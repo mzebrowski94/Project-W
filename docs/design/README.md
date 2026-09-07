@@ -15,6 +15,7 @@ description at all.
 | Question | Where the answer lives |
 |---|---|
 | What must always be true? | Invariants, below |
+| How does a phase session go, and what is still scaffolding? | [`alpha-phase.md`](alpha-phase.md) |
 | What does this system do? | `sim/src/main/java/.../system/` |
 | What is this number? | `assets/game.properties` |
 | Why did we reject the obvious alternative? | `docs/design/decisions/` |
@@ -35,12 +36,19 @@ rows become enforceable once the named feature exists - promote them then.
 | No gameplay effect depends on frame rate. | enforced - fixed timestep + `SimulationDeterminismTest` |
 | Every gameplay number comes from `game.properties`; no tuning literals in systems. | judgement |
 | Nothing is bought, equipped or configured between levels. | judgement |
+| Aim is independent of movement; no system assumes facing follows heading (G0002). | enforced - `CommanderControlSystemTest.firesWhereItAimsNoMatterWhereItIsWalking` |
+| Rendering reads an appearance component and never branches on what an entity is (G0003). | judgement |
+| Systems communicate through components, never a message bus (G0004). | judgement |
+| Everything drawn carries a `PreviousPosition` seeded at its spawn point. | enforced - `SpawnerTest.seedsPositionHistoryAtTheSpawnPointSoNothingStreaksIn` |
+| Nothing ends a tick outside the arena. | enforced - `ArenaBoundsTest.neverLetsACrowdSqueezeAnythingOutOfTheArena` |
+| How an entity collides is data on a `Collider`, not a question about what it is. | judgement |
+| Obstacles and level geometry are ordinary entities with a `Position` and a `Body`. Collision has one path. | enforced - `SpawnerTest.makesAnObstacleAnOrdinaryEntityWithAPositionAndABody` |
 | The commander is an ordinary entity - killable, collidable, standing on the field. | deferred - needs health |
 | Losing the commander ends the level. | deferred - needs level lifecycle |
 | Troopers lost during a level stay lost for that level. | deferred - needs squad |
 | Squad size never exceeds its configured maximum. | deferred - needs squad |
-| Every projectile is a simulated entity with a `Position` and a `Body`. No hitscan. | deferred - needs weapons |
-| Everything that can be hit has a `Body`. | deferred - needs combat |
+| Every projectile is a simulated entity with a `Position` and a `Body`. No hitscan. | enforced - `SpawnerTest.givesEveryProjectileAPositionAndABody` |
+| Everything that can be hit has a `Body`. | enforced - `SpawnerTest.givesEveryUnitABodySoItCanBeHit` |
 
 The no-hitscan row is load-bearing in three directions at once: it keeps collision uniform, keeps
 the simulation deterministic, and keeps every threat visible to the player. It is the row most
@@ -51,20 +59,30 @@ likely to be argued away for convenience.
 One key, one action. **Adding a binding means editing this table in the same change** - this is the
 cheapest guard against two features silently claiming the same input.
 
-Proposed, nothing implemented yet:
+*Built* rows work today. *Settled* rows are fixed by a decision but not yet wired up; *proposed*
+rows are still a guess. Gamepad support is not built at all - the stick and trigger columns are the
+intended bindings, not working ones.
 
-| Input | Action |
-|---|---|
-| `WASD` / left stick | Move the commander |
-| Mouse / right stick | Aim |
-| Left mouse / right trigger | Fire |
-| Right mouse / left bumper | Squad command (contextual) |
-| `Esc` | Pause |
+The alpha-phase harness has its own keys - pause, single-step, restart - listed in
+[`alpha-phase.md`](alpha-phase.md). Those are dev controls and deliberately kept out of this table;
+do not treat one as taken when adding a game binding.
+
+| Input | Action | Status |
+|---|---|---|
+| `WASD`, arrow keys / left stick | Move the commander | built (keyboard) |
+| Mouse / right stick | Aim | built (mouse) - G0002 |
+| Left mouse / right trigger | Fire | built (mouse) |
+| Right mouse / left bumper | Squad command (contextual) | proposed - depends on the command model |
+| `Esc` | Pause | proposed |
 
 ## Open questions
 
 Deliberately undecided. **Ask rather than inventing an answer** - a guess here becomes a
 contradiction three features later.
+
+The alpha phase answers none of these. Where a system needs one of them to have an answer it uses
+scaffolding instead, listed in [`alpha-phase.md`](alpha-phase.md) so the scaffolding is not later
+mistaken for a decision.
 
 - How does the player command the squad? Auto-follow, point-to-move, formations, or stances?
 - What ends a level - an objective, an extraction point, elimination, or a timer?

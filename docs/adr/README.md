@@ -10,6 +10,7 @@ One line each. Open a record only when you are about to work against it or propo
 | [0004](0004-net-ready-single-player.md) | Single-player, but the simulation stays deterministic and net-ready. | accepted |
 | [0005](0005-quality-tooling.md) | Spotless, Error Prone, NullAway and Lombok run on every build. | accepted |
 | [0006](0006-gradle-in-the-sandbox.md) | Claude runs the real Gradle build in its sandbox. | accepted |
+| [0007](0007-circles-only-collision.md) | Every body is a circle; no AABBs. Narrows 0002. | accepted |
 
 Decisions about what the game *is*, rather than how it is built, live in
 `docs/design/decisions/`.

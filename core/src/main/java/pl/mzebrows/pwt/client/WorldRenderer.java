@@ -4,62 +4,89 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import lombok.RequiredArgsConstructor;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.PreviousPosition;
 
 /**
  * Draws the simulation as coloured circles.
  *
  * <p>This is the placeholder renderer: until real art exists every entity is a shape, so gameplay
- * can be built and looked at without a single texture. Once the atlas lands, a sprite renderer
- * replaces this class and the convention stays - the simulation is never asked how to draw itself.
+ * can be built and looked at without a single texture. It decides what to draw by reading an
+ * entity's {@link Appearance} and asks nothing else about it (G0003). Once the atlas lands, a sprite
+ * renderer replaces this class and reads the same component; the simulation is still never asked how
+ * to draw itself.
+ *
+ * <p>Positions are interpolated between the previous tick and the current one. The simulation runs at
+ * a fixed 60 ticks per second while the window may refresh at 144, so without this every entity
+ * visibly steps. The cost is that what you see lags the simulation by up to one tick, which is the
+ * standard trade and invisible in play.
  */
 @RequiredArgsConstructor
 public final class WorldRenderer implements Disposable {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
-    private static final Family DRAWABLE =
-            Family.all(Position.class, Body.class).get();
-    private static final Color PLACEHOLDER = new Color(0.45f, 0.85f, 0.95f, 1f);
-    private static final int CIRCLE_SEGMENTS = 12;
+    private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
+    private static final Family DRAWABLE = Family.all(
+                    Position.class, PreviousPosition.class, Body.class, Appearance.class)
+            .get();
+    private static final int CIRCLE_SEGMENTS = 16;
 
-    private final Simulation simulation;
     private final Viewport viewport;
+    private final Palette palette;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
 
-    /** Cached once: Ashley keeps this view live, so it must not be re-queried per frame. */
-    private ImmutableArray<Entity> drawable = new ImmutableArray<>(new com.badlogic.gdx.utils.Array<>());
+    /** Cached: Ashley keeps this view live, so it must not be re-queried per frame. */
+    private ImmutableArray<Entity> drawable = new ImmutableArray<>(new Array<>());
 
-    /** Resolves the entity view; call once after the simulation is built. */
-    public void start() {
+    private boolean disposed;
+
+    /** Points the renderer at a world. Call again after a restart - a new simulation is a new engine. */
+    public void bind(Simulation simulation) {
         drawable = simulation.engine().getEntitiesFor(DRAWABLE);
     }
 
-    /** Draws one frame. {@code alpha} is the fraction of a step elapsed, for interpolation. */
+    /** Draws one frame. {@code alpha} is how far the clock is towards the next tick, in {@code [0, 1)}. */
     public void render(float alpha) {
+        if (disposed) {
+            // Belt and braces. Drawing with a disposed ShapeRenderer writes to freed GL memory and
+            // takes the JVM down with an access violation and no stack trace, so this turns the
+            // worst possible failure into a visible, reportable one.
+            Log.error("WorldRenderer.render called after dispose; nothing drawn", null);
+            return;
+        }
         viewport.apply();
         shapes.setProjectionMatrix(viewport.getCamera().combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
-        shapes.setColor(PLACEHOLDER);
         for (int i = 0; i < drawable.size(); i++) {
             Entity entity = drawable.get(i);
             Position position = POSITION.get(entity);
+            PreviousPosition previous = PREVIOUS.get(entity);
             Body body = BODY.get(entity);
-            shapes.circle(position.x, position.y, body.radius, CIRCLE_SEGMENTS);
+            shapes.setColor(palette.colorFor(APPEARANCE.get(entity).look));
+            shapes.circle(
+                    previous.x + (position.x - previous.x) * alpha,
+                    previous.y + (position.y - previous.y) * alpha,
+                    body.radius,
+                    CIRCLE_SEGMENTS);
         }
         shapes.end();
     }
 
     @Override
     public void dispose() {
+        disposed = true;
+        drawable = new ImmutableArray<>(new Array<>());
         shapes.dispose();
     }
 }

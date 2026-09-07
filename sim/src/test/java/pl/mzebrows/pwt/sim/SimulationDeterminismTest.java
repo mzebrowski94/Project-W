@@ -5,9 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import pl.mzebrows.pwt.sim.component.Position;
-import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.scenario.Scenario;
+import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
 /**
  * The load-bearing test of the whole architecture. If this ever goes red, deterministic replay and
@@ -15,34 +20,47 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  */
 class SimulationDeterminismTest {
 
-    private static final SimConfig CONFIG = new SimConfig(20_260_906L, 1f / 60f, 5, 160f, 90f);
+    private static final long SEED = 20_260_906L;
     private static final int ENTITIES = 200;
     private static final int STEPS = 600;
 
     @Test
     void twoRunsFromTheSameSeedProduceIdenticalWorlds() {
-        assertThat(runScenario()).isEqualTo(runScenario());
+        assertThat(runBodies(SEED)).isEqualTo(runBodies(SEED));
     }
 
     @Test
     void aDifferentSeedProducesADifferentWorld() {
-        SimConfig other = new SimConfig(1L, CONFIG.tickSeconds(), 5, CONFIG.worldWidth(), CONFIG.worldHeight());
-
-        assertThat(runScenario(CONFIG)).isNotEqualTo(runScenario(other));
+        assertThat(runBodies(SEED)).isNotEqualTo(runBodies(1L));
     }
 
-    private static float[] runScenario() {
-        return runScenario(CONFIG);
+    /**
+     * Covers every scenario the menu can launch, so a new one cannot quietly introduce a
+     * non-reproducible spawn. This is the test that actually exercises the systems; the bare-body
+     * runs above only exercise movement.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("registeredScenarios")
+    void everyScenarioReplaysIdentically(String name, Scenario scenario) {
+        assertThat(runScenario(scenario))
+                .as("scenario %s is not reproducible", name)
+                .isEqualTo(runScenario(scenario));
     }
 
-    private static float[] runScenario(SimConfig config) {
+    private static Stream<Arguments> registeredScenarios() {
+        return Scenarios.all().stream().map(scenario -> Arguments.of(scenario.name(), scenario));
+    }
+
+    private static float[] runBodies(long seed) {
+        SimConfig config = configSeeded(seed);
         Simulation simulation = new Simulation(config);
         Rng rng = simulation.rng();
 
         for (int i = 0; i < ENTITIES; i++) {
-            simulation.spawn(
-                    rng.nextFloat(0f, config.worldWidth()),
-                    rng.nextFloat(0f, config.worldHeight()),
+            AlphaWorlds.spawnBody(
+                    simulation,
+                    rng.nextFloat(0f, config.arena().width()),
+                    rng.nextFloat(0f, config.arena().height()),
                     rng.nextFloat(-30f, 30f),
                     rng.nextFloat(-30f, 30f),
                     rng.nextFloat(0.5f, 2f));
@@ -51,10 +69,42 @@ class SimulationDeterminismTest {
         for (int step = 0; step < STEPS; step++) {
             simulation.step();
         }
+        return snapshot(simulation);
+    }
 
-        ImmutableArray<Entity> entities = simulation
-                .engine()
-                .getEntitiesFor(Family.all(Position.class, Velocity.class).get());
+    private static float[] runScenario(Scenario scenario) {
+        Simulation simulation = new Simulation(scenario.configure(configSeeded(SEED)));
+        scenario.populate(simulation);
+
+        for (int step = 0; step < STEPS; step++) {
+            simulation.step(scriptedInput(step));
+        }
+        return snapshot(simulation);
+    }
+
+    /** A commander walking in a circle and firing most ticks - enough to exercise every system. */
+    private static CommanderInput scriptedInput(int step) {
+        double angle = step * 0.05;
+        return new CommanderInput(
+                (float) StrictMath.cos(angle), (float) StrictMath.sin(angle), 80f, 45f, step % 7 != 0);
+    }
+
+    private static SimConfig configSeeded(long seed) {
+        return new SimConfig(
+                seed,
+                1f / 60f,
+                5,
+                new SimConfig.ArenaConfig(160f, 90f),
+                new SimConfig.CommanderConfig(2f, 28f),
+                new SimConfig.EnemyConfig(1.8f, 14f, 12),
+                new SimConfig.WeaponConfig(0.18f, 70f, 0.6f),
+                new SimConfig.ObstacleConfig(3.5f, 8),
+                new SimConfig.CollisionConfig(3));
+    }
+
+    private static float[] snapshot(Simulation simulation) {
+        ImmutableArray<Entity> entities =
+                simulation.engine().getEntitiesFor(Family.all(Position.class).get());
         float[] snapshot = new float[entities.size() * 2];
         for (int i = 0; i < entities.size(); i++) {
             Position position = entities.get(i).getComponent(Position.class);

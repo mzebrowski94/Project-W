@@ -1,33 +1,27 @@
 package pl.mzebrows.pwt.client;
 
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.ScreenUtils;
-import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
-import pl.mzebrows.pwt.sim.FixedStepClock;
-import pl.mzebrows.pwt.sim.Rng;
+import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Screen;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.SimConfig;
-import pl.mzebrows.pwt.sim.Simulation;
 
 /**
- * Application entry point: owns the simulation, the viewport and the renderer, and drives the
- * fixed-step loop.
+ * Application entry point: owns everything that outlives a single screen - configuration, assets and
+ * the shared text renderer - and opens the scenario menu.
  *
  * <p>Fields are created in {@link #create()} because they need a GL context, which does not exist
  * when this object is constructed - hence the class-level NullAway.Init suppression.
  */
 @SuppressWarnings("NullAway.Init")
-public final class PwtGame extends ApplicationAdapter {
+public final class PwtGame extends Game implements GameContext {
 
     private final GraphicConfig graphicConfig;
 
     private SimConfig simConfig;
-    private Simulation simulation;
-    private FixedStepClock clock;
-    private Viewport viewport;
-    private WorldRenderer renderer;
     private Assets assets;
+    private Hud hud;
+
+    private @Nullable Screen pendingScreen;
 
     public PwtGame(GraphicConfig graphicConfig) {
         this.graphicConfig = graphicConfig;
@@ -43,47 +37,64 @@ public final class PwtGame extends ApplicationAdapter {
         assets.queueAll();
         assets.finishLoading();
 
-        simulation = new Simulation(simConfig);
-        clock = new FixedStepClock(simConfig);
-        viewport = new FitViewport(graphicConfig.virtualWidth(), graphicConfig.virtualHeight());
-        renderer = new WorldRenderer(simulation, viewport);
+        hud = new Hud();
+        setScreen(new MenuScreen(this));
+    }
 
-        spawnPlaceholderWorld();
-        renderer.start();
+    /**
+     * Switches screen at the end of the current frame instead of immediately.
+     *
+     * <p>{@code setScreen} calls the outgoing screen's {@code hide()} synchronously, and a screen
+     * releases its GL resources there. Calling it from inside that screen's own {@code render} frees
+     * a buffer the rest of the frame is still drawing with, which crashes the JVM outright rather
+     * than throwing - there is no stack trace to read, just an access violation.
+     *
+     * <p>So screens never switch themselves. They ask, the frame finishes, and the swap happens here
+     * where nothing is mid-draw.
+     */
+    @Override
+    public void queueScreen(Screen next) {
+        pendingScreen = next;
     }
 
     @Override
     public void render() {
-        int steps = clock.stepsFor(Gdx.graphics.getDeltaTime());
-        for (int i = 0; i < steps; i++) {
-            simulation.step();
+        super.render();
+        Screen next = pendingScreen;
+        if (next != null) {
+            pendingScreen = null;
+            setScreen(next);
         }
-        ScreenUtils.clear(graphicConfig.backgroundColor());
-        renderer.render(clock.alpha());
     }
 
     @Override
     public void resize(int width, int height) {
-        viewport.update(width, height, true);
+        hud.resize(width, height);
+        super.resize(width, height);
+    }
+
+    @Override
+    public GraphicConfig graphicConfig() {
+        return graphicConfig;
+    }
+
+    @Override
+    public SimConfig simConfig() {
+        return simConfig;
+    }
+
+    @Override
+    public Hud hud() {
+        return hud;
     }
 
     @Override
     public void dispose() {
-        renderer.dispose();
-        assets.dispose();
-        Log.info("Project-W stopped after " + simulation.tick() + " simulation steps");
-    }
-
-    /** Temporary: something to look at until real gameplay exists. */
-    private void spawnPlaceholderWorld() {
-        Rng rng = simulation.rng();
-        for (int i = 0; i < 24; i++) {
-            simulation.spawn(
-                    rng.nextFloat(0f, simConfig.worldWidth()),
-                    rng.nextFloat(0f, simConfig.worldHeight()),
-                    rng.nextFloat(-12f, 12f),
-                    rng.nextFloat(-12f, 12f),
-                    rng.nextFloat(0.8f, 2.4f));
+        if (getScreen() != null) {
+            getScreen().hide();
         }
+        hud.dispose();
+        assets.dispose();
+        Log.info("Project-W stopped");
     }
 }

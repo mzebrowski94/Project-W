@@ -7,10 +7,10 @@ import org.junit.jupiter.api.Test;
 
 class FixedStepClockTest {
 
-    private static final float TICK = 1f / 60f;
+    private static final float TICK = AlphaWorlds.TICK;
 
     private static FixedStepClock clock() {
-        return new FixedStepClock(new SimConfig(1L, TICK, 5, 160f, 90f));
+        return new FixedStepClock(AlphaWorlds.config());
     }
 
     @Test

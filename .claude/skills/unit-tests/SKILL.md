@@ -8,6 +8,7 @@ description: How tests are written in Project-W - naming, shape, assertions, whe
 **Read the exemplar first. It outranks everything below.**
 
 - `sim/src/test/java/pl/mzebrows/pwt/sim/system/MovementSystemTest.java` - testing a system.
+- `core/src/test/java/pl/mzebrows/pwt/client/ScenarioSessionTest.java` - testing client logic.
 - `core/src/test/java/pl/mzebrows/pwt/client/GamePropertiesTest.java` - plain logic and fallback paths.
 
 Rules here cover only what those files cannot show.
@@ -56,6 +57,37 @@ default addition.
 
 There is no mock-using test in the repository yet. The first one sets the pattern - write it
 carefully, and add it to the exemplar list above.
+
+## Testing the client
+
+`core` has no GL context in tests and is not getting one. Anything that constructs a
+`ShapeRenderer`, `SpriteBatch`, `BitmapFont` or `Texture` cannot be unit-tested here.
+
+The boundary runs between deciding and drawing, in both directions:
+
+- **Decisions are testable, and are tested.** What a key means, what a command does, how a selection
+  wraps, how config parses and falls back. These classes never touch `Gdx`; they take their input as
+  values or one-method interfaces - `KeyPresses`, a delta, a `CommanderInput` - so a test can supply
+  them directly.
+- **Drawing is not tested.** Screens, renderers and the HUD hold GL objects and turn already-decided
+  state into draw calls. Keep them thin enough to review by eye, and verify them by running the game
+  on Mateusz's machine.
+
+`ClientArchitectureTest` enforces this rather than trusting it: no `Screen` may call `setScreen` or
+depend on `Game`, and no class ending in `Session`, `Controls` or `Selection` may depend on `Gdx`.
+All three rules were checked against deliberate violations when they were written; a rule nobody has
+seen fail is not a guard.
+
+**When a client bug turns out to be untestable, move the decision out of the drawing class - do not
+reach for a headless backend.** The screen-switch crash of 2026-09-07 is the worked example: a
+decision about when to swap screens was living in a method that also drew, so the only way to hit it
+was to run the game, and the only symptom was the JVM dying with an access violation. Adding a
+backend would have made that code reachable from a test; moving the decision made it *simple*, which
+is worth more.
+
+A headless backend would still be the right answer for one thing we do not test today: `Assets` and
+anything else that goes through `Gdx.files`. That is a small, separate question - raise it when
+something there actually breaks, not pre-emptively.
 
 ## Consolidation
 

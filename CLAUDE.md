@@ -51,6 +51,10 @@ stop and raise it rather than working around it.
 Invariants, the input map and the open questions are in `docs/design/README.md`. Read it before any
 gameplay change - the `feature` skill has the procedure.
 
+**We are in the alpha phase**: one system per session, built to be built on, with an optional
+scenario so Mateusz can run it. `docs/design/alpha-phase.md` has the method and the list of
+shortcuts still standing.
+
 These six are inline rather than loaded on demand **by decision, not by oversight**: a contradiction
 usually slips in during a session nobody framed as gameplay work, which is exactly when an
 on-demand file would not be read. Do not migrate them into a skill.
@@ -95,6 +99,7 @@ Everything else is caught by Spotless, Error Prone, NullAway or a test. These ar
 | `docs/workflow.md` | Builds, recipes, something broke, or environment friction. |
 | `docs/glossary.md` | Naming anything in the game domain. |
 | `docs/design/README.md` | Any gameplay change - invariants, input map, open questions. |
+| `docs/design/alpha-phase.md` | **Every session right now** - how a phase session goes, how to add a scenario, what is still scaffolding. |
 | `docs/adr/README.md` | Before proposing to change a structural decision. |
 | `docs/design/decisions/` | Before re-proposing a gameplay alternative. |
 

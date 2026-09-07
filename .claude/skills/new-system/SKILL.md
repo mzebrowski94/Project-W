@@ -54,7 +54,16 @@ before or after this one.
 For each one, ask whether it is a real case or noise. A test that cannot fail for an interesting
 reason is worse than no test - it is maintenance with no payoff. Delete those.
 
-### 4. Verify
+### 4. Offer a scenario
+
+We are in the alpha phase, where a system is meant to be run and judged by hand, not only by its
+tests. **Ask** whether Mateusz wants a scenario demonstrating it - do not build one unheard, and do
+not skip the offer either. `docs/design/alpha-phase.md` has the recipe: a class in `sim/.../scenario/`
+and a line in `Scenarios.ALL`, which is the whole registry the menu reads.
+
+A system already visible in an existing scenario does not need its own; say so when offering.
+
+### 5. Verify
 
 ```
 .claude/scripts/verify.sh

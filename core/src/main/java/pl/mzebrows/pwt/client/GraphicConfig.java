@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
  * @param windowHeight initial window height in pixels
  * @param vsync whether to wait for vertical sync
  * @param backgroundColor colour the frame is cleared to
+ * @param palette placeholder colour per entity look, until sprites exist
  */
 public record GraphicConfig(
         float virtualWidth,
@@ -20,7 +21,8 @@ public record GraphicConfig(
         int windowWidth,
         int windowHeight,
         boolean vsync,
-        Color backgroundColor) {
+        Color backgroundColor,
+        Palette palette) {
 
     private static final String FILE = "graphic.properties";
 
@@ -42,6 +44,27 @@ public record GraphicConfig(
                 properties.getInt("graphic.windowWidth", 1280),
                 properties.getInt("graphic.windowHeight", 720),
                 properties.getBoolean("graphic.vsync", true),
-                Color.valueOf(properties.getString("graphic.backgroundColor", "101018ff")));
+                color(properties, "graphic.backgroundColor", "101018ff"),
+                palette(properties));
+    }
+
+    private static Palette palette(GameProperties properties) {
+        return new Palette(
+                color(properties, "graphic.color.commander", "6ee7ffff"),
+                color(properties, "graphic.color.enemy", "ff5d5dff"),
+                color(properties, "graphic.color.projectile", "ffe066ff"),
+                color(properties, "graphic.color.obstacle", "4a4a5eff"),
+                color(properties, "graphic.color.unknown", "ff00ffff"));
+    }
+
+    /** Falls back to the given hex when the configured value is missing or not a colour. */
+    private static Color color(GameProperties properties, String key, String fallback) {
+        String raw = properties.getString(key, fallback);
+        try {
+            return Color.valueOf(raw);
+        } catch (RuntimeException e) {
+            Log.error("graphic.properties: " + key + "='" + raw + "' is not a colour; using " + fallback, e);
+            return Color.valueOf(fallback);
+        }
     }
 }

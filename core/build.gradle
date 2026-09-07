@@ -9,6 +9,9 @@ dependencies {
   if (enableGraalNative == 'true') {
     implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
   }
+
+  // Same version the sim module already uses; see ClientArchitectureTest for what it guards.
+  testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
 }
 
 // Packs assets-raw/ into a single atlas under assets/atlas/. Run manually after

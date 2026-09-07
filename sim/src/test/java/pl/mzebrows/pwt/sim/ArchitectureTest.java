@@ -60,6 +60,38 @@ final class ArchitectureTest {
             .because("randomness must come from the seeded Rng so runs can be replayed");
 
     @ArchTest
+    static final ArchRule simulationDoesNotUseNonReproducibleMath = noClasses()
+            .should()
+            .callMethod(Math.class, "sin", double.class)
+            .orShould()
+            .callMethod(Math.class, "cos", double.class)
+            .orShould()
+            .callMethod(Math.class, "tan", double.class)
+            .orShould()
+            .callMethod(Math.class, "asin", double.class)
+            .orShould()
+            .callMethod(Math.class, "acos", double.class)
+            .orShould()
+            .callMethod(Math.class, "atan", double.class)
+            .orShould()
+            .callMethod(Math.class, "atan2", double.class, double.class)
+            .orShould()
+            .callMethod(Math.class, "pow", double.class, double.class)
+            .orShould()
+            .callMethod(Math.class, "exp", double.class)
+            .orShould()
+            .callMethod(Math.class, "log", double.class)
+            .orShould()
+            .callMethod(Math.class, "log10", double.class)
+            .orShould()
+            .callMethod(Math.class, "cbrt", double.class)
+            .orShould()
+            .callMethod(Math.class, "hypot", double.class, double.class)
+            .because("Math's transcendentals are only specified to within 1 ulp and may differ between JVM"
+                    + " implementations; StrictMath is bit-identical everywhere. Math.sqrt, abs, min, max,"
+                    + " floor, ceil and round are exactly specified and remain fine");
+
+    @ArchTest
     static final ArchRule simulationDoesNotReadTheWallClock = noClasses()
             .should()
             .callMethod(System.class, "currentTimeMillis")

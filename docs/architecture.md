@@ -21,6 +21,16 @@ system that changes world state.
   snapshotted and replayed exactly.
 - `FixedStepClock` - turns a variable frame delta into a whole number of ticks, and exposes `alpha`
   for render interpolation. Long stalls are dropped, not queued.
+- `CommanderInput` - one tick of what the player asked for. The only way input enters the
+  simulation; `step` copies it into the commander's `Intent` before any system runs.
+- `Spawner` - builds the entity kinds the game knows, so no system has to remember which components
+  a commander or a projectile is made of.
+- `collision/` - `SpatialGrid`, a dense grid over the arena with no hashing and therefore no
+  iteration order that could vary between runs, and `ConstraintSolver`, which decides where bodies
+  are allowed to be. Both are purely geometric and read `Collider` flags rather than asking what an
+  entity is. Systems still all live in `system/`; this package is the machinery they call.
+- `scenario/` - the arenas the menu can launch. `Scenarios` is the registry, and the list in it is
+  the menu.
 - `component/` - pooled data. Public mutable fields, `reset()`, no behaviour.
 - `system/` - all behaviour. One system, one responsibility.
 
@@ -43,9 +53,25 @@ loop.
   fallback and logs when it is used.
 - `Assets` - every asset path as a constant, an `AssetManager` behind them. Missing files log and
   are skipped, never thrown.
-- `WorldRenderer` - the placeholder renderer: every entity is a coloured circle. Replaced by a
-  sprite renderer once the atlas exists; the contract stays the same, which is that the simulation
-  is never asked how to draw itself.
+- `GameContext` - what a screen may ask of the application. Screens are given this rather than
+  `PwtGame`, and it deliberately has no `setScreen`: **a screen never switches itself**, it calls
+  `queueScreen` and the swap happens once the frame has finished. `setScreen` runs the outgoing
+  screen's `hide()` synchronously, so switching mid-frame frees GL resources that frame is still
+  drawing with, which crashes the JVM with an access violation rather than an exception.
+- `ScenarioSession` / `HarnessControls` / `MenuSelection` - everything the client *decides*, kept out
+  of the classes that draw so it can be unit-tested without a GL context. `ClientArchitectureTest`
+  enforces both halves of that split.
+- `MenuScreen` / `ScenarioScreen` - the scenario list, and one running scenario with the alpha-phase
+  harness. Thin by design: they read input, hand commands to the session, and draw.
+- `Hud` / `DebugOverlay` - text in screen space, on their own pixel-unit viewport. The font is
+  libGDX's built-in one, so the harness needs no art at all.
+- `InputReader` - the only class that touches a keyboard or mouse. Produces a `CommanderInput` per
+  frame.
+- `WorldRenderer` - the placeholder renderer: every entity is a coloured circle. It reads each
+  entity's `Appearance` and asks nothing else about it (G0003). Replaced by a sprite renderer once
+  the atlas exists; the contract stays the same, which is that the simulation is never asked how to
+  draw itself.
+- `Palette` - the one place that turns an `Appearance.Look` into a colour.
 - `Log` - the logging facade.
 
 ## Coordinates

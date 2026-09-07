@@ -37,17 +37,29 @@ classes included - use Lombok `@Getter`/`@Setter` plus a `reset()`.
 
 ## Performance
 
-The hot loop is per-frame entity, projectile and collision updates. There:
+The rule is about **per-entity** work, not per-frame work, and the distinction is the whole point.
+Inside a loop that runs once per entity per tick - collision pairs, movement integration, the draw
+loop:
 
-- **Zero allocation per frame.** No `new` in a system's update path. Pool everything. No boxing, no
-  varargs, no `Optional`, no string concatenation.
-- Classic `for` or enhanced-`for`. No streams, no lambda capture, no iterator churn.
+- **No allocation per entity.** No `new`, no boxing, no varargs, no `Optional`, no string
+  concatenation. A lambda or method reference that captures allocates too.
+- Classic `for` or enhanced-`for`. No streams, no iterator churn.
 - Cache the `ImmutableArray` from `engine.getEntitiesFor(...)` once (in the constructor or
   `addedToEngine`), never per frame. Ashley keeps the view live.
 - Cache `ComponentMapper`s in `private static final` fields.
 - **Never log.** Not at any level.
 
-Streams, lambdas and allocation are all fine in setup, loading, tooling and tests.
+**Allocation at per-tick scope is fine** - once per system per tick rather than once per entity. A
+short-lived object dies in the young generation and costs very little on a desktop JVM, and clarity
+is worth more than avoiding it. `CommanderInput`, built once a frame, is the model.
+
+**Anything beyond these rules needs a measurement.** Not an argument, not an instinct: before and
+after numbers, said out loud in the change that introduces it. This is deliberate. The game is a few
+hundred circles on hardware that draws millions, and the previous version of this rule - zero
+allocation anywhere in an update path - already cost readability twice without anyone ever timing
+what it saved. An optimization nobody measured is a guess with a maintenance bill.
+
+Streams, lambdas and allocation are all fine in setup, loading, scenarios, tooling and tests.
 
 ## Determinism
 

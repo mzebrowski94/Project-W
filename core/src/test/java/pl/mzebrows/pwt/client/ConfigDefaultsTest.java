@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.badlogic.gdx.graphics.Color;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.component.Appearance;
 
 /**
  * The config files live in assets/, which is only on the launcher's classpath - so here both loaders
@@ -23,11 +24,21 @@ class ConfigDefaultsTest {
         assertThat(config.windowWidth()).isGreaterThan(0);
         assertThat(config.windowHeight()).isGreaterThan(0);
         assertThat(config.backgroundColor()).isNotNull();
+        assertThat(config.palette()).isNotNull();
     }
 
     @Test
     void simConfigFallsBackToTheSimulationsOwnDefaults() {
         assertThat(SimConfigLoader.load()).isEqualTo(SimConfig.defaults());
+    }
+
+    @Test
+    void mapsEveryLookToAColour() {
+        Palette palette = GraphicConfig.load().palette();
+
+        for (Appearance.Look look : Appearance.Look.values()) {
+            assertThat(palette.colorFor(look)).isNotNull();
+        }
     }
 
     @Test
@@ -37,7 +48,11 @@ class ConfigDefaultsTest {
 
     @Test
     void rejectsANonPositiveVirtualSize() {
-        assertThatThrownBy(() -> new GraphicConfig(0f, 90f, 1280, 720, true, Color.BLACK))
+        assertThatThrownBy(() -> new GraphicConfig(0f, 90f, 1280, 720, true, Color.BLACK, palette()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static Palette palette() {
+        return new Palette(Color.WHITE, Color.RED, Color.YELLOW, Color.GRAY, Color.MAGENTA);
     }
 }

@@ -5,14 +5,19 @@ description: Audit a Project-W hot path for allocation, boxing, logging and othe
 
 # Hot-path audit
 
-The hot path is anything that runs per entity per frame: every `EntitySystem.update`, every
-`IteratingSystem.processEntity`, the renderer's draw loop, and everything they call.
+The hot path is anything that runs **per entity** per frame: the body of every
+`IteratingSystem.processEntity`, the loops inside an `EntitySystem.update`, the renderer's draw loop,
+and everything they call. Work that happens once per system per tick is not the hot path.
 
 Read `docs/conventions.md` first - this skill applies those rules, it does not replace them.
 
+**Before reporting anything, know what it is worth.** The rule now requires a measurement for any
+optimization beyond the standing conventions, and that applies to this audit's findings too. A
+finding with no number attached is a suggestion, and should say so.
+
 ## What to look for, in order of how much it costs
 
-**Allocation.** The rule is zero per frame. Look for:
+**Allocation, inside a per-entity loop.** Look for:
 
 - `new` anywhere in the update path, including implicit ones
 - `Vector2` and `Color` created per entity instead of reused scratch instances
@@ -43,7 +48,9 @@ entity), and the concrete fix. Order by cost, not by file.
 
 Say plainly when something is fine. An audit that manufactures findings to look thorough wastes more
 time than it saves - and in a 60-entity scene most of this list genuinely does not matter yet. Note
-when a finding is theoretical at current scale and worth fixing only as a habit.
+when a finding is theoretical at current scale, and prefer leaving it alone: readable code that is
+fast enough beats fast code nobody wants to change. An allocation outside a per-entity loop is not a
+finding at all.
 
 Do not change behaviour to make something faster without saying so explicitly.
 
