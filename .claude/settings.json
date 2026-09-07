@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.claude/scripts/verify.sh:*)",
+      "Bash(.claude/scripts/gradle.sh:*)",
+      "Bash(./gradlew:*)"
+    ],
+    "deny": [
+      "Bash(git commit:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)"
+    ]
+  }
+}

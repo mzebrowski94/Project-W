@@ -1,0 +1,69 @@
+package pl.mzebrows.pwt.sim;
+
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+
+import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.junit.AnalyzeClasses;
+import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchRule;
+
+/**
+ * Guards the one boundary the whole architecture rests on: the simulation stays headless and
+ * deterministic. The Gradle module split keeps rendering libraries off this classpath; these rules
+ * close the remaining gap, because gdx.jar itself contains graphics classes.
+ */
+@AnalyzeClasses(packages = "pl.mzebrows.pwt.sim", importOptions = ImportOption.DoNotIncludeTests.class)
+final class ArchitectureTest {
+
+    @ArchTest
+    static final ArchRule simulationIsHeadless = noClasses()
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage(
+                    "com.badlogic.gdx.graphics..",
+                    "com.badlogic.gdx.scenes..",
+                    "com.badlogic.gdx.assets..",
+                    "com.badlogic.gdx.audio..",
+                    "com.badlogic.gdx.files..",
+                    "com.badlogic.gdx.backends..")
+            .because("simulation tests must run without a GL context or an Application instance");
+
+    @ArchTest
+    static final ArchRule simulationDoesNotTouchTheRunningApplication = noClasses()
+            .should()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName("com.badlogic.gdx.Gdx")
+            .because("Gdx is the live application; the simulation must not know it exists");
+
+    @ArchTest
+    static final ArchRule simulationDoesNotReadInputDirectly = noClasses()
+            .should()
+            .dependOnClassesThat()
+            .haveNameMatching("com\\.badlogic\\.gdx\\.Input.*")
+            .orShould()
+            .dependOnClassesThat()
+            .resideInAPackage("com.badlogic.gdx.controllers..")
+            .because("input reaches the simulation as a per-tick value object, never by polling a device -"
+                    + " see the input invariant in docs/design/README.md");
+
+    @ArchTest
+    static final ArchRule simulationDoesNotUseUnseededRandomnessOrHashIteration = noClasses()
+            .should()
+            .dependOnClassesThat()
+            .belongToAnyOf(java.util.Random.class, java.util.HashMap.class, java.util.HashSet.class)
+            .because("Rng is the only randomness source, and hash iteration order is not reproducible");
+
+    @ArchTest
+    static final ArchRule simulationDoesNotUseMathRandom = noClasses()
+            .should()
+            .callMethod(Math.class, "random")
+            .because("randomness must come from the seeded Rng so runs can be replayed");
+
+    @ArchTest
+    static final ArchRule simulationDoesNotReadTheWallClock = noClasses()
+            .should()
+            .callMethod(System.class, "currentTimeMillis")
+            .orShould()
+            .callMethod(System.class, "nanoTime")
+            .because("the simulation advances by fixed steps only, never by real time");
+}

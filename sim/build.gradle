@@ -1,0 +1,11 @@
+eclipse.project.name = appName + '-sim'
+
+// The deterministic simulation. Depends on libGDX only for its math and collection
+// types - see ArchitectureTest, which fails the build if rendering or platform APIs
+// leak in here.
+dependencies {
+  api "com.badlogicgames.gdx:gdx:$gdxVersion"
+  api "com.badlogicgames.ashley:ashley:$ashleyVersion"
+
+  testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
+}

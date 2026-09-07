@@ -1,0 +1,18 @@
+pluginManagement {
+  repositories {
+    gradlePluginPortal()
+    mavenCentral()
+  }
+}
+
+plugins {
+  // Allows automatic download of JDKs when no matching local toolchain is found.
+  id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'Project-W'
+
+// sim    - deterministic, headless game simulation. No rendering, no assets, no I/O.
+// core   - libGDX application: rendering, input, assets, screens. Depends on sim.
+// lwjgl3 - desktop launcher.
+include 'sim', 'core', 'lwjgl3'

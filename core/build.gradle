@@ -1,0 +1,36 @@
+eclipse.project.name = appName + '-core'
+
+dependencies {
+  api project(':sim')
+  api "com.badlogicgames.gdx:gdx:$gdxVersion"
+  api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
+  api "com.badlogicgames.gdx-controllers:gdx-controllers-core:$gdxControllersVersion"
+
+  if (enableGraalNative == 'true') {
+    implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
+  }
+}
+
+// Packs assets-raw/ into a single atlas under assets/atlas/. Run manually after
+// changing source art: ./gradlew :core:packTextures
+configurations {
+  texturePacker
+}
+
+dependencies {
+  texturePacker "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
+}
+
+tasks.register('packTextures', JavaExec) {
+  group = 'build'
+  description = 'Packs assets-raw/ into a texture atlas in assets/atlas/.'
+  classpath = configurations.texturePacker
+  mainClass = 'com.badlogic.gdx.tools.texturepacker.TexturePacker'
+  systemProperty 'java.awt.headless', 'true'
+  args = ["$rootDir/assets-raw", "$rootDir/assets/atlas", 'game']
+  onlyIf { file("$rootDir/assets-raw").isDirectory() }
+}
+
+jar {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
