@@ -52,15 +52,16 @@ class CollisionSystemTest {
         assertThat(commander.getComponent(Position.class).x).isLessThan(60f - OBSTACLE_RADIUS);
     }
 
+    /** How much a projectile takes off, and how many it takes, is {@code CombatTest}'s business. */
     @Test
-    void removesAnEnemyHitByAProjectile() {
+    void leavesAnEnemyStandingAfterASingleHit() {
         Simulation simulation = simulation();
         simulation.spawnEnemy(50f, 50f);
         simulation.spawnProjectile(49.5f, 50f, 1f, 0f);
 
         simulation.step();
 
-        assertThat(count(simulation, Enemy.class)).isZero();
+        assertThat(count(simulation, Enemy.class)).isEqualTo(1);
     }
 
     @Test

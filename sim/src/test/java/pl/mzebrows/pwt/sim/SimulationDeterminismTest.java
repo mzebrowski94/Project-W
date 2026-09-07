@@ -95,9 +95,9 @@ class SimulationDeterminismTest {
                 1f / 60f,
                 5,
                 new SimConfig.ArenaConfig(160f, 90f),
-                new SimConfig.CommanderConfig(2f, 28f),
-                new SimConfig.EnemyConfig(1.8f, 14f, 12),
-                new SimConfig.WeaponConfig(0.18f, 70f, 0.6f),
+                new SimConfig.CommanderConfig(2f, 28f, 100f, 3f, 6f, 2f),
+                new SimConfig.EnemyConfig(1.8f, 14f, 12, 100f, 100f, 1f, 0.6f),
+                new SimConfig.WeaponConfig(0.18f, 70f, 0.6f, 50f),
                 new SimConfig.ObstacleConfig(3.5f, 8),
                 new SimConfig.CollisionConfig(3));
     }

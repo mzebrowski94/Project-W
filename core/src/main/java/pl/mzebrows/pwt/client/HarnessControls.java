@@ -38,6 +38,9 @@ public final class HarnessControls {
         if (keys.justPressed(Input.Keys.F1)) {
             commands.add(HarnessCommand.TOGGLE_OVERLAY);
         }
+        if (keys.justPressed(Input.Keys.G)) {
+            commands.add(HarnessCommand.TOGGLE_GOD_MODE);
+        }
         return commands;
     }
 }

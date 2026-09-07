@@ -28,6 +28,7 @@ public final class ScenarioSession {
     private boolean paused;
     private boolean overlayVisible = true;
     private boolean leaving;
+    private boolean godMode;
 
     public ScenarioSession(Scenario scenario, SimConfig baseConfig) {
         this.scenario = scenario;
@@ -46,6 +47,7 @@ public final class ScenarioSession {
             case STEP -> stepOnce(input);
             case RESTART -> restart();
             case TOGGLE_OVERLAY -> overlayVisible = !overlayVisible;
+            case TOGGLE_GOD_MODE -> setGodMode(!godMode);
             case LEAVE -> leaving = true;
         }
     }
@@ -86,6 +88,11 @@ public final class ScenarioSession {
         return overlayVisible;
     }
 
+    /** Whether the commander is currently unkillable. Survives a restart, because a restart is not a fix. */
+    public boolean godMode() {
+        return godMode;
+    }
+
     /** True once the player has asked to go back to the menu. One-way. */
     public boolean leaving() {
         return leaving;
@@ -104,9 +111,16 @@ public final class ScenarioSession {
         paused = false;
     }
 
+    private void setGodMode(boolean enabled) {
+        godMode = enabled;
+        simulation.setCommanderInvulnerable(enabled);
+    }
+
+    /** Carries god mode into the new world; restarting to try something again should not silently undo it. */
     private Simulation newWorld() {
         Simulation world = new Simulation(scenario.configure(baseConfig));
         scenario.populate(world);
+        world.setCommanderInvulnerable(godMode);
         return world;
     }
 }

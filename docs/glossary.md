@@ -10,6 +10,8 @@ it. Terms marked *(source)* come from *Triumph! War 2099*.
 | **trooper** | One AI-controlled member of a squad. |
 | **level** *(source)* | One self-contained combat scenario, start to objective. |
 | **projectile** | A fired entity that travels and can hit something. Always simulated; there is no hitscan. |
+| **faction** | Which side an entity is on. Damage only ever crosses sides. Scenery is on nobody's. |
+| **recovery** | The window after a staggering hit during which a unit takes no further contact damage. |
 | **obstacle** | A static entity that blocks movement and projectiles. An entity like any other, not terrain data. |
 | **pickup** | A collectable that changes the player's state - weapon, health, reinforcement. |
 | **reinforcement** *(source)* | A pickup that adds troopers to the squad. |

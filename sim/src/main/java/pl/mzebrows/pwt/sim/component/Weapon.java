@@ -13,14 +13,20 @@ public final class Weapon implements Component, Pool.Poolable {
     public float remainingSeconds;
     public float projectileSpeed;
     public float projectileRadius;
+    public float damage;
 
     /** Sets the weapon ready to fire immediately, and returns this component, for fluent spawning. */
-    public Weapon set(float newCooldownSeconds, float newProjectileSpeed, float newProjectileRadius) {
+    public Weapon set(float newCooldownSeconds, float newProjectileSpeed, float newProjectileRadius, float newDamage) {
         this.cooldownSeconds = newCooldownSeconds;
         this.remainingSeconds = 0f;
         this.projectileSpeed = newProjectileSpeed;
         this.projectileRadius = newProjectileRadius;
+        this.damage = newDamage;
         return this;
+    }
+
+    public boolean ready() {
+        return remainingSeconds <= 0f;
     }
 
     @Override
@@ -29,5 +35,6 @@ public final class Weapon implements Component, Pool.Poolable {
         remainingSeconds = 0f;
         projectileSpeed = 0f;
         projectileRadius = 0f;
+        damage = 0f;
     }
 }

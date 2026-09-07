@@ -16,6 +16,8 @@ public enum HarnessCommand {
     RESTART,
     /** Show or hide the stats overlay. */
     TOGGLE_OVERLAY,
+    /** Make the commander invulnerable, or stop. A dev tool - see Invulnerable.permanent. */
+    TOGGLE_GOD_MODE,
     /** Leave for the menu. */
     LEAVE
 }

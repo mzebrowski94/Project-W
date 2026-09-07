@@ -39,21 +39,30 @@ public final class SimConfigLoader {
     private static SimConfig.CommanderConfig commander(GameProperties properties, SimConfig.CommanderConfig defaults) {
         return new SimConfig.CommanderConfig(
                 properties.getFloat("sim.commander.radius", defaults.radius()),
-                properties.getFloat("sim.commander.speed", defaults.speed()));
+                properties.getFloat("sim.commander.speed", defaults.speed()),
+                properties.getFloat("sim.commander.health", defaults.health()),
+                properties.getFloat("sim.commander.respawnDelaySeconds", defaults.respawnDelaySeconds()),
+                properties.getFloat("sim.commander.respawnMargin", defaults.respawnMargin()),
+                properties.getFloat("sim.commander.respawnInvulnerableSeconds", defaults.respawnInvulnerableSeconds()));
     }
 
     private static SimConfig.EnemyConfig enemy(GameProperties properties, SimConfig.EnemyConfig defaults) {
         return new SimConfig.EnemyConfig(
                 properties.getFloat("sim.enemy.radius", defaults.radius()),
                 properties.getFloat("sim.enemy.speed", defaults.speed()),
-                properties.getInt("sim.enemy.count", defaults.count()));
+                properties.getInt("sim.enemy.count", defaults.count()),
+                properties.getFloat("sim.enemy.health", defaults.health()),
+                properties.getFloat("sim.enemy.contactDamage", defaults.contactDamage()),
+                properties.getFloat("sim.enemy.attackCooldownSeconds", defaults.attackCooldownSeconds()),
+                properties.getFloat("sim.enemy.victimInvulnerableSeconds", defaults.victimInvulnerableSeconds()));
     }
 
     private static SimConfig.WeaponConfig weapon(GameProperties properties, SimConfig.WeaponConfig defaults) {
         return new SimConfig.WeaponConfig(
                 properties.getFloat("sim.weapon.cooldownSeconds", defaults.cooldownSeconds()),
                 properties.getFloat("sim.weapon.projectileSpeed", defaults.projectileSpeed()),
-                properties.getFloat("sim.weapon.projectileRadius", defaults.projectileRadius()));
+                properties.getFloat("sim.weapon.projectileRadius", defaults.projectileRadius()),
+                properties.getFloat("sim.weapon.damage", defaults.damage()));
     }
 
     private static SimConfig.CollisionConfig collision(GameProperties properties, SimConfig.CollisionConfig defaults) {

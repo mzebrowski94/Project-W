@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
@@ -18,18 +19,22 @@ import pl.mzebrows.pwt.sim.component.Projectile;
  * <p>Units are kept inside by the constraint solver; projectiles deliberately are not, because a
  * projectile that stops at the wall and sits there is worse than one that flies off and disappears.
  * This system is what stops that becoming a leak.
+ *
+ * <p>Marks rather than removes: only {@code ReaperSystem} takes an entity out of the world.
  */
 public final class ProjectileBoundsSystem extends EntitySystem {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
+    private final Spawner spawner;
     private final float width;
     private final float height;
 
     private ImmutableArray<Entity> projectiles = new ImmutableArray<>(new Array<>());
 
-    public ProjectileBoundsSystem(SimConfig.ArenaConfig arena) {
+    public ProjectileBoundsSystem(SimConfig.ArenaConfig arena, Spawner spawner) {
+        this.spawner = spawner;
         this.width = arena.width();
         this.height = arena.height();
     }
@@ -53,7 +58,7 @@ public final class ProjectileBoundsSystem extends EntitySystem {
                     || position.x - radius > width
                     || position.y + radius < 0f
                     || position.y - radius > height) {
-                getEngine().removeEntity(projectile);
+                spawner.markDead(projectile);
             }
         }
     }

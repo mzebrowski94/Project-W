@@ -6,13 +6,19 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
+import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
+import pl.mzebrows.pwt.sim.system.CooldownSystem;
+import pl.mzebrows.pwt.sim.system.DamageSystem;
 import pl.mzebrows.pwt.sim.system.EnemyChaseSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
 import pl.mzebrows.pwt.sim.system.PositionHistorySystem;
 import pl.mzebrows.pwt.sim.system.ProjectileBoundsSystem;
+import pl.mzebrows.pwt.sim.system.ReaperSystem;
+import pl.mzebrows.pwt.sim.system.RespawnSystem;
 
 /**
  * The whole game world and everything that happens in it.
@@ -23,13 +29,16 @@ import pl.mzebrows.pwt.sim.system.ProjectileBoundsSystem;
  * networking depend on.
  *
  * <p><strong>System order is behaviour.</strong> Positions are recorded for interpolation before
- * anything moves; intent becomes velocity; enemies aim at where the commander currently is;
- * everything moves; the constraint solver decides where things are actually allowed to be; and
- * projectiles that left the arena are cleaned up. Reordering these changes what the game does.
+ * anything moves; timers count down; intent becomes velocity; enemies aim at where the commander
+ * currently is; everything moves; the constraint solver decides where things may be and what touched
+ * what; damage owed becomes damage taken and anything out of health is marked dead; reactions run
+ * while the dead are still there to react to; and only then are they removed. Reordering these
+ * changes what the game does.
  */
 public final class Simulation {
 
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
+    private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
 
     private final SimConfig config;
     private final Rng rng;
@@ -38,6 +47,7 @@ public final class Simulation {
     private final ImmutableArray<Entity> commanders;
 
     private long tick;
+    private boolean commanderInvulnerable;
 
     public Simulation(SimConfig config) {
         this.config = config;
@@ -48,11 +58,15 @@ public final class Simulation {
                 engine.getEntitiesFor(Family.all(Commander.class, Intent.class).get());
 
         engine.addSystem(new PositionHistorySystem());
+        engine.addSystem(new CooldownSystem());
         engine.addSystem(new CommanderControlSystem(spawner));
         engine.addSystem(new EnemyChaseSystem());
         engine.addSystem(new MovementSystem());
-        engine.addSystem(new CollisionSystem(config));
-        engine.addSystem(new ProjectileBoundsSystem(config.arena()));
+        engine.addSystem(new CollisionSystem(config, spawner));
+        engine.addSystem(new DamageSystem(spawner));
+        engine.addSystem(new RespawnSystem(spawner));
+        engine.addSystem(new ProjectileBoundsSystem(config.arena(), spawner));
+        engine.addSystem(new ReaperSystem());
     }
 
     /** Advances the world by one fixed step with nothing driving the commander. */
@@ -66,7 +80,11 @@ public final class Simulation {
      */
     public void step(CommanderInput input) {
         for (int i = 0; i < commanders.size(); i++) {
-            INTENT.get(commanders.get(i)).set(input.moveX(), input.moveY(), input.aimX(), input.aimY(), input.firing());
+            Entity commander = commanders.get(i);
+            INTENT.get(commander).set(input.moveX(), input.moveY(), input.aimX(), input.aimY(), input.firing());
+            if (INVULNERABLE.has(commander)) {
+                INVULNERABLE.get(commander).permanent = commanderInvulnerable;
+            }
         }
         engine.update(config.tickSeconds());
         tick++;
@@ -87,11 +105,40 @@ public final class Simulation {
         return spawner.spawnObstacle(x, y);
     }
 
-    /** Spawns a projectile travelling along the given unit direction, at the configured speed. */
+    /** Spawns a projectile on the player's side, travelling along the given unit direction. */
     public Entity spawnProjectile(float x, float y, float directionX, float directionY) {
+        return spawnProjectile(x, y, directionX, directionY, Faction.Side.PLAYER);
+    }
+
+    /** Spawns a projectile on a given side, so a test can fire something that is not the player's. */
+    public Entity spawnProjectile(float x, float y, float directionX, float directionY, Faction.Side side) {
         SimConfig.WeaponConfig weapon = config.weapon();
         return spawner.spawnProjectile(
-                x, y, directionX, directionY, weapon.projectileSpeed(), weapon.projectileRadius());
+                x,
+                y,
+                directionX,
+                directionY,
+                weapon.projectileSpeed(),
+                weapon.projectileRadius(),
+                weapon.damage(),
+                side);
+    }
+
+    /**
+     * Turns the harness god-mode toggle on or off. Re-applied every tick, so it survives the commander
+     * dying and coming back.
+     *
+     * <p><strong>Harness only.</strong> Pillar 2 says the commander can be killed; this exists to be
+     * switched on by hand while testing a system, never by a scenario or a config file.
+     * {@code ArchitectureTest} fails the build if a scenario calls it.
+     */
+    public void setCommanderInvulnerable(boolean invulnerable) {
+        this.commanderInvulnerable = invulnerable;
+    }
+
+    /** Whether god mode is currently on, for the harness overlay. */
+    public boolean commanderInvulnerable() {
+        return commanderInvulnerable;
     }
 
     /** The entity engine; the client module reads it to draw the world. */

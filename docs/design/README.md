@@ -43,8 +43,11 @@ rows become enforceable once the named feature exists - promote them then.
 | Nothing ends a tick outside the arena. | enforced - `ArenaBoundsTest.neverLetsACrowdSqueezeAnythingOutOfTheArena` |
 | How an entity collides is data on a `Collider`, not a question about what it is. | judgement |
 | Obstacles and level geometry are ordinary entities with a `Position` and a `Body`. Collision has one path. | enforced - `SpawnerTest.makesAnObstacleAnOrdinaryEntityWithAPositionAndABody` |
-| The commander is an ordinary entity - killable, collidable, standing on the field. | deferred - needs health |
-| Losing the commander ends the level. | deferred - needs level lifecycle |
+| The commander is an ordinary entity - killable, collidable, standing on the field. | enforced - `CombatTest.killsTheCommanderTheMomentAnEnemyTouchesIt` |
+| The commander comes back while any trooper still lives. | deferred - needs squad; with no troopers it always comes back |
+| Only `ReaperSystem` removes an entity; anything that kills only marks it `Dead`. | enforced - `ArchitectureTest.onlyTheReaperRemovesEntities` |
+| Damage only ever crosses faction lines, never stays inside one. | enforced - `CombatTest.neverLetsEnemiesHurtEachOther` |
+| Invulnerability is reachable from the harness only, never from a scenario or config. | enforced - `ArchitectureTest.scenariosCannotSwitchOnGodMode` |
 | Troopers lost during a level stay lost for that level. | deferred - needs squad |
 | Squad size never exceeds its configured maximum. | deferred - needs squad |
 | Every projectile is a simulated entity with a `Position` and a `Body`. No hitscan. | enforced - `SpawnerTest.givesEveryProjectileAPositionAndABody` |

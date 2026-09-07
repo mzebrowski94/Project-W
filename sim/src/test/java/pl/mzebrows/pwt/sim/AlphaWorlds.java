@@ -37,6 +37,19 @@ public final class AlphaWorlds {
     public static final float PROJECTILE_RADIUS = 0.5f;
     public static final float OBSTACLE_RADIUS = 2f;
 
+    public static final float COMMANDER_HEALTH = 100f;
+    public static final float ENEMY_HEALTH = 100f;
+    public static final float WEAPON_DAMAGE = 50f;
+    public static final float ENEMY_CONTACT_DAMAGE = 100f;
+    public static final float ENEMY_ATTACK_COOLDOWN = 1f;
+    public static final float VICTIM_INVULNERABLE = 0.5f;
+
+    /** A second, not the shipped three - a test that waits three seconds of ticks is a slow test. */
+    public static final float RESPAWN_DELAY = 1f;
+
+    public static final float RESPAWN_MARGIN = 5f;
+    public static final float RESPAWN_INVULNERABLE = 0.5f;
+
     private AlphaWorlds() {}
 
     public static SimConfig config() {
@@ -45,15 +58,33 @@ public final class AlphaWorlds {
                 TICK,
                 5,
                 new SimConfig.ArenaConfig(ARENA, ARENA),
-                new SimConfig.CommanderConfig(COMMANDER_RADIUS, COMMANDER_SPEED),
-                new SimConfig.EnemyConfig(ENEMY_RADIUS, ENEMY_SPEED, 0),
-                new SimConfig.WeaponConfig(COOLDOWN, PROJECTILE_SPEED, PROJECTILE_RADIUS),
+                new SimConfig.CommanderConfig(
+                        COMMANDER_RADIUS,
+                        COMMANDER_SPEED,
+                        COMMANDER_HEALTH,
+                        RESPAWN_DELAY,
+                        RESPAWN_MARGIN,
+                        RESPAWN_INVULNERABLE),
+                new SimConfig.EnemyConfig(
+                        ENEMY_RADIUS,
+                        ENEMY_SPEED,
+                        0,
+                        ENEMY_HEALTH,
+                        ENEMY_CONTACT_DAMAGE,
+                        ENEMY_ATTACK_COOLDOWN,
+                        VICTIM_INVULNERABLE),
+                new SimConfig.WeaponConfig(COOLDOWN, PROJECTILE_SPEED, PROJECTILE_RADIUS, WEAPON_DAMAGE),
                 new SimConfig.ObstacleConfig(OBSTACLE_RADIUS, 0),
                 new SimConfig.CollisionConfig(3));
     }
 
     public static Simulation simulation() {
         return new Simulation(config());
+    }
+
+    /** How many ticks make up this many seconds, for tests that wait out a cooldown or a respawn. */
+    public static int ticksIn(float seconds) {
+        return Math.round(seconds / TICK);
     }
 
     public static int count(Simulation simulation, Class<? extends Component> marker) {

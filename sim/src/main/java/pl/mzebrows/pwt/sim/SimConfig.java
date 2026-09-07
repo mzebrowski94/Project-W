@@ -44,9 +44,9 @@ public record SimConfig(
                 1f / 60f,
                 5,
                 new ArenaConfig(160f, 90f),
-                new CommanderConfig(2f, 28f),
-                new EnemyConfig(1.8f, 14f, 12),
-                new WeaponConfig(0.18f, 70f, 0.6f),
+                new CommanderConfig(2f, 28f, 100f, 3f, 6f, 2f),
+                new EnemyConfig(1.8f, 14f, 12, 100f, 100f, 1f, 0.6f),
+                new WeaponConfig(0.18f, 70f, 0.6f, 50f),
                 new ObstacleConfig(3.5f, 8),
                 new CollisionConfig(3));
     }
@@ -124,11 +124,37 @@ public record SimConfig(
      *
      * @param radius its circular body, in world units
      * @param speed how fast it moves, in world units per second
+     * @param health damage it absorbs before dying
+     * @param respawnDelaySeconds how long after dying before it comes back
+     * @param respawnMargin how far in from the left edge of the arena it comes back, in world units
+     * @param respawnInvulnerableSeconds protection on arrival, so it does not die again immediately
      */
-    public record CommanderConfig(float radius, float speed) {
+    public record CommanderConfig(
+            float radius,
+            float speed,
+            float health,
+            float respawnDelaySeconds,
+            float respawnMargin,
+            float respawnInvulnerableSeconds) {
         public CommanderConfig {
             requirePositive("commander radius", radius);
             requirePositive("commander speed", speed);
+            requirePositive("commander health", health);
+            requireNotNegative("commander respawnDelaySeconds", respawnDelaySeconds);
+            requireNotNegative("commander respawnMargin", respawnMargin);
+            requireNotNegative("commander respawnInvulnerableSeconds", respawnInvulnerableSeconds);
+        }
+
+        /** How fast it moves, everything else unchanged. */
+        public CommanderConfig withSpeed(float newSpeed) {
+            return new CommanderConfig(
+                    radius, newSpeed, health, respawnDelaySeconds, respawnMargin, respawnInvulnerableSeconds);
+        }
+
+        /** How much it can take, everything else unchanged. */
+        public CommanderConfig withHealth(float newHealth) {
+            return new CommanderConfig(
+                    radius, speed, newHealth, respawnDelaySeconds, respawnMargin, respawnInvulnerableSeconds);
         }
     }
 
@@ -138,12 +164,40 @@ public record SimConfig(
      * @param radius circular body, in world units
      * @param speed world units per second; slower than the commander, or there is no escaping them
      * @param count how many the scenario spawns
+     * @param health damage one absorbs before dying
+     * @param contactDamage what it does to whatever it touches on the other side
+     * @param attackCooldownSeconds how long before it can strike again
+     * @param victimInvulnerableSeconds how long its victim is protected afterwards, so a crowd cannot
+     *     delete a unit in a single tick
      */
-    public record EnemyConfig(float radius, float speed, int count) {
+    public record EnemyConfig(
+            float radius,
+            float speed,
+            int count,
+            float health,
+            float contactDamage,
+            float attackCooldownSeconds,
+            float victimInvulnerableSeconds) {
         public EnemyConfig {
             requirePositive("enemy radius", radius);
             requirePositive("enemy speed", speed);
             requireNotNegative("enemy count", count);
+            requirePositive("enemy health", health);
+            requireNotNegative("enemy contactDamage", contactDamage);
+            requireNotNegative("enemy attackCooldownSeconds", attackCooldownSeconds);
+            requireNotNegative("enemy victimInvulnerableSeconds", victimInvulnerableSeconds);
+        }
+
+        /** How many to spawn, everything else unchanged. A scenario varying one field says only that. */
+        public EnemyConfig withCount(int newCount) {
+            return new EnemyConfig(
+                    radius, speed, newCount, health, contactDamage, attackCooldownSeconds, victimInvulnerableSeconds);
+        }
+
+        /** How hard one hits, everything else unchanged. */
+        public EnemyConfig withContactDamage(float newContactDamage) {
+            return new EnemyConfig(
+                    radius, speed, count, health, newContactDamage, attackCooldownSeconds, victimInvulnerableSeconds);
         }
     }
 
@@ -153,12 +207,14 @@ public record SimConfig(
      * @param cooldownSeconds minimum time between shots
      * @param projectileSpeed world units per second
      * @param projectileRadius circular body of a fired projectile
+     * @param damage what one projectile takes off what it hits
      */
-    public record WeaponConfig(float cooldownSeconds, float projectileSpeed, float projectileRadius) {
+    public record WeaponConfig(float cooldownSeconds, float projectileSpeed, float projectileRadius, float damage) {
         public WeaponConfig {
             requireNotNegative("weapon cooldownSeconds", cooldownSeconds);
             requirePositive("weapon projectileSpeed", projectileSpeed);
             requirePositive("weapon projectileRadius", projectileRadius);
+            requireNotNegative("weapon damage", damage);
         }
     }
 
@@ -172,6 +228,11 @@ public record SimConfig(
         public ObstacleConfig {
             requirePositive("obstacle radius", radius);
             requireNotNegative("obstacle count", count);
+        }
+
+        /** How many to scatter, radius unchanged. */
+        public ObstacleConfig withCount(int newCount) {
+            return new ObstacleConfig(radius, newCount);
         }
     }
 

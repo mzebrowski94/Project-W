@@ -75,6 +75,11 @@ beforehand. Conventions live in the `unit-tests` skill.
 
 **Ask before adding a dependency.** Every library is a decision, not an implementation detail.
 
+**Ask for delete permission in your first message of the session.** It resets every session, and
+without it Spotless cannot rewrite a file and nothing can be renamed or removed. Requesting it
+half-way through a task puts a prompt in front of Mateusz when he may have walked away, and the work
+stops until he comes back. Ask once, up front, whether or not you expect to need it.
+
 **Name friction when you hit it.** If something would be fixed by a change on Mateusz's side - a
 permission, an allowlist entry, an access grant, a setting - say so in one line at the moment you
 hit it, then carry on. Do not silently work around the same obstacle every session. Known ones are

@@ -7,6 +7,7 @@ import com.badlogic.ashley.systems.IteratingSystem;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Speed;
@@ -28,6 +29,7 @@ public final class CommanderControlSystem extends IteratingSystem {
     private static final ComponentMapper<Speed> SPEED = ComponentMapper.getFor(Speed.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
+    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
 
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
     private static final float EPSILON = 1e-4f;
@@ -45,7 +47,8 @@ public final class CommanderControlSystem extends IteratingSystem {
                         Velocity.class,
                         Speed.class,
                         Body.class,
-                        Weapon.class)
+                        Weapon.class,
+                        Faction.class)
                 .get());
         this.spawner = spawner;
     }
@@ -54,7 +57,7 @@ public final class CommanderControlSystem extends IteratingSystem {
     protected void processEntity(Entity entity, float deltaTime) {
         Intent intent = INTENT.get(entity);
         drive(entity, intent);
-        fire(entity, intent, deltaTime);
+        fire(entity, intent);
     }
 
     /**
@@ -73,12 +76,10 @@ public final class CommanderControlSystem extends IteratingSystem {
         velocity.set(intent.moveX * scale, intent.moveY * scale);
     }
 
-    private void fire(Entity entity, Intent intent, float deltaTime) {
+    /** The cooldown itself is counted down by {@code CooldownSystem}, before this runs. */
+    private void fire(Entity entity, Intent intent) {
         Weapon weapon = WEAPON.get(entity);
-        if (weapon.remainingSeconds > 0f) {
-            weapon.remainingSeconds -= deltaTime;
-        }
-        if (!intent.firing || weapon.remainingSeconds > 0f) {
+        if (!intent.firing || !weapon.ready()) {
             return;
         }
         Position position = POSITION.get(entity);
@@ -97,7 +98,9 @@ public final class CommanderControlSystem extends IteratingSystem {
                 directionX,
                 directionY,
                 weapon.projectileSpeed,
-                weapon.projectileRadius);
+                weapon.projectileRadius,
+                weapon.damage,
+                FACTION.get(entity).side);
         weapon.remainingSeconds = weapon.cooldownSeconds;
     }
 }

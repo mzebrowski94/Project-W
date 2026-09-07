@@ -28,9 +28,7 @@ final class CrowdScenario implements Scenario {
 
     @Override
     public SimConfig configure(SimConfig base) {
-        return base.with(new SimConfig.EnemyConfig(
-                        base.enemy().radius(), base.enemy().speed(), ENEMIES))
-                .with(new SimConfig.ObstacleConfig(base.obstacle().radius(), 0));
+        return base.with(base.enemy().withCount(ENEMIES)).with(base.obstacle().withCount(0));
     }
 
     @Override

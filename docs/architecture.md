@@ -31,6 +31,11 @@ system that changes world state.
   entity is. Systems still all live in `system/`; this package is the machinery they call.
 - `scenario/` - the arenas the menu can launch. `Scenarios` is the registry, and the list in it is
   the menu.
+
+Combat runs on four systems in a fixed order, and the order is the design: contact writes damage,
+`DamageSystem` turns it into lost health and marks the dead, reactions such as `RespawnSystem` run
+while the dead are still there to react to, and `ReaperSystem` removes them last. Nothing else in the
+simulation removes an entity - `ArchitectureTest` fails the build if it tries.
 - `component/` - pooled data. Public mutable fields, `reset()`, no behaviour.
 - `system/` - all behaviour. One system, one responsibility.
 

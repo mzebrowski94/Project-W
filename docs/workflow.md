@@ -62,11 +62,13 @@ Only things actually hit. Add what you hit; delete what stops happening.
 Named here so it is not re-discovered every session. Nothing here blocks work - each one is a cost
 we currently pay repeatedly.
 
-- **Delete permission resets every session** and cannot be made persistent from here. It is no
-  longer a blocker: `verify.sh` probes for it and, without it, compiles, lints and tests anyway,
-  reporting formatting instead of applying it. Approve it when you want Spotless to actually rewrite
-  files - which is the only thing in the whole build that deletes anything on `D:` (verified by
-  syscall trace, 2026-09-07).
+- **Delete permission resets every session** and cannot be made persistent from here. **Ask for it in
+  your first message**, not when you hit it - see `CLAUDE.md`. Mid-task is exactly when Mateusz is
+  least likely to be watching, and the task stalls on an unanswered prompt.
+  It is not a blocker for everything: `verify.sh` probes for it and, without it, compiles, lints and
+  tests anyway, reporting formatting instead of applying it. It *is* a hard blocker for renaming or
+  deleting a file. Spotless is the only thing in the whole build that deletes anything on `D:`
+  (verified by syscall trace, 2026-09-07).
 - **Computer-use access also lapses between sessions.** Re-approve when Claude needs to run or look
   at the game.
 - **The repository lives on `D:`, a Windows mount.** That costs the ~175x write penalty described

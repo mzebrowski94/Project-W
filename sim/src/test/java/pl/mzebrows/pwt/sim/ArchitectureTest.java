@@ -60,6 +60,27 @@ final class ArchitectureTest {
             .because("randomness must come from the seeded Rng so runs can be replayed");
 
     @ArchTest
+    static final ArchRule onlyTheReaperRemovesEntities = noClasses()
+            .that()
+            .doNotHaveSimpleName("ReaperSystem")
+            .should()
+            .callMethod(com.badlogic.ashley.core.Engine.class, "removeEntity", com.badlogic.ashley.core.Entity.class)
+            .orShould()
+            .callMethod(
+                    com.badlogic.ashley.core.PooledEngine.class, "removeEntity", com.badlogic.ashley.core.Entity.class)
+            .because("the gap between being marked dead and being reaped is where every death reaction runs;"
+                    + " an entity that vanishes mid-tick takes its own funeral with it - mark it Dead instead");
+
+    @ArchTest
+    static final ArchRule scenariosCannotSwitchOnGodMode = noClasses()
+            .that()
+            .resideInAPackage("pl.mzebrows.pwt.sim.scenario..")
+            .should()
+            .callMethod(pl.mzebrows.pwt.sim.Simulation.class, "setCommanderInvulnerable", boolean.class)
+            .because("god mode is a harness switch for testing by hand; pillar 2 says the commander can be"
+                    + " killed, and content that turns that off would quietly repeal it");
+
+    @ArchTest
     static final ArchRule simulationDoesNotUseNonReproducibleMath = noClasses()
             .should()
             .callMethod(Math.class, "sin", double.class)

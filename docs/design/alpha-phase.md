@@ -54,6 +54,7 @@ Dev controls, available in any scenario. **These are not game bindings** - the r
 | `P` | Pause and unpause |
 | `.` | Advance exactly one tick, while paused |
 | `R` | Restart the scenario from its first tick |
+| `G` | Make the commander invulnerable, or stop. A dev tool - pillar 2 says he can be killed |
 | `F1` | Toggle the stats overlay |
 | `Esc` | Back to the scenario menu |
 
@@ -74,9 +75,9 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 
 | Scaffolding | Replaced by |
 |---|---|
-| A projectile removes the enemy it hits | Health and damage. Nothing should be balanced around one-shot kills until then. |
-| Enemies do nothing on contact | Damage. There is currently no way to be harmed. |
+| The commander always respawns | The source game's rule - respawn only while a trooper lives. Needs the squad. |
 | Enemies walk straight at the commander and bump into obstacles | Whatever pathing the squad work needs, if any. |
+| Nothing reacts to a death except respawning | More death reactions, as they are designed. The machinery is there: mark `Dead`, add a component, add a small system. |
 | `Placement` silently places fewer circles than asked when the arena is full | A real level format, which must report the shortfall instead of swallowing it. |
 
 ## Known limits, accepted on purpose

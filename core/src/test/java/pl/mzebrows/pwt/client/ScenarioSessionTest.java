@@ -100,6 +100,46 @@ class ScenarioSessionTest {
     }
 
     @Test
+    void startsWithGodModeOff() {
+        ScenarioSession session = session();
+
+        assertThat(session.godMode()).isFalse();
+        assertThat(session.simulation().commanderInvulnerable()).isFalse();
+    }
+
+    @Test
+    void makesTheCommanderUnkillableWhenGodModeIsSwitchedOn() {
+        ScenarioSession session = session();
+
+        session.apply(HarnessCommand.TOGGLE_GOD_MODE, IDLE);
+
+        assertThat(session.godMode()).isTrue();
+        assertThat(session.simulation().commanderInvulnerable()).isTrue();
+    }
+
+    @Test
+    void switchesGodModeBackOff() {
+        ScenarioSession session = session();
+
+        session.apply(HarnessCommand.TOGGLE_GOD_MODE, IDLE);
+        session.apply(HarnessCommand.TOGGLE_GOD_MODE, IDLE);
+
+        assertThat(session.simulation().commanderInvulnerable()).isFalse();
+    }
+
+    /** Restarting to try the same thing again should not quietly turn the safety off. */
+    @Test
+    void carriesGodModeIntoARestartedWorld() {
+        ScenarioSession session = session();
+        session.apply(HarnessCommand.TOGGLE_GOD_MODE, IDLE);
+
+        session.apply(HarnessCommand.RESTART, IDLE);
+
+        assertThat(session.godMode()).isTrue();
+        assertThat(session.simulation().commanderInvulnerable()).isTrue();
+    }
+
+    @Test
     void isNotLeavingUntilAskedTo() {
         assertThat(session().leaving()).isFalse();
     }
@@ -178,7 +218,7 @@ class ScenarioSessionTest {
 
         @Override
         public SimConfig configure(SimConfig base) {
-            return base.with(new SimConfig.CommanderConfig(base.commander().radius(), SPEED));
+            return base.with(base.commander().withSpeed(SPEED));
         }
 
         @Override
