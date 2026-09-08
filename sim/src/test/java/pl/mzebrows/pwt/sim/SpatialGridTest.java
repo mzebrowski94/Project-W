@@ -6,6 +6,7 @@ import com.badlogic.ashley.core.Entity;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.collision.SpatialGrid;
 
 /**
  * The grid is a broad phase: it reports pairs close enough to be <em>worth</em> testing, not pairs

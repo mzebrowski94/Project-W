@@ -27,7 +27,7 @@ class PositionHistorySystemTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        simulation.step(new CommanderInput(1f, 0f, 0f, 0f, false));
+        simulation.step(new CommanderInput(1f, 0f, 0f, 0f, false, false));
 
         PreviousPosition previous = commander.getComponent(PreviousPosition.class);
         assertThat(previous.x).isCloseTo(50f, TOLERANCE);
@@ -38,7 +38,7 @@ class PositionHistorySystemTest {
     void movesTheHistoryForwardEveryTick() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
-        CommanderInput walking = new CommanderInput(1f, 0f, 0f, 0f, false);
+        CommanderInput walking = new CommanderInput(1f, 0f, 0f, 0f, false, false);
 
         simulation.step(walking);
         simulation.step(walking);

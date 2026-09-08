@@ -14,14 +14,20 @@ package pl.mzebrows.pwt.sim;
  * @param aimX world x the commander is aiming at
  * @param aimY world y the commander is aiming at
  * @param firing whether the fire input is held this tick
+ * @param striking whether the melee input is held this tick
  */
-public record CommanderInput(float moveX, float moveY, float aimX, float aimY, boolean firing) {
+public record CommanderInput(float moveX, float moveY, float aimX, float aimY, boolean firing, boolean striking) {
 
-    /** No movement, no firing. What a simulation steps with when nothing is driving it. */
-    public static final CommanderInput IDLE = new CommanderInput(0f, 0f, 0f, 0f, false);
+    /** No movement, no firing, no swinging. What a simulation steps with when nothing is driving it. */
+    public static final CommanderInput IDLE = new CommanderInput(0f, 0f, 0f, 0f, false, false);
 
     /** The same input with the fire button released - convenient in tests. */
     public CommanderInput notFiring() {
-        return new CommanderInput(moveX, moveY, aimX, aimY, false);
+        return new CommanderInput(moveX, moveY, aimX, aimY, false, striking);
+    }
+
+    /** The same input with the melee button held - convenient in tests. */
+    public CommanderInput swinging() {
+        return new CommanderInput(moveX, moveY, aimX, aimY, firing, true);
     }
 }

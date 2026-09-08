@@ -6,6 +6,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_ATTACK_COOLDOWN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.WEAPON_DAMAGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
@@ -14,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
@@ -48,7 +49,7 @@ class CombatTest {
         hit(simulation, enemy);
         hit(simulation, enemy);
 
-        assertThat(count(simulation, Enemy.class)).isZero();
+        assertThat(countLiving(simulation, Enemy.class)).isZero();
     }
 
     @Test
@@ -84,15 +85,20 @@ class CombatTest {
         assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH - WEAPON_DAMAGE);
     }
 
+    /**
+     * The killing is instant; only the removal waits. The body lying on the field for its throes is
+     * the dying animation's window and not a reprieve - it is out of health and cannot act again.
+     */
     @Test
     void killsTheCommanderTheMomentAnEnemyTouchesIt() {
         Simulation simulation = simulation();
-        simulation.spawnCommander(50f, 50f);
+        Entity commander = simulation.spawnCommander(50f, 50f);
         simulation.spawnEnemy(50f, 50f);
 
         simulation.step();
 
-        assertThat(count(simulation, Commander.class)).isZero();
+        assertThat(commander.getComponent(Health.class).current).isLessThanOrEqualTo(0f);
+        assertThat(commander.getComponent(Dying.class).begun).isTrue();
     }
 
     @Test

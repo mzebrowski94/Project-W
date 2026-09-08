@@ -41,7 +41,7 @@ class ArenaBoundsTest {
         Entity commander = simulation.spawnCommander(2f, 50f);
 
         for (int i = 0; i < 60; i++) {
-            simulation.step(new CommanderInput(-1f, 0f, 0f, 0f, false));
+            simulation.step(new CommanderInput(-1f, 0f, 0f, 0f, false, false));
         }
 
         assertThat(commander.getComponent(Position.class).x).isGreaterThanOrEqualTo(COMMANDER_RADIUS - TOLERANCE);
@@ -53,7 +53,7 @@ class ArenaBoundsTest {
         Entity commander = simulation.spawnCommander(ARENA - 2f, 50f);
 
         for (int i = 0; i < 60; i++) {
-            simulation.step(new CommanderInput(1f, 0f, 0f, 0f, false));
+            simulation.step(new CommanderInput(1f, 0f, 0f, 0f, false, false));
         }
 
         assertThat(commander.getComponent(Position.class).x).isLessThanOrEqualTo(ARENA - COMMANDER_RADIUS + TOLERANCE);
@@ -71,7 +71,7 @@ class ArenaBoundsTest {
         Entity commander = simulation.spawnCommander(20f, 20f);
 
         for (int i = 0; i < 240; i++) {
-            simulation.step(new CommanderInput(-1f, -1f, 0f, 0f, false));
+            simulation.step(new CommanderInput(-1f, -1f, 0f, 0f, false, false));
         }
 
         Position position = commander.getComponent(Position.class);
@@ -100,7 +100,7 @@ class ArenaBoundsTest {
         }
 
         for (int i = 0; i < 240; i++) {
-            simulation.step(new CommanderInput(-1f, 0f, 0f, 0f, false));
+            simulation.step(new CommanderInput(-1f, 0f, 0f, 0f, false, false));
         }
 
         SoftAssertions.assertSoftly(soft -> {

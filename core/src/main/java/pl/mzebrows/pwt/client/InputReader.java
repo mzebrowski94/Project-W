@@ -14,6 +14,10 @@ import pl.mzebrows.pwt.sim.CommanderInput;
  *
  * <p>Movement and aim are read independently (G0002): the mouse decides where the commander points
  * and the keys decide where it walks, and neither is derived from the other.
+ *
+ * <p>Both mouse buttons are read as held rather than as pressed. The simulation rate-limits what they
+ * do - a weapon cooldown, a melee cooldown - so a button that repeats is the simulation's decision to
+ * make and not this class's.
  */
 @RequiredArgsConstructor
 public final class InputReader {
@@ -32,7 +36,8 @@ public final class InputReader {
         viewport.unproject(pointer);
 
         boolean firing = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
-        return new CommanderInput(moveX, moveY, pointer.x, pointer.y, firing);
+        boolean striking = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
+        return new CommanderInput(moveX, moveY, pointer.x, pointer.y, firing, striking);
     }
 
     private static float axis(int positive, int positiveAlias, int negative, int negativeAlias) {

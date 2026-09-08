@@ -4,12 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Brute;
 import pl.mzebrows.pwt.sim.component.Collider;
+import pl.mzebrows.pwt.sim.component.Enemy;
+import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Strike;
 
 /**
  * Enforces the composition invariants in {@code docs/design/README.md}: everything that can be hit
@@ -26,6 +31,38 @@ class SpawnerTest {
 
         assertThat(projectile.getComponent(Position.class)).isNotNull();
         assertThat(projectile.getComponent(Body.class)).isNotNull();
+    }
+
+    /**
+     * The melee half of the no-hitscan rule (G0005). A swing is a body in the world like anything else,
+     * so collision has one path and the player can see what is about to hit him.
+     */
+    @Test
+    void givesEveryStrikeAPositionAndABodySoThereIsNoMeleeHitscan() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(10f, 10f);
+
+        simulation.step(new CommanderInput(0f, 0f, 20f, 10f, false, true));
+
+        Entity strike = simulation
+                .engine()
+                .getEntitiesFor(Family.all(Strike.class).get())
+                .first();
+        assertThat(strike.getComponent(Position.class)).isNotNull();
+        assertThat(strike.getComponent(Body.class)).isNotNull();
+        assertThat(strike.getComponent(Strike.class).owner).isSameAs(commander);
+    }
+
+    @Test
+    void givesABruteEverythingAnEnemyHasSoNothingHasToTellThemApart() {
+        Simulation simulation = simulation();
+
+        Entity brute = simulation.spawnBrute(20f, 20f);
+
+        assertThat(brute.getComponent(Enemy.class)).isNotNull();
+        assertThat(brute.getComponent(Brute.class)).isNotNull();
+        assertThat(brute.getComponent(Body.class)).isNotNull();
+        assertThat(brute.getComponent(Leap.class)).isNotNull();
     }
 
     @Test

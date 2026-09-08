@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.system;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 
 import com.badlogic.ashley.core.Entity;
@@ -64,7 +65,7 @@ class DamageSystemTest {
         owe(enemy, ENEMY_HEALTH);
         simulation.step();
 
-        assertThat(count(simulation, Enemy.class)).isZero();
+        assertThat(countLiving(simulation, Enemy.class)).isZero();
     }
 
     @Test

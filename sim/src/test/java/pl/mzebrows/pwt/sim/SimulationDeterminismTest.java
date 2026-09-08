@@ -82,24 +82,22 @@ class SimulationDeterminismTest {
         return snapshot(simulation);
     }
 
-    /** A commander walking in a circle and firing most ticks - enough to exercise every system. */
+    /**
+     * A commander walking in a circle, firing most ticks and swinging every so often - enough to
+     * exercise every system, the seeded wind-up before a leap among them.
+     */
     private static CommanderInput scriptedInput(int step) {
         double angle = step * 0.05;
         return new CommanderInput(
-                (float) StrictMath.cos(angle), (float) StrictMath.sin(angle), 80f, 45f, step % 7 != 0);
+                (float) StrictMath.cos(angle), (float) StrictMath.sin(angle), 80f, 45f, step % 7 != 0, step % 11 == 0);
     }
 
+    /**
+     * The shipped numbers, seeded for the replay. Restating them here as a literal would mean this
+     * test stopped covering what the game actually runs the first time one of them changed.
+     */
     private static SimConfig configSeeded(long seed) {
-        return new SimConfig(
-                seed,
-                1f / 60f,
-                5,
-                new SimConfig.ArenaConfig(160f, 90f),
-                new SimConfig.CommanderConfig(2f, 28f, 100f, 3f, 6f, 2f),
-                new SimConfig.EnemyConfig(1.8f, 14f, 12, 100f, 100f, 1f, 0.6f),
-                new SimConfig.WeaponConfig(0.18f, 70f, 0.6f, 50f),
-                new SimConfig.ObstacleConfig(3.5f, 8),
-                new SimConfig.CollisionConfig(3));
+        return SimConfig.defaults().withSeed(seed);
     }
 
     private static float[] snapshot(Simulation simulation) {

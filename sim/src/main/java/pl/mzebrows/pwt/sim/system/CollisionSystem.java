@@ -7,6 +7,7 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.collision.ConstraintSolver;
@@ -18,6 +19,9 @@ import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Strike;
+import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.component.Velocity;
 
 /**
  * Runs the constraint solver, then decides what this tick's contacts mean.
@@ -28,8 +32,13 @@ import pl.mzebrows.pwt.sim.component.Projectile;
  * <p>There is one rule for every contact, and it is about sides rather than about kinds. Nothing
  * happens between two entities on the same side, which is what stops a commander shooting itself and
  * enemies eating each other with no special case for either. Across sides, whoever carries a
- * {@link ContactDamage} that is off cooldown lands a hit - claws and bullets alike, differing only in
- * their numbers.
+ * {@link ContactDamage} that is off cooldown lands a hit - claws, bullets and a swung fist alike,
+ * differing only in their numbers.
+ *
+ * <p>A blow that carries a lock holds <em>both</em> parties still and throws whatever survives it.
+ * That one rule covers both halves of the melee exchange: an enemy that reaches the commander is
+ * committed to the kill for three seconds, and a sweep that answers a leap costs the commander a
+ * shorter opening of his own. The asymmetry is entirely in the numbers.
  *
  * <p>It never subtracts health and never removes anything. A hit adds to the target's {@link Damage},
  * and a spent projectile is marked dead; what those mean is decided later in the tick, by systems
@@ -42,6 +51,13 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<ContactDamage> CONTACT_DAMAGE = ComponentMapper.getFor(ContactDamage.class);
     private static final ComponentMapper<Damage> DAMAGE = ComponentMapper.getFor(Damage.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
+    private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
+    private static final ComponentMapper<Strike> STRIKE = ComponentMapper.getFor(Strike.class);
+    private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
+
+    /** Below this two bodies are on top of each other and give no direction to be thrown along. */
+    private static final float EPSILON = 1e-4f;
 
     private final ConstraintSolver solver;
     private final Spawner spawner;
@@ -107,6 +123,11 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (!CONTACT_DAMAGE.has(attacker) || !DAMAGE.has(target)) {
             return;
         }
+        if (held(attacker) || held(owner(attacker))) {
+            // Something already landed on this attacker; it is not swinging at anything until it
+            // comes round. Its cooldown is not spent either - it never got the blow off.
+            return;
+        }
         ContactDamage attack = CONTACT_DAMAGE.get(attacker);
         if (!attack.ready()) {
             return;
@@ -123,5 +144,66 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         owed.add(attack.amount, attack.victimInvulnerableSeconds);
+        lock(attacker, target, attack, owed);
+    }
+
+    /**
+     * Holds both parties still, and throws the target away from whoever swung.
+     *
+     * <p>Both halves resolve to the swing's owner where there is one. For the lock that is because a
+     * sweep is gone in a tenth of a second and it is the commander who has to live with the opening it
+     * costs him. For the throw it is because a sweep can be on the <em>far</em> side of what it hits -
+     * it travels an arc - and pushing away from the sweep would then shove the target into the
+     * commander's face, which is the exact opposite of what a parry is for.
+     *
+     * <p>Both of those are recorded rather than applied, because both depend on whether the target
+     * survives and nothing here has touched its health yet - {@code DamageSystem} decides. A blow that
+     * kills throws nothing and locks its author: the body stops where it was struck and the two of them
+     * are tangled together for a beat. A blow that is survived throws its target and locks nobody: the
+     * commander has shoved something away, which is not the same as being caught up with it, and he
+     * keeps fighting.
+     */
+    private static void lock(Entity attacker, Entity target, ContactDamage attack, Damage owed) {
+        if (!attack.locks()) {
+            return;
+        }
+        Entity owner = owner(attacker);
+        Entity source = owner == null ? attacker : owner;
+        hold(target, attack);
+        owed.lockOnDeath(source, attack.lockSeconds, attack.knockbackDecay);
+        throwBack(source, target, attack, owed);
+    }
+
+    private static void hold(@Nullable Entity entity, ContactDamage attack) {
+        if (entity != null && STUNNED.has(entity)) {
+            STUNNED.get(entity).apply(attack.lockSeconds, attack.knockbackDecay);
+        }
+    }
+
+    private static void throwBack(Entity source, Entity target, ContactDamage attack, Damage owed) {
+        if (attack.knockbackSpeed <= 0f || !VELOCITY.has(target) || !POSITION.has(source) || !POSITION.has(target)) {
+            return;
+        }
+        Position from = POSITION.get(source);
+        Position to = POSITION.get(target);
+        float awayX = to.x - from.x;
+        float awayY = to.y - from.y;
+        float distance = (float) Math.sqrt(awayX * awayX + awayY * awayY);
+        if (distance <= EPSILON) {
+            return;
+        }
+        owed.push(awayX / distance, awayY / distance, attack.knockbackSpeed);
+    }
+
+    /** The entity that swung this, where the attacker is a swing rather than a unit. */
+    private static @Nullable Entity owner(@Nullable Entity attacker) {
+        if (attacker == null || !STRIKE.has(attacker)) {
+            return null;
+        }
+        return STRIKE.get(attacker).owner;
+    }
+
+    private static boolean held(@Nullable Entity entity) {
+        return entity != null && STUNNED.has(entity) && STUNNED.get(entity).active();
     }
 }

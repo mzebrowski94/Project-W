@@ -1,7 +1,7 @@
 # The alpha phase
 
 The POC proved the loop turns: a commander moves, shoots, and collides. This phase builds the
-systems the game will actually run on, one per session, designed to be built on rather than unpicked.
+systems the game will actually run on, designed to be built on rather than unpicked.
 
 Two rules separate it from the POC:
 
@@ -12,7 +12,11 @@ Two rules separate it from the POC:
 
 ## How a session goes
 
-One system per session. The system is the deliverable; a scenario is optional and comes second.
+The system is the deliverable; a scenario is optional and comes second. A session may carry as many
+systems as the change genuinely needs - mechanics that only make sense against each other, like a
+leap and the strike that answers it, are worth building together, because half of that pair cannot be
+judged by feel on its own. Split the work into stages that each stand up on their own and can be
+stopped after, rather than splitting it across sessions by count.
 
 1. **Design it** - the `feature` skill. Check it against the invariants in `README.md`, ask rather
    than invent, and write down whatever it settles.
@@ -76,8 +80,10 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | Scaffolding | Replaced by |
 |---|---|
 | The commander always respawns | The source game's rule - respawn only while a trooper lives. Needs the squad. |
-| Enemies walk straight at the commander and bump into obstacles | Whatever pathing the squad work needs, if any. |
-| Nothing reacts to a death except respawning | More death reactions, as they are designed. The machinery is there: mark `Dead`, add a component, add a small system. |
+| Enemies walk straight at the commander and bump into obstacles, then leap the last of the gap | Whatever pathing the squad work needs, if any. The leap is designed; the walking under it is not. |
+| A body in its death throes is a frozen circle in a darker colour | The dying animation. The window is real and configured per unit kind (`*.deathThroesSeconds`); only what plays in it is missing. |
+| Two units in a clinch are two circles touching, both drawn the same | The grapple animation, which resolves into one of them dying. `Appearance.State.GRAPPLING` is the hook and is already published for both parties for the whole lock. |
+| Nothing reacts to a death except respawning and the killer's lock | More death reactions, as they are designed. The machinery is there: mark `Dead`, add a component, add a small system. |
 | `Placement` silently places fewer circles than asked when the arena is full | A real level format, which must report the shortfall instead of swallowing it. |
 
 ## Known limits, accepted on purpose

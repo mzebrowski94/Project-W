@@ -3,10 +3,12 @@ package pl.mzebrows.pwt.sim.system;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_MARGIN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
@@ -22,16 +24,23 @@ import pl.mzebrows.pwt.sim.component.Position;
 /**
  * Dying and coming back. The commander is genuinely removed in between - no half-alive state that
  * every other family would then have to exclude - and a ticket entity holds the countdown for it.
+ *
+ * <p>A killing blow no longer removes the body at once: it lies where it fell for its death throes
+ * first, and only then does the respawn countdown start. The two waits are sequential, not
+ * concurrent, so everything here measures from the blow to the return.
  */
 class RespawnSystemTest {
 
+    /** From the killing blow to being back on his feet: the body lingers, and then he is away. */
+    private static final float RETURN_DELAY = DEATH_THROES + RESPAWN_DELAY;
+
     @Test
-    void takesTheCommanderOffTheFieldWhenItDies() {
+    void takesTheCommanderOffTheFieldOnceItHasFinishedDying() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
         kill(commander);
-        simulation.step();
+        steps(simulation, ticksIn(DEATH_THROES) + 2);
 
         assertThat(count(simulation, Commander.class)).isZero();
     }
@@ -41,9 +50,7 @@ class RespawnSystemTest {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(50f, 50f));
 
-        for (int i = 0; i < ticksIn(RESPAWN_DELAY) - 2; i++) {
-            simulation.step();
-        }
+        steps(simulation, ticksIn(RETURN_DELAY) - 2);
 
         assertThat(count(simulation, Commander.class)).isZero();
     }
@@ -53,9 +60,7 @@ class RespawnSystemTest {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(50f, 50f));
 
-        for (int i = 0; i < ticksIn(RESPAWN_DELAY) + 2; i++) {
-            simulation.step();
-        }
+        steps(simulation, ticksIn(RETURN_DELAY) + 2);
 
         assertThat(count(simulation, Commander.class)).isEqualTo(1);
     }
@@ -65,9 +70,7 @@ class RespawnSystemTest {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(90f, 90f));
 
-        for (int i = 0; i < ticksIn(RESPAWN_DELAY) + 2; i++) {
-            simulation.step();
-        }
+        steps(simulation, ticksIn(RETURN_DELAY) + 2);
 
         Position position = commander(simulation).getComponent(Position.class);
         assertThat(position.x).isEqualTo(RESPAWN_MARGIN);
@@ -79,9 +82,7 @@ class RespawnSystemTest {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(50f, 50f));
 
-        for (int i = 0; i < ticksIn(RESPAWN_DELAY) + 2; i++) {
-            simulation.step();
-        }
+        steps(simulation, ticksIn(RETURN_DELAY) + 2);
 
         assertThat(commander(simulation).getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH);
     }
@@ -92,9 +93,7 @@ class RespawnSystemTest {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(50f, 50f));
 
-        for (int i = 0; i < ticksIn(RESPAWN_DELAY) + 2; i++) {
-            simulation.step();
-        }
+        steps(simulation, ticksIn(RETURN_DELAY) + 2);
 
         assertThat(commander(simulation).getComponent(Invulnerable.class).active())
                 .isTrue();
@@ -106,9 +105,7 @@ class RespawnSystemTest {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(50f, 50f));
 
-        for (int i = 0; i < ticksIn(RESPAWN_DELAY) + 4; i++) {
-            simulation.step();
-        }
+        steps(simulation, ticksIn(RETURN_DELAY) + 4);
 
         assertThat(simulation.engine().getEntities().size()).isEqualTo(1);
     }
@@ -117,14 +114,10 @@ class RespawnSystemTest {
     void bringsItBackAgainEveryTimeItDies() {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(50f, 50f));
-        for (int i = 0; i < ticksIn(RESPAWN_DELAY) + 2; i++) {
-            simulation.step();
-        }
+        steps(simulation, ticksIn(RETURN_DELAY) + 2);
 
         kill(commander(simulation));
-        for (int i = 0; i < ticksIn(RESPAWN_DELAY) + 2; i++) {
-            simulation.step();
-        }
+        steps(simulation, ticksIn(RETURN_DELAY) + 2);
 
         assertThat(count(simulation, Commander.class)).isEqualTo(1);
     }

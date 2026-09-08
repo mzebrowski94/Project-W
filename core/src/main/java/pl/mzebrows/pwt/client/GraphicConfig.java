@@ -14,6 +14,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
  * @param vsync whether to wait for vertical sync
  * @param backgroundColor colour the frame is cleared to
  * @param palette placeholder colour per entity look, until sprites exist
+ * @param stateTint how far to shift that colour for what the entity is currently doing
  */
 public record GraphicConfig(
         float virtualWidth,
@@ -22,7 +23,8 @@ public record GraphicConfig(
         int windowHeight,
         boolean vsync,
         Color backgroundColor,
-        Palette palette) {
+        Palette palette,
+        StateTint stateTint) {
 
     private static final String FILE = "graphic.properties";
 
@@ -45,16 +47,28 @@ public record GraphicConfig(
                 properties.getInt("graphic.windowHeight", 720),
                 properties.getBoolean("graphic.vsync", true),
                 color(properties, "graphic.backgroundColor", "101018ff"),
-                palette(properties));
+                palette(properties),
+                stateTint(properties));
     }
 
     private static Palette palette(GameProperties properties) {
         return new Palette(
                 color(properties, "graphic.color.commander", "6ee7ffff"),
                 color(properties, "graphic.color.enemy", "ff5d5dff"),
+                color(properties, "graphic.color.brute", "b53a5aff"),
                 color(properties, "graphic.color.projectile", "ffe066ff"),
+                color(properties, "graphic.color.strike", "ffffffff"),
                 color(properties, "graphic.color.obstacle", "4a4a5eff"),
                 color(properties, "graphic.color.unknown", "ff00ffff"));
+    }
+
+    private static StateTint stateTint(GameProperties properties) {
+        return new StateTint(
+                properties.getFloat("graphic.state.windingUp", 0.85f),
+                properties.getFloat("graphic.state.airborne", 0.5f),
+                properties.getFloat("graphic.state.grappling", -0.3f),
+                properties.getFloat("graphic.state.staggered", 0.35f),
+                properties.getFloat("graphic.state.dying", -0.7f));
     }
 
     /** Falls back to the given hex when the configured value is missing or not a colour. */

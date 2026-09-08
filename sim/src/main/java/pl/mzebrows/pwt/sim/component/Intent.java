@@ -20,13 +20,18 @@ public final class Intent implements Component, Pool.Poolable {
     public float aimY;
     public boolean firing;
 
+    /** Whether the melee input is held this tick. The swing itself is rate-limited by {@link Melee}. */
+    public boolean striking;
+
     /** Copies a tick's worth of intent in, and returns this component, for fluent spawning. */
-    public Intent set(float newMoveX, float newMoveY, float newAimX, float newAimY, boolean newFiring) {
+    public Intent set(
+            float newMoveX, float newMoveY, float newAimX, float newAimY, boolean newFiring, boolean newStriking) {
         this.moveX = newMoveX;
         this.moveY = newMoveY;
         this.aimX = newAimX;
         this.aimY = newAimY;
         this.firing = newFiring;
+        this.striking = newStriking;
         return this;
     }
 
@@ -37,5 +42,6 @@ public final class Intent implements Component, Pool.Poolable {
         aimX = 0f;
         aimY = 0f;
         firing = false;
+        striking = false;
     }
 }

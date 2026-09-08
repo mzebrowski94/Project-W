@@ -9,6 +9,7 @@ and structural choices. Same format, same discipline, different subject.
 | [G0002](G0002-aim-is-independent-of-movement.md) | Aim is independent of movement. | accepted |
 | [G0003](G0003-the-renderer-reads-a-component.md) | The renderer reads a component; it never asks what an entity is. | accepted |
 | [G0004](G0004-no-event-bus.md) | No event bus - reactions are components, feedback is a spawned entity. | accepted |
+| [G0005](G0005-the-strike-is-an-entity.md) | A melee strike is an entity, not an overlap query. | accepted |
 
 ## When to write one
 

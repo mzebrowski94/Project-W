@@ -25,7 +25,7 @@ class CommanderControlSystemTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        simulation.step(new CommanderInput(1f, 0f, 0f, 0f, false));
+        simulation.step(new CommanderInput(1f, 0f, 0f, 0f, false, false));
 
         Position position = commander.getComponent(Position.class);
         assertThat(position.x).isCloseTo(50f + COMMANDER_SPEED * TICK, TOLERANCE);
@@ -39,8 +39,8 @@ class CommanderControlSystemTest {
         Simulation diagonal = simulation();
         Entity diagonalCommander = diagonal.spawnCommander(50f, 50f);
 
-        straight.step(new CommanderInput(1f, 0f, 0f, 0f, false));
-        diagonal.step(new CommanderInput(1f, 1f, 0f, 0f, false));
+        straight.step(new CommanderInput(1f, 0f, 0f, 0f, false, false));
+        diagonal.step(new CommanderInput(1f, 1f, 0f, 0f, false, false));
 
         assertThat(travelled(diagonalCommander)).isCloseTo(travelled(straightCommander), TOLERANCE);
     }
@@ -50,7 +50,7 @@ class CommanderControlSystemTest {
         Simulation simulation = simulation();
         simulation.spawnCommander(50f, 50f);
 
-        simulation.step(new CommanderInput(0f, 0f, 60f, 50f, true));
+        simulation.step(new CommanderInput(0f, 0f, 60f, 50f, true, false));
 
         assertThat(count(simulation, Projectile.class)).isEqualTo(1);
     }
@@ -60,7 +60,7 @@ class CommanderControlSystemTest {
         Simulation simulation = simulation();
         simulation.spawnCommander(50f, 50f);
 
-        simulation.step(new CommanderInput(0f, 0f, 60f, 50f, false));
+        simulation.step(new CommanderInput(0f, 0f, 60f, 50f, false, false));
 
         assertThat(count(simulation, Projectile.class)).isZero();
     }
@@ -69,7 +69,7 @@ class CommanderControlSystemTest {
     void waitsOutTheCooldownBeforeFiringAgain() {
         Simulation simulation = simulation();
         simulation.spawnCommander(50f, 50f);
-        CommanderInput firing = new CommanderInput(0f, 0f, 60f, 50f, true);
+        CommanderInput firing = new CommanderInput(0f, 0f, 60f, 50f, true, false);
 
         for (int i = 0; i < ticksIn(COOLDOWN) - 2; i++) {
             simulation.step(firing);
@@ -82,7 +82,7 @@ class CommanderControlSystemTest {
     void firesAgainOnceTheCooldownHasElapsed() {
         Simulation simulation = simulation();
         simulation.spawnCommander(50f, 50f);
-        CommanderInput firing = new CommanderInput(0f, 0f, 60f, 50f, true);
+        CommanderInput firing = new CommanderInput(0f, 0f, 60f, 50f, true, false);
 
         for (int i = 0; i < ticksIn(COOLDOWN) + 2; i++) {
             simulation.step(firing);
@@ -96,7 +96,7 @@ class CommanderControlSystemTest {
         Simulation simulation = simulation();
         simulation.spawnCommander(50f, 50f);
 
-        simulation.step(new CommanderInput(0f, 0f, 50f, 90f, true));
+        simulation.step(new CommanderInput(0f, 0f, 50f, 90f, true, false));
 
         Position projectile = firstProjectile(simulation).getComponent(Position.class);
         assertThat(projectile.y).isGreaterThan(50f);
@@ -108,7 +108,7 @@ class CommanderControlSystemTest {
         Simulation simulation = simulation();
         simulation.spawnCommander(50f, 50f);
 
-        simulation.step(new CommanderInput(-1f, 0f, 90f, 50f, true));
+        simulation.step(new CommanderInput(-1f, 0f, 90f, 50f, true, false));
 
         Position projectile = firstProjectile(simulation).getComponent(Position.class);
         assertThat(projectile.x).isGreaterThan(50f);
@@ -119,7 +119,7 @@ class CommanderControlSystemTest {
         Simulation simulation = simulation();
         simulation.spawnCommander(50f, 50f);
 
-        simulation.step(new CommanderInput(0f, 0f, 50f, 50f, true));
+        simulation.step(new CommanderInput(0f, 0f, 50f, 50f, true, false));
 
         assertThat(count(simulation, Projectile.class)).isZero();
     }
@@ -129,7 +129,7 @@ class CommanderControlSystemTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        simulation.step(new CommanderInput(0.5f, 0f, 0f, 0f, false));
+        simulation.step(new CommanderInput(0.5f, 0f, 0f, 0f, false, false));
 
         assertThat(travelled(commander)).isCloseTo(COMMANDER_SPEED * TICK * 0.5f, TOLERANCE);
     }

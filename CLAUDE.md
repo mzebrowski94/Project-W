@@ -51,9 +51,10 @@ stop and raise it rather than working around it.
 Invariants, the input map and the open questions are in `docs/design/README.md`. Read it before any
 gameplay change - the `feature` skill has the procedure.
 
-**We are in the alpha phase**: one system per session, built to be built on, with an optional
-scenario so Mateusz can run it. `docs/design/alpha-phase.md` has the method and the list of
-shortcuts still standing.
+**We are in the alpha phase**: systems built to be built on, with an optional scenario so Mateusz
+can run it. Take as many systems in one session as the change genuinely needs, staged so the work can
+stop after any stage. `docs/design/alpha-phase.md` has the method and the list of shortcuts still
+standing.
 
 These six are inline rather than loaded on demand **by decision, not by oversight**: a contradiction
 usually slips in during a session nobody framed as gameplay work, which is exactly when an
@@ -72,6 +73,10 @@ and not noise. Step 3 is the point; specifics discovered while implementing beat
 beforehand. Conventions live in the `unit-tests` skill.
 
 **Mateusz commits.** Never run `git commit`, `git add` or `git push`. Leave the tree for review.
+
+**Suggest a commit message when the work is done.** One line, imperative, minimal - what changed, not
+how it was built. `Add enemy leap and player hand strike`, not a paragraph. No body unless something
+in the change genuinely cannot be inferred from the diff.
 
 **Ask before adding a dependency.** Every library is a decision, not an implementation detail.
 

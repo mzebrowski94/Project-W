@@ -32,10 +32,16 @@ system that changes world state.
 - `scenario/` - the arenas the menu can launch. `Scenarios` is the registry, and the list in it is
   the menu.
 
-Combat runs on four systems in a fixed order, and the order is the design: contact writes damage,
-`DamageSystem` turns it into lost health and marks the dead, reactions such as `RespawnSystem` run
-while the dead are still there to react to, and `ReaperSystem` removes them last. Nothing else in the
-simulation removes an entity - `ArchitectureTest` fails the build if it tries.
+Combat runs on a fixed order of systems, and the order is the design: contact writes damage,
+`DamageSystem` turns it into lost health and either marks the dead or starts them dying, `DyingSystem`
+marks a body that has lain out its throes, reactions such as `RespawnSystem` run while the dead are
+still there to react to, and `ReaperSystem` removes them last. Nothing else in the simulation removes
+an entity - `ArchitectureTest` fails the build if it tries.
+
+Two more orderings carry meaning. `EnemyLeapSystem` runs after `EnemyChaseSystem` and overwrites the
+velocity of anything mid-leap, which is why neither needs to know the other exists. `StunSystem` runs
+after every driver and before movement, so it owns the velocity of anything held still - a driver that
+zeroed a stunned unit's velocity itself would silently delete knockback.
 - `component/` - pooled data. Public mutable fields, `reset()`, no behaviour.
 - `system/` - all behaviour. One system, one responsibility.
 
@@ -76,7 +82,9 @@ loop.
   entity's `Appearance` and asks nothing else about it (G0003). Replaced by a sprite renderer once
   the atlas exists; the contract stays the same, which is that the simulation is never asked how to
   draw itself.
-- `Palette` - the one place that turns an `Appearance.Look` into a colour.
+- `Palette` - the one place that turns an `Appearance.Look` into a colour. `StateTint` is the other
+  axis: how far to shift that colour for what the entity is currently *doing* (`Appearance.State`), so
+  the same tell reads the same way on every kind of unit.
 - `Log` - the logging facade.
 
 ## Coordinates

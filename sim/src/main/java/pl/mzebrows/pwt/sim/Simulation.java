@@ -9,16 +9,22 @@ import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.system.AppearanceSystem;
 import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
 import pl.mzebrows.pwt.sim.system.CooldownSystem;
 import pl.mzebrows.pwt.sim.system.DamageSystem;
+import pl.mzebrows.pwt.sim.system.DyingSystem;
 import pl.mzebrows.pwt.sim.system.EnemyChaseSystem;
+import pl.mzebrows.pwt.sim.system.EnemyLeapSystem;
+import pl.mzebrows.pwt.sim.system.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
 import pl.mzebrows.pwt.sim.system.PositionHistorySystem;
 import pl.mzebrows.pwt.sim.system.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.ReaperSystem;
 import pl.mzebrows.pwt.sim.system.RespawnSystem;
+import pl.mzebrows.pwt.sim.system.StrikeSystem;
+import pl.mzebrows.pwt.sim.system.StunSystem;
 
 /**
  * The whole game world and everything that happens in it.
@@ -29,11 +35,14 @@ import pl.mzebrows.pwt.sim.system.RespawnSystem;
  * networking depend on.
  *
  * <p><strong>System order is behaviour.</strong> Positions are recorded for interpolation before
- * anything moves; timers count down; intent becomes velocity; enemies aim at where the commander
- * currently is; everything moves; the constraint solver decides where things may be and what touched
- * what; damage owed becomes damage taken and anything out of health is marked dead; reactions run
- * while the dead are still there to react to; and only then are they removed. Reordering these
- * changes what the game does.
+ * anything moves; timers count down; intent becomes velocity and gunfire, then a swing if one was
+ * asked for; enemies aim at where the commander currently is, and any of them mid-leap overwrite that
+ * with where they already committed to going; whatever is held still bleeds off the blow that held
+ * it; everything moves; swings travel their arc; the constraint solver decides where things may be
+ * and what touched what; damage owed becomes damage taken, and anything out of health either dies now
+ * or starts dying; bodies that have lain long enough are marked; reactions run while the dead are
+ * still there to react to; everything publishes how it should be drawn; and only then are the dead
+ * removed. Reordering these changes what the game does.
  */
 public final class Simulation {
 
@@ -60,12 +69,18 @@ public final class Simulation {
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new CommanderControlSystem(spawner));
+        engine.addSystem(new MeleeSystem(spawner));
         engine.addSystem(new EnemyChaseSystem());
+        engine.addSystem(new EnemyLeapSystem(rng));
+        engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
+        engine.addSystem(new StrikeSystem(spawner));
         engine.addSystem(new CollisionSystem(config, spawner));
         engine.addSystem(new DamageSystem(spawner));
+        engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
         engine.addSystem(new ProjectileBoundsSystem(config.arena(), spawner));
+        engine.addSystem(new AppearanceSystem());
         engine.addSystem(new ReaperSystem());
     }
 
@@ -81,7 +96,8 @@ public final class Simulation {
     public void step(CommanderInput input) {
         for (int i = 0; i < commanders.size(); i++) {
             Entity commander = commanders.get(i);
-            INTENT.get(commander).set(input.moveX(), input.moveY(), input.aimX(), input.aimY(), input.firing());
+            INTENT.get(commander)
+                    .set(input.moveX(), input.moveY(), input.aimX(), input.aimY(), input.firing(), input.striking());
             if (INVULNERABLE.has(commander)) {
                 INVULNERABLE.get(commander).permanent = commanderInvulnerable;
             }
@@ -98,6 +114,11 @@ public final class Simulation {
     /** Spawns a unit that chases the commander. */
     public Entity spawnEnemy(float x, float y) {
         return spawner.spawnEnemy(x, y);
+    }
+
+    /** Spawns a heavy unit that chases the commander and survives a hand strike. */
+    public Entity spawnBrute(float x, float y) {
+        return spawner.spawnBrute(x, y);
     }
 
     /** Spawns a static circle that blocks units and projectiles. */

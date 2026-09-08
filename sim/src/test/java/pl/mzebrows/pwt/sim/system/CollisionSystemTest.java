@@ -46,7 +46,7 @@ class CollisionSystemTest {
         Entity commander = simulation.spawnCommander(50f, 50f);
 
         for (int i = 0; i < 60; i++) {
-            simulation.step(new CommanderInput(1f, 0f, 0f, 0f, false));
+            simulation.step(new CommanderInput(1f, 0f, 0f, 0f, false, false));
         }
 
         assertThat(commander.getComponent(Position.class).x).isLessThan(60f - OBSTACLE_RADIUS);

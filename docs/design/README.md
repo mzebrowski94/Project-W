@@ -51,11 +51,43 @@ rows become enforceable once the named feature exists - promote them then.
 | Troopers lost during a level stay lost for that level. | deferred - needs squad |
 | Squad size never exceeds its configured maximum. | deferred - needs squad |
 | Every projectile is a simulated entity with a `Position` and a `Body`. No hitscan. | enforced - `SpawnerTest.givesEveryProjectileAPositionAndABody` |
+| Every melee strike is a simulated entity with a `Position` and a `Body`. No melee hitscan (G0005). | enforced - `SpawnerTest.givesEveryStrikeAPositionAndABodySoThereIsNoMeleeHitscan` |
+| A blow that kills holds both the attacker and its victim - that is the clinch. | enforced - `StunTest.holdsBothTheAttackerAndItsVictimWhenTheBlowKills` |
+| A blow that is survived holds only the one that took it; the one that landed it stays free. | enforced - `StunTest.holdsOnlyTheVictimWhenTheBlowIsSurvived` |
+| A stunned entity acts on nothing, but is still moved and still shoved by the solver. | enforced - `StunTest.stillLetsAHeldUnitBeShovedOutOfTheWay` |
+| Only a target that survives a blow is thrown; a killing blow leaves the body where it was struck. | enforced - `StrikeCombatTest.throwsNothingWhenTheBlowKills` |
+| A dying body is scenery: solid, and immovable like an obstacle. | enforced - `DeathThroesTest.turnsABodyIntoAnObstacle` |
+| Both parties to a *fatal* exchange look the same for its whole duration, winner and loser alike. | enforced - `AppearanceSystemTest.showsALostExchangeAsLockedRatherThanDyingWhileTheLockHolds` |
+| A leap is aimed once at launch and never steered afterwards. | enforced - `EnemyLeapSystemTest.keepsGoingWhereItAimedEvenIfTheCommanderMoves` |
+| A killing blow is instant; only the removal of the body waits. | enforced - `CombatTest.killsTheCommanderTheMomentAnEnemyTouchesIt` |
+| One swing lands at most one blow. | enforced - `StrikeCombatTest.landsAtMostOneBlowPerSwing` |
 | Everything that can be hit has a `Body`. | enforced - `SpawnerTest.givesEveryUnitABodySoItCanBeHit` |
 
-The no-hitscan row is load-bearing in three directions at once: it keeps collision uniform, keeps
-the simulation deterministic, and keeps every threat visible to the player. It is the row most
-likely to be argued away for convenience.
+The no-hitscan rows are load-bearing in three directions at once: they keep collision uniform, keep
+the simulation deterministic, and keep every threat visible to the player. They are the rows most
+likely to be argued away for convenience - the melee one was very nearly argued away the day it was
+written, which is why G0005 exists.
+
+**A blow that kills and a blow that is survived are two different events**, and the three rows above
+are the whole of the difference. Killing something tangles you up with it: neither of you moves, the
+body stops where it was struck, and you are committed to the moment. Failing to kill it shoves it
+away: it staggers, you do not, and you are free to follow up. That asymmetry is the reward for the
+parry, and collapsing it back into one rule - locking both parties on every landed blow, as the first
+version did - quietly makes every successful defence cost you a second you did not spend.
+
+The grapple row is a **deliberate, narrow exception to pillar 5**, and the only one in the game. For
+as long as a *fatal* lock holds, the two units in it are drawn identically whether they won or lost,
+so the player does not know which of them is getting back up until it ends. A survived blow is not
+hidden at all: the one that took it reads as staggered and the one that landed it reads as normal. It is written down here rather
+than left as a quirk of `AppearanceSystem` precisely because it looks like a bug: everything else in
+the game says state must be visible, and this says one thing is hidden, for one second, on purpose.
+It stays legitimate only while it is that narrow - a second hidden state would not be a beat, it
+would be the game lying to the player.
+
+The lock and stun rows are what make a fight an exchange rather than a sequence of hits, and they are
+easy to break by accident: an "obvious" tidy-up that stops a stunned unit being pushed, or that zeroes
+a stunned unit's velocity in its driver rather than leaving it to `StunSystem`, breaks knockback
+without breaking any other test.
 
 ## Input map
 
@@ -75,7 +107,8 @@ do not treat one as taken when adding a game binding.
 | `WASD`, arrow keys / left stick | Move the commander | built (keyboard) |
 | Mouse / right stick | Aim | built (mouse) - G0002 |
 | Left mouse / right trigger | Fire | built (mouse) |
-| Right mouse / left bumper | Squad command (contextual) | proposed - depends on the command model |
+| Right mouse / left bumper | Melee strike | built (mouse) |
+| *(unassigned)* | Squad command (contextual) | proposed - had right mouse, lost it to the strike |
 | `Esc` | Pause | proposed |
 
 ## Open questions
@@ -87,7 +120,13 @@ The alpha phase answers none of these. Where a system needs one of them to have 
 scaffolding instead, listed in [`alpha-phase.md`](alpha-phase.md) so the scaffolding is not later
 mistaken for a decision.
 
-- How does the player command the squad? Auto-follow, point-to-move, formations, or stances?
+- How does the player command the squad? Auto-follow, point-to-move, formations, or stances? **And
+  on what input** - the melee strike took right mouse, which this had provisionally claimed, so
+  whatever the command model turns out to be needs a binding of its own.
+- A body is scenery for its throes - solid, immovable, and it stops bullets. That is realistic and it
+  is what makes the clinch settle at touching distance, but it also means shooting into a crowd now
+  leaves obstacles for a second at a time. Whether that reads as good feedback or as clutter is a
+  question for play, not for a test.
 - What ends a level - an objective, an extraction point, elimination, or a timer?
 - The source game had four commanders because it was four-player co-op. In single-player, is the
   commander a choice with distinct kits, or one fixed protagonist?

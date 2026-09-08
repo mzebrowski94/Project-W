@@ -25,6 +25,7 @@ class ConfigDefaultsTest {
         assertThat(config.windowHeight()).isGreaterThan(0);
         assertThat(config.backgroundColor()).isNotNull();
         assertThat(config.palette()).isNotNull();
+        assertThat(config.stateTint()).isNotNull();
     }
 
     @Test
@@ -42,17 +43,43 @@ class ConfigDefaultsTest {
     }
 
     @Test
+    void mapsEveryStateToAShift() {
+        StateTint tint = GraphicConfig.load().stateTint();
+
+        for (Appearance.State state : Appearance.State.values()) {
+            assertThat(tint.forState(state)).isBetween(-1f, 1f);
+        }
+    }
+
+    /** A tell the player cannot see is not a tell, so the wind-up must shift the colour at all. */
+    @Test
+    void shiftsTheColourOfAUnitWindingUpToLeap() {
+        assertThat(GraphicConfig.load().stateTint().forState(Appearance.State.WINDING_UP))
+                .isNotZero();
+    }
+
+    @Test
+    void leavesTheColourOfAUnitDoingNothingAlone() {
+        assertThat(GraphicConfig.load().stateTint().forState(Appearance.State.NORMAL))
+                .isZero();
+    }
+
+    @Test
     void backgroundColourStringsParse() {
         assertThat(Color.valueOf("101018ff")).isEqualTo(new Color(0x101018ff));
     }
 
     @Test
     void rejectsANonPositiveVirtualSize() {
-        assertThatThrownBy(() -> new GraphicConfig(0f, 90f, 1280, 720, true, Color.BLACK, palette()))
+        assertThatThrownBy(() -> new GraphicConfig(0f, 90f, 1280, 720, true, Color.BLACK, palette(), tint()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static Palette palette() {
-        return new Palette(Color.WHITE, Color.RED, Color.YELLOW, Color.GRAY, Color.MAGENTA);
+        return new Palette(Color.WHITE, Color.RED, Color.MAROON, Color.YELLOW, Color.WHITE, Color.GRAY, Color.MAGENTA);
+    }
+
+    private static StateTint tint() {
+        return new StateTint(0.85f, 0.5f, -0.3f, 0.35f, -0.7f);
     }
 }

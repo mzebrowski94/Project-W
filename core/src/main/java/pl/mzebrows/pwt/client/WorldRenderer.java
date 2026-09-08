@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
@@ -24,6 +25,9 @@ import pl.mzebrows.pwt.sim.component.PreviousPosition;
  * renderer replaces this class and reads the same component; the simulation is still never asked how
  * to draw itself.
  *
+ * <p>What an entity is doing is drawn as a shift in its colour rather than as a different colour per
+ * situation, so the same tell reads the same way on every kind of unit (pillar 5).
+ *
  * <p>Positions are interpolated between the previous tick and the current one. The simulation runs at
  * a fixed 60 ticks per second while the window may refresh at 144, so without this every entity
  * visibly steps. The cost is that what you see lags the simulation by up to one tick, which is the
@@ -43,8 +47,12 @@ public final class WorldRenderer implements Disposable {
 
     private final Viewport viewport;
     private final Palette palette;
+    private final StateTint stateTint;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
+
+    /** Reused every entity every frame: tinting must not allocate a colour per circle per frame. */
+    private final Color tinted = new Color();
 
     /** Cached: Ashley keeps this view live, so it must not be re-queried per frame. */
     private ImmutableArray<Entity> drawable = new ImmutableArray<>(new Array<>());
@@ -73,7 +81,7 @@ public final class WorldRenderer implements Disposable {
             Position position = POSITION.get(entity);
             PreviousPosition previous = PREVIOUS.get(entity);
             Body body = BODY.get(entity);
-            shapes.setColor(palette.colorFor(APPEARANCE.get(entity).look));
+            shapes.setColor(tint(APPEARANCE.get(entity)));
             shapes.circle(
                     previous.x + (position.x - previous.x) * alpha,
                     previous.y + (position.y - previous.y) * alpha,
@@ -81,6 +89,25 @@ public final class WorldRenderer implements Disposable {
                     CIRCLE_SEGMENTS);
         }
         shapes.end();
+    }
+
+    /**
+     * The entity's colour shifted for what it is doing: toward white for a tell the player must not
+     * miss, toward black for a unit that has stopped being a threat. Returns the shared scratch
+     * colour, which {@code ShapeRenderer} copies out of immediately.
+     */
+    private Color tint(Appearance appearance) {
+        tinted.set(palette.colorFor(appearance.look));
+        float shift = stateTint.forState(appearance.state);
+        if (shift == 0f) {
+            return tinted;
+        }
+        float target = shift > 0f ? 1f : 0f;
+        float amount = Math.abs(shift);
+        tinted.r += (target - tinted.r) * amount;
+        tinted.g += (target - tinted.g) * amount;
+        tinted.b += (target - tinted.b) * amount;
+        return tinted;
     }
 
     @Override

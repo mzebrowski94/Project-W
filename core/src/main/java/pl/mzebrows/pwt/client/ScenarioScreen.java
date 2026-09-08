@@ -47,7 +47,10 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     @Override
     public void show() {
-        renderer = new WorldRenderer(viewport, context.graphicConfig().palette());
+        renderer = new WorldRenderer(
+                viewport,
+                context.graphicConfig().palette(),
+                context.graphicConfig().stateTint());
         input = new InputReader(viewport);
         session = new ScenarioSession(scenario, context.simConfig());
         bound = null;
