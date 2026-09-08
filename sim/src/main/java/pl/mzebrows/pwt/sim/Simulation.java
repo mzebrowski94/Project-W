@@ -6,9 +6,12 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
 import pl.mzebrows.pwt.sim.component.Commander;
-import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.AppearanceSystem;
 import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
@@ -17,8 +20,10 @@ import pl.mzebrows.pwt.sim.system.DamageSystem;
 import pl.mzebrows.pwt.sim.system.DyingSystem;
 import pl.mzebrows.pwt.sim.system.EnemyChaseSystem;
 import pl.mzebrows.pwt.sim.system.EnemyLeapSystem;
+import pl.mzebrows.pwt.sim.system.EvolutionSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
+import pl.mzebrows.pwt.sim.system.PickupSystem;
 import pl.mzebrows.pwt.sim.system.PositionHistorySystem;
 import pl.mzebrows.pwt.sim.system.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.ReaperSystem;
@@ -76,12 +81,16 @@ public final class Simulation {
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));
         engine.addSystem(new CollisionSystem(config, spawner));
+        engine.addSystem(new PickupSystem(config, spawner));
+        engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(spawner));
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
         engine.addSystem(new ProjectileBoundsSystem(config.arena(), spawner));
-        engine.addSystem(new AppearanceSystem());
+        engine.addSystem(new AppearanceSystem(config));
         engine.addSystem(new ReaperSystem());
+
+        spawner.spawnLevel();
     }
 
     /** Advances the world by one fixed step with nothing driving the commander. */
@@ -111,14 +120,24 @@ public final class Simulation {
         return spawner.spawnCommander(x, y);
     }
 
-    /** Spawns a unit that chases the commander. */
-    public Entity spawnEnemy(float x, float y) {
-        return spawner.spawnEnemy(x, y);
+    /** Spawns a chasing unit of the given strain. */
+    public Entity spawnUnit(UnitKind kind, float x, float y) {
+        return spawner.spawnUnit(kind, x, y);
     }
 
-    /** Spawns a heavy unit that chases the commander and survives a hand strike. */
+    /** Spawns a grunt: the basic unit that chases the commander. */
+    public Entity spawnEnemy(float x, float y) {
+        return spawner.spawnUnit(UnitKind.GRUNT, x, y);
+    }
+
+    /** Spawns a brute: heavy, and it survives a hand strike. */
     public Entity spawnBrute(float x, float y) {
-        return spawner.spawnBrute(x, y);
+        return spawner.spawnUnit(UnitKind.BRUTE, x, y);
+    }
+
+    /** Spawns something lying on the field for the first thing that touches it. */
+    public Entity spawnPickup(PickupKind kind, float x, float y) {
+        return spawner.spawnPickup(kind, x, y);
     }
 
     /** Spawns a static circle that blocks units and projectiles. */
@@ -128,21 +147,12 @@ public final class Simulation {
 
     /** Spawns a projectile on the player's side, travelling along the given unit direction. */
     public Entity spawnProjectile(float x, float y, float directionX, float directionY) {
-        return spawnProjectile(x, y, directionX, directionY, Faction.Side.PLAYER);
+        return spawnProjectile(x, y, directionX, directionY, Side.PLAYER);
     }
 
     /** Spawns a projectile on a given side, so a test can fire something that is not the player's. */
-    public Entity spawnProjectile(float x, float y, float directionX, float directionY, Faction.Side side) {
-        SimConfig.WeaponConfig weapon = config.weapon();
-        return spawner.spawnProjectile(
-                x,
-                y,
-                directionX,
-                directionY,
-                weapon.projectileSpeed(),
-                weapon.projectileRadius(),
-                weapon.damage(),
-                side);
+    public Entity spawnProjectile(float x, float y, float directionX, float directionY, Side side) {
+        return spawner.spawnProjectile(x, y, directionX, directionY, config.weapon(WeaponKind.SIDEARM), side);
     }
 
     /**
@@ -160,6 +170,14 @@ public final class Simulation {
     /** Whether god mode is currently on, for the harness overlay. */
     public boolean commanderInvulnerable() {
         return commanderInvulnerable;
+    }
+
+    /**
+     * The assembler, for tests that need to build or rebuild an entity directly. Package-private:
+     * systems are handed this in their constructor and nothing outside the simulation needs it.
+     */
+    Spawner spawner() {
+        return spawner;
     }
 
     /** The entity engine; the client module reads it to draw the world. */

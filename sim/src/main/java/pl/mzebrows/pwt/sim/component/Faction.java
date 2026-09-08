@@ -2,26 +2,16 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.Side;
 
 /**
  * Which side an entity is on. Damage only ever crosses sides, never stays within one.
  *
- * <p>This exists so combat asks a question about <em>data</em> rather than about what an entity is.
- * It replaced a hard-coded "is this the commander?" check that stopped a commander shooting itself;
- * with a side on the projectile, the same rule now covers troopers, friendly fire and anything else
- * with a team, without another branch.
+ * <p>The sides themselves are {@link Side}, over with the definitions, because definitions need to
+ * answer questions about them - what a pickup offers each side - and a definition may not depend on a
+ * component. This component is only the entity's membership.
  */
 public final class Faction implements Component, Pool.Poolable {
-
-    /** The sides that exist. Scenery is {@link #NEUTRAL}, which is on nobody's side and hurts nobody. */
-    public enum Side {
-        /** Not set, or scenery. Never friendly with anything, including other neutrals' attacks. */
-        NEUTRAL,
-        /** The commander and, when they exist, troopers. */
-        PLAYER,
-        /** Everything trying to kill them. */
-        ALIEN
-    }
 
     public Side side = Side.NEUTRAL;
 

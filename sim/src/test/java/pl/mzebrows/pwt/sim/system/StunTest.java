@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * What a landed blow costs both people involved in it.
@@ -178,6 +179,6 @@ class StunTest {
 
     private static Simulation survivableWorld() {
         SimConfig config = AlphaWorlds.config();
-        return new Simulation(config.with(config.enemy().withContactDamage(SURVIVABLE_HIT)));
+        return new Simulation(config.withUnit(UnitKind.GRUNT, grunt -> grunt.withContactDamage(SURVIVABLE_HIT)));
     }
 }

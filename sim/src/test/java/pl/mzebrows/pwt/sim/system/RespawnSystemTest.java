@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Respawning;
 
 /**
  * Dying and coming back. The commander is genuinely removed in between - no half-alive state that
@@ -107,7 +108,8 @@ class RespawnSystemTest {
 
         steps(simulation, ticksIn(RETURN_DELAY) + 4);
 
-        assertThat(simulation.engine().getEntities().size()).isEqualTo(1);
+        assertThat(count(simulation, Respawning.class)).isZero();
+        assertThat(count(simulation, Commander.class)).isEqualTo(1);
     }
 
     @Test

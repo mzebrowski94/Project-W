@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 
 /**
@@ -59,7 +60,9 @@ public final class DebugOverlay {
         Entity commander = commanders.first();
         Health health = commander.getComponent(Health.class);
         Invulnerable protection = commander.getComponent(Invulnerable.class);
-        String state = Math.round(health.current) + "/" + Math.round(health.max);
+        Weapon weapon = commander.getComponent(Weapon.class);
+        String state =
+                Math.round(health.current) + "/" + Math.round(health.max) + (weapon == null ? "" : "   " + weapon.kind);
         if (simulation.commanderInvulnerable()) {
             return state + "   GOD MODE";
         }

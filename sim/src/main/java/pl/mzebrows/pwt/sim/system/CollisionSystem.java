@@ -15,13 +15,20 @@ import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.PickupDef;
+import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.Side;
 
 /**
  * Runs the constraint solver, then decides what this tick's contacts mean.
@@ -55,18 +62,23 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<Strike> STRIKE = ComponentMapper.getFor(Strike.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
+    private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
+    private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
+    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     /** Below this two bodies are on top of each other and give no direction to be thrown along. */
     private static final float EPSILON = 1e-4f;
 
     private final ConstraintSolver solver;
     private final Spawner spawner;
+    private final Defs<PickupKind, PickupDef> pickups;
 
     private ImmutableArray<Entity> bodies = new ImmutableArray<>(new Array<>());
 
     public CollisionSystem(SimConfig config, Spawner spawner) {
         this.solver = new ConstraintSolver(config, this);
         this.spawner = spawner;
+        this.pickups = config.pickups();
     }
 
     @Override
@@ -82,6 +94,14 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
 
     @Override
     public void onContact(Entity a, Entity b) {
+        if (PICKUP.has(a)) {
+            claim(a, b);
+            return;
+        }
+        if (PICKUP.has(b)) {
+            claim(b, a);
+            return;
+        }
         if (friendly(a, b)) {
             return;
         }
@@ -100,13 +120,44 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         }
     }
 
+    /**
+     * Marks a pickup as taken by whoever touched it, if that side has anything to gain.
+     *
+     * <p>Nothing is granted here. The claim is recorded on both parties and {@code PickupSystem}
+     * decides what it means, for the same reason contact never subtracts health: geometry knows two
+     * circles overlapped and nothing else. It does not know whether the taker is dying, what a grant
+     * does, or where a level-scope one has to land.
+     *
+     * <p>The two guards are what make a pickup go to exactly one taker and never vanish for nothing.
+     * A pickup already claimed this tick is spent, so the second unit to reach it walks on; a side the
+     * definition offers nothing simply passes over it and leaves it standing, which is what lets one
+     * item mean different things to the commander and to what is chasing him.
+     */
+    private void claim(Entity pickupEntity, Entity taker) {
+        Pickup pickup = PICKUP.get(pickupEntity);
+        if (pickup.claimed || !TAKING.has(taker) || !FACTION.has(taker) || inert(taker)) {
+            return;
+        }
+        if (!pickups.of(pickup.kind).offersSomethingTo(FACTION.get(taker).side)) {
+            return;
+        }
+        if (TAKING.get(taker).claim(pickup.kind)) {
+            pickup.claimed = true;
+        }
+    }
+
+    /** A body in its throes is scenery. Scenery does not go shopping. */
+    private static boolean inert(Entity entity) {
+        return DYING.has(entity) && DYING.get(entity).begun;
+    }
+
     /** Same side, so nothing happens. An entity with no side is on nobody's, and is friendly to nobody. */
     private static boolean friendly(Entity a, Entity b) {
         if (!FACTION.has(a) || !FACTION.has(b)) {
             return false;
         }
-        Faction.Side side = FACTION.get(a).side;
-        return side != Faction.Side.NEUTRAL && side == FACTION.get(b).side;
+        Side side = FACTION.get(a).side;
+        return side != Side.NEUTRAL && side == FACTION.get(b).side;
     }
 
     /** A projectile is used up on whatever stops it, whether or not that thing can be hurt. */

@@ -5,7 +5,6 @@ import com.badlogic.ashley.core.PooledEngine;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Brute;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
@@ -14,22 +13,35 @@ import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
+import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Obstacle;
+import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
 import pl.mzebrows.pwt.sim.component.Speed;
+import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.PickupDef;
+import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.UnitDef;
+import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WeaponDef;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
  * The one place that builds entity state, so no system has to remember which components a commander
@@ -46,6 +58,12 @@ import pl.mzebrows.pwt.sim.component.Weapon;
  */
 public final class Spawner {
 
+    /**
+     * What a commander is armed with when it spawns and when it comes back. A better gun is something
+     * found on the field and lost on death, never something owned (pillar 3).
+     */
+    private static final WeaponKind STARTING_WEAPON = WeaponKind.SIDEARM;
+
     private final PooledEngine engine;
     private final SimConfig config;
 
@@ -57,11 +75,10 @@ public final class Spawner {
     /** Spawns the player-controlled unit, armed, at full health, and ready to fire. */
     public Entity spawnCommander(float x, float y) {
         SimConfig.CommanderConfig commander = config.commander();
-        SimConfig.WeaponConfig weapon = config.weapon();
         SimConfig.MeleeConfig melee = config.melee();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Commander.class));
-        entity.add(engine.createComponent(Faction.class).set(Faction.Side.PLAYER));
+        entity.add(engine.createComponent(Faction.class).set(Side.PLAYER));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
@@ -80,8 +97,7 @@ public final class Spawner {
                         commander.respawnMargin(),
                         config.arena().height() * 0.5f,
                         commander.respawnInvulnerableSeconds()));
-        entity.add(engine.createComponent(Weapon.class)
-                .set(weapon.cooldownSeconds(), weapon.projectileSpeed(), weapon.projectileRadius(), weapon.damage()));
+        entity.add(engine.createComponent(Weapon.class).set(STARTING_WEAPON, config.weapon(STARTING_WEAPON)));
         entity.add(engine.createComponent(Melee.class)
                 .set(
                         melee.cooldownSeconds(),
@@ -94,98 +110,135 @@ public final class Spawner {
                         melee.lockSeconds(),
                         melee.knockbackSpeed(),
                         melee.knockbackDecay()));
-        entity.add(engine.createComponent(Appearance.class).set(Appearance.Look.COMMANDER));
-        engine.addEntity(entity);
-        return entity;
-    }
-
-    /** Spawns a unit that chases the commander and hurts whatever it touches on the other side. */
-    public Entity spawnEnemy(float x, float y) {
-        SimConfig.EnemyConfig enemy = config.enemy();
-        Entity entity = chaser(
-                x,
-                y,
-                enemy.radius(),
-                enemy.speed(),
-                enemy.health(),
-                enemy.contactDamage(),
-                enemy.attackCooldownSeconds(),
-                enemy.victimInvulnerableSeconds(),
-                enemy.lockSeconds(),
-                enemy.deathThroesSeconds(),
-                enemy.leap(),
-                Appearance.Look.ENEMY);
-        engine.addEntity(entity);
-        return entity;
-    }
-
-    /** Spawns a heavy unit: the same thing as an enemy, with more health and a slower, bigger leap. */
-    public Entity spawnBrute(float x, float y) {
-        SimConfig.BruteConfig brute = config.brute();
-        Entity entity = chaser(
-                x,
-                y,
-                brute.radius(),
-                brute.speed(),
-                brute.health(),
-                brute.contactDamage(),
-                brute.attackCooldownSeconds(),
-                brute.victimInvulnerableSeconds(),
-                brute.lockSeconds(),
-                brute.deathThroesSeconds(),
-                brute.leap(),
-                Appearance.Look.BRUTE);
-        entity.add(engine.createComponent(Brute.class));
+        entity.add(engine.createComponent(Taking.class));
+        entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER));
         engine.addEntity(entity);
         return entity;
     }
 
     /**
-     * The parts every chasing unit is made of. A brute is an enemy with different numbers and one
-     * extra marker, so it is built here rather than in a second near-identical method.
+     * Spawns a chasing unit of the given strain, built entirely from that strain's definition.
+     *
+     * <p>There is one method rather than one per strain because a strain <em>is</em> its numbers. A
+     * grunt and a brute differ in a {@code UnitDef} and in nothing else, so adding a strain is a
+     * definition and no code at all.
      */
-    private Entity chaser(
-            float x,
-            float y,
-            float radius,
-            float speed,
-            float health,
-            float contactDamage,
-            float attackCooldownSeconds,
-            float victimInvulnerableSeconds,
-            float lockSeconds,
-            float deathThroesSeconds,
-            SimConfig.LeapConfig leap,
-            Appearance.Look look) {
+    public Entity spawnUnit(UnitKind kind, float x, float y) {
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Enemy.class));
-        entity.add(engine.createComponent(Faction.class).set(Faction.Side.ALIEN));
+        entity.add(engine.createComponent(Strain.class));
+        entity.add(engine.createComponent(Faction.class).set(Side.ALIEN));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
-        entity.add(engine.createComponent(Body.class).set(radius));
-        entity.add(engine.createComponent(Speed.class).set(speed));
+        entity.add(engine.createComponent(Body.class));
+        entity.add(engine.createComponent(Speed.class));
         entity.add(engine.createComponent(Collider.class).set(true, true));
-        entity.add(engine.createComponent(Health.class).set(health));
+        entity.add(engine.createComponent(Health.class));
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(Invulnerable.class));
         entity.add(engine.createComponent(Stunned.class));
-        entity.add(engine.createComponent(Dying.class).set(deathThroesSeconds));
-        entity.add(engine.createComponent(ContactDamage.class)
-                .set(contactDamage, attackCooldownSeconds, victimInvulnerableSeconds)
-                .setLock(lockSeconds, 0f, 0f));
-        entity.add(engine.createComponent(Leap.class)
+        entity.add(engine.createComponent(Dying.class));
+        entity.add(engine.createComponent(ContactDamage.class));
+        entity.add(engine.createComponent(Leap.class));
+        entity.add(engine.createComponent(Taking.class));
+        entity.add(engine.createComponent(Feed.class));
+        entity.add(engine.createComponent(Appearance.class));
+        applyStrain(entity, kind);
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
+     * Writes a strain's definition into components the entity already has.
+     *
+     * <p><strong>The single writer.</strong> Spawning calls it and so does evolving, which is what
+     * guarantees an evolved unit is indistinguishable from one spawned in that strain - no field can
+     * be updated in one path and forgotten in the other, because there is only one path.
+     *
+     * <p>It changes no component <em>set</em>, only field values, so an entity may be run through it
+     * mid-tick without disturbing any family being iterated. That is the whole reason a strain is an
+     * enum on a component rather than a marker.
+     *
+     * <p>Health is set to the new strain's maximum rather than carried over as a fraction. A unit
+     * that has just become something else arrives whole; a grunt shot down to a sliver and then fed
+     * gets up as a full brute, and that reversal is the drama the mechanic is for.
+     */
+    public void applyStrain(Entity entity, UnitKind kind) {
+        UnitDef def = config.unit(kind);
+        entity.getComponent(Strain.class).set(kind);
+        entity.getComponent(Body.class).set(def.radius());
+        entity.getComponent(Speed.class).set(def.speed());
+        entity.getComponent(Health.class).set(def.health());
+        entity.getComponent(Dying.class).set(def.deathThroesSeconds());
+        entity.getComponent(ContactDamage.class)
+                .set(def.contactDamage(), def.attackCooldownSeconds(), def.victimInvulnerableSeconds())
+                .setLock(def.lockSeconds(), 0f, 0f);
+        entity.getComponent(Leap.class)
                 .set(
-                        leap.enabled(),
-                        leap.triggerRange(),
-                        leap.speed(),
-                        leap.airborneSeconds(),
-                        leap.sequenceLength(),
-                        leap.betweenSeconds(),
-                        leap.cooldownSeconds(),
-                        leap.hesitationMinSeconds(),
-                        leap.hesitationMaxSeconds()));
-        entity.add(engine.createComponent(Appearance.class).set(look));
+                        def.leap().enabled(),
+                        def.leap().triggerRange(),
+                        def.leap().speed(),
+                        def.leap().airborneSeconds(),
+                        def.leap().sequenceLength(),
+                        def.leap().betweenSeconds(),
+                        def.leap().cooldownSeconds(),
+                        def.leap().hesitationMinSeconds(),
+                        def.leap().hesitationMaxSeconds());
+        entity.getComponent(Appearance.class).set(def.look());
+    }
+
+    /**
+     * Puts a gun in a unit's hands, replacing whatever it was carrying.
+     *
+     * <p>The single writer for weapons, as {@code applyStrain} is for strains: spawning and picking
+     * one up both come through here, so a gun found on the field behaves exactly like one spawned
+     * with. It changes no component set - only the fields of the {@code Weapon} the unit already has.
+     */
+    public void applyWeapon(Entity entity, WeaponKind kind) {
+        Weapon weapon = entity.getComponent(Weapon.class);
+        if (weapon != null) {
+            weapon.set(kind, config.weapon(kind));
+        }
+    }
+
+    /**
+     * Spawns something lying on the field for the first thing that touches it.
+     *
+     * <p>Non-solid, so units walk over it rather than round it, and immovable, so a crowd cannot
+     * shove it out of the way. Those two flags are the whole of what makes it a pickup as far as the
+     * constraint solver is concerned - it reports the contact and asks nothing further, exactly as it
+     * does for a projectile or a melee sweep.
+     *
+     * <p>Neutral, because a pickup is on nobody's side. What each side gets out of it is in the
+     * definition, not in a faction.
+     */
+    public Entity spawnPickup(PickupKind kind, float x, float y) {
+        PickupDef def = config.pickup(kind);
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Pickup.class).set(kind));
+        entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(def.radius()));
+        entity.add(engine.createComponent(Collider.class).set(false, false));
+        entity.add(engine.createComponent(Appearance.class).set(def.look()));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns the level entity: one entity holding state that belongs to nobody in particular.
+     *
+     * <p>Spawned with the world and never removed. It has no position, no body and nothing to draw,
+     * which is exactly why it is an entity - it means a level-scope reaction is an ordinary system
+     * reading an ordinary component, and no part of the simulation needs a message queue to reach it
+     * (G0004).
+     */
+    public Entity spawnLevel() {
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Level.class));
+        engine.addEntity(entity);
         return entity;
     }
 
@@ -193,12 +246,12 @@ public final class Spawner {
     public Entity spawnObstacle(float x, float y) {
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Obstacle.class));
-        entity.add(engine.createComponent(Faction.class).set(Faction.Side.NEUTRAL));
+        entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(config.obstacle().radius()));
         entity.add(engine.createComponent(Collider.class).set(true, false));
-        entity.add(engine.createComponent(Appearance.class).set(Appearance.Look.OBSTACLE));
+        entity.add(engine.createComponent(Appearance.class).set(Look.OBSTACLE));
         engine.addEntity(entity);
         return entity;
     }
@@ -207,8 +260,41 @@ public final class Spawner {
      * Spawns a projectile travelling along the given unit direction, on the firer's side so it cannot
      * hit them or anything else friendly. The caller supplies the direction already normalised - it
      * has usually just computed it to place the spawn point.
+     *
+     * <p>Everything about the shot comes from the gun's definition, its look included, so which gun
+     * fired it is visible without anything asking.
      */
-    public Entity spawnProjectile(
+    public Entity spawnProjectile(float x, float y, float directionX, float directionY, Weapon weapon, Side side) {
+        return projectile(
+                x,
+                y,
+                directionX,
+                directionY,
+                weapon.projectileSpeed,
+                weapon.projectileRadius,
+                weapon.damage,
+                weapon.projectileLook,
+                side);
+    }
+
+    /**
+     * The same, from a gun's definition rather than from a gun somebody is holding. For the harness
+     * and for tests that want a shot in the world without a shooter behind it.
+     */
+    public Entity spawnProjectile(float x, float y, float directionX, float directionY, WeaponDef gun, Side side) {
+        return projectile(
+                x,
+                y,
+                directionX,
+                directionY,
+                gun.projectileSpeed(),
+                gun.projectileRadius(),
+                gun.damage(),
+                gun.projectileLook(),
+                side);
+    }
+
+    private Entity projectile(
             float x,
             float y,
             float directionX,
@@ -216,7 +302,8 @@ public final class Spawner {
             float speed,
             float radius,
             float damage,
-            Faction.Side side) {
+            Look look,
+            Side side) {
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Projectile.class));
         entity.add(engine.createComponent(Faction.class).set(side));
@@ -226,7 +313,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(radius));
         entity.add(engine.createComponent(Collider.class).set(false, true));
         entity.add(engine.createComponent(ContactDamage.class).set(damage, 0f, 0f));
-        entity.add(engine.createComponent(Appearance.class).set(Appearance.Look.PROJECTILE));
+        entity.add(engine.createComponent(Appearance.class).set(look));
         engine.addEntity(entity);
         return entity;
     }
@@ -249,7 +336,7 @@ public final class Spawner {
             float startAngle,
             float sweepRadians,
             Melee melee,
-            Faction.Side side) {
+            Side side) {
         float x = originX + (float) StrictMath.cos(startAngle) * melee.reach;
         float y = originY + (float) StrictMath.sin(startAngle) * melee.reach;
         Entity entity = engine.createEntity();
@@ -263,7 +350,7 @@ public final class Spawner {
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(melee.damage, melee.activeSeconds, 0f)
                 .setLock(melee.lockSeconds, melee.knockbackSpeed, melee.knockbackDecay));
-        entity.add(engine.createComponent(Appearance.class).set(Appearance.Look.STRIKE));
+        entity.add(engine.createComponent(Appearance.class).set(Look.STRIKE));
         engine.addEntity(entity);
         return entity;
     }

@@ -17,9 +17,10 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
-import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * What contact costs. One rule covers claws and bullets alike: nothing happens between two entities
@@ -66,7 +67,7 @@ class CombatTest {
     void letsAProjectilePassThroughItsOwnSide() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
-        simulation.spawnProjectile(48f, 50f, 1f, 0f, Faction.Side.PLAYER);
+        simulation.spawnProjectile(48f, 50f, 1f, 0f, Side.PLAYER);
 
         simulation.step();
 
@@ -78,7 +79,7 @@ class CombatTest {
     void letsAnAlienProjectileHitTheCommander() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
-        simulation.spawnProjectile(48f, 50f, 1f, 0f, Faction.Side.ALIEN);
+        simulation.spawnProjectile(48f, 50f, 1f, 0f, Side.ALIEN);
 
         simulation.step();
 
@@ -163,6 +164,6 @@ class CombatTest {
 
     private static Simulation survivableWorld() {
         SimConfig config = AlphaWorlds.config();
-        return new Simulation(config.with(config.enemy().withContactDamage(SURVIVABLE_HIT)));
+        return new Simulation(config.withUnit(UnitKind.GRUNT, grunt -> grunt.withContactDamage(SURVIVABLE_HIT)));
     }
 }

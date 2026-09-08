@@ -23,8 +23,16 @@ it. Terms marked *(source)* come from *Triumph! War 2099*.
 | **death throes** | The window between a killing blow and the body being removed. Every unit has them. The body is scenery for their duration - solid, immovable, and it stops bullets. Where the dying animation will play; a commander's respawn countdown starts after them, not during. |
 | **brute** | A heavy enemy: slower, tougher, and able to survive a hand strike. Carries everything an ordinary enemy carries, so only spawning and drawing tell them apart. |
 | **obstacle** | A static entity that blocks movement and projectiles. An entity like any other, not terrain data. |
-| **pickup** | A collectable that changes the player's state - weapon, health, reinforcement. |
-| **reinforcement** *(source)* | A pickup that adds troopers to the squad. |
+| **pickup** | Anything lying on the field that the first thing to touch it takes. Not the player's alone: what it does depends on which side took it, and one item can be a weapon to the commander and a meal to what is chasing him. |
+| **grant** | What a pickup gives one side for taking it. Every pickup carries two - one per side - and either may be nothing, which is what makes that side walk over it and leave it. |
+| **strain** | The form a unit currently has. Grunt, brute and whatever they grow into are strains of one thing, not different classes of entity: a strain is an enum on a component and a table of numbers, and changing it is a field write. |
+| **grunt** | The basic enemy strain. *Enemy* stays the umbrella word for everything on the alien side; *grunt* is the specific creature. |
+| **evolve** | A unit changing strain. One way, and it arrives at the new strain's full health - a unit that has just become something else arrives whole. |
+| **feed** | What a unit has eaten towards its next evolution, as a count. Crossing its strain's threshold evolves it; an item that names a strain outright skips the count entirely. |
+| **charge** | How full something is, as a fraction the simulation publishes for the renderer - a unit part-way to evolving, and later anything else that fills up. One tell, drawn the same way wherever it appears. |
+| **frozen trooper** | Alpha-phase scaffolding: an inert body on the field, a reinforcement to the commander and a mouthful to an alien. **Not a trooper** - the squad does not exist yet, and nothing about this answers whether it will work this way when it does. |
+| **the level entity** | One entity, spawned with the world and never removed, carrying state that belongs to the level rather than to anything standing in it (G0007). |
+| **reinforcement** *(source)* | A pickup that adds troopers to the squad. Until the squad exists, one lands on the level entity and is counted there. |
 | **tick** | One fixed simulation step, `SimConfig.tickSeconds()` long. Never a frame. |
 | **frame** | One rendered image. Zero or more ticks happen per frame. Never a tick. |
 | **alpha** | Fraction of a tick elapsed, used to interpolate rendering between ticks. |
@@ -37,6 +45,10 @@ it. Terms marked *(source)* come from *Triumph! War 2099*.
 ## Words we do not use
 
 - *unit* alone - ambiguous between trooper, entity and world unit. Say which.
+- *type* or *class* for what a creature is - say strain. *Kind* is fine for the enum in code
+  (`UnitKind`, `PickupKind`), but prose says strain.
+- *item*, *collectable*, *powerup* - say pickup.
+- *mutation*, *transformation* - say evolve.
 - *object*, *actor*, *thing* - say entity.
 - *update* for a simulation step - say tick.
 - *create* or *make* for bringing an entity into the world - say spawn.

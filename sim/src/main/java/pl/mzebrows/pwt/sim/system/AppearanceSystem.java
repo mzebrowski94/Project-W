@@ -4,10 +4,16 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
+import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Leap;
+import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.UnitDef;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * Publishes what each entity is doing, so the renderer can show it without asking (G0003, pillar 5).
@@ -33,14 +39,43 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
+    private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
+    private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
 
-    public AppearanceSystem() {
+    private final Defs<UnitKind, UnitDef> units;
+
+    public AppearanceSystem(SimConfig config) {
         super(Family.all(Appearance.class).get());
+        this.units = config.units();
     }
 
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
-        APPEARANCE.get(entity).state = stateOf(entity);
+        Appearance appearance = APPEARANCE.get(entity);
+        appearance.state = stateOf(entity);
+        appearance.charge = chargeOf(entity);
+    }
+
+    /**
+     * How close a unit is to turning into something else, in {@code [0, 1]}.
+     *
+     * <p>Pillar 5 says the player never tracks a number the game does not show, and how much an
+     * enemy has eaten is exactly such a number. Published as a fraction rather than as a count so the
+     * renderer needs to know nothing about strains or thresholds - and so that anything else that
+     * fills up can use the same channel later.
+     *
+     * <p>A strain with nowhere to grow reports nothing, which is what almost everything reports.
+     */
+    private float chargeOf(Entity entity) {
+        if (!FEED.has(entity) || !STRAIN.has(entity)) {
+            return 0f;
+        }
+        UnitDef def = units.of(STRAIN.get(entity).kind);
+        if (!def.canEvolveByFeeding()) {
+            return 0f;
+        }
+        float progress = (float) FEED.get(entity).count / def.feedToEvolve();
+        return progress < 1f ? progress : 1f;
     }
 
     private static Appearance.State stateOf(Entity entity) {

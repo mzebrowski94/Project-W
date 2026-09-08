@@ -48,6 +48,7 @@ public final class WorldRenderer implements Disposable {
     private final Viewport viewport;
     private final Palette palette;
     private final StateTint stateTint;
+    private final ChargeMark chargeMark;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
 
@@ -81,12 +82,15 @@ public final class WorldRenderer implements Disposable {
             Position position = POSITION.get(entity);
             PreviousPosition previous = PREVIOUS.get(entity);
             Body body = BODY.get(entity);
-            shapes.setColor(tint(APPEARANCE.get(entity)));
-            shapes.circle(
-                    previous.x + (position.x - previous.x) * alpha,
-                    previous.y + (position.y - previous.y) * alpha,
-                    body.radius,
-                    CIRCLE_SEGMENTS);
+            Appearance appearance = APPEARANCE.get(entity);
+            float x = previous.x + (position.x - previous.x) * alpha;
+            float y = previous.y + (position.y - previous.y) * alpha;
+            shapes.setColor(tint(appearance));
+            shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
+            if (appearance.charge > 0f) {
+                shapes.setColor(brightened(tint(appearance), chargeMark.tint()));
+                shapes.circle(x, y, chargeMark.radiusFor(body.radius, appearance.charge), CIRCLE_SEGMENTS);
+            }
         }
         shapes.end();
     }
@@ -108,6 +112,17 @@ public final class WorldRenderer implements Disposable {
         tinted.g += (target - tinted.g) * amount;
         tinted.b += (target - tinted.b) * amount;
         return tinted;
+    }
+
+    /**
+     * The same colour shifted toward white, for the core drawn inside something that is filling up.
+     * Mutates and returns the shared scratch colour, which the caller has just been handed.
+     */
+    private static Color brightened(Color color, float amount) {
+        color.r += (1f - color.r) * amount;
+        color.g += (1f - color.g) * amount;
+        color.b += (1f - color.b) * amount;
+        return color;
     }
 
     @Override

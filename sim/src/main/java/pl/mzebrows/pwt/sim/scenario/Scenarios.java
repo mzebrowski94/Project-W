@@ -10,7 +10,8 @@ import java.util.List;
  */
 public final class Scenarios {
 
-    private static final List<Scenario> ALL = List.of(new SkirmishScenario(), new DuelScenario(), new CrowdScenario());
+    private static final List<Scenario> ALL =
+            List.of(new SkirmishScenario(), new DuelScenario(), new FeedingGroundScenario(), new CrowdScenario());
 
     private Scenarios() {}
 

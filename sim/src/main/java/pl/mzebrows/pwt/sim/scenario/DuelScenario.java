@@ -2,6 +2,8 @@ package pl.mzebrows.pwt.sim.scenario;
 
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.def.UnitDef;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * A near-empty arena and a handful of things that jump at you, half of them too heavy to punch down.
@@ -38,9 +40,9 @@ final class DuelScenario implements Scenario {
 
     @Override
     public SimConfig configure(SimConfig config) {
-        return config.with(config.enemy().withCount(ENEMIES))
-                .with(config.brute().withCount(BRUTES))
-                .with(config.obstacle().withCount(OBSTACLES));
+        return config.withUnit(UnitKind.GRUNT, grunt -> grunt.withCount(ENEMIES))
+                .withUnit(UnitKind.BRUTE, brute -> brute.withCount(BRUTES))
+                .withObstacle(config.obstacle().withCount(OBSTACLES));
     }
 
     @Override
@@ -62,16 +64,17 @@ final class DuelScenario implements Scenario {
                 simulation.spawnObstacle(spot.x(), spot.y());
             }
         }
-        for (int i = 0; i < config.enemy().count(); i++) {
-            Placement.Spot spot = placement.find(config.enemy().radius());
+        spawn(simulation, placement, UnitKind.GRUNT);
+        spawn(simulation, placement, UnitKind.BRUTE);
+    }
+
+    /** Scatters a strain's configured count wherever there is room for one. */
+    private static void spawn(Simulation simulation, Placement placement, UnitKind kind) {
+        UnitDef def = simulation.config().unit(kind);
+        for (int i = 0; i < def.count(); i++) {
+            Placement.Spot spot = placement.find(def.radius());
             if (spot != null) {
-                simulation.spawnEnemy(spot.x(), spot.y());
-            }
-        }
-        for (int i = 0; i < config.brute().count(); i++) {
-            Placement.Spot spot = placement.find(config.brute().radius());
-            if (spot != null) {
-                simulation.spawnBrute(spot.x(), spot.y());
+                simulation.spawnUnit(kind, spot.x(), spot.y());
             }
         }
     }

@@ -25,6 +25,13 @@ system that changes world state.
   simulation; `step` copies it into the commander's `Intent` before any system runs.
 - `Spawner` - builds the entity kinds the game knows, so no system has to remember which components
   a commander or a projectile is made of.
+- `def/` - immutable definitions: what a kind of thing *is*, as data. `UnitKind`/`UnitDef` for
+  strains, `WeaponKind`/`WeaponDef` for guns, `PickupKind`/`PickupDef` for what lies on the field,
+  and `Defs<K, V>`, the table that holds one definition per enum constant and refuses to be built
+  with a hole in it. Also `Look` and `Side`, which are vocabulary rather than state. **This package
+  depends on nothing else in the simulation** - components and systems read definitions, definitions
+  never read them - and that one-way arrow is what stops a kind acquiring behaviour. ADR 0008 has
+  why this is a typed table rather than a marker component or a data file.
 - `collision/` - `SpatialGrid`, a dense grid over the arena with no hashing and therefore no
   iteration order that could vary between runs, and `ConstraintSolver`, which decides where bodies
   are allowed to be. Both are purely geometric and read `Collider` flags rather than asking what an
@@ -32,10 +39,19 @@ system that changes world state.
 - `scenario/` - the arenas the menu can launch. `Scenarios` is the registry, and the list in it is
   the menu.
 
+One entity exists that is not in the world at all: the **level entity**, spawned in `Simulation`'s
+constructor and never removed, carrying state that belongs to the level rather than to anything
+standing in it. It has no position and nothing to draw. It is how a pickup that grants troopers
+reaches something to grant them to, without the message queue G0004 rejected - see G0007.
+
 Combat runs on a fixed order of systems, and the order is the design: contact writes damage,
-`DamageSystem` turns it into lost health and either marks the dead or starts them dying, `DyingSystem`
-marks a body that has lain out its throes, reactions such as `RespawnSystem` run while the dead are
-still there to react to, and `ReaperSystem` removes them last. Nothing else in the simulation removes
+`PickupSystem` gives out whatever was claimed and `EvolutionSystem` turns what a unit has eaten into
+what it becomes, `DamageSystem` turns damage owed into lost health and either marks the dead or starts
+them dying, `DyingSystem` marks a body that has lain out its throes, reactions such as `RespawnSystem`
+run while the dead are still there to react to, and `ReaperSystem` removes them last.
+
+Pickups resolving *before* damage is deliberate: a grunt shot to a sliver that reaches a flower first
+gets up whole and takes that tick's damage as the thing it has become. Nothing else in the simulation removes
 an entity - `ArchitectureTest` fails the build if it tries.
 
 Two more orderings carry meaning. `EnemyLeapSystem` runs after `EnemyChaseSystem` and overwrites the
@@ -82,9 +98,15 @@ loop.
   entity's `Appearance` and asks nothing else about it (G0003). Replaced by a sprite renderer once
   the atlas exists; the contract stays the same, which is that the simulation is never asked how to
   draw itself.
-- `Palette` - the one place that turns an `Appearance.Look` into a colour. `StateTint` is the other
-  axis: how far to shift that colour for what the entity is currently *doing* (`Appearance.State`), so
-  the same tell reads the same way on every kind of unit.
+- `Palette` - the one place that turns a `Look` into a colour. A table indexed by the enum rather
+  than a field per look, so a new kind of thing is a constant and a properties line; `GraphicConfig`
+  holds the fallback per look in an exhaustive switch, which means a new look fails the client's
+  compile until somebody decides what it looks like.
+- `StateTint` - the other axis: how far to shift that colour for what the entity is currently
+  *doing* (`Appearance.State`), so the same tell reads the same way on every kind of unit.
+- `ChargeMark` - the third: how to draw something that is filling up. The simulation publishes one
+  fraction (`Appearance.charge`) and says nothing about how it should look; this is the whole of the
+  answer, and one mark serves every mechanic that fills up.
 - `Log` - the logging facade.
 
 ## Coordinates

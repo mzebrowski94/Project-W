@@ -2,10 +2,12 @@ package pl.mzebrows.pwt.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.badlogic.ashley.core.Family;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 
 /**
@@ -171,7 +173,12 @@ class ScenarioSessionTest {
 
     @Test
     void populatesTheWorldFromTheScenario() {
-        assertThat(session().simulation().engine().getEntities().size()).isEqualTo(1);
+        assertThat(session()
+                        .simulation()
+                        .engine()
+                        .getEntitiesFor(Family.all(Commander.class).get())
+                        .size())
+                .isEqualTo(1);
     }
 
     @Test
@@ -218,7 +225,7 @@ class ScenarioSessionTest {
 
         @Override
         public SimConfig configure(SimConfig base) {
-            return base.with(base.commander().withSpeed(SPEED));
+            return base.withCommander(base.commander().withSpeed(SPEED));
         }
 
         @Override

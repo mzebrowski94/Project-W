@@ -2,6 +2,8 @@ package pl.mzebrows.pwt.sim.scenario;
 
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.def.UnitDef;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * The default arena: a commander in the middle, obstacles scattered around, enemies further out.
@@ -47,10 +49,11 @@ final class SkirmishScenario implements Scenario {
                 simulation.spawnObstacle(spot.x(), spot.y());
             }
         }
-        for (int i = 0; i < config.enemy().count(); i++) {
-            Placement.Spot spot = placement.find(config.enemy().radius());
+        UnitDef grunt = config.unit(UnitKind.GRUNT);
+        for (int i = 0; i < grunt.count(); i++) {
+            Placement.Spot spot = placement.find(grunt.radius());
             if (spot != null) {
-                simulation.spawnEnemy(spot.x(), spot.y());
+                simulation.spawnUnit(UnitKind.GRUNT, spot.x(), spot.y());
             }
         }
     }

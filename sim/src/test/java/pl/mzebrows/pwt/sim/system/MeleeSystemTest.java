@@ -132,7 +132,7 @@ class MeleeSystemTest {
     @Test
     void holdsBackTheSweepUntilAWeaponWithAWindUpHasFinishedIt() {
         SimConfig config = AlphaWorlds.config();
-        Simulation simulation = new Simulation(config.with(config.melee().withWindupSeconds(0.2f)));
+        Simulation simulation = new Simulation(config.withMelee(config.melee().withWindupSeconds(0.2f)));
         simulation.spawnCommander(50f, 50f);
 
         simulation.step(EAST);
@@ -143,7 +143,7 @@ class MeleeSystemTest {
     @Test
     void releasesTheSweepOnceTheWindUpIsOver() {
         SimConfig config = AlphaWorlds.config();
-        Simulation simulation = new Simulation(config.with(config.melee().withWindupSeconds(0.2f)));
+        Simulation simulation = new Simulation(config.withMelee(config.melee().withWindupSeconds(0.2f)));
         simulation.spawnCommander(50f, 50f);
 
         steps(simulation, ticksIn(0.2f) + 2, EAST);

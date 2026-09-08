@@ -8,13 +8,15 @@ import com.badlogic.ashley.core.Family;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Brute;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Strike;
+import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * Enforces the composition invariants in {@code docs/design/README.md}: everything that can be hit
@@ -53,16 +55,37 @@ class SpawnerTest {
         assertThat(strike.getComponent(Strike.class).owner).isSameAs(commander);
     }
 
+    /**
+     * Every strain is built from the same parts and differs only in its numbers, so nothing chasing,
+     * leaping or taking a bullet ever has to know which strain it is looking at.
+     */
     @Test
-    void givesABruteEverythingAnEnemyHasSoNothingHasToTellThemApart() {
+    void givesEveryStrainTheSameComponentsSoNothingHasToTellThemApart() {
         Simulation simulation = simulation();
 
-        Entity brute = simulation.spawnBrute(20f, 20f);
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, 10f, 10f);
+        Entity brute = simulation.spawnUnit(UnitKind.BRUTE, 20f, 20f);
 
         assertThat(brute.getComponent(Enemy.class)).isNotNull();
-        assertThat(brute.getComponent(Brute.class)).isNotNull();
         assertThat(brute.getComponent(Body.class)).isNotNull();
         assertThat(brute.getComponent(Leap.class)).isNotNull();
+        assertThat(grunt.getComponent(Strain.class).kind).isEqualTo(UnitKind.GRUNT);
+        assertThat(brute.getComponent(Strain.class).kind).isEqualTo(UnitKind.BRUTE);
+    }
+
+    /** The look follows the strain, so an evolved unit cannot end up drawn as what it used to be. */
+    @Test
+    void drawsAUnitAsWhateverItsStrainSays() {
+        Simulation simulation = simulation();
+
+        Entity unit = simulation.spawnUnit(UnitKind.GRUNT, 10f, 10f);
+        assertThat(look(unit)).isEqualTo(Look.GRUNT);
+
+        simulation.spawner().applyStrain(unit, UnitKind.BRUTE);
+
+        assertThat(look(unit)).isEqualTo(Look.BRUTE);
+        assertThat(unit.getComponent(Body.class).radius)
+                .isEqualTo(simulation.config().unit(UnitKind.BRUTE).radius());
     }
 
     @Test
@@ -90,10 +113,10 @@ class SpawnerTest {
     void tellsTheRendererWhatEverySpawnedEntityIs() {
         Simulation simulation = simulation();
 
-        assertThat(look(simulation.spawnCommander(10f, 10f))).isEqualTo(Appearance.Look.COMMANDER);
-        assertThat(look(simulation.spawnEnemy(20f, 20f))).isEqualTo(Appearance.Look.ENEMY);
-        assertThat(look(simulation.spawnObstacle(30f, 30f))).isEqualTo(Appearance.Look.OBSTACLE);
-        assertThat(look(simulation.spawnProjectile(40f, 40f, 1f, 0f))).isEqualTo(Appearance.Look.PROJECTILE);
+        assertThat(look(simulation.spawnCommander(10f, 10f))).isEqualTo(Look.COMMANDER);
+        assertThat(look(simulation.spawnEnemy(20f, 20f))).isEqualTo(Look.GRUNT);
+        assertThat(look(simulation.spawnObstacle(30f, 30f))).isEqualTo(Look.OBSTACLE);
+        assertThat(look(simulation.spawnProjectile(40f, 40f, 1f, 0f))).isEqualTo(Look.PROJECTILE);
     }
 
     @Test
@@ -135,7 +158,7 @@ class SpawnerTest {
         assertThat(previous.y).isEqualTo(34f);
     }
 
-    private static Appearance.Look look(Entity entity) {
+    private static Look look(Entity entity) {
         return entity.getComponent(Appearance.class).look;
     }
 }

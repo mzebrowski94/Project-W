@@ -72,6 +72,19 @@ final class ArchitectureTest {
                     + " an entity that vanishes mid-tick takes its own funeral with it - mark it Dead instead");
 
     @ArchTest
+    static final ArchRule onlyTheSpawnerChangesWhatAnEntityIsMadeOf = noClasses()
+            .that()
+            .doNotHaveSimpleName("Spawner")
+            .should()
+            .callMethod(com.badlogic.ashley.core.Entity.class, "add", com.badlogic.ashley.core.Component.class)
+            .orShould()
+            .callMethod(com.badlogic.ashley.core.Entity.class, "remove", Class.class)
+            .because("adding or removing a component mid-tick mutates the families being iterated and silently"
+                    + " skips entities; state that changes belongs in a field on a component the entity already"
+                    + " carries - a strain, a phase, a timer - which is why Damage, Dying, Stunned and Strain are"
+                    + " all permanent");
+
+    @ArchTest
     static final ArchRule scenariosCannotSwitchOnGodMode = noClasses()
             .that()
             .resideInAPackage("pl.mzebrows.pwt.sim.scenario..")

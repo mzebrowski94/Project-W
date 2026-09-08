@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.scenario;
 
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * Sixty enemies spawned deliberately on top of each other, with no obstacles.
@@ -28,7 +29,8 @@ final class CrowdScenario implements Scenario {
 
     @Override
     public SimConfig configure(SimConfig base) {
-        return base.with(base.enemy().withCount(ENEMIES)).with(base.obstacle().withCount(0));
+        return base.withUnit(UnitKind.GRUNT, grunt -> grunt.withCount(ENEMIES))
+                .withObstacle(base.obstacle().withCount(0));
     }
 
     @Override
@@ -40,7 +42,7 @@ final class CrowdScenario implements Scenario {
 
         simulation.spawnCommander(centreX, centreY);
 
-        for (int i = 0; i < config.enemy().count(); i++) {
+        for (int i = 0; i < config.unit(UnitKind.GRUNT).count(); i++) {
             float x = centreX + simulation.rng().nextFloat(-RING_RADIUS, RING_RADIUS);
             float y = centreY - arena.height() * 0.35f + simulation.rng().nextFloat(-RING_RADIUS, RING_RADIUS);
             simulation.spawnEnemy(x, y);

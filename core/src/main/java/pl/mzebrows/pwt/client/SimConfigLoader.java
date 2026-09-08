@@ -1,6 +1,15 @@
 package pl.mzebrows.pwt.client;
 
+import java.util.Locale;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.LeapDef;
+import pl.mzebrows.pwt.sim.def.PickupDef;
+import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.UnitDef;
+import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WeaponDef;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
  * Builds a {@link SimConfig} from {@code game.properties}.
@@ -24,9 +33,9 @@ public final class SimConfigLoader {
                 properties.getInt("sim.maxTicksPerFrame", defaults.maxTicksPerFrame()),
                 arena(properties, defaults.arena()),
                 commander(properties, defaults.commander()),
-                enemy(properties, defaults.enemy()),
-                brute(properties, defaults.brute()),
-                weapon(properties, defaults.weapon()),
+                units(properties, defaults),
+                pickups(properties, defaults),
+                weapons(properties, defaults),
                 melee(properties, defaults.melee()),
                 obstacle(properties, defaults.obstacle()),
                 collision(properties, defaults.collision()));
@@ -49,37 +58,64 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.commander.respawnInvulnerableSeconds", defaults.respawnInvulnerableSeconds()));
     }
 
-    private static SimConfig.EnemyConfig enemy(GameProperties properties, SimConfig.EnemyConfig defaults) {
-        return new SimConfig.EnemyConfig(
-                properties.getFloat("sim.enemy.radius", defaults.radius()),
-                properties.getFloat("sim.enemy.speed", defaults.speed()),
-                properties.getInt("sim.enemy.count", defaults.count()),
-                properties.getFloat("sim.enemy.health", defaults.health()),
-                properties.getFloat("sim.enemy.contactDamage", defaults.contactDamage()),
-                properties.getFloat("sim.enemy.attackCooldownSeconds", defaults.attackCooldownSeconds()),
-                properties.getFloat("sim.enemy.victimInvulnerableSeconds", defaults.victimInvulnerableSeconds()),
-                properties.getFloat("sim.enemy.lockSeconds", defaults.lockSeconds()),
-                properties.getFloat("sim.enemy.deathThroesSeconds", defaults.deathThroesSeconds()),
-                leap(properties, "sim.enemy.leap", defaults.leap()));
+    /**
+     * Every strain, each under {@code sim.unit.<kind>} with the same keys below it.
+     *
+     * <p>One loop over the enum rather than a method per strain: adding a strain is a constant, a
+     * default and a block in the file, and nothing here changes. A strain with no block in the file
+     * simply falls back to its default, field by field.
+     *
+     * <p>What a strain <em>becomes</em> and what it is <em>drawn as</em> are deliberately not
+     * loadable. Both are structure rather than tuning - an evolution chain read out of a properties
+     * file could be edited into a loop, and a look is not a number anyone balances.
+     */
+    private static Defs<UnitKind, UnitDef> units(GameProperties properties, SimConfig defaults) {
+        Defs.Builder<UnitKind, UnitDef> builder = Defs.builder(UnitKind.class);
+        for (UnitKind kind : UnitKind.values()) {
+            builder.put(
+                    kind, unit(properties, "sim.unit." + kind.name().toLowerCase(Locale.ROOT), defaults.unit(kind)));
+        }
+        return builder.build();
     }
 
-    private static SimConfig.BruteConfig brute(GameProperties properties, SimConfig.BruteConfig defaults) {
-        return new SimConfig.BruteConfig(
-                properties.getFloat("sim.brute.radius", defaults.radius()),
-                properties.getFloat("sim.brute.speed", defaults.speed()),
-                properties.getInt("sim.brute.count", defaults.count()),
-                properties.getFloat("sim.brute.health", defaults.health()),
-                properties.getFloat("sim.brute.contactDamage", defaults.contactDamage()),
-                properties.getFloat("sim.brute.attackCooldownSeconds", defaults.attackCooldownSeconds()),
-                properties.getFloat("sim.brute.victimInvulnerableSeconds", defaults.victimInvulnerableSeconds()),
-                properties.getFloat("sim.brute.lockSeconds", defaults.lockSeconds()),
-                properties.getFloat("sim.brute.deathThroesSeconds", defaults.deathThroesSeconds()),
-                leap(properties, "sim.brute.leap", defaults.leap()));
+    /**
+     * Every kind of pickup, each under {@code sim.pickup.<kind>}.
+     *
+     * <p>Only the size is loadable. What a pickup <em>grants</em> is structure rather than tuning -
+     * which effect it has and which strain it names - and it stays in {@code SimConfig} for the same
+     * reason a strain's {@code evolvesTo} does. The number that balances an eating evolution is
+     * {@code feedToEvolve} on the strain, and that is loaded.
+     */
+    private static Defs<PickupKind, PickupDef> pickups(GameProperties properties, SimConfig defaults) {
+        Defs.Builder<PickupKind, PickupDef> builder = Defs.builder(PickupKind.class);
+        for (PickupKind kind : PickupKind.values()) {
+            PickupDef fallback = defaults.pickup(kind);
+            String prefix = "sim.pickup." + kind.name().toLowerCase(Locale.ROOT);
+            builder.put(kind, fallback.withRadius(properties.getFloat(prefix + ".radius", fallback.radius())));
+        }
+        return builder.build();
     }
 
-    /** Every enemy kind configures its leap under its own prefix; the keys below it are the same. */
-    private static SimConfig.LeapConfig leap(GameProperties properties, String prefix, SimConfig.LeapConfig defaults) {
-        return new SimConfig.LeapConfig(
+    private static UnitDef unit(GameProperties properties, String prefix, UnitDef defaults) {
+        return new UnitDef(
+                properties.getFloat(prefix + ".radius", defaults.radius()),
+                properties.getFloat(prefix + ".speed", defaults.speed()),
+                properties.getInt(prefix + ".count", defaults.count()),
+                properties.getFloat(prefix + ".health", defaults.health()),
+                properties.getFloat(prefix + ".contactDamage", defaults.contactDamage()),
+                properties.getFloat(prefix + ".attackCooldownSeconds", defaults.attackCooldownSeconds()),
+                properties.getFloat(prefix + ".victimInvulnerableSeconds", defaults.victimInvulnerableSeconds()),
+                properties.getFloat(prefix + ".lockSeconds", defaults.lockSeconds()),
+                properties.getFloat(prefix + ".deathThroesSeconds", defaults.deathThroesSeconds()),
+                properties.getInt(prefix + ".feedToEvolve", defaults.feedToEvolve()),
+                defaults.evolvesTo(),
+                leap(properties, prefix + ".leap", defaults.leap()),
+                defaults.look());
+    }
+
+    /** Every strain configures its leap under its own prefix; the keys below it are the same. */
+    private static LeapDef leap(GameProperties properties, String prefix, LeapDef defaults) {
+        return new LeapDef(
                 properties.getBoolean(prefix + ".enabled", defaults.enabled()),
                 properties.getFloat(prefix + ".triggerRange", defaults.triggerRange()),
                 properties.getFloat(prefix + ".speed", defaults.speed()),
@@ -105,12 +141,25 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.melee.knockbackDecay", defaults.knockbackDecay()));
     }
 
-    private static SimConfig.WeaponConfig weapon(GameProperties properties, SimConfig.WeaponConfig defaults) {
-        return new SimConfig.WeaponConfig(
-                properties.getFloat("sim.weapon.cooldownSeconds", defaults.cooldownSeconds()),
-                properties.getFloat("sim.weapon.projectileSpeed", defaults.projectileSpeed()),
-                properties.getFloat("sim.weapon.projectileRadius", defaults.projectileRadius()),
-                properties.getFloat("sim.weapon.damage", defaults.damage()));
+    /**
+     * Every gun, each under {@code sim.weapon.<kind>} with the same keys. What its shots look like
+     * stays in {@code SimConfig}: a look is not a number anyone balances.
+     */
+    private static Defs<WeaponKind, WeaponDef> weapons(GameProperties properties, SimConfig defaults) {
+        Defs.Builder<WeaponKind, WeaponDef> builder = Defs.builder(WeaponKind.class);
+        for (WeaponKind kind : WeaponKind.values()) {
+            WeaponDef fallback = defaults.weapon(kind);
+            String prefix = "sim.weapon." + kind.name().toLowerCase(Locale.ROOT);
+            builder.put(
+                    kind,
+                    new WeaponDef(
+                            properties.getFloat(prefix + ".cooldownSeconds", fallback.cooldownSeconds()),
+                            properties.getFloat(prefix + ".projectileSpeed", fallback.projectileSpeed()),
+                            properties.getFloat(prefix + ".projectileRadius", fallback.projectileRadius()),
+                            properties.getFloat(prefix + ".damage", fallback.damage()),
+                            fallback.projectileLook()));
+        }
+        return builder.build();
     }
 
     private static SimConfig.CollisionConfig collision(GameProperties properties, SimConfig.CollisionConfig defaults) {

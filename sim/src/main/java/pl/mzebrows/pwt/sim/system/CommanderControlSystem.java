@@ -116,9 +116,7 @@ public final class CommanderControlSystem extends IteratingSystem {
                 position.y + directionY * muzzle,
                 directionX,
                 directionY,
-                weapon.projectileSpeed,
-                weapon.projectileRadius,
-                weapon.damage,
+                weapon,
                 FACTION.get(entity).side);
         weapon.remainingSeconds = weapon.cooldownSeconds;
     }

@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.Color;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.def.Look;
 
 /**
  * The config files live in assets/, which is only on the launcher's classpath - so here both loaders
@@ -26,6 +27,7 @@ class ConfigDefaultsTest {
         assertThat(config.backgroundColor()).isNotNull();
         assertThat(config.palette()).isNotNull();
         assertThat(config.stateTint()).isNotNull();
+        assertThat(config.chargeMark()).isNotNull();
     }
 
     @Test
@@ -37,7 +39,7 @@ class ConfigDefaultsTest {
     void mapsEveryLookToAColour() {
         Palette palette = GraphicConfig.load().palette();
 
-        for (Appearance.Look look : Appearance.Look.values()) {
+        for (Look look : Look.values()) {
             assertThat(palette.colorFor(look)).isNotNull();
         }
     }
@@ -71,15 +73,27 @@ class ConfigDefaultsTest {
 
     @Test
     void rejectsANonPositiveVirtualSize() {
-        assertThatThrownBy(() -> new GraphicConfig(0f, 90f, 1280, 720, true, Color.BLACK, palette(), tint()))
+        assertThatThrownBy(() -> new GraphicConfig(0f, 90f, 1280, 720, true, Color.BLACK, palette(), tint(), mark()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static Palette palette() {
-        return new Palette(Color.WHITE, Color.RED, Color.MAROON, Color.YELLOW, Color.WHITE, Color.GRAY, Color.MAGENTA);
+        Color[] colors = new Color[Look.values().length];
+        java.util.Arrays.fill(colors, Color.WHITE);
+        return new Palette(colors);
+    }
+
+    /** A palette missing a look cannot be built, so no renderer has to cope with one. */
+    @Test
+    void refusesAPaletteThatIsMissingALook() {
+        assertThatThrownBy(() -> new Palette(new Color[] {Color.WHITE})).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static StateTint tint() {
         return new StateTint(0.85f, 0.5f, -0.3f, 0.35f, -0.7f);
+    }
+
+    private static ChargeMark mark() {
+        return new ChargeMark(0.55f, 0.8f);
     }
 }

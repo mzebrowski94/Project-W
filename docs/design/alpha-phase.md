@@ -85,6 +85,10 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | Two units in a clinch are two circles touching, both drawn the same | The grapple animation, which resolves into one of them dying. `Appearance.State.GRAPPLING` is the hook and is already published for both parties for the whole lock. |
 | Nothing reacts to a death except respawning and the killer's lock | More death reactions, as they are designed. The machinery is there: mark `Dead`, add a component, add a small system. |
 | `Placement` silently places fewer circles than asked when the arena is full | A real level format, which must report the shortfall instead of swallowing it. |
+| **Frozen troopers.** An inert body on the field that an alien eats and the commander rescues. It is a pickup, not a trooper - it does not follow, cannot be commanded and cannot die. | Real troopers. It exists so evolution-by-devouring can be built and played before the squad does, and **nothing about it answers how the squad works**. |
+| `Level.pendingReinforcements` counts rescued troopers and nothing reads it | The squad. The number is there so a level-scope grant has somewhere real to land and the path can be tested end to end; it changes nothing in play. |
+| A unit that is filling up is drawn as a brighter core inside its circle | Whatever the art does with it. `Appearance.charge` is the hook and is already published as a fraction, so the renderer decides and the simulation never learns how it is shown. |
+| The commander's gun is named only in the F1 overlay | A real HUD. What he is holding is visible in what he fires, which is enough to play; it is not enough to be told at a glance. |
 
 ## Known limits, accepted on purpose
 

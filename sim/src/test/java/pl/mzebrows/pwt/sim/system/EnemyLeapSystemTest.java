@@ -23,6 +23,8 @@ import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.LeapDef;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * Throwing yourself at the commander.
@@ -197,8 +199,10 @@ class EnemyLeapSystemTest {
 
     private static Simulation variedHesitation() {
         SimConfig config = AlphaWorlds.config();
-        SimConfig.LeapConfig varied = AlphaWorlds.leapConfig().withHesitation(0.05f, 0.5f);
-        return new Simulation(config.with(config.enemy().withContactDamage(0f).withLeap(varied)));
+        LeapDef varied =
+                AlphaWorlds.leapConfig().withHesitationMinSeconds(0.05f).withHesitationMaxSeconds(0.5f);
+        return new Simulation(config.withUnit(
+                UnitKind.GRUNT, grunt -> grunt.withContactDamage(0f).withLeap(varied)));
     }
 
     private static List<Leap.Phase> record(Simulation simulation, Entity enemy, int ticks) {

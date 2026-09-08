@@ -25,6 +25,7 @@ import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * What a swing costs whatever it lands on, and what it costs the man swinging.
@@ -254,7 +255,6 @@ class StrikeCombatTest {
 
     private static Simulation lethalLeaping() {
         Simulation harmlessWorld = harmlessLeaping();
-        return new Simulation(
-                harmlessWorld.config().with(harmlessWorld.config().enemy().withContactDamage(1000f)));
+        return new Simulation(harmlessWorld.config().withUnit(UnitKind.GRUNT, grunt -> grunt.withContactDamage(1000f)));
     }
 }

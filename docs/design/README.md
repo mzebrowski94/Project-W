@@ -62,6 +62,16 @@ rows become enforceable once the named feature exists - promote them then.
 | A killing blow is instant; only the removal of the body waits. | enforced - `CombatTest.killsTheCommanderTheMomentAnEnemyTouchesIt` |
 | One swing lands at most one blow. | enforced - `StrikeCombatTest.landsAtMostOneBlowPerSwing` |
 | Everything that can be hit has a `Body`. | enforced - `SpawnerTest.givesEveryUnitABodySoItCanBeHit` |
+| Contact resolution records what is owed; a later system decides what it costs. Nothing in the collision path applies damage, grants a pickup or removes an entity. | judgement |
+| What an entity *is* - its strain, its gun - is a field on a component. No system adds or removes a component; only `Spawner` builds one. | enforced - `ArchitectureTest.onlyTheSpawnerChangesWhatAnEntityIsMadeOf` |
+| Every kind named by an enum has a definition. A table with a hole in it cannot be built. | enforced - `DefsTest.refusesToBuildATableThatIsMissingAKind` |
+| The collision grid's cell size covers the largest body any entity can reach, including strains only evolution reaches. | enforced - `SimConfigTest.measuresTheLargestBodyEvenWhenOnlyEvolvingCanReachIt` |
+| A pickup is taken by exactly one taker. | enforced - `PickupSystemTest.givesOnePickupToExactlyOneTaker` |
+| A pickup a side is offered nothing by is left standing, not consumed. | enforced - `PickupSystemTest.leavesAPickupStandingForASideItOffersNothing` |
+| Nothing in its death throes takes a pickup or evolves. | enforced - `PickupSystemTest.letsNothingInItsDeathThroesTakeAnything` |
+| A unit that evolves arrives at the new strain's full health, and is otherwise identical to one spawned in it. | enforced - `EvolutionSystemTest.startsTheNewStrainAtFullHealth` |
+| How full a unit is towards evolving is published for the renderer, never left as a number only the simulation knows. | enforced - `EvolutionSystemTest.showsHowFarAlongAUnitIsTowardsEvolving` |
+| A weapon pickup replaces what the commander is carrying. Nothing about a gun survives his death. | enforced - `WeaponPickupTest.givesHimBackHisSidearmWhenHeComesBack` |
 
 The no-hitscan rows are load-bearing in three directions at once: they keep collision uniform, keep
 the simulation deterministic, and keep every threat visible to the player. They are the rows most
@@ -88,6 +98,20 @@ The lock and stun rows are what make a fight an exchange rather than a sequence 
 easy to break by accident: an "obvious" tidy-up that stops a stunned unit being pushed, or that zeroes
 a stunned unit's velocity in its driver rather than leaving it to `StunSystem`, breaks knockback
 without breaking any other test.
+
+**A gun is found and lost, never owned.** Picking one up replaces what you were carrying outright and
+dying gives you the sidearm back. Slots you switch between were considered and rejected: they need a
+binding, and the input map below has nothing free - the melee strike took right mouse and the squad
+command is still waiting for one. They also turn a moment of "take it or deny it" into a menu the
+player carries around, which is what pillar 3 is against even though there is no shop involved. If a
+second weapon axis is ever wanted, it is a second *kind* of weapon slot - a melee weapon alongside a
+gun - not two guns.
+
+**Both halves of a shared item are the point.** A pickup carries a grant per side, and either may be
+nothing. That is what makes a frozen trooper a race rather than a collectable: reach it and it is a
+reinforcement, lose it and the thing chasing you is one mouthful closer to being a brute. An item
+that offers a side nothing is not consumed by that side, so denial has to be earned rather than
+handed over.
 
 ## Input map
 
@@ -131,7 +155,14 @@ mistaken for a decision.
 - The source game had four commanders because it was four-player co-op. In single-player, is the
   commander a choice with distinct kits, or one fixed protagonist?
 - Does the squad persist between levels, or does each level grant a fresh one?
-- Does a weapon pickup replace what you are carrying, or fill a slot?
 - On failure, do you retry the level, or is the run over?
 - Given "no between-level management", what does progression across the nine levels actually consist
   of - only what you carry out of a level?
+- What does alien food do for the commander? Mushrooms and flowers currently offer him nothing, so he
+  walks over them. Denial by eating them, a use of his own, or nothing at all are all still open - and
+  "nothing at all" is a real answer, not a gap.
+- Can a pickup be destroyed? Shooting a mushroom would make denial something the player can do at
+  range rather than only by standing on it, and would change how a feeding ground reads. Nothing
+  supports it today.
+- What happens to a reinforcement? It lands on the level entity and is counted; who it becomes needs
+  the squad.
