@@ -10,6 +10,8 @@ import pl.mzebrows.pwt.sim.component.Appearance;
  * no change. Keeping them as four numbers rather than four more colours is what makes a winding-up
  * brute and a winding-up enemy read as the same event.
  *
+ * @param unaware a unit that has not noticed the commander, or has lost him. It must read as the
+ *     quietest thing on the field, because it is the one thing there that is not a threat yet
  * @param windingUp a unit committed to a leap and standing still - the tell, so it must pop
  * @param airborne a unit in the air on a direction it can no longer change
  * @param grappling both parties to a landed blow, for as long as the lock holds them. Winner and
@@ -17,11 +19,12 @@ import pl.mzebrows.pwt.sim.component.Appearance;
  * @param staggered a unit shoved off a blow it survived, briefly unable to act
  * @param dying a body on the field that is not coming back up, with no exchange behind it
  */
-public record StateTint(float windingUp, float airborne, float grappling, float staggered, float dying) {
+public record StateTint(float unaware, float windingUp, float airborne, float grappling, float staggered, float dying) {
 
     /** How far to shift the base colour, in {@code [-1, 1]}. */
     public float forState(Appearance.State state) {
         return switch (state) {
+            case UNAWARE -> unaware;
             case WINDING_UP -> windingUp;
             case AIRBORNE -> airborne;
             case GRAPPLING -> grappling;

@@ -26,6 +26,8 @@ import org.jspecify.annotations.Nullable;
  * @param feedToEvolve how much it must consume before it turns into {@link #evolvesTo}. Zero means
  *     eating alone never changes it, though an item that names a strain still can
  * @param evolvesTo what it becomes when it has fed enough, or null for a strain with nowhere to go
+ * @param perception how far it can notice the commander, and how far he must get to be lost again
+ * @param wander how it passes the time when it has noticed nobody
  * @param leap how it closes the last of the distance
  * @param look what a renderer draws it as
  */
@@ -42,6 +44,8 @@ public record UnitDef(
         float deathThroesSeconds,
         int feedToEvolve,
         @Nullable UnitKind evolvesTo,
+        PerceptionDef perception,
+        WanderDef wander,
         LeapDef leap,
         Look look) {
 

@@ -30,6 +30,12 @@ reason it is a module rather than a package; ADR 0009 has the argument.
   it managed so a full arena and a broken generator do not look identical. Deliberately grid-anchored
   rather than Poisson-disc: the grid is the unit a level is authored in and terrain is per tile, which
   is what makes "mushrooms grow on organic ground" a filter instead of a rejection loop.
+- `FlowField` - which way to walk, from any tile, to reach one goal, for a body of one size. A
+  breadth-first pass out from the goal, then the gradient of that distance field, sampled with a
+  bilinear blend so following it is a curve rather than a staircase. **Clearance is baked in**: a
+  field is built for a body radius and a tile is only ground if a circle that size fits on it, which
+  is what makes a one-tile crack a route for a grunt and a wall for a brute. Nav data is a function of
+  terrain and a goal, so it lives here; who follows it, and how fast, is a system.
 - `Maps` - ready-made layouts and the checks that keep one honest. `uniform` for tests; `regions`
   partitions open ground by nearest seed; `reachableFrom`/`connects` flood-fill a map so a layout can
   be validated rather than trusted, and `sealUnreachable` fills in the pockets they find. Four-connected,
@@ -53,7 +59,10 @@ system that changes world state.
 - `SimConfig` - the tunables it was built with. A record, handed in already parsed; `sim` reads no
   files.
 - `Rng` - SplitMix64. The only randomness source. Its state is one `long`, so a world can be
-  snapshotted and replayed exactly.
+  snapshotted and replayed exactly. `Rng.stream` derives one generator per concern from the level
+  seed; `RngStream` names them. Sharing one sequence between concerns keeps every run reproducible
+  and makes the game miserable to tune, because re-tuning how often anything draws a number reshuffles
+  every number every other system gets afterwards.
 - `FixedStepClock` - turns a variable frame delta into a whole number of ticks, and exposes `alpha`
   for render interpolation. Long stalls are dropped, not queued.
 - `CommanderInput` - one tick of what the player asked for. The only way input enters the
@@ -94,10 +103,20 @@ Pickups resolving *before* damage is deliberate: a grunt shot to a sliver that r
 gets up whole and takes that tick's damage as the thing it has become. Nothing else in the simulation removes
 an entity - `ArchitectureTest` fails the build if it tries.
 
-Two more orderings carry meaning. `EnemyLeapSystem` runs after `EnemyChaseSystem` and overwrites the
-velocity of anything mid-leap, which is why neither needs to know the other exists. `StunSystem` runs
-after every driver and before movement, so it owns the velocity of anything held still - a driver that
-zeroed a stunned unit's velocity itself would silently delete knockback.
+**Driving a unit is a pipeline, and the seam is `Steering`.** `PerceptionSystem` decides which units
+are hunting the commander; `NavigationSystem` gives the ones that are a direction out of a flow field
+built for their strain's body size; `WanderSystem` ambles the ones that are not around the patch they
+were spawned in. All three write a *desired velocity* and none of them writes a velocity, so several
+systems can have an opinion without any of them knowing the others exist. `DriveSystem` commits that
+to `Velocity` once, at the end, and clears it - which is why a unit no system spoke for this tick
+stands still, and why there is no halt-everything branch in any driver. G0010 has the argument for
+deciding in a field rather than in a tree.
+
+Two more orderings carry meaning. `EnemyLeapSystem` runs after `DriveSystem` and overwrites the
+velocity of anything mid-leap outright, because a leap is committed and is not one opinion among
+several. `StunSystem` runs after every driver and before movement, so it owns the velocity of anything
+held still - a driver that zeroed a stunned unit's velocity itself would silently delete knockback,
+which is why `DriveSystem` leaves a held unit entirely alone rather than writing a zero over it.
 - `component/` - pooled data. Public mutable fields, `reset()`, no behaviour.
 - `system/` - all behaviour. One system, one responsibility.
 

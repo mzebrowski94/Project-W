@@ -27,6 +27,13 @@ public final class Appearance implements Component, Pool.Poolable {
     /** What the entity is doing, where that changes how it must read at a glance. */
     public enum State {
         NORMAL,
+        /**
+         * On the field but not hunting anybody - it has not noticed the commander, or has lost him.
+         * Pillar 5: which of the things in front of you are already coming for you is exactly the sort
+         * of thing a player must be able to read, and a pack that looks identical asleep and awake
+         * would make a detection range something the player could only learn by dying to it.
+         */
+        UNAWARE,
         /** Committed to a leap and standing still. The window the player has to answer it. */
         WINDING_UP,
         AIRBORNE,

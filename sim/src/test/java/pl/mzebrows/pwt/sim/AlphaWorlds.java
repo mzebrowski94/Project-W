@@ -11,15 +11,19 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
@@ -32,6 +36,10 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  *
  * <p>New system tests should build worlds from here rather than assembling a {@link SimConfig} by
  * hand; a config literal in a test rots the moment the record gains a field.
+ *
+ * <p><strong>Every strain is always aggressive in the base config.</strong> Most tests are about what
+ * a unit does once it is fighting rather than about whether it has noticed; {@link #watching()}
+ * switches detection on for the tests that are about noticing.
  *
  * <p><strong>Leaping is off in the base config.</strong> Most tests are about something else and want
  * an enemy that walks predictably; {@link #leaping()} switches it on with a fixed wind-up so a test
@@ -103,6 +111,25 @@ public final class AlphaWorlds {
     public static final float BRUTE_RADIUS = 1f;
     public static final float BRUTE_SPEED = 30f;
     public static final float BRUTE_HEALTH = 300f;
+
+    /** How close the commander must come before a watching strain notices him, in {@link #watching()}. */
+    public static final float DETECTION_RANGE = 20f;
+
+    /** How far he must get to be lost again. Wider than the detection range, which is the hysteresis. */
+    public static final float LOSE_RANGE = 30f;
+
+    /** How far an idle unit roams from where it was spawned, in {@link #wandering()}. */
+    public static final float WANDER_RADIUS = 10f;
+
+    /** Half speed while idle, so an ambling unit reads differently from one that has seen you. */
+    public static final float WANDER_SPEED_FACTOR = 0.5f;
+
+    public static final float WANDER_ARRIVE_RADIUS = 1f;
+
+    /** Fixed, so a test knows exactly how long a unit stands still between waypoints. */
+    public static final float WANDER_PAUSE = 0.2f;
+
+    public static final float WANDER_TIMEOUT = 3f;
 
     public static final float LEAP_TRIGGER_RANGE = 20f;
 
@@ -210,6 +237,8 @@ public final class AlphaWorlds {
                 ENEMY_THROES,
                 0,
                 null,
+                PerceptionDef.alwaysAggressive(DETECTION_RANGE, LOSE_RANGE),
+                WanderDef.off(),
                 LeapDef.off(),
                 look);
     }
@@ -264,6 +293,35 @@ public final class AlphaWorlds {
         return new Simulation(config().withUnit(
                         UnitKind.GRUNT,
                         grunt -> grunt.withFeedToEvolve(FEED_TO_EVOLVE).withEvolvesTo(UnitKind.BRUTE)));
+    }
+
+    /**
+     * A world where every strain has to notice the commander before it hunts him, at the ranges above.
+     * The base config has them always aggressive, so a test about something else never has a pack
+     * quietly stand down halfway through it.
+     */
+    public static Simulation watching() {
+        return new Simulation(everyStrain(
+                config(), strain -> strain.withPerception(new PerceptionDef(false, DETECTION_RANGE, LOSE_RANGE))));
+    }
+
+    /**
+     * A world where every strain both has to notice the commander and ambles about while it has not.
+     * Idling is off in the base config for the same reason leaping is: a test about something else
+     * wants an enemy that stays where it was put.
+     */
+    public static Simulation wandering() {
+        return new Simulation(everyStrain(
+                config(),
+                strain -> strain.withPerception(new PerceptionDef(false, DETECTION_RANGE, LOSE_RANGE))
+                        .withWander(new WanderDef(
+                                true,
+                                WANDER_RADIUS,
+                                WANDER_SPEED_FACTOR,
+                                WANDER_ARRIVE_RADIUS,
+                                WANDER_PAUSE,
+                                WANDER_PAUSE,
+                                WANDER_TIMEOUT))));
     }
 
     /** The base world with every strain leaping on a fixed wind-up. */
@@ -324,6 +382,22 @@ public final class AlphaWorlds {
         for (int i = 0; i < count; i++) {
             simulation.step(input);
         }
+    }
+
+    /**
+     * A bare body that moves only where something asks it to, with no perception, no behaviour and no
+     * role. Nothing in the game spawns one; it lets the seam between deciding and moving be tested
+     * without a commander, a strain and a fight in the fixture.
+     */
+    public static Entity spawnSteered(Simulation simulation, float x, float y) {
+        PooledEngine engine = simulation.engine();
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
+        entity.add(engine.createComponent(Steering.class));
+        engine.addEntity(entity);
+        return entity;
     }
 
     /**

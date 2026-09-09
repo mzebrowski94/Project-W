@@ -63,6 +63,21 @@ class DefsTest {
     }
 
     private static UnitDef strain(float radius, Look look) {
-        return new UnitDef(radius, SPEED, 1, HEALTH, 0f, 0f, 0f, 0f, 0f, 0, null, LeapDef.off(), look);
+        return new UnitDef(
+                radius,
+                SPEED,
+                1,
+                HEALTH,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                0,
+                null,
+                PerceptionDef.alwaysAggressive(0f, 0f),
+                WanderDef.off(),
+                LeapDef.off(),
+                look);
     }
 }

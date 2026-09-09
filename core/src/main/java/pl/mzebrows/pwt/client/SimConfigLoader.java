@@ -4,10 +4,12 @@ import java.util.Locale;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.LeapDef;
+import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
@@ -115,8 +117,35 @@ public final class SimConfigLoader {
                 properties.getFloat(prefix + ".deathThroesSeconds", defaults.deathThroesSeconds()),
                 properties.getInt(prefix + ".feedToEvolve", defaults.feedToEvolve()),
                 defaults.evolvesTo(),
+                perception(properties, prefix + ".perception", defaults.perception()),
+                wander(properties, prefix + ".wander", defaults.wander()),
                 leap(properties, prefix + ".leap", defaults.leap()),
                 defaults.look());
+    }
+
+    /**
+     * What a strain can notice, under its own prefix.
+     *
+     * <p>{@code alwaysAggressive} is loadable so a scenario or a build can turn detection off
+     * wholesale and get back the standing fight every existing arena was tuned around.
+     */
+    private static PerceptionDef perception(GameProperties properties, String prefix, PerceptionDef defaults) {
+        return new PerceptionDef(
+                properties.getBoolean(prefix + ".alwaysAggressive", defaults.alwaysAggressive()),
+                properties.getFloat(prefix + ".detectionRange", defaults.detectionRange()),
+                properties.getFloat(prefix + ".loseRange", defaults.loseRange()));
+    }
+
+    /** How a strain idles, under its own prefix. */
+    private static WanderDef wander(GameProperties properties, String prefix, WanderDef defaults) {
+        return new WanderDef(
+                properties.getBoolean(prefix + ".enabled", defaults.enabled()),
+                properties.getFloat(prefix + ".radius", defaults.radius()),
+                properties.getFloat(prefix + ".speedFactor", defaults.speedFactor()),
+                properties.getFloat(prefix + ".arriveRadius", defaults.arriveRadius()),
+                properties.getFloat(prefix + ".pauseMinSeconds", defaults.pauseMinSeconds()),
+                properties.getFloat(prefix + ".pauseMaxSeconds", defaults.pauseMaxSeconds()),
+                properties.getFloat(prefix + ".waypointTimeoutSeconds", defaults.waypointTimeoutSeconds()));
     }
 
     /** Every strain configures its leap under its own prefix; the keys below it are the same. */

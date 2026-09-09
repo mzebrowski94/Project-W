@@ -3,11 +3,13 @@ package pl.mzebrows.pwt.sim.system;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LEAP_HESITATION;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.LOSE_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_LOCK;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmlessLeaping;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.watching;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,28 @@ import pl.mzebrows.pwt.sim.component.Stunned;
  * would be worse than showing nothing, because the player would have learned to trust it.
  */
 class AppearanceSystemTest {
+
+    @Test
+    void showsAUnitThatHasNotNoticedHimAsUnaware() {
+        Simulation simulation = watching();
+        simulation.spawnCommander(50f, 50f);
+        Entity enemy = simulation.spawnEnemy(50f + LOSE_RANGE + 1f, 50f);
+
+        simulation.step();
+
+        assertThat(enemy.getComponent(Appearance.class).state).isEqualTo(Appearance.State.UNAWARE);
+    }
+
+    @Test
+    void showsAUnitThatHasNoticedHimAsNormal() {
+        Simulation simulation = watching();
+        simulation.spawnCommander(50f, 50f);
+        Entity enemy = simulation.spawnEnemy(55f, 50f);
+
+        simulation.step();
+
+        assertThat(enemy.getComponent(Appearance.class).state).isEqualTo(Appearance.State.NORMAL);
+    }
 
     @Test
     void showsAUnitDoingNothingInParticularAsNormal() {

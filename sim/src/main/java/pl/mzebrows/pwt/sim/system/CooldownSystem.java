@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.component.Weapon;
 
 /**
@@ -27,7 +28,8 @@ import pl.mzebrows.pwt.sim.component.Weapon;
  * component mid-tick mutates the families being iterated, which silently skips entities; a spent
  * timer simply reads as inactive.
  *
- * <p>The phase machines - {@link Leap} and the wind-up half of {@link Melee} - keep their clocks here
+ * <p>The phase machines - {@link Leap}, {@link Wander} and the wind-up half of {@link Melee} - keep
+ * their clocks here
  * for the same reason, and read them where the phases are decided. Counting down is not deciding.
  */
 public final class CooldownSystem extends EntitySystem {
@@ -39,6 +41,7 @@ public final class CooldownSystem extends EntitySystem {
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
+    private static final ComponentMapper<Wander> WANDER = ComponentMapper.getFor(Wander.class);
 
     private ImmutableArray<Entity> invulnerable = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> attacks = new ImmutableArray<>(new Array<>());
@@ -47,6 +50,7 @@ public final class CooldownSystem extends EntitySystem {
     private ImmutableArray<Entity> stunned = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> dying = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> leaps = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> wanders = new ImmutableArray<>(new Array<>());
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -57,6 +61,7 @@ public final class CooldownSystem extends EntitySystem {
         stunned = engine.getEntitiesFor(Family.all(Stunned.class).get());
         dying = engine.getEntitiesFor(Family.all(Dying.class).get());
         leaps = engine.getEntitiesFor(Family.all(Leap.class).get());
+        wanders = engine.getEntitiesFor(Family.all(Wander.class).get());
     }
 
     @Override
@@ -92,6 +97,10 @@ public final class CooldownSystem extends EntitySystem {
             Leap leap = LEAP.get(leaps.get(i));
             leap.remainingSeconds = countDown(leap.remainingSeconds, deltaTime);
             leap.cooldownRemaining = countDown(leap.cooldownRemaining, deltaTime);
+        }
+        for (int i = 0; i < wanders.size(); i++) {
+            Wander wander = WANDER.get(wanders.get(i));
+            wander.remainingSeconds = countDown(wander.remainingSeconds, deltaTime);
         }
     }
 

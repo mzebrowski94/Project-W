@@ -9,6 +9,7 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Leap;
+import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -39,6 +40,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
+    private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
 
@@ -93,6 +95,9 @@ public final class AppearanceSystem extends IteratingSystem {
             if (leap.phase == Leap.Phase.HESITATING) {
                 return Appearance.State.WINDING_UP;
             }
+        }
+        if (PERCEPTION.has(entity) && !PERCEPTION.get(entity).aggro) {
+            return Appearance.State.UNAWARE;
         }
         return Appearance.State.NORMAL;
     }

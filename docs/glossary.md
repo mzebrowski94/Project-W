@@ -45,6 +45,14 @@ it. Terms marked *(source)* come from *Triumph! War 2099*.
 | **fragment** | A piece of map that generation produces and assembles with others into a level. Not built yet; the grid exists to make it cheap. |
 | **scenario** | One arena the alpha-phase menu can launch, built to make a system visible. Content, never design. |
 | **contact** | An overlapping pair, reported once per tick by the constraint solver. What it *means* is the collision system's business. |
+| **aggro** | Whether a unit is hunting the commander. One latched boolean, and the whole of a unit's mind: it notices him at its detection range and gives up at its lose range, which is a longer one. |
+| **detection range** | How close the commander must come before an unaware unit notices him. |
+| **lose range** | How far he must get before a hunting unit gives up. Never shorter than the detection range - one number for both would flicker a unit standing exactly on the boundary between hunting and idling, every tick. |
+| **patch** | The circle of ground an idle unit ambles around, centred where it was spawned. Losing the commander therefore means walking home, which is what makes a disengagement read as one. Set once, at the spawn: a grunt that becomes a brute keeps the grunt's patch. |
+| **desired velocity** | Where a unit wants to be going this tick, before anything decides whether it may. Written by whatever is driving it, committed to a velocity by one system, and spent on the tick it was written - a unit nothing spoke for asks for nothing and stops. |
+| **flow field** | A direction per tile, pointing the way to one goal, rebuilt when the goal leaves its tile. One grid pass serves every unit that reads it, however many there are - the alternative is a path search each and a queue walking in single file. |
+| **clearance** | Whether a body of a given size fits on a tile. Baked into a flow field rather than checked afterwards, which is what makes a one-tile crack a route for a grunt and a wall for a brute without anybody writing a rule about it. |
+| **stream** | One seeded generator per concern, all derived from the level seed. Sharing one sequence means re-tuning how often anything draws a number reshuffles every number every other system gets - reproducible, and miserable to iterate on. |
 | **intent** | What a commander is trying to do this tick, as a component. Written from input, read by systems. |
 
 ## Words we do not use

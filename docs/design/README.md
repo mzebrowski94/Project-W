@@ -32,6 +32,15 @@ rows become enforceable once the named feature exists - promote them then.
 | Invariant | Status |
 |---|---|
 | Input reaches the simulation as a per-tick value object; no system polls a device. | enforced - `ArchitectureTest.simulationDoesNotReadInputDirectly` |
+| Every concern draws random numbers from its own stream, derived from the one level seed. | enforced - `RngTest.streamsForDifferentConcernsDiverge` |
+| A unit's lose range is never shorter than its detection range, so a commander on the boundary cannot flicker a pack between hunting and idling. | enforced - `PerceptionDefTest.refusesALoseRangeShorterThanTheDetectionRange` |
+| A unit that has not noticed the commander is drawn differently from one that has. | enforced - `AppearanceSystemTest.showsAUnitThatHasNotNoticedHimAsUnaware` |
+| A unit that has noticed nobody stays in the patch it was spawned in, and walks back to it if it finds itself outside. | enforced - `WanderSystemTest.keepsAnIdleUnitNearWhereItWasSpawned`, `.walksBackToItsSpawnPointWhenItFindsItselfAwayFromIt` |
+| A route is a function of terrain and a body size. Nothing is routed through a gap it does not fit through. | enforced - `FlowFieldTest.refusesAGapNarrowerThanTheBodyItWasBuiltFor`, `NavigationSystemTest.takesAGruntThroughACrackAndLeavesABruteOnTheWrongSideOfIt` |
+| A desired velocity is spent on the tick it was written; a unit no system spoke for stops. | enforced - `DriveSystemTest.spendsADesiredVelocityOnTheTickItWasWritten`, `.stopsAUnitThatAsksForNothing` |
+| Nothing drives a held unit. Whatever is holding it owns its velocity until it comes round. | enforced - `DriveSystemTest.leavesAHeldUnitToWhateverIsHoldingIt` |
+| Systems that drive a unit write a desired velocity; one system turns that into a velocity (G0010). | judgement - `Steering` and `DriveSystem`; the exceptions are the commander's own control and a committed leap, both of which overwrite outright |
+| What a unit is doing is a field on a component, never a component added or removed (G0010). | enforced - `ArchitectureTest.onlyTheSpawnerChangesWhatAnEntityIsMadeOf` |
 | Same seed and same input sequence produce the same run. | enforced - `SimulationDeterminismTest` |
 | No gameplay effect depends on frame rate. | enforced - fixed timestep + `SimulationDeterminismTest` |
 | Every gameplay number comes from `game.properties`; no tuning literals in systems. | judgement |
@@ -174,6 +183,13 @@ mistaken for a decision.
   is what makes the clinch settle at touching distance, but it also means shooting into a crowd now
   leaves obstacles for a second at a time. Whether that reads as good feedback or as clutter is a
   question for play, not for a test.
+- **Should noise pull aggro?** Detection is a radius around each unit and nothing the player does
+  changes it, so firing a gun in a corridor wakes nobody who could not already have noticed you. A
+  shot that wakes things beyond the detection radius is a big arcade lever and it is cheap to add now
+  and awkward to retrofit later, but it is a decision about how loud the game wants to be.
+- **Do enemies notice anything other than the commander?** The secondary detection range - a shorter
+  one, for neutrals and pickups - is designed and not built. It arrives with the rabbit; until then a
+  grunt walks over a mushroom it was not already standing on.
 - What ends a level - an objective, an extraction point, elimination, or a timer?
 - The source game had four commanders because it was four-player co-op. In single-player, is the
   commander a choice with distinct kits, or one fixed protagonist?

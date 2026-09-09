@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Obstacle;
+import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
@@ -30,11 +31,13 @@ import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
 import pl.mzebrows.pwt.sim.component.Speed;
+import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupDef;
@@ -138,6 +141,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
         entity.add(engine.createComponent(Body.class));
         entity.add(engine.createComponent(Speed.class));
+        entity.add(engine.createComponent(Steering.class));
         entity.add(engine.createComponent(Collider.class).set(true, true));
         entity.add(engine.createComponent(Health.class));
         entity.add(engine.createComponent(Damage.class));
@@ -145,6 +149,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Stunned.class));
         entity.add(engine.createComponent(Dying.class));
         entity.add(engine.createComponent(ContactDamage.class));
+        entity.add(engine.createComponent(Perception.class));
+        entity.add(engine.createComponent(Wander.class).anchor(x, y));
         entity.add(engine.createComponent(Leap.class));
         entity.add(engine.createComponent(Taking.class));
         entity.add(engine.createComponent(Feed.class));
@@ -165,6 +171,10 @@ public final class Spawner {
      * mid-tick without disturbing any family being iterated. That is the whole reason a strain is an
      * enum on a component rather than a marker.
      *
+     * <p>Where a unit lives is the one thing it does not rewrite. {@code Wander.anchor} is set at the
+     * spawn and never again, so a grunt that becomes a brute keeps the patch the grunt was put in -
+     * where something lives is a fact about that individual, not about what it has turned into.
+     *
      * <p>Health is set to the new strain's maximum rather than carried over as a fraction. A unit
      * that has just become something else arrives whole; a grunt shot down to a sliver and then fed
      * gets up as a full brute, and that reversal is the drama the mechanic is for.
@@ -179,6 +189,20 @@ public final class Spawner {
         entity.getComponent(ContactDamage.class)
                 .set(def.contactDamage(), def.attackCooldownSeconds(), def.victimInvulnerableSeconds())
                 .setLock(def.lockSeconds(), 0f, 0f);
+        entity.getComponent(Perception.class)
+                .set(
+                        def.perception().alwaysAggressive(),
+                        def.perception().detectionRange(),
+                        def.perception().loseRange());
+        entity.getComponent(Wander.class)
+                .set(
+                        def.wander().enabled(),
+                        def.wander().radius(),
+                        def.wander().speedFactor(),
+                        def.wander().arriveRadius(),
+                        def.wander().pauseMinSeconds(),
+                        def.wander().pauseMaxSeconds(),
+                        def.wander().waypointTimeoutSeconds());
         entity.getComponent(Leap.class)
                 .set(
                         def.leap().enabled(),

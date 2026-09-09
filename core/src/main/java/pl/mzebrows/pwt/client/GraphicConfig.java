@@ -130,6 +130,7 @@ public record GraphicConfig(
 
     private static StateTint stateTint(GameProperties properties) {
         return new StateTint(
+                properties.getFloat("graphic.state.unaware", -0.4f),
                 properties.getFloat("graphic.state.windingUp", 0.85f),
                 properties.getFloat("graphic.state.airborne", 0.5f),
                 properties.getFloat("graphic.state.grappling", -0.3f),

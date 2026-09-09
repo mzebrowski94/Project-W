@@ -20,12 +20,14 @@ import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
 import pl.mzebrows.pwt.sim.system.CooldownSystem;
 import pl.mzebrows.pwt.sim.system.DamageSystem;
+import pl.mzebrows.pwt.sim.system.DriveSystem;
 import pl.mzebrows.pwt.sim.system.DyingSystem;
-import pl.mzebrows.pwt.sim.system.EnemyChaseSystem;
 import pl.mzebrows.pwt.sim.system.EnemyLeapSystem;
 import pl.mzebrows.pwt.sim.system.EvolutionSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
+import pl.mzebrows.pwt.sim.system.NavigationSystem;
+import pl.mzebrows.pwt.sim.system.PerceptionSystem;
 import pl.mzebrows.pwt.sim.system.PickupSystem;
 import pl.mzebrows.pwt.sim.system.PositionHistorySystem;
 import pl.mzebrows.pwt.sim.system.ProjectileBoundsSystem;
@@ -33,6 +35,7 @@ import pl.mzebrows.pwt.sim.system.ReaperSystem;
 import pl.mzebrows.pwt.sim.system.RespawnSystem;
 import pl.mzebrows.pwt.sim.system.StrikeSystem;
 import pl.mzebrows.pwt.sim.system.StunSystem;
+import pl.mzebrows.pwt.sim.system.WanderSystem;
 
 /**
  * The whole game world and everything that happens in it.
@@ -44,9 +47,11 @@ import pl.mzebrows.pwt.sim.system.StunSystem;
  *
  * <p><strong>System order is behaviour.</strong> Positions are recorded for interpolation before
  * anything moves; timers count down; intent becomes velocity and gunfire, then a swing if one was
- * asked for; enemies aim at where the commander currently is, and any of them mid-leap overwrite that
- * with where they already committed to going; whatever is held still bleeds off the blow that held
- * it; everything moves; swings travel their arc; the constraint solver decides where things may be
+ * asked for; every unit that can notice the commander decides whether it has; enemies that have
+ * decide where they want to be going and the ones that have not amble around their patch instead,
+ * and either way that becomes a velocity, and any of them
+ * mid-leap overwrite it with where they already committed to going; whatever is held still bleeds off
+ * the blow that held it; everything moves; swings travel their arc; the constraint solver decides where things may be
  * and what touched what; damage owed becomes damage taken, and anything out of health either dies now
  * or starts dying; bodies that have lain long enough are marked; reactions run while the dead are
  * still there to react to; everything publishes how it should be drawn; and only then are the dead
@@ -92,8 +97,11 @@ public final class Simulation {
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new CommanderControlSystem(spawner));
         engine.addSystem(new MeleeSystem(spawner));
-        engine.addSystem(new EnemyChaseSystem());
-        engine.addSystem(new EnemyLeapSystem(rng));
+        engine.addSystem(new PerceptionSystem());
+        engine.addSystem(new NavigationSystem(config, map));
+        engine.addSystem(new WanderSystem(Rng.stream(config.seed(), RngStream.WANDER), map));
+        engine.addSystem(new DriveSystem());
+        engine.addSystem(new EnemyLeapSystem(Rng.stream(config.seed(), RngStream.LEAP)));
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));

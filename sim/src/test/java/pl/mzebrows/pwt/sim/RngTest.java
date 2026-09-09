@@ -61,4 +61,43 @@ class RngTest {
 
         assertThatThrownBy(() -> rng.nextInt(0)).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void aStreamIsTheSameEveryRunForTheSameSeed() {
+        Rng first = Rng.stream(42L, RngStream.WANDER);
+        Rng second = Rng.stream(42L, RngStream.WANDER);
+
+        for (int i = 0; i < 1000; i++) {
+            assertThat(first.nextLong()).isEqualTo(second.nextLong());
+        }
+    }
+
+    @Test
+    void streamsForDifferentConcernsDiverge() {
+        Rng leap = Rng.stream(42L, RngStream.LEAP);
+        Rng wander = Rng.stream(42L, RngStream.WANDER);
+
+        for (int i = 0; i < 100; i++) {
+            assertThat(wander.nextLong()).isNotEqualTo(leap.nextLong());
+        }
+    }
+
+    @Test
+    void oneStreamIsNotAnotherAFewDrawsAhead() {
+        Rng leap = Rng.stream(7L, RngStream.LEAP);
+        Rng wander = Rng.stream(7L, RngStream.WANDER);
+        long first = wander.nextLong();
+
+        for (int i = 0; i < 64; i++) {
+            assertThat(leap.nextLong()).isNotEqualTo(first);
+        }
+    }
+
+    @Test
+    void aStreamDoesNotFollowTheGeneratorItWasSeededFrom() {
+        Rng level = new Rng(7L);
+        Rng derived = Rng.stream(7L, RngStream.MAP);
+
+        assertThat(derived.nextLong()).isNotEqualTo(level.nextLong());
+    }
 }

@@ -7,13 +7,10 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
-import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.component.Commander;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Position;
-import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
 
 /**
@@ -42,8 +39,6 @@ public final class EnemyLeapSystem extends EntitySystem {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
-    private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
     private static final float EPSILON = 1e-4f;
@@ -67,11 +62,11 @@ public final class EnemyLeapSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
-        Position target = livingTarget();
+        Position target = Drivers.livingTarget(commanders);
         for (int i = 0; i < leapers.size(); i++) {
             Entity entity = leapers.get(i);
             Leap leap = LEAP.get(entity);
-            if (held(entity)) {
+            if (Drivers.held(entity)) {
                 if (leap.committed()) {
                     leap.finish();
                 }
@@ -88,26 +83,6 @@ public final class EnemyLeapSystem extends EntitySystem {
             }
             advance(entity, leap, target);
         }
-    }
-
-    /** The commander worth leaping at: the first one still alive. A body on the ground is not a target. */
-    private @Nullable Position livingTarget() {
-        for (int i = 0; i < commanders.size(); i++) {
-            Entity commander = commanders.get(i);
-            if (DYING.has(commander) && DYING.get(commander).begun) {
-                continue;
-            }
-            return POSITION.get(commander);
-        }
-        return null;
-    }
-
-    /** Held still by a blow, or dead on the ground. Either way it is not going anywhere under its own power. */
-    private static boolean held(Entity entity) {
-        if (STUNNED.has(entity) && STUNNED.get(entity).active()) {
-            return true;
-        }
-        return DYING.has(entity) && DYING.get(entity).begun;
     }
 
     private void advance(Entity entity, Leap leap, Position target) {

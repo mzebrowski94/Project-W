@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.scenario;
 import java.util.List;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
+import pl.mzebrows.pwt.sim.RngStream;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 
@@ -13,16 +14,6 @@ import pl.mzebrows.pwt.sim.Simulation;
  * and it does not appear in the menu, this is the line you forgot.
  */
 public final class Scenarios {
-
-    /**
-     * Mixed into the level seed to give map generation a stream of its own.
-     *
-     * <p>One stream per concern is what stops re-tuning a layout from reshuffling everything the
-     * simulation later draws - the leap wind-ups, the scatter - which is the usual reason procedural
-     * generation is miserable to iterate on. The whole level is still a function of one seed, so
-     * pillar 6 holds.
-     */
-    private static final long MAP_STREAM = 0x51ED_270B_6EFC_2FB7L;
 
     private static final List<Scenario> ALL = List.of(
             new SkirmishScenario(),
@@ -50,7 +41,7 @@ public final class Scenarios {
      */
     public static Simulation world(Scenario scenario, SimConfig base) {
         SimConfig config = scenario.configure(base);
-        TileMap map = scenario.map(config, new Rng(config.seed() ^ MAP_STREAM));
+        TileMap map = scenario.map(config, Rng.stream(config.seed(), RngStream.MAP));
         Simulation simulation = new Simulation(config, map);
         scenario.populate(simulation);
         return simulation;

@@ -14,6 +14,8 @@ and structural choices. Same format, same discipline, different subject.
 | [G0007](G0007-level-state-is-an-entity.md) | State that belongs to the level is an entity. Narrows G0004. | accepted |
 | [G0008](G0008-a-level-may-be-larger-than-the-view.md) | A level may be larger than the view. Amends pillar 4. | accepted |
 | [G0009](G0009-the-grid-builds-the-map-and-nothing-else.md) | The tile grid lays a level out; nothing in the game is quantised to it. | accepted |
+| [G0010](G0010-a-mind-is-a-field-not-a-tree.md) | A unit's mind is a field on a component, not a behaviour tree. | accepted |
+| [G0011](G0011-detection-is-range-only.md) | Detection is range only; rock does not hide you. | accepted |
 
 ## When to write one
 

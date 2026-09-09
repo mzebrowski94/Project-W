@@ -6,11 +6,13 @@ import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Require;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
@@ -118,6 +120,8 @@ public record SimConfig(
                                 1f,
                                 3,
                                 UnitKind.BRUTE,
+                                PerceptionDef.alwaysAggressive(30f, 45f),
+                                new WanderDef(true, 12f, 0.45f, 1.5f, 0.4f, 1.4f, 4f),
                                 new LeapDef(true, 16f, 42f, 0.28f, 2, 0.18f, 1.6f, 0.08f, 0.22f),
                                 Look.GRUNT))
                 .put(
@@ -134,6 +138,8 @@ public record SimConfig(
                                 1f,
                                 0,
                                 null,
+                                PerceptionDef.alwaysAggressive(24f, 36f),
+                                new WanderDef(true, 8f, 0.35f, 2f, 0.8f, 2.4f, 5f),
                                 new LeapDef(true, 22f, 34f, 0.42f, 3, 0.26f, 2.4f, 0.18f, 0.42f),
                                 Look.BRUTE))
                 .build();
