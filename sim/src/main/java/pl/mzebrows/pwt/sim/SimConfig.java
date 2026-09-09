@@ -35,7 +35,7 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * @param seed seed for the simulation's {@link Rng}
  * @param tickSeconds length of one fixed simulation step
  * @param maxTicksPerFrame ceiling on catch-up steps, so a stalled frame cannot spiral
- * @param arena the rectangle the level is played inside
+ * @param map the grid a level is laid out on; its extent <em>is</em> the arena
  * @param commander the player-controlled unit
  * @param units every strain of chasing unit, by kind
  * @param pickups every kind of thing that can be lying on the field, by kind
@@ -49,7 +49,7 @@ public record SimConfig(
         long seed,
         float tickSeconds,
         int maxTicksPerFrame,
-        ArenaConfig arena,
+        MapConfig map,
         CommanderConfig commander,
         Defs<UnitKind, UnitDef> units,
         Defs<PickupKind, PickupDef> pickups,
@@ -92,7 +92,7 @@ public record SimConfig(
                 1L,
                 1f / 60f,
                 5,
-                new ArenaConfig(160f, 90f),
+                new MapConfig(32, 18, 5f, 6),
                 new CommanderConfig(2f, 28f, 100f, 1.5f, 3f, 6f, 2f),
                 defaultUnits(),
                 defaultPickups(),
@@ -214,17 +214,39 @@ public record SimConfig(
     }
 
     /**
-     * The rectangle a level is played inside, in world units. Not a body - the boundary is handled
-     * by clamping a position, never by a pairwise test.
+     * The grid a level is laid out on. <strong>This is the only place a level's size is decided</strong>
+     * - the arena is exactly what the grid adds up to, so a map and an arena can never disagree about
+     * how big a level is.
      *
-     * @param width arena width in world units
-     * @param height arena height in world units
+     * <p>These are the defaults a scenario's map is built from. Once built, the {@code TileMap} is the
+     * thing every system reads; nothing consults this afterwards.
+     *
+     * <p>The arena boundary is still handled by clamping a position, never by a pairwise test.
+     *
+     * @param cols tiles across
+     * @param rows tiles down
+     * @param tileSize width of one tile, in world units
+     * @param regions how many areas the ground is partitioned into. Regions are what the renderer
+     *     tints apart so a level reads as places rather than as one flat sheet, and later what decides
+     *     which terrain and which contents belong where.
      */
     @With
-    public record ArenaConfig(float width, float height) {
-        public ArenaConfig {
-            Require.positive("arena width", width);
-            Require.positive("arena height", height);
+    public record MapConfig(int cols, int rows, float tileSize, int regions) {
+        public MapConfig {
+            Require.atLeastOne("map cols", cols);
+            Require.atLeastOne("map rows", rows);
+            Require.positive("map tileSize", tileSize);
+            Require.atLeastOne("map regions", regions);
+        }
+
+        /** The playable width, in world units. */
+        public float worldWidth() {
+            return cols * tileSize;
+        }
+
+        /** The playable height, in world units. */
+        public float worldHeight() {
+            return rows * tileSize;
         }
     }
 

@@ -1,5 +1,8 @@
 package pl.mzebrows.pwt.sim.scenario;
 
+import pl.mzebrows.pwt.map.Maps;
+import pl.mzebrows.pwt.map.Randomness;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 
@@ -29,6 +32,22 @@ public interface Scenario {
      */
     default SimConfig configure(SimConfig base) {
         return base;
+    }
+
+    /**
+     * The ground this scenario is played on. Built before the simulation exists, because the map's
+     * extent is the arena and everything in the world is sized against it.
+     *
+     * <p>The default is open ground the size {@code config.map()} asks for, partitioned into regions
+     * so the level reads as places rather than one flat sheet. Override to lay out real terrain.
+     *
+     * <p>{@code randomness} is map generation's <em>own</em> stream, derived from the level seed and
+     * separate from the one the simulation draws from - so changing a layout never reshuffles what
+     * happens during play, and the level is still reproducible from one seed.
+     */
+    default TileMap map(SimConfig config, Randomness randomness) {
+        SimConfig.MapConfig shape = config.map();
+        return Maps.regions(shape.cols(), shape.rows(), shape.tileSize(), shape.regions(), randomness);
     }
 
     /** Fills an empty simulation. Spawn the commander first, so it is always present. */

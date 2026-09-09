@@ -12,6 +12,8 @@ and structural choices. Same format, same discipline, different subject.
 | [G0005](G0005-the-strike-is-an-entity.md) | A melee strike is an entity, not an overlap query. | accepted |
 | [G0006](G0006-a-pickup-is-claimed-then-applied.md) | A pickup is claimed on contact and applied afterwards; exactly one taker, and a side offered nothing leaves it standing. | accepted |
 | [G0007](G0007-level-state-is-an-entity.md) | State that belongs to the level is an entity. Narrows G0004. | accepted |
+| [G0008](G0008-a-level-may-be-larger-than-the-view.md) | A level may be larger than the view. Amends pillar 4. | accepted |
+| [G0009](G0009-the-grid-builds-the-map-and-nothing-else.md) | The tile grid lays a level out; nothing in the game is quantised to it. | accepted |
 
 ## When to write one
 

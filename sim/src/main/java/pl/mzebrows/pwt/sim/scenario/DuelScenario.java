@@ -1,5 +1,7 @@
 package pl.mzebrows.pwt.sim.scenario;
 
+import pl.mzebrows.pwt.map.Scatter;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.def.UnitDef;
@@ -48,34 +50,24 @@ final class DuelScenario implements Scenario {
     @Override
     public void populate(Simulation simulation) {
         SimConfig config = simulation.config();
-        SimConfig.ArenaConfig arena = config.arena();
-        float centreX = arena.width() * 0.5f;
-        float centreY = arena.height() * 0.5f;
+        TileMap map = simulation.map();
+        float centreX = map.worldWidth() * 0.5f;
+        float centreY = map.worldHeight() * 0.5f;
 
         simulation.spawnCommander(centreX, centreY);
 
         float wallMargin = config.commander().radius() * 2f + CLEARANCE;
-        Placement placement = new Placement(simulation.rng(), arena, CLEARANCE, wallMargin);
-        placement.reserve(centreX, centreY, config.commander().radius() + STANDOFF);
+        Scatter scatter = new Scatter(map, simulation.rng(), CLEARANCE, wallMargin);
+        scatter.reserve(centreX, centreY, config.commander().radius() + STANDOFF);
 
-        for (int i = 0; i < config.obstacle().count(); i++) {
-            Placement.Spot spot = placement.find(config.obstacle().radius());
-            if (spot != null) {
-                simulation.spawnObstacle(spot.x(), spot.y());
-            }
-        }
-        spawn(simulation, placement, UnitKind.GRUNT);
-        spawn(simulation, placement, UnitKind.BRUTE);
+        scatter.scatter(config.obstacle().count(), config.obstacle().radius(), simulation::spawnObstacle);
+        spawn(simulation, scatter, UnitKind.GRUNT);
+        spawn(simulation, scatter, UnitKind.BRUTE);
     }
 
     /** Scatters a strain's configured count wherever there is room for one. */
-    private static void spawn(Simulation simulation, Placement placement, UnitKind kind) {
+    private static void spawn(Simulation simulation, Scatter scatter, UnitKind kind) {
         UnitDef def = simulation.config().unit(kind);
-        for (int i = 0; i < def.count(); i++) {
-            Placement.Spot spot = placement.find(def.radius());
-            if (spot != null) {
-                simulation.spawnUnit(kind, spot.x(), spot.y());
-            }
-        }
+        scatter.scatter(def.count(), def.radius(), (x, y) -> simulation.spawnUnit(kind, x, y));
     }
 }

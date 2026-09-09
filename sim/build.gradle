@@ -4,6 +4,8 @@ eclipse.project.name = appName + '-sim'
 // types - see ArchitectureTest, which fails the build if rendering or platform APIs
 // leak in here.
 dependencies {
+  // The terrain field. sim reads it; it can never read sim.
+  api project(':map')
   api "com.badlogicgames.gdx:gdx:$gdxVersion"
   api "com.badlogicgames.ashley:ashley:$ashleyVersion"
 

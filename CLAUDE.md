@@ -10,13 +10,19 @@ Author: Mateusz Zebrowski. Package root `pl.mzebrows.pwt`.
 
 | Module | What lives there |
 |---|---|
+| `map` | The ground a level is played on: the tile grid, terrain, regions, and map generation. Depends on nothing at all. |
 | `sim` | The deterministic simulation: entities, components, systems, world state. No rendering, no assets, no I/O. |
 | `core` | The libGDX application: rendering, input, assets, screens, config loading. |
 | `lwjgl3` | Desktop launcher. |
 
-Dependencies point one way: `lwjgl3` -> `core` -> `sim`. `ArchitectureTest` fails the build if
-anything in `sim` reaches for rendering, the wall clock, unseeded randomness or hash iteration
-order - so those rules are enforced, not remembered.
+Dependencies point one way: `lwjgl3` -> `core` -> `sim` -> `map`. `ArchitectureTest` fails the build
+if anything in `sim` reaches for rendering, the wall clock, unseeded randomness or hash iteration
+order, and `MapArchitectureTest` does the same for `map`, which may not reach for any of those *or*
+for an entity - so those rules are enforced, not remembered.
+
+**`map` owns the field; `sim` owns what stands on it and what happens over time** (ADR 0009). A pure
+function of terrain and geometry may live in `map`; anything that reads a clock, an entity or a
+component lives in `sim`.
 
 ## Verify
 
@@ -42,7 +48,10 @@ stop and raise it rather than working around it.
    the squad's biggest weapon. No detached god view, no invulnerability.
 3. **The squad is the resource.** Troopers are won and lost during play. No shop, no loadout screen,
    no economy between levels.
-4. **One screen, one fight.** A level reads at a glance. No fog of war, no off-screen management.
+4. **One fight, and you can always see it.** No fog of war, no off-screen management, no second
+   front to check on. A level may run wider than the view - the camera follows you, and one key pulls
+   it back for a look - but the fight is always the one you are standing in. (Amended by G0008; a
+   minimap is off-screen management with a nicer name and is ruled out there.)
 5. **State is visible.** What an entity can do is legible from how it looks. The player is never
    tracking a number the game does not show.
 6. **Every run is reproducible** (ADR 0004). No wall-clock effects, no unseeded variety, no bug that
@@ -114,4 +123,5 @@ Everything else is caught by Spotless, Error Prone, NullAway or a test. These ar
 | `docs/design/decisions/` | Before re-proposing a gameplay alternative. |
 
 Skills: `feature` (design a gameplay change), `new-system` (build it), `unit-tests` (write tests),
-`perf-audit` (check a hot path).
+`perf-audit` (check a hot path), `game-patterns` (the standard answer for cameras, scatter, terrain,
+pathing and generation - read it before inventing an algorithm for any of them).

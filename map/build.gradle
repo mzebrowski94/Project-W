@@ -1,0 +1,8 @@
+eclipse.project.name = appName + '-map'
+
+// The terrain field and the algorithms that build one. This module depends on NOTHING -
+// not libGDX, not Ashley, not sim - so a generator can never reach for an entity.
+// MapArchitectureTest fails the build if that changes.
+dependencies {
+  testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
+}

@@ -5,6 +5,7 @@ import pl.mzebrows.pwt.sim.FixedStepClock;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
+import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
 /**
  * One scenario being played: the world, the clock that drives it, and the harness state around it.
@@ -118,8 +119,7 @@ public final class ScenarioSession {
 
     /** Carries god mode into the new world; restarting to try something again should not silently undo it. */
     private Simulation newWorld() {
-        Simulation world = new Simulation(scenario.configure(baseConfig));
-        scenario.populate(world);
+        Simulation world = Scenarios.world(scenario, baseConfig);
         world.setCommanderInvulnerable(godMode);
         return world;
     }

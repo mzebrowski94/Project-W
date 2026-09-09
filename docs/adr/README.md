@@ -12,6 +12,8 @@ One line each. Open a record only when you are about to work against it or propo
 | [0006](0006-gradle-in-the-sandbox.md) | Claude runs the real Gradle build in its sandbox. | accepted |
 | [0007](0007-circles-only-collision.md) | Every body is a circle; no AABBs. Narrows 0002. | accepted |
 | [0008](0008-kinds-are-typed-definition-tables.md) | A kind of thing is an enum plus a definition record in a table; not a marker component, and not a data file. | accepted |
+| [0009](0009-map-as-a-separate-module.md) | The terrain field and map generation are their own module, depending on nothing. | accepted |
+| [0010](0010-libgdx-tiled-maps-renderer-not-model.md) | libGDX's tiled map API is not our model - its tile carries a `TextureRegion`. Its renderer and the Tiled editor stay open. | accepted |
 
 Decisions about what the game *is*, rather than how it is built, live in
 `docs/design/decisions/`.

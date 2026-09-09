@@ -6,6 +6,8 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
 import java.util.function.UnaryOperator;
+import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -38,7 +40,11 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
 public final class AlphaWorlds {
 
     public static final float TICK = 1f / 60f;
-    public static final float ARENA = 100f;
+    /** Five world units, as the game ships. Twenty of them square is the 100-unit test arena. */
+    public static final float TILE = 5f;
+
+    public static final int ARENA_TILES = 20;
+    public static final float ARENA = ARENA_TILES * TILE;
     public static final float COMMANDER_RADIUS = 1f;
     public static final float COMMANDER_SPEED = 60f;
     public static final float ENEMY_RADIUS = 1f;
@@ -132,7 +138,7 @@ public final class AlphaWorlds {
                 1L,
                 TICK,
                 5,
-                new SimConfig.ArenaConfig(ARENA, ARENA),
+                new SimConfig.MapConfig(ARENA_TILES, ARENA_TILES, TILE, 1),
                 new SimConfig.CommanderConfig(
                         COMMANDER_RADIUS,
                         COMMANDER_SPEED,
@@ -215,6 +221,21 @@ public final class AlphaWorlds {
             changed = changed.withUnit(kind, change);
         }
         return changed;
+    }
+
+    /** A world on a map of your own - open ground everywhere else, so only the terrain under test differs. */
+    public static Simulation on(TileMap map) {
+        return new Simulation(config(), map);
+    }
+
+    /** A world on a map of your own with a config of your own, for a test that needs both. */
+    public static Simulation on(SimConfig config, TileMap map) {
+        return new Simulation(config, map);
+    }
+
+    /** The test grid, filled with open ground, ready for a test to lay rock into. */
+    public static TileMap.Builder ground() {
+        return TileMap.builder(ARENA_TILES, ARENA_TILES, TILE).fill(Terrain.PLAIN);
     }
 
     public static Simulation simulation() {

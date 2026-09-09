@@ -12,7 +12,8 @@ plugins {
 
 rootProject.name = 'Project-W'
 
+// map    - the terrain field and map generation. Depends on nothing at all.
 // sim    - deterministic, headless game simulation. No rendering, no assets, no I/O.
 // core   - libGDX application: rendering, input, assets, screens. Depends on sim.
 // lwjgl3 - desktop launcher.
-include 'sim', 'core', 'lwjgl3'
+include 'map', 'sim', 'core', 'lwjgl3'

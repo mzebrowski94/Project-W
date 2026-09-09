@@ -1,7 +1,17 @@
 package pl.mzebrows.pwt.sim.scenario;
 
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
+import java.util.EnumSet;
+import pl.mzebrows.pwt.map.Maps;
+import pl.mzebrows.pwt.map.Randomness;
+import pl.mzebrows.pwt.map.Scatter;
+import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -12,6 +22,10 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  * across the middle precisely so that a grunt closing on the commander walks over them: each one it
  * eats brightens the core inside it, and the third turns it into a brute in front of you. Reach a
  * trooper first and it is a reinforcement instead - the same object, read differently by each side.
+ *
+ * <p>The band is <em>organic ground</em>, not just a row of objects: the mushrooms growing through it
+ * are scattered on that terrain and nowhere else, which is the whole of what terrain-gated spawning
+ * means. Walk to the edge of the green and the food stops.
  *
  * <p>What to look at: the mark growing inside a grunt as it feeds, the moment one changes shape and
  * colour mid-walk, and whether shooting the fed ones first is worth more than racing them for the
@@ -36,6 +50,22 @@ final class FeedingGroundScenario implements Scenario {
     /** How much of the arena's height the band and the grunt line spread over. */
     private static final float SPREAD = 0.7f;
 
+    /** Growth on the organic band. Free food for anything that reaches it. */
+    private static final int MUSHROOMS = 14;
+
+    private static final float CLEARANCE = 2f;
+
+    @Override
+    public TileMap map(SimConfig config, Randomness randomness) {
+        SimConfig.MapConfig shape = config.map();
+        TileMap.Builder builder = TileMap.builder(shape.cols(), shape.rows(), shape.tileSize());
+        Maps.partitionRegions(builder, shape.regions(), randomness);
+
+        int from = (int) (shape.cols() * BAND_START_X) - 1;
+        int width = (int) (shape.cols() * (FLOWER_X - BAND_START_X)) + 3;
+        return builder.rect(from, 0, width, shape.rows(), Terrain.ORGANIC).build();
+    }
+
     @Override
     public String name() {
         return "Feeding Ground";
@@ -55,9 +85,9 @@ final class FeedingGroundScenario implements Scenario {
 
     @Override
     public void populate(Simulation simulation) {
-        SimConfig.ArenaConfig arena = simulation.config().arena();
-        float width = arena.width();
-        float height = arena.height();
+        TileMap map = simulation.map();
+        float width = map.worldWidth();
+        float height = map.worldHeight();
 
         simulation.spawnCommander(width * COMMANDER_X, height * 0.5f);
         simulation.spawnPickup(PickupKind.ARMOURY, width * ARMOURY_X, height * 0.5f);
@@ -80,6 +110,28 @@ final class FeedingGroundScenario implements Scenario {
                     width * GRUNT_X,
                     height * spread(0.5f - SPREAD * 0.5f, 0.5f + SPREAD * 0.5f, i, GRUNTS));
         }
+
+        growMushrooms(simulation, map);
+    }
+
+    /**
+     * Mushrooms grow on organic ground and nowhere else. Everything already standing is reserved
+     * first, so nothing sprouts underneath a trooper or on top of the commander.
+     */
+    private static void growMushrooms(Simulation simulation, TileMap map) {
+        float radius = simulation.config().pickup(PickupKind.MUSHROOM).radius();
+        Scatter scatter = new Scatter(map, simulation.rng(), CLEARANCE, radius * 2f);
+        for (Entity standing : simulation
+                .engine()
+                .getEntitiesFor(Family.all(Position.class, Body.class).get())) {
+            Position position = standing.getComponent(Position.class);
+            scatter.reserve(position.x, position.y, standing.getComponent(Body.class).radius);
+        }
+        scatter.scatter(
+                MUSHROOMS,
+                radius,
+                EnumSet.of(Terrain.ORGANIC),
+                (x, y) -> simulation.spawnPickup(PickupKind.MUSHROOM, x, y));
     }
 
     /** Evenly spaces {@code count} things between two fractions, both ends included. */

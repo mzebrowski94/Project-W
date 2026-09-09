@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.graphics.Color;
 import java.util.Locale;
+import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Look;
 
@@ -16,8 +17,10 @@ import pl.mzebrows.pwt.sim.def.Look;
  * @param vsync whether to wait for vertical sync
  * @param backgroundColor colour the frame is cleared to
  * @param palette placeholder colour per entity look, until sprites exist
+ * @param terrainPalette placeholder colour per kind of ground, and how far apart regions are shaded
  * @param stateTint how far to shift that colour for what the entity is currently doing
  * @param chargeMark how to draw an entity that is filling up towards something
+ * @param camera how the view follows what it is watching, and how far out it may sit
  */
 public record GraphicConfig(
         float virtualWidth,
@@ -27,8 +30,10 @@ public record GraphicConfig(
         boolean vsync,
         Color backgroundColor,
         Palette palette,
+        TerrainPalette terrainPalette,
         StateTint stateTint,
-        ChargeMark chargeMark) {
+        ChargeMark chargeMark,
+        CameraDirector.Settings camera) {
 
     private static final String FILE = "graphic.properties";
 
@@ -52,8 +57,10 @@ public record GraphicConfig(
                 properties.getBoolean("graphic.vsync", true),
                 color(properties, "graphic.backgroundColor", "101018ff"),
                 palette(properties),
+                terrainPalette(properties),
                 stateTint(properties),
-                chargeMark(properties));
+                chargeMark(properties),
+                camera(properties));
     }
 
     /** One colour per look, read from {@code graphic.color.<look>} and keyed by the enum's own name. */
@@ -92,6 +99,35 @@ public record GraphicConfig(
         };
     }
 
+    /**
+     * One colour per kind of ground, read from {@code graphic.terrain.<name>}, plus how far apart two
+     * regions of the same ground may be shaded.
+     */
+    @SuppressWarnings("EnumOrdinal")
+    private static TerrainPalette terrainPalette(GameProperties properties) {
+        Terrain[] terrains = Terrain.values();
+        Color[] colors = new Color[terrains.length];
+        for (Terrain terrain : terrains) {
+            colors[terrain.ordinal()] = color(
+                    properties, "graphic.terrain." + terrain.name().toLowerCase(Locale.ROOT), fallbackFor(terrain));
+        }
+        return new TerrainPalette(colors, properties.getFloat("graphic.region.variance", 0.06f));
+    }
+
+    /**
+     * The colour a kind of ground falls back to with no properties file at all. Exhaustive for the
+     * same reason {@link #fallbackFor(Look)} is: a new terrain fails this compile until somebody has
+     * decided what it looks like.
+     */
+    private static String fallbackFor(Terrain terrain) {
+        return switch (terrain) {
+            case PLAIN -> "1c2130ff";
+            case DUST -> "2a2620ff";
+            case ORGANIC -> "16241cff";
+            case ROCK -> "343442ff";
+        };
+    }
+
     private static StateTint stateTint(GameProperties properties) {
         return new StateTint(
                 properties.getFloat("graphic.state.windingUp", 0.85f),
@@ -104,6 +140,22 @@ public record GraphicConfig(
     private static ChargeMark chargeMark(GameProperties properties) {
         return new ChargeMark(
                 properties.getFloat("graphic.charge.scale", 0.55f), properties.getFloat("graphic.charge.tint", 0.8f));
+    }
+
+    /**
+     * How the view behaves. Rendering only - none of it can reach the simulation, and a camera setting
+     * that changed what the game does would be a bug rather than a feature.
+     */
+    private static CameraDirector.Settings camera(GameProperties properties) {
+        return new CameraDirector.Settings(
+                properties.getFloat("graphic.camera.deadZone", 6f),
+                properties.getFloat("graphic.camera.smoothing", 8f),
+                properties.getFloat("graphic.camera.lookAhead", 14f),
+                properties.getFloat("graphic.camera.leadSmoothing", 2f),
+                properties.getFloat("graphic.camera.nearZoom", 1f),
+                properties.getFloat("graphic.camera.farZoom", 2.2f),
+                properties.getFloat("graphic.camera.zoomSmoothing", 7f),
+                properties.getFloat("graphic.camera.fitMargin", 1.25f));
     }
 
     /** Falls back to the given hex when the configured value is missing or not a colour. */

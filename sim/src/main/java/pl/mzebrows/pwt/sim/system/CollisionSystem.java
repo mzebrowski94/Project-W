@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.collision.ConstraintSolver;
@@ -75,8 +76,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
 
     private ImmutableArray<Entity> bodies = new ImmutableArray<>(new Array<>());
 
-    public CollisionSystem(SimConfig config, Spawner spawner) {
-        this.solver = new ConstraintSolver(config, this);
+    public CollisionSystem(SimConfig config, TileMap map, Spawner spawner) {
+        this.solver = new ConstraintSolver(config, map, this);
         this.spawner = spawner;
         this.pickups = config.pickups();
     }

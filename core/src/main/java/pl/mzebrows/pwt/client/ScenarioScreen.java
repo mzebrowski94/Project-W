@@ -1,13 +1,23 @@
 package pl.mzebrows.pwt.client;
 
+import com.badlogic.ashley.core.ComponentMapper;
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Focus;
+import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 
 /**
@@ -18,6 +28,11 @@ import pl.mzebrows.pwt.sim.scenario.Scenario;
  * be, which is exactly why there is so little of it.
  */
 public final class ScenarioScreen extends ScreenAdapter {
+
+    private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
+    private static final Family FOCUSED =
+            Family.all(Focus.class, Position.class, PreviousPosition.class).get();
 
     private final GameContext context;
     private final Scenario scenario;
@@ -32,7 +47,16 @@ public final class ScenarioScreen extends ScreenAdapter {
     private WorldRenderer renderer;
 
     @SuppressWarnings("NullAway.Init")
+    private TerrainRenderer terrain;
+
+    @SuppressWarnings("NullAway.Init")
     private InputReader input;
+
+    @SuppressWarnings("NullAway.Init")
+    private CameraDirector camera;
+
+    /** Cached: Ashley keeps this view live, so it must not be re-queried per frame. */
+    private ImmutableArray<Entity> focused = new ImmutableArray<>(new Array<>());
 
     /** The world the renderer is currently bound to; a restart replaces it with a different one. */
     private @Nullable Simulation bound;
@@ -52,24 +76,34 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().palette(),
                 context.graphicConfig().stateTint(),
                 context.graphicConfig().chargeMark());
+        terrain = new TerrainRenderer(viewport, context.graphicConfig().terrainPalette());
         input = new InputReader(viewport);
         session = new ScenarioSession(scenario, context.simConfig());
+        camera = new CameraDirector(context.graphicConfig().camera());
         bound = null;
     }
 
     @Override
     public void render(float delta) {
+        // Input is read first, and therefore against the camera as it was when the frame the player
+        // reacted to was drawn. Moving the camera before reading would interpret the mouse against a
+        // view they have not seen yet.
         CommanderInput commanderInput = input.read();
         for (HarnessCommand command : HarnessControls.poll(keys)) {
             session.apply(command, commanderInput);
+        }
+        if (ViewControls.zoomToggled(keys)) {
+            camera.toggleWide();
         }
         if (session.leaving()) {
             context.queueScreen(new MenuScreen(context));
         }
         session.advance(delta, commanderInput);
         rebindIfRestarted();
+        aimCamera(delta, commanderInput);
 
         ScreenUtils.clear(context.graphicConfig().backgroundColor());
+        terrain.render();
         renderer.render(session.renderAlpha());
         if (session.overlayVisible()) {
             overlay.render(session.simulation(), session.paused());
@@ -84,13 +118,43 @@ public final class ScenarioScreen extends ScreenAdapter {
     @Override
     public void hide() {
         renderer.dispose();
+        terrain.dispose();
     }
 
     private void rebindIfRestarted() {
         Simulation current = session.simulation();
         if (bound != current) {
             renderer.bind(current);
+            terrain.bind(current.map());
+            focused = current.engine().getEntitiesFor(FOCUSED);
+            camera = new CameraDirector(context.graphicConfig().camera());
             bound = current;
+        }
+    }
+
+    /**
+     * Points the view at everything the simulation marked with a {@code Focus}, using the same
+     * interpolated positions the renderer will draw at so the view does not lag what is on screen by
+     * a tick of its own.
+     */
+    private void aimCamera(float delta, CommanderInput commanderInput) {
+        float alpha = session.renderAlpha();
+        camera.begin();
+        for (int i = 0; i < focused.size(); i++) {
+            Entity entity = focused.get(i);
+            Position position = POSITION.get(entity);
+            PreviousPosition previous = PREVIOUS.get(entity);
+            camera.watch(
+                    previous.x + (position.x - previous.x) * alpha, previous.y + (position.y - previous.y) * alpha);
+        }
+        camera.heading(commanderInput.moveX(), commanderInput.moveY());
+
+        TileMap map = session.simulation().map();
+        camera.update(viewport.getWorldWidth(), viewport.getWorldHeight(), map.worldWidth(), map.worldHeight(), delta);
+        if (viewport.getCamera() instanceof OrthographicCamera lens) {
+            lens.zoom = camera.zoom();
+            lens.position.set(camera.centreX(), camera.centreY(), 0f);
+            lens.update();
         }
     }
 }

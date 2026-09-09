@@ -52,15 +52,14 @@ class SimulationDeterminismTest {
     }
 
     private static float[] runBodies(long seed) {
-        SimConfig config = configSeeded(seed);
-        Simulation simulation = new Simulation(config);
+        Simulation simulation = new Simulation(configSeeded(seed));
         Rng rng = simulation.rng();
 
         for (int i = 0; i < ENTITIES; i++) {
             AlphaWorlds.spawnBody(
                     simulation,
-                    rng.nextFloat(0f, config.arena().width()),
-                    rng.nextFloat(0f, config.arena().height()),
+                    rng.nextFloat(0f, simulation.map().worldWidth()),
+                    rng.nextFloat(0f, simulation.map().worldHeight()),
                     rng.nextFloat(-30f, 30f),
                     rng.nextFloat(-30f, 30f),
                     rng.nextFloat(0.5f, 2f));
@@ -73,8 +72,7 @@ class SimulationDeterminismTest {
     }
 
     private static float[] runScenario(Scenario scenario) {
-        Simulation simulation = new Simulation(scenario.configure(configSeeded(SEED)));
-        scenario.populate(simulation);
+        Simulation simulation = Scenarios.world(scenario, configSeeded(SEED));
 
         for (int step = 0; step < STEPS; step++) {
             simulation.step(scriptedInput(step));

@@ -37,7 +37,12 @@ it. Terms marked *(source)* come from *Triumph! War 2099*.
 | **frame** | One rendered image. Zero or more ticks happen per frame. Never a tick. |
 | **alpha** | Fraction of a tick elapsed, used to interpolate rendering between ticks. |
 | **world unit** | The simulation's unit of length. Never pixels. |
-| **arena** | The rectangle a level is played inside. Not a body - it is handled by clamping, not by a collision test. |
+| **arena** | The rectangle a level is played inside. Not a body - it is handled by clamping, not by a collision test. It is exactly the map's own extent; there is no separate arena size. |
+| **tile** | One cell of the grid a level is laid out on. A unit of *construction*, not of play: nothing moves tile by tile and nothing is centred in one (G0009). |
+| **terrain** | The kind of ground on a tile. Names a role, like a `Look` does - what it looks like is the client's decision and what it costs a unit is a number in `game.properties`. Whether it can be stood on is the one exception, because generation needs it. |
+| **region** | A contiguous area of a map, decided before its tiles are filled in. What makes a level read as places rather than one flat sheet: regions are shaded subtly apart, and later decide what terrain and what contents belong where. |
+| **focus** | A marker saying the view must keep this entity in shot. The simulation says who matters and stops there; where the camera goes is entirely the client's. |
+| **fragment** | A piece of map that generation produces and assembles with others into a level. Not built yet; the grid exists to make it cheap. |
 | **scenario** | One arena the alpha-phase menu can launch, built to make a system visible. Content, never design. |
 | **contact** | An overlapping pair, reported once per tick by the constraint solver. What it *means* is the collision system's business. |
 | **intent** | What a commander is trying to do this tick, as a component. Written from input, read by systems. |

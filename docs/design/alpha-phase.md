@@ -38,7 +38,14 @@ A scenario is one arena, built to make a system visible. Everything needed to ad
    and what to look at* - "sixty enemies spawned overlapping, watch them untangle", not "a fight".
 4. Override `configure(SimConfig)` to vary tunables - a crowd, an empty arena, a faster weapon -
    using the `with(...)` overloads on `SimConfig`. Do not edit `game.properties` for a scenario.
-5. `populate(Simulation)` spawns the world. Spawn the commander first.
+5. Override `map(SimConfig, Randomness)` if the scenario needs particular ground. The default is open
+   ground the size `sim.map.*` asks for, partitioned into regions. **The map is built before the
+   simulation**, because its extent is the arena.
+6. `populate(Simulation)` spawns the world. Spawn the commander first, and take the arena size from
+   `simulation.map()` rather than from config.
+
+`Scenarios.world(scenario, config)` assembles all of that and is the only place a world is built -
+use it in tests too rather than constructing a `Simulation` and populating it by hand.
 
 `ScenariosTest` applies to every registered scenario automatically: each must describe itself, spawn
 exactly one commander, and survive 300 ticks. `SimulationDeterminismTest` replays each one twice and
@@ -84,7 +91,7 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | A body in its death throes is a frozen circle in a darker colour | The dying animation. The window is real and configured per unit kind (`*.deathThroesSeconds`); only what plays in it is missing. |
 | Two units in a clinch are two circles touching, both drawn the same | The grapple animation, which resolves into one of them dying. `Appearance.State.GRAPPLING` is the hook and is already published for both parties for the whole lock. |
 | Nothing reacts to a death except respawning and the killer's lock | More death reactions, as they are designed. The machinery is there: mark `Dead`, add a component, add a small system. |
-| `Placement` silently places fewer circles than asked when the arena is full | A real level format, which must report the shortfall instead of swallowing it. |
+| Rock is laid by hand in `Warren` and scattered blindly in `Skirmish` | Generated fragments. The terrain and the solver are real; what decides *where* rock goes is not designed yet. |
 | **Frozen troopers.** An inert body on the field that an alien eats and the commander rescues. It is a pickup, not a trooper - it does not follow, cannot be commanded and cannot die. | Real troopers. It exists so evolution-by-devouring can be built and played before the squad does, and **nothing about it answers how the squad works**. |
 | `Level.pendingReinforcements` counts rescued troopers and nothing reads it | The squad. The number is there so a level-scope grant has somewhere real to land and the path can be tested end to end; it changes nothing in play. |
 | A unit that is filling up is drawn as a brighter core inside its circle | Whatever the art does with it. `Appearance.charge` is the hook and is already published as a fraction, so the renderer decides and the simulation never learns how it is shown. |

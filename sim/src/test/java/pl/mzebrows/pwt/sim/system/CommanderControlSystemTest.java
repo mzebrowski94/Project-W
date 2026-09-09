@@ -15,10 +15,41 @@ import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Velocity;
 
 class CommanderControlSystemTest {
 
     private static final Offset<Float> TOLERANCE = Offset.offset(1e-4f);
+
+    /**
+     * Aim is a <em>direction</em>, and this is the test that keeps it one.
+     *
+     * <p>The mouse is unprojected through the camera, so pulling the view back moves the world point
+     * under the cursor further away. If firing cared how far that point was, zooming out would quietly
+     * become extra range - a rendering setting changing what the game does, which is the one thing the
+     * client/simulation split exists to prevent.
+     */
+    @Test
+    void firesInTheSameDirectionHoweverFarAwayTheAimPointIs() {
+        Simulation close = simulation();
+        close.spawnCommander(50f, 50f);
+        Simulation distant = simulation();
+        distant.spawnCommander(50f, 50f);
+
+        close.step(new CommanderInput(0f, 0f, 60f, 60f, true, false));
+        distant.step(new CommanderInput(0f, 0f, 150f, 150f, true, false));
+
+        assertThat(shotDirection(distant)).isCloseTo(shotDirection(close), TOLERANCE);
+    }
+
+    private static float shotDirection(Simulation simulation) {
+        Velocity velocity = simulation
+                .engine()
+                .getEntitiesFor(Family.all(Projectile.class, Velocity.class).get())
+                .first()
+                .getComponent(Velocity.class);
+        return (float) StrictMath.atan2(velocity.y, velocity.x);
+    }
 
     @Test
     void movesTheCommanderInTheDirectionItIsAskedTo() {

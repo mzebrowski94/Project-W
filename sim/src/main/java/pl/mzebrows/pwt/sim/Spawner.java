@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
@@ -14,6 +15,7 @@ import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Feed;
+import pl.mzebrows.pwt.sim.component.Focus;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
@@ -66,10 +68,12 @@ public final class Spawner {
 
     private final PooledEngine engine;
     private final SimConfig config;
+    private final TileMap map;
 
-    Spawner(PooledEngine engine, SimConfig config) {
+    Spawner(PooledEngine engine, SimConfig config, TileMap map) {
         this.engine = engine;
         this.config = config;
+        this.map = map;
     }
 
     /** Spawns the player-controlled unit, armed, at full health, and ready to fire. */
@@ -78,6 +82,7 @@ public final class Spawner {
         SimConfig.MeleeConfig melee = config.melee();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Commander.class));
+        entity.add(engine.createComponent(Focus.class));
         entity.add(engine.createComponent(Faction.class).set(Side.PLAYER));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
@@ -95,7 +100,7 @@ public final class Spawner {
                 .set(
                         commander.respawnDelaySeconds(),
                         commander.respawnMargin(),
-                        config.arena().height() * 0.5f,
+                        map.worldHeight() * 0.5f,
                         commander.respawnInvulnerableSeconds()));
         entity.add(engine.createComponent(Weapon.class).set(STARTING_WEAPON, config.weapon(STARTING_WEAPON)));
         entity.add(engine.createComponent(Melee.class)

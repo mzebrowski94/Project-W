@@ -5,6 +5,9 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
+import pl.mzebrows.pwt.map.Maps;
+import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
@@ -55,6 +58,7 @@ public final class Simulation {
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
 
     private final SimConfig config;
+    private final TileMap map;
     private final Rng rng;
     private final PooledEngine engine;
     private final Spawner spawner;
@@ -63,11 +67,24 @@ public final class Simulation {
     private long tick;
     private boolean commanderInvulnerable;
 
+    /**
+     * A world on plain open ground the size the config asks for. What tests and any caller that does
+     * not care about terrain want; a scenario hands in a real map instead.
+     */
     public Simulation(SimConfig config) {
+        this(config, plainGround(config));
+    }
+
+    /**
+     * A world laid out on a given map. The map's extent is the arena, so nothing in here needs to be
+     * told separately how big the level is.
+     */
+    public Simulation(SimConfig config, TileMap map) {
         this.config = config;
+        this.map = map;
         this.rng = new Rng(config.seed());
         this.engine = new PooledEngine();
-        this.spawner = new Spawner(engine, config);
+        this.spawner = new Spawner(engine, config, map);
         this.commanders =
                 engine.getEntitiesFor(Family.all(Commander.class, Intent.class).get());
 
@@ -80,17 +97,22 @@ public final class Simulation {
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));
-        engine.addSystem(new CollisionSystem(config, spawner));
+        engine.addSystem(new CollisionSystem(config, map, spawner));
         engine.addSystem(new PickupSystem(config, spawner));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(spawner));
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
-        engine.addSystem(new ProjectileBoundsSystem(config.arena(), spawner));
+        engine.addSystem(new ProjectileBoundsSystem(map, spawner));
         engine.addSystem(new AppearanceSystem(config));
         engine.addSystem(new ReaperSystem());
 
         spawner.spawnLevel();
+    }
+
+    private static TileMap plainGround(SimConfig config) {
+        SimConfig.MapConfig shape = config.map();
+        return Maps.uniform(shape.cols(), shape.rows(), shape.tileSize(), Terrain.PLAIN);
     }
 
     /** Advances the world by one fixed step with nothing driving the commander. */
@@ -196,5 +218,13 @@ public final class Simulation {
 
     public SimConfig config() {
         return config;
+    }
+
+    /**
+     * The ground this world is played on. Read freely - it is world state of the same kind as the
+     * config, immutable for the life of the level, and the client reads it to draw the terrain.
+     */
+    public TileMap map() {
+        return map;
     }
 }

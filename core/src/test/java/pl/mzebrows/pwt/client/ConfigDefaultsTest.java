@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.badlogic.gdx.graphics.Color;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -26,8 +27,10 @@ class ConfigDefaultsTest {
         assertThat(config.windowHeight()).isGreaterThan(0);
         assertThat(config.backgroundColor()).isNotNull();
         assertThat(config.palette()).isNotNull();
+        assertThat(config.terrainPalette()).isNotNull();
         assertThat(config.stateTint()).isNotNull();
         assertThat(config.chargeMark()).isNotNull();
+        assertThat(config.camera()).isNotNull();
     }
 
     @Test
@@ -41,6 +44,15 @@ class ConfigDefaultsTest {
 
         for (Look look : Look.values()) {
             assertThat(palette.colorFor(look)).isNotNull();
+        }
+    }
+
+    @Test
+    void mapsEveryTerrainToAColour() {
+        TerrainPalette terrain = GraphicConfig.load().terrainPalette();
+
+        for (Terrain kind : Terrain.values()) {
+            assertThat(terrain.colorFor(kind)).isNotNull();
         }
     }
 
@@ -73,7 +85,8 @@ class ConfigDefaultsTest {
 
     @Test
     void rejectsANonPositiveVirtualSize() {
-        assertThatThrownBy(() -> new GraphicConfig(0f, 90f, 1280, 720, true, Color.BLACK, palette(), tint(), mark()))
+        assertThatThrownBy(() -> new GraphicConfig(
+                        0f, 90f, 1280, 720, true, Color.BLACK, palette(), terrain(), tint(), mark(), camera()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -89,11 +102,21 @@ class ConfigDefaultsTest {
         assertThatThrownBy(() -> new Palette(new Color[] {Color.WHITE})).isInstanceOf(IllegalArgumentException.class);
     }
 
+    private static TerrainPalette terrain() {
+        Color[] colors = new Color[Terrain.values().length];
+        java.util.Arrays.fill(colors, Color.GRAY);
+        return new TerrainPalette(colors, 0.05f);
+    }
+
     private static StateTint tint() {
         return new StateTint(0.85f, 0.5f, -0.3f, 0.35f, -0.7f);
     }
 
     private static ChargeMark mark() {
         return new ChargeMark(0.55f, 0.8f);
+    }
+
+    private static CameraDirector.Settings camera() {
+        return new CameraDirector.Settings(6f, 8f, 14f, 2f, 1f, 2.2f, 7f, 1.25f);
     }
 }

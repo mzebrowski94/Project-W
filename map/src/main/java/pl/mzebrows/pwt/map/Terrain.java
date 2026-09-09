@@ -1,0 +1,41 @@
+package pl.mzebrows.pwt.map;
+
+/**
+ * A kind of ground. Names a role in the world, never a colour and never a number to balance - what a
+ * terrain looks like is decided in the client module, and what standing on it costs a unit is decided
+ * in {@code sim}. This is the same split {@code Look} and {@code Palette} already run for entities.
+ *
+ * <p><strong>Passability is the one exception, and it is here because it is geometry rather than
+ * gameplay.</strong> Map generation itself cannot work without it: checking that a level is
+ * connected, and finding somewhere to put an object, are questions about shape that have to be
+ * answerable inside this module. Anything else terrain might do to a unit - slow it, hurt it, hide
+ * it - is a gameplay number and belongs in {@code game.properties}, read by a system.
+ *
+ * <p>{@link #PLAIN} is deliberately first: a grid that has not been written to yet is open ground
+ * rather than solid rock, so a half-built map reads as empty instead of as a bug in the generator.
+ */
+public enum Terrain {
+
+    /** Open ground. The default a map starts as. */
+    PLAIN(true),
+
+    /** Scoured, dusty ground. Passable; where wreckage tends to collect. */
+    DUST(true),
+
+    /** Alien growth. Passable; where the things that feed the strains take root. */
+    ORGANIC(true),
+
+    /** Rock. The blocking terrain, and what anything outside the map reads as. */
+    ROCK(false);
+
+    private final boolean passable;
+
+    Terrain(boolean passable) {
+        this.passable = passable;
+    }
+
+    /** Whether a unit may stand here. Geometry, not gameplay - see the class note. */
+    public boolean passable() {
+        return passable;
+    }
+}

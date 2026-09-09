@@ -31,7 +31,7 @@ public final class SimConfigLoader {
                 properties.getLong("sim.seed", defaults.seed()),
                 properties.getFloat("sim.tickSeconds", defaults.tickSeconds()),
                 properties.getInt("sim.maxTicksPerFrame", defaults.maxTicksPerFrame()),
-                arena(properties, defaults.arena()),
+                map(properties, defaults.map()),
                 commander(properties, defaults.commander()),
                 units(properties, defaults),
                 pickups(properties, defaults),
@@ -41,10 +41,16 @@ public final class SimConfigLoader {
                 collision(properties, defaults.collision()));
     }
 
-    private static SimConfig.ArenaConfig arena(GameProperties properties, SimConfig.ArenaConfig defaults) {
-        return new SimConfig.ArenaConfig(
-                properties.getFloat("sim.arena.width", defaults.width()),
-                properties.getFloat("sim.arena.height", defaults.height()));
+    /**
+     * The grid a level is laid out on. The arena is whatever this adds up to, so there is no separate
+     * arena size to keep in step with it.
+     */
+    private static SimConfig.MapConfig map(GameProperties properties, SimConfig.MapConfig defaults) {
+        return new SimConfig.MapConfig(
+                properties.getInt("sim.map.cols", defaults.cols()),
+                properties.getInt("sim.map.rows", defaults.rows()),
+                properties.getFloat("sim.map.tileSize", defaults.tileSize()),
+                properties.getInt("sim.map.regions", defaults.regions()));
     }
 
     private static SimConfig.CommanderConfig commander(GameProperties properties, SimConfig.CommanderConfig defaults) {

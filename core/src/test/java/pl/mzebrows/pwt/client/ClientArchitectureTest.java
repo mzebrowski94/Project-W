@@ -51,6 +51,8 @@ final class ClientArchitectureTest {
             .haveSimpleNameEndingWith("Controls")
             .or()
             .haveSimpleNameEndingWith("Selection")
+            .or()
+            .haveSimpleNameEndingWith("Director")
             .should()
             .dependOnClassesThat()
             .haveFullyQualifiedName("com.badlogic.gdx.Gdx")

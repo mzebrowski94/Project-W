@@ -1,5 +1,6 @@
 package pl.mzebrows.pwt.sim.scenario;
 
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -36,15 +37,15 @@ final class CrowdScenario implements Scenario {
     @Override
     public void populate(Simulation simulation) {
         SimConfig config = simulation.config();
-        SimConfig.ArenaConfig arena = config.arena();
-        float centreX = arena.width() * 0.5f;
-        float centreY = arena.height() * 0.5f;
+        TileMap map = simulation.map();
+        float centreX = map.worldWidth() * 0.5f;
+        float centreY = map.worldHeight() * 0.5f;
 
         simulation.spawnCommander(centreX, centreY);
 
         for (int i = 0; i < config.unit(UnitKind.GRUNT).count(); i++) {
             float x = centreX + simulation.rng().nextFloat(-RING_RADIUS, RING_RADIUS);
-            float y = centreY - arena.height() * 0.35f + simulation.rng().nextFloat(-RING_RADIUS, RING_RADIUS);
+            float y = centreY - map.worldHeight() * 0.35f + simulation.rng().nextFloat(-RING_RADIUS, RING_RADIUS);
             simulation.spawnEnemy(x, y);
         }
     }
