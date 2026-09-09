@@ -28,6 +28,7 @@ import org.jspecify.annotations.Nullable;
  * @param evolvesTo what it becomes when it has fed enough, or null for a strain with nowhere to go
  * @param perception how far it can notice the commander, and how far he must get to be lost again
  * @param wander how it passes the time when it has noticed nobody
+ * @param avoidance how far ahead it looks for things in its way, and how hard it leans off them
  * @param leap how it closes the last of the distance
  * @param look what a renderer draws it as
  */
@@ -46,6 +47,7 @@ public record UnitDef(
         @Nullable UnitKind evolvesTo,
         PerceptionDef perception,
         WanderDef wander,
+        AvoidanceDef avoidance,
         LeapDef leap,
         Look look) {
 

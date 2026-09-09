@@ -11,6 +11,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -24,19 +25,28 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  * Asks every enemy that is hunting the commander to head for him at its own speed, round whatever is
  * in the way.
  *
- * <p>Whether a unit is hunting at all is {@code PerceptionSystem}'s answer, not this system's; a unit
- * that has not noticed him is simply not spoken for here, asks for nothing, and is left to whatever
- * drives an idle unit.
+ * <p>Whether a unit is hunting at all, and whether it has something else in mind instead, are
+ * {@code PerceptionSystem}'s answers rather than this system's. A unit hunting him is routed to him; a
+ * unit that has not noticed him but has spotted something edible is walked at that; a unit with
+ * neither is not spoken for here at all, asks for nothing, and is left to whatever drives an idle one.
+ * A world with no commander in it still has units going to dinner, which is why nothing here gives up
+ * early just because there is nobody to hunt.
  *
  * <p>Routes come from a {@link FlowField} per strain, rebuilt only when the commander leaves the tile
  * it was pointed at. One grid pass serves every unit of that strain, however many there are, and each
  * field is built for that strain's body radius - which is what lets a grunt take a one-tile crack that
  * a brute has to walk around, without either of them knowing there is a rule about it.
  *
- * <p><strong>The last of the approach is steered straight at him, not by the field.</strong> A field
- * flattens out at its own goal, so once a unit is on the commander's tile it reports nothing useful;
- * that is also the honest answer when a body that size cannot reach him at all, and walking at him and
- * being stopped by rock is the right behaviour for a brute facing a crack he has backed into.
+ * <p><strong>A unit that can see him walks straight at him.</strong> The field is consulted only when
+ * rock is actually in the way. Distances in it are four-connected, so its gradient in the open is
+ * grid-shaped rather than straight, and a pack crossing an empty arena would converge onto the
+ * commander's row and arrive along it. Checking the line first costs a march down it and buys back
+ * the straight approach, which is also the one every existing arena was tuned around.
+ *
+ * <p><strong>The last of the approach is steered straight at him too.</strong> A field flattens out at
+ * its own goal, so once a unit is on the commander's tile it reports nothing useful; that is also the
+ * honest answer when a body that size cannot reach him at all, and walking at him and being stopped by
+ * rock is the right behaviour for a brute facing a crack he has backed into.
  *
  * <p>It writes a desired velocity rather than a velocity, so what it asks for is one opinion among
  * several rather than the last word. {@code DriveSystem} commits it; a unit this system says nothing
@@ -57,6 +67,7 @@ public final class NavigationSystem extends EntitySystem {
     private static final ComponentMapper<Speed> SPEED = ComponentMapper.getFor(Speed.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
+    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -95,19 +106,26 @@ public final class NavigationSystem extends EntitySystem {
     @Override
     public void update(float deltaTime) {
         @Nullable Position target = Drivers.livingTarget(commanders);
-        if (target == null) {
-            return;
-        }
-        int goalCol = map.colAt(target.x);
-        int goalRow = map.rowAt(target.y);
+        int goalCol = target == null ? 0 : map.colAt(target.x);
+        int goalRow = target == null ? 0 : map.rowAt(target.y);
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
-            if (Drivers.held(enemy) || !PERCEPTION.get(enemy).aggro) {
+            Perception perception = PERCEPTION.get(enemy);
+            if (Drivers.held(enemy) || !perception.occupied()) {
+                continue;
+            }
+            if (!perception.aggro) {
+                foodAt(enemy, perception);
+                continue;
+            }
+            if (target == null) {
                 continue;
             }
             Position position = POSITION.get(enemy);
             float speed = SPEED.get(enemy).value;
-            if (within(position, target, map.tileSize())) {
+            float radius = BODY.get(enemy).radius;
+            if (within(position, target, map.tileSize())
+                    || map.isClearPath(position.x, position.y, target.x, target.y, radius)) {
                 straightAt(enemy, position, target, speed);
                 continue;
             }
@@ -144,5 +162,25 @@ public final class NavigationSystem extends EntitySystem {
             return;
         }
         STEERING.get(enemy).set(toTargetX / distance * speed, toTargetY / distance * speed);
+    }
+
+    /**
+     * Straight at whatever it is going to eat.
+     *
+     * <p>No field for this one. Food is only ever chased from inside the secondary range, the shortest
+     * range in the game, so a grid pass would be answering a question about the next few world units -
+     * and a unit that cannot reach a mushroom round a corner simply stands beside the rock and gives up
+     * on it, which is the right amount of stupid for something that is not hunting anybody.
+     */
+    private static void foodAt(Entity enemy, Perception perception) {
+        Position position = POSITION.get(enemy);
+        float towardsX = perception.foodX - position.x;
+        float towardsY = perception.foodY - position.y;
+        float distance = (float) Math.sqrt(towardsX * towardsX + towardsY * towardsY);
+        if (distance <= EPSILON) {
+            return;
+        }
+        float speed = SPEED.get(enemy).value;
+        STEERING.get(enemy).set(towardsX / distance * speed, towardsY / distance * speed);
     }
 }

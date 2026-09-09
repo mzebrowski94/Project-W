@@ -51,11 +51,23 @@ public final class Stunned implements Component, Pool.Poolable {
     }
 
     /**
-     * Turns a hold into a clinch. Called once the blow is known to have killed - never undone, because
-     * a clinch that downgraded to a shove partway through would flicker on screen.
+     * Turns a hold into a clinch, and stops whoever it holds dead.
+     *
+     * <p>Called once the blow is known to have killed - never undone, because a clinch that downgraded
+     * to a shove partway through would flicker on screen.
+     *
+     * <p><strong>A clinch clears the knockback decay rather than carrying one.</strong> A decay
+     * describes a throw bleeding off, and a killing blow throws nothing: the two of them are tangled
+     * together, not shoved apart. Carrying the weapon's decay in here left the survivor coasting on
+     * whatever he was doing when he swung, so a commander who killed a leaper while backing away slid
+     * out from under the body he had just been clinched to - the gap reopening under a freeze that was
+     * supposed to have closed it.
      */
-    public void clinch(float seconds, float decay) {
-        apply(seconds, decay);
+    public void clinch(float seconds) {
+        if (seconds > remainingSeconds) {
+            remainingSeconds = seconds;
+        }
+        knockbackDecay = 0f;
         grappling = true;
     }
 

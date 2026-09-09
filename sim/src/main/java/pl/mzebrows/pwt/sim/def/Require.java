@@ -25,6 +25,14 @@ public final class Require {
         }
     }
 
+    /** Rejects a value that falls short of a minimum something else in the config already fixed. */
+    public static void atLeast(String name, float value, float minimum, String because) {
+        if (value < minimum) {
+            throw new IllegalArgumentException(
+                    name + " must be at least " + minimum + " (" + because + "), was " + value);
+        }
+    }
+
     /** Rejects below one, for a count of things that makes no sense empty - passes, a leap sequence. */
     public static void atLeastOne(String name, int value) {
         if (value < 1) {

@@ -16,6 +16,9 @@ and structural choices. Same format, same discipline, different subject.
 | [G0009](G0009-the-grid-builds-the-map-and-nothing-else.md) | The tile grid lays a level out; nothing in the game is quantised to it. | accepted |
 | [G0010](G0010-a-mind-is-a-field-not-a-tree.md) | A unit's mind is a field on a component, not a behaviour tree. | accepted |
 | [G0011](G0011-detection-is-range-only.md) | Detection is range only; rock does not hide you. | accepted |
+| [G0012](G0012-the-dodge-is-deterministic.md) | A dodge is a function of the shot, not a roll. | accepted |
+| [G0013](G0013-the-clinch-is-what-a-parry-earns.md) | A melee kill clinches only something already committed to attacking. | accepted; one rejection superseded by G0014 |
+| [G0014](G0014-the-clinch-carries.md) | The clinch carries the body in under its own momentum; it never places it. | accepted |
 
 ## When to write one
 

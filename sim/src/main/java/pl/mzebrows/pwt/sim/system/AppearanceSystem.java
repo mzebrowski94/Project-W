@@ -24,8 +24,10 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  * ends up drawn as winding up while it is actually stunned - which would be worse than no tell at
  * all, because the player would have learned to trust it.
  *
- * <p>The precedence is worst-news-first, with one deliberate exception at the top. <strong>Being
- * locked outranks being dead.</strong> Both parties to a landed blow read as {@code GRAPPLING} for the
+ * <p>The precedence is worst-news-first, with one deliberate exception at the top. <strong>A
+ * <em>fatal</em> lock outranks being dead</strong>, and only a fatal one: something swatted while it
+ * walked is stunned as it dies and reads as dying, because the player has no reason to be in suspense
+ * about it. Both parties to a landed blow read as {@code GRAPPLING} for the
  * whole lock, the loser included, so that for that beat the player cannot tell from the picture which
  * of them is getting back up - only when the lock ends does the loser fail to stand.
  *
@@ -81,11 +83,15 @@ public final class AppearanceSystem extends IteratingSystem {
     }
 
     private static Appearance.State stateOf(Entity entity) {
-        if (STUNNED.has(entity) && STUNNED.get(entity).active()) {
-            return STUNNED.get(entity).grappling ? Appearance.State.GRAPPLING : Appearance.State.STAGGERED;
+        boolean held = STUNNED.has(entity) && STUNNED.get(entity).active();
+        if (held && STUNNED.get(entity).grappling) {
+            return Appearance.State.GRAPPLING;
         }
         if (DYING.has(entity) && DYING.get(entity).begun) {
             return Appearance.State.DYING;
+        }
+        if (held) {
+            return Appearance.State.STAGGERED;
         }
         if (LEAP.has(entity)) {
             Leap leap = LEAP.get(entity);

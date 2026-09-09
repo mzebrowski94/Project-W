@@ -77,6 +77,7 @@ class DefsTest {
                 null,
                 PerceptionDef.alwaysAggressive(0f, 0f),
                 WanderDef.off(),
+                AvoidanceDef.off(),
                 LeapDef.off(),
                 look);
     }

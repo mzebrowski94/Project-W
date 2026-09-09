@@ -33,5 +33,7 @@ public enum Look {
     /** A trooper in stasis, waiting to be thawed or eaten. */
     FROZEN_TROOPER,
     /** A weapons cache. */
-    ARMOURY
+    ARMOURY,
+    /** Alien food on legs. */
+    RABBIT
 }

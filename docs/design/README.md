@@ -35,7 +35,14 @@ rows become enforceable once the named feature exists - promote them then.
 | Every concern draws random numbers from its own stream, derived from the one level seed. | enforced - `RngTest.streamsForDifferentConcernsDiverge` |
 | A unit's lose range is never shorter than its detection range, so a commander on the boundary cannot flicker a pack between hunting and idling. | enforced - `PerceptionDefTest.refusesALoseRangeShorterThanTheDetectionRange` |
 | A unit that has not noticed the commander is drawn differently from one that has. | enforced - `AppearanceSystemTest.showsAUnitThatHasNotNoticedHimAsUnaware` |
-| A unit that has noticed nobody stays in the patch it was spawned in, and walks back to it if it finds itself outside. | enforced - `WanderSystemTest.keepsAnIdleUnitNearWhereItWasSpawned`, `.walksBackToItsSpawnPointWhenItFindsItselfAwayFromIt` |
+| A unit that has noticed nobody stays in its patch, and walks back to it if it finds itself outside. | enforced - `WanderSystemTest.keepsAnIdleUnitNearWhereItWasSpawned`, `.walksBackToItsSpawnPointWhenItFindsItselfAwayFromIt` |
+| A unit leans off what it is about to walk into before it touches it; discovering an obstacle by collision is a failure. | enforced - `AvoidanceSystemTest.leansOffALineThatWouldRunIntoSomethingLongBeforeItGetsThere` |
+| Nothing steers around what it is hunting, and nothing steers around a pickup. | enforced - `AvoidanceSystemTest.neverAvoidsTheThingItIsHunting`; judgement for the pickup half - `AvoidanceSystem` skips them, or a hungry alien would walk round its dinner |
+| A dodge is a function of the shot's geometry alone. The same shot from the same place gets the same answer, always (G0012). | enforced - `DodgeSystemTest.answersTheSameShotTheSameWayEveryTime`, `.breaksAwayFromTheSideTheShotIsOn` |
+| A creature committed to a dodge cannot answer anything else until the window closes. | enforced - `DodgeSystemTest.willNotAnswerASecondShotWhileItIsCommittedToTheFirst` |
+| The commander outranks food absolutely. A unit that has noticed him never diverts to eat. | enforced - `PerceptionSystemTest.walksPastFoodWhileItIsHuntingHim` |
+| A pickup that carries health can be shot or struck; one that does not is scenery a weapon passes through. | enforced - `RabbitTest.feedsNobodyOnceItHasBeenShot`, `.canBeDeniedWithTheHandStrike` |
+| A pickup that has been killed feeds nobody. Denial at range is a real thing the player can do. | enforced - `RabbitTest.feedsNobodyOnceItHasBeenShot` |
 | A route is a function of terrain and a body size. Nothing is routed through a gap it does not fit through. | enforced - `FlowFieldTest.refusesAGapNarrowerThanTheBodyItWasBuiltFor`, `NavigationSystemTest.takesAGruntThroughACrackAndLeavesABruteOnTheWrongSideOfIt` |
 | A desired velocity is spent on the tick it was written; a unit no system spoke for stops. | enforced - `DriveSystemTest.spendsADesiredVelocityOnTheTickItWasWritten`, `.stopsAUnitThatAsksForNothing` |
 | Nothing drives a held unit. Whatever is holding it owns its velocity until it comes round. | enforced - `DriveSystemTest.leavesAHeldUnitToWhateverIsHoldingIt` |
@@ -67,12 +74,19 @@ rows become enforceable once the named feature exists - promote them then.
 | Squad size never exceeds its configured maximum. | deferred - needs squad |
 | Every projectile is a simulated entity with a `Position` and a `Body`. No hitscan. | enforced - `SpawnerTest.givesEveryProjectileAPositionAndABody` |
 | Every melee strike is a simulated entity with a `Position` and a `Body`. No melee hitscan (G0005). | enforced - `SpawnerTest.givesEveryStrikeAPositionAndABodySoThereIsNoMeleeHitscan` |
-| A blow that kills holds both the attacker and its victim - that is the clinch. | enforced - `StunTest.holdsBothTheAttackerAndItsVictimWhenTheBlowKills` |
+| A blow that kills holds both the attacker and its victim - that is the clinch. A melee kill does so only when its victim had already committed to attacking; a swat on something merely walking holds only the corpse (G0013). | enforced - `StunTest.holdsBothTheAttackerAndItsVictimWhenTheBlowKills`, `StrikeCombatTest.tanglesHimUpWhenHisSweepKillsSomethingMidLeap`, `.leavesHimFreeWhenHisSweepKillsSomethingThatWasNotComingAtHim` |
+| A lethal exchange ends with the two of them touching, whatever distance the blow was struck at - and the body gets there under its own momentum, shoving the survivor back, rather than being placed (G0014). | enforced - `StrikeCombatTest.endsALethalExchangeWithTheTwoOfThemTouching`, `.shovesHimBackAsTheBodyArrives` |
+| A clinch's carry must cross the longest gap a sweep can leave. A config where it stops short is refused rather than shipped. | enforced - `SimConfigTest.refusesAClinchCarryThatWouldStopShortOfTheCommander` |
+| A strain that does not lose interest keeps hunting him however far he gets. | enforced - `PerceptionSystemTest.keepsHuntingHimForeverWhenItNeverLosesInterest` |
+| Him going down releases everything hunting him, whatever its switches say. Nothing stands to attention over a corpse. | enforced - `PerceptionSystemTest.letsGoOfHimWhenHeGoesDownEvenThoughItNeverGivesUp`, `.losesHimWhenHeGoesDown` |
+| A unit that gives up idles where it gave up, not where it was spawned. Its patch follows it while it has something better to do. | enforced - `WanderSystemTest.settlesWhereItGaveUpRatherThanWhereItWasSpawned` |
+| A clinch stops both parties dead. A killing blow throws nothing, so there is no throw for the freeze to bleed off. | enforced - `StunTest.clearsTheThrowWhenAHoldBecomesAClinch`, `StrikeCombatTest.stopsHimDeadSoTheClinchDoesNotDriftApart` |
 | A blow that is survived holds only the one that took it; the one that landed it stays free. | enforced - `StunTest.holdsOnlyTheVictimWhenTheBlowIsSurvived` |
 | A stunned entity acts on nothing, but is still moved and still shoved by the solver. | enforced - `StunTest.stillLetsAHeldUnitBeShovedOutOfTheWay` |
-| Only a target that survives a blow is thrown; a killing blow leaves the body where it was struck. | enforced - `StrikeCombatTest.throwsNothingWhenTheBlowKills` |
+| Only a target that survives a blow is thrown *away*; a killing blow leaves the body where it was struck, except that a clinch carries it the last stride *into* the survivor (G0014). | enforced - `StrikeCombatTest.throwsNothingWhenTheBlowKills`, `.shovesHimBackAsTheBodyArrives` |
 | A dying body is scenery: solid, and immovable like an obstacle. | enforced - `DeathThroesTest.turnsABodyIntoAnObstacle` |
-| Both parties to a *fatal* exchange look the same for its whole duration, winner and loser alike. | enforced - `AppearanceSystemTest.showsALostExchangeAsLockedRatherThanDyingWhileTheLockHolds` |
+| A dying body is harmless as well as immovable. Nothing it touches is hurt by it. | enforced - `DeathThroesTest.landsNoBlowOnceItIsDead` |
+| Both parties to a *fatal* exchange look the same for its whole duration, winner and loser alike - and only a fatal lock does that, so anything swatted reads as dying. | enforced - `AppearanceSystemTest.showsALostExchangeAsLockedRatherThanDyingWhileTheLockHolds` |
 | A leap is aimed once at launch and never steered afterwards. | enforced - `EnemyLeapSystemTest.keepsGoingWhereItAimedEvenIfTheCommanderMoves` |
 | A killing blow is instant; only the removal of the body waits. | enforced - `CombatTest.killsTheCommanderTheMomentAnEnemyTouchesIt` |
 | One swing lands at most one blow. | enforced - `StrikeCombatTest.landsAtMostOneBlowPerSwing` |
@@ -187,9 +201,14 @@ mistaken for a decision.
   changes it, so firing a gun in a corridor wakes nobody who could not already have noticed you. A
   shot that wakes things beyond the detection radius is a big arcade lever and it is cheap to add now
   and awkward to retrofit later, but it is a decision about how loud the game wants to be.
-- **Do enemies notice anything other than the commander?** The secondary detection range - a shorter
-  one, for neutrals and pickups - is designed and not built. It arrives with the rabbit; until then a
-  grunt walks over a mushroom it was not already standing on.
+- **Can a rabbit be killed with the hand strike?** Only a projectile reaches the damage path through
+  a pickup, so a sweep passes through one today. Denial at range is the interesting half and it works;
+  whether denial in your face should also work is undecided, and it is a rule about what a melee
+  weapon is for rather than a gap in the rabbit.
+- **Where do rabbits come from?** A scenario spawns a handful and that is all there ever are. Whether
+  a level breeds them, whether running out matters, and whether the aliens are meant to clear them
+  before you can get to them are all still open - and they decide whether the rabbit is a resource or
+  a set piece.
 - What ends a level - an objective, an extraction point, elimination, or a timer?
 - The source game had four commanders because it was four-player co-op. In single-player, is the
   commander a choice with distinct kits, or one fixed protagonist?

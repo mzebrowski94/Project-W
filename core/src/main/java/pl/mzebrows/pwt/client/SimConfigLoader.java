@@ -2,7 +2,9 @@ package pl.mzebrows.pwt.client;
 
 import java.util.Locale;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
@@ -39,6 +41,7 @@ public final class SimConfigLoader {
                 pickups(properties, defaults),
                 weapons(properties, defaults),
                 melee(properties, defaults.melee()),
+                rabbit(properties, defaults.rabbit()),
                 obstacle(properties, defaults.obstacle()),
                 collision(properties, defaults.collision()));
     }
@@ -119,6 +122,7 @@ public final class SimConfigLoader {
                 defaults.evolvesTo(),
                 perception(properties, prefix + ".perception", defaults.perception()),
                 wander(properties, prefix + ".wander", defaults.wander()),
+                avoidance(properties, prefix + ".avoidance", defaults.avoidance()),
                 leap(properties, prefix + ".leap", defaults.leap()),
                 defaults.look());
     }
@@ -132,8 +136,10 @@ public final class SimConfigLoader {
     private static PerceptionDef perception(GameProperties properties, String prefix, PerceptionDef defaults) {
         return new PerceptionDef(
                 properties.getBoolean(prefix + ".alwaysAggressive", defaults.alwaysAggressive()),
+                properties.getBoolean(prefix + ".losesInterest", defaults.losesInterest()),
                 properties.getFloat(prefix + ".detectionRange", defaults.detectionRange()),
-                properties.getFloat(prefix + ".loseRange", defaults.loseRange()));
+                properties.getFloat(prefix + ".loseRange", defaults.loseRange()),
+                properties.getFloat(prefix + ".secondaryRange", defaults.secondaryRange()));
     }
 
     /** How a strain idles, under its own prefix. */
@@ -146,6 +152,15 @@ public final class SimConfigLoader {
                 properties.getFloat(prefix + ".pauseMinSeconds", defaults.pauseMinSeconds()),
                 properties.getFloat(prefix + ".pauseMaxSeconds", defaults.pauseMaxSeconds()),
                 properties.getFloat(prefix + ".waypointTimeoutSeconds", defaults.waypointTimeoutSeconds()));
+    }
+
+    /** How far ahead a strain looks for things in its way, under its own prefix. */
+    private static AvoidanceDef avoidance(GameProperties properties, String prefix, AvoidanceDef defaults) {
+        return new AvoidanceDef(
+                properties.getBoolean(prefix + ".enabled", defaults.enabled()),
+                properties.getFloat(prefix + ".scanRange", defaults.scanRange()),
+                properties.getFloat(prefix + ".lookaheadSeconds", defaults.lookaheadSeconds()),
+                properties.getFloat(prefix + ".weight", defaults.weight()));
     }
 
     /** Every strain configures its leap under its own prefix; the keys below it are the same. */
@@ -172,6 +187,9 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.melee.damage", defaults.damage()),
                 properties.getFloat("sim.melee.arcDegrees", defaults.arcDegrees()),
                 properties.getFloat("sim.melee.lockSeconds", defaults.lockSeconds()),
+                properties.getBoolean("sim.melee.locksCommittedOnly", defaults.locksCommittedOnly()),
+                properties.getFloat("sim.melee.clinchCarrySpeed", defaults.clinchCarrySpeed()),
+                properties.getFloat("sim.melee.clinchCarryDecay", defaults.clinchCarryDecay()),
                 properties.getFloat("sim.melee.knockbackSpeed", defaults.knockbackSpeed()),
                 properties.getFloat("sim.melee.knockbackDecay", defaults.knockbackDecay()));
     }
@@ -199,6 +217,27 @@ public final class SimConfigLoader {
 
     private static SimConfig.CollisionConfig collision(GameProperties properties, SimConfig.CollisionConfig defaults) {
         return new SimConfig.CollisionConfig(properties.getInt("sim.collision.passes", defaults.passes()));
+    }
+
+    /** The one pickup with numbers of its own, because it is the one that moves. */
+    private static SimConfig.RabbitConfig rabbit(GameProperties properties, SimConfig.RabbitConfig defaults) {
+        return new SimConfig.RabbitConfig(
+                properties.getFloat("sim.rabbit.speed", defaults.speed()),
+                properties.getFloat("sim.rabbit.health", defaults.health()),
+                properties.getFloat("sim.rabbit.deathThroesSeconds", defaults.deathThroesSeconds()),
+                wander(properties, "sim.rabbit.wander", defaults.wander()),
+                dodge(properties, "sim.rabbit.dodge", defaults.dodge()));
+    }
+
+    /** How a creature answers a shot, under its own prefix. */
+    private static DodgeDef dodge(GameProperties properties, String prefix, DodgeDef defaults) {
+        return new DodgeDef(
+                properties.getBoolean(prefix + ".enabled", defaults.enabled()),
+                properties.getFloat(prefix + ".reactionRange", defaults.reactionRange()),
+                properties.getFloat(prefix + ".speed", defaults.speed()),
+                properties.getFloat(prefix + ".durationSeconds", defaults.durationSeconds()),
+                properties.getFloat(prefix + ".commitSeconds", defaults.commitSeconds()),
+                properties.getFloat(prefix + ".margin", defaults.margin()));
     }
 
     private static SimConfig.ObstacleConfig obstacle(GameProperties properties, SimConfig.ObstacleConfig defaults) {

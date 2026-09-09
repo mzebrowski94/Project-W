@@ -5,12 +5,14 @@ import com.badlogic.ashley.core.PooledEngine;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.Avoidance;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
+import pl.mzebrows.pwt.sim.component.Dodge;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -116,6 +118,9 @@ public final class Spawner {
                         melee.damage(),
                         melee.arcDegrees(),
                         melee.lockSeconds(),
+                        melee.locksCommittedOnly(),
+                        melee.clinchCarrySpeed(),
+                        melee.clinchCarryDecay(),
                         melee.knockbackSpeed(),
                         melee.knockbackDecay()));
         entity.add(engine.createComponent(Taking.class));
@@ -151,6 +156,7 @@ public final class Spawner {
         entity.add(engine.createComponent(ContactDamage.class));
         entity.add(engine.createComponent(Perception.class));
         entity.add(engine.createComponent(Wander.class).anchor(x, y));
+        entity.add(engine.createComponent(Avoidance.class));
         entity.add(engine.createComponent(Leap.class));
         entity.add(engine.createComponent(Taking.class));
         entity.add(engine.createComponent(Feed.class));
@@ -188,12 +194,14 @@ public final class Spawner {
         entity.getComponent(Dying.class).set(def.deathThroesSeconds());
         entity.getComponent(ContactDamage.class)
                 .set(def.contactDamage(), def.attackCooldownSeconds(), def.victimInvulnerableSeconds())
-                .setLock(def.lockSeconds(), 0f, 0f);
+                .setLock(def.lockSeconds(), false, 0f, 0f, 0f, 0f);
         entity.getComponent(Perception.class)
                 .set(
                         def.perception().alwaysAggressive(),
+                        def.perception().losesInterest(),
                         def.perception().detectionRange(),
-                        def.perception().loseRange());
+                        def.perception().loseRange(),
+                        def.perception().secondaryRange());
         entity.getComponent(Wander.class)
                 .set(
                         def.wander().enabled(),
@@ -203,6 +211,12 @@ public final class Spawner {
                         def.wander().pauseMinSeconds(),
                         def.wander().pauseMaxSeconds(),
                         def.wander().waypointTimeoutSeconds());
+        entity.getComponent(Avoidance.class)
+                .set(
+                        def.avoidance().enabled(),
+                        def.avoidance().scanRange(),
+                        def.avoidance().lookaheadSeconds(),
+                        def.avoidance().weight());
         entity.getComponent(Leap.class)
                 .set(
                         def.leap().enabled(),
@@ -251,6 +265,56 @@ public final class Spawner {
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(def.radius()));
         entity.add(engine.createComponent(Collider.class).set(false, false));
+        entity.add(engine.createComponent(Appearance.class).set(def.look()));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a rabbit: alien food that walks, wanders, and steps aside from a shot it sees coming.
+     *
+     * <p>A pickup in every way that matters - it is claimed on contact and its grants come from the
+     * same table - but solid and movable rather than the usual non-solid and immovable, because those
+     * two flags are what keep a body out of rock and inside the arena and this one moves under its own
+     * power. Avoidance is told to ignore pickups outright, so nothing steers around it.
+     *
+     * <p>It carries {@code Health} and {@code Damage} because it can be shot, and a shot body cannot
+     * be claimed - which is what makes killing one denial rather than a waste of a bullet.
+     */
+    public Entity spawnRabbit(float x, float y) {
+        PickupDef def = config.pickup(PickupKind.RABBIT);
+        SimConfig.RabbitConfig rabbit = config.rabbit();
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Pickup.class).set(PickupKind.RABBIT));
+        entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
+        entity.add(engine.createComponent(Body.class).set(def.radius()));
+        entity.add(engine.createComponent(Speed.class).set(rabbit.speed()));
+        entity.add(engine.createComponent(Collider.class).set(true, true));
+        entity.add(engine.createComponent(Health.class).set(rabbit.health()));
+        entity.add(engine.createComponent(Damage.class));
+        entity.add(engine.createComponent(Dying.class).set(rabbit.deathThroesSeconds()));
+        entity.add(engine.createComponent(Steering.class));
+        entity.add(engine.createComponent(Wander.class)
+                .set(
+                        rabbit.wander().enabled(),
+                        rabbit.wander().radius(),
+                        rabbit.wander().speedFactor(),
+                        rabbit.wander().arriveRadius(),
+                        rabbit.wander().pauseMinSeconds(),
+                        rabbit.wander().pauseMaxSeconds(),
+                        rabbit.wander().waypointTimeoutSeconds())
+                .anchor(x, y));
+        entity.add(engine.createComponent(Dodge.class)
+                .set(
+                        rabbit.dodge().enabled(),
+                        rabbit.dodge().reactionRange(),
+                        rabbit.dodge().speed(),
+                        rabbit.dodge().durationSeconds(),
+                        rabbit.dodge().commitSeconds(),
+                        rabbit.dodge().margin()));
         entity.add(engine.createComponent(Appearance.class).set(def.look()));
         engine.addEntity(entity);
         return entity;
@@ -378,7 +442,13 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(false, false));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(melee.damage, melee.activeSeconds, 0f)
-                .setLock(melee.lockSeconds, melee.knockbackSpeed, melee.knockbackDecay));
+                .setLock(
+                        melee.lockSeconds,
+                        melee.locksCommittedOnly,
+                        melee.clinchCarrySpeed,
+                        melee.clinchCarryDecay,
+                        melee.knockbackSpeed,
+                        melee.knockbackDecay));
         entity.add(engine.createComponent(Appearance.class).set(Look.STRIKE));
         engine.addEntity(entity);
         return entity;

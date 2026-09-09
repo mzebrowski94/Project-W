@@ -2,7 +2,9 @@ package pl.mzebrows.pwt.sim;
 
 import java.util.function.UnaryOperator;
 import lombok.With;
+import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -43,6 +45,7 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * @param pickups every kind of thing that can be lying on the field, by kind
  * @param weapons every gun the commander can be carrying, by kind
  * @param melee the commander's hand strike
+ * @param rabbit the neutral creature that wanders the field and is eaten
  * @param obstacle the static circles that block movement
  * @param collision how hard the constraint solver works
  */
@@ -57,12 +60,20 @@ public record SimConfig(
         Defs<PickupKind, PickupDef> pickups,
         Defs<WeaponKind, WeaponDef> weapons,
         MeleeConfig melee,
+        RabbitConfig rabbit,
         ObstacleConfig obstacle,
         CollisionConfig collision) {
 
     public SimConfig {
         Require.positive("tickSeconds", tickSeconds);
         Require.atLeastOne("maxTicksPerFrame", maxTicksPerFrame);
+        if (melee.clinchCarrySpeed() > 0f) {
+            Require.atLeast(
+                    "melee carry distance",
+                    melee.carryDistance(),
+                    melee.longestReachableGap(commander.radius()),
+                    "a clinch that stops short of the commander leaves the freeze playing across a gap");
+        }
     }
 
     /** The definition of one strain, for a system or a scenario that needs its numbers. */
@@ -99,7 +110,13 @@ public record SimConfig(
                 defaultUnits(),
                 defaultPickups(),
                 defaultWeapons(),
-                new MeleeConfig(0.45f, 0f, 0.12f, 1.2f, 1.4f, 120f, 180f, 1f, 45f, 120f),
+                new MeleeConfig(0.45f, 0f, 0.12f, 1.2f, 1.4f, 120f, 180f, 1f, true, 14f, 100f, 45f, 120f),
+                new RabbitConfig(
+                        22f,
+                        1f,
+                        0.4f,
+                        new WanderDef(true, 18f, 0.7f, 1f, 0.3f, 1.1f, 3f),
+                        new DodgeDef(true, 26f, 46f, 0.32f, 0.9f, 1.2f)),
                 new ObstacleConfig(3.5f, 8),
                 new CollisionConfig(3));
     }
@@ -120,8 +137,9 @@ public record SimConfig(
                                 1f,
                                 3,
                                 UnitKind.BRUTE,
-                                PerceptionDef.alwaysAggressive(30f, 45f),
+                                new PerceptionDef(true, true, 30f, 45f, 14f),
                                 new WanderDef(true, 12f, 0.45f, 1.5f, 0.4f, 1.4f, 4f),
+                                new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 new LeapDef(true, 16f, 42f, 0.28f, 2, 0.18f, 1.6f, 0.08f, 0.22f),
                                 Look.GRUNT))
                 .put(
@@ -138,8 +156,9 @@ public record SimConfig(
                                 1f,
                                 0,
                                 null,
-                                PerceptionDef.alwaysAggressive(24f, 36f),
+                                new PerceptionDef(true, true, 24f, 36f, 10f),
                                 new WanderDef(true, 8f, 0.35f, 2f, 0.8f, 2.4f, 5f),
+                                new AvoidanceDef(true, 9f, 0.5f, 1.3f),
                                 new LeapDef(true, 22f, 34f, 0.42f, 3, 0.26f, 2.4f, 0.18f, 0.42f),
                                 Look.BRUTE))
                 .build();
@@ -177,6 +196,7 @@ public record SimConfig(
                 .put(
                         PickupKind.ARMOURY,
                         new PickupDef(1.2f, Look.ARMOURY, new Grant.Arm(WeaponKind.RAILGUN), new Grant.Feed(1)))
+                .put(PickupKind.RABBIT, new PickupDef(0.8f, Look.RABBIT, Grant.NOTHING, new Grant.Feed(1)))
                 .build();
     }
 
@@ -306,6 +326,14 @@ public record SimConfig(
      * @param damage what a connecting sweep takes off what it hits
      * @param arcDegrees how far around the aim direction the sweep travels; 180 is a half-circle
      * @param lockSeconds how long a connecting sweep holds both the commander and its target still
+     * @param locksCommittedOnly whether that lock is spent only when the target had already committed
+     *     to attacking. On, a kill on something mid-leap is a clinch and a kill on something merely
+     *     walking is a swat that costs him nothing but the cooldown - which is what stops the harmless
+     *     target being the expensive one
+     * @param clinchCarrySpeed how fast a body it kills finishes its lunge into the commander, in
+     *     world units per second. It must carry further than the sweep out-reaches a touch - about a
+     *     unit at the shipped numbers - or the two finish the clinch a stride apart
+     * @param clinchCarryDecay how fast that carry bleeds off, in world units per second per second
      * @param knockbackSpeed how hard a surviving target is thrown, in world units per second
      * @param knockbackDecay how fast that throw bleeds off, in world units per second per second
      */
@@ -319,6 +347,9 @@ public record SimConfig(
             float damage,
             float arcDegrees,
             float lockSeconds,
+            boolean locksCommittedOnly,
+            float clinchCarrySpeed,
+            float clinchCarryDecay,
             float knockbackSpeed,
             float knockbackDecay) {
         public MeleeConfig {
@@ -330,8 +361,60 @@ public record SimConfig(
             Require.notNegative("melee damage", damage);
             Require.notNegative("melee arcDegrees", arcDegrees);
             Require.notNegative("melee lockSeconds", lockSeconds);
+            Require.notNegative("melee clinchCarrySpeed", clinchCarrySpeed);
+            Require.notNegative("melee clinchCarryDecay", clinchCarryDecay);
             Require.notNegative("melee knockbackSpeed", knockbackSpeed);
             Require.notNegative("melee knockbackDecay", knockbackDecay);
+        }
+
+        /**
+         * How far a body carried into the commander travels before it stops, in world units.
+         *
+         * <p>A carry that never decays never stops, which is reported as an unreachable distance
+         * rather than as a division by zero.
+         */
+        public float carryDistance() {
+            return clinchCarryDecay <= 0f
+                    ? Float.MAX_VALUE
+                    : clinchCarrySpeed * clinchCarrySpeed / (2f * clinchCarryDecay);
+        }
+
+        /**
+         * The stride a sweep can leave between the commander and something it killed at full stretch.
+         *
+         * <p>The sweep sits {@code reach} out and is {@code radius} across, so the far edge of what it
+         * can touch is that much further out than the commander's own body - and the target's radius
+         * cancels, because it counts on both sides. Anything the clinch is meant to close has to close
+         * at least this.
+         */
+        public float longestReachableGap(float bodyRadius) {
+            float gap = reach + radius - bodyRadius;
+            return gap > 0f ? gap : 0f;
+        }
+    }
+
+    /**
+     * The neutral creature that wanders the field, is eaten by whatever catches it, and sidesteps a
+     * shot it sees coming.
+     *
+     * <p>What it <em>is</em> - how big, what colour, what each side gets for taking it - is a
+     * {@code PickupDef} like every other pickup's, because taking one works exactly the same way. What
+     * it <em>does</em> is here, because nothing else lying on the field does anything.
+     *
+     * @param speed how fast it moves under its own power, in world units per second
+     * @param health what it absorbs before dying. One shot is meant to be enough; the number exists so
+     *     that is a decision rather than an accident of the damage code
+     * @param deathThroesSeconds how long the body lies there. A body cannot be eaten, so this is how
+     *     long a denied meal stays visible as one
+     * @param wander how it passes the time
+     * @param dodge how it answers a shot
+     */
+    @With
+    public record RabbitConfig(float speed, float health, float deathThroesSeconds, WanderDef wander, DodgeDef dodge) {
+        public RabbitConfig {
+            Require.positive("rabbit speed", speed);
+            Require.positive("rabbit health", health);
+            Require.notNegative("rabbit deathThroesSeconds", deathThroesSeconds);
         }
     }
 

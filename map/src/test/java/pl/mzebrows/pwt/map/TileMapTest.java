@@ -13,6 +13,12 @@ class TileMapTest {
     private static final int ROWS = 18;
     private static final Offset<Float> TOLERANCE = Offset.offset(1e-5f);
 
+    /** A grunt: a one-tile crack is a way through. */
+    private static final float SLIM = 1.8f;
+
+    /** A brute: 5.2 across against a 5-unit tile, so a one-tile crack is a wall. */
+    private static final float BROAD = 2.6f;
+
     @Test
     void reportsTheWorldSizeItsGridAddsUpTo() {
         TileMap map = plain();
@@ -138,6 +144,33 @@ class TileMapTest {
 
         assertThat(map.terrainAtTile(3, 3)).isEqualTo(Terrain.ROCK);
         assertThat(map.terrainAtTile(1, 1)).isEqualTo(Terrain.PLAIN);
+    }
+
+    @Test
+    void seesAClearLineAcrossOpenGround() {
+        assertThat(plain().isClearPath(10f, 10f, 90f, 60f, SLIM)).isTrue();
+    }
+
+    @Test
+    void seesNoLineThroughAWall() {
+        TileMap map = TileMap.builder(COLS, ROWS, TILE)
+                .fill(Terrain.PLAIN)
+                .rect(10, 0, 1, ROWS, Terrain.ROCK)
+                .build();
+
+        assertThat(map.isClearPath(10f, 40f, 90f, 40f, SLIM)).isFalse();
+    }
+
+    @Test
+    void seesNoLineThroughAGapNarrowerThanTheBody() {
+        TileMap map = TileMap.builder(COLS, ROWS, TILE)
+                .fill(Terrain.PLAIN)
+                .rect(10, 0, 1, ROWS, Terrain.ROCK)
+                .set(10, 8, Terrain.PLAIN)
+                .build();
+
+        assertThat(map.isClearPath(30f, 42.5f, 80f, 42.5f, SLIM)).isTrue();
+        assertThat(map.isClearPath(30f, 42.5f, 80f, 42.5f, BROAD)).isFalse();
     }
 
     private static TileMap plain() {

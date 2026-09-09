@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DETECTION_RANGE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.LOSE_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.WANDER_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.wandering;
@@ -23,6 +24,14 @@ class WanderSystemTest {
 
     /** Well outside its patch, so walking home is a journey rather than a step. */
     private static final float DRAGGED = 30f;
+
+    /** Where a unit starts, and where it has chased something to. Far enough apart to tell apart. */
+    private static final float SPAWNED_AT = MIDDLE + DETECTION_RANGE - 1f;
+
+    private static final float GAVE_UP_AT = 20f;
+
+    /** Close enough to be noticed, far enough not to be touching - a fight would end the test early. */
+    private static final float WITHIN_SIGHT = 10f;
 
     @Test
     void movesAnIdleUnitAwayFromWhereItWasSpawned() {
@@ -75,6 +84,28 @@ class WanderSystemTest {
         steps(simulation, A_LONG_WHILE);
 
         assertThat(distanceFrom(enemy, MIDDLE, MIDDLE)).isLessThan(WANDER_RADIUS + SLACK);
+    }
+
+    /**
+     * Where a chase ends is where it lives now. Anchoring the patch to the spawn instead sent a unit
+     * that had broken off back across the level, which reads as the level rewinding rather than as a
+     * creature losing interest.
+     */
+    @Test
+    void settlesWhereItGaveUpRatherThanWhereItWasSpawned() {
+        Simulation simulation = wandering();
+        Entity commander = simulation.spawnCommander(SPAWNED_AT - WITHIN_SIGHT, MIDDLE);
+        Entity enemy = simulation.spawnEnemy(SPAWNED_AT, MIDDLE);
+        simulation.step();
+
+        enemy.getComponent(Position.class).set(GAVE_UP_AT, MIDDLE);
+        commander.getComponent(Position.class).set(GAVE_UP_AT - WITHIN_SIGHT, MIDDLE);
+        simulation.step();
+        commander.getComponent(Position.class).set(GAVE_UP_AT, MIDDLE + LOSE_RANGE * 3f);
+        steps(simulation, A_LONG_WHILE);
+
+        assertThat(distanceFrom(enemy, GAVE_UP_AT, MIDDLE)).isLessThan(WANDER_RADIUS + SLACK);
+        assertThat(distanceFrom(enemy, SPAWNED_AT, MIDDLE)).isGreaterThan(WANDER_RADIUS + SLACK);
     }
 
     private static float distanceFrom(Entity entity, float x, float y) {

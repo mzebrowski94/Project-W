@@ -16,10 +16,12 @@ import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.AppearanceSystem;
+import pl.mzebrows.pwt.sim.system.AvoidanceSystem;
 import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
 import pl.mzebrows.pwt.sim.system.CooldownSystem;
 import pl.mzebrows.pwt.sim.system.DamageSystem;
+import pl.mzebrows.pwt.sim.system.DodgeSystem;
 import pl.mzebrows.pwt.sim.system.DriveSystem;
 import pl.mzebrows.pwt.sim.system.DyingSystem;
 import pl.mzebrows.pwt.sim.system.EnemyLeapSystem;
@@ -49,7 +51,8 @@ import pl.mzebrows.pwt.sim.system.WanderSystem;
  * anything moves; timers count down; intent becomes velocity and gunfire, then a swing if one was
  * asked for; every unit that can notice the commander decides whether it has; enemies that have
  * decide where they want to be going and the ones that have not amble around their patch instead,
- * and either way that becomes a velocity, and any of them
+ * and either way that course is bent around whatever it was about to walk into, and anything with a
+ * shot coming at it breaks aside whatever it had been doing, and then all of that becomes a velocity, and any of them
  * mid-leap overwrite it with where they already committed to going; whatever is held still bleeds off
  * the blow that held it; everything moves; swings travel their arc; the constraint solver decides where things may be
  * and what touched what; damage owed becomes damage taken, and anything out of health either dies now
@@ -97,9 +100,11 @@ public final class Simulation {
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new CommanderControlSystem(spawner));
         engine.addSystem(new MeleeSystem(spawner));
-        engine.addSystem(new PerceptionSystem());
+        engine.addSystem(new PerceptionSystem(config));
         engine.addSystem(new NavigationSystem(config, map));
         engine.addSystem(new WanderSystem(Rng.stream(config.seed(), RngStream.WANDER), map));
+        engine.addSystem(new AvoidanceSystem());
+        engine.addSystem(new DodgeSystem());
         engine.addSystem(new DriveSystem());
         engine.addSystem(new EnemyLeapSystem(Rng.stream(config.seed(), RngStream.LEAP)));
         engine.addSystem(new StunSystem());
@@ -163,6 +168,11 @@ public final class Simulation {
     /** Spawns a brute: heavy, and it survives a hand strike. */
     public Entity spawnBrute(float x, float y) {
         return spawner.spawnUnit(UnitKind.BRUTE, x, y);
+    }
+
+    /** Spawns a rabbit: alien food that wanders the field and steps aside from a shot. */
+    public Entity spawnRabbit(float x, float y) {
+        return spawner.spawnRabbit(x, y);
     }
 
     /** Spawns something lying on the field for the first thing that touches it. */

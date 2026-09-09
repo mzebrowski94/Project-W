@@ -95,6 +95,7 @@ public record GraphicConfig(
             case FLOWER -> "e07be0ff";
             case FROZEN_TROOPER -> "9fd8f0ff";
             case ARMOURY -> "d8a04aff";
+            case RABBIT -> "f0f0f0ff";
             case NONE -> "ff00ffff";
         };
     }

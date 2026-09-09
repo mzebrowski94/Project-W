@@ -38,6 +38,21 @@ class DeathThroesTest {
     private static final float TOLERANCE = 1e-4f;
 
     @Test
+    void landsNoBlowOnceItIsDead() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(20f, 50f);
+        Entity enemy = simulation.spawnEnemy(50f, 50f);
+        kill(enemy);
+        steps(simulation, 2);
+
+        commander.getComponent(Position.class).set(50f, 50f);
+        commander.getComponent(Invulnerable.class).remainingSeconds = 0f;
+        simulation.step();
+
+        assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH);
+    }
+
+    @Test
     void leavesTheBodyOnTheFieldWhileItIsDying() {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(50f, 50f));

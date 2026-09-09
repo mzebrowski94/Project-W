@@ -6,11 +6,13 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
 
@@ -45,6 +47,10 @@ public final class DamageSystem extends IteratingSystem {
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
+    private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
+
+    private static final float EPSILON = 1e-4f;
 
     private final Spawner spawner;
 
@@ -66,7 +72,8 @@ public final class DamageSystem extends IteratingSystem {
         float shove = damage.knockbackSpeed;
         Entity locksOnDeath = damage.locksOnDeath;
         float deathLock = damage.deathLockSeconds;
-        float deathLockDecay = damage.deathLockDecay;
+        float carrySpeed = damage.clinchCarrySpeed;
+        float carryDecay = damage.clinchCarryDecay;
         damage.reset();
         if (INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active()) {
             return;
@@ -77,8 +84,10 @@ public final class DamageSystem extends IteratingSystem {
             INVULNERABLE.get(entity).grant(recovery);
         }
         if (health.current <= 0f) {
+            float travelX = VELOCITY.has(entity) ? VELOCITY.get(entity).x : 0f;
+            float travelY = VELOCITY.has(entity) ? VELOCITY.get(entity).y : 0f;
             kill(entity);
-            clinch(entity, locksOnDeath, deathLock, deathLockDecay);
+            clinch(entity, locksOnDeath, deathLock, travelX, travelY, carrySpeed, carryDecay);
             return;
         }
         if (shove > 0f && VELOCITY.has(entity)) {
@@ -91,16 +100,82 @@ public final class DamageSystem extends IteratingSystem {
      *
      * <p>This is the whole difference between a clinch and a shove, and it only exists here because
      * here is the only place that knows which one happened. Nothing is held when the target lives.
+     *
+     * <p>Both of them stop dead. A clinch carries no knockback decay because a killing blow throws
+     * nothing - and without that the survivor coasted on whatever he was doing when he swung, which
+     * is how a commander backing away from a leap ended up frozen a stride clear of the body.
      */
-    private static void clinch(Entity target, @Nullable Entity attacker, float seconds, float decay) {
+    private static void clinch(
+            Entity target,
+            @Nullable Entity attacker,
+            float seconds,
+            float travelX,
+            float travelY,
+            float carrySpeed,
+            float carryDecay) {
         if (seconds <= 0f) {
             return;
         }
         if (attacker != null && STUNNED.has(attacker)) {
-            STUNNED.get(attacker).clinch(seconds, decay);
+            STUNNED.get(attacker).clinch(seconds);
         }
         if (STUNNED.has(target)) {
-            STUNNED.get(target).clinch(seconds, decay);
+            STUNNED.get(target).clinch(seconds);
+        }
+        carry(target, attacker, travelX, travelY, carrySpeed, carryDecay);
+    }
+
+    /**
+     * Lets a body finish the lunge it died on, so the two of them end up connected.
+     *
+     * <p>A sweep reaches further than the commander's own body, so a leap answered at full stretch
+     * dies a stride short of him - and a killing blow throws nothing and a corpse is immovable, so
+     * nothing would close that stride. It read as him flinching at thin air.
+     *
+     * <p>Placing the body against him instead worked and looked like what it was: a teleport. So the
+     * body keeps going. It carries on along the line it was travelling, decaying, and the constraint
+     * solver does the rest - the corpse is immovable and the commander is not, so the body arriving
+     * <em>shoves him back</em> and the two travel the last of it together. Nothing here says any of
+     * that; it falls out of an immovable body with a velocity meeting a movable one.
+     *
+     * <p>The heading is the body's own travel unless that points away from him, in which case it is
+     * the line between them - a leap is aimed at where he was, and he may have moved since.
+     *
+     * <p>Nothing is carried when the two are already touching, which is every exchange decided by
+     * contact rather than by reach. A commander killed by claws is at arm's length by definition, and
+     * his body is left exactly where it fell.
+     */
+    private static void carry(
+            Entity body, @Nullable Entity survivor, float travelX, float travelY, float speed, float decay) {
+        if (survivor == null || speed <= 0f || !VELOCITY.has(body)) {
+            return;
+        }
+        if (!POSITION.has(body) || !POSITION.has(survivor) || !BODY.has(body) || !BODY.has(survivor)) {
+            return;
+        }
+        Position bodyAt = POSITION.get(body);
+        Position survivorAt = POSITION.get(survivor);
+        float towardsX = survivorAt.x - bodyAt.x;
+        float towardsY = survivorAt.y - bodyAt.y;
+        float apart = (float) Math.sqrt(towardsX * towardsX + towardsY * towardsY);
+        if (apart <= BODY.get(body).radius + BODY.get(survivor).radius || apart <= EPSILON) {
+            return;
+        }
+        float headingX = travelX;
+        float headingY = travelY;
+        if (headingX * headingX + headingY * headingY <= EPSILON || headingX * towardsX + headingY * towardsY <= 0f) {
+            headingX = towardsX;
+            headingY = towardsY;
+        }
+        float length = (float) Math.sqrt(headingX * headingX + headingY * headingY);
+        if (length <= EPSILON) {
+            return;
+        }
+        VELOCITY.get(body).set(headingX / length * speed, headingY / length * speed);
+        if (STUNNED.has(body)) {
+            // The clinch cleared this so the survivor would stop dead; the body is the half still
+            // moving, and this is what brings it to rest against him rather than through him.
+            STUNNED.get(body).knockbackDecay = decay;
         }
     }
 

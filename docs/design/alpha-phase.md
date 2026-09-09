@@ -87,7 +87,7 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | Scaffolding | Replaced by |
 |---|---|
 | The commander always respawns | The source game's rule - respawn only while a trooper lives. Needs the squad. |
-| Enemies walk into each other and into obstacles on the way | Local avoidance - steering that reads the obstacles and neighbours ahead of a unit and adjusts its desired velocity before it touches them. Terrain is routed around; nothing else is yet, so a pack still funnels and shoves through a doorway. |
+| Rabbits are spawned by a scenario and never replaced | Whatever a level does about them - breeding, a population, or nothing at all. The creature is designed; where they come from is an open question in `README.md`. |
 | A body in its death throes is a frozen circle in a darker colour | The dying animation. The window is real and configured per unit kind (`*.deathThroesSeconds`); only what plays in it is missing. |
 | Two units in a clinch are two circles touching, both drawn the same | The grapple animation, which resolves into one of them dying. `Appearance.State.GRAPPLING` is the hook and is already published for both parties for the whole lock. |
 | Nothing reacts to a death except respawning and the killer's lock | More death reactions, as they are designed. The machinery is there: mark `Dead`, add a component, add a small system. |
@@ -99,10 +99,13 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 
 ## Known limits, accepted on purpose
 
-- **A unit routes around terrain but not around anything else.** The flow field is built from the
-  map, so rock is planned around and obstacles, corpses and other units are still discovered by
-  walking into them. That is the avoidance line in the scaffolding table above, not a bug in the
-  field.
+- **Avoidance looks at everything on the field, once per unit.** There is no broadphase for it: the
+  collision grid is built after the AI has run, so a unit scores every other body every tick. At a few
+  dozen entities that is free. Past a couple of hundred it wants either a second grid or the collision
+  grid moved earlier in the tick, and it will show up as frame time rather than as a bug.
+- **A route plans around rock and steers around everything else.** The flow field is built from the
+  map alone, so obstacles, corpses and other units never enter a route - avoidance handles them, which
+  means a pack still funnels through a doorway rather than queueing for it.
 - **Crowd pressure pushes units into obstacles.** The constraint solver satisfies arena containment
   absolutely and obstacle separation best-effort; a crowd driven into a dead end is unsatisfiable and
   the obstacle is what gives. Raising `sim.collision.passes` reduces the squeeze without removing it.

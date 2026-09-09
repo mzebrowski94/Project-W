@@ -103,14 +103,21 @@ Pickups resolving *before* damage is deliberate: a grunt shot to a sliver that r
 gets up whole and takes that tick's damage as the thing it has become. Nothing else in the simulation removes
 an entity - `ArchitectureTest` fails the build if it tries.
 
-**Driving a unit is a pipeline, and the seam is `Steering`.** `PerceptionSystem` decides which units
-are hunting the commander; `NavigationSystem` gives the ones that are a direction out of a flow field
-built for their strain's body size; `WanderSystem` ambles the ones that are not around the patch they
-were spawned in. All three write a *desired velocity* and none of them writes a velocity, so several
-systems can have an opinion without any of them knowing the others exist. `DriveSystem` commits that
-to `Velocity` once, at the end, and clears it - which is why a unit no system spoke for this tick
-stands still, and why there is no halt-everything branch in any driver. G0010 has the argument for
-deciding in a field rather than in a tree.
+**Driving a unit is a pipeline, and the seam is `Steering`.** `PerceptionSystem` decides what has a
+unit's attention - the commander, something edible, or nothing; `NavigationSystem` gives it a
+direction, out of a flow field built for its strain's body size when it is hunting and straight at
+its dinner when it is not; `WanderSystem` ambles whatever is left around the patch it was spawned in.
+Then `AvoidanceSystem` bends that course around anything it was about to walk into, and `DodgeSystem`
+overrides it outright for a creature with a shot coming at it. All of them write a *desired velocity*
+and none writes a velocity, so several systems can have an opinion without any of them knowing the
+others exist - and avoidance can only do its job at all because it can see what the unit intended
+before it adjusts it. `DriveSystem` commits that to `Velocity` once, at the end, and clears it - which
+is why a unit no system spoke for this tick stands still, and why there is no halt-everything branch
+in any driver. G0010 has the argument for deciding in a field rather than in a tree.
+
+**The order inside that pipeline is itself design.** Avoidance runs before the dodge and not after,
+because a dodge bent around a rock would not be the same dodge twice and G0012 promises that it is.
+A cornered rabbit therefore sidesteps into a wall, which is what being cornered should cost it.
 
 Two more orderings carry meaning. `EnemyLeapSystem` runs after `DriveSystem` and overwrites the
 velocity of anything mid-leap outright, because a leap is committed and is not one opinion among

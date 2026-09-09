@@ -25,21 +25,54 @@ public final class Perception implements Component, Pool.Poolable {
     /** Whether this unit skips noticing altogether and hunts from the first tick. */
     public boolean alwaysAggressive;
 
+    /** Whether it can ever stop hunting once it has started. Off, noticing him is a one-way door. */
+    public boolean losesInterest;
+
     /** How close the commander must come before an unaware unit notices him, in world units. */
     public float detectionRange;
 
     /** How far he must get before a hunting unit gives up, in world units. */
     public float loseRange;
 
+    /** How close something edible has to be before an idle unit goes for it, in world units. */
+    public float secondaryRange;
+
     /** True while this unit is hunting the commander. */
     public boolean aggro;
 
+    /** True while this unit is on its way to something edible. Never true at the same time as aggro. */
+    public boolean foraging;
+
+    /** Where that something is. Meaningless unless {@link #foraging}. */
+    public float foodX;
+
+    public float foodY;
+
     /** Sets what it can notice and returns this component, for fluent spawning. */
-    public Perception set(boolean newAlwaysAggressive, float newDetectionRange, float newLoseRange) {
+    public Perception set(
+            boolean newAlwaysAggressive,
+            boolean newLosesInterest,
+            float newDetectionRange,
+            float newLoseRange,
+            float newSecondaryRange) {
         this.alwaysAggressive = newAlwaysAggressive;
+        this.losesInterest = newLosesInterest;
         this.detectionRange = newDetectionRange;
         this.loseRange = newLoseRange;
+        this.secondaryRange = newSecondaryRange;
         return this;
+    }
+
+    /** True while something other than standing about has its attention. */
+    public boolean occupied() {
+        return aggro || foraging;
+    }
+
+    /** Sends it after something edible at a place, rather than at an entity that may not last the tick. */
+    public void feedAt(float x, float y) {
+        this.foraging = true;
+        this.foodX = x;
+        this.foodY = y;
     }
 
     /** How far the commander may be right now without this unit losing interest, in world units. */
@@ -50,8 +83,13 @@ public final class Perception implements Component, Pool.Poolable {
     @Override
     public void reset() {
         alwaysAggressive = false;
+        losesInterest = false;
         detectionRange = 0f;
         loseRange = 0f;
+        secondaryRange = 0f;
         aggro = false;
+        foraging = false;
+        foodX = 0f;
+        foodY = 0f;
     }
 }

@@ -60,7 +60,10 @@ public final class Damage implements Component, Pool.Poolable {
 
     public float deathLockSeconds;
 
-    public float deathLockDecay;
+    /** How fast this body finishes its lunge into whoever killed it, if the blow proves fatal. */
+    public float clinchCarrySpeed;
+
+    public float clinchCarryDecay;
 
     /** Adds to what is already owed, and to how long the victim recovers afterwards. */
     public void add(float extra, float recovery) {
@@ -91,13 +94,14 @@ public final class Damage implements Component, Pool.Poolable {
     }
 
     /** Records who to hold still if this kills, keeping the longest lock asked for this tick. */
-    public void lockOnDeath(Entity attacker, float seconds, float decay) {
+    public void lockOnDeath(Entity attacker, float seconds, float carrySpeed, float carryDecay) {
         if (seconds <= deathLockSeconds) {
             return;
         }
         locksOnDeath = attacker;
         deathLockSeconds = seconds;
-        deathLockDecay = decay;
+        clinchCarrySpeed = carrySpeed;
+        clinchCarryDecay = carryDecay;
     }
 
     @Override
@@ -109,6 +113,7 @@ public final class Damage implements Component, Pool.Poolable {
         knockbackSpeed = 0f;
         locksOnDeath = null;
         deathLockSeconds = 0f;
-        deathLockDecay = 0f;
+        clinchCarrySpeed = 0f;
+        clinchCarryDecay = 0f;
     }
 }

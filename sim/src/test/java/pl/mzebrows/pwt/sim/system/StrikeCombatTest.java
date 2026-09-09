@@ -2,11 +2,11 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.BRUTE_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_RADIUS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_ACTIVE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_DAMAGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_LOCK;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_RADIUS;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_REACH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmless;
@@ -15,6 +15,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
@@ -104,25 +105,47 @@ class StrikeCombatTest {
         assertThat(commander.getComponent(Stunned.class).active()).isFalse();
     }
 
-    /** A kill is the other thing entirely: the two of them are tangled together for the lock. */
+    /**
+     * A kill on something already coming at him is the other thing entirely: the two of them are
+     * tangled together for the lock, and for that beat neither of them is going anywhere.
+     */
     @Test
-    void holdsTheCommanderStillWhenHisSwingKills() {
-        Simulation simulation = harmless();
+    void tanglesHimUpWhenHisSweepKillsSomethingMidLeap() {
+        Simulation simulation = lethalLeaping();
         Entity commander = simulation.spawnCommander(50f, 50f);
-        simulation.spawnEnemy(IN_THE_ARC_X, 50f);
+        Entity enemy = simulation.spawnEnemy(56f, 50f);
 
+        stepUntilAirborne(simulation, enemy);
         steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_EAST);
 
         assertThat(commander.getComponent(Stunned.class).active()).isTrue();
         assertThat(commander.getComponent(Stunned.class).grappling).isTrue();
     }
 
+    /**
+     * A kill on something that was only walking is a swat, and a swat costs him nothing but the
+     * cooldown. The lock is what answering a committed attack earns; spending it on the harmless
+     * target too would make the safest thing on the field the most expensive one to kill.
+     */
     @Test
-    void letsTheCommanderGoOnceHisOwnLockHasPassed() {
+    void leavesHimFreeWhenHisSweepKillsSomethingThatWasNotComingAtHim() {
         Simulation simulation = harmless();
         Entity commander = simulation.spawnCommander(50f, 50f);
         simulation.spawnEnemy(IN_THE_ARC_X, 50f);
 
+        steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_EAST);
+
+        assertThat(countLiving(simulation, Enemy.class)).isZero();
+        assertThat(commander.getComponent(Stunned.class).active()).isFalse();
+    }
+
+    @Test
+    void letsTheCommanderGoOnceHisOwnLockHasPassed() {
+        Simulation simulation = lethalLeaping();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+        Entity enemy = simulation.spawnEnemy(56f, 50f);
+
+        stepUntilAirborne(simulation, enemy);
         steps(simulation, ticksIn(MELEE_ACTIVE + MELEE_LOCK) + 4, SWING_EAST);
 
         assertThat(commander.getComponent(Stunned.class).active()).isFalse();
@@ -148,12 +171,13 @@ class StrikeCombatTest {
     }
 
     /**
-     * The clinch, measured. A body cannot have been struck from further away than the sweep reaches,
-     * and nothing moves it afterwards - so a lethal answer to a leap always ends with the two of them
-     * within a swing of each other rather than a corpse sailing off.
+     * The clinch, measured. A sweep reaches further than the commander's own body, so a leap answered
+     * at full stretch dies a stride short of him - and a kill throws nothing and a corpse is
+     * immovable, so without something closing that stride the beat reads as him flinching at thin air.
+     * A lethal exchange ends with the two of them touching, whatever distance the blow was struck at.
      */
     @Test
-    void leavesTheBodyOfALeaperWithinArmsReach() {
+    void endsALethalExchangeWithTheTwoOfThemTouching() {
         Simulation simulation = lethalLeaping();
         Entity commander = simulation.spawnCommander(50f, 50f);
         Entity enemy = simulation.spawnEnemy(56f, 50f);
@@ -161,7 +185,45 @@ class StrikeCombatTest {
         stepUntilAirborne(simulation, enemy);
         steps(simulation, ticksIn(MELEE_ACTIVE) + 4, SWING_EAST);
 
-        assertThat(distanceBetween(commander, enemy)).isLessThanOrEqualTo(MELEE_REACH + MELEE_RADIUS + 1f);
+        assertThat(distanceBetween(commander, enemy)).isCloseTo(COMMANDER_RADIUS + ENEMY_RADIUS, Offset.offset(0.01f));
+    }
+
+    /**
+     * And it holds them there. A clinch carries no knockback decay, so the survivor stops dead instead
+     * of coasting on whatever he was doing when he swung - which is what let a commander backing away
+     * from a leap slide out from under the body he had just been clinched to, leaving the freeze
+     * playing across a gap.
+     */
+    @Test
+    void stopsHimDeadSoTheClinchDoesNotDriftApart() {
+        Simulation simulation = lethalLeaping();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+        Entity enemy = simulation.spawnEnemy(56f, 50f);
+        stepUntilAirborne(simulation, enemy);
+        steps(simulation, ticksIn(MELEE_ACTIVE) + 4, SWING_EAST);
+
+        steps(simulation, 2);
+
+        assertThat(commander.getComponent(Velocity.class).x).isZero();
+        assertThat(commander.getComponent(Velocity.class).y).isZero();
+        assertThat(distanceBetween(commander, enemy)).isCloseTo(COMMANDER_RADIUS + ENEMY_RADIUS, Offset.offset(0.01f));
+    }
+
+    /**
+     * And it arrives under its own momentum rather than being put there. The corpse is immovable and
+     * the commander is not, so a body still travelling when it reaches him shoves him back - which is
+     * the whole of what makes the beat read as two things colliding instead of one thing blinking.
+     */
+    @Test
+    void shovesHimBackAsTheBodyArrives() {
+        Simulation simulation = lethalLeaping();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+        Entity enemy = simulation.spawnEnemy(56f, 50f);
+        stepUntilAirborne(simulation, enemy);
+
+        steps(simulation, ticksIn(MELEE_ACTIVE) + 4, SWING_EAST);
+
+        assertThat(commander.getComponent(Position.class).x).isLessThan(50f);
     }
 
     /** One swing, one blow. A sweep that mowed through a crowd would make the counter free. */

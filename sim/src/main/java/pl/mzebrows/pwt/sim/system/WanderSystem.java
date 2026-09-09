@@ -22,6 +22,12 @@ import pl.mzebrows.pwt.sim.component.Wander;
  * <p>Pick a spot, walk to it, stand a moment, pick again. Nothing more, deliberately: exploring a
  * level is a different behaviour with different questions attached, and it is not designed yet.
  *
+ * <p><strong>The patch is wherever it last had nothing to do</strong>, not where it was spawned. The
+ * anchor is dragged along behind anything that is hunting or feeding, so the moment it gives up it is
+ * already home. Anchoring to the spawn instead means a unit that broke off a chase turns round and
+ * walks the length of the level back, which reads as the level rewinding rather than as a creature
+ * losing interest.
+ *
  * <p>It drives only units that are <em>not</em> hunting, and navigation drives only the ones that
  * are, so the two never write the same tick and neither has to know the other exists.
  * {@code PerceptionSystem} decided which is which, upstream of both.
@@ -57,9 +63,8 @@ public final class WanderSystem extends EntitySystem {
 
     @Override
     public void addedToEngine(Engine engine) {
-        idlers = engine.getEntitiesFor(
-                Family.all(Wander.class, Perception.class, Position.class, Steering.class, Speed.class, Body.class)
-                        .get());
+        idlers = engine.getEntitiesFor(Family.all(Wander.class, Position.class, Steering.class, Speed.class, Body.class)
+                .get());
     }
 
     @Override
@@ -70,7 +75,12 @@ public final class WanderSystem extends EntitySystem {
                 continue;
             }
             Wander wander = WANDER.get(entity);
-            if (PERCEPTION.get(entity).aggro) {
+            if (PERCEPTION.has(entity) && PERCEPTION.get(entity).occupied()) {
+                // Its patch follows it while it has something better to do, so the ground it gives up
+                // on is the ground it settles into. A unit that broke off a chase and then walked the
+                // length of the level back to where it spawned read as the level rewinding.
+                Position position = POSITION.get(entity);
+                wander.anchor(position.x, position.y);
                 wander.rest(0f);
                 continue;
             }

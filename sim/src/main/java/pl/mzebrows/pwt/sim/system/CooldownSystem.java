@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
+import pl.mzebrows.pwt.sim.component.Dodge;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
@@ -28,8 +29,8 @@ import pl.mzebrows.pwt.sim.component.Weapon;
  * component mid-tick mutates the families being iterated, which silently skips entities; a spent
  * timer simply reads as inactive.
  *
- * <p>The phase machines - {@link Leap}, {@link Wander} and the wind-up half of {@link Melee} - keep
- * their clocks here
+ * <p>The phase machines - {@link Leap}, {@link Wander}, {@link Dodge} and the wind-up half of {@link
+ * Melee} - keep their clocks here
  * for the same reason, and read them where the phases are decided. Counting down is not deciding.
  */
 public final class CooldownSystem extends EntitySystem {
@@ -42,6 +43,7 @@ public final class CooldownSystem extends EntitySystem {
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Wander> WANDER = ComponentMapper.getFor(Wander.class);
+    private static final ComponentMapper<Dodge> DODGE = ComponentMapper.getFor(Dodge.class);
 
     private ImmutableArray<Entity> invulnerable = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> attacks = new ImmutableArray<>(new Array<>());
@@ -51,6 +53,7 @@ public final class CooldownSystem extends EntitySystem {
     private ImmutableArray<Entity> dying = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> leaps = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> wanders = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> dodges = new ImmutableArray<>(new Array<>());
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -62,6 +65,7 @@ public final class CooldownSystem extends EntitySystem {
         dying = engine.getEntitiesFor(Family.all(Dying.class).get());
         leaps = engine.getEntitiesFor(Family.all(Leap.class).get());
         wanders = engine.getEntitiesFor(Family.all(Wander.class).get());
+        dodges = engine.getEntitiesFor(Family.all(Dodge.class).get());
     }
 
     @Override
@@ -101,6 +105,11 @@ public final class CooldownSystem extends EntitySystem {
         for (int i = 0; i < wanders.size(); i++) {
             Wander wander = WANDER.get(wanders.get(i));
             wander.remainingSeconds = countDown(wander.remainingSeconds, deltaTime);
+        }
+        for (int i = 0; i < dodges.size(); i++) {
+            Dodge dodge = DODGE.get(dodges.get(i));
+            dodge.remainingSeconds = countDown(dodge.remainingSeconds, deltaTime);
+            dodge.commitRemaining = countDown(dodge.commitRemaining, deltaTime);
         }
     }
 

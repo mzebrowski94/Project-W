@@ -32,6 +32,26 @@ public final class ContactDamage implements Component, Pool.Poolable {
      */
     public float lockSeconds;
 
+    /**
+     * Whether the lock is only spent on a target that had already committed to attacking.
+     *
+     * <p>True for a melee weapon and false for everything else, and the difference is the mechanic. A
+     * sweep that answers something already in the air is a clinch - the two of them are tangled and
+     * neither is going anywhere for a beat, and that is what the timing was worth. The same sweep on
+     * something merely walking towards you is a swat, and a swat that rooted you to the spot would
+     * make killing the harmless thing more expensive than killing the dangerous one.
+     */
+    public boolean locksCommittedOnly;
+
+    /**
+     * How fast a body this blow kills finishes its lunge into whoever landed it, in world units per
+     * second. Zero for a blow that has no gap to close.
+     */
+    public float clinchCarrySpeed;
+
+    /** How fast that carry bleeds off, in world units per second per second. */
+    public float clinchCarryDecay;
+
     /** How hard a target that survives the blow is thrown, in world units per second. */
     public float knockbackSpeed;
 
@@ -45,6 +65,9 @@ public final class ContactDamage implements Component, Pool.Poolable {
         this.remainingSeconds = 0f;
         this.victimInvulnerableSeconds = newVictimInvulnerableSeconds;
         this.lockSeconds = 0f;
+        this.locksCommittedOnly = false;
+        this.clinchCarrySpeed = 0f;
+        this.clinchCarryDecay = 0f;
         this.knockbackSpeed = 0f;
         this.knockbackDecay = 0f;
         return this;
@@ -54,8 +77,17 @@ public final class ContactDamage implements Component, Pool.Poolable {
      * Adds what a landed blow does beyond damage. Chained after {@link #set}, so an attack that only
      * hurts stays a one-line spawn.
      */
-    public ContactDamage setLock(float newLockSeconds, float newKnockbackSpeed, float newKnockbackDecay) {
+    public ContactDamage setLock(
+            float newLockSeconds,
+            boolean newLocksCommittedOnly,
+            float newClinchCarrySpeed,
+            float newClinchCarryDecay,
+            float newKnockbackSpeed,
+            float newKnockbackDecay) {
         this.lockSeconds = newLockSeconds;
+        this.locksCommittedOnly = newLocksCommittedOnly;
+        this.clinchCarrySpeed = newClinchCarrySpeed;
+        this.clinchCarryDecay = newClinchCarryDecay;
         this.knockbackSpeed = newKnockbackSpeed;
         this.knockbackDecay = newKnockbackDecay;
         return this;
@@ -77,6 +109,9 @@ public final class ContactDamage implements Component, Pool.Poolable {
         remainingSeconds = 0f;
         victimInvulnerableSeconds = 0f;
         lockSeconds = 0f;
+        locksCommittedOnly = false;
+        clinchCarrySpeed = 0f;
+        clinchCarryDecay = 0f;
         knockbackSpeed = 0f;
         knockbackDecay = 0f;
     }

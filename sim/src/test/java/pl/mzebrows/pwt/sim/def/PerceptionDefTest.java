@@ -13,11 +13,12 @@ class PerceptionDefTest {
 
     @Test
     void refusesALoseRangeShorterThanTheDetectionRange() {
-        assertThatThrownBy(() -> new PerceptionDef(false, 30f, 20f)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PerceptionDef(false, true, 30f, 20f, 0f))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void allowsTheTwoRangesToBeEqual() {
-        new PerceptionDef(false, 30f, 30f);
+        new PerceptionDef(false, true, 30f, 30f, 0f);
     }
 }

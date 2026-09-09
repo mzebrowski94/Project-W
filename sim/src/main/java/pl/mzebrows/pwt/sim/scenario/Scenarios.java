@@ -18,6 +18,7 @@ public final class Scenarios {
     private static final List<Scenario> ALL = List.of(
             new SkirmishScenario(),
             new WarrenScenario(),
+            new ThicketScenario(),
             new ExpanseScenario(),
             new DuelScenario(),
             new FeedingGroundScenario(),

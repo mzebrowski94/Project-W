@@ -153,6 +153,28 @@ public final class TileMap {
     }
 
     /**
+     * Whether a circle of this radius could travel between two world points without touching rock.
+     *
+     * <p>Marched in half-tile steps rather than solved analytically: a tile grid has no closed form
+     * for "does this capsule hit any solid tile", and a step of half a tile cannot skip past one. It
+     * inherits {@link #isClear}'s conservatism, so it errs towards reporting a route blocked, which is
+     * the right way round for a caller deciding whether it may take a shortcut.
+     */
+    public boolean isClearPath(float fromX, float fromY, float toX, float toY, float radius) {
+        float spanX = toX - fromX;
+        float spanY = toY - fromY;
+        float span = (float) Math.sqrt(spanX * spanX + spanY * spanY);
+        int steps = (int) Math.ceil(span / (tileSize * 0.5f));
+        for (int step = 0; step <= steps; step++) {
+            float along = steps == 0 ? 0f : (float) step / steps;
+            if (!isClear(fromX + spanX * along, fromY + spanY * along, radius)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Assembles a map tile by tile. Generators and hand-authored levels both come through here, so a
      * fixed level and a generated one are the same type downstream and nothing can tell them apart.
      */

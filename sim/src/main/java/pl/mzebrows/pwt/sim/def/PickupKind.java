@@ -15,5 +15,12 @@ public enum PickupKind {
     /** A trooper in stasis. Alpha-phase scaffolding - the squad does not exist yet. */
     FROZEN_TROOPER,
     /** A weapons cache: a better gun to the commander, and a mouthful to whatever reaches it first. */
-    ARMOURY
+    ARMOURY,
+    /**
+     * Alien food that runs away. A pickup like any other as far as taking it goes - it is claimed on
+     * contact and feeds whatever ate it - but it wanders the field on its own legs and sidesteps a
+     * shot it sees coming. The commander is offered nothing by it, so his only interest in one is
+     * denying it.
+     */
+    RABBIT
 }

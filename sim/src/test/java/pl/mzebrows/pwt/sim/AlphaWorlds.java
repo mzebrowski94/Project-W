@@ -14,7 +14,9 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -100,6 +102,16 @@ public final class AlphaWorlds {
     public static final float MELEE_ARC = 180f;
     public static final float MELEE_LOCK = 0.25f;
 
+    /**
+     * How fast a body finishes its lunge into the commander, and how fast that bleeds off. It has to
+     * carry further than the sweep can leave between them - {@code MELEE_REACH + MELEE_RADIUS -
+     * COMMANDER_RADIUS}, or 1.7 here - and {@code SimConfig} refuses a config where it does not, because
+     * a carry that stops short leaves the freeze playing across exactly the gap it exists to close.
+     */
+    public static final float CLINCH_CARRY_SPEED = 25f;
+
+    public static final float CLINCH_CARRY_DECAY = 150f;
+
     /** One world unit per tick, so a knocked-back brute's travel can be read straight off. */
     public static final float KNOCKBACK_SPEED = 60f;
 
@@ -118,6 +130,9 @@ public final class AlphaWorlds {
     /** How far he must get to be lost again. Wider than the detection range, which is the hysteresis. */
     public static final float LOSE_RANGE = 30f;
 
+    /** How close something edible has to be before an idle unit goes for it. Shorter than either. */
+    public static final float SECONDARY_RANGE = 10f;
+
     /** How far an idle unit roams from where it was spawned, in {@link #wandering()}. */
     public static final float WANDER_RADIUS = 10f;
 
@@ -130,6 +145,32 @@ public final class AlphaWorlds {
     public static final float WANDER_PAUSE = 0.2f;
 
     public static final float WANDER_TIMEOUT = 3f;
+
+    /** How close something has to be, surface to surface, before it is steered around. */
+    public static final float AVOID_RANGE = 12f;
+
+    public static final float AVOID_LOOKAHEAD = 0.5f;
+    public static final float AVOID_WEIGHT = 2f;
+
+    /** Big enough to be worth shooting at and small enough to slip a shot. */
+    public static final float RABBIT_RADIUS = 1f;
+
+    public static final float RABBIT_SPEED = 30f;
+
+    /** One hit, whatever hit it. Denying a meal should not be a marksmanship exercise twice over. */
+    public static final float RABBIT_HEALTH = 1f;
+
+    public static final float RABBIT_THROES = 0.2f;
+
+    /** Further than a shot travels in the time it takes to arrive, so the rabbit always gets to think. */
+    public static final float DODGE_REACTION_RANGE = 25f;
+
+    public static final float DODGE_SPEED = 60f;
+    public static final float DODGE_DURATION = 0.3f;
+    public static final float DODGE_COMMIT = 0.5f;
+
+    /** Wide enough that a shot passing two units away still counts as coming at it. */
+    public static final float DODGE_MARGIN = 1.5f;
 
     public static final float LEAP_TRIGGER_RANGE = 20f;
 
@@ -190,6 +231,7 @@ public final class AlphaWorlds {
                         .put(
                                 PickupKind.ARMOURY,
                                 new PickupDef(PICKUP_RADIUS, Look.ARMOURY, new Grant.Arm(WeaponKind.RAILGUN), MOUTHFUL))
+                        .put(PickupKind.RABBIT, new PickupDef(RABBIT_RADIUS, Look.RABBIT, Grant.NOTHING, MOUTHFUL))
                         .build(),
                 Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
                         .put(
@@ -214,8 +256,12 @@ public final class AlphaWorlds {
                         MELEE_DAMAGE,
                         MELEE_ARC,
                         MELEE_LOCK,
+                        true,
+                        CLINCH_CARRY_SPEED,
+                        CLINCH_CARRY_DECAY,
                         KNOCKBACK_SPEED,
                         KNOCKBACK_DECAY),
+                new SimConfig.RabbitConfig(RABBIT_SPEED, RABBIT_HEALTH, RABBIT_THROES, WanderDef.off(), DodgeDef.off()),
                 new SimConfig.ObstacleConfig(OBSTACLE_RADIUS, 0),
                 new SimConfig.CollisionConfig(3));
     }
@@ -239,6 +285,7 @@ public final class AlphaWorlds {
                 null,
                 PerceptionDef.alwaysAggressive(DETECTION_RANGE, LOSE_RANGE),
                 WanderDef.off(),
+                AvoidanceDef.off(),
                 LeapDef.off(),
                 look);
     }
@@ -302,7 +349,9 @@ public final class AlphaWorlds {
      */
     public static Simulation watching() {
         return new Simulation(everyStrain(
-                config(), strain -> strain.withPerception(new PerceptionDef(false, DETECTION_RANGE, LOSE_RANGE))));
+                config(),
+                strain -> strain.withPerception(
+                        new PerceptionDef(false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))));
     }
 
     /**
@@ -313,7 +362,8 @@ public final class AlphaWorlds {
     public static Simulation wandering() {
         return new Simulation(everyStrain(
                 config(),
-                strain -> strain.withPerception(new PerceptionDef(false, DETECTION_RANGE, LOSE_RANGE))
+                strain -> strain.withPerception(
+                                new PerceptionDef(false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))
                         .withWander(new WanderDef(
                                 true,
                                 WANDER_RADIUS,
@@ -322,6 +372,26 @@ public final class AlphaWorlds {
                                 WANDER_PAUSE,
                                 WANDER_PAUSE,
                                 WANDER_TIMEOUT))));
+    }
+
+    /**
+     * A world where every strain steers around what is in its way. Off in the base config, because a
+     * test about where a unit ends up wants it to walk in a straight line to get there.
+     */
+    public static Simulation avoiding() {
+        return new Simulation(everyStrain(
+                config(),
+                strain -> strain.withAvoidance(new AvoidanceDef(true, AVOID_RANGE, AVOID_LOOKAHEAD, AVOID_WEIGHT))));
+    }
+
+    /**
+     * A world where rabbits dodge and stand still otherwise. Wandering is off so a test about a
+     * sidestep is not reading a stroll, and the numbers are round so a sidestep can be read off.
+     */
+    public static Simulation rabbits() {
+        return new Simulation(config().withRabbit(config().rabbit()
+                .withDodge(new DodgeDef(
+                        true, DODGE_REACTION_RANGE, DODGE_SPEED, DODGE_DURATION, DODGE_COMMIT, DODGE_MARGIN))));
     }
 
     /** The base world with every strain leaping on a fixed wind-up. */

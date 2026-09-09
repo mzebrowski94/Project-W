@@ -25,6 +25,16 @@ public final class Melee implements Component, Pool.Poolable {
     public float damage;
     public float arcDegrees;
     public float lockSeconds;
+
+    /** Whether that lock is spent only on a target already committed to attacking. */
+    public boolean locksCommittedOnly;
+
+    /** How fast a body it kills finishes its lunge into the commander, in world units per second. */
+    public float clinchCarrySpeed;
+
+    /** How fast that carry bleeds off, in world units per second per second. */
+    public float clinchCarryDecay;
+
     public float knockbackSpeed;
     public float knockbackDecay;
 
@@ -46,6 +56,9 @@ public final class Melee implements Component, Pool.Poolable {
             float newDamage,
             float newArcDegrees,
             float newLockSeconds,
+            boolean newLocksCommittedOnly,
+            float newClinchCarrySpeed,
+            float newClinchCarryDecay,
             float newKnockbackSpeed,
             float newKnockbackDecay) {
         this.cooldownSeconds = newCooldownSeconds;
@@ -57,6 +70,9 @@ public final class Melee implements Component, Pool.Poolable {
         this.damage = newDamage;
         this.arcDegrees = newArcDegrees;
         this.lockSeconds = newLockSeconds;
+        this.locksCommittedOnly = newLocksCommittedOnly;
+        this.clinchCarrySpeed = newClinchCarrySpeed;
+        this.clinchCarryDecay = newClinchCarryDecay;
         this.knockbackSpeed = newKnockbackSpeed;
         this.knockbackDecay = newKnockbackDecay;
         this.windupRemaining = 0f;
@@ -102,6 +118,9 @@ public final class Melee implements Component, Pool.Poolable {
         damage = 0f;
         arcDegrees = 0f;
         lockSeconds = 0f;
+        locksCommittedOnly = false;
+        clinchCarrySpeed = 0f;
+        clinchCarryDecay = 0f;
         knockbackSpeed = 0f;
         knockbackDecay = 0f;
         windupRemaining = 0f;

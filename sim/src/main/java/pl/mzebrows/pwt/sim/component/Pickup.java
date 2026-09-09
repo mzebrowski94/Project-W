@@ -7,9 +7,14 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 /**
  * Something lying on the field waiting to be taken, and whether anything has taken it yet.
  *
- * <p>A pickup is an ordinary entity with a body: non-solid, so units walk over it rather than round
- * it, and immovable, so nothing shoves it away. The constraint solver reports it as a contact for
- * exactly the same reason it reports a projectile, and knows no more about it than that.
+ * <p>A pickup lying on the ground is an ordinary entity with a body: non-solid, so units walk over it
+ * rather than round it, and immovable, so nothing shoves it away. The constraint solver reports it as
+ * a contact for exactly the same reason it reports a projectile, and knows no more about it than that.
+ *
+ * <p><strong>A pickup that walks is solid instead</strong>, because those two flags are also what keep
+ * a body out of rock and inside the arena, and something that moves under its own power needs both.
+ * Nothing else changes: it is claimed on contact like any other, and avoidance is told to ignore
+ * pickups outright, so a hungry alien still walks over its dinner rather than politely round it.
  *
  * <p>{@code claimed} is what makes a pickup go to exactly one taker. Two units can touch the same
  * mushroom on the same tick; the first pair the collision grid visits sets this, and the second finds
