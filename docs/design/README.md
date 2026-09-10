@@ -70,8 +70,8 @@ rows become enforceable once the named feature exists - promote them then.
 | Only `ReaperSystem` removes an entity; anything that kills only marks it `Dead`. | enforced - `ArchitectureTest.onlyTheReaperRemovesEntities` |
 | Damage only ever crosses faction lines, never stays inside one. | enforced - `CombatTest.neverLetsEnemiesHurtEachOther` |
 | Invulnerability is reachable from the harness only, never from a scenario or config. | enforced - `ArchitectureTest.scenariosCannotSwitchOnGodMode` |
-| Troopers lost during a level stay lost for that level. | deferred - needs squad |
-| Squad size never exceeds its configured maximum. | deferred - needs squad |
+| Troopers lost during a level stay lost for that level. | enforced - `SquadTest.keepsATrooperLostDuringALevelLost` |
+| Squad size never exceeds its configured maximum. | enforced - `SquadTest.neverPutsMoreTroopersOnTheFieldThanTheSquadAllows`; a scenario sets it, not the build |
 | Every projectile is a simulated entity with a `Position` and a `Body`. No hitscan. | enforced - `SpawnerTest.givesEveryProjectileAPositionAndABody` |
 | Every melee strike is a simulated entity with a `Position` and a `Body`. No melee hitscan (G0005). | enforced - `SpawnerTest.givesEveryStrikeAPositionAndABodySoThereIsNoMeleeHitscan` |
 | A blow that kills holds both the attacker and its victim - that is the clinch. A melee kill does so only when its victim had already committed to attacking; a swat on something merely walking holds only the corpse (G0013). | enforced - `StunTest.holdsBothTheAttackerAndItsVictimWhenTheBlowKills`, `StrikeCombatTest.tanglesHimUpWhenHisSweepKillsSomethingMidLeap`, `.leavesHimFreeWhenHisSweepKillsSomethingThatWasNotComingAtHim` |
@@ -117,6 +117,30 @@ rows become enforceable once the named feature exists - promote them then.
 | What may be spawned on a patch of ground is decided by its terrain. | enforced - `ScatterTest.keepsEverythingOffGroundItWasNotOfferedTo` |
 | Nothing placed by the grid stands at a tile centre. | enforced - `ScatterTest.standsThingsInsideTheirTilesRatherThanAtTheCentre` |
 | A placement routine reports what it could not place rather than silently placing fewer. | enforced - `ScatterTest.reportsWhatItCouldNotPlace` |
+| A unit publishes which way it is looking, and anything that does not steer itself publishes none. | enforced - `FacingTest.publishesNoFacingForSomethingThatDoesNotSteerItself` |
+| The commander's facing is his aim and never his heading (G0002). | enforced - `FacingTest.facesWhereTheCommanderIsAimingRatherThanWhereHeIsWalking` |
+| A trooper's facing is its own decision, so it can stand still and go on watching. | enforced - `TrooperAdvanceTest.sweepsItsAttentionFromSideToSideAsItGoes`, `SquadOrderTest.holdsATrooperStillWhileItGoesOnLookingAround` |
+| What a unit can notice is the list of tests its definition declares, run cheapest first (G0015). A strain that declares only a range behaves exactly as detection always did. | enforced - `PerceptionSystemTest.noticesWhatIsInsideItsArcAndNotWhatIsBehindIt`, `.noticesNothingThroughRockWhenItNeedsAClearLine` |
+| Once a unit is awake, losing what it noticed is a range test alone. Turning your head never makes you forget. | enforced - `PerceptionSystemTest.keepsHuntingHimAfterItTurnsAwayFromHim`, `TrooperCombatTest.keepsFightingSomethingThatSlipsOutOfItsArc` |
+| A sight line is exact: every tile the line crosses is tested, including the corner where two walls meet. | enforced - `TileMapTest.seesNothingThroughTheCornerWhereTwoWallsMeet` |
+| Being hurt latches a **place**, never a unit - and the place is the muzzle, not the impact (G0016). | enforced - `AggroTest.sendsAHurtUnitAtWhereTheShotCameFrom`, `.walksTowardsTheMuzzleRatherThanStandingWhereItWasHit` |
+| The commander outranks a grudge exactly as absolutely as he outranks food. | enforced - `AggroTest.dropsTheGrudgeWhenItNoticesTheCommander` |
+| A control point's capture resets when the last capturer leaves. It never pauses. | enforced - `ControlPointTest.startsTheCaptureAgainWhenTheLastCapturerLeaves` |
+| A level requires every objective it names; one that names none is never complete. | enforced - `ControlPointTest.requiresEveryObjectiveALevelNames`, `.neverCompletesALevelThatNamesNoObjectives` |
+| Objectives are recomputed from the world every tick, never latched. "The map is clear" must be able to stop being true. | judgement - `ObjectiveSystem` |
+| Nearest objective means nearest **by route**, never by straight line. | enforced - `TrooperAdvanceTest.picksThePointThatIsTheShorterWalkRatherThanTheNearerOne`, `FlowFieldTest.countsTheWalkRatherThanTheStraightLine` |
+| Urgency blends the route against the sweep and never changes speed; "move out" is the only thing that changes speed. | enforced - `TrooperAdvanceTest.keepsTheSameWalkingPaceWhateverTheUrgency` |
+| A trooper stands still to shoot. | enforced - `TrooperCombatTest.standsItsGroundWhileItIsShooting` |
+| A trooper hardly ever answers a leap with a sweep. Answering one is the commander's moment (G0013). | judgement - `sim.trooper.strikeChancePerSecond`; `TrooperCombatTest.neverSwingsAtSomethingThatIsMerelyWalkingAtIt` holds the half that is a rule |
+| An order reaches only the troopers within earshot of the commander, and is delivered once (G0017). | enforced - `SquadOrderTest.reachesNobodyOutOfEarshot`, `.deliversAnOrderOnceRatherThanForAsLongAsItIsHeld` |
+| An order outranks the level's objectives and never an ongoing fight; it is carried out when the fight ends. | enforced - `SquadOrderTest.neverInterruptsAFightAndObeysAsSoonAsItIsOver` |
+| A unit acting on an order is drawn differently from one acting on its own judgement. | enforced - `SquadOrderTest.showsWhichTroopersHeardHim` |
+| An order given on any frame reaches the simulation, whatever the refresh rate, and one press is one order. | enforced - `ScenarioSessionTest.deliversAnOrderGivenOnAFrameTooShortToRunATick`, `.spendsAnOrderOnceEvenWhenAFrameRunsSeveralTicks` |
+| **His going down releases the squad.** Every standing order drops when the commander dies, and none of it is restored when he comes back. The mirror of the rule that nothing stands to attention over a corpse. | enforced - `SquadOrderTest.releasesTheSquadWhenTheCommanderGoesDown`, `.doesNotResumeAnOldOrderWhenHeComesBack`, `.takesTheOrderRingOffWhenHeGoesDown` |
+| Everyone put down in a spawn area is jittered inside its tiles; nobody stands at a tile centre (G0009). | enforced - `SquadTest.standsNobodyAtATileCentre` |
+| A trooper inside a control point holds where it stands rather than walking at its middle. Everyone in the radius counts equally. | enforced - `TrooperAdvanceTest.standsOnAPointRatherThanWalkingAtItsMiddle` |
+| A trooper that stops takes a bearing of its own to watch. A squad at rest never all faces the same way. | enforced - `TrooperAdvanceTest.givesEveryManHoldingAPointHisOwnBearingToWatch`, `SquadOrderTest.spreadsTheSquadsAttentionInsteadOfAllStaringAtHim` |
+| Every gameplay speed is one block in `game.properties` and is retuned together, so the ratios between units survive a pace change. | judgement - the PACE block |
 
 The no-hitscan rows are load-bearing in three directions at once: they keep collision uniform, keep
 the simulation deterministic, and keep every threat visible to the player. They are the rows most
@@ -177,9 +201,19 @@ do not treat one as taken when adding a game binding.
 | Mouse / right stick | Aim | built (mouse) - G0002 |
 | Left mouse / right trigger | Fire | built (mouse) |
 | Right mouse / left bumper | Melee strike | built (mouse) |
-| *(unassigned)* | Squad command (contextual) | proposed - had right mouse, lost it to the strike |
+| `1` | Squad order: follow me | built - scaffolding, see below |
+| `2` | Squad order: move out | built - scaffolding, see below |
+| `3` | Squad order: stop | built - scaffolding, see below |
+| `4` | Squad order: cancel | built - scaffolding, see below |
 | `Tab` | Pull the view back for a look, and put it back | built (keyboard) |
 | `Esc` | Pause | proposed |
+
+The four order keys are **alpha-phase scaffolding, not a decision**. The command *model* is settled -
+an order reaches the troopers near the commander and names a verb, never a target (G0017) - but the
+input is not: the intended binding is one button plus a radial menu, which needs interface work that
+does not exist yet. Four keys make the verbs playable in the meantime. They are listed here rather
+than with the harness keys because they drive the game rather than the dev loop, so nothing else may
+claim them.
 
 ## Open questions
 
@@ -190,9 +224,10 @@ The alpha phase answers none of these. Where a system needs one of them to have 
 scaffolding instead, listed in [`alpha-phase.md`](alpha-phase.md) so the scaffolding is not later
 mistaken for a decision.
 
-- How does the player command the squad? Auto-follow, point-to-move, formations, or stances? **And
-  on what input** - the melee strike took right mouse, which this had provisionally claimed, so
-  whatever the command model turns out to be needs a binding of its own.
+- ~~How does the player command the squad?~~ **Answered 2026-09-10 (G0017):** an order reaches the
+  troopers near the commander, names a verb and never a target, outranks the level's objectives and
+  never an ongoing fight. Four verbs: follow me, move out, stop, cancel. The **input is still open** -
+  keys `1`-`4` are scaffolding and the intended binding is a button plus a radial menu.
 - A body is scenery for its throes - solid, immovable, and it stops bullets. That is realistic and it
   is what makes the clinch settle at touching distance, but it also means shooting into a crowd now
   leaves obstacles for a second at a time. Whether that reads as good feedback or as clutter is a
@@ -209,7 +244,20 @@ mistaken for a decision.
   a level breeds them, whether running out matters, and whether the aliens are meant to clear them
   before you can get to them are all still open - and they decide whether the rabbit is a resource or
   a set piece.
-- What ends a level - an objective, an extraction point, elimination, or a timer?
+- ~~What ends a level - an objective, an extraction point, elimination, or a timer?~~ **Answered
+  2026-09-10:** an objective, and a level may name more than one. Two exist - clear the map of
+  enemies, and capture every control point - and a level requires **all** of the set it names.
+- **What happens when a level's objectives are met?** The alpha deliberately does nothing: the level
+  entity knows, and nothing reads it. Extraction, an immediate cut, a lull before the next wave and a
+  score screen are all still open, and this is now the question standing between the alpha and a
+  playable level.
+- **Should a trooper ever break off a fight?** It stands still and shoots until whatever it noticed
+  is dead or out of range (1.d), which is exactly right for an arcade squad and exactly wrong if the
+  thing shooting back is a brute. Retreating, repositioning and taking cover are all unaddressed, and
+  the first of them that gets added needs this answered rather than guessed.
+- **Can the other side take a control point back?** Capture is one-way today. Whether an alien can
+  stand on a point and undo it is a question about what the aliens are *trying to do*, which nothing
+  in the game has yet said.
 - The source game had four commanders because it was four-player co-op. In single-player, is the
   commander a choice with distinct kits, or one fixed protagonist?
 - Does the squad persist between levels, or does each level grant a fresh one?

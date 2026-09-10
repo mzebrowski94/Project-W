@@ -8,13 +8,17 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.LOSE_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SECONDARY_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.everyStrain;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.watching;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.watchingInFront;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -169,7 +173,7 @@ class PerceptionSystemTest {
         Simulation simulation = new Simulation(everyStrain(
                 config(),
                 strain -> strain.withPerception(
-                        new PerceptionDef(false, false, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))));
+                        PerceptionDef.allRound(false, false, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))));
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity enemy = simulation.spawnEnemy(MIDDLE + DETECTION_RANGE - 1f, MIDDLE);
         simulation.step();
@@ -196,6 +200,82 @@ class PerceptionSystemTest {
         steps(simulation, 2);
 
         assertThat(aggro(enemy)).isFalse();
+    }
+
+    /**
+     * The arc half of G0015. A unit that declares one notices what is in front of it and not what is
+     * behind it, at the same distance - which is what makes the facing spoke worth drawing.
+     */
+    @Test
+    void noticesWhatIsInsideItsArcAndNotWhatIsBehindIt() {
+        Simulation simulation = watchingInFront(ground().build());
+        Entity watcher = simulation.spawnEnemy(MIDDLE, MIDDLE);
+        watcher.getComponent(Appearance.class).face(1f, 0f);
+        simulation.spawnCommander(MIDDLE - 5f, MIDDLE);
+
+        simulation.step();
+
+        assertThat(aggro(watcher)).isFalse();
+    }
+
+    @Test
+    void noticesWhatItIsFacing() {
+        Simulation simulation = watchingInFront(ground().build());
+        Entity watcher = simulation.spawnEnemy(MIDDLE, MIDDLE);
+        watcher.getComponent(Appearance.class).face(-1f, 0f);
+        simulation.spawnCommander(MIDDLE - 5f, MIDDLE);
+
+        simulation.step();
+
+        assertThat(aggro(watcher)).isTrue();
+    }
+
+    /**
+     * The line half. Rock between the two hides him from a unit that declares a clear line - and only
+     * from that unit: an alien declares none and still comes round the wall (G0011 stands).
+     */
+    @Test
+    void noticesNothingThroughRockWhenItNeedsAClearLine() {
+        Simulation simulation =
+                watchingInFront(ground().rect(9, 0, 1, 20, Terrain.ROCK).build());
+        Entity watcher = simulation.spawnEnemy(52f, MIDDLE);
+        watcher.getComponent(Appearance.class).face(-1f, 0f);
+        simulation.spawnCommander(43f, MIDDLE);
+
+        simulation.step();
+
+        assertThat(aggro(watcher)).isFalse();
+    }
+
+    @Test
+    void noticesTheSameManThroughTheSameGapWhenTheRockIsNotInTheWay() {
+        Simulation simulation = watchingInFront(ground().build());
+        Entity watcher = simulation.spawnEnemy(52f, MIDDLE);
+        watcher.getComponent(Appearance.class).face(-1f, 0f);
+        simulation.spawnCommander(43f, MIDDLE);
+
+        simulation.step();
+
+        assertThat(aggro(watcher)).isTrue();
+    }
+
+    /**
+     * Hysteresis outranks both new tests once a unit is awake. Turning away, or stepping behind a
+     * wall, must not un-notice a man who is still standing there - that is the flicker the two ranges
+     * exist to stop, and an arc would reintroduce it every time a unit looked around.
+     */
+    @Test
+    void keepsHuntingHimAfterItTurnsAwayFromHim() {
+        Simulation simulation = watchingInFront(ground().build());
+        Entity watcher = simulation.spawnEnemy(MIDDLE, MIDDLE);
+        watcher.getComponent(Appearance.class).face(-1f, 0f);
+        simulation.spawnCommander(MIDDLE - 5f, MIDDLE);
+        simulation.step();
+
+        watcher.getComponent(Appearance.class).face(1f, 0f);
+        simulation.step();
+
+        assertThat(aggro(watcher)).isTrue();
     }
 
     private static boolean aggro(Entity entity) {

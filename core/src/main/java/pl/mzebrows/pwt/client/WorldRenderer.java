@@ -25,6 +25,13 @@ import pl.mzebrows.pwt.sim.component.PreviousPosition;
  * renderer replaces this class and reads the same component; the simulation is still never asked how
  * to draw itself.
  *
+ * <p>A unit acting on an order carries a ring, so the player can see who heard him - which is how
+ * he learns how far his voice carries rather than guessing at it (pillar 5).
+ *
+ * <p>Which way an entity is pointing is drawn as a spoke out of its centre, for anything that
+ * publishes a facing. That is a tell rather than decoration: a trooper only engages what is inside
+ * its arc, so the player has to be able to see where its front is (G0015).
+ *
  * <p>What an entity is doing is drawn as a shift in its colour rather than as a different colour per
  * situation, so the same tell reads the same way on every kind of unit (pillar 5).
  *
@@ -49,6 +56,8 @@ public final class WorldRenderer implements Disposable {
     private final Palette palette;
     private final StateTint stateTint;
     private final ChargeMark chargeMark;
+    private final FacingMark facingMark;
+    private final OrderMark orderMark;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
 
@@ -87,10 +96,55 @@ public final class WorldRenderer implements Disposable {
             float y = previous.y + (position.y - previous.y) * alpha;
             shapes.setColor(tint(appearance));
             shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
+            if (appearance.facingX != 0f || appearance.facingY != 0f) {
+                shapes.setColor(brightened(tint(appearance), facingMark.tint()));
+                float reach = facingMark.lengthFor(body.radius);
+                shapes.rectLine(
+                        x,
+                        y,
+                        x + appearance.facingX * reach,
+                        y + appearance.facingY * reach,
+                        facingMark.widthFor(body.radius));
+            }
             if (appearance.charge > 0f) {
                 shapes.setColor(brightened(tint(appearance), chargeMark.tint()));
                 shapes.circle(x, y, chargeMark.radiusFor(body.radius, appearance.charge), CIRCLE_SEGMENTS);
             }
+        }
+        shapes.end();
+        drawOrderRings();
+    }
+
+    /**
+     * A ring around every unit acting on an order (3.f).
+     *
+     * <p>A second pass in outline rather than another filled circle, so the ring never hides the unit
+     * inside it - and outlines cannot be drawn in the same {@code ShapeRenderer} pass as fills.
+     *
+     * <p>The pass is skipped entirely when nothing is under orders, which is most of the time, so it
+     * costs a walk of the list rather than a state change.
+     */
+    private void drawOrderRings() {
+        boolean any = false;
+        for (int i = 0; i < drawable.size(); i++) {
+            if (APPEARANCE.get(drawable.get(i)).ordered) {
+                any = true;
+                break;
+            }
+        }
+        if (!any) {
+            return;
+        }
+        shapes.begin(ShapeRenderer.ShapeType.Line);
+        for (int i = 0; i < drawable.size(); i++) {
+            Entity entity = drawable.get(i);
+            Appearance appearance = APPEARANCE.get(entity);
+            if (!appearance.ordered) {
+                continue;
+            }
+            Position position = POSITION.get(entity);
+            shapes.setColor(brightened(tint(appearance), orderMark.tint()));
+            shapes.circle(position.x, position.y, orderMark.radiusFor(BODY.get(entity).radius), CIRCLE_SEGMENTS);
         }
         shapes.end();
     }

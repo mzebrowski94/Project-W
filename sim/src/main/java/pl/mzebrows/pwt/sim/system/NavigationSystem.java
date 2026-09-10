@@ -25,6 +25,10 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  * Asks every enemy that is hunting the commander to head for him at its own speed, round whatever is
  * in the way.
  *
+ * <p>A unit that has been hurt and has not noticed him walks at <em>where the hit came from</em>
+ * instead (G0016) - a place rather than whoever landed it, so nothing holds a reference to something
+ * that may not last the tick.
+ *
  * <p>Whether a unit is hunting at all, and whether it has something else in mind instead, are
  * {@code PerceptionSystem}'s answers rather than this system's. A unit hunting him is routed to him; a
  * unit that has not noticed him but has spotted something edible is walked at that; a unit with
@@ -114,6 +118,10 @@ public final class NavigationSystem extends EntitySystem {
             if (Drivers.held(enemy) || !perception.occupied()) {
                 continue;
             }
+            if (!perception.aggro && perception.provoked) {
+                towards(enemy, perception.provokedX, perception.provokedY);
+                continue;
+            }
             if (!perception.aggro) {
                 foodAt(enemy, perception);
                 continue;
@@ -165,6 +173,32 @@ public final class NavigationSystem extends EntitySystem {
     }
 
     /**
+     * Straight at a place something is cross about (G0016).
+     *
+     * <p><strong>No flow field for this one</strong>, and that is a decision rather than an
+     * oversight. A field is built per goal and rebuilt when the goal moves; provoked units are each
+     * cross about a <em>different</em> place, so routing them properly would mean a grid pass per
+     * unit per tick - the exact per-unit cost a flow field exists to avoid. Straight-line steering
+     * plus avoidance is what the forage path already does for the same reason.
+     *
+     * <p>The cost is that a unit provoked from the far side of a wall walks into the wall and mills
+     * about there rather than coming round. At the ranges a fight actually happens at that is rare,
+     * and it is listed with the other accepted limits. It stops being acceptable the moment
+     * something can provoke from across the level.
+     */
+    private static void towards(Entity enemy, float x, float y) {
+        Position position = POSITION.get(enemy);
+        float towardsX = x - position.x;
+        float towardsY = y - position.y;
+        float distance = (float) Math.sqrt(towardsX * towardsX + towardsY * towardsY);
+        if (distance <= EPSILON) {
+            return;
+        }
+        float speed = SPEED.get(enemy).value;
+        STEERING.get(enemy).set(towardsX / distance * speed, towardsY / distance * speed);
+    }
+
+    /**
      * Straight at whatever it is going to eat.
      *
      * <p>No field for this one. Food is only ever chased from inside the secondary range, the shortest
@@ -173,14 +207,6 @@ public final class NavigationSystem extends EntitySystem {
      * on it, which is the right amount of stupid for something that is not hunting anybody.
      */
     private static void foodAt(Entity enemy, Perception perception) {
-        Position position = POSITION.get(enemy);
-        float towardsX = perception.foodX - position.x;
-        float towardsY = perception.foodY - position.y;
-        float distance = (float) Math.sqrt(towardsX * towardsX + towardsY * towardsY);
-        if (distance <= EPSILON) {
-            return;
-        }
-        float speed = SPEED.get(enemy).value;
-        STEERING.get(enemy).set(towardsX / distance * speed, towardsY / distance * speed);
+        towards(enemy, perception.foodX, perception.foodY);
     }
 }

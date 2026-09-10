@@ -4,15 +4,34 @@ import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
 
 /**
- * Marker: A fired entity that despawns when it hits something or leaves the arena.
+ * A fired entity that despawns when it hits something or leaves the arena.
  *
- * <p>Carries no data on purpose. Systems select on it through a {@code Family} rather than branching
- * on what an entity is, which is the whole reason markers are preferred to a kind enum here.
+ * <p>It carries <strong>where it was fired from</strong>, and deliberately not <em>who</em> fired it.
+ * Something shot at wants to go and deal with the shooter, and a place answers that without a
+ * reference: components are pooled, so an owner kept here could outlive the shooter and come back
+ * pointing at whatever was built from the recycled instance (G0010). A muzzle flash is a place, and
+ * walking at it is what the player would expect to see (G0016).
+ *
+ * <p>The origin is where the shot started, not where it landed. The impact point is a couple of
+ * units from whoever was hit and is no use as somewhere to go.
  */
 public final class Projectile implements Component, Pool.Poolable {
 
+    /** Where this shot was fired from, in world units. */
+    public float originX;
+
+    public float originY;
+
+    /** Records the muzzle, and returns this component, for fluent spawning. */
+    public Projectile from(float x, float y) {
+        this.originX = x;
+        this.originY = y;
+        return this;
+    }
+
     @Override
     public void reset() {
-        // Nothing to clear - this component is a marker.
+        originX = 0f;
+        originY = 0f;
     }
 }

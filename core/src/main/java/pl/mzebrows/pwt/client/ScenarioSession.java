@@ -1,9 +1,11 @@
 package pl.mzebrows.pwt.client;
 
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.FixedStepClock;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
@@ -31,6 +33,28 @@ public final class ScenarioSession {
     private boolean leaving;
     private boolean godMode;
 
+    /**
+     * The last squad order the player gave, or null if none yet.
+     *
+     * <p>Client state rather than simulation state, deliberately: the simulation delivers an order to
+     * whoever was in earshot and keeps nothing about it having been said, which is right - "what did
+     * I last press" is a question about the player, not about the world. Kept here rather than in the
+     * screen because it is a decision worth testing, and the screen only draws.
+     */
+    private @Nullable Order lastOrder;
+
+    /**
+     * An order the player has given that no simulation tick has taken yet.
+     *
+     * <p><strong>This is why orders used to be dropped.</strong> A key is "just pressed" for exactly
+     * one <em>frame</em>, and a frame runs zero ticks whenever it is shorter than one - which on a
+     * display faster than 60 Hz is most frames. The order went into the input record, the overlay
+     * recorded it, and no tick ever saw it: the console said the order had been given and nothing
+     * happened, more often than not. Holding it here until a tick spends it makes one press mean
+     * exactly one order, at any refresh rate.
+     */
+    private @Nullable Order pendingOrder;
+
     public ScenarioSession(Scenario scenario, SimConfig baseConfig) {
         this.scenario = scenario;
         this.baseConfig = baseConfig;
@@ -53,14 +77,20 @@ public final class ScenarioSession {
         }
     }
 
+    /** The last squad order the player gave, for the overlay to show. Null until one is given. */
+    public @Nullable Order lastOrder() {
+        return lastOrder;
+    }
+
     /** Runs however many fixed steps this frame's elapsed time is worth. Does nothing while paused. */
     public void advance(float deltaSeconds, CommanderInput input) {
+        remember(input);
         if (paused) {
             return;
         }
         int steps = clock.stepsFor(deltaSeconds);
         for (int i = 0; i < steps; i++) {
-            simulation.step(input);
+            simulation.step(forThisTick(input));
         }
     }
 
@@ -99,14 +129,44 @@ public final class ScenarioSession {
         return leaving;
     }
 
+    /**
+     * Notes an order as given.
+     *
+     * <p>Recorded even while paused and on a single step, because both are ways the player issues
+     * one, and an overlay that disagreed with what they had just pressed would be worse than no
+     * readout at all.
+     */
+    private void remember(CommanderInput input) {
+        if (input.order() != null) {
+            lastOrder = input.order();
+            pendingOrder = input.order();
+        }
+    }
+
+    /**
+     * This tick's input, carrying a waiting order if there is one and spending it.
+     *
+     * <p>Spent rather than repeated: several ticks can run in one frame, and one press has to mean
+     * one order or a single tap would recruit every trooper that walked into earshot during the
+     * catch-up.
+     */
+    private CommanderInput forThisTick(CommanderInput input) {
+        Order order = pendingOrder;
+        pendingOrder = null;
+        return input.ordering(order);
+    }
+
     /** Single-stepping only makes sense while paused; otherwise the clock is already advancing. */
     private void stepOnce(CommanderInput input) {
+        remember(input);
         if (paused) {
-            simulation.step(input);
+            simulation.step(forThisTick(input));
         }
     }
 
     private void restart() {
+        lastOrder = null;
+        pendingOrder = null;
         simulation = newWorld();
         clock = new FixedStepClock(simulation.config());
         paused = false;

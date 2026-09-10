@@ -103,6 +103,26 @@ public final class FlowField {
     }
 
     /**
+     * How many tiles of walking it is from this tile to the goal, or {@code -1} if a body this size
+     * cannot get there at all.
+     *
+     * <p><strong>Route distance, not straight-line distance</strong>, and that difference is the
+     * whole reason this is public. A point twenty units away through a wall is not nearer than one
+     * forty units away down a corridor, and choosing between objectives on a straight line sends a
+     * squad to stand against rock. The flood that answers this has already been done to build the
+     * field, so the honest answer is also the free one.
+     *
+     * <p>Four-connected, so it counts tiles rather than measuring metres. That is exactly right for
+     * comparing two routes and wrong for anything that wants a length.
+     */
+    public int stepsTo(int col, int row) {
+        if (!built || !map.inBounds(col, row)) {
+            return UNREACHED;
+        }
+        return distance[row * cols + col];
+    }
+
+    /**
      * Writes the unit direction to walk from this world point into {@code out}, and reports whether
      * there was one.
      *

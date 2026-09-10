@@ -40,9 +40,10 @@ class StunTest {
 
     private static final float TOLERANCE = 1e-4f;
 
-    /** A fatal blow tangles the two of them together - that is the clinch, and both are committed. */
     /**
-     * A decay describes a throw bleeding off, and a killing blow throws nothing. Carrying the weapon's
+     * A fatal blow tangles the two of them together - that is the clinch, and both are committed.
+     *
+     * <p>A decay describes a throw bleeding off, and a killing blow throws nothing. Carrying the weapon's
      * decay into a clinch left the survivor coasting on whatever he was doing when he swung - which is
      * how a commander who killed a leaper while backing away slid out from under the body he had just
      * been clinched to.

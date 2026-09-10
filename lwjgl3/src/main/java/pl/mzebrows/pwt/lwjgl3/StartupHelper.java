@@ -176,7 +176,7 @@ public class StartupHelper {
         String javaExecPath = System.getProperty("java.home") + "/bin/java";
         // If targeting Java 9 or higher, you could use the following instead of the above line:
         // String javaExecPath = ProcessHandle.current().info().command().orElseThrow()
-        if (!(new File(javaExecPath).exists())) {
+        if (!new File(javaExecPath).exists()) {
             System.err.println(getJreErrMsg(isMac));
             return false;
         }

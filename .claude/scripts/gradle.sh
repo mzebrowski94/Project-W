@@ -6,8 +6,12 @@
 #
 # Three things this handles that ./gradlew cannot in the sandbox: no JDK 25, no Gradle, and a
 # network reachable only through an authenticating proxy Java does not read from the environment.
-# It also keeps the dependency cache and build outputs off the Windows mount, which writes at
-# ~12 MB/s against ~2 GB/s for the VM's own disk - worth 7.2s -> 2.7s on a warm build.
+# It also keeps the dependency cache, the project cache and build outputs off the Windows mount,
+# which writes at ~12 MB/s against ~2 GB/s for the VM's own disk - worth 7.2s -> 2.7s on a warm
+# build. The project cache matters for a second reason: <project>/.gradle is shared with whatever
+# runs on Windows, and an IntelliJ or a gradlew daemon holding those .lock files makes every build
+# in here die with "Could not create service of type FileHasher ... Input/output error", which reads
+# like a corrupt cache and is actually a file the VM is not allowed to touch.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -88,6 +92,7 @@ fi
 
 # 2 cores and ~4 GB here; the committed gradle.properties is tuned for a real desktop.
 exec "$GRADLE_DIR/bin/gradle" -p "$ROOT" -I "$LOCAL/local-build.gradle" \
+  --project-cache-dir "$LOCAL/project-cache" \
   --console=plain --no-parallel --max-workers=2 \
   -Dorg.gradle.jvmargs="-Xms256m -Xmx1g -Dfile.encoding=UTF-8" \
   "${PROXY_ARGS[@]}" "$@"

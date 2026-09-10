@@ -1,0 +1,66 @@
+package pl.mzebrows.pwt.sim.system;
+
+import pl.mzebrows.pwt.map.TileMap;
+
+/**
+ * The three tests a unit can declare about what it is able to notice (G0015), in one place.
+ *
+ * <p><strong>Cheapest first, and every caller runs them in that order:</strong> a squared distance,
+ * then a dot product against a facing, then a walk of the tile grid. The expensive one is reached
+ * only by something already in range and already in front, which is why a line-of-sight test costs a
+ * fraction of what one per unit per tick would - the objection G0011 raised, answered by arithmetic
+ * rather than by argument.
+ *
+ * <p>Here rather than inside one system because two different minds now ask the same questions: an
+ * alien deciding whether it has noticed the commander, and a trooper deciding whether it has anything
+ * to shoot at. Copying the tests would be how one of them quietly grows a rule the other does not
+ * have - and a strain's senses would stop being readable from its definition.
+ *
+ * <p>Angles are compared as cosines, never as angles. Converting one costs a transcendental, and
+ * {@code ArchitectureTest} bans those here because they are specified only to within an ulp and may
+ * differ between JVMs, which pillar 6 does not allow.
+ */
+final class Sight {
+
+    private Sight() {}
+
+    /** Whether the two points are within this distance of one another. */
+    static boolean withinRange(float fromX, float fromY, float toX, float toY, float range) {
+        float towardsX = toX - fromX;
+        float towardsY = toY - fromY;
+        return towardsX * towardsX + towardsY * towardsY <= range * range;
+    }
+
+    /**
+     * Whether a point lies inside the cone a unit looking this way can notice within.
+     *
+     * <p>An {@code arcCosine} of {@code -1} notices all round and is beaten by every direction, so a
+     * unit that declares no arc pays one comparison and never fails it. A unit with no facing worth
+     * speaking of - it has never moved, or does not steer itself - also notices all round, so an arc
+     * cannot accidentally blind something before it has taken a step.
+     */
+    static boolean withinArc(
+            float lookX, float lookY, float fromX, float fromY, float toX, float toY, float arcCosine) {
+        if (arcCosine <= -1f || (lookX == 0f && lookY == 0f)) {
+            return true;
+        }
+        float towardsX = toX - fromX;
+        float towardsY = toY - fromY;
+        float distanceSquared = towardsX * towardsX + towardsY * towardsY;
+        if (distanceSquared <= 0f) {
+            return true;
+        }
+        float scale = 1f / (float) Math.sqrt(distanceSquared);
+        return (towardsX * lookX + towardsY * lookY) * scale >= arcCosine;
+    }
+
+    /**
+     * Whether nothing solid stands between the two points.
+     *
+     * <p>Only terrain blocks a line. Obstacles, corpses and other units do not - a limit accepted on
+     * purpose and listed with the others, and the same asymmetry routing already lives with.
+     */
+    static boolean clearLine(TileMap map, float fromX, float fromY, float toX, float toY, boolean required) {
+        return !required || map.clearLine(fromX, fromY, toX, toY);
+    }
+}

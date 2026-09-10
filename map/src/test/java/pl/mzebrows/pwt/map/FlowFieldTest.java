@@ -109,4 +109,44 @@ class FlowFieldTest {
     private static float centre(int tile) {
         return tile * TILE + TILE * 0.5f;
     }
+
+    /**
+     * The reason this is public at all: a squad choosing between two objectives must compare routes,
+     * not straight lines. The near point here is behind a wall and the far one is not.
+     */
+    @Test
+    void countsTheWalkRatherThanTheStraightLine() {
+        TileMap map = TileMap.builder(20, 20, 5f)
+                .fill(Terrain.PLAIN)
+                .rect(5, 0, 1, 18, Terrain.ROCK)
+                .build();
+        FlowField field = FlowField.over(map, 1f);
+        field.rebuildFor(2, 2);
+
+        int throughTheWall = field.stepsTo(8, 2);
+        int roundTheOpenSide = field.stepsTo(2, 12);
+
+        assertThat(throughTheWall).isGreaterThan(roundTheOpenSide);
+    }
+
+    @Test
+    void reportsNoRouteToSomewhereItCannotReach() {
+        TileMap map = TileMap.builder(20, 20, 5f)
+                .fill(Terrain.PLAIN)
+                .rect(5, 0, 1, 20, Terrain.ROCK)
+                .build();
+        FlowField field = FlowField.over(map, 1f);
+        field.rebuildFor(2, 2);
+
+        assertThat(field.stepsTo(8, 2)).isNegative();
+    }
+
+    @Test
+    void countsNoStepsFromTheGoalItself() {
+        TileMap map = TileMap.builder(20, 20, 5f).fill(Terrain.PLAIN).build();
+        FlowField field = FlowField.over(map, 1f);
+        field.rebuildFor(4, 4);
+
+        assertThat(field.stepsTo(4, 4)).isZero();
+    }
 }

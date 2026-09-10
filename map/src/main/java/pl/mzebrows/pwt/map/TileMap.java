@@ -175,6 +175,73 @@ public final class TileMap {
     }
 
     /**
+     * Whether an unobstructed straight line runs between two world points - a sight line, with no
+     * body to it.
+     *
+     * <p>Walks the grid tile by tile (Amanatides and Woo) rather than sampling along the ray, so it
+     * is <em>exact</em>: every tile the line passes through is tested, and none can be stepped over.
+     * {@link #isClearPath} deliberately does something different - it marches in half-tile steps and
+     * carries a radius, because it answers "could a body of this size travel here", where erring
+     * towards blocked is right. A sight line has no width and must not err at all, or a unit
+     * occasionally notices through the corner of a wall and nothing reproduces it.
+     *
+     * <p>Anything outside the map reads as impassable, so a line that leaves the grid is blocked
+     * rather than clear - the same rule every other lookup here follows, and it fails safe.
+     *
+     * <p>Only terrain blocks a line. Obstacles, corpses and other units are entities and this module
+     * cannot see one (ADR 0009); that asymmetry is deliberate and is the same one routing already
+     * accepts.
+     */
+    public boolean clearLine(float fromX, float fromY, float toX, float toY) {
+        int col = colAt(fromX);
+        int row = rowAt(fromY);
+        if (!passableAtTile(col, row)) {
+            return false;
+        }
+        int endCol = colAt(toX);
+        int endRow = rowAt(toY);
+        if (col == endCol && row == endRow) {
+            return true;
+        }
+
+        float spanX = toX - fromX;
+        float spanY = toY - fromY;
+        int stepX = spanX > 0f ? 1 : (spanX < 0f ? -1 : 0);
+        int stepY = spanY > 0f ? 1 : (spanY < 0f ? -1 : 0);
+        float nextX = boundary(col, stepX);
+        float nextY = boundary(row, stepY);
+        float toBoundaryX = stepX == 0 ? Float.POSITIVE_INFINITY : (nextX - fromX) / spanX;
+        float toBoundaryY = stepY == 0 ? Float.POSITIVE_INFINITY : (nextY - fromY) / spanY;
+        float perTileX = stepX == 0 ? Float.POSITIVE_INFINITY : tileSize / Math.abs(spanX);
+        float perTileY = stepY == 0 ? Float.POSITIVE_INFINITY : tileSize / Math.abs(spanY);
+
+        // Every tile crossed is one step in exactly one axis, so the walk cannot be longer than the
+        // grid's own span. The bound is belt and braces against a denormal ray stalling the loop.
+        int limit = cols + rows + 2;
+        for (int taken = 0; taken < limit; taken++) {
+            if (toBoundaryX < toBoundaryY) {
+                col += stepX;
+                toBoundaryX += perTileX;
+            } else {
+                row += stepY;
+                toBoundaryY += perTileY;
+            }
+            if (!passableAtTile(col, row)) {
+                return false;
+            }
+            if (col == endCol && row == endRow) {
+                return true;
+            }
+        }
+        return true;
+    }
+
+    /** The world coordinate of the edge of this tile the ray is heading towards. */
+    private float boundary(int index, int step) {
+        return step > 0 ? (index + 1) * tileSize : index * tileSize;
+    }
+
+    /**
      * Assembles a map tile by tile. Generators and hand-authored levels both come through here, so a
      * fixed level and a generated one are the same type downstream and nothing can tell them apart.
      */

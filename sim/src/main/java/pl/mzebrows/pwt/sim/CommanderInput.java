@@ -1,5 +1,8 @@
 package pl.mzebrows.pwt.sim;
 
+import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.def.Order;
+
 /**
  * One tick's worth of what the player is asking for. The simulation is handed this and copies it
  * into the commander's {@code Intent}; no system ever polls a device, which is the input invariant
@@ -15,19 +18,44 @@ package pl.mzebrows.pwt.sim;
  * @param aimY world y the commander is aiming at
  * @param firing whether the fire input is held this tick
  * @param striking whether the melee input is held this tick
+ * @param order the squad order issued this tick, or null for none. A one-tick event rather than
+ *     a held state: an order is <em>given</em> once and then stands on whoever heard it (G0017)
  */
-public record CommanderInput(float moveX, float moveY, float aimX, float aimY, boolean firing, boolean striking) {
+public record CommanderInput(
+        float moveX,
+        float moveY,
+        float aimX,
+        float aimY,
+        boolean firing,
+        boolean striking,
+        @Nullable Order order) {
+
+    /**
+     * The same tick of input with no order given, which is almost every tick.
+     *
+     * <p>An order is a rare, deliberate event; movement and aim happen sixty times a second. Making
+     * the common case the shorter call keeps the two visibly different at every call site, rather
+     * than burying a {@code null} on the end of every one of them.
+     */
+    public CommanderInput(float moveX, float moveY, float aimX, float aimY, boolean firing, boolean striking) {
+        this(moveX, moveY, aimX, aimY, firing, striking, null);
+    }
 
     /** No movement, no firing, no swinging. What a simulation steps with when nothing is driving it. */
-    public static final CommanderInput IDLE = new CommanderInput(0f, 0f, 0f, 0f, false, false);
+    public static final CommanderInput IDLE = new CommanderInput(0f, 0f, 0f, 0f, false, false, null);
 
     /** The same input with the fire button released - convenient in tests. */
     public CommanderInput notFiring() {
-        return new CommanderInput(moveX, moveY, aimX, aimY, false, striking);
+        return new CommanderInput(moveX, moveY, aimX, aimY, false, striking, order);
     }
 
     /** The same input with the melee button held - convenient in tests. */
     public CommanderInput swinging() {
-        return new CommanderInput(moveX, moveY, aimX, aimY, firing, true);
+        return new CommanderInput(moveX, moveY, aimX, aimY, firing, true, order);
+    }
+
+    /** The same input carrying a squad order, or none. */
+    public CommanderInput ordering(@Nullable Order newOrder) {
+        return new CommanderInput(moveX, moveY, aimX, aimY, firing, striking, newOrder);
     }
 }

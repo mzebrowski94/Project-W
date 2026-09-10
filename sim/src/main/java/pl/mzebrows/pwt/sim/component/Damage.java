@@ -65,6 +65,37 @@ public final class Damage implements Component, Pool.Poolable {
 
     public float clinchCarryDecay;
 
+    /**
+     * Where the hit came from, in world units - the muzzle a shot was fired from, or the attacker
+     * itself for a blow. Meaningless unless {@link #hasSource}.
+     *
+     * <p>A place rather than whoever landed it (G0016). Contact resolution records it and
+     * {@code DamageSystem} decides what it provokes, which is the same division of labour as the
+     * damage itself: what is owed here, what it costs later.
+     */
+    public float sourceX;
+
+    public float sourceY;
+
+    /** Whether anything this tick said where it came from. */
+    public boolean hasSource;
+
+    /**
+     * Records where a hit came from, keeping the <strong>first</strong> of the tick.
+     *
+     * <p>First rather than last so that two attackers landing in one tick resolve the same way on
+     * every replay, and so that what provokes a unit is the hit that reached it soonest rather than
+     * whichever pair the collision grid happened to visit last.
+     */
+    public void cameFrom(float x, float y) {
+        if (hasSource) {
+            return;
+        }
+        hasSource = true;
+        sourceX = x;
+        sourceY = y;
+    }
+
     /** Adds to what is already owed, and to how long the victim recovers afterwards. */
     public void add(float extra, float recovery) {
         amount += extra;
@@ -115,5 +146,8 @@ public final class Damage implements Component, Pool.Poolable {
         deathLockSeconds = 0f;
         clinchCarrySpeed = 0f;
         clinchCarryDecay = 0f;
+        sourceX = 0f;
+        sourceY = 0f;
+        hasSource = false;
     }
 }

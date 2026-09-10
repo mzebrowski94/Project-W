@@ -140,4 +140,29 @@ class ScatterTest {
         long[] state = {0L};
         return () -> state[0] += 0x9E3779B97F4A7C15L;
     }
+
+    @Test
+    void keepsASpawnAreaScatterInsideItsOwnTiles() {
+        TileMap map = TileMap.builder(20, 20, 5f).fill(Terrain.PLAIN).build();
+        TileRect area = new TileRect(1, 8, 2, 4);
+        Scatter scatter = new Scatter(map, seeded(), 0f, 0f);
+
+        List<float[]> placed = new ArrayList<>();
+        int count = scatter.scatter(area, 6, 0.5f, (x, y) -> placed.add(new float[] {x, y}));
+
+        assertThat(count).isEqualTo(6);
+        assertThat(placed)
+                .allSatisfy(at -> assertThat(area.contains(map.colAt(at[0]), map.rowAt(at[1])))
+                        .isTrue());
+    }
+
+    @Test
+    void reportsWhatASpawnAreaWasTooSmallToHold() {
+        TileMap map = TileMap.builder(20, 20, 5f).fill(Terrain.PLAIN).build();
+        Scatter scatter = new Scatter(map, seeded(), 0f, 0f);
+
+        int count = scatter.scatter(TileRect.ofTile(3, 3), 40, 2f, (x, y) -> {});
+
+        assertThat(count).isLessThan(40);
+    }
 }

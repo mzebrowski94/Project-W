@@ -199,6 +199,57 @@ public final class AlphaWorlds {
 
     public static final float RAILGUN_DAMAGE = 400f;
 
+    public static final float TROOPER_RADIUS = 1f;
+
+    public static final float TROOPER_SPEED = 20f;
+
+    public static final float TROOPER_HEALTH = 100f;
+
+    /** Small on purpose: a test that spawns a squad should be able to name every member of it. */
+    public static final int SQUAD_SIZE = 3;
+
+    /** Wide enough that a squad fits inside it, as the shipped one is. */
+    public static final float POINT_RADIUS = 6f;
+
+    /** Short, so a test that waits out a capture does not wait out five seconds of ticks. */
+    public static final float POINT_CAPTURE_SECONDS = 1f;
+
+    public static final float POINT_AGGRO_RADIUS = 26f;
+
+    /** Half and half, so a test can see both the advance and the weave in one run. */
+    public static final float TROOPER_URGENCY = 0.5f;
+
+    public static final float TROOPER_SCAN_SPREAD = 0.8f;
+
+    /** Fixed rather than a range, so a test counting ticks to a sweep is not guessing. */
+    public static final float TROOPER_SCAN_SECONDS = 1f;
+
+    public static final float TROOPER_ARRIVE_RADIUS = 3f;
+
+    public static final float TROOPER_SIGHT = 34f;
+
+    public static final float TROOPER_HOLD = 42f;
+
+    public static final float TROOPER_ARC = 100f;
+
+    /** Off in the base fixture: a rare event firing at random would make every other test flaky. */
+    public static final float TROOPER_STRIKE_CHANCE = 0f;
+
+    /** How far the commander's voice carries in the fixtures. */
+    public static final float ORDER_RADIUS = 22f;
+
+    public static final float MOVE_OUT_DISTANCE = 40f;
+
+    public static final float MOVE_OUT_FACTOR = 1.6f;
+
+    public static final float FOLLOW_DISTANCE = 7f;
+
+    public static final int SPAWN_COL = 1;
+
+    public static final int SPAWN_WIDTH = 2;
+
+    public static final int SPAWN_HEIGHT = 5;
+
     private AlphaWorlds() {}
 
     public static SimConfig config() {
@@ -215,6 +266,26 @@ public final class AlphaWorlds {
                         RESPAWN_DELAY,
                         RESPAWN_MARGIN,
                         RESPAWN_INVULNERABLE),
+                new SimConfig.TrooperConfig(
+                        TROOPER_RADIUS,
+                        TROOPER_SPEED,
+                        SQUAD_SIZE,
+                        TROOPER_HEALTH,
+                        DEATH_THROES,
+                        WeaponKind.SIDEARM,
+                        AvoidanceDef.off(),
+                        TROOPER_URGENCY,
+                        TROOPER_SCAN_SPREAD,
+                        TROOPER_SCAN_SECONDS,
+                        TROOPER_SCAN_SECONDS,
+                        TROOPER_ARRIVE_RADIUS,
+                        new PerceptionDef(false, true, TROOPER_SIGHT, TROOPER_HOLD, 0f, TROOPER_ARC, true),
+                        ORDER_RADIUS,
+                        MOVE_OUT_DISTANCE,
+                        MOVE_OUT_FACTOR,
+                        FOLLOW_DISTANCE,
+                        TROOPER_STRIKE_CHANCE),
+                new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 Defs.<UnitKind, UnitDef>builder(UnitKind.class)
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
                         .put(UnitKind.BRUTE, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.BRUTE))
@@ -262,6 +333,7 @@ public final class AlphaWorlds {
                         KNOCKBACK_SPEED,
                         KNOCKBACK_DECAY),
                 new SimConfig.RabbitConfig(RABBIT_SPEED, RABBIT_HEALTH, RABBIT_THROES, WanderDef.off(), DodgeDef.off()),
+                new SimConfig.ControlPointConfig(POINT_RADIUS, POINT_CAPTURE_SECONDS, POINT_AGGRO_RADIUS),
                 new SimConfig.ObstacleConfig(OBSTACLE_RADIUS, 0),
                 new SimConfig.CollisionConfig(3));
     }
@@ -309,6 +381,23 @@ public final class AlphaWorlds {
         return new Simulation(config, map);
     }
 
+    /** How wide a cone a strain that only notices what is in front of it looks through. */
+    public static final float ARC_DEGREES = 90f;
+
+    /**
+     * A world where every strain notices only what is inside its facing arc, and only through open
+     * ground - what a trooper declares (G0015). Enemies do not declare either; this fixture exists so
+     * the tests can be written without a trooper in the world.
+     */
+    public static Simulation watchingInFront(TileMap map) {
+        return new Simulation(
+                everyStrain(
+                        config(),
+                        strain -> strain.withPerception(new PerceptionDef(
+                                false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE, ARC_DEGREES, true))),
+                map);
+    }
+
     /** The test grid, filled with open ground, ready for a test to lay rock into. */
     public static TileMap.Builder ground() {
         return TileMap.builder(ARENA_TILES, ARENA_TILES, TILE).fill(Terrain.PLAIN);
@@ -351,7 +440,7 @@ public final class AlphaWorlds {
         return new Simulation(everyStrain(
                 config(),
                 strain -> strain.withPerception(
-                        new PerceptionDef(false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))));
+                        PerceptionDef.allRound(false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))));
     }
 
     /**
@@ -363,7 +452,7 @@ public final class AlphaWorlds {
         return new Simulation(everyStrain(
                 config(),
                 strain -> strain.withPerception(
-                                new PerceptionDef(false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))
+                                PerceptionDef.allRound(false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))
                         .withWander(new WanderDef(
                                 true,
                                 WANDER_RADIUS,

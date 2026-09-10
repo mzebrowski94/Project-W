@@ -28,7 +28,7 @@ public final class InputReader {
     private final Vector3 pointer = new Vector3();
 
     /** Samples the devices as they are right now. */
-    public CommanderInput read() {
+    public CommanderInput read(KeyPresses keys) {
         float moveX = axis(Input.Keys.D, Input.Keys.RIGHT, Input.Keys.A, Input.Keys.LEFT);
         float moveY = axis(Input.Keys.W, Input.Keys.UP, Input.Keys.S, Input.Keys.DOWN);
 
@@ -37,7 +37,7 @@ public final class InputReader {
 
         boolean firing = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
         boolean striking = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
-        return new CommanderInput(moveX, moveY, pointer.x, pointer.y, firing, striking);
+        return new CommanderInput(moveX, moveY, pointer.x, pointer.y, firing, striking, OrderKeys.poll(keys));
     }
 
     private static float axis(int positive, int positiveAlias, int negative, int negativeAlias) {

@@ -75,7 +75,9 @@ public final class ScenarioScreen extends ScreenAdapter {
                 viewport,
                 context.graphicConfig().palette(),
                 context.graphicConfig().stateTint(),
-                context.graphicConfig().chargeMark());
+                context.graphicConfig().chargeMark(),
+                context.graphicConfig().facingMark(),
+                context.graphicConfig().orderMark());
         terrain = new TerrainRenderer(viewport, context.graphicConfig().terrainPalette());
         input = new InputReader(viewport);
         session = new ScenarioSession(scenario, context.simConfig());
@@ -88,7 +90,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         // Input is read first, and therefore against the camera as it was when the frame the player
         // reacted to was drawn. Moving the camera before reading would interpret the mouse against a
         // view they have not seen yet.
-        CommanderInput commanderInput = input.read();
+        CommanderInput commanderInput = input.read(keys);
         for (HarnessCommand command : HarnessControls.poll(keys)) {
             session.apply(command, commanderInput);
         }
@@ -106,7 +108,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         terrain.render();
         renderer.render(session.renderAlpha());
         if (session.overlayVisible()) {
-            overlay.render(session.simulation(), session.paused());
+            overlay.render(session.simulation(), session.paused(), session.lastOrder());
         }
     }
 

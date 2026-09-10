@@ -20,6 +20,8 @@ import pl.mzebrows.pwt.sim.def.Look;
  * @param terrainPalette placeholder colour per kind of ground, and how far apart regions are shaded
  * @param stateTint how far to shift that colour for what the entity is currently doing
  * @param chargeMark how to draw an entity that is filling up towards something
+ * @param facingMark how to draw which way an entity is pointing
+ * @param orderMark how to draw a unit that is acting on an order
  * @param camera how the view follows what it is watching, and how far out it may sit
  */
 public record GraphicConfig(
@@ -33,6 +35,8 @@ public record GraphicConfig(
         TerrainPalette terrainPalette,
         StateTint stateTint,
         ChargeMark chargeMark,
+        FacingMark facingMark,
+        OrderMark orderMark,
         CameraDirector.Settings camera) {
 
     private static final String FILE = "graphic.properties";
@@ -60,6 +64,8 @@ public record GraphicConfig(
                 terrainPalette(properties),
                 stateTint(properties),
                 chargeMark(properties),
+                facingMark(properties),
+                orderMark(properties),
                 camera(properties));
     }
 
@@ -85,8 +91,10 @@ public record GraphicConfig(
     private static String fallbackFor(Look look) {
         return switch (look) {
             case COMMANDER -> "6ee7ffff";
+            case TROOPER -> "4fb8d8ff";
             case GRUNT -> "ff5d5dff";
             case BRUTE -> "b53a5aff";
+            case CONTROL_POINT -> "2b3a52ff";
             case PROJECTILE -> "ffe066ff";
             case SLUG -> "fff3c4ff";
             case STRIKE -> "ffffffff";
@@ -142,6 +150,18 @@ public record GraphicConfig(
     private static ChargeMark chargeMark(GameProperties properties) {
         return new ChargeMark(
                 properties.getFloat("graphic.charge.scale", 0.55f), properties.getFloat("graphic.charge.tint", 0.8f));
+    }
+
+    private static FacingMark facingMark(GameProperties properties) {
+        return new FacingMark(
+                properties.getFloat("graphic.facing.length", 1.35f),
+                properties.getFloat("graphic.facing.width", 0.34f),
+                properties.getFloat("graphic.facing.tint", 0.55f));
+    }
+
+    private static OrderMark orderMark(GameProperties properties) {
+        return new OrderMark(
+                properties.getFloat("graphic.order.scale", 1.55f), properties.getFloat("graphic.order.tint", 0.75f));
     }
 
     /**

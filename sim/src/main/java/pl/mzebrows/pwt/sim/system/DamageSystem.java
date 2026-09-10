@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
@@ -48,6 +49,7 @@ public final class DamageSystem extends IteratingSystem {
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
     private static final float EPSILON = 1e-4f;
@@ -74,9 +76,19 @@ public final class DamageSystem extends IteratingSystem {
         float deathLock = damage.deathLockSeconds;
         float carrySpeed = damage.clinchCarrySpeed;
         float carryDecay = damage.clinchCarryDecay;
+        boolean hasSource = damage.hasSource;
+        float sourceX = damage.sourceX;
+        float sourceY = damage.sourceY;
         damage.reset();
         if (INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active()) {
             return;
+        }
+        if (hasSource && PERCEPTION.has(entity)) {
+            // Being hurt sends it to deal with whatever is where the hit came from (G0016). Latched
+            // here rather than in the collision path because only this system knows the hit actually
+            // landed - an invulnerable target has already returned above, and being missed provokes
+            // nobody.
+            PERCEPTION.get(entity).provokeAt(sourceX, sourceY);
         }
         Health health = HEALTH.get(entity);
         health.current -= owed;

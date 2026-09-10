@@ -6,12 +6,18 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
+import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Perception;
+import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -44,7 +50,13 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
+    private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
+    private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
+    private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Steering> STEERING = ComponentMapper.getFor(Steering.class);
+    private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
+    private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
 
     private final Defs<UnitKind, UnitDef> units;
 
@@ -58,6 +70,43 @@ public final class AppearanceSystem extends IteratingSystem {
         Appearance appearance = APPEARANCE.get(entity);
         appearance.state = stateOf(entity);
         appearance.charge = chargeOf(entity);
+        face(entity, appearance);
+        appearance.ordered = TROOPER.has(entity)
+                && (TROOPER.get(entity).order != null || TROOPER.get(entity).movingOut());
+    }
+
+    /**
+     * Points the entity where it is looking, for anything whose facing the player has a reason to
+     * read.
+     *
+     * <p><strong>Aim first, and never a heading, for anything with an {@link Intent}</strong> - that
+     * is G0002 at the one place the two are easiest to conflate. A commander backing away while
+     * shooting forwards must be drawn facing his shots, or the tell contradicts the bullets.
+     *
+     * <p>Everything else that steers itself faces the way it is going. What decides whether a facing
+     * is published at all is whether the entity drives itself - an {@link Intent} or a
+     * {@link Steering} - rather than what it is, so a bullet reports none and the renderer never has
+     * to ask what it is looking at (G0003).
+     */
+    private static void face(Entity entity, Appearance appearance) {
+        if (TROOPER.has(entity)) {
+            // A trooper decides where it is looking rather than looking wherever it is walking. That
+            // is what lets it stand still and keep watching, and what makes its arc a thing the
+            // player can read off the picture.
+            Trooper trooper = TROOPER.get(entity);
+            appearance.face(trooper.lookX, trooper.lookY);
+            return;
+        }
+        if (INTENT.has(entity) && POSITION.has(entity)) {
+            Position at = POSITION.get(entity);
+            Intent intent = INTENT.get(entity);
+            appearance.face(intent.aimX - at.x, intent.aimY - at.y);
+            return;
+        }
+        if (STEERING.has(entity) && VELOCITY.has(entity)) {
+            Velocity velocity = VELOCITY.get(entity);
+            appearance.face(velocity.x, velocity.y);
+        }
     }
 
     /**
@@ -71,6 +120,11 @@ public final class AppearanceSystem extends IteratingSystem {
      * <p>A strain with nowhere to grow reports nothing, which is what almost everything reports.
      */
     private float chargeOf(Entity entity) {
+        if (POINT.has(entity)) {
+            // A point filling up is the same tell as a unit filling up, deliberately: one
+            // way of drawing \"nearly there\", learnt once and read everywhere.
+            return POINT.get(entity).progress();
+        }
         if (!FEED.has(entity) || !STRAIN.has(entity)) {
             return 0f;
         }

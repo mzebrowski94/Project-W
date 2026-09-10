@@ -8,7 +8,9 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -54,15 +56,18 @@ public final class PerceptionSystem extends EntitySystem {
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
+    private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
 
     private final Defs<PickupKind, PickupDef> pickupDefs;
+    private final TileMap map;
 
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> edible = new ImmutableArray<>(new Array<>());
 
-    public PerceptionSystem(SimConfig config) {
+    public PerceptionSystem(SimConfig config, TileMap map) {
         this.pickupDefs = config.pickups();
+        this.map = map;
     }
 
     @Override
@@ -92,17 +97,87 @@ public final class PerceptionSystem extends EntitySystem {
                 perception.aggro = true;
             } else if (perception.aggro && !perception.losesInterest) {
                 perception.aggro = true;
+            } else if (perception.aggro) {
+                // Losing him is range alone, whatever else this strain declares. That is the
+                // hysteresis: a trooper that has seen something must not forget it the instant it
+                // turns, and a unit must not be un-noticed by a wall it walked behind.
+                perception.aggro = withinRange(position, target, perception.loseRange);
             } else {
-                float toTargetX = target.x - position.x;
-                float toTargetY = target.y - position.y;
-                float range = perception.rangeInPlay();
-                perception.aggro = toTargetX * toTargetX + toTargetY * toTargetY <= range * range;
+                perception.aggro = notices(watcher, perception, position, target);
+            }
+            if (perception.aggro) {
+                // The commander outranks a grudge exactly as absolutely as he outranks food. A unit
+                // that has noticed him drops where it was going, and does not resume afterwards -
+                // whatever provoked it is a long way behind by then.
+                perception.provoked = false;
+            } else if (perception.provoked && withinRange(position, provokedPlace(perception), map.tileSize())) {
+                // Arrived. Whatever is standing here is now a fight like any other, decided by
+                // contact; there is nothing left for the latch to say.
+                perception.provoked = false;
             }
             perception.foraging = false;
-            if (!perception.aggro) {
+            if (!perception.occupied()) {
                 lookForFood(watcher, perception, position);
             }
         }
+    }
+
+    /**
+     * Whether this unit notices the target, by every test its strain declares (G0015).
+     *
+     * <p><strong>Cheapest first, short-circuiting</strong>, and the order is a cost ordering rather
+     * than a meaningful one: a squared distance, then a dot product, then a walk of the tile grid.
+     * The grid walk is reached only by something already in range and already in front, which is why
+     * a line-of-sight test here costs a fraction of what one per unit per tick would.
+     *
+     * <p>A strain that declares neither an arc nor a line - every alien - pays two comparisons that
+     * always pass and behaves exactly as it did before any of this existed.
+     */
+    private boolean notices(Entity watcher, Perception perception, Position position, Position target) {
+        if (!withinRange(position, target, perception.detectionRange)) {
+            return false;
+        }
+        if (!withinArc(watcher, perception, position, target)) {
+            return false;
+        }
+        return !perception.requiresClearLine || map.clearLine(position.x, position.y, target.x, target.y);
+    }
+
+    /** Scratch for the latched place, so comparing against it costs no allocation per unit per tick. */
+    private final Position latched = new Position();
+
+    private Position provokedPlace(Perception perception) {
+        latched.set(perception.provokedX, perception.provokedY);
+        return latched;
+    }
+
+    private static boolean withinRange(Position from, Position to, float range) {
+        float towardsX = to.x - from.x;
+        float towardsY = to.y - from.y;
+        return towardsX * towardsX + towardsY * towardsY <= range * range;
+    }
+
+    /**
+     * Whether the target is inside the cone this unit notices within, centred on the way it is facing.
+     *
+     * <p>The facing read here is the one the renderer drew last frame, deliberately: the arc the game
+     * uses is then exactly the arc the player was shown. A unit that has no facing to speak of - it
+     * has never moved, or does not steer itself - notices all round rather than nothing, so an arc
+     * cannot accidentally blind something before it has taken a step.
+     */
+    private static boolean withinArc(Entity watcher, Perception perception, Position position, Position target) {
+        if (!APPEARANCE.has(watcher)) {
+            return true;
+        }
+        Appearance appearance = APPEARANCE.get(watcher);
+        return Sight.withinArc(
+                appearance.facingX,
+                appearance.facingY,
+                position.x,
+                position.y,
+                target.x,
+                target.y,
+                perception.arcCosine);
     }
 
     /**

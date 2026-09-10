@@ -37,11 +37,14 @@ public final class SimConfigLoader {
                 properties.getInt("sim.maxTicksPerFrame", defaults.maxTicksPerFrame()),
                 map(properties, defaults.map()),
                 commander(properties, defaults.commander()),
+                trooper(properties, defaults.trooper()),
+                spawn(properties, defaults.spawn()),
                 units(properties, defaults),
                 pickups(properties, defaults),
                 weapons(properties, defaults),
                 melee(properties, defaults.melee()),
                 rabbit(properties, defaults.rabbit()),
+                controlPoint(properties, defaults.controlPoint()),
                 obstacle(properties, defaults.obstacle()),
                 collision(properties, defaults.collision()));
     }
@@ -56,6 +59,37 @@ public final class SimConfigLoader {
                 properties.getInt("sim.map.rows", defaults.rows()),
                 properties.getFloat("sim.map.tileSize", defaults.tileSize()),
                 properties.getInt("sim.map.regions", defaults.regions()));
+    }
+
+    /** The squad, under {@code sim.trooper}. Squad size is loadable but a scenario usually overrides it. */
+    private static SimConfig.TrooperConfig trooper(GameProperties properties, SimConfig.TrooperConfig defaults) {
+        return new SimConfig.TrooperConfig(
+                properties.getFloat("sim.trooper.radius", defaults.radius()),
+                properties.getFloat("sim.trooper.speed", defaults.speed()),
+                properties.getInt("sim.trooper.squadSize", defaults.squadSize()),
+                properties.getFloat("sim.trooper.health", defaults.health()),
+                properties.getFloat("sim.trooper.deathThroesSeconds", defaults.deathThroesSeconds()),
+                defaults.weapon(),
+                avoidance(properties, "sim.trooper.avoidance", defaults.avoidance()),
+                properties.getFloat("sim.trooper.urgency", defaults.urgency()),
+                properties.getFloat("sim.trooper.scanSpread", defaults.scanSpread()),
+                properties.getFloat("sim.trooper.scanMinSeconds", defaults.scanMinSeconds()),
+                properties.getFloat("sim.trooper.scanMaxSeconds", defaults.scanMaxSeconds()),
+                properties.getFloat("sim.trooper.arriveRadius", defaults.arriveRadius()),
+                perception(properties, "sim.trooper.perception", defaults.perception()),
+                properties.getFloat("sim.trooper.orderRadius", defaults.orderRadius()),
+                properties.getFloat("sim.trooper.moveOutDistance", defaults.moveOutDistance()),
+                properties.getFloat("sim.trooper.moveOutSpeedFactor", defaults.moveOutSpeedFactor()),
+                properties.getFloat("sim.trooper.followDistance", defaults.followDistance()),
+                properties.getFloat("sim.trooper.strikeChancePerSecond", defaults.strikeChancePerSecond()));
+    }
+
+    /** Where the player's side starts, under {@code sim.spawn}. */
+    private static SimConfig.SpawnConfig spawn(GameProperties properties, SimConfig.SpawnConfig defaults) {
+        return new SimConfig.SpawnConfig(
+                properties.getInt("sim.spawn.col", defaults.col()),
+                properties.getInt("sim.spawn.width", defaults.width()),
+                properties.getInt("sim.spawn.height", defaults.height()));
     }
 
     private static SimConfig.CommanderConfig commander(GameProperties properties, SimConfig.CommanderConfig defaults) {
@@ -139,7 +173,9 @@ public final class SimConfigLoader {
                 properties.getBoolean(prefix + ".losesInterest", defaults.losesInterest()),
                 properties.getFloat(prefix + ".detectionRange", defaults.detectionRange()),
                 properties.getFloat(prefix + ".loseRange", defaults.loseRange()),
-                properties.getFloat(prefix + ".secondaryRange", defaults.secondaryRange()));
+                properties.getFloat(prefix + ".secondaryRange", defaults.secondaryRange()),
+                properties.getFloat(prefix + ".arcDegrees", defaults.arcDegrees()),
+                properties.getBoolean(prefix + ".requiresClearLine", defaults.requiresClearLine()));
     }
 
     /** How a strain idles, under its own prefix. */
@@ -217,6 +253,15 @@ public final class SimConfigLoader {
 
     private static SimConfig.CollisionConfig collision(GameProperties properties, SimConfig.CollisionConfig defaults) {
         return new SimConfig.CollisionConfig(properties.getInt("sim.collision.passes", defaults.passes()));
+    }
+
+    /** What it takes to hold a point, under {@code sim.controlPoint}. */
+    private static SimConfig.ControlPointConfig controlPoint(
+            GameProperties properties, SimConfig.ControlPointConfig defaults) {
+        return new SimConfig.ControlPointConfig(
+                properties.getFloat("sim.controlPoint.radius", defaults.radius()),
+                properties.getFloat("sim.controlPoint.captureSeconds", defaults.captureSeconds()),
+                properties.getFloat("sim.controlPoint.aggroRadius", defaults.aggroRadius()));
     }
 
     /** The one pickup with numbers of its own, because it is the one that moves. */

@@ -6,7 +6,6 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.math.MathUtils;
 import pl.mzebrows.pwt.sim.Spawner;
-import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
@@ -15,7 +14,12 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Stunned;
 
 /**
- * Turns a commander's melee intent into a swing in the world.
+ * Turns anything's melee intent into a swing in the world.
+ *
+ * <p><strong>One place turns a swing into a strike entity</strong> (G0005), whoever swung. The
+ * commander's intent comes from input and a trooper's from its own judgement, but both go through
+ * {@code Melee.beginSwing} and are released here - so the windup, the arc and the cooldown cannot
+ * drift apart between the two.
  *
  * <p>It spawns a {@code Strike} entity and nothing else: no overlap query, no damage, no knowledge of
  * what is nearby (G0005). Whether the swing connects is the collision system's business, and it
@@ -42,8 +46,7 @@ public final class MeleeSystem extends IteratingSystem {
     private final Spawner spawner;
 
     public MeleeSystem(Spawner spawner) {
-        super(Family.all(Commander.class, Intent.class, Position.class, Melee.class, Faction.class)
-                .get());
+        super(Family.all(Position.class, Melee.class, Faction.class).get());
         this.spawner = spawner;
     }
 
@@ -53,9 +56,11 @@ public final class MeleeSystem extends IteratingSystem {
             return;
         }
         Melee melee = MELEE.get(entity);
-        Intent intent = INTENT.get(entity);
-        if (intent.striking && melee.ready()) {
-            melee.beginSwing(intent.aimX, intent.aimY);
+        if (INTENT.has(entity)) {
+            Intent intent = INTENT.get(entity);
+            if (intent.striking && melee.ready()) {
+                melee.beginSwing(intent.aimX, intent.aimY);
+            }
         }
         if (melee.releasing()) {
             release(entity, melee);

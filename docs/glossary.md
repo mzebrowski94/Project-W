@@ -59,6 +59,14 @@ it. Terms marked *(source)* come from *Triumph! War 2099*.
 | **dodge** | A sidestep away from an incoming shot. Perpendicular to the shot, to the side the creature is already on, the same every time, so it can be learned and led (G0012). Bounded by a commit window, which is what makes the answer to a dodge a second shot. |
 | **rabbit** | Alien food that runs away. A pickup in every way that matters - claimed on contact, granted from the same table - but it walks, it dodges, and it can be shot. The commander is offered nothing by one, so his only interest is denying it. |
 | **intent** | What a commander is trying to do this tick, as a component. Written from input, read by systems. |
+| **objective** | A condition a level requires before it counts as done. A level names a set and requires all of it. Two exist: clear the map of enemies, and capture every control point. What a completed level *does* is still open - in the alpha it does nothing. |
+| **control point** | Ground a squad takes by standing near it for a while. Captured by dwelling; the dwell goes back to zero the moment the last capturer leaves, rather than pausing, and starting an attempt wakes what is nearby. |
+| **spawn area** | The patch of tiles a side is put on at the start of a level. A rectangle of tiles with everyone jittered inside them, never at a tile centre (G0009) - the same tile-anchored scatter that places everything else. |
+| **order** | One thing the commander tells the troopers near him to do, as a standing instruction on each of them. Reaches only what is within earshot when it is given (G0017), outranks the level's objectives, and never interrupts a fight - which needs no queue, because nothing consumes it. **His death drops every standing order**, and none of them come back with him. |
+| **earshot** | How far the commander's voice carries. The whole of who hears an order: there is no selection and no roster, so where he is standing is what decides. |
+| **urgency** | How much a trooper's advance beats its scanning, as a fraction. Deliberately **not** a speed - "move out" is what changes speed, and one dial doing both would make that order invisible. It is the number that sets the game's pace. |
+| **scan** | A trooper sweeping its attention from side to side as it advances. The trooper's answer to *forage*: what it does with its attention while nothing is happening, and the reason its facing is worth drawing. |
+| **facing** | Which way a thing is looking, published as a unit vector for the renderer. The commander's is his aim and never his heading (G0002); a trooper's is a decision of its own, so it can stand still and go on watching. Anything that does not steer itself has none. |
 
 ## Words we do not use
 

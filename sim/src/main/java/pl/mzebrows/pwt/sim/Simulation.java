@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -19,6 +20,7 @@ import pl.mzebrows.pwt.sim.system.AppearanceSystem;
 import pl.mzebrows.pwt.sim.system.AvoidanceSystem;
 import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
+import pl.mzebrows.pwt.sim.system.ControlPointSystem;
 import pl.mzebrows.pwt.sim.system.CooldownSystem;
 import pl.mzebrows.pwt.sim.system.DamageSystem;
 import pl.mzebrows.pwt.sim.system.DodgeSystem;
@@ -29,14 +31,19 @@ import pl.mzebrows.pwt.sim.system.EvolutionSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
 import pl.mzebrows.pwt.sim.system.NavigationSystem;
+import pl.mzebrows.pwt.sim.system.ObjectiveSystem;
 import pl.mzebrows.pwt.sim.system.PerceptionSystem;
 import pl.mzebrows.pwt.sim.system.PickupSystem;
 import pl.mzebrows.pwt.sim.system.PositionHistorySystem;
 import pl.mzebrows.pwt.sim.system.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.ReaperSystem;
 import pl.mzebrows.pwt.sim.system.RespawnSystem;
+import pl.mzebrows.pwt.sim.system.SquadOrderSystem;
 import pl.mzebrows.pwt.sim.system.StrikeSystem;
 import pl.mzebrows.pwt.sim.system.StunSystem;
+import pl.mzebrows.pwt.sim.system.TrooperCombatSystem;
+import pl.mzebrows.pwt.sim.system.TrooperMindSystem;
+import pl.mzebrows.pwt.sim.system.TrooperMoveSystem;
 import pl.mzebrows.pwt.sim.system.WanderSystem;
 
 /**
@@ -62,6 +69,7 @@ import pl.mzebrows.pwt.sim.system.WanderSystem;
  */
 public final class Simulation {
 
+    private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
 
@@ -71,6 +79,7 @@ public final class Simulation {
     private final PooledEngine engine;
     private final Spawner spawner;
     private final ImmutableArray<Entity> commanders;
+    private final ImmutableArray<Entity> levels;
 
     private long tick;
     private boolean commanderInvulnerable;
@@ -95,13 +104,22 @@ public final class Simulation {
         this.spawner = new Spawner(engine, config, map);
         this.commanders =
                 engine.getEntitiesFor(Family.all(Commander.class, Intent.class).get());
+        this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
 
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new CommanderControlSystem(spawner));
         engine.addSystem(new MeleeSystem(spawner));
-        engine.addSystem(new PerceptionSystem(config));
+        engine.addSystem(new PerceptionSystem(config, map));
         engine.addSystem(new NavigationSystem(config, map));
+        // One stream for the squad, shared by the two systems that drive it: roaming and
+        // sweeping are the same concern, and separating them would only mean two salts to
+        // keep apart for no benefit.
+        Rng squad = Rng.stream(config.seed(), RngStream.TROOPER);
+        engine.addSystem(new SquadOrderSystem(config));
+        engine.addSystem(new TrooperMindSystem(config, map, squad));
+        engine.addSystem(new TrooperMoveSystem(config, map, squad));
+        engine.addSystem(new TrooperCombatSystem(config, spawner, squad));
         engine.addSystem(new WanderSystem(Rng.stream(config.seed(), RngStream.WANDER), map));
         engine.addSystem(new AvoidanceSystem());
         engine.addSystem(new DodgeSystem());
@@ -117,6 +135,8 @@ public final class Simulation {
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
         engine.addSystem(new ProjectileBoundsSystem(map, spawner));
+        engine.addSystem(new ControlPointSystem());
+        engine.addSystem(new ObjectiveSystem());
         engine.addSystem(new AppearanceSystem(config));
         engine.addSystem(new ReaperSystem());
 
@@ -141,7 +161,14 @@ public final class Simulation {
         for (int i = 0; i < commanders.size(); i++) {
             Entity commander = commanders.get(i);
             INTENT.get(commander)
-                    .set(input.moveX(), input.moveY(), input.aimX(), input.aimY(), input.firing(), input.striking());
+                    .set(
+                            input.moveX(),
+                            input.moveY(),
+                            input.aimX(),
+                            input.aimY(),
+                            input.firing(),
+                            input.striking(),
+                            input.order());
             if (INVULNERABLE.has(commander)) {
                 INVULNERABLE.get(commander).permanent = commanderInvulnerable;
             }
@@ -153,6 +180,26 @@ public final class Simulation {
     /** Spawns the player-controlled unit. */
     public Entity spawnCommander(float x, float y) {
         return spawner.spawnCommander(x, y);
+    }
+
+    /**
+     * The level entity's state, for a scenario naming what it wants done (G0007).
+     *
+     * <p>There is always exactly one: it is spawned in this constructor, before any scenario runs, so
+     * nothing here has a null case to consider.
+     */
+    public Level level() {
+        return LEVEL.get(levels.first());
+    }
+
+    /** Spawns ground a squad takes by standing on it. Spawn these before whatever stands on them. */
+    public Entity spawnControlPoint(float x, float y) {
+        return spawner.spawnControlPoint(x, y);
+    }
+
+    /** Spawns one member of the squad, on the commander's side. */
+    public Entity spawnTrooper(float x, float y) {
+        return spawner.spawnTrooper(x, y);
     }
 
     /** Spawns a chasing unit of the given strain. */

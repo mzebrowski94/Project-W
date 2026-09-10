@@ -86,8 +86,28 @@ class ConfigDefaultsTest {
     @Test
     void rejectsANonPositiveVirtualSize() {
         assertThatThrownBy(() -> new GraphicConfig(
-                        0f, 90f, 1280, 720, true, Color.BLACK, palette(), terrain(), tint(), mark(), camera()))
+                        0f,
+                        90f,
+                        1280,
+                        720,
+                        true,
+                        Color.BLACK,
+                        palette(),
+                        terrain(),
+                        tint(),
+                        mark(),
+                        facing(),
+                        ordered(),
+                        camera()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static OrderMark ordered() {
+        return new OrderMark(1.55f, 0.75f);
+    }
+
+    private static FacingMark facing() {
+        return new FacingMark(1.35f, 0.34f, 0.55f);
     }
 
     private static Palette palette() {

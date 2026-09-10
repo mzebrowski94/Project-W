@@ -173,6 +173,56 @@ class TileMapTest {
         assertThat(map.isClearPath(30f, 42.5f, 80f, 42.5f, BROAD)).isFalse();
     }
 
+    @Test
+    void seesStraightAcrossOpenGround() {
+        assertThat(plain().clearLine(10f, 42.5f, 140f, 42.5f)).isTrue();
+    }
+
+    @Test
+    void seesNothingThroughRock() {
+        TileMap map = TileMap.builder(COLS, ROWS, TILE)
+                .fill(Terrain.PLAIN)
+                .rect(10, 0, 1, ROWS, Terrain.ROCK)
+                .build();
+
+        assertThat(map.clearLine(10f, 42.5f, 140f, 42.5f)).isFalse();
+    }
+
+    /**
+     * The case a marched sampler gets wrong. A ray clipping the corner where two walls meet passes
+     * through solid ground, but half-tile samples on either side of the corner can both land on open
+     * tiles - which is a unit noticing through a wall, once in a while, unreproducibly.
+     */
+    @Test
+    void seesNothingThroughTheCornerWhereTwoWallsMeet() {
+        TileMap map = TileMap.builder(COLS, ROWS, TILE)
+                .fill(Terrain.PLAIN)
+                .rect(5, 5, 1, 1, Terrain.ROCK)
+                .build();
+
+        assertThat(map.clearLine(27.4f, 27.4f, 32.6f, 32.6f)).isFalse();
+    }
+
+    @Test
+    void seesSomethingStandingInTheSameTile() {
+        assertThat(plain().clearLine(12f, 12f, 13f, 13f)).isTrue();
+    }
+
+    @Test
+    void seesNothingPastTheEdgeOfTheMap() {
+        assertThat(plain().clearLine(10f, 42.5f, -30f, 42.5f)).isFalse();
+    }
+
+    @Test
+    void seesNothingFromInsideRock() {
+        TileMap map = TileMap.builder(COLS, ROWS, TILE)
+                .fill(Terrain.PLAIN)
+                .rect(2, 8, 1, 1, Terrain.ROCK)
+                .build();
+
+        assertThat(map.clearLine(12.5f, 42.5f, 140f, 42.5f)).isFalse();
+    }
+
     private static TileMap plain() {
         return TileMap.builder(COLS, ROWS, TILE).fill(Terrain.PLAIN).build();
     }

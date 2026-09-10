@@ -2,6 +2,8 @@ package pl.mzebrows.pwt.sim;
 
 import java.util.function.UnaryOperator;
 import lombok.With;
+import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
@@ -41,11 +43,14 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * @param maxTicksPerFrame ceiling on catch-up steps, so a stalled frame cannot spiral
  * @param map the grid a level is laid out on; its extent <em>is</em> the arena
  * @param commander the player-controlled unit
+ * @param trooper the AI-controlled members of his squad
+ * @param spawn where a level puts the player's side to start with
  * @param units every strain of chasing unit, by kind
  * @param pickups every kind of thing that can be lying on the field, by kind
  * @param weapons every gun the commander can be carrying, by kind
  * @param melee the commander's hand strike
  * @param rabbit the neutral creature that wanders the field and is eaten
+ * @param controlPoint what it takes to hold a point, and how far taking one carries
  * @param obstacle the static circles that block movement
  * @param collision how hard the constraint solver works
  */
@@ -56,11 +61,14 @@ public record SimConfig(
         int maxTicksPerFrame,
         MapConfig map,
         CommanderConfig commander,
+        TrooperConfig trooper,
+        SpawnConfig spawn,
         Defs<UnitKind, UnitDef> units,
         Defs<PickupKind, PickupDef> pickups,
         Defs<WeaponKind, WeaponDef> weapons,
         MeleeConfig melee,
         RabbitConfig rabbit,
+        ControlPointConfig controlPoint,
         ObstacleConfig obstacle,
         CollisionConfig collision) {
 
@@ -106,17 +114,38 @@ public record SimConfig(
                 1f / 60f,
                 5,
                 new MapConfig(32, 18, 5f, 6),
-                new CommanderConfig(2f, 28f, 100f, 1.5f, 3f, 6f, 2f),
+                new CommanderConfig(2f, 19f, 100f, 1.5f, 3f, 6f, 2f),
+                new TrooperConfig(
+                        1.6f,
+                        13.5f,
+                        4,
+                        100f,
+                        1f,
+                        WeaponKind.SIDEARM,
+                        new AvoidanceDef(true, 7f, 0.35f, 1.6f),
+                        0.55f,
+                        0.8f,
+                        0.7f,
+                        1.6f,
+                        3f,
+                        new PerceptionDef(false, true, 22f, 28f, 0f, 100f, true),
+                        22f,
+                        40f,
+                        1.6f,
+                        7f,
+                        0.5f),
+                new SpawnConfig(1, 2, 5),
                 defaultUnits(),
                 defaultPickups(),
                 defaultWeapons(),
-                new MeleeConfig(0.45f, 0f, 0.12f, 1.2f, 1.4f, 120f, 180f, 1f, true, 14f, 100f, 45f, 120f),
+                new MeleeConfig(0.6f, 0f, 0.12f, 1.2f, 1.4f, 120f, 180f, 1f, true, 14f, 100f, 45f, 120f),
                 new RabbitConfig(
-                        22f,
+                        15f,
                         1f,
                         0.4f,
                         new WanderDef(true, 18f, 0.7f, 1f, 0.3f, 1.1f, 3f),
-                        new DodgeDef(true, 26f, 46f, 0.32f, 0.9f, 1.2f)),
+                        new DodgeDef(true, 26f, 32f, 0.32f, 0.9f, 1.2f)),
+                new ControlPointConfig(6f, 5f, 48f),
                 new ObstacleConfig(3.5f, 8),
                 new CollisionConfig(3));
     }
@@ -127,39 +156,39 @@ public record SimConfig(
                         UnitKind.GRUNT,
                         new UnitDef(
                                 1.8f,
-                                10.5f,
+                                7.5f,
                                 12,
                                 100f,
                                 100f,
-                                1f,
+                                1.3f,
                                 0.6f,
                                 1.5f,
                                 1f,
                                 3,
                                 UnitKind.BRUTE,
-                                new PerceptionDef(true, true, 30f, 45f, 14f),
+                                PerceptionDef.allRound(true, true, 30f, 45f, 14f),
                                 new WanderDef(true, 12f, 0.45f, 1.5f, 0.4f, 1.4f, 4f),
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
-                                new LeapDef(true, 16f, 42f, 0.28f, 2, 0.18f, 1.6f, 0.08f, 0.22f),
+                                new LeapDef(true, 16f, 29f, 0.28f, 2, 0.18f, 1.6f, 0.08f, 0.22f),
                                 Look.GRUNT))
                 .put(
                         UnitKind.BRUTE,
                         new UnitDef(
                                 2.6f,
-                                6.75f,
+                                4.75f,
                                 3,
                                 250f,
                                 100f,
-                                1.2f,
+                                1.5f,
                                 0.6f,
                                 1.5f,
                                 1f,
                                 0,
                                 null,
-                                new PerceptionDef(true, true, 24f, 36f, 10f),
+                                PerceptionDef.allRound(true, true, 24f, 36f, 10f),
                                 new WanderDef(true, 8f, 0.35f, 2f, 0.8f, 2.4f, 5f),
                                 new AvoidanceDef(true, 9f, 0.5f, 1.3f),
-                                new LeapDef(true, 22f, 34f, 0.42f, 3, 0.26f, 2.4f, 0.18f, 0.42f),
+                                new LeapDef(true, 22f, 24f, 0.42f, 3, 0.26f, 2.4f, 0.18f, 0.42f),
                                 Look.BRUTE))
                 .build();
     }
@@ -170,8 +199,8 @@ public record SimConfig(
      */
     private static Defs<WeaponKind, WeaponDef> defaultWeapons() {
         return Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
-                .put(WeaponKind.SIDEARM, new WeaponDef(0.18f, 70f, 0.6f, 50f, Look.PROJECTILE))
-                .put(WeaponKind.RAILGUN, new WeaponDef(0.8f, 140f, 1f, 300f, Look.SLUG))
+                .put(WeaponKind.SIDEARM, new WeaponDef(0.3f, 42f, 0.6f, 50f, Look.PROJECTILE))
+                .put(WeaponKind.RAILGUN, new WeaponDef(1.2f, 85f, 1f, 300f, Look.SLUG))
                 .build();
     }
 
@@ -212,6 +241,7 @@ public record SimConfig(
      */
     public float largestRadius() {
         float largest = Math.max(commander.radius(), obstacle.radius());
+        largest = Math.max(largest, trooper.radius());
         largest = Math.max(largest, melee.radius());
         for (WeaponDef gun : weapons.values()) {
             largest = Math.max(largest, gun.projectileRadius());
@@ -223,6 +253,25 @@ public record SimConfig(
             largest = Math.max(largest, pickup.radius());
         }
         return largest;
+    }
+
+    /**
+     * What it takes to hold a control point.
+     *
+     * @param radius how far from the middle counts as standing on it, in world units. Wide enough
+     *     that a squad fits inside it, or holding one becomes a queue rather than a stand
+     * @param captureSeconds how long somebody has to stay inside it. This is the number that decides
+     *     whether a point is a formality or a fight - it is the window the level has to answer with
+     * @param aggroRadius how far the noise of an attempt carries, in world units. Longer than a
+     *     unit's own detection range on purpose: taking a point is meant to bring things to you
+     */
+    @With
+    public record ControlPointConfig(float radius, float captureSeconds, float aggroRadius) {
+        public ControlPointConfig {
+            Require.positive("control point radius", radius);
+            Require.positive("control point captureSeconds", captureSeconds);
+            Require.notNegative("control point aggroRadius", aggroRadius);
+        }
     }
 
     /**
@@ -305,6 +354,121 @@ public record SimConfig(
             Require.notNegative("commander respawnDelaySeconds", respawnDelaySeconds);
             Require.notNegative("commander respawnMargin", respawnMargin);
             Require.notNegative("commander respawnInvulnerableSeconds", respawnInvulnerableSeconds);
+        }
+    }
+
+    /**
+     * One AI-controlled member of the squad, as numbers.
+     *
+     * <p>Separate from {@link UnitDef} rather than a strain in it, for the reasons on the
+     * {@code Trooper} component: a trooper has no evolution, no leap and no contact damage, and would
+     * carry all three as dead fields.
+     *
+     * @param radius circular body, in world units
+     * @param speed world units per second at its ordinary pace. Below the commander's, so a squad
+     *     following him strings out behind rather than crowding him
+     * @param squadSize how many spawn with him. <strong>Scenario-facing</strong>: a scenario varies it
+     *     through {@code withTrooper(...)} rather than by editing {@code game.properties}
+     * @param health damage one absorbs before dying
+     * @param deathThroesSeconds how long its body stays on the field after a killing blow
+     * @param weapon the gun it carries
+     * @param avoidance how far ahead it looks for things in its way, and how hard it leans off them
+     * @param urgency how much heading for the objective beats looking around, in {@code [0, 1]}. One
+     *     is a beeline; zero is a unit that weaves so hard it barely advances. <strong>Not a
+     *     speed</strong> - "move out" is what changes speed, and one dial doing both would make the
+     *     order invisible. This is the number that sets the game's pace
+     * @param scanSpread how far off the route a full lean carries it, as a fraction of its heading
+     * @param scanMinSeconds shortest a lean lasts before it sweeps back the other way
+     * @param scanMaxSeconds longest. Drawn between the two from the level seed so a squad does not
+     *     sweep in lockstep, which reads as a chorus line rather than as men looking around
+     * @param arriveRadius how close counts as having got there, in world units
+     * @param perception what it can notice: how far, how wide an arc, and whether rock hides things
+     *     from it. A trooper is the unit G0015 exists for - it declares all three
+     * @param orderRadius how far the commander's voice carries, in world units. This is the whole of
+     *     who hears an order (G0017) - wide enough that a squad walking with him all hear it, short
+     *     enough that a stray one has to be gone and fetched
+     * @param moveOutDistance how much ground a "move out" buys, in world units. A distance rather
+     *     than a countdown, so a squad held up by a fight still gets its full push afterwards
+     * @param moveOutSpeedFactor how much faster it walks while that lasts
+     * @param followDistance how close a following trooper tries to stay to the commander, in world
+     *     units. Loose on purpose: a squad glued to him is a squad he cannot see past
+     * @param strikeChancePerSecond how often it tries a bare-handed sweep at something already
+     *     committed to a leap, per second of opportunity. <strong>Very small on purpose.</strong> The
+     *     hand strike is the commander's answer to a leap, and a squad that reliably swatted them
+     *     would take the moment away from him
+     */
+    @With
+    public record TrooperConfig(
+            float radius,
+            float speed,
+            int squadSize,
+            float health,
+            float deathThroesSeconds,
+            WeaponKind weapon,
+            AvoidanceDef avoidance,
+            float urgency,
+            float scanSpread,
+            float scanMinSeconds,
+            float scanMaxSeconds,
+            float arriveRadius,
+            PerceptionDef perception,
+            float orderRadius,
+            float moveOutDistance,
+            float moveOutSpeedFactor,
+            float followDistance,
+            float strikeChancePerSecond) {
+        public TrooperConfig {
+            Require.positive("trooper radius", radius);
+            Require.positive("trooper speed", speed);
+            Require.notNegative("trooper squadSize", squadSize);
+            Require.positive("trooper health", health);
+            Require.notNegative("trooper deathThroesSeconds", deathThroesSeconds);
+            Require.notNegative("trooper scanSpread", scanSpread);
+            Require.positive("trooper scanMinSeconds", scanMinSeconds);
+            Require.positive("trooper arriveRadius", arriveRadius);
+            if (urgency < 0f || urgency > 1f) {
+                throw new IllegalArgumentException("trooper urgency must be in [0, 1], was " + urgency);
+            }
+            if (scanMaxSeconds < scanMinSeconds) {
+                throw new IllegalArgumentException("trooper scanMaxSeconds must not be below scanMinSeconds");
+            }
+            Require.notNegative("trooper strikeChancePerSecond", strikeChancePerSecond);
+            Require.positive("trooper orderRadius", orderRadius);
+            Require.notNegative("trooper moveOutDistance", moveOutDistance);
+            Require.positive("trooper moveOutSpeedFactor", moveOutSpeedFactor);
+            Require.positive("trooper followDistance", followDistance);
+        }
+    }
+
+    /**
+     * Where a level puts the player's side to start with, as a rectangle of tiles on the left of the
+     * map.
+     *
+     * <p><strong>A stand-in for something a map will one day carry itself.</strong> A spawn area
+     * belongs to a level, and levels are still hand-laid; naming it in config keeps every scenario
+     * starting in the same recognisable place until generated fragments can say where their entrances
+     * are. A scenario that wants a different one overrides it, exactly as it overrides anything else.
+     *
+     * <p>It is tiles, and units are jittered inside them (G0009). Nothing is placed at a tile centre
+     * and a squad is never lined up on a grid.
+     *
+     * @param col leftmost tile column of the area
+     * @param width how many columns across
+     * @param height how many rows tall, centred vertically on the map
+     */
+    @With
+    public record SpawnConfig(int col, int width, int height) {
+        public SpawnConfig {
+            Require.notNegative("spawn col", col);
+            Require.atLeastOne("spawn width", width);
+            Require.atLeastOne("spawn height", height);
+        }
+
+        /** The spawn area on this map: the configured columns, centred on the map's own height. */
+        public TileRect on(TileMap map) {
+            int rows = Math.min(height, map.rows());
+            int row = Math.max(0, (map.rows() - rows) / 2);
+            return new TileRect(col, row, Math.min(width, map.cols()), rows);
         }
     }
 

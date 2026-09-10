@@ -31,6 +31,8 @@ package pl.mzebrows.pwt.client;
 public final class CameraDirector {
 
     /**
+     * How the view follows what it is watching, and how far out it may sit.
+     *
      * @param deadZone how far the goal may drift from the current centre before the view follows it,
      *     in world units
      * @param smoothing how fast the view closes on its goal, per second. Higher is tighter.

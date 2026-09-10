@@ -5,7 +5,9 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Enemy;
@@ -14,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 
 /**
@@ -30,7 +33,7 @@ public final class DebugOverlay {
     private final Scenario scenario;
 
     /** Draws the overlay. Never called from inside the simulation, so it may allocate freely. */
-    public void render(Simulation simulation, boolean paused) {
+    public void render(Simulation simulation, boolean paused, @Nullable Order lastOrder) {
         hud.begin();
         hud.line(0, scenario.name() + (paused ? "   [PAUSED]" : ""));
         hud.line(1, "fps " + Gdx.graphics.getFramesPerSecond() + "    tick " + simulation.tick());
@@ -42,7 +45,10 @@ public final class DebugOverlay {
                         + count(simulation, Obstacle.class));
         hud.line(3, "entities " + simulation.engine().getEntities().size());
         hud.line(4, "commander " + commanderState(simulation));
-        hud.line(hud.rows() - 1, "P pause   . step   R restart   G god   F1 overlay   ESC menu");
+        hud.line(5, "last order " + (lastOrder == null ? "-" : lastOrder.name().toLowerCase(Locale.ROOT)));
+        hud.line(
+                hud.rows() - 1,
+                "1 follow  2 move out  3 stop  4 cancel      P pause  . step  R restart  G god  F1  ESC");
         hud.end();
     }
 

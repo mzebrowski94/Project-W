@@ -1,5 +1,6 @@
 package pl.mzebrows.pwt.sim.def;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
@@ -13,12 +14,33 @@ class PerceptionDefTest {
 
     @Test
     void refusesALoseRangeShorterThanTheDetectionRange() {
-        assertThatThrownBy(() -> new PerceptionDef(false, true, 30f, 20f, 0f))
+        assertThatThrownBy(() -> PerceptionDef.allRound(false, true, 30f, 20f, 0f))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void allowsTheTwoRangesToBeEqual() {
-        new PerceptionDef(false, true, 30f, 30f, 0f);
+        PerceptionDef.allRound(false, true, 30f, 30f, 0f);
+    }
+
+    @Test
+    void refusesAnArcThatIsNotAnArc() {
+        assertThatThrownBy(() -> new PerceptionDef(false, true, 30f, 30f, 0f, 0f, false))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PerceptionDef(false, true, 30f, 30f, 0f, 400f, false))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** All round has to be the cosine every direction beats, or an arc would blind a strain by default. */
+    @Test
+    void noticesEveryDirectionWhenItLooksAllRound() {
+        assertThat(PerceptionDef.allRound(false, true, 30f, 30f, 0f).arcCosine())
+                .isEqualTo(-1f);
+    }
+
+    @Test
+    void turnsAnArcIntoTheCosineOfItsHalfAngle() {
+        assertThat(new PerceptionDef(false, true, 30f, 30f, 0f, 180f, false).arcCosine())
+                .isCloseTo(0f, org.assertj.core.data.Offset.offset(1e-6f));
     }
 }

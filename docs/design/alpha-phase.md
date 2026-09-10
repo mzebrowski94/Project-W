@@ -92,8 +92,14 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | Two units in a clinch are two circles touching, both drawn the same | The grapple animation, which resolves into one of them dying. `Appearance.State.GRAPPLING` is the hook and is already published for both parties for the whole lock. |
 | Nothing reacts to a death except respawning and the killer's lock | More death reactions, as they are designed. The machinery is there: mark `Dead`, add a component, add a small system. |
 | Rock is laid by hand in `Warren` and scattered blindly in `Skirmish` | Generated fragments. The terrain and the solver are real; what decides *where* rock goes is not designed yet. |
-| **Frozen troopers.** An inert body on the field that an alien eats and the commander rescues. It is a pickup, not a trooper - it does not follow, cannot be commanded and cannot die. | Real troopers. It exists so evolution-by-devouring can be built and played before the squad does, and **nothing about it answers how the squad works**. |
-| `Level.pendingReinforcements` counts rescued troopers and nothing reads it | The squad. The number is there so a level-scope grant has somewhere real to land and the path can be tested end to end; it changes nothing in play. |
+| **Frozen troopers.** An inert body on the field that an alien eats and the commander rescues. It is a pickup, not a trooper - it does not follow, cannot be commanded and cannot die. | Real troopers, which now exist. Turning a rescued one into a member of the squad is buildable and is somebody's next session; **nothing about the pickup answers how the squad works**, and it still does not. |
+| `Level.pendingReinforcements` counts rescued troopers and nothing reads it | The squad exists now, so this is finally connectable - a rescued trooper becoming a real one. Still nothing reads it. |
+| Squad orders are given on keys `1`-`4` | A button and a radial menu. The verbs and who hears them are designed (G0017); the input is not. |
+| A trooper under orders wears a ring | Whatever the art does with it. `Appearance.ordered` is the hook and is already published. |
+| A control point is a dark disc that fills up, drawn under everything standing on it | Whatever a control point looks like. The dwell, the reset and the radius are real, and the fill rides the same `charge` channel as everything else that fills up. |
+| A level's objectives are met and nothing happens | The level lifecycle. What a completed level *does* is an open question in `README.md`, and inventing an answer inside a system would settle it by accident. |
+| A scenario names its control points by hand, and the spawn area is a config value | Generated fragments saying where their own entrances and objectives are. Same standing as hand-laid rock. |
+| Troopers roam to seeded random points when nothing is left to take | Something that actually searches - a sweep, a last-known-position, a patrol route. Roaming is enough to see the squad clear a map and is not a decision about how they search. |
 | A unit that is filling up is drawn as a brighter core inside its circle | Whatever the art does with it. `Appearance.charge` is the hook and is already published as a fraction, so the renderer decides and the simulation never learns how it is shown. |
 | The commander's gun is named only in the F1 overlay | A real HUD. What he is holding is visible in what he fires, which is enough to play; it is not enough to be told at a glance. |
 
@@ -103,6 +109,15 @@ Behaviour that looks like design and is not. Each line names what replaces it.
   collision grid is built after the AI has run, so a unit scores every other body every tick. At a few
   dozen entities that is free. Past a couple of hundred it wants either a second grid or the collision
   grid moved earlier in the tick, and it will show up as frame time rather than as a bug.
+- **A provoked unit walks straight at what provoked it.** No flow field: each one is cross about a
+  different place, so routing them properly would cost a grid pass per unit per tick, which is the
+  per-unit cost a flow field exists to avoid. One provoked from behind a wall walks into the wall and
+  mills about. At the ranges a fight happens at that is rare; it stops being acceptable the moment
+  something can provoke from across the level.
+- **A sight line is blocked by rock and by nothing else.** Obstacles, corpses and other units do not
+  hide anything, because they are entities and the test is a pure function of terrain (ADR 0009).
+  Blocking on them needs the collision grid, which is built *after* the AI has run. Same asymmetry as
+  the routing limit below, and the same reasoning.
 - **A route plans around rock and steers around everything else.** The flow field is built from the
   map alone, so obstacles, corpses and other units never enter a route - avoidance handles them, which
   means a pack still funnels through a doorway rather than queueing for it.

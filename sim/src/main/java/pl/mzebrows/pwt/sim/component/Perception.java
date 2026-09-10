@@ -37,8 +37,35 @@ public final class Perception implements Component, Pool.Poolable {
     /** How close something edible has to be before an idle unit goes for it, in world units. */
     public float secondaryRange;
 
+    /**
+     * The smallest dot product between this unit's facing and the direction to something for that
+     * thing to count as in front of it. Minus one notices all round, which is what every alien does.
+     *
+     * <p>Stored as a cosine rather than as the arc it came from so the per-tick test is a dot product
+     * and a comparison. The conversion happens once, at spawn, in {@code PerceptionDef.arcCosine()}.
+     */
+    public float arcCosine = -1f;
+
+    /** Whether rock between this unit and what it might notice hides that thing (G0015). */
+    public boolean requiresClearLine;
+
     /** True while this unit is hunting the commander. */
     public boolean aggro;
+
+    /**
+     * True while this unit is on its way to somewhere it was provoked from - shot at, struck, or
+     * stood next to a point being taken off it.
+     *
+     * <p>A place and not a target (G0016). What it fights when it gets there is whatever is standing
+     * there, decided by contact like every other fight. The trade that buys is written down in the
+     * decision: focusing the first attacker until it dies becomes emergent rather than guaranteed.
+     */
+    public boolean provoked;
+
+    /** Where that was. Meaningless unless {@link #provoked}. */
+    public float provokedX;
+
+    public float provokedY;
 
     /** True while this unit is on its way to something edible. Never true at the same time as aggro. */
     public boolean foraging;
@@ -54,18 +81,35 @@ public final class Perception implements Component, Pool.Poolable {
             boolean newLosesInterest,
             float newDetectionRange,
             float newLoseRange,
-            float newSecondaryRange) {
+            float newSecondaryRange,
+            float newArcCosine,
+            boolean newRequiresClearLine) {
         this.alwaysAggressive = newAlwaysAggressive;
         this.losesInterest = newLosesInterest;
         this.detectionRange = newDetectionRange;
         this.loseRange = newLoseRange;
         this.secondaryRange = newSecondaryRange;
+        this.arcCosine = newArcCosine;
+        this.requiresClearLine = newRequiresClearLine;
         return this;
     }
 
     /** True while something other than standing about has its attention. */
     public boolean occupied() {
-        return aggro || foraging;
+        return aggro || provoked || foraging;
+    }
+
+    /**
+     * Sends it to deal with whatever is at a place, because something there hurt it.
+     *
+     * <p>Latched: it keeps walking there until it arrives or the commander turns up, rather than
+     * re-deciding every tick. Without the latch, two troopers firing alternately would hold a unit
+     * swinging between them instead of pulling it onto either.
+     */
+    public void provokeAt(float x, float y) {
+        this.provoked = true;
+        this.provokedX = x;
+        this.provokedY = y;
     }
 
     /** Sends it after something edible at a place, rather than at an entity that may not last the tick. */
@@ -87,7 +131,12 @@ public final class Perception implements Component, Pool.Poolable {
         detectionRange = 0f;
         loseRange = 0f;
         secondaryRange = 0f;
+        arcCosine = -1f;
+        requiresClearLine = false;
         aggro = false;
+        provoked = false;
+        provokedX = 0f;
+        provokedY = 0f;
         foraging = false;
         foodX = 0f;
         foodY = 0f;

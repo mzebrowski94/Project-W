@@ -56,6 +56,9 @@ Only things actually hit. Add what you hit; delete what stops happening.
 | A dependency's "latest" is a milestone (AssertJ resolved `4.0.0-M1`) | Maven metadata `<latest>` includes pre-releases. | Pin the newest stable explicitly in `gradle.properties`. |
 | `ArchitectureTest` suddenly reports violations inside itself | Build outputs were relocated and no longer match `.../build/classes/java/test/`; ArchUnit's `DoNotIncludeTests` silently stops excluding test classes. | Keep the `/build/` segment in any relocated output path - `gradle.sh` does. |
 | Lombok `sun.misc.Unsafe` warning | Unavoidable on JDK 25. | Ignore; `verify.sh` filters it. |
+| `Could not create service of type FileHasher ... java.io.IOException: Input/output error`, and `rm` on `.gradle/**` says `Permission denied` | IntelliJ or a Windows `gradlew` daemon is holding `<project>/.gradle`'s lock files, which the sandbox VM may not touch. Reads like a corrupt cache and is not one. | Nothing to do: `gradle.sh` passes `--project-cache-dir` so the sandbox keeps its project cache off the mount. If it reappears, check that flag is still there before deleting anything. |
+| An input that is "just pressed" seems to be ignored at random | A frame shorter than one tick runs **zero** simulation steps, so a one-frame input reaches no tick at all. Above 60 Hz that is most frames. | Latch it until a tick spends it, as `ScenarioSession.pendingOrder` does. Anything read with `isKeyJustPressed` and handed to `advance()` has this problem. |
+| `error: warnings found and -Werror specified` | A real warning. Most often a javadoc orphaned by inserting a method *above* the one it documented. | Fix it. Do not disable the check - it exists because eight warnings accumulated in a single session without anyone noticing. |
 
 ## Friction only Mateusz can remove
 

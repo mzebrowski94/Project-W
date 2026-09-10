@@ -3,11 +3,14 @@ package pl.mzebrows.pwt.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.badlogic.ashley.core.Family;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 
 /**
@@ -188,6 +191,83 @@ class ScenarioSessionTest {
         assertThat(session.simulation().config().commander().speed()).isEqualTo(FasterCommander.SPEED);
     }
 
+    /**
+     * The overlay readout. Orders are delivered by the simulation and nothing about them is kept
+     * there afterwards, which is right - "what did I last press" is a question about the player, not
+     * about the world - so the answer has to live here.
+     */
+    @Test
+    void remembersTheLastOrderTheirPlayerGave() {
+        ScenarioSession session = session();
+
+        session.advance(TICK, IDLE.ordering(Order.FOLLOW_ME));
+        session.advance(TICK, IDLE.ordering(Order.STOP));
+        session.advance(TICK, IDLE);
+
+        assertThat(session.lastOrder()).isEqualTo(Order.STOP);
+    }
+
+    @Test
+    void hasNoLastOrderBeforeOneIsGiven() {
+        assertThat(session().lastOrder()).isNull();
+    }
+
+    /** Paused is still a way to give one, and a readout that disagreed with the key would be worse than none. */
+    @Test
+    void remembersAnOrderGivenWhilePaused() {
+        ScenarioSession session = session();
+        session.apply(HarnessCommand.PAUSE, IDLE);
+
+        session.advance(TICK, IDLE.ordering(Order.MOVE_OUT));
+
+        assertThat(session.lastOrder()).isEqualTo(Order.MOVE_OUT);
+    }
+
+    @Test
+    void forgetsTheLastOrderWhenTheScenarioRestarts() {
+        ScenarioSession session = session();
+        session.advance(TICK, IDLE.ordering(Order.FOLLOW_ME));
+
+        session.apply(HarnessCommand.RESTART, IDLE);
+
+        assertThat(session.lastOrder()).isNull();
+    }
+
+    /**
+     * The bug this exists to stop coming back. A key is "just pressed" for exactly one <em>frame</em>,
+     * and a frame shorter than a tick runs no simulation step at all - which above 60 Hz is most
+     * frames. The order used to go into the input record, get shown in the overlay, and reach no tick
+     * whatsoever: the console said it had been given and more than half the time nothing happened.
+     */
+    @Test
+    void deliversAnOrderGivenOnAFrameTooShortToRunATick() {
+        ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
+
+        session.advance(TICK * 0.4f, IDLE.ordering(Order.STOP));
+        session.advance(TICK, IDLE);
+
+        assertThat(trooperOrder(session)).isEqualTo(Order.STOP);
+    }
+
+    /** One press is one order, however many ticks the frame after it happens to run. */
+    @Test
+    void spendsAnOrderOnceEvenWhenAFrameRunsSeveralTicks() {
+        ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
+
+        session.advance(TICK * 3f, IDLE.ordering(Order.STOP));
+
+        assertThat(trooperOrder(session)).isEqualTo(Order.STOP);
+    }
+
+    private static @Nullable Order trooperOrder(ScenarioSession session) {
+        return session.simulation()
+                .engine()
+                .getEntitiesFor(Family.all(Trooper.class).get())
+                .get(0)
+                .getComponent(Trooper.class)
+                .order;
+    }
+
     private static ScenarioSession session() {
         return new ScenarioSession(new OneCommander(), SimConfig.defaults());
     }
@@ -207,6 +287,25 @@ class ScenarioSessionTest {
         @Override
         public void populate(Simulation simulation) {
             simulation.spawnCommander(10f, 10f);
+        }
+    }
+
+    /** A commander with one trooper beside him, for testing that an order actually arrives. */
+    private static final class CommanderAndTrooper implements Scenario {
+        @Override
+        public String name() {
+            return "One commander and a trooper";
+        }
+
+        @Override
+        public String description() {
+            return "A commander with one man, for checking an order reaches the simulation.";
+        }
+
+        @Override
+        public void populate(Simulation simulation) {
+            simulation.spawnCommander(10f, 10f);
+            simulation.spawnTrooper(13f, 10f);
         }
     }
 

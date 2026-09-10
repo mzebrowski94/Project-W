@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
+import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dodge;
@@ -38,6 +39,7 @@ import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Taking;
+import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.component.Weapon;
@@ -124,7 +126,67 @@ public final class Spawner {
                         melee.knockbackSpeed(),
                         melee.knockbackDecay()));
         entity.add(engine.createComponent(Taking.class));
-        entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER));
+        entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER).face(1f, 0f));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns one trooper: a member of the squad, on the commander's side.
+     *
+     * <p>It has a body, a gun and a life, and nothing drives it yet. That is the stage boundary
+     * rather than an oversight - a trooper that can be seen, shoved and killed is worth putting on
+     * the field before anything decides where it walks, because everything after this is judged by
+     * watching it move.
+     */
+    public Entity spawnTrooper(float x, float y) {
+        SimConfig.TrooperConfig trooper = config.trooper();
+        SimConfig.MeleeConfig melee = config.melee();
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Trooper.class)
+                .sees(
+                        trooper.perception().detectionRange(),
+                        trooper.perception().loseRange(),
+                        trooper.perception().arcCosine(),
+                        trooper.perception().requiresClearLine())
+                .look(1f, 0f));
+        entity.add(engine.createComponent(Faction.class).set(Side.PLAYER));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
+        entity.add(engine.createComponent(Body.class).set(trooper.radius()));
+        entity.add(engine.createComponent(Speed.class).set(trooper.speed()));
+        entity.add(engine.createComponent(Steering.class));
+        entity.add(engine.createComponent(Collider.class).set(true, true));
+        entity.add(engine.createComponent(Health.class).set(trooper.health()));
+        entity.add(engine.createComponent(Damage.class));
+        entity.add(engine.createComponent(Invulnerable.class));
+        entity.add(engine.createComponent(Stunned.class));
+        entity.add(engine.createComponent(Dying.class).set(trooper.deathThroesSeconds()));
+        entity.add(engine.createComponent(Avoidance.class)
+                .set(
+                        trooper.avoidance().enabled(),
+                        trooper.avoidance().scanRange(),
+                        trooper.avoidance().lookaheadSeconds(),
+                        trooper.avoidance().weight()));
+        entity.add(engine.createComponent(Weapon.class).set(trooper.weapon(), config.weapon(trooper.weapon())));
+        entity.add(engine.createComponent(Melee.class)
+                .set(
+                        melee.cooldownSeconds(),
+                        melee.windupSeconds(),
+                        melee.activeSeconds(),
+                        melee.reach(),
+                        melee.radius(),
+                        melee.damage(),
+                        melee.arcDegrees(),
+                        melee.lockSeconds(),
+                        melee.locksCommittedOnly(),
+                        melee.clinchCarrySpeed(),
+                        melee.clinchCarryDecay(),
+                        melee.knockbackSpeed(),
+                        melee.knockbackDecay()));
+        entity.add(engine.createComponent(Taking.class));
+        entity.add(engine.createComponent(Appearance.class).set(Look.TROOPER).face(1f, 0f));
         engine.addEntity(entity);
         return entity;
     }
@@ -160,7 +222,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Leap.class));
         entity.add(engine.createComponent(Taking.class));
         entity.add(engine.createComponent(Feed.class));
-        entity.add(engine.createComponent(Appearance.class));
+        entity.add(engine.createComponent(Appearance.class).face(1f, 0f));
         applyStrain(entity, kind);
         engine.addEntity(entity);
         return entity;
@@ -201,7 +263,9 @@ public final class Spawner {
                         def.perception().losesInterest(),
                         def.perception().detectionRange(),
                         def.perception().loseRange(),
-                        def.perception().secondaryRange());
+                        def.perception().secondaryRange(),
+                        def.perception().arcCosine(),
+                        def.perception().requiresClearLine());
         entity.getComponent(Wander.class)
                 .set(
                         def.wander().enabled(),
@@ -315,7 +379,32 @@ public final class Spawner {
                         rabbit.dodge().durationSeconds(),
                         rabbit.dodge().commitSeconds(),
                         rabbit.dodge().margin()));
-        entity.add(engine.createComponent(Appearance.class).set(def.look()));
+        entity.add(engine.createComponent(Appearance.class).set(def.look()).face(1f, 0f));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a control point: ground the squad takes by standing on it.
+     *
+     * <p><strong>No collider.</strong> A point is somewhere you walk, not something you walk into, so
+     * it never enters the pairwise path at all - which also means its body can be as wide as the
+     * capture radius without inflating the collision grid's cell size.
+     *
+     * <p>It carries a body anyway, because that is what the renderer measures a circle from, and a
+     * point drawn at its capture radius is a point whose edge the player can see. Spawn one before
+     * the units that will stand on it: the renderer draws in spawn order, so it wants to be the thing
+     * underneath.
+     */
+    public Entity spawnControlPoint(float x, float y) {
+        SimConfig.ControlPointConfig point = config.controlPoint();
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(ControlPoint.class)
+                .set(point.radius(), point.captureSeconds(), point.aggroRadius()));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(point.radius()));
+        entity.add(engine.createComponent(Appearance.class).set(Look.CONTROL_POINT));
         engine.addEntity(entity);
         return entity;
     }
@@ -398,7 +487,7 @@ public final class Spawner {
             Look look,
             Side side) {
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Projectile.class));
+        entity.add(engine.createComponent(Projectile.class).from(x, y));
         entity.add(engine.createComponent(Faction.class).set(side));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));

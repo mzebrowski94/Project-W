@@ -7,6 +7,7 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import java.util.Objects;
 import pl.mzebrows.pwt.sim.component.Avoidance;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
@@ -169,7 +170,10 @@ public final class AvoidanceSystem extends EntitySystem {
         boolean threatened = false;
         for (int i = 0; i < hazards.size(); i++) {
             Entity hazard = hazards.get(i);
-            if (hazard == entity || !COLLIDER.get(hazard).solid || PICKUP.has(hazard) || opposed(side, hazard)) {
+            if (Objects.equals(hazard, entity)
+                    || !COLLIDER.get(hazard).solid
+                    || PICKUP.has(hazard)
+                    || opposed(side, hazard)) {
                 continue;
             }
             Position hazardPosition = POSITION.get(hazard);

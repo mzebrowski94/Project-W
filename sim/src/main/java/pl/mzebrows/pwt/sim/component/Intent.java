@@ -2,6 +2,8 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.def.Order;
 
 /**
  * What a commander is trying to do this tick. Written from the per-tick input value object before
@@ -23,15 +25,31 @@ public final class Intent implements Component, Pool.Poolable {
     /** Whether the melee input is held this tick. The swing itself is rate-limited by {@link Melee}. */
     public boolean striking;
 
+    /**
+     * The squad order given this tick, or null.
+     *
+     * <p>One tick only, like everything else here. An order is <em>given</em> once and then stands on
+     * whichever troopers were near enough to hear it, so holding the key does not re-issue it every
+     * tick to whoever has since wandered into range.
+     */
+    public @Nullable Order order;
+
     /** Copies a tick's worth of intent in, and returns this component, for fluent spawning. */
     public Intent set(
-            float newMoveX, float newMoveY, float newAimX, float newAimY, boolean newFiring, boolean newStriking) {
+            float newMoveX,
+            float newMoveY,
+            float newAimX,
+            float newAimY,
+            boolean newFiring,
+            boolean newStriking,
+            @Nullable Order newOrder) {
         this.moveX = newMoveX;
         this.moveY = newMoveY;
         this.aimX = newAimX;
         this.aimY = newAimY;
         this.firing = newFiring;
         this.striking = newStriking;
+        this.order = newOrder;
         return this;
     }
 
@@ -43,5 +61,6 @@ public final class Intent implements Component, Pool.Poolable {
         aimY = 0f;
         firing = false;
         striking = false;
+        order = null;
     }
 }

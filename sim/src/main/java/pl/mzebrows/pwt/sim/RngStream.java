@@ -26,7 +26,10 @@ public enum RngStream {
     LEAP(0x2545_F491_4F6C_DD1DL),
 
     /** Where an idle unit wanders next, and how long it stands still first. */
-    WANDER(0x9E37_79B9_7F4A_7C55L);
+    WANDER(0x9E37_79B9_7F4A_7C55L),
+
+    /** How a trooper sweeps its attention as it advances, and where it roams with nothing left to take. */
+    TROOPER(0xD1B5_4A32_D192_ED03L);
 
     private final long salt;
 

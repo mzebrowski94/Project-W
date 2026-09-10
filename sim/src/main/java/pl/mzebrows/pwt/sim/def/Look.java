@@ -17,10 +17,14 @@ public enum Look {
     /** Nothing meaningful set - a pooled component that was reset and not yet reused. */
     NONE,
     COMMANDER,
+    /** One AI-controlled member of the squad. */
+    TROOPER,
     /** The basic chasing strain. */
     GRUNT,
     /** The heavy chasing strain. */
     BRUTE,
+    /** Ground a squad takes by standing on it. */
+    CONTROL_POINT,
     PROJECTILE,
     /** A heavy shot, so a gun is visible in what it fires. */
     SLUG,

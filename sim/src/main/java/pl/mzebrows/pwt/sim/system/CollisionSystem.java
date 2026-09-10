@@ -228,6 +228,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         owed.add(attack.amount, attack.victimInvulnerableSeconds);
+        recordSource(attacker, owed);
         lock(attacker, target, attack, owed);
     }
 
@@ -295,6 +296,29 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         owed.push(awayX / distance, awayY / distance, attack.knockbackSpeed);
+    }
+
+    /**
+     * Notes where the blow came from, so that whatever decides what it costs can also decide what it
+     * provokes (G0016).
+     *
+     * <p>For a shot that is the <em>muzzle</em> rather than the impact: a projectile lands a stride
+     * from its victim, and walking at that is walking on the spot. For a sweep it is whoever swung,
+     * because a sweep travels an arc and is often on the far side of what it hits. For anything
+     * else - claws, a body - it is the attacker itself.
+     */
+    private static void recordSource(Entity attacker, Damage owed) {
+        if (PROJECTILE.has(attacker)) {
+            Projectile shot = PROJECTILE.get(attacker);
+            owed.cameFrom(shot.originX, shot.originY);
+            return;
+        }
+        Entity swinger = owner(attacker);
+        Entity source = swinger != null ? swinger : attacker;
+        if (POSITION.has(source)) {
+            Position at = POSITION.get(source);
+            owed.cameFrom(at.x, at.y);
+        }
     }
 
     /** The entity that swung this, where the attacker is a swing rather than a unit. */

@@ -57,7 +57,11 @@ subprojects {
     options.encoding = 'UTF-8'
     options.release = 25
     options.incremental = true
-    options.compilerArgs += ['-Xlint:all', '-Xlint:-processing', '-Xlint:-serial']
+    // -Werror is what makes the warning list above worth having. Warnings printed by a build that
+    // still says SUCCESS are warnings nobody reads: eight of them accumulated in one session before
+    // anyone noticed, three of them javadocs orphaned by inserting a method above them - the kind of
+    // thing a compiler is very good at catching and a human is not.
+    options.compilerArgs += ['-Xlint:all', '-Xlint:-processing', '-Xlint:-serial', '-Werror']
 
     options.errorprone {
       disableWarningsInGeneratedCode = true

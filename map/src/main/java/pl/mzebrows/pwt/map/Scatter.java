@@ -66,15 +66,34 @@ public final class Scatter {
     }
 
     /**
+     * Places up to {@code count} circles of this radius inside one rectangle of tiles - a spawn area
+     * rather than the whole map.
+     *
+     * <p>Same jitter, same clearance and the same report of what would not fit as the full-map
+     * scatter, because it is the same routine with a smaller candidate list. A squad therefore lands
+     * spread out and off the tile centres, and a spawn area too small for the squad says so instead
+     * of stacking them.
+     *
+     * @return how many it actually placed, which is the caller's cue that the area was too small
+     */
+    public int scatter(TileRect area, int count, float radius, Place place) {
+        return place(shuffledTilesIn(area, ANY_GROUND), count, radius, place);
+    }
+
+    /**
      * Places up to {@code count} circles of this radius on tiles whose terrain is one of {@code on}.
      *
      * @return how many it actually placed, which is the caller's cue that the ground was full
      */
     public int scatter(int count, float radius, Set<Terrain> on, Place place) {
+        return place(shuffledTiles(on), count, radius, place);
+    }
+
+    /** Walks a prepared candidate list, jittering inside each tile until it has placed enough. */
+    private int place(int[] candidates, int count, float radius, Place place) {
         if (count <= 0) {
             return 0;
         }
-        int[] candidates = shuffledTiles(on);
         int placed = 0;
         for (int i = 0; i < candidates.length && placed < count; i++) {
             int col = candidates[i] % map.cols();
@@ -97,11 +116,16 @@ public final class Scatter {
      * walking tiles in order would fill a level from one corner.
      */
     private int[] shuffledTiles(Set<Terrain> on) {
-        int[] candidates = new int[map.cols() * map.rows()];
+        return shuffledTilesIn(new TileRect(0, 0, map.cols(), map.rows()), on);
+    }
+
+    /** The same, restricted to one rectangle of the grid. Tiles outside the map are simply not offered. */
+    private int[] shuffledTilesIn(TileRect area, Set<Terrain> on) {
+        int[] candidates = new int[area.tileCount()];
         int found = 0;
-        for (int row = 0; row < map.rows(); row++) {
-            for (int col = 0; col < map.cols(); col++) {
-                if (on.contains(map.terrainAtTile(col, row))) {
+        for (int row = area.row(); row < area.endRow(); row++) {
+            for (int col = area.col(); col < area.endCol(); col++) {
+                if (map.inBounds(col, row) && on.contains(map.terrainAtTile(col, row))) {
                     candidates[found++] = row * map.cols() + col;
                 }
             }
