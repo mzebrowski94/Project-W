@@ -11,7 +11,8 @@ component, never simulation logic in `core`.
 Gameplay change rather than plumbing? Run the `feature` skill first - it checks the idea against the
 design before any code exists.
 
-Check `CLAUDE.md`'s reuse list before starting. Most mechanics need an existing component, not a new one.
+Check `CLAUDE.md`'s reuse list before starting, and `docs/components.md` for the 39 components that
+already exist. Most mechanics need a field on an existing component, not a new one.
 
 ## 1. General-level tests first
 
@@ -33,7 +34,7 @@ class DamageSystemTest {
 ## 2. Implement
 
 **Component** in `sim/.../component/`: copy `Position.java`. The thing that bites is `reset()` - every
-field, every time.
+field, every time. Then regenerate the index: `python3 .claude/scripts/component-index.py`.
 
 **System** in `sim/.../system/`: copy `MovementSystem.java`. It is the smallest one and shows the whole
 shape, and the file outranks any skeleton written down here - which is why there is not one. Rules:
