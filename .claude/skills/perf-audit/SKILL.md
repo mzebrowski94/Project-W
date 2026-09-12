@@ -5,56 +5,37 @@ description: Audit a Project-W hot path for allocation, boxing, logging and othe
 
 # Hot-path audit
 
-The hot path is anything that runs **per entity** per frame: the body of every
-`IteratingSystem.processEntity`, the loops inside an `EntitySystem.update`, the renderer's draw loop,
-and everything they call. Work that happens once per system per tick is not the hot path.
+**Read `docs/performance.md` first.** It defines the hot path, the rules, and what counts as a finding.
+This skill is the procedure for applying it to a specific file; it does not restate it.
 
-Read `docs/conventions.md` first - this skill applies those rules, it does not replace them.
+## Procedure
 
-**Before reporting anything, know what it is worth.** The rule now requires a measurement for any
-optimization beyond the standing conventions, and that applies to this audit's findings too. A
-finding with no number attached is a suggestion, and should say so.
+1. **Establish the loop boundary.** Which lines run once per entity per tick, and which once per system
+   per tick. Everything downstream depends on drawing this line correctly, and it is the mistake most
+   audits make.
+2. **Walk the per-entity body**, including everything it calls, against `docs/performance.md`'s list -
+   allocation, then logging, then repeated lookups, then work that does not change per frame. In that
+   order, because that is the order of what it costs.
+3. **Price each finding.** Allocations per entity per frame, lookups per entity. A finding with no
+   number is a suggestion and must say so.
+4. **Report**, ordered by cost rather than by file: file and line, what it costs, the concrete fix.
+5. **Verify any change** with `.claude/scripts/verify.sh`, and confirm `SimulationDeterminismTest`
+   produces what it produced before.
 
-## What to look for, in order of how much it costs
-
-**Allocation, inside a per-entity loop.** Look for:
-
-- `new` anywhere in the update path, including implicit ones
-- `Vector2` and `Color` created per entity instead of reused scratch instances
-- string concatenation, including inside a disabled log call - the concatenation still happens
-- boxing: `Integer`, `Float`, `Optional`, generic collections of primitives, varargs
-- lambdas or method references that capture - each capture is an allocation
-- iterators: enhanced-`for` over a `List` allocates; over a libGDX `Array` or an indexed loop it
-  does not
-- `engine.getEntitiesFor(...)` called per frame instead of cached once
-
-**Logging.** Any log call in a per-frame or per-entity loop is a defect, at any level.
-
-**Repeated lookups.** `ComponentMapper.get` is cheap but not free; `entity.getComponent(X.class)` is
-much worse. Mappers belong in `private static final` fields.
-
-**Work that does not change per frame.** Config reads, `Math` calls on constants, trigonometry that
-could be a lookup, anything derivable at spawn time and stored in a component.
-
-**Determinism, but only in `core`.** `ArchitectureTest` already fails the build for wall-clock
-reads, `Math.random`, `java.util.Random` and hash iteration inside `sim`, so do not re-check those
-there. The client module has no such guard, and rendering code that feeds a value back into the
-simulation is the failure worth looking for.
-
-## How to report
-
-For each finding: the file and line, what it costs (an allocation per entity per frame, a lookup per
-entity), and the concrete fix. Order by cost, not by file.
+## What makes an audit worth reading
 
 Say plainly when something is fine. An audit that manufactures findings to look thorough wastes more
-time than it saves - and in a 60-entity scene most of this list genuinely does not matter yet. Note
-when a finding is theoretical at current scale, and prefer leaving it alone: readable code that is
-fast enough beats fast code nobody wants to change. An allocation outside a per-entity loop is not a
-finding at all.
+time than it saves.
 
-Do not change behaviour to make something faster without saying so explicitly.
+Note when a finding is theoretical at current scale - a 60-entity scene does not care about most of
+this list - and prefer leaving it alone. Readable code that is fast enough beats fast code nobody wants
+to change.
 
-## Verify
+Never change behaviour to make something faster without saying so explicitly.
 
-Any change from an audit must keep `.claude/scripts/verify.sh` green, and must not change what
-`SimulationDeterminismTest` produces.
+## Determinism, but only in `core`
+
+`ArchitectureTest` already fails the build for wall-clock reads, `Math.random`, `java.util.Random`,
+`Math`'s transcendentals and hash iteration inside `sim`, so do not re-check those there. The client has
+no such guard; the failure worth looking for is rendering code that feeds a value back into the
+simulation.

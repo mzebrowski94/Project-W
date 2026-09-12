@@ -1,5 +1,9 @@
 # G0006: A pickup is claimed on contact and applied afterwards
 
+**Trigger.** Adding a pickup or a grant, or anything claimed on contact.
+
+**Enforced by.** `ArchitectureTest.onlyTheReaperRemovesEntities` for the removal half; the rest by reading.
+
 **Constraint.** Touching a pickup grants nothing. Contact resolution records a claim - on the taker
 (`Taking.claimed`) and on the pickup (`Pickup.claimed`) - and `PickupSystem`, later in the same tick,
 decides what the claim means and spends the pickup. Nothing in the collision path reads a grant,
@@ -22,19 +26,19 @@ It says nothing about *when* the claim is resolved. That `PickupSystem` runs bef
 so a grunt shot to a sliver that reaches a flower first gets up whole - is an ordering decision
 recorded in `Simulation`'s Javadoc, and is free to change without touching this.
 
-**Rejected, and likely to be re-proposed.**
+**DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-*Apply the grant in `onContact`.* It is four lines shorter and reads perfectly well. Rejected because
+**No:** *Apply the grant in `onContact`.* It is four lines shorter and reads perfectly well. Rejected because
 the collision path does not know what it would need to know: whether the taker is already dying,
 whether a grant belongs to the taker or to the level, or what a future grant will need. Every one of
 those would arrive as another branch inside a method whose entire value is that it knows only
 geometry - which is how `CollisionSystem` would become the place every mechanic goes to be special.
 
-*A `canTake` flag or a side mask on the pickup, next to its grants.* Rejected because it is the same
+**No:** *A `canTake` flag or a side mask on the pickup, next to its grants.* Rejected because it is the same
 fact written twice: a side with `Grant.NOTHING` on offer already cannot take it. Two ways to say one
 thing is two ways to disagree.
 
-*Removing the pickup entity the moment it is claimed.* Rejected because only `ReaperSystem` removes
+**No:** *Removing the pickup entity the moment it is claimed.* Rejected because only `ReaperSystem` removes
 anything (`ArchitectureTest.onlyTheReaperRemovesEntities`), and because a pickup that vanished
 mid-tick would take its own grant with it.
 

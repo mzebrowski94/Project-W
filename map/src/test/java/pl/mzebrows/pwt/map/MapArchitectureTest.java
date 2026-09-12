@@ -42,6 +42,11 @@ final class MapArchitectureTest {
             .callMethod(Math.class, "random")
             .because("randomness must come from the seeded stream so a level can be replayed");
 
+    /**
+     * Kept deliberately identical to {@code ArchitectureTest#simulationDoesNotUseNonReproducibleMath}: a level laid out
+     * differently on two machines breaks replay exactly as thoroughly as a simulation that does. Add a
+     * method to both or to neither.
+     */
     @ArchTest
     static final ArchRule mapDoesNotUseNonReproducibleMath = noClasses()
             .should()
@@ -49,18 +54,41 @@ final class MapArchitectureTest {
             .orShould()
             .callMethod(Math.class, "cos", double.class)
             .orShould()
+            .callMethod(Math.class, "tan", double.class)
+            .orShould()
+            .callMethod(Math.class, "asin", double.class)
+            .orShould()
+            .callMethod(Math.class, "acos", double.class)
+            .orShould()
+            .callMethod(Math.class, "atan", double.class)
+            .orShould()
             .callMethod(Math.class, "atan2", double.class, double.class)
             .orShould()
-            .callMethod(Math.class, "pow", double.class, double.class)
+            .callMethod(Math.class, "sinh", double.class)
+            .orShould()
+            .callMethod(Math.class, "cosh", double.class)
+            .orShould()
+            .callMethod(Math.class, "tanh", double.class)
             .orShould()
             .callMethod(Math.class, "exp", double.class)
             .orShould()
+            .callMethod(Math.class, "expm1", double.class)
+            .orShould()
             .callMethod(Math.class, "log", double.class)
             .orShould()
+            .callMethod(Math.class, "log10", double.class)
+            .orShould()
+            .callMethod(Math.class, "log1p", double.class)
+            .orShould()
+            .callMethod(Math.class, "pow", double.class, double.class)
+            .orShould()
+            .callMethod(Math.class, "cbrt", double.class)
+            .orShould()
             .callMethod(Math.class, "hypot", double.class, double.class)
-            .because("Math's transcendentals are only specified to within 1 ulp and may differ between JVM"
-                    + " implementations; StrictMath is bit-identical everywhere. Math.sqrt, abs, min, max and"
-                    + " floor are exactly specified and remain fine");
+            .because("Math's transcendentals are only specified to within 1 ulp - 2.5 for the hyperbolic"
+                    + " functions - and may differ between JVM implementations; StrictMath is bit-identical"
+                    + " everywhere. Math.sqrt, abs, min, max, floor, ceil and round are exactly specified and"
+                    + " remain fine");
 
     @ArchTest
     static final ArchRule mapDoesNotReadTheWallClock = noClasses()

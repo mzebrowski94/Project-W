@@ -1,5 +1,9 @@
 # ADR 0008: A kind of thing is a definition in a table, not a marker and not a data file
 
+**Trigger.** Adding a strain, weapon, pickup or any other thing that comes in kinds.
+
+**Enforced by.** `ArchitectureTest` bans `HashMap` in `sim`; `Defs` refuses to build with a hole in it.
+
 **Constraint.** Anything that comes in kinds - a strain of enemy, a gun, a pickup - is an enum
 constant plus an immutable definition record, held in a `Defs<K, V>` table indexed by that enum. An
 entity's kind is a **field on a component** (`Strain.kind`, `Weapon.kind`), never which marker
@@ -17,16 +21,16 @@ It does not apply to things there is exactly one of. The arena, the commander's 
 collision solver's settings stay as named records on `SimConfig`; a table of one is a table nobody
 reads twice.
 
-**Rejected, and likely to be re-proposed.**
+**DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-*A marker component per kind, as `Brute` was.* This is the obvious Ashley idiom and it is what this
+**No:** *A marker component per kind, as `Brute` was.* This is the obvious Ashley idiom and it is what this
 codebase did until strains had to change at runtime. Rejected because evolving would mean adding a
 component in the middle of a tick, which mutates the families being iterated and silently skips
 entities - the exact trap `Damage`, `Dying` and `Stunned` are all carried permanently to avoid. A
 marker is fine for something an entity is for its whole life (`Commander`, `Enemy`, `Obstacle`);
 it is wrong for anything that can change.
 
-*Data-driven archetypes: entity composition described in files, `Spawner` as a generic assembler.*
+**No:** *Data-driven archetypes: entity composition described in files, `Spawner` as a generic assembler.*
 This is what Unity prefabs, Unreal blueprints and Flecs prefabs give you, and it will be proposed the
 first time somebody counts the `spawn` methods. Rejected because it trades compile-time errors for
 content errors, and this project's entire quality strategy is the opposite - `ArchitectureTest`,
@@ -39,7 +43,7 @@ The deciding argument is the one already written in `Scenario`'s Javadoc: a scen
 rather than a data file *on purpose*, because "adding one means a recompile, which costs nothing
 here". One programmer, a handful of kinds, a three-second build. Kinds have the same profile.
 
-*A `HashMap<Kind, Def>` instead of an ordinal-indexed array.* Rejected outright: hash iteration order
+**No:** *A `HashMap<Kind, Def>` instead of an ordinal-indexed array.* Rejected outright: hash iteration order
 is not reproducible, and `ArchitectureTest` fails the build on `HashMap` in `sim` for that reason.
 The array indexes on `ordinal()`, which is safe here only because nothing is persisted against those
 numbers - the table is built from the enum's own constants in the same process that reads it.

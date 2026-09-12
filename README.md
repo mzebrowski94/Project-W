@@ -7,11 +7,13 @@ A top-down 2D arcade shooter in Java 25 and [libGDX](https://libgdx.com/), inspi
 
 | Module | Contents |
 |---|---|
+| `map` | The ground a level is played on - tile grid, terrain, regions, generation. Depends on nothing: not libGDX, not Ashley, not `sim`. |
 | `sim` | The deterministic simulation - entities, components, systems, world state. Headless; no rendering, no assets, no I/O. |
-| `core` | The libGDX application - rendering, input, assets, screens, config. Depends on `sim`. |
+| `core` | The libGDX application - rendering, input, assets, screens, config. |
 | `lwjgl3` | Desktop launcher. |
 
-Dependencies point one way: `lwjgl3` -> `core` -> `sim`.
+Dependencies point one way: `lwjgl3` -> `core` -> `sim` -> `map`. `map` owns the field; `sim` owns
+what stands on it and what happens over time.
 
 ## Requirements
 
@@ -37,7 +39,7 @@ Tunables are external, never literals in code:
 ## Quality gates
 
 Every build runs Spotless (palantir-java-format), Error Prone, NullAway in JSpecify mode, ArchUnit
-architecture rules, and the JUnit 5 test suite.
+architecture rules across all three source modules, and the JUnit 5 test suite. Warnings are errors.
 
 ## Working with Claude
 

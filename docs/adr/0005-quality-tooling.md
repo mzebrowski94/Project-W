@@ -1,5 +1,9 @@
 # ADR 0005: Spotless, Error Prone, NullAway and Lombok
 
+**Trigger.** Changing the build's checkers or formatting, or proposing to drop one.
+
+**Enforced by.** The build itself - Spotless, Error Prone and NullAway all fail it.
+
 **Constraint.** All four run on every build; versions are in `gradle.properties`. Formatting is
 never hand-applied - Spotless rewrites. Every package carries `@NullMarked`, and a NullAway
 violation fails the build.
@@ -13,7 +17,7 @@ reviewed by one person. Tooling that catches a class of mistake mechanically is 
 arrangement than on a project where every line is typed by its reviewer. Spotless in particular
 exists so review sees only real changes.
 
-**Rejected, and likely to be re-proposed.** Checkstyle - describes style rather than fixing it,
+**DO NOT BUILD** - rejected, and likely to be re-proposed. Checkstyle - describes style rather than fixing it,
 which is strictly worse when a machine writes the code.
 
 **Revisit when** any of the four blocks a JDK upgrade. Lombok is the likely candidate and the

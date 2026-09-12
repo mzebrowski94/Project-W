@@ -1,5 +1,9 @@
 # G0004: No event bus - reactions are components
 
+**Trigger.** Making two systems communicate; proposing an event bus, queue, signal or listener.
+
+**Enforced by.** Nothing mechanical - caught by reading. No system holding a reference to another is the thing to check.
+
 **Constraint.** Systems in `sim` communicate through components and family membership. There is no
 message queue, no listener registry, no signal, and no system holds a reference to another.
 
@@ -16,7 +20,7 @@ mark: the reaction spawns it, the renderer draws it like anything else, a lifeti
 does. This says nothing about a future replay or network layer, which serialises state and is
 unaffected either way.
 
-**Rejected, and likely to be re-proposed.** A pooled per-tick event queue. It will be proposed the
+**DO NOT BUILD** - rejected, and likely to be re-proposed. A pooled per-tick event queue. It will be proposed the
 first time something needs to react to a death from far away in the tick, and it will look like the
 obvious tool. Rejected because an event bus is the path of least resistance: once it exists, systems
 start talking through it instead of through components, ordering becomes implicit, and the thing that

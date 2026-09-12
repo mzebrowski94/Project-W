@@ -5,20 +5,18 @@ description: Add a mechanic to the Project-W simulation as an ECS component plus
 
 # Adding a simulation system
 
-Behaviour in Project-W is always a **component** (data) plus a **system** (logic) in the `sim`
-module. Never put behaviour on a component, never put simulation logic in `core`.
+Behaviour is always a **component** (data) plus a **system** (logic) in `sim`. Never behaviour on a
+component, never simulation logic in `core`.
 
-## Order of work
+Gameplay change rather than plumbing? Run the `feature` skill first - it checks the idea against the
+design before any code exists.
 
-If this is a gameplay change rather than plumbing, run the `feature` skill first - it checks the
-idea against the design before any code exists.
+Check `CLAUDE.md`'s reuse list before starting. Most mechanics need an existing component, not a new one.
 
-Follow the project's test discipline exactly - it is in `CLAUDE.md` and it is not optional.
+## 1. General-level tests first
 
-### 1. General-level tests first
-
-Before writing any implementation, write one or a few tests that state what the mechanic should do
-in broad strokes. Not edge cases. The question they answer is "what is this for".
+Before any implementation, one or a few tests stating what the mechanic should do in broad strokes. Not
+edge cases. The question they answer is "what is this for".
 
 ```java
 class DamageSystemTest {
@@ -30,55 +28,42 @@ class DamageSystemTest {
 }
 ```
 
-Run `.claude/scripts/verify.sh :sim:test` and watch them fail for the right reason.
+`.claude/scripts/verify.sh :sim:test`, and watch them fail for the right reason.
 
-### 2. Implement
+## 2. Implement
 
-**Component** in `sim/.../component/`: copy `Position.java`. The one thing that bites is `reset()` -
-it must clear **every** field. A pooled component that forgets one leaks state into the next entity
-that reuses it, and that bug is very hard to find.
+**Component** in `sim/.../component/`: copy `Position.java`. The thing that bites is `reset()` - every
+field, every time.
 
-**System** in `sim/.../system/`: copy `MovementSystem.java`. It already shows the shape - static
-final `ComponentMapper`s, `Family` in the constructor, no allocation in `processEntity`. The hot-path
-rules are in `docs/conventions.md`; the determinism rules are enforced by `ArchitectureTest`, so you
-will hear about a violation rather than having to remember it.
+**System** in `sim/.../system/`: copy `MovementSystem.java`. It is the smallest one and shows the whole
+shape, and the file outranks any skeleton written down here - which is why there is not one. Rules:
+`docs/performance.md` for the loop body, `docs/conventions.md` for everything else.
 
-**Register** it in `Simulation`'s constructor. Order matters - see `docs/architecture.md`.
+**Register** it in `Simulation`'s constructor. `docs/simulation-order.md` has the current order and the
+constraints your position must not break. Say in your reply why you chose it.
 
-### 3. Fill in the specific cases
+## 3. Fill in the specific cases
 
-Now go back to the tests and add the specifics that surfaced while implementing: boundaries, zero
-and negative values, entities missing an optional component, interaction with systems that run
-before or after this one.
+Back to the tests with what surfaced while implementing: boundaries, zero and negative values, entities
+missing an optional component, interaction with the systems either side of yours.
 
-For each one, ask whether it is a real case or noise. A test that cannot fail for an interesting
-reason is worse than no test - it is maintenance with no payoff. Delete those.
+For each, ask whether it is a real case or noise. A test that cannot fail for an interesting reason is
+maintenance with no payoff. Delete those.
 
-### 4. Offer a scenario
+## 4. Offer a scenario
 
-We are in the alpha phase, where a system is meant to be run and judged by hand, not only by its
-tests. **Ask** whether Mateusz wants a scenario demonstrating it - do not build one unheard, and do
-not skip the offer either. `docs/design/alpha-phase.md` has the recipe: a class in `sim/.../scenario/`
-and a line in `Scenarios.ALL`, which is the whole registry the menu reads.
+Alpha phase: a system is meant to be run and judged by hand, not only by its tests. **Ask** whether
+Mateusz wants a scenario - do not build one unheard, do not skip the offer. `docs/design/alpha-phase.md`
+has the recipe: a class in `sim/.../scenario/` and a line in `Scenarios.ALL`, the whole registry the
+menu reads. `Scenarios.world` is the only place a playable world is assembled; do not assemble one
+anywhere else. A scenario may not call `setCommanderInvulnerable` - `scenariosCannotSwitchOnGodMode`
+fails the build.
 
-A system already visible in an existing scenario does not need its own; say so when offering.
+## 5. Verify
 
-### 5. Verify
+`.claude/scripts/verify.sh`. Green means compiles, formatted, Error Prone clean, NullAway clean,
+architecture rules hold, all tests pass. Red -> the failure protocol in `docs/workflow.md`.
 
-```
-.claude/scripts/verify.sh
-```
-
-Green means: compiles, formatted, Error Prone clean, NullAway clean, architecture rules hold, all
-tests pass. Anything less is not done.
-
-## Checklist before saying it is finished
-
-- [ ] `reset()` clears every field of the new component
-- [ ] `ComponentMapper`s are `static final`; entity views cached, not re-queried per frame
-- [ ] nothing allocates in the update path
-- [ ] the system is registered, in a deliberate position
-- [ ] tests run headless - no `Gdx.app`, no GL context
-- [ ] new domain words are in `docs/glossary.md`
-- [ ] tunables are in `assets/game.properties`, not literals in the system
-- [ ] `verify.sh` is green
+`CLAUDE.md`'s pre-flight list is the finishing check. The two items specific to this skill and not on
+it: entity views cached in the constructor or `addedToEngine` rather than re-queried per frame, and
+tests running headless - no `Gdx.app`, no GL context.

@@ -1,5 +1,9 @@
 # G0002: Aim is independent of movement
 
+**Trigger.** Touching facing, aim or input; proposing a gamepad-only or touch build.
+
+**Enforced by.** Nothing mechanical - caught by reading.
+
 **Constraint.** Where a unit is pointed is set by the aim input, not by the movement input. Moving
 one way while firing another is always available, and no mechanic may assume that the direction a
 unit moves is the direction it faces.
@@ -9,7 +13,7 @@ walking to a position while shooting something behind it is the same rule, not a
 It says nothing about *how* aim is expressed - a world point or a direction is an implementation
 choice inside the input value object, and either satisfies this.
 
-**Rejected, and likely to be re-proposed.** Facing follows movement. One input instead of two, no
+**DO NOT BUILD** - rejected, and likely to be re-proposed. Facing follows movement. One input instead of two, no
 mouse dependency, and closer to how a 2001 game would have done it - it will come back the first
 time a gamepad-only or touch build is discussed, and it will look like a small simplification. It
 is not. It removes the retreat-while-firing decision, and that decision is most of what makes a

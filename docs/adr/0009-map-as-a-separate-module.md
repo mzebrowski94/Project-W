@@ -1,5 +1,9 @@
 # 0009: The terrain field is its own module
 
+**Trigger.** Deciding whether new code belongs in `map` or `sim`; writing map generation.
+
+**Enforced by.** `MapArchitectureTest` - `map` may reach for none of `com.badlogic`, and no entity.
+
 **Constraint.** The ground a level is played on - the tile grid, its terrain, its regions, and every
 algorithm that produces one - lives in the `map` Gradle module. That module **depends on nothing**:
 not libGDX, not Ashley, not `sim`. Dependencies run `lwjgl3 -> core -> sim -> map`.
@@ -25,19 +29,19 @@ Nor does it cover navigation *behaviour*. When walls force the pathing question,
 flow field is a pure function of terrain and a goal - belongs here, and deciding who follows it and
 how fast is a system in `sim`.
 
-**Rejected, and likely to be re-proposed.**
+**DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-*A `sim.map` package with an ArchUnit rule instead of a module.* Cheaper, and the rule would be as
+**No:** *A `sim.map` package with an ArchUnit rule instead of a module.* Cheaper, and the rule would be as
 trusted as any other here. Rejected because the failure mode it does not catch is the expensive one:
 generation code that can see an `Entity` will eventually spawn one, and then map generation and
 gameplay are one thing again - which is the exact outcome this separation exists to prevent. A
 package rule can be satisfied while the import is added one class at a time.
 
-*Putting `TileMap` in `sim` and only the generator in a module.* Rejected because it inverts the
+**No:** *Putting `TileMap` in `sim` and only the generator in a module.* Rejected because it inverts the
 dependency: a generator that constructs a `TileMap` would have to depend on `sim`, which puts all of
 Ashley back on its classpath and achieves nothing.
 
-*Moving `Rng` down into `map` so generation has a generator.* Rejected because `map` would then own
+**No:** *Moving `Rng` down into `map` so generation has a generator.* Rejected because `map` would then own
 the game's randomness while being named for terrain, and `Rng`'s snapshot state belongs with the
 simulation it snapshots. Instead `map` declares `Randomness` - one method - and `Rng` implements it,
 so there is exactly one algorithm and map generation draws numbers the way the simulation does.

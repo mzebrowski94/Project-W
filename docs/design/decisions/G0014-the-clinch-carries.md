@@ -1,5 +1,9 @@
 # G0014: The clinch carries the body in; it never places it
 
+**Trigger.** The clinch, corpse movement or carry speed. Supersedes one G0013 rejection.
+
+**Enforced by.** `SimConfig` validates `melee carry distance` and refuses a config whose carry stops short (verified 2026-09-12).
+
 **Constraint.** When a lethal blow clinches, the body **keeps travelling**. It is given the heading it
 died on - or the line to whoever killed it, if that heading no longer points at him - at a
 configured carry speed, and decays to rest. Nothing writes either body's position directly. The two
@@ -27,17 +31,17 @@ Two things follow:
 **Scope.** The clinch. It does not reopen the knockback rule: a blow that kills still throws nothing
 *away* from the survivor, and the carry is the opposite direction by construction.
 
-**Rejected, and likely to be re-proposed.**
+**DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-*Place the body and be done with it.* One line, no tuning, no config check. It reads as a teleport,
+**No:** *Place the body and be done with it.* One line, no tuning, no config check. It reads as a teleport,
 and at the exact moment the game most wants the player looking at the two of them.
 
-*Pull the commander onto the body instead of pushing him back.* Closes the same gap and is cheaper -
+**No:** *Pull the commander onto the body instead of pushing him back.* Closes the same gap and is cheaper -
 one entity moves rather than a chain of two. Rejected because the leaper is the thing with the
 momentum, and a commander who slid *forward* onto something he had just killed would read as him
 lunging at a corpse. Being shoved back is also the half the player feels.
 
-*Give the corpse a mass and let the solver do an inelastic collision.* The physical answer, and it
+**No:** *Give the corpse a mass and let the solver do an inelastic collision.* The physical answer, and it
 needs mass, which the collision model deliberately does not have (ADR 0007). An immovable body with a
 velocity is the same outcome for none of the machinery.
 

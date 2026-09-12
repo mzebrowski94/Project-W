@@ -1,5 +1,9 @@
 # G0010: A unit's mind is a field on a component, not a behaviour tree
 
+**Trigger.** Adding or changing AI behaviour; proposing a behaviour tree or a state machine.
+
+**Enforced by.** `ArchitectureTest.onlyTheSpawnerChangesWhatAnEntityIsMadeOf`.
+
 **Constraint.** What a unit is doing is a value on a component it already carries - a boolean, an
 enum, a countdown - written by exactly one system. There is no behaviour tree, no state-machine
 object, no blackboard, and no per-unit AI instance. A behaviour is a system that reads those fields
@@ -23,20 +27,20 @@ Three things follow, and all three are load-bearing:
 and nothing about the pipeline they write into - deciding is a field, moving is `Steering`, and those
 are separate questions.
 
-**Rejected, and likely to be re-proposed.**
+**DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-*A behaviour tree.* It is the industry answer and it will be proposed the first time a fourth
+**No:** *A behaviour tree.* It is the industry answer and it will be proposed the first time a fourth
 behaviour arrives. Rejected because a tree earns its keep when there are many behaviours and somebody
 other than the programmer is composing them, and it costs a per-unit blackboard, a per-tick traversal
 and a second vocabulary to read the AI in. There are two behaviours. When there are eight and they
 are being reordered rather than written, that is the trigger below.
 
-*A finite state machine object per unit, or gdx-ai's `StateMachine`.* Same shape, smaller: it still
+**No:** *A finite state machine object per unit, or gdx-ai's `StateMachine`.* Same shape, smaller: it still
 means an object per unit holding a reference to that unit, allocated at spawn, and a second place
 besides the component where a unit's state lives. The enum field is the state machine, minus the
 object.
 
-*One component per state, selected with a `Family`.* The natural ECS answer, and the one that reads
+**No:** *One component per state, selected with a `Family`.* The natural ECS answer, and the one that reads
 best - right up against the enforced rule that only `Spawner` changes what an entity is made of.
 
 **Revisit when** a unit needs behaviour that is not a choice between mutually exclusive drivers - a

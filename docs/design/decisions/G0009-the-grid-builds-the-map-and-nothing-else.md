@@ -1,5 +1,9 @@
 # G0009: The grid builds the map and nothing else
 
+**Trigger.** Placing objects, terrain collision or pathing; proposing anything quantised to a tile.
+
+**Enforced by.** Nothing mechanical - caught by reading.
+
 **Constraint.** The tile grid is how a level is *laid out*. Nothing in the game is quantised to it.
 Units move in continuous world units, objects stand at arbitrary positions, and no driver, no AI and
 no gameplay system ever asks which tile something is in.
@@ -22,16 +26,16 @@ coordinate it walked to, not snapped to anything.
 It does not permit grid-stepped movement, tile-by-tile pathing that moves units between tile centres,
 attacks or abilities that resolve per tile, or a spawn that snaps to a tile centre.
 
-**Rejected, and likely to be re-proposed.**
+**DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-*Making obstacles tiles.* Rejected: it would give collision a second path for something that already
+**No:** *Making obstacles tiles.* Rejected: it would give collision a second path for something that already
 works as an entity, and an obstacle would stop being able to move, die, or be anything other than
 scenery. A rock that can be destroyed is an entity; a cliff is terrain.
 
-*Snapping spawns to tile centres because it is simpler.* Rejected - see the first consequence above.
+**No:** *Snapping spawns to tile centres because it is simpler.* Rejected - see the first consequence above.
 The jitter is the feature.
 
-*Tile-based pathfinding that moves units tile to tile.* Rejected as stated, but the near neighbour is
+**No:** *Tile-based pathfinding that moves units tile to tile.* Rejected as stated, but the near neighbour is
 fine and will probably be right: a flow field computed *over* the grid gives each unit a direction,
 and the unit then moves continuously along it. The grid informs the movement; it does not step it.
 

@@ -1,5 +1,9 @@
 # G0008: A level may be larger than the view
 
+**Trigger.** Level extent, the camera or the zoom; proposing a minimap.
+
+**Enforced by.** Nothing mechanical - caught by reading, against pillar 4.
+
 **Constraint.** Pillar 4 is amended. It used to read:
 
 > **One screen, one fight.** A level reads at a glance. No fog of war, no off-screen management.
@@ -24,20 +28,20 @@ the letter of it.
 The permission is bounded by what the camera and the zoom actually do, which is a level a few screens
 across - not an open world, and not a level with a far half you travel to and fight in separately.
 
-**Rejected, and likely to be re-proposed.**
+**DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-*Keeping the pillar and capping every level to the view.* Rejected deliberately rather than by
+**No:** *Keeping the pillar and capping every level to the view.* Rejected deliberately rather than by
 drift. Tiles exist to make generated map fragments cheap, and a generator whose output can only ever
 be one screen wide has almost no room to produce anything the player would recognise as different
 places. The cost is real and is accepted: a level is no longer legible in one glance, and the zoom
 key is what pays for that.
 
-*A per-level-type exception, with pillar 4 standing as the default.* Rejected because it needs a
+**No:** *A per-level-type exception, with pillar 4 standing as the default.* Rejected because it needs a
 rule about which levels are which, and because the exception becomes the default by drift - at which
 point the pillar says one thing and every level does another, which is worse than amending it
 honestly.
 
-*A minimap.* Rejected, and worth naming because it is the obvious answer to "the level is bigger than
+**No:** *A minimap.* Rejected, and worth naming because it is the obvious answer to "the level is bigger than
 the screen". A minimap is off-screen management with a nicer name: it puts information the player
 needs somewhere other than the field they are fighting on. The zoom is the answer instead, precisely
 because it makes you stop looking at the fight to use it.

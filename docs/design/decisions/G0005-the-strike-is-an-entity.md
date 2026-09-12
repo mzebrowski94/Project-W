@@ -1,5 +1,9 @@
 # G0005: A melee strike is an entity, not an overlap query
 
+**Trigger.** Adding a melee weapon, or anything that hurts by being somewhere.
+
+**Enforced by.** Nothing mechanical - caught by reading.
+
 **Constraint.** A swing of a melee weapon is spawned into the world as an ordinary entity with a
 `Position`, a `Body`, a `Collider`, a `Faction` and a `ContactDamage`. It travels its arc over
 several ticks and is removed like anything else. No system asks the spatial grid what is in front of
@@ -14,7 +18,7 @@ replayable, and every threat in the world is a thing the player can see.
 wave, a mine's blast radius. It says nothing about effects with no position - a heal, a buff, a
 score - which are not contacts and have no business in the collision system either way.
 
-**Rejected, and likely to be re-proposed.** A `MeleeSystem` that queries the grid for everything
+**DO NOT BUILD** - rejected, and likely to be re-proposed. A `MeleeSystem` that queries the grid for everything
 inside the arc and writes `Damage` directly. It is fewer lines, allocates nothing extra, and will be
 proposed the first time someone notices that a swing entity exists for six ticks and then dies. It
 was rejected because it is a second damage path: the moment it exists, "what can hurt what" is

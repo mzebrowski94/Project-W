@@ -1,5 +1,9 @@
 # G0012: A dodge is a function of the shot, not a roll
 
+**Trigger.** Writing or changing dodge behaviour.
+
+**Enforced by.** `SimulationDeterminismTest` catches a dodge drawn from the `Rng` only if it changes a replay; otherwise reading.
+
 **Constraint.** A creature that steps aside from an incoming shot decides where to step from the
 shot's geometry alone: perpendicular to its heading, to the side of its line the creature is already
 on. Nothing about a dodge is drawn from the `Rng` - not the side, not the timing, not the distance.
@@ -14,20 +18,20 @@ rabbit wanders from a seeded stream, and a leap's hesitation is deliberately var
 reason: a leap is a threat the player must *read*, and a dodge is a pattern the player must *learn*.
 That difference is the whole of why one draws from the `Rng` and the other must not.
 
-**Rejected, and likely to be re-proposed.**
+**DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-*A seeded wobble - the same dodge, plus a little variance.* It will be proposed the first time
+**No:** *A seeded wobble - the same dodge, plus a little variance.* It will be proposed the first time
 somebody leads a rabbit five times running and it stops feeling like a skill. Rejected because it
 converts a miss from "I read that wrong" into "I was unlucky", and a player cannot tell the two apart
 from inside the game. Variance would also be invisible in a replay, which is where the seeded-versus-
 deterministic distinction usually gets waved through: both replay fine, and only one is learnable.
 
-*Dodging continuously - re-deciding the direction every tick while the shot closes.* It curves away
+**No:** *Dodging continuously - re-deciding the direction every tick while the shot closes.* It curves away
 from a shot rather than stepping off its line, which cannot be led at all. It also reads as the
 creature knowing exactly where the bullet is at every instant, which is a stronger claim about what it
 can see than the game wants to make.
 
-*Alternating sides, or a longer memory of which way it went last.* Deterministic, and learnable in
+**No:** *Alternating sides, or a longer memory of which way it went last.* Deterministic, and learnable in
 principle, but the state that decides it is invisible: the player would have to have watched the
 previous dodge to predict this one. Geometry is legible from the shot alone.
 

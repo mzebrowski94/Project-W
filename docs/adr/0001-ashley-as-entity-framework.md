@@ -1,5 +1,9 @@
 # ADR 0001: Ashley is the entity framework
 
+**Trigger.** Creating an entity or component, adding a system, or proposing a different ECS.
+
+**Enforced by.** Nothing mechanical for the caching rules - caught by reading and the `perf-audit` skill.
+
 **Constraint.** Entities are Ashley entities, created through `PooledEngine`. Components implement
 `Component` and `Pool.Poolable`. Every system caches its `ImmutableArray` once at construction or
 `addedToEngine` and holds `ComponentMapper`s in `private static final` fields - Ashley's `Family`
@@ -8,7 +12,7 @@ matching and `getEntitiesFor` allocate when called per frame.
 **Scope.** All simulation state. Does not extend to rendering: `WorldRenderer` reads the engine but
 is not an Ashley system, because rendering must not be able to advance the world.
 
-**Rejected, and likely to be re-proposed.** artemis-odb - faster archetype storage and actually
+**DO NOT BUILD** - rejected, and likely to be re-proposed. artemis-odb - faster archetype storage and actually
 maintained, but a second set of conventions to learn for a gain we cannot yet measure. A hand-rolled
 ECS - infrastructure work before there is a game.
 

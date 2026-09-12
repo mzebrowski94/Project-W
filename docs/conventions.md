@@ -1,89 +1,99 @@
 # Coding conventions
 
+Banned APIs (below) are the index for the whole project. Per-entity cost rules live in
+`docs/performance.md`; reproducibility rules in `docs/determinism.md`.
+
+## Banned, and what to use instead
+
+| Never | Use | Where | Caught by |
+|---|---|---|---|
+| `Math.random()`, `java.util.Random`, `ThreadLocalRandom` | `Rng` (SplitMix64); one stream per concern via `Rng.stream` | `sim`, `map` | `simulationDoesNotUseMathRandom`, `mapDoesNotUseMathRandom`, `simulationDoesNotUseUnseededRandomnessOrHashIteration` |
+| `Math.sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `sinh`, `cosh`, `tanh`, `exp`, `expm1`, `log`, `log10`, `log1p`, `pow`, `cbrt`, `hypot` | `StrictMath` - bit-identical everywhere; `Math`'s are specified only to within 1 ulp. Better still: resolve the trig once at spawn and store it. **`Math.sqrt`, `abs`, `min`, `max`, `floor`, `ceil` and `round` are exactly specified and stay fine.** | `sim`, `map` | `simulationDoesNotUseNonReproducibleMath`, `mapDoesNotUseNonReproducibleMath` - identical lists |
+| `System.currentTimeMillis()`, `nanoTime()`, `Instant.now()`, `LocalDate.now()` | Nothing. A tick count is the only time the simulation has. | `sim`, `map` | `simulationDoesNotReadTheWallClock`, `mapDoesNotReadTheWallClock` |
+| Iterating a `HashMap`, `HashSet`, or anything with unspecified order | libGDX `ObjectMap`/`Array`, or sort explicitly first | `sim`, `map` | `simulationDoesNotUseUnseededRandomnessOrHashIteration`, `mapDoesNotUseUnseededRandomnessOrHashIteration` |
+| Removing an entity anywhere but `ReaperSystem` | Mark it; `ReaperSystem` removes it | `sim` | `onlyTheReaperRemovesEntities` |
+| `com.badlogic.*` of any kind | Plain Java - `map` depends on nothing | `map` | `mapKnowsNothingOfTheGameAroundIt` |
+| Anything graphical: `SpriteBatch`, `ShapeRenderer`, `Texture`, `Gdx.*` | Publish state on a component; the client decides how to draw it (G0003) | `sim`, `map` | `simulationIsHeadless`, `simulationDoesNotTouchTheRunningApplication` |
+| `setScreen` from inside a screen; a screen depending on `Game` | `GameContext.queueScreen` - the swap happens after the frame | `core` | `screensDoNotSwitchThemselves`, `screensCannotReachPastTheirContext` |
+| `Gdx.*` in a class named `*Session`, `*Controls`, `*Selection` | Take input as values or one-method interfaces, so it tests without GL | `core` | `decisionLogicDoesNotTouchTheRunningApplication` |
+| `new`, boxing, varargs, `Optional`, string concatenation, streams, capturing lambdas, iterators over a `List` | Reuse a scratch instance, index a libGDX `Array`, cache the view | inside a per-entity loop | nothing - `docs/performance.md` |
+| Any log call, any level | Log outside the loop or not at all | inside a per-frame or per-entity loop | nothing |
+| A nested loop over two entity collections (O(N²)) | `SpatialGrid` | gameplay interactions | nothing |
+| `./gradlew` in the sandbox | `.claude/scripts/gradle.sh` - the wrapper cannot reach the network there | sandbox shell | a confusing `UnknownHostException` |
+| `com.badlogic.gdx.Input*`, `gdx.controllers..` - polling a device | Input arrives as a per-tick value object (`CommanderInput`) | `sim` | `simulationDoesNotReadInputDirectly` |
+| `Simulation.setCommanderInvulnerable` from a scenario | Nothing. God mode is a harness switch; pillar 2 says the commander can be killed. | `sim.scenario` | `scenariosCannotSwitchOnGodMode` |
+| A magic number in game logic or rendering | `assets/game.properties` (sim) or `assets/graphic.properties` (render), into a config record | everywhere | nothing |
+| An invented asset path | A constant in `Assets` | `core` | nothing |
+| Preview or incubator APIs, Structured Concurrency, Vector API | The finalized Java 25 feature, or nothing | everywhere | `--release 25` |
+| Box2D, Spring, any IoC container, a service locator, an event bus | Circle-circle collision (ADR 0007); manual constructor DI; reaction components and spawned entities (G0004) | everywhere | review |
+| Hand-formatting | `spotlessApply`; `verify.sh` runs it | everywhere | Spotless |
+
+Anything not listed is allowed until someone has a reason. Add a row when a mistake is made twice, not
+when it is imagined once.
+
+**The two `NonReproducibleMath` rules are kept byte-identical** (widened 2026-09-12, each watched
+failing against a probe). They ban every `java.lang.Math` method whose result is not exactly specified:
+`sin cos tan asin acos atan atan2 sinh cosh tanh exp expm1 log log10 log1p pow cbrt hypot`. Adding a
+method means adding it to **both**, and each file's javadoc says so.
+
 ## Language
 
-Java 25, `--release 25`. Use the finalized modern features: records, pattern matching for
-`switch`/`instanceof`, record patterns, unnamed variables (`_`), exhaustive switches, sealed types.
-
-No preview or incubator APIs. No Structured Concurrency, no Vector API. If a feature needs
-`--enable-preview`, it is not available to us.
+Java 25, `--release 25`. Use the finalized features: records, pattern matching for `switch`/`instanceof`,
+record patterns, unnamed variables (`_`), exhaustive switches, sealed types. Nothing needing
+`--enable-preview`.
 
 ## Architecture
 
-- Composition over inheritance. ECS and strategy objects, not deep class hierarchies.
-- Program to interfaces; hide implementations behind them. Swap behaviour by swapping an
-  implementation or a lambda, not by subclassing.
-- Manual constructor DI. No Spring, no IoC container, no service locator. Lombok's
-  `@RequiredArgsConstructor` is fine for the boilerplate.
+- Composition over inheritance. ECS and strategy objects, not deep hierarchies.
 - Immutable `record`s for static configuration and definitions. Mutable pooled classes for runtime
   entities: mutate in place, never replace a pooled instance.
+- `SimConfig` and its nested records have `with…` helpers. Use those; never write a record literal for
+  a config that already exists.
+- Manual constructor DI. Lombok's `@RequiredArgsConstructor` for the boilerplate.
 - Small, cohesive types. One class per file. Don't over-engineer a small addition.
+
+### Interfaces only at real boundaries
+
+An interface earns its place where substitution, ownership or an external boundary is real: a seam the
+client uses to keep `Gdx` out of a testable class, a strategy genuinely swapped at runtime, a module
+boundary.
+
+Do **not** introduce one because a class has several methods, to satisfy "program to interfaces", to
+enable a hypothetical second implementation, or to make a test easier when a simpler seam exists.
+Prefer concrete types inside a cohesive module. An interface with one implementation and no prospect of
+a second is indirection with a maintenance bill.
+
+Same for a test that seems to need a mock in `sim`: that is a design signal, not a testing problem -
+see the `unit-tests` skill.
 
 ### The one exception to encapsulation
 
-ECS components use **public mutable fields**, not getters and setters:
+ECS components use **public mutable fields**, not accessors:
 
 ```java
 public final class Position implements Component, Pool.Poolable {
     public float x;
     public float y;
+
+    @Override
+    public void reset() {
+        x = 0f;
+        y = 0f;
+    }
 }
 ```
 
-Components are data, read and written thousands of times per frame by systems that already own
-them. Accessors add nothing but indirection here, and this is the idiom every Ashley codebase (and
-every Ashley example the model has seen) uses. Everywhere else - pooled non-component runtime
-classes included - use Lombok `@Getter`/`@Setter` plus a `reset()`.
+`reset()` must clear **every** field. A pooled component that forgets one leaks state into the next
+entity that reuses it, and that bug is very hard to find.
 
-## Performance
-
-The rule is about **per-entity** work, not per-frame work, and the distinction is the whole point.
-Inside a loop that runs once per entity per tick - collision pairs, movement integration, the draw
-loop:
-
-- **No allocation per entity.** No `new`, no boxing, no varargs, no `Optional`, no string
-  concatenation. A lambda or method reference that captures allocates too.
-- Classic `for` or enhanced-`for`. No streams, no iterator churn.
-- Cache the `ImmutableArray` from `engine.getEntitiesFor(...)` once (in the constructor or
-  `addedToEngine`), never per frame. Ashley keeps the view live.
-- Cache `ComponentMapper`s in `private static final` fields.
-- **Never log.** Not at any level.
-
-**Allocation at per-tick scope is fine** - once per system per tick rather than once per entity. A
-short-lived object dies in the young generation and costs very little on a desktop JVM, and clarity
-is worth more than avoiding it. `CommanderInput`, built once a frame, is the model.
-
-**Anything beyond these rules needs a measurement.** Not an argument, not an instinct: before and
-after numbers, said out loud in the change that introduces it. This is deliberate. The game is a few
-hundred circles on hardware that draws millions, and the previous version of this rule - zero
-allocation anywhere in an update path - already cost readability twice without anyone ever timing
-what it saved. An optimization nobody measured is a guess with a maintenance bill.
-
-Streams, lambdas and allocation are all fine in setup, loading, scenarios, tooling and tests.
-
-## Determinism
-
-The simulation must produce identical output from identical input on every run and every machine.
-This is what makes replays and any future lockstep networking possible, and it is cheap to keep and
-expensive to recover.
-
-In `sim`:
-
-- Advance only through `Simulation.step()`, always by `SimConfig.tickSeconds()`.
-- Randomness comes only from `Rng`. Never `Math.random()`, never `java.util.Random`.
-- Never read a wall clock: no `System.currentTimeMillis()`, no `System.nanoTime()`.
-- Never iterate a `HashMap` or `HashSet` - their order is not reproducible. Use libGDX's
-  `ObjectMap`/`Array`, or sort explicitly.
-- Keep floating-point operation order stable. Do not reorder arithmetic "for readability".
-
-`ArchitectureTest` enforces the mechanical parts of this. `SimulationDeterminismTest` catches the
-rest. Both live in `sim/src/test`.
+Components are data, read and written thousands of times per frame by systems that already own them.
+Accessors add only indirection, and this is the idiom every Ashley codebase uses. Everywhere else -
+pooled non-component runtime classes included - Lombok `@Getter`/`@Setter` plus a `reset()`.
 
 ## Nullability
 
-Every package has a `package-info.java` carrying JSpecify's `@NullMarked`, so everything is
-non-null by default. Mark the exceptions with `@Nullable`. NullAway enforces this at compile time
-and a violation fails the build.
+Every package has a `package-info.java` with JSpecify's `@NullMarked`: non-null by default, exceptions
+marked `@Nullable`. NullAway enforces it at compile time; a violation fails the build.
 
 Framework-initialised fields (created in libGDX's `create()`, not the constructor) are the one place
 `@SuppressWarnings("NullAway.Init")` is acceptable - see `PwtGame`.
@@ -91,33 +101,39 @@ Framework-initialised fields (created in libGDX's `create()`, not the constructo
 ## Clean code
 
 - `var` only where the type is obvious from the right-hand side.
-- No magic numbers in game logic or rendering. Tunables go in `assets/game.properties` (simulation)
-  or `assets/graphic.properties` (rendering), loaded into a config record.
-  Changing `graphic.properties` must never change what the game *does*.
-- One-line Javadoc on public classes and methods. Minimal inline comments - the code explains
-  itself; comments explain *why*. No `@author` tags.
-- Formatting is not a matter of opinion: Spotless with palantir-java-format runs in the verify loop
-  and rewrites the file. Never hand-format.
+- One-line Javadoc on public classes and methods. Minimal inline comments - the code explains itself,
+  comments explain *why*. No `@author`.
+- **Inserting a method above another orphans that method's javadoc**, and `-Werror` is on, so it fails
+  the build. Check the method below the one you added.
 - Reuse the vocabulary in `docs/glossary.md`. One concept, one word, everywhere.
+- Changing `graphic.properties` must never change what the game *does*.
 
 ## Logging
 
-`Log` (in `core`), a facade over `Gdx.app`, works before libGDX starts and in plain unit tests.
+`Log` (in `core`) is a facade over `Gdx.app`, working before libGDX starts and in plain unit tests.
 
 - `Log.info` - lifecycle: startup, shutdown, screen changes.
-- `Log.debug` - initialisation detail and resolved configuration.
+- `Log.debug` - initialisation detail, resolved configuration.
 - `Log.error` - failures, always with the cause when there is one.
 
 Resource-load failures log and fall back gracefully. They never crash the game.
 
+The ban is on logging **inside a per-frame or per-entity loop**, at any level - not on logging. Do not
+delete an existing `Log.error` on the strength of that rule.
+
 ## Tests
 
-JUnit 5 + AssertJ + Mockito, plus ArchUnit for the architecture rules. Conventions - naming, shape,
-when to mock, which existing class to copy - are in the `unit-tests` skill.
+JUnit 5 + AssertJ + Mockito, plus ArchUnit for the architecture rules. Naming, shape, when to mock,
+which class to copy: the `unit-tests` skill.
 
-Two rules that are architectural rather than stylistic, so they live here:
+Two rules that are architectural rather than stylistic:
 
-- All `sim` logic must be testable without a graphics context. The module split makes this
-  structural: rendering libraries are not on `sim`'s classpath.
-- Write the general-level tests first, implement, then fill in the specific cases. The order is in
-  `CLAUDE.md`; it is the house workflow, not a preference.
+- All `sim` logic must be testable without a graphics context. Structural, not aspirational: rendering
+  libraries are not on `sim`'s classpath.
+- Test order is the house workflow, in `CLAUDE.md`, not a preference.
+
+Tests are evidence, not ceremony. Prefer ones that catch a behavioural regression, pin a deterministic
+outcome, or protect an architectural boundary. Skip cases that exist only to move a number.
+
+**Every ArchUnit rule here was watched failing against a deliberate probe before being trusted.** A new
+one is not finished until you have seen it fail.

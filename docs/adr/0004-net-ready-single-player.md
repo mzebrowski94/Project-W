@@ -1,5 +1,9 @@
 # ADR 0004: Single-player, with a net-ready simulation
 
+**Trigger.** Touching how the simulation advances, randomness or time; proposing networking.
+
+**Enforced by.** `ArchitectureTest` for the mechanical bans; `SimulationDeterminismTest` for the rest.
+
 **Constraint.** The simulation advances only through `Simulation.step()`, always by
 `SimConfig.tickSeconds()`. State changes only from input. Randomness comes only from the seeded
 `Rng`, whose entire state is one `long`. Rendering reads simulation state and never writes it.
@@ -8,7 +12,7 @@
 networking's sake alone - they are what make deterministic replay and headless testing work today,
 which is why they pay for themselves before any multiplayer feature exists.
 
-**Rejected, and likely to be re-proposed.** Reading `Gdx.graphics.getDeltaTime()` inside a system,
+**DO NOT BUILD** - rejected, and likely to be re-proposed. Reading `Gdx.graphics.getDeltaTime()` inside a system,
 or pulling a value out of the renderer, because it is momentarily convenient. That is the specific
 shortcut this ADR exists to prevent.
 

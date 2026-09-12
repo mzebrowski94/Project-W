@@ -1,5 +1,9 @@
 # 0010: libGDX's tiled map API — its renderer, maybe; its model, never
 
+**Trigger.** Rendering terrain, loading a level file, or proposing libGDX's tiled map API.
+
+**Enforced by.** `ArchitectureTest.simulationIsHeadless` and `MapArchitectureTest.mapKnowsNothingOfTheGameAroundIt`.
+
 **Constraint.** `com.badlogic.gdx.maps.tiled` is not the game's map model. `TileMap` in the `map`
 module is, and it stays free of every graphics type.
 
@@ -33,16 +37,16 @@ adopting theirs would undo it.
 
 Neither is adopted now. Both would be a conversion at the edge, never a change to what `sim` reads.
 
-**Rejected, and likely to be re-proposed.**
+**DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-*"libGDX already has tile maps, use those."* The honest version of this proposal is "put a
+**No:** *"libGDX already has tile maps, use those."* The honest version of this proposal is "put a
 `TextureRegion` in the thing the simulation reads every tick", and it fails the build. Worth writing
 down because the API looks like exactly what we built and somebody will reasonably ask.
 
-*Relaxing the graphics ban in `sim` so `TiledMap` can be shared.* Rejected: that ban is what makes
+**No:** *Relaxing the graphics ban in `sim` so `TiledMap` can be shared.* Rejected: that ban is what makes
 the simulation headless and testable without a GL context, which is the whole of ADR 0003.
 
-*Writing our own `.tmx` parser to get Tiled authoring without the dependency.* Premature. If Tiled
+**No:** *Writing our own `.tmx` parser to get Tiled authoring without the dependency.* Premature. If Tiled
 authoring is wanted, `TmxMapLoader` in `core` converting into a `TileMap` is less code and less to
 maintain than a parser of our own.
 
