@@ -129,7 +129,7 @@ class ConfigDefaultsTest {
     }
 
     private static StateTint tint() {
-        return new StateTint(-0.4f, 0.85f, 0.5f, -0.3f, 0.35f, -0.7f);
+        return new StateTint(-0.4f, 0.85f, 0.5f, -0.3f, 0.35f, -0.7f, 0.6f);
     }
 
     private static ChargeMark mark() {

@@ -28,6 +28,8 @@ mechanic you are about to write appears there, it has already been rejected and 
 | [G0017](G0017-an-order-reaches-who-is-near.md) | An order reaches the troopers near the commander, not the squad. | select-then-order; orders reaching the whole squad; a squad roster | accepted |
 | [G0018](G0018-the-blast-is-one-circle.md) | The blast is one circle, and things explode by dying. | damage falloff; a lethal core in a wounding ring; a blast that spares its own side; a blast in the collision path; spawning one directly; a blast that stays lethal while it is drawn | accepted |
 | [G0019](G0019-the-grenade-is-a-fixed-throw.md) | A grenade is thrown along the aim direction for a fixed distance. | throwing to the aim point; cooking or charging a throw; contact detonation; a solid grenade; a grenade `WeaponKind` | accepted |
+| [G0020](G0020-lethality-belongs-to-the-source.md) | Whether a blow kills or leaves a casualty is declared by the source, not derived from the amount. | a health threshold; a chance to go down; adding or removing a `Casualty` component; a casualty commander; a blast that wounds some and kills others | accepted |
+| [G0021](G0021-one-key-and-the-game-chooses.md) | One action key, and what is in reach decides what it does. | an action menu or radial; a key per action; selecting a target first; an action the player can queue | accepted |
 
 ## When to write one
 

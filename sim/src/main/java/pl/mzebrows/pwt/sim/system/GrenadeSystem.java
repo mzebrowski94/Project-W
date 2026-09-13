@@ -176,7 +176,7 @@ public final class GrenadeSystem extends EntitySystem {
             }
             Thrower thrower = THROWER.get(entity);
             Intent intent = INTENT.get(entity);
-            if (!intent.throwing || !thrower.ready()) {
+            if (!intent.throwing || !thrower.ready() || Drivers.handsFull(entity)) {
                 continue;
             }
             Position at = POSITION.get(entity);

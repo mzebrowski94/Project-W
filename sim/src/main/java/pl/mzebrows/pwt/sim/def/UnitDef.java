@@ -30,6 +30,7 @@ import org.jspecify.annotations.Nullable;
  * @param wander how it passes the time when it has noticed nobody
  * @param avoidance how far ahead it looks for things in its way, and how hard it leans off them
  * @param leap how it closes the last of the distance
+ * @param ranged how it shoots, if it shoots at all
  * @param look what a renderer draws it as
  */
 @With
@@ -49,6 +50,7 @@ public record UnitDef(
         WanderDef wander,
         AvoidanceDef avoidance,
         LeapDef leap,
+        RangedDef ranged,
         Look look) {
 
     public UnitDef {

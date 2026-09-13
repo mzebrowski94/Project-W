@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.component.Focus;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Shake;
+import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 
 /**
@@ -107,6 +108,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             context.queueScreen(new MenuScreen(context));
         }
         session.advance(delta, commanderInput);
+        announceAction();
         rebindIfRestarted();
         aimCamera(delta, commanderInput);
 
@@ -116,6 +118,21 @@ public final class ScenarioScreen extends ScreenAdapter {
         if (session.overlayVisible()) {
             overlay.render(session.simulation(), session.paused(), session.lastOrder());
         }
+    }
+
+    /**
+     * Says what the action key would do, each time that changes.
+     *
+     * <p>Alpha-phase scaffolding standing in for an on-screen prompt: the console is not where a
+     * player looks mid-fight, and pillar 5 wants this beside the commander. What it is standing in
+     * for is a label, not a system - the decision is already made in the simulation and published.
+     */
+    private void announceAction() {
+        ActionKind offered = session.newlyOfferedAction();
+        if (offered == null) {
+            return;
+        }
+        Log.info(offered == ActionKind.NONE ? "action: nothing in reach" : "action [E]: " + offered);
     }
 
     @Override

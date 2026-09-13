@@ -15,8 +15,9 @@ import pl.mzebrows.pwt.sim.CommanderInput;
  * <p>Movement and aim are read independently (G0002): the mouse decides where the commander points
  * and the keys decide where it walks, and neither is derived from the other.
  *
- * <p>The grenade key is read the same way as the mouse buttons, and for the same reason: how often a
- * throw may happen is a {@code Thrower} cooldown in the simulation, not a question about key repeat.
+ * <p>The grenade, action and drag keys are read the same way as the mouse buttons, and for the same
+ * reason: how often a throw may happen is a {@code Thrower} cooldown in the simulation, and how long
+ * a stabilise takes is a number on a casualty - neither is a question about key repeat.
  *
  * <p>Both mouse buttons are read as held rather than as pressed. The simulation rate-limits what they
  * do - a weapon cooldown, a melee cooldown - so a button that repeats is the simulation's decision to
@@ -41,7 +42,10 @@ public final class InputReader {
         boolean firing = Gdx.input.isButtonPressed(Input.Buttons.LEFT);
         boolean striking = Gdx.input.isButtonPressed(Input.Buttons.RIGHT);
         boolean throwing = Gdx.input.isKeyPressed(Input.Keys.Q);
-        return new CommanderInput(moveX, moveY, pointer.x, pointer.y, firing, striking, throwing, OrderKeys.poll(keys));
+        boolean acting = Gdx.input.isKeyPressed(Input.Keys.E);
+        boolean dragging = Gdx.input.isKeyPressed(Input.Keys.F);
+        return new CommanderInput(
+                moveX, moveY, pointer.x, pointer.y, firing, striking, throwing, acting, dragging, OrderKeys.poll(keys));
     }
 
     private static float axis(int positive, int positiveAlias, int negative, int negativeAlias) {

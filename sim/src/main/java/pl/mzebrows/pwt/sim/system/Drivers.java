@@ -4,6 +4,8 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.component.Casualty;
+import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Stunned;
@@ -20,19 +22,41 @@ final class Drivers {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
+    private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
+    private static final ComponentMapper<Drag> DRAG = ComponentMapper.getFor(Drag.class);
 
     private Drivers() {}
 
     /**
-     * Held still by a blow, or dead on the ground. Neither drives itself: a stunned unit's velocity
-     * belongs to {@code StunSystem} until it comes round, and a corpse's belongs to nobody. A driver
-     * that zeroed either would silently delete knockback.
+     * Held still by a blow, dead on the ground, or down on it waiting for somebody. None of the
+     * three drives itself: a stunned unit's velocity belongs to {@code StunSystem} until it comes
+     * round, a corpse's belongs to nobody, and a casualty's belongs to whoever is hauling him. A
+     * driver that zeroed any of them would silently delete knockback, or a drag.
+     *
+     * <p>The casualty case is the reason this is one question rather than sixteen copies of it. A
+     * man who is down must stop shooting, stop thinking, stop holding ground and stop being steered,
+     * and every one of those is a system that already asks here.
      */
     static boolean held(Entity entity) {
         if (STUNNED.has(entity) && STUNNED.get(entity).active()) {
             return true;
         }
+        if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
+            return true;
+        }
         return DYING.has(entity) && DYING.get(entity).begun;
+    }
+
+    /**
+     * Whether this unit is hauling something, and therefore has nothing to fight with.
+     *
+     * <p>Asked by everything a commander does with his hands - firing, swinging, throwing - for the
+     * same reason {@link #held} is asked by everything that drives one: three copies of the same
+     * test is two chances for one of them to drift, and the drift would be a commander who could
+     * somehow still throw a grenade with a man over his shoulder.
+     */
+    static boolean handsFull(Entity entity) {
+        return DRAG.has(entity) && DRAG.get(entity).active();
     }
 
     /**

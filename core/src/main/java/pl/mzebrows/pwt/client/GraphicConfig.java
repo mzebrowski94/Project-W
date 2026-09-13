@@ -94,9 +94,11 @@ public record GraphicConfig(
             case TROOPER -> "4fb8d8ff";
             case GRUNT -> "ff5d5dff";
             case BRUTE -> "b53a5aff";
+            case SPITTER -> "a05cf0ff";
             case CONTROL_POINT -> "2b3a52ff";
             case PROJECTILE -> "ffe066ff";
             case SLUG -> "fff3c4ff";
+            case SPIT -> "d08cffff";
             case STRIKE -> "ffffffff";
             case GRENADE -> "c07820ff";
             case BLAST -> "ffb03aff";
@@ -147,7 +149,8 @@ public record GraphicConfig(
                 properties.getFloat("graphic.state.airborne", 0.5f),
                 properties.getFloat("graphic.state.grappling", -0.3f),
                 properties.getFloat("graphic.state.staggered", 0.35f),
-                properties.getFloat("graphic.state.dying", -0.7f));
+                properties.getFloat("graphic.state.dying", -0.7f),
+                properties.getFloat("graphic.state.casualty", 0.6f));
     }
 
     private static ChargeMark chargeMark(GameProperties properties) {

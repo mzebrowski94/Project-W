@@ -16,18 +16,22 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.system.ActionSystem;
 import pl.mzebrows.pwt.sim.system.AppearanceSystem;
 import pl.mzebrows.pwt.sim.system.AvoidanceSystem;
 import pl.mzebrows.pwt.sim.system.BlastSystem;
+import pl.mzebrows.pwt.sim.system.CasualtySystem;
 import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
 import pl.mzebrows.pwt.sim.system.ControlPointSystem;
 import pl.mzebrows.pwt.sim.system.CooldownSystem;
 import pl.mzebrows.pwt.sim.system.DamageSystem;
 import pl.mzebrows.pwt.sim.system.DodgeSystem;
+import pl.mzebrows.pwt.sim.system.DragSystem;
 import pl.mzebrows.pwt.sim.system.DriveSystem;
 import pl.mzebrows.pwt.sim.system.DyingSystem;
 import pl.mzebrows.pwt.sim.system.EnemyLeapSystem;
+import pl.mzebrows.pwt.sim.system.EnemyRangedSystem;
 import pl.mzebrows.pwt.sim.system.EvolutionSystem;
 import pl.mzebrows.pwt.sim.system.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
@@ -57,15 +61,18 @@ import pl.mzebrows.pwt.sim.system.WanderSystem;
  * networking depend on.
  *
  * <p><strong>System order is behaviour.</strong> Positions are recorded for interpolation before
- * anything moves; timers count down; intent becomes velocity and gunfire, then a swing if one was
- * asked for; every unit that can notice the commander decides whether it has; enemies that have
+ * anything moves; timers count down; whatever he has hold of is pulled along behind him; intent
+ * becomes velocity - constrained to backing away, if his hands are full - and gunfire, then a swing
+ * if one was asked for; every unit that can notice the commander decides whether it has; enemies that have
  * decide where they want to be going and the ones that have not amble around their patch instead,
  * and either way that course is bent around whatever it was about to walk into, and anything with a
  * shot coming at it breaks aside whatever it had been doing, and then all of that becomes a velocity, and any of them
  * mid-leap overwrite it with where they already committed to going; whatever is held still bleeds off
  * the blow that held it; everything moves; swings travel their arc; the constraint solver decides where things may be
- * and what touched what; damage owed becomes damage taken, and anything out of health either dies now
- * or starts dying; bodies that have lain long enough are marked; reactions run while the dead are
+ * and what touched what; damage owed becomes damage taken, and anything out of health either dies
+ * now, starts dying, or goes down on the ground with a clock running; whatever is within the
+ * commander's reach decides what his hands are offered and he gets on with it; a clock that runs out
+ * is a death like any other; bodies that have lain long enough are marked; reactions run while the dead are
  * still there to react to; everything publishes how it should be drawn; and only then are the dead
  * removed. Reordering these changes what the game does.
  */
@@ -110,6 +117,7 @@ public final class Simulation {
 
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
+        engine.addSystem(new DragSystem());
         engine.addSystem(new CommanderControlSystem(spawner));
         engine.addSystem(new MeleeSystem(spawner));
         engine.addSystem(new PerceptionSystem(config, map));
@@ -124,6 +132,7 @@ public final class Simulation {
         engine.addSystem(new TrooperCombatSystem(config, spawner, squad));
         engine.addSystem(new WanderSystem(Rng.stream(config.seed(), RngStream.WANDER), map));
         engine.addSystem(new AvoidanceSystem());
+        engine.addSystem(new EnemyRangedSystem(map, spawner, Rng.stream(config.seed(), RngStream.SPIT)));
         engine.addSystem(new DodgeSystem());
         engine.addSystem(new DriveSystem());
         engine.addSystem(new EnemyLeapSystem(Rng.stream(config.seed(), RngStream.LEAP)));
@@ -135,6 +144,8 @@ public final class Simulation {
         engine.addSystem(new PickupSystem(config, spawner));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(spawner));
+        engine.addSystem(new ActionSystem(config));
+        engine.addSystem(new CasualtySystem(config, spawner));
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
         engine.addSystem(new BlastSystem(map, spawner));
@@ -173,6 +184,8 @@ public final class Simulation {
                             input.firing(),
                             input.striking(),
                             input.throwing(),
+                            input.acting(),
+                            input.dragging(),
                             input.order());
             if (INVULNERABLE.has(commander)) {
                 INVULNERABLE.get(commander).permanent = commanderInvulnerable;

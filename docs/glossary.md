@@ -19,6 +19,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **faction** | Which side an entity is on. Damage only ever crosses sides. Scenery is on nobody's. |
 | **grunt** | The basic enemy strain. *Enemy* stays the umbrella word for everything on the alien side; *grunt* is the specific creature. |
 | **obstacle** | A static entity that blocks movement and projectiles. An entity like any other, not terrain data. |
+| **spitter** | The shooting strain: purple, fragile, and it holds its ground at a distance instead of closing. A different problem from the two above - one you have to go and solve rather than one that comes to you. |
 | **squad** *(source)* | The group of troopers following a commander. |
 | **strain** | The form a unit currently has. Grunt, brute and whatever they grow into are strains of one thing, not different classes of entity: a strain is an enum on a component and a table of numbers, and changing it is a field write. |
 | **trooper** | One AI-controlled member of a squad. |
@@ -41,8 +42,11 @@ A term that could sit in two sections goes where a reader would look for it, not
 | Term | Meaning |
 |---|---|
 | **blast** | The circle of ground an explosion makes lethal, for a moment. One circle, uniformly fatal inside it and harmless outside it, on nobody's side, and stopped by rock (G0018). It catches what is standing in it on the tick it appears and nothing that walks in afterwards, so the rest of it is only the flash. Everything that explodes does so by **dying**, and a blast is what the death leaves. |
+| **bleed-out** | The window a casualty has before he is gone. It stops while he is being hauled, so the ground you cross carrying him is free; what it costs is the work at the far end. Published as a fraction on the `charge` channel, because a rescue the player cannot time is a rescue he cannot decide to attempt. |
+| **casualty** | A man shot or blasted off his feet but not dead: he lies where he fell with a **bleed-out** running, and somebody who reaches him in time can **stabilise** him. He is at zero health, so the next hit of any kind finishes him - being shot while down and being eaten while down are the same rule rather than two. Nothing on the alien side can be one, because nothing on that side would come and get him (G0020). Distinct from *going down*, which everywhere else in this codebase means dying. |
 | **clinch** | How a lethal exchange ends: both parties stopped dead and held still, the body immovable, and the last stride closed so the two finish touching. It carries no knockback decay - a killing blow throws nothing, so there is nothing to bleed off, and carrying one let the survivor coast out from under the body. A melee kill earns it only against something already committed to attacking; a swat on something walking is not a clinch and costs the commander nothing (G0013). |
 | **contact** | An overlapping pair, reported once per tick by the constraint solver. What it *means* is the collision system's business. |
+| **decisive** | What a blow is when it empties a health bar. Whether that kills outright or leaves a **casualty** is declared by the source rather than derived from the amount: gunfire and blasts leave casualties, claws and sweeps and leaps kill (G0020). Fatal wins when two hits combine. |
 | **death throes** | The window between a killing blow and the body being removed. Every unit has them. The body is scenery for their duration - solid, immovable, and it stops bullets. Where the dying animation will play; a commander's respawn countdown starts after them, not during. |
 | **dodge** | A sidestep away from an incoming shot. Perpendicular to the shot, to the side the creature is already on, the same every time, so it can be learned and led (G0012). Bounded by a commit window, which is what makes the answer to a dodge a second shot. |
 | **grenade** | What the commander throws. It travels along his aim **direction** for a fixed distance, comes off rock and scenery without losing speed, passes through anything alive, and leaves a blast where the distance runs out (G0019). The reach is the same every throw, so a wall changes where one ends up rather than how far it went. |
@@ -53,6 +57,9 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **projectile** | A fired entity that travels and can hit something. Always simulated; there is no hitscan. |
 | **recovery** | The window after a staggering hit during which a unit takes no further contact damage. |
 | **stagger** | The stun a *survived* blow puts on the one that took it, and only on that one. A shove, not a clinch: whoever landed it keeps fighting. |
+| **spit** | What a spitter fires. Slow in the air on purpose, and thrown inside a narrow cone rather than along a line - so a shot meant for the commander reaches the men standing beside him, which is most of what makes a firing line hurt a squad. |
+| **spread** | The width of the cone a shot may leave in, centred on the aim. Applied by turning the shot, never by nudging where it was aimed: turning keeps every shot the same length and the cone the same width at every distance. |
+| **stabilise** | Putting a casualty back on his feet. Only the commander can, it needs him within arm's length, and it takes an unbroken hold of the action key - letting go loses the work rather than banking it. He gets up hurt and briefly protected. A man who has been **hauled** takes far longer. |
 | **strike** | One swing of a melee weapon, as an entity in the world with a body that sweeps an arc (G0005). Never an overlap query. |
 | **stun** | A window during which an entity cannot act - no control, no chase, no leap, no blow. It can still be moved and still be shoved; that is what lets knockback exist. Distinct from *recovery*, which is about damage rather than agency. |
 
@@ -81,6 +88,15 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **earshot** | How far the commander's voice carries. The whole of who hears an order: there is no selection and no roster, so where he is standing is what decides. |
 | **order** | One thing the commander tells the troopers near him to do, as a standing instruction on each of them. Reaches only what is within earshot when it is given (G0017), outranks the level's objectives, and never interrupts a fight - which needs no queue, because nothing consumes it. **His death drops every standing order**, and none of them come back with him. |
 | **urgency** | How much a trooper's advance beats its scanning, as a fraction. Deliberately **not** a speed - "move out" is what changes speed, and one dial doing both would make that order invisible. It is the number that sets the game's pace. |
+
+### What the commander does with his hands
+
+| Term | Meaning |
+|---|---|
+| **action** | Something the commander does to whatever is within arm's length, on one key. He never picks from a list: what is in reach is what is on offer, nearest first, and the simulation publishes which kind it is for the interface to show (G0021). |
+| **haul** | To drag a load - a casualty or a barrel - along behind you. It costs almost everything: he backs away and cannot press forwards, keeps only a fraction of his pace and a little sideways lean, and has no hand free for a weapon. **Hauled** latches on the load, because what it buys is paid for after he puts it down. |
+| **load** | Whatever is being hauled. Named by an issued id on both ends rather than by an entity reference, so a drag that outlives what it was holding can never come back attached to something else (G0010). |
+| **reach** | How close something must be, surface to surface, for the commander to do anything with it. One number for every action there is, so there is one distance to learn. |
 
 ### The map and the view
 

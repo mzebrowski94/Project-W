@@ -58,6 +58,17 @@ public final class ContactDamage implements Component, Pool.Poolable {
     /** How fast that throw bleeds off, in world units per second per second. */
     public float knockbackDecay;
 
+    /**
+     * Whether this blow kills outright rather than leaving a casualty on the ground.
+     *
+     * <p>True for everything by default, and false for exactly two things: gunfire and blasts. The
+     * asymmetry is the mechanic. Being shot from across the field is survivable if somebody comes
+     * for you; something reaching you with its claws is not, and neither is being caught by a sweep
+     * or landed on. That is what makes distance worth keeping and what makes a man who goes down in
+     * the open worth going to get.
+     */
+    public boolean fatal = true;
+
     /** Sets the attack and leaves it ready to strike, returning this component, for fluent spawning. */
     public ContactDamage set(float newAmount, float newCooldownSeconds, float newVictimInvulnerableSeconds) {
         this.amount = newAmount;
@@ -70,6 +81,16 @@ public final class ContactDamage implements Component, Pool.Poolable {
         this.clinchCarryDecay = 0f;
         this.knockbackSpeed = 0f;
         this.knockbackDecay = 0f;
+        this.fatal = true;
+        return this;
+    }
+
+    /**
+     * Makes this a blow that puts a man down rather than killing him, and returns this component,
+     * for fluent spawning. Chained after {@link #set}, so the killing case stays a one-line spawn.
+     */
+    public ContactDamage wounding() {
+        this.fatal = false;
         return this;
     }
 
@@ -114,5 +135,6 @@ public final class ContactDamage implements Component, Pool.Poolable {
         clinchCarryDecay = 0f;
         knockbackSpeed = 0f;
         knockbackDecay = 0f;
+        fatal = true;
     }
 }

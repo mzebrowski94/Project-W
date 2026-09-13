@@ -29,7 +29,10 @@ public enum RngStream {
     WANDER(0x9E37_79B9_7F4A_7C55L),
 
     /** How a trooper sweeps its attention as it advances, and where it roams with nothing left to take. */
-    TROOPER(0xD1B5_4A32_D192_ED03L);
+    TROOPER(0xD1B5_4A32_D192_ED03L),
+
+    /** How far off true a spitter's shot leaves its mouth. */
+    SPIT(0xA3C5_9AC3_0F8C_2E71L);
 
     private final long salt;
 

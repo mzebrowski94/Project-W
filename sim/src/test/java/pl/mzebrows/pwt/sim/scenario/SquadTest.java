@@ -133,9 +133,9 @@ class SquadTest {
     @Test
     void keepsATrooperLostDuringALevelLost() {
         Simulation simulation = deployed(config());
-        Entity casualty = all(simulation, Trooper.class).get(0);
+        Entity lost = all(simulation, Trooper.class).get(0);
 
-        casualty.getComponent(Damage.class).add(TROOPER_HEALTH * 2f, 0f);
+        lost.getComponent(Damage.class).add(TROOPER_HEALTH * 2f, 0f);
         steps(simulation, ticksIn(DEATH_THROES) + 30);
 
         assertThat(count(simulation, Trooper.class)).isEqualTo(SQUAD_SIZE - 1);

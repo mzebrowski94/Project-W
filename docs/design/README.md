@@ -140,7 +140,7 @@ rows become enforceable once the named feature exists - promote them then.
 | Everyone put down in a spawn area is jittered inside its tiles; nobody stands at a tile centre (G0009). | enforced - `SquadTest.standsNobodyAtATileCentre` |
 | A trooper inside a control point holds where it stands rather than walking at its middle. Everyone in the radius counts equally. | enforced - `TrooperAdvanceTest.standsOnAPointRatherThanWalkingAtItsMiddle` |
 | A trooper that stops takes a bearing of its own to watch. A squad at rest never all faces the same way. | enforced - `TrooperAdvanceTest.givesEveryManHoldingAPointHisOwnBearingToWatch`, `SquadOrderTest.spreadsTheSquadsAttentionInsteadOfAllStaringAtHim` |
-| A blast is uniformly fatal inside one circle and harmless outside it, and that circle is the one the renderer draws (G0018). | enforced - `BlastTest.killsEverythingStandingInsideIt`, `.leavesAnythingStandingOutsideItUntouched`, `.killsABruteAsReadilyAsAGrunt` |
+| A blast is uniformly **decisive** inside one circle and harmless outside it, and that circle is the one the renderer draws (G0018). Everything standing in it goes down; what that leaves behind is a fact about the victim, not about the blast (G0020). | enforced - `BlastTest.killsEverythingStandingInsideIt`, `.leavesAnythingStandingOutsideItUntouched`, `.killsABruteAsReadilyAsAGrunt` |
 | A blast is on nobody's side. It kills the commander and his troopers exactly as readily as it kills the aliens. | enforced - `BlastTest.killsTheCommanderAsReadilyAsAnEnemy`, `BarrelTest.killsTheCommanderWhoShootsOneFromTooCloseUp` |
 | A blast does not reach through rock, by the same clear-line test perception uses. | enforced - `BlastTest.doesNotReachThroughRock` |
 | A blast catches what is standing in it on the tick it goes off, and nothing that walks in afterwards. Running through the tail of one is safe. | enforced - `BlastTest.catchesWhatWasStandingInItAndNothingThatWalksInAfterwards` |
@@ -149,6 +149,21 @@ rows become enforceable once the named feature exists - promote them then.
 | A grenade travels the same total distance whatever it bounces off (G0019). | enforced - `GrenadeTest.spendsTheSameFlightWhetherItBouncesOrNot`, `.travelsItsFullRangeWhenNothingIsInTheWay` |
 | A grenade is thrown along the aim **direction** and never to the aim point, so pulling the view back can never reach further (G0019). | enforced - `GrenadeTest.throwsAlongTheAimDirectionRatherThanAtTheAimPoint` |
 | The simulation never moves the camera. It publishes what happened and how violent it was; what the view does about it is the client's. | judgement - `Shake`, the same split `Focus` already makes |
+| Whether a blow kills outright or leaves a casualty is declared by the **source**, never derived from the amount (G0020). | enforced - `CasualtyTest.leavesATrooperShotDownOnTheGroundRatherThanDead`, `.killsATrooperOutrightWhenTheBlowIsOneThatKills` |
+| Gunfire and blasts leave a casualty; claws, a sweep and a leap kill. That asymmetry is what makes distance worth keeping. | enforced - the two rows' tests, plus `CombatTest.killsTheCommanderTheMomentAnEnemyTouchesIt` |
+| A casualty is at zero health, so anything that reaches him finishes him. Being shot while down and being eaten while down are the same rule, and neither is a special case. | enforced - `CasualtyTest.finishesACasualtyWithTheNextHitThatReachesHimWhateverItIs` |
+| Nothing on the alien side can be a casualty. Being rescuable requires somebody on your side who would come. | enforced - `CasualtyTest.killsAnAlienOutrightHoweverItWasHurt` |
+| A casualty is out of the fight entirely - not driven, not shooting, not holding ground - and is visibly distinct from a corpse. | enforced - `CasualtyTest.leavesACasualtyOutOfTheFight`, `.showsACasualtyAsOneAndCountsHisBleedOutDownWhereThePlayerCanSeeIt` |
+| A bleed-out nobody answered leaves exactly the corpse a bullet would have. There is one death path. | enforced - `CasualtyTest.killsACasualtyNobodyReachedInTime`; `Deaths.kill` is the single writer |
+| The action key does whatever is within arm's length, nearest first; the player never selects (G0021). | enforced - `ActionTest.offersToPickUpAManWhoIsDownBesideHim`, `.offersNothingForAManWhoIsDownOutOfReach`, `.stopsOfferingWhenHeWalksOutOfReach` |
+| Stabilising is a commitment, not a total: letting go loses the work rather than banking it. | enforced - `ActionTest.losesTheWorkDoneSoFarWhenHeLetsGo` |
+| Only something with nothing else driving it can be hauled - a man who is down, or a barrel. A trooper on his feet cannot be picked up. | enforced - `DragTest.willNotTakeHoldOfAManStillOnHisFeet`, `.haulsABarrelAsReadilyAsAMan` |
+| A drag names its load by an issued id, never by an entity reference (G0010, G0016). | judgement - `Drag.load` and `Dragged.by`; a recycled component resets to zero, so a stale id can never match |
+| Hauling costs a hand: no firing, no sweep, no throw while something is in them. | enforced - `DragTest.leavesHimNoHandForTheGun` |
+| A man hauling something can only back away from it, with a little sideways lean, and slower than he walks. | enforced - `DragTest.barelyMovesAtAllWhenHePressesStraightAtTheManHeIsDragging`, `.haulsHimSlowerThanTheCommanderWalks` |
+| A load is moved by writing its velocity, never its position, so terrain still has the last word about where it may go. | enforced - `DragTest.putsABarrelBackToSceneryWhenHeLetsGoOfIt` holds the half that can drift; `DragSystem` never writes a position |
+| A spitter fires at what it is hunting, inside a cone, and never through rock. | enforced - `SpitterTest.firesOnceWhatItIsHuntingComesInsideItsRange`, `.keepsEveryShotInsideTheConeItDeclares`, `.willNotFireThroughRock` |
+| A cone is applied by turning the shot, so every shot is the same length and the cone the same width at every distance. | enforced - `SpitterTest.sendsEveryShotOutAtTheSameSpeedHoweverFarOffTrueItIs` |
 | Every gameplay speed is one block in `game.properties` and is retuned together, so the ratios between units survive a pace change. | judgement - the PACE block |
 
 The no-hitscan rows are load-bearing in three directions at once: they keep collision uniform, keep
@@ -211,6 +226,8 @@ do not treat one as taken when adding a game binding.
 | Left mouse / right trigger | Fire | built (mouse) |
 | Right mouse / left bumper | Melee strike | built (mouse) |
 | `Q` / right bumper | Throw a grenade | built (keyboard) - G0019 |
+| `E` / face button | Act on what is in reach - stabilise a casualty | built (keyboard) - G0021 |
+| `F` / left trigger | Take hold of a load, or let go of it | built (keyboard) - G0021 |
 | `1` | Squad order: follow me | built - scaffolding, see below |
 | `2` | Squad order: move out | built - scaffolding, see below |
 | `3` | Squad order: stop | built - scaffolding, see below |
@@ -242,6 +259,19 @@ mistaken for a decision.
   is what makes the clinch settle at touching distance, but it also means shooting into a crowd now
   leaves obstacles for a second at a time. Whether that reads as good feedback or as clutter is a
   question for play, not for a test.
+- **Should an alien ever aim at a trooper?** Nothing on the alien side has ever targeted anybody but
+  the commander - `Perception` latches onto him and only him - and the spitter inherits that: it
+  shoots what it is hunting. The squad still takes hits, because the cone is wide enough that a shot
+  meant for him reaches the men beside him, and that turned out to be a better reason for a squad to
+  take casualties than a targeting rule would have been. But it means a trooper standing alone is
+  never shot at, which will start to look wrong the moment the squad operates away from the commander.
+  Deciding yes means a second targeting concern in the alien AI, which is why it was not decided in
+  passing.
+- **Who picks the commander up?** Only he can stabilise, so he cannot be a casualty: a bleed-out
+  nobody could answer would be an animation promising a rescue the game cannot deliver. Troopers that
+  revive, or a second player, each answer this - and either makes him a casualty by adding one line to
+  `Spawner`. Until then, shots kill him as they always did, which is an asymmetry between him and his
+  men that nothing in the fiction explains.
 - **Should noise pull aggro?** Detection is a radius around each unit and nothing the player does
   changes it, so firing a gun in a corridor wakes nobody who could not already have noticed you. A
   shot that wakes things beyond the detection radius is a big arcade lever and it is cheap to add now

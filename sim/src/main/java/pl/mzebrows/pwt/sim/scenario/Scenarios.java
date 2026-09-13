@@ -24,6 +24,7 @@ public final class Scenarios {
             new DuelScenario(),
             new FeedingGroundScenario(),
             new DemolitionScenario(),
+            new CasualtyScenario(),
             new CrowdScenario());
 
     private Scenarios() {}

@@ -23,11 +23,15 @@ public enum Look {
     GRUNT,
     /** The heavy chasing strain. */
     BRUTE,
+    /** The strain that holds its ground and shoots. */
+    SPITTER,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     PROJECTILE,
     /** A heavy shot, so a gun is visible in what it fires. */
     SLUG,
+    /** What a spitter fires. It must not be mistakable for anything of the player's. */
+    SPIT,
     STRIKE,
     /** Something thrown that bounces and goes off where it stops. */
     GRENADE,

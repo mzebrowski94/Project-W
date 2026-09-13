@@ -16,5 +16,11 @@ public enum UnitKind {
     /** The basic enemy: fast, fragile, dies to one hand strike. */
     GRUNT,
     /** The heavy enemy: slower, tougher, survives a hand strike and is knocked back instead. */
-    BRUTE
+    BRUTE,
+    /**
+     * The shooting enemy: it stops at a distance and spits, roughly, rather than closing. Fragile up
+     * close, and a different problem from the two above - one you have to go and solve rather than
+     * one that comes to you.
+     */
+    SPITTER
 }

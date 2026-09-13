@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.RangedDef;
 import pl.mzebrows.pwt.sim.def.Require;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -74,6 +75,8 @@ public record SimConfig(
         GrenadeConfig grenade,
         RabbitConfig rabbit,
         BarrelConfig barrel,
+        CasualtyConfig casualty,
+        ActionConfig action,
         ControlPointConfig controlPoint,
         ObstacleConfig obstacle,
         CollisionConfig collision) {
@@ -154,6 +157,8 @@ public record SimConfig(
                         new WanderDef(true, 18f, 0.7f, 1f, 0.3f, 1.1f, 3f),
                         new DodgeDef(true, 26f, 32f, 0.32f, 0.9f, 1.2f)),
                 new BarrelConfig(1f, 11f),
+                new CasualtyConfig(8f, 1.5f, 0.4f, 1f, 0f, 2.5f),
+                new ActionConfig(2.5f, 0.45f, 0.35f, 0.4f),
                 new ControlPointConfig(6f, 5f, 48f),
                 new ObstacleConfig(3.5f, 8),
                 new CollisionConfig(3));
@@ -179,6 +184,7 @@ public record SimConfig(
                                 new WanderDef(true, 12f, 0.45f, 1.5f, 0.4f, 1.4f, 4f),
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 new LeapDef(true, 16f, 29f, 0.28f, 2, 0.18f, 1.6f, 0.08f, 0.22f),
+                                RangedDef.off(),
                                 Look.GRUNT))
                 .put(
                         UnitKind.BRUTE,
@@ -198,7 +204,28 @@ public record SimConfig(
                                 new WanderDef(true, 8f, 0.35f, 2f, 0.8f, 2.4f, 5f),
                                 new AvoidanceDef(true, 9f, 0.5f, 1.3f),
                                 new LeapDef(true, 22f, 24f, 0.42f, 3, 0.26f, 2.4f, 0.18f, 0.42f),
+                                RangedDef.off(),
                                 Look.BRUTE))
+                .put(
+                        UnitKind.SPITTER,
+                        new UnitDef(
+                                1.7f,
+                                6f,
+                                4,
+                                70f,
+                                100f,
+                                1.3f,
+                                0.6f,
+                                1.5f,
+                                1f,
+                                0,
+                                null,
+                                PerceptionDef.allRound(true, true, 30f, 45f, 14f),
+                                new WanderDef(true, 10f, 0.4f, 1.5f, 0.5f, 1.6f, 4f),
+                                new AvoidanceDef(true, 7f, 0.35f, 1.6f),
+                                LeapDef.off(),
+                                new RangedDef(true, 18f, 14f, true, WeaponKind.SPIT),
+                                Look.SPITTER))
                 .build();
     }
 
@@ -210,6 +237,7 @@ public record SimConfig(
         return Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
                 .put(WeaponKind.SIDEARM, new WeaponDef(0.3f, 42f, 0.6f, 50f, Look.PROJECTILE))
                 .put(WeaponKind.RAILGUN, new WeaponDef(1.2f, 85f, 1f, 300f, Look.SLUG))
+                .put(WeaponKind.SPIT, new WeaponDef(1.1f, 30f, 0.7f, 50f, Look.SPIT))
                 .build();
     }
 
@@ -667,6 +695,74 @@ public record SimConfig(
         public BarrelConfig {
             Require.positive("barrel health", health);
             Require.positive("barrel blastRadius", blastRadius);
+        }
+    }
+
+    /**
+     * What happens to a man who is shot off his feet.
+     *
+     * @param bleedOutSeconds how long he lies there before he is gone, in seconds. This is the whole
+     *     of what makes a casualty a decision rather than an event: it is the window the player has
+     *     to cross open ground, and the number that decides whether going to get him is brave or
+     *     merely expensive
+     * @param stabiliseSeconds how long somebody has to stand over him, unbroken, to put him back on
+     *     his feet. Seconds standing still in the open is what the rescue actually costs
+     * @param reviveHealthFraction how much of his health he gets back, in {@code (0, 1]}. Well under
+     *     a full bar on purpose: a man picked up in the middle of a firefight goes down again to the
+     *     next thing that touches him, so getting him up is not the same as getting him out
+     * @param reviveInvulnerableSeconds how long he is protected as he stands up. Without it the
+     *     stray round that was already in the air undoes the whole rescue, which reads as the game
+     *     cheating rather than as bad luck
+     * @param draggedBleedFactor how fast his clock runs while he is being hauled, as a multiple of
+     *     normal. Zero stops it, which is the shipped answer: the ground you cross carrying him is
+     *     free, and what you pay is at the far end. Whether that is the right trade is a question
+     *     for play, which is exactly why it is a number here rather than a rule in a system
+     * @param hauledStabiliseFactor what having been hauled multiplies the work by. Well above one,
+     *     so taking him somewhere quiet is a real decision against patching him up where he fell
+     */
+    @With
+    public record CasualtyConfig(
+            float bleedOutSeconds,
+            float stabiliseSeconds,
+            float reviveHealthFraction,
+            float reviveInvulnerableSeconds,
+            float draggedBleedFactor,
+            float hauledStabiliseFactor) {
+
+        public CasualtyConfig {
+            Require.positive("casualty bleedOutSeconds", bleedOutSeconds);
+            Require.positive("casualty stabiliseSeconds", stabiliseSeconds);
+            Require.positive("casualty reviveHealthFraction", reviveHealthFraction);
+            Require.notNegative("casualty reviveInvulnerableSeconds", reviveInvulnerableSeconds);
+            Require.notNegative("casualty draggedBleedFactor", draggedBleedFactor);
+            Require.positive("casualty hauledStabiliseFactor", hauledStabiliseFactor);
+            if (reviveHealthFraction > 1f) {
+                throw new IllegalArgumentException(
+                        "casualty reviveHealthFraction must be at most 1, was " + reviveHealthFraction);
+            }
+        }
+    }
+
+    /**
+     * What the commander can do with his hands, and how close he has to be to do it.
+     *
+     * @param reach how close something must be, surface to surface, to be within arm's length, in
+     *     world units. One number for every action there is or will be: a player who learnt that
+     *     reviving needs him almost touching should not have to learn a second distance for hauling
+     * @param dragSpeedFactor how much of his walking pace survives while he hauls, in {@code (0, 1]}
+     * @param dragLateralFactor how much of a sideways step survives while he hauls, in {@code [0, 1]}.
+     *     Small but not zero: backing out of a fight in a dead straight line is not a retreat, it is
+     *     a rail
+     * @param dragGap clearance between the two bodies while he hauls, in world units
+     */
+    @With
+    public record ActionConfig(float reach, float dragSpeedFactor, float dragLateralFactor, float dragGap) {
+
+        public ActionConfig {
+            Require.positive("action reach", reach);
+            Require.positive("action dragSpeedFactor", dragSpeedFactor);
+            Require.notNegative("action dragLateralFactor", dragLateralFactor);
+            Require.notNegative("action dragGap", dragGap);
         }
     }
 

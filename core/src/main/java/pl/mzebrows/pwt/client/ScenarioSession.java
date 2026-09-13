@@ -1,10 +1,16 @@
 package pl.mzebrows.pwt.client;
 
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.FixedStepClock;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Action;
+import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
@@ -22,6 +28,10 @@ import pl.mzebrows.pwt.sim.scenario.Scenarios;
  * {@link #simulation()} by identity.
  */
 public final class ScenarioSession {
+
+    /** Cached, because a {@code Family} built per frame is an allocation per frame. */
+    private static final Family COMMANDERS =
+            Family.all(Commander.class, Action.class).get();
 
     private final Scenario scenario;
     private final SimConfig baseConfig;
@@ -55,6 +65,16 @@ public final class ScenarioSession {
      */
     private @Nullable Order pendingOrder;
 
+    /**
+     * The action last reported to the player, so the same one is not reported twice.
+     *
+     * <p>Alpha-phase scaffolding: the available action belongs on screen, beside the commander,
+     * where a player can see it without reading a log. Until there is an interface to put it in, it
+     * is announced once each time it changes - and once each time, rather than every frame, is the
+     * whole reason this field exists. A line per frame is not a prompt, it is a flood.
+     */
+    private ActionKind announcedAction = ActionKind.NONE;
+
     public ScenarioSession(Scenario scenario, SimConfig baseConfig) {
         this.scenario = scenario;
         this.baseConfig = baseConfig;
@@ -80,6 +100,25 @@ public final class ScenarioSession {
     /** The last squad order the player gave, for the overlay to show. Null until one is given. */
     public @Nullable Order lastOrder() {
         return lastOrder;
+    }
+
+    /**
+     * The action the commander could take right now, but only if it has changed since this was last
+     * asked; null when it has not.
+     *
+     * <p>The change detection lives here rather than in the screen because it is a decision and the
+     * screen only draws. Asking is what marks it as reported, so a caller that asks twice in a frame
+     * gets it once - which is the behaviour a prompt wants.
+     */
+    public @Nullable ActionKind newlyOfferedAction() {
+        ImmutableArray<Entity> commanders = simulation.engine().getEntitiesFor(COMMANDERS);
+        ActionKind offered =
+                commanders.size() == 0 ? ActionKind.NONE : commanders.first().getComponent(Action.class).available;
+        if (offered == announcedAction) {
+            return null;
+        }
+        announcedAction = offered;
+        return offered;
     }
 
     /** Runs however many fixed steps this frame's elapsed time is worth. Does nothing while paused. */
@@ -167,6 +206,7 @@ public final class ScenarioSession {
     private void restart() {
         lastOrder = null;
         pendingOrder = null;
+        announcedAction = ActionKind.NONE;
         simulation = newWorld();
         clock = new FixedStepClock(simulation.config());
         paused = false;

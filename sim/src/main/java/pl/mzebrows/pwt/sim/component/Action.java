@@ -1,0 +1,45 @@
+package pl.mzebrows.pwt.sim.component;
+
+import com.badlogic.ashley.core.Component;
+import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.ActionKind;
+
+/**
+ * What the commander could do right now, and how far through doing it he is.
+ *
+ * <p><strong>It names a kind, never a target.</strong> Which casualty he is working on is resolved
+ * from scratch every tick by {@code ActionSystem}, exactly as {@code Perception} resolves what a
+ * unit is hunting - components are pooled, so an entity reference kept here across ticks could
+ * outlive what it pointed at and come back aimed at whatever was built from the recycled instance
+ * (G0010). Nothing is lost by re-deciding: if he has walked away from the man he was reviving, the
+ * right answer is that he is no longer reviving him.
+ *
+ * <p>{@link #available} is published for the interface (pillar 5). An action the player cannot see
+ * is an action he has to already know about, which is the same as not having it.
+ */
+public final class Action implements Component, Pool.Poolable {
+
+    /** What the action key would do this tick. {@link ActionKind#NONE} for almost every tick. */
+    public ActionKind available = ActionKind.NONE;
+
+    /** How close something has to be, surface to surface, to be within arm's length. */
+    public float reach;
+
+    /** How far through the current action he is, in {@code [0, 1]}. Zero when he is doing nothing. */
+    public float progress;
+
+    /** Sets how far he can reach and returns this component, for fluent spawning. */
+    public Action set(float newReach) {
+        this.reach = newReach;
+        this.available = ActionKind.NONE;
+        this.progress = 0f;
+        return this;
+    }
+
+    @Override
+    public void reset() {
+        available = ActionKind.NONE;
+        reach = 0f;
+        progress = 0f;
+    }
+}

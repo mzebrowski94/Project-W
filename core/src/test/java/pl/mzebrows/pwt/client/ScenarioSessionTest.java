@@ -9,7 +9,9 @@ import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 
@@ -257,6 +259,43 @@ class ScenarioSessionTest {
         session.advance(TICK * 3f, IDLE.ordering(Order.STOP));
 
         assertThat(trooperOrder(session)).isEqualTo(Order.STOP);
+    }
+
+    /**
+     * Scaffolding for the console prompt: the action is announced when it changes and not otherwise.
+     * Reporting it every frame is the failure this exists to prevent - a line per frame is a flood,
+     * not a prompt, and the player would stop reading it.
+     */
+    @Test
+    void reportsAnActionWhenOneComesWithinReach() {
+        ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
+        session.advance(TICK, IDLE);
+
+        putTheTrooperDown(session);
+        session.advance(TICK, IDLE);
+
+        assertThat(session.newlyOfferedAction()).isEqualTo(ActionKind.STABILISE);
+    }
+
+    @Test
+    void reportsNothingWhileTheAvailableActionHasNotChanged() {
+        ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
+        putTheTrooperDown(session);
+        session.advance(TICK, IDLE);
+        session.newlyOfferedAction();
+
+        session.advance(TICK, IDLE);
+
+        assertThat(session.newlyOfferedAction()).isNull();
+    }
+
+    private static void putTheTrooperDown(ScenarioSession session) {
+        session.simulation()
+                .engine()
+                .getEntitiesFor(Family.all(Trooper.class).get())
+                .get(0)
+                .getComponent(Damage.class)
+                .add(SimConfig.defaults().trooper().health(), 0f, false);
     }
 
     private static @Nullable Order trooperOrder(ScenarioSession session) {

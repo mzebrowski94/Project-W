@@ -125,7 +125,10 @@ public final class BlastSystem extends EntitySystem {
                 continue;
             }
             Damage owed = DAMAGE.get(victim);
-            owed.add(damage, 0f);
+            // Wounding, like gunfire: a blast is still uniformly decisive inside its circle
+            // (G0018) - everything in it goes down - but what it leaves behind depends on whether
+            // anything on that side could come and get you. An alien cannot be rescued and dies.
+            owed.add(damage, 0f, false);
             owed.cameFrom(x, y);
         }
     }

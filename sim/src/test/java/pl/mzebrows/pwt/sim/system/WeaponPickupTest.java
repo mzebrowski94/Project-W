@@ -110,7 +110,7 @@ class WeaponPickupTest {
         simulation.step();
 
         assertThat(grunt.getComponent(Feed.class).count).isEqualTo(1);
-        assertThat(grunt.getComponent(Weapon.class)).isNull();
+        assertThat(grunt.getComponent(Weapon.class).kind).isNotEqualTo(WeaponKind.RAILGUN);
     }
 
     private static void kill(Entity entity) {

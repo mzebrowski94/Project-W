@@ -18,8 +18,13 @@ import pl.mzebrows.pwt.sim.component.Appearance;
  *     loser share it on purpose - see {@code AppearanceSystem}
  * @param staggered a unit shoved off a blow it survived, briefly unable to act
  * @param dying a body on the field that is not coming back up, with no exchange behind it
+ * @param casualty a man down and bleeding out, who can still be put back on his feet. It must not be
+ *     confusable with {@code dying} at a glance: one is somewhere to run to and the other is not,
+ *     and a player who mistook them would either abandon a man he could have saved or cross open
+ *     ground for a corpse
  */
-public record StateTint(float unaware, float windingUp, float airborne, float grappling, float staggered, float dying) {
+public record StateTint(
+        float unaware, float windingUp, float airborne, float grappling, float staggered, float dying, float casualty) {
 
     /** How far to shift the base colour, in {@code [-1, 1]}. */
     public float forState(Appearance.State state) {
@@ -30,6 +35,7 @@ public record StateTint(float unaware, float windingUp, float airborne, float gr
             case GRAPPLING -> grappling;
             case STAGGERED -> staggered;
             case DYING -> dying;
+            case CASUALTY -> casualty;
             case NORMAL -> 0f;
         };
     }

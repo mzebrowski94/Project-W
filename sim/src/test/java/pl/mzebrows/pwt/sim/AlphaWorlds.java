@@ -6,6 +6,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
 import java.util.function.UnaryOperator;
+import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -23,6 +24,7 @@ import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.RangedDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
@@ -137,6 +139,37 @@ public final class AlphaWorlds {
     /** Wider than the barrel by a long way: what a barrel is for is what happens around it. */
     public static final float BARREL_BLAST_RADIUS = 8f;
 
+    /** Half a second: long enough to be interrupted in a test, short enough not to slow one down. */
+    public static final float CASUALTY_STABILISE = 0.5f;
+
+    /** Half a bar back. Enough that a revived man is visibly not a whole one. */
+    public static final float REVIVE_HEALTH_FRACTION = 0.5f;
+
+    public static final float REVIVE_INVULNERABLE = 0.25f;
+
+    /** Stopped while he is hauled, as the game ships it. */
+    public static final float DRAGGED_BLEED_FACTOR = 0f;
+
+    /** Double, not the shipped two and a half: round, so a test can read the cost straight off. */
+    public static final float HAULED_STABILISE_FACTOR = 2f;
+
+    /** Half pace while hauling, so a test can read the distance covered straight off. */
+    public static final float DRAG_SPEED_FACTOR = 0.5f;
+
+    public static final float DRAG_LATERAL_FACTOR = 0.25f;
+
+    public static final float DRAG_GAP = 0.5f;
+
+    /** Arm's length in the fixtures, and round, so a test can stand just inside or just outside it. */
+    public static final float ACTION_REACH = 3f;
+
+    /**
+     * Two seconds, not the shipped eight - a test that waits out a bleed-out is a slow test. Several
+     * times {@link #COOLDOWN} on purpose, so a test can watch a man lie there through a whole weapon
+     * cooldown and see that he does not use it.
+     */
+    public static final float CASUALTY_BLEED_OUT = 2f;
+
     /** Wide enough to catch two units either side of the middle and leave a third of them clear. */
     public static final float BLAST_RADIUS = 6f;
 
@@ -206,6 +239,27 @@ public final class AlphaWorlds {
 
     /** Wide enough that a shot passing two units away still counts as coming at it. */
     public static final float DODGE_MARGIN = 1.5f;
+
+    public static final float SPITTER_RADIUS = 1f;
+
+    public static final float SPITTER_SPEED = 30f;
+
+    public static final float SPITTER_HEALTH = 100f;
+
+    /** Shorter than the detection range, so a spitter notices well before it may shoot. */
+    public static final float SPIT_RANGE = 15f;
+
+    /** Half a second, so a test can count the shots a spitter gets off without waiting about. */
+    public static final float SPIT_COOLDOWN = 0.5f;
+
+    /** One world unit per tick, so a spit's travel can be read straight off. */
+    public static final float SPIT_SPEED = 60f;
+
+    /** Two of them put a man of any kind down, which is what the shipped numbers do too. */
+    public static final float SPIT_DAMAGE = 50f;
+
+    /** Wide enough that a test can tell a spread shot from a straight one without a microscope. */
+    public static final float SPIT_SPREAD_DEGREES = 40f;
 
     public static final float LEAP_TRIGGER_RANGE = 20f;
 
@@ -324,6 +378,7 @@ public final class AlphaWorlds {
                 Defs.<UnitKind, UnitDef>builder(UnitKind.class)
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
                         .put(UnitKind.BRUTE, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.BRUTE))
+                        .put(UnitKind.SPITTER, strain(SPITTER_RADIUS, SPITTER_SPEED, SPITTER_HEALTH, Look.SPITTER))
                         .build(),
                 Defs.<PickupKind, PickupDef>builder(PickupKind.class)
                         .put(PickupKind.MUSHROOM, new PickupDef(PICKUP_RADIUS, Look.MUSHROOM, Grant.NOTHING, MOUTHFUL))
@@ -347,6 +402,9 @@ public final class AlphaWorlds {
                                 WeaponKind.SIDEARM,
                                 new WeaponDef(
                                         COOLDOWN, PROJECTILE_SPEED, PROJECTILE_RADIUS, WEAPON_DAMAGE, Look.PROJECTILE))
+                        .put(
+                                WeaponKind.SPIT,
+                                new WeaponDef(SPIT_COOLDOWN, SPIT_SPEED, PROJECTILE_RADIUS, SPIT_DAMAGE, Look.SPIT))
                         .put(
                                 WeaponKind.RAILGUN,
                                 new WeaponDef(
@@ -375,6 +433,14 @@ public final class AlphaWorlds {
                         GRENADE_COOLDOWN, GRENADE_SPEED, GRENADE_RANGE, GRENADE_RADIUS, GRENADE_BLAST_RADIUS),
                 new SimConfig.RabbitConfig(RABBIT_SPEED, RABBIT_HEALTH, RABBIT_THROES, WanderDef.off(), DodgeDef.off()),
                 new SimConfig.BarrelConfig(BARREL_HEALTH, BARREL_BLAST_RADIUS),
+                new SimConfig.CasualtyConfig(
+                        CASUALTY_BLEED_OUT,
+                        CASUALTY_STABILISE,
+                        REVIVE_HEALTH_FRACTION,
+                        REVIVE_INVULNERABLE,
+                        DRAGGED_BLEED_FACTOR,
+                        HAULED_STABILISE_FACTOR),
+                new SimConfig.ActionConfig(ACTION_REACH, DRAG_SPEED_FACTOR, DRAG_LATERAL_FACTOR, DRAG_GAP),
                 new SimConfig.ControlPointConfig(POINT_RADIUS, POINT_CAPTURE_SECONDS, POINT_AGGRO_RADIUS),
                 new SimConfig.ObstacleConfig(OBSTACLE_RADIUS, 0),
                 new SimConfig.CollisionConfig(3));
@@ -401,6 +467,7 @@ public final class AlphaWorlds {
                 WanderDef.off(),
                 AvoidanceDef.off(),
                 LeapDef.off(),
+                RangedDef.off(),
                 look);
     }
 
@@ -523,6 +590,32 @@ public final class AlphaWorlds {
         return new Simulation(config().withRabbit(config().rabbit()
                 .withDodge(new DodgeDef(
                         true, DODGE_REACTION_RANGE, DODGE_SPEED, DODGE_DURATION, DODGE_COMMIT, DODGE_MARGIN))));
+    }
+
+    /**
+     * A world where every strain holds its ground and shoots, at the ranges above. Shooting is off
+     * in the base config for the same reason leaping is: a test about something else wants an enemy
+     * that walks at you predictably and does not fill the arena with projectiles.
+     */
+    public static Simulation shooting() {
+        return new Simulation(everyStrain(
+                config(),
+                strain -> strain.withRanged(
+                        new RangedDef(true, SPIT_RANGE, SPIT_SPREAD_DEGREES, true, WeaponKind.SPIT))));
+    }
+
+    /** Shooting straight, for a test that wants to know exactly where a shot went. */
+    public static Simulation shootingStraight() {
+        return shootingStraight(Maps.uniform(ARENA_TILES, ARENA_TILES, TILE, Terrain.PLAIN));
+    }
+
+    /** Shooting straight on ground of your own, for a test about what a shooter will not shoot through. */
+    public static Simulation shootingStraight(TileMap map) {
+        return new Simulation(
+                everyStrain(
+                        config(),
+                        strain -> strain.withRanged(new RangedDef(true, SPIT_RANGE, 0f, true, WeaponKind.SPIT))),
+                map);
     }
 
     /** The base world with every strain leaping on a fixed wind-up. */

@@ -81,6 +81,21 @@ public final class Damage implements Component, Pool.Poolable {
     public boolean hasSource;
 
     /**
+     * Whether any of this tick's hits was the kind that kills outright rather than leaving a
+     * casualty.
+     *
+     * <p>Fatal wins when hits combine, exactly as the longest recovery window does. A man caught by
+     * a blast and a set of claws in the same tick is dead: the merciful reading would let a unit
+     * survive a killing blow because a bullet happened to land alongside it, which would make the
+     * rule "it depends what else hit you" rather than "claws kill".
+     *
+     * <p>It is a property of the <em>source</em>, not of the amount. That is what keeps a new damage
+     * source from having to know that casualties exist - it says what kind of thing it is once, at
+     * the point the blow is recorded, and {@code DamageSystem} does the rest.
+     */
+    public boolean fatal;
+
+    /**
      * Records where a hit came from, keeping the <strong>first</strong> of the tick.
      *
      * <p>First rather than last so that two attackers landing in one tick resolve the same way on
@@ -96,12 +111,30 @@ public final class Damage implements Component, Pool.Poolable {
         sourceY = y;
     }
 
-    /** Adds to what is already owed, and to how long the victim recovers afterwards. */
+    /**
+     * Adds a blow that kills outright, and to how long the victim recovers afterwards.
+     *
+     * <p>The shorter call is the killing one because that is what almost everything in the game
+     * does - claws, a sweep, a leap - and because it is what every caller meant before there was a
+     * choice. A source that leaves a casualty says so explicitly.
+     */
     public void add(float extra, float recovery) {
+        add(extra, recovery, true);
+    }
+
+    /**
+     * Adds to what is already owed, saying whether this blow kills outright or leaves a casualty.
+     *
+     * <p>{@code kills} is a property of the weapon rather than of the damage: a sidearm round that
+     * takes a man to zero puts him on the ground, and claws that take him to zero finish him, and
+     * the numbers may be identical.
+     */
+    public void add(float extra, float recovery, boolean kills) {
         amount += extra;
         if (recovery > recoverySeconds) {
             recoverySeconds = recovery;
         }
+        fatal |= kills;
     }
 
     /** Records a shove, keeping the hardest asked for this tick. Applied only if the target lives. */
@@ -149,5 +182,6 @@ public final class Damage implements Component, Pool.Poolable {
         sourceX = 0f;
         sourceY = 0f;
         hasSource = false;
+        fatal = false;
     }
 }

@@ -29,6 +29,16 @@ public final class Intent implements Component, Pool.Poolable {
     public boolean throwing;
 
     /**
+     * Whether the action input is held this tick. What action that is - if any is available at all -
+     * is decided by {@code ActionSystem} from what he is standing next to, never by the player
+     * choosing from a list. One key, and the field tells him what it will do.
+     */
+    public boolean acting;
+
+    /** Whether the drag input is held this tick. */
+    public boolean dragging;
+
+    /**
      * The squad order given this tick, or null.
      *
      * <p>One tick only, like everything else here. An order is <em>given</em> once and then stands on
@@ -46,6 +56,8 @@ public final class Intent implements Component, Pool.Poolable {
             boolean newFiring,
             boolean newStriking,
             boolean newThrowing,
+            boolean newActing,
+            boolean newDragging,
             @Nullable Order newOrder) {
         this.moveX = newMoveX;
         this.moveY = newMoveY;
@@ -54,6 +66,8 @@ public final class Intent implements Component, Pool.Poolable {
         this.firing = newFiring;
         this.striking = newStriking;
         this.throwing = newThrowing;
+        this.acting = newActing;
+        this.dragging = newDragging;
         this.order = newOrder;
         return this;
     }
@@ -67,6 +81,8 @@ public final class Intent implements Component, Pool.Poolable {
         firing = false;
         striking = false;
         throwing = false;
+        acting = false;
+        dragging = false;
         order = null;
     }
 }

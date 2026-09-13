@@ -292,7 +292,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (INVULNERABLE.has(target) && INVULNERABLE.get(target).active()) {
             return;
         }
-        owed.add(attack.amount, attack.victimInvulnerableSeconds);
+        owed.add(attack.amount, attack.victimInvulnerableSeconds, attack.fatal);
         recordSource(attacker, owed);
         lock(attacker, target, attack, owed);
     }

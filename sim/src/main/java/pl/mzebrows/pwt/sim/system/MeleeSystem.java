@@ -58,7 +58,7 @@ public final class MeleeSystem extends IteratingSystem {
         Melee melee = MELEE.get(entity);
         if (INTENT.has(entity)) {
             Intent intent = INTENT.get(entity);
-            if (intent.striking && melee.ready()) {
+            if (intent.striking && melee.ready() && !Drivers.handsFull(entity)) {
                 melee.beginSwing(intent.aimX, intent.aimY);
             }
         }

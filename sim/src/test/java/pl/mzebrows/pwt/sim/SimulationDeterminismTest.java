@@ -87,7 +87,14 @@ class SimulationDeterminismTest {
     private static CommanderInput scriptedInput(int step) {
         double angle = step * 0.05;
         return new CommanderInput(
-                (float) StrictMath.cos(angle), (float) StrictMath.sin(angle), 80f, 45f, step % 7 != 0, step % 11 == 0);
+                        (float) StrictMath.cos(angle),
+                        (float) StrictMath.sin(angle),
+                        80f,
+                        45f,
+                        step % 7 != 0,
+                        step % 11 == 0)
+                .acting(step % 13 == 0)
+                .dragging(step % 17 == 0);
     }
 
     /**

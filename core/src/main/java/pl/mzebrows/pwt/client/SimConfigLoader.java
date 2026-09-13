@@ -9,6 +9,7 @@ import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.RangedDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
@@ -47,6 +48,8 @@ public final class SimConfigLoader {
                 grenade(properties, defaults.grenade()),
                 rabbit(properties, defaults.rabbit()),
                 barrel(properties, defaults.barrel()),
+                casualty(properties, defaults.casualty()),
+                action(properties, defaults.action()),
                 controlPoint(properties, defaults.controlPoint()),
                 obstacle(properties, defaults.obstacle()),
                 collision(properties, defaults.collision()));
@@ -161,6 +164,7 @@ public final class SimConfigLoader {
                 wander(properties, prefix + ".wander", defaults.wander()),
                 avoidance(properties, prefix + ".avoidance", defaults.avoidance()),
                 leap(properties, prefix + ".leap", defaults.leap()),
+                ranged(properties, prefix + ".ranged", defaults.ranged()),
                 defaults.look());
     }
 
@@ -200,6 +204,19 @@ public final class SimConfigLoader {
                 properties.getFloat(prefix + ".scanRange", defaults.scanRange()),
                 properties.getFloat(prefix + ".lookaheadSeconds", defaults.lookaheadSeconds()),
                 properties.getFloat(prefix + ".weight", defaults.weight()));
+    }
+
+    /**
+     * How a strain shoots, under {@code <prefix>.ranged}. Which gun it carries is structure rather
+     * than tuning and stays in the defaults, exactly as {@code evolvesTo} does.
+     */
+    private static RangedDef ranged(GameProperties properties, String prefix, RangedDef defaults) {
+        return new RangedDef(
+                properties.getBoolean(prefix + ".enabled", defaults.enabled()),
+                properties.getFloat(prefix + ".range", defaults.range()),
+                properties.getFloat(prefix + ".spreadDegrees", defaults.spreadDegrees()),
+                properties.getBoolean(prefix + ".haltsToFire", defaults.haltsToFire()),
+                defaults.gun());
     }
 
     /** Every strain configures its leap under its own prefix; the keys below it are the same. */
@@ -294,6 +311,26 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.grenade.range", defaults.range()),
                 properties.getFloat("sim.grenade.radius", defaults.radius()),
                 properties.getFloat("sim.grenade.blastRadius", defaults.blastRadius()));
+    }
+
+    /** How long a man who is shot off his feet lasts, and what it takes to pick him up. */
+    private static SimConfig.CasualtyConfig casualty(GameProperties properties, SimConfig.CasualtyConfig defaults) {
+        return new SimConfig.CasualtyConfig(
+                properties.getFloat("sim.casualty.bleedOutSeconds", defaults.bleedOutSeconds()),
+                properties.getFloat("sim.casualty.stabiliseSeconds", defaults.stabiliseSeconds()),
+                properties.getFloat("sim.casualty.reviveHealthFraction", defaults.reviveHealthFraction()),
+                properties.getFloat("sim.casualty.reviveInvulnerableSeconds", defaults.reviveInvulnerableSeconds()),
+                properties.getFloat("sim.casualty.draggedBleedFactor", defaults.draggedBleedFactor()),
+                properties.getFloat("sim.casualty.hauledStabiliseFactor", defaults.hauledStabiliseFactor()));
+    }
+
+    /** How close the commander has to be to do anything with his hands, under {@code sim.action}. */
+    private static SimConfig.ActionConfig action(GameProperties properties, SimConfig.ActionConfig defaults) {
+        return new SimConfig.ActionConfig(
+                properties.getFloat("sim.action.reach", defaults.reach()),
+                properties.getFloat("sim.action.dragSpeedFactor", defaults.dragSpeedFactor()),
+                properties.getFloat("sim.action.dragLateralFactor", defaults.dragLateralFactor()),
+                properties.getFloat("sim.action.dragGap", defaults.dragGap()));
     }
 
     /** The other pickup with numbers of its own, because it is the one that goes off. */

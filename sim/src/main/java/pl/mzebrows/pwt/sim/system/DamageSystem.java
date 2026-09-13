@@ -7,9 +7,9 @@ import com.badlogic.ashley.systems.IteratingSystem;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Collider;
+import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Damage;
-import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -34,23 +34,27 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  * touching. That is the whole of what makes a lethal answer to a leap read as a clinch rather than as
  * a punt.
  *
- * <p>What death means depends on whether the unit carries {@link Dying}. Without it, death is
- * immediate and the entity is marked dead here as it always was. With it, the body stays on the field
- * for its throes and {@code DyingSystem} marks it dead when they run out. Either way {@code Dead}
- * arrives exactly once and means exactly what it always meant.
+ * <p>What a killing blow does to a body is {@link Deaths}, shared with the bleed-out so that a man
+ * nobody reached leaves exactly the corpse a bullet would have.
+ *
+ * <p><strong>Not every blow that empties a health bar kills.</strong> Gunfire and blasts leave a
+ * casualty on the ground with a clock running; claws, a sweep and a leap finish the job. Which one
+ * a blow is travels on the {@link Damage} owed, so this is the only place that has to know the
+ * difference - and a unit nothing can rescue simply does not carry a {@link Casualty} and dies as it
+ * always did.
  */
 public final class DamageSystem extends IteratingSystem {
 
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Damage> DAMAGE = ComponentMapper.getFor(Damage.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
-    private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
+    private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
+    private static final ComponentMapper<Dragged> DRAGGED = ComponentMapper.getFor(Dragged.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -77,6 +81,7 @@ public final class DamageSystem extends IteratingSystem {
         float carrySpeed = damage.clinchCarrySpeed;
         float carryDecay = damage.clinchCarryDecay;
         boolean hasSource = damage.hasSource;
+        boolean fatal = damage.fatal;
         float sourceX = damage.sourceX;
         float sourceY = damage.sourceY;
         damage.reset();
@@ -96,15 +101,52 @@ public final class DamageSystem extends IteratingSystem {
             INVULNERABLE.get(entity).grant(recovery);
         }
         if (health.current <= 0f) {
+            if (fall(entity, fatal)) {
+                return;
+            }
             float travelX = VELOCITY.has(entity) ? VELOCITY.get(entity).x : 0f;
             float travelY = VELOCITY.has(entity) ? VELOCITY.get(entity).y : 0f;
-            kill(entity);
+            Deaths.kill(spawner, entity);
             clinch(entity, locksOnDeath, deathLock, travelX, travelY, carrySpeed, carryDecay);
             return;
         }
         if (shove > 0f && VELOCITY.has(entity)) {
             VELOCITY.get(entity).set(shoveX * shove, shoveY * shove);
         }
+    }
+
+    /**
+     * Puts a man on the ground instead of in the grave, if this was the kind of blow that does that
+     * and he is the kind of unit it can be done to. Returns whether he went down.
+     *
+     * <p>Three things have to be true: the blow left a casualty rather than killing, the unit can be
+     * one at all - no alien can, because nothing on that side would come and get him - and he is not
+     * already down. That last one is what makes being shot while you lie there fatal, and it costs
+     * no branch anywhere: he is already at zero health, so the hit takes him below it and the
+     * ordinary death path runs.
+     *
+     * <p>His velocity goes with him. Nothing drives a casualty - {@link Drivers} treats him as held
+     * - so whatever he was doing when he was hit would otherwise have carried him across the field
+     * on the ground.
+     */
+    private static boolean fall(Entity entity, boolean fatal) {
+        if (fatal || !CASUALTY.has(entity)) {
+            return false;
+        }
+        Casualty casualty = CASUALTY.get(entity);
+        if (casualty.begun) {
+            return false;
+        }
+        casualty.begin();
+        if (DRAGGED.has(entity)) {
+            // A fresh time on the ground is a fresh journey. What being hauled costs is the work at
+            // the far end, and charging a man for a drag two firefights ago is charging him twice.
+            DRAGGED.get(entity).hauled = false;
+        }
+        if (VELOCITY.has(entity)) {
+            VELOCITY.get(entity).set(0f, 0f);
+        }
+        return true;
     }
 
     /**
@@ -188,40 +230,6 @@ public final class DamageSystem extends IteratingSystem {
             // The clinch cleared this so the survivor would stop dead; the body is the half still
             // moving, and this is what brings it to rest against him rather than through him.
             STUNNED.get(body).knockbackDecay = decay;
-        }
-    }
-
-    /**
-     * A killing blow: either the entity goes now, or it takes its time about it.
-     *
-     * <p>A body that lingers becomes scenery - solid, and immovable like an obstacle. Immovable is the
-     * half that matters for the clinch: the solver stops trying to shuffle the corpse and pushes the
-     * living party out instead, so the two settle exactly touching rather than being prised apart or
-     * left overlapping.
-     *
-     * <p>It does not stun the body. If the killing blow carried a lock, contact resolution has already
-     * stunned it and that stun is what makes the pair read as locked together; if it did not - anything
-     * shot - the body has nothing to hide and reads as dead at once. What keeps a corpse from still
-     * chasing is that the drivers treat dying as inert in its own right, not a stun standing in for it.
-     */
-    private void kill(Entity entity) {
-        if (VELOCITY.has(entity)) {
-            VELOCITY.get(entity).set(0f, 0f);
-        }
-        if (!DYING.has(entity)) {
-            spawner.markDead(entity);
-            return;
-        }
-        Dying throes = DYING.get(entity);
-        if (throes.begun) {
-            return;
-        }
-        throes.begin();
-        if (COLLIDER.has(entity)) {
-            COLLIDER.get(entity).set(true, false);
-        }
-        if (INVULNERABLE.has(entity)) {
-            INVULNERABLE.get(entity).grant(throes.throesSeconds);
         }
     }
 }

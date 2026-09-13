@@ -49,6 +49,12 @@ public final class Appearance implements Component, Pool.Poolable {
         GRAPPLING,
         /** Shoved and briefly unable to act, with nothing holding the other party. */
         STAGGERED,
+        /**
+         * Shot off his feet and bleeding out, but not gone: somebody who reaches him in time puts
+         * him back on them. It must read as unmistakably different from {@link #DYING}, because the
+         * two ask the player for opposite things - one is somewhere to run to and one is not.
+         */
+        CASUALTY,
         /** Out of health, body still on the field. */
         DYING
     }

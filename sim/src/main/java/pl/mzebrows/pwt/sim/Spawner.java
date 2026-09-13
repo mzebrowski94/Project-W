@@ -4,11 +4,13 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.PooledEngine;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Avoidance;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
@@ -16,6 +18,8 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dodge;
+import pl.mzebrows.pwt.sim.component.Drag;
+import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -33,6 +37,7 @@ import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
 import pl.mzebrows.pwt.sim.component.Shake;
@@ -139,6 +144,12 @@ public final class Spawner {
                         grenade.radius(),
                         grenade.blastRadius()));
         entity.add(engine.createComponent(Taking.class));
+        entity.add(engine.createComponent(Action.class).set(config.action().reach()));
+        entity.add(engine.createComponent(Drag.class)
+                .set(
+                        config.action().dragSpeedFactor(),
+                        config.action().dragLateralFactor(),
+                        config.action().dragGap()));
         entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER).face(1f, 0f));
         engine.addEntity(entity);
         return entity;
@@ -176,6 +187,12 @@ public final class Spawner {
         entity.add(engine.createComponent(Invulnerable.class));
         entity.add(engine.createComponent(Stunned.class));
         entity.add(engine.createComponent(Dying.class).set(trooper.deathThroesSeconds()));
+        entity.add(engine.createComponent(Casualty.class)
+                .set(
+                        config.casualty().bleedOutSeconds(),
+                        config.casualty().stabiliseSeconds(),
+                        config.casualty().hauledStabiliseFactor()));
+        entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Avoidance.class)
                 .set(
                         trooper.avoidance().enabled(),
@@ -233,6 +250,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Wander.class).anchor(x, y));
         entity.add(engine.createComponent(Avoidance.class));
         entity.add(engine.createComponent(Leap.class));
+        entity.add(engine.createComponent(Ranged.class));
+        entity.add(engine.createComponent(Weapon.class));
         entity.add(engine.createComponent(Taking.class));
         entity.add(engine.createComponent(Feed.class));
         entity.add(engine.createComponent(Appearance.class).face(1f, 0f));
@@ -305,6 +324,16 @@ public final class Spawner {
                         def.leap().cooldownSeconds(),
                         def.leap().hesitationMinSeconds(),
                         def.leap().hesitationMaxSeconds());
+        entity.getComponent(Ranged.class)
+                .set(
+                        def.ranged().enabled(),
+                        def.ranged().range(),
+                        def.ranged().halfSpreadRadians(),
+                        def.ranged().haltsToFire());
+        // Through the same table and the same component the commander's own guns come through, so a
+        // strain that shoots needs no firing code of its own - only a definition saying which gun.
+        entity.getComponent(Weapon.class)
+                .set(def.ranged().gun(), config.weapon(def.ranged().gun()));
         entity.getComponent(Appearance.class).set(def.look());
     }
 
@@ -422,11 +451,15 @@ public final class Spawner {
         entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
         entity.add(engine.createComponent(Body.class).set(def.radius()));
         entity.add(engine.createComponent(Collider.class).set(true, false));
         entity.add(engine.createComponent(Health.class).set(barrel.health()));
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(BlastsOnDeath.class).set(barrel.blastRadius()));
+        // It can be hauled, which is why it has a velocity at all. Immovable and therefore still
+        // scenery until somebody picks it up; nothing drives it, so the velocity stays zero.
+        entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Appearance.class).set(def.look()));
         engine.addEntity(entity);
         return entity;
@@ -542,7 +575,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Velocity.class).set(directionX * speed, directionY * speed));
         entity.add(engine.createComponent(Body.class).set(radius));
         entity.add(engine.createComponent(Collider.class).set(false, true));
-        entity.add(engine.createComponent(ContactDamage.class).set(damage, 0f, 0f));
+        entity.add(
+                engine.createComponent(ContactDamage.class).set(damage, 0f, 0f).wounding());
         entity.add(engine.createComponent(Appearance.class).set(look));
         engine.addEntity(entity);
         return entity;

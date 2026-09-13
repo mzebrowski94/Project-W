@@ -5,8 +5,10 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Blast;
+import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
@@ -53,6 +55,8 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Blast> BLAST = ComponentMapper.getFor(Blast.class);
+    private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
+    private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
@@ -122,6 +126,18 @@ public final class AppearanceSystem extends IteratingSystem {
      * <p>A strain with nowhere to grow reports nothing, which is what almost everything reports.
      */
     private float chargeOf(Entity entity) {
+        if (ACTION.has(entity) && ACTION.get(entity).progress > 0f) {
+            // The work shows on the man doing it, not on the man being worked on - the casualty's
+            // own circle is already saying how long he has left, and one circle cannot carry two
+            // meanings without the player having to guess which.
+            return ACTION.get(entity).progress;
+        }
+        if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
+            // How long a man on the ground has left, on the same channel as everything else that
+            // fills up - read backwards, as a blast is. Pillar 5 at its sharpest: a rescue the
+            // player cannot time is a rescue he cannot decide to attempt.
+            return CASUALTY.get(entity).fraction();
+        }
         if (BLAST.has(entity)) {
             // A blast burning out rides the same channel as a unit filling up, read backwards. One
             // way of drawing "how far through this is", learnt once and recognised everywhere.
@@ -150,6 +166,12 @@ public final class AppearanceSystem extends IteratingSystem {
         }
         if (DYING.has(entity) && DYING.get(entity).begun) {
             return Appearance.State.DYING;
+        }
+        if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
+            // Above staggered, below dying. A man who was shoved and then shot off his feet is a
+            // casualty, not a stagger - worst news first - but a casualty who ran out of time is a
+            // corpse, and the two must never be confused for each other.
+            return Appearance.State.CASUALTY;
         }
         if (held) {
             return Appearance.State.STAGGERED;
