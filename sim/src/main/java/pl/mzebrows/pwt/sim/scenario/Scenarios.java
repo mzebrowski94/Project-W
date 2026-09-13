@@ -23,6 +23,7 @@ public final class Scenarios {
             new ExpanseScenario(),
             new DuelScenario(),
             new FeedingGroundScenario(),
+            new DemolitionScenario(),
             new CrowdScenario());
 
     private Scenarios() {}

@@ -26,6 +26,8 @@ mechanic you are about to write appears there, it has already been rejected and 
 | [G0015](G0015-detection-is-a-list-of-tests.md) | Detection is a list of tests a strain declares. Narrows G0011. | a special case in `PerceptionSystem`; line of sight for everything; a `Visibility` component | accepted |
 | [G0016](G0016-aggro-latches-a-place.md) | Aggro latches a place, not a unit. | latching an attacker by id; holding an `Entity` across ticks; a threat table | accepted |
 | [G0017](G0017-an-order-reaches-who-is-near.md) | An order reaches the troopers near the commander, not the squad. | select-then-order; orders reaching the whole squad; a squad roster | accepted |
+| [G0018](G0018-the-blast-is-one-circle.md) | The blast is one circle, and things explode by dying. | damage falloff; a lethal core in a wounding ring; a blast that spares its own side; a blast in the collision path; spawning one directly; a blast that stays lethal while it is drawn | accepted |
+| [G0019](G0019-the-grenade-is-a-fixed-throw.md) | A grenade is thrown along the aim direction for a fixed distance. | throwing to the aim point; cooking or charging a throw; contact detonation; a solid grenade; a grenade `WeaponKind` | accepted |
 
 ## When to write one
 

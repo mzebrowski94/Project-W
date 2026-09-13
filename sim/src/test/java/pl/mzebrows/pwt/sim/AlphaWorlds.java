@@ -117,6 +117,41 @@ public final class AlphaWorlds {
 
     public static final float KNOCKBACK_DECAY = 60f;
 
+    /** One world unit per tick, so a throw's travel can be read straight off. */
+    public static final float GRENADE_SPEED = 60f;
+
+    /** Twenty units of flight: far enough to bounce inside the test arena, short enough to wait out. */
+    public static final float GRENADE_RANGE = 20f;
+
+    public static final float GRENADE_RADIUS = 0.5f;
+
+    /** Small, so a test about the throw is not also a test about what the blast happened to catch. */
+    public static final float GRENADE_BLAST_RADIUS = 4f;
+
+    /** Shorter than a whole flight, so a test can watch a second grenade join the first in the air. */
+    public static final float GRENADE_COOLDOWN = 0.2f;
+
+    /** One of anything sets it off. A barrel is a trigger, not something to grind down. */
+    public static final float BARREL_HEALTH = 1f;
+
+    /** Wider than the barrel by a long way: what a barrel is for is what happens around it. */
+    public static final float BARREL_BLAST_RADIUS = 8f;
+
+    /** Wide enough to catch two units either side of the middle and leave a third of them clear. */
+    public static final float BLAST_RADIUS = 6f;
+
+    /** Enough to kill anything in the fixture, which is the rule: a blast is fatal or it is nothing. */
+    public static final float BLAST_DAMAGE = 1000f;
+
+    /** Long enough that a test can put something into the tail of a blast and watch it walk away. */
+    public static final float BLAST_SECONDS = 0.2f;
+
+    /** How hard the ground moves. Nothing in the simulation reads it; the view is the client's. */
+    public static final float BLAST_SHAKE = 3f;
+
+    /** How far that carries, as a multiple of the blast's own radius. */
+    public static final float BLAST_SHAKE_REACH = 2.5f;
+
     /** As long as the melee lock, so a lethal answer holds the two together for the whole beat. */
     public static final float ENEMY_THROES = 0.25f;
 
@@ -303,6 +338,9 @@ public final class AlphaWorlds {
                                 PickupKind.ARMOURY,
                                 new PickupDef(PICKUP_RADIUS, Look.ARMOURY, new Grant.Arm(WeaponKind.RAILGUN), MOUTHFUL))
                         .put(PickupKind.RABBIT, new PickupDef(RABBIT_RADIUS, Look.RABBIT, Grant.NOTHING, MOUTHFUL))
+                        .put(
+                                PickupKind.BARREL,
+                                new PickupDef(PICKUP_RADIUS, Look.BARREL, Grant.NOTHING, Grant.DETONATE))
                         .build(),
                 Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
                         .put(
@@ -332,7 +370,11 @@ public final class AlphaWorlds {
                         CLINCH_CARRY_DECAY,
                         KNOCKBACK_SPEED,
                         KNOCKBACK_DECAY),
+                new SimConfig.BlastConfig(BLAST_DAMAGE, BLAST_SECONDS, BLAST_SHAKE, BLAST_SHAKE_REACH),
+                new SimConfig.GrenadeConfig(
+                        GRENADE_COOLDOWN, GRENADE_SPEED, GRENADE_RANGE, GRENADE_RADIUS, GRENADE_BLAST_RADIUS),
                 new SimConfig.RabbitConfig(RABBIT_SPEED, RABBIT_HEALTH, RABBIT_THROES, WanderDef.off(), DodgeDef.off()),
+                new SimConfig.BarrelConfig(BARREL_HEALTH, BARREL_BLAST_RADIUS),
                 new SimConfig.ControlPointConfig(POINT_RADIUS, POINT_CAPTURE_SECONDS, POINT_AGGRO_RADIUS),
                 new SimConfig.ObstacleConfig(OBSTACLE_RADIUS, 0),
                 new SimConfig.CollisionConfig(3));

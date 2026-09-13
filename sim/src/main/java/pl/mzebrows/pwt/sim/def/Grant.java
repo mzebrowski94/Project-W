@@ -30,6 +30,9 @@ public sealed interface Grant {
     /** Offers a side nothing. A side with nothing on offer walks over the pickup and leaves it. */
     Grant NOTHING = new None();
 
+    /** Destroys the pickup in the taker's face. What a barrel is worth to something hungry. */
+    Grant DETONATE = new Detonate();
+
     /** Nothing happens, and the pickup is not consumed. */
     record None() implements Grant {}
 
@@ -45,6 +48,15 @@ public sealed interface Grant {
 
     /** Puts a different gun in the taker's hands, replacing whatever it was carrying. */
     record Arm(WeaponKind weapon) implements Grant {}
+
+    /**
+     * Nothing reaches the taker at all. Taking the thing is what <em>destroys</em> it, and what it
+     * does on being destroyed is its own death reaction rather than anything granted here.
+     *
+     * <p>It exists so that a side which sets a barrel off is a side the barrel is consumed by.
+     * {@link None} would leave it standing and the alien would walk over it for the rest of the level.
+     */
+    record Detonate() implements Grant {}
 
     /** Adds troopers to the level rather than changing whoever picked it up. */
     record Reinforce(int troopers) implements Grant {

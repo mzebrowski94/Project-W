@@ -7,13 +7,16 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Dodge;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Melee;
+import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.component.Weapon;
 
@@ -44,6 +47,9 @@ public final class CooldownSystem extends EntitySystem {
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Wander> WANDER = ComponentMapper.getFor(Wander.class);
     private static final ComponentMapper<Dodge> DODGE = ComponentMapper.getFor(Dodge.class);
+    private static final ComponentMapper<Blast> BLAST = ComponentMapper.getFor(Blast.class);
+    private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
+    private static final ComponentMapper<Thrower> THROWER = ComponentMapper.getFor(Thrower.class);
 
     private ImmutableArray<Entity> invulnerable = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> attacks = new ImmutableArray<>(new Array<>());
@@ -54,6 +60,9 @@ public final class CooldownSystem extends EntitySystem {
     private ImmutableArray<Entity> leaps = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> wanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> dodges = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> blasts = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> shakes = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> throwers = new ImmutableArray<>(new Array<>());
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -66,6 +75,9 @@ public final class CooldownSystem extends EntitySystem {
         leaps = engine.getEntitiesFor(Family.all(Leap.class).get());
         wanders = engine.getEntitiesFor(Family.all(Wander.class).get());
         dodges = engine.getEntitiesFor(Family.all(Dodge.class).get());
+        blasts = engine.getEntitiesFor(Family.all(Blast.class).get());
+        shakes = engine.getEntitiesFor(Family.all(Shake.class).get());
+        throwers = engine.getEntitiesFor(Family.all(Thrower.class).get());
     }
 
     @Override
@@ -110,6 +122,18 @@ public final class CooldownSystem extends EntitySystem {
             Dodge dodge = DODGE.get(dodges.get(i));
             dodge.remainingSeconds = countDown(dodge.remainingSeconds, deltaTime);
             dodge.commitRemaining = countDown(dodge.commitRemaining, deltaTime);
+        }
+        for (int i = 0; i < blasts.size(); i++) {
+            Blast blast = BLAST.get(blasts.get(i));
+            blast.remainingSeconds = countDown(blast.remainingSeconds, deltaTime);
+        }
+        for (int i = 0; i < shakes.size(); i++) {
+            Shake shake = SHAKE.get(shakes.get(i));
+            shake.remainingSeconds = countDown(shake.remainingSeconds, deltaTime);
+        }
+        for (int i = 0; i < throwers.size(); i++) {
+            Thrower thrower = THROWER.get(throwers.get(i));
+            thrower.remainingSeconds = countDown(thrower.remainingSeconds, deltaTime);
         }
     }
 

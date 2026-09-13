@@ -26,6 +26,7 @@ import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Taking;
+import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.PickupDef;
@@ -68,6 +69,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
+    private static final ComponentMapper<Thrown> THROWN = ComponentMapper.getFor(Thrown.class);
+    private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
 
     /** Below this two bodies are on top of each other and give no direction to be thrown along. */
     private static final float EPSILON = 1e-4f;
@@ -97,6 +100,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
 
     @Override
     public void onContact(Entity a, Entity b) {
+        if (THROWN.has(a) || THROWN.has(b)) {
+            bounce(a, b);
+            return;
+        }
         if (PICKUP.has(a) && !shotAt(a, b)) {
             claim(a, b);
             return;
@@ -121,6 +128,64 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             strike(a, b);
             strike(b, a);
         }
+    }
+
+    /**
+     * Notes which way a thrown thing came off whatever it ran into, and stops there.
+     *
+     * <p>Recorded rather than answered, for the reason everything in this class is: geometry knows two
+     * circles overlapped, and whether that is a bounce depends on which way the thing was already
+     * travelling - which is {@code GrenadeSystem}'s question. It is the same split as damage owed and
+     * a pickup claimed.
+     *
+     * <p>It comes off <em>scenery</em> and nothing else, so one grenade passes through another, through
+     * a bullet, and through every unit on the field. That is the whole test, and it is a question about
+     * collider flags rather than about what any of it is.
+     *
+     * <p>First in the method, and it returns, because a grenade in the air is harmless: nothing should
+     * spend an enemy's attack cooldown on it or offer it a mushroom.
+     */
+    private static void bounce(Entity a, Entity b) {
+        if (THROWN.has(a) && prop(b)) {
+            comeOff(a, POSITION.get(b));
+        }
+        if (THROWN.has(b) && prop(a)) {
+            comeOff(b, POSITION.get(a));
+        }
+    }
+
+    private static void comeOff(Entity thrown, Position surface) {
+        Position at = POSITION.get(thrown);
+        float normalX = at.x - surface.x;
+        float normalY = at.y - surface.y;
+        float length = (float) Math.sqrt(normalX * normalX + normalY * normalY);
+        if (length <= EPSILON) {
+            return;
+        }
+        THROWN.get(thrown).bounceOff(normalX / length, normalY / length);
+    }
+
+    /**
+     * Scenery: something standing on the field that never moves and is not on its way out.
+     *
+     * <p><strong>A grenade passes through anything alive.</strong> It came off units when this was
+     * first built, and one playtest in a crowd showed why that is wrong: with a dozen bodies between
+     * the commander and where he was aiming, where a throw ends up stops being anything a player can
+     * predict, and the bank off a wall - the whole reason the throw is worth having - is drowned in
+     * noise. Nothing had to be added to fix it: a unit is solid <em>and movable</em>, so it drops out
+     * of this test on its own.
+     *
+     * <p>The corpse clause is the one deliberate exclusion. A dying body is scenery everywhere else in
+     * the game - solid, immovable, and it stops bullets - but it appears and vanishes on a one-second
+     * clock, and a surface that comes and goes unannounced is exactly the unpredictability the rest of
+     * this rule exists to remove.
+     */
+    private static boolean prop(Entity entity) {
+        if (!COLLIDER.has(entity)) {
+            return false;
+        }
+        Collider collider = COLLIDER.get(entity);
+        return collider.solid && !collider.movable && !inert(entity);
     }
 
     /**

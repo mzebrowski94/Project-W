@@ -68,7 +68,7 @@ rows become enforceable once the named feature exists - promote them then.
 | The commander is an ordinary entity - killable, collidable, standing on the field. | enforced - `CombatTest.killsTheCommanderTheMomentAnEnemyTouchesIt` |
 | The commander comes back while any trooper still lives. | deferred - needs squad; with no troopers it always comes back |
 | Only `ReaperSystem` removes an entity; anything that kills only marks it `Dead`. | enforced - `ArchitectureTest.onlyTheReaperRemovesEntities` |
-| Damage only ever crosses faction lines, never stays inside one. | enforced - `CombatTest.neverLetsEnemiesHurtEachOther` |
+| Damage only ever crosses faction lines, never stays inside one - and a source on **nobody's** side crosses every one of them, which is how a blast reaches the commander who caused it. | enforced - `CombatTest.neverLetsEnemiesHurtEachOther`, `BarrelTest.killsTheCommanderWhoShootsOneFromTooCloseUp` |
 | Invulnerability is reachable from the harness only, never from a scenario or config. | enforced - `ArchitectureTest.scenariosCannotSwitchOnGodMode` |
 | Troopers lost during a level stay lost for that level. | enforced - `SquadTest.keepsATrooperLostDuringALevelLost` |
 | Squad size never exceeds its configured maximum. | enforced - `SquadTest.neverPutsMoreTroopersOnTheFieldThanTheSquadAllows`; a scenario sets it, not the build |
@@ -110,7 +110,7 @@ rows become enforceable once the named feature exists - promote them then.
 | Only `TileMap` converts a world position into a tile. | judgement |
 | Map generation draws from its own stream, so changing a layout never reshuffles what happens in play. | judgement - `Scenarios.world` derives it; one seed still decides the whole level |
 | A level may be larger than the view, and the camera keeps every player in it (G0008). | enforced - `CameraDirectorTest.framesBothTargetsWhenThereAreTwo` |
-| The view never shows anything past the edge of the map, and centres on a level smaller than itself. | enforced - `CameraDirectorTest.keepsTheViewInsideTheMap`, `.centresOnAMapSmallerThanTheView` |
+| The view never comes to **rest** showing anything past the edge of the map, and centres on a level smaller than itself. **Only a shake may take it outside, and never further than the shake displaces it** - amended 2026-09-13, because the clamp pins the view on a level no bigger than itself and was silently deleting every screen shake on the default map size. | enforced - `CameraDirectorTest.keepsTheViewInsideTheMap`, `.centresOnAMapSmallerThanTheView`, `.letsAShakeLeaveTheMapButNeverByMoreThanTheShake`, `.shakesEvenOnALevelNoBiggerThanTheView` |
 | **Aim is a direction, never a distance.** Zoom is a rendering setting and cannot become extra range. | enforced - `CommanderControlSystemTest.firesInTheSameDirectionHoweverFarAwayTheAimPointIs` |
 | The view is told who to watch by a component; the client never asks which entity is the commander. | judgement - `Focus`; local co-op is two markers and no client change |
 | The camera feels the same at every frame rate. | enforced - `CameraDirectorTest.movesTheSameDistanceWhateverTheFrameRate` |
@@ -140,6 +140,15 @@ rows become enforceable once the named feature exists - promote them then.
 | Everyone put down in a spawn area is jittered inside its tiles; nobody stands at a tile centre (G0009). | enforced - `SquadTest.standsNobodyAtATileCentre` |
 | A trooper inside a control point holds where it stands rather than walking at its middle. Everyone in the radius counts equally. | enforced - `TrooperAdvanceTest.standsOnAPointRatherThanWalkingAtItsMiddle` |
 | A trooper that stops takes a bearing of its own to watch. A squad at rest never all faces the same way. | enforced - `TrooperAdvanceTest.givesEveryManHoldingAPointHisOwnBearingToWatch`, `SquadOrderTest.spreadsTheSquadsAttentionInsteadOfAllStaringAtHim` |
+| A blast is uniformly fatal inside one circle and harmless outside it, and that circle is the one the renderer draws (G0018). | enforced - `BlastTest.killsEverythingStandingInsideIt`, `.leavesAnythingStandingOutsideItUntouched`, `.killsABruteAsReadilyAsAGrunt` |
+| A blast is on nobody's side. It kills the commander and his troopers exactly as readily as it kills the aliens. | enforced - `BlastTest.killsTheCommanderAsReadilyAsAnEnemy`, `BarrelTest.killsTheCommanderWhoShootsOneFromTooCloseUp` |
+| A blast does not reach through rock, by the same clear-line test perception uses. | enforced - `BlastTest.doesNotReachThroughRock` |
+| A blast catches what is standing in it on the tick it goes off, and nothing that walks in afterwards. Running through the tail of one is safe. | enforced - `BlastTest.catchesWhatWasStandingInItAndNothingThatWalksInAfterwards` |
+| Anything that explodes does so by **dying**, through one death reaction (G0018). There is no second path to a blast. | enforced - `BarrelTest.goesOffWhenItIsShot`, `.goesOffWhenAnAlienBitesIntoIt`, `GrenadeTest.travelsItsFullRangeWhenNothingIsInTheWay` |
+| A grenade comes off rock, the arena edge and scenery that never moves, and passes through anything alive (G0019). | enforced - `GrenadeTest.passesThroughAnEnemyInsteadOfComingOffIt`, `.comesOffAnObstacle`, `.passesThroughABodyInItsThroes` |
+| A grenade travels the same total distance whatever it bounces off (G0019). | enforced - `GrenadeTest.spendsTheSameFlightWhetherItBouncesOrNot`, `.travelsItsFullRangeWhenNothingIsInTheWay` |
+| A grenade is thrown along the aim **direction** and never to the aim point, so pulling the view back can never reach further (G0019). | enforced - `GrenadeTest.throwsAlongTheAimDirectionRatherThanAtTheAimPoint` |
+| The simulation never moves the camera. It publishes what happened and how violent it was; what the view does about it is the client's. | judgement - `Shake`, the same split `Focus` already makes |
 | Every gameplay speed is one block in `game.properties` and is retuned together, so the ratios between units survive a pace change. | judgement - the PACE block |
 
 The no-hitscan rows are load-bearing in three directions at once: they keep collision uniform, keep
@@ -201,6 +210,7 @@ do not treat one as taken when adding a game binding.
 | Mouse / right stick | Aim | built (mouse) - G0002 |
 | Left mouse / right trigger | Fire | built (mouse) |
 | Right mouse / left bumper | Melee strike | built (mouse) |
+| `Q` / right bumper | Throw a grenade | built (keyboard) - G0019 |
 | `1` | Squad order: follow me | built - scaffolding, see below |
 | `2` | Squad order: move out | built - scaffolding, see below |
 | `3` | Squad order: stop | built - scaffolding, see below |

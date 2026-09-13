@@ -137,6 +137,6 @@ class ConfigDefaultsTest {
     }
 
     private static CameraDirector.Settings camera() {
-        return new CameraDirector.Settings(6f, 8f, 14f, 2f, 1f, 2.2f, 7f, 1.25f);
+        return new CameraDirector.Settings(6f, 8f, 14f, 2f, 1f, 2.2f, 7f, 1.25f, 1f, 3f);
     }
 }

@@ -17,6 +17,15 @@ public enum PickupKind {
     /** A weapons cache: a better gun to the commander, and a mouthful to whatever reaches it first. */
     ARMOURY,
     /**
+     * An explosive barrel. A pickup with nothing on offer to anybody: the commander is offered
+     * nothing and leaves it standing, and what an alien gets for biting into one is the explosion.
+     *
+     * <p>It is a pickup rather than an obstacle because avoidance steers a unit around anything solid
+     * <em>except</em> a pickup - as an obstacle it would be a thing the aliens carefully walked
+     * around, which is the opposite of the mechanic.
+     */
+    BARREL,
+    /**
      * Alien food that runs away. A pickup like any other as far as taking it goes - it is claimed on
      * contact and feeds whatever ate it - but it wanders the field on its own legs and sidesteps a
      * shot it sees coming. The commander is offered nothing by it, so his only interest in one is

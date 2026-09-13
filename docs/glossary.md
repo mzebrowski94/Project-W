@@ -27,6 +27,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 
 | Term | Meaning |
 |---|---|
+| **barrel** | An explosive barrel: a pickup with nothing on offer to anybody. The commander is offered nothing and leaves it standing; what an alien gets for biting into one is the blast. A pickup rather than an obstacle on purpose - avoidance steers a unit round anything solid *except* a pickup, so as an obstacle it would be the thing the aliens carefully walked around. |
 | **charge** | How full something is, as a fraction the simulation publishes for the renderer - a unit part-way to evolving, and later anything else that fills up. One tell, drawn the same way wherever it appears. |
 | **evolve** | A unit changing strain. One way, and it arrives at the new strain's full health - a unit that has just become something else arrives whole. |
 | **feed** | What a unit has eaten towards its next evolution, as a count. Crossing its strain's threshold evolves it; an item that names a strain outright skips the count entirely. |
@@ -39,10 +40,12 @@ A term that could sit in two sections goes where a reader would look for it, not
 
 | Term | Meaning |
 |---|---|
+| **blast** | The circle of ground an explosion makes lethal, for a moment. One circle, uniformly fatal inside it and harmless outside it, on nobody's side, and stopped by rock (G0018). It catches what is standing in it on the tick it appears and nothing that walks in afterwards, so the rest of it is only the flash. Everything that explodes does so by **dying**, and a blast is what the death leaves. |
 | **clinch** | How a lethal exchange ends: both parties stopped dead and held still, the body immovable, and the last stride closed so the two finish touching. It carries no knockback decay - a killing blow throws nothing, so there is nothing to bleed off, and carrying one let the survivor coast out from under the body. A melee kill earns it only against something already committed to attacking; a swat on something walking is not a clinch and costs the commander nothing (G0013). |
 | **contact** | An overlapping pair, reported once per tick by the constraint solver. What it *means* is the collision system's business. |
 | **death throes** | The window between a killing blow and the body being removed. Every unit has them. The body is scenery for their duration - solid, immovable, and it stops bullets. Where the dying animation will play; a commander's respawn countdown starts after them, not during. |
 | **dodge** | A sidestep away from an incoming shot. Perpendicular to the shot, to the side the creature is already on, the same every time, so it can be learned and led (G0012). Bounded by a commit window, which is what makes the answer to a dodge a second shot. |
+| **grenade** | What the commander throws. It travels along his aim **direction** for a fixed distance, comes off rock and scenery without losing speed, passes through anything alive, and leaves a blast where the distance runs out (G0019). The reach is the same every throw, so a wall changes where one ends up rather than how far it went. |
 | **hesitation** | The pause a unit takes before the first leap of a sequence. The tell: the only part of a leap the player gets to answer. Drawn from the seeded `Rng`, so it varies between leaps and not between runs. |
 | **knockback** | The velocity a landed blow gives a target **that survives it**, bleeding off over the stun. A blow that kills throws nothing - the body stops where it was struck. |
 | **leap** | A unit throwing itself at the commander to close the last of the distance. Committed, telegraphed, and aimed once at launch - never steered. |
@@ -87,6 +90,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **focus** | A marker saying the view must keep this entity in shot. The simulation says who matters and stops there; where the camera goes is entirely the client's. |
 | **fragment** | A piece of map that generation produces and assembles with others into a level. Not built yet; the grid exists to make it cheap. |
 | **region** | A contiguous area of a map, decided before its tiles are filled in. What makes a level read as places rather than one flat sheet: regions are shaded subtly apart, and later decide what terrain and what contents belong where. |
+| **shake** | Something violent that happened somewhere, published for the view: how hard at the middle of it, how far it is felt, and how far through it is. The simulation says what happened and stops there - what the view does about it is entirely the client's, exactly as *focus* says who matters and not where the camera goes. |
 | **spawn area** | The patch of tiles a side is put on at the start of a level. A rectangle of tiles with everyone jittered inside them, never at a tile centre (G0009) - the same tile-anchored scatter that places everything else. |
 | **terrain** | The kind of ground on a tile. Names a role, like a `Look` does - what it looks like is the client's decision and what it costs a unit is a number in `game.properties`. Whether it can be stood on is the one exception, because generation needs it. |
 | **tile** | One cell of the grid a level is laid out on. A unit of *construction*, not of play: nothing moves tile by tile and nothing is centred in one (G0009). |

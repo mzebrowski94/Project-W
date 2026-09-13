@@ -25,6 +25,9 @@ public final class Intent implements Component, Pool.Poolable {
     /** Whether the melee input is held this tick. The swing itself is rate-limited by {@link Melee}. */
     public boolean striking;
 
+    /** Whether the grenade input is held this tick. The throw is rate-limited by {@link Thrower}. */
+    public boolean throwing;
+
     /**
      * The squad order given this tick, or null.
      *
@@ -42,6 +45,7 @@ public final class Intent implements Component, Pool.Poolable {
             float newAimY,
             boolean newFiring,
             boolean newStriking,
+            boolean newThrowing,
             @Nullable Order newOrder) {
         this.moveX = newMoveX;
         this.moveY = newMoveY;
@@ -49,6 +53,7 @@ public final class Intent implements Component, Pool.Poolable {
         this.aimY = newAimY;
         this.firing = newFiring;
         this.striking = newStriking;
+        this.throwing = newThrowing;
         this.order = newOrder;
         return this;
     }
@@ -61,6 +66,7 @@ public final class Intent implements Component, Pool.Poolable {
         aimY = 0f;
         firing = false;
         striking = false;
+        throwing = false;
         order = null;
     }
 }

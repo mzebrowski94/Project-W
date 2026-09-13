@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.AppearanceSystem;
 import pl.mzebrows.pwt.sim.system.AvoidanceSystem;
+import pl.mzebrows.pwt.sim.system.BlastSystem;
 import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
 import pl.mzebrows.pwt.sim.system.ControlPointSystem;
@@ -28,6 +29,7 @@ import pl.mzebrows.pwt.sim.system.DriveSystem;
 import pl.mzebrows.pwt.sim.system.DyingSystem;
 import pl.mzebrows.pwt.sim.system.EnemyLeapSystem;
 import pl.mzebrows.pwt.sim.system.EvolutionSystem;
+import pl.mzebrows.pwt.sim.system.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
 import pl.mzebrows.pwt.sim.system.NavigationSystem;
@@ -129,11 +131,13 @@ public final class Simulation {
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));
         engine.addSystem(new CollisionSystem(config, map, spawner));
+        engine.addSystem(new GrenadeSystem(map, spawner));
         engine.addSystem(new PickupSystem(config, spawner));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(spawner));
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
+        engine.addSystem(new BlastSystem(map, spawner));
         engine.addSystem(new ProjectileBoundsSystem(map, spawner));
         engine.addSystem(new ControlPointSystem());
         engine.addSystem(new ObjectiveSystem());
@@ -168,6 +172,7 @@ public final class Simulation {
                             input.aimY(),
                             input.firing(),
                             input.striking(),
+                            input.throwing(),
                             input.order());
             if (INVULNERABLE.has(commander)) {
                 INVULNERABLE.get(commander).permanent = commanderInvulnerable;
@@ -222,6 +227,11 @@ public final class Simulation {
         return spawner.spawnRabbit(x, y);
     }
 
+    /** Spawns an explosive barrel: gunfire or something hungry sets it off. */
+    public Entity spawnBarrel(float x, float y) {
+        return spawner.spawnBarrel(x, y);
+    }
+
     /** Spawns something lying on the field for the first thing that touches it. */
     public Entity spawnPickup(PickupKind kind, float x, float y) {
         return spawner.spawnPickup(kind, x, y);
@@ -230,6 +240,21 @@ public final class Simulation {
     /** Spawns a static circle that blocks units and projectiles. */
     public Entity spawnObstacle(float x, float y) {
         return spawner.spawnObstacle(x, y);
+    }
+
+    /** Spawns a grenade travelling along the given unit direction, for the harness and for tests. */
+    public Entity spawnGrenade(float x, float y, float directionX, float directionY) {
+        return spawner.spawnGrenade(x, y, directionX, directionY);
+    }
+
+    /**
+     * Spawns a blast: a circle of ground lethal for a moment, on nobody's side.
+     *
+     * <p>For the harness and for tests that want one in the world without something dying to make it.
+     * In play a blast is a death reaction, so nothing needs to reach for this.
+     */
+    public Entity spawnBlast(float x, float y, float radius) {
+        return spawner.spawnBlast(x, y, radius);
     }
 
     /** Spawns a projectile on the player's side, travelling along the given unit direction. */

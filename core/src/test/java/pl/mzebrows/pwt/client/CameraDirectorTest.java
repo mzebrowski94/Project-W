@@ -18,6 +18,19 @@ class CameraDirectorTest {
     private static final float FRAME = 1f / 60f;
     private static final Offset<Float> TOLERANCE = Offset.offset(0.01f);
 
+    /** Where the tests below park the view before anything goes off near it. */
+    private static final float TARGET_X = 240f;
+
+    private static final float TARGET_Y = 90f;
+
+    /** A jolt worth several world units, felt out to most of a screen away. */
+    private static final float SHAKE_STRENGTH = 4f;
+
+    private static final float SHAKE_RADIUS = 60f;
+
+    /** Hard enough to throw the view clean off the map if nothing held it in. */
+    private static final float HEAVY_SHAKE = 30f;
+
     /** Placing the view where it belongs on the first frame, rather than sliding in from the origin. */
     @Test
     void arrivesAtItsTargetOnTheFirstFrameInsteadOfSlidingInFromTheOrigin() {
@@ -192,15 +205,93 @@ class CameraDirectorTest {
     }
 
     @Test
+    void shakesTheViewWhenSomethingViolentGoesOffNearby() {
+        assertThat(shakenBy(TARGET_X, TARGET_Y, 1f)).isGreaterThan(1f);
+    }
+
+    @Test
+    void feelsLessOfAShakeFromFurtherAway() {
+        assertThat(shakenBy(TARGET_X + SHAKE_RADIUS * 0.75f, TARGET_Y, 1f))
+                .isLessThan(shakenBy(TARGET_X, TARGET_Y, 1f));
+    }
+
+    @Test
+    void feelsNothingFromAShakeRightAcrossTheLevel() {
+        assertThat(shakenBy(TARGET_X + SHAKE_RADIUS + 10f, TARGET_Y, 1f)).isZero();
+    }
+
+    @Test
+    void settlesTheViewAsTheShakeBurnsOut() {
+        assertThat(shakenBy(TARGET_X, TARGET_Y, 0.05f)).isLessThan(shakenBy(TARGET_X, TARGET_Y, 1f));
+    }
+
+    /**
+     * The bug this pair was written for. The clamp pins the centre to the middle of any level no
+     * bigger than the view, so clamping the *shaken* position threw the jolt away entirely - and the
+     * shipped map is exactly the size of the viewport, which meant no explosion anywhere shook
+     * anything. Every other test here runs on a map far larger than the view and so never saw it.
+     */
+    @Test
+    void shakesEvenOnALevelNoBiggerThanTheView() {
+        CameraDirector director = director(0f, 0f);
+        director.begin();
+        director.watch(VIEW_WIDTH * 0.5f, VIEW_HEIGHT * 0.5f);
+        director.update(VIEW_WIDTH, VIEW_HEIGHT, VIEW_WIDTH, VIEW_HEIGHT, FRAME);
+        float restX = director.centreX();
+
+        director.begin();
+        director.watch(VIEW_WIDTH * 0.5f, VIEW_HEIGHT * 0.5f);
+        director.shake(VIEW_WIDTH * 0.5f, VIEW_HEIGHT * 0.5f, SHAKE_STRENGTH, SHAKE_RADIUS, 1f);
+        director.update(VIEW_WIDTH, VIEW_HEIGHT, VIEW_WIDTH, VIEW_HEIGHT, FRAME);
+
+        assertThat(Math.abs(director.centreX() - restX)).isGreaterThan(1f);
+    }
+
+    /**
+     * The view never comes to <em>rest</em> outside the level; only a shake may take it out, and never
+     * further than the shake itself displaces it. That bound is what keeps the exception narrow.
+     */
+    @Test
+    void letsAShakeLeaveTheMapButNeverByMoreThanTheShake() {
+        CameraDirector director = director(0f, 0f);
+        step(director, MAP_WIDTH - 5f, MAP_HEIGHT - 5f);
+        float restX = director.centreX();
+
+        director.begin();
+        director.watch(MAP_WIDTH - 5f, MAP_HEIGHT - 5f);
+        director.shake(MAP_WIDTH - 5f, MAP_HEIGHT - 5f, HEAVY_SHAKE, SHAKE_RADIUS, 1f);
+        director.update(VIEW_WIDTH, VIEW_HEIGHT, MAP_WIDTH, MAP_HEIGHT, FRAME);
+
+        assertThat(director.centreX()).isGreaterThan(MAP_WIDTH - VIEW_WIDTH * 0.5f);
+        assertThat(director.centreX() - restX).isLessThanOrEqualTo(HEAVY_SHAKE + 0.001f);
+    }
+
+    @Test
     void refusesZoomLevelsThatAreNotAViewAtAll() {
-        assertThatThrownBy(() -> new CameraDirector.Settings(0f, 6f, 0f, 2f, 0f, 2f, 6f, 1.2f))
+        assertThatThrownBy(() -> new CameraDirector.Settings(0f, 6f, 0f, 2f, 0f, 2f, 6f, 1.2f, 1f, 3f))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new CameraDirector.Settings(0f, 6f, 0f, 2f, 2f, 1f, 6f, 1.2f))
+        assertThatThrownBy(() -> new CameraDirector.Settings(0f, 6f, 0f, 2f, 2f, 1f, 6f, 1.2f, 1f, 3f))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    /** How far one frame of shake moves the view from where it would otherwise have been sitting. */
+    private static float shakenBy(float shakeX, float shakeY, float fade) {
+        CameraDirector director = director(0f, 0f);
+        step(director, TARGET_X, TARGET_Y);
+        float restX = director.centreX();
+        float restY = director.centreY();
+
+        director.begin();
+        director.watch(TARGET_X, TARGET_Y);
+        director.shake(shakeX, shakeY, SHAKE_STRENGTH, SHAKE_RADIUS, fade);
+        director.update(VIEW_WIDTH, VIEW_HEIGHT, MAP_WIDTH, MAP_HEIGHT, FRAME);
+
+        return (float) Math.hypot(director.centreX() - restX, director.centreY() - restY);
+    }
+
     private static CameraDirector director(float deadZone, float lookAhead) {
-        return new CameraDirector(new CameraDirector.Settings(deadZone, 6f, lookAhead, 2f, NEAR, FAR, 6f, FIT_MARGIN));
+        return new CameraDirector(
+                new CameraDirector.Settings(deadZone, 6f, lookAhead, 2f, NEAR, FAR, 6f, FIT_MARGIN, 1f, 3f));
     }
 
     /** One frame with the target standing at {@code x} but walking in the given direction. */

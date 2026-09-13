@@ -21,6 +21,26 @@ package pl.mzebrows.pwt.client;
  * point, which leans it further: a feedback loop that reads as the view drifting off on its own.
  * Movement input comes from the keyboard and is camera-independent, so it cannot do that.
  *
+ * <p><strong>A shake is applied last of all, and outside the clamp.</strong> The jolt is kept out of
+ * the smoothed centre entirely - a view that chased its own shaken position would wobble its way
+ * across the level - so the smoothing state and what the camera is actually set to are two different
+ * numbers, and only the second one is shaken.
+ *
+ * <p><strong>The shaken position is deliberately not clamped, and this is the one place the view may
+ * leave the map.</strong> Clamping it was the first version and it did not work: the clamp pins the
+ * centre to the middle of any level no bigger than the view, so on a map the size of the viewport -
+ * which is the shipped default - the jolt was computed and then thrown away, and no explosion shook
+ * anything. The resting centre is still clamped, so the view never *sits* outside the level; a shake
+ * can take it out by no more than the shake itself displaces it, which is a couple of world units for
+ * a fraction of a second. Re-clamping this line is the obvious tidy-up and it silently removes screen
+ * shake from every small level, so do not.
+ *
+ * <p>How violent an event was is the simulation's to say; how much the view moves is not. The
+ * simulation publishes a strength in world units and a radius it is felt within, and everything
+ * here - the falloff, the waveform, how many times it swings - is a rendering decision. Zoom needs no
+ * handling at all: the offset is in world units, so the pulled-back view divides it by the zoom for
+ * free, and the same blast that rocks the close view is a twitch in the overview.
+ *
  * <p><strong>The lead eases in on its own, and far more slowly than the view follows.</strong> Taking
  * the movement input raw makes the goal jump the whole look-ahead distance the instant the player
  * reverses, so tapping left and right shakes the view badly - which is exactly what playing it
@@ -43,6 +63,11 @@ public final class CameraDirector {
      * @param farZoom the pulled-back view, and the widest the fit is ever allowed to go
      * @param zoomSmoothing how fast the zoom eases between levels, per second
      * @param fitMargin slack left around the targets when framing more than one, as a multiplier
+     * @param shakeScale how much of a published shake the view actually takes, as a multiplier. One
+     *     means the strength the simulation published, in world units. Trim the feel here rather than
+     *     in {@code game.properties} - how violent an event is and how much the camera moves are two
+     *     different questions
+     * @param shakeCycles how many times the view swings back and forth over a whole shake
      */
     public record Settings(
             float deadZone,
@@ -52,13 +77,25 @@ public final class CameraDirector {
             float nearZoom,
             float farZoom,
             float zoomSmoothing,
-            float fitMargin) {
+            float fitMargin,
+            float shakeScale,
+            float shakeCycles) {
         public Settings {
             if (nearZoom <= 0f || farZoom < nearZoom) {
                 throw new IllegalArgumentException("zoom levels must be positive with far >= near");
             }
         }
     }
+
+    private static final float TWO_PI = (float) (Math.PI * 2.0);
+
+    /**
+     * How the sideways swing relates to the forward one. Not a whole number and not one, so the view
+     * traces a ragged figure rather than a circle - a circular shake reads as the camera orbiting.
+     */
+    private static final float SIDEWAYS_RATE = 1.6f;
+
+    private static final float SIDEWAYS_PHASE = 1.1f;
 
     private final Settings settings;
 
@@ -78,8 +115,19 @@ public final class CameraDirector {
 
     private float leadY;
 
+    /** This frame's jolt, summed over everything violent near enough to be felt. Cleared each frame. */
+    private float shakeX;
+
+    private float shakeY;
+
     private float centreX;
     private float centreY;
+
+    /** Where the camera is actually put: the smoothed centre, shaken, then clamped to the map. */
+    private float viewX;
+
+    private float viewY;
+
     private float zoom;
     private float baseZoom;
     private boolean wide;
@@ -96,6 +144,8 @@ public final class CameraDirector {
         watched = 0;
         askedX = 0f;
         askedY = 0f;
+        shakeX = 0f;
+        shakeY = 0f;
     }
 
     /** Adds something the view must keep in shot. */
@@ -112,6 +162,35 @@ public final class CameraDirector {
             maxY = Math.max(maxY, y);
         }
         watched++;
+    }
+
+    /**
+     * Adds something violent that happened this frame, as the simulation published it: where, how hard
+     * at the middle of it, how far it is felt, and how much of it is left.
+     *
+     * <p>Distance is measured from the targets rather than from the camera, so call it after
+     * {@link #watch}. It matters at the level's edges, where the view is clamped some way off whoever
+     * it is watching: what should decide how hard a blast is felt is how close the player was to it,
+     * not how close the camera happened to be allowed to get.
+     *
+     * <p>The waveform is a function of how far through the shake is and of nothing else - no clock, no
+     * random numbers - so the same explosion looks the same on every replay, and a paused frame is
+     * still a frame the view is not drifting in.
+     */
+    public void shake(float x, float y, float strength, float radius, float fade) {
+        if (strength <= 0f || radius <= 0f || fade <= 0f) {
+            return;
+        }
+        float fromX = watched > 0 ? (minX + maxX) * 0.5f : centreX;
+        float fromY = watched > 0 ? (minY + maxY) * 0.5f : centreY;
+        float distance = (float) Math.hypot(x - fromX, y - fromY);
+        if (distance >= radius) {
+            return;
+        }
+        float felt = strength * settings.shakeScale() * fade * (1f - distance / radius);
+        float phase = fade * settings.shakeCycles() * TWO_PI;
+        shakeX += felt * (float) Math.cos(phase);
+        shakeY += felt * (float) Math.cos(phase * SIDEWAYS_RATE + SIDEWAYS_PHASE);
     }
 
     /** Where the targets are walking, as a direction of roughly unit length. */
@@ -166,11 +245,11 @@ public final class CameraDirector {
     }
 
     public float centreX() {
-        return centreX;
+        return viewX;
     }
 
     public float centreY() {
-        return centreY;
+        return viewY;
     }
 
     public float zoom() {
@@ -198,12 +277,21 @@ public final class CameraDirector {
         return 1f - (float) Math.exp(-rate * deltaSeconds);
     }
 
-    /** Applied last, so the view never shows anything beyond the edge of the map. */
+    /**
+     * Applied last, so the view never comes to rest showing anything beyond the edge of the map. The
+     * shaken position is offset from the clamped one rather than clamped itself - see the class note.
+     */
     private void clampToMap(float viewWidth, float viewHeight, float mapWidth, float mapHeight) {
-        float halfWidth = viewWidth * zoom * 0.5f;
-        float halfHeight = viewHeight * zoom * 0.5f;
-        centreX = mapWidth <= halfWidth * 2f ? mapWidth * 0.5f : clamp(centreX, halfWidth, mapWidth - halfWidth);
-        centreY = mapHeight <= halfHeight * 2f ? mapHeight * 0.5f : clamp(centreY, halfHeight, mapHeight - halfHeight);
+        centreX = clampAxis(centreX, viewWidth * zoom, mapWidth);
+        centreY = clampAxis(centreY, viewHeight * zoom, mapHeight);
+        viewX = centreX + shakeX;
+        viewY = centreY + shakeY;
+    }
+
+    /** One axis of that: centred on a level narrower than the view, held inside a wider one. */
+    private static float clampAxis(float value, float viewExtent, float mapExtent) {
+        float half = viewExtent * 0.5f;
+        return mapExtent <= half * 2f ? mapExtent * 0.5f : clamp(value, half, mapExtent - half);
     }
 
     private static float clamp(float value, float min, float max) {

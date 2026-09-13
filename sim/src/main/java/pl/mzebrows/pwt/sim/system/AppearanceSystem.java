@@ -6,6 +6,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
@@ -51,6 +52,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
+    private static final ComponentMapper<Blast> BLAST = ComponentMapper.getFor(Blast.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
@@ -120,6 +122,11 @@ public final class AppearanceSystem extends IteratingSystem {
      * <p>A strain with nowhere to grow reports nothing, which is what almost everything reports.
      */
     private float chargeOf(Entity entity) {
+        if (BLAST.has(entity)) {
+            // A blast burning out rides the same channel as a unit filling up, read backwards. One
+            // way of drawing "how far through this is", learnt once and recognised everywhere.
+            return BLAST.get(entity).fade();
+        }
         if (POINT.has(entity)) {
             // A point filling up is the same tell as a unit filling up, deliberately: one
             // way of drawing \"nearly there\", learnt once and read everywhere.

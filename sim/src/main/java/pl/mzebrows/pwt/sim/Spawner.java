@@ -6,6 +6,8 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Avoidance;
+import pl.mzebrows.pwt.sim.component.Blast;
+import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -33,12 +35,15 @@ import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
+import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Taking;
+import pl.mzebrows.pwt.sim.component.Thrower;
+import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Wander;
@@ -87,6 +92,7 @@ public final class Spawner {
     public Entity spawnCommander(float x, float y) {
         SimConfig.CommanderConfig commander = config.commander();
         SimConfig.MeleeConfig melee = config.melee();
+        SimConfig.GrenadeConfig grenade = config.grenade();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Commander.class));
         entity.add(engine.createComponent(Focus.class));
@@ -125,6 +131,13 @@ public final class Spawner {
                         melee.clinchCarryDecay(),
                         melee.knockbackSpeed(),
                         melee.knockbackDecay()));
+        entity.add(engine.createComponent(Thrower.class)
+                .set(
+                        grenade.cooldownSeconds(),
+                        grenade.speed(),
+                        grenade.range(),
+                        grenade.radius(),
+                        grenade.blastRadius()));
         entity.add(engine.createComponent(Taking.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER).face(1f, 0f));
         engine.addEntity(entity);
@@ -385,6 +398,41 @@ public final class Spawner {
     }
 
     /**
+     * Spawns an explosive barrel: a pickup nobody wants to pick up.
+     *
+     * <p><strong>A pickup rather than an obstacle, and that is the design rather than a
+     * convenience.</strong> Avoidance steers a unit around anything solid <em>except</em> a pickup, so
+     * a barrel that was an obstacle would be a thing the aliens carefully walked round. Because it is
+     * one, an idle alien inside its secondary range goes over to eat it like anything else on offer -
+     * so "set off by gunfire or by something hungry" is two paths that already existed meeting at one
+     * death, rather than two new rules.
+     *
+     * <p>Solid and immovable, unlike the growths: a barrel is a thing standing on the field rather
+     * than a dot to walk over. That changes nothing about being taken - the solver reports a contact
+     * before it separates anything.
+     *
+     * <p>It carries {@code Health} so a shot or a sweep reaches the damage path through it, exactly as
+     * a rabbit's does, and {@code BlastsOnDeath} so that both ways of ending it end the same way.
+     */
+    public Entity spawnBarrel(float x, float y) {
+        PickupDef def = config.pickup(PickupKind.BARREL);
+        SimConfig.BarrelConfig barrel = config.barrel();
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Pickup.class).set(PickupKind.BARREL));
+        entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(def.radius()));
+        entity.add(engine.createComponent(Collider.class).set(true, false));
+        entity.add(engine.createComponent(Health.class).set(barrel.health()));
+        entity.add(engine.createComponent(Damage.class));
+        entity.add(engine.createComponent(BlastsOnDeath.class).set(barrel.blastRadius()));
+        entity.add(engine.createComponent(Appearance.class).set(def.look()));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
      * Spawns a control point: ground the squad takes by standing on it.
      *
      * <p><strong>No collider.</strong> A point is somewhere you walk, not something you walk into, so
@@ -539,6 +587,89 @@ public final class Spawner {
                         melee.knockbackSpeed,
                         melee.knockbackDecay));
         entity.add(engine.createComponent(Appearance.class).set(Look.STRIKE));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a grenade travelling along the given unit direction, thrown by a unit that carries one.
+     *
+     * <p>Non-solid, so it slips past bodies rather than shoving a fight around, and movable, so it
+     * travels. Those two flags also mean the solver never keeps it out of rock or inside the arena -
+     * {@code GrenadeSystem} does both, because what a wall <em>means</em> to a grenade is a bounce
+     * rather than the end of it.
+     *
+     * <p>No faction, and no contact damage. A grenade in the air is harmless: everything it does, it
+     * does by dying.
+     */
+    public Entity spawnGrenade(float x, float y, float directionX, float directionY, Thrower thrower) {
+        return grenade(x, y, directionX, directionY, thrower.speed, thrower.range, thrower.radius, thrower.blastRadius);
+    }
+
+    /**
+     * The same, from the config rather than from a thrower holding one. For the harness and for tests
+     * that want one in the air without a commander behind it.
+     */
+    public Entity spawnGrenade(float x, float y, float directionX, float directionY) {
+        SimConfig.GrenadeConfig grenade = config.grenade();
+        return grenade(
+                x,
+                y,
+                directionX,
+                directionY,
+                grenade.speed(),
+                grenade.range(),
+                grenade.radius(),
+                grenade.blastRadius());
+    }
+
+    private Entity grenade(
+            float x,
+            float y,
+            float directionX,
+            float directionY,
+            float speed,
+            float range,
+            float radius,
+            float blastRadius) {
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Thrown.class).set(speed, range));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Velocity.class).set(directionX * speed, directionY * speed));
+        entity.add(engine.createComponent(Body.class).set(radius));
+        entity.add(engine.createComponent(Collider.class).set(false, true));
+        entity.add(engine.createComponent(BlastsOnDeath.class).set(blastRadius));
+        entity.add(engine.createComponent(Appearance.class).set(Look.GRENADE));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a blast: a circle of ground that is lethal for a moment, and on nobody's side.
+     *
+     * <p><strong>No collider.</strong> A body this wide in the pairwise path would set the collision
+     * grid's cell size for the whole level in order to serve a quarter of a second of effect - the
+     * same trade {@link #spawnControlPoint} makes, for the same reason. {@code BlastSystem} does the
+     * radius test itself.
+     *
+     * <p>It carries a body anyway, because that is what the renderer measures a circle from - and here
+     * the drawn circle and the lethal circle are the same number, so the ring the player sees is the
+     * ring that killed him.
+     *
+     * <p>No faction, because a blast is on nobody's side. It is not a question anything asks it: the
+     * damage it owes is written straight onto whatever it caught, and never crosses the contact path.
+     */
+    public Entity spawnBlast(float x, float y, float radius) {
+        SimConfig.BlastConfig blast = config.blast();
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Blast.class).set(blast.damage(), blast.durationSeconds()));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(radius));
+        entity.add(engine.createComponent(Appearance.class).set(Look.BLAST));
+        entity.add(engine.createComponent(Shake.class)
+                .set(blast.shakeStrength(), radius * blast.shakeRadiusFactor(), blast.durationSeconds()));
         engine.addEntity(entity);
         return entity;
     }

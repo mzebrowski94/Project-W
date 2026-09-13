@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Focus;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 
 /**
@@ -31,8 +32,10 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
+    private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
     private static final Family FOCUSED =
             Family.all(Focus.class, Position.class, PreviousPosition.class).get();
+    private static final Family SHAKEN = Family.all(Shake.class, Position.class).get();
 
     private final GameContext context;
     private final Scenario scenario;
@@ -57,6 +60,9 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     /** Cached: Ashley keeps this view live, so it must not be re-queried per frame. */
     private ImmutableArray<Entity> focused = new ImmutableArray<>(new Array<>());
+
+    /** Everything violent enough for the view to notice. Almost always empty. */
+    private ImmutableArray<Entity> shaken = new ImmutableArray<>(new Array<>());
 
     /** The world the renderer is currently bound to; a restart replaces it with a different one. */
     private @Nullable Simulation bound;
@@ -129,6 +135,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             renderer.bind(current);
             terrain.bind(current.map());
             focused = current.engine().getEntitiesFor(FOCUSED);
+            shaken = current.engine().getEntitiesFor(SHAKEN);
             camera = new CameraDirector(context.graphicConfig().camera());
             bound = current;
         }
@@ -148,6 +155,12 @@ public final class ScenarioScreen extends ScreenAdapter {
             PreviousPosition previous = PREVIOUS.get(entity);
             camera.watch(
                     previous.x + (position.x - previous.x) * alpha, previous.y + (position.y - previous.y) * alpha);
+        }
+        for (int i = 0; i < shaken.size(); i++) {
+            Entity entity = shaken.get(i);
+            Position at = POSITION.get(entity);
+            Shake shake = SHAKE.get(entity);
+            camera.shake(at.x, at.y, shake.strength, shake.radius, shake.fade());
         }
         camera.heading(commanderInput.moveX(), commanderInput.moveY());
 

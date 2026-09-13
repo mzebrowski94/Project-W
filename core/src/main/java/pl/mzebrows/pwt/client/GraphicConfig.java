@@ -98,11 +98,14 @@ public record GraphicConfig(
             case PROJECTILE -> "ffe066ff";
             case SLUG -> "fff3c4ff";
             case STRIKE -> "ffffffff";
+            case GRENADE -> "c07820ff";
+            case BLAST -> "ffb03aff";
             case OBSTACLE -> "4a4a5eff";
             case MUSHROOM -> "8fd97fff";
             case FLOWER -> "e07be0ff";
             case FROZEN_TROOPER -> "9fd8f0ff";
             case ARMOURY -> "d8a04aff";
+            case BARREL -> "ff3a10ff";
             case RABBIT -> "f0f0f0ff";
             case NONE -> "ff00ffff";
         };
@@ -177,7 +180,9 @@ public record GraphicConfig(
                 properties.getFloat("graphic.camera.nearZoom", 1f),
                 properties.getFloat("graphic.camera.farZoom", 2.2f),
                 properties.getFloat("graphic.camera.zoomSmoothing", 7f),
-                properties.getFloat("graphic.camera.fitMargin", 1.25f));
+                properties.getFloat("graphic.camera.fitMargin", 1.25f),
+                properties.getFloat("graphic.camera.shakeScale", 1f),
+                properties.getFloat("graphic.camera.shakeCycles", 3f));
     }
 
     /** Falls back to the given hex when the configured value is missing or not a colour. */

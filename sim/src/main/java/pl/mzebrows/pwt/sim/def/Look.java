@@ -29,6 +29,10 @@ public enum Look {
     /** A heavy shot, so a gun is visible in what it fires. */
     SLUG,
     STRIKE,
+    /** Something thrown that bounces and goes off where it stops. */
+    GRENADE,
+    /** The circle an explosion makes lethal, for a moment. */
+    BLAST,
     OBSTACLE,
     /** Alien food growing on the field. */
     MUSHROOM,
@@ -38,6 +42,8 @@ public enum Look {
     FROZEN_TROOPER,
     /** A weapons cache. */
     ARMOURY,
+    /** Something on the field that goes off when it is killed. */
+    BARREL,
     /** Alien food on legs. */
     RABBIT
 }

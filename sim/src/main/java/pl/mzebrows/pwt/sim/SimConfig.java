@@ -49,7 +49,10 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * @param pickups every kind of thing that can be lying on the field, by kind
  * @param weapons every gun the commander can be carrying, by kind
  * @param melee the commander's hand strike
+ * @param blast what an explosion does, wherever it came from
+ * @param grenade what the commander throws
  * @param rabbit the neutral creature that wanders the field and is eaten
+ * @param barrel the explosive one, which is neither eaten nor picked up
  * @param controlPoint what it takes to hold a point, and how far taking one carries
  * @param obstacle the static circles that block movement
  * @param collision how hard the constraint solver works
@@ -67,7 +70,10 @@ public record SimConfig(
         Defs<PickupKind, PickupDef> pickups,
         Defs<WeaponKind, WeaponDef> weapons,
         MeleeConfig melee,
+        BlastConfig blast,
+        GrenadeConfig grenade,
         RabbitConfig rabbit,
+        BarrelConfig barrel,
         ControlPointConfig controlPoint,
         ObstacleConfig obstacle,
         CollisionConfig collision) {
@@ -139,12 +145,15 @@ public record SimConfig(
                 defaultPickups(),
                 defaultWeapons(),
                 new MeleeConfig(0.6f, 0f, 0.12f, 1.2f, 1.4f, 120f, 180f, 1f, true, 14f, 100f, 45f, 120f),
+                new BlastConfig(1000f, 0.25f, 3f, 2.5f),
+                new GrenadeConfig(1.2f, 38f, 34f, 0.55f, 12f),
                 new RabbitConfig(
                         15f,
                         1f,
                         0.4f,
                         new WanderDef(true, 18f, 0.7f, 1f, 0.3f, 1.1f, 3f),
                         new DodgeDef(true, 26f, 32f, 0.32f, 0.9f, 1.2f)),
+                new BarrelConfig(1f, 11f),
                 new ControlPointConfig(6f, 5f, 48f),
                 new ObstacleConfig(3.5f, 8),
                 new CollisionConfig(3));
@@ -226,6 +235,7 @@ public record SimConfig(
                         PickupKind.ARMOURY,
                         new PickupDef(1.2f, Look.ARMOURY, new Grant.Arm(WeaponKind.RAILGUN), new Grant.Feed(1)))
                 .put(PickupKind.RABBIT, new PickupDef(0.8f, Look.RABBIT, Grant.NOTHING, new Grant.Feed(1)))
+                .put(PickupKind.BARREL, new PickupDef(1f, Look.BARREL, Grant.NOTHING, Grant.DETONATE))
                 .build();
     }
 
@@ -243,6 +253,7 @@ public record SimConfig(
         float largest = Math.max(commander.radius(), obstacle.radius());
         largest = Math.max(largest, trooper.radius());
         largest = Math.max(largest, melee.radius());
+        largest = Math.max(largest, grenade.radius());
         for (WeaponDef gun : weapons.values()) {
             largest = Math.max(largest, gun.projectileRadius());
         }
@@ -558,6 +569,34 @@ public record SimConfig(
     }
 
     /**
+     * What an explosion does, wherever it came from.
+     *
+     * <p>The radius is deliberately <strong>not</strong> here. A grenade and a barrel make blasts of
+     * different sizes, so each of them names its own; what is shared is what a blast <em>is</em> -
+     * fatal, and briefly visible - and that is one rule for every explosion in the game.
+     *
+     * @param damage what a blast takes off whatever it catches. Far above any unit's health on
+     *     purpose: one circle and death inside it is the rule the player can read, and a number that
+     *     left the heaviest strain standing would quietly turn it into a damage curve
+     * @param durationSeconds how long the flash is drawn for. Fast, and long enough to see
+     * @param shakeStrength how hard the ground moves at the middle of one, in world units. Zero for
+     *     an explosion nothing feels. What a <em>view</em> does with that is the client's decision;
+     *     this is the simulation saying how violent the event was, not how the camera should behave
+     * @param shakeRadiusFactor how far that is felt, as a multiple of the blast's own radius. Above
+     *     one on purpose - you hear an explosion you were not close enough to be killed by, and that
+     *     is most of what tells a player one has gone off somewhere they were not looking
+     */
+    @With
+    public record BlastConfig(float damage, float durationSeconds, float shakeStrength, float shakeRadiusFactor) {
+        public BlastConfig {
+            Require.positive("blast damage", damage);
+            Require.positive("blast durationSeconds", durationSeconds);
+            Require.notNegative("blast shakeStrength", shakeStrength);
+            Require.notNegative("blast shakeRadiusFactor", shakeRadiusFactor);
+        }
+    }
+
+    /**
      * The neutral creature that wanders the field, is eaten by whatever catches it, and sidesteps a
      * shot it sees coming.
      *
@@ -579,6 +618,55 @@ public record SimConfig(
             Require.positive("rabbit speed", speed);
             Require.positive("rabbit health", health);
             Require.notNegative("rabbit deathThroesSeconds", deathThroesSeconds);
+        }
+    }
+
+    /**
+     * What the commander throws.
+     *
+     * <p><strong>{@code range} is a distance and not a countdown</strong>, and that is the mechanic
+     * rather than an implementation note: a bounce changes a grenade's direction and never its speed,
+     * so every throw covers the same ground however many walls it comes off. It is spent along the aim
+     * <em>direction</em>, so pulling the view back never reaches further.
+     *
+     * <p>Nothing here counts grenades. Unlimited ones are alpha-phase scaffolding and a count would be
+     * one more number in this record, so leaving it out settles nothing about how ammunition works.
+     *
+     * @param cooldownSeconds minimum time between throws. The whole of what stops a stream of them
+     * @param speed how fast it travels, in world units per second
+     * @param range how far it travels in total, in world units, whatever it bounces off on the way.
+     *     Comfortably longer than the blast it leaves, or every throw would be suicide
+     * @param radius the grenade's own circular body. Small: it has to come off things, not shove them
+     * @param blastRadius how wide the blast it leaves is, in world units
+     */
+    @With
+    public record GrenadeConfig(float cooldownSeconds, float speed, float range, float radius, float blastRadius) {
+        public GrenadeConfig {
+            Require.notNegative("grenade cooldownSeconds", cooldownSeconds);
+            Require.positive("grenade speed", speed);
+            Require.positive("grenade range", range);
+            Require.positive("grenade radius", radius);
+            Require.positive("grenade blastRadius", blastRadius);
+        }
+    }
+
+    /**
+     * The explosive barrel: the one pickup that is worth nothing to anybody.
+     *
+     * <p>How big it is stays in its {@link PickupDef} with every other pickup's radius. What is here
+     * is the pair of numbers nothing else on the field has - how little it takes to set one off, and
+     * how much ground it takes with it.
+     *
+     * @param health what it absorbs before it goes off. One of anything, on purpose: a barrel is a
+     *     trigger standing in the open, not something to grind down
+     * @param blastRadius how wide the blast it leaves is, in world units. The number that decides
+     *     whether a barrel is scenery or a reason to change where you are standing
+     */
+    @With
+    public record BarrelConfig(float health, float blastRadius) {
+        public BarrelConfig {
+            Require.positive("barrel health", health);
+            Require.positive("barrel blastRadius", blastRadius);
         }
     }
 

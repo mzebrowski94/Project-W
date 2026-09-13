@@ -3,28 +3,29 @@
 Systems run in the order they were added to `Simulation`'s constructor. **Changing that order changes
 results.** Register deliberately, and say in your reply why you put a system where you put it.
 
-Transcribed from `Simulation`'s constructor and verified 2026-09-12. Re-verify if this list and the
+Transcribed from `Simulation`'s constructor and verified 2026-09-12 (31 systems). Re-verify if this list and the
 constructor ever disagree; the constructor wins.
 
 ## The order
 
 | # | System | # | System |
 |---|---|---|---|
-| 1 | `PositionHistorySystem` | 16 | `StunSystem` |
-| 2 | `CooldownSystem` | 17 | `MovementSystem` |
-| 3 | `CommanderControlSystem` | 18 | `StrikeSystem` |
-| 4 | `MeleeSystem` | 19 | `CollisionSystem` |
-| 5 | `PerceptionSystem` | 20 | `PickupSystem` |
-| 6 | `NavigationSystem` | 21 | `EvolutionSystem` |
-| 7 | `SquadOrderSystem` | 22 | `DamageSystem` |
-| 8 | `TrooperMindSystem` | 23 | `DyingSystem` |
-| 9 | `TrooperMoveSystem` | 24 | `RespawnSystem` |
-| 10 | `TrooperCombatSystem` | 25 | `ProjectileBoundsSystem` |
-| 11 | `WanderSystem` | 26 | `ControlPointSystem` |
-| 12 | `AvoidanceSystem` | 27 | `ObjectiveSystem` |
-| 13 | `DodgeSystem` | 28 | `AppearanceSystem` |
-| 14 | `DriveSystem` | 29 | `ReaperSystem` |
-| 15 | `EnemyLeapSystem` | | |
+| 1 | `PositionHistorySystem` | 17 | `MovementSystem` |
+| 2 | `CooldownSystem` | 18 | `StrikeSystem` |
+| 3 | `CommanderControlSystem` | 19 | `CollisionSystem` |
+| 4 | `MeleeSystem` | 20 | `GrenadeSystem` |
+| 5 | `PerceptionSystem` | 21 | `PickupSystem` |
+| 6 | `NavigationSystem` | 22 | `EvolutionSystem` |
+| 7 | `SquadOrderSystem` | 23 | `DamageSystem` |
+| 8 | `TrooperMindSystem` | 24 | `DyingSystem` |
+| 9 | `TrooperMoveSystem` | 25 | `RespawnSystem` |
+| 10 | `TrooperCombatSystem` | 26 | `BlastSystem` |
+| 11 | `WanderSystem` | 27 | `ProjectileBoundsSystem` |
+| 12 | `AvoidanceSystem` | 28 | `ControlPointSystem` |
+| 13 | `DodgeSystem` | 29 | `ObjectiveSystem` |
+| 14 | `DriveSystem` | 30 | `AppearanceSystem` |
+| 15 | `EnemyLeapSystem` | 31 | `ReaperSystem` |
+| 16 | `StunSystem` | | |
 
 Before system 1, `step()` copies `CommanderInput` into the commander's `Intent`. That is the only way
 input enters the simulation.
@@ -51,6 +52,9 @@ against the order above on 2026-09-12 and hold.
 | `AvoidanceSystem` (12) after every system that sets a course (5-11) | It can only do its job by seeing what the unit intended before adjusting it. |
 | `EnemyLeapSystem` (15) **after** `DriveSystem` (14), overwriting velocity outright | A leap is committed, not one opinion among several. |
 | `StunSystem` (16) after every driver, **before** `MovementSystem` (17) | It owns the velocity of anything held still. A driver zeroing a stunned unit's velocity itself would silently delete knockback, so `DriveSystem` leaves a held unit alone rather than writing a zero. |
+| `GrenadeSystem` (20) **immediately after** `CollisionSystem` (19) | A bounce is recorded by the solver and answered here, with nothing having moved in between. One system later and a grenade would be answering last tick's contact against this tick's course. |
+| `BlastSystem` (26) after `RespawnSystem` (25), inside the death-reaction window | A blast is what a death leaves behind, so it has to run while the dead are still on the field - the same window, and the same reason, as respawning. |
+| `BlastSystem` (26) after `DamageSystem` (23), **knowingly** | A blast owes damage that therefore lands on the following tick. That delay is not a defect: it is what makes a row of barrels go off as a cascade, one link per tick, instead of as one flat bang. |
 
 ## Positions that surprise
 
@@ -65,7 +69,8 @@ Worth naming, because a reasonable guess puts each of these somewhere else.
   the fallback: it ambles whatever nothing else spoke for.
 - **`StrikeSystem` (18) sits between movement (17) and collision (19)** - a strike advances along its
   arc with everything else, then contacts resolve once.
-- **`ProjectileBoundsSystem` (25) runs after the death chain**, not with collision.
+- **`BlastSystem` (26) runs after everything that could have killed something**, not near the collision it looks like it belongs with. It is a death reaction first and a damage source second, and it reads the two families in that order.
+- **`ProjectileBoundsSystem` (27) runs after the death chain**, not with collision.
 
 ## Debugging a one-tick ordering bug
 

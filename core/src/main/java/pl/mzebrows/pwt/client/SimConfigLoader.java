@@ -43,7 +43,10 @@ public final class SimConfigLoader {
                 pickups(properties, defaults),
                 weapons(properties, defaults),
                 melee(properties, defaults.melee()),
+                blast(properties, defaults.blast()),
+                grenade(properties, defaults.grenade()),
                 rabbit(properties, defaults.rabbit()),
+                barrel(properties, defaults.barrel()),
                 controlPoint(properties, defaults.controlPoint()),
                 obstacle(properties, defaults.obstacle()),
                 collision(properties, defaults.collision()));
@@ -230,6 +233,15 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.melee.knockbackDecay", defaults.knockbackDecay()));
     }
 
+    /** What an explosion does, under {@code sim.blast}. The radius belongs to whatever makes one. */
+    private static SimConfig.BlastConfig blast(GameProperties properties, SimConfig.BlastConfig defaults) {
+        return new SimConfig.BlastConfig(
+                properties.getFloat("sim.blast.damage", defaults.damage()),
+                properties.getFloat("sim.blast.durationSeconds", defaults.durationSeconds()),
+                properties.getFloat("sim.blast.shakeStrength", defaults.shakeStrength()),
+                properties.getFloat("sim.blast.shakeRadiusFactor", defaults.shakeRadiusFactor()));
+    }
+
     /**
      * Every gun, each under {@code sim.weapon.<kind>} with the same keys. What its shots look like
      * stays in {@code SimConfig}: a look is not a number anyone balances.
@@ -272,6 +284,23 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.rabbit.deathThroesSeconds", defaults.deathThroesSeconds()),
                 wander(properties, "sim.rabbit.wander", defaults.wander()),
                 dodge(properties, "sim.rabbit.dodge", defaults.dodge()));
+    }
+
+    /** What the commander throws, under {@code sim.grenade}. */
+    private static SimConfig.GrenadeConfig grenade(GameProperties properties, SimConfig.GrenadeConfig defaults) {
+        return new SimConfig.GrenadeConfig(
+                properties.getFloat("sim.grenade.cooldownSeconds", defaults.cooldownSeconds()),
+                properties.getFloat("sim.grenade.speed", defaults.speed()),
+                properties.getFloat("sim.grenade.range", defaults.range()),
+                properties.getFloat("sim.grenade.radius", defaults.radius()),
+                properties.getFloat("sim.grenade.blastRadius", defaults.blastRadius()));
+    }
+
+    /** The other pickup with numbers of its own, because it is the one that goes off. */
+    private static SimConfig.BarrelConfig barrel(GameProperties properties, SimConfig.BarrelConfig defaults) {
+        return new SimConfig.BarrelConfig(
+                properties.getFloat("sim.barrel.health", defaults.health()),
+                properties.getFloat("sim.barrel.blastRadius", defaults.blastRadius()));
     }
 
     /** How a creature answers a shot, under its own prefix. */

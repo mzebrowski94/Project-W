@@ -97,6 +97,11 @@ public final class PickupSystem extends EntitySystem {
                 // A side with nothing on offer never claims one, so this is unreachable in practice.
                 // It exists because the switch is exhaustive, which is the property worth having.
             }
+            case Grant.Detonate _ -> {
+                // Nothing happens to whatever bit into it. Taking a barrel is what kills the barrel,
+                // and a thing that blasts on death is already on its way to going off; doing it here
+                // as well would be a second path to the same explosion.
+            }
             case Grant.Arm(WeaponKind gun) -> spawner.applyWeapon(taker, gun);
             case Grant.Feed(int amount) -> feed(taker, amount);
             case Grant.Mutate(UnitKind into) -> mutate(taker, into);

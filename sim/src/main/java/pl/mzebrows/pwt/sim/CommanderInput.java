@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.def.Order;
  * @param aimY world y the commander is aiming at
  * @param firing whether the fire input is held this tick
  * @param striking whether the melee input is held this tick
+ * @param throwing whether the grenade input is held this tick
  * @param order the squad order issued this tick, or null for none. A one-tick event rather than
  *     a held state: an order is <em>given</em> once and then stands on whoever heard it (G0017)
  */
@@ -28,6 +29,7 @@ public record CommanderInput(
         float aimY,
         boolean firing,
         boolean striking,
+        boolean throwing,
         @Nullable Order order) {
 
     /**
@@ -38,24 +40,24 @@ public record CommanderInput(
      * than burying a {@code null} on the end of every one of them.
      */
     public CommanderInput(float moveX, float moveY, float aimX, float aimY, boolean firing, boolean striking) {
-        this(moveX, moveY, aimX, aimY, firing, striking, null);
+        this(moveX, moveY, aimX, aimY, firing, striking, false, null);
     }
 
     /** No movement, no firing, no swinging. What a simulation steps with when nothing is driving it. */
-    public static final CommanderInput IDLE = new CommanderInput(0f, 0f, 0f, 0f, false, false, null);
+    public static final CommanderInput IDLE = new CommanderInput(0f, 0f, 0f, 0f, false, false, false, null);
 
     /** The same input with the fire button released - convenient in tests. */
     public CommanderInput notFiring() {
-        return new CommanderInput(moveX, moveY, aimX, aimY, false, striking, order);
+        return new CommanderInput(moveX, moveY, aimX, aimY, false, striking, throwing, order);
     }
 
     /** The same input with the melee button held - convenient in tests. */
     public CommanderInput swinging() {
-        return new CommanderInput(moveX, moveY, aimX, aimY, firing, true, order);
+        return new CommanderInput(moveX, moveY, aimX, aimY, firing, true, throwing, order);
     }
 
     /** The same input carrying a squad order, or none. */
     public CommanderInput ordering(@Nullable Order newOrder) {
-        return new CommanderInput(moveX, moveY, aimX, aimY, firing, striking, newOrder);
+        return new CommanderInput(moveX, moveY, aimX, aimY, firing, striking, throwing, newOrder);
     }
 }
