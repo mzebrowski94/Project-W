@@ -4,7 +4,9 @@ import java.util.function.UnaryOperator;
 import lombok.With;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
+import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
@@ -49,6 +51,10 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * @param units every strain of chasing unit, by kind
  * @param pickups every kind of thing that can be lying on the field, by kind
  * @param weapons every gun the commander can be carrying, by kind
+ * @param chances how often each occasional AI behaviour happens, one number per {@code AiChance} -
+ *     the index of everything the AI leaves to the dice. A strain carries its own copy, resolved
+ *     against this one when the config is built, so retune a behaviour with {@link #withChance}
+ *     rather than by replacing this table on its own
  * @param melee the commander's hand strike
  * @param blast what an explosion does, wherever it came from
  * @param grenade what the commander throws
@@ -70,6 +76,7 @@ public record SimConfig(
         Defs<UnitKind, UnitDef> units,
         Defs<PickupKind, PickupDef> pickups,
         Defs<WeaponKind, WeaponDef> weapons,
+        Chances chances,
         MeleeConfig melee,
         BlastConfig blast,
         GrenadeConfig grenade,
@@ -108,6 +115,30 @@ public record SimConfig(
         return weapons.of(kind);
     }
 
+    /** How often one occasional behaviour happens for a unit with no override of its own. */
+    public float chance(AiChance kind) {
+        return chances.of(kind);
+    }
+
+    /**
+     * This config with one occasional behaviour retuned <strong>everywhere</strong> - the shared
+     * table and every strain's own copy of it.
+     *
+     * <p>A strain carries a table already resolved against the shared one rather than a set of
+     * overrides, so that spawning reads one number and never has to ask whether this strain had an
+     * opinion. The price is that {@code withChances} alone does not reach a strain, and this method
+     * is what closes that trap: a scenario or a test switching a behaviour on wants it on for
+     * everything, not for everything that happened not to override it.
+     */
+    public SimConfig withChance(AiChance kind, float chance) {
+        SimConfig changed = withChances(chances.with(kind, chance));
+        for (UnitKind unitKind : UnitKind.values()) {
+            changed = changed.withUnit(
+                    unitKind, strain -> strain.withChances(strain.chances().with(kind, chance)));
+        }
+        return changed;
+    }
+
     /**
      * This config with one strain changed, so a scenario or a test can vary a single number without
      * restating the strain or the rest of the config.
@@ -141,12 +172,12 @@ public record SimConfig(
                         22f,
                         40f,
                         1.6f,
-                        7f,
-                        0.5f),
+                        7f),
                 new SpawnConfig(1, 2, 5),
                 defaultUnits(),
                 defaultPickups(),
                 defaultWeapons(),
+                Chances.standard(),
                 new MeleeConfig(0.6f, 0f, 0.12f, 1.2f, 1.4f, 120f, 180f, 1f, true, 14f, 100f, 45f, 120f),
                 new BlastConfig(1000f, 0.25f, 3f, 2.5f),
                 new GrenadeConfig(1.2f, 38f, 34f, 0.55f, 12f),
@@ -156,8 +187,8 @@ public record SimConfig(
                         0.4f,
                         new WanderDef(true, 18f, 0.7f, 1f, 0.3f, 1.1f, 3f),
                         new DodgeDef(true, 26f, 32f, 0.32f, 0.9f, 1.2f)),
-                new BarrelConfig(1f, 11f),
-                new CasualtyConfig(8f, 1.5f, 0.4f, 1f, 0f, 2.5f),
+                new BarrelConfig(1f, 11f, 4f),
+                new CasualtyConfig(8f, 0.8f, 0.4f, 1f, 0f, 1.6f),
                 new ActionConfig(2.5f, 0.45f, 0.35f, 0.4f),
                 new ControlPointConfig(6f, 5f, 48f),
                 new ObstacleConfig(3.5f, 8),
@@ -174,6 +205,7 @@ public record SimConfig(
                                 12,
                                 100f,
                                 100f,
+                                200f,
                                 1.3f,
                                 0.6f,
                                 1.5f,
@@ -185,6 +217,7 @@ public record SimConfig(
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 new LeapDef(true, 16f, 29f, 0.28f, 2, 0.18f, 1.6f, 0.08f, 0.22f),
                                 RangedDef.off(),
+                                Chances.standard(),
                                 Look.GRUNT))
                 .put(
                         UnitKind.BRUTE,
@@ -194,6 +227,7 @@ public record SimConfig(
                                 3,
                                 250f,
                                 100f,
+                                200f,
                                 1.5f,
                                 0.6f,
                                 1.5f,
@@ -205,6 +239,7 @@ public record SimConfig(
                                 new AvoidanceDef(true, 9f, 0.5f, 1.3f),
                                 new LeapDef(true, 22f, 24f, 0.42f, 3, 0.26f, 2.4f, 0.18f, 0.42f),
                                 RangedDef.off(),
+                                Chances.standard(),
                                 Look.BRUTE))
                 .put(
                         UnitKind.SPITTER,
@@ -214,6 +249,7 @@ public record SimConfig(
                                 4,
                                 70f,
                                 100f,
+                                200f,
                                 1.3f,
                                 0.6f,
                                 1.5f,
@@ -224,7 +260,24 @@ public record SimConfig(
                                 new WanderDef(true, 10f, 0.4f, 1.5f, 0.5f, 1.6f, 4f),
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 LeapDef.off(),
-                                new RangedDef(true, 18f, 14f, true, WeaponKind.SPIT),
+                                new RangedDef(
+                                        true,
+                                        18f,
+                                        14f,
+                                        true,
+                                        WeaponKind.SPIT,
+                                        true,
+                                        150f,
+                                        3f,
+                                        9f,
+                                        0.6f,
+                                        3,
+                                        0.35f,
+                                        WeaponKind.CHARGED_SPIT),
+                                // It wants a barrel far more than anything that closes and claws
+                                // does, because a barrel is what turns its gun into an artillery
+                                // piece. Standing one next to a barrel is a decision a level makes.
+                                Chances.standard().with(AiChance.BITE_A_BARREL, 8f),
                                 Look.SPITTER))
                 .build();
     }
@@ -235,9 +288,10 @@ public record SimConfig(
      */
     private static Defs<WeaponKind, WeaponDef> defaultWeapons() {
         return Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
-                .put(WeaponKind.SIDEARM, new WeaponDef(0.3f, 42f, 0.6f, 50f, Look.PROJECTILE))
-                .put(WeaponKind.RAILGUN, new WeaponDef(1.2f, 85f, 1f, 300f, Look.SLUG))
-                .put(WeaponKind.SPIT, new WeaponDef(1.1f, 30f, 0.7f, 50f, Look.SPIT))
+                .put(WeaponKind.SIDEARM, new WeaponDef(0.3f, 42f, 0.6f, 50f, Look.PROJECTILE, 0f))
+                .put(WeaponKind.RAILGUN, new WeaponDef(1.2f, 85f, 1f, 300f, Look.SLUG, 0f))
+                .put(WeaponKind.SPIT, new WeaponDef(1.1f, 30f, 0.7f, 100f, Look.SPIT, 0f))
+                .put(WeaponKind.CHARGED_SPIT, new WeaponDef(1.1f, 30f, 0.8f, 100f, Look.CHARGED_SPIT, 5f))
                 .build();
     }
 
@@ -414,7 +468,7 @@ public record SimConfig(
      * @param avoidance how far ahead it looks for things in its way, and how hard it leans off them
      * @param urgency how much heading for the objective beats looking around, in {@code [0, 1]}. One
      *     is a beeline; zero is a unit that weaves so hard it barely advances. <strong>Not a
-     *     speed</strong> - "move out" is what changes speed, and one dial doing both would make the
+     *     speed</strong> - "forward" is what changes speed, and one dial doing both would make the
      *     order invisible. This is the number that sets the game's pace
      * @param scanSpread how far off the route a full lean carries it, as a fraction of its heading
      * @param scanMinSeconds shortest a lean lasts before it sweeps back the other way
@@ -426,15 +480,11 @@ public record SimConfig(
      * @param orderRadius how far the commander's voice carries, in world units. This is the whole of
      *     who hears an order (G0017) - wide enough that a squad walking with him all hear it, short
      *     enough that a stray one has to be gone and fetched
-     * @param moveOutDistance how much ground a "move out" buys, in world units. A distance rather
+     * @param forwardDistance how much ground a "forward" buys, in world units. A distance rather
      *     than a countdown, so a squad held up by a fight still gets its full push afterwards
-     * @param moveOutSpeedFactor how much faster it walks while that lasts
+     * @param forwardSpeedFactor how much faster it walks while that lasts
      * @param followDistance how close a following trooper tries to stay to the commander, in world
      *     units. Loose on purpose: a squad glued to him is a squad he cannot see past
-     * @param strikeChancePerSecond how often it tries a bare-handed sweep at something already
-     *     committed to a leap, per second of opportunity. <strong>Very small on purpose.</strong> The
-     *     hand strike is the commander's answer to a leap, and a squad that reliably swatted them
-     *     would take the moment away from him
      */
     @With
     public record TrooperConfig(
@@ -452,10 +502,9 @@ public record SimConfig(
             float arriveRadius,
             PerceptionDef perception,
             float orderRadius,
-            float moveOutDistance,
-            float moveOutSpeedFactor,
-            float followDistance,
-            float strikeChancePerSecond) {
+            float forwardDistance,
+            float forwardSpeedFactor,
+            float followDistance) {
         public TrooperConfig {
             Require.positive("trooper radius", radius);
             Require.positive("trooper speed", speed);
@@ -471,10 +520,9 @@ public record SimConfig(
             if (scanMaxSeconds < scanMinSeconds) {
                 throw new IllegalArgumentException("trooper scanMaxSeconds must not be below scanMinSeconds");
             }
-            Require.notNegative("trooper strikeChancePerSecond", strikeChancePerSecond);
             Require.positive("trooper orderRadius", orderRadius);
-            Require.notNegative("trooper moveOutDistance", moveOutDistance);
-            Require.positive("trooper moveOutSpeedFactor", moveOutSpeedFactor);
+            Require.notNegative("trooper forwardDistance", forwardDistance);
+            Require.positive("trooper forwardSpeedFactor", forwardSpeedFactor);
             Require.positive("trooper followDistance", followDistance);
         }
     }
@@ -689,10 +737,16 @@ public record SimConfig(
      *     trigger standing in the open, not something to grind down
      * @param blastRadius how wide the blast it leaves is, in world units. The number that decides
      *     whether a barrel is scenery or a reason to change where you are standing
+     * @param bittenBlastRadius how wide it goes off instead when something bit into it rather than
+     *     shooting it, in world units. Smaller, and that asymmetry is the point: a creature that set
+     *     one off with its mouth was standing on top of it and takes most of the blast itself, so a
+     *     barrel the aliens walk into is a gift rather than a disaster. Shooting one from across the
+     *     field is still the full circle, which is what keeps it worth aiming at
      */
     @With
-    public record BarrelConfig(float health, float blastRadius) {
+    public record BarrelConfig(float health, float blastRadius, float bittenBlastRadius) {
         public BarrelConfig {
+            Require.positive("barrel bittenBlastRadius", bittenBlastRadius);
             Require.positive("barrel health", health);
             Require.positive("barrel blastRadius", blastRadius);
         }

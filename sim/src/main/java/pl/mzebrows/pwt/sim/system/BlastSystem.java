@@ -108,8 +108,15 @@ public final class BlastSystem extends EntitySystem {
     private void leaveBlastsWhereTheyFell() {
         for (int i = 0; i < detonating.size(); i++) {
             Entity entity = detonating.get(i);
+            float radius = REACTION.get(entity).radius;
+            if (radius <= 0f) {
+                // A reaction with no radius leaves nothing: a barrel swallowed whole rather than set
+                // off (G0022). Still one death and still one path to a blast - this one just has no
+                // circle to draw.
+                continue;
+            }
             Position at = POSITION.get(entity);
-            spawner.spawnBlast(at.x, at.y, REACTION.get(entity).radius);
+            spawner.spawnBlast(at.x, at.y, radius);
         }
     }
 

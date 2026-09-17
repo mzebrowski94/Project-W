@@ -7,17 +7,22 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Order;
 
 /**
@@ -36,9 +41,21 @@ import pl.mzebrows.pwt.sim.def.Order;
  * <p>The fields are built <strong>once</strong>. Control points do not move and are never removed, so
  * a rebuild would be a full grid pass per tick for an answer that cannot have changed.
  *
- * <p><strong>A fight outranks the objective.</strong> Something in front of it is dealt with before
- * anywhere it was going, because the alternative is a squad walking past a fight to stand on a
- * square - which is the version that reads as the AI being broken. Where it was headed is not
+ * <p><strong>The order of precedence is fight, order, casualty, objective.</strong> A fight beats
+ * everything because a squad that walked past one to do anything else reads as the AI being broken.
+ * A standing order beats going to fetch somebody because an order that a body on the ground could
+ * override is not an order (G0017); a man told to hold a corner holds it. And fetching somebody
+ * beats the level's objectives, because a squad that walked past one of its own to stand on a square
+ * would be the same failure as walking past a fight.
+ *
+ * <p>Whether it goes at all is a roll - {@code AiChance.AID_A_TROOPER}, or the much likelier
+ * {@code AID_THE_COMMANDER} - and it is rolled only while the trooper is not already going. Rolling
+ * every tick of an approach would have men setting off and thinking better of it halfway, which
+ * reads as indecision rather than as judgement.
+ *
+ * <p>Something in front of it is dealt with before anywhere it was going, because the alternative is
+ * a squad walking past a fight to stand on a square - which is the version that reads as the AI being
+ * broken. Where it was headed is not
  * remembered: the objective is a pure function of where the trooper is standing and what is still
  * untaken, so it is re-derived the moment the shooting stops rather than saved and restored.
  *
@@ -53,11 +70,17 @@ public final class TrooperMindSystem extends EntitySystem {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
+    private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
+    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
     private final TileMap map;
     private final Rng rng;
+    private final Rng nerve;
+    private final Chances chances;
     private final float bodyRadius;
     private final float arriveRadius;
+    private final float reach;
 
     /** One field per control point, parallel to the family. Rebuilt only if the set of points changes. */
     private FlowField[] routes = new FlowField[0];
@@ -66,12 +89,16 @@ public final class TrooperMindSystem extends EntitySystem {
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> enemies = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> casualties = new ImmutableArray<>(new Array<>());
 
-    public TrooperMindSystem(SimConfig config, TileMap map, Rng rng) {
+    public TrooperMindSystem(SimConfig config, TileMap map, Rng rng, Rng nerve) {
         this.map = map;
         this.rng = rng;
+        this.nerve = nerve;
+        this.chances = config.chances();
         this.bodyRadius = config.trooper().radius();
         this.arriveRadius = config.trooper().arriveRadius();
+        this.reach = config.action().reach();
     }
 
     @Override
@@ -83,6 +110,8 @@ public final class TrooperMindSystem extends EntitySystem {
         enemies = engine.getEntitiesFor(Family.all(Enemy.class, Position.class).get());
         commanders = engine.getEntitiesFor(
                 Family.all(Commander.class, Position.class).get());
+        casualties = engine.getEntitiesFor(
+                Family.all(Casualty.class, Position.class, Body.class).get());
     }
 
     @Override
@@ -104,6 +133,10 @@ public final class TrooperMindSystem extends EntitySystem {
             }
 
             if (obeys(trooper)) {
+                continue;
+            }
+
+            if (aids(entity, trooper, at, deltaTime)) {
                 continue;
             }
 
@@ -145,12 +178,12 @@ public final class TrooperMindSystem extends EntitySystem {
      * remember being interrupted: a trooper that was shooting simply never reached this branch, and
      * reaches it again the tick the shooting stops.
      *
-     * <p>"Move out" is not handled here at all - it is a burst of pace on the way to the objective
+     * <p>"Forward" is not handled here at all - it is a burst of pace on the way to the objective
      * rather than somewhere else to be, so it falls through to the objective and is spent by
      * {@code TrooperMoveSystem} as ground is covered.
      */
     private boolean obeys(Trooper trooper) {
-        if (trooper.order == Order.STOP) {
+        if (trooper.order == Order.DEFENCE) {
             trooper.mode = Trooper.Mode.HOLD;
             trooper.clearTarget();
             return true;
@@ -167,6 +200,86 @@ public final class TrooperMindSystem extends EntitySystem {
         trooper.mode = Trooper.Mode.FOLLOW;
         trooper.headFor(commander.x, commander.y);
         return true;
+    }
+
+    /**
+     * Goes to pick somebody up, if there is somebody and this man is willing.
+     *
+     * <p>Below the order and above the objective, which is the whole of where a rescue sits. The
+     * candidate has to be somewhere this trooper could have seen - its own sight range, rather than a
+     * number of its own - so "it went for a man it could see go down" is the rule, and a squad does
+     * not converge on a body across the map.
+     *
+     * <p><strong>The dice are consulted once, on the way in.</strong> A trooper already in the mode
+     * keeps going: re-rolling every tick of an approach would have men setting off and thinking
+     * better of it halfway, which reads as a bug rather than as judgement. It stops only when there
+     * is nobody left within range - because he was picked up, because somebody else got there, or
+     * because he ran out - and then falls through to the objective on the same tick.
+     *
+     * <p>What it heads for is a <em>place</em> (G0010). Which body it is standing over is asked again
+     * by {@code AidSystem} every tick, from the entities actually in reach, so a casualty reaped
+     * between ticks cannot come back as whatever was built from the recycled component.
+     */
+    private boolean aids(Entity entity, Trooper trooper, Position at, float deltaTime) {
+        Entity subject = nearestCasualty(entity, at, trooper.sightRange);
+        if (subject == null) {
+            return false;
+        }
+        if (trooper.mode != Trooper.Mode.AID && !Odds.rolls(nerve, chances, willingness(subject), deltaTime)) {
+            return false;
+        }
+        trooper.mode = Trooper.Mode.AID;
+        if (Aid.gapBetween(at, BODY.get(entity).radius, subject) <= reach) {
+            // Standing over him. Nothing to head for, so it stops where it is and gets on with it.
+            trooper.clearTarget();
+        } else {
+            Position where = POSITION.get(subject);
+            trooper.headFor(where.x, where.y);
+        }
+        return true;
+    }
+
+    /**
+     * How readily this trooper would go for that particular man.
+     *
+     * <p>The commander is worth far more than a comrade, and that is the whole of "more frequently
+     * the commander": no ranking, no second pass over the candidates, just a number that makes a man
+     * with two bodies in front of him set off for the right one far more often than not.
+     */
+    private static AiChance willingness(Entity subject) {
+        return COMMANDER.has(subject) ? AiChance.AID_THE_COMMANDER : AiChance.AID_A_TROOPER;
+    }
+
+    /**
+     * The nearest man on the ground within this trooper's sight range, or null if there is none.
+     *
+     * <p>By straight-line distance rather than by route, unlike an objective: a body you can see is
+     * one you go to, and a squad that worked out the walking distance to each casualty before setting
+     * off would be doing arithmetic in a firefight. Nobody is offered himself, and nothing already
+     * dying is offered at all - the work would be spent on a corpse.
+     */
+    private @Nullable Entity nearestCasualty(Entity helper, Position at, float range) {
+        Entity nearest = null;
+        float shortest = range * range;
+        for (int i = 0; i < casualties.size(); i++) {
+            Entity candidate = casualties.get(i);
+            if (Objects.equals(candidate, helper) || !CASUALTY.get(candidate).begun) {
+                continue;
+            }
+            if (DYING.has(candidate) && DYING.get(candidate).begun) {
+                continue;
+            }
+            Position where = POSITION.get(candidate);
+            float dx = where.x - at.x;
+            float dy = where.y - at.y;
+            float distance = dx * dx + dy * dy;
+            if (distance > shortest) {
+                continue;
+            }
+            shortest = distance;
+            nearest = candidate;
+        }
+        return nearest;
     }
 
     /**

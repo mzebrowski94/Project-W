@@ -21,6 +21,7 @@ import pl.mzebrows.pwt.sim.def.Look;
  * @param stateTint how far to shift that colour for what the entity is currently doing
  * @param chargeMark how to draw an entity that is filling up towards something
  * @param facingMark how to draw which way an entity is pointing
+ * @param chargedMark how to draw a unit whose gun goes off where its shots land
  * @param orderMark how to draw a unit that is acting on an order
  * @param camera how the view follows what it is watching, and how far out it may sit
  */
@@ -36,6 +37,7 @@ public record GraphicConfig(
         StateTint stateTint,
         ChargeMark chargeMark,
         FacingMark facingMark,
+        ChargedMark chargedMark,
         OrderMark orderMark,
         CameraDirector.Settings camera) {
 
@@ -65,6 +67,7 @@ public record GraphicConfig(
                 stateTint(properties),
                 chargeMark(properties),
                 facingMark(properties),
+                chargedMark(properties),
                 orderMark(properties),
                 camera(properties));
     }
@@ -99,6 +102,7 @@ public record GraphicConfig(
             case PROJECTILE -> "ffe066ff";
             case SLUG -> "fff3c4ff";
             case SPIT -> "d08cffff";
+            case CHARGED_SPIT -> "ff8ce0ff";
             case STRIKE -> "ffffffff";
             case GRENADE -> "c07820ff";
             case BLAST -> "ffb03aff";
@@ -109,6 +113,7 @@ public record GraphicConfig(
             case ARMOURY -> "d8a04aff";
             case BARREL -> "ff3a10ff";
             case RABBIT -> "f0f0f0ff";
+            case MENDING -> "4ce88aff";
             case NONE -> "ff00ffff";
         };
     }
@@ -163,6 +168,17 @@ public record GraphicConfig(
                 properties.getFloat("graphic.facing.length", 1.35f),
                 properties.getFloat("graphic.facing.width", 0.34f),
                 properties.getFloat("graphic.facing.tint", 0.55f));
+    }
+
+    /**
+     * How to draw a creature carrying an explosive, under {@code graphic.charged}. Its own colour
+     * rather than a shift of the body's: it has to be findable at a glance in a line of otherwise
+     * identical creatures.
+     */
+    private static ChargedMark chargedMark(GameProperties properties) {
+        return new ChargedMark(
+                properties.getFloat("graphic.charged.scale", 1.35f),
+                color(properties, "graphic.charged.color", "ff3a10ff"));
     }
 
     private static OrderMark orderMark(GameProperties properties) {

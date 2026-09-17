@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.sim.system;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.MOVE_OUT_FACTOR;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.FORWARD_FACTOR;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ORDER_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SPEED;
@@ -50,9 +50,9 @@ class SquadOrderTest {
         simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
 
-        simulation.step(order(Order.STOP));
+        simulation.step(order(Order.DEFENCE));
 
-        assertThat(orderOf(trooper)).isEqualTo(Order.STOP);
+        assertThat(orderOf(trooper)).isEqualTo(Order.DEFENCE);
     }
 
     /** The rule the radius exists for: a stray trooper has to be gone and fetched. */
@@ -62,7 +62,7 @@ class SquadOrderTest {
         simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity trooper = simulation.spawnTrooper(OUT_OF_EARSHOT, MIDDLE);
 
-        simulation.step(order(Order.STOP));
+        simulation.step(order(Order.DEFENCE));
 
         assertThat(orderOf(trooper)).isNull();
     }
@@ -74,7 +74,7 @@ class SquadOrderTest {
         simulation.spawnCommander(MIDDLE, MIDDLE);
         simulation.spawnControlPoint(90f, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
-        simulation.step(order(Order.STOP));
+        simulation.step(order(Order.DEFENCE));
 
         float wasX = at(trooper).x;
         float firstLook = trooper.getComponent(Appearance.class).facingY;
@@ -107,14 +107,14 @@ class SquadOrderTest {
         simulation.spawnCommander(MIDDLE, MIDDLE);
         simulation.spawnControlPoint(95f, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
-        simulation.step(order(Order.MOVE_OUT));
+        simulation.step(order(Order.FORWARD));
         steps(simulation, 5);
 
         float pushing = pace(trooper);
         steps(simulation, 200);
         float settled = pace(trooper);
 
-        assertThat(pushing).isCloseTo(TROOPER_SPEED * MOVE_OUT_FACTOR, TOLERANCE);
+        assertThat(pushing).isCloseTo(TROOPER_SPEED * FORWARD_FACTOR, TOLERANCE);
         assertThat(settled).isCloseTo(TROOPER_SPEED, TOLERANCE);
     }
 
@@ -125,7 +125,7 @@ class SquadOrderTest {
         simulation.spawnCommander(MIDDLE, MIDDLE);
         simulation.spawnControlPoint(90f, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
-        simulation.step(order(Order.STOP));
+        simulation.step(order(Order.DEFENCE));
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.HOLD);
 
         simulation.step(order(Order.CANCEL));
@@ -149,9 +149,9 @@ class SquadOrderTest {
         simulation.step();
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
 
-        simulation.step(order(Order.STOP));
+        simulation.step(order(Order.DEFENCE));
 
-        assertThat(orderOf(trooper)).isEqualTo(Order.STOP);
+        assertThat(orderOf(trooper)).isEqualTo(Order.DEFENCE);
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
 
         enemy.getComponent(pl.mzebrows.pwt.sim.component.Damage.class)
@@ -169,7 +169,7 @@ class SquadOrderTest {
         Entity heard = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
         Entity missedIt = simulation.spawnTrooper(OUT_OF_EARSHOT, MIDDLE);
 
-        simulation.step(order(Order.STOP));
+        simulation.step(order(Order.DEFENCE));
 
         assertThat(heard.getComponent(Appearance.class).ordered).isTrue();
         assertThat(missedIt.getComponent(Appearance.class).ordered).isFalse();
@@ -182,7 +182,7 @@ class SquadOrderTest {
         simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity latecomer = simulation.spawnTrooper(OUT_OF_EARSHOT, MIDDLE);
 
-        simulation.step(order(Order.STOP));
+        simulation.step(order(Order.DEFENCE));
         latecomer.getComponent(Position.class).set(MIDDLE + 4f, MIDDLE);
         steps(simulation, 3);
 
@@ -238,7 +238,7 @@ class SquadOrderTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
-        simulation.step(order(Order.STOP));
+        simulation.step(order(Order.DEFENCE));
         assertThat(trooper.getComponent(Appearance.class).ordered).isTrue();
 
         commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
@@ -274,13 +274,13 @@ class SquadOrderTest {
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         simulation.spawnControlPoint(90f, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
-        simulation.step(order(Order.MOVE_OUT));
-        assertThat(trooper.getComponent(Trooper.class).movingOut()).isTrue();
+        simulation.step(order(Order.FORWARD));
+        assertThat(trooper.getComponent(Trooper.class).pushingForward()).isTrue();
 
         commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
         steps(simulation, 3);
 
-        assertThat(trooper.getComponent(Trooper.class).movingOut()).isFalse();
+        assertThat(trooper.getComponent(Trooper.class).pushingForward()).isFalse();
     }
 
     private static CommanderInput order(Order given) {

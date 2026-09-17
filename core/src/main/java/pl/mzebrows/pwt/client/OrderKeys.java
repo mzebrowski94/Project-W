@@ -30,10 +30,10 @@ public final class OrderKeys {
             return Order.FOLLOW_ME;
         }
         if (keys.justPressed(Input.Keys.NUM_2)) {
-            return Order.MOVE_OUT;
+            return Order.FORWARD;
         }
         if (keys.justPressed(Input.Keys.NUM_3)) {
-            return Order.STOP;
+            return Order.DEFENCE;
         }
         if (keys.justPressed(Input.Keys.NUM_4)) {
             return Order.CANCEL;

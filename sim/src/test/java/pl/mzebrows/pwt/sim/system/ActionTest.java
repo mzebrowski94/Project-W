@@ -15,11 +15,13 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
+import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.def.ActionKind;
+import pl.mzebrows.pwt.sim.def.Look;
 
 /**
  * One key, and the game decides what it means: what is within arm's length is what is on offer. The
@@ -166,6 +168,37 @@ class ActionTest {
         assertThat(commander.getComponent(Action.class).progress)
                 .isGreaterThan(0.3f)
                 .isLessThan(0.7f);
+    }
+
+    /**
+     * The two circles that must not be confused. A man on the ground and the man working on him are
+     * both drawn as "filling up", and one is a clock running out while the other is the only good
+     * news on the field - so the work names a colour of its own and the bleed-out does not.
+     */
+    @Test
+    void drawsTheWorkInItsOwnColourAndTheBleedOutInTheOrdinaryOne() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
+
+        putDown(trooper);
+        steps(simulation, ticksIn(CASUALTY_STABILISE * 0.5f), STILL.acting(true));
+
+        assertThat(commander.getComponent(Appearance.class).chargeLook).isEqualTo(Look.MENDING);
+        assertThat(trooper.getComponent(Appearance.class).chargeLook).isEqualTo(Look.NONE);
+    }
+
+    @Test
+    void stopsColouringHimGreenTheMomentHeLetsGo() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
+
+        putDown(trooper);
+        steps(simulation, ticksIn(CASUALTY_STABILISE * 0.5f), STILL.acting(true));
+        simulation.step(STILL);
+
+        assertThat(commander.getComponent(Appearance.class).chargeLook).isEqualTo(Look.NONE);
     }
 
     private static void putDown(Entity entity) {

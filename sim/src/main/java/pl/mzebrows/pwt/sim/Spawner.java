@@ -53,6 +53,7 @@ import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
@@ -144,6 +145,13 @@ public final class Spawner {
                         grenade.radius(),
                         grenade.blastRadius()));
         entity.add(engine.createComponent(Taking.class));
+        // He can be shot off his feet like his men, now that there is somebody who would come and
+        // get him (G0023). Claws, a sweep and a leap still kill him outright, as they kill everyone.
+        entity.add(engine.createComponent(Casualty.class)
+                .set(
+                        config.casualty().bleedOutSeconds(),
+                        config.casualty().stabiliseSeconds(),
+                        config.casualty().hauledStabiliseFactor()));
         entity.add(engine.createComponent(Action.class).set(config.action().reach()));
         entity.add(engine.createComponent(Drag.class)
                 .set(
@@ -216,6 +224,9 @@ public final class Spawner {
                         melee.knockbackSpeed(),
                         melee.knockbackDecay()));
         entity.add(engine.createComponent(Taking.class));
+        // A trooper has hands too. The same component the commander carries, so the work a man does
+        // on a casualty is published and drawn the same way whoever is doing it.
+        entity.add(engine.createComponent(Action.class).set(config.action().reach()));
         entity.add(engine.createComponent(Appearance.class).set(Look.TROOPER).face(1f, 0f));
         engine.addEntity(entity);
         return entity;
@@ -288,6 +299,7 @@ public final class Spawner {
         entity.getComponent(Dying.class).set(def.deathThroesSeconds());
         entity.getComponent(ContactDamage.class)
                 .set(def.contactDamage(), def.attackCooldownSeconds(), def.victimInvulnerableSeconds())
+                .reachingWithin(def.attackArcCosine())
                 .setLock(def.lockSeconds(), false, 0f, 0f, 0f, 0f);
         entity.getComponent(Perception.class)
                 .set(
@@ -329,11 +341,29 @@ public final class Spawner {
                         def.ranged().enabled(),
                         def.ranged().range(),
                         def.ranged().halfSpreadRadians(),
-                        def.ranged().haltsToFire());
+                        def.ranged().haltsToFire(),
+                        def.ranged().holdsGround(),
+                        def.ranged().arcCosine(),
+                        def.ranged().turnRate(),
+                        def.ranged().closeRange(),
+                        def.ranged().closeFactor(),
+                        def.ranged().settleShots(),
+                        def.ranged().settledSpreadFactor(),
+                        def.ranged().chargedGun());
+        if (def.ranged().enabled()) {
+            // A shooter starts out looking where everything else starts out looking, rather than
+            // already at you: a field of view is only a field of view if it starts somewhere. A
+            // strain that does not shoot publishes no aim at all, so its facing stays its heading.
+            entity.getComponent(Ranged.class).aim(1f, 0f);
+        }
         // Through the same table and the same component the commander's own guns come through, so a
         // strain that shoots needs no firing code of its own - only a definition saying which gun.
         entity.getComponent(Weapon.class)
                 .set(def.ranged().gun(), config.weapon(def.ranged().gun()));
+        // How readily this strain bites into something it should be wary of. Copied onto the
+        // component like every other per-strain number, so the place that asks needs no table.
+        entity.getComponent(Taking.class)
+                .set(def.chances().of(AiChance.BITE_A_BARREL), def.ranged().chargedGun() != null);
         entity.getComponent(Appearance.class).set(def.look());
     }
 
@@ -365,7 +395,7 @@ public final class Spawner {
     public Entity spawnPickup(PickupKind kind, float x, float y) {
         PickupDef def = config.pickup(kind);
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Pickup.class).set(kind));
+        entity.add(engine.createComponent(Pickup.class).set(kind, def.shunned()));
         entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
@@ -391,7 +421,7 @@ public final class Spawner {
         PickupDef def = config.pickup(PickupKind.RABBIT);
         SimConfig.RabbitConfig rabbit = config.rabbit();
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Pickup.class).set(PickupKind.RABBIT));
+        entity.add(engine.createComponent(Pickup.class).set(PickupKind.RABBIT, def.shunned()));
         entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
@@ -430,11 +460,13 @@ public final class Spawner {
      * Spawns an explosive barrel: a pickup nobody wants to pick up.
      *
      * <p><strong>A pickup rather than an obstacle, and that is the design rather than a
-     * convenience.</strong> Avoidance steers a unit around anything solid <em>except</em> a pickup, so
-     * a barrel that was an obstacle would be a thing the aliens carefully walked round. Because it is
-     * one, an idle alien inside its secondary range goes over to eat it like anything else on offer -
-     * so "set off by gunfire or by something hungry" is two paths that already existed meeting at one
-     * death, rather than two new rules.
+     * convenience.</strong> Being one is what makes "set off by gunfire" and "set off by something
+     * hungry" two paths that already existed meeting at one death, rather than two new rules.
+     *
+     * <p>It is the one pickup that is <em>shunned</em> (G0022): avoidance gives it as wide a berth as
+     * a rock and an idle alien no longer walks over to eat it. What gets a creature onto one is the
+     * dice - {@code AiChance.BITE_A_BARREL}, rolled while it is actually touching one - so a barrel
+     * reads as a hazard the aliens mostly respect and occasionally set off in their own faces.
      *
      * <p>Solid and immovable, unlike the growths: a barrel is a thing standing on the field rather
      * than a dot to walk over. That changes nothing about being taken - the solver reports a contact
@@ -447,7 +479,7 @@ public final class Spawner {
         PickupDef def = config.pickup(PickupKind.BARREL);
         SimConfig.BarrelConfig barrel = config.barrel();
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Pickup.class).set(PickupKind.BARREL));
+        entity.add(engine.createComponent(Pickup.class).set(PickupKind.BARREL, def.shunned()));
         entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
@@ -456,7 +488,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(true, false));
         entity.add(engine.createComponent(Health.class).set(barrel.health()));
         entity.add(engine.createComponent(Damage.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class).set(barrel.blastRadius()));
+        entity.add(engine.createComponent(BlastsOnDeath.class).set(barrel.blastRadius(), barrel.bittenBlastRadius()));
         // It can be hauled, which is why it has a velocity at all. Immovable and therefore still
         // scenery until somebody picks it up; nothing drives it, so the velocity stays zero.
         entity.add(engine.createComponent(Dragged.class));
@@ -537,6 +569,7 @@ public final class Spawner {
                 weapon.projectileRadius,
                 weapon.damage,
                 weapon.projectileLook,
+                weapon.blastRadius,
                 side);
     }
 
@@ -554,6 +587,7 @@ public final class Spawner {
                 gun.projectileRadius(),
                 gun.damage(),
                 gun.projectileLook(),
+                gun.blastRadius(),
                 side);
     }
 
@@ -566,6 +600,7 @@ public final class Spawner {
             float radius,
             float damage,
             Look look,
+            float blastRadius,
             Side side) {
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Projectile.class).from(x, y));
@@ -577,6 +612,12 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(false, true));
         entity.add(
                 engine.createComponent(ContactDamage.class).set(damage, 0f, 0f).wounding());
+        if (blastRadius > 0f) {
+            // A shot that goes off where it stops, and it does so by dying, through the one reaction
+            // everything that explodes uses (G0018). Hitting something and running out of arena are
+            // the same event to it, because both end in the reaper's window.
+            entity.add(engine.createComponent(BlastsOnDeath.class).set(blastRadius, blastRadius));
+        }
         entity.add(engine.createComponent(Appearance.class).set(look));
         engine.addEntity(entity);
         return entity;
@@ -673,7 +714,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Velocity.class).set(directionX * speed, directionY * speed));
         entity.add(engine.createComponent(Body.class).set(radius));
         entity.add(engine.createComponent(Collider.class).set(false, true));
-        entity.add(engine.createComponent(BlastsOnDeath.class).set(blastRadius));
+        // Nothing bites a grenade out of the air, so both ways of ending it are the same circle.
+        entity.add(engine.createComponent(BlastsOnDeath.class).set(blastRadius, blastRadius));
         entity.add(engine.createComponent(Appearance.class).set(Look.GRENADE));
         engine.addEntity(entity);
         return entity;

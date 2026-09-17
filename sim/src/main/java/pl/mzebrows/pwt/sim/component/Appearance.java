@@ -75,6 +75,22 @@ public final class Appearance implements Component, Pool.Poolable {
     public float charge;
 
     /**
+     * What that charge is, where it is worth telling apart from every other thing that fills up.
+     *
+     * <p>{@link Look#NONE} - what almost everything reports - means "the ordinary one", and the
+     * renderer draws it in the entity's own colour brightened, as it always did. Anything else names
+     * a look the renderer already knows how to colour, so a new kind of charge is an entry in
+     * {@link Look} and a line in {@code graphic.properties} rather than any drawing code (G0003).
+     *
+     * <p>It exists because one channel had come to carry opposite meanings. An evolution filling up,
+     * a control point being taken, a bleed-out running out and a man being put back on his feet were
+     * all one white core; three of those are a clock the player is racing and the fourth is the only
+     * good news on the field, and pillar 5 says two things that ask for opposite reactions must not
+     * look the same.
+     */
+    public Look chargeLook = Look.NONE;
+
+    /**
      * Which way the entity is pointing, as a unit vector; {@code (0, 0)} means it has no facing worth
      * showing and the renderer draws none.
      *
@@ -99,11 +115,27 @@ public final class Appearance implements Component, Pool.Poolable {
      */
     public boolean ordered;
 
+    /**
+     * Whether what this entity is carrying goes off where it lands.
+     *
+     * <p>Pillar 5 applied to the barrel power-up. A creature that has swallowed an explosive is the
+     * thing on the field the player has to identify and deal with first, and until now the only
+     * thing saying so was the colour of its shots - which you learn by being caught in one. Published
+     * as a plain flag so the client decides what it looks like (G0003), exactly as {@link #ordered}
+     * is.
+     *
+     * <p>Derived from the gun rather than from the strain, so any unit that ever carries an exploding
+     * weapon reads as carrying one, including the commander if a gun like that ever reaches his
+     * hands.
+     */
+    public boolean charged;
+
     /** Sets the look and returns this component, for fluent spawning. */
     public Appearance set(Look newLook) {
         this.look = newLook;
         this.state = State.NORMAL;
         this.charge = 0f;
+        this.chargeLook = Look.NONE;
         return this;
     }
 
@@ -130,8 +162,10 @@ public final class Appearance implements Component, Pool.Poolable {
         look = Look.NONE;
         state = State.NORMAL;
         charge = 0f;
+        chargeLook = Look.NONE;
         facingX = 0f;
         facingY = 0f;
         ordered = false;
+        charged = false;
     }
 }

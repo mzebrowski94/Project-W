@@ -122,8 +122,12 @@ a real case, not noise. For a bug fix, start instead with the smallest test that
 Conventions: `unit-tests` skill.
 
 **Mateusz commits.** Never `git commit`, `git add`, `git push`. Leave the tree for review. Suggest a
-commit message when done: one line, imperative, what changed rather than how - `Add enemy leap and
+commit message when done: past tense, one line, imperative, what changed rather than how - `Add enemy leap and
 player hand strike`. No body unless something cannot be inferred from the diff.
+
+Reading git state is fine, but **always `git --no-optional-locks status --porcelain`** - a bare
+`git status` takes `.git/index.lock`, and if delete permission has lapsed it cannot give it back,
+which strands a lock that breaks Mateusz's own `git add` until somebody deletes it by hand.
 
 **Ask for delete permission in your first message.** It resets every session; without it Spotless
 cannot rewrite a file and nothing can be renamed or removed. Mid-task is when Mateusz is least likely

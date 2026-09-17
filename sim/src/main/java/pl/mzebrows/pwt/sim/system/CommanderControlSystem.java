@@ -8,12 +8,10 @@ import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Drag;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Speed;
-import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
 
@@ -37,8 +35,6 @@ public final class CommanderControlSystem extends IteratingSystem {
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
-    private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Drag> DRAG = ComponentMapper.getFor(Drag.class);
 
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
@@ -65,7 +61,7 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
-        if (held(entity)) {
+        if (Drivers.held(entity)) {
             return;
         }
         Intent intent = INTENT.get(entity);
@@ -74,14 +70,6 @@ public final class CommanderControlSystem extends IteratingSystem {
             return;
         }
         fire(entity, intent);
-    }
-
-    /** Held still by a blow, or already down. Either way the player is not driving this tick. */
-    private static boolean held(Entity entity) {
-        if (STUNNED.has(entity) && STUNNED.get(entity).active()) {
-            return true;
-        }
-        return DYING.has(entity) && DYING.get(entity).begun;
     }
 
     /**

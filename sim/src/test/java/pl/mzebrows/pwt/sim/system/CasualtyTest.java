@@ -2,9 +2,11 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_BLEED_OUT;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COOLDOWN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -13,12 +15,15 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
+import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Weapon;
 
 /**
@@ -30,6 +35,16 @@ import pl.mzebrows.pwt.sim.component.Weapon;
  * casualties exist.
  */
 class CasualtyTest {
+
+    /** Everything the player can ask for at once, so nothing is left as a maybe. */
+    private static final CommanderInput WALKING_AND_SHOOTING = new CommanderInput(1f, 1f, 90f, 90f, true, true);
+
+    /**
+     * Long enough to be unmistakable, and asked for only <em>after</em> the hit has landed. The blow
+     * is applied twenty systems after the one that drives him, so the tick he is hit is a tick he
+     * still gets to act on - which is correct, and would otherwise look like the bug.
+     */
+    private static final int WHILE_HE_ASKS = 30;
 
     @Test
     void leavesATrooperShotDownOnTheGroundRatherThanDead() {
@@ -145,6 +160,67 @@ class CasualtyTest {
             assertThat(trooper.getComponent(Weapon.class).remainingSeconds).isZero();
         }
         assertThat(trooper.getComponent(Casualty.class).active()).isTrue();
+    }
+
+    /**
+     * He is one of his men in this as in everything else (pillar 2). It is only legitimate because
+     * somebody would come and get him - see {@code AidTest} - and it is one line in {@code Spawner}
+     * to take back if trooper revival ever goes away (G0023).
+     */
+    @Test
+    void leavesTheCommanderShotDownOnTheGroundRatherThanDead() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+
+        wound(commander, COMMANDER_HEALTH);
+        simulation.step();
+
+        assertThat(commander.getComponent(Casualty.class).begun).isTrue();
+        assertThat(commander.getComponent(Dying.class).begun).isFalse();
+    }
+
+    /** Claws still finish him where a bullet only puts him down. That asymmetry is the whole rule. */
+    @Test
+    void killsTheCommanderOutrightWhenTheBlowIsOneThatKills() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+
+        kill(commander, COMMANDER_HEALTH);
+        simulation.step();
+
+        assertThat(commander.getComponent(Casualty.class).begun).isFalse();
+        assertThat(commander.getComponent(Dying.class).begun).isTrue();
+    }
+
+    /**
+     * The bug playtesting found: he was still walking and still firing with an empty bar, because
+     * the system that drives him carried its own copy of "is this man out of it" and that copy knew
+     * about being stunned and dying and not about being a casualty. Every driver asks {@code Drivers}
+     * now, which is what it was written for.
+     */
+    @Test
+    void leavesACommanderWhoIsDownWhereHeFell() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+
+        wound(commander, COMMANDER_HEALTH);
+        simulation.step();
+        steps(simulation, WHILE_HE_ASKS, WALKING_AND_SHOOTING);
+
+        assertThat(commander.getComponent(Position.class).x).isEqualTo(50f);
+        assertThat(commander.getComponent(Position.class).y).isEqualTo(50f);
+    }
+
+    @Test
+    void takesNoShotFromACommanderWhoIsDown() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+
+        wound(commander, COMMANDER_HEALTH);
+        simulation.step();
+        steps(simulation, WHILE_HE_ASKS, WALKING_AND_SHOOTING);
+
+        assertThat(count(simulation, Projectile.class)).isZero();
     }
 
     private static void wound(Entity entity, float amount) {

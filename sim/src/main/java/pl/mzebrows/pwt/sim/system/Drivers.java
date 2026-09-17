@@ -64,15 +64,28 @@ final class Drivers {
      *
      * <p>A body on the ground is not a target: the pack stops rather than piling onto a corpse, which
      * is what makes the seconds after a kill read as a beat rather than a scrum.
+     *
+     * <p><strong>A man bleeding out is off his feet too</strong> (G0023). This one call is what "his
+     * going down releases everything" is actually made of - the pack, the firing line and the squad
+     * all ask it - so the moment he could be a casualty rather than a corpse, the release had to
+     * cover both, or a rescue would be something the game showed you and never let you reach.
      */
     static @Nullable Position livingTarget(ImmutableArray<Entity> commanders) {
         for (int i = 0; i < commanders.size(); i++) {
             Entity commander = commanders.get(i);
-            if (DYING.has(commander) && DYING.get(commander).begun) {
+            if (down(commander)) {
                 continue;
             }
             return POSITION.get(commander);
         }
         return null;
+    }
+
+    /** Off his feet: on the ground bleeding, or on it for good. Narrower than {@link #held}. */
+    static boolean down(Entity entity) {
+        if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
+            return true;
+        }
+        return DYING.has(entity) && DYING.get(entity).begun;
     }
 }

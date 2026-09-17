@@ -27,6 +27,36 @@ public final class Taking implements Component, Pool.Poolable {
     /** What was claimed, or null for nothing this tick. */
     public @Nullable PickupKind claimed;
 
+    /**
+     * How readily this unit bites into something it ought to be wary of, per second of touching one.
+     *
+     * <p>{@code AiChance.BITE_A_BARREL} for its strain, copied here at spawn like every other
+     * per-strain number, so the one place that asks the question needs no definition table. It is
+     * what makes a barrel a hazard the aliens mostly avoid and occasionally set off in their own
+     * faces - and, turned well up for a strain that shoots, what makes one worth standing next to.
+     *
+     * <p>Zero for anything a shunned pickup offers nothing to, which is everything on the player's
+     * side: the commander walks over a barrel and leaves it standing, as he always did.
+     */
+    public float biteChance;
+
+    /**
+     * Whether it takes an explosive whole rather than setting it off.
+     *
+     * <p>True for anything with a gun a barrel can charge. It is the difference between a barrel
+     * being a gift and a barrel being a problem: a creature that closes and claws bites into one and
+     * goes up with it, and a shooter swallows it and comes away with artillery (G0022).
+     */
+    public boolean swallows;
+
+    /** Sets how this unit treats an explosive it touches, for fluent spawning. */
+    public Taking set(float newBiteChance, boolean newSwallows) {
+        this.biteChance = newBiteChance;
+        this.swallows = newSwallows;
+        this.claimed = null;
+        return this;
+    }
+
     /** True if this entity is owed a pickup that has not been applied yet. */
     public boolean hasClaim() {
         return claimed != null;
@@ -47,5 +77,7 @@ public final class Taking implements Component, Pool.Poolable {
     @Override
     public void reset() {
         claimed = null;
+        biteChance = 0f;
+        swallows = false;
     }
 }

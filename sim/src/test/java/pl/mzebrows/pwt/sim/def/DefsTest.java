@@ -72,6 +72,7 @@ class DefsTest {
                 1,
                 HEALTH,
                 0f,
+                PerceptionDef.ALL_ROUND,
                 0f,
                 0f,
                 0f,
@@ -83,6 +84,7 @@ class DefsTest {
                 AvoidanceDef.off(),
                 LeapDef.off(),
                 RangedDef.off(),
+                Chances.standard(),
                 look);
     }
 }

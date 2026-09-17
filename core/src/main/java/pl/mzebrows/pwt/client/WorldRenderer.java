@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.def.Look;
 
 /**
  * Draws the simulation as coloured circles.
@@ -57,6 +58,7 @@ public final class WorldRenderer implements Disposable {
     private final StateTint stateTint;
     private final ChargeMark chargeMark;
     private final FacingMark facingMark;
+    private final ChargedMark chargedMark;
     private final OrderMark orderMark;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
@@ -107,27 +109,38 @@ public final class WorldRenderer implements Disposable {
                         facingMark.widthFor(body.radius));
             }
             if (appearance.charge > 0f) {
-                shapes.setColor(brightened(tint(appearance), chargeMark.tint()));
+                // A charge that names a look of its own is drawn in that colour; everything else is
+                // the body's own colour brightened, which is what the mark has always been. The
+                // simulation says what the charge is and the palette says what that looks like
+                // (G0003) - there is no branch here on what the entity is.
+                shapes.setColor(
+                        appearance.chargeLook == Look.NONE
+                                ? brightened(tint(appearance), chargeMark.tint())
+                                : palette.colorFor(appearance.chargeLook));
                 shapes.circle(x, y, chargeMark.radiusFor(body.radius, appearance.charge), CIRCLE_SEGMENTS);
             }
         }
         shapes.end();
-        drawOrderRings();
+        drawRings();
     }
 
     /**
-     * A ring around every unit acting on an order (3.f).
+     * The rings: one round every unit acting on an order (3.f), one round every unit whose gun goes
+     * off where its shots land.
      *
-     * <p>A second pass in outline rather than another filled circle, so the ring never hides the unit
-     * inside it - and outlines cannot be drawn in the same {@code ShapeRenderer} pass as fills.
+     * <p>A second pass in outline rather than more filled circles, so a ring never hides the unit
+     * inside it - and outlines cannot be drawn in the same {@code ShapeRenderer} pass as fills. Both
+     * rings share the pass because both are outlines; a pass each would cost a state change to say
+     * the same thing twice.
      *
-     * <p>The pass is skipped entirely when nothing is under orders, which is most of the time, so it
+     * <p>The pass is skipped entirely when there is nothing to ring, which is most of the time, so it
      * costs a walk of the list rather than a state change.
      */
-    private void drawOrderRings() {
+    private void drawRings() {
         boolean any = false;
         for (int i = 0; i < drawable.size(); i++) {
-            if (APPEARANCE.get(drawable.get(i)).ordered) {
+            Appearance appearance = APPEARANCE.get(drawable.get(i));
+            if (appearance.ordered || appearance.charged) {
                 any = true;
                 break;
             }
@@ -139,12 +152,18 @@ public final class WorldRenderer implements Disposable {
         for (int i = 0; i < drawable.size(); i++) {
             Entity entity = drawable.get(i);
             Appearance appearance = APPEARANCE.get(entity);
-            if (!appearance.ordered) {
-                continue;
-            }
             Position position = POSITION.get(entity);
-            shapes.setColor(brightened(tint(appearance), orderMark.tint()));
-            shapes.circle(position.x, position.y, orderMark.radiusFor(BODY.get(entity).radius), CIRCLE_SEGMENTS);
+            float radius = BODY.get(entity).radius;
+            if (appearance.charged) {
+                // Drawn first, so a trooper that somehow had both keeps its order ring outermost -
+                // whose man it is matters more at a glance than what he is holding.
+                shapes.setColor(chargedMark.color());
+                shapes.circle(position.x, position.y, chargedMark.radiusFor(radius), CIRCLE_SEGMENTS);
+            }
+            if (appearance.ordered) {
+                shapes.setColor(brightened(tint(appearance), orderMark.tint()));
+                shapes.circle(position.x, position.y, orderMark.radiusFor(radius), CIRCLE_SEGMENTS);
+            }
         }
         shapes.end();
     }

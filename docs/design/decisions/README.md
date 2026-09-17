@@ -30,6 +30,8 @@ mechanic you are about to write appears there, it has already been rejected and 
 | [G0019](G0019-the-grenade-is-a-fixed-throw.md) | A grenade is thrown along the aim direction for a fixed distance. | throwing to the aim point; cooking or charging a throw; contact detonation; a solid grenade; a grenade `WeaponKind` | accepted |
 | [G0020](G0020-lethality-belongs-to-the-source.md) | Whether a blow kills or leaves a casualty is declared by the source, not derived from the amount. | a health threshold; a chance to go down; adding or removing a `Casualty` component; a casualty commander; a blast that wounds some and kills others | accepted |
 | [G0021](G0021-one-key-and-the-game-chooses.md) | One action key, and what is in reach decides what it does. | an action menu or radial; a key per action; selecting a target first; an action the player can queue | accepted |
+| [G0022](G0022-a-barrel-is-a-hazard-with-two-faces.md) | A barrel is steered around, bitten only on a roll, and worth a smaller bang or a charged gun depending on what reached it. | a barrel as an obstacle; an "avoided" flag beside the grants; barrel-eaters decided at spawn; a bite rolled per contact; a blast that spares whoever set it off; a compound grant for the power-up | accepted; amended 2026-09-17 - shunned is about the pair, not the thing |
+| [G0023](G0023-the-commander-can-be-picked-up.md) | The commander is a casualty like his men, and a trooper sometimes comes for him. | a trooper that always comes; re-rolling the approach; aid outranking an order or a fight; a second set of revive numbers; a trooper that hauls; a second respawn clock | accepted; supersedes G0020's rejection of a casualty commander |
 
 ## When to write one
 

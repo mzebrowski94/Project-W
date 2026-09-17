@@ -27,7 +27,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  *
  * <p>Two things here are decisions rather than behaviour, and both are easy to break by accident.
  * <strong>Nearest means nearest by route</strong>, so a squad does not march at a point on the far
- * side of a wall; and <strong>urgency is not a speed</strong>, so that "move out" - which is a speed -
+ * side of a wall; and <strong>urgency is not a speed</strong>, so that "forward" - which is a speed -
  * stays a thing the player can see happening.
  */
 class TrooperAdvanceTest {
@@ -127,7 +127,7 @@ class TrooperAdvanceTest {
     /**
      * The decision urgency was chosen for. It blends the route against the sweep and leaves the pace
      * alone - so a squad ambling and a squad beelining cover ground at the same rate, and the only
-     * thing that changes how fast they walk is an order to move out.
+     * thing that changes how fast they walk is an order to push forward.
      */
     @Test
     void keepsTheSameWalkingPaceWhateverTheUrgency() {

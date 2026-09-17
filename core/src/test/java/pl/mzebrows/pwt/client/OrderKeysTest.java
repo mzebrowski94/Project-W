@@ -21,8 +21,8 @@ class OrderKeysTest {
     @Test
     void readsEachOrderOffItsOwnKey() {
         assertThat(OrderKeys.poll(pressing(Input.Keys.NUM_1))).isEqualTo(Order.FOLLOW_ME);
-        assertThat(OrderKeys.poll(pressing(Input.Keys.NUM_2))).isEqualTo(Order.MOVE_OUT);
-        assertThat(OrderKeys.poll(pressing(Input.Keys.NUM_3))).isEqualTo(Order.STOP);
+        assertThat(OrderKeys.poll(pressing(Input.Keys.NUM_2))).isEqualTo(Order.FORWARD);
+        assertThat(OrderKeys.poll(pressing(Input.Keys.NUM_3))).isEqualTo(Order.DEFENCE);
         assertThat(OrderKeys.poll(pressing(Input.Keys.NUM_4))).isEqualTo(Order.CANCEL);
     }
 
@@ -34,7 +34,7 @@ class OrderKeysTest {
     /** Every order the game has must be reachable, or one of them is a constant nobody can use. */
     @Test
     void leavesNoOrderWithoutAKey() {
-        Set<Order> bound = Set.of(Order.FOLLOW_ME, Order.MOVE_OUT, Order.STOP, Order.CANCEL);
+        Set<Order> bound = Set.of(Order.FOLLOW_ME, Order.FORWARD, Order.DEFENCE, Order.CANCEL);
 
         assertThat(bound).containsExactlyInAnyOrder(Order.values());
     }

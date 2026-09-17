@@ -16,10 +16,10 @@ package pl.mzebrows.pwt.sim.def;
 public enum Order {
     /** Come with me. Troopers keep a loose formation and keep looking around. */
     FOLLOW_ME,
-    /** Push on. A burst of pace towards the objective, for a short distance only. */
-    MOVE_OUT,
-    /** Hold here. Stationary, still watching. */
-    STOP,
+    /** Forward. A burst of pace towards the objective, for a short distance only. */
+    FORWARD,
+    /** Defence. Hold here: stationary, still watching. */
+    DEFENCE,
     /** As you were. Drops whatever is standing and goes back to the level's objectives. */
     CANCEL
 }

@@ -23,7 +23,7 @@ phase so far.
 | Open question | Answer |
 |---|---|
 | What ends a level — an objective, an extraction point, elimination, or a timer? | **An objective, and a level may name more than one.** Two exist: clear the map of enemies, and capture every control point. A level names a set and requires **all** of them. |
-| How does the player command the squad, and on what input? | **Positional orders.** Four verbs — follow, move out, stop, cancel — reaching only the troopers near the commander, not the whole squad. Keys `1`–`4` for now. |
+| How does the player command the squad, and on what input? | **Positional orders.** Four verbs — follow, push forward, stop, cancel — reaching only the troopers near the commander, not the whole squad. Keys `1`–`4` for now. |
 
 Neither answer closes the questions around them: what happens *after* the objectives are met is still
 open (alpha does nothing), and whether the squad persists between levels is untouched.
@@ -108,7 +108,7 @@ as indecision in play.
 
 **Urgency blends route against scanning.** One number, 0..1, between "head straight down the flow
 field" and "amble sideways looking around". Walking **speed is not what urgency changes** — that is
-deliberate, so that "move out" (3.b), which *does* change speed, stays a distinct and visible thing
+deliberate, so that "forward" (3.b), which *does* change speed, stays a distinct and visible thing
 rather than a second urgency dial.
 
 **Two deferred invariants get promoted; the third does not.** "Troopers lost during a level stay lost

@@ -18,6 +18,8 @@ import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.Chances;
 
 /**
  * Shoots, and very occasionally swings.
@@ -33,10 +35,9 @@ import pl.mzebrows.pwt.sim.component.Weapon;
  * trooper tries it seldom enough to read as a lucky break rather than as a tactic - and when it does
  * land, it pays the same clinch the commander pays, because it goes through the same code.
  *
- * <p>The roll is drawn from the squad's seeded stream, so a run replays identically (pillar 6). It is
- * a chance <em>per second</em> converted with the tick length rather than a chance per tick, so the
- * number in {@code game.properties} means something a person can reason about and does not silently
- * change if the tick rate ever does.
+ * <p>The roll goes through {@code Odds} against {@code AiChance.SWING_AT_A_LEAP}, like every other
+ * occasional behaviour in the game: seeded, so a run replays identically (pillar 6), stated per
+ * second rather than per tick, and findable from the one enum that indexes all of them.
  */
 public final class TrooperCombatSystem extends EntitySystem {
 
@@ -56,7 +57,7 @@ public final class TrooperCombatSystem extends EntitySystem {
 
     private final Spawner spawner;
     private final Rng rng;
-    private final float strikeChancePerSecond;
+    private final Chances chances;
 
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> leapers = new ImmutableArray<>(new Array<>());
@@ -64,7 +65,7 @@ public final class TrooperCombatSystem extends EntitySystem {
     public TrooperCombatSystem(SimConfig config, Spawner spawner, Rng rng) {
         this.spawner = spawner;
         this.rng = rng;
-        this.strikeChancePerSecond = config.trooper().strikeChancePerSecond();
+        this.chances = config.chances();
     }
 
     @Override
@@ -105,7 +106,7 @@ public final class TrooperCombatSystem extends EntitySystem {
      */
     private boolean swingAtALeap(Entity entity, float deltaTime) {
         Melee melee = MELEE.get(entity);
-        if (strikeChancePerSecond <= 0f || !melee.ready()) {
+        if (!melee.ready()) {
             return false;
         }
         Position at = POSITION.get(entity);
@@ -119,7 +120,7 @@ public final class TrooperCombatSystem extends EntitySystem {
             if (!Sight.withinRange(at.x, at.y, where.x, where.y, reach)) {
                 continue;
             }
-            if (rng.nextFloat() >= strikeChancePerSecond * deltaTime) {
+            if (!Odds.rolls(rng, chances, AiChance.SWING_AT_A_LEAP, deltaTime)) {
                 return false;
             }
             melee.beginSwing(where.x, where.y);

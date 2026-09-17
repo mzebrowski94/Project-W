@@ -32,6 +32,11 @@ public enum Look {
     SLUG,
     /** What a spitter fires. It must not be mistakable for anything of the player's. */
     SPIT,
+    /**
+     * What a spitter fires once it has eaten a barrel. It goes off where it stops, so it must be
+     * tellable from an ordinary spit at a glance - the ground beside one is no longer safe.
+     */
+    CHARGED_SPIT,
     STRIKE,
     /** Something thrown that bounces and goes off where it stops. */
     GRENADE,
@@ -49,5 +54,14 @@ public enum Look {
     /** Something on the field that goes off when it is killed. */
     BARREL,
     /** Alien food on legs. */
-    RABBIT
+    RABBIT,
+    /**
+     * The work of putting a man back on his feet, drawn on whoever is doing it.
+     *
+     * <p>A look rather than a second colour setting, because the renderer already maps a look to a
+     * colour and nothing else needs inventing (G0003). It is the first look that is not a thing
+     * standing on the field, which is the point: {@code Appearance.chargeLook} names what a charge
+     * <em>is</em>, and the general channel had until now been drawn in one colour whatever it meant.
+     */
+    MENDING
 }

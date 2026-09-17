@@ -10,7 +10,7 @@ whole squad at once. A trooper that takes an order keeps it until it is cancelle
 another, or spent - and orders outrank the level's objectives but never an ongoing fight, which is
 carried out first.
 
-Four verbs, and each is a mode a trooper is in rather than a place it is going: follow me, move out,
+Four verbs, and each is a mode a trooper is in rather than a place it is going: follow me, push forward,
 stop, cancel. None of them names a target, which is what keeps the commander's own position the thing
 that decides who hears him.
 

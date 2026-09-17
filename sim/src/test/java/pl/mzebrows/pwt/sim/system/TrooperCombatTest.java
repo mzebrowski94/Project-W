@@ -26,6 +26,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 
 /**
@@ -195,7 +196,7 @@ class TrooperCombatTest {
     private static Simulation alwaysSwinging() {
         SimConfig base = everyStrain(
                 AlphaWorlds.config(), strain -> strain.withContactDamage(0f).withLeap(leapConfig()));
-        return new Simulation(base.withTrooper(base.trooper().withStrikeChancePerSecond(10_000f)));
+        return new Simulation(base.withChance(AiChance.SWING_AT_A_LEAP, AlphaWorlds.CERTAIN));
     }
 
     private static void facing(Entity trooper, float x, float y) {

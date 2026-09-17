@@ -7,6 +7,11 @@ import pl.mzebrows.pwt.sim.def.ActionKind;
 /**
  * What the commander could do right now, and how far through doing it he is.
  *
+ * <p>Carried by the commander, who acts on a key, and by a trooper, which acts on its own judgement
+ * in {@code AidSystem}. One component for "what this pair of hands is doing" means the interface and
+ * the renderer learn it once: the green core drawn on a man putting somebody back on his feet is the
+ * same mark whether it is the player doing it or one of his men.
+ *
  * <p><strong>It names a kind, never a target.</strong> Which casualty he is working on is resolved
  * from scratch every tick by {@code ActionSystem}, exactly as {@code Perception} resolves what a
  * unit is hunting - components are pooled, so an entity reference kept here across ticks could
@@ -34,6 +39,12 @@ public final class Action implements Component, Pool.Poolable {
         this.available = ActionKind.NONE;
         this.progress = 0f;
         return this;
+    }
+
+    /** Nothing within reach worth doing anything to, and no work in progress. Most ticks. */
+    public void idle() {
+        this.available = ActionKind.NONE;
+        this.progress = 0f;
     }
 
     @Override

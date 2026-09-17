@@ -38,7 +38,16 @@ public final class Trooper implements Component, Pool.Poolable {
         /** Told to hold here. Stationary, still watching (3.c). */
         HOLD,
         /** Standing on a point it is taking. Stationary, watching, and not walking at the middle. */
-        SECURE
+        SECURE,
+        /**
+         * Going to pick somebody up, or standing over him doing it.
+         *
+         * <p>One mode for both halves, because they differ only in whether it has arrived - which is
+         * a distance, not a state to keep. It ranks below a standing order and above the level's
+         * objectives: a man told to hold a corner holds it while somebody bleeds, and a squad with
+         * nothing but an objective to walk to goes and fetches him.
+         */
+        AID
     }
 
     public Mode mode = Mode.ADVANCE;
@@ -75,11 +84,11 @@ public final class Trooper implements Component, Pool.Poolable {
     /**
      * How much further this trooper is pushing on at speed, in world units.
      *
-     * <p>A distance rather than a countdown, because "move out" is about ground covered: a squad told
+     * <p>A distance rather than a countdown, because "forward" is about ground covered: a squad told
      * to push on and then held up by a fight should still get its full push afterwards, rather than
      * having spent it standing still.
      */
-    public float moveOutRemaining;
+    public float forwardRemaining;
 
     /**
      * Whether it has already picked a bearing to watch since it last stopped.
@@ -152,8 +161,8 @@ public final class Trooper implements Component, Pool.Poolable {
     }
 
     /** Whether it is pushing on at speed. */
-    public boolean movingOut() {
-        return moveOutRemaining > 0f;
+    public boolean pushingForward() {
+        return forwardRemaining > 0f;
     }
 
     /** Sends it to a place. */
@@ -180,7 +189,7 @@ public final class Trooper implements Component, Pool.Poolable {
         scanSide = 1;
         order = null;
         settled = false;
-        moveOutRemaining = 0f;
+        forwardRemaining = 0f;
         baseLookX = 1f;
         baseLookY = 0f;
         sightRange = 0f;

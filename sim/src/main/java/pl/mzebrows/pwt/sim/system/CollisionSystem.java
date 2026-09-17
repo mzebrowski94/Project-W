@@ -9,6 +9,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.collision.ConstraintSolver;
@@ -78,13 +79,24 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private final ConstraintSolver solver;
     private final Spawner spawner;
     private final Defs<PickupKind, PickupDef> pickups;
+    private final Rng rng;
+
+    /**
+     * The length of the tick being resolved, for the one decision here that is a chance per second.
+     *
+     * <p>A field because contacts arrive through a callback the solver owns, and threading a number
+     * that never varies within a tick through every contact would be a worse shape than setting it
+     * once. Written at the top of {@link #update(float)} and read nowhere else.
+     */
+    private float deltaTime;
 
     private ImmutableArray<Entity> bodies = new ImmutableArray<>(new Array<>());
 
-    public CollisionSystem(SimConfig config, TileMap map, Spawner spawner) {
+    public CollisionSystem(SimConfig config, TileMap map, Spawner spawner, Rng rng) {
         this.solver = new ConstraintSolver(config, map, this);
         this.spawner = spawner;
         this.pickups = config.pickups();
+        this.rng = rng;
     }
 
     @Override
@@ -95,6 +107,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
 
     @Override
     public void update(float deltaTime) {
+        this.deltaTime = deltaTime;
         solver.solve(bodies);
     }
 
@@ -215,7 +228,15 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      * <p>A pickup already dying is not claimable either. It matters for exactly one of them: shooting
      * something that runs away is only denial if the corpse cannot then be eaten.
      *
-     * <p>The two guards are what make a pickup go to exactly one taker and never vanish for nothing.
+     * <p><strong>A shunned pickup is taken only if the dice say so</strong> (G0022). It is the one
+     * decision here that is not settled by what the two things are, and it belongs with the other
+     * two guards rather than in {@code PickupSystem}: this is where a claim is <em>made</em>, and a
+     * claim made and then taken back would leave a barrel spent for nothing. Touching one is the
+     * opportunity and {@code AiChance.BITE_A_BARREL} is how often it is taken, per second of it - so
+     * a creature shoved against a barrel in a crowd goes off with it, and one that brushes past does
+     * not. The commander is offered nothing by a barrel and so never reaches this at all.
+     *
+     * <p>The two guards above are what make a pickup go to exactly one taker and never vanish for nothing.
      * A pickup already claimed this tick is spent, so the second unit to reach it walks on; a side the
      * definition offers nothing simply passes over it and leaves it standing, which is what lets one
      * item mean different things to the commander and to what is chasing him.
@@ -228,8 +249,14 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (!pickups.of(pickup.kind).offersSomethingTo(FACTION.get(taker).side)) {
             return;
         }
+        if (pickup.shunned && !Odds.rolls(rng, TAKING.get(taker).biteChance, deltaTime)) {
+            return;
+        }
         if (TAKING.get(taker).claim(pickup.kind)) {
             pickup.claimed = true;
+            // Which of the two things a barrel can be is decided by what reached it, so it is
+            // recorded here with the claim and read where the claim is spent.
+            pickup.swallowed = TAKING.get(taker).swallows;
         }
     }
 
@@ -243,6 +270,30 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      */
     private static boolean inert(@Nullable Entity entity) {
         return entity != null && DYING.has(entity) && DYING.get(entity).begun;
+    }
+
+    /**
+     * Whether the attacker can reach the target at all, given the arc its blow declares.
+     *
+     * <p><strong>Which way it is going is which way it is facing.</strong> That is the same
+     * derivation the renderer already makes for everything that steers itself, so the picture and
+     * the rule cannot disagree - a creature drawn walking away from you is a creature that cannot
+     * bite you. Reading the published facing instead would mean gameplay depending on a component
+     * written for the renderer, and written a dozen systems later in the tick at that.
+     *
+     * <p>Something standing perfectly still reaches all round, because {@code Sight.withinArc} treats
+     * a facing of nothing as facing everywhere. That is the right answer rather than a gap: a
+     * creature that has stopped can turn on the spot, and anything pressing into the commander is
+     * moving into him even while the solver holds it apart.
+     */
+    private static boolean reaches(Entity attacker, Entity target, float arcCosine) {
+        if (arcCosine <= -1f || !VELOCITY.has(attacker) || !POSITION.has(attacker) || !POSITION.has(target)) {
+            return true;
+        }
+        Velocity heading = VELOCITY.get(attacker);
+        Position at = POSITION.get(attacker);
+        Position where = POSITION.get(target);
+        return Sight.withinArc(heading.x, heading.y, at.x, at.y, where.x, where.y, arcCosine);
     }
 
     /** Same side, so nothing happens. An entity with no side is on nobody's, and is friendly to nobody. */
@@ -279,6 +330,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         }
         ContactDamage attack = CONTACT_DAMAGE.get(attacker);
         if (!attack.ready()) {
+            return;
+        }
+        if (!reaches(attacker, target, attack.arcCosine)) {
+            // Its back is turned. The cooldown is not spent either: it never swung.
             return;
         }
         Damage owed = DAMAGE.get(target);
@@ -394,7 +449,16 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         return STRIKE.get(attacker).owner;
     }
 
+    /**
+     * Not swinging at anything: held still by a blow, or off its feet.
+     *
+     * <p>Asked through {@link Drivers} rather than answered here. Three systems used to carry their
+     * own copy of this question and one of them had already drifted - a commander shot off his feet
+     * went on walking and firing, because his copy knew about being stunned and dying and not about
+     * being a casualty. The cost of a private copy is that the drift is invisible until somebody
+     * plays it.
+     */
     private static boolean held(@Nullable Entity entity) {
-        return entity != null && STUNNED.has(entity) && STUNNED.get(entity).active();
+        return entity != null && Drivers.held(entity);
     }
 }

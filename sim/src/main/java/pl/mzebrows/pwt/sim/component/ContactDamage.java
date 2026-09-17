@@ -69,6 +69,22 @@ public final class ContactDamage implements Component, Pool.Poolable {
      */
     public boolean fatal = true;
 
+    /**
+     * The cosine of half the arc this blow can reach into, measured from the way the attacker is
+     * going. {@code -1} reaches all round, which is what everything declared before there was an arc.
+     *
+     * <p><strong>A creature has to be facing you to bite you.</strong> Without it, walking into the
+     * back of something that had not noticed you killed you outright - which reads as the game
+     * cheating rather than as a mistake you made, because there was nothing on screen to warn you.
+     * The arc is deliberately generous: a lunging creature is not precise, and a blind spot wide
+     * enough to exploit reliably would turn every fight into a dance round behind things.
+     *
+     * <p>It is a number on the blow rather than a question about what is attacking, so the collision
+     * system keeps its single rule for "attacker touched target" - a projectile and a melee sweep
+     * declare all round and pay one comparison for it.
+     */
+    public float arcCosine = -1f;
+
     /** Sets the attack and leaves it ready to strike, returning this component, for fluent spawning. */
     public ContactDamage set(float newAmount, float newCooldownSeconds, float newVictimInvulnerableSeconds) {
         this.amount = newAmount;
@@ -82,6 +98,17 @@ public final class ContactDamage implements Component, Pool.Poolable {
         this.knockbackSpeed = 0f;
         this.knockbackDecay = 0f;
         this.fatal = true;
+        this.arcCosine = -1f;
+        return this;
+    }
+
+    /**
+     * Narrows this blow to an arc in front of whatever is landing it, and returns this component,
+     * for fluent spawning. Chained after {@link #set}, so a blow that reaches all round stays a
+     * one-line spawn.
+     */
+    public ContactDamage reachingWithin(float newArcCosine) {
+        this.arcCosine = newArcCosine;
         return this;
     }
 
@@ -136,5 +163,6 @@ public final class ContactDamage implements Component, Pool.Poolable {
         knockbackSpeed = 0f;
         knockbackDecay = 0f;
         fatal = true;
+        arcCosine = -1f;
     }
 }

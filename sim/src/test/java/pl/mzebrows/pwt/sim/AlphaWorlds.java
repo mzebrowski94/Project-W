@@ -15,7 +15,9 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
+import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
@@ -76,6 +78,17 @@ public final class AlphaWorlds {
     public static final float ENEMY_HEALTH = 100f;
     public static final float WEAPON_DAMAGE = 50f;
     public static final float ENEMY_CONTACT_DAMAGE = 100f;
+
+    /**
+     * All round in the base fixture. Most combat tests are about what a blow costs rather than about
+     * which way the thing was pointing, and an arc would make every one of them a test about
+     * approach angles as well.
+     */
+    public static final float ENEMY_ATTACK_ARC = PerceptionDef.ALL_ROUND;
+
+    /** Narrow, for the tests that are about the arc: wide enough to walk into and out of. */
+    public static final float ENEMY_NARROW_ATTACK_ARC = 90f;
+
     public static final float ENEMY_ATTACK_COOLDOWN = 1f;
     public static final float VICTIM_INVULNERABLE = 0.5f;
 
@@ -138,6 +151,9 @@ public final class AlphaWorlds {
 
     /** Wider than the barrel by a long way: what a barrel is for is what happens around it. */
     public static final float BARREL_BLAST_RADIUS = 8f;
+
+    /** Half of it, so a test can stand something inside one circle and outside the other. */
+    public static final float BARREL_BITTEN_BLAST_RADIUS = 4f;
 
     /** Half a second: long enough to be interrupted in a test, short enough not to slow one down. */
     public static final float CASUALTY_STABILISE = 0.5f;
@@ -261,6 +277,21 @@ public final class AlphaWorlds {
     /** Wide enough that a test can tell a spread shot from a straight one without a microscope. */
     public static final float SPIT_SPREAD_DEGREES = 40f;
 
+    /** Small, so a test about a charged shot is not also a test about what its blast happened to catch. */
+    public static final float CHARGED_SPIT_BLAST_RADIUS = 4f;
+
+    /** How wide a shooter's field of view is in {@link #watchingItsArc()}: narrow, so a test can leave it. */
+    public static final float SPIT_ARC_DEGREES = 90f;
+
+    /** The distance a shooter prefers in {@link #holdingAPreferredDistance()}: half its reach. */
+    public static final float SPIT_CLOSE_RANGE = SPIT_RANGE * 0.5f;
+
+    /**
+     * How fast it swings onto a target there, as a fraction of the angle left per second. Slow
+     * enough that a test can watch it out of its arc for a moment and then watch it arrive.
+     */
+    public static final float SPIT_TURN_RATE = 1f;
+
     public static final float LEAP_TRIGGER_RANGE = 20f;
 
     /** One world unit per tick while airborne. */
@@ -321,15 +352,40 @@ public final class AlphaWorlds {
 
     public static final float TROOPER_ARC = 100f;
 
-    /** Off in the base fixture: a rare event firing at random would make every other test flaky. */
-    public static final float TROOPER_STRIKE_CHANCE = 0f;
+    /**
+     * Nothing occasional happens in the base fixture.
+     *
+     * <p>Every {@link AiChance} is switched off, so no test is at the mercy of a roll it did not ask
+     * for. A test about one of them switches that one on - {@link #willing(AiChance)} - which also
+     * keeps the switched-off ones drawing nothing, so the stream a test does care about is not being
+     * consumed behind its back.
+     */
+    public static Chances noChances() {
+        Chances chances = Chances.standard();
+        for (AiChance kind : AiChance.values()) {
+            chances = chances.with(kind, 0f);
+        }
+        return chances;
+    }
+
+    /** The base config with one occasional behaviour certain to happen, for a test that is about it. */
+    public static SimConfig willing(AiChance kind) {
+        return config().withChance(kind, CERTAIN);
+    }
+
+    /**
+     * Far more than one per second, so a behaviour rolled once per tick happens on the first tick it
+     * is possible. A test about what a unit does when it takes a chance should not also be a test
+     * about how often it takes one.
+     */
+    public static final float CERTAIN = 1000f;
 
     /** How far the commander's voice carries in the fixtures. */
     public static final float ORDER_RADIUS = 22f;
 
-    public static final float MOVE_OUT_DISTANCE = 40f;
+    public static final float FORWARD_DISTANCE = 40f;
 
-    public static final float MOVE_OUT_FACTOR = 1.6f;
+    public static final float FORWARD_FACTOR = 1.6f;
 
     public static final float FOLLOW_DISTANCE = 7f;
 
@@ -370,10 +426,9 @@ public final class AlphaWorlds {
                         TROOPER_ARRIVE_RADIUS,
                         new PerceptionDef(false, true, TROOPER_SIGHT, TROOPER_HOLD, 0f, TROOPER_ARC, true),
                         ORDER_RADIUS,
-                        MOVE_OUT_DISTANCE,
-                        MOVE_OUT_FACTOR,
-                        FOLLOW_DISTANCE,
-                        TROOPER_STRIKE_CHANCE),
+                        FORWARD_DISTANCE,
+                        FORWARD_FACTOR,
+                        FOLLOW_DISTANCE),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 Defs.<UnitKind, UnitDef>builder(UnitKind.class)
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
@@ -401,10 +456,24 @@ public final class AlphaWorlds {
                         .put(
                                 WeaponKind.SIDEARM,
                                 new WeaponDef(
-                                        COOLDOWN, PROJECTILE_SPEED, PROJECTILE_RADIUS, WEAPON_DAMAGE, Look.PROJECTILE))
+                                        COOLDOWN,
+                                        PROJECTILE_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        WEAPON_DAMAGE,
+                                        Look.PROJECTILE,
+                                        0f))
                         .put(
                                 WeaponKind.SPIT,
-                                new WeaponDef(SPIT_COOLDOWN, SPIT_SPEED, PROJECTILE_RADIUS, SPIT_DAMAGE, Look.SPIT))
+                                new WeaponDef(SPIT_COOLDOWN, SPIT_SPEED, PROJECTILE_RADIUS, SPIT_DAMAGE, Look.SPIT, 0f))
+                        .put(
+                                WeaponKind.CHARGED_SPIT,
+                                new WeaponDef(
+                                        SPIT_COOLDOWN,
+                                        SPIT_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        SPIT_DAMAGE,
+                                        Look.CHARGED_SPIT,
+                                        CHARGED_SPIT_BLAST_RADIUS))
                         .put(
                                 WeaponKind.RAILGUN,
                                 new WeaponDef(
@@ -412,8 +481,10 @@ public final class AlphaWorlds {
                                         PROJECTILE_SPEED,
                                         PROJECTILE_RADIUS,
                                         RAILGUN_DAMAGE,
-                                        Look.SLUG))
+                                        Look.SLUG,
+                                        0f))
                         .build(),
+                noChances(),
                 new SimConfig.MeleeConfig(
                         MELEE_COOLDOWN,
                         0f,
@@ -432,7 +503,7 @@ public final class AlphaWorlds {
                 new SimConfig.GrenadeConfig(
                         GRENADE_COOLDOWN, GRENADE_SPEED, GRENADE_RANGE, GRENADE_RADIUS, GRENADE_BLAST_RADIUS),
                 new SimConfig.RabbitConfig(RABBIT_SPEED, RABBIT_HEALTH, RABBIT_THROES, WanderDef.off(), DodgeDef.off()),
-                new SimConfig.BarrelConfig(BARREL_HEALTH, BARREL_BLAST_RADIUS),
+                new SimConfig.BarrelConfig(BARREL_HEALTH, BARREL_BLAST_RADIUS, BARREL_BITTEN_BLAST_RADIUS),
                 new SimConfig.CasualtyConfig(
                         CASUALTY_BLEED_OUT,
                         CASUALTY_STABILISE,
@@ -457,6 +528,7 @@ public final class AlphaWorlds {
                 0,
                 health,
                 ENEMY_CONTACT_DAMAGE,
+                ENEMY_ATTACK_ARC,
                 ENEMY_ATTACK_COOLDOWN,
                 VICTIM_INVULNERABLE,
                 ENEMY_LOCK,
@@ -468,6 +540,7 @@ public final class AlphaWorlds {
                 AvoidanceDef.off(),
                 LeapDef.off(),
                 RangedDef.off(),
+                noChances(),
                 look);
     }
 
@@ -600,8 +673,7 @@ public final class AlphaWorlds {
     public static Simulation shooting() {
         return new Simulation(everyStrain(
                 config(),
-                strain -> strain.withRanged(
-                        new RangedDef(true, SPIT_RANGE, SPIT_SPREAD_DEGREES, true, WeaponKind.SPIT))));
+                strain -> strain.withRanged(RangedDef.plain(SPIT_RANGE, SPIT_SPREAD_DEGREES, true, WeaponKind.SPIT))));
     }
 
     /** Shooting straight, for a test that wants to know exactly where a shot went. */
@@ -613,9 +685,98 @@ public final class AlphaWorlds {
     public static Simulation shootingStraight(TileMap map) {
         return new Simulation(
                 everyStrain(
-                        config(),
-                        strain -> strain.withRanged(new RangedDef(true, SPIT_RANGE, 0f, true, WeaponKind.SPIT))),
+                        config(), strain -> strain.withRanged(RangedDef.plain(SPIT_RANGE, 0f, true, WeaponKind.SPIT))),
                 map);
+    }
+
+    /**
+     * A world where every strain shoots straight, holds its ground, and only fires at what is inside
+     * a narrow field of view. The base shooting fixture has eyes all round on purpose, so a test
+     * about where a shot goes is not also a test about whether the thing had turned far enough.
+     */
+    public static Simulation watchingItsArc() {
+        return new Simulation(everyStrain(
+                config(),
+                strain -> strain.withRanged(RangedDef.plain(SPIT_RANGE, 0f, true, WeaponKind.SPIT)
+                        .withArcDegrees(SPIT_ARC_DEGREES)
+                        .withTurnRate(SPIT_TURN_RATE)
+                        .withHoldsGround(true))));
+    }
+
+    /**
+     * A world where every shooter has a distance it prefers, and so walks to that rather than to the
+     * edge of its reach. The other shooting fixtures name none, which leaves them stopping as soon
+     * as they can reach at all - simpler to assert against, and not what the shipped spitter does.
+     */
+    public static Simulation holdingAPreferredDistance() {
+        return new Simulation(everyStrain(
+                config(),
+                strain -> strain.withRanged(RangedDef.plain(SPIT_RANGE, 0f, true, WeaponKind.SPIT)
+                        .withHoldsGround(true)
+                        .withCloseRange(SPIT_CLOSE_RANGE))));
+    }
+
+    /** A world where every strain settles its aim over three shots, for a test about the settling. */
+    public static Simulation settlingAim() {
+        return new Simulation(everyStrain(
+                config(),
+                strain -> strain.withRanged(RangedDef.plain(SPIT_RANGE, SPIT_SPREAD_DEGREES, true, WeaponKind.SPIT)
+                        .withSettleShots(3)
+                        .withSettledSpreadFactor(0.1f))));
+    }
+
+    /** A world where every strain carries a charged gun once it has eaten something explosive. */
+    public static Simulation chargedByBarrels() {
+        return new Simulation(everyStrain(
+                        config(),
+                        strain -> strain.withRanged(RangedDef.plain(SPIT_RANGE, 0f, true, WeaponKind.SPIT)
+                                .withChargedGun(WeaponKind.CHARGED_SPIT)))
+                .withChance(AiChance.BITE_A_BARREL, CERTAIN));
+    }
+
+    /**
+     * A world where every shooter holds its ground and ambles about its patch while it fires.
+     *
+     * <p>Wandering is off in the base fixture, so a shooter there stands perfectly still - which is
+     * the bug this exists to catch rather than the behaviour.
+     */
+    public static Simulation shufflingShooters() {
+        return new Simulation(everyStrain(
+                config(),
+                strain -> strain.withRanged(RangedDef.plain(SPIT_RANGE, 0f, true, WeaponKind.SPIT)
+                                .withHoldsGround(true))
+                        .withWander(new WanderDef(
+                                true,
+                                WANDER_RADIUS,
+                                WANDER_SPEED_FACTOR,
+                                WANDER_ARRIVE_RADIUS,
+                                WANDER_PAUSE,
+                                WANDER_PAUSE,
+                                WANDER_TIMEOUT))));
+    }
+
+    /**
+     * A world where every strain has to notice the commander first, ambles until it does, and goes
+     * for an explosive it can see and use.
+     *
+     * <p>Three things have to be true at once for that to happen at all, which is why it is a fixture
+     * rather than a line in a test: the unit must not be hunting anybody - the commander outranks
+     * food absolutely - it must have a secondary range to notice food within, and its strain must
+     * name a gun a barrel can charge, or a barrel is something to be wary of rather than to fetch.
+     *
+     * <p>Ambling is deliberately left off. Going for food is navigation rather than wandering, and a
+     * unit strolling about its patch blunders into things by accident - which is exactly what a test
+     * about whether it went on purpose must not allow.
+     */
+    public static Simulation huntingBarrels() {
+        return new Simulation(everyStrain(
+                        config(),
+                        strain -> strain.withRanged(RangedDef.plain(SPIT_RANGE, 0f, true, WeaponKind.SPIT)
+                                        .withHoldsGround(true)
+                                        .withChargedGun(WeaponKind.CHARGED_SPIT))
+                                .withPerception(PerceptionDef.allRound(
+                                        false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE)))
+                .withChance(AiChance.BITE_A_BARREL, CERTAIN));
     }
 
     /** The base world with every strain leaping on a fixed wind-up. */
@@ -630,6 +791,15 @@ public final class AlphaWorlds {
     public static Simulation harmlessLeaping() {
         return new Simulation(
                 everyStrain(config(), strain -> strain.withContactDamage(0f).withLeap(leapConfig())));
+    }
+
+    /**
+     * A world where a creature's claws only reach what is in front of it. All round in the base
+     * config, so a test about what a blow costs is never also a test about which way the thing was
+     * walking when it landed.
+     */
+    public static Simulation clawingForwardOnly() {
+        return new Simulation(everyStrain(config(), strain -> strain.withAttackArcDegrees(ENEMY_NARROW_ATTACK_ARC)));
     }
 
     /** Enemies that walk but cannot hurt anything, for tests about a swing rather than about a fight. */

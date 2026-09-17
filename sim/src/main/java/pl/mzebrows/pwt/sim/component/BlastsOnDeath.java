@@ -19,14 +19,46 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
     /** How wide the blast it leaves is, in world units. Also the circle the player will see. */
     public float radius;
 
+    /**
+     * How wide instead, if something bit into it rather than shooting it.
+     *
+     * <p>Smaller: a creature that walks onto a barrel and sets it off with its mouth is standing on
+     * top of the thing, and most of the blast goes into it. Shooting one from across the field is
+     * still the full circle, which is what keeps a barrel worth aiming at rather than worth waiting
+     * next to.
+     *
+     * <p>Two numbers on the reaction rather than a second death path: <strong>anything that explodes
+     * still does so by dying, through one reaction</strong> (G0018). What changed is a field read
+     * before the death, not where the blast comes from.
+     */
+    public float bittenRadius;
+
     /** Sets the reaction and returns this component, for fluent spawning. */
-    public BlastsOnDeath set(float newRadius) {
+    public BlastsOnDeath set(float newRadius, float newBittenRadius) {
         this.radius = newRadius;
+        this.bittenRadius = newBittenRadius;
         return this;
+    }
+
+    /** Records that this was set off by something biting into it, which makes for a smaller bang. */
+    public void bitten() {
+        this.radius = bittenRadius;
+    }
+
+    /**
+     * Records that this was taken whole rather than set off, which makes for no bang at all.
+     *
+     * <p>A reaction with no radius leaves nothing behind. It is still the same reaction and the same
+     * one death (G0018) - what changed is a number read before the death, not whether a second path
+     * to an explosion exists.
+     */
+    public void swallowed() {
+        this.radius = 0f;
     }
 
     @Override
     public void reset() {
         radius = 0f;
+        bittenRadius = 0f;
     }
 }

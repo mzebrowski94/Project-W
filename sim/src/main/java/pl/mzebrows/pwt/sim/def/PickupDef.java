@@ -41,4 +41,20 @@ public record PickupDef(float radius, Look look, Grant playerGrant, Grant alienG
     public boolean offersSomethingTo(Side side) {
         return Grant.isSomething(grantFor(side));
     }
+
+    /**
+     * True if this is a thing to steer around rather than a thing to walk over.
+     *
+     * <p>Derived from what it offers rather than declared separately, because there is exactly one
+     * reason to give a pickup a wide berth and it is already written down: what it hands whoever
+     * takes it is an explosion. A second flag saying the same thing would be a second thing to keep
+     * consistent, and the first time the two disagreed the barrel would be walked into cheerfully.
+     *
+     * <p>It is why the invariant "nothing steers around a pickup" now reads "nothing steers around a
+     * pickup it wants" (G0022). Everything edible is still walked straight over - a hungry alien
+     * must not circle its own dinner - and only what goes off is given room.
+     */
+    public boolean shunned() {
+        return playerGrant instanceof Grant.Detonate || alienGrant instanceof Grant.Detonate;
+    }
 }

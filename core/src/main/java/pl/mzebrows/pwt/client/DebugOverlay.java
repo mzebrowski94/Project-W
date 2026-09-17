@@ -48,7 +48,7 @@ public final class DebugOverlay {
         hud.line(5, "last order " + (lastOrder == null ? "-" : lastOrder.name().toLowerCase(Locale.ROOT)));
         hud.line(
                 hud.rows() - 1,
-                "1 follow  2 move out  3 stop  4 cancel      P pause  . step  R restart  G god  F1  ESC");
+                "1 follow  2 forward  3 defence  4 cancel      P pause  . step  R restart  G god  F1  ESC");
         hud.end();
     }
 

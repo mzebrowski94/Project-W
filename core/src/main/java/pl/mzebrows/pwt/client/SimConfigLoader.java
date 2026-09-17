@@ -2,7 +2,9 @@ package pl.mzebrows.pwt.client;
 
 import java.util.Locale;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
+import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
@@ -32,6 +34,7 @@ public final class SimConfigLoader {
     public static SimConfig load() {
         SimConfig defaults = SimConfig.defaults();
         GameProperties properties = GameProperties.load(FILE);
+        Chances chances = chances(properties, "sim.ai.chance", defaults.chances(), defaults.chances());
         return new SimConfig(
                 properties.getLong("sim.seed", defaults.seed()),
                 properties.getFloat("sim.tickSeconds", defaults.tickSeconds()),
@@ -40,9 +43,10 @@ public final class SimConfigLoader {
                 commander(properties, defaults.commander()),
                 trooper(properties, defaults.trooper()),
                 spawn(properties, defaults.spawn()),
-                units(properties, defaults),
+                units(properties, defaults, chances),
                 pickups(properties, defaults),
                 weapons(properties, defaults),
+                chances,
                 melee(properties, defaults.melee()),
                 blast(properties, defaults.blast()),
                 grenade(properties, defaults.grenade()),
@@ -84,10 +88,9 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.trooper.arriveRadius", defaults.arriveRadius()),
                 perception(properties, "sim.trooper.perception", defaults.perception()),
                 properties.getFloat("sim.trooper.orderRadius", defaults.orderRadius()),
-                properties.getFloat("sim.trooper.moveOutDistance", defaults.moveOutDistance()),
-                properties.getFloat("sim.trooper.moveOutSpeedFactor", defaults.moveOutSpeedFactor()),
-                properties.getFloat("sim.trooper.followDistance", defaults.followDistance()),
-                properties.getFloat("sim.trooper.strikeChancePerSecond", defaults.strikeChancePerSecond()));
+                properties.getFloat("sim.trooper.forwardDistance", defaults.forwardDistance()),
+                properties.getFloat("sim.trooper.forwardSpeedFactor", defaults.forwardSpeedFactor()),
+                properties.getFloat("sim.trooper.followDistance", defaults.followDistance()));
     }
 
     /** Where the player's side starts, under {@code sim.spawn}. */
@@ -120,13 +123,38 @@ public final class SimConfigLoader {
      * loadable. Both are structure rather than tuning - an evolution chain read out of a properties
      * file could be edited into a loop, and a look is not a number anyone balances.
      */
-    private static Defs<UnitKind, UnitDef> units(GameProperties properties, SimConfig defaults) {
+    private static Defs<UnitKind, UnitDef> units(GameProperties properties, SimConfig defaults, Chances shared) {
         Defs.Builder<UnitKind, UnitDef> builder = Defs.builder(UnitKind.class);
         for (UnitKind kind : UnitKind.values()) {
             builder.put(
-                    kind, unit(properties, "sim.unit." + kind.name().toLowerCase(Locale.ROOT), defaults.unit(kind)));
+                    kind,
+                    unit(properties, "sim.unit." + kind.name().toLowerCase(Locale.ROOT), defaults.unit(kind), shared));
         }
         return builder.build();
+    }
+
+    /**
+     * How often each occasional behaviour happens, under the given prefix and keyed by the constant's
+     * own lowercase name.
+     *
+     * <p>A behaviour with no key of its own falls back through two levels, and which one wins is the
+     * whole of what makes a strain override work. <strong>A strain that has already declared a
+     * different number keeps it</strong> - that is what {@code defaults()} declaring a spitter far
+     * hungrier for barrels than a grunt actually means - and a strain that is sitting on the game's
+     * own number follows the shared block, so retuning a behaviour for everybody is one line in
+     * {@code game.properties} and does not have to be repeated per strain.
+     *
+     * <p>{@code own} and {@code shared} are the same table for the shared block itself, where the
+     * two levels collapse into one.
+     */
+    private static Chances chances(GameProperties properties, String prefix, Chances shared, Chances own) {
+        Chances loaded = own;
+        for (AiChance kind : AiChance.values()) {
+            String key = prefix + "." + kind.name().toLowerCase(Locale.ROOT);
+            float fallback = own.of(kind) == kind.standard() ? shared.of(kind) : own.of(kind);
+            loaded = loaded.with(kind, properties.getFloat(key, fallback));
+        }
+        return loaded;
     }
 
     /**
@@ -147,13 +175,14 @@ public final class SimConfigLoader {
         return builder.build();
     }
 
-    private static UnitDef unit(GameProperties properties, String prefix, UnitDef defaults) {
+    private static UnitDef unit(GameProperties properties, String prefix, UnitDef defaults, Chances shared) {
         return new UnitDef(
                 properties.getFloat(prefix + ".radius", defaults.radius()),
                 properties.getFloat(prefix + ".speed", defaults.speed()),
                 properties.getInt(prefix + ".count", defaults.count()),
                 properties.getFloat(prefix + ".health", defaults.health()),
                 properties.getFloat(prefix + ".contactDamage", defaults.contactDamage()),
+                properties.getFloat(prefix + ".attackArcDegrees", defaults.attackArcDegrees()),
                 properties.getFloat(prefix + ".attackCooldownSeconds", defaults.attackCooldownSeconds()),
                 properties.getFloat(prefix + ".victimInvulnerableSeconds", defaults.victimInvulnerableSeconds()),
                 properties.getFloat(prefix + ".lockSeconds", defaults.lockSeconds()),
@@ -165,6 +194,7 @@ public final class SimConfigLoader {
                 avoidance(properties, prefix + ".avoidance", defaults.avoidance()),
                 leap(properties, prefix + ".leap", defaults.leap()),
                 ranged(properties, prefix + ".ranged", defaults.ranged()),
+                chances(properties, prefix + ".chance", shared, defaults.chances()),
                 defaults.look());
     }
 
@@ -207,8 +237,9 @@ public final class SimConfigLoader {
     }
 
     /**
-     * How a strain shoots, under {@code <prefix>.ranged}. Which gun it carries is structure rather
-     * than tuning and stays in the defaults, exactly as {@code evolvesTo} does.
+     * How a strain shoots, under {@code <prefix>.ranged}. Which guns it carries - the one it starts
+     * with and the one a barrel upgrades it to - is structure rather than tuning and stays in the
+     * defaults, exactly as {@code evolvesTo} does.
      */
     private static RangedDef ranged(GameProperties properties, String prefix, RangedDef defaults) {
         return new RangedDef(
@@ -216,7 +247,15 @@ public final class SimConfigLoader {
                 properties.getFloat(prefix + ".range", defaults.range()),
                 properties.getFloat(prefix + ".spreadDegrees", defaults.spreadDegrees()),
                 properties.getBoolean(prefix + ".haltsToFire", defaults.haltsToFire()),
-                defaults.gun());
+                defaults.gun(),
+                properties.getBoolean(prefix + ".holdsGround", defaults.holdsGround()),
+                properties.getFloat(prefix + ".arcDegrees", defaults.arcDegrees()),
+                properties.getFloat(prefix + ".turnRate", defaults.turnRate()),
+                properties.getFloat(prefix + ".closeRange", defaults.closeRange()),
+                properties.getFloat(prefix + ".closeFactor", defaults.closeFactor()),
+                properties.getInt(prefix + ".settleShots", defaults.settleShots()),
+                properties.getFloat(prefix + ".settledSpreadFactor", defaults.settledSpreadFactor()),
+                defaults.chargedGun());
     }
 
     /** Every strain configures its leap under its own prefix; the keys below it are the same. */
@@ -275,7 +314,8 @@ public final class SimConfigLoader {
                             properties.getFloat(prefix + ".projectileSpeed", fallback.projectileSpeed()),
                             properties.getFloat(prefix + ".projectileRadius", fallback.projectileRadius()),
                             properties.getFloat(prefix + ".damage", fallback.damage()),
-                            fallback.projectileLook()));
+                            fallback.projectileLook(),
+                            properties.getFloat(prefix + ".blastRadius", fallback.blastRadius())));
         }
         return builder.build();
     }
@@ -337,7 +377,8 @@ public final class SimConfigLoader {
     private static SimConfig.BarrelConfig barrel(GameProperties properties, SimConfig.BarrelConfig defaults) {
         return new SimConfig.BarrelConfig(
                 properties.getFloat("sim.barrel.health", defaults.health()),
-                properties.getFloat("sim.barrel.blastRadius", defaults.blastRadius()));
+                properties.getFloat("sim.barrel.blastRadius", defaults.blastRadius()),
+                properties.getFloat("sim.barrel.bittenBlastRadius", defaults.bittenBlastRadius()));
     }
 
     /** How a creature answers a shot, under its own prefix. */

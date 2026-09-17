@@ -36,10 +36,36 @@ public final class Pickup implements Component, Pool.Poolable {
     /** True once something has claimed it this tick. It is spent, whatever happens next. */
     public boolean claimed;
 
-    /** Sets the kind and returns this component, for fluent spawning. */
-    public Pickup set(PickupKind newKind) {
+    /**
+     * True if this is a thing to steer around rather than to walk over (G0022).
+     *
+     * <p>Copied from the definition at spawn rather than looked up, because avoidance asks it of
+     * every hazard near every steering unit every tick and a table lookup there would be a cost paid
+     * for one pickup kind out of six.
+     *
+     * <p>An idle unit does not go for one either: what is shunned is left out of the hunt for food
+     * as well as steered around, or a creature would walk across the arena to a thing it is
+     * supposed to be wary of.
+     */
+    public boolean shunned;
+
+    /**
+     * True if whatever claimed it took it whole rather than setting it off.
+     *
+     * <p>Only an explosive is worth telling apart this way, and only for something that can do
+     * anything with one: a creature that swallows a barrel turns it into ammunition, and a creature
+     * that merely bites into one sets it off in its own face (G0022). The difference is entirely in
+     * what claimed it, which is why it is recorded here at the moment of the claim and read later,
+     * exactly as {@link #claimed} is.
+     */
+    public boolean swallowed;
+
+    /** Sets the kind and whether it is given a wide berth, for fluent spawning. */
+    public Pickup set(PickupKind newKind, boolean newShunned) {
         this.kind = newKind;
+        this.shunned = newShunned;
         this.claimed = false;
+        this.swallowed = false;
         return this;
     }
 
@@ -47,5 +73,7 @@ public final class Pickup implements Component, Pool.Poolable {
     public void reset() {
         kind = PickupKind.MUSHROOM;
         claimed = false;
+        shunned = false;
+        swallowed = false;
     }
 }

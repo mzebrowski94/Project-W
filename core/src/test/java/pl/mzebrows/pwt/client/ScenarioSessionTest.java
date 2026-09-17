@@ -203,10 +203,10 @@ class ScenarioSessionTest {
         ScenarioSession session = session();
 
         session.advance(TICK, IDLE.ordering(Order.FOLLOW_ME));
-        session.advance(TICK, IDLE.ordering(Order.STOP));
+        session.advance(TICK, IDLE.ordering(Order.DEFENCE));
         session.advance(TICK, IDLE);
 
-        assertThat(session.lastOrder()).isEqualTo(Order.STOP);
+        assertThat(session.lastOrder()).isEqualTo(Order.DEFENCE);
     }
 
     @Test
@@ -220,9 +220,9 @@ class ScenarioSessionTest {
         ScenarioSession session = session();
         session.apply(HarnessCommand.PAUSE, IDLE);
 
-        session.advance(TICK, IDLE.ordering(Order.MOVE_OUT));
+        session.advance(TICK, IDLE.ordering(Order.FORWARD));
 
-        assertThat(session.lastOrder()).isEqualTo(Order.MOVE_OUT);
+        assertThat(session.lastOrder()).isEqualTo(Order.FORWARD);
     }
 
     @Test
@@ -245,10 +245,10 @@ class ScenarioSessionTest {
     void deliversAnOrderGivenOnAFrameTooShortToRunATick() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
 
-        session.advance(TICK * 0.4f, IDLE.ordering(Order.STOP));
+        session.advance(TICK * 0.4f, IDLE.ordering(Order.DEFENCE));
         session.advance(TICK, IDLE);
 
-        assertThat(trooperOrder(session)).isEqualTo(Order.STOP);
+        assertThat(trooperOrder(session)).isEqualTo(Order.DEFENCE);
     }
 
     /** One press is one order, however many ticks the frame after it happens to run. */
@@ -256,9 +256,9 @@ class ScenarioSessionTest {
     void spendsAnOrderOnceEvenWhenAFrameRunsSeveralTicks() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
 
-        session.advance(TICK * 3f, IDLE.ordering(Order.STOP));
+        session.advance(TICK * 3f, IDLE.ordering(Order.DEFENCE));
 
-        assertThat(trooperOrder(session)).isEqualTo(Order.STOP);
+        assertThat(trooperOrder(session)).isEqualTo(Order.DEFENCE);
     }
 
     /**

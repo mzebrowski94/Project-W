@@ -17,6 +17,11 @@ import org.jspecify.annotations.Nullable;
  *     the strain itself, but it belongs to the same block in {@code game.properties}
  * @param health damage one absorbs before dying
  * @param contactDamage what it does to whatever it touches on the other side
+ * @param attackArcDegrees how wide an arc in front of it its claws reach into, centred on the way it
+ *     is going. {@link PerceptionDef#ALL_ROUND} bites anything it touches, which is what every strain
+ *     did before there was an arc; anything less leaves a blind spot behind it. Generous on purpose -
+ *     a lunging creature is not precise, and a blind spot narrow enough to rely on would turn every
+ *     fight into a dance round behind things
  * @param attackCooldownSeconds how long before it can strike again
  * @param victimInvulnerableSeconds how long its victim is protected afterwards, so a crowd cannot
  *     delete a unit in a single tick
@@ -31,6 +36,9 @@ import org.jspecify.annotations.Nullable;
  * @param avoidance how far ahead it looks for things in its way, and how hard it leans off them
  * @param leap how it closes the last of the distance
  * @param ranged how it shoots, if it shoots at all
+ * @param chances how often each occasional behaviour happens for this strain. Starts as the game's
+ *     own table and is overridden per strain in {@code game.properties}, which is how a shooter can
+ *     be far hungrier for a barrel than a grunt with no branch anywhere asking what it is
  * @param look what a renderer draws it as
  */
 @With
@@ -40,6 +48,7 @@ public record UnitDef(
         int count,
         float health,
         float contactDamage,
+        float attackArcDegrees,
         float attackCooldownSeconds,
         float victimInvulnerableSeconds,
         float lockSeconds,
@@ -51,6 +60,7 @@ public record UnitDef(
         AvoidanceDef avoidance,
         LeapDef leap,
         RangedDef ranged,
+        Chances chances,
         Look look) {
 
     public UnitDef {
@@ -59,11 +69,26 @@ public record UnitDef(
         Require.notNegative("unit count", count);
         Require.positive("unit health", health);
         Require.notNegative("unit contactDamage", contactDamage);
+        if (attackArcDegrees <= 0f || attackArcDegrees > PerceptionDef.ALL_ROUND) {
+            throw new IllegalArgumentException("unit attackArcDegrees must be in (0, 360], was " + attackArcDegrees);
+        }
         Require.notNegative("unit attackCooldownSeconds", attackCooldownSeconds);
         Require.notNegative("unit victimInvulnerableSeconds", victimInvulnerableSeconds);
         Require.notNegative("unit lockSeconds", lockSeconds);
         Require.notNegative("unit deathThroesSeconds", deathThroesSeconds);
         Require.notNegative("unit feedToEvolve", feedToEvolve);
+    }
+
+    /**
+     * The smallest dot product between the way it is going and the direction to something for its
+     * claws to reach that thing.
+     *
+     * <p>The same trade {@code PerceptionDef.arcCosine()} makes, for the same reason: converted once
+     * at spawn, so the per-contact test is a dot product and a comparison with no trigonometry in the
+     * tick.
+     */
+    public float attackArcCosine() {
+        return (float) StrictMath.cos(StrictMath.toRadians(attackArcDegrees * 0.5));
     }
 
     /** True if feeding alone can turn this strain into another one. */

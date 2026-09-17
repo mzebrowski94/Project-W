@@ -32,7 +32,17 @@ public enum RngStream {
     TROOPER(0xD1B5_4A32_D192_ED03L),
 
     /** How far off true a spitter's shot leaves its mouth. */
-    SPIT(0xA3C5_9AC3_0F8C_2E71L);
+    SPIT(0xA3C5_9AC3_0F8C_2E71L),
+
+    /**
+     * Every occasional decision the AI leaves to the dice - everything named in {@code AiChance}.
+     *
+     * <p>One stream for all of them rather than one each, because they are one concern: how often a
+     * unit does something it only sometimes does. Splitting them would mean a salt to keep apart per
+     * behaviour, and the thing a separate stream buys - retuning one without reshuffling the others -
+     * is already bought by {@code Odds} drawing nothing at all when a chance is zero.
+     */
+    NERVE(0x6C8E_9CF5_7037_08D3L);
 
     private final long salt;
 

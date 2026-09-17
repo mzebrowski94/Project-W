@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Blast;
+import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Health;
@@ -79,15 +80,21 @@ class BlastTest {
         assertThat(clear.getComponent(Health.class).current).isEqualTo(ENEMY_HEALTH);
     }
 
+    /**
+     * A blast is on nobody's side, so it catches him exactly as it catches them. What it leaves
+     * behind differs, and that is a fact about the victim rather than about the blast (G0020): an
+     * alien dies, and he goes down bleeding, because there is now somebody on his side who would
+     * come and get him (G0023).
+     */
     @Test
-    void killsTheCommanderAsReadilyAsAnEnemy() {
+    void catchesTheCommanderAsReadilyAsAnEnemy() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
 
         simulation.spawnBlast(MIDDLE, MIDDLE, BLAST_RADIUS);
         steps(simulation, SETTLE);
 
-        assertThat(commander.getComponent(Dying.class).begun).isTrue();
+        assertThat(commander.getComponent(Casualty.class).begun).isTrue();
     }
 
     @Test

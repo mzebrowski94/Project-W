@@ -23,7 +23,7 @@ import pl.mzebrows.pwt.sim.component.Trooper;
  *
  * <p><strong>Urgency blends the route against the sweep, and never the speed.</strong> At one a
  * trooper makes a beeline; at zero it weaves so hard it barely advances. Speed is deliberately left
- * alone, because "move out" is the thing that changes speed - one dial doing both would make that
+ * alone, because "forward" is the thing that changes speed - one dial doing both would make that
  * order invisible, which is the sort of overlap that quietly removes a mechanic.
  *
  * <p>The sweep is what "looking around" actually is. Leaning off the route turns the trooper, and its
@@ -56,7 +56,7 @@ public final class TrooperMoveSystem extends EntitySystem {
     private final float scanSpread;
     private final float scanMinSeconds;
     private final float scanMaxSeconds;
-    private final float moveOutSpeedFactor;
+    private final float forwardSpeedFactor;
     private final float followDistance;
     private final float walkingSpeed;
 
@@ -76,7 +76,7 @@ public final class TrooperMoveSystem extends EntitySystem {
         this.scanSpread = trooper.scanSpread();
         this.scanMinSeconds = trooper.scanMinSeconds();
         this.scanMaxSeconds = trooper.scanMaxSeconds();
-        this.moveOutSpeedFactor = trooper.moveOutSpeedFactor();
+        this.forwardSpeedFactor = trooper.forwardSpeedFactor();
         this.followDistance = trooper.followDistance();
         this.walkingSpeed = trooper.speed();
         this.route = FlowField.over(map, trooper.radius());
@@ -97,9 +97,13 @@ public final class TrooperMoveSystem extends EntitySystem {
             }
             Trooper trooper = TROOPER.get(entity);
             sweep(trooper, deltaTime);
-            if (trooper.mode == Trooper.Mode.HOLD || trooper.mode == Trooper.Mode.SECURE) {
-                // 3.c, and a squad holding a point: still watching. It asks for no velocity at all
-                // rather than for a zero one, so DriveSystem stops it and a shove still moves it.
+            if (trooper.mode == Trooper.Mode.HOLD
+                    || trooper.mode == Trooper.Mode.SECURE
+                    || (trooper.mode == Trooper.Mode.AID && !trooper.hasTarget)) {
+                // 3.c, a squad holding a point, and a man standing over somebody: all still watching.
+                // Each asks for no velocity at all rather than for a zero one, so DriveSystem stops
+                // it and a shove still moves it. A trooper aiding has nowhere to head for precisely
+                // when it has arrived, so the two questions are the same question.
                 keepWatching(trooper);
                 continue;
             }
@@ -186,16 +190,16 @@ public final class TrooperMoveSystem extends EntitySystem {
     /**
      * How much faster it is walking than usual, and spends the push as it goes.
      *
-     * <p>Move out buys a <em>distance</em>, so it is charged for ground covered rather than for time
+     * <p>Forward buys a <em>distance</em>, so it is charged for ground covered rather than for time
      * elapsed. A squad told to push on and then pinned by a fight gets the whole push afterwards,
      * which is what the order would look like it promised.
      */
     private float pace(Trooper trooper, float deltaTime) {
-        if (!trooper.movingOut()) {
+        if (!trooper.pushingForward()) {
             return 1f;
         }
-        trooper.moveOutRemaining -= walkingSpeed * moveOutSpeedFactor * deltaTime;
-        return moveOutSpeedFactor;
+        trooper.forwardRemaining -= walkingSpeed * forwardSpeedFactor * deltaTime;
+        return forwardSpeedFactor;
     }
 
     /** Close enough to the commander that a follower stops crowding him. */

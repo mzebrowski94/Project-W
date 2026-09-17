@@ -9,10 +9,12 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Pickup;
+import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Grant;
@@ -49,7 +51,9 @@ public final class PickupSystem extends EntitySystem {
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
     private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
+    private static final ComponentMapper<Ranged> RANGED = ComponentMapper.getFor(Ranged.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
+    private static final ComponentMapper<BlastsOnDeath> REACTION = ComponentMapper.getFor(BlastsOnDeath.class);
 
     private final Spawner spawner;
     private final Defs<PickupKind, PickupDef> pickups;
@@ -84,9 +88,23 @@ public final class PickupSystem extends EntitySystem {
         }
         for (int i = 0; i < lying.size(); i++) {
             Entity pickup = lying.get(i);
-            if (PICKUP.get(pickup).claimed) {
-                spawner.markDead(pickup);
+            if (!PICKUP.get(pickup).claimed) {
+                continue;
             }
+            if (REACTION.has(pickup)) {
+                // Being taken is one of two things, and which one is a fact about whatever reached
+                // it. Something that swallowed it took it whole and there is no bang at all - it is
+                // carrying it now. Something that merely bit into it had its mouth on the thing, so
+                // most of the blast goes into it and the circle is far smaller than the one a shot
+                // from across the field leaves. The reaction is the same reaction either way
+                // (G0018); only the radius it reads is decided here, before the death.
+                if (PICKUP.get(pickup).swallowed) {
+                    REACTION.get(pickup).swallowed();
+                } else {
+                    REACTION.get(pickup).bitten();
+                }
+            }
+            spawner.markDead(pickup);
         }
     }
 
@@ -97,16 +115,37 @@ public final class PickupSystem extends EntitySystem {
                 // A side with nothing on offer never claims one, so this is unreachable in practice.
                 // It exists because the switch is exhaustive, which is the property worth having.
             }
-            case Grant.Detonate _ -> {
-                // Nothing happens to whatever bit into it. Taking a barrel is what kills the barrel,
-                // and a thing that blasts on death is already on its way to going off; doing it here
-                // as well would be a second path to the same explosion.
-            }
+            case Grant.Detonate _ -> charge(taker);
             case Grant.Arm(WeaponKind gun) -> spawner.applyWeapon(taker, gun);
             case Grant.Feed(int amount) -> feed(taker, amount);
             case Grant.Mutate(UnitKind into) -> mutate(taker, into);
             case Grant.Reinforce(int troopers) -> reinforce(troopers);
         }
+    }
+
+    /**
+     * What is left of a barrel once it has gone off in something's face.
+     *
+     * <p><strong>Nothing, for almost everything.</strong> Taking a barrel is what kills the barrel,
+     * and a thing that blasts on death is already on its way to going off; setting it off here as
+     * well would be a second path to the same explosion (G0018). How big that explosion is was
+     * settled when the claim was spent, on the barrel itself.
+     *
+     * <p>A strain that shoots is the exception, and the exception is data: it names on its own
+     * definition the gun it carries afterwards, and picking that up goes through the same call a
+     * weapons cache goes through. Anything that names none - every strain that closes and claws -
+     * still gets nothing at all, which is why a barrel is a gift when a grunt walks into one and a
+     * problem when a spitter does (G0022).
+     */
+    private void charge(Entity taker) {
+        if (!RANGED.has(taker)) {
+            return;
+        }
+        Ranged ranged = RANGED.get(taker);
+        if (!ranged.enabled || ranged.chargedGun == null) {
+            return;
+        }
+        spawner.applyWeapon(taker, ranged.chargedGun);
     }
 
     /** Counts towards whatever the taker's strain evolves into. {@code EvolutionSystem} decides when. */

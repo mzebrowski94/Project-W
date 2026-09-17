@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Wander;
@@ -44,6 +45,7 @@ public final class WanderSystem extends EntitySystem {
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Wander> WANDER = ComponentMapper.getFor(Wander.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
+    private static final ComponentMapper<Ranged> RANGED = ComponentMapper.getFor(Ranged.class);
 
     /**
      * How many spots it will try before settling for home. A cap rather than a loop: a unit walled
@@ -75,7 +77,7 @@ public final class WanderSystem extends EntitySystem {
                 continue;
             }
             Wander wander = WANDER.get(entity);
-            if (PERCEPTION.has(entity) && PERCEPTION.get(entity).occupied()) {
+            if (PERCEPTION.has(entity) && PERCEPTION.get(entity).occupied() && !shuffles(entity)) {
                 // Its patch follows it while it has something better to do, so the ground it gives up
                 // on is the ground it settles into. A unit that broke off a chase and then walked the
                 // length of the level back to where it spawned read as the level rewinding.
@@ -95,6 +97,29 @@ public final class WanderSystem extends EntitySystem {
             }
             walkOn(entity, wander);
         }
+    }
+
+    /**
+     * Whether this unit goes on ambling even while it has something to shoot at.
+     *
+     * <p>A shooter that holds ground has nothing else to do with its legs: it will not close and it
+     * will not follow, so without this it stands perfectly still for a whole fight - which reads as a
+     * turret somebody forgot to animate rather than as a creature. Ambling inside its patch while it
+     * fires is the whole of the difference, and the patch is small enough that it is still holding a
+     * line rather than wandering off one.
+     *
+     * <p><strong>Only once it is actually holding a position.</strong> Everywhere a rooted shooter
+     * does have somewhere to be - food, a place it was roused to, a firing position it has not
+     * reached yet - {@code NavigationSystem} is already driving it there, and this system runs
+     * later, so ambling would overwrite the walk every tick. That is precisely what made a roused
+     * spitter look about and turn back instead of coming to defend the point.
+     */
+    private static boolean shuffles(Entity entity) {
+        if (!RANGED.has(entity) || !PERCEPTION.get(entity).aggro) {
+            return false;
+        }
+        Ranged ranged = RANGED.get(entity);
+        return ranged.enabled && ranged.holdsGround && ranged.inPosition;
     }
 
     /** Steers toward the spot it picked, or gives up on it - by arriving, or by running out of patience. */

@@ -51,6 +51,20 @@ Use `sim/src core/src map/src docs`.
 only build output differs (`~/.pwt/build` here, `<project>/build` there). Re-read a file before editing
 rather than trusting an earlier read.
 
+### Reading git state
+
+**`git --no-optional-locks status --porcelain`**, and the same flag for `diff`. Never a bare
+`git status`.
+
+The flag tells git not to take `index.lock` for the optional index refresh. Without it, every status
+run from the sandbox takes that lock - and if delete permission has lapsed, git cannot remove it
+again and leaves a zero-byte lock file that makes Mateusz's own `git add` fail with "another git
+process seems to be running". The lock is not doing anything; it is litter that only looks like a
+running process, and clearing it needs the delete grant the sandbox may not have.
+
+Nothing here should ever run `git add`, `commit` or `push` - see `CLAUDE.md`. So no command from this
+side has any business writing the index at all, and the flag makes that true rather than hoped for.
+
 ## Verification ladder
 
 Start at the cheapest level that can refute the change. Escalate on a trigger, not by habit.
@@ -95,6 +109,7 @@ Only things actually hit. Add what you hit; delete what stops happening.
 | An input that is "just pressed" is ignored at random | A frame shorter than one tick runs **zero** simulation steps, so a one-frame input reaches no tick. Above 60 Hz that is most frames. | Latch it until a tick spends it, as `ScenarioSession.pendingOrder` does. Anything read with `isKeyJustPressed` and handed to `advance()` has this. |
 | `error: warnings found and -Werror specified` | A real warning. Most often a javadoc orphaned by inserting a method *above* the one it documented. | Fix it. Do not disable the check - eight warnings accumulated in one session before anyone noticed. |
 | `sandbox-helper: no Plan9 drive shares mounted under /mnt/.virtiofs-root/shared` | The device shell cannot mount `D:` at all. Hit 2026-09-11, attributed to a Windows update of 2026-09-08; fixed on Mateusz's side 2026-09-12. | Nothing in the build can run. Say so and fall back to the file tools - see below. |
+| IntelliJ or the command line says `Unable to create '.git/index.lock': File exists. Another git process seems to be running` | **A `git` command run from the sandbox left its lock behind.** Plain `git status` takes `index.lock` to write a refreshed index cache, and removing it again needs delete rights on `D:` - which reset between sessions, so a status run without them strands a zero-byte lock that blocks Mateusz's own git indefinitely. Hit 2026-09-17. | Delete `.git/index.lock` (needs delete permission), then **always** `git --no-optional-locks ...` for anything read-only. See the recipe below. |
 | `too deeply nested to stage: N folders below the connected folder` | `device_stage_files` supports 7 folders; Java sources sit 8-9 deep. | Not workable around from here. Read the file another way or ask Mateusz to connect a deeper folder. |
 
 ## When the mount is down

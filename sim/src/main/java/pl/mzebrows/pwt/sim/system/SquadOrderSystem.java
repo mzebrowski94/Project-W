@@ -40,14 +40,14 @@ public final class SquadOrderSystem extends EntitySystem {
     private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
 
     private final float earshot;
-    private final float moveOutDistance;
+    private final float forwardDistance;
 
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
 
     public SquadOrderSystem(SimConfig config) {
         this.earshot = config.trooper().orderRadius();
-        this.moveOutDistance = config.trooper().moveOutDistance();
+        this.forwardDistance = config.trooper().forwardDistance();
     }
 
     @Override
@@ -106,32 +106,32 @@ public final class SquadOrderSystem extends EntitySystem {
         for (int i = 0; i < troopers.size(); i++) {
             Trooper trooper = TROOPER.get(troopers.get(i));
             trooper.order = null;
-            trooper.moveOutRemaining = 0f;
+            trooper.forwardRemaining = 0f;
         }
     }
 
     /**
      * Writes one order onto one trooper.
      *
-     * <p>Two of these stand and two do not. Follow and stop are states a trooper stays in until it is
-     * told otherwise; move out is a burst of ground to cover, so it lands as a distance rather than
+     * <p>Two of these stand and two do not. Follow and defence are states a trooper stays in until it
+     * is told otherwise; forward is a burst of ground to cover, so it lands as a distance rather than
      * as a standing order and expires by being spent. Cancel is the only one that removes both, which
      * is what makes it a single key rather than a mode the player has to remember they are in.
      */
     private void give(Trooper trooper, Order order) {
         switch (order) {
             case FOLLOW_ME -> trooper.order = Order.FOLLOW_ME;
-            case STOP -> trooper.order = Order.STOP;
-            case MOVE_OUT -> {
+            case DEFENCE -> trooper.order = Order.DEFENCE;
+            case FORWARD -> {
                 // Pushing on cancels standing still, or the order would be swallowed by the last one.
-                if (trooper.order == Order.STOP) {
+                if (trooper.order == Order.DEFENCE) {
                     trooper.order = null;
                 }
-                trooper.moveOutRemaining = moveOutDistance;
+                trooper.forwardRemaining = forwardDistance;
             }
             case CANCEL -> {
                 trooper.order = null;
-                trooper.moveOutRemaining = 0f;
+                trooper.forwardRemaining = 0f;
             }
         }
     }

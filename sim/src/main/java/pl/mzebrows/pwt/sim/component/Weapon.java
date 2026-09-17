@@ -30,6 +30,9 @@ public final class Weapon implements Component, Pool.Poolable {
     /** What its shots are drawn as, so which gun is in hand is visible in what comes out of it. */
     public Look projectileLook = Look.PROJECTILE;
 
+    /** How wide a blast each shot leaves where it stops. Zero for every ordinary gun. */
+    public float blastRadius;
+
     /** Reads a gun's definition in, ready to fire, and returns this component, for fluent spawning. */
     public Weapon set(WeaponKind newKind, WeaponDef def) {
         this.kind = newKind;
@@ -39,6 +42,7 @@ public final class Weapon implements Component, Pool.Poolable {
         this.projectileRadius = def.projectileRadius();
         this.damage = def.damage();
         this.projectileLook = def.projectileLook();
+        this.blastRadius = def.blastRadius();
         return this;
     }
 
@@ -55,5 +59,6 @@ public final class Weapon implements Component, Pool.Poolable {
         projectileRadius = 0f;
         damage = 0f;
         projectileLook = Look.PROJECTILE;
+        blastRadius = 0f;
     }
 }

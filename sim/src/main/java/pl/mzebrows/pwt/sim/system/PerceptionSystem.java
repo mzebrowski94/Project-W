@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
@@ -55,6 +56,7 @@ public final class PerceptionSystem extends EntitySystem {
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
+    private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
 
@@ -208,6 +210,12 @@ public final class PerceptionSystem extends EntitySystem {
             if (pickup.claimed || (DYING.has(food) && DYING.get(food).begun)) {
                 continue;
             }
+            if (pickup.shunned && !swallows(watcher)) {
+                // What is shunned is not food to anything that cannot use it: a creature crossing the
+                // arena to a barrel it is wary of would be the opposite of steering clear of one.
+                // Something that swallows one is not wary of it at all - it is going shopping (G0022).
+                continue;
+            }
             if (!pickupDefs.of(pickup.kind).offersSomethingTo(side)) {
                 continue;
             }
@@ -220,5 +228,10 @@ public final class PerceptionSystem extends EntitySystem {
                 perception.feedAt(where.x, where.y);
             }
         }
+    }
+
+    /** Whether this unit takes an explosive whole rather than setting it off, and therefore wants one. */
+    private static boolean swallows(Entity watcher) {
+        return TAKING.has(watcher) && TAKING.get(watcher).swallows;
     }
 }

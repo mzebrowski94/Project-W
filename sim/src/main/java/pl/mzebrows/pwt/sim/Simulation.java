@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.ActionSystem;
+import pl.mzebrows.pwt.sim.system.AidSystem;
 import pl.mzebrows.pwt.sim.system.AppearanceSystem;
 import pl.mzebrows.pwt.sim.system.AvoidanceSystem;
 import pl.mzebrows.pwt.sim.system.BlastSystem;
@@ -126,10 +127,13 @@ public final class Simulation {
         // sweeping are the same concern, and separating them would only mean two salts to
         // keep apart for no benefit.
         Rng squad = Rng.stream(config.seed(), RngStream.TROOPER);
+        // Everything the AI leaves to the dice draws from one stream of its own, so re-tuning how
+        // often a trooper swings never reshuffles where the squad roams (see AiChance).
+        Rng nerve = Rng.stream(config.seed(), RngStream.NERVE);
         engine.addSystem(new SquadOrderSystem(config));
-        engine.addSystem(new TrooperMindSystem(config, map, squad));
+        engine.addSystem(new TrooperMindSystem(config, map, squad, nerve));
         engine.addSystem(new TrooperMoveSystem(config, map, squad));
-        engine.addSystem(new TrooperCombatSystem(config, spawner, squad));
+        engine.addSystem(new TrooperCombatSystem(config, spawner, nerve));
         engine.addSystem(new WanderSystem(Rng.stream(config.seed(), RngStream.WANDER), map));
         engine.addSystem(new AvoidanceSystem());
         engine.addSystem(new EnemyRangedSystem(map, spawner, Rng.stream(config.seed(), RngStream.SPIT)));
@@ -139,12 +143,13 @@ public final class Simulation {
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));
-        engine.addSystem(new CollisionSystem(config, map, spawner));
+        engine.addSystem(new CollisionSystem(config, map, spawner, nerve));
         engine.addSystem(new GrenadeSystem(map, spawner));
         engine.addSystem(new PickupSystem(config, spawner));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(spawner));
         engine.addSystem(new ActionSystem(config));
+        engine.addSystem(new AidSystem(config));
         engine.addSystem(new CasualtySystem(config, spawner));
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));

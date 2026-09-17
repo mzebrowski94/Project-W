@@ -16,12 +16,15 @@ import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -60,9 +63,11 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Ranged> RANGED = ComponentMapper.getFor(Ranged.class);
     private static final ComponentMapper<Steering> STEERING = ComponentMapper.getFor(Steering.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
+    private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
 
     private final Defs<UnitKind, UnitDef> units;
 
@@ -75,10 +80,13 @@ public final class AppearanceSystem extends IteratingSystem {
     protected void processEntity(Entity entity, float deltaTime) {
         Appearance appearance = APPEARANCE.get(entity);
         appearance.state = stateOf(entity);
-        appearance.charge = chargeOf(entity);
+        publishCharge(entity, appearance);
         face(entity, appearance);
         appearance.ordered = TROOPER.has(entity)
-                && (TROOPER.get(entity).order != null || TROOPER.get(entity).movingOut());
+                && (TROOPER.get(entity).order != null || TROOPER.get(entity).pushingForward());
+        // What it is carrying goes off where it lands. A fact about the gun, so nothing here asks
+        // what kind of creature is holding it.
+        appearance.charged = WEAPON.has(entity) && WEAPON.get(entity).blastRadius > 0f;
     }
 
     /**
@@ -89,8 +97,8 @@ public final class AppearanceSystem extends IteratingSystem {
      * is G0002 at the one place the two are easiest to conflate. A commander backing away while
      * shooting forwards must be drawn facing his shots, or the tell contradicts the bullets.
      *
-     * <p>Everything else that steers itself faces the way it is going. What decides whether a facing
-     * is published at all is whether the entity drives itself - an {@link Intent} or a
+     * <p>A shooter faces what it is aiming at, and everything else that steers itself faces the way it
+     * is going. What decides whether a facing is published at all is whether the entity drives itself - an {@link Intent} or a
      * {@link Steering} - rather than what it is, so a bullet reports none and the renderer never has
      * to ask what it is looking at (G0003).
      */
@@ -109,6 +117,14 @@ public final class AppearanceSystem extends IteratingSystem {
             appearance.face(intent.aimX - at.x, intent.aimY - at.y);
             return;
         }
+        if (RANGED.has(entity) && RANGED.get(entity).aiming()) {
+            // A shooter faces where its gun is pointing, not where it last walked. Its field of view
+            // is measured from that same direction, so this is the tell that makes the arc something
+            // the player can read off the picture rather than learn by being shot (pillar 5, G0015).
+            Ranged ranged = RANGED.get(entity);
+            appearance.face(ranged.aimX, ranged.aimY);
+            return;
+        }
         if (STEERING.has(entity) && VELOCITY.has(entity)) {
             Velocity velocity = VELOCITY.get(entity);
             appearance.face(velocity.x, velocity.y);
@@ -116,7 +132,7 @@ public final class AppearanceSystem extends IteratingSystem {
     }
 
     /**
-     * How close a unit is to turning into something else, in {@code [0, 1]}.
+     * How far through something this entity is, in {@code [0, 1]}, and what that something is.
      *
      * <p>Pillar 5 says the player never tracks a number the game does not show, and how much an
      * enemy has eaten is exactly such a number. Published as a fraction rather than as a count so the
@@ -124,39 +140,55 @@ public final class AppearanceSystem extends IteratingSystem {
      * fills up can use the same channel later.
      *
      * <p>A strain with nowhere to grow reports nothing, which is what almost everything reports.
+     *
+     * <p>It publishes the look alongside the number, in one pass, for the reason this whole class
+     * exists: two methods walking the same conditions is how a charge ends up drawn in the colour of
+     * the mechanic above the one that set it.
      */
-    private float chargeOf(Entity entity) {
+    private void publishCharge(Entity entity, Appearance appearance) {
+        appearance.chargeLook = Look.NONE;
         if (ACTION.has(entity) && ACTION.get(entity).progress > 0f) {
             // The work shows on the man doing it, not on the man being worked on - the casualty's
             // own circle is already saying how long he has left, and one circle cannot carry two
             // meanings without the player having to guess which.
-            return ACTION.get(entity).progress;
+            //
+            // It is the one charge with a colour of its own. Everything else on this channel is a
+            // clock the player is losing; this is the one he is winning, and at a glance the two
+            // must not be the same picture.
+            appearance.chargeLook = Look.MENDING;
+            appearance.charge = ACTION.get(entity).progress;
+            return;
         }
         if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
             // How long a man on the ground has left, on the same channel as everything else that
             // fills up - read backwards, as a blast is. Pillar 5 at its sharpest: a rescue the
             // player cannot time is a rescue he cannot decide to attempt.
-            return CASUALTY.get(entity).fraction();
+            appearance.charge = CASUALTY.get(entity).fraction();
+            return;
         }
         if (BLAST.has(entity)) {
             // A blast burning out rides the same channel as a unit filling up, read backwards. One
             // way of drawing "how far through this is", learnt once and recognised everywhere.
-            return BLAST.get(entity).fade();
+            appearance.charge = BLAST.get(entity).fade();
+            return;
         }
         if (POINT.has(entity)) {
             // A point filling up is the same tell as a unit filling up, deliberately: one
             // way of drawing \"nearly there\", learnt once and read everywhere.
-            return POINT.get(entity).progress();
+            appearance.charge = POINT.get(entity).progress();
+            return;
         }
         if (!FEED.has(entity) || !STRAIN.has(entity)) {
-            return 0f;
+            appearance.charge = 0f;
+            return;
         }
         UnitDef def = units.of(STRAIN.get(entity).kind);
         if (!def.canEvolveByFeeding()) {
-            return 0f;
+            appearance.charge = 0f;
+            return;
         }
         float progress = (float) FEED.get(entity).count / def.feedToEvolve();
-        return progress < 1f ? progress : 1f;
+        appearance.charge = progress < 1f ? progress : 1f;
     }
 
     private static Appearance.State stateOf(Entity entity) {

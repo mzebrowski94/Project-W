@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Steering;
+import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Side;
 
@@ -32,9 +33,11 @@ import pl.mzebrows.pwt.sim.def.Side;
  * something is going to be rather than where it is. Something beside it and moving into its path is a
  * hazard; something dead ahead and moving away is not.
  *
- * <p><strong>It never avoids a pickup.</strong> A pickup is a thing you walk over, and one that walks
- * has to be solid to stay out of rock - so without this a hungry alien would steer politely around its
- * own dinner.
+ * <p><strong>It never avoids a pickup it wants.</strong> A pickup is a thing you walk over, and one
+ * that walks has to be solid to stay out of rock - so without this a hungry alien would steer politely
+ * around its own dinner. The exception is a pickup that goes off (G0022): a barrel is given as wide a
+ * berth as a rock by everything that would only set it off, and walked straight at by anything that
+ * can swallow one. Wariness is about the pair, not about the thing.
  *
  * <p><strong>It never avoids the other side.</strong> A hazard on an opposing side is what the unit is
  * trying to reach, and a grunt that swerved around the commander would never land a blow. Everything
@@ -96,6 +99,7 @@ public final class AvoidanceSystem extends EntitySystem {
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Avoidance> AVOIDANCE = ComponentMapper.getFor(Avoidance.class);
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
+    private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
 
     /** Danger per candidate direction, refilled per unit. One array, reused, so nothing allocates. */
     private final float[] danger = new float[SLOTS];
@@ -172,7 +176,7 @@ public final class AvoidanceSystem extends EntitySystem {
             Entity hazard = hazards.get(i);
             if (Objects.equals(hazard, entity)
                     || !COLLIDER.get(hazard).solid
-                    || PICKUP.has(hazard)
+                    || (PICKUP.has(hazard) && !shunnedBy(entity, hazard))
                     || opposed(side, hazard)) {
                 continue;
             }
@@ -210,6 +214,22 @@ public final class AvoidanceSystem extends EntitySystem {
             }
         }
         return threatened;
+    }
+
+    /**
+     * Whether this steerer gives that pickup a wide berth.
+     *
+     * <p>A question about the pair rather than about the pickup. A barrel is shunned by everything
+     * that would only set one off in its own face, and not shunned at all by anything that can
+     * swallow one and carry it off as ammunition (G0022) - a creature that steered politely round the
+     * thing it was crossing the field to eat would be the very bug this method's caller exists to
+     * prevent.
+     */
+    private static boolean shunnedBy(Entity steerer, Entity hazard) {
+        if (!PICKUP.get(hazard).shunned) {
+            return false;
+        }
+        return !TAKING.has(steerer) || !TAKING.get(steerer).swallows;
     }
 
     /** On the other side, and therefore the thing being hunted rather than something in the way. */

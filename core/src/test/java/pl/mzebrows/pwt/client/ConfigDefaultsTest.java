@@ -30,6 +30,7 @@ class ConfigDefaultsTest {
         assertThat(config.terrainPalette()).isNotNull();
         assertThat(config.stateTint()).isNotNull();
         assertThat(config.chargeMark()).isNotNull();
+        assertThat(config.chargedMark()).isNotNull();
         assertThat(config.camera()).isNotNull();
     }
 
@@ -97,6 +98,7 @@ class ConfigDefaultsTest {
                         tint(),
                         mark(),
                         facing(),
+                        charged(),
                         ordered(),
                         camera()))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -104,6 +106,10 @@ class ConfigDefaultsTest {
 
     private static OrderMark ordered() {
         return new OrderMark(1.55f, 0.75f);
+    }
+
+    private static ChargedMark charged() {
+        return new ChargedMark(1.35f, Color.RED);
     }
 
     private static FacingMark facing() {

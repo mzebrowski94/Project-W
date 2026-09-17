@@ -37,7 +37,7 @@ rows become enforceable once the named feature exists - promote them then.
 | A unit that has not noticed the commander is drawn differently from one that has. | enforced - `AppearanceSystemTest.showsAUnitThatHasNotNoticedHimAsUnaware` |
 | A unit that has noticed nobody stays in its patch, and walks back to it if it finds itself outside. | enforced - `WanderSystemTest.keepsAnIdleUnitNearWhereItWasSpawned`, `.walksBackToItsSpawnPointWhenItFindsItselfAwayFromIt` |
 | A unit leans off what it is about to walk into before it touches it; discovering an obstacle by collision is a failure. | enforced - `AvoidanceSystemTest.leansOffALineThatWouldRunIntoSomethingLongBeforeItGetsThere` |
-| Nothing steers around what it is hunting, and nothing steers around a pickup. | enforced - `AvoidanceSystemTest.neverAvoidsTheThingItIsHunting`; judgement for the pickup half - `AvoidanceSystem` skips them, or a hungry alien would walk round its dinner |
+| Nothing steers around what it is hunting, and nothing steers around a pickup **it wants**. What would go off in your face is given as wide a berth as rock - **and wariness is about the pair, not the thing**: something that can swallow an explosive walks straight at one (G0022, amended 2026-09-17). | enforced - `AvoidanceSystemTest.neverAvoidsTheThingItIsHunting`, `.walksStraightOverItsOwnDinner`, `.leansOffABarrelAsReadilyAsOffARock`, `SpitterTest.crossesTheGroundToABarrelItCanUse`, `BarrelTest.isNotWorthCrossingTheGroundForToSomethingThatCannotUseOne` |
 | A dodge is a function of the shot's geometry alone. The same shot from the same place gets the same answer, always (G0012). | enforced - `DodgeSystemTest.answersTheSameShotTheSameWayEveryTime`, `.breaksAwayFromTheSideTheShotIsOn` |
 | A creature committed to a dodge cannot answer anything else until the window closes. | enforced - `DodgeSystemTest.willNotAnswerASecondShotWhileItIsCommittedToTheFirst` |
 | The commander outranks food absolutely. A unit that has noticed him never diverts to eat. | enforced - `PerceptionSystemTest.walksPastFoodWhileItIsHuntingHim` |
@@ -68,7 +68,7 @@ rows become enforceable once the named feature exists - promote them then.
 | The commander is an ordinary entity - killable, collidable, standing on the field. | enforced - `CombatTest.killsTheCommanderTheMomentAnEnemyTouchesIt` |
 | The commander comes back while any trooper still lives. | deferred - needs squad; with no troopers it always comes back |
 | Only `ReaperSystem` removes an entity; anything that kills only marks it `Dead`. | enforced - `ArchitectureTest.onlyTheReaperRemovesEntities` |
-| Damage only ever crosses faction lines, never stays inside one - and a source on **nobody's** side crosses every one of them, which is how a blast reaches the commander who caused it. | enforced - `CombatTest.neverLetsEnemiesHurtEachOther`, `BarrelTest.killsTheCommanderWhoShootsOneFromTooCloseUp` |
+| Damage only ever crosses faction lines, never stays inside one - and a source on **nobody's** side crosses every one of them, which is how a blast reaches the commander who caused it. | enforced - `CombatTest.neverLetsEnemiesHurtEachOther`, `BarrelTest.putsDownTheCommanderWhoShootsOneFromTooCloseUp` |
 | Invulnerability is reachable from the harness only, never from a scenario or config. | enforced - `ArchitectureTest.scenariosCannotSwitchOnGodMode` |
 | Troopers lost during a level stay lost for that level. | enforced - `SquadTest.keepsATrooperLostDuringALevelLost` |
 | Squad size never exceeds its configured maximum. | enforced - `SquadTest.neverPutsMoreTroopersOnTheFieldThanTheSquadAllows`; a scenario sets it, not the build |
@@ -78,7 +78,7 @@ rows become enforceable once the named feature exists - promote them then.
 | A lethal exchange ends with the two of them touching, whatever distance the blow was struck at - and the body gets there under its own momentum, shoving the survivor back, rather than being placed (G0014). | enforced - `StrikeCombatTest.endsALethalExchangeWithTheTwoOfThemTouching`, `.shovesHimBackAsTheBodyArrives` |
 | A clinch's carry must cross the longest gap a sweep can leave. A config where it stops short is refused rather than shipped. | enforced - `SimConfigTest.refusesAClinchCarryThatWouldStopShortOfTheCommander` |
 | A strain that does not lose interest keeps hunting him however far he gets. | enforced - `PerceptionSystemTest.keepsHuntingHimForeverWhenItNeverLosesInterest` |
-| Him going down releases everything hunting him, whatever its switches say. Nothing stands to attention over a corpse. | enforced - `PerceptionSystemTest.letsGoOfHimWhenHeGoesDownEvenThoughItNeverGivesUp`, `.losesHimWhenHeGoesDown` |
+| Him going down releases everything hunting him, whatever its switches say. Nothing stands to attention over a corpse - and **down means bleeding as well as dead**, or the things that put him there would finish him where he lay (G0023). | enforced - `PerceptionSystemTest.letsGoOfHimWhenHeGoesDownEvenThoughItNeverGivesUp`, `.losesHimWhenHeGoesDown`; one writer - `Drivers.livingTarget` |
 | A unit that gives up idles where it gave up, not where it was spawned. Its patch follows it while it has something better to do. | enforced - `WanderSystemTest.settlesWhereItGaveUpRatherThanWhereItWasSpawned` |
 | A clinch stops both parties dead. A killing blow throws nothing, so there is no throw for the freeze to bleed off. | enforced - `StunTest.clearsTheThrowWhenAHoldBecomesAClinch`, `StrikeCombatTest.stopsHimDeadSoTheClinchDoesNotDriftApart` |
 | A blow that is survived holds only the one that took it; the one that landed it stays free. | enforced - `StunTest.holdsOnlyTheVictimWhenTheBlowIsSurvived` |
@@ -129,7 +129,7 @@ rows become enforceable once the named feature exists - promote them then.
 | A level requires every objective it names; one that names none is never complete. | enforced - `ControlPointTest.requiresEveryObjectiveALevelNames`, `.neverCompletesALevelThatNamesNoObjectives` |
 | Objectives are recomputed from the world every tick, never latched. "The map is clear" must be able to stop being true. | judgement - `ObjectiveSystem` |
 | Nearest objective means nearest **by route**, never by straight line. | enforced - `TrooperAdvanceTest.picksThePointThatIsTheShorterWalkRatherThanTheNearerOne`, `FlowFieldTest.countsTheWalkRatherThanTheStraightLine` |
-| Urgency blends the route against the sweep and never changes speed; "move out" is the only thing that changes speed. | enforced - `TrooperAdvanceTest.keepsTheSameWalkingPaceWhateverTheUrgency` |
+| Urgency blends the route against the sweep and never changes speed; "forward" is the only thing that changes speed. | enforced - `TrooperAdvanceTest.keepsTheSameWalkingPaceWhateverTheUrgency` |
 | A trooper stands still to shoot. | enforced - `TrooperCombatTest.standsItsGroundWhileItIsShooting` |
 | A trooper hardly ever answers a leap with a sweep. Answering one is the commander's moment (G0013). | judgement - `sim.trooper.strikeChancePerSecond`; `TrooperCombatTest.neverSwingsAtSomethingThatIsMerelyWalkingAtIt` holds the half that is a rule |
 | An order reaches only the troopers within earshot of the commander, and is delivered once (G0017). | enforced - `SquadOrderTest.reachesNobodyOutOfEarshot`, `.deliversAnOrderOnceRatherThanForAsLongAsItIsHeld` |
@@ -141,7 +141,7 @@ rows become enforceable once the named feature exists - promote them then.
 | A trooper inside a control point holds where it stands rather than walking at its middle. Everyone in the radius counts equally. | enforced - `TrooperAdvanceTest.standsOnAPointRatherThanWalkingAtItsMiddle` |
 | A trooper that stops takes a bearing of its own to watch. A squad at rest never all faces the same way. | enforced - `TrooperAdvanceTest.givesEveryManHoldingAPointHisOwnBearingToWatch`, `SquadOrderTest.spreadsTheSquadsAttentionInsteadOfAllStaringAtHim` |
 | A blast is uniformly **decisive** inside one circle and harmless outside it, and that circle is the one the renderer draws (G0018). Everything standing in it goes down; what that leaves behind is a fact about the victim, not about the blast (G0020). | enforced - `BlastTest.killsEverythingStandingInsideIt`, `.leavesAnythingStandingOutsideItUntouched`, `.killsABruteAsReadilyAsAGrunt` |
-| A blast is on nobody's side. It kills the commander and his troopers exactly as readily as it kills the aliens. | enforced - `BlastTest.killsTheCommanderAsReadilyAsAnEnemy`, `BarrelTest.killsTheCommanderWhoShootsOneFromTooCloseUp` |
+| A blast is on nobody's side. It catches the commander and his troopers exactly as readily as it catches the aliens; what it leaves behind is a fact about the victim (G0020). | enforced - `BlastTest.catchesTheCommanderAsReadilyAsAnEnemy`, `BarrelTest.putsDownTheCommanderWhoShootsOneFromTooCloseUp` |
 | A blast does not reach through rock, by the same clear-line test perception uses. | enforced - `BlastTest.doesNotReachThroughRock` |
 | A blast catches what is standing in it on the tick it goes off, and nothing that walks in afterwards. Running through the tail of one is safe. | enforced - `BlastTest.catchesWhatWasStandingInItAndNothingThatWalksInAfterwards` |
 | Anything that explodes does so by **dying**, through one death reaction (G0018). There is no second path to a blast. | enforced - `BarrelTest.goesOffWhenItIsShot`, `.goesOffWhenAnAlienBitesIntoIt`, `GrenadeTest.travelsItsFullRangeWhenNothingIsInTheWay` |
@@ -153,10 +153,15 @@ rows become enforceable once the named feature exists - promote them then.
 | Gunfire and blasts leave a casualty; claws, a sweep and a leap kill. That asymmetry is what makes distance worth keeping. | enforced - the two rows' tests, plus `CombatTest.killsTheCommanderTheMomentAnEnemyTouchesIt` |
 | A casualty is at zero health, so anything that reaches him finishes him. Being shot while down and being eaten while down are the same rule, and neither is a special case. | enforced - `CasualtyTest.finishesACasualtyWithTheNextHitThatReachesHimWhateverItIs` |
 | Nothing on the alien side can be a casualty. Being rescuable requires somebody on your side who would come. | enforced - `CasualtyTest.killsAnAlienOutrightHoweverItWasHurt` |
+| **The commander is one of his men in this too**: gunfire and blasts put him on the ground, claws and sweeps and leaps still kill him outright (G0023). | enforced - `CasualtyTest.leavesTheCommanderShotDownOnTheGroundRatherThanDead`, `.killsTheCommanderOutrightWhenTheBlowIsOneThatKills` |
+| A man is put back on his feet by one path, whoever reached him. How long it takes, what he gets back and how long he is protected are facts about him, not about his rescuer. | judgement - `Aid` is the single writer, used by `ActionSystem` and `AidSystem` |
+| A trooper will leave the level's objectives to fetch somebody, will not leave a standing order to, and will never leave a fight. | enforced - `AidTest.holdsWhereItWasToldToRatherThanGoingToFetchSomebody`, `.neverBreaksOffAFightToFetchSomebody`, `.putsAFallenComradeBackOnHisFeet` |
+| Whether a trooper goes at all is a roll, taken once on the way in and never re-taken while it is on its way. Nobody is owed a rescue. | enforced - `AidTest.leavesHimWhereHeLiesWhenNobodyIsWilling`, `.walksAcrossToAManWhoIsDownOutOfReach` |
 | A casualty is out of the fight entirely - not driven, not shooting, not holding ground - and is visibly distinct from a corpse. | enforced - `CasualtyTest.leavesACasualtyOutOfTheFight`, `.showsACasualtyAsOneAndCountsHisBleedOutDownWhereThePlayerCanSeeIt` |
 | A bleed-out nobody answered leaves exactly the corpse a bullet would have. There is one death path. | enforced - `CasualtyTest.killsACasualtyNobodyReachedInTime`; `Deaths.kill` is the single writer |
 | The action key does whatever is within arm's length, nearest first; the player never selects (G0021). | enforced - `ActionTest.offersToPickUpAManWhoIsDownBesideHim`, `.offersNothingForAManWhoIsDownOutOfReach`, `.stopsOfferingWhenHeWalksOutOfReach` |
 | Stabilising is a commitment, not a total: letting go loses the work rather than banking it. | enforced - `ActionTest.losesTheWorkDoneSoFarWhenHeLetsGo` |
+| Work being done on a man is drawn in a colour of its own; every other thing that fills up is the body's colour brightened. Two circles that ask for opposite reactions must not read alike. | enforced - `ActionTest.drawsTheWorkInItsOwnColourAndTheBleedOutInTheOrdinaryOne`, `.stopsColouringHimGreenTheMomentHeLetsGo` |
 | Only something with nothing else driving it can be hauled - a man who is down, or a barrel. A trooper on his feet cannot be picked up. | enforced - `DragTest.willNotTakeHoldOfAManStillOnHisFeet`, `.haulsABarrelAsReadilyAsAMan` |
 | A drag names its load by an issued id, never by an entity reference (G0010, G0016). | judgement - `Drag.load` and `Dragged.by`; a recycled component resets to zero, so a stale id can never match |
 | Hauling costs a hand: no firing, no sweep, no throw while something is in them. | enforced - `DragTest.leavesHimNoHandForTheGun` |
@@ -165,6 +170,21 @@ rows become enforceable once the named feature exists - promote them then.
 | A spitter fires at what it is hunting, inside a cone, and never through rock. | enforced - `SpitterTest.firesOnceWhatItIsHuntingComesInsideItsRange`, `.keepsEveryShotInsideTheConeItDeclares`, `.willNotFireThroughRock` |
 | A cone is applied by turning the shot, so every shot is the same length and the cone the same width at every distance. | enforced - `SpitterTest.sendsEveryShotOutAtTheSameSpeedHoweverFarOffTrueItIs` |
 | Every gameplay speed is one block in `game.properties` and is retuned together, so the ratios between units survive a pace change. | judgement - the PACE block |
+| Everything the AI does only *sometimes* is a named constant in `AiChance` with a number in `game.properties`, stated per second of opportunity. There is no conditional behaviour that is not on that list. | judgement - `AiChance` is the index; `Odds` is the only caller of the dice |
+| A behaviour switched off draws no random number at all, so turning one off cannot reshuffle what every other behaviour rolls. | enforced - `OddsTest.drawsNothingAtAllForABehaviourThatIsSwitchedOff` |
+| A creature's claws reach into an arc in front of it, and **which way it is going is which way it is facing** - the same derivation the renderer makes, so a thing drawn walking away cannot bite you. Something standing still reaches all round, because it can turn on the spot. | enforced - `CombatTest.landsNoBlowOnWhatIsBehindIt`, `.landsOneOnWhatItIsWalkingAt`, `.reachesAllRoundWhileItIsNotGoingAnywhere` |
+| **A man who is off his feet is driven by nobody, the player included.** Every driver asks one question in one place; a private copy of it is how a commander shot off his feet went on walking and firing for four days. | enforced - `CasualtyTest.leavesACommanderWhoIsDownWhereHeFell`, `.takesNoShotFromACommanderWhoIsDown`; one writer - `Drivers.held` |
+| A shooter ambles inside its patch **once it is in position** - and only then, because everywhere else it has somewhere to be and the system that drives it there runs first. With nothing driving its legs it reads as a turret rather than a creature. | enforced - `SpitterTest.goesOnAmblingAboutWhileItShoots`, `.neverAmblesFurtherThanItsOwnPatch` |
+| A pickup that would go off is taken only on a roll, and only while the two are actually touching (G0022). | enforced - `BarrelTest.isLeftStandingByAnAlienWithNoAppetiteForOne`, `.goesOffWhenAnAlienBitesIntoIt` |
+| How big a barrel's blast is depends on what set it off: a shot leaves the full circle, a bite a far smaller one, and a swallow none at all. Still one reaction and one death (G0018, G0022). | enforced - `BarrelTest.leavesASmallerCircleWhenItIsBittenIntoThanWhenItIsShot`, `.catchesTheSameBystanderWhenItIsShotInstead`, `SpitterTest.swallowsABarrelAndFiresShotsThatGoOff` |
+| **A shooter moves for somewhere to be, never for somebody to follow** - amended 2026-09-17, twice. It answers a provocation, because that is a place and not a target (G0016); it crosses the gap between noticing you and being able to fight you, once; and from the moment it has the ground it wanted it holds that ground however far you then go. Refusing to move at all left it standing and watching, and left the point's rouse radius dead against the one strain a level most needs it for. | enforced - `SpitterTest.comesToAPointBeingTakenOffIt`, `.movesUpToItsFiringRangeAndNoFurther`, `.neverFollowsOnceItIsInPosition` |
+| It walks to the distance it **shoots best from**, not to the edge of what it can reach - stopping at the edge leaves it ambling in and out of its own range between shots. | enforced - `SpitterTest.walksToTheDistanceItShootsBestFrom` |
+| Getting out of a shooter's way is not getting away. Losing its range costs it the cone it had walked in; only losing it altogether lets it take a position again. | enforced - `SpitterTest.takesAPositionAgainOnceItHasLostHimAltogether`, `RangedTest.goesBackToTheWildConeWhenItLosesWhatItWasShootingAt` |
+| A shooter's facing **is** its aim, and with nothing to shoot at the aim follows where it is going - so one crossing the ground to eat something faces the thing it is going to eat. A stale aim on a walking creature reads as walking backwards. | enforced - `SpitterTest.facesTheThingItIsWalkingOverToEat`, `.swingsOntoItAndThenFires` |
+| A creature carrying a gun that goes off where its shots land is drawn as carrying one. The shots alone are a tell you learn by being caught in one. | enforced - `SpitterTest.showsThatItIsCarryingABarrel` |
+| A shooter fires only into the field of view it declares, and its aim swings onto a target at a rate rather than snapping. | enforced - `SpitterTest.willNotFireAtSomethingOutsideItsFieldOfView`, `.swingsOntoItAndThenFires` |
+| A shooter's cone narrows with every shot it lands on the same target and goes back to its widest the moment it loses one. | enforced - `RangedTest.narrowsTheConeWithEveryShotItLands`, `.stopsNarrowingOnceItsAimIsWalkedIn`, `.goesBackToTheWildConeWhenItLosesWhatItWasShootingAt` |
+| A gun that names a blast radius leaves one where its shot stops, through the one death reaction everything else explodes through (G0018). | enforced - `SpitterTest.swallowsABarrelAndFiresShotsThatGoOff` |
 
 The no-hitscan rows are load-bearing in three directions at once: they keep collision uniform, keep
 the simulation deterministic, and keep every threat visible to the player. They are the rows most
@@ -229,8 +249,8 @@ do not treat one as taken when adding a game binding.
 | `E` / face button | Act on what is in reach - stabilise a casualty | built (keyboard) - G0021 |
 | `F` / left trigger | Take hold of a load, or let go of it | built (keyboard) - G0021 |
 | `1` | Squad order: follow me | built - scaffolding, see below |
-| `2` | Squad order: move out | built - scaffolding, see below |
-| `3` | Squad order: stop | built - scaffolding, see below |
+| `2` | Squad order: forward | built - scaffolding, see below |
+| `3` | Squad order: defence | built - scaffolding, see below |
 | `4` | Squad order: cancel | built - scaffolding, see below |
 | `Tab` | Pull the view back for a look, and put it back | built (keyboard) |
 | `Esc` | Pause | proposed |
@@ -253,7 +273,8 @@ mistaken for a decision.
 
 - ~~How does the player command the squad?~~ **Answered 2026-09-10 (G0017):** an order reaches the
   troopers near the commander, names a verb and never a target, outranks the level's objectives and
-  never an ongoing fight. Four verbs: follow me, move out, stop, cancel. The **input is still open** -
+  never an ongoing fight. Four verbs: follow me, forward, defence, cancel - the middle two renamed
+  from *move out* and *stop* on 2026-09-13, because what a squad does when it stops is hold a place. The **input is still open** -
   keys `1`-`4` are scaffolding and the intended binding is a button plus a radial menu.
 - A body is scenery for its throes - solid, immovable, and it stops bullets. That is realistic and it
   is what makes the clinch settle at touching distance, but it also means shooting into a crowd now
@@ -267,11 +288,11 @@ mistaken for a decision.
   never shot at, which will start to look wrong the moment the squad operates away from the commander.
   Deciding yes means a second targeting concern in the alien AI, which is why it was not decided in
   passing.
-- **Who picks the commander up?** Only he can stabilise, so he cannot be a casualty: a bleed-out
-  nobody could answer would be an animation promising a rescue the game cannot deliver. Troopers that
-  revive, or a second player, each answer this - and either makes him a casualty by adding one line to
-  `Spawner`. Until then, shots kill him as they always did, which is an asymmetry between him and his
-  men that nothing in the fiction explains.
+- ~~Who picks the commander up?~~ **Answered 2026-09-13 (G0023):** his troopers do, sometimes. He is
+  a casualty like his men, gunfire and blasts put him on the ground, and a trooper with nothing more
+  urgent in front of it rolls for whether to come - far more readily for him than for one of its own.
+  What that leaves open is the co-op half: a second player changes who is nearest and whether the
+  squad should bother at all.
 - **Should noise pull aggro?** Detection is a radius around each unit and nothing the player does
   changes it, so firing a gun in a corridor wakes nobody who could not already have noticed you. A
   shot that wakes things beyond the detection radius is a big arcade lever and it is cheap to add now

@@ -21,5 +21,14 @@ public enum WeaponKind {
      * grants it: what a pickup offers each side is in its {@code PickupDef}, and no pickup offers
      * this.
      */
-    SPIT
+    SPIT,
+    /**
+     * What a spitter fires after it has eaten something explosive. The same slow shot, and it goes
+     * off where it stops (G0022).
+     *
+     * <p>A kind rather than a flag on the spitter, so the power-up is a definition and a block in
+     * {@code game.properties} - what it costs the player is that the ground beside a shot is no
+     * longer safe, and every number in that is tunable without touching a system.
+     */
+    CHARGED_SPIT
 }

@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
@@ -70,6 +71,7 @@ public final class NavigationSystem extends EntitySystem {
     private static final ComponentMapper<Steering> STEERING = ComponentMapper.getFor(Steering.class);
     private static final ComponentMapper<Speed> SPEED = ComponentMapper.getFor(Speed.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
+    private static final ComponentMapper<Ranged> RANGED = ComponentMapper.getFor(Ranged.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
@@ -118,6 +120,15 @@ public final class NavigationSystem extends EntitySystem {
             if (Drivers.held(enemy) || !perception.occupied()) {
                 continue;
             }
+            // A shooter that holds ground is a place on the field rather than a pursuer, and "place"
+            // is the operative word: it moves for somewhere to be and never for somebody to follow.
+            //
+            // It answers a provocation, because that is somewhere to be (G0016) - somewhere it was
+            // shot from, or a point being taken off it. And it moves up to its own firing range
+            // once, because the gap between noticing you and being able to shoot you is ground it
+            // would otherwise never cross: it notices at thirty and shoots at eighteen. From its
+            // first shot onwards it holds the position it took, however far you go.
+            boolean rooted = RANGED.has(enemy) && RANGED.get(enemy).enabled && RANGED.get(enemy).holdsGround;
             if (!perception.aggro && perception.provoked) {
                 towards(enemy, perception.provokedX, perception.provokedY);
                 continue;
@@ -127,6 +138,12 @@ public final class NavigationSystem extends EntitySystem {
                 continue;
             }
             if (target == null) {
+                continue;
+            }
+            if (rooted && !RANGED.get(enemy).takingUpPosition(distanceBetween(POSITION.get(enemy), target))) {
+                // It has opened fire on him, or it is already close enough to. Either way it holds
+                // where it is standing and he is not followed - which is the whole of what makes a
+                // shooter ground to cross rather than a thing to outrun.
                 continue;
             }
             Position position = POSITION.get(enemy);
@@ -159,6 +176,13 @@ public final class NavigationSystem extends EntitySystem {
         float toTargetX = target.x - position.x;
         float toTargetY = target.y - position.y;
         return toTargetX * toTargetX + toTargetY * toTargetY <= range * range;
+    }
+
+    /** How far apart two points are, in world units. */
+    private static float distanceBetween(Position position, Position target) {
+        float toTargetX = target.x - position.x;
+        float toTargetY = target.y - position.y;
+        return (float) Math.sqrt(toTargetX * toTargetX + toTargetY * toTargetY);
     }
 
     /** The last of the approach, and what a unit falls back on when the field has nothing to say. */

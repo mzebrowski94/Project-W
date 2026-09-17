@@ -6,12 +6,10 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.gdx.math.MathUtils;
 import pl.mzebrows.pwt.sim.Spawner;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Position;
-import pl.mzebrows.pwt.sim.component.Stunned;
 
 /**
  * Turns anything's melee intent into a swing in the world.
@@ -35,8 +33,6 @@ public final class MeleeSystem extends IteratingSystem {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Melee> MELEE = ComponentMapper.getFor(Melee.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
-    private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     /** Below this the aim point is on top of the commander and gives no usable direction. */
     private static final float EPSILON = 1e-4f;
@@ -52,7 +48,7 @@ public final class MeleeSystem extends IteratingSystem {
 
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
-        if (held(entity)) {
+        if (Drivers.held(entity)) {
             return;
         }
         Melee melee = MELEE.get(entity);
@@ -65,14 +61,6 @@ public final class MeleeSystem extends IteratingSystem {
         if (melee.releasing()) {
             release(entity, melee);
         }
-    }
-
-    /** A commander held still by a blow, or already on his way out, swings at nothing. */
-    private static boolean held(Entity entity) {
-        if (STUNNED.has(entity) && STUNNED.get(entity).active()) {
-            return true;
-        }
-        return DYING.has(entity) && DYING.get(entity).begun;
     }
 
     private void release(Entity entity, Melee melee) {

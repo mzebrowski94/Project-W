@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 
 class AvoidanceSystemTest {
 
@@ -65,6 +66,30 @@ class AvoidanceSystemTest {
         steps(simulation, 100);
 
         assertThat(enemy.getComponent(Position.class).x).isGreaterThan(BLOCKER);
+    }
+
+    @Test
+    void walksStraightOverItsOwnDinner() {
+        Simulation simulation = avoiding();
+        simulation.spawnCommander(TARGET, LANE);
+        Entity enemy = simulation.spawnEnemy(START, LANE);
+        simulation.spawnPickup(PickupKind.MUSHROOM, BLOCKER, LANE);
+
+        steps(simulation, WELL_BEFORE_CONTACT);
+
+        assertThat(offLane(enemy)).isLessThan(A_CLEAR_DEVIATION);
+    }
+
+    @Test
+    void leansOffABarrelAsReadilyAsOffARock() {
+        Simulation simulation = avoiding();
+        simulation.spawnCommander(TARGET, LANE);
+        Entity enemy = simulation.spawnEnemy(START, LANE);
+        simulation.spawnBarrel(BLOCKER, LANE);
+
+        steps(simulation, WELL_BEFORE_CONTACT);
+
+        assertThat(offLane(enemy)).isGreaterThan(A_CLEAR_DEVIATION);
     }
 
     private static float offLane(Entity entity) {
