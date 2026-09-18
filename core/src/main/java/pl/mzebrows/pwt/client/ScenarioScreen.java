@@ -13,7 +13,8 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
-import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.PlayerInputs;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Focus;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -43,6 +44,7 @@ public final class ScenarioScreen extends ScreenAdapter {
     private final Viewport viewport;
     private final DebugOverlay overlay;
     private final KeyPresses keys = keycode -> Gdx.input.isKeyJustPressed(keycode);
+    private final KeyHolds held = keycode -> Gdx.input.isKeyPressed(keycode);
 
     @SuppressWarnings("NullAway.Init")
     private ScenarioSession session;
@@ -88,7 +90,7 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().orderMark(),
                 context.graphicConfig().heatMark());
         terrain = new TerrainRenderer(viewport, context.graphicConfig().terrainPalette());
-        input = new InputReader(viewport);
+        input = new InputReader(viewport, context.controlsConfig(), context.gamepads());
         session = new ScenarioSession(scenario, context.simConfig());
         camera = new CameraDirector(context.graphicConfig().camera());
         bound = null;
@@ -99,21 +101,29 @@ public final class ScenarioScreen extends ScreenAdapter {
         // Input is read first, and therefore against the camera as it was when the frame the player
         // reacted to was drawn. Moving the camera before reading would interpret the mouse against a
         // view they have not seen yet.
-        CommanderInput commanderInput = input.read(keys);
-        for (HarnessCommand command : HarnessControls.poll(keys)) {
-            session.apply(command, commanderInput);
+        PlayerInputs players = input.read(held, keys);
+        for (int joined = input.seats().nextNewlySeated();
+                joined >= 0;
+                joined = input.seats().nextNewlySeated()) {
+            session.seat(joined);
         }
-        if (ViewControls.zoomToggled(keys)) {
+        for (HarnessCommand command : HarnessControls.poll(keys)) {
+            session.apply(command, players);
+        }
+        if (input.pauseRequested()) {
+            session.apply(HarnessCommand.PAUSE, players);
+        }
+        if (input.zoomToggled()) {
             camera.toggleWide();
         }
         if (session.leaving()) {
             context.queueScreen(new MenuScreen(context));
         }
-        session.advance(delta, commanderInput);
+        session.advance(delta, players);
         announceAction();
         announceWave();
         rebindIfRestarted();
-        aimCamera(delta, commanderInput);
+        aimCamera(delta);
 
         ScreenUtils.clear(context.graphicConfig().backgroundColor());
         terrain.render();
@@ -146,11 +156,14 @@ public final class ScenarioScreen extends ScreenAdapter {
      * for is a label, not a system - the decision is already made in the simulation and published.
      */
     private void announceAction() {
-        ActionKind offered = session.newlyOfferedAction();
-        if (offered == null) {
-            return;
+        for (int slot = 0; slot < Players.MAX; slot++) {
+            ActionKind offered = session.newlyOfferedAction(slot);
+            if (offered == null) {
+                continue;
+            }
+            String who = slot == 0 ? "" : "player " + (slot + 1) + " ";
+            Log.info(offered == ActionKind.NONE ? who + "action: nothing in reach" : who + "action: " + offered);
         }
-        Log.info(offered == ActionKind.NONE ? "action: nothing in reach" : "action [E]: " + offered);
     }
 
     @Override
@@ -181,7 +194,7 @@ public final class ScenarioScreen extends ScreenAdapter {
      * interpolated positions the renderer will draw at so the view does not lag what is on screen by
      * a tick of its own.
      */
-    private void aimCamera(float delta, CommanderInput commanderInput) {
+    private void aimCamera(float delta) {
         float alpha = session.renderAlpha();
         camera.begin();
         for (int i = 0; i < focused.size(); i++) {
@@ -197,7 +210,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             Shake shake = SHAKE.get(entity);
             camera.shake(at.x, at.y, shake.strength, shake.radius, shake.fade());
         }
-        camera.heading(commanderInput.moveX(), commanderInput.moveY());
+        camera.heading(input.headingX(), input.headingY());
 
         TileMap map = session.simulation().map();
         camera.update(viewport.getWorldWidth(), viewport.getWorldHeight(), map.worldWidth(), map.worldHeight(), delta);

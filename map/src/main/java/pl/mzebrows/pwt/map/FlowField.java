@@ -48,8 +48,16 @@ public final class FlowField {
     private final int[] queue;
 
     private boolean built;
-    private int goalCol;
-    private int goalRow;
+
+    /** The goal tiles of the last rebuild, as indices, and how many of them there are. */
+    private int[] goals = new int[1];
+
+    private int goalCount;
+
+    /** Scratch for the one-goal call, so it costs no allocation to express as the general one. */
+    private final int[] oneCol = new int[1];
+
+    private final int[] oneRow = new int[1];
 
     private FlowField(TileMap map, float bodyRadius) {
         this.map = map;
@@ -86,14 +94,59 @@ public final class FlowField {
      * cannot have changed. A goal that has merely moved within one tile is the same goal.
      */
     public boolean rebuildFor(int newGoalCol, int newGoalRow) {
-        if (built && newGoalCol == goalCol && newGoalRow == goalRow) {
+        oneCol[0] = newGoalCol;
+        oneRow[0] = newGoalRow;
+        return rebuildFor(oneCol, oneRow, 1);
+    }
+
+    /**
+     * Points the whole field at <strong>several</strong> tiles at once, and reports whether it had to
+     * do any work.
+     *
+     * <p>A multi-source flood costs exactly what a single-source one costs - the queue starts with
+     * every goal on it instead of one, and each tile is still settled once - so a field that leads to
+     * <em>whichever goal is nearest by route</em> is the same grid pass as a field that leads to one.
+     * That is what makes it the right answer for a side with several men on it: the alternative is a
+     * field per man, which is a grid pass each, per tick, which is the exact cost a flow field exists
+     * to avoid.
+     *
+     * <p>{@code stepsTo} then answers the distance to the nearest of them, and a unit reading its own
+     * tile walks to the nearest of them without anything having chosen which.
+     *
+     * <p>The goals are compared in the order given, so a caller that hands them over in a stable order
+     * - an entity family is in insertion order - pays nothing while nobody has moved tile. Reordering
+     * the same goals costs one needless rebuild and never a wrong field.
+     *
+     * @param goalCols column of each goal
+     * @param goalRows row of each goal, paired with {@code goalCols}
+     * @param count how many of the arrays to read. Zero leaves the field reaching nothing
+     */
+    public boolean rebuildFor(int[] goalCols, int[] goalRows, int count) {
+        if (built && sameGoals(goalCols, goalRows, count)) {
             return false;
         }
-        goalCol = newGoalCol;
-        goalRow = newGoalRow;
+        if (goals.length < count) {
+            goals = new int[count];
+        }
+        goalCount = count;
+        for (int i = 0; i < count; i++) {
+            goals[i] = goalRows[i] * cols + goalCols[i];
+        }
         built = true;
         flood();
         gradient();
+        return true;
+    }
+
+    private boolean sameGoals(int[] goalCols, int[] goalRows, int count) {
+        if (count != goalCount) {
+            return false;
+        }
+        for (int i = 0; i < count; i++) {
+            if (goals[i] != goalRows[i] * cols + goalCols[i]) {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -184,14 +237,21 @@ public final class FlowField {
         for (int i = 0; i < distance.length; i++) {
             distance[i] = UNREACHED;
         }
-        if (!map.inBounds(goalCol, goalRow)) {
-            return;
-        }
         int head = 0;
         int tail = 0;
-        int start = goalRow * cols + goalCol;
-        distance[start] = 0;
-        queue[tail++] = start;
+        for (int i = 0; i < goalCount; i++) {
+            int start = goals[i];
+            int startCol = start % cols;
+            int startRow = start / cols;
+            // Seeded whether or not a body this size fits on it, exactly as the single-goal flood
+            // did: a goal standing in a gap too tight for a brute must still pull brutes to the
+            // mouth of it. Only the walk is filtered by size, never the destination.
+            if (!map.inBounds(startCol, startRow) || distance[start] == 0) {
+                continue;
+            }
+            distance[start] = 0;
+            queue[tail++] = start;
+        }
         while (head < tail) {
             int at = queue[head++];
             int atCol = at % cols;

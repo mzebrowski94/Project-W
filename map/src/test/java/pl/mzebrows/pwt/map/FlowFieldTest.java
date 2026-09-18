@@ -149,4 +149,55 @@ class FlowFieldTest {
 
         assertThat(field.stepsTo(4, 4)).isZero();
     }
+
+    /**
+     * Several goals at once, which is what a side with more than one man on it needs. A multi-source
+     * flood costs what a single-source one costs, so this is the cheap answer rather than the clever
+     * one - the alternative is a field per man, per tick.
+     */
+    @Test
+    void leadsToWhicheverGoalIsNearestByRoute() {
+        TileMap map = Maps.uniform(21, 5, 1f, Terrain.PLAIN);
+        FlowField field = FlowField.over(map, 0.2f);
+
+        field.rebuildFor(new int[] {0, 20}, new int[] {2, 2}, 2);
+
+        assertThat(field.stepsTo(1, 2)).isEqualTo(1);
+        assertThat(field.stepsTo(19, 2)).isEqualTo(1);
+        assertThat(field.stepsTo(10, 2)).isEqualTo(10);
+    }
+
+    /** And a man standing on one of them is standing on the goal, whichever of them it is. */
+    @Test
+    void countsEveryGoalAsArrived() {
+        TileMap map = Maps.uniform(21, 5, 1f, Terrain.PLAIN);
+        FlowField field = FlowField.over(map, 0.2f);
+
+        field.rebuildFor(new int[] {0, 20}, new int[] {2, 2}, 2);
+
+        assertThat(field.stepsTo(0, 2)).isZero();
+        assertThat(field.stepsTo(20, 2)).isZero();
+    }
+
+    /** No goals at all is a field that reaches nothing, rather than one pointing at a corner. */
+    @Test
+    void reachesNothingWhenThereIsNobodyToWalkTo() {
+        TileMap map = Maps.uniform(9, 5, 1f, Terrain.PLAIN);
+        FlowField field = FlowField.over(map, 0.2f);
+
+        field.rebuildFor(new int[0], new int[0], 0);
+
+        assertThat(field.reaches(4, 2)).isFalse();
+    }
+
+    /** Handing over the same goals again is a field that was already right, and no second grid pass. */
+    @Test
+    void doesNoWorkWhenTheGoalsHaveNotMoved() {
+        TileMap map = Maps.uniform(9, 5, 1f, Terrain.PLAIN);
+        FlowField field = FlowField.over(map, 0.2f);
+        field.rebuildFor(new int[] {1, 7}, new int[] {2, 2}, 2);
+
+        assertThat(field.rebuildFor(new int[] {1, 7}, new int[] {2, 2}, 2)).isFalse();
+        assertThat(field.rebuildFor(new int[] {1, 6}, new int[] {2, 2}, 2)).isTrue();
+    }
 }

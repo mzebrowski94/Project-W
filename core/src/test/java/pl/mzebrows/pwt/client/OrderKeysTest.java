@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.badlogic.gdx.Input;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.def.Order;
 
@@ -18,17 +19,20 @@ import pl.mzebrows.pwt.sim.def.Order;
  */
 class OrderKeysTest {
 
+    private static final ControlsConfig.Keyboard BINDINGS =
+            ControlsConfig.load().keyboard();
+
     @Test
     void readsEachOrderOffItsOwnKey() {
-        assertThat(OrderKeys.poll(pressing(Input.Keys.NUM_1))).isEqualTo(Order.FOLLOW_ME);
-        assertThat(OrderKeys.poll(pressing(Input.Keys.NUM_2))).isEqualTo(Order.FORWARD);
-        assertThat(OrderKeys.poll(pressing(Input.Keys.NUM_3))).isEqualTo(Order.DEFENCE);
-        assertThat(OrderKeys.poll(pressing(Input.Keys.NUM_4))).isEqualTo(Order.CANCEL);
+        assertThat(poll(pressing(Input.Keys.NUM_1))).isEqualTo(Order.FOLLOW_ME);
+        assertThat(poll(pressing(Input.Keys.NUM_2))).isEqualTo(Order.FORWARD);
+        assertThat(poll(pressing(Input.Keys.NUM_3))).isEqualTo(Order.DEFENCE);
+        assertThat(poll(pressing(Input.Keys.NUM_4))).isEqualTo(Order.CANCEL);
     }
 
     @Test
     void asksForNothingWhenNoOrderKeyIsPressed() {
-        assertThat(OrderKeys.poll(pressing(Input.Keys.W))).isNull();
+        assertThat(poll(pressing(Input.Keys.W))).isNull();
     }
 
     /** Every order the game has must be reachable, or one of them is a constant nobody can use. */
@@ -37,6 +41,10 @@ class OrderKeysTest {
         Set<Order> bound = Set.of(Order.FOLLOW_ME, Order.FORWARD, Order.DEFENCE, Order.CANCEL);
 
         assertThat(bound).containsExactlyInAnyOrder(Order.values());
+    }
+
+    private static @Nullable Order poll(KeyPresses keys) {
+        return OrderKeys.poll(keys, BINDINGS);
     }
 
     private static KeyPresses pressing(int... keycodes) {

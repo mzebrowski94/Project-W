@@ -104,14 +104,17 @@ class SquadOrderTest {
     @Test
     void pushesOnFasterForAShortDistanceAndThenSettlesBack() {
         Simulation simulation = simulation();
-        simulation.spawnCommander(MIDDLE, MIDDLE);
+        // The long way across the arena on purpose: the burst has to be spent and the walk still
+        // going when the second sample is taken, or what is measured is a trooper that has arrived
+        // and settled onto the point rather than one back at its ordinary pace.
+        simulation.spawnCommander(10f, MIDDLE);
         simulation.spawnControlPoint(95f, MIDDLE);
-        Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(14f, MIDDLE);
         simulation.step(order(Order.FORWARD));
         steps(simulation, 5);
 
         float pushing = pace(trooper);
-        steps(simulation, 200);
+        steps(simulation, 120);
         float settled = pace(trooper);
 
         assertThat(pushing).isCloseTo(TROOPER_SPEED * FORWARD_FACTOR, TOLERANCE);
@@ -264,6 +267,38 @@ class SquadOrderTest {
         steps(simulation, ticksIn(DEATH_THROES + RESPAWN_DELAY) + 30);
 
         assertThat(countLiving(simulation, Commander.class)).isEqualTo(1);
+        assertThat(orderOf(trooper)).isNull();
+    }
+
+    /**
+     * Forward is what sends a squad on, so every reason not to advance has to go with it. Having to
+     * cancel first was one press too many for the order that sets a level's pace.
+     */
+    @Test
+    void dropsFollowMeWhenHeSaysForward() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        simulation.spawnControlPoint(90f, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
+        simulation.step(order(Order.FOLLOW_ME));
+        assertThat(orderOf(trooper)).isEqualTo(Order.FOLLOW_ME);
+
+        simulation.step(order(Order.FORWARD));
+
+        assertThat(orderOf(trooper)).isNull();
+        assertThat(trooper.getComponent(Trooper.class).pushingForward()).isTrue();
+    }
+
+    @Test
+    void dropsDefenceWhenHeSaysForward() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        simulation.spawnControlPoint(90f, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
+        simulation.step(order(Order.DEFENCE));
+
+        simulation.step(order(Order.FORWARD));
+
         assertThat(orderOf(trooper)).isNull();
     }
 

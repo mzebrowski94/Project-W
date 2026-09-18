@@ -4,6 +4,8 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
+import com.badlogic.ashley.utils.ImmutableArray;
+import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -25,6 +27,21 @@ import pl.mzebrows.pwt.sim.component.Weapon;
  * <p>A commander held still by a blow - or lying on the field having taken a fatal one - runs none of
  * this. It does not zero his velocity either: while he is held, that belongs to {@code StunSystem},
  * which bleeds off whatever the blow gave him.
+ *
+ * <p><strong>The leash lives here because this system owns a commander's velocity.</strong> Pillar 4
+ * says there is one fight and the player can always see it, and one shared view cannot frame four
+ * players free to walk apart for ever - so a step that would take a commander further than
+ * {@code leashRadius} from the middle of the commanders has its outward part refused. It is refused
+ * exactly, down to what is left of the rope, so he stops on the line rather than a step past it.
+ *
+ * <p><strong>It never pushes.</strong> Only the outward part of a step the player asked for is
+ * touched; sideways and inward are untouched, and a commander already past the line - knocked there,
+ * or brought back while the others walked on - simply walks home himself. A leash that shoved would
+ * be the camera driving a unit, and pillar 2 says the commander is a unit rather than a cursor.
+ *
+ * <p>The distance is a number in {@code game.properties} sized against the near-zoom view by hand,
+ * and is never read from the camera: zoom is a rendering setting and a leash that grew with it would
+ * make pulling the view back into extra rope.
  */
 public final class CommanderControlSystem extends IteratingSystem {
 
@@ -44,11 +61,19 @@ public final class CommanderControlSystem extends IteratingSystem {
     private static final float MUZZLE_GAP = 0.05f;
 
     private final Spawner spawner;
+    private final float leashRadius;
 
     /** Scratch, so working out where a shot leaves from costs no allocation per shot. */
     private final float[] muzzle = new float[2];
 
-    public CommanderControlSystem(Spawner spawner) {
+    /** The middle of the commanders, worked out once a tick before any of them is driven. */
+    private float centreX;
+
+    private float centreY;
+
+    private int watched;
+
+    public CommanderControlSystem(SimConfig config, Spawner spawner) {
         super(Family.all(
                         Commander.class,
                         Intent.class,
@@ -60,6 +85,19 @@ public final class CommanderControlSystem extends IteratingSystem {
                         Faction.class)
                 .get());
         this.spawner = spawner;
+        this.leashRadius = config.commander().leashRadius();
+    }
+
+    /**
+     * Where the commanders are, before any of them has been driven.
+     *
+     * <p>Once a tick rather than once per commander: the middle has to be the same answer for all of
+     * them, or the first one driven would be leashed to a different place from the last.
+     */
+    @Override
+    public void update(float deltaTime) {
+        findCentre();
+        super.update(deltaTime);
     }
 
     @Override
@@ -69,10 +107,62 @@ public final class CommanderControlSystem extends IteratingSystem {
         }
         Intent intent = INTENT.get(entity);
         drive(entity, intent);
+        leash(entity, deltaTime);
         if (Drivers.handsFull(entity)) {
             return;
         }
         fire(entity, intent);
+    }
+
+    private void findCentre() {
+        ImmutableArray<Entity> commanders = getEntities();
+        watched = commanders.size();
+        centreX = 0f;
+        centreY = 0f;
+        if (watched == 0) {
+            return;
+        }
+        for (int i = 0; i < watched; i++) {
+            Position at = POSITION.get(commanders.get(i));
+            centreX += at.x;
+            centreY += at.y;
+        }
+        centreX /= watched;
+        centreY /= watched;
+    }
+
+    /**
+     * Takes off whatever part of this step would carry him past the end of the rope.
+     *
+     * <p>The allowance is what is left of the rope divided by the step, so the velocity that survives
+     * lands him exactly on the line. Clamping the position afterwards instead would be a second
+     * system writing where he is, which is how a unit ends up somewhere neither asked for.
+     */
+    private void leash(Entity entity, float deltaTime) {
+        if (leashRadius <= 0f || watched < 2 || deltaTime <= 0f) {
+            return;
+        }
+        Position at = POSITION.get(entity);
+        float outX = at.x - centreX;
+        float outY = at.y - centreY;
+        float distance = (float) Math.sqrt(outX * outX + outY * outY);
+        if (distance <= EPSILON) {
+            return;
+        }
+        outX /= distance;
+        outY /= distance;
+        Velocity velocity = VELOCITY.get(entity);
+        float outward = velocity.x * outX + velocity.y * outY;
+        if (outward <= 0f) {
+            return;
+        }
+        float rope = leashRadius - distance;
+        float allowance = rope > 0f ? rope / deltaTime : 0f;
+        if (outward <= allowance) {
+            return;
+        }
+        float excess = outward - allowance;
+        velocity.set(velocity.x - excess * outX, velocity.y - excess * outY);
     }
 
     /**

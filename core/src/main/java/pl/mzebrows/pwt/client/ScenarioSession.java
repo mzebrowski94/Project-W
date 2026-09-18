@@ -1,11 +1,14 @@
 package pl.mzebrows.pwt.client;
 
+import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
-import com.badlogic.ashley.utils.ImmutableArray;
+import java.util.Arrays;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.FixedStepClock;
+import pl.mzebrows.pwt.sim.PlayerInputs;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
@@ -31,6 +34,8 @@ import pl.mzebrows.pwt.sim.scenario.Scenarios;
 public final class ScenarioSession {
 
     /** Cached, because a {@code Family} built per frame is an allocation per frame. */
+    private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
+
     private static final Family COMMANDERS =
             Family.all(Commander.class, Action.class).get();
 
@@ -64,7 +69,19 @@ public final class ScenarioSession {
      * happened, more often than not. Holding it here until a tick spends it makes one press mean
      * exactly one order, at any refresh rate.
      */
-    private @Nullable Order pendingOrder;
+    private final @Nullable Order[] pendingOrder = new Order[Players.MAX];
+
+    /** Reused, so handing a tick its waiting orders costs no allocation per tick. */
+    private final PlayerInputs forThisTick = new PlayerInputs();
+
+    /**
+     * Which slots have a player in them, so a restart puts everybody back.
+     *
+     * <p>A scenario spawns one commander and knows nothing about pads; everybody who joined by
+     * plugging one in did so after it had finished populating the world. Rebuilding that world would
+     * otherwise leave three players watching a game with one commander in it.
+     */
+    private final boolean[] seated = new boolean[Players.MAX];
 
     /**
      * The action last reported to the player, so the same one is not reported twice.
@@ -74,7 +91,7 @@ public final class ScenarioSession {
      * is announced once each time it changes - and once each time, rather than every frame, is the
      * whole reason this field exists. A line per frame is not a prompt, it is a flood.
      */
-    private ActionKind announcedAction = ActionKind.NONE;
+    private final ActionKind[] announcedAction = filled();
 
     public ScenarioSession(Scenario scenario, SimConfig baseConfig) {
         this.scenario = scenario;
@@ -87,7 +104,7 @@ public final class ScenarioSession {
      * Carries out one harness command. {@code input} is only used by {@link HarnessCommand#STEP},
      * which advances the world by a tick and so needs to know what the player is currently holding.
      */
-    public void apply(HarnessCommand command, CommanderInput input) {
+    public void apply(HarnessCommand command, PlayerInputs input) {
         switch (command) {
             case PAUSE -> paused = !paused;
             case STEP -> stepOnce(input);
@@ -113,22 +130,31 @@ public final class ScenarioSession {
      * <p>The change detection lives here rather than in the screen because it is a decision and the
      * screen only draws. Asking is what marks it as reported, so a caller that asks twice in a frame
      * gets it once - which is the behaviour a prompt wants.
+     *
+     * <p>Asked per player, because what is within one man's arm's length says nothing about what is
+     * within another's - and a prompt that told three players what the fourth could reach would be
+     * worse than none at all.
      */
-    public @Nullable ActionKind newlyOfferedAction() {
-        ImmutableArray<Entity> commanders = simulation.engine().getEntitiesFor(COMMANDERS);
-        ActionKind offered =
-                commanders.size() == 0 ? ActionKind.NONE : commanders.first().getComponent(Action.class).available;
-        if (offered == announcedAction) {
+    public @Nullable ActionKind newlyOfferedAction(int slot) {
+        Entity commander = Players.inSlot(simulation.engine().getEntitiesFor(COMMANDERS), slot);
+        ActionKind offered = commander == null ? ActionKind.NONE : ACTION.get(commander).available;
+        if (offered == announcedAction[slot]) {
             return null;
         }
-        announcedAction = offered;
+        announcedAction[slot] = offered;
         return offered;
+    }
+
+    private static ActionKind[] filled() {
+        ActionKind[] none = new ActionKind[Players.MAX];
+        Arrays.fill(none, ActionKind.NONE);
+        return none;
     }
 
     /**
      * The number of the wave that has just arrived, or zero if none has since this was last asked.
      *
-     * <p>The same shape as {@link #newlyOfferedAction()} and for the same reason: the change is a
+     * <p>The same shape as {@link #newlyOfferedAction(int)} and for the same reason: the change is a
      * decision, the screen only draws, and asking is what marks it reported - so a caller that asks
      * twice in a frame is told once. A line per frame is a flood rather than a report.
      *
@@ -153,8 +179,21 @@ public final class ScenarioSession {
         return simulation.waves();
     }
 
+    /**
+     * Puts a player who has just picked up a pad onto the field, and remembers that he is there.
+     *
+     * <p>Idempotent on purpose: a slot that already has a commander is left alone, so a pad
+     * reconnecting after the cable was kicked does not hand its player a second one.
+     */
+    public void seat(int slot) {
+        seated[slot] = true;
+        if (Players.inSlot(simulation.engine().getEntitiesFor(COMMANDERS), slot) == null) {
+            simulation.joinCommander(slot);
+        }
+    }
+
     /** Runs however many fixed steps this frame's elapsed time is worth. Does nothing while paused. */
-    public void advance(float deltaSeconds, CommanderInput input) {
+    public void advance(float deltaSeconds, PlayerInputs input) {
         remember(input);
         if (paused) {
             return;
@@ -207,10 +246,13 @@ public final class ScenarioSession {
      * one, and an overlay that disagreed with what they had just pressed would be worse than no
      * readout at all.
      */
-    private void remember(CommanderInput input) {
-        if (input.order() != null) {
-            lastOrder = input.order();
-            pendingOrder = input.order();
+    private void remember(PlayerInputs input) {
+        for (int slot = 0; slot < Players.MAX; slot++) {
+            Order given = input.get(slot).order();
+            if (given != null) {
+                lastOrder = given;
+                pendingOrder[slot] = given;
+            }
         }
     }
 
@@ -221,14 +263,18 @@ public final class ScenarioSession {
      * one order or a single tap would recruit every trooper that walked into earshot during the
      * catch-up.
      */
-    private CommanderInput forThisTick(CommanderInput input) {
-        Order order = pendingOrder;
-        pendingOrder = null;
-        return input.ordering(order);
+    private PlayerInputs forThisTick(PlayerInputs input) {
+        for (int slot = 0; slot < Players.MAX; slot++) {
+            CommanderInput held = input.get(slot);
+            Order order = pendingOrder[slot];
+            pendingOrder[slot] = null;
+            forThisTick.set(slot, order == null && held.order() == null ? held : held.ordering(order));
+        }
+        return forThisTick;
     }
 
     /** Single-stepping only makes sense while paused; otherwise the clock is already advancing. */
-    private void stepOnce(CommanderInput input) {
+    private void stepOnce(PlayerInputs input) {
         remember(input);
         if (paused) {
             simulation.step(forThisTick(input));
@@ -237,12 +283,17 @@ public final class ScenarioSession {
 
     private void restart() {
         lastOrder = null;
-        pendingOrder = null;
-        announcedAction = ActionKind.NONE;
+        Arrays.fill(pendingOrder, null);
+        Arrays.fill(announcedAction, ActionKind.NONE);
         announcedWave = 0;
         simulation = newWorld();
         clock = new FixedStepClock(simulation.config());
         paused = false;
+        for (int slot = 0; slot < Players.MAX; slot++) {
+            if (seated[slot]) {
+                seat(slot);
+            }
+        }
     }
 
     private void setGodMode(boolean enabled) {

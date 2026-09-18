@@ -11,6 +11,7 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -158,6 +159,10 @@ public final class TrooperMindSystem extends EntitySystem {
                 continue;
             }
 
+            if (holdsWhatItHasTaken(trooper, at)) {
+                continue;
+            }
+
             int nearest = nearestUncapturedPoint(at);
             if (nearest >= 0) {
                 Entity point = points.get(nearest);
@@ -166,7 +171,13 @@ public final class TrooperMindSystem extends EntitySystem {
                 // Already standing on it: hold this spot and watch, rather than shuffling towards
                 // the middle. Everyone inside the radius counts equally, so walking further in buys
                 // nothing and a squad piled on one spot cannot see past itself.
-                trooper.mode = standingOn(point, at) ? Trooper.Mode.SECURE : Trooper.Mode.ADVANCE;
+                boolean arrived = standingOn(point, at);
+                if (arrived) {
+                    // The walk is over, so the order that paid for it is spent. One "forward" buys
+                    // one point, and the squad settles again on the one it has just reached.
+                    trooper.sentOn = false;
+                }
+                trooper.mode = arrived ? Trooper.Mode.SECURE : Trooper.Mode.ADVANCE;
                 continue;
             }
             trooper.mode = Trooper.Mode.EXPLORE;
@@ -292,12 +303,15 @@ public final class TrooperMindSystem extends EntitySystem {
         if (trooper.order != Order.FOLLOW_ME) {
             return false;
         }
-        Position commander = Drivers.livingTarget(commanders);
-        if (commander == null) {
+        // The man who said it, not whichever commander happens to be first. With four of them,
+        // following anybody else would make "follow me" the one order the player cannot aim.
+        Entity giver = Players.inSlot(commanders, trooper.orderedBy);
+        if (giver == null || Drivers.down(giver)) {
             // Belt and braces: his death already released the order upstream this tick. Falling
             // through to the objective is still better than standing about waiting for a corpse.
             return false;
         }
+        Position commander = POSITION.get(giver);
         trooper.mode = Trooper.Mode.FOLLOW;
         trooper.headFor(commander.x, commander.y);
         return true;
@@ -419,7 +433,7 @@ public final class TrooperMindSystem extends EntitySystem {
             if (distance > shortest) {
                 continue;
             }
-            if (!alreadyFighting && !inSight(trooper, at, where)) {
+            if (!inSight(trooper, at, where, alreadyFighting)) {
                 continue;
             }
             shortest = distance;
@@ -428,10 +442,53 @@ public final class TrooperMindSystem extends EntitySystem {
         return nearest;
     }
 
-    /** Every test this trooper declares, cheapest first. */
-    private boolean inSight(Trooper trooper, Position at, Position target) {
-        return Sight.withinArc(trooper.lookX, trooper.lookY, at.x, at.y, target.x, target.y, trooper.arcCosine)
+    /**
+     * Every test this trooper declares, cheapest first.
+     *
+     * <p><strong>A fight in progress forgives the arc and never the wall.</strong> The two are not
+     * the same kind of hysteresis: where a man is looking is his own doing and changes twice a
+     * second as he sweeps, so dropping a target the moment his head passes it would make a trooper
+     * unable to hold a fight at all. Rock is not his doing and does not move. Forgiving both - which
+     * is what this did - is a squad standing in the open firing into a wall the thing it was
+     * shooting at stepped behind, which is the one thing a trooper must never look like doing.
+     */
+    private boolean inSight(Trooper trooper, Position at, Position target, boolean alreadyFighting) {
+        return (alreadyFighting
+                        || Sight.withinArc(
+                                trooper.lookX, trooper.lookY, at.x, at.y, target.x, target.y, trooper.arcCosine))
                 && Sight.clearLine(map, at.x, at.y, target.x, target.y, trooper.requiresClearLine);
+    }
+
+    /**
+     * Holds ground the squad has already taken, unless it has been told to push on.
+     *
+     * <p><strong>A point taken is a point held.</strong> Walking off the moment the bar fills meant
+     * the squad ran the level on its own and the commander spent it catching up; waiting means ground
+     * the squad has taken is ground somebody is still standing on, and the level advances at his pace.
+     * "Forward" is what sends them on, and because an order reaches only what is within earshot
+     * (G0017), sending them on means going to them first - which is the loop this is for.
+     *
+     * <p>Only on a point it has <em>taken</em>. A trooper anywhere else advances as it always did, so
+     * the first walk of a level needs no order, and a point somebody is still capturing is still
+     * being captured.
+     *
+     * <p>{@code SECURE} rather than a mode of its own: standing on a point, stationary, watching
+     * outward and not shuffling towards the middle is the same posture whether the bar is filling or
+     * full, and the renderer already draws it.
+     */
+    private boolean holdsWhatItHasTaken(Trooper trooper, Position at) {
+        if (trooper.sentOn) {
+            return false;
+        }
+        for (int i = 0; i < points.size(); i++) {
+            Entity point = points.get(i);
+            if (POINT.get(point).captured && standingOn(point, at)) {
+                trooper.mode = Trooper.Mode.SECURE;
+                trooper.clearTarget();
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

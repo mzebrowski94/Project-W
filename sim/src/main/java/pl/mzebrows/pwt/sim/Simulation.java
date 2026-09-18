@@ -8,10 +8,12 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Level;
+import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -87,6 +89,8 @@ public final class Simulation {
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
+    private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
 
     private final SimConfig config;
     private final TileMap map;
@@ -95,6 +99,12 @@ public final class Simulation {
     private final Spawner spawner;
     private final ImmutableArray<Entity> commanders;
     private final ImmutableArray<Entity> levels;
+
+    /**
+     * Reused by {@link #step(CommanderInput)}, so driving one player costs no allocation per tick.
+     * Never handed out; the multi-player path takes the caller's own holder instead.
+     */
+    private final PlayerInputs solo = new PlayerInputs();
 
     private long tick;
     private boolean commanderInvulnerable;
@@ -117,14 +127,14 @@ public final class Simulation {
         this.rng = new Rng(config.seed());
         this.engine = new PooledEngine();
         this.spawner = new Spawner(engine, config, map);
-        this.commanders =
-                engine.getEntitiesFor(Family.all(Commander.class, Intent.class).get());
+        this.commanders = engine.getEntitiesFor(
+                Family.all(Commander.class, Intent.class, Position.class).get());
         this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
 
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new DragSystem());
-        engine.addSystem(new CommanderControlSystem(spawner));
+        engine.addSystem(new CommanderControlSystem(config, spawner));
         engine.addSystem(new MeleeSystem(spawner));
         // Immediately after the commander's own hands, and before anything looks around: a shot
         // fired from a turret this tick is in the world before the enemies decide what they can see,
@@ -190,18 +200,36 @@ public final class Simulation {
     }
 
     /**
-     * Advances the world by exactly one fixed step. The input is copied into the commander's intent
-     * before any system runs, so systems read a component and never the input object itself.
+     * Advances the world by one fixed step with only the first player driving. Every other slot is
+     * idle, which is what a single-player game and almost every test wants.
      */
     public void step(CommanderInput input) {
+        step(solo.clear().set(0, input));
+    }
+
+    /**
+     * Advances the world by exactly one fixed step. Each slot's input is copied into that
+     * commander's intent before any system runs, so systems read a component and never the input
+     * object itself.
+     *
+     * <p><strong>This is the one place a relative aim becomes a place on the field.</strong> A stick
+     * sends an offset because it does not know where its commander is standing; adding his position
+     * here means every system downstream reads the absolute point it has always read, and there is
+     * no second kind of aim anywhere below this line.
+     */
+    public void step(PlayerInputs inputs) {
         for (int i = 0; i < commanders.size(); i++) {
             Entity commander = commanders.get(i);
+            CommanderInput input = inputs.get(COMMANDER.get(commander).slot);
+            Position at = POSITION.get(commander);
+            float aimX = input.aimRelative() ? at.x + input.aimX() : input.aimX();
+            float aimY = input.aimRelative() ? at.y + input.aimY() : input.aimY();
             INTENT.get(commander)
                     .set(
                             input.moveX(),
                             input.moveY(),
-                            input.aimX(),
-                            input.aimY(),
+                            aimX,
+                            aimY,
                             input.firing(),
                             input.striking(),
                             input.throwing(),
@@ -216,9 +244,45 @@ public final class Simulation {
         tick++;
     }
 
-    /** Spawns the player-controlled unit. */
+    /** Spawns the first player's commander, which is the only one a single-player level has. */
     public Entity spawnCommander(float x, float y) {
-        return spawner.spawnCommander(x, y);
+        return spawnCommander(x, y, 0);
+    }
+
+    /**
+     * Spawns a commander for one player.
+     *
+     * <p>The slot is what ties him to a device, and nothing checks here whether it is already taken:
+     * who sits where is the client's question, and a simulation that refused a duplicate would be
+     * answering it twice.
+     */
+    public Entity spawnCommander(float x, float y, int slot) {
+        return spawner.spawnCommander(x, y, slot);
+    }
+
+    /**
+     * Puts a player who has just picked up a pad onto the field, wherever the fight currently is.
+     *
+     * <p><strong>Joining is plugging a pad in</strong>, at any point in a level, and this is the one
+     * place that answers where the newcomer appears - so it holds for every scenario there is rather
+     * than being something each one remembers to support.
+     *
+     * <p>He arrives <em>on</em> whoever is still standing, which is the same answer a man coming back
+     * from the dead gets and for the same reasons: it is ground somebody is demonstrably standing on,
+     * so it is neither rock nor unreachable and needs no map query to establish; it is inside the
+     * leash; and it puts him in the fight rather than at the edge of the level watching it. The
+     * solver untangles the overlap on the tick he appears. With nobody standing - a wipe, or a level
+     * whose first player has not been spawned yet - he goes to the middle of the level's spawn area,
+     * which is where the level meant its players to start.
+     */
+    public Entity joinCommander(int slot) {
+        Entity standing = Players.standing(commanders);
+        if (standing != null) {
+            Position at = POSITION.get(standing);
+            return spawnCommander(at.x, at.y, slot);
+        }
+        TileRect area = config.spawn().on(map);
+        return spawnCommander(area.centreX(map), area.centreY(map), slot);
     }
 
     /**

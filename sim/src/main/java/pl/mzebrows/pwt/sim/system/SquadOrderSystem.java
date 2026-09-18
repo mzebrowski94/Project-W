@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Intent;
@@ -42,6 +43,9 @@ public final class SquadOrderSystem extends EntitySystem {
     private final float earshot;
     private final float forwardDistance;
 
+    /** Which slots have a commander on his feet this tick. Filled once a tick, read per trooper. */
+    private final boolean[] standing = new boolean[Players.MAX];
+
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
 
@@ -60,12 +64,17 @@ public final class SquadOrderSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
-        if (Drivers.livingTarget(commanders) == null) {
-            release();
-            return;
-        }
-        for (int i = 0; i < commanders.size(); i++) {
-            Entity commander = commanders.get(i);
+        takeStock();
+        release();
+        // Ascending slot, so when two commanders shout at one trooper on the same tick the higher
+        // slot is heard last and therefore wins. Whatever order Ashley holds the family in would
+        // also be an answer, but it changes the moment somebody is killed and respawned - and a
+        // rule that quiet is a rule nobody can play around.
+        for (int slot = 0; slot < Players.MAX; slot++) {
+            Entity commander = Players.inSlot(commanders, slot);
+            if (commander == null) {
+                continue;
+            }
             @Nullable Order order = INTENT.get(commander).order;
             if (order == null || Drivers.held(commander)) {
                 // A commander held still by a blow is not giving orders. Being able to shout while
@@ -80,14 +89,22 @@ public final class SquadOrderSystem extends EntitySystem {
                 }
                 Position where = POSITION.get(entity);
                 if (Sight.withinRange(at.x, at.y, where.x, where.y, earshot)) {
-                    give(TROOPER.get(entity), order);
+                    give(TROOPER.get(entity), order, slot);
                 }
             }
         }
     }
 
+    /** Who is on his feet, once, so the trooper loop below is a lookup rather than a search. */
+    private void takeStock() {
+        for (int slot = 0; slot < standing.length; slot++) {
+            Entity commander = Players.inSlot(commanders, slot);
+            standing[slot] = commander != null && !Drivers.down(commander);
+        }
+    }
+
     /**
-     * Drops every standing order, because the man who gave them is on the ground.
+     * Drops every standing order whose giver is on the ground.
      *
      * <p><strong>His going down releases the squad</strong>, which is the same rule the other side
      * already lives by: nothing stands to attention over a corpse. A squad holding a formation around
@@ -101,12 +118,25 @@ public final class SquadOrderSystem extends EntitySystem {
      * <p>Orders are <strong>not</strong> restored when he comes back. An order is a live instruction
      * from a living commander; resuming a formation he asked for two deaths ago would be the game
      * remembering something the player has long stopped meaning.
+     *
+     * <p><strong>Each commander releases only his own men.</strong> With one commander that is the
+     * rule as it was written; with four, releasing the lot when any of them fell would let a death
+     * across the map cancel the formation somebody else was holding. What is orphaned is what he
+     * said, and nothing else.
      */
     private void release() {
         for (int i = 0; i < troopers.size(); i++) {
             Trooper trooper = TROOPER.get(troopers.get(i));
+            if (trooper.order == null && trooper.forwardRemaining <= 0f && !trooper.sentOn) {
+                continue;
+            }
+            if (standing[trooper.orderedBy]) {
+                continue;
+            }
             trooper.order = null;
+            trooper.orderedBy = 0;
             trooper.forwardRemaining = 0f;
+            trooper.sentOn = false;
         }
     }
 
@@ -114,20 +144,32 @@ public final class SquadOrderSystem extends EntitySystem {
      * Writes one order onto one trooper.
      *
      * <p>Two of these stand and two do not. Follow and defence are states a trooper stays in until it
-     * is told otherwise; forward is a burst of ground to cover, so it lands as a distance rather than
-     * as a standing order and expires by being spent. Cancel is the only one that removes both, which
-     * is what makes it a single key rather than a mode the player has to remember they are in.
+     * is told otherwise; forward is a burst of ground to cover plus permission to leave a point
+     * (G0029), so it lands as a distance and a flag rather than as a standing order, and expires by
+     * being spent.
+     *
+     * <p><strong>Forward also drops whatever standing order it had</strong>, because every one of
+     * them is a reason not to advance. Cancel still exists and is not the same thing: it stops the
+     * squad without sending it anywhere, and it is the one key that puts a man back to his own
+     * judgement rather than giving him something else to do.
      */
-    private void give(Trooper trooper, Order order) {
+    private void give(Trooper trooper, Order order, int slot) {
+        trooper.orderedBy = slot;
         switch (order) {
             case FOLLOW_ME -> trooper.order = Order.FOLLOW_ME;
             case DEFENCE -> trooper.order = Order.DEFENCE;
             case FORWARD -> {
-                // Pushing on cancels standing still, or the order would be swallowed by the last one.
-                if (trooper.order == Order.DEFENCE) {
-                    trooper.order = null;
-                }
+                // Pushing on cancels whatever it was doing instead of advancing - holding a place,
+                // or keeping station on him. Either would swallow the order: a man told to hold
+                // pushes on and then stands still again, and a man following stays at your shoulder
+                // while you walk. Having to cancel first was one press too many for the order that
+                // sets a level's pace.
+                trooper.order = null;
                 trooper.forwardRemaining = forwardDistance;
+                // And it leaves the point it is holding. One order buys one point: the flag is spent
+                // when it reaches the next, so the squad advances at the commander's pace rather than
+                // running the level on its own.
+                trooper.sentOn = true;
             }
             case CANCEL -> {
                 trooper.order = null;

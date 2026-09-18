@@ -99,6 +99,29 @@ public final class Trooper implements Component, Pool.Poolable {
     public float forwardRemaining;
 
     /**
+     * Which player's slot gave the standing order, so "follow me" means the man who said it.
+     *
+     * <p>A number rather than the commander himself: a component may not hold an entity across ticks
+     * (G0016), and the commander this refers to is one of the likeliest in the game to be killed and
+     * recycled. It is meaningless while {@link #order} is null, and is set fresh every time an order
+     * lands, so a stale slot is never read.
+     */
+    public int orderedBy;
+
+    /**
+     * Whether it has been told to leave the point it is holding and go and take the next one.
+     *
+     * <p>A trooper standing on a <strong>captured</strong> point waits there; "forward" is what sends
+     * it on, and one order buys one point. Spent the moment it reaches the next point, so the squad
+     * settles again rather than running the level on its own.
+     *
+     * <p>It is a flag rather than a distance, which {@code forwardRemaining} beside it already is:
+     * the two halves of "forward" are a burst of pace, which is ground, and permission to leave, which
+     * is not. A distance cannot express the second - the next point may be one tile away or thirty.
+     */
+    public boolean sentOn;
+
+    /**
      * Whether it has already picked a bearing to watch since it last stopped.
      *
      * <p>A trooper that stops takes a bearing of its own rather than keeping the one it was walking
@@ -196,6 +219,8 @@ public final class Trooper implements Component, Pool.Poolable {
         scanRemaining = 0f;
         scanSide = 1;
         order = null;
+        orderedBy = 0;
+        sentOn = false;
         settled = false;
         forwardRemaining = 0f;
         baseLookX = 1f;

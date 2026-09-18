@@ -36,6 +36,8 @@ mechanic you are about to write appears there, it has already been rejected and 
 | [G0025](G0025-heat-belongs-to-the-gun.md) | Heat belongs to the gun, and coming back costs more than stopping. | heat on the man; resetting it when a crew leaves; drawing it on the `charge` channel; locking until empty; a rising cooldown instead of a stop | accepted |
 | [G0026](G0026-an-alien-comes-for-whoever-is-nearest.md) | An alien comes for whoever on the player's side is nearest; the commander is on that list rather than above it. | a threat table; aggro earned by damage; latching a target by id or reference; a flow field per target; finishing a man who is down | accepted; answers the open question about aliens and troopers |
 | [G0027](G0027-the-post-is-a-goal-for-the-other-side.md) | The post is a goal the level gives the aliens, not a point they capture. | a post with health; a capture bar the aliens fill; marching handled by wandering or by a scenario flag; a wave schedule on a scenario's own timer | accepted |
+| [G0028](G0028-a-player-is-a-slot.md) | A player is a slot; joining is plugging a pad in, and unplugging is not leaving. | a lobby or press-start screen; a `Player` component; removing a commander when his pad disconnects; a per-player squad | accepted |
+| [G0029](G0029-a-point-taken-is-a-point-held.md) | A point taken is a point held; "forward" sends the squad on, one point at a time. | a new mode for holding a taken point; spending the forward distance as the permission; holding at an untaken point; a release that lasts until cancelled | accepted |
 
 ## When to write one
 

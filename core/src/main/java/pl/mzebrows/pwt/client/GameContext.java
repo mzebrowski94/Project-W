@@ -21,6 +21,18 @@ public interface GameContext {
     /** The simulation config a scenario starts from, before its own overrides. */
     SimConfig simConfig();
 
+    /** Every binding and feel number, read once at startup from {@code controls.properties}. */
+    ControlsConfig controlsConfig();
+
+    /**
+     * Where gamepads come from.
+     *
+     * <p>Owned by the application rather than by a screen, so a pad plugged in during the menu is
+     * already seated when a scenario starts, and unplugging one during a restart does not lose a
+     * player's seat.
+     */
+    GamepadSource gamepads();
+
     /** Shared screen-space text renderer, owned by the application rather than by any one screen. */
     Hud hud();
 

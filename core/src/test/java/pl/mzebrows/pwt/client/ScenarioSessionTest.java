@@ -2,11 +2,15 @@ package pl.mzebrows.pwt.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
+import java.util.ArrayList;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -26,11 +30,14 @@ class ScenarioSessionTest {
     private static final float TICK = SimConfig.defaults().tickSeconds();
     private static final CommanderInput IDLE = CommanderInput.IDLE;
 
+    /** Nobody asking for anything, in any slot. Never mutated, so one of them serves every test. */
+    private static final PlayerInputs NOBODY = new PlayerInputs();
+
     @Test
     void runsTheWorldWhileItIsNotPaused() {
         ScenarioSession session = session();
 
-        session.advance(TICK, IDLE);
+        session.advance(TICK, NOBODY);
 
         assertThat(session.simulation().tick()).isEqualTo(1L);
     }
@@ -38,9 +45,9 @@ class ScenarioSessionTest {
     @Test
     void stopsTheClockWhenPaused() {
         ScenarioSession session = session();
-        session.apply(HarnessCommand.PAUSE, IDLE);
+        session.apply(HarnessCommand.PAUSE, NOBODY);
 
-        session.advance(TICK * 10f, IDLE);
+        session.advance(TICK * 10f, NOBODY);
 
         assertThat(session.simulation().tick()).isZero();
     }
@@ -49,9 +56,9 @@ class ScenarioSessionTest {
     void resumesWhenPauseIsPressedAgain() {
         ScenarioSession session = session();
 
-        session.apply(HarnessCommand.PAUSE, IDLE);
-        session.apply(HarnessCommand.PAUSE, IDLE);
-        session.advance(TICK, IDLE);
+        session.apply(HarnessCommand.PAUSE, NOBODY);
+        session.apply(HarnessCommand.PAUSE, NOBODY);
+        session.advance(TICK, NOBODY);
 
         assertThat(session.simulation().tick()).isEqualTo(1L);
     }
@@ -59,9 +66,9 @@ class ScenarioSessionTest {
     @Test
     void advancesExactlyOneTickWhenSteppedWhilePaused() {
         ScenarioSession session = session();
-        session.apply(HarnessCommand.PAUSE, IDLE);
+        session.apply(HarnessCommand.PAUSE, NOBODY);
 
-        session.apply(HarnessCommand.STEP, IDLE);
+        session.apply(HarnessCommand.STEP, NOBODY);
 
         assertThat(session.simulation().tick()).isEqualTo(1L);
     }
@@ -71,7 +78,7 @@ class ScenarioSessionTest {
     void ignoresAStepWhileTheClockIsAlreadyRunning() {
         ScenarioSession session = session();
 
-        session.apply(HarnessCommand.STEP, IDLE);
+        session.apply(HarnessCommand.STEP, NOBODY);
 
         assertThat(session.simulation().tick()).isZero();
     }
@@ -80,9 +87,9 @@ class ScenarioSessionTest {
     void buildsAWholeNewWorldOnRestart() {
         ScenarioSession session = session();
         Simulation original = session.simulation();
-        session.advance(TICK * 5f, IDLE);
+        session.advance(TICK * 5f, NOBODY);
 
-        session.apply(HarnessCommand.RESTART, IDLE);
+        session.apply(HarnessCommand.RESTART, NOBODY);
 
         assertThat(session.simulation()).isNotSameAs(original);
         assertThat(session.simulation().tick()).isZero();
@@ -92,9 +99,9 @@ class ScenarioSessionTest {
     @Test
     void unpausesOnRestart() {
         ScenarioSession session = session();
-        session.apply(HarnessCommand.PAUSE, IDLE);
+        session.apply(HarnessCommand.PAUSE, NOBODY);
 
-        session.apply(HarnessCommand.RESTART, IDLE);
+        session.apply(HarnessCommand.RESTART, NOBODY);
 
         assertThat(session.paused()).isFalse();
     }
@@ -104,7 +111,7 @@ class ScenarioSessionTest {
         ScenarioSession session = session();
 
         assertThat(session.overlayVisible()).isTrue();
-        session.apply(HarnessCommand.TOGGLE_OVERLAY, IDLE);
+        session.apply(HarnessCommand.TOGGLE_OVERLAY, NOBODY);
         assertThat(session.overlayVisible()).isFalse();
     }
 
@@ -120,7 +127,7 @@ class ScenarioSessionTest {
     void makesTheCommanderUnkillableWhenGodModeIsSwitchedOn() {
         ScenarioSession session = session();
 
-        session.apply(HarnessCommand.TOGGLE_GOD_MODE, IDLE);
+        session.apply(HarnessCommand.TOGGLE_GOD_MODE, NOBODY);
 
         assertThat(session.godMode()).isTrue();
         assertThat(session.simulation().commanderInvulnerable()).isTrue();
@@ -130,8 +137,8 @@ class ScenarioSessionTest {
     void switchesGodModeBackOff() {
         ScenarioSession session = session();
 
-        session.apply(HarnessCommand.TOGGLE_GOD_MODE, IDLE);
-        session.apply(HarnessCommand.TOGGLE_GOD_MODE, IDLE);
+        session.apply(HarnessCommand.TOGGLE_GOD_MODE, NOBODY);
+        session.apply(HarnessCommand.TOGGLE_GOD_MODE, NOBODY);
 
         assertThat(session.simulation().commanderInvulnerable()).isFalse();
     }
@@ -140,9 +147,9 @@ class ScenarioSessionTest {
     @Test
     void carriesGodModeIntoARestartedWorld() {
         ScenarioSession session = session();
-        session.apply(HarnessCommand.TOGGLE_GOD_MODE, IDLE);
+        session.apply(HarnessCommand.TOGGLE_GOD_MODE, NOBODY);
 
-        session.apply(HarnessCommand.RESTART, IDLE);
+        session.apply(HarnessCommand.RESTART, NOBODY);
 
         assertThat(session.godMode()).isTrue();
         assertThat(session.simulation().commanderInvulnerable()).isTrue();
@@ -161,9 +168,9 @@ class ScenarioSessionTest {
     void staysLeavingOnceAskedTo() {
         ScenarioSession session = session();
 
-        session.apply(HarnessCommand.LEAVE, IDLE);
-        session.apply(HarnessCommand.PAUSE, IDLE);
-        session.apply(HarnessCommand.RESTART, IDLE);
+        session.apply(HarnessCommand.LEAVE, NOBODY);
+        session.apply(HarnessCommand.PAUSE, NOBODY);
+        session.apply(HarnessCommand.RESTART, NOBODY);
 
         assertThat(session.leaving()).isTrue();
     }
@@ -173,7 +180,7 @@ class ScenarioSessionTest {
     void freezesRenderInterpolationWhilePaused() {
         ScenarioSession session = session();
 
-        session.apply(HarnessCommand.PAUSE, IDLE);
+        session.apply(HarnessCommand.PAUSE, NOBODY);
 
         assertThat(session.renderAlpha()).isEqualTo(1f);
     }
@@ -204,9 +211,9 @@ class ScenarioSessionTest {
     void remembersTheLastOrderTheirPlayerGave() {
         ScenarioSession session = session();
 
-        session.advance(TICK, IDLE.ordering(Order.FOLLOW_ME));
-        session.advance(TICK, IDLE.ordering(Order.DEFENCE));
-        session.advance(TICK, IDLE);
+        session.advance(TICK, only(IDLE.ordering(Order.FOLLOW_ME)));
+        session.advance(TICK, only(IDLE.ordering(Order.DEFENCE)));
+        session.advance(TICK, NOBODY);
 
         assertThat(session.lastOrder()).isEqualTo(Order.DEFENCE);
     }
@@ -220,9 +227,9 @@ class ScenarioSessionTest {
     @Test
     void remembersAnOrderGivenWhilePaused() {
         ScenarioSession session = session();
-        session.apply(HarnessCommand.PAUSE, IDLE);
+        session.apply(HarnessCommand.PAUSE, NOBODY);
 
-        session.advance(TICK, IDLE.ordering(Order.FORWARD));
+        session.advance(TICK, only(IDLE.ordering(Order.FORWARD)));
 
         assertThat(session.lastOrder()).isEqualTo(Order.FORWARD);
     }
@@ -230,9 +237,9 @@ class ScenarioSessionTest {
     @Test
     void forgetsTheLastOrderWhenTheScenarioRestarts() {
         ScenarioSession session = session();
-        session.advance(TICK, IDLE.ordering(Order.FOLLOW_ME));
+        session.advance(TICK, only(IDLE.ordering(Order.FOLLOW_ME)));
 
-        session.apply(HarnessCommand.RESTART, IDLE);
+        session.apply(HarnessCommand.RESTART, NOBODY);
 
         assertThat(session.lastOrder()).isNull();
     }
@@ -247,8 +254,8 @@ class ScenarioSessionTest {
     void deliversAnOrderGivenOnAFrameTooShortToRunATick() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
 
-        session.advance(TICK * 0.4f, IDLE.ordering(Order.DEFENCE));
-        session.advance(TICK, IDLE);
+        session.advance(TICK * 0.4f, only(IDLE.ordering(Order.DEFENCE)));
+        session.advance(TICK, NOBODY);
 
         assertThat(trooperOrder(session)).isEqualTo(Order.DEFENCE);
     }
@@ -258,7 +265,7 @@ class ScenarioSessionTest {
     void spendsAnOrderOnceEvenWhenAFrameRunsSeveralTicks() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
 
-        session.advance(TICK * 3f, IDLE.ordering(Order.DEFENCE));
+        session.advance(TICK * 3f, only(IDLE.ordering(Order.DEFENCE)));
 
         assertThat(trooperOrder(session)).isEqualTo(Order.DEFENCE);
     }
@@ -271,12 +278,12 @@ class ScenarioSessionTest {
     @Test
     void reportsAnActionWhenOneComesWithinReach() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
-        session.advance(TICK, IDLE);
+        session.advance(TICK, NOBODY);
 
         putTheTrooperDown(session);
-        session.advance(TICK, IDLE);
+        session.advance(TICK, NOBODY);
 
-        assertThat(session.newlyOfferedAction()).isEqualTo(ActionKind.STABILISE);
+        assertThat(session.newlyOfferedAction(0)).isEqualTo(ActionKind.STABILISE);
     }
 
     /** The other half of the console scaffolding: which wave has walked in, once, when it does. */
@@ -284,7 +291,7 @@ class ScenarioSessionTest {
     void reportsAWaveWhenItArrives() {
         ScenarioSession session = new ScenarioSession(new OneWave(), SimConfig.defaults());
 
-        session.advance(TICK, IDLE);
+        session.advance(TICK, NOBODY);
 
         assertThat(session.newlyArrivedWave()).isEqualTo(1);
         assertThat(session.totalWaves()).isEqualTo(1);
@@ -293,10 +300,10 @@ class ScenarioSessionTest {
     @Test
     void reportsNothingWhileNoFurtherWaveHasArrived() {
         ScenarioSession session = new ScenarioSession(new OneWave(), SimConfig.defaults());
-        session.advance(TICK, IDLE);
+        session.advance(TICK, NOBODY);
         session.newlyArrivedWave();
 
-        session.advance(TICK, IDLE);
+        session.advance(TICK, NOBODY);
 
         assertThat(session.newlyArrivedWave()).isZero();
     }
@@ -305,7 +312,7 @@ class ScenarioSessionTest {
     void reportsNothingOnALevelThatSendsNoWaves() {
         ScenarioSession session = session();
 
-        session.advance(TICK, IDLE);
+        session.advance(TICK, NOBODY);
 
         assertThat(session.newlyArrivedWave()).isZero();
         assertThat(session.totalWaves()).isZero();
@@ -315,12 +322,64 @@ class ScenarioSessionTest {
     void reportsNothingWhileTheAvailableActionHasNotChanged() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
         putTheTrooperDown(session);
-        session.advance(TICK, IDLE);
-        session.newlyOfferedAction();
+        session.advance(TICK, NOBODY);
+        session.newlyOfferedAction(0);
 
-        session.advance(TICK, IDLE);
+        session.advance(TICK, NOBODY);
 
-        assertThat(session.newlyOfferedAction()).isNull();
+        assertThat(session.newlyOfferedAction(0)).isNull();
+    }
+
+    /**
+     * Plugging a pad in is the whole of joining, at any point in a level, and it works the same in
+     * every scenario because no scenario is asked about it.
+     */
+    @Test
+    void putsAPlayerWhoHasJustPluggedAPadInOntoTheField() {
+        ScenarioSession session = session();
+        session.advance(TICK, NOBODY);
+
+        session.seat(1);
+
+        assertThat(commanderSlots(session)).containsExactlyInAnyOrder(0, 1);
+    }
+
+    /** A kicked cable comes back as a reconnection, and a reconnection is not a second commander. */
+    @Test
+    void leavesAPlayerWhoIsAlreadyOnTheFieldAlone() {
+        ScenarioSession session = session();
+        session.seat(1);
+
+        session.seat(1);
+
+        assertThat(commanderSlots(session)).containsExactlyInAnyOrder(0, 1);
+    }
+
+    /** A scenario spawns one commander and knows nothing about pads, so the harness puts the rest back. */
+    @Test
+    void putsEverySeatedPlayerBackWhenTheScenarioRestarts() {
+        ScenarioSession session = session();
+        session.seat(1);
+        session.seat(2);
+
+        session.apply(HarnessCommand.RESTART, NOBODY);
+
+        assertThat(commanderSlots(session)).containsExactlyInAnyOrder(0, 1, 2);
+    }
+
+    private static List<Integer> commanderSlots(ScenarioSession session) {
+        List<Integer> slots = new ArrayList<>();
+        for (Entity commander : session.simulation()
+                .engine()
+                .getEntitiesFor(Family.all(Commander.class).get())) {
+            slots.add(commander.getComponent(Commander.class).slot);
+        }
+        return slots;
+    }
+
+    /** One player asking for something and nobody else. */
+    private static PlayerInputs only(CommanderInput input) {
+        return new PlayerInputs().set(0, input);
     }
 
     private static void putTheTrooperDown(ScenarioSession session) {

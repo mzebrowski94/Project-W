@@ -7,21 +7,27 @@ import org.junit.jupiter.api.Test;
 
 class ViewControlsTest {
 
+    private static final ControlsConfig.Keyboard BINDINGS =
+            ControlsConfig.load().keyboard();
+
     @Test
     void swapsTheViewOnTab() {
-        assertThat(ViewControls.zoomToggled(keycode -> keycode == Input.Keys.TAB))
-                .isTrue();
+        assertThat(zoomToggled(keycode -> keycode == Input.Keys.TAB)).isTrue();
     }
 
     @Test
     void leavesTheViewAloneWhenNothingWasPressed() {
-        assertThat(ViewControls.zoomToggled(keycode -> false)).isFalse();
+        assertThat(zoomToggled(keycode -> false)).isFalse();
+    }
+
+    private static boolean zoomToggled(KeyPresses keys) {
+        return ViewControls.zoomToggled(keys, BINDINGS);
     }
 
     /** The harness keys are dev tools and must not double as game bindings. */
     @Test
     void ignoresTheHarnessKeys() {
-        assertThat(ViewControls.zoomToggled(keycode -> keycode == Input.Keys.P
+        assertThat(zoomToggled(keycode -> keycode == Input.Keys.P
                         || keycode == Input.Keys.R
                         || keycode == Input.Keys.G
                         || keycode == Input.Keys.F1))

@@ -110,6 +110,32 @@ class TrooperCombatTest {
     }
 
     /**
+     * The other half of the hysteresis, and the half that was missing: a fight in progress forgives
+     * the arc and never the wall.
+     *
+     * <p>Where a man is looking is his own doing and changes twice a second as he sweeps. Rock is not
+     * his doing and does not move. Forgiving both meant a squad stood in the open firing into the
+     * wall whatever it had been shooting at had stepped behind.
+     */
+    @Test
+    void stopsFightingSomethingThatStepsBehindRock() {
+        Simulation simulation = on(
+                everyStrain(AlphaWorlds.config(), strain -> strain.withContactDamage(0f)),
+                ground().rect(11, 0, 1, 20, Terrain.ROCK).build());
+        simulation.spawnCommander(CORNER, 5f);
+        Entity trooper = simulation.spawnTrooper(52f, MIDDLE);
+        Entity enemy = simulation.spawnEnemy(45f, MIDDLE);
+        facing(trooper, -1f, 0f);
+        simulation.step();
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+
+        enemy.getComponent(Position.class).set(63f, MIDDLE);
+        simulation.step();
+
+        assertThat(mode(trooper)).isNotEqualTo(Trooper.Mode.FIGHT);
+    }
+
+    /**
      * Hysteresis. Starting a fight costs every test it declares; staying in one costs range alone, or
      * a trooper would drop its target the moment its own sweep carried its head past it.
      */

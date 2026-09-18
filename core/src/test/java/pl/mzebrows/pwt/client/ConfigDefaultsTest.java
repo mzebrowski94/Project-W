@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.badlogic.gdx.graphics.Color;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -122,21 +123,40 @@ class ConfigDefaultsTest {
     }
 
     private static Palette palette() {
-        Color[] colors = new Color[Look.values().length];
-        java.util.Arrays.fill(colors, Color.WHITE);
+        Color[][] colors = new Color[Look.values().length][];
+        java.util.Arrays.fill(colors, new Color[] {Color.WHITE});
         return new Palette(colors);
     }
 
     /** A palette missing a look cannot be built, so no renderer has to cope with one. */
     @Test
     void refusesAPaletteThatIsMissingALook() {
-        assertThatThrownBy(() -> new Palette(new Color[] {Color.WHITE})).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new Palette(new Color[][] {{Color.WHITE}}))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** Four commanders on a field must be four colours, or the players cannot tell themselves apart. */
+    @Test
+    void givesEveryPlayerACommanderColourOfHisOwn() {
+        Palette shipped = GraphicConfig.load().palette();
+
+        for (int slot = 0; slot < Players.MAX; slot++) {
+            assertThat(shipped.colorFor(Look.COMMANDER, slot)).isNotNull();
+        }
+    }
+
+    /** A variant nothing declares is the ordinary colour rather than a crash or a hole. */
+    @Test
+    void fallsBackToTheOrdinaryColourForAVariantALookDoesNotHave() {
+        Palette shipped = GraphicConfig.load().palette();
+
+        assertThat(shipped.colorFor(Look.GRUNT, 2)).isEqualTo(shipped.colorFor(Look.GRUNT));
     }
 
     private static TerrainPalette terrain() {
         Color[] colors = new Color[Terrain.values().length];
         java.util.Arrays.fill(colors, Color.GRAY);
-        return new TerrainPalette(colors, 0.05f);
+        return new TerrainPalette(colors, 0.05f, 0.03f, 4, 3);
     }
 
     private static StateTint tint() {

@@ -7,13 +7,14 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
-import org.jspecify.annotations.Nullable;
+import java.util.Arrays;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Enemy;
+import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Post;
@@ -108,7 +109,13 @@ public final class NavigationSystem extends EntitySystem {
 
     private ImmutableArray<Entity> posts = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> enemies = new ImmutableArray<>(new Array<>());
-    private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
+    /** Everything that could be hunted, so the field can be built for all of them at once. */
+    private ImmutableArray<Entity> targets = new ImmutableArray<>(new Array<>());
+
+    /** Their tiles, reused between ticks so collecting them costs no allocation per tick. */
+    private int[] goalCols = new int[8];
+
+    private int[] goalRows = new int[8];
 
     public NavigationSystem(SimConfig config, TileMap map) {
         this.map = map;
@@ -126,15 +133,13 @@ public final class NavigationSystem extends EntitySystem {
         enemies = engine.getEntitiesFor(
                 Family.all(Enemy.class, Position.class, Steering.class, Speed.class, Perception.class, Strain.class)
                         .get());
-        commanders = engine.getEntitiesFor(
-                Family.all(Commander.class, Position.class).get());
+        targets = engine.getEntitiesFor(
+                Family.all(Faction.class, Health.class, Position.class).get());
     }
 
     @Override
     public void update(float deltaTime) {
-        @Nullable Position commander = Drivers.livingTarget(commanders);
-        int goalCol = commander == null ? 0 : map.colAt(commander.x);
-        int goalRow = commander == null ? 0 : map.rowAt(commander.y);
+        int goals = collectGoals();
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
             Perception perception = PERCEPTION.get(enemy);
@@ -180,23 +185,50 @@ public final class NavigationSystem extends EntitySystem {
                 straightAt(enemy, position, target, speed);
                 continue;
             }
-            if (!perception.targetIsCommander) {
-                // Routes are built for one goal per strain and rebuilt when it leaves its tile; a
-                // field per man being hunted would be a grid pass each, per tick - the exact cost a
-                // flow field exists to avoid. So anything hunting somebody else walks straight at
-                // them and leans off what is in the way, exactly as a provoked unit does, and pays
-                // the same price: one that sets off from behind a wall walks into the wall.
-                straightAt(enemy, position, target, speed);
-                continue;
-            }
+            // One field per strain, flooded from every man on the player's side at once. A
+            // multi-source flood costs what a single-source one costs, so routing to whoever is
+            // nearest BY ROUTE is the same grid pass as routing to one named man - and it is what
+            // G0026 says happens, which until now was only true by line. What it replaced was a
+            // field built for the commander alone: anything hunting somebody else walked straight at
+            // them, which on a level with rock in it meant walking into the rock and staying there.
+            //
+            // The field leads to the nearest of them and the published target names one of them; the
+            // two agree except in a corner, and the last of the approach below is steered at the man
+            // rather than by the grid either way.
             FlowField field = fields[STRAIN.get(enemy).kind.ordinal()];
-            field.rebuildFor(goalCol, goalRow);
+            field.rebuildFor(goalCols, goalRows, goals);
             if (field.directionAt(position.x, position.y, direction)) {
                 STEERING.get(enemy).set(direction[0] * speed, direction[1] * speed);
                 continue;
             }
             straightAt(enemy, position, target, speed);
         }
+    }
+
+    /**
+     * The tile of everything an alien would come for, for this tick's fields.
+     *
+     * <p>Collected once and handed to every strain's field, which rebuilds only if the set has
+     * changed - so a squad standing still costs nothing at all, and a squad on the move costs one
+     * grid pass per strain, which is what it cost when the goal was the commander alone.
+     */
+    private int collectGoals() {
+        int count = 0;
+        for (int i = 0; i < targets.size(); i++) {
+            Entity candidate = targets.get(i);
+            if (!Drivers.huntable(candidate)) {
+                continue;
+            }
+            if (count == goalCols.length) {
+                goalCols = Arrays.copyOf(goalCols, count * 2);
+                goalRows = Arrays.copyOf(goalRows, count * 2);
+            }
+            Position where = POSITION.get(candidate);
+            goalCols[count] = map.colAt(where.x);
+            goalRows[count] = map.rowAt(where.y);
+            count++;
+        }
+        return count;
     }
 
     /**

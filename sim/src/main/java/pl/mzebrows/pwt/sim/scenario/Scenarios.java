@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 public final class Scenarios {
 
     private static final List<Scenario> ALL = List.of(
+            new AdventureScenario(),
             new AdvanceScenario(),
             new SkirmishScenario(),
             new DefendScenario(),

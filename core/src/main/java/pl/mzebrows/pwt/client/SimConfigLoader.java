@@ -113,7 +113,8 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.commander.deathThroesSeconds", defaults.deathThroesSeconds()),
                 properties.getFloat("sim.commander.respawnDelaySeconds", defaults.respawnDelaySeconds()),
                 properties.getFloat("sim.commander.respawnMargin", defaults.respawnMargin()),
-                properties.getFloat("sim.commander.respawnInvulnerableSeconds", defaults.respawnInvulnerableSeconds()));
+                properties.getFloat("sim.commander.respawnInvulnerableSeconds", defaults.respawnInvulnerableSeconds()),
+                properties.getFloat("sim.commander.leashRadius", defaults.leashRadius()));
     }
 
     /**

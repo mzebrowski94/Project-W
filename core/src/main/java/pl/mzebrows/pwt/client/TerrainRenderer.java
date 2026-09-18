@@ -37,6 +37,8 @@ public final class TerrainRenderer implements Disposable {
     private Color[] resolved = new Color[0];
 
     private int regionCount;
+    private int shadeCount = 1;
+
     private boolean disposed;
 
     public TerrainRenderer(Viewport viewport, TerrainPalette palette) {
@@ -48,11 +50,14 @@ public final class TerrainRenderer implements Disposable {
     public void bind(TileMap tileMap) {
         this.map = tileMap;
         this.regionCount = Math.max(1, tileMap.regionCount());
+        this.shadeCount = palette.tileShades();
         Terrain[] terrains = Terrain.values();
-        this.resolved = new Color[terrains.length * regionCount];
+        this.resolved = new Color[terrains.length * regionCount * shadeCount];
         for (Terrain terrain : terrains) {
             for (int region = 0; region < regionCount; region++) {
-                resolved[index(terrain, region)] = new Color(palette.colorFor(terrain, region));
+                for (int shade = 0; shade < shadeCount; shade++) {
+                    resolved[index(terrain, region, shade)] = new Color(palette.colorFor(terrain, region, shade));
+                }
             }
         }
     }
@@ -88,13 +93,18 @@ public final class TerrainRenderer implements Disposable {
             while (runStart <= lastCol) {
                 Terrain terrain = current.terrainAtTile(runStart, row);
                 int region = current.regionAtTile(runStart, row);
+                int shade = palette.shadeStepFor(runStart, row);
                 int runEnd = runStart;
+                // The run now breaks on the tile shade as well, which is what keeps per-tile
+                // variation and run-merging from being a choice between two. A handful of shades
+                // means a run breaks a few times more often over a few hundred visible tiles.
                 while (runEnd + 1 <= lastCol
                         && current.terrainAtTile(runEnd + 1, row) == terrain
-                        && current.regionAtTile(runEnd + 1, row) == region) {
+                        && current.regionAtTile(runEnd + 1, row) == region
+                        && palette.shadeStepFor(runEnd + 1, row) == shade) {
                     runEnd++;
                 }
-                shapes.setColor(colorOf(terrain, region));
+                shapes.setColor(colorOf(terrain, region, shade));
                 shapes.rect(runStart * tile, row * tile, (runEnd - runStart + 1) * tile, tile);
                 runStart = runEnd + 1;
             }
@@ -102,14 +112,13 @@ public final class TerrainRenderer implements Disposable {
         shapes.end();
     }
 
-    private Color colorOf(Terrain terrain, int region) {
-        int at = index(terrain, region < 0 ? 0 : region % regionCount);
-        return resolved[at];
+    private Color colorOf(Terrain terrain, int region, int shade) {
+        return resolved[index(terrain, region < 0 ? 0 : region % regionCount, shade)];
     }
 
     @SuppressWarnings("EnumOrdinal")
-    private int index(Terrain terrain, int region) {
-        return terrain.ordinal() * regionCount + region;
+    private int index(Terrain terrain, int region, int shade) {
+        return (terrain.ordinal() * regionCount + region) * shadeCount + shade;
     }
 
     @Override

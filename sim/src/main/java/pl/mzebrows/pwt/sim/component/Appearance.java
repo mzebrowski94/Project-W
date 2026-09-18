@@ -159,9 +159,29 @@ public final class Appearance implements Component, Pool.Poolable {
     /** Whether that gun has stopped itself. The half of the bar that changes what to do next. */
     public boolean overheated;
 
+    /**
+     * Which of a look's several appearances this one wears. Zero is the ordinary one.
+     *
+     * <p>Four commanders are four identical circles, and pillar 5 says what a thing is must be
+     * legible from how it looks - so each player wears a different one. It is a number on this
+     * component rather than four looks in the enum, and rather than the renderer reading which player
+     * an entity belongs to, because G0003 says the renderer decides what to draw from {@code
+     * Appearance} and asks nothing else about an entity.
+     *
+     * <p>A look that declares no variant of this number is drawn in its ordinary colour, so nothing
+     * but the commander is affected by any of it.
+     */
+    public int variant;
+
     /** Sets the look and returns this component, for fluent spawning. */
     public Appearance set(Look newLook) {
+        return set(newLook, 0);
+    }
+
+    /** Sets the look and which of its appearances to wear, and returns this component. */
+    public Appearance set(Look newLook, int newVariant) {
         this.look = newLook;
+        this.variant = newVariant;
         this.state = State.NORMAL;
         this.charge = 0f;
         this.chargeLook = Look.NONE;
@@ -189,6 +209,7 @@ public final class Appearance implements Component, Pool.Poolable {
     @Override
     public void reset() {
         look = Look.NONE;
+        variant = 0;
         state = State.NORMAL;
         charge = 0f;
         chargeLook = Look.NONE;

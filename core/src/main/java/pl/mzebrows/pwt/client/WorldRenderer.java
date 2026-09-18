@@ -225,7 +225,7 @@ public final class WorldRenderer implements Disposable {
      * colour, which {@code ShapeRenderer} copies out of immediately.
      */
     private Color tint(Appearance appearance) {
-        tinted.set(palette.colorFor(appearance.look));
+        tinted.set(palette.colorFor(appearance.look, appearance.variant));
         float shift = stateTint.forState(appearance.state);
         if (shift == 0f) {
             return tinted;

@@ -78,6 +78,27 @@ class NavigationSystemTest {
         assertThat(enemy.getComponent(Position.class).y).isLessThan(centre(LANE_ROW - 2));
     }
 
+    /**
+     * The same wall, and the man on the far side of it is a <em>trooper</em>.
+     *
+     * <p>Routes used to be built for the commander alone, so anything hunting anybody else walked
+     * straight at them - which on a level with rock in it meant walking into the rock and staying
+     * there for the rest of the game. The field is flooded from every man on the player's side now,
+     * so it leads to whichever is nearest by route, which is what G0026 already said happens.
+     */
+    @Test
+    void walksAnEnemyRoundAWallToATrooperJustAsReadily() {
+        Simulation simulation = on(walledWithAGapAtTheTop());
+        // Far away and behind it, so nothing here is routing to him by accident.
+        simulation.spawnCommander(centre(1), centre(LANE_ROW));
+        simulation.spawnTrooper(centre(WALL_COL + 4), centre(LANE_ROW));
+        Entity enemy = simulation.spawnEnemy(centre(WALL_COL - 3), centre(LANE_ROW));
+
+        steps(simulation, LONG_ENOUGH_TO_ROUND_THE_CORNER);
+
+        assertThat(enemy.getComponent(Position.class).y).isLessThan(centre(LANE_ROW - 2));
+    }
+
     @Test
     void takesAGruntThroughACrackAndLeavesABruteOnTheWrongSideOfIt() {
         SimConfig config = config().withUnit(UnitKind.BRUTE, brute -> brute.withRadius(BROAD));

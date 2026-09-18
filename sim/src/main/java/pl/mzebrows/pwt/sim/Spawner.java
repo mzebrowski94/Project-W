@@ -109,11 +109,16 @@ public final class Spawner {
 
     /** Spawns the player-controlled unit, armed, at full health, and ready to fire. */
     public Entity spawnCommander(float x, float y) {
+        return spawnCommander(x, y, 0);
+    }
+
+    /** The same, seated at one player's slot. */
+    public Entity spawnCommander(float x, float y, int slot) {
         SimConfig.CommanderConfig commander = config.commander();
         SimConfig.MeleeConfig melee = config.melee();
         SimConfig.GrenadeConfig grenade = config.grenade();
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Commander.class));
+        entity.add(engine.createComponent(Commander.class).set(slot));
         entity.add(engine.createComponent(Focus.class));
         entity.add(engine.createComponent(Faction.class).set(Side.PLAYER));
         entity.add(engine.createComponent(Position.class).set(x, y));
@@ -175,7 +180,9 @@ public final class Spawner {
         // Carried always, because what he is holding changes: a gun that runs hot needs somewhere to
         // put it, and one that does not leaves this at zero for ever.
         entity.add(engine.createComponent(Heat.class));
-        entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER).face(1f, 0f));
+        entity.add(engine.createComponent(Appearance.class)
+                .set(Look.COMMANDER, slot)
+                .face(1f, 0f));
         engine.addEntity(entity);
         return entity;
     }
@@ -851,9 +858,9 @@ public final class Spawner {
      * Spawns the pending-respawn ticket for a unit that just died. It has nothing to draw and nothing
      * to collide with; it exists only to hold a countdown that the dead unit can no longer hold.
      */
-    public Entity spawnRespawn(float delaySeconds, float x, float y, float invulnerableSeconds) {
+    public Entity spawnRespawn(float delaySeconds, float x, float y, float invulnerableSeconds, int slot) {
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Respawning.class).set(delaySeconds, x, y, invulnerableSeconds));
+        entity.add(engine.createComponent(Respawning.class).set(delaySeconds, x, y, invulnerableSeconds, slot));
         engine.addEntity(entity);
         return entity;
     }

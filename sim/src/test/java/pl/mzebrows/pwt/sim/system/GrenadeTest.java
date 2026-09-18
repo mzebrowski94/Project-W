@@ -223,7 +223,7 @@ class GrenadeTest {
 
     /** One tick of input asking for a throw, aimed along the x axis at the given point. */
     private static CommanderInput throwing(float aimX) {
-        return new CommanderInput(0f, 0f, aimX, THROW_Y, false, false, true, false, false, null);
+        return new CommanderInput(0f, 0f, aimX, THROW_Y, false, false, true, false, false, null, false);
     }
 
     /** How far the blast ends up from the commander, for a throw aimed at a point this far out. */

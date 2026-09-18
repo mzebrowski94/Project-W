@@ -106,6 +106,12 @@ public final class AlphaWorlds {
     public static final float RESPAWN_MARGIN = 5f;
     public static final float RESPAWN_INVULNERABLE = 0.5f;
 
+    /**
+     * How far a commander may get from the middle of the commanders, in the fixtures. A tenth of the
+     * arena, so a leashed pair is visibly held and a test does not have to run for a second to see it.
+     */
+    public static final float LEASH_RADIUS = 10f;
+
     public static final float MELEE_COOLDOWN = 0.5f;
     public static final float MELEE_ACTIVE = 0.1f;
     /** Short, like the shipped weapon: the sweep must not land until the target is nearly touching. */
@@ -459,7 +465,8 @@ public final class AlphaWorlds {
                         DEATH_THROES,
                         RESPAWN_DELAY,
                         RESPAWN_MARGIN,
-                        RESPAWN_INVULNERABLE),
+                        RESPAWN_INVULNERABLE,
+                        LEASH_RADIUS),
                 new SimConfig.TrooperConfig(
                         TROOPER_RADIUS,
                         TROOPER_SPEED,

@@ -32,6 +32,13 @@ rows become enforceable once the named feature exists - promote them then.
 | Invariant | Status |
 |---|---|
 | Input reaches the simulation as a per-tick value object; no system polls a device. | enforced - `ArchitectureTest.simulationDoesNotReadInputDirectly` |
+| **A slot drives one commander and nobody else's.** One input per player per tick, handed out by `Simulation.step` before any system runs. | enforced - `CoopTest.drivesEachCommanderFromItsOwnSlot`, `.leavesASlotNobodyIsSittingInIdle` |
+| A stick sends its aim as an **offset from the commander**, because it does not know where he is standing; exactly one place turns that into a point on the field, and no system below it sees two kinds of aim. | enforced - `CoopTest.aimsRelativeToWhicheverCommanderIsAiming`; one writer - `Simulation.step` |
+| **No commander may walk further than the leash from the middle of the commanders.** It refuses the outward part of a step and **never pushes**, so nobody is shoved and a man at the end of the rope walks home himself. A backstop against two players ending up a level apart, deliberately far wider than the view - **so it does not hold pillar 4 on its own, and a player may be off screen.** | enforced - `CoopTest.refusesToLetTwoCommandersWalkFurtherApartThanTheLeash`, `.letsHimWalkBackTowardsTheGroupFromTheEndOfTheLeash`, `.leavesASoleCommanderFreeToWalkWhereverHeLikes` |
+| The leash is a **distance in world units**, never read from the camera. Zoom is a rendering setting and must not become extra rope. | judgement - `sim.commander.leashRadius`; the row above holds the half that is testable |
+| A commander comes back **beside whoever of the players is still on his feet**, and only at the arena edge when nobody is. | enforced - `CoopTest.bringsHimBackBesideACommanderWhoIsStillOnHisFeet`, `RespawnSystemTest.bringsItBackAtTheLeftOfTheArena` |
+| A commander comes back **into the slot he left**, so a death does not reseat a player. | enforced - `CoopTest.bringsHimBackIntoTheSlotHeLeft` |
+| Every player's commander is drawn in a colour of his own. Four identical circles is not a field anybody can read (pillar 5). | enforced - `ConfigDefaultsTest.givesEveryPlayerACommanderColourOfHisOwn` |
 | Every concern draws random numbers from its own stream, derived from the one level seed. | enforced - `RngTest.streamsForDifferentConcernsDiverge` |
 | A unit's lose range is never shorter than its detection range, so a commander on the boundary cannot flicker a pack between hunting and idling. | enforced - `PerceptionDefTest.refusesALoseRangeShorterThanTheDetectionRange` |
 | A unit that has not noticed the commander is drawn differently from one that has. | enforced - `AppearanceSystemTest.showsAUnitThatHasNotNoticedHimAsUnaware` |
@@ -116,7 +123,7 @@ rows become enforceable once the named feature exists - promote them then.
 | A level may be larger than the view, and the camera keeps every player in it (G0008). | enforced - `CameraDirectorTest.framesBothTargetsWhenThereAreTwo` |
 | The view never comes to **rest** showing anything past the edge of the map, and centres on a level smaller than itself. **Only a shake may take it outside, and never further than the shake displaces it** - amended 2026-09-13, because the clamp pins the view on a level no bigger than itself and was silently deleting every screen shake on the default map size. | enforced - `CameraDirectorTest.keepsTheViewInsideTheMap`, `.centresOnAMapSmallerThanTheView`, `.letsAShakeLeaveTheMapButNeverByMoreThanTheShake`, `.shakesEvenOnALevelNoBiggerThanTheView` |
 | **Aim is a direction, never a distance.** Zoom is a rendering setting and cannot become extra range. | enforced - `CommanderControlSystemTest.firesInTheSameDirectionHoweverFarAwayTheAimPointIs` |
-| The view is told who to watch by a component; the client never asks which entity is the commander. | judgement - `Focus`; local co-op is two markers and no client change |
+| The **view** is told who to watch by a component and never asks which entity is a commander; four of them are four `Focus` markers and no renderer change. The harness asks by **slot** - only to know whether a joining player already has a man on the field - and never to decide what to draw. | judgement - `Focus`; `ScenarioSession.seat` is the only place that looks a commander up |
 | The camera feels the same at every frame rate. | enforced - `CameraDirectorTest.movesTheSameDistanceWhateverTheFrameRate` |
 | What may be spawned on a patch of ground is decided by its terrain. | enforced - `ScatterTest.keepsEverythingOffGroundItWasNotOfferedTo` |
 | Nothing placed by the grid stands at a tile centre. | enforced - `ScatterTest.standsThingsInsideTheirTilesRatherThanAtTheCentre` |
@@ -142,10 +149,14 @@ rows become enforceable once the named feature exists - promote them then.
 | A trooper stands still to shoot. | enforced - `TrooperCombatTest.standsItsGroundWhileItIsShooting` |
 | A trooper hardly ever answers a leap with a sweep. Answering one is the commander's moment (G0013). | judgement - `sim.trooper.strikeChancePerSecond`; `TrooperCombatTest.neverSwingsAtSomethingThatIsMerelyWalkingAtIt` holds the half that is a rule |
 | An order reaches only the troopers within earshot of the commander, and is delivered once (G0017). | enforced - `SquadOrderTest.reachesNobodyOutOfEarshot`, `.deliversAnOrderOnceRatherThanForAsLongAsItIsHeld` |
+| **Forward drops whatever standing order a trooper had** - holding a place, or keeping station on him - because every one of them is a reason not to advance. Cancel is still the key that gives a man nothing to do instead. | enforced - `SquadOrderTest.dropsFollowMeWhenHeSaysForward`, `.dropsDefenceWhenHeSaysForward` |
+| **A trooper standing on a captured point holds it until a forward order reaches it**, and one order buys one point (G0029). Ground the squad has taken is ground somebody is still standing on, and the level advances at the commander's pace. Because an order carries only as far as earshot, sending them on means walking up to them. | enforced - `TrooperAdvanceTest.waitsOnAPointItHasTakenRatherThanWalkingOnToTheNext`, `.goesOnToTheNextPointWhenHeSaysForward`, `.waitsAgainOnceItHasTakenTheNextPoint`, `.walksToTheFirstPointWithoutBeingTold` |
+| When two commanders order one trooper on the same tick, **the higher slot is heard last and wins** (G0028). Ascending slot order, deliberately, and never whatever order Ashley holds the family in - that order changes every time somebody is killed and respawned. | enforced - `CoopTest.letsTheHigherSlotsOrderStandWhenTwoCommandersSpeakAtOnce`, `.letsTheHigherSlotsOrderStandWhicheverOrderItIs` |
+| A trooper follows **the man who told it to**, not whichever commander is first. | judgement - `Trooper.orderedBy`; `TrooperMindSystem.obeys` is the single reader |
 | An order outranks the level's objectives and never an ongoing fight; it is carried out when the fight ends. | enforced - `SquadOrderTest.neverInterruptsAFightAndObeysAsSoonAsItIsOver` |
 | A unit acting on an order is drawn differently from one acting on its own judgement. | enforced - `SquadOrderTest.showsWhichTroopersHeardHim` |
 | An order given on any frame reaches the simulation, whatever the refresh rate, and one press is one order. | enforced - `ScenarioSessionTest.deliversAnOrderGivenOnAFrameTooShortToRunATick`, `.spendsAnOrderOnceEvenWhenAFrameRunsSeveralTicks` |
-| **His going down releases the squad.** Every standing order drops when the commander dies, and none of it is restored when he comes back. The mirror of the rule that nothing stands to attention over a corpse. | enforced - `SquadOrderTest.releasesTheSquadWhenTheCommanderGoesDown`, `.doesNotResumeAnOldOrderWhenHeComesBack`, `.takesTheOrderRingOffWhenHeGoesDown` |
+| **His going down releases his own men.** Every order *he* gave drops when he dies, and none of it is restored when he comes back. The mirror of the rule that nothing stands to attention over a corpse. Narrowed from "the squad" by G0028: with four commanders, releasing the lot when any of them fell would let a death across the map cancel the formation somebody else was holding. | enforced - `SquadOrderTest.releasesTheSquadWhenTheCommanderGoesDown`, `.doesNotResumeAnOldOrderWhenHeComesBack`, `.takesTheOrderRingOffWhenHeGoesDown` |
 | Everyone put down in a spawn area is jittered inside its tiles; nobody stands at a tile centre (G0009). | enforced - `SquadTest.standsNobodyAtATileCentre` |
 | A trooper inside a control point holds where it stands rather than walking at its middle. Everyone in the radius counts equally. | enforced - `TrooperAdvanceTest.standsOnAPointRatherThanWalkingAtItsMiddle` |
 | A trooper that stops takes a bearing of its own to watch. A squad at rest never all faces the same way. | enforced - `TrooperAdvanceTest.givesEveryManHoldingAPointHisOwnBearingToWatch`, `SquadOrderTest.spreadsTheSquadsAttentionInsteadOfAllStaringAtHim` |
@@ -186,6 +197,8 @@ rows become enforceable once the named feature exists - promote them then.
 | A man hauling something can only back away from it, with a little sideways lean, and slower than he walks. | enforced - `DragTest.barelyMovesAtAllWhenHePressesStraightAtTheManHeIsDragging`, `.haulsHimSlowerThanTheCommanderWalks` |
 | A load is moved by writing its velocity, never its position, so terrain still has the last word about where it may go. | enforced - `DragTest.putsABarrelBackToSceneryWhenHeLetsGoOfIt` holds the half that can drift; `DragSystem` never writes a position |
 | A spitter fires at what it is hunting, inside a cone, and never through rock. | enforced - `SpitterTest.firesOnceWhatItIsHuntingComesInsideItsRange`, `.keepsEveryShotInsideTheConeItDeclares`, `.willNotFireThroughRock` |
+| **A trooper never fires through rock, including at something it is already fighting.** Staying in a fight forgives the arc, because where a man is looking is his own doing and changes twice a second; it never forgives the wall, because rock is not his doing and does not move. | enforced - `TrooperCombatTest.doesNotShootThroughRock`, `.stopsFightingSomethingThatStepsBehindRock`, `.keepsFightingSomethingThatSlipsOutOfItsArc` |
+| **An alien routes to whoever on the player's side is nearest by route**, not to the commander alone: one field per strain, flooded from every one of them at once, which costs what flooding from one costs (G0026, amended). | enforced - `NavigationSystemTest.walksAnEnemyRoundAWallToATrooperJustAsReadily`, `FlowFieldTest.leadsToWhicheverGoalIsNearestByRoute` |
 | A cone is applied by turning the shot, so every shot is the same length and the cone the same width at every distance. | enforced - `SpitterTest.sendsEveryShotOutAtTheSameSpeedHoweverFarOffTrueItIs` |
 | Every gameplay speed is one block in `game.properties` and is retuned together, so the ratios between units survive a pace change. | judgement - the PACE block |
 | Everything the AI does only *sometimes* is a named constant in `AiChance` with a number in `game.properties`, stated per second of opportunity. There is no conditional behaviour that is not on that list. | judgement - `AiChance` is the index; `Odds` is the only caller of the dice |
@@ -250,30 +263,42 @@ One key, one action. **Adding a binding means editing this table in the same cha
 cheapest guard against two features silently claiming the same input.
 
 *Built* rows work today. *Settled* rows are fixed by a decision but not yet wired up; *proposed*
-rows are still a guess. Gamepad support is not built at all - the stick and trigger columns are the
-intended bindings, not working ones.
+rows are still a guess.
+
+**Both columns are live.** The keyboard is player one's and no pad takes it in the alpha (1.a); every
+other player is a pad. Every binding below is in [`assets/controls.properties`](../../assets/controls.properties)
+and can be changed there without touching code.
+
+Pad buttons are named by **where they are**, never by what is printed on them: `SOUTH` is A on an Xbox
+pad and Cross on a PlayStation one, `WEST` is X and Square, `EAST` is B and Circle. The Xbox and
+PlayStation names below are the two label sets for one binding, not two bindings (ADR 0011).
 
 The alpha-phase harness has its own keys - pause, single-step, restart - listed in
 [`alpha-phase.md`](alpha-phase.md). Those are dev controls and deliberately kept out of this table;
-do not treat one as taken when adding a game binding.
+do not treat one as taken when adding a game binding. None of them is on the pad.
 
-| Input | Action | Status |
-|---|---|---|
-| `WASD`, arrow keys / left stick | Move the commander | built (keyboard) |
-| Mouse / right stick | Aim | built (mouse) - G0002 |
-| Left mouse / right trigger | Fire | built (mouse) |
-| Right mouse / left bumper | Melee strike | built (mouse) |
-| `Q` / right bumper | Throw a grenade | built (keyboard) - G0019 |
-| `E` / face button | Act on what is in reach - stabilise a casualty, get on or off a turret | built (keyboard) - G0021, G0024 |
-| `F` / left trigger | Take hold of a load, or let go of it | built (keyboard) - G0021 |
-| `1` | Squad order: follow me | built - scaffolding, see below |
-| `2` | Squad order: forward | built - scaffolding, see below |
-| `3` | Squad order: defence | built - scaffolding, see below |
-| `4` | Squad order: cancel | built - scaffolding, see below |
-| `Tab` | Pull the view back for a look, and put it back | built (keyboard) |
-| `Esc` | Pause | proposed |
+| Keyboard | Pad (Xbox / PlayStation) | Action | Status |
+|---|---|---|---|
+| `WASD`, arrow keys | Left stick | Move the commander | built |
+| Mouse | Right stick | Aim | built - G0002. The stick sends a direction; the mouse sends a place |
+| Left mouse | `X` / `Square`, or `RT` / `R2` | Fire | built |
+| Right mouse | `LT` / `L2` | Melee strike | built |
+| `Q` | `B` / `Circle` | Throw a grenade | built - G0019 |
+| `E` | `A` / `Cross` | Act on what is in reach - stabilise a casualty, get on or off a turret | built - G0021, G0024 |
+| `F` | `RB` / `R1` | Take hold of a load, or let go of it | built - G0021 |
+| `1` | D-pad up | Squad order: follow me | built - scaffolding, see below |
+| `2` | D-pad right | Squad order: forward | built - scaffolding, see below |
+| `3` | D-pad down | Squad order: defence | built - scaffolding, see below |
+| `4` | D-pad left | Squad order: cancel | built - scaffolding, see below |
+| `Tab` | `LB` / `L1` | Pull the view back for a look, and put it back. **One camera, so anybody's press moves everybody's view** | built |
+| - | `Start` / `Options` | Pause | built (pad only; `Esc` is the harness's, and `P` pauses there) |
+| - | - | Unbound on the pad: `Y`/`Triangle`, `Back`/`Share`, both stick clicks. Left free on purpose | - |
 
-The four order keys are **alpha-phase scaffolding, not a decision**. The command *model* is settled -
+Plugging a pad in **is** joining, and unplugging is not leaving (G0028). There is no binding for
+either and there is not going to be one.
+
+The four order keys, and the d-pad that mirrors them, are **alpha-phase scaffolding, not a
+decision**. The command *model* is settled -
 an order reaches the troopers near the commander and names a verb, never a target (G0017) - but the
 input is not: the intended binding is one button plus a radial menu, which needs interface work that
 does not exist yet. Four keys make the verbs playable in the meantime. They are listed here rather
@@ -284,6 +309,15 @@ claim them.
 
 Deliberately undecided. **Ask rather than inventing an answer** - a guess here becomes a
 contradiction three features later.
+
+- **What does the view do with a player it cannot frame?** The leash was tried at the width of the
+  view, which is what pillar 4 asks for, and it played badly - being stopped by an invisible wall
+  because somebody else walked the other way is not a fight, it is a tether. It is now far wider than
+  the screen and is a backstop rather than a frame, so **a player can be off screen**, which pillar 4
+  says should not happen. That is a knowing gap, and the question it leaves is which of the answers
+  fills it: the camera giving up at far zoom and a marker at the edge pointing at whoever is missing;
+  splitting the view; or a soft pull that only starts once somebody is actually out of shot. None is
+  chosen, and a marker is the cheapest thing to try first.
 
 The alpha phase answers none of these. Where a system needs one of them to have an answer it uses
 scaffolding instead, listed in [`alpha-phase.md`](alpha-phase.md) so the scaffolding is not later
@@ -306,8 +340,11 @@ mistaken for a decision.
 - ~~Who picks the commander up?~~ **Answered 2026-09-13 (G0023):** his troopers do, sometimes. He is
   a casualty like his men, gunfire and blasts put him on the ground, and a trooper with nothing more
   urgent in front of it rolls for whether to come - far more readily for him than for one of its own.
-  What that leaves open is the co-op half: a second player changes who is nearest and whether the
-  squad should bother at all.
+  The co-op half is now live and **still unanswered**: a second player can reach a downed commander
+  with the same action key his troopers use, which works today because a commander is a casualty like
+  any other. What nobody has decided is whether a trooper should still bother when another *player* is
+  closer - a squad and a friend racing for the same body is either the best moment in the game or a
+  waste of a trooper, and only play will say which.
 - **Should noise pull aggro?** Detection is a radius around each unit and nothing the player does
   changes it, so firing a gun in a corridor wakes nobody who could not already have noticed you. A
   shot that wakes things beyond the detection radius is a big arcade lever and it is cheap to add now
@@ -334,8 +371,11 @@ mistaken for a decision.
 - **Can the other side take a control point back?** Capture is one-way today. Whether an alien can
   stand on a point and undo it is a question about what the aliens are *trying to do*, which nothing
   in the game has yet said.
-- The source game had four commanders because it was four-player co-op. In single-player, is the
-  commander a choice with distinct kits, or one fixed protagonist?
+- The source game had four commanders because it was four-player co-op, which this now is (G0028).
+  **Are the four the same man in four colours, or four commanders with distinct kits?** Today they are
+  identical but for colour. Distinct kits would give a reason to pick one and a reason to want a
+  second player, and it is the question standing between "co-op works" and "co-op is worth doing".
+  In single-player it is the same question asked once.
 - Does the squad persist between levels, or does each level grant a fresh one?
 - On failure, do you retry the level, or is the run over?
 - Given "no between-level management", what does progression across the nine levels actually consist

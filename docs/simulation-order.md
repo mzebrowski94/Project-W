@@ -31,8 +31,11 @@ constructor ever disagree; the constructor wins.
 | 19 | `EnemyLeapSystem` | 39 | `ReaperSystem` |
 | 20 | `StunSystem` | | |
 
-Before system 1, `step()` copies `CommanderInput` into the commander's `Intent`. That is the only way
-input enters the simulation.
+Before system 1, `step(PlayerInputs)` copies each slot's `CommanderInput` into that commander's
+`Intent`. That is the only way input enters the simulation, and it is also **the one place a relative
+aim becomes a place on the field**: a stick sends an offset because it does not know where its
+commander is standing, and his position is added here so every system below reads the absolute point
+it has always read.
 
 `TrooperMindSystem` and `TrooperMoveSystem` share **one** `Rng` stream (`RngStream.TROOPER`), by the
 comment in the constructor: roaming and sweeping are the same concern and separating them would mean
@@ -51,6 +54,8 @@ against the order above on 2026-09-13 and hold.
 | Constraint | Why |
 |---|---|
 | Input reaches `Intent` **before any system runs** | Input is one tick's worth of what the player asked for, and nothing else may enter the simulation. |
+| The leash is inside `CommanderControlSystem` (4), not a system of its own | That system owns a commander's velocity, and two systems writing one velocity is how a unit ends up travelling somewhere neither asked for. The middle of the commanders is worked out once in its `update`, before any of them is driven, so the first one leashed and the last one are leashed to the same place. |
+| `RespawnSystem` (32) reads the commanders | Only to answer *where*: a man comes back beside whoever is still standing. *When* and *whether* are still read off the reaction on the dying unit, so a trooper that respawns needs no change to either. |
 | Pickups (25) resolve **before** damage (27) | A grunt shot to a sliver that reaches a flower first gets up whole and takes that tick's damage as the thing it has become. |
 | `EvolutionSystem` (26) after pickups, before damage | Turns what a unit has eaten into what it becomes, in time for the damage to land on the new strain. |
 | `DyingSystem` (31) after `DamageSystem` (27) | Marks a body that has lain out its throes; damage decides who is dying. |

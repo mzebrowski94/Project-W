@@ -18,6 +18,8 @@ public final class PwtGame extends Game implements GameContext {
     private final GraphicConfig graphicConfig;
 
     private SimConfig simConfig;
+    private ControlsConfig controlsConfig;
+    private GamepadSource gamepads;
     private Assets assets;
     private Hud hud;
 
@@ -32,6 +34,8 @@ public final class PwtGame extends Game implements GameContext {
         Log.info("Starting Project-W");
         simConfig = SimConfigLoader.load();
         Log.debug("Simulation config: " + simConfig);
+        controlsConfig = ControlsConfig.load();
+        gamepads = new GdxGamepads(controlsConfig.hardware());
 
         assets = new Assets();
         assets.queueAll();
@@ -81,6 +85,16 @@ public final class PwtGame extends Game implements GameContext {
     @Override
     public SimConfig simConfig() {
         return simConfig;
+    }
+
+    @Override
+    public ControlsConfig controlsConfig() {
+        return controlsConfig;
+    }
+
+    @Override
+    public GamepadSource gamepads() {
+        return gamepads;
     }
 
     @Override

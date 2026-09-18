@@ -11,7 +11,6 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Appearance;
-import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
@@ -68,7 +67,6 @@ public final class PerceptionSystem extends EntitySystem {
     private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
-    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
 
     private final Defs<PickupKind, PickupDef> pickupDefs;
     private final TileMap map;
@@ -124,7 +122,7 @@ public final class PerceptionSystem extends EntitySystem {
                 perception.aggro = notices(watcher, perception, position, target);
             }
             if (perception.aggro && target != null) {
-                perception.hunt(target.x, target.y, COMMANDER.has(quarry));
+                perception.hunt(target.x, target.y);
                 // Somebody in front of it outranks a grudge exactly as absolutely as he outranks
                 // food. A unit that has noticed one drops where it was going, and does not resume
                 // afterwards - whatever provoked it is a long way behind by then.

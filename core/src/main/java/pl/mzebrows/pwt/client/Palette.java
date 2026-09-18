@@ -25,19 +25,40 @@ import pl.mzebrows.pwt.sim.def.Look;
 @SuppressWarnings("EnumOrdinal")
 public final class Palette {
 
-    private final Color[] byLook;
+    private final Color[][] byLook;
 
-    /** Takes one colour per {@link Look}, indexed by ordinal. Refuses a palette with a hole in it. */
-    public Palette(Color[] byLook) {
+    /**
+     * Takes the colours for each {@link Look} in ordinal order: the first is its ordinary one and any
+     * after it are its variants, in variant order. Refuses a palette with a hole in it.
+     */
+    public Palette(Color[][] byLook) {
         if (byLook.length != Look.values().length) {
             throw new IllegalArgumentException(
-                    "palette needs one colour per look, got " + byLook.length + " of " + Look.values().length);
+                    "palette needs colours for every look, got " + byLook.length + " of " + Look.values().length);
         }
-        this.byLook = byLook.clone();
+        this.byLook = new Color[byLook.length][];
+        for (int look = 0; look < byLook.length; look++) {
+            if (byLook[look].length == 0) {
+                throw new IllegalArgumentException("look " + Look.values()[look] + " has no colour at all");
+            }
+            this.byLook[look] = byLook[look].clone();
+        }
     }
 
     /** The colour to draw a given look in, before anything it is doing is taken into account. */
     public Color colorFor(Look look) {
-        return byLook[look.ordinal()];
+        return colorFor(look, 0);
+    }
+
+    /**
+     * The same, for a look that has several appearances - four commanders, one per player.
+     *
+     * <p>A variant this look does not declare falls back to its ordinary colour rather than throwing,
+     * because the failure that matters here is a player drawn in somebody else's colour and not a
+     * missing key in a config file.
+     */
+    public Color colorFor(Look look, int variant) {
+        Color[] variants = byLook[look.ordinal()];
+        return variants[variant >= 0 && variant < variants.length ? variant : 0];
     }
 }

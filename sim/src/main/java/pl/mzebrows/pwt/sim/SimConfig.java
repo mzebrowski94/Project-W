@@ -158,7 +158,7 @@ public record SimConfig(
                 1f / 60f,
                 5,
                 new MapConfig(32, 18, 5f, 6),
-                new CommanderConfig(2f, 19f, 100f, 1.5f, 3f, 6f, 2f),
+                new CommanderConfig(2f, 19f, 100f, 1.5f, 3f, 6f, 2f, 120f),
                 new TrooperConfig(
                         1.6f,
                         13.5f,
@@ -475,6 +475,12 @@ public record SimConfig(
      * @param respawnDelaySeconds how long after the body is removed before it comes back
      * @param respawnMargin how far in from the left edge of the arena it comes back, in world units
      * @param respawnInvulnerableSeconds protection on arrival, so it does not die again immediately
+     * @param leashRadius how far a commander may walk from the middle of the commanders, in world
+     *     units. Pillar 4 says there is one fight and you can always see it, and one shared view
+     *     cannot frame players free to walk apart for ever. <strong>A distance, deliberately not the
+     *     camera's:</strong> zoom is a rendering setting and must never become extra rope, so this is
+     *     sized against the near-zoom view by hand rather than read from it. Zero is no leash, which
+     *     is what a single commander effectively has anyway
      */
     @With
     public record CommanderConfig(
@@ -484,7 +490,8 @@ public record SimConfig(
             float deathThroesSeconds,
             float respawnDelaySeconds,
             float respawnMargin,
-            float respawnInvulnerableSeconds) {
+            float respawnInvulnerableSeconds,
+            float leashRadius) {
         public CommanderConfig {
             Require.positive("commander radius", radius);
             Require.positive("commander speed", speed);
@@ -493,6 +500,7 @@ public record SimConfig(
             Require.notNegative("commander respawnDelaySeconds", respawnDelaySeconds);
             Require.notNegative("commander respawnMargin", respawnMargin);
             Require.notNegative("commander respawnInvulnerableSeconds", respawnInvulnerableSeconds);
+            Require.notNegative("commander leashRadius", leashRadius);
         }
     }
 

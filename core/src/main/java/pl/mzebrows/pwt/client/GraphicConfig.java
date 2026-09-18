@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client;
 import com.badlogic.gdx.graphics.Color;
 import java.util.Locale;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Look;
 
@@ -75,16 +76,34 @@ public record GraphicConfig(
                 camera(properties));
     }
 
-    /** One colour per look, read from {@code graphic.color.<look>} and keyed by the enum's own name. */
+    /**
+     * One colour per look, read from {@code graphic.color.<look>} and keyed by the enum's own name,
+     * plus any variants at {@code graphic.color.<look>.<n>}.
+     *
+     * <p>A variant is a second appearance for the same role - the commander has one per player, so
+     * four of them on a field are four colours rather than four identical circles (pillar 5). A look
+     * with no variant keys is one colour, which is all but one of them.
+     */
     @SuppressWarnings("EnumOrdinal")
     private static Palette palette(GameProperties properties) {
         Look[] looks = Look.values();
-        Color[] colors = new Color[looks.length];
+        Color[][] colors = new Color[looks.length][];
         for (Look look : looks) {
-            colors[look.ordinal()] =
-                    color(properties, "graphic.color." + look.name().toLowerCase(Locale.ROOT), fallbackFor(look));
+            String key = "graphic.color." + look.name().toLowerCase(Locale.ROOT);
+            Color ordinary = color(properties, key, fallbackFor(look));
+            Color[] variants = new Color[Players.MAX];
+            variants[0] = ordinary;
+            for (int variant = 1; variant < Players.MAX; variant++) {
+                variants[variant] = color(properties, key + "." + variant, hex(ordinary));
+            }
+            colors[look.ordinal()] = variants;
         }
         return new Palette(colors);
+    }
+
+    /** A colour back as the eight hex digits {@link #color} expects, so a fallback can be a colour. */
+    private static String hex(Color color) {
+        return color.toString();
     }
 
     /**
@@ -139,7 +158,12 @@ public record GraphicConfig(
             colors[terrain.ordinal()] = color(
                     properties, "graphic.terrain." + terrain.name().toLowerCase(Locale.ROOT), fallbackFor(terrain));
         }
-        return new TerrainPalette(colors, properties.getFloat("graphic.region.variance", 0.06f));
+        return new TerrainPalette(
+                colors,
+                properties.getFloat("graphic.region.variance", 0.06f),
+                properties.getFloat("graphic.tile.variance", 0.022f),
+                properties.getInt("graphic.tile.shades", 4),
+                properties.getInt("graphic.tile.patch", 3));
     }
 
     /**

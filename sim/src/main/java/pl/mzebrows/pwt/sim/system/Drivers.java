@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Drag;
@@ -79,14 +80,8 @@ final class Drivers {
      * cover both, or a rescue would be something the game showed you and never let you reach.
      */
     static @Nullable Position livingTarget(ImmutableArray<Entity> commanders) {
-        for (int i = 0; i < commanders.size(); i++) {
-            Entity commander = commanders.get(i);
-            if (down(commander)) {
-                continue;
-            }
-            return POSITION.get(commander);
-        }
-        return null;
+        Entity standing = Players.standing(commanders);
+        return standing == null ? null : POSITION.get(standing);
     }
 
     /**
@@ -121,7 +116,7 @@ final class Drivers {
         float nearestDistance = Float.MAX_VALUE;
         for (int i = 0; i < candidates.size(); i++) {
             Entity candidate = candidates.get(i);
-            if (down(candidate) || FACTION.get(candidate).side != Side.PLAYER) {
+            if (!huntable(candidate)) {
                 continue;
             }
             Position where = POSITION.get(candidate);
@@ -136,11 +131,19 @@ final class Drivers {
         return nearest;
     }
 
+    /**
+     * Whether an alien would come for this: on the player's side, and still on its feet (G0026).
+     *
+     * <p>Asked by the system that decides <em>who</em> is hunted and by the one that works out
+     * <em>how to get there</em>, which is why it is one question rather than two copies. A man who is
+     * down being on one list and off the other is how a pack ends up routing to a corpse.
+     */
+    static boolean huntable(Entity entity) {
+        return !down(entity) && FACTION.get(entity).side == Side.PLAYER;
+    }
+
     /** Off his feet: on the ground bleeding, or on it for good. Narrower than {@link #held}. */
     static boolean down(Entity entity) {
-        if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
-            return true;
-        }
-        return DYING.has(entity) && DYING.get(entity).begun;
+        return Players.down(entity);
     }
 }

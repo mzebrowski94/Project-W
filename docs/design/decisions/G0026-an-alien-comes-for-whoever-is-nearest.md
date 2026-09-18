@@ -40,9 +40,15 @@ back aimed at whatever replaced it, which reads as the AI hallucinating. This is
 argument has been made in this codebase, and the third time it has won.
 
 **No:** *A flow field per man being hunted.* Routes are one grid pass per goal per tick, which is the
-per-unit cost a flow field exists to avoid. The field stays pointed at the commander and everything
-hunting somebody else steers straight and leans off what is in the way, exactly as a provoked unit
-does - and pays the same price when a wall is between them.
+per-unit cost a flow field exists to avoid.
+
+**Amended 2026-09-18.** The half of that which said *the field stays pointed at the commander, and
+everything hunting somebody else steers straight* was wrong in practice, and co-op plus a level with
+rock in it made it obvious: an alien hunting a trooper across a wall walked into the wall and stayed
+there. The answer is not a field per man - that rejection stands - but **one field per strain flooded
+from every man at once**. A multi-source flood settles each tile once, exactly as a single-source one
+does, so it costs the same grid pass and leads every unit to whoever is nearest *by route*. Which is
+what this record said happens all along; it was only ever true by line.
 
 **No:** *Letting a pack finish a man who is down.* It would be consistent, and it would delete the
 rescue: a squad cannot cross open ground to somebody a pack is standing on. A casualty is off the

@@ -64,16 +64,6 @@ public final class Perception implements Component, Pool.Poolable {
     public float targetY;
 
     /**
-     * Whether the thing it is hunting is the commander.
-     *
-     * <p>Published only because routing is cheap for exactly one goal: {@code NavigationSystem} keeps
-     * one flow field per strain pointed at him, and anything hunting somebody else walks straight at
-     * them and leans off what is in the way, as a provoked unit already does. Not a targeting rule -
-     * a fact about which routes are already paid for.
-     */
-    public boolean targetIsCommander;
-
-    /**
      * True while this unit is on its way to somewhere it was provoked from - shot at, struck, or
      * stood next to a point being taken off it.
      *
@@ -130,11 +120,16 @@ public final class Perception implements Component, Pool.Poolable {
         return aggro || provoked || foraging || marching;
     }
 
-    /** Remembers where it is hunting, and whether that is the one thing routes are built for. */
-    public void hunt(float x, float y, boolean commander) {
+    /**
+     * Remembers where it is hunting.
+     *
+     * <p>It used to record whether that was the commander, because routes were built for him alone
+     * and anything hunting somebody else had to walk straight at them. The field is built for every
+     * man on the player's side now, so there is nothing left for the answer to change.
+     */
+    public void hunt(float x, float y) {
         this.targetX = x;
         this.targetY = y;
-        this.targetIsCommander = commander;
     }
 
     /**
@@ -174,7 +169,6 @@ public final class Perception implements Component, Pool.Poolable {
         aggro = false;
         targetX = 0f;
         targetY = 0f;
-        targetIsCommander = false;
         provoked = false;
         provokedX = 0f;
         provokedY = 0f;

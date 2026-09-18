@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_CAPTURE_SECONDS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SPEED;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
@@ -14,6 +15,7 @@ import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -21,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Order;
 
 /**
  * How a squad crosses a level: towards what the level wants taken, looking around on the way.
@@ -69,9 +72,14 @@ class TrooperAdvanceTest {
         assertThat(at(trooper).y).isGreaterThan(20f);
     }
 
-    /** 2.c. A point taken is a point finished with; the squad goes to the next one. */
+    /**
+     * <strong>A point taken is a point held.</strong> The squad stops there and waits to be told to
+     * push on, rather than walking off to the next one the moment the bar fills - so ground the squad
+     * has taken is ground it is still standing on, and the level advances at the commander's pace
+     * rather than at the trooper's.
+     */
     @Test
-    void movesOnToTheNextPointOnceOneIsTaken() {
+    void waitsOnAPointItHasTakenRatherThanWalkingOnToTheNext() {
         Simulation simulation = simulation();
         simulation.spawnCommander(CORNER, CORNER);
         Entity taken = simulation.spawnControlPoint(20f, 20f);
@@ -81,9 +89,81 @@ class TrooperAdvanceTest {
         assertThat(taken.getComponent(ControlPoint.class).captured).isTrue();
 
         float before = at(trooper).x;
+        steps(simulation, 120);
+
+        assertThat(at(trooper).x).isCloseTo(before, Offset.offset(2f));
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);
+    }
+
+    /** And it is still watching while it waits - a squad holding ground is not a squad asleep. */
+    @Test
+    void goesOnLookingAroundWhileItWaits() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(CORNER, CORNER);
+        simulation.spawnControlPoint(20f, 20f);
+        Entity trooper = simulation.spawnTrooper(20f, 20f);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
+
+        float firstLook = facing(trooper);
+        boolean lookedElsewhere = false;
+        // Sampled every tick rather than once at the end: the sweep is periodic, so one late look
+        // can land back exactly where it started and read as a man who never moved his head.
+        for (int i = 0; i < 180 && !lookedElsewhere; i++) {
+            steps(simulation, 1);
+            lookedElsewhere = facing(trooper) != firstLook;
+        }
+
+        assertThat(lookedElsewhere).isTrue();
+    }
+
+    /** 2.c. "Forward" is what sends them on, which is the whole of why the order exists now. */
+    @Test
+    void goesOnToTheNextPointWhenHeSaysForward() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(20f, 32f);
+        simulation.spawnControlPoint(20f, 20f);
+        simulation.spawnControlPoint(80f, 20f);
+        Entity trooper = simulation.spawnTrooper(20f, 20f);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
+
+        float before = at(trooper).x;
+        simulation.step(CommanderInput.IDLE.ordering(Order.FORWARD));
+        steps(simulation, 90);
+
+        assertThat(at(trooper).x).isGreaterThan(before + 5f);
+    }
+
+    /** One press, one point: it holds the next one too rather than running the level on its own. */
+    @Test
+    void waitsAgainOnceItHasTakenTheNextPoint() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(20f, 32f);
+        simulation.spawnControlPoint(20f, 20f);
+        simulation.spawnControlPoint(50f, 20f);
+        simulation.spawnControlPoint(80f, 20f);
+        Entity trooper = simulation.spawnTrooper(20f, 20f);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
+        simulation.step(CommanderInput.IDLE.ordering(Order.FORWARD));
+        steps(simulation, 400);
+
+        float settled = at(trooper).x;
+        steps(simulation, 200);
+
+        assertThat(settled).isCloseTo(50f, Offset.offset(POINT_RADIUS));
+        assertThat(at(trooper).x).isCloseTo(settled, Offset.offset(2f));
+    }
+
+    /** Nothing taken yet, so nothing to wait on: the first walk of a level needs no order. */
+    @Test
+    void walksToTheFirstPointWithoutBeingTold() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(CORNER, CORNER);
+        simulation.spawnControlPoint(80f, 20f);
+        Entity trooper = simulation.spawnTrooper(20f, 20f);
+
         steps(simulation, 60);
 
-        assertThat(at(trooper).x).isGreaterThan(before);
+        assertThat(at(trooper).x).isGreaterThan(22f);
     }
 
     /** 2.c, the other half: nothing left to take, so go and look for whatever is still alive. */
