@@ -18,11 +18,17 @@ import pl.mzebrows.pwt.sim.def.Objective;
 public final class Level implements Component, Pool.Poolable {
 
     /**
-     * Troopers granted by pickups and not yet given to anybody, because the squad does not exist yet.
+     * Troopers a pickup has granted the level and that are not yet standing on it.
      *
-     * <p>Alpha-phase scaffolding, listed as such in {@code docs/design/alpha-phase.md}. It is here so
-     * that a level-scope grant has somewhere real to land and the path can be tested end to end;
-     * nothing in the game reads it, and what replaces it is the squad.
+     * <p>The handover between {@code PickupSystem}, which knows a crate was worth some men, and
+     * {@code ReinforcementSystem}, which knows where a man goes and how many the squad may hold. It
+     * is also the queue those men arrive in: one is put down per tick, so a crate worth three drains
+     * this over three ticks and then it is zero again, which is what it reads for almost all of a
+     * level.
+     *
+     * <p>It survives longer only while there is nobody to form up on - the commander down, and a
+     * trooper having reached the crate. That is a debt owed for a couple of seconds, not a balance:
+     * it pays out on the tick somebody is standing again.
      */
     public int pendingReinforcements;
 

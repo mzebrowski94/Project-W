@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Perception;
+import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Steering;
@@ -28,6 +29,8 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.PickupDef;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -74,12 +77,34 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
     private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
+    private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
 
     private final Defs<UnitKind, UnitDef> units;
+    private final Defs<PickupKind, PickupDef> pickups;
+
+    /**
+     * How far through its pulse everything that shines currently is, in {@code [0, 1)}.
+     *
+     * <p>One phase for the whole level rather than one per entity, and that is the decision rather
+     * than a shortcut: a crate carrying a phase of its own would be a field on a pooled component
+     * that has to be reset, for a difference the player cannot see - two crates are rarely on screen
+     * close enough together for anybody to read whether they pulse together. It is advanced once per
+     * tick from the fixed step, so it is a function of the tick count and a replay matches (pillar 6).
+     */
+    private float shinePhase;
 
     public AppearanceSystem(SimConfig config) {
         super(Family.all(Appearance.class).get());
         this.units = config.units();
+        this.pickups = config.pickups();
+    }
+
+    @Override
+    public void update(float deltaTime) {
+        // Once for the tick, before anything is published, so every shining thing on the field
+        // reports the same moment of the same pulse.
+        shinePhase += deltaTime;
+        super.update(deltaTime);
     }
 
     @Override
@@ -195,6 +220,19 @@ public final class AppearanceSystem extends IteratingSystem {
             appearance.charge = POINT.get(entity).progress();
             return;
         }
+        if (PICKUP.has(entity)) {
+            // Something small on a large map, saying so. It is never full and never empty, which is
+            // what separates a glow from every other thing on this channel - all of those are going
+            // somewhere, and this one is only asking to be noticed.
+            PickupDef def = pickups.of(PICKUP.get(entity).kind);
+            if (def.shines()) {
+                appearance.chargeLook = Look.GLEAM;
+                appearance.charge = pulse(def.shineSeconds());
+            } else {
+                appearance.charge = 0f;
+            }
+            return;
+        }
         if (!FEED.has(entity) || !STRAIN.has(entity)) {
             appearance.charge = 0f;
             return;
@@ -206,6 +244,20 @@ public final class AppearanceSystem extends IteratingSystem {
         }
         float progress = (float) FEED.get(entity).count / def.feedToEvolve();
         appearance.charge = progress < 1f ? progress : 1f;
+    }
+
+    /**
+     * One slow triangle wave, in {@code [0, 1]}, for something that shines.
+     *
+     * <p>A triangle rather than a sine because {@code sin} is banned in {@code sim} - it is specified
+     * only to within an ulp and may differ between JVMs, which pillar 6 does not allow. At this speed
+     * nobody can tell the two apart, and the wave never rests at either end, so the thing is always
+     * either brightening or dimming rather than sitting still at full.
+     */
+    private float pulse(float periodSeconds) {
+        float turns = shinePhase / periodSeconds;
+        float phase = turns - (float) Math.floor(turns);
+        return 1f - Math.abs(phase * 2f - 1f);
     }
 
     private static Appearance.State stateOf(Entity entity) {

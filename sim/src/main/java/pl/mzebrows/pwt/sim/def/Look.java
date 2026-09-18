@@ -84,5 +84,14 @@ public enum Look {
      * A gun that has stopped itself. Told apart from {@link #HEAT} at a glance on purpose - it is the
      * half of the bar that changes what the player should do next.
      */
-    OVERHEAT
+    OVERHEAT,
+    /**
+     * The slow pulse on something worth crossing the ground for.
+     *
+     * <p>A look rather than a flag, for the reason {@link #MENDING} is one: the renderer maps a look
+     * to a colour and asks nothing else (G0003), so "this thing shines" costs a colour in
+     * {@code graphic.properties} and no drawing code at all. It rides the charge channel, which is
+     * already "how full is this" - a thing that is never full and never empty reads as a glow.
+     */
+    GLEAM
 }

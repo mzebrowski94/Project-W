@@ -1,12 +1,20 @@
 package pl.mzebrows.pwt.sim.scenario;
 
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.utils.ImmutableArray;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.Randomness;
 import pl.mzebrows.pwt.map.Scatter;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.Rng;
+import pl.mzebrows.pwt.sim.RngStream;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 
 /**
  * One arena the alpha-phase menu can launch, built to demonstrate and test a system by hand.
@@ -88,5 +96,59 @@ public interface Scenario {
             simulation.spawnCommander(area.centreX(map), area.centreY(map));
         }
         scatter.scatter(area, config.trooper().squadSize(), trooperRadius, simulation::spawnTrooper);
+    }
+
+    /**
+     * Lays a handful of reinforcements beside every control point the level named.
+     *
+     * <p><strong>Men are where the ground you have to take is.</strong> A point already asks you to
+     * walk into somewhere and stand in it while the level answers; putting the crate there makes the
+     * squad you fight with the reward for the fighting, which is pillar 3 stated as a place on the
+     * map rather than as a rule. Scattering them anywhere else would have made them litter.
+     *
+     * <p>Just outside the point's own radius, so it is a step off the ground you are holding rather
+     * than something that lands in your lap for standing still - and jittered into its tiles like
+     * everything else (G0009).
+     *
+     * <p><strong>How many is drawn per point</strong>, between the two numbers the config names. A
+     * fixed number makes every point on a level worth exactly the same and the third one not worth
+     * looking at; a range means walking in to see what is there, which is the same reason nothing
+     * else in this game is laid out on a grid.
+     *
+     * <p>Called by {@code Scenarios.world} after the scenario has populated itself, so it is a fact
+     * about every level rather than a line each one remembers. A scenario that wants none overrides
+     * it; that is what a default method is for.
+     */
+    default void deployReinforcements(Simulation simulation) {
+        SimConfig config = simulation.config();
+        TileMap map = simulation.map();
+        ImmutableArray<Entity> points = simulation
+                .engine()
+                .getEntitiesFor(Family.all(ControlPoint.class, Position.class).get());
+        if (points.size() == 0) {
+            return;
+        }
+        float crateRadius = config.pickup(PickupKind.FROZEN_TROOPER).radius();
+        float reach = config.controlPoint().reinforcementRadius();
+        int fewest = config.controlPoint().reinforcementsMin();
+        int spread = config.controlPoint().reinforcementsMax() - fewest + 1;
+        // Its own stream: where a level lays its crates must not shift because something unrelated
+        // drew a number first, and the layout is settled once, here.
+        Rng rng = Rng.stream(config.seed(), RngStream.REINFORCEMENT);
+        Scatter scatter = new Scatter(map, rng, crateRadius, crateRadius);
+        // Every point is reserved before anything is placed, so a crate laid beside one point is not
+        // laid on top of the next one along.
+        for (int i = 0; i < points.size(); i++) {
+            Position at = points.get(i).getComponent(Position.class);
+            scatter.reserve(at.x, at.y, config.controlPoint().radius());
+        }
+        for (int i = 0; i < points.size(); i++) {
+            Position at = points.get(i).getComponent(Position.class);
+            scatter.scatter(
+                    TileRect.around(map, at.x, at.y, reach),
+                    fewest + rng.nextInt(spread),
+                    crateRadius,
+                    (x, y) -> simulation.spawnPickup(PickupKind.FROZEN_TROOPER, x, y));
+        }
     }
 }

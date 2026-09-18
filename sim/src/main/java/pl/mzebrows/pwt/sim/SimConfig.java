@@ -163,6 +163,8 @@ public record SimConfig(
                         1.6f,
                         13.5f,
                         4,
+                        8,
+                        7f,
                         100f,
                         1f,
                         WeaponKind.SIDEARM,
@@ -195,7 +197,7 @@ public record SimConfig(
                 new BarrelConfig(1f, 11f, 4f),
                 new CasualtyConfig(8f, 0.8f, 0.4f, 1f, 0f, 1.6f),
                 new ActionConfig(2.5f, 0.45f, 0.35f, 0.4f),
-                new ControlPointConfig(6f, 5f, 48f),
+                new ControlPointConfig(6f, 5f, 48f, 12f, 2, 3),
                 new TurretConfig(2.2f, 300f, 6f, 2.5f, 0.3f, 55f, 26f, 6f, WeaponKind.TURRET_GUN),
                 new ObstacleConfig(3.5f, 8),
                 new CollisionConfig(3));
@@ -352,18 +354,18 @@ public record SimConfig(
      */
     private static Defs<PickupKind, PickupDef> defaultPickups() {
         return Defs.<PickupKind, PickupDef>builder(PickupKind.class)
-                .put(PickupKind.MUSHROOM, new PickupDef(0.9f, Look.MUSHROOM, Grant.NOTHING, new Grant.Feed(1)))
+                .put(PickupKind.MUSHROOM, new PickupDef(0.9f, Look.MUSHROOM, Grant.NOTHING, new Grant.Feed(1), 0f))
                 .put(
                         PickupKind.FLOWER,
-                        new PickupDef(0.9f, Look.FLOWER, Grant.NOTHING, new Grant.Mutate(UnitKind.BRUTE)))
+                        new PickupDef(0.9f, Look.FLOWER, Grant.NOTHING, new Grant.Mutate(UnitKind.BRUTE), 0f))
                 .put(
                         PickupKind.FROZEN_TROOPER,
-                        new PickupDef(1.6f, Look.FROZEN_TROOPER, new Grant.Reinforce(1), new Grant.Feed(1)))
+                        new PickupDef(0.9f, Look.FROZEN_TROOPER, new Grant.Reinforce(3), new Grant.Feed(1), 1.8f))
                 .put(
                         PickupKind.ARMOURY,
-                        new PickupDef(1.2f, Look.ARMOURY, new Grant.Arm(WeaponKind.RAILGUN), new Grant.Feed(1)))
-                .put(PickupKind.RABBIT, new PickupDef(0.8f, Look.RABBIT, Grant.NOTHING, new Grant.Feed(1)))
-                .put(PickupKind.BARREL, new PickupDef(1f, Look.BARREL, Grant.NOTHING, Grant.DETONATE))
+                        new PickupDef(1.2f, Look.ARMOURY, new Grant.Arm(WeaponKind.RAILGUN), new Grant.Feed(1), 2.6f))
+                .put(PickupKind.RABBIT, new PickupDef(0.8f, Look.RABBIT, Grant.NOTHING, new Grant.Feed(1), 0f))
+                .put(PickupKind.BARREL, new PickupDef(1f, Look.BARREL, Grant.NOTHING, Grant.DETONATE, 0f))
                 .build();
     }
 
@@ -403,13 +405,30 @@ public record SimConfig(
      *     whether a point is a formality or a fight - it is the window the level has to answer with
      * @param aggroRadius how far the noise of an attempt carries, in world units. Longer than a
      *     unit's own detection range on purpose: taking a point is meant to bring things to you
+     * @param reinforcementRadius how far from a point the level lays its reinforcements, in world
+     *     units. Outside the point's own radius, so fetching one is a step off the ground you are
+     *     holding rather than something you collect by standing still
+     * @param reinforcementsMin fewest crates a point is worth
+     * @param reinforcementsMax most. Drawn between the two from the level seed, so the points on a
+     *     level are not all worth exactly the same and none of them is worth guessing about
      */
     @With
-    public record ControlPointConfig(float radius, float captureSeconds, float aggroRadius) {
+    public record ControlPointConfig(
+            float radius,
+            float captureSeconds,
+            float aggroRadius,
+            float reinforcementRadius,
+            int reinforcementsMin,
+            int reinforcementsMax) {
         public ControlPointConfig {
             Require.positive("control point radius", radius);
             Require.positive("control point captureSeconds", captureSeconds);
             Require.notNegative("control point aggroRadius", aggroRadius);
+            Require.positive("control point reinforcementRadius", reinforcementRadius);
+            Require.notNegative("control point reinforcementsMin", reinforcementsMin);
+            if (reinforcementsMax < reinforcementsMin) {
+                throw new IllegalArgumentException("control point reinforcementsMax must not be below its minimum");
+            }
         }
     }
 
@@ -516,6 +535,12 @@ public record SimConfig(
      *     following him strings out behind rather than crowding him
      * @param squadSize how many spawn with him. <strong>Scenario-facing</strong>: a scenario varies it
      *     through {@code withTrooper(...)} rather than by editing {@code game.properties}
+     * @param squadGrowth how many men beyond the ones he starts with the field will hold. The squad's
+     *     maximum is {@code squadSize + squadGrowth}, and reinforcements stop there. Expressed as
+     *     headroom rather than as a ceiling so that a scenario raising {@code squadSize} cannot
+     *     accidentally configure a maximum below its own starting squad
+     * @param reinforcementRadius how far from the commander a rescued trooper is put down, in world
+     *     units. Close enough that the men you won are in the fight you won them in
      * @param health damage one absorbs before dying
      * @param deathThroesSeconds how long its body stays on the field after a killing blow
      * @param weapon the gun it carries
@@ -548,6 +573,8 @@ public record SimConfig(
             float radius,
             float speed,
             int squadSize,
+            int squadGrowth,
+            float reinforcementRadius,
             float health,
             float deathThroesSeconds,
             WeaponKind weapon,
@@ -567,6 +594,8 @@ public record SimConfig(
             Require.positive("trooper radius", radius);
             Require.positive("trooper speed", speed);
             Require.notNegative("trooper squadSize", squadSize);
+            Require.notNegative("trooper squadGrowth", squadGrowth);
+            Require.positive("trooper reinforcementRadius", reinforcementRadius);
             Require.positive("trooper health", health);
             Require.notNegative("trooper deathThroesSeconds", deathThroesSeconds);
             Require.notNegative("trooper scanSpread", scanSpread);

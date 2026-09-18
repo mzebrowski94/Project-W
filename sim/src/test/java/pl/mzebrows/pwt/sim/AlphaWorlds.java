@@ -377,6 +377,24 @@ public final class AlphaWorlds {
     /** Small on purpose: a test that spawns a squad should be able to name every member of it. */
     public static final int SQUAD_SIZE = 3;
 
+    /** Headroom for reinforcements. Small, so a test can fill the squad without spawning a crowd. */
+    public static final int SQUAD_GROWTH = 3;
+
+    /** Two tiles and a bit, so a man who forms up on the commander is plainly beside him. */
+    public static final float TROOPER_REINFORCEMENT_RADIUS = 7f;
+
+    /** Outside the point's own radius, as the shipped one is. */
+    public static final float POINT_REINFORCEMENT_RADIUS = 12f;
+
+    /** Fixed rather than a range, so a test counting crates is not also testing the dice. */
+    public static final int POINT_REINFORCEMENTS = 2;
+
+    /** What one crate is worth. Three, as the shipped one is. */
+    public static final int CRATE_TROOPERS = 3;
+
+    /** Round, so a test can step a whole pulse without counting fractions of a tick. */
+    public static final float SHINE_SECONDS = 2f;
+
     /** Wide enough that a squad fits inside it, as the shipped one is. */
     public static final float POINT_RADIUS = 6f;
 
@@ -471,6 +489,8 @@ public final class AlphaWorlds {
                         TROOPER_RADIUS,
                         TROOPER_SPEED,
                         SQUAD_SIZE,
+                        SQUAD_GROWTH,
+                        TROOPER_REINFORCEMENT_RADIUS,
                         TROOPER_HEALTH,
                         DEATH_THROES,
                         WeaponKind.SIDEARM,
@@ -494,21 +514,37 @@ public final class AlphaWorlds {
                         .put(UnitKind.RUNNER, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.RUNNER))
                         .build(),
                 Defs.<PickupKind, PickupDef>builder(PickupKind.class)
-                        .put(PickupKind.MUSHROOM, new PickupDef(PICKUP_RADIUS, Look.MUSHROOM, Grant.NOTHING, MOUTHFUL))
+                        .put(
+                                PickupKind.MUSHROOM,
+                                new PickupDef(PICKUP_RADIUS, Look.MUSHROOM, Grant.NOTHING, MOUTHFUL, 0f))
                         .put(
                                 PickupKind.FLOWER,
                                 new PickupDef(
-                                        PICKUP_RADIUS, Look.FLOWER, Grant.NOTHING, new Grant.Mutate(UnitKind.BRUTE)))
+                                        PICKUP_RADIUS,
+                                        Look.FLOWER,
+                                        Grant.NOTHING,
+                                        new Grant.Mutate(UnitKind.BRUTE),
+                                        0f))
                         .put(
                                 PickupKind.FROZEN_TROOPER,
-                                new PickupDef(PICKUP_RADIUS, Look.FROZEN_TROOPER, new Grant.Reinforce(1), MOUTHFUL))
+                                new PickupDef(
+                                        PICKUP_RADIUS,
+                                        Look.FROZEN_TROOPER,
+                                        new Grant.Reinforce(CRATE_TROOPERS),
+                                        MOUTHFUL,
+                                        SHINE_SECONDS))
                         .put(
                                 PickupKind.ARMOURY,
-                                new PickupDef(PICKUP_RADIUS, Look.ARMOURY, new Grant.Arm(WeaponKind.RAILGUN), MOUTHFUL))
-                        .put(PickupKind.RABBIT, new PickupDef(RABBIT_RADIUS, Look.RABBIT, Grant.NOTHING, MOUTHFUL))
+                                new PickupDef(
+                                        PICKUP_RADIUS,
+                                        Look.ARMOURY,
+                                        new Grant.Arm(WeaponKind.RAILGUN),
+                                        MOUTHFUL,
+                                        SHINE_SECONDS))
+                        .put(PickupKind.RABBIT, new PickupDef(RABBIT_RADIUS, Look.RABBIT, Grant.NOTHING, MOUTHFUL, 0f))
                         .put(
                                 PickupKind.BARREL,
-                                new PickupDef(PICKUP_RADIUS, Look.BARREL, Grant.NOTHING, Grant.DETONATE))
+                                new PickupDef(PICKUP_RADIUS, Look.BARREL, Grant.NOTHING, Grant.DETONATE, 0f))
                         .build(),
                 Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
                         .put(
@@ -595,7 +631,13 @@ public final class AlphaWorlds {
                         DRAGGED_BLEED_FACTOR,
                         HAULED_STABILISE_FACTOR),
                 new SimConfig.ActionConfig(ACTION_REACH, DRAG_SPEED_FACTOR, DRAG_LATERAL_FACTOR, DRAG_GAP),
-                new SimConfig.ControlPointConfig(POINT_RADIUS, POINT_CAPTURE_SECONDS, POINT_AGGRO_RADIUS),
+                new SimConfig.ControlPointConfig(
+                        POINT_RADIUS,
+                        POINT_CAPTURE_SECONDS,
+                        POINT_AGGRO_RADIUS,
+                        POINT_REINFORCEMENT_RADIUS,
+                        POINT_REINFORCEMENTS,
+                        POINT_REINFORCEMENTS),
                 new SimConfig.TurretConfig(
                         TURRET_RADIUS,
                         TURRET_HEALTH,

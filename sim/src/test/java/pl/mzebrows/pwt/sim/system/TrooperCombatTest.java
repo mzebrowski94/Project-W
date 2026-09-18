@@ -22,6 +22,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Leap;
+import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Strike;
@@ -173,7 +174,14 @@ class TrooperCombatTest {
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.ADVANCE);
     }
 
-    /** 1.e. Rare in the shipped numbers; here the dice are rigged so the behaviour is testable at all. */
+    /**
+     * 1.e. Rare in the shipped numbers; here the dice are rigged so the behaviour is testable at all.
+     *
+     * <p><strong>The probe is the trooper's hand, not a sweep still standing on the field.</strong> A
+     * sweep that connects is spent on the tick it connects, and a creature leaping at the man beside
+     * it now genuinely arrives - so counting strike entities afterwards counts whether the blow
+     * missed, which is not what this test is about.
+     */
     @Test
     void swingsAtSomethingAlreadyCommittedToALeap() {
         Simulation simulation = alwaysSwinging();
@@ -185,16 +193,20 @@ class TrooperCombatTest {
 
         steps(simulation, 3);
 
-        assertThat(count(simulation, Strike.class)).isGreaterThan(0);
+        assertThat(swung(trooper)).isTrue();
     }
 
     /**
      * A sweep at something merely walking is a swat that earns no clinch (G0013). A trooper spending
      * its swing on one would be standing there with its hands busy while the thing walked into it.
+     *
+     * <p>The creature here can leap and never does: its trigger range is nothing, so it is walking at
+     * the trooper with its {@code Leap} in hand. That is the case the rule is about - the version
+     * with no {@code Leap} at all would pass by having nothing to swing at.
      */
     @Test
     void neverSwingsAtSomethingThatIsMerelyWalkingAtIt() {
-        Simulation simulation = alwaysSwinging();
+        Simulation simulation = alwaysSwingingAtSomethingThatNeverLeaps();
         simulation.spawnCommander(CORNER, CORNER);
         Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
         simulation.spawnEnemy(MIDDLE + 2f, MIDDLE);
@@ -202,6 +214,7 @@ class TrooperCombatTest {
 
         steps(simulation, 3);
 
+        assertThat(swung(trooper)).isFalse();
         assertThat(count(simulation, Strike.class)).isZero();
     }
 
@@ -223,6 +236,19 @@ class TrooperCombatTest {
         SimConfig base = everyStrain(
                 AlphaWorlds.config(), strain -> strain.withContactDamage(0f).withLeap(leapConfig()));
         return new Simulation(base.withChance(AiChance.SWING_AT_A_LEAP, AlphaWorlds.CERTAIN));
+    }
+
+    /** Leaping strains whose trigger range is nothing: they carry a leap and never commit to one. */
+    private static Simulation alwaysSwingingAtSomethingThatNeverLeaps() {
+        SimConfig base = everyStrain(
+                AlphaWorlds.config(),
+                strain -> strain.withContactDamage(0f).withLeap(leapConfig().withTriggerRange(0f)));
+        return new Simulation(base.withChance(AiChance.SWING_AT_A_LEAP, AlphaWorlds.CERTAIN));
+    }
+
+    /** Whether this man's hands have been busy: a swing is what puts his melee on its cooldown. */
+    private static boolean swung(Entity trooper) {
+        return trooper.getComponent(Melee.class).remainingSeconds > 0f;
     }
 
     private static void facing(Entity trooper, float x, float y) {

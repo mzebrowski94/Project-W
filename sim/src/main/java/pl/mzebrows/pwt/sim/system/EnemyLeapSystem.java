@@ -8,14 +8,14 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.Rng;
-import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Leap;
+import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Velocity;
 
 /**
- * Throws a unit at the commander once he is close enough, and owns its velocity while it is in the
- * air.
+ * Throws a unit at whoever it is hunting once he is close enough, and owns its velocity while it is
+ * in the air.
  *
  * <p>Runs after {@code EnemyChaseSystem} on purpose: chasing writes a velocity for every enemy every
  * tick, and this overwrites it for the ones that are doing something more interesting. That ordering
@@ -33,20 +33,30 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  *   <li><strong>A stun cancels the whole sequence.</strong> That is what a landed counter is for: it
  *       does not merely interrupt this hop, it puts the unit back to walking and starts its cooldown.
  * </ul>
+ *
+ * <p><strong>Who it leaps at is read off its own {@code Perception}</strong>, which is where the
+ * answer already lives (G0026): {@code PerceptionSystem} decides, every tick, who on the player's
+ * side is nearest to <em>this</em> unit and publishes it as a place. Asking a second time here is how
+ * this system spent a while throwing every leaper in the level at the first commander who happened to
+ * be standing - the second player was never leapt at, and neither was a trooper. A unit that has not
+ * noticed anybody does not leap; that is the same gate everything else it does goes through.
  */
 public final class EnemyLeapSystem extends EntitySystem {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
+    private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
 
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
     private static final float EPSILON = 1e-4f;
 
     private final Rng rng;
 
+    /** Scratch for the place being leapt at, so reading it costs no allocation per unit per tick. */
+    private final Position hunted = new Position();
+
     private ImmutableArray<Entity> leapers = new ImmutableArray<>(new Array<>());
-    private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
 
     public EnemyLeapSystem(Rng rng) {
         this.rng = rng;
@@ -54,15 +64,12 @@ public final class EnemyLeapSystem extends EntitySystem {
 
     @Override
     public void addedToEngine(Engine engine) {
-        leapers = engine.getEntitiesFor(
-                Family.all(Leap.class, Position.class, Velocity.class).get());
-        commanders = engine.getEntitiesFor(
-                Family.all(Commander.class, Position.class).get());
+        leapers = engine.getEntitiesFor(Family.all(Leap.class, Position.class, Velocity.class, Perception.class)
+                .get());
     }
 
     @Override
     public void update(float deltaTime) {
-        Position target = Drivers.livingTarget(commanders);
         for (int i = 0; i < leapers.size(); i++) {
             Entity entity = leapers.get(i);
             Leap leap = LEAP.get(entity);
@@ -75,13 +82,15 @@ public final class EnemyLeapSystem extends EntitySystem {
             if (!leap.enabled) {
                 continue;
             }
-            if (target == null) {
+            Perception perception = PERCEPTION.get(entity);
+            if (!perception.aggro) {
                 if (leap.committed()) {
                     leap.finish();
                 }
                 continue;
             }
-            advance(entity, leap, target);
+            hunted.set(perception.targetX, perception.targetY);
+            advance(entity, leap, hunted);
         }
     }
 

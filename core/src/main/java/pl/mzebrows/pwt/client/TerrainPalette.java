@@ -68,8 +68,7 @@ public final class TerrainPalette {
      * @param tilePatch how many tiles across one patch of a single shade is. One hashes every tile
      *     on its own, which is white noise and reads as static; a few tiles reads as ground.
      */
-    public TerrainPalette(
-            Color[] byTerrain, float regionVariance, float tileVariance, int tileShades, int tilePatch) {
+    public TerrainPalette(Color[] byTerrain, float regionVariance, float tileVariance, int tileShades, int tilePatch) {
         if (byTerrain.length != Terrain.values().length) {
             throw new IllegalArgumentException("terrain palette needs one colour per terrain, got " + byTerrain.length
                     + " of " + Terrain.values().length);

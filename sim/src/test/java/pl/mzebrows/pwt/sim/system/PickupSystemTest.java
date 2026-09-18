@@ -5,13 +5,12 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 
 import com.badlogic.ashley.core.Entity;
-import com.badlogic.ashley.core.Family;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
-import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Pickup;
+import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -113,14 +112,16 @@ class PickupSystemTest {
         rescued.step();
         eaten.step();
 
-        assertThat(level(rescued).pendingReinforcements).isEqualTo(1);
-        assertThat(level(eaten).pendingReinforcements).isZero();
+        assertThat(count(rescued, Trooper.class)).isEqualTo(1);
+        assertThat(count(eaten, Trooper.class)).isZero();
         assertThat(grunt.getComponent(Feed.class).count).isEqualTo(1);
     }
 
     /**
      * A grant that belongs to nobody in particular lands on the level entity, which is how the
-     * simulation reaches level-scope state without the message queue G0004 rejected.
+     * simulation reaches level-scope state without the message queue G0004 rejected. Nothing reaches
+     * the taker at all - {@code ReinforcementSystem} turns the level's count into a man the same
+     * tick, which is what {@code ReinforcementSystemTest} is about.
      */
     @Test
     void landsALevelScopeGrantOnTheLevelRatherThanOnTheTaker() {
@@ -131,7 +132,7 @@ class PickupSystemTest {
         simulation.step();
 
         assertThat(commander.getComponent(Feed.class)).isNull();
-        assertThat(level(simulation).pendingReinforcements).isEqualTo(1);
+        assertThat(count(simulation, Trooper.class)).isEqualTo(1);
     }
 
     /** A body in its throes is scenery, and scenery does not go shopping. */
@@ -146,13 +147,5 @@ class PickupSystemTest {
 
         assertThat(grunt.getComponent(Feed.class).count).isZero();
         assertThat(count(simulation, Pickup.class)).isEqualTo(1);
-    }
-
-    private static Level level(Simulation simulation) {
-        return simulation
-                .engine()
-                .getEntitiesFor(Family.all(Level.class).get())
-                .first()
-                .getComponent(Level.class);
     }
 }

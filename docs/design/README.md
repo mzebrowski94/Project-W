@@ -79,8 +79,13 @@ rows become enforceable once the named feature exists - promote them then.
 | Only `ReaperSystem` removes an entity; anything that kills only marks it `Dead`. | enforced - `ArchitectureTest.onlyTheReaperRemovesEntities` |
 | Damage only ever crosses faction lines, never stays inside one - and a source on **nobody's** side crosses every one of them, which is how a blast reaches the commander who caused it. | enforced - `CombatTest.neverLetsEnemiesHurtEachOther`, `BarrelTest.putsDownTheCommanderWhoShootsOneFromTooCloseUp` |
 | Invulnerability is reachable from the harness only, never from a scenario or config. | enforced - `ArchitectureTest.scenariosCannotSwitchOnGodMode` |
-| Troopers lost during a level stay lost for that level. | enforced - `SquadTest.keepsATrooperLostDuringALevelLost` |
-| Squad size never exceeds its configured maximum. | enforced - `SquadTest.neverPutsMoreTroopersOnTheFieldThanTheSquadAllows`; a scenario sets it, not the build |
+| Troopers lost during a level stay lost for that level. **A reinforcement is a new man won from the field, never the one you lost** - nothing revives a casualty who bled out, and the crate that replaces him had to be walked to and could have been eaten first. | enforced - `SquadTest.keepsATrooperLostDuringALevelLost` |
+| Squad size never exceeds its configured maximum: the squad the level started with plus its configured headroom. A reinforcement past it is **wasted, not banked** - a reserve that paid out later would be a number the player tracks and the game does not show (pillar 5). | enforced - `SquadTest.neverPutsMoreTroopersOnTheFieldThanTheSquadAllows`, `ReinforcementSystemTest.neverPutsMoreMenOnTheFieldThanTheSquadAllows`, `.takesAsManyAsTheSquadHasRoomForAndNoMore`; a scenario sets both numbers, not the build |
+| A reinforcement becomes men beside the commander and nowhere else (G0030), **one a tick** - a crate is worth several and they arrive in a queue rather than in a heap. With nobody standing it is owed rather than lost, and it pays out on the tick somebody is back on his feet. | enforced - `ReinforcementSystemTest.putsHimDownBesideTheCommander`, `.putsOneManDownPerTickRatherThanTheWholeCrateAtOnce`, `.keepsAReinforcementOwedWhileNobodyIsStandingToFormUpOn`, `.deliversWhatItOwedOnceSomebodyIsStandingAgain` |
+| Every control point a level names has a handful of reinforcements lying just outside it, how many drawn per point. Men are where the ground you have to take is (G0030). | enforced - `ReinforcementDeployTest.laysAHandfulOfReinforcementsBesideEveryControlPoint`, `.keepsItOffThePointItself`, `.keepsItWithinReachOfThePointItBelongsTo` |
+| **A trooper taking or holding a point still watches and still shoots.** A fight outranks the ground it is standing on, so the squad is never caught watching a bar fill while something walks into it. | enforced - `TrooperAdvanceTest.goesOnLookingAroundWhileItTakesAPoint`, `.firesFromAPointItIsStandingOnWhenSomethingComesAtIt`, `.goesBackToHoldingThePointOnceTheFightIsOver` |
+| **A creature leaps at whoever it is hunting**, which is whoever on the player's side is nearest to it (G0026) - any commander, or a trooper. Never "the commander", which meant the first one standing. | enforced - `EnemyLeapSystemTest.leapsAtTheSecondPlayerWhenHeIsTheOneStandingInFrontOfIt`, `.leapsAtATrooperWhenItIsTheNearestManOnTheField`, `.leapsAtNobodyOnceThereIsNobodyLeftToHunt` |
+| A pickup worth crossing the ground for glows; the rest is scenery. Zero shine means not for me. | judgement - `PickupDef.shineSeconds`, published by `AppearanceSystem` on the charge channel |
 | Every projectile is a simulated entity with a `Position` and a `Body`. No hitscan. | enforced - `SpawnerTest.givesEveryProjectileAPositionAndABody` |
 | Every melee strike is a simulated entity with a `Position` and a `Body`. No melee hitscan (G0005). | enforced - `SpawnerTest.givesEveryStrikeAPositionAndABodySoThereIsNoMeleeHitscan` |
 | A blow that kills holds both the attacker and its victim - that is the clinch. A melee kill does so only when its victim had already committed to attacking; a swat on something merely walking holds only the corpse (G0013). | enforced - `StunTest.holdsBothTheAttackerAndItsVictimWhenTheBlowKills`, `StrikeCombatTest.tanglesHimUpWhenHisSweepKillsSomethingMidLeap`, `.leavesHimFreeWhenHisSweepKillsSomethingThatWasNotComingAtHim` |
@@ -257,6 +262,13 @@ reinforcement, lose it and the thing chasing you is one mouthful closer to being
 that offers a side nothing is not consumed by that side, so denial has to be earned rather than
 handed over.
 
+**A reinforcement is won where the fighting is.** One lies beside every control point, which is the
+only placement that makes pillar 3 a place on the map rather than a rule in a document: the ground
+the level already asks you to walk into and hold is the ground the next man is standing on. Scattering
+them loose would have made them litter, and putting them in the spawn area would have made them a
+free top-up. Taking one puts a man down beside the commander at once - there is no timer, no drop ship
+and nothing to defend, because a mechanic that makes the player stop and wait is pillar 1's problem.
+
 ## Input map
 
 One key, one action. **Adding a binding means editing this table in the same change** - this is the
@@ -392,5 +404,8 @@ mistaken for a decision.
 - Can a pickup be destroyed? Shooting a mushroom would make denial something the player can do at
   range rather than only by standing on it, and would change how a feeding ground reads. Nothing
   supports it today.
-- What happens to a reinforcement? It lands on the level entity and is counted; who it becomes needs
-  the squad.
+- ~~What happens to a reinforcement?~~ **Answered 2026-09-18:** it becomes a trooper, put down beside
+  the commander, up to a ceiling of the starting squad plus its configured headroom. Crates are laid
+  beside the control points, so the squad you fight with is the reward for taking ground. Still open
+  underneath it: whether the ceiling should be per level or carried between them, which is the same
+  question as whether the squad persists between levels.

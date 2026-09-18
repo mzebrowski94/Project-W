@@ -43,7 +43,8 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **shunned** | A pickup that is steered around rather than walked over, because what it hands whoever takes it is an explosion. Derived from the grant rather than declared beside it, so the two can never disagree. The barrel is the only one - and it is shunned **by whatever cannot use one**: anything that can **swallow** an explosive crosses the ground for it like any other food (G0022). |
 | **swallow** | Taking an explosive whole instead of setting it off. No blast at all: the creature is carrying it now. |
 | **rabbit** | Alien food that runs away. A pickup in every way that matters - claimed on contact, granted from the same table - but it walks, it dodges, and it can be shot. The commander is offered nothing by one, so his only interest is denying it. |
-| **reinforcement** *(source)* | A pickup that adds troopers to the squad. Until the squad exists, one lands on the level entity and is counted there. |
+| **reinforcement** *(source)* | A pickup that adds troopers to the squad - three of them, as the shipped one is. Taking one lands a count on the level entity, which `ReinforcementSystem` turns into men standing beside the commander, one a tick, up to the squad's maximum and wasted past it. A level lays two or three beside every control point. |
+| **shine** | The slow pulse on a pickup worth crossing the ground for. Declared per kind as `shineSeconds`, zero meaning it does not shine, and published on the charge channel as `Look.GLEAM` so the renderer draws it without being told what the thing is. |
 
 ### Fighting
 
@@ -164,7 +165,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 
 | Term | Meaning |
 |---|---|
-| **frozen trooper** | Alpha-phase scaffolding: an inert body on the field, a reinforcement to the commander and a mouthful to an alien. **Not a trooper** - the squad does not exist yet, and nothing about this answers whether it will work this way when it does. |
+| **frozen trooper** | An inert body on the field: a reinforcement to the commander and a mouthful to an alien, contested by both. It is **not a trooper** while it lies there - it does not follow, cannot be commanded and cannot die - and it becomes one only once he reaches it. |
 
 ## Words we do not use
 

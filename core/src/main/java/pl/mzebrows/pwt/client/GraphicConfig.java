@@ -142,6 +142,7 @@ public record GraphicConfig(
             case MENDING -> "4ce88aff";
             case HEAT -> "ffc24aff";
             case OVERHEAT -> "ff4a2aff";
+            case GLEAM -> "ffffffff";
             case NONE -> "ff00ffff";
         };
     }

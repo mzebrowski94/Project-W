@@ -307,12 +307,21 @@ final class AdventureScenario implements Scenario {
         pickups(simulation, map, PickupKind.MUSHROOM, 65, 12, 71, 22, 78, 8, 86, 15, 69, 26);
         pickups(simulation, map, PickupKind.FLOWER, 67, 9, 84, 21);
         rabbits(simulation, map, 62, 24, 80, 11);
+        // The first caches, and nothing before them. The plain and the dust are what a sidearm is
+        // tuned for, and a better gun handed out in either would be a shortcut past the half of the
+        // march that teaches you to aim. They are contested like anything else - a runner that
+        // reaches one first eats it - so a gun this far east is something to get to rather than
+        // something to collect.
+        pickups(simulation, map, PickupKind.ARMOURY, 76, 20, 87, 11);
 
         // The quarry: brutes in the way, spitters behind them, and barrels among them.
         units(simulation, map, UnitKind.BRUTE, 92, 7, 94, 18, 99, 3, 100, 25, 106, 22, 108, 9, 113, 15, 117, 5);
         units(simulation, map, UnitKind.SPITTER, 92, 12, 97, 21, 99, 8, 102, 4, 106, 15, 109, 26, 114, 20, 118, 11);
         grunts(simulation, map, 93, 4, 98, 25, 101, 10, 107, 17, 112, 24, 115, 13);
         barrels(simulation, map, 94, 14, 100, 17, 109, 12, 115, 25);
+        // More of them here, because everything in the quarry outlives a sidearm and a gun lost with
+        // a death has to be findable again.
+        pickups(simulation, map, PickupKind.ARMOURY, 96, 16, 104, 6, 116, 22);
 
         // Points only. Clearing a level this size of everything alive is a different game.
         Level level = simulation.level();

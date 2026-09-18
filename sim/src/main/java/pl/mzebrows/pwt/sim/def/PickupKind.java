@@ -12,7 +12,7 @@ public enum PickupKind {
     MUSHROOM,
     /** Alien food that is not food at all: whatever eats one turns into something else on the spot. */
     FLOWER,
-    /** A trooper in stasis. Alpha-phase scaffolding - the squad does not exist yet. */
+    /** A trooper in stasis: a man to the commander who reaches it, a mouthful to the alien that does. */
     FROZEN_TROOPER,
     /** A weapons cache: a better gun to the commander, and a mouthful to whatever reaches it first. */
     ARMOURY,

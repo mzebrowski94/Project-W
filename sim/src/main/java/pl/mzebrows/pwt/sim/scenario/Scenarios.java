@@ -49,6 +49,8 @@ public final class Scenarios {
         TileMap map = scenario.map(config, Rng.stream(config.seed(), RngStream.MAP));
         Simulation simulation = new Simulation(config, map);
         scenario.populate(simulation);
+        // After the scenario, because it is the scenario that says where the control points are.
+        scenario.deployReinforcements(simulation);
         return simulation;
     }
 }

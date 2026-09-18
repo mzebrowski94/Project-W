@@ -1,8 +1,11 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_CAPTURE_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_RADIUS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SCAN_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SPEED;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
@@ -15,12 +18,15 @@ import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Order;
@@ -294,6 +300,66 @@ class TrooperAdvanceTest {
 
         assertThat(facing(first)).isNotEqualTo(facing(second));
         assertThat(facing(second)).isNotEqualTo(facing(third));
+    }
+
+    /**
+     * Taking a point is not a job that takes a man's attention off the field. He stands on it and
+     * goes on sweeping, which is what makes a point somewhere the level can answer rather than
+     * somewhere the squad stands blind.
+     */
+    @Test
+    void goesOnLookingAroundWhileItTakesAPoint() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(CORNER, CORNER);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + 1f, MIDDLE);
+        steps(simulation, 2);
+
+        float wasLooking = facing(trooper);
+        steps(simulation, ticksIn(TROOPER_SCAN_SECONDS) + 4);
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);
+        assertThat(facing(trooper)).isNotEqualTo(wasLooking);
+    }
+
+    /**
+     * And it shoots what turns up. A fight outranks the point it is standing on - the mode is chosen
+     * before anything about objectives is asked - so the squad is never caught watching a bar fill
+     * while something walks into it.
+     */
+    @Test
+    void firesFromAPointItIsStandingOnWhenSomethingComesAtIt() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(CORNER, CORNER);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + 1f, MIDDLE);
+        steps(simulation, 2);
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);
+
+        simulation.spawnEnemy(MIDDLE + 12f, MIDDLE);
+        trooper.getComponent(Trooper.class).look(1f, 0f);
+        steps(simulation, 3);
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+        assertThat(AlphaWorlds.count(simulation, Projectile.class)).isGreaterThan(0);
+    }
+
+    /** And goes back to holding it once the fight is over, rather than walking off after the body. */
+    @Test
+    void goesBackToHoldingThePointOnceTheFightIsOver() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(CORNER, CORNER);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + 1f, MIDDLE);
+        Entity enemy = simulation.spawnEnemy(MIDDLE + 12f, MIDDLE);
+        trooper.getComponent(Trooper.class).look(1f, 0f);
+        steps(simulation, 2);
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+
+        enemy.getComponent(Damage.class).add(ENEMY_HEALTH * 2f, 0f);
+        steps(simulation, ticksIn(DEATH_THROES) + 4);
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);
     }
 
     private static float facing(Entity trooper) {

@@ -47,6 +47,7 @@ import pl.mzebrows.pwt.sim.system.PickupSystem;
 import pl.mzebrows.pwt.sim.system.PositionHistorySystem;
 import pl.mzebrows.pwt.sim.system.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.ReaperSystem;
+import pl.mzebrows.pwt.sim.system.ReinforcementSystem;
 import pl.mzebrows.pwt.sim.system.RespawnSystem;
 import pl.mzebrows.pwt.sim.system.SquadOrderSystem;
 import pl.mzebrows.pwt.sim.system.StrikeSystem;
@@ -177,6 +178,12 @@ public final class Simulation {
         engine.addSystem(new RespawnSystem(spawner));
         engine.addSystem(new BlastSystem(map, spawner));
         engine.addSystem(new ProjectileBoundsSystem(map, spawner));
+        // With the other systems that are about the level rather than about anything standing in it,
+        // and after the solver has settled every position: a man who arrives forms up on where the
+        // commander actually ended up. After the death chain too, so a trooper who arrives this tick
+        // is not counted among the dead this tick's reaper is about to take.
+        engine.addSystem(
+                new ReinforcementSystem(config, map, spawner, Rng.stream(config.seed(), RngStream.REINFORCEMENT)));
         // Before the objectives, and at the end of the tick with the other systems that are about the
         // level rather than about anything standing in it: a level whose last wave lands this tick
         // must not read as complete for the tick before the aliens appear.

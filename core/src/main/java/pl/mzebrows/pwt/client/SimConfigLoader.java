@@ -80,6 +80,8 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.trooper.radius", defaults.radius()),
                 properties.getFloat("sim.trooper.speed", defaults.speed()),
                 properties.getInt("sim.trooper.squadSize", defaults.squadSize()),
+                properties.getInt("sim.trooper.squadGrowth", defaults.squadGrowth()),
+                properties.getFloat("sim.trooper.reinforcementRadius", defaults.reinforcementRadius()),
                 properties.getFloat("sim.trooper.health", defaults.health()),
                 properties.getFloat("sim.trooper.deathThroesSeconds", defaults.deathThroesSeconds()),
                 defaults.weapon(),
@@ -175,7 +177,10 @@ public final class SimConfigLoader {
         for (PickupKind kind : PickupKind.values()) {
             PickupDef fallback = defaults.pickup(kind);
             String prefix = "sim.pickup." + kind.name().toLowerCase(Locale.ROOT);
-            builder.put(kind, fallback.withRadius(properties.getFloat(prefix + ".radius", fallback.radius())));
+            builder.put(
+                    kind,
+                    fallback.withRadius(properties.getFloat(prefix + ".radius", fallback.radius()))
+                            .withShineSeconds(properties.getFloat(prefix + ".shineSeconds", fallback.shineSeconds())));
         }
         return builder.build();
     }
@@ -361,7 +366,10 @@ public final class SimConfigLoader {
         return new SimConfig.ControlPointConfig(
                 properties.getFloat("sim.controlPoint.radius", defaults.radius()),
                 properties.getFloat("sim.controlPoint.captureSeconds", defaults.captureSeconds()),
-                properties.getFloat("sim.controlPoint.aggroRadius", defaults.aggroRadius()));
+                properties.getFloat("sim.controlPoint.aggroRadius", defaults.aggroRadius()),
+                properties.getFloat("sim.controlPoint.reinforcementRadius", defaults.reinforcementRadius()),
+                properties.getInt("sim.controlPoint.reinforcementsMin", defaults.reinforcementsMin()),
+                properties.getInt("sim.controlPoint.reinforcementsMax", defaults.reinforcementsMax()));
     }
 
     /** The one pickup with numbers of its own, because it is the one that moves. */

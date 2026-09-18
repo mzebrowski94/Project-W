@@ -38,6 +38,7 @@ mechanic you are about to write appears there, it has already been rejected and 
 | [G0027](G0027-the-post-is-a-goal-for-the-other-side.md) | The post is a goal the level gives the aliens, not a point they capture. | a post with health; a capture bar the aliens fill; marching handled by wandering or by a scenario flag; a wave schedule on a scenario's own timer | accepted |
 | [G0028](G0028-a-player-is-a-slot.md) | A player is a slot; joining is plugging a pad in, and unplugging is not leaving. | a lobby or press-start screen; a `Player` component; removing a commander when his pad disconnects; a per-player squad | accepted |
 | [G0029](G0029-a-point-taken-is-a-point-held.md) | A point taken is a point held; "forward" sends the squad on, one point at a time. | a new mode for holding a taken point; spending the forward distance as the permission; holding at an untaken point; a release that lasts until cancelled | accepted |
+| [G0030](G0030-a-reinforcement-is-won-where-the-fighting-is.md) | A reinforcement lies beside a control point, becomes a man beside the commander at once, and is wasted past the squad's ceiling. | a reserve that pays out later; leaving the crate standing when the squad is full; a timed or defended arrival; spawning the man where the crate was; a reinforcement granted by the capture itself | accepted; amended 2026-09-18 - a handful of crates per point, three men per crate, one a tick |
 
 ## When to write one
 

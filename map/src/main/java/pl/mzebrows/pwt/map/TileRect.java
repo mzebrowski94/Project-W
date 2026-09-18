@@ -55,6 +55,23 @@ public record TileRect(int col, int row, int width, int height) {
         return atCol >= col && atCol < endCol() && atRow >= row && atRow < endRow();
     }
 
+    /**
+     * The square of tiles a world-space radius reaches from a point: the grid's answer to "near here".
+     *
+     * <p>Rounded outwards to whole tiles and never smaller than the one tile the point stands on, so a
+     * radius below a tile still names somewhere. It may run off the edge of the map; a rectangle is
+     * geometry and does not know where the map stops, and {@link Scatter} simply is not offered the
+     * tiles that are not there.
+     *
+     * <p>It lives here because it is the same question asked in two places - where a rescued trooper
+     * forms up on the commander, and where a level lays a reinforcement down beside a control point -
+     * and two copies of a rounding rule is one copy too many.
+     */
+    public static TileRect around(TileMap map, float worldX, float worldY, float radius) {
+        int span = Math.max(1, (int) Math.ceil(radius / map.tileSize()));
+        return new TileRect(map.colAt(worldX) - span, map.rowAt(worldY) - span, span * 2 + 1, span * 2 + 1);
+    }
+
     /** The world point at the middle of the rectangle - for a camera or a route, never for a spawn. */
     public float centreX(TileMap map) {
         return (col + width * 0.5f) * map.tileSize();

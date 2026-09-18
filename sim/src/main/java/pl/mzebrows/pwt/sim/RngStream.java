@@ -45,7 +45,17 @@ public enum RngStream {
     NERVE(0x6C8E_9CF5_7037_08D3L),
 
     /** Where the aliens in a wave are put down when it arrives. */
-    WAVE(0x8E9C_5AB1_02C7_6D45L);
+    WAVE(0x8E9C_5AB1_02C7_6D45L),
+
+    /**
+     * Where a reinforcement is put down: a rescued trooper forming up on the commander, and the crate
+     * a level lays beside a control point.
+     *
+     * <p>One stream for both halves because they are one concern - where a reinforcement lands - and
+     * because the level's layout is drawn from it before play starts, which is exactly the case
+     * {@code RngStream} exists to protect: retuning how often men arrive must not reshuffle the map.
+     */
+    REINFORCEMENT(0x4F2C_9D17_A85B_3E61L);
 
     private final long salt;
 

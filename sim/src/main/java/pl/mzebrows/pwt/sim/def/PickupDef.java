@@ -15,12 +15,23 @@ import lombok.With;
  * @param look what a renderer draws it as
  * @param playerGrant what the commander and, later, troopers get for taking it
  * @param alienGrant what an enemy gets for eating it
+ * @param shineSeconds how long one pulse of its glow takes, in seconds. <strong>Zero means it does
+ *     not shine</strong>, which is what most things report - the codebase's usual way of saying "not
+ *     for me", so a kind opts in by naming a number rather than by a flag somewhere else. A small
+ *     thing on a large map has to be findable, and a pulse is the cheapest way of saying "worth
+ *     walking to" without drawing a marker the player then has to learn
  */
 @With
-public record PickupDef(float radius, Look look, Grant playerGrant, Grant alienGrant) {
+public record PickupDef(float radius, Look look, Grant playerGrant, Grant alienGrant, float shineSeconds) {
 
     public PickupDef {
         Require.positive("pickup radius", radius);
+        Require.notNegative("pickup shineSeconds", shineSeconds);
+    }
+
+    /** True if this is a thing that catches the eye rather than a thing lying in the grass. */
+    public boolean shines() {
+        return shineSeconds > 0f;
     }
 
     /**

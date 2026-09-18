@@ -41,6 +41,20 @@ class EnemyLeapSystemTest {
 
     private static final float TOLERANCE = 1e-3f;
 
+    /** Whether this unit is in the air and travelling at the thing named, rather than past it. */
+    private static boolean leapsToward(Entity enemy, Entity quarry) {
+        Leap leap = enemy.getComponent(Leap.class);
+        if (!leap.airborne()) {
+            return false;
+        }
+        Position from = enemy.getComponent(Position.class);
+        Position to = quarry.getComponent(Position.class);
+        float toX = to.x - from.x;
+        float toY = to.y - from.y;
+        float length = (float) Math.sqrt(toX * toX + toY * toY);
+        return length > 0f && (leap.directionX * toX + leap.directionY * toY) / length > 0.9f;
+    }
+
     @Test
     void walksRatherThanLeapingWhileTheCommanderIsOutOfRange() {
         Simulation simulation = harmlessLeaping();
@@ -61,6 +75,47 @@ class EnemyLeapSystemTest {
         simulation.step();
 
         assertThat(enemy.getComponent(Leap.class).phase).isEqualTo(Leap.Phase.HESITATING);
+    }
+
+    /**
+     * G0026, applied to the leap. It used to ask for "the commander" and got the first one standing,
+     * so every leaper on a level threw itself at player one: the second player was never leapt at,
+     * and neither was a trooper standing right in front of one. Who it comes for is decided once, by
+     * {@code PerceptionSystem}, and this reads that answer.
+     */
+    @Test
+    void leapsAtTheSecondPlayerWhenHeIsTheOneStandingInFrontOfIt() {
+        Simulation simulation = harmlessLeaping();
+        simulation.spawnCommander(10f, 10f, 0);
+        Entity second = simulation.spawnCommander(50f, 50f, 1);
+        Entity enemy = simulation.spawnEnemy(60f, 50f);
+
+        steps(simulation, ticksIn(LEAP_HESITATION) + 2);
+
+        assertThat(leapsToward(enemy, second)).isTrue();
+    }
+
+    @Test
+    void leapsAtATrooperWhenItIsTheNearestManOnTheField() {
+        Simulation simulation = harmlessLeaping();
+        simulation.spawnCommander(10f, 10f);
+        Entity trooper = simulation.spawnTrooper(50f, 50f);
+        Entity enemy = simulation.spawnEnemy(60f, 50f);
+
+        steps(simulation, ticksIn(LEAP_HESITATION) + 2);
+
+        assertThat(leapsToward(enemy, trooper)).isTrue();
+    }
+
+    /** Nothing noticed is nothing to jump at. A leap is an attack, and an attack needs a quarry. */
+    @Test
+    void leapsAtNobodyOnceThereIsNobodyLeftToHunt() {
+        Simulation simulation = harmlessLeaping();
+        Entity enemy = simulation.spawnEnemy(60f, 50f);
+
+        steps(simulation, 4);
+
+        assertThat(enemy.getComponent(Leap.class).phase).isEqualTo(Leap.Phase.READY);
     }
 
     /** The tell. A unit that kept walking through its wind-up would give the player nothing to read. */

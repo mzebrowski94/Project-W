@@ -15,7 +15,9 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 
 /**
  * The claims this level makes that a glance at it would not catch.
@@ -158,6 +160,36 @@ class AdventureScenarioTest {
             positions.add(found.get(i).getComponent(Position.class));
         }
         return positions;
+    }
+
+    /**
+     * A better gun exists on this march, and only in the half of it that needs one. The plain and the
+     * dust are what a sidearm is tuned for; a cache in either is a shortcut past the part that teaches
+     * you to aim, and it is exactly the kind of thing that gets added later without anyone noticing.
+     */
+    @Test
+    void offersABetterGunOnlyInTheLastTwoBiomes() {
+        Simulation world = world();
+        TileMap map = world.map();
+
+        List<Position> caches = armouriesOf(world);
+
+        assertThat(caches).isNotEmpty();
+        for (Position cache : caches) {
+            assertThat(biomeOf(map.colAt(cache.x))).isGreaterThanOrEqualTo(2);
+        }
+    }
+
+    private static List<Position> armouriesOf(Simulation world) {
+        List<Position> found = new ArrayList<>();
+        ImmutableArray<Entity> pickups = world.engine()
+                .getEntitiesFor(Family.all(Pickup.class, Position.class).get());
+        for (Entity pickup : pickups) {
+            if (pickup.getComponent(Pickup.class).kind == PickupKind.ARMOURY) {
+                found.add(pickup.getComponent(Position.class));
+            }
+        }
+        return found;
     }
 
     private static Simulation world() {
