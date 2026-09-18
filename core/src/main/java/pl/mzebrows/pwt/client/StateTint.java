@@ -22,9 +22,19 @@ import pl.mzebrows.pwt.sim.component.Appearance;
  *     confusable with {@code dying} at a glance: one is somewhere to run to and the other is not,
  *     and a player who mistook them would either abandon a man he could have saved or cross open
  *     ground for a corpse
+ * @param crewed a gun with somebody on it. Brighter than an abandoned one, because the difference
+ *     between a turret that is about to shoot at you and a turret that is scenery is the difference
+ *     between two completely different approaches to it
  */
 public record StateTint(
-        float unaware, float windingUp, float airborne, float grappling, float staggered, float dying, float casualty) {
+        float unaware,
+        float windingUp,
+        float airborne,
+        float grappling,
+        float staggered,
+        float dying,
+        float casualty,
+        float crewed) {
 
     /** How far to shift the base colour, in {@code [-1, 1]}. */
     public float forState(Appearance.State state) {
@@ -36,7 +46,10 @@ public record StateTint(
             case STAGGERED -> staggered;
             case DYING -> dying;
             case CASUALTY -> casualty;
-            case NORMAL -> 0f;
+            case CREWED -> crewed;
+            // A man aboard something is inside it: the renderer draws the thing he is in and not
+            // him, so there is no colour for this one to shift.
+            case ABOARD, NORMAL -> 0f;
         };
     }
 }

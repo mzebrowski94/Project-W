@@ -85,7 +85,8 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().chargeMark(),
                 context.graphicConfig().facingMark(),
                 context.graphicConfig().chargedMark(),
-                context.graphicConfig().orderMark());
+                context.graphicConfig().orderMark(),
+                context.graphicConfig().heatMark());
         terrain = new TerrainRenderer(viewport, context.graphicConfig().terrainPalette());
         input = new InputReader(viewport);
         session = new ScenarioSession(scenario, context.simConfig());
@@ -110,6 +111,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         }
         session.advance(delta, commanderInput);
         announceAction();
+        announceWave();
         rebindIfRestarted();
         aimCamera(delta, commanderInput);
 
@@ -119,6 +121,21 @@ public final class ScenarioScreen extends ScreenAdapter {
         if (session.overlayVisible()) {
             overlay.render(session.simulation(), session.paused(), session.lastOrder());
         }
+    }
+
+    /**
+     * Says which wave has just walked in, and how many there are.
+     *
+     * <p>Scaffolding in exactly the sense the action prompt is: what the level has left to send is
+     * something the player is entitled to know (pillar 5), and the console is not where he will
+     * eventually read it.
+     */
+    private void announceWave() {
+        int arrived = session.newlyArrivedWave();
+        if (arrived == 0) {
+            return;
+        }
+        Log.info("wave " + arrived + "/" + session.totalWaves());
     }
 
     /**

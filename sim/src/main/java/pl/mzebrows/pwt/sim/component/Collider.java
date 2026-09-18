@@ -21,10 +21,25 @@ public final class Collider implements Component, Pool.Poolable {
     public boolean solid;
     public boolean movable;
 
+    /**
+     * Whether it takes part in collision at all.
+     *
+     * <p>The third flag, and the one that says "not on the field right now" - a man aboard a turret
+     * is inside the thing rather than standing beside it, so nothing may shove him, shoot him or
+     * claw him while he is on it. Everything else that is out of the pairwise path is out of it by
+     * carrying no collider at all; a man who is sometimes aboard cannot be, because adding and
+     * removing a component mid-tick mutates the families being iterated.
+     *
+     * <p>It is still a fact about how this entity collides rather than a question about what it is,
+     * which is the whole point of this component: the solver reads the flag and asks nothing.
+     */
+    public boolean present;
+
     /** Sets both flags and returns this component, for fluent spawning. */
     public Collider set(boolean newSolid, boolean newMovable) {
         this.solid = newSolid;
         this.movable = newMovable;
+        this.present = true;
         return this;
     }
 
@@ -32,5 +47,6 @@ public final class Collider implements Component, Pool.Poolable {
     public void reset() {
         solid = false;
         movable = false;
+        present = false;
     }
 }

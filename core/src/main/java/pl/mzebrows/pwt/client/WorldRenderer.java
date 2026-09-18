@@ -6,6 +6,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -60,6 +61,7 @@ public final class WorldRenderer implements Disposable {
     private final FacingMark facingMark;
     private final ChargedMark chargedMark;
     private final OrderMark orderMark;
+    private final HeatMark heatMark;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
 
@@ -94,10 +96,19 @@ public final class WorldRenderer implements Disposable {
             PreviousPosition previous = PREVIOUS.get(entity);
             Body body = BODY.get(entity);
             Appearance appearance = APPEARANCE.get(entity);
+            if (appearance.state == Appearance.State.ABOARD) {
+                // Inside something rather than standing on the ground. What the player sees is the
+                // thing he is in, which says for itself that somebody is on it.
+                continue;
+            }
             float x = previous.x + (position.x - previous.x) * alpha;
             float y = previous.y + (position.y - previous.y) * alpha;
             shapes.setColor(tint(appearance));
-            shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
+            if (square(appearance.look)) {
+                shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
+            } else {
+                shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
+            }
             if (appearance.facingX != 0f || appearance.facingY != 0f) {
                 shapes.setColor(brightened(tint(appearance), facingMark.tint()));
                 float reach = facingMark.lengthFor(body.radius);
@@ -118,6 +129,9 @@ public final class WorldRenderer implements Disposable {
                                 ? brightened(tint(appearance), chargeMark.tint())
                                 : palette.colorFor(appearance.chargeLook));
                 shapes.circle(x, y, chargeMark.radiusFor(body.radius, appearance.charge), CIRCLE_SEGMENTS);
+            }
+            if (appearance.heat > 0f) {
+                drawHeat(x, y, body.radius, appearance);
             }
         }
         shapes.end();
@@ -166,6 +180,43 @@ public final class WorldRenderer implements Disposable {
             }
         }
         shapes.end();
+    }
+
+    /**
+     * The heat bar: an arc over the thing holding the gun, filling from left to right.
+     *
+     * <p>Drawn in straight pieces rather than as an arc primitive, because {@code ShapeRenderer}'s
+     * own arc is a pie slice - it would draw two spokes back to the middle of the unit and read as a
+     * wedge rather than as a gauge. Only ever reached by something that is actually hot, which is
+     * one or two things on the worst tick.
+     */
+    private void drawHeat(float x, float y, float radius, Appearance appearance) {
+        shapes.setColor(palette.colorFor(appearance.overheated ? Look.OVERHEAT : Look.HEAT));
+        float arc = heatMark.radiusFor(radius);
+        float width = heatMark.widthFor(radius);
+        int steps = heatMark.segmentsFor(appearance.heat);
+        float fromX = x + MathUtils.cosDeg(heatMark.angleAt(0)) * arc;
+        float fromY = y + MathUtils.sinDeg(heatMark.angleAt(0)) * arc;
+        for (int step = 1; step <= steps; step++) {
+            float angle = heatMark.angleAt(step);
+            float toX = x + MathUtils.cosDeg(angle) * arc;
+            float toY = y + MathUtils.sinDeg(angle) * arc;
+            shapes.rectLine(fromX, fromY, toX, toY, width);
+            fromX = toX;
+            fromY = toY;
+        }
+    }
+
+    /**
+     * Whether a look is drawn square rather than round.
+     *
+     * <p>The client's decision, like the colour beside it: the simulation names a role and never a
+     * shape (G0003), and how a role is drawn is this module's to change. Everything alive is round
+     * and the one piece of equipment is not, which is the whole of the rule so far - a body is still
+     * a circle either way (ADR 0007), so this changes what is seen and nothing about what is hit.
+     */
+    private static boolean square(Look look) {
+        return look == Look.TURRET;
     }
 
     /**

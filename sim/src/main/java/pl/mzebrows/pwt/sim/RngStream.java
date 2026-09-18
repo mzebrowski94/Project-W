@@ -42,7 +42,10 @@ public enum RngStream {
      * behaviour, and the thing a separate stream buys - retuning one without reshuffling the others -
      * is already bought by {@code Odds} drawing nothing at all when a chance is zero.
      */
-    NERVE(0x6C8E_9CF5_7037_08D3L);
+    NERVE(0x6C8E_9CF5_7037_08D3L),
+
+    /** Where the aliens in a wave are put down when it arrives. */
+    WAVE(0x8E9C_5AB1_02C7_6D45L);
 
     private final long salt;
 

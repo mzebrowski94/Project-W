@@ -91,15 +91,18 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | A body in its death throes is a frozen circle in a darker colour | The dying animation. The window is real and configured per unit kind (`*.deathThroesSeconds`); only what plays in it is missing. |
 | Two units in a clinch are two circles touching, both drawn the same | The grapple animation, which resolves into one of them dying. `Appearance.State.GRAPPLING` is the hook and is already published for both parties for the whole lock. |
 | Nothing reacts to a death except respawning and the killer's lock | More death reactions, as they are designed. The machinery is there: mark `Dead`, add a component, add a small system. |
-| Rock is laid by hand in `Warren` and scattered blindly in `Skirmish` | Generated fragments. The terrain and the solver are real; what decides *where* rock goes is not designed yet. |
+| Rock is laid by hand in `Defend` and scattered blindly in `Skirmish` | Generated fragments. The terrain and the solver are real; what decides *where* rock goes is not designed yet. |
+| A post is a dark green disc, and a level's waves are a list written out by hand in `Defend` | Whatever a level does about both. The post, the march, the schedule and the objective are all real; where a post goes and what a level throws at it is content, and generated fragments will eventually say. |
 | **Frozen troopers.** An inert body on the field that an alien eats and the commander rescues. It is a pickup, not a trooper - it does not follow, cannot be commanded and cannot die. | Real troopers, which now exist. Turning a rescued one into a member of the squad is buildable and is somebody's next session; **nothing about the pickup answers how the squad works**, and it still does not. |
 | `Level.pendingReinforcements` counts rescued troopers and nothing reads it | The squad exists now, so this is finally connectable - a rescued trooper becoming a real one. Still nothing reads it. |
 | Squad orders are given on keys `1`-`4` | A button and a radial menu. The verbs and who hears them are designed (G0017); the input is not. |
 | Every AI chance is one number for the whole game, with one strain override | Whatever tuning turns out to need. The index is real and complete - `AiChance` names every occasional behaviour and `Odds` is the only caller of the dice - but nothing yet varies a chance by difficulty, by level, or by how a fight is going. |
+| **Which wave has walked in is announced in the console** - `wave 3/6` - as it arrives. | The same on-screen place the action prompt is waiting for. What the level has left to send is something the player is entitled to know (pillar 5); the decision is already made in the simulation and published on `Waves`, so what is missing is a label rather than a system. |
 | **The available action is announced in the console** when it changes. | An on-screen prompt beside the commander. The decision is already made in the simulation and published on `Action.available` (G0021); what is missing is a label, not a system. The console is not where a player looks mid-fight, so pillar 5 is only half-served until it moves. |
 | A casualty is a brightened circle with his bleed-out on the `charge` ring | The going-down and getting-up animations. The window, the clock, the stabilise and the hauling are all real; what plays in them is not. The colour is deliberately the opposite shift from a corpse - the two states are the most expensive in the game to confuse. |
 | The stabilise shows as a green `charge` filling inside whoever is doing it | Whatever the art does with it. The hook is `Action.progress` and `Appearance.chargeLook`, both published, so the renderer decides. The colour is the one thing here that is a decision rather than a stand-in: every other charge in the game is a clock the player is losing and this is the one he is winning. |
 | A trooper that has decided to fetch somebody just walks there and stands over him | Whatever a man carrying out a rescue looks like. The ranking, the roll and the work are all real; it has no call, no posture and no way of telling the player it is going. |
+| A runner is an orange circle, slightly smaller than a grunt's | Whatever the fast strain looks like. The weave, the dodge and the dash are all real. The colour is deliberately off both the grunt's red and the spitter's purple: what will not hold still has to be tellable at a glance from what is walking straight at you. |
 | A spitter is a purple circle and its spit a purple dot | Whatever a shooting alien looks like. The halt, the cone and the range are real. The colour is deliberately off both reds: what is coming for you and what is shooting at you need different answers, and a field where they look alike is the confusion pillar 5 exists to prevent. |
 | Spitters, their barrels and the cover they stand behind are placed by hand in `Casualty` | Whatever a level does about them. Same standing as hand-laid rock and hand-placed barrels. |
 | A charged spitter is the same purple circle inside an orange-red ring | Whatever a creature carrying an explosive looks like. The swallow, the gun and the blast are all real, and the ring is the colour of the thing it swallowed. `Appearance.charged` is the hook and is already published, so the renderer decides. |
@@ -111,21 +114,31 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | A unit that is filling up is drawn as a brighter core inside its circle | Whatever the art does with it. `Appearance.charge` is the hook and is already published as a fraction, so the renderer decides and the simulation never learns how it is shown. |
 | **Grenades are unlimited.** No count, no pickup, no cost but the cooldown. | Whatever ammunition turns out to be. The throw itself is designed (G0019); how many you have is not, and a count is one more number in `Thrower` rather than a change to any of it. |
 | A blast is a coloured circle with a core that collapses as it fades | The explosion animation. The radius, the timing, the one lethal tick and the shake are all real; only what plays inside the circle is missing. |
+| **A turret is a blue square, brighter when somebody is on it, and the man on it is not drawn at all.** | Whatever a gun emplacement and its crew look like. The square is the only shape in the game that is not a circle, and it is deliberate: everything alive is round and the one piece of equipment is not. `Appearance.State.CREWED` and `ABOARD` are the hooks and are already published, so the renderer decides. |
+| A gun's heat is an arc of straight pieces drawn over whatever is holding it, amber and then red | Whatever the art does with it. The bar, the stop and the two colours are real and published on `Appearance.heat` and `.overheated`; the arc is drawn in pieces only because `ShapeRenderer`'s own arc is a pie slice. |
+| Turrets are placed by hand in scenarios | Whatever a level does about them. Same standing as hand-laid rock and hand-placed barrels: the turret is designed, where turrets come from is not. |
 | A barrel is a small orange-red circle | Whatever a barrel looks like. The colour is deliberately off the grunt's red - a field where some red circles chase you and the others kill you when you shoot them is exactly the confusion pillar 5 exists to prevent. |
 | Barrels are placed by hand in `Demolition` and `Casualty` and nowhere else | Whatever a level does about them. Same standing as hand-laid rock: the barrel is designed, where barrels come from is not. |
 | The commander's gun is named only in the F1 overlay | A real HUD. What he is holding is visible in what he fires, which is enough to play; it is not enough to be told at a glance. |
 
 ## Known limits, accepted on purpose
 
+- **Every alien scores every living thing on the player's side, once per tick,** to decide who it is
+  coming for (G0026). That is a commander, a handful of men and whatever guns a level put down - a
+  small list against a big one rather than a pair loop, and cheaper than the avoidance scan below it.
+  It wants the same answer as that one if either ever needs a broadphase.
 - **Avoidance looks at everything on the field, once per unit.** There is no broadphase for it: the
   collision grid is built after the AI has run, so a unit scores every other body every tick. At a few
   dozen entities that is free. Past a couple of hundred it wants either a second grid or the collision
-  grid moved earlier in the tick, and it will show up as frame time rather than as a bug.
-- **A provoked unit walks straight at what provoked it.** No flow field: each one is cross about a
-  different place, so routing them properly would cost a grid pass per unit per tick, which is the
-  per-unit cost a flow field exists to avoid. One provoked from behind a wall walks into the wall and
-  mills about. At the ranges a fight happens at that is rare; it stops being acceptable the moment
-  something can provoke from across the level.
+  grid moved earlier in the tick, and it will show up as frame time rather than as a bug. **`Defend` is
+  the level that will find out**: it sends a hundred and seventeen aliens in fourteen waves, and if the
+  squad is losing, sixty of them can be standing at once. Watch the frame time on `F1` there before
+  reaching for a profiler anywhere else.
+- **A provoked unit walks straight at what provoked it, and so does anything hunting somebody who is
+  not the commander.** No flow field for either: routes are one grid pass per goal, and each of those
+  units has a goal of its own - the per-unit cost a flow field exists to avoid. One that sets off from
+  behind a wall walks into the wall and mills about. At the ranges a fight happens at that is rare; it
+  stops being acceptable the moment something can be summoned from across the level.
 - **A sight line is blocked by rock and by nothing else.** Obstacles, corpses and other units do not
   hide anything, because they are entities and the test is a pure function of terrain (ADR 0009).
   Blocking on them needs the collision grid, which is built *after* the AI has run. Same asymmetry as

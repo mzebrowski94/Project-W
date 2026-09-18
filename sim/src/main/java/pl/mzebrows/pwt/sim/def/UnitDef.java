@@ -36,6 +36,9 @@ import org.jspecify.annotations.Nullable;
  * @param avoidance how far ahead it looks for things in its way, and how hard it leans off them
  * @param leap how it closes the last of the distance
  * @param ranged how it shoots, if it shoots at all
+ * @param weave how hard it refuses to walk in a straight line at you, if it refuses at all
+ * @param dodge how it answers a shot it can see coming, if it answers one at all. The same
+ *     definition a rabbit carries: stepping aside from a bullet is one behaviour, not one per side
  * @param chances how often each occasional behaviour happens for this strain. Starts as the game's
  *     own table and is overridden per strain in {@code game.properties}, which is how a shooter can
  *     be far hungrier for a barrel than a grunt with no branch anywhere asking what it is
@@ -60,6 +63,8 @@ public record UnitDef(
         AvoidanceDef avoidance,
         LeapDef leap,
         RangedDef ranged,
+        WeaveDef weave,
+        DodgeDef dodge,
         Chances chances,
         Look look) {
 

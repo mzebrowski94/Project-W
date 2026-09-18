@@ -49,8 +49,29 @@ public final class Perception implements Component, Pool.Poolable {
     /** Whether rock between this unit and what it might notice hides that thing (G0015). */
     public boolean requiresClearLine;
 
-    /** True while this unit is hunting the commander. */
+    /** True while this unit is hunting something on the player's side. */
     public boolean aggro;
+
+    /**
+     * Where that something was this tick. Meaningless unless {@link #aggro}.
+     *
+     * <p>A place, re-resolved every tick, never a reference (G0010, G0016). What it is hunting can be
+     * shot, reaped and its component recycled between one tick and the next; a unit charging whatever
+     * was built from that instance is a bug that reads as the AI hallucinating.
+     */
+    public float targetX;
+
+    public float targetY;
+
+    /**
+     * Whether the thing it is hunting is the commander.
+     *
+     * <p>Published only because routing is cheap for exactly one goal: {@code NavigationSystem} keeps
+     * one flow field per strain pointed at him, and anything hunting somebody else walks straight at
+     * them and leans off what is in the way, as a provoked unit already does. Not a targeting rule -
+     * a fact about which routes are already paid for.
+     */
+    public boolean targetIsCommander;
 
     /**
      * True while this unit is on its way to somewhere it was provoked from - shot at, struck, or
@@ -66,6 +87,16 @@ public final class Perception implements Component, Pool.Poolable {
     public float provokedX;
 
     public float provokedY;
+
+    /**
+     * True while this unit is walking at the ground the level told the other side to come for.
+     *
+     * <p>The lowest thing that can have its attention: anything it notices, anything that hurt it and
+     * anything it could eat all outrank the walk. Where the post is is not kept here - unlike food
+     * and a grudge, there is exactly one and it never moves, so the system that drives it reads it
+     * from the field rather than from a copy that could go stale.
+     */
+    public boolean marching;
 
     /** True while this unit is on its way to something edible. Never true at the same time as aggro. */
     public boolean foraging;
@@ -96,7 +127,14 @@ public final class Perception implements Component, Pool.Poolable {
 
     /** True while something other than standing about has its attention. */
     public boolean occupied() {
-        return aggro || provoked || foraging;
+        return aggro || provoked || foraging || marching;
+    }
+
+    /** Remembers where it is hunting, and whether that is the one thing routes are built for. */
+    public void hunt(float x, float y, boolean commander) {
+        this.targetX = x;
+        this.targetY = y;
+        this.targetIsCommander = commander;
     }
 
     /**
@@ -134,9 +172,13 @@ public final class Perception implements Component, Pool.Poolable {
         arcCosine = -1f;
         requiresClearLine = false;
         aggro = false;
+        targetX = 0f;
+        targetY = 0f;
+        targetIsCommander = false;
         provoked = false;
         provokedX = 0f;
         provokedY = 0f;
+        marching = false;
         foraging = false;
         foodX = 0f;
         foodY = 0f;

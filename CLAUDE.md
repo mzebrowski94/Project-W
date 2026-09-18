@@ -13,6 +13,19 @@ happened to open, no abstraction the task does not require, no renaming a public
 change, no new dependency - unless asked. If the task turns out to need a larger structural change:
 stop, name the dependency chain, wait.
 
+**Small patch, right shape.** The rule above is about code you *happened to open*. It is not an
+argument for the surface version of the code the task makes you **write**, and read carelessly it
+becomes one. Choose the general shape when a second user already exists - one named in the request
+counts, a hypothetical one does not - and when the general version costs a field, a parameter or a
+small helper rather than a layer. Say the second user out loud; if you cannot name it, build the
+surface version and move on.
+
+Two consequences worth knowing before you reach for it. A number put on a shared definition is a
+number every caller must honour, or it is a config key that lies - so it arrives with **one place**
+that reads it, and every caller goes through that place. And "zero means off" is how this codebase
+says *not for me* (`AiChance`, `RangedDef.off()`, `WeaveDef.off()`), so a new capability usually
+belongs on the definition every kind already has rather than on the one kind that asked for it.
+
 **Reuse before you create.** A second way to do what already has one way is a defect. Already here:
 `Spawner` (entity kinds), `Defs` (kind definitions), `Pool` (transients), `Rng` (randomness),
 `SpatialGrid` (neighbour queries), `ConstraintSolver` (where bodies may be), `Sight` (detection tests),

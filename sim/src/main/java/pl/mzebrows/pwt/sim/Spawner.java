@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dodge;
@@ -26,6 +27,7 @@ import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Focus;
 import pl.mzebrows.pwt.sim.component.Health;
+import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
@@ -35,6 +37,7 @@ import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Ranged;
@@ -50,9 +53,12 @@ import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Wander;
+import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.component.Weave;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupDef;
@@ -87,6 +93,13 @@ public final class Spawner {
     private final PooledEngine engine;
     private final SimConfig config;
     private final TileMap map;
+
+    /**
+     * Issued rather than derived, so a station's id is never reused. A man aboard a gun that is blown
+     * up is left holding a number nothing on the field will ever carry again, which is the whole
+     * safety argument for naming a station by one instead of by a reference (G0010).
+     */
+    private long nextStationId = 1L;
 
     Spawner(PooledEngine engine, SimConfig config, TileMap map) {
         this.engine = engine;
@@ -158,6 +171,10 @@ public final class Spawner {
                         config.action().dragSpeedFactor(),
                         config.action().dragLateralFactor(),
                         config.action().dragGap()));
+        entity.add(engine.createComponent(Crew.class));
+        // Carried always, because what he is holding changes: a gun that runs hot needs somewhere to
+        // put it, and one that does not leaves this at zero for ever.
+        entity.add(engine.createComponent(Heat.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER).face(1f, 0f));
         engine.addEntity(entity);
         return entity;
@@ -227,6 +244,8 @@ public final class Spawner {
         // A trooper has hands too. The same component the commander carries, so the work a man does
         // on a casualty is published and drawn the same way whoever is doing it.
         entity.add(engine.createComponent(Action.class).set(config.action().reach()));
+        // A trooper has hands for a gun on a mount too, though nothing decides to use one yet.
+        entity.add(engine.createComponent(Crew.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.TROOPER).face(1f, 0f));
         engine.addEntity(entity);
         return entity;
@@ -262,6 +281,10 @@ public final class Spawner {
         entity.add(engine.createComponent(Avoidance.class));
         entity.add(engine.createComponent(Leap.class));
         entity.add(engine.createComponent(Ranged.class));
+        // Seeded from where it was put down, so a pack weaves out of step without a number being
+        // drawn for it - the same reason its patch is anchored here rather than in applyStrain.
+        entity.add(engine.createComponent(Weave.class).phaseFrom(x, y));
+        entity.add(engine.createComponent(Dodge.class));
         entity.add(engine.createComponent(Weapon.class));
         entity.add(engine.createComponent(Taking.class));
         entity.add(engine.createComponent(Feed.class));
@@ -336,6 +359,16 @@ public final class Spawner {
                         def.leap().cooldownSeconds(),
                         def.leap().hesitationMinSeconds(),
                         def.leap().hesitationMaxSeconds());
+        entity.getComponent(Weave.class)
+                .set(def.weave().enabled(), def.weave().amplitude(), def.weave().wavelength());
+        entity.getComponent(Dodge.class)
+                .set(
+                        def.dodge().enabled(),
+                        def.dodge().reactionRange(),
+                        def.dodge().speed(),
+                        def.dodge().durationSeconds(),
+                        def.dodge().commitSeconds(),
+                        def.dodge().margin());
         entity.getComponent(Ranged.class)
                 .set(
                         def.ranged().enabled(),
@@ -523,6 +556,49 @@ public final class Spawner {
     }
 
     /**
+     * Spawns a turret: a gun on a mount that a man gets on rather than picks up.
+     *
+     * <p>Solid and immovable, exactly as a barrel is: it is a thing standing on the field, and it can
+     * be hauled to somewhere more useful by the same hands and the same component that haul one. It
+     * carries {@code Health} and {@code Damage} so it can be shot down, and {@code BlastsOnDeath} so
+     * that losing one is an event rather than a disappearance - and so that whoever was on it when it
+     * went is caught by the circle he was standing in the middle of.
+     *
+     * <p>It has no death throes. A barrel does not either, and for the same reason: what a destroyed
+     * explosive thing leaves behind is the blast, not a body to walk round.
+     *
+     * <p>On the player's side, so his own fire passes through it and the aliens' does not.
+     */
+    public Entity spawnTurret(float x, float y) {
+        SimConfig.TurretConfig turret = config.turret();
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Turret.class)
+                .set(
+                        nextStationId++,
+                        turret.turnRate(),
+                        turret.firingTurnFactor(),
+                        turret.range(),
+                        turret.quietSeconds()));
+        entity.add(engine.createComponent(Faction.class).set(Side.PLAYER));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
+        entity.add(engine.createComponent(Body.class).set(turret.radius()));
+        entity.add(engine.createComponent(Collider.class).set(true, false));
+        entity.add(engine.createComponent(Health.class).set(turret.health()));
+        entity.add(engine.createComponent(Damage.class));
+        entity.add(engine.createComponent(BlastsOnDeath.class).set(turret.blastRadius(), turret.blastRadius()));
+        entity.add(engine.createComponent(Dragged.class));
+        entity.add(engine.createComponent(Weapon.class).set(turret.weapon(), config.weapon(turret.weapon())));
+        // The heat belongs to the gun, not to whoever is on it. That is the whole of why stepping off
+        // a hot turret and back on again is not a way of putting the bar back.
+        entity.add(engine.createComponent(Heat.class));
+        entity.add(engine.createComponent(Appearance.class).set(Look.TURRET).face(1f, 0f));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
      * Spawns the level entity: one entity holding state that belongs to nobody in particular.
      *
      * <p>Spawned with the world and never removed. It has no position, no body and nothing to draw,
@@ -533,6 +609,27 @@ public final class Spawner {
     public Entity spawnLevel() {
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Level.class));
+        // What is still to arrive. Empty on every level built so far, which is what "everything is on
+        // the field from the first tick" looks like as data.
+        entity.add(engine.createComponent(Waves.class));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns the post: ground the level says you must hold, and the other side walks at.
+     *
+     * <p>No collider, no health and no faction - it is a goal rather than a thing to fight. Spawn one
+     * before whatever stands on it: the renderer draws in spawn order, and a post wants to be the
+     * thing underneath.
+     */
+    public Entity spawnPost(float x, float y) {
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Post.class).set(config.controlPoint().radius()));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(config.controlPoint().radius()));
+        entity.add(engine.createComponent(Appearance.class).set(Look.POST));
         engine.addEntity(entity);
         return entity;
     }

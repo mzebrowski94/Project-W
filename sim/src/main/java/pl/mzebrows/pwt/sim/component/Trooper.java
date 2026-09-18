@@ -47,7 +47,15 @@ public final class Trooper implements Component, Pool.Poolable {
          * objectives: a man told to hold a corner holds it while somebody bleeds, and a squad with
          * nothing but an objective to walk to goes and fetches him.
          */
-        AID
+        AID,
+        /**
+         * Walking to a gun on a mount, or sitting on one.
+         *
+         * <p>One mode for both halves, as {@link #AID} is: they differ only in whether it has
+         * arrived. It ranks below going to fetch somebody and above the level's objectives - a gun
+         * is worth leaving a walk for and never worth leaving a man on the ground for.
+         */
+        CREW
     }
 
     public Mode mode = Mode.ADVANCE;

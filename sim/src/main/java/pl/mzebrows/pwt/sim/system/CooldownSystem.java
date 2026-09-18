@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Dodge;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Melee;
@@ -50,6 +51,7 @@ public final class CooldownSystem extends EntitySystem {
     private static final ComponentMapper<Blast> BLAST = ComponentMapper.getFor(Blast.class);
     private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
     private static final ComponentMapper<Thrower> THROWER = ComponentMapper.getFor(Thrower.class);
+    private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
 
     private ImmutableArray<Entity> invulnerable = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> attacks = new ImmutableArray<>(new Array<>());
@@ -63,6 +65,7 @@ public final class CooldownSystem extends EntitySystem {
     private ImmutableArray<Entity> blasts = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> shakes = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> throwers = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> heats = new ImmutableArray<>(new Array<>());
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -78,6 +81,7 @@ public final class CooldownSystem extends EntitySystem {
         blasts = engine.getEntitiesFor(Family.all(Blast.class).get());
         shakes = engine.getEntitiesFor(Family.all(Shake.class).get());
         throwers = engine.getEntitiesFor(Family.all(Thrower.class).get());
+        heats = engine.getEntitiesFor(Family.all(Heat.class, Weapon.class).get());
     }
 
     @Override
@@ -134,6 +138,14 @@ public final class CooldownSystem extends EntitySystem {
         for (int i = 0; i < throwers.size(); i++) {
             Thrower thrower = THROWER.get(throwers.get(i));
             thrower.remainingSeconds = countDown(thrower.remainingSeconds, deltaTime);
+        }
+        for (int i = 0; i < heats.size(); i++) {
+            Entity entity = heats.get(i);
+            // Always, whoever is holding it and whether or not anybody is: a gun left standing cools
+            // at exactly the rate one in your hands does, so letting go of a hot turret is not a way
+            // of putting the bar back. The gun's own numbers, read where they are needed.
+            Weapon weapon = WEAPON.get(entity);
+            HEAT.get(entity).cool(weapon.heatCoolPerSecond, weapon.heatResumeBelow, deltaTime);
         }
     }
 

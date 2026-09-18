@@ -20,7 +20,9 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Order;
@@ -73,6 +75,7 @@ public final class TrooperMindSystem extends EntitySystem {
     private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
+    private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
 
     private final TileMap map;
     private final Rng rng;
@@ -81,6 +84,9 @@ public final class TrooperMindSystem extends EntitySystem {
     private final float bodyRadius;
     private final float arriveRadius;
     private final float reach;
+    private final float crewRadius;
+    private final float pushDistance;
+    private final float patchRadius;
 
     /** One field per control point, parallel to the family. Rebuilt only if the set of points changes. */
     private FlowField[] routes = new FlowField[0];
@@ -90,6 +96,8 @@ public final class TrooperMindSystem extends EntitySystem {
     private ImmutableArray<Entity> enemies = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> casualties = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> stations = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> posts = new ImmutableArray<>(new Array<>());
 
     public TrooperMindSystem(SimConfig config, TileMap map, Rng rng, Rng nerve) {
         this.map = map;
@@ -99,6 +107,9 @@ public final class TrooperMindSystem extends EntitySystem {
         this.bodyRadius = config.trooper().radius();
         this.arriveRadius = config.trooper().arriveRadius();
         this.reach = config.action().reach();
+        this.crewRadius = config.turret().crewRadius();
+        this.pushDistance = config.trooper().forwardDistance();
+        this.patchRadius = config.trooper().patchRadius();
     }
 
     @Override
@@ -112,6 +123,9 @@ public final class TrooperMindSystem extends EntitySystem {
                 Family.all(Commander.class, Position.class).get());
         casualties = engine.getEntitiesFor(
                 Family.all(Casualty.class, Position.class, Body.class).get());
+        stations = engine.getEntitiesFor(
+                Family.all(Turret.class, Position.class, Body.class).get());
+        posts = engine.getEntitiesFor(Family.all(Post.class, Position.class).get());
     }
 
     @Override
@@ -140,6 +154,10 @@ public final class TrooperMindSystem extends EntitySystem {
                 continue;
             }
 
+            if (crews(entity, trooper, at, deltaTime)) {
+                continue;
+            }
+
             int nearest = nearestUncapturedPoint(at);
             if (nearest >= 0) {
                 Entity point = points.get(nearest);
@@ -153,9 +171,92 @@ public final class TrooperMindSystem extends EntitySystem {
             }
             trooper.mode = Trooper.Mode.EXPLORE;
             if (!trooper.hasTarget || arrived(at, trooper)) {
-                roam(trooper);
+                roam(trooper, at);
             }
         }
+    }
+
+    /**
+     * Goes and gets on a gun, if there is a free one near enough and something it could shoot from it.
+     *
+     * <p>Below going to fetch somebody and above the level's objectives: a gun is worth leaving a
+     * walk for and never worth leaving a man on the ground for. In practice that ranking is what
+     * "objectives take priority unless it is defensive" comes to - the guns a level puts down are
+     * where it expects the fighting, so a trooper crossing the map to an objective simply never has
+     * one within reach of its route.
+     *
+     * <p><strong>Only ever with something already in the gun's reach.</strong> A man does not sit
+     * down at a gun for the view, and without that condition a trooper that had just got off a quiet
+     * one would climb straight back on it - the dice are rolled once on the way in, so the loop would
+     * never break itself.
+     *
+     * <p>What it heads for is a <em>place</em>, and boarding is decided again from the gun actually
+     * in reach when it arrives (G0010).
+     */
+    private boolean crews(Entity entity, Trooper trooper, Position at, float deltaTime) {
+        @Nullable Entity station = worthGettingOn(at);
+        if (station == null) {
+            if (trooper.mode == Trooper.Mode.CREW) {
+                // It was walking to a gun and there is no longer one worth walking to: somebody else
+                // got there first, or there is nothing left in reach of it. Where it was headed was
+                // decided for a reason that has stopped being true, so it is dropped rather than
+                // walked out - a man standing over an occupied gun is a man missing from the squad.
+                trooper.clearTarget();
+            }
+            return false;
+        }
+        if (trooper.mode != Trooper.Mode.CREW && !Odds.rolls(nerve, chances, AiChance.MAN_A_TURRET, deltaTime)) {
+            return false;
+        }
+        trooper.mode = Trooper.Mode.CREW;
+        if (Crews.gapTo(entity, station) <= reach) {
+            Crews.board(entity, station);
+            trooper.clearTarget();
+            return true;
+        }
+        Position where = POSITION.get(station);
+        trooper.headFor(where.x, where.y);
+        return true;
+    }
+
+    /** The nearest free gun within walking distance that has something in its own reach, or null. */
+    private @Nullable Entity worthGettingOn(Position at) {
+        @Nullable Entity nearest = null;
+        float nearestDistance = Float.MAX_VALUE;
+        for (int i = 0; i < stations.size(); i++) {
+            Entity station = stations.get(i);
+            Turret turret = TURRET.get(station);
+            if (turret.crewed) {
+                continue;
+            }
+            Position where = POSITION.get(station);
+            if (!Sight.withinRange(at.x, at.y, where.x, where.y, crewRadius)) {
+                continue;
+            }
+            float toX = where.x - at.x;
+            float toY = where.y - at.y;
+            float distance = toX * toX + toY * toY;
+            if (distance < nearestDistance && somethingToShootFrom(where, turret.range)) {
+                nearestDistance = distance;
+                nearest = station;
+            }
+        }
+        return nearest;
+    }
+
+    /** Whether anything on the other side is inside this gun's reach. */
+    private boolean somethingToShootFrom(Position where, float range) {
+        for (int i = 0; i < enemies.size(); i++) {
+            Entity enemy = enemies.get(i);
+            if (DYING.has(enemy) && DYING.get(enemy).begun) {
+                continue;
+            }
+            Position standing = POSITION.get(enemy);
+            if (Sight.withinRange(where.x, where.y, standing.x, standing.y, range)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -358,7 +459,13 @@ public final class TrooperMindSystem extends EntitySystem {
     }
 
     /** Somewhere on the map a trooper can actually stand, drawn from the squad's own stream. */
-    private void roam(Trooper trooper) {
+    private void roam(Trooper trooper, Position at) {
+        if (trooper.pushingForward() && pushesOutFromThePost(trooper, at)) {
+            return;
+        }
+        if (posts.size() > 0 && roamsAroundThePost(trooper)) {
+            return;
+        }
         for (int attempt = 0; attempt < ROAM_ATTEMPTS; attempt++) {
             float x = rng.nextFloat(0f, map.worldWidth());
             float y = rng.nextFloat(0f, map.worldHeight());
@@ -369,6 +476,79 @@ public final class TrooperMindSystem extends EntitySystem {
         }
         // A map with almost nowhere to stand. Better to hold still than to walk into rock.
         trooper.clearTarget();
+    }
+
+    /**
+     * Pushes the front line out: on a level that names a post, "forward" means away from the thing
+     * you were told to hold.
+     *
+     * <p>Everywhere else forward is a burst of pace on the way to an objective, and it needs no
+     * direction of its own because there is one to walk to. A defence has none - there is nothing to
+     * take - so without this the order would spend itself sending men to a seeded random corner,
+     * which is the opposite of a line moving.
+     *
+     * <p>It walks the target back towards the man until it lands on ground he can stand on, rather
+     * than giving up at the first refusal: a push that stopped because the full distance happened to
+     * end in rock would read as the order being ignored.
+     */
+    private boolean pushesOutFromThePost(Trooper trooper, Position at) {
+        if (posts.size() == 0) {
+            return false;
+        }
+        Position post = POSITION.get(posts.first());
+        float awayX = at.x - post.x;
+        float awayY = at.y - post.y;
+        float distance = (float) Math.sqrt(awayX * awayX + awayY * awayY);
+        if (distance <= EPSILON) {
+            // Standing on it. There is no "away" from here, so the ordinary roam is the better answer.
+            return false;
+        }
+        float reach = pushDistance;
+        for (int attempt = 0; attempt < PUSH_ATTEMPTS; attempt++) {
+            float x = at.x + awayX / distance * reach;
+            float y = at.y + awayY / distance * reach;
+            if (map.isClear(x, y, bodyRadius)) {
+                trooper.headFor(x, y);
+                return true;
+            }
+            reach *= 0.5f;
+        }
+        return false;
+    }
+
+    /**
+     * Roams inside the squad's patch around the post, rather than across the whole level.
+     *
+     * <p>A defence has nothing to take, so with nothing in front of them the squad falls through to
+     * roaming - and roaming the map is the wrong answer on the one level whose whole instruction is
+     * <em>stay here</em>. Men who wander off leave the post held by whoever happened to be standing
+     * on it, which reads as the squad ignoring the level.
+     *
+     * <p>It is the same idea as an idle creature's patch, aimed at the post instead of at where the
+     * unit was spawned - and it costs the player nothing, because "forward" still pushes the line out
+     * past it and a fight still outranks all of this.
+     *
+     * <p>Drawn inside the square and rejected outside the circle, so no trigonometry is needed to
+     * pick a point in a disc; {@code Math.sin} and {@code Math.cos} are banned here (pillar 6).
+     */
+    private boolean roamsAroundThePost(Trooper trooper) {
+        Position post = POSITION.get(posts.first());
+        for (int attempt = 0; attempt < ROAM_ATTEMPTS; attempt++) {
+            float offsetX = rng.nextFloat(-patchRadius, patchRadius);
+            float offsetY = rng.nextFloat(-patchRadius, patchRadius);
+            if (offsetX * offsetX + offsetY * offsetY > patchRadius * patchRadius) {
+                continue;
+            }
+            float x = post.x + offsetX;
+            float y = post.y + offsetY;
+            if (map.isClear(x, y, bodyRadius)) {
+                trooper.headFor(x, y);
+                return true;
+            }
+        }
+        // Nowhere to stand anywhere near it. Better to hold where it is than to walk into rock.
+        trooper.clearTarget();
+        return true;
     }
 
     private boolean arrived(Position at, Trooper trooper) {
@@ -396,4 +576,10 @@ public final class TrooperMindSystem extends EntitySystem {
 
     /** Enough tries to find open ground on any map worth playing; a few more would not help. */
     private static final int ROAM_ATTEMPTS = 16;
+
+    /** How many times a push out from the post is halved before it gives up and roams instead. */
+    private static final int PUSH_ATTEMPTS = 5;
+
+    /** Below this there is no direction away from the post worth normalising. */
+    private static final float EPSILON = 1e-4f;
 }

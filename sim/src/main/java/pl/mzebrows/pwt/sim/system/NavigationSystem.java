@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
@@ -23,8 +24,11 @@ import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
- * Asks every enemy that is hunting the commander to head for him at its own speed, round whatever is
- * in the way.
+ * Asks every enemy that is hunting somebody to head for him at its own speed, round whatever is in
+ * the way.
+ *
+ * <p>Who that is was decided by {@code PerceptionSystem} and published as a place (G0026); this
+ * system walks the answer and never asks the question.
  *
  * <p>A unit that has been hurt and has not noticed him walks at <em>where the hit came from</em>
  * instead (G0016) - a place rather than whoever landed it, so nothing holds a reference to something
@@ -37,8 +41,12 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  * A world with no commander in it still has units going to dinner, which is why nothing here gives up
  * early just because there is nobody to hunt.
  *
- * <p>Routes come from a {@link FlowField} per strain, rebuilt only when the commander leaves the tile
- * it was pointed at. One grid pass serves every unit of that strain, however many there are, and each
+ * <p><strong>Routes are built for the commander only.</strong> A {@link FlowField} per strain,
+ * rebuilt when he leaves the tile it was pointed at; anything hunting somebody else steers straight
+ * and leans off what is in the way, exactly as a provoked unit does, because a field per man being
+ * hunted would be a grid pass each per tick - the cost a flow field exists to avoid.
+ *
+ * <p>Each field is rebuilt only when the commander leaves the tile it was pointed at. One grid pass serves every unit of that strain, however many there are, and each
  * field is built for that strain's body radius - which is what lets a grunt take a one-tile crack that
  * a brute has to walk around, without either of them knowing there is a rule about it.
  *
@@ -86,22 +94,35 @@ public final class NavigationSystem extends EntitySystem {
      */
     private final FlowField[] fields;
 
+    /**
+     * One field per strain pointed at the post, built once. The post never moves, so a rebuild would
+     * be a whole grid pass for an answer that cannot have changed.
+     */
+    private final FlowField[] marches;
+
     /** Scratch for one direction, so sampling a field costs no allocation per unit per tick. */
     private final float[] direction = new float[2];
 
+    /** Scratch for the place being hunted, so reading it costs no allocation per unit per tick. */
+    private final Position hunted = new Position();
+
+    private ImmutableArray<Entity> posts = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> enemies = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
 
     public NavigationSystem(SimConfig config, TileMap map) {
         this.map = map;
         this.fields = new FlowField[UnitKind.values().length];
+        this.marches = new FlowField[UnitKind.values().length];
         for (UnitKind kind : UnitKind.values()) {
             fields[kind.ordinal()] = FlowField.over(map, config.unit(kind).radius());
+            marches[kind.ordinal()] = FlowField.over(map, config.unit(kind).radius());
         }
     }
 
     @Override
     public void addedToEngine(Engine engine) {
+        posts = engine.getEntitiesFor(Family.all(Post.class, Position.class).get());
         enemies = engine.getEntitiesFor(
                 Family.all(Enemy.class, Position.class, Steering.class, Speed.class, Perception.class, Strain.class)
                         .get());
@@ -111,9 +132,9 @@ public final class NavigationSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
-        @Nullable Position target = Drivers.livingTarget(commanders);
-        int goalCol = target == null ? 0 : map.colAt(target.x);
-        int goalRow = target == null ? 0 : map.rowAt(target.y);
+        @Nullable Position commander = Drivers.livingTarget(commanders);
+        int goalCol = commander == null ? 0 : map.colAt(commander.x);
+        int goalRow = commander == null ? 0 : map.rowAt(commander.y);
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
             Perception perception = PERCEPTION.get(enemy);
@@ -133,13 +154,18 @@ public final class NavigationSystem extends EntitySystem {
                 towards(enemy, perception.provokedX, perception.provokedY);
                 continue;
             }
-            if (!perception.aggro) {
+            if (!perception.aggro && perception.foraging) {
                 foodAt(enemy, perception);
                 continue;
             }
-            if (target == null) {
+            if (!perception.aggro) {
+                marchToThePost(enemy);
                 continue;
             }
+            // Where whatever it is hunting was standing this tick, published by the one system that
+            // decides who that is (G0026). A place, never a reference (G0010).
+            hunted.set(perception.targetX, perception.targetY);
+            Position target = hunted;
             if (rooted && !RANGED.get(enemy).takingUpPosition(distanceBetween(POSITION.get(enemy), target))) {
                 // It has opened fire on him, or it is already close enough to. Either way it holds
                 // where it is standing and he is not followed - which is the whole of what makes a
@@ -151,6 +177,15 @@ public final class NavigationSystem extends EntitySystem {
             float radius = BODY.get(enemy).radius;
             if (within(position, target, map.tileSize())
                     || map.isClearPath(position.x, position.y, target.x, target.y, radius)) {
+                straightAt(enemy, position, target, speed);
+                continue;
+            }
+            if (!perception.targetIsCommander) {
+                // Routes are built for one goal per strain and rebuilt when it leaves its tile; a
+                // field per man being hunted would be a grid pass each, per tick - the exact cost a
+                // flow field exists to avoid. So anything hunting somebody else walks straight at
+                // them and leans off what is in the way, exactly as a provoked unit does, and pays
+                // the same price: one that sets off from behind a wall walks into the wall.
                 straightAt(enemy, position, target, speed);
                 continue;
             }
@@ -220,6 +255,36 @@ public final class NavigationSystem extends EntitySystem {
         }
         float speed = SPEED.get(enemy).value;
         STEERING.get(enemy).set(towardsX / distance * speed, towardsY / distance * speed);
+    }
+
+    /**
+     * Walks a creature that has noticed nobody at the ground the level told its side to come for.
+     *
+     * <p><strong>Routed, unlike everything else that is not the commander.</strong> A post is one
+     * goal for the whole level and it never moves, so its field is built once per strain and then
+     * answers every marching unit for the rest of the run - the case a flow field is exactly right
+     * for, and the reason a level can send a wave in from a corner and have it arrive round the rock
+     * instead of milling against it.
+     */
+    private void marchToThePost(Entity enemy) {
+        if (posts.size() == 0) {
+            return;
+        }
+        Position post = POSITION.get(posts.first());
+        Position position = POSITION.get(enemy);
+        float speed = SPEED.get(enemy).value;
+        float radius = BODY.get(enemy).radius;
+        if (within(position, post, map.tileSize()) || map.isClearPath(position.x, position.y, post.x, post.y, radius)) {
+            straightAt(enemy, position, post, speed);
+            return;
+        }
+        FlowField field = marches[STRAIN.get(enemy).kind.ordinal()];
+        field.rebuildFor(map.colAt(post.x), map.rowAt(post.y));
+        if (field.directionAt(position.x, position.y, direction)) {
+            STEERING.get(enemy).set(direction[0] * speed, direction[1] * speed);
+            return;
+        }
+        straightAt(enemy, position, post, speed);
     }
 
     /**

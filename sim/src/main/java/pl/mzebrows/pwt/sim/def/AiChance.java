@@ -48,6 +48,17 @@ public enum AiChance {
     AID_A_TROOPER(0.4f),
 
     /**
+     * How often a trooper standing near a free gun decides to get on it rather than get on with what
+     * it was doing.
+     *
+     * <p>High, and deliberately: a turret nobody is on is a turret the level might as well not have
+     * put down. What keeps it from being constant is that it is only ever rolled with something
+     * already in the gun's reach - a man does not sit down at a gun for the view - and that the gun
+     * puts him off again once there has been nothing to shoot at for a while.
+     */
+    MAN_A_TURRET(2f),
+
+    /**
      * How often a trooper goes to pick up the commander.
      *
      * <p>Well above {@link #AID_A_TROOPER}: the squad exists because of him, and a man who has to

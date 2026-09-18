@@ -25,11 +25,22 @@ public enum Look {
     BRUTE,
     /** The strain that holds its ground and shoots. */
     SPITTER,
+    /** The fast strain that weaves and dodges. It must read as lighter than a grunt at a glance. */
+    RUNNER,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
+    /** Ground a level says you must hold, and the other side walks at. */
+    POST,
+    /** A gun on a mount that a man gets on. Square rather than round, because it is not a creature. */
+    TURRET,
     PROJECTILE,
     /** A heavy shot, so a gun is visible in what it fires. */
     SLUG,
+    /**
+     * What a turret fires: light, very fast, and unmistakably the player's. It arrives faster than
+     * anything else on the field, so it must not be read as something coming the other way.
+     */
+    TURRET_SHOT,
     /** What a spitter fires. It must not be mistakable for anything of the player's. */
     SPIT,
     /**
@@ -63,5 +74,15 @@ public enum Look {
      * standing on the field, which is the point: {@code Appearance.chargeLook} names what a charge
      * <em>is</em>, and the general channel had until now been drawn in one colour whatever it meant.
      */
-    MENDING
+    MENDING,
+    /**
+     * How hot a gun has got. Not a thing standing on the field, like {@link #MENDING}: it is a look
+     * so that the one place that maps a role to a colour maps this one too (G0003).
+     */
+    HEAT,
+    /**
+     * A gun that has stopped itself. Told apart from {@link #HEAT} at a glance on purpose - it is the
+     * half of the bar that changes what the player should do next.
+     */
+    OVERHEAT
 }

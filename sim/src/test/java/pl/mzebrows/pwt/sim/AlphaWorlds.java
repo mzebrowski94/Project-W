@@ -21,6 +21,7 @@ import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
+import pl.mzebrows.pwt.sim.def.HeatDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
@@ -32,6 +33,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.def.WeaveDef;
 
 /**
  * Shared fixture for the alpha-phase system tests: one simulation config with numbers chosen to make
@@ -319,6 +321,47 @@ public final class AlphaWorlds {
 
     public static final float RAILGUN_DAMAGE = 400f;
 
+    /** A third of the bar per shot, so a test can count to four and watch the gun stop itself. */
+    public static final float TURRET_HEAT_PER_SHOT = 0.34f;
+
+    /** Slow against the rate of fire, so holding the trigger wins, and fast enough to watch it fall. */
+    public static final float HEAT_COOL_PER_SECOND = 0.4f;
+
+    /** Half a bar. A test can tell "no longer full" from "back in your hands" at this distance. */
+    public static final float HEAT_RESUME_BELOW = 0.5f;
+
+    /** Far past a trooper's own sight, so a test can stand something where only the gun reaches it. */
+    public static final float TURRET_RANGE = 60f;
+
+    /** How far a trooper will divert for a free gun in the fixtures. */
+    public static final float TURRET_CREW_RADIUS = 20f;
+
+    /** A second, not the shipped six - a test that waits out a man's patience is a slow test. */
+    public static final float TURRET_QUIET_SECONDS = 1f;
+
+    public static final float TURRET_RADIUS = 2f;
+
+    /** Three times a trooper's, as the shipped one is: a gun is worth working for. */
+    public static final float TURRET_HEALTH = 300f;
+
+    /** Wide enough to catch whoever was on it, narrow enough not to reach the next thing along. */
+    public static final float TURRET_BLAST_RADIUS = 5f;
+
+    /** Slow enough that a test can watch one come round rather than find it already there. */
+    public static final float TURRET_TURN_RATE = 2f;
+
+    /** A quarter of that while the trigger is down, so the difference is visible in a second. */
+    public static final float TURRET_FIRING_TURN_FACTOR = 0.25f;
+
+    /** Round, so which muzzle a shot came out of can be read straight off where it is. */
+    public static final float TURRET_MUZZLE_OFFSET = 1f;
+
+    /** Short, so a test can count two shots out of it without waiting about. */
+    public static final float TURRET_COOLDOWN = 0.1f;
+
+    /** Less than a sidearm's, which is the trade: a turret buys rate and speed with damage. */
+    public static final float TURRET_DAMAGE = 25f;
+
     public static final float TROOPER_RADIUS = 1f;
 
     public static final float TROOPER_SPEED = 20f;
@@ -389,11 +432,17 @@ public final class AlphaWorlds {
 
     public static final float FOLLOW_DISTANCE = 7f;
 
+    /** How far from the post the squad roams in the fixtures. Round, and well inside the test arena. */
+    public static final float TROOPER_PATCH = 20f;
+
     public static final int SPAWN_COL = 1;
 
     public static final int SPAWN_WIDTH = 2;
 
     public static final int SPAWN_HEIGHT = 5;
+
+    /** What the two guns that run hot in the fixtures declare. Both, so one test covers either. */
+    private static final HeatDef HOT = new HeatDef(TURRET_HEAT_PER_SHOT, HEAT_COOL_PER_SECOND, HEAT_RESUME_BELOW);
 
     private AlphaWorlds() {}
 
@@ -428,12 +477,14 @@ public final class AlphaWorlds {
                         ORDER_RADIUS,
                         FORWARD_DISTANCE,
                         FORWARD_FACTOR,
-                        FOLLOW_DISTANCE),
+                        FOLLOW_DISTANCE,
+                        TROOPER_PATCH),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 Defs.<UnitKind, UnitDef>builder(UnitKind.class)
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
                         .put(UnitKind.BRUTE, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.BRUTE))
                         .put(UnitKind.SPITTER, strain(SPITTER_RADIUS, SPITTER_SPEED, SPITTER_HEALTH, Look.SPITTER))
+                        .put(UnitKind.RUNNER, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.RUNNER))
                         .build(),
                 Defs.<PickupKind, PickupDef>builder(PickupKind.class)
                         .put(PickupKind.MUSHROOM, new PickupDef(PICKUP_RADIUS, Look.MUSHROOM, Grant.NOTHING, MOUTHFUL))
@@ -461,10 +512,20 @@ public final class AlphaWorlds {
                                         PROJECTILE_RADIUS,
                                         WEAPON_DAMAGE,
                                         Look.PROJECTILE,
+                                        0f,
+                                        HeatDef.none(),
                                         0f))
                         .put(
                                 WeaponKind.SPIT,
-                                new WeaponDef(SPIT_COOLDOWN, SPIT_SPEED, PROJECTILE_RADIUS, SPIT_DAMAGE, Look.SPIT, 0f))
+                                new WeaponDef(
+                                        SPIT_COOLDOWN,
+                                        SPIT_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        SPIT_DAMAGE,
+                                        Look.SPIT,
+                                        0f,
+                                        HeatDef.none(),
+                                        0f))
                         .put(
                                 WeaponKind.CHARGED_SPIT,
                                 new WeaponDef(
@@ -473,7 +534,9 @@ public final class AlphaWorlds {
                                         PROJECTILE_RADIUS,
                                         SPIT_DAMAGE,
                                         Look.CHARGED_SPIT,
-                                        CHARGED_SPIT_BLAST_RADIUS))
+                                        CHARGED_SPIT_BLAST_RADIUS,
+                                        HeatDef.none(),
+                                        0f))
                         .put(
                                 WeaponKind.RAILGUN,
                                 new WeaponDef(
@@ -482,7 +545,20 @@ public final class AlphaWorlds {
                                         PROJECTILE_RADIUS,
                                         RAILGUN_DAMAGE,
                                         Look.SLUG,
+                                        0f,
+                                        HOT,
                                         0f))
+                        .put(
+                                WeaponKind.TURRET_GUN,
+                                new WeaponDef(
+                                        TURRET_COOLDOWN,
+                                        PROJECTILE_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        TURRET_DAMAGE,
+                                        Look.TURRET_SHOT,
+                                        0f,
+                                        HOT,
+                                        TURRET_MUZZLE_OFFSET))
                         .build(),
                 noChances(),
                 new SimConfig.MeleeConfig(
@@ -513,6 +589,16 @@ public final class AlphaWorlds {
                         HAULED_STABILISE_FACTOR),
                 new SimConfig.ActionConfig(ACTION_REACH, DRAG_SPEED_FACTOR, DRAG_LATERAL_FACTOR, DRAG_GAP),
                 new SimConfig.ControlPointConfig(POINT_RADIUS, POINT_CAPTURE_SECONDS, POINT_AGGRO_RADIUS),
+                new SimConfig.TurretConfig(
+                        TURRET_RADIUS,
+                        TURRET_HEALTH,
+                        TURRET_BLAST_RADIUS,
+                        TURRET_TURN_RATE,
+                        TURRET_FIRING_TURN_FACTOR,
+                        TURRET_RANGE,
+                        TURRET_CREW_RADIUS,
+                        TURRET_QUIET_SECONDS,
+                        WeaponKind.TURRET_GUN),
                 new SimConfig.ObstacleConfig(OBSTACLE_RADIUS, 0),
                 new SimConfig.CollisionConfig(3));
     }
@@ -540,6 +626,8 @@ public final class AlphaWorlds {
                 AvoidanceDef.off(),
                 LeapDef.off(),
                 RangedDef.off(),
+                WeaveDef.off(),
+                DodgeDef.off(),
                 noChances(),
                 look);
     }
@@ -777,6 +865,24 @@ public final class AlphaWorlds {
                                 .withPerception(PerceptionDef.allRound(
                                         false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE)))
                 .withChance(AiChance.BITE_A_BARREL, CERTAIN));
+    }
+
+    /** How hard a weaving strain leans off its course in the fixtures. Wide enough to see. */
+    public static final float WEAVE_AMPLITUDE = 0.6f;
+
+    /** Round, and short enough that a test sees two whole cycles in forty ticks. */
+    public static final float WEAVE_WAVELENGTH = 8f;
+
+    /**
+     * A world where the runner weaves and nothing else does.
+     *
+     * <p>Only the one strain, deliberately: every test about the weave wants something walking in a
+     * straight line beside it to compare against, and the fixture is the comparison.
+     */
+    public static Simulation weaving() {
+        return new Simulation(config().withUnit(
+                        UnitKind.RUNNER,
+                        runner -> runner.withWeave(new WeaveDef(true, WEAVE_AMPLITUDE, WEAVE_WAVELENGTH))));
     }
 
     /** The base world with every strain leaping on a fixed wind-up. */

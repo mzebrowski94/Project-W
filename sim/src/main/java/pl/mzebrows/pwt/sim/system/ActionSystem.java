@@ -7,6 +7,7 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -14,6 +15,7 @@ import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 
 /**
@@ -53,6 +55,7 @@ public final class ActionSystem extends EntitySystem {
 
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> casualties = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> stations = new ImmutableArray<>(new Array<>());
 
     public ActionSystem(SimConfig config) {
         this.reviveHealthFraction = config.casualty().reviveHealthFraction();
@@ -66,6 +69,8 @@ public final class ActionSystem extends EntitySystem {
                         .get());
         casualties = engine.getEntitiesFor(
                 Family.all(Casualty.class, Position.class, Body.class).get());
+        stations = engine.getEntitiesFor(
+                Family.all(Turret.class, Position.class, Body.class).get());
     }
 
     @Override
@@ -73,18 +78,57 @@ public final class ActionSystem extends EntitySystem {
         for (int i = 0; i < commanders.size(); i++) {
             Entity commander = commanders.get(i);
             Action action = ACTION.get(commander);
-            Entity subject = Drivers.held(commander) ? null : Aid.nearest(casualties, commander, action.reach);
+            boolean acting = INTENT.get(commander).acting;
+            boolean pressed = acting && !action.wasHeld;
+            action.wasHeld = acting;
+            if (Drivers.aboard(commander)) {
+                offer(action, ActionKind.LEAVE_TURRET);
+                if (pressed) {
+                    Crews.leave(stations, commander);
+                }
+                continue;
+            }
+            if (Drivers.held(commander)) {
+                action.idle();
+                continue;
+            }
+            @Nullable Entity station = Crews.nearestFree(stations, commander, action.reach);
+            @Nullable Entity subject = Aid.nearest(casualties, commander, action.reach);
+            if (station != null && nearer(commander, station, subject)) {
+                offer(action, ActionKind.MAN_TURRET);
+                if (pressed) {
+                    Crews.board(commander, station);
+                }
+                continue;
+            }
             if (subject == null) {
                 action.idle();
                 continue;
             }
             action.available = ActionKind.STABILISE;
-            if (INTENT.get(commander).acting) {
+            if (acting) {
                 Aid.work(subject, deltaTime, reviveHealthFraction, reviveInvulnerableSeconds);
             } else {
                 Aid.letGo(subject);
             }
             action.progress = Aid.progress(subject);
         }
+    }
+
+    /**
+     * Whether the gun is the nearer of the two things on offer (G0021).
+     *
+     * <p>Ties go to the gun, which is the one case where it matters which way a tie falls: a man
+     * lying against a turret is the moment the player most wants the key to mean one specific thing,
+     * and getting on the gun is the reversible half of the pair.
+     */
+    private static boolean nearer(Entity commander, Entity station, @Nullable Entity subject) {
+        return subject == null || Crews.gapTo(commander, station) <= Crews.gapTo(commander, subject);
+    }
+
+    /** Puts an offer on the table with no work behind it - getting on and off a gun is instant. */
+    private static void offer(Action action, ActionKind kind) {
+        action.available = kind;
+        action.progress = 0f;
     }
 }

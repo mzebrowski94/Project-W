@@ -77,6 +77,11 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
         grid.clear();
         for (int i = 0; i < bodies.size(); i++) {
             Entity entity = bodies.get(i);
+            if (!COLLIDER.get(entity).present) {
+                // Not on the field at all - a man inside the gun he is firing. Never inserted, so it
+                // makes no pair with anything and the rest of this class needs no case for it.
+                continue;
+            }
             Position position = POSITION.get(entity);
             grid.insert(entity, position.x, position.y);
         }
@@ -160,7 +165,7 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
         for (int i = 0; i < bodies.size(); i++) {
             Entity entity = bodies.get(i);
             Collider collider = COLLIDER.get(entity);
-            if (!collider.solid || !collider.movable) {
+            if (!collider.present || !collider.solid || !collider.movable) {
                 continue;
             }
             Position position = POSITION.get(entity);

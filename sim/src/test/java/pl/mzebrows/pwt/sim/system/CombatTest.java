@@ -49,6 +49,15 @@ class CombatTest {
     private static final float IN_FRONT_OF_THE_ENEMY = ENEMY_X + 1.5f;
 
     /**
+     * Nearer than anything behind it, so it is what the enemy turns towards.
+     *
+     * <p>Needed since an alien comes for whoever on the player's side is nearest (G0026): with only a
+     * man behind it and the commander far away, a creature now simply turns round, and the arc it is
+     * facing is the thing under test rather than the thing being arranged.
+     */
+    private static final float THE_LURE = ENEMY_X + 1f;
+
+    /**
      * Walking into the back of something that has not turned round used to kill outright, which read
      * as the game cheating: there was nothing on screen saying the thing could reach behind itself.
      * A creature's claws reach into an arc in front of it, and which way it is going is which way it
@@ -60,6 +69,7 @@ class CombatTest {
         simulation.setCommanderInvulnerable(true);
         simulation.spawnCommander(FAR_RIGHT, LANE);
         simulation.spawnEnemy(ENEMY_X, LANE);
+        simulation.spawnTrooper(THE_LURE, LANE);
         Entity behind = simulation.spawnTrooper(BEHIND_THE_ENEMY, LANE);
 
         simulation.step();

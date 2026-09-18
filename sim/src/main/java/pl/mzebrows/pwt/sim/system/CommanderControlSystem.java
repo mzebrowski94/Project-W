@@ -45,6 +45,9 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     private final Spawner spawner;
 
+    /** Scratch, so working out where a shot leaves from costs no allocation per shot. */
+    private final float[] muzzle = new float[2];
+
     public CommanderControlSystem(Spawner spawner) {
         super(Family.all(
                         Commander.class,
@@ -133,7 +136,7 @@ public final class CommanderControlSystem extends IteratingSystem {
     /** The cooldown itself is counted down by {@code CooldownSystem}, before this runs. */
     private void fire(Entity entity, Intent intent) {
         Weapon weapon = WEAPON.get(entity);
-        if (!intent.firing || !weapon.ready()) {
+        if (!intent.firing || !Guns.ready(entity, weapon)) {
             return;
         }
         Position position = POSITION.get(entity);
@@ -145,14 +148,9 @@ public final class CommanderControlSystem extends IteratingSystem {
         }
         float directionX = toAimX / distance;
         float directionY = toAimY / distance;
-        float muzzle = BODY.get(entity).radius + weapon.projectileRadius + MUZZLE_GAP;
-        spawner.spawnProjectile(
-                position.x + directionX * muzzle,
-                position.y + directionY * muzzle,
-                directionX,
-                directionY,
-                weapon,
-                FACTION.get(entity).side);
-        weapon.remainingSeconds = weapon.cooldownSeconds;
+        Muzzle.next(
+                position.x, position.y, BODY.get(entity).radius, weapon, MUZZLE_GAP, directionX, directionY, muzzle);
+        spawner.spawnProjectile(muzzle[0], muzzle[1], directionX, directionY, weapon, FACTION.get(entity).side);
+        Guns.spend(entity, weapon, weapon.cooldownSeconds);
     }
 }

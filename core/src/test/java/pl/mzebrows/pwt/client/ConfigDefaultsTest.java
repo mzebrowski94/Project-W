@@ -100,8 +100,13 @@ class ConfigDefaultsTest {
                         facing(),
                         charged(),
                         ordered(),
+                        heat(),
                         camera()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static HeatMark heat() {
+        return new HeatMark(1.7f, 0.28f, 150f, 14);
     }
 
     private static OrderMark ordered() {
@@ -135,7 +140,7 @@ class ConfigDefaultsTest {
     }
 
     private static StateTint tint() {
-        return new StateTint(-0.4f, 0.85f, 0.5f, -0.3f, 0.35f, -0.7f, 0.6f);
+        return new StateTint(-0.4f, 0.85f, 0.5f, -0.3f, 0.35f, -0.7f, 0.6f, 0.45f);
     }
 
     private static ChargeMark mark() {

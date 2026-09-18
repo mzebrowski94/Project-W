@@ -15,5 +15,9 @@ public enum ActionKind {
     /** Nothing within reach is worth doing anything to. */
     NONE,
     /** Put a man who is down back on his feet. */
-    STABILISE
+    STABILISE,
+    /** Get on the gun he is standing next to. */
+    MAN_TURRET,
+    /** Get off the gun he is on. The only thing on offer while he is on one. */
+    LEAVE_TURRET
 }

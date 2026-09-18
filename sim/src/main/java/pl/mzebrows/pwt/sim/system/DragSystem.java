@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Speed;
+import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Velocity;
 
 /**
@@ -56,6 +57,8 @@ public final class DragSystem extends EntitySystem {
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Speed> SPEED = ComponentMapper.getFor(Speed.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
+
+    private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -225,9 +228,16 @@ public final class DragSystem extends EntitySystem {
     /**
      * Whether this has nothing else driving it. A man who is down does not; a barrel never did; a man
      * on his feet does, and a corpse is past helping.
+     *
+     * <p>A gun with somebody on it does too: the man aboard owns where it points and what it fires,
+     * and hauling a working gun about by the barrel is the same mistake as picking up a trooper who
+     * is still standing.
      */
     private static boolean grabbable(Entity entity) {
         if (DYING.has(entity) && DYING.get(entity).begun) {
+            return false;
+        }
+        if (TURRET.has(entity) && TURRET.get(entity).crewed) {
             return false;
         }
         return !CASUALTY.has(entity) || CASUALTY.get(entity).begun;

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.badlogic.ashley.core.Family;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
@@ -13,6 +14,7 @@ import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 
 /**
@@ -277,6 +279,38 @@ class ScenarioSessionTest {
         assertThat(session.newlyOfferedAction()).isEqualTo(ActionKind.STABILISE);
     }
 
+    /** The other half of the console scaffolding: which wave has walked in, once, when it does. */
+    @Test
+    void reportsAWaveWhenItArrives() {
+        ScenarioSession session = new ScenarioSession(new OneWave(), SimConfig.defaults());
+
+        session.advance(TICK, IDLE);
+
+        assertThat(session.newlyArrivedWave()).isEqualTo(1);
+        assertThat(session.totalWaves()).isEqualTo(1);
+    }
+
+    @Test
+    void reportsNothingWhileNoFurtherWaveHasArrived() {
+        ScenarioSession session = new ScenarioSession(new OneWave(), SimConfig.defaults());
+        session.advance(TICK, IDLE);
+        session.newlyArrivedWave();
+
+        session.advance(TICK, IDLE);
+
+        assertThat(session.newlyArrivedWave()).isZero();
+    }
+
+    @Test
+    void reportsNothingOnALevelThatSendsNoWaves() {
+        ScenarioSession session = session();
+
+        session.advance(TICK, IDLE);
+
+        assertThat(session.newlyArrivedWave()).isZero();
+        assertThat(session.totalWaves()).isZero();
+    }
+
     @Test
     void reportsNothingWhileTheAvailableActionHasNotChanged() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
@@ -326,6 +360,25 @@ class ScenarioSessionTest {
         @Override
         public void populate(Simulation simulation) {
             simulation.spawnCommander(10f, 10f);
+        }
+    }
+
+    /** A commander and one wave due immediately, for the console line that says what has arrived. */
+    private static final class OneWave implements Scenario {
+        @Override
+        public String name() {
+            return "One wave";
+        }
+
+        @Override
+        public String description() {
+            return "A commander and one lot of aliens, due on the first tick.";
+        }
+
+        @Override
+        public void populate(Simulation simulation) {
+            simulation.spawnCommander(10f, 10f);
+            simulation.waves().add(0f, UnitKind.GRUNT, 2, new TileRect(5, 5, 2, 2));
         }
     }
 

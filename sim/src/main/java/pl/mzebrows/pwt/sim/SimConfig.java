@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
+import pl.mzebrows.pwt.sim.def.HeatDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
@@ -22,6 +23,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.def.WeaveDef;
 
 /**
  * Tunables the simulation reads at construction time. Loaded from {@code game.properties} by the
@@ -61,6 +63,7 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * @param rabbit the neutral creature that wanders the field and is eaten
  * @param barrel the explosive one, which is neither eaten nor picked up
  * @param controlPoint what it takes to hold a point, and how far taking one carries
+ * @param turret the gun on a mount that a man gets on
  * @param obstacle the static circles that block movement
  * @param collision how hard the constraint solver works
  */
@@ -85,6 +88,7 @@ public record SimConfig(
         CasualtyConfig casualty,
         ActionConfig action,
         ControlPointConfig controlPoint,
+        TurretConfig turret,
         ObstacleConfig obstacle,
         CollisionConfig collision) {
 
@@ -172,7 +176,8 @@ public record SimConfig(
                         22f,
                         40f,
                         1.6f,
-                        7f),
+                        7f,
+                        30f),
                 new SpawnConfig(1, 2, 5),
                 defaultUnits(),
                 defaultPickups(),
@@ -191,6 +196,7 @@ public record SimConfig(
                 new CasualtyConfig(8f, 0.8f, 0.4f, 1f, 0f, 1.6f),
                 new ActionConfig(2.5f, 0.45f, 0.35f, 0.4f),
                 new ControlPointConfig(6f, 5f, 48f),
+                new TurretConfig(2.2f, 300f, 6f, 2.5f, 0.3f, 55f, 26f, 6f, WeaponKind.TURRET_GUN),
                 new ObstacleConfig(3.5f, 8),
                 new CollisionConfig(3));
     }
@@ -217,6 +223,8 @@ public record SimConfig(
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 new LeapDef(true, 16f, 29f, 0.28f, 2, 0.18f, 1.6f, 0.08f, 0.22f),
                                 RangedDef.off(),
+                                WeaveDef.off(),
+                                DodgeDef.off(),
                                 Chances.standard(),
                                 Look.GRUNT))
                 .put(
@@ -239,6 +247,8 @@ public record SimConfig(
                                 new AvoidanceDef(true, 9f, 0.5f, 1.3f),
                                 new LeapDef(true, 22f, 24f, 0.42f, 3, 0.26f, 2.4f, 0.18f, 0.42f),
                                 RangedDef.off(),
+                                WeaveDef.off(),
+                                DodgeDef.off(),
                                 Chances.standard(),
                                 Look.BRUTE))
                 .put(
@@ -277,8 +287,36 @@ public record SimConfig(
                                 // It wants a barrel far more than anything that closes and claws
                                 // does, because a barrel is what turns its gun into an artillery
                                 // piece. Standing one next to a barrel is a decision a level makes.
+                                WeaveDef.off(),
+                                DodgeDef.off(),
                                 Chances.standard().with(AiChance.BITE_A_BARREL, 8f),
                                 Look.SPITTER))
+                .put(
+                        UnitKind.RUNNER,
+                        new UnitDef(
+                                1.4f,
+                                9.5f,
+                                6,
+                                60f,
+                                100f,
+                                200f,
+                                1.1f,
+                                0.6f,
+                                1.5f,
+                                0.8f,
+                                0,
+                                null,
+                                // It notices you from most of the way across a level, which is the
+                                // whole of what it is for: the strain that comes to find you.
+                                PerceptionDef.allRound(true, true, 60f, 80f, 14f),
+                                new WanderDef(true, 16f, 0.5f, 1.5f, 0.3f, 1f, 4f),
+                                new AvoidanceDef(true, 7f, 0.35f, 1.6f),
+                                new LeapDef(true, 14f, 34f, 0.24f, 2, 0.14f, 1.2f, 0.06f, 0.16f),
+                                RangedDef.off(),
+                                new WeaveDef(true, 0.55f, 9f),
+                                new DodgeDef(true, 22f, 26f, 0.26f, 0.7f, 1.4f),
+                                Chances.standard(),
+                                Look.RUNNER))
                 .build();
     }
 
@@ -288,10 +326,18 @@ public record SimConfig(
      */
     private static Defs<WeaponKind, WeaponDef> defaultWeapons() {
         return Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
-                .put(WeaponKind.SIDEARM, new WeaponDef(0.3f, 42f, 0.6f, 50f, Look.PROJECTILE, 0f))
-                .put(WeaponKind.RAILGUN, new WeaponDef(1.2f, 85f, 1f, 300f, Look.SLUG, 0f))
-                .put(WeaponKind.SPIT, new WeaponDef(1.1f, 30f, 0.7f, 100f, Look.SPIT, 0f))
-                .put(WeaponKind.CHARGED_SPIT, new WeaponDef(1.1f, 30f, 0.8f, 100f, Look.CHARGED_SPIT, 5f))
+                .put(WeaponKind.SIDEARM, new WeaponDef(0.3f, 42f, 0.6f, 50f, Look.PROJECTILE, 0f, HeatDef.none(), 0f))
+                .put(
+                        WeaponKind.RAILGUN,
+                        new WeaponDef(1.2f, 85f, 1f, 300f, Look.SLUG, 0f, new HeatDef(0.34f, 0.12f, 0.4f), 0f))
+                .put(WeaponKind.SPIT, new WeaponDef(1.1f, 30f, 0.7f, 100f, Look.SPIT, 0f, HeatDef.none(), 0f))
+                .put(
+                        WeaponKind.CHARGED_SPIT,
+                        new WeaponDef(1.1f, 30f, 0.8f, 100f, Look.CHARGED_SPIT, 5f, HeatDef.none(), 0f))
+                .put(
+                        WeaponKind.TURRET_GUN,
+                        new WeaponDef(
+                                0.16f, 150f, 0.45f, 30f, Look.TURRET_SHOT, 0f, new HeatDef(0.1f, 0.35f, 0.6f), 0.9f))
                 .build();
     }
 
@@ -483,7 +529,10 @@ public record SimConfig(
      * @param forwardDistance how much ground a "forward" buys, in world units. A distance rather
      *     than a countdown, so a squad held up by a fight still gets its full push afterwards
      * @param forwardSpeedFactor how much faster it walks while that lasts
-     * @param followDistance how close a following trooper tries to stay to the commander, in world
+     * @param followDistance how close a following trooper tries to stay to the commander
+     * @param patchRadius how far from the post a trooper roams on a level that names one, in world
+     *     units. The squad's own patch: with nothing in front of them they stay around the thing they
+     *     were told to hold instead of wandering off across the level, in world
      *     units. Loose on purpose: a squad glued to him is a squad he cannot see past
      */
     @With
@@ -504,7 +553,8 @@ public record SimConfig(
             float orderRadius,
             float forwardDistance,
             float forwardSpeedFactor,
-            float followDistance) {
+            float followDistance,
+            float patchRadius) {
         public TrooperConfig {
             Require.positive("trooper radius", radius);
             Require.positive("trooper speed", speed);
@@ -524,6 +574,7 @@ public record SimConfig(
             Require.notNegative("trooper forwardDistance", forwardDistance);
             Require.positive("trooper forwardSpeedFactor", forwardSpeedFactor);
             Require.positive("trooper followDistance", followDistance);
+            Require.positive("trooper patchRadius", patchRadius);
         }
     }
 
@@ -817,6 +868,54 @@ public record SimConfig(
             Require.positive("action dragSpeedFactor", dragSpeedFactor);
             Require.notNegative("action dragLateralFactor", dragLateralFactor);
             Require.notNegative("action dragGap", dragGap);
+        }
+    }
+
+    /**
+     * The gun on a mount: how big it is, how much it takes to bring down, and how fast it comes round.
+     *
+     * <p>Health well above a man's, because a turret is somewhere a level tells you to stand and
+     * losing one should be a decision the other side had to work for. The blast is small on purpose -
+     * it is a thing going up under whoever is on it, not a barrel.
+     *
+     * @param radius circular body, in world units, though it is drawn square - what it looks like is
+     *     the client's and what it collides as is data (ADR 0007)
+     * @param health damage it absorbs before it is destroyed
+     * @param blastRadius how wide a circle it leaves when it goes, in world units
+     * @param turnRate how fast it comes round with the trigger off, as the fraction of the angle left
+     *     it covers per second
+     * @param firingTurnFactor what is left of that rate while it is firing, in {@code (0, 1]}. This is
+     *     the number that makes holding the trigger and tracking a target two different decisions
+     * @param range how far a crew of its own judgement will shoot from it, in world units. Well past
+     *     what a man can see for himself, which is most of what a turret is worth to a squad
+     * @param crewRadius how far a trooper will divert to get on a free one, in world units
+     * @param quietSeconds how long with nothing in range before a trooper gets off again
+     * @param weapon which gun is on it
+     */
+    @With
+    public record TurretConfig(
+            float radius,
+            float health,
+            float blastRadius,
+            float turnRate,
+            float firingTurnFactor,
+            float range,
+            float crewRadius,
+            float quietSeconds,
+            WeaponKind weapon) {
+
+        public TurretConfig {
+            Require.positive("turret radius", radius);
+            Require.positive("turret health", health);
+            Require.notNegative("turret blastRadius", blastRadius);
+            Require.notNegative("turret turnRate", turnRate);
+            if (firingTurnFactor <= 0f || firingTurnFactor > 1f) {
+                throw new IllegalArgumentException(
+                        "turret firingTurnFactor must be in (0, 1], was " + firingTurnFactor);
+            }
+            Require.positive("turret range", range);
+            Require.notNegative("turret crewRadius", crewRadius);
+            Require.notNegative("turret quietSeconds", quietSeconds);
         }
     }
 

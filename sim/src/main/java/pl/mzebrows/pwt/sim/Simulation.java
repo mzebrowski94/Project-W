@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Level;
+import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -51,7 +52,10 @@ import pl.mzebrows.pwt.sim.system.StunSystem;
 import pl.mzebrows.pwt.sim.system.TrooperCombatSystem;
 import pl.mzebrows.pwt.sim.system.TrooperMindSystem;
 import pl.mzebrows.pwt.sim.system.TrooperMoveSystem;
+import pl.mzebrows.pwt.sim.system.TurretSystem;
 import pl.mzebrows.pwt.sim.system.WanderSystem;
+import pl.mzebrows.pwt.sim.system.WaveSystem;
+import pl.mzebrows.pwt.sim.system.WeaveSystem;
 
 /**
  * The whole game world and everything that happens in it.
@@ -80,6 +84,7 @@ import pl.mzebrows.pwt.sim.system.WanderSystem;
 public final class Simulation {
 
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
+    private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
 
@@ -121,8 +126,15 @@ public final class Simulation {
         engine.addSystem(new DragSystem());
         engine.addSystem(new CommanderControlSystem(spawner));
         engine.addSystem(new MeleeSystem(spawner));
+        // Immediately after the commander's own hands, and before anything looks around: a shot
+        // fired from a turret this tick is in the world before the enemies decide what they can see,
+        // exactly as a melee sweep is.
+        engine.addSystem(new TurretSystem(map, spawner));
         engine.addSystem(new PerceptionSystem(config, map));
         engine.addSystem(new NavigationSystem(config, map));
+        // Immediately after the course it bends, and well before avoidance: a weave that could steer
+        // something into rock would stop being a weave the moment a level had walls in it.
+        engine.addSystem(new WeaveSystem());
         // One stream for the squad, shared by the two systems that drive it: roaming and
         // sweeping are the same concern, and separating them would only mean two salts to
         // keep apart for no benefit.
@@ -155,6 +167,10 @@ public final class Simulation {
         engine.addSystem(new RespawnSystem(spawner));
         engine.addSystem(new BlastSystem(map, spawner));
         engine.addSystem(new ProjectileBoundsSystem(map, spawner));
+        // Before the objectives, and at the end of the tick with the other systems that are about the
+        // level rather than about anything standing in it: a level whose last wave lands this tick
+        // must not read as complete for the tick before the aliens appear.
+        engine.addSystem(new WaveSystem(config, map, spawner, Rng.stream(config.seed(), RngStream.WAVE)));
         engine.addSystem(new ControlPointSystem());
         engine.addSystem(new ObjectiveSystem());
         engine.addSystem(new AppearanceSystem(config));
@@ -215,9 +231,29 @@ public final class Simulation {
         return LEVEL.get(levels.first());
     }
 
+    /**
+     * What the level still has to throw at you, for a scenario describing its waves (G0007).
+     *
+     * <p>There is always exactly one, spawned with the world before any scenario runs, so nothing
+     * here has a null case to consider - exactly as {@link #level()} does not.
+     */
+    public Waves waves() {
+        return WAVES.get(levels.first());
+    }
+
+    /** Spawns the post: ground the level says you must hold, and the other side comes for. */
+    public Entity spawnPost(float x, float y) {
+        return spawner.spawnPost(x, y);
+    }
+
     /** Spawns ground a squad takes by standing on it. Spawn these before whatever stands on them. */
     public Entity spawnControlPoint(float x, float y) {
         return spawner.spawnControlPoint(x, y);
+    }
+
+    /** Spawns a turret: a gun on a mount that the commander or a trooper can get on. */
+    public Entity spawnTurret(float x, float y) {
+        return spawner.spawnTurret(x, y);
     }
 
     /** Spawns one member of the squad, on the commander's side. */

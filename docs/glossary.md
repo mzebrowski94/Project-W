@@ -19,10 +19,12 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **faction** | Which side an entity is on. Damage only ever crosses sides. Scenery is on nobody's. |
 | **grunt** | The basic enemy strain. *Enemy* stays the umbrella word for everything on the alien side; *grunt* is the specific creature. |
 | **obstacle** | A static entity that blocks movement and projectiles. An entity like any other, not terrain data. |
+| **runner** | The fast strain: smaller, thinner, and it notices the commander from most of the way across a level. What makes it a different problem from a grunt is its line rather than its speed - it **weaves** as it closes and **dodges** shots it sees coming, so it is a target you have to lead rather than one you have to out-run. It dashes the last of the distance as a grunt does. |
 | **spitter** | The shooting strain: purple, fragile, and it holds its ground at a distance instead of closing. A different problem from the two above - one you have to go and solve rather than one that comes to you. |
 | **squad** *(source)* | The group of troopers following a commander. |
 | **strain** | The form a unit currently has. Grunt, brute and whatever they grow into are strains of one thing, not different classes of entity: a strain is an enum on a component and a table of numbers, and changing it is a field write. |
 | **trooper** | One AI-controlled member of a squad. |
+| **turret** | A gun on a mount that a man gets on rather than picks up (G0024). It stays where it is put - though it can be **hauled** like a barrel while nobody is on it - fires far faster and far lighter than anything carried, and has to be swung onto a bearing instead of pointed. Three times a trooper's health, and it goes off when it is destroyed. Drawn square, because it is the one thing on the field that is equipment rather than a creature. |
 
 ### Growth and pickups
 
@@ -60,6 +62,9 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **lock** | The stun a *fatal* blow puts on both parties. What turns a kill into an exchange rather than a deletion. |
 | **projectile** | A fired entity that travels and can hit something. Always simulated; there is no hitscan. |
 | **recovery** | The window after a staggering hit during which a unit takes no further contact damage. |
+| **heat** | How hot a gun has become, as a fraction the simulation publishes for the renderer. It fills with every shot and comes off at a rate, always - a gun nobody is holding cools exactly as fast as one somebody is. The one bar in the game that fills up because of what the player **did** rather than something being done to him, which is why it is drawn as an arc over the holder rather than on the **charge** channel (G0025). |
+| **overheat** | A gun that has filled its **heat** bar and stopped itself. It stays stopped until the bar has fallen well below full, not merely below the top - so running one into the stop costs seconds rather than a stutter. |
+| **muzzle** | Where a shot leaves a gun. A number on the gun rather than on whatever is holding it: a gun that names an offset has two of them, fires from each in turn, and is therefore a twin mount without anything growing a second firing path. Never *barrel* - that word is taken by the explosive. |
 | **stagger** | The stun a *survived* blow puts on the one that took it, and only on that one. A shove, not a clinch: whoever landed it keeps fighting. |
 | **spit** | What a spitter fires. Slow in the air on purpose, and thrown inside a narrow cone rather than along a line - so a shot meant for the commander reaches the men standing beside him, which is most of what makes a firing line hurt a squad. |
 | **attack arc** | How wide an arc in front of a creature its claws reach into, centred on the way it is going. Below all round on purpose: walking into the back of something that had not turned round used to kill outright, which read as the game cheating rather than as a mistake. Generous, though - a lunging creature is not precise, and something standing still reaches all round because it can turn on the spot. |
@@ -73,7 +78,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 
 | Term | Meaning |
 |---|---|
-| **aggro** | Whether a unit is hunting the commander. One latched boolean, and the whole of a unit's mind. It notices him at its detection range and, if its strain loses interest at all, gives up past its lose range. Him going down releases it regardless: nothing stands to attention over a corpse. |
+| **aggro** | Whether a unit is hunting anybody. One latched boolean, and the whole of a unit's mind. *Who* it is hunting is not latched: that is whoever on the player's side is nearest and still on his feet, asked again every tick and published as a place (G0026). It notices at its detection range and, if its strain loses interest at all, gives up past its lose range. That man going down releases it regardless: nothing stands to attention over a corpse. |
 | **aid** | A trooper leaving what it was doing to go and **stabilise** somebody. Ranked below a standing order and above the level's objectives, and taken on a **chance** rather than always (G0023). |
 | **avoidance** | Steering around what a unit is about to hit, decided before it hits it. Context steering: a ring of candidate directions scored by how much the unit wanted to go that way against how dangerous that way is. It never avoids the other side, which is what it is trying to reach, and never a pickup it wants - only a **shunned** one gets room. |
 | **chance** | How often a unit does something it only sometimes does, as a probability per second of opportunity. Every one in the game is a constant in `AiChance` and a line in `game.properties`, so the conditional behaviour can be read off one list instead of found by searching the systems. Zero switches one off and draws no number at all. |
@@ -85,6 +90,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **hold ground** | A shooter that moves for somewhere to be and never for somebody to follow. It comes when summoned - a provocation is a place rather than a target, so taking a point off one brings it over - and it crosses the ground between noticing you and being able to fight you, once. From the moment it is **in position** it holds that ground however far you go, so you are driven off rather than chased. |
 | **in position** | A shooter that has reached the distance it wanted. It outlives being in range on purpose: stepping out of its reach costs it the aim it had **settled**, and only losing it altogether lets it move up again. |
 | **facing** | Which way a thing is looking, published as a unit vector for the renderer. The commander's is his aim and never his heading (G0002); a trooper's is a decision of its own, so it can stand still and go on watching. Anything that does not steer itself has none. |
+| **weave** | A creature refusing to walk in a straight line: its course is turned from side to side as it closes, so it arrives by a serpentine rather than along the line you were aiming down. A function of **ground covered** and of nothing else - not a clock, so being slowed does not change its shape, and not a roll (G0012), so it can be learnt and led. The phase comes from where the unit was spawned, which is what puts a pack out of step with itself without a number being drawn. Turns the course rather than adding to it, so a weaving creature is a harder shot and not a faster one. |
 | **flow field** | A direction per tile, pointing the way to one goal, rebuilt when the goal leaves its tile. One grid pass serves every unit that reads it, however many there are - the alternative is a path search each and a queue walking in single file. |
 | **forage** | An idle unit going to eat something it has noticed. Only ever reached by a unit that has not noticed the commander - he outranks food absolutely - which is why the secondary range is the shortest range in the game. |
 | **intent** | What a commander is trying to do this tick, as a component. Written from input, read by systems. |
@@ -108,6 +114,8 @@ A term that could sit in two sections goes where a reader would look for it, not
 | Term | Meaning |
 |---|---|
 | **action** | Something the commander does to whatever is within arm's length, on one key. He never picks from a list: what is in reach is what is on offer, nearest first, and the simulation publishes which kind it is for the interface to show (G0021). |
+| **crew** | To be aboard a **station** rather than standing on the ground. A man who is crewing one is driven by nobody, is out of the collision path entirely - nothing can shove, shoot or claw him - and is not drawn at all; what the player sees is the gun, which reads as manned. A **blast** still reaches him, which is what makes destroying a manned turret worth doing. Got on and off with the **action** key (G0024). |
+| **station** | Something a man can **crew**. One exists - the **turret** - and it is named by an issued id rather than by a reference, exactly as a **load** is (G0010). |
 | **haul** | To drag a load - a casualty or a barrel - along behind you. It costs almost everything: he backs away and cannot press forwards, keeps only a fraction of his pace and a little sideways lean, and has no hand free for a weapon. **Hauled** latches on the load, because what it buys is paid for after he puts it down. |
 | **load** | Whatever is being hauled. Named by an issued id on both ends rather than by an entity reference, so a drag that outlives what it was holding can never come back attached to something else (G0010). |
 | **reach** | How close something must be, surface to surface, for the commander to do anything with it. One number for every action there is, so there is one distance to learn. |
@@ -129,6 +137,8 @@ A term that could sit in two sections goes where a reader would look for it, not
 
 | Term | Meaning |
 |---|---|
+| **post** | Ground a level says you must hold, and the first thing in the game that tells the **aliens** where to be: anything that has noticed nobody walks at it rather than ambling about its patch (G0027). It has no health, no side and no capture bar - it is a goal, not a thing to fight - and there is one per level. Distinct from a **control point**, which is somewhere the squad goes and takes. |
+| **wave** | One lot of aliens, and when and where it arrives. A list of them is carried by **the level entity**, and whether that list is spent is half of the "hold the post" objective: an empty field means you have won if there is nothing left to come, and means you are between waves if there is. |
 | **control point** | Ground a squad takes by standing near it for a while. Captured by dwelling; the dwell goes back to zero the moment the last capturer leaves, rather than pausing, and starting an attempt wakes what is nearby. |
 | **level** *(source)* | One self-contained combat scenario, start to objective. |
 | **objective** | A condition a level requires before it counts as done. A level names a set and requires all of it. Two exist: clear the map of enemies, and capture every control point. What a completed level *does* is still open - in the alpha it does nothing. |
@@ -159,5 +169,10 @@ A term that could sit in two sections goes where a reader would look for it, not
 - *item*, *collectable*, *powerup* - say pickup.
 - *mutation*, *transformation* - say evolve.
 - *object*, *actor*, *thing* - say entity.
+- *barrel* for the end of a gun - say muzzle. A barrel is the explosive.
+- *ammo*, *ammunition*, *reload* for what heat does - say heat and overheat. Heat is a rate limit and
+  not a supply, and grenades are the only thing a count is still open for.
+- *mount*, *emplacement*, *vehicle* - say turret for the thing and station for the role.
+- *enter*, *board*, *ride* - say crew, or "aboard" for the state.
 - *update* for a simulation step - say tick.
 - *create* or *make* for bringing an entity into the world - say spawn.

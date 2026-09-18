@@ -33,6 +33,23 @@ public final class Weapon implements Component, Pool.Poolable {
     /** How wide a blast each shot leaves where it stops. Zero for every ordinary gun. */
     public float blastRadius;
 
+    /** How far to either side of the line of fire its muzzles sit. Zero for a gun with one. */
+    public float muzzleOffset;
+
+    /** What one shot adds to whatever is holding this, as a fraction. Zero for a gun that stays cold. */
+    public float heatPerShot;
+
+    /** How much of that comes off per second, and how far it must fall before the gun comes back. */
+    public float heatCoolPerSecond;
+
+    public float heatResumeBelow;
+
+    /**
+     * Which of the two it fires from next. Runtime state, like the cooldown, and meaningless on a
+     * gun with one muzzle - where the offset is zero and both sides are the same point.
+     */
+    public boolean nextMuzzleRight = true;
+
     /** Reads a gun's definition in, ready to fire, and returns this component, for fluent spawning. */
     public Weapon set(WeaponKind newKind, WeaponDef def) {
         this.kind = newKind;
@@ -43,6 +60,11 @@ public final class Weapon implements Component, Pool.Poolable {
         this.damage = def.damage();
         this.projectileLook = def.projectileLook();
         this.blastRadius = def.blastRadius();
+        this.muzzleOffset = def.muzzleOffset();
+        this.heatPerShot = def.heat().perShot();
+        this.heatCoolPerSecond = def.heat().coolPerSecond();
+        this.heatResumeBelow = def.heat().resumeBelow();
+        this.nextMuzzleRight = true;
         return this;
     }
 
@@ -60,5 +82,10 @@ public final class Weapon implements Component, Pool.Poolable {
         damage = 0f;
         projectileLook = Look.PROJECTILE;
         blastRadius = 0f;
+        muzzleOffset = 0f;
+        heatPerShot = 0f;
+        heatCoolPerSecond = 0f;
+        heatResumeBelow = 0f;
+        nextMuzzleRight = true;
     }
 }

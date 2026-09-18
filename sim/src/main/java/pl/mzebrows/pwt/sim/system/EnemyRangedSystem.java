@@ -7,11 +7,11 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -28,12 +28,12 @@ import pl.mzebrows.pwt.sim.component.Weapon;
  * same {@code Spawner} call. Everything that makes a shooter a shooter already existed; this decides
  * only when to pull the trigger and in roughly which direction.
  *
- * <p><strong>It shoots what it is hunting, which is the commander.</strong> Nothing on the alien
- * side has ever targeted a trooper - {@code Perception} latches onto him and only him - and
- * inventing a second targeting rule inside a firing system would settle a design question by
- * accident. The squad is still in danger, because the cone is wide enough that a shot meant for him
- * reaches the men standing near him, which is most of what a firing line does to a squad anyway.
- * Whether an alien should ever aim at a trooper is an open question in {@code docs/design}.
+ * <p><strong>It shoots what it is hunting, and that is whoever on the player's side is nearest</strong>
+ * (G0026) - the commander, a trooper, or a gun. It does not work that out here: {@code
+ * PerceptionSystem} decides and publishes the place, and a firing system that resolved a target of
+ * its own would be a second targeting rule that could disagree with the first. The cone is wide
+ * enough that a shot meant for one man reaches those standing near him, which is still most of what
+ * a firing line does to a squad.
  *
  * <p><strong>The spread is drawn from a stream of its own</strong> (pillar 6). Sharing one with the
  * leap would mean re-tuning how often something shoots quietly reshuffles when everything jumps -
@@ -83,15 +83,19 @@ public final class EnemyRangedSystem extends EntitySystem {
 
     private static final float EPSILON = 1e-4f;
 
-    /** Close enough to dead behind that there is no shorter way round to lerp along. */
-    private static final float ANTIPARALLEL = -0.9999f;
-
     private final TileMap map;
     private final Spawner spawner;
     private final Rng rng;
 
+    /** Scratch, so swinging an aim and working out a muzzle cost no allocation per shooter per tick. */
+    private final float[] swung = new float[2];
+
+    /** Scratch for the place it is hunting, so reading it costs no allocation per shooter per tick. */
+    private final Position hunting = new Position();
+
+    private final float[] muzzle = new float[2];
+
     private ImmutableArray<Entity> shooters = new ImmutableArray<>(new Array<>());
-    private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
 
     public EnemyRangedSystem(TileMap map, Spawner spawner, Rng rng) {
         this.map = map;
@@ -104,13 +108,10 @@ public final class EnemyRangedSystem extends EntitySystem {
         shooters = engine.getEntitiesFor(
                 Family.all(Enemy.class, Ranged.class, Weapon.class, Position.class, Body.class, Faction.class)
                         .get());
-        commanders = engine.getEntitiesFor(
-                Family.all(Commander.class, Position.class).get());
     }
 
     @Override
     public void update(float deltaTime) {
-        Position target = Drivers.livingTarget(commanders);
         for (int i = 0; i < shooters.size(); i++) {
             Entity entity = shooters.get(i);
             Ranged ranged = RANGED.get(entity);
@@ -119,6 +120,7 @@ public final class EnemyRangedSystem extends EntitySystem {
             }
             Position at = POSITION.get(entity);
             boolean hunting = !PERCEPTION.has(entity) || PERCEPTION.get(entity).aggro;
+            @Nullable Position target = hunting ? hunted(entity) : null;
             if (!hunting) {
                 // It has lost him, not merely lost sight of him. That is what releases the position
                 // it took as well as the aim it had walked in.
@@ -160,6 +162,22 @@ public final class EnemyRangedSystem extends EntitySystem {
     }
 
     /**
+     * Where whatever this shooter is hunting was standing this tick, or null if it is hunting nobody.
+     *
+     * <p>Read from what {@code PerceptionSystem} published rather than resolved again here: one
+     * system decides who each alien has noticed, and a firing system that asked the question a
+     * second time would be a second targeting rule that could disagree with the first (G0026).
+     */
+    private @Nullable Position hunted(Entity entity) {
+        if (!PERCEPTION.has(entity)) {
+            return null;
+        }
+        Perception perception = PERCEPTION.get(entity);
+        hunting.set(perception.targetX, perception.targetY);
+        return hunting;
+    }
+
+    /**
      * Whether it has something it could shoot at this tick: noticed, inside its range, with nothing
      * solid in between. Whether there is a living target at all is asked at the call site, once.
      *
@@ -190,7 +208,7 @@ public final class EnemyRangedSystem extends EntitySystem {
      * nothing has moved yet. A creature standing still keeps the aim it had, which is what lets it
      * hold a bearing between waypoints instead of snapping back to nothing.
      */
-    private static void lookWhereItIsGoing(Entity entity, Ranged ranged, float deltaTime) {
+    private void lookWhereItIsGoing(Entity entity, Ranged ranged, float deltaTime) {
         if (!STEERING.has(entity)) {
             return;
         }
@@ -214,41 +232,21 @@ public final class EnemyRangedSystem extends EntitySystem {
      * <p>A turn rate of zero means it is always already looking at you, which is what everything that
      * shot before there were fields of view declares.
      */
-    private static void swingOnto(Ranged ranged, float aimX, float aimY, float deltaTime) {
-        if (ranged.turnRate <= 0f || !ranged.aiming()) {
+    private void swingOnto(Ranged ranged, float aimX, float aimY, float deltaTime) {
+        if (!ranged.aiming()) {
+            // It has no bearing to come round from. Everything else is {@link Aim}'s, including the
+            // case where what it wants to shoot is exactly behind it.
             ranged.aim(aimX, aimY);
             return;
         }
-        float blend = ranged.turnRate * deltaTime;
-        if (blend >= 1f) {
-            ranged.aim(aimX, aimY);
-            return;
-        }
-        float swungX;
-        float swungY;
-        if (ranged.aimX * aimX + ranged.aimY * aimY <= ANTIPARALLEL) {
-            // Dead behind it. The two directions cancel, so lerping between them only shortens the
-            // aim along its own line and renormalising puts it straight back - a shooter with
-            // somebody exactly at its six would turn for ever. Nudge off the line by the same amount
-            // it would have turned, and from the next tick there is a shorter way round to take.
-            swungX = ranged.aimX - aimY * blend;
-            swungY = ranged.aimY + aimX * blend;
-        } else {
-            swungX = ranged.aimX + (aimX - ranged.aimX) * blend;
-            swungY = ranged.aimY + (aimY - ranged.aimY) * blend;
-        }
-        float length = (float) Math.sqrt(swungX * swungX + swungY * swungY);
-        if (length <= EPSILON) {
-            ranged.aim(aimX, aimY);
-            return;
-        }
-        ranged.aim(swungX / length, swungY / length);
+        Aim.swing(ranged.aimX, ranged.aimY, aimX, aimY, ranged.turnRate, deltaTime, swung);
+        ranged.aim(swung[0], swung[1]);
     }
 
     /** One shot, roughly at him, whenever the gun is ready - and less roughly than the last one. */
     private void fire(Entity entity, Ranged ranged, Position at, float aimX, float aimY, float distance) {
         Weapon weapon = WEAPON.get(entity);
-        if (!weapon.ready()) {
+        if (!Guns.ready(entity, weapon)) {
             return;
         }
         float turn = (rng.nextFloat() * 2f - 1f) * ranged.halfSpreadFor(distance);
@@ -256,15 +254,9 @@ public final class EnemyRangedSystem extends EntitySystem {
         float sin = (float) StrictMath.sin(turn);
         float directionX = aimX * cos - aimY * sin;
         float directionY = aimX * sin + aimY * cos;
-        float muzzle = BODY.get(entity).radius + weapon.projectileRadius + MUZZLE_GAP;
-        spawner.spawnProjectile(
-                at.x + directionX * muzzle,
-                at.y + directionY * muzzle,
-                directionX,
-                directionY,
-                weapon,
-                FACTION.get(entity).side);
-        weapon.remainingSeconds = ranged.cooldownFor(weapon.cooldownSeconds, distance);
+        Muzzle.next(at.x, at.y, BODY.get(entity).radius, weapon, MUZZLE_GAP, directionX, directionY, muzzle);
+        spawner.spawnProjectile(muzzle[0], muzzle[1], directionX, directionY, weapon, FACTION.get(entity).side);
+        Guns.spend(entity, weapon, ranged.cooldownFor(weapon.cooldownSeconds, distance));
         ranged.shotsOnTarget++;
     }
 }

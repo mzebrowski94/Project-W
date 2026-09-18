@@ -19,6 +19,11 @@ import lombok.With;
  *     ordinary gun. A shot that carries one goes off on whatever it hits and at the end of its flight
  *     alike, because it does so <em>by dying</em> through the reaction everything else explodes
  *     through (G0018) - there is no second path to a blast, only a gun that names one
+ * @param heat how hot it gets and how fast that comes off. {@link HeatDef#none()} for a gun that can
+ *     be fired as fast as its cooldown allows, for ever, which is most of them
+ * @param muzzleOffset how far to either side of the line of fire its muzzles sit, in world units.
+ *     Zero for a gun with one muzzle, which is every gun a man carries. A gun that names one fires
+ *     from alternate sides, so a twin mount is a number here rather than a second firing path
  */
 @With
 public record WeaponDef(
@@ -27,7 +32,9 @@ public record WeaponDef(
         float projectileRadius,
         float damage,
         Look projectileLook,
-        float blastRadius) {
+        float blastRadius,
+        HeatDef heat,
+        float muzzleOffset) {
 
     public WeaponDef {
         Require.notNegative("weapon cooldownSeconds", cooldownSeconds);
@@ -35,6 +42,12 @@ public record WeaponDef(
         Require.positive("weapon projectileRadius", projectileRadius);
         Require.notNegative("weapon damage", damage);
         Require.notNegative("weapon blastRadius", blastRadius);
+        Require.notNegative("weapon muzzleOffset", muzzleOffset);
+    }
+
+    /** True if firing this gun faster than it likes costs anything. */
+    public boolean overheats() {
+        return heat.matters();
     }
 
     /** True if what it fires goes off where it stops. */

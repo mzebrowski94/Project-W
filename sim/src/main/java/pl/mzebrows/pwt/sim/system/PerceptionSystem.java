@@ -14,9 +14,11 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.PickupDef;
@@ -24,16 +26,23 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 
 /**
- * Decides, once a tick, which units are hunting the commander and which have not noticed him.
+ * Decides, once a tick, which units are hunting somebody, and who that somebody is.
+ *
+ * <p><strong>Whoever on the player's side is nearest</strong> - the commander, a trooper, or a gun a
+ * level put down (G0026). The answer is worked out here and published as a place on {@code
+ * Perception}; every system downstream reads that rather than asking again, which is what stops two
+ * of them disagreeing about what a creature is coming for.
  *
  * <p>Everything downstream reads the answer and never asks the question again: navigation drives the
  * ones that are hunting, wandering drives the ones that are not, and the renderer shows which is
  * which. One place deciding is what stops two systems disagreeing about whether a unit is awake.
  *
- * <p><strong>Him going down releases everything, whatever its switches say.</strong> A strain that
- * never loses interest never loses interest in a living man; a pack standing to attention over a
- * corpse for the length of a respawn is the game holding its breath, and the three seconds after a
- * kill are supposed to be a beat rather than a freeze frame.
+ * <p><strong>Whoever it was hunting going down releases it, whatever its switches say.</strong> A
+ * strain that never loses interest never loses interest in a living man; a pack standing to attention
+ * over a corpse for the length of a respawn is the game holding its breath, and the seconds after a
+ * kill are supposed to be a beat rather than a freeze frame. It is free to notice somebody else on
+ * the same tick, which is the whole difference the nearest rule makes: his death is a beat rather
+ * than an all-clear.
  *
  * <p><strong>The hysteresis is the mechanic</strong> for a strain that can give up at all. It notices
  * him at one range and gives up at a longer one, so the distance at which it wakes is not the distance
@@ -59,12 +68,14 @@ public final class PerceptionSystem extends EntitySystem {
     private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
+    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
 
     private final Defs<PickupKind, PickupDef> pickupDefs;
     private final TileMap map;
 
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
-    private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> sides = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> posts = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> edible = new ImmutableArray<>(new Array<>());
 
     public PerceptionSystem(SimConfig config, TileMap map) {
@@ -76,14 +87,14 @@ public final class PerceptionSystem extends EntitySystem {
     public void addedToEngine(Engine engine) {
         watchers = engine.getEntitiesFor(
                 Family.all(Perception.class, Position.class).get());
-        commanders = engine.getEntitiesFor(
-                Family.all(Commander.class, Position.class).get());
+        sides = engine.getEntitiesFor(
+                Family.all(Faction.class, Health.class, Position.class).get());
+        posts = engine.getEntitiesFor(Family.all(Post.class, Position.class).get());
         edible = engine.getEntitiesFor(Family.all(Pickup.class, Position.class).get());
     }
 
     @Override
     public void update(float deltaTime) {
-        @Nullable Position target = Drivers.livingTarget(commanders);
         for (int i = 0; i < watchers.size(); i++) {
             Entity watcher = watchers.get(i);
             if (Drivers.held(watcher)) {
@@ -91,6 +102,11 @@ public final class PerceptionSystem extends EntitySystem {
             }
             Perception perception = PERCEPTION.get(watcher);
             Position position = POSITION.get(watcher);
+            // Whoever on the player's side is nearest to this one, asked again every tick (G0026).
+            // Nearest changes as a fight moves, and a unit that latched the first thing it saw would
+            // walk past the man standing over it.
+            @Nullable Entity quarry = Drivers.nearestLivingTarget(sides, position);
+            @Nullable Position target = quarry == null ? null : POSITION.get(quarry);
             if (target == null) {
                 // Nobody left to hunt. This outranks every switch below it: a pack standing to
                 // attention over a corpse for the length of a respawn is the game holding its breath.
@@ -107,10 +123,11 @@ public final class PerceptionSystem extends EntitySystem {
             } else {
                 perception.aggro = notices(watcher, perception, position, target);
             }
-            if (perception.aggro) {
-                // The commander outranks a grudge exactly as absolutely as he outranks food. A unit
-                // that has noticed him drops where it was going, and does not resume afterwards -
-                // whatever provoked it is a long way behind by then.
+            if (perception.aggro && target != null) {
+                perception.hunt(target.x, target.y, COMMANDER.has(quarry));
+                // Somebody in front of it outranks a grudge exactly as absolutely as he outranks
+                // food. A unit that has noticed one drops where it was going, and does not resume
+                // afterwards - whatever provoked it is a long way behind by then.
                 perception.provoked = false;
             } else if (perception.provoked && withinRange(position, provokedPlace(perception), map.tileSize())) {
                 // Arrived. Whatever is standing here is now a fight like any other, decided by
@@ -118,8 +135,15 @@ public final class PerceptionSystem extends EntitySystem {
                 perception.provoked = false;
             }
             perception.foraging = false;
+            perception.marching = false;
             if (!perception.occupied()) {
                 lookForFood(watcher, perception, position);
+            }
+            if (!perception.occupied() && posts.size() > 0) {
+                // Nothing noticed, nothing owed, nothing to eat - and a level that has told the other
+                // side where to be. Walking at it is what turns a map you clear into a place that is
+                // attacked, and it is the lowest thing that can have a creature's attention.
+                perception.marching = true;
             }
         }
     }

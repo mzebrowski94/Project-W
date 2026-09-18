@@ -19,24 +19,26 @@ and a component touched by many is where to check. Read the code before concludi
 | **Avoidance** | How far ahead a unit looks for things in its way, and how hard it leans off them. | `Avoidance` · `Spawner` |
 | **Blast** | A circle of ground that is lethal for a moment. | `Appearance`, `Blast`, `Cooldown` · `Spawner` |
 | **BlastsOnDeath** | A death reaction: this entity leaves a blast where it fell. | `Blast`, `Pickup` · `Spawner` |
-| **Body** | An entity's circular extent, used for collision and for placeholder rendering. | `Action`, `Aid`, `Aid`, `Avoidance`, `Blast`, `Collision`, `CommanderControl`, `Damage`, `Dodge`, `Drag`, `EnemyRanged`, `Grenade`, `Navigation`, `ProjectileBounds`, `TrooperCombat`, `TrooperMind`, `TrooperMove`, `Wander` · solver: `ConstraintSolver` · `Spawner` · client: `WorldRenderer` |
+| **Body** | An entity's circular extent, used for collision and for placeholder rendering. | `Action`, `Aid`, `Aid`, `Avoidance`, `Blast`, `Collision`, `CommanderControl`, `Crews`, `Damage`, `Dodge`, `Drag`, `EnemyRanged`, `Grenade`, `Navigation`, `ProjectileBounds`, `TrooperCombat`, `TrooperMind`, `TrooperMove`, `Turret`, `Wander` · solver: `ConstraintSolver` · `Spawner` · client: `WorldRenderer` |
 | **Casualty** | A unit that has been shot or blasted off its feet but is not dead yet: it lies where it fell, bleeding out, and can be put back on its feet by somebody who reaches it in time. | `Action`, `Aid`, `Aid`, `Appearance`, `Casualty`, `Damage`, `Drag`, `Drivers`, `TrooperMind` · `Spawner` |
-| **Collider** | How an entity takes part in collision, as data rather than as a class of entity. | `Avoidance`, `Collision`, `Deaths`, `Drag` · solver: `ConstraintSolver` · `Spawner` |
-| **Commander** | Marker: The player-controlled unit. | `Action`, `CommanderControl`, `Drag`, `EnemyLeap`, `EnemyRanged`, `Navigation`, `Perception`, `SquadOrder`, `TrooperMind` · `Simulation`, `Spawner` · client: `DebugOverlay`, `ScenarioSession` |
+| **Collider** | How an entity takes part in collision, as data rather than as a class of entity. | `Avoidance`, `Collision`, `Crews`, `Deaths`, `Drag` · solver: `ConstraintSolver` · `Spawner` |
+| **Commander** | Marker: The player-controlled unit. | `Action`, `CommanderControl`, `Drag`, `EnemyLeap`, `Navigation`, `Perception`, `SquadOrder`, `TrooperMind` · `Simulation`, `Spawner` · client: `DebugOverlay`, `ScenarioSession` |
 | **ContactDamage** | What an entity does to something it touches on the other side. | `Collision`, `Cooldown` · `Spawner` |
 | **ControlPoint** | A place a squad takes by standing near it. | `Appearance`, `ControlPoint`, `Objective`, `TrooperMind` · `Spawner` |
+| **Crew** | Whether this man is aboard something, and which thing. | `Appearance`, `Crews`, `Drivers`, `Turret` · `Spawner` |
 | **Damage** | Damage owed to an entity this tick, waiting to be applied. | `Blast`, `Collision`, `Damage` · `Spawner` |
 | **Dead** | Marker: This entity is finished and will be removed at the end of the tick. | `Blast`, `Reaper`, `Respawn` · `Spawner` |
 | **Dodge** | A sidestep away from an incoming shot, and how long it is committed to it. | `Cooldown`, `Dodge` · `Spawner` |
 | **Drag** | What the commander has hold of, and which way it is from him. | `CommanderControl`, `Drag`, `Drivers` · `Spawner` |
 | **Dragged** | Something that can be hauled about: a man who is down, or a barrel. | `Aid`, `Casualty`, `Damage`, `Drag` · `Spawner` |
-| **Dying** | A death that takes time: the entity's body stays on the field for a while before it is removed. | `Aid`, `Appearance`, `Casualty`, `Collision`, `Cooldown`, `Deaths`, `Drag`, `Drivers`, `Dying`, `Evolution`, `Objective`, `Perception`, `TrooperCombat`, `TrooperMind` · `Spawner` |
-| **Enemy** | Marker: A unit that chases the commander. | `EnemyRanged`, `Navigation`, `Objective`, `TrooperMind` · `Spawner` · client: `DebugOverlay` |
-| **Faction** | Which side an entity is on. | `Avoidance`, `Collision`, `CommanderControl`, `ControlPoint`, `EnemyRanged`, `Melee`, `Perception`, `Pickup`, `TrooperCombat` · `Spawner` |
+| **Dying** | A death that takes time: the entity's body stays on the field for a while before it is removed. | `Aid`, `Appearance`, `Casualty`, `Collision`, `Cooldown`, `Deaths`, `Drag`, `Drivers`, `Dying`, `Evolution`, `Objective`, `Perception`, `TrooperCombat`, `TrooperMind`, `Turret` · `Spawner` |
+| **Enemy** | Marker: A unit that chases the commander. | `EnemyRanged`, `Navigation`, `Objective`, `TrooperMind`, `Turret` · `Spawner` · client: `DebugOverlay` |
+| **Faction** | Which side an entity is on. | `Avoidance`, `Collision`, `CommanderControl`, `ControlPoint`, `Drivers`, `EnemyRanged`, `Melee`, `Perception`, `Pickup`, `TrooperCombat`, `Turret` · `Spawner` |
 | **Feed** | What a unit has eaten, and where that is taking it. | `Appearance`, `Evolution`, `Pickup` · `SimConfig`, `Spawner` |
 | **Focus** | Marker: The view should keep this entity in shot. | `Spawner` · client: `ScenarioScreen` |
-| **Health** | How much damage an entity can take before it dies. | `Aid`, `Blast`, `Damage` · `Spawner` · client: `DebugOverlay` |
-| **Intent** | What a commander is trying to do this tick. | `Action`, `Appearance`, `CommanderControl`, `Drag`, `Grenade`, `Melee`, `SquadOrder` · `Simulation`, `Spawner` |
+| **Health** | How much damage an entity can take before it dies. | `Aid`, `Blast`, `Damage`, `Perception` · `Spawner` · client: `DebugOverlay` |
+| **Heat** | How hot the gun this entity is holding has become, and whether it has stopped itself. | `Appearance`, `Cooldown`, `Guns` · `Spawner` |
+| **Intent** | What a commander is trying to do this tick. | `Action`, `Appearance`, `CommanderControl`, `Drag`, `Grenade`, `Melee`, `SquadOrder`, `Turret` · `Simulation`, `Spawner` |
 | **Invulnerable** | Damage this entity is currently ignoring. | `Aid`, `Collision`, `Cooldown`, `Damage`, `Deaths`, `Respawn` · `Simulation`, `Spawner` · client: `DebugOverlay` |
 | **Leap** | How a unit throws itself at the commander, and where it currently is in doing so. | `Appearance`, `Collision`, `Cooldown`, `EnemyLeap`, `TrooperCombat` · `Spawner` |
 | **Level** | State that belongs to the level rather than to anything standing in it. | `Objective`, `Pickup` · `Simulation`, `Spawner` |
@@ -44,7 +46,8 @@ and a component touched by many is where to check. Read the code before concludi
 | **Obstacle** | Marker: A static circle that blocks units and projectiles and never moves. | `Spawner` · client: `DebugOverlay` |
 | **Perception** | What a unit can notice, and whether it has noticed. | `Appearance`, `ControlPoint`, `Damage`, `EnemyRanged`, `Navigation`, `Perception`, `Wander` · `Spawner` |
 | **Pickup** | Something lying on the field waiting to be taken, and whether anything has taken it yet. | `Avoidance`, `Collision`, `Perception`, `Pickup` · `Spawner` |
-| **Position** | Where an entity is, in world units. | `Action`, `Aid`, `Aid`, `Appearance`, `Avoidance`, `Blast`, `Collision`, `CommanderControl`, `ControlPoint`, `Damage`, `Dodge`, `Drag`, `Drivers`, `EnemyLeap`, `EnemyRanged`, `Grenade`, `Melee`, `Movement`, `Navigation`, `Perception`, `PositionHistory`, `ProjectileBounds`, `SquadOrder`, `Strike`, `TrooperCombat`, `TrooperMind`, `TrooperMove`, `Wander` · solver: `ConstraintSolver` · `Spawner` · client: `ScenarioScreen`, `WorldRenderer` |
+| **Position** | Where an entity is, in world units. | `Action`, `Aid`, `Aid`, `Appearance`, `Avoidance`, `Blast`, `Collision`, `CommanderControl`, `ControlPoint`, `Crews`, `Damage`, `Dodge`, `Drag`, `Drivers`, `EnemyLeap`, `EnemyRanged`, `Grenade`, `Melee`, `Movement`, `Navigation`, `Perception`, `PositionHistory`, `ProjectileBounds`, `SquadOrder`, `Strike`, `TrooperCombat`, `TrooperMind`, `TrooperMove`, `Turret`, `Wander` · solver: `ConstraintSolver` · `Spawner` · client: `ScenarioScreen`, `WorldRenderer` |
+| **Post** | Ground the level says you must hold, and the other side is coming for. | `Navigation`, `Objective`, `Perception`, `TrooperMind` · `Spawner` |
 | **PreviousPosition** | Where an entity was at the start of the current tick, so the renderer can draw it partway between ticks instead of snapping once every simulation step. | `Grenade`, `PositionHistory` · `Spawner` · client: `ScenarioScreen`, `WorldRenderer` |
 | **Projectile** | A fired entity that despawns when it hits something or leaves the arena. | `Collision`, `Dodge`, `ProjectileBounds` · `Spawner` · client: `DebugOverlay` |
 | **Ranged** | How a unit uses the gun it is carrying: what it can see, how close it lets you get, how loosely it shoots, and where it is currently looking. | `Appearance`, `EnemyRanged`, `Navigation`, `Pickup`, `Wander` · `Spawner` |
@@ -52,7 +55,7 @@ and a component touched by many is where to check. Read the code before concludi
 | **RespawnsOnDeath** | A death reaction: this entity comes back, after a delay, somewhere specific. | `Respawn` · `Spawner` |
 | **Shake** | Something violent happened here, this hard, and it is this far through. | `Cooldown` · `Spawner` · client: `ScenarioScreen` |
 | **Speed** | How fast an entity moves under its own power, in world units per second. | `CommanderControl`, `Drag`, `Navigation`, `TrooperMove`, `Wander` · `Spawner` |
-| **Steering** | Where a unit wants to be going this tick, in world units per second, before anything decides whether it may. | `Appearance`, `Avoidance`, `Dodge`, `Drive`, `EnemyRanged`, `Navigation`, `TrooperMove`, `Wander` · `Spawner` |
+| **Steering** | Where a unit wants to be going this tick, in world units per second, before anything decides whether it may. | `Appearance`, `Avoidance`, `Dodge`, `Drive`, `EnemyRanged`, `Navigation`, `TrooperMove`, `Wander`, `Weave` · `Spawner` |
 | **Strain** | Which form a unit currently has. | `Appearance`, `Evolution`, `Navigation` · `Spawner` |
 | **Strike** | One swing of a melee weapon, in the world. | `Collision`, `Strike` · `Spawner` |
 | **Stunned** | How long an entity is unable to act, and whether what is holding it is a clinch or a shove. | `Appearance`, `Collision`, `Cooldown`, `Damage`, `Drivers`, `Stun` · `Spawner` |
@@ -60,15 +63,18 @@ and a component touched by many is where to check. Read the code before concludi
 | **Thrower** | What a unit can throw, and how often. | `Cooldown`, `Grenade` · `Spawner` |
 | **Thrown** | Something in the air off a fixed throw: how much of its flight is left, and what it has just come off. | `Collision`, `Grenade` · `Spawner` |
 | **Trooper** | One AI-controlled member of the squad, and the whole of what it is thinking. | `Aid`, `Appearance`, `SquadOrder`, `TrooperCombat`, `TrooperMind`, `TrooperMove` · `Spawner` |
-| **Velocity** | How fast an entity moves, in world units per second. | `Appearance`, `Avoidance`, `Collision`, `CommanderControl`, `Damage`, `Deaths`, `Dodge`, `Drag`, `Drive`, `EnemyLeap`, `Grenade`, `Movement`, `Stun` · `Spawner` |
+| **Turret** | A gun on a mount: where it is pointing, how fast it comes round, and whether anybody is on it. | `Action`, `Appearance`, `Crews`, `Drag`, `TrooperMind`, `Turret` · `Spawner` |
+| **Velocity** | How fast an entity moves, in world units per second. | `Appearance`, `Avoidance`, `Collision`, `CommanderControl`, `Crews`, `Damage`, `Deaths`, `Dodge`, `Drag`, `Drive`, `EnemyLeap`, `Grenade`, `Movement`, `Stun`, `Turret` · `Spawner` |
 | **Wander** | A unit's patch of ground, and where inside it it is currently headed. | `Cooldown`, `Wander` · `Spawner` |
-| **Weapon** | The gun a unit is carrying: which one, how often it may fire, and what it fires. | `Appearance`, `CommanderControl`, `Cooldown`, `EnemyRanged`, `TrooperCombat` · `Spawner` · client: `DebugOverlay` |
+| **Waves** | What is still to arrive, and how long until the next of it. | `Objective`, `Wave` · `Simulation`, `Spawner` |
+| **Weapon** | The gun a unit is carrying: which one, how often it may fire, and what it fires. | `Appearance`, `CommanderControl`, `Cooldown`, `EnemyRanged`, `Guns`, `Muzzle`, `TrooperCombat`, `Turret` · `Spawner` · client: `DebugOverlay` |
+| **Weave** | How far through its weave a creature is, and how hard it weaves. | `Weave` · `Spawner` |
 
 ## Before adding a component
 
-49 exist. Look for one that already holds what you need: most new mechanics want a field on an existing component, not a new component - G0010 makes that structural, because only `Spawner` may change what an entity is made of, so state cannot be a component that gets added and removed.
+55 exist. Look for one that already holds what you need: most new mechanics want a field on an existing component, not a new component - G0010 makes that structural, because only `Spawner` may change what an entity is made of, so state cannot be a component that gets added and removed.
 
-**Touched by exactly one system:** `Avoidance`, `Respawning`, `RespawnsOnDeath`, `Shake`.
+**Touched by exactly one system:** `Avoidance`, `Respawning`, `RespawnsOnDeath`, `Shake`, `Weave`.
 These satisfy the one-writer rule by construction. A second system writing one is the change worth thinking twice about.
 
 **Touched by no system:** `Focus`, `Obstacle`.

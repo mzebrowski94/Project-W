@@ -14,6 +14,14 @@ public enum WeaponKind {
     /** Slow, heavy and fast-flying. One shot kills anything a sidearm needs five for. */
     RAILGUN,
     /**
+     * What a turret fires. Light, very fast and quick to repeat: it trades the damage of a carried
+     * gun for a rate and a flight time neither side can step out of.
+     *
+     * <p>It is in the same table as the commander's guns and cannot be picked up, because nothing
+     * grants it - a turret is somewhere you stand, not something you carry away.
+     */
+    TURRET_GUN,
+    /**
      * What a spitter fires. Slow enough in the air to be seen coming and walked out of, which is
      * what makes a firing line something to read rather than something to be hit by.
      *

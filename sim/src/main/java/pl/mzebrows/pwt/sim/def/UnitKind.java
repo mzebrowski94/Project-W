@@ -22,5 +22,13 @@ public enum UnitKind {
      * close, and a different problem from the two above - one you have to go and solve rather than
      * one that comes to you.
      */
-    SPITTER
+    SPITTER,
+    /**
+     * The fast one: smaller, thinner, and it notices you from much further off than anything else.
+     *
+     * <p>What makes it a different problem from a grunt is not its speed but its line - it weaves as
+     * it closes and steps aside from shots it sees coming, so it is a target you have to lead rather
+     * than one you have to out-run.
+     */
+    RUNNER
 }

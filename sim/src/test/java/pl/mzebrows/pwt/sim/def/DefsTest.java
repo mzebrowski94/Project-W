@@ -49,7 +49,10 @@ class DefsTest {
     void listsEveryDefinitionInTheEnumsOwnOrder() {
         assertThat(complete().values())
                 .containsExactly(
-                        strain(RADIUS, Look.GRUNT), strain(RADIUS * 2f, Look.BRUTE), strain(RADIUS, Look.SPITTER));
+                        strain(RADIUS, Look.GRUNT),
+                        strain(RADIUS * 2f, Look.BRUTE),
+                        strain(RADIUS, Look.SPITTER),
+                        strain(RADIUS, Look.RUNNER));
     }
 
     @Test
@@ -62,6 +65,7 @@ class DefsTest {
                 .put(UnitKind.GRUNT, strain(RADIUS, Look.GRUNT))
                 .put(UnitKind.BRUTE, strain(RADIUS * 2f, Look.BRUTE))
                 .put(UnitKind.SPITTER, strain(RADIUS, Look.SPITTER))
+                .put(UnitKind.RUNNER, strain(RADIUS, Look.RUNNER))
                 .build();
     }
 
@@ -84,6 +88,8 @@ class DefsTest {
                 AvoidanceDef.off(),
                 LeapDef.off(),
                 RangedDef.off(),
+                WeaveDef.off(),
+                DodgeDef.off(),
                 Chances.standard(),
                 look);
     }

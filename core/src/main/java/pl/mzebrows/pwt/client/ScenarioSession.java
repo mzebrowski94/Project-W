@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
@@ -97,6 +98,9 @@ public final class ScenarioSession {
         }
     }
 
+    /** How many waves had been sent when the console was last told. */
+    private int announcedWave;
+
     /** The last squad order the player gave, for the overlay to show. Null until one is given. */
     public @Nullable Order lastOrder() {
         return lastOrder;
@@ -119,6 +123,34 @@ public final class ScenarioSession {
         }
         announcedAction = offered;
         return offered;
+    }
+
+    /**
+     * The number of the wave that has just arrived, or zero if none has since this was last asked.
+     *
+     * <p>The same shape as {@link #newlyOfferedAction()} and for the same reason: the change is a
+     * decision, the screen only draws, and asking is what marks it reported - so a caller that asks
+     * twice in a frame is told once. A line per frame is a flood rather than a report.
+     *
+     * <p>Zero rather than null because it is a count, and because a level with no waves at all should
+     * not have to be told about in a different type.
+     */
+    public int newlyArrivedWave() {
+        int sent = waves().sent();
+        if (sent == announcedWave) {
+            return 0;
+        }
+        announcedWave = sent;
+        return sent;
+    }
+
+    /** How many waves this level has altogether, for the other half of the line. */
+    public int totalWaves() {
+        return waves().total();
+    }
+
+    private Waves waves() {
+        return simulation.waves();
     }
 
     /** Runs however many fixed steps this frame's elapsed time is worth. Does nothing while paused. */
@@ -207,6 +239,7 @@ public final class ScenarioSession {
         lastOrder = null;
         pendingOrder = null;
         announcedAction = ActionKind.NONE;
+        announcedWave = 0;
         simulation = newWorld();
         clock = new FixedStepClock(simulation.config());
         paused = false;

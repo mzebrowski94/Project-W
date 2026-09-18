@@ -11,6 +11,8 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Level;
+import pl.mzebrows.pwt.sim.component.Post;
+import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Objective;
 
 /**
@@ -34,16 +36,19 @@ public final class ObjectiveSystem extends EntitySystem {
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
+    private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
 
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> enemies = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> posts = new ImmutableArray<>(new Array<>());
 
     @Override
     public void addedToEngine(Engine engine) {
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
         enemies = engine.getEntitiesFor(Family.all(Enemy.class).get());
         points = engine.getEntitiesFor(Family.all(ControlPoint.class).get());
+        posts = engine.getEntitiesFor(Family.all(Post.class).get());
     }
 
     @Override
@@ -54,9 +59,11 @@ public final class ObjectiveSystem extends EntitySystem {
         boolean cleared = nothingLeftStanding();
         boolean taken = everyPointTaken();
         for (int i = 0; i < levels.size(); i++) {
-            Level level = LEVEL.get(levels.get(i));
+            Entity entity = levels.get(i);
+            Level level = LEVEL.get(entity);
             level.setMet(Objective.CLEAR_ENEMIES, cleared);
             level.setMet(Objective.CAPTURE_POINTS, taken);
+            level.setMet(Objective.HOLD_POINT, postHeld(entity, cleared));
         }
     }
 
@@ -78,6 +85,22 @@ public final class ObjectiveSystem extends EntitySystem {
             }
         }
         return true;
+    }
+
+    /**
+     * The post held: there is one, everything the level had to send has been sent, and nothing
+     * hostile is left standing.
+     *
+     * <p>Two of those three are questions about the world and the middle one is not, which is the
+     * whole shape of a defence: an empty field means you have won if there is nothing left to come,
+     * and means you are between waves if there is. The schedule is level state exactly as the
+     * objectives are, so this is still recomputed from scratch every tick and latches nothing.
+     */
+    private boolean postHeld(Entity level, boolean cleared) {
+        if (posts.size() == 0) {
+            return false;
+        }
+        return cleared && (!WAVES.has(level) || WAVES.get(level).spent());
     }
 
     /** Every point taken - and a map with no points on it has not taken them all. */

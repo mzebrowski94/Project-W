@@ -7,6 +7,7 @@ import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
+import pl.mzebrows.pwt.sim.def.HeatDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
@@ -17,6 +18,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.def.WeaveDef;
 
 /**
  * Builds a {@link SimConfig} from {@code game.properties}.
@@ -55,6 +57,7 @@ public final class SimConfigLoader {
                 casualty(properties, defaults.casualty()),
                 action(properties, defaults.action()),
                 controlPoint(properties, defaults.controlPoint()),
+                turret(properties, defaults.turret()),
                 obstacle(properties, defaults.obstacle()),
                 collision(properties, defaults.collision()));
     }
@@ -90,7 +93,8 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.trooper.orderRadius", defaults.orderRadius()),
                 properties.getFloat("sim.trooper.forwardDistance", defaults.forwardDistance()),
                 properties.getFloat("sim.trooper.forwardSpeedFactor", defaults.forwardSpeedFactor()),
-                properties.getFloat("sim.trooper.followDistance", defaults.followDistance()));
+                properties.getFloat("sim.trooper.followDistance", defaults.followDistance()),
+                properties.getFloat("sim.trooper.patchRadius", defaults.patchRadius()));
     }
 
     /** Where the player's side starts, under {@code sim.spawn}. */
@@ -194,6 +198,8 @@ public final class SimConfigLoader {
                 avoidance(properties, prefix + ".avoidance", defaults.avoidance()),
                 leap(properties, prefix + ".leap", defaults.leap()),
                 ranged(properties, prefix + ".ranged", defaults.ranged()),
+                weave(properties, prefix + ".weave", defaults.weave()),
+                dodge(properties, prefix + ".dodge", defaults.dodge()),
                 chances(properties, prefix + ".chance", shared, defaults.chances()),
                 defaults.look());
     }
@@ -315,13 +321,37 @@ public final class SimConfigLoader {
                             properties.getFloat(prefix + ".projectileRadius", fallback.projectileRadius()),
                             properties.getFloat(prefix + ".damage", fallback.damage()),
                             fallback.projectileLook(),
-                            properties.getFloat(prefix + ".blastRadius", fallback.blastRadius())));
+                            properties.getFloat(prefix + ".blastRadius", fallback.blastRadius()),
+                            heat(properties, prefix, fallback.heat()),
+                            properties.getFloat(prefix + ".muzzleOffset", fallback.muzzleOffset())));
         }
         return builder.build();
     }
 
+    /** How hot one gun gets, under {@code sim.weapon.<kind>.heat}. All zero means a gun that stays cold. */
+    private static HeatDef heat(GameProperties properties, String prefix, HeatDef defaults) {
+        return new HeatDef(
+                properties.getFloat(prefix + ".heat.perShot", defaults.perShot()),
+                properties.getFloat(prefix + ".heat.coolPerSecond", defaults.coolPerSecond()),
+                properties.getFloat(prefix + ".heat.resumeBelow", defaults.resumeBelow()));
+    }
+
     private static SimConfig.CollisionConfig collision(GameProperties properties, SimConfig.CollisionConfig defaults) {
         return new SimConfig.CollisionConfig(properties.getInt("sim.collision.passes", defaults.passes()));
+    }
+
+    /** The gun on a mount, under {@code sim.turret}. Which gun is on it is structure, not tuning. */
+    private static SimConfig.TurretConfig turret(GameProperties properties, SimConfig.TurretConfig defaults) {
+        return new SimConfig.TurretConfig(
+                properties.getFloat("sim.turret.radius", defaults.radius()),
+                properties.getFloat("sim.turret.health", defaults.health()),
+                properties.getFloat("sim.turret.blastRadius", defaults.blastRadius()),
+                properties.getFloat("sim.turret.turnRate", defaults.turnRate()),
+                properties.getFloat("sim.turret.firingTurnFactor", defaults.firingTurnFactor()),
+                properties.getFloat("sim.turret.range", defaults.range()),
+                properties.getFloat("sim.turret.crewRadius", defaults.crewRadius()),
+                properties.getFloat("sim.turret.quietSeconds", defaults.quietSeconds()),
+                defaults.weapon());
     }
 
     /** What it takes to hold a point, under {@code sim.controlPoint}. */
@@ -379,6 +409,14 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.barrel.health", defaults.health()),
                 properties.getFloat("sim.barrel.blastRadius", defaults.blastRadius()),
                 properties.getFloat("sim.barrel.bittenBlastRadius", defaults.bittenBlastRadius()));
+    }
+
+    /** How hard a strain refuses to walk in a straight line, under {@code <prefix>.weave}. */
+    private static WeaveDef weave(GameProperties properties, String prefix, WeaveDef defaults) {
+        return new WeaveDef(
+                properties.getBoolean(prefix + ".enabled", defaults.enabled()),
+                properties.getFloat(prefix + ".amplitude", defaults.amplitude()),
+                properties.getFloat(prefix + ".wavelength", defaults.wavelength()));
     }
 
     /** How a creature answers a shot, under its own prefix. */

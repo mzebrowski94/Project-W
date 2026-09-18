@@ -33,11 +33,22 @@ public final class Action implements Component, Pool.Poolable {
     /** How far through the current action he is, in {@code [0, 1]}. Zero when he is doing nothing. */
     public float progress;
 
+    /**
+     * Whether the key was held last tick, so that getting on or off a gun happens on the press.
+     *
+     * <p>The two kinds of action the key does want opposite things from it. Putting a man back on
+     * his feet is a <em>hold</em>: the work accumulates while the key is down and is lost the moment
+     * it is not. Getting on a turret is an <em>event</em>: without an edge, one press would put him
+     * on and take him straight off again, sixty times a second.
+     */
+    public boolean wasHeld;
+
     /** Sets how far he can reach and returns this component, for fluent spawning. */
     public Action set(float newReach) {
         this.reach = newReach;
         this.available = ActionKind.NONE;
         this.progress = 0f;
+        this.wasHeld = false;
         return this;
     }
 
@@ -52,5 +63,6 @@ public final class Action implements Component, Pool.Poolable {
         available = ActionKind.NONE;
         reach = 0f;
         progress = 0f;
+        wasHeld = false;
     }
 }

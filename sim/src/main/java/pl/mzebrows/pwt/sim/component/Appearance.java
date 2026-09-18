@@ -56,7 +56,22 @@ public final class Appearance implements Component, Pool.Poolable {
          */
         CASUALTY,
         /** Out of health, body still on the field. */
-        DYING
+        DYING,
+        /**
+         * Inside something rather than standing on the ground - a man on a turret. Nothing can reach
+         * him and nothing drives him; what the player sees is the gun, which says for itself that
+         * somebody is on it.
+         */
+        ABOARD,
+        /**
+         * Manned. A gun with somebody on it and an abandoned one are two completely different things
+         * to walk towards, and the difference has to be readable from outside its arc (pillar 5).
+         *
+         * <p>A state rather than a flag of its own, because it is exactly what a state is for - and
+         * because it then rides the one channel every other "what is this doing" tell rides, so the
+         * client learns nothing new.
+         */
+        CREWED
     }
 
     public Look look = Look.NONE;
@@ -130,6 +145,20 @@ public final class Appearance implements Component, Pool.Poolable {
      */
     public boolean charged;
 
+    /**
+     * How hot this entity's gun is, in {@code [0, 1]}, and whether it has stopped itself.
+     *
+     * <p>A channel of its own rather than the {@link #charge} one, and that is the decision rather
+     * than an oversight. Everything on the charge channel is something happening <em>to</em> the
+     * thing it is drawn on - a clock running out, work being done, ground being taken - and this is
+     * the one thing on the field that fills up because of what the player <em>did</em>. It also has
+     * to be readable at the same time as those, which one channel cannot do.
+     */
+    public float heat;
+
+    /** Whether that gun has stopped itself. The half of the bar that changes what to do next. */
+    public boolean overheated;
+
     /** Sets the look and returns this component, for fluent spawning. */
     public Appearance set(Look newLook) {
         this.look = newLook;
@@ -167,5 +196,7 @@ public final class Appearance implements Component, Pool.Poolable {
         facingY = 0f;
         ordered = false;
         charged = false;
+        heat = 0f;
+        overheated = false;
     }
 }

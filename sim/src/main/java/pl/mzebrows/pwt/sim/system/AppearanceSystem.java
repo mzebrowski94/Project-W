@@ -10,8 +10,10 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
+import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -21,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -68,6 +71,9 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
+    private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
+    private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
+    private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
 
     private final Defs<UnitKind, UnitDef> units;
 
@@ -87,6 +93,10 @@ public final class AppearanceSystem extends IteratingSystem {
         // What it is carrying goes off where it lands. A fact about the gun, so nothing here asks
         // what kind of creature is holding it.
         appearance.charged = WEAPON.has(entity) && WEAPON.get(entity).blastRadius > 0f;
+        // How hot its gun is, and whether that has taken it away. Pillar 5: a bar the player cannot
+        // see is a bar he is guessing at, and this one is entirely his own doing.
+        appearance.heat = HEAT.has(entity) ? HEAT.get(entity).value : 0f;
+        appearance.overheated = HEAT.has(entity) && HEAT.get(entity).locked;
     }
 
     /**
@@ -103,6 +113,13 @@ public final class AppearanceSystem extends IteratingSystem {
      * to ask what it is looking at (G0003).
      */
     private static void face(Entity entity, Appearance appearance) {
+        if (TURRET.has(entity)) {
+            // A gun on a mount faces where it is pointing, which is the whole tell: the player has to
+            // be able to read how far it still has to come round before it can reach him.
+            Turret turret = TURRET.get(entity);
+            appearance.face(turret.aimX, turret.aimY);
+            return;
+        }
         if (TROOPER.has(entity)) {
             // A trooper decides where it is looking rather than looking wherever it is walking. That
             // is what lets it stand still and keep watching, and what makes its arc a thing the
@@ -207,6 +224,14 @@ public final class AppearanceSystem extends IteratingSystem {
         }
         if (held) {
             return Appearance.State.STAGGERED;
+        }
+        if (TURRET.has(entity) && TURRET.get(entity).crewed) {
+            return Appearance.State.CREWED;
+        }
+        if (CREW.has(entity) && CREW.get(entity).aboard()) {
+            // Inside the gun rather than standing beside it. Below the states that say he is hurt,
+            // because a man blown off a gun is a casualty first and a passenger not at all.
+            return Appearance.State.ABOARD;
         }
         if (LEAP.has(entity)) {
             Leap leap = LEAP.get(entity);

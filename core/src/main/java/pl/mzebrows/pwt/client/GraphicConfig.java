@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.def.Look;
  * @param facingMark how to draw which way an entity is pointing
  * @param chargedMark how to draw a unit whose gun goes off where its shots land
  * @param orderMark how to draw a unit that is acting on an order
+ * @param heatMark how to draw how hot the gun a unit is holding has become
  * @param camera how the view follows what it is watching, and how far out it may sit
  */
 public record GraphicConfig(
@@ -39,6 +40,7 @@ public record GraphicConfig(
         FacingMark facingMark,
         ChargedMark chargedMark,
         OrderMark orderMark,
+        HeatMark heatMark,
         CameraDirector.Settings camera) {
 
     private static final String FILE = "graphic.properties";
@@ -69,6 +71,7 @@ public record GraphicConfig(
                 facingMark(properties),
                 chargedMark(properties),
                 orderMark(properties),
+                heatMark(properties),
                 camera(properties));
     }
 
@@ -98,9 +101,13 @@ public record GraphicConfig(
             case GRUNT -> "ff5d5dff";
             case BRUTE -> "b53a5aff";
             case SPITTER -> "a05cf0ff";
+            case RUNNER -> "ff9a4aff";
             case CONTROL_POINT -> "2b3a52ff";
+            case POST -> "3a5230ff";
+            case TURRET -> "3f7fa8ff";
             case PROJECTILE -> "ffe066ff";
             case SLUG -> "fff3c4ff";
+            case TURRET_SHOT -> "7fd8ffff";
             case SPIT -> "d08cffff";
             case CHARGED_SPIT -> "ff8ce0ff";
             case STRIKE -> "ffffffff";
@@ -114,6 +121,8 @@ public record GraphicConfig(
             case BARREL -> "ff3a10ff";
             case RABBIT -> "f0f0f0ff";
             case MENDING -> "4ce88aff";
+            case HEAT -> "ffc24aff";
+            case OVERHEAT -> "ff4a2aff";
             case NONE -> "ff00ffff";
         };
     }
@@ -155,7 +164,8 @@ public record GraphicConfig(
                 properties.getFloat("graphic.state.grappling", -0.3f),
                 properties.getFloat("graphic.state.staggered", 0.35f),
                 properties.getFloat("graphic.state.dying", -0.7f),
-                properties.getFloat("graphic.state.casualty", 0.6f));
+                properties.getFloat("graphic.state.casualty", 0.6f),
+                properties.getFloat("graphic.state.crewed", 0.45f));
     }
 
     private static ChargeMark chargeMark(GameProperties properties) {
@@ -184,6 +194,14 @@ public record GraphicConfig(
     private static OrderMark orderMark(GameProperties properties) {
         return new OrderMark(
                 properties.getFloat("graphic.order.scale", 1.55f), properties.getFloat("graphic.order.tint", 0.75f));
+    }
+
+    private static HeatMark heatMark(GameProperties properties) {
+        return new HeatMark(
+                properties.getFloat("graphic.heat.scale", 1.7f),
+                properties.getFloat("graphic.heat.width", 0.28f),
+                properties.getFloat("graphic.heat.spreadDegrees", 150f),
+                properties.getInt("graphic.heat.segments", 14));
     }
 
     /**
