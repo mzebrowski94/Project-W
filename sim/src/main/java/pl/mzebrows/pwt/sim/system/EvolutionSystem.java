@@ -19,8 +19,8 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  *
  * <p>Two ways in and one way out. A pickup that named a strain outright turns the unit into that
  * strain at once, whatever it had eaten before; anything else adds to a count, and crossing the
- * strain's threshold turns it into whatever that strain says it grows into. Three frozen troopers and
- * one flower are the same rule with different numbers, which is why there is one system rather than
+ * strain's threshold turns it into whatever that strain says it grows into. Three mushrooms and one
+ * flower are the same rule with different numbers, which is why there is one system rather than
  * an evolution mechanic per fiction.
  *
  * <p>Evolving writes fields on components the unit already carries - it never adds or removes one -

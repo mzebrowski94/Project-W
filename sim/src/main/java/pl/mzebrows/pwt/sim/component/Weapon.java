@@ -25,7 +25,17 @@ public final class Weapon implements Component, Pool.Poolable {
     public float remainingSeconds;
     public float projectileSpeed;
     public float projectileRadius;
+
+    /** How far one of its shots flies before it expires. Zero is until it hits something. */
+    public float projectileRange;
+
     public float damage;
+
+    /** How many shots one pull sends. One for every gun that fires a single round. */
+    public int pellets = 1;
+
+    /** Half the cone the gun throws them into, in radians. Zero fires dead straight. */
+    public float halfSpreadRadians;
 
     /** What its shots are drawn as, so which gun is in hand is visible in what comes out of it. */
     public Look projectileLook = Look.PROJECTILE;
@@ -57,7 +67,10 @@ public final class Weapon implements Component, Pool.Poolable {
         this.remainingSeconds = 0f;
         this.projectileSpeed = def.projectileSpeed();
         this.projectileRadius = def.projectileRadius();
+        this.projectileRange = def.projectileRange();
         this.damage = def.damage();
+        this.pellets = def.pellets();
+        this.halfSpreadRadians = def.halfSpreadRadians();
         this.projectileLook = def.projectileLook();
         this.blastRadius = def.blastRadius();
         this.muzzleOffset = def.muzzleOffset();
@@ -79,7 +92,10 @@ public final class Weapon implements Component, Pool.Poolable {
         remainingSeconds = 0f;
         projectileSpeed = 0f;
         projectileRadius = 0f;
+        projectileRange = 0f;
         damage = 0f;
+        pellets = 1;
+        halfSpreadRadians = 0f;
         projectileLook = Look.PROJECTILE;
         blastRadius = 0f;
         muzzleOffset = 0f;

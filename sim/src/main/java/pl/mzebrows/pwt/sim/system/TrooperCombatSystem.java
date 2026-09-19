@@ -57,12 +57,20 @@ public final class TrooperCombatSystem extends EntitySystem {
 
     private final Spawner spawner;
     private final Rng rng;
+
+    /** A gun's own pattern, which is a different concern from a man's nerve and draws separately. */
+    private final Rng scatter;
+
+    /** Scratch, so working out a muzzle costs no allocation per trooper per shot. */
+    private final float[] muzzle = new float[2];
+
     private final Chances chances;
 
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> leapers = new ImmutableArray<>(new Array<>());
 
-    public TrooperCombatSystem(SimConfig config, Spawner spawner, Rng rng) {
+    public TrooperCombatSystem(SimConfig config, Spawner spawner, Rng rng, Rng scatter) {
+        this.scatter = scatter;
         this.spawner = spawner;
         this.rng = rng;
         this.chances = config.chances();
@@ -129,7 +137,14 @@ public final class TrooperCombatSystem extends EntitySystem {
         return false;
     }
 
-    /** One shot at what it is aiming at, whenever the gun is ready. */
+    /**
+     * One pull of the trigger at what it is aiming at, whenever the gun is ready.
+     *
+     * <p>Through the same place the commander, a shooting alien and a gun on a mount go through, so
+     * what a pull puts in the air is a property of the gun and not of who is holding it. It worked
+     * out its own muzzle point until 2026-09-18 and was therefore the one shooter in the game that a
+     * twin mount or a scattergun would have behaved differently in.
+     */
     private void fire(Entity entity, Trooper trooper) {
         Weapon weapon = WEAPON.get(entity);
         if (!weapon.ready()) {
@@ -144,14 +159,19 @@ public final class TrooperCombatSystem extends EntitySystem {
         }
         float directionX = toX / distance;
         float directionY = toY / distance;
-        float muzzle = BODY.get(entity).radius + weapon.projectileRadius + MUZZLE_GAP;
-        spawner.spawnProjectile(
-                at.x + directionX * muzzle,
-                at.y + directionY * muzzle,
+        Guns.volley(
+                spawner,
+                scatter,
+                entity,
+                weapon,
+                at.x,
+                at.y,
+                BODY.get(entity).radius,
+                MUZZLE_GAP,
                 directionX,
                 directionY,
-                weapon,
-                FACTION.get(entity).side);
+                FACTION.get(entity).side,
+                muzzle);
         weapon.remainingSeconds = weapon.cooldownSeconds;
     }
 }

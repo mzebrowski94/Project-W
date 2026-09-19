@@ -46,6 +46,8 @@ rows become enforceable once the named feature exists - promote them then.
 | A unit leans off what it is about to walk into before it touches it; discovering an obstacle by collision is a failure. | enforced - `AvoidanceSystemTest.leansOffALineThatWouldRunIntoSomethingLongBeforeItGetsThere` |
 | Nothing steers around what it is hunting, and nothing steers around a pickup **it wants**. What would go off in your face is given as wide a berth as rock - **and wariness is about the pair, not the thing**: something that can swallow an explosive walks straight at one (G0022, amended 2026-09-17). | enforced - `AvoidanceSystemTest.neverAvoidsTheThingItIsHunting`, `.walksStraightOverItsOwnDinner`, `.leansOffABarrelAsReadilyAsOffARock`, `SpitterTest.crossesTheGroundToABarrelItCanUse`, `BarrelTest.isNotWorthCrossingTheGroundForToSomethingThatCannotUseOne` |
 | A weave is a function of the ground a creature has covered and of nothing else: no clock, no dice. Two spawned in different places are out of step with each other, and the same level weaves the same way on every run (G0012's argument, applied to a course). | enforced - `RunnerTest.weavesTheSameWayOnEveryRun`, `.doesNotWeaveInLockstepWithAnother` |
+| **A pack closes on one man along lines of its own, not down one line.** Each creature walks at a point beside him, on a side seeded from where it was spawned rather than rolled - so the fan is the same on every run - and the offset is spent by the time it is close, so the last of every approach is straight at him. Terrain still has the last word: where the line to its own point is not clear the flow field answers instead, and a corridor still files. | enforced - `ApproachTest.closesOnAPointBesideHimRatherThanOnHim`, `.walksStraightAtHimForTheLastOfTheApproach`, `.bringsTwoInDownOppositeSidesRatherThanOneBehindTheOther`, `.givesTwoSpawnedApartLinesOfTheirOwn`, `.takesTheSameLineOnEveryRun` |
+| A spread moves the goal, never the pace. A creature taking its own line in travels at exactly the speed whatever was driving it asked for. | enforced - `ApproachTest.keepsTheSamePaceWhileItSpreads` |
 | A weave turns a course; it never adds to it. A creature that weaves travels at exactly the speed whatever was driving it asked for. | enforced - `RunnerTest.keepsTheSamePaceWhileItWeaves` |
 | A dodge is a function of the shot's geometry alone. The same shot from the same place gets the same answer, always (G0012). | enforced - `DodgeSystemTest.answersTheSameShotTheSameWayEveryTime`, `.breaksAwayFromTheSideTheShotIsOn` |
 | A creature committed to a dodge cannot answer anything else until the window closes. | enforced - `DodgeSystemTest.willNotAnswerASecondShotWhileItIsCommittedToTheFirst` |
@@ -180,6 +182,7 @@ rows become enforceable once the named feature exists - promote them then.
 | Nothing on the alien side can be a casualty. Being rescuable requires somebody on your side who would come. | enforced - `CasualtyTest.killsAnAlienOutrightHoweverItWasHurt` |
 | **The commander is one of his men in this too**: gunfire and blasts put him on the ground, claws and sweeps and leaps still kill him outright (G0023). | enforced - `CasualtyTest.leavesTheCommanderShotDownOnTheGroundRatherThanDead`, `.killsTheCommanderOutrightWhenTheBlowIsOneThatKills` |
 | A man is put back on his feet by one path, whoever reached him. How long it takes, what he gets back and how long he is protected are facts about him, not about his rescuer. | judgement - `Aid` is the single writer, used by `ActionSystem` and `AidSystem` |
+| **How long he has on the ground is a fact about him too.** The commander's bleed-out is his own number and shorter than the squad's: what a player sits out is the bleed-out plus the throes plus the respawn, and three windows sized for a trooper added up to most of a fight. Shortening the shared one would have shortened every rescue on the field, which is a different decision about a different mechanic. | enforced - `CasualtyTest.countsTheCommanderDownOnHisOwnClockRatherThanHisMens`; one reader - `Spawner.spawnCommander` |
 | A trooper will leave the level's objectives to fetch somebody, will not leave a standing order to, and will never leave a fight. | enforced - `AidTest.holdsWhereItWasToldToRatherThanGoingToFetchSomebody`, `.neverBreaksOffAFightToFetchSomebody`, `.putsAFallenComradeBackOnHisFeet` |
 | Whether a trooper goes at all is a roll, taken once on the way in and never re-taken while it is on its way. Nobody is owed a rescue. | enforced - `AidTest.leavesHimWhereHeLiesWhenNobodyIsWilling`, `.walksAcrossToAManWhoIsDownOutOfReach` |
 | A casualty is out of the fight entirely - not driven, not shooting, not holding ground - and is visibly distinct from a corpse. | enforced - `CasualtyTest.leavesACasualtyOutOfTheFight`, `.showsACasualtyAsOneAndCountsHisBleedOutDownWhereThePlayerCanSeeIt` |
@@ -220,6 +223,12 @@ rows become enforceable once the named feature exists - promote them then.
 | A creature carrying a gun that goes off where its shots land is drawn as carrying one. The shots alone are a tell you learn by being caught in one. | enforced - `SpitterTest.showsThatItIsCarryingABarrel` |
 | A shooter fires only into the field of view it declares, and its aim swings onto a target at a rate rather than snapping. | enforced - `SpitterTest.willNotFireAtSomethingOutsideItsFieldOfView`, `.swingsOntoItAndThenFires` |
 | A shooter's cone narrows with every shot it lands on the same target and goes back to its widest the moment it loses one. | enforced - `RangedTest.narrowsTheConeWithEveryShotItLands`, `.stopsNarrowingOnceItsAimIsWalkedIn`, `.goesBackToTheWildConeWhenItLosesWhatItWasShootingAt` |
+| **What one pull of a trigger puts in the air is a property of the gun, not of who is holding it.** A gun that names several pellets sends that many from every shooter there is, each turned inside the gun's own cone - which is a different cone from the one a creature's bad aim makes, and composes with it rather than replacing it. One place decides it, and the four things that fire all go through it. | enforced - `VolleyTest.sendsAsManyShotsAsTheGunNamesFromOnePull`, `.sendsOneFromAGunThatNamesOne`, `.throwsEveryPelletStraightForAGunWithNoConeOfItsOwn`, `.scattersThemInsideTheConeForAGunThatNamesOne`, `.sendsEveryPelletOutAtTheSameSpeed`; one writer - `Guns.volley` |
+| **A gun may have a reach; an aim may not.** How far a shot flies before it goes out is a number on the weapon, exactly as a grenade's throw has been since G0019 - so a short-ranged gun is possible without the aim ever becoming a distance. Zero means until it hits something, which is what almost every gun declares. | enforced - `VolleyTest.dropsAShotOnceItHasFlownAsFarAsItsGunAllows`, `.leavesAShotFromAGunWithNoReachFlying`, `.carriesItTheWholeOfTheReachBeforeItGoesOut`, and `CommanderControlSystemTest.firesInTheSameDirectionHoweverFarAwayTheAimPointIs` still holds the aim half |
+| **A nest sleeps until somebody comes near, and never sleeps again.** A level larger than the view cannot have a producer working from the first tick - the player would meet the accumulation rather than the nest - and a producer that stopped when he backed off would be one he could wait out from just outside its radius. | enforced - `NestTest.sendsOutNothingAtAllUntilSomebodyComesNear`, `.startsWorkingOnceSomebodyComesNear`, `.goesOnWorkingAfterWhoeverWokeItHasGone` |
+| **A nest is at its worst the moment you kill it**: destroying one empties a last brood out of it and rouses everything within earshot. That is what makes taking one away a decision about *when* rather than a chore, and it is the same death-reaction window a blast and a respawn run in. | enforced - `NestTest.emptiesTheLastOfItselfWhenItIsDestroyed`, `.sendsOutWhateverStrainItWasBuiltFor`, `.sendsEverythingWithinEarshotToSeeWhoIsHittingIt` |
+| A level is never clear while something on it is still producing. A nest carries the same marker every other hostile thing carries, so it counts - the alternative is an objective that reads as met and unmeets itself every half minute. | enforced - `NestTest.leavesALevelUnclearedWhileItIsStillStanding` |
+| Being provoked towards a place is one mechanism, wherever the shout came from - a point being taken, or a nest being hit. Loud once per event, never every tick (G0016). | judgement - `Rouse.within` is the single writer, used by `ControlPointSystem` and `NestSystem` |
 | A gun that names a blast radius leaves one where its shot stops, through the one death reaction everything else explodes through (G0018). | enforced - `SpitterTest.swallowsABarrelAndFiresShotsThatGoOff` |
 
 The no-hitscan rows are load-bearing in three directions at once: they keep collision uniform, keep
@@ -256,11 +265,20 @@ player carries around, which is what pillar 3 is against even though there is no
 second weapon axis is ever wanted, it is a second *kind* of weapon slot - a melee weapon alongside a
 gun - not two guns.
 
-**Both halves of a shared item are the point.** A pickup carries a grant per side, and either may be
-nothing. That is what makes a frozen trooper a race rather than a collectable: reach it and it is a
-reinforcement, lose it and the thing chasing you is one mouthful closer to being a brute. An item
-that offers a side nothing is not consumed by that side, so denial has to be earned rather than
-handed over.
+**A pickup carries a grant per side, and either may be nothing.** An item that offers a side nothing
+is not consumed by that side, so denial has to be earned rather than handed over: the commander walks
+over a mushroom and leaves it, and the only way to stop something eating one is to be standing on it
+or to kill what is coming for it.
+
+**Nothing in the table is contested any more, and that is a decision rather than a gap** (2026-09-18).
+A supply drop and a weapons cache used to be a mouthful to whatever reached them first, which made
+each one a race; they are now the player's alone. What that cost is the race, and what it bought is a
+level whose kit is still there when you get to it - on a march four screens long, a cache eaten by a
+runner twenty seconds in is a gun the player never sees and cannot plan around, and a crate of men
+eaten before he arrives is a squad he is never told he lost. The mechanism stays: both halves are
+still declared per kind, `PickupDef.offersSomethingTo` still decides who consumes what, and the day a
+contested item is wanted again it is two fields in a table. `AlphaWorlds.contesting` is the world the
+test of that mechanism builds for itself.
 
 **A reinforcement is won where the fighting is.** One lies beside every control point, which is the
 only placement that makes pillar 3 a place on the map rather than a rule in a document: the ground

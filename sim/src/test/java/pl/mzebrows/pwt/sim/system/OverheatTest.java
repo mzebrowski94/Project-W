@@ -168,7 +168,7 @@ class OverheatTest {
     void heatsACarriedGunToo() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
-        simulation.spawnPickup(PickupKind.ARMOURY, MIDDLE, MIDDLE);
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, MIDDLE, MIDDLE);
 
         simulation.step(STILL);
         simulation.step(firing());

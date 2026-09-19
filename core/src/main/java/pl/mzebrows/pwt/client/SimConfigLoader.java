@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client;
 import java.util.Locale;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.ApproachDef;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -56,6 +57,7 @@ public final class SimConfigLoader {
                 barrel(properties, defaults.barrel()),
                 casualty(properties, defaults.casualty()),
                 action(properties, defaults.action()),
+                nest(properties, defaults.nest()),
                 controlPoint(properties, defaults.controlPoint()),
                 turret(properties, defaults.turret()),
                 obstacle(properties, defaults.obstacle()),
@@ -112,6 +114,7 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.commander.radius", defaults.radius()),
                 properties.getFloat("sim.commander.speed", defaults.speed()),
                 properties.getFloat("sim.commander.health", defaults.health()),
+                properties.getFloat("sim.commander.bleedOutSeconds", defaults.bleedOutSeconds()),
                 properties.getFloat("sim.commander.deathThroesSeconds", defaults.deathThroesSeconds()),
                 properties.getFloat("sim.commander.respawnDelaySeconds", defaults.respawnDelaySeconds()),
                 properties.getFloat("sim.commander.respawnMargin", defaults.respawnMargin()),
@@ -204,6 +207,7 @@ public final class SimConfigLoader {
                 avoidance(properties, prefix + ".avoidance", defaults.avoidance()),
                 leap(properties, prefix + ".leap", defaults.leap()),
                 ranged(properties, prefix + ".ranged", defaults.ranged()),
+                approach(properties, prefix + ".approach", defaults.approach()),
                 weave(properties, prefix + ".weave", defaults.weave()),
                 dodge(properties, prefix + ".dodge", defaults.dodge()),
                 chances(properties, prefix + ".chance", shared, defaults.chances()),
@@ -225,6 +229,14 @@ public final class SimConfigLoader {
                 properties.getFloat(prefix + ".secondaryRange", defaults.secondaryRange()),
                 properties.getFloat(prefix + ".arcDegrees", defaults.arcDegrees()),
                 properties.getBoolean(prefix + ".requiresClearLine", defaults.requiresClearLine()));
+    }
+
+    /** How wide of what it is hunting a strain closes, under its own prefix. */
+    private static ApproachDef approach(GameProperties properties, String prefix, ApproachDef defaults) {
+        return new ApproachDef(
+                properties.getBoolean(prefix + ".enabled", defaults.enabled()),
+                properties.getFloat(prefix + ".offset", defaults.offset()),
+                properties.getFloat(prefix + ".closeRange", defaults.closeRange()));
     }
 
     /** How a strain idles, under its own prefix. */
@@ -325,7 +337,10 @@ public final class SimConfigLoader {
                             properties.getFloat(prefix + ".cooldownSeconds", fallback.cooldownSeconds()),
                             properties.getFloat(prefix + ".projectileSpeed", fallback.projectileSpeed()),
                             properties.getFloat(prefix + ".projectileRadius", fallback.projectileRadius()),
+                            properties.getFloat(prefix + ".projectileRange", fallback.projectileRange()),
                             properties.getFloat(prefix + ".damage", fallback.damage()),
+                            properties.getInt(prefix + ".pellets", fallback.pellets()),
+                            properties.getFloat(prefix + ".spreadDegrees", fallback.spreadDegrees()),
                             fallback.projectileLook(),
                             properties.getFloat(prefix + ".blastRadius", fallback.blastRadius()),
                             heat(properties, prefix, fallback.heat()),
@@ -358,6 +373,21 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.turret.crewRadius", defaults.crewRadius()),
                 properties.getFloat("sim.turret.quietSeconds", defaults.quietSeconds()),
                 defaults.weapon());
+    }
+
+    /** The holes in the ground that keep sending more out, under {@code sim.nest}. */
+    private static SimConfig.NestConfig nest(GameProperties properties, SimConfig.NestConfig defaults) {
+        return new SimConfig.NestConfig(
+                properties.getFloat("sim.nest.radius", defaults.radius()),
+                properties.getFloat("sim.nest.health", defaults.health()),
+                properties.getFloat("sim.nest.periodSeconds", defaults.periodSeconds()),
+                properties.getInt("sim.nest.broodMin", defaults.broodMin()),
+                properties.getInt("sim.nest.broodMax", defaults.broodMax()),
+                properties.getInt("sim.nest.deathBroodMin", defaults.deathBroodMin()),
+                properties.getInt("sim.nest.deathBroodMax", defaults.deathBroodMax()),
+                properties.getFloat("sim.nest.hatchRadius", defaults.hatchRadius()),
+                properties.getFloat("sim.nest.wakeRadius", defaults.wakeRadius()),
+                properties.getFloat("sim.nest.rouseRadius", defaults.rouseRadius()));
     }
 
     /** What it takes to hold a point, under {@code sim.controlPoint}. */

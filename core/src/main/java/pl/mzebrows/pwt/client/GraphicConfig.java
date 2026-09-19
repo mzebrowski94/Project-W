@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.def.Look;
  * @param chargeMark how to draw an entity that is filling up towards something
  * @param facingMark how to draw which way an entity is pointing
  * @param chargedMark how to draw a unit whose gun goes off where its shots land
+ * @param nestMark how to draw a hole in the ground
  * @param orderMark how to draw a unit that is acting on an order
  * @param heatMark how to draw how hot the gun a unit is holding has become
  * @param camera how the view follows what it is watching, and how far out it may sit
@@ -38,6 +39,7 @@ public record GraphicConfig(
         TerrainPalette terrainPalette,
         StateTint stateTint,
         ChargeMark chargeMark,
+        NestMark nestMark,
         FacingMark facingMark,
         ChargedMark chargedMark,
         OrderMark orderMark,
@@ -69,6 +71,7 @@ public record GraphicConfig(
                 terrainPalette(properties),
                 stateTint(properties),
                 chargeMark(properties),
+                nestMark(properties),
                 facingMark(properties),
                 chargedMark(properties),
                 orderMark(properties),
@@ -123,9 +126,12 @@ public record GraphicConfig(
             case RUNNER -> "ff9a4aff";
             case CONTROL_POINT -> "2b3a52ff";
             case POST -> "3a5230ff";
+            case NEST -> "6b4a2aff";
             case TURRET -> "3f7fa8ff";
             case PROJECTILE -> "ffe066ff";
             case SLUG -> "fff3c4ff";
+            case FLAME -> "ff7a2eff";
+            case PELLET -> "ffd24dff";
             case TURRET_SHOT -> "7fd8ffff";
             case SPIT -> "d08cffff";
             case CHARGED_SPIT -> "ff8ce0ff";
@@ -135,8 +141,10 @@ public record GraphicConfig(
             case OBSTACLE -> "4a4a5eff";
             case MUSHROOM -> "8fd97fff";
             case FLOWER -> "e07be0ff";
-            case FROZEN_TROOPER -> "9fd8f0ff";
-            case ARMOURY -> "d8a04aff";
+            case SUPPLY_DROP -> "9fd8f0ff";
+            case ARMOURY_RAILGUN -> "d8a04aff";
+            case ARMOURY_FLAMER -> "ff7a2eff";
+            case ARMOURY_SHOTGUN -> "4ad8a0ff";
             case BARREL -> "ff3a10ff";
             case RABBIT -> "f0f0f0ff";
             case MENDING -> "4ce88aff";
@@ -196,6 +204,15 @@ public record GraphicConfig(
     private static ChargeMark chargeMark(GameProperties properties) {
         return new ChargeMark(
                 properties.getFloat("graphic.charge.scale", 0.55f), properties.getFloat("graphic.charge.tint", 0.8f));
+    }
+
+    /**
+     * How to draw a hole in the ground, under {@code graphic.nest}. Rings rather than one circle,
+     * because dug ground drawn as a body reads as an enormous slow creature.
+     */
+    private static NestMark nestMark(GameProperties properties) {
+        return new NestMark(
+                properties.getInt("graphic.nest.shells", 4), properties.getFloat("graphic.nest.darken", 0.55f));
     }
 
     private static FacingMark facingMark(GameProperties properties) {

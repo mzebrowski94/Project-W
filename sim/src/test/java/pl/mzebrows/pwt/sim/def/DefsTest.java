@@ -88,6 +88,7 @@ class DefsTest {
                 AvoidanceDef.off(),
                 LeapDef.off(),
                 RangedDef.off(),
+                ApproachDef.off(),
                 WeaveDef.off(),
                 DodgeDef.off(),
                 Chances.standard(),

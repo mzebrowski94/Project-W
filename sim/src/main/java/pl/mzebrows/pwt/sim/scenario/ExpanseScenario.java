@@ -108,8 +108,8 @@ final class ExpanseScenario implements Scenario {
         Scatter scatter = new Scatter(map, simulation.rng(), CLEARANCE, wallMargin);
         scatter.reserve(startX, startY, config.commander().radius() + STANDOFF);
 
-        simulation.spawnPickup(PickupKind.ARMOURY, map.tileCentreX(COLS - 8), map.tileCentreY(6));
-        simulation.spawnPickup(PickupKind.ARMOURY, map.tileCentreX(COLS - 8), map.tileCentreY(ROWS - 7));
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, map.tileCentreX(COLS - 8), map.tileCentreY(6));
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, map.tileCentreX(COLS - 8), map.tileCentreY(ROWS - 7));
 
         scatter.scatter(config.obstacle().count(), config.obstacle().radius(), simulation::spawnObstacle);
         for (UnitKind kind : new UnitKind[] {UnitKind.GRUNT, UnitKind.BRUTE}) {

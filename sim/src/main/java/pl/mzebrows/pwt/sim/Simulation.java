@@ -41,6 +41,7 @@ import pl.mzebrows.pwt.sim.system.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
 import pl.mzebrows.pwt.sim.system.NavigationSystem;
+import pl.mzebrows.pwt.sim.system.NestSystem;
 import pl.mzebrows.pwt.sim.system.ObjectiveSystem;
 import pl.mzebrows.pwt.sim.system.PerceptionSystem;
 import pl.mzebrows.pwt.sim.system.PickupSystem;
@@ -132,15 +133,20 @@ public final class Simulation {
                 Family.all(Commander.class, Intent.class, Position.class).get());
         this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
 
+        // A gun's own pattern, shared by every shooter that holds one: how loosely a WEAPON throws is
+        // one concern, and a different one from how badly a creature aims (RngStream.SPIT) or how
+        // often a man does something he only sometimes does (NERVE).
+        Rng scatter = Rng.stream(config.seed(), RngStream.SCATTER);
+
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new DragSystem());
-        engine.addSystem(new CommanderControlSystem(config, spawner));
+        engine.addSystem(new CommanderControlSystem(config, spawner, scatter));
         engine.addSystem(new MeleeSystem(spawner));
         // Immediately after the commander's own hands, and before anything looks around: a shot
         // fired from a turret this tick is in the world before the enemies decide what they can see,
         // exactly as a melee sweep is.
-        engine.addSystem(new TurretSystem(map, spawner));
+        engine.addSystem(new TurretSystem(map, spawner, scatter));
         engine.addSystem(new PerceptionSystem(config, map));
         engine.addSystem(new NavigationSystem(config, map));
         // Immediately after the course it bends, and well before avoidance: a weave that could steer
@@ -156,10 +162,10 @@ public final class Simulation {
         engine.addSystem(new SquadOrderSystem(config));
         engine.addSystem(new TrooperMindSystem(config, map, squad, nerve));
         engine.addSystem(new TrooperMoveSystem(config, map, squad));
-        engine.addSystem(new TrooperCombatSystem(config, spawner, nerve));
+        engine.addSystem(new TrooperCombatSystem(config, spawner, nerve, scatter));
         engine.addSystem(new WanderSystem(Rng.stream(config.seed(), RngStream.WANDER), map));
         engine.addSystem(new AvoidanceSystem());
-        engine.addSystem(new EnemyRangedSystem(map, spawner, Rng.stream(config.seed(), RngStream.SPIT)));
+        engine.addSystem(new EnemyRangedSystem(map, spawner, Rng.stream(config.seed(), RngStream.SPIT), scatter));
         engine.addSystem(new DodgeSystem());
         engine.addSystem(new DriveSystem());
         engine.addSystem(new EnemyLeapSystem(Rng.stream(config.seed(), RngStream.LEAP)));
@@ -188,6 +194,12 @@ public final class Simulation {
         // level rather than about anything standing in it: a level whose last wave lands this tick
         // must not read as complete for the tick before the aliens appear.
         engine.addSystem(new WaveSystem(config, map, spawner, Rng.stream(config.seed(), RngStream.WAVE)));
+        // With the other systems that are about the level rather than about anything standing in it,
+        // and after the death chain above: a nest destroyed this tick empties the last of itself
+        // while its body is still on the field, in the same window respawning and blasts run in, and
+        // before the reaper takes it. Before ObjectiveSystem for the reason WaveSystem is - a level
+        // whose last nest dies this tick must not read as clear for the tick before its brood lands.
+        engine.addSystem(new NestSystem(config, map, spawner, Rng.stream(config.seed(), RngStream.NEST)));
         engine.addSystem(new ControlPointSystem());
         engine.addSystem(new ObjectiveSystem());
         engine.addSystem(new AppearanceSystem(config));
@@ -320,6 +332,14 @@ public final class Simulation {
     /** Spawns ground a squad takes by standing on it. Spawn these before whatever stands on them. */
     public Entity spawnControlPoint(float x, float y) {
         return spawner.spawnControlPoint(x, y);
+    }
+
+    /**
+     * Spawns a nest: a hole in the ground that keeps sending more of one strain out of it. Spawn
+     * these before whatever stands on them - a nest is ground rather than a thing on the ground.
+     */
+    public Entity spawnNest(UnitKind kind, float x, float y) {
+        return spawner.spawnNest(kind, x, y);
     }
 
     /** Spawns a turret: a gun on a mount that the commander or a trooper can get on. */

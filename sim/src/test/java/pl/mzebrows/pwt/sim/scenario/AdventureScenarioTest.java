@@ -15,9 +15,11 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * The claims this level makes that a glance at it would not catch.
@@ -35,6 +37,10 @@ class AdventureScenarioTest {
 
     /** Where each biome ends, in tile columns. The bands the whole level is built out of. */
     private static final int[] BIOME_END = {30, 60, 90, 120};
+
+    /** Every kind of weapons cache there is. One per gun, and this list must grow with that enum. */
+    private static final EnumSet<PickupKind> CACHES =
+            EnumSet.of(PickupKind.ARMOURY_RAILGUN, PickupKind.ARMOURY_FLAMER, PickupKind.ARMOURY_SHOTGUN);
 
     @Test
     void laysOutTwoPointsInEveryBiome() {
@@ -151,6 +157,39 @@ class AdventureScenarioTest {
         throw new IllegalStateException("biome " + biome + " has nowhere to stand");
     }
 
+    /**
+     * The march gets harder because the ground fills in behind you faster, not because the numbers on
+     * the creatures went up. One more nest in each biome than the last is the whole of that claim,
+     * and it is exactly the sort of thing that survives a careless edit while stopping being true.
+     */
+    @Test
+    void putsOneMoreNestInEachBiomeThanTheLast() {
+        Simulation world = world();
+        TileMap map = world.map();
+
+        int[] perBiome = new int[BIOME_END.length];
+        for (Entity nest : world.engine()
+                .getEntitiesFor(Family.all(Nest.class, Position.class).get())) {
+            perBiome[biomeOf(map.colAt(nest.getComponent(Position.class).x))]++;
+        }
+
+        assertThat(perBiome).containsExactly(1, 2, 3, 4);
+    }
+
+    /** Every strain a biome teaches has a hole sending more of it out, somewhere in that biome. */
+    @Test
+    void givesEachBiomeNestsOfWhatItTeaches() {
+        Simulation world = world();
+
+        EnumSet<UnitKind> hatching = EnumSet.noneOf(UnitKind.class);
+        for (Entity nest : world.engine().getEntitiesFor(Family.all(Nest.class).get())) {
+            hatching.add(nest.getComponent(Nest.class).kind);
+        }
+
+        assertThat(hatching)
+                .containsExactlyInAnyOrder(UnitKind.GRUNT, UnitKind.SPITTER, UnitKind.RUNNER, UnitKind.BRUTE);
+    }
+
     private static List<Position> pointsOf(Simulation simulation) {
         ImmutableArray<Entity> found = simulation
                 .engine()
@@ -180,12 +219,16 @@ class AdventureScenarioTest {
         }
     }
 
+    /**
+     * Every crate, of whichever gun. Asking about one kind would have quietly stopped covering the
+     * other two the day they were added, which is the failure this whole class exists to catch.
+     */
     private static List<Position> armouriesOf(Simulation world) {
         List<Position> found = new ArrayList<>();
         ImmutableArray<Entity> pickups = world.engine()
                 .getEntitiesFor(Family.all(Pickup.class, Position.class).get());
         for (Entity pickup : pickups) {
-            if (pickup.getComponent(Pickup.class).kind == PickupKind.ARMOURY) {
+            if (CACHES.contains(pickup.getComponent(Pickup.class).kind)) {
                 found.add(pickup.getComponent(Position.class));
             }
         }

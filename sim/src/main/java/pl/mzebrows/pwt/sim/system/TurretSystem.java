@@ -9,6 +9,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Crew;
@@ -76,6 +77,9 @@ public final class TurretSystem extends EntitySystem {
     private final TileMap map;
     private final Spawner spawner;
 
+    /** A gun's own pattern. Zero-width for the gun a mount carries, and asked for all the same. */
+    private final Rng scatter;
+
     /** Scratch, so swinging a gun and firing it cost no allocation per tick. */
     private final float[] swung = new float[2];
 
@@ -85,7 +89,8 @@ public final class TurretSystem extends EntitySystem {
     private ImmutableArray<Entity> riders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> quarry = new ImmutableArray<>(new Array<>());
 
-    public TurretSystem(TileMap map, Spawner spawner) {
+    public TurretSystem(TileMap map, Spawner spawner, Rng scatter) {
+        this.scatter = scatter;
         this.map = map;
         this.spawner = spawner;
     }
@@ -236,8 +241,19 @@ public final class TurretSystem extends EntitySystem {
             return;
         }
         Position at = POSITION.get(station);
-        Muzzle.next(at.x, at.y, BODY.get(station).radius, weapon, MUZZLE_GAP, turret.aimX, turret.aimY, muzzle);
-        spawner.spawnProjectile(muzzle[0], muzzle[1], turret.aimX, turret.aimY, weapon, FACTION.get(station).side);
+        Guns.volley(
+                spawner,
+                scatter,
+                station,
+                weapon,
+                at.x,
+                at.y,
+                BODY.get(station).radius,
+                MUZZLE_GAP,
+                turret.aimX,
+                turret.aimY,
+                FACTION.get(station).side,
+                muzzle);
         Guns.spend(station, weapon, weapon.cooldownSeconds);
     }
 }

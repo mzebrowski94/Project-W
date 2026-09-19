@@ -26,7 +26,8 @@ import pl.mzebrows.pwt.sim.def.Side;
  * attempt <em>starts</em>, not every tick it continues: re-latching them constantly would pin
  * everything within earshot to the point forever and override any other grudge they had, and once is
  * all it takes for them to come and look (G0016). If they are driven off and the squad starts again,
- * that is a new attempt and it is loud again.
+ * that is a new attempt and it is loud again. The shout itself is {@link Rouse}'s, shared with the
+ * nest - a point being taken and a nest being hit mean the same thing to a creature.
  *
  * <p>Progress is not published here. {@code AppearanceSystem} is the only writer of what an entity
  * looks like, and a point filling up rides the same {@code charge} channel as a unit part-way to
@@ -40,7 +41,6 @@ public final class ControlPointSystem extends EntitySystem {
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
-    private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
 
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> holders = new ImmutableArray<>(new Array<>());
@@ -77,7 +77,9 @@ public final class ControlPointSystem extends EntitySystem {
                 point.heldSeconds = point.captureSeconds;
             }
             if (starting) {
-                rouse(at, point.aggroRadius);
+                // Through the one place that answers "there is trouble over there", shared with the
+                // nest: two copies of it is one chance for them to drift (G0016).
+                Rouse.within(watchers, at.x, at.y, point.aggroRadius);
             }
         }
     }
@@ -100,22 +102,6 @@ public final class ControlPointSystem extends EntitySystem {
             }
         }
         return false;
-    }
-
-    /** Sends everything within earshot to see who is on the point (G0016). */
-    private void rouse(Position at, float radius) {
-        if (radius <= 0f) {
-            return;
-        }
-        for (int i = 0; i < watchers.size(); i++) {
-            Entity watcher = watchers.get(i);
-            if (Drivers.held(watcher)) {
-                continue;
-            }
-            if (within(at, POSITION.get(watcher), radius)) {
-                PERCEPTION.get(watcher).provokeAt(at.x, at.y);
-            }
-        }
     }
 
     private static boolean within(Position a, Position b, float range) {

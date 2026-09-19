@@ -14,6 +14,25 @@ public enum WeaponKind {
     /** Slow, heavy and fast-flying. One shot kills anything a sidearm needs five for. */
     RAILGUN,
     /**
+     * A wall of fire a few strides long. It throws several fat, short-lived pellets per pull into a
+     * wide cone, so it covers ground rather than a point - and the ground it covers is right in front
+     * of him, because the flame goes out.
+     *
+     * <p>It runs hot, which is the whole of what stops it being the answer to everything: held down
+     * it takes itself away, and it is the gun most likely to be held down. Reach, not damage, is what
+     * it trades - anything at all past its range is a problem for a different gun.
+     */
+    FLAMER,
+    /**
+     * A handful of pellets thrown wide with every pull, slowly. Devastating with the muzzle against
+     * something and close to useless across a room: the cone is the same width at every distance, so
+     * how much of it lands is entirely how close he was willing to get.
+     *
+     * <p>It stays cold. What it costs is the wait between pulls, which is long enough that a miss is
+     * a decision the player has to live with.
+     */
+    SHOTGUN,
+    /**
      * What a turret fires. Light, very fast and quick to repeat: it trades the damage of a carried
      * gun for a rate and a flight time neither side can step out of.
      *

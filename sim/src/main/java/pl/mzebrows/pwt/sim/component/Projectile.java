@@ -22,6 +22,17 @@ public final class Projectile implements Component, Pool.Poolable {
 
     public float originY;
 
+    /**
+     * How far it may fly before it expires, in world units. Zero is until it hits something or
+     * leaves the level, which is what almost every shot in the game declares.
+     *
+     * <p>A property of the shot rather than of the aim. The enforced invariant that aim is a
+     * direction and never a distance is about where a trigger pull is pointed; a grenade has carried
+     * a flight length since G0019 without troubling it, and this is the same number on a bullet - it
+     * is what lets a gun be short-ranged rather than what lets an aim reach further.
+     */
+    public float range;
+
     /** Records the muzzle, and returns this component, for fluent spawning. */
     public Projectile from(float x, float y) {
         this.originX = x;
@@ -29,9 +40,26 @@ public final class Projectile implements Component, Pool.Poolable {
         return this;
     }
 
+    /** Gives it a flight length, and returns this component, for fluent spawning. */
+    public Projectile lasting(float newRange) {
+        this.range = newRange;
+        return this;
+    }
+
+    /** True if this shot has flown as far as it was ever going to. */
+    public boolean spent(float x, float y) {
+        if (range <= 0f) {
+            return false;
+        }
+        float flownX = x - originX;
+        float flownY = y - originY;
+        return flownX * flownX + flownY * flownY >= range * range;
+    }
+
     @Override
     public void reset() {
         originX = 0f;
         originY = 0f;
+        range = 0f;
     }
 }

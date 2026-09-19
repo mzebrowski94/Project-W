@@ -3,33 +3,34 @@
 Systems run in the order they were added to `Simulation`'s constructor. **Changing that order changes
 results.** Register deliberately, and say in your reply why you put a system where you put it.
 
-Transcribed from `Simulation`'s constructor and verified 2026-09-18 (40 systems). Re-verify if this list and the
+Transcribed from `Simulation`'s constructor and verified 2026-09-19 (41 systems). Re-verify if this list and the
 constructor ever disagree; the constructor wins.
 
 ## The order
 
 | # | System | # | System |
 |---|---|---|---|
-| 1 | `PositionHistorySystem` | 21 | `MovementSystem` |
-| 2 | `CooldownSystem` | 22 | `StrikeSystem` |
-| 3 | `DragSystem` | 23 | `CollisionSystem` |
-| 4 | `CommanderControlSystem` | 24 | `GrenadeSystem` |
-| 5 | `MeleeSystem` | 25 | `PickupSystem` |
-| 6 | `TurretSystem` | 26 | `EvolutionSystem` |
-| 7 | `PerceptionSystem` | 27 | `DamageSystem` |
-| 8 | `NavigationSystem` | 28 | `ActionSystem` |
-| 9 | `WeaveSystem` | 29 | `AidSystem` |
-| 10 | `SquadOrderSystem` | 30 | `CasualtySystem` |
-| 11 | `TrooperMindSystem` | 31 | `DyingSystem` |
-| 12 | `TrooperMoveSystem` | 32 | `RespawnSystem` |
-| 13 | `TrooperCombatSystem` | 33 | `BlastSystem` |
-| 14 | `WanderSystem` | 34 | `ProjectileBoundsSystem` |
-| 15 | `AvoidanceSystem` | 35 | `ReinforcementSystem` |
-| 16 | `EnemyRangedSystem` | 36 | `WaveSystem` |
-| 17 | `DodgeSystem` | 37 | `ControlPointSystem` |
-| 18 | `DriveSystem` | 38 | `ObjectiveSystem` |
-| 19 | `EnemyLeapSystem` | 39 | `AppearanceSystem` |
-| 20 | `StunSystem` | 40 | `ReaperSystem` |
+| 1 | `PositionHistorySystem` | 22 | `StrikeSystem` |
+| 2 | `CooldownSystem` | 23 | `CollisionSystem` |
+| 3 | `DragSystem` | 24 | `GrenadeSystem` |
+| 4 | `CommanderControlSystem` | 25 | `PickupSystem` |
+| 5 | `MeleeSystem` | 26 | `EvolutionSystem` |
+| 6 | `TurretSystem` | 27 | `DamageSystem` |
+| 7 | `PerceptionSystem` | 28 | `ActionSystem` |
+| 8 | `NavigationSystem` | 29 | `AidSystem` |
+| 9 | `WeaveSystem` | 30 | `CasualtySystem` |
+| 10 | `SquadOrderSystem` | 31 | `DyingSystem` |
+| 11 | `TrooperMindSystem` | 32 | `RespawnSystem` |
+| 12 | `TrooperMoveSystem` | 33 | `BlastSystem` |
+| 13 | `TrooperCombatSystem` | 34 | `ProjectileBoundsSystem` |
+| 14 | `WanderSystem` | 35 | `ReinforcementSystem` |
+| 15 | `AvoidanceSystem` | 36 | `WaveSystem` |
+| 16 | `EnemyRangedSystem` | 37 | `NestSystem` |
+| 17 | `DodgeSystem` | 38 | `ControlPointSystem` |
+| 18 | `DriveSystem` | 39 | `ObjectiveSystem` |
+| 19 | `EnemyLeapSystem` | 40 | `AppearanceSystem` |
+| 20 | `StunSystem` | 41 | `ReaperSystem` |
+| 21 | `MovementSystem` | | |
 
 Before system 1, `step(PlayerInputs)` copies each slot's `CommanderInput` into that commander's
 `Intent`. That is the only way input enters the simulation, and it is also **the one place a relative
@@ -40,6 +41,10 @@ it has always read.
 `TrooperMindSystem` and `TrooperMoveSystem` share **one** `Rng` stream (`RngStream.TROOPER`), by the
 comment in the constructor: roaming and sweeping are the same concern and separating them would mean
 two salts to keep apart for no benefit.
+
+How loosely a *gun* throws draws from `RngStream.SCATTER`, shared by all four things that fire one - the commander, a trooper, a shooting alien and a gun on a mount. Deliberately not `SPIT`, which is how badly a *creature* aims and narrows as it settles: retuning a shotgun's pattern must not reshuffle where a spitter's next shot goes.
+
+How big a nest's brood is and where it lands draws from `RngStream.NEST`, for the reason `WAVE` has its own: re-tuning what a nest produces must not move where a wave arrives.
 
 Everything the AI leaves to the dice draws from a second stream, `RngStream.NERVE` - the trooper's
 sweep at a leaper, its decision to go and fetch somebody, and a creature biting into a barrel. One
@@ -62,8 +67,10 @@ against the order above on 2026-09-13 and hold.
 | `EvolutionSystem` (26) after pickups, before damage | Turns what a unit has eaten into what it becomes, in time for the damage to land on the new strain. |
 | `DyingSystem` (31) after `DamageSystem` (27) | Marks a body that has lain out its throes; damage decides who is dying. |
 | Reactions - `RespawnSystem` (32) - run **while the dead are still there** | They react to a body that has not been removed yet. |
-| `WaveSystem` (36) **before** `ObjectiveSystem` (38) | A level whose last wave lands this tick must not read as complete for the tick before the aliens appear. It sits with the other systems that are about the level rather than about anything standing in it, at the end of the tick. |
-| `ReaperSystem` **last** (40) | Nothing else in the simulation removes an entity; `onlyTheReaperRemovesEntities` fails the build if it tries. |
+| `WaveSystem` (36) **before** `ObjectiveSystem` (39) | A level whose last wave lands this tick must not read as complete for the tick before the aliens appear. It sits with the other systems that are about the level rather than about anything standing in it, at the end of the tick. |
+| `NestSystem` (37) **after** the death chain (27-33) and **before** `ReaperSystem` (41) | A destroyed nest empties the last of itself while its body is still on the field - the same window, and the same reason, as respawning and blasts. One system earlier and the brood would be owed to a tick that had already gone; one later and there would be nothing left to react to. |
+| `NestSystem` (37) **before** `ObjectiveSystem` (39) | The same reason `WaveSystem` is: a level whose last nest dies this tick must not read as clear for the tick before its brood appears. |
+| `ReaperSystem` **last** (41) | Nothing else in the simulation removes an entity; `onlyTheReaperRemovesEntities` fails the build if it tries. |
 | Drivers write *desired* velocity; `DriveSystem` (18) commits it once and clears it | Several systems may have an opinion without knowing the others exist. A unit no system spoke for stands still, and no driver needs a halt-everything branch (G0010). |
 | `WeaveSystem` (9) **after** `NavigationSystem` (8) and **before** `AvoidanceSystem` (15) | It bends the course navigation has just written, and avoidance keeps the last word about it - a weave that could steer a creature into rock would stop being a weave the moment a level had walls in it. Its phase advances with ground covered rather than with the clock, which is why it reads the desired velocity before anything has moved. |
 | `AvoidanceSystem` (15) **before** `DodgeSystem` (17) | A dodge bent around a rock would not be the same dodge twice, and G0012 promises it is. A cornered rabbit sidesteps into a wall - what being cornered should cost it. |

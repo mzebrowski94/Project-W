@@ -5,6 +5,7 @@ import lombok.With;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.ApproachDef;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -62,6 +63,7 @@ import pl.mzebrows.pwt.sim.def.WeaveDef;
  * @param grenade what the commander throws
  * @param rabbit the neutral creature that wanders the field and is eaten
  * @param barrel the explosive one, which is neither eaten nor picked up
+ * @param nest the holes in the ground that keep sending more out
  * @param controlPoint what it takes to hold a point, and how far taking one carries
  * @param turret the gun on a mount that a man gets on
  * @param obstacle the static circles that block movement
@@ -87,6 +89,7 @@ public record SimConfig(
         BarrelConfig barrel,
         CasualtyConfig casualty,
         ActionConfig action,
+        NestConfig nest,
         ControlPointConfig controlPoint,
         TurretConfig turret,
         ObstacleConfig obstacle,
@@ -158,7 +161,7 @@ public record SimConfig(
                 1f / 60f,
                 5,
                 new MapConfig(32, 18, 5f, 6),
-                new CommanderConfig(2f, 19f, 100f, 1.5f, 3f, 6f, 2f, 120f),
+                new CommanderConfig(2f, 19f, 100f, 5f, 1.5f, 1.5f, 6f, 2f, 120f),
                 new TrooperConfig(
                         1.6f,
                         13.5f,
@@ -197,6 +200,7 @@ public record SimConfig(
                 new BarrelConfig(1f, 11f, 4f),
                 new CasualtyConfig(8f, 0.8f, 0.4f, 1f, 0f, 1.6f),
                 new ActionConfig(2.5f, 0.45f, 0.35f, 0.4f),
+                new NestConfig(2.4f, 600f, 30f, 2, 3, 2, 3, 6f, 140f, 48f),
                 new ControlPointConfig(6f, 5f, 48f, 12f, 2, 3),
                 new TurretConfig(2.2f, 300f, 6f, 2.5f, 0.3f, 55f, 26f, 6f, WeaponKind.TURRET_GUN),
                 new ObstacleConfig(3.5f, 8),
@@ -209,7 +213,7 @@ public record SimConfig(
                         UnitKind.GRUNT,
                         new UnitDef(
                                 1.8f,
-                                7.5f,
+                                8.25f,
                                 12,
                                 100f,
                                 100f,
@@ -225,6 +229,7 @@ public record SimConfig(
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 new LeapDef(true, 16f, 29f, 0.28f, 2, 0.18f, 1.6f, 0.08f, 0.22f),
                                 RangedDef.off(),
+                                new ApproachDef(true, 7f, 12f),
                                 WeaveDef.off(),
                                 DodgeDef.off(),
                                 Chances.standard(),
@@ -249,6 +254,7 @@ public record SimConfig(
                                 new AvoidanceDef(true, 9f, 0.5f, 1.3f),
                                 new LeapDef(true, 22f, 24f, 0.42f, 3, 0.26f, 2.4f, 0.18f, 0.42f),
                                 RangedDef.off(),
+                                new ApproachDef(true, 9f, 14f),
                                 WeaveDef.off(),
                                 DodgeDef.off(),
                                 Chances.standard(),
@@ -286,6 +292,9 @@ public record SimConfig(
                                         3,
                                         0.35f,
                                         WeaponKind.CHARGED_SPIT),
+                                // It takes its own ground rather than closing on him, so there is no
+                                // queue for a spread to break up.
+                                ApproachDef.off(),
                                 // It wants a barrel far more than anything that closes and claws
                                 // does, because a barrel is what turns its gun into an artillery
                                 // piece. Standing one next to a barrel is a decision a level makes.
@@ -315,6 +324,9 @@ public record SimConfig(
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 new LeapDef(true, 14f, 34f, 0.24f, 2, 0.14f, 1.2f, 0.06f, 0.16f),
                                 RangedDef.off(),
+                                // Narrower than a grunt's, because it weaves on top of it: two wide
+                                // answers to the same question read as a creature that cannot decide.
+                                new ApproachDef(true, 5f, 10f),
                                 new WeaveDef(true, 0.55f, 9f),
                                 new DodgeDef(true, 22f, 26f, 0.26f, 0.7f, 1.4f),
                                 Chances.standard(),
@@ -328,18 +340,52 @@ public record SimConfig(
      */
     private static Defs<WeaponKind, WeaponDef> defaultWeapons() {
         return Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
-                .put(WeaponKind.SIDEARM, new WeaponDef(0.3f, 42f, 0.6f, 50f, Look.PROJECTILE, 0f, HeatDef.none(), 0f))
+                .put(
+                        WeaponKind.SIDEARM,
+                        new WeaponDef(0.3f, 42f, 0.6f, 0f, 50f, 1, 0f, Look.PROJECTILE, 0f, HeatDef.none(), 0f))
                 .put(
                         WeaponKind.RAILGUN,
-                        new WeaponDef(1.2f, 85f, 1f, 300f, Look.SLUG, 0f, new HeatDef(0.34f, 0.12f, 0.4f), 0f))
-                .put(WeaponKind.SPIT, new WeaponDef(1.1f, 30f, 0.7f, 100f, Look.SPIT, 0f, HeatDef.none(), 0f))
+                        new WeaponDef(
+                                1.2f, 85f, 1f, 0f, 300f, 1, 0f, Look.SLUG, 0f, new HeatDef(0.34f, 0.12f, 0.4f), 0f))
+                // The two that cover ground rather than a point. Both name a flight length, which is
+                // what makes them short-ranged - a property of the shot and never of the aim.
+                .put(
+                        WeaponKind.FLAMER,
+                        new WeaponDef(
+                                0.09f,
+                                34f,
+                                1.1f,
+                                17f,
+                                9f,
+                                4,
+                                34f,
+                                Look.FLAME,
+                                0f,
+                                new HeatDef(0.035f, 0.3f, 0.45f),
+                                0f))
+                .put(
+                        WeaponKind.SHOTGUN,
+                        new WeaponDef(0.75f, 60f, 0.5f, 26f, 22f, 6, 26f, Look.PELLET, 0f, HeatDef.none(), 0f))
+                .put(
+                        WeaponKind.SPIT,
+                        new WeaponDef(1.1f, 30f, 0.7f, 0f, 100f, 1, 0f, Look.SPIT, 0f, HeatDef.none(), 0f))
                 .put(
                         WeaponKind.CHARGED_SPIT,
-                        new WeaponDef(1.1f, 30f, 0.8f, 100f, Look.CHARGED_SPIT, 5f, HeatDef.none(), 0f))
+                        new WeaponDef(1.1f, 30f, 0.8f, 0f, 100f, 1, 0f, Look.CHARGED_SPIT, 5f, HeatDef.none(), 0f))
                 .put(
                         WeaponKind.TURRET_GUN,
                         new WeaponDef(
-                                0.16f, 150f, 0.45f, 30f, Look.TURRET_SHOT, 0f, new HeatDef(0.1f, 0.35f, 0.6f), 0.9f))
+                                0.16f,
+                                150f,
+                                0.45f,
+                                0f,
+                                30f,
+                                1,
+                                0f,
+                                Look.TURRET_SHOT,
+                                0f,
+                                new HeatDef(0.1f, 0.35f, 0.6f),
+                                0.9f))
                 .build();
     }
 
@@ -359,11 +405,21 @@ public record SimConfig(
                         PickupKind.FLOWER,
                         new PickupDef(0.9f, Look.FLOWER, Grant.NOTHING, new Grant.Mutate(UnitKind.BRUTE), 0f))
                 .put(
-                        PickupKind.FROZEN_TROOPER,
-                        new PickupDef(0.9f, Look.FROZEN_TROOPER, new Grant.Reinforce(3), new Grant.Feed(1), 1.8f))
+                        PickupKind.SUPPLY_DROP,
+                        new PickupDef(0.9f, Look.SUPPLY_DROP, new Grant.Reinforce(3), Grant.NOTHING, 1.8f))
+                // One crate per gun. Same size and same pulse; only the colour says what is inside,
+                // which is a look and a key in graphic.properties rather than any drawing code (G0003).
                 .put(
-                        PickupKind.ARMOURY,
-                        new PickupDef(1.2f, Look.ARMOURY, new Grant.Arm(WeaponKind.RAILGUN), new Grant.Feed(1), 2.6f))
+                        PickupKind.ARMOURY_RAILGUN,
+                        new PickupDef(
+                                1.2f, Look.ARMOURY_RAILGUN, new Grant.Arm(WeaponKind.RAILGUN), Grant.NOTHING, 2.6f))
+                .put(
+                        PickupKind.ARMOURY_FLAMER,
+                        new PickupDef(1.2f, Look.ARMOURY_FLAMER, new Grant.Arm(WeaponKind.FLAMER), Grant.NOTHING, 2.6f))
+                .put(
+                        PickupKind.ARMOURY_SHOTGUN,
+                        new PickupDef(
+                                1.2f, Look.ARMOURY_SHOTGUN, new Grant.Arm(WeaponKind.SHOTGUN), Grant.NOTHING, 2.6f))
                 .put(PickupKind.RABBIT, new PickupDef(0.8f, Look.RABBIT, Grant.NOTHING, new Grant.Feed(1), 0f))
                 .put(PickupKind.BARREL, new PickupDef(1f, Look.BARREL, Grant.NOTHING, Grant.DETONATE, 0f))
                 .build();
@@ -394,6 +450,68 @@ public record SimConfig(
             largest = Math.max(largest, pickup.radius());
         }
         return largest;
+    }
+
+    /**
+     * A hole in the ground that keeps sending more of one strain out of it.
+     *
+     * <p>One block for every nest on the field rather than one per strain: what makes two nests
+     * different is <em>what comes out</em>, which is a {@code UnitKind} named where the nest is put
+     * down, and everything below is about the hole rather than about the creature.
+     *
+     * @param radius its circular body, in world units. A thing standing on the field, so it is solid
+     *     and can be shot, and wide enough to be a target worth aiming at rather than a dot
+     * @param health what it absorbs before it is destroyed. <strong>A job, not a stray round</strong>,
+     *     and above a turret's on purpose: a turret is yours and losing one is an event, a nest is
+     *     theirs and leaving one standing is a decision. It has to be payable with the sidearm, since
+     *     the first nest on a march comes long before the first weapons cache does - so the ceiling is
+     *     how long the player can stand still and shoot with a brood already on the field
+     * @param periodSeconds how long between broods
+     * @param broodMin how few come out at a time
+     * @param broodMax how many, drawn between the two from the level's own stream. A fixed number
+     *     makes every nest worth exactly the same; a range means walking up to see
+     * @param deathBroodMin how few come out when it is destroyed
+     * @param deathBroodMax how many. <strong>A nest is at its worst the moment you kill it</strong>,
+     *     which is what makes destroying one a decision about timing rather than a chore
+     * @param hatchRadius how far around it a brood is put down, in world units. Outside its own body,
+     *     so nothing is hatched inside the thing that hatched it
+     * @param wakeRadius how close somebody on the player's side must come before it starts working,
+     *     in world units. <strong>Deliberately large</strong>: it is not a detection range but the
+     *     answer to a long level, where a nest working from the first tick would have sent twenty
+     *     creatures at empty ground before anybody arrived
+     * @param rouseRadius how far its cry carries when it is attacked, in world units. The same idea
+     *     as a control point's, and sized like one: taking a nest away should bring the neighbourhood
+     *     rather than be something done quietly from the edge of its range
+     */
+    @With
+    public record NestConfig(
+            float radius,
+            float health,
+            float periodSeconds,
+            int broodMin,
+            int broodMax,
+            int deathBroodMin,
+            int deathBroodMax,
+            float hatchRadius,
+            float wakeRadius,
+            float rouseRadius) {
+
+        public NestConfig {
+            Require.positive("nest radius", radius);
+            Require.positive("nest health", health);
+            Require.positive("nest periodSeconds", periodSeconds);
+            Require.notNegative("nest broodMin", broodMin);
+            Require.notNegative("nest deathBroodMin", deathBroodMin);
+            Require.atLeast("nest broodMax", broodMax, broodMin, "a nest cannot have a smaller most than fewest");
+            Require.atLeast(
+                    "nest deathBroodMax",
+                    deathBroodMax,
+                    deathBroodMin,
+                    "a nest cannot have a smaller most than fewest");
+            Require.positive("nest hatchRadius", hatchRadius);
+            Require.notNegative("nest wakeRadius", wakeRadius);
+            Require.notNegative("nest rouseRadius", rouseRadius);
+        }
     }
 
     /**
@@ -489,6 +607,11 @@ public record SimConfig(
      * @param radius its circular body, in world units
      * @param speed how fast it moves, in world units per second
      * @param health damage it absorbs before dying
+     * @param bleedOutSeconds how long he lies on the ground shot off his feet before he is gone, in
+     *     seconds. <strong>His own, and deliberately not the squad's</strong>: what a player actually
+     *     sits out is this plus the throes plus the respawn, and three windows sized for a trooper
+     *     added up to most of a fight. Shortening the shared one instead would have shortened every
+     *     rescue on the field, which is a different decision about a different mechanic
      * @param deathThroesSeconds how long its body stays on the field after a killing blow, before it
      *     is removed and the respawn countdown starts. The window the dying animation will play in.
      * @param respawnDelaySeconds how long after the body is removed before it comes back
@@ -506,6 +629,7 @@ public record SimConfig(
             float radius,
             float speed,
             float health,
+            float bleedOutSeconds,
             float deathThroesSeconds,
             float respawnDelaySeconds,
             float respawnMargin,
@@ -515,6 +639,7 @@ public record SimConfig(
             Require.positive("commander radius", radius);
             Require.positive("commander speed", speed);
             Require.positive("commander health", health);
+            Require.positive("commander bleedOutSeconds", bleedOutSeconds);
             Require.notNegative("commander deathThroesSeconds", deathThroesSeconds);
             Require.notNegative("commander respawnDelaySeconds", respawnDelaySeconds);
             Require.notNegative("commander respawnMargin", respawnMargin);

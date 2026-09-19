@@ -24,7 +24,7 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 /**
  * What a rescued trooper actually becomes.
  *
- * <p>The pickup half of this is {@code PickupSystemTest}'s: a frozen trooper lands a level-scope
+ * <p>The pickup half of this is {@code PickupSystemTest}'s: a supply drop lands a level-scope
  * grant on the level entity. This is the other half - the grant becoming a man standing beside the
  * commander - and the cap that keeps pillar 3 honest, because a squad that can be topped up without
  * limit is not a resource.
@@ -38,7 +38,7 @@ class ReinforcementSystemTest {
     void turnsARescuedTrooperIntoAManOnTheField() {
         Simulation simulation = world(config());
         simulation.spawnCommander(X, Y);
-        simulation.spawnPickup(PickupKind.FROZEN_TROOPER, X, Y);
+        simulation.spawnPickup(PickupKind.SUPPLY_DROP, X, Y);
 
         simulation.step();
 
@@ -50,7 +50,7 @@ class ReinforcementSystemTest {
     void putsHimDownBesideTheCommander() {
         Simulation simulation = world(config());
         simulation.spawnCommander(X, Y);
-        simulation.spawnPickup(PickupKind.FROZEN_TROOPER, X, Y);
+        simulation.spawnPickup(PickupKind.SUPPLY_DROP, X, Y);
 
         simulation.step();
 
@@ -70,7 +70,7 @@ class ReinforcementSystemTest {
     void spendsAGrantOnceRatherThanEveryTick() {
         Simulation simulation = world(config());
         simulation.spawnCommander(X, Y);
-        simulation.spawnPickup(PickupKind.FROZEN_TROOPER, X, Y);
+        simulation.spawnPickup(PickupKind.SUPPLY_DROP, X, Y);
 
         steps(simulation, 30);
 
@@ -83,7 +83,7 @@ class ReinforcementSystemTest {
     void putsOneManDownPerTickRatherThanTheWholeCrateAtOnce() {
         Simulation simulation = world(config());
         simulation.spawnCommander(X, Y);
-        simulation.spawnPickup(PickupKind.FROZEN_TROOPER, X, Y);
+        simulation.spawnPickup(PickupKind.SUPPLY_DROP, X, Y);
 
         simulation.step();
         assertThat(count(simulation, Trooper.class)).isEqualTo(1);
@@ -102,7 +102,7 @@ class ReinforcementSystemTest {
         for (int i = 0; i < SQUAD_SIZE + 1; i++) {
             simulation.spawnTrooper(X + 20f + i * 3f, Y);
         }
-        simulation.spawnPickup(PickupKind.FROZEN_TROOPER, X, Y);
+        simulation.spawnPickup(PickupKind.SUPPLY_DROP, X, Y);
 
         simulation.step();
 

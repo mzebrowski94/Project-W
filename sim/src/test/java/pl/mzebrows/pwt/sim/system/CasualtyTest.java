@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_BLEED_OUT;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_BLEED_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COOLDOWN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
@@ -177,6 +178,27 @@ class CasualtyTest {
 
         assertThat(commander.getComponent(Casualty.class).begun).isTrue();
         assertThat(commander.getComponent(Dying.class).begun).isFalse();
+    }
+
+    /**
+     * <strong>How long a man has on the ground is a fact about him</strong>, and the commander's is
+     * shorter than his men's. What a player is actually made to sit out is the bleed-out plus the
+     * throes plus the respawn, and three windows built for a trooper added up to most of a fight; a
+     * number on his own config is the only place that can say so without shortening every rescue on
+     * the field.
+     */
+    @Test
+    void countsTheCommanderDownOnHisOwnClockRatherThanHisMens() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+        Entity trooper = simulation.spawnTrooper(60f, 50f);
+
+        wound(commander, COMMANDER_HEALTH);
+        wound(trooper, TROOPER_HEALTH);
+        steps(simulation, ticksIn(COMMANDER_BLEED_OUT) + 2);
+
+        assertThat(commander.getComponent(Dying.class).begun).isTrue();
+        assertThat(trooper.getComponent(Dying.class).begun).isFalse();
     }
 
     /** Claws still finish him where a bullet only puts him down. That asymmetry is the whole rule. */

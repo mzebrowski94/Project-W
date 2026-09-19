@@ -58,6 +58,7 @@ public final class WorldRenderer implements Disposable {
     private final Palette palette;
     private final StateTint stateTint;
     private final ChargeMark chargeMark;
+    private final NestMark nestMark;
     private final FacingMark facingMark;
     private final ChargedMark chargedMark;
     private final OrderMark orderMark;
@@ -106,6 +107,8 @@ public final class WorldRenderer implements Disposable {
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {
                 shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
+            } else if (shelled(appearance.look)) {
+                drawShells(x, y, body.radius, appearance);
             } else {
                 shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
             }
@@ -208,6 +211,31 @@ public final class WorldRenderer implements Disposable {
     }
 
     /**
+     * A hole in the ground: rings, darkening inwards.
+     *
+     * <p>Drawn outermost first so each one sits on top of the last, which is what makes the shading
+     * read as depth rather than as concentric bands. It reuses the same scratch colour every ring, so
+     * a nest costs no allocation per frame either.
+     */
+    private void drawShells(float x, float y, float radius, Appearance appearance) {
+        for (int shell = 0; shell < nestMark.shells(); shell++) {
+            shapes.setColor(darkened(tint(appearance), nestMark.darkenAt(shell)));
+            shapes.circle(x, y, nestMark.radiusAt(shell, radius), CIRCLE_SEGMENTS);
+        }
+    }
+
+    /**
+     * Whether a look is drawn as rings rather than as one filled circle.
+     *
+     * <p>The client's decision, exactly as {@link #square} is: the simulation names a role and never
+     * a shape (G0003). A nest is dug ground, and dug ground drawn as a body reads as an enormous slow
+     * creature.
+     */
+    private static boolean shelled(Look look) {
+        return look == Look.NEST;
+    }
+
+    /**
      * Whether a look is drawn square rather than round.
      *
      * <p>The client's decision, like the colour beside it: the simulation names a role and never a
@@ -236,6 +264,17 @@ public final class WorldRenderer implements Disposable {
         tinted.g += (target - tinted.g) * amount;
         tinted.b += (target - tinted.b) * amount;
         return tinted;
+    }
+
+    /**
+     * The same colour shifted toward black, for a ring further into a hole. Mutates and returns the
+     * shared scratch colour, exactly as {@link #brightened} does.
+     */
+    private static Color darkened(Color color, float amount) {
+        color.r -= color.r * amount;
+        color.g -= color.g * amount;
+        color.b -= color.b * amount;
+        return color;
     }
 
     /**

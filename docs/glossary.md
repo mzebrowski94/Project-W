@@ -45,6 +45,8 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **rabbit** | Alien food that runs away. A pickup in every way that matters - claimed on contact, granted from the same table - but it walks, it dodges, and it can be shot. The commander is offered nothing by one, so his only interest is denying it. |
 | **reinforcement** *(source)* | A pickup that adds troopers to the squad - three of them, as the shipped one is. Taking one lands a count on the level entity, which `ReinforcementSystem` turns into men standing beside the commander, one a tick, up to the squad's maximum and wasted past it. A level lays two or three beside every control point. |
 | **shine** | The slow pulse on a pickup worth crossing the ground for. Declared per kind as `shineSeconds`, zero meaning it does not shine, and published on the charge channel as `Look.GLEAM` so the renderer draws it without being told what the thing is. |
+| **weapons cache** | A crate with a gun in it: the player's alone, and one **kind** per gun so which one it is can be read before he has walked to it. Picking one up replaces what he was carrying; nothing about it survives his death. |
+| **supply drop** | A crate of men lying on the field: three **reinforcements** to whoever on the player's side reaches it, and nothing at all to the other side, which walks over one and leaves it standing. Renamed from *frozen trooper* on 2026-09-18, when it stopped being a mouthful to the aliens - the old name described a body being contested, and it is now kit. |
 
 ### Fighting
 
@@ -67,6 +69,12 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **recovery** | The window after a staggering hit during which a unit takes no further contact damage. |
 | **heat** | How hot a gun has become, as a fraction the simulation publishes for the renderer. It fills with every shot and comes off at a rate, always - a gun nobody is holding cools exactly as fast as one somebody is. The one bar in the game that fills up because of what the player **did** rather than something being done to him, which is why it is drawn as an arc over the holder rather than on the **charge** channel (G0025). |
 | **overheat** | A gun that has filled its **heat** bar and stopped itself. It stays stopped until the bar has fallen well below full, not merely below the top - so running one into the stop costs seconds rather than a stutter. |
+| **volley** | Everything one pull of a trigger puts in the air. One for most guns; a **scattergun** names more, and they leave together inside the gun's own **spread**. One place decides it for every shooter there is, so what a pull does is a property of the gun and never of who is holding it. |
+| **scattergun** | A gun that covers ground rather than a point: several **pellets** per **volley**, thrown into a cone of its own. Two exist - the **flamethrower** and the **shotgun** - and they are the same trade at different distances. |
+| **pellet** | One shot of a **volley**. Not a round: what makes a scattergun a scattergun is that a pellet on its own is worth little and six of them at arm's length are worth everything. |
+| **flight** | How far a shot travels before it goes out, as a distance on the gun. Zero means until it hits something or leaves the level, which is what almost every gun says. **A property of the shot and never of the aim** - a grenade has had one since G0019 - so it is what lets a gun be short-ranged without touching the rule that aim is a direction. |
+| **flamethrower** | The short gun. Four fat, short-lived **pellets** per pull into a wide cone, so it covers the ground right in front of him and nothing past it. It runs hot, which is the whole of what stops it being the answer to everything: it is the gun most likely to be held down. |
+| **shotgun** | The other short gun, and the opposite rhythm. Six **pellets** thrown wide, slowly: all of them kill a grunt outright and one or two at range annoy it, so how much of a pull lands is entirely how close he was willing to get. It stays cold; what it costs is the wait. |
 | **muzzle** | Where a shot leaves a gun. A number on the gun rather than on whatever is holding it: a gun that names an offset has two of them, fires from each in turn, and is therefore a twin mount without anything growing a second firing path. Never *barrel* - that word is taken by the explosive. |
 | **stagger** | The stun a *survived* blow puts on the one that took it, and only on that one. A shove, not a clinch: whoever landed it keeps fighting. |
 | **spit** | What a spitter fires. Slow in the air on purpose, and thrown inside a narrow cone rather than along a line - so a shot meant for the commander reaches the men standing beside him, which is most of what makes a firing line hurt a squad. |
@@ -83,6 +91,8 @@ A term that could sit in two sections goes where a reader would look for it, not
 |---|---|
 | **aggro** | Whether a unit is hunting anybody. One latched boolean, and the whole of a unit's mind. *Who* it is hunting is not latched: that is whoever on the player's side is nearest and still on his feet, asked again every tick and published as a place (G0026). It notices at its detection range and, if its strain loses interest at all, gives up past its lose range. That man going down releases it regardless: nothing stands to attention over a corpse. |
 | **aid** | A trooper leaving what it was doing to go and **stabilise** somebody. Ranked below a standing order and above the level's objectives, and taken on a **chance** rather than always (G0023). |
+| **approach** | How wide of whatever it is hunting a creature closes. Each one walks at a point beside the man rather than at the man, on a side taken from where it was spawned rather than rolled (G0012's argument, applied to an approach) - which is what stops a pack converging onto one line and arriving in single file. The offset is spent by the time it is close, so the last of every approach is straight at him; a **spread** that held all the way in would be an orbit. |
+| **rouse** | Sending everything within earshot of a place to go and see who is there. Two things shout: a **control point** somebody has started taking, and a **nest** somebody is hitting. Loud once per event rather than every tick, and a place rather than a target (G0016) - what it fights when it gets there is whatever is standing there. |
 | **avoidance** | Steering around what a unit is about to hit, decided before it hits it. Context steering: a ring of candidate directions scored by how much the unit wanted to go that way against how dangerous that way is. It never avoids the other side, which is what it is trying to reach, and never a pickup it wants - only a **shunned** one gets room. |
 | **chance** | How often a unit does something it only sometimes does, as a probability per second of opportunity. Every one in the game is a constant in `AiChance` and a line in `game.properties`, so the conditional behaviour can be read off one list instead of found by searching the systems. Zero switches one off and draws no number at all. |
 | **clearance** | Whether a body of a given size fits on a tile. Baked into a flow field rather than checked afterwards, which is what makes a one-tile crack a route for a grunt and a wall for a brute without anybody writing a rule about it. |
@@ -144,6 +154,8 @@ A term that could sit in two sections goes where a reader would look for it, not
 | Term | Meaning |
 |---|---|
 | **post** | Ground a level says you must hold, and the first thing in the game that tells the **aliens** where to be: anything that has noticed nobody walks at it rather than ambling about its patch (G0027). It has no health, no side and no capture bar - it is a goal, not a thing to fight - and there is one per level. Distinct from a **control point**, which is somewhere the squad goes and takes. |
+| **nest** | A hole in the ground that keeps sending more of one **strain** out of it. The third way a level puts creatures on the field, after "everything is here from the first tick" and a **wave** schedule - and the only one that is a **place**, so it can be walked to, shot and taken away. It **sleeps** until somebody on the player's side comes near, and waking latches: backing off does not stop it. Destroying one empties the last **brood** out of it and **rouses** the neighbourhood, so a nest is at its worst the moment you kill it. |
+| **brood** | One lot of creatures out of a **nest** - a few at a time, drawn between two numbers, jittered into the tiles around the hole like everything else (G0009). |
 | **wave** | One lot of aliens, and when and where it arrives. A list of them is carried by **the level entity**, and whether that list is spent is half of the "hold the post" objective: an empty field means you have won if there is nothing left to come, and means you are between waves if there is. |
 | **control point** | Ground a squad takes by standing near it for a while. Captured by dwelling; the dwell goes back to zero the moment the last capturer leaves, rather than pausing, and starting an attempt wakes what is nearby. |
 | **level** *(source)* | One self-contained combat scenario, start to objective. |
@@ -160,12 +172,6 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **stream** | One seeded generator per concern, all derived from the level seed. Sharing one sequence means re-tuning how often anything draws a number reshuffles every number every other system gets - reproducible, and miserable to iterate on. |
 | **tick** | One fixed simulation step, `SimConfig.tickSeconds()` long. Never a frame. |
 | **world unit** | The simulation's unit of length. Never pixels. |
-
-### Alpha-phase scaffolding
-
-| Term | Meaning |
-|---|---|
-| **frozen trooper** | An inert body on the field: a reinforcement to the commander and a mouthful to an alien, contested by both. It is **not a trooper** while it lies there - it does not follow, cannot be commanded and cannot die - and it becomes one only once he reaches it. |
 
 ## Words we do not use
 

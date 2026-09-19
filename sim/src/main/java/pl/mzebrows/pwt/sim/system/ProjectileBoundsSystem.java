@@ -14,7 +14,8 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 
 /**
- * Throws away projectiles that have left the arena or flown into rock.
+ * Throws away projectiles that have left the arena, flown into rock, or flown as far as their gun
+ * lets them.
  *
  * <p>Units are kept inside by the constraint solver; projectiles deliberately are not, because a
  * projectile that stops at the wall and sits there is worse than one that flies off and disappears.
@@ -25,12 +26,18 @@ import pl.mzebrows.pwt.sim.component.Projectile;
  * is checked against the projectile's centre rather than its edge, so a shot visibly reaches the rock
  * before it goes out - the same way a shot leaving the arena is only dropped once it is fully past.
  *
+ * <p><strong>A gun with a reach is one whose shots expire</strong>, and expiring is dying like any
+ * other end - so a shot that carries a blast leaves one where it runs out, through the reaction
+ * everything explodes through (G0018), exactly as a grenade at the end of its throw does. Zero range
+ * is "until it hits something", which is what almost every gun in the game declares.
+ *
  * <p>Marks rather than removes: only {@code ReaperSystem} takes an entity out of the world.
  */
 public final class ProjectileBoundsSystem extends EntitySystem {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
+    private static final ComponentMapper<Projectile> PROJECTILE = ComponentMapper.getFor(Projectile.class);
 
     private final Spawner spawner;
     private final TileMap map;
@@ -61,6 +68,10 @@ public final class ProjectileBoundsSystem extends EntitySystem {
             }
             Position position = POSITION.get(projectile);
             float radius = BODY.get(projectile).radius;
+            if (PROJECTILE.get(projectile).spent(position.x, position.y)) {
+                spawner.markDead(projectile);
+                continue;
+            }
             if (position.x + radius < 0f
                     || position.x - radius > width
                     || position.y + radius < 0f

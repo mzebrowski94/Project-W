@@ -131,9 +131,9 @@ final class DefendScenario implements Scenario {
         simulation.spawnTurret(map.tileCentreX(POST_COL + 12), map.tileCentreY(POST_ROW));
 
         // A better gun behind the post, and two men to go and fetch out of the approach.
-        simulation.spawnPickup(PickupKind.ARMOURY, map.tileCentreX(POST_COL - 4), map.tileCentreY(POST_ROW));
-        simulation.spawnPickup(PickupKind.FROZEN_TROOPER, map.tileCentreX(26), map.tileCentreY(6));
-        simulation.spawnPickup(PickupKind.FROZEN_TROOPER, map.tileCentreX(26), map.tileCentreY(28));
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, map.tileCentreX(POST_COL - 4), map.tileCentreY(POST_ROW));
+        simulation.spawnPickup(PickupKind.SUPPLY_DROP, map.tileCentreX(26), map.tileCentreY(6));
+        simulation.spawnPickup(PickupKind.SUPPLY_DROP, map.tileCentreX(26), map.tileCentreY(28));
 
         // Along the approach, and two within reach of the post for when it gets that far.
         simulation.spawnBarrel(map.tileCentreX(POST_COL + 7), map.tileCentreY(POST_ROW - 2));

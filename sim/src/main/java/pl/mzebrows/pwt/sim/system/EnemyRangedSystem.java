@@ -87,6 +87,9 @@ public final class EnemyRangedSystem extends EntitySystem {
     private final Spawner spawner;
     private final Rng rng;
 
+    /** The gun's own pattern, which is a different thing from how badly the creature aims. */
+    private final Rng scatter;
+
     /** Scratch, so swinging an aim and working out a muzzle cost no allocation per shooter per tick. */
     private final float[] swung = new float[2];
 
@@ -97,7 +100,8 @@ public final class EnemyRangedSystem extends EntitySystem {
 
     private ImmutableArray<Entity> shooters = new ImmutableArray<>(new Array<>());
 
-    public EnemyRangedSystem(TileMap map, Spawner spawner, Rng rng) {
+    public EnemyRangedSystem(TileMap map, Spawner spawner, Rng rng, Rng scatter) {
+        this.scatter = scatter;
         this.map = map;
         this.spawner = spawner;
         this.rng = rng;
@@ -254,8 +258,21 @@ public final class EnemyRangedSystem extends EntitySystem {
         float sin = (float) StrictMath.sin(turn);
         float directionX = aimX * cos - aimY * sin;
         float directionY = aimX * sin + aimY * cos;
-        Muzzle.next(at.x, at.y, BODY.get(entity).radius, weapon, MUZZLE_GAP, directionX, directionY, muzzle);
-        spawner.spawnProjectile(muzzle[0], muzzle[1], directionX, directionY, weapon, FACTION.get(entity).side);
+        // The creature's cone has been spent on the aim above, once for the whole volley - it is one
+        // bad guess rather than one per pellet. What the gun does to each of them is the gun's.
+        Guns.volley(
+                spawner,
+                scatter,
+                entity,
+                weapon,
+                at.x,
+                at.y,
+                BODY.get(entity).radius,
+                MUZZLE_GAP,
+                directionX,
+                directionY,
+                FACTION.get(entity).side,
+                muzzle);
         Guns.spend(entity, weapon, ranged.cooldownFor(weapon.cooldownSeconds, distance));
         ranged.shotsOnTarget++;
     }

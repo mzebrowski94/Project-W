@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.ApproachDef;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -193,6 +194,39 @@ public final class AlphaWorlds {
      * cooldown and see that he does not use it.
      */
     public static final float CASUALTY_BLEED_OUT = 2f;
+
+    /**
+     * Half of it, for the commander's own clock. Deliberately a different number from the one above:
+     * a test that asserts he is on his own clock would pass by accident if the two agreed.
+     */
+    public static final float COMMANDER_BLEED_OUT = 1f;
+
+    /** How many shots one pull of a scattering gun sends in the fixtures. Small enough to count. */
+    public static final int PELLETS = 3;
+
+    /** A cone wide enough that a pellet visibly leaves off true, and narrow enough to stay a cone. */
+    public static final float SCATTER_DEGREES = 40f;
+
+    /** A flight length short enough that a test can watch a shot go out without waiting. */
+    public static final float FLAME_RANGE = 10f;
+
+    /** Round numbers for a nest, so a test can count ticks to a brood rather than guess at one. */
+    public static final float NEST_RADIUS = 2f;
+
+    public static final float NEST_HEALTH = 100f;
+
+    /** Short, because a test that waits out a thirty-second period is a test nobody runs. */
+    public static final float NEST_PERIOD = 1f;
+
+    /** Fixed rather than a range, so a test can assert a count instead of a band. */
+    public static final int BROOD = 2;
+
+    public static final float NEST_HATCH_RADIUS = 6f;
+
+    /** Short enough that a test can stand something just outside it and have it stay asleep. */
+    public static final float NEST_WAKE_RADIUS = 20f;
+
+    public static final float NEST_ROUSE_RADIUS = 30f;
 
     /** Wide enough to catch two units either side of the middle and leave a third of them clear. */
     public static final float BLAST_RADIUS = 6f;
@@ -480,6 +514,7 @@ public final class AlphaWorlds {
                         COMMANDER_RADIUS,
                         COMMANDER_SPEED,
                         COMMANDER_HEALTH,
+                        COMMANDER_BLEED_OUT,
                         DEATH_THROES,
                         RESPAWN_DELAY,
                         RESPAWN_MARGIN,
@@ -526,20 +561,36 @@ public final class AlphaWorlds {
                                         new Grant.Mutate(UnitKind.BRUTE),
                                         0f))
                         .put(
-                                PickupKind.FROZEN_TROOPER,
+                                PickupKind.SUPPLY_DROP,
                                 new PickupDef(
                                         PICKUP_RADIUS,
-                                        Look.FROZEN_TROOPER,
+                                        Look.SUPPLY_DROP,
                                         new Grant.Reinforce(CRATE_TROOPERS),
-                                        MOUTHFUL,
+                                        Grant.NOTHING,
                                         SHINE_SECONDS))
                         .put(
-                                PickupKind.ARMOURY,
+                                PickupKind.ARMOURY_RAILGUN,
                                 new PickupDef(
                                         PICKUP_RADIUS,
-                                        Look.ARMOURY,
+                                        Look.ARMOURY_RAILGUN,
                                         new Grant.Arm(WeaponKind.RAILGUN),
-                                        MOUTHFUL,
+                                        Grant.NOTHING,
+                                        SHINE_SECONDS))
+                        .put(
+                                PickupKind.ARMOURY_FLAMER,
+                                new PickupDef(
+                                        PICKUP_RADIUS,
+                                        Look.ARMOURY_FLAMER,
+                                        new Grant.Arm(WeaponKind.FLAMER),
+                                        Grant.NOTHING,
+                                        SHINE_SECONDS))
+                        .put(
+                                PickupKind.ARMOURY_SHOTGUN,
+                                new PickupDef(
+                                        PICKUP_RADIUS,
+                                        Look.ARMOURY_SHOTGUN,
+                                        new Grant.Arm(WeaponKind.SHOTGUN),
+                                        Grant.NOTHING,
                                         SHINE_SECONDS))
                         .put(PickupKind.RABBIT, new PickupDef(RABBIT_RADIUS, Look.RABBIT, Grant.NOTHING, MOUTHFUL, 0f))
                         .put(
@@ -553,7 +604,10 @@ public final class AlphaWorlds {
                                         COOLDOWN,
                                         PROJECTILE_SPEED,
                                         PROJECTILE_RADIUS,
+                                        0f,
                                         WEAPON_DAMAGE,
+                                        1,
+                                        0f,
                                         Look.PROJECTILE,
                                         0f,
                                         HeatDef.none(),
@@ -564,7 +618,10 @@ public final class AlphaWorlds {
                                         SPIT_COOLDOWN,
                                         SPIT_SPEED,
                                         PROJECTILE_RADIUS,
+                                        0f,
                                         SPIT_DAMAGE,
+                                        1,
+                                        0f,
                                         Look.SPIT,
                                         0f,
                                         HeatDef.none(),
@@ -575,7 +632,10 @@ public final class AlphaWorlds {
                                         SPIT_COOLDOWN,
                                         SPIT_SPEED,
                                         PROJECTILE_RADIUS,
+                                        0f,
                                         SPIT_DAMAGE,
+                                        1,
+                                        0f,
                                         Look.CHARGED_SPIT,
                                         CHARGED_SPIT_BLAST_RADIUS,
                                         HeatDef.none(),
@@ -586,10 +646,41 @@ public final class AlphaWorlds {
                                         RAILGUN_COOLDOWN,
                                         PROJECTILE_SPEED,
                                         PROJECTILE_RADIUS,
+                                        0f,
                                         RAILGUN_DAMAGE,
+                                        1,
+                                        0f,
                                         Look.SLUG,
                                         0f,
                                         HOT,
+                                        0f))
+                        .put(
+                                WeaponKind.FLAMER,
+                                new WeaponDef(
+                                        COOLDOWN,
+                                        PROJECTILE_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        FLAME_RANGE,
+                                        WEAPON_DAMAGE,
+                                        PELLETS,
+                                        SCATTER_DEGREES,
+                                        Look.FLAME,
+                                        0f,
+                                        HeatDef.none(),
+                                        0f))
+                        .put(
+                                WeaponKind.SHOTGUN,
+                                new WeaponDef(
+                                        COOLDOWN,
+                                        PROJECTILE_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        0f,
+                                        WEAPON_DAMAGE,
+                                        PELLETS,
+                                        0f,
+                                        Look.PELLET,
+                                        0f,
+                                        HeatDef.none(),
                                         0f))
                         .put(
                                 WeaponKind.TURRET_GUN,
@@ -597,7 +688,10 @@ public final class AlphaWorlds {
                                         TURRET_COOLDOWN,
                                         PROJECTILE_SPEED,
                                         PROJECTILE_RADIUS,
+                                        0f,
                                         TURRET_DAMAGE,
+                                        1,
+                                        0f,
                                         Look.TURRET_SHOT,
                                         0f,
                                         HOT,
@@ -631,6 +725,17 @@ public final class AlphaWorlds {
                         DRAGGED_BLEED_FACTOR,
                         HAULED_STABILISE_FACTOR),
                 new SimConfig.ActionConfig(ACTION_REACH, DRAG_SPEED_FACTOR, DRAG_LATERAL_FACTOR, DRAG_GAP),
+                new SimConfig.NestConfig(
+                        NEST_RADIUS,
+                        NEST_HEALTH,
+                        NEST_PERIOD,
+                        BROOD,
+                        BROOD,
+                        BROOD,
+                        BROOD,
+                        NEST_HATCH_RADIUS,
+                        NEST_WAKE_RADIUS,
+                        NEST_ROUSE_RADIUS),
                 new SimConfig.ControlPointConfig(
                         POINT_RADIUS,
                         POINT_CAPTURE_SECONDS,
@@ -675,6 +780,7 @@ public final class AlphaWorlds {
                 AvoidanceDef.off(),
                 LeapDef.off(),
                 RangedDef.off(),
+                ApproachDef.off(),
                 WeaveDef.off(),
                 DodgeDef.off(),
                 noChances(),
@@ -748,6 +854,19 @@ public final class AlphaWorlds {
         return new Simulation(config().withUnit(
                         UnitKind.GRUNT,
                         grunt -> grunt.withFeedToEvolve(FEED_TO_EVOLVE).withEvolvesTo(UnitKind.BRUTE)));
+    }
+
+    /**
+     * A world where the supply drop is worth having to <em>both</em> sides.
+     *
+     * <p>Nothing in the shipped table is contested any more - a drop and a weapons cache are the
+     * player's alone, and everything that grows is the aliens' - so this is what a test about the
+     * grant-per-side mechanism has to build for itself. The mechanism is still the design; it is the
+     * table that stopped using both halves.
+     */
+    public static Simulation contesting() {
+        return new Simulation(config().withPickups(
+                        config().pickups().map(PickupKind.SUPPLY_DROP, drop -> drop.withAlienGrant(MOUTHFUL))));
     }
 
     /**
@@ -914,6 +1033,25 @@ public final class AlphaWorlds {
                                 .withPerception(PerceptionDef.allRound(
                                         false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE)))
                 .withChance(AiChance.BITE_A_BARREL, CERTAIN));
+    }
+
+    /** How wide a spreading strain closes in the fixtures. Wide enough to read off a single tick. */
+    public static final float APPROACH_OFFSET = 8f;
+
+    /** Round, and well inside the lane a test walks something down, so the fan has room to open. */
+    public static final float APPROACH_CLOSE_RANGE = 10f;
+
+    /**
+     * A world where the grunt takes its own line in and nothing else does.
+     *
+     * <p>Only the one strain, for the reason {@link #weaving} names: a test about a spread wants
+     * something walking straight at him beside it to compare against, and the fixture is the
+     * comparison.
+     */
+    public static Simulation spreading() {
+        return new Simulation(config().withUnit(
+                        UnitKind.GRUNT,
+                        grunt -> grunt.withApproach(new ApproachDef(true, APPROACH_OFFSET, APPROACH_CLOSE_RANGE))));
     }
 
     /** How hard a weaving strain leans off its course in the fixtures. Wide enough to see. */

@@ -12,10 +12,22 @@ public enum PickupKind {
     MUSHROOM,
     /** Alien food that is not food at all: whatever eats one turns into something else on the spot. */
     FLOWER,
-    /** A trooper in stasis: a man to the commander who reaches it, a mouthful to the alien that does. */
-    FROZEN_TROOPER,
-    /** A weapons cache: a better gun to the commander, and a mouthful to whatever reaches it first. */
-    ARMOURY,
+    /**
+     * A crate of men. Worth three troopers to whoever on the player's side reaches it, and nothing at
+     * all to the other side - the aliens walk over one and leave it standing.
+     */
+    SUPPLY_DROP,
+    /**
+     * A weapons cache: a better gun to the commander, and nothing at all to the other side.
+     *
+     * <p><strong>One kind per gun</strong>, so which gun is in a crate is legible before he has
+     * walked to it (pillar 5). It is the ordinary way this codebase adds a kind of thing - a
+     * constant, a definition and a block in {@code game.properties}, never a branch (G0008) - and it
+     * means a fourth gun needs no new idea, only a fourth crate.
+     */
+    ARMOURY_RAILGUN,
+    ARMOURY_FLAMER,
+    ARMOURY_SHOTGUN,
     /**
      * An explosive barrel. A pickup with nothing on offer to anybody: the commander is offered
      * nothing and leaves it standing, and what an alien gets for biting into one is the explosion.

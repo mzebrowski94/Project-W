@@ -128,7 +128,7 @@ public interface Scenario {
         if (points.size() == 0) {
             return;
         }
-        float crateRadius = config.pickup(PickupKind.FROZEN_TROOPER).radius();
+        float crateRadius = config.pickup(PickupKind.SUPPLY_DROP).radius();
         float reach = config.controlPoint().reinforcementRadius();
         int fewest = config.controlPoint().reinforcementsMin();
         int spread = config.controlPoint().reinforcementsMax() - fewest + 1;
@@ -148,7 +148,7 @@ public interface Scenario {
                     TileRect.around(map, at.x, at.y, reach),
                     fewest + rng.nextInt(spread),
                     crateRadius,
-                    (x, y) -> simulation.spawnPickup(PickupKind.FROZEN_TROOPER, x, y));
+                    (x, y) -> simulation.spawnPickup(PickupKind.SUPPLY_DROP, x, y));
         }
     }
 }

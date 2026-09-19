@@ -6,6 +6,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.Approach;
 import pl.mzebrows.pwt.sim.component.Avoidance;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
@@ -33,6 +34,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Melee;
+import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
@@ -165,9 +167,12 @@ public final class Spawner {
         entity.add(engine.createComponent(Taking.class));
         // He can be shot off his feet like his men, now that there is somebody who would come and
         // get him (G0023). Claws, a sweep and a leap still kill him outright, as they kill everyone.
+        // His bleed-out is his own; everything else about being picked up is the same for him as for
+        // his men. The single place that reads it, which is what keeps the key from being one that
+        // lies (G0023).
         entity.add(engine.createComponent(Casualty.class)
                 .set(
-                        config.casualty().bleedOutSeconds(),
+                        commander.bleedOutSeconds(),
                         config.casualty().stabiliseSeconds(),
                         config.casualty().hauledStabiliseFactor()));
         entity.add(engine.createComponent(Action.class).set(config.action().reach()));
@@ -288,8 +293,11 @@ public final class Spawner {
         entity.add(engine.createComponent(Avoidance.class));
         entity.add(engine.createComponent(Leap.class));
         entity.add(engine.createComponent(Ranged.class));
-        // Seeded from where it was put down, so a pack weaves out of step without a number being
-        // drawn for it - the same reason its patch is anchored here rather than in applyStrain.
+        // Both seeded from where it was put down, so a pack fans out and weaves out of step without a
+        // number being drawn for either - the same reason its patch is anchored here rather than in
+        // applyStrain. Which line a creature takes in is a fact about that individual, not about
+        // what it has turned into, so evolving must not rewrite it.
+        entity.add(engine.createComponent(Approach.class).bearingFrom(x, y));
         entity.add(engine.createComponent(Weave.class).phaseFrom(x, y));
         entity.add(engine.createComponent(Dodge.class));
         entity.add(engine.createComponent(Weapon.class));
@@ -312,9 +320,11 @@ public final class Spawner {
      * mid-tick without disturbing any family being iterated. That is the whole reason a strain is an
      * enum on a component rather than a marker.
      *
-     * <p>Where a unit lives is the one thing it does not rewrite. {@code Wander.anchor} is set at the
-     * spawn and never again, so a grunt that becomes a brute keeps the patch the grunt was put in -
-     * where something lives is a fact about that individual, not about what it has turned into.
+     * <p>Where a unit lives is the one thing it does not rewrite - and which line it takes in is the
+     * other. {@code Wander.anchor}, {@code Weave.travelled} and {@code Approach.bearing} are set at
+     * the spawn and never again, so a grunt that becomes a brute keeps the patch the grunt was put in
+     * and the side it was already closing on: both are facts about that individual rather than about
+     * what it has turned into.
      *
      * <p>Health is set to the new strain's maximum rather than carried over as a fraction. A unit
      * that has just become something else arrives whole; a grunt shot down to a sliver and then fed
@@ -366,6 +376,11 @@ public final class Spawner {
                         def.leap().cooldownSeconds(),
                         def.leap().hesitationMinSeconds(),
                         def.leap().hesitationMaxSeconds());
+        entity.getComponent(Approach.class)
+                .set(
+                        def.approach().enabled(),
+                        def.approach().offset(),
+                        def.approach().closeRange());
         entity.getComponent(Weave.class)
                 .set(def.weave().enabled(), def.weave().amplitude(), def.weave().wavelength());
         entity.getComponent(Dodge.class)
@@ -538,6 +553,54 @@ public final class Spawner {
     }
 
     /**
+     * Spawns a nest: a hole in the ground that keeps sending more of one strain out of it.
+     *
+     * <p>Solid and immovable, exactly as a barrel and a turret are - it is a thing standing on the
+     * field, and it is meant to be walked to and shot. It carries {@code Health} and {@code Damage}
+     * so that a shot, a sweep and a blast all reach it through the paths that already exist.
+     *
+     * <p><strong>On the alien side, and carrying {@code Enemy}.</strong> The side is what makes the
+     * player's fire reach it and the aliens' pass through; the marker is what puts it on the list a
+     * trooper and a turret shoot at, and on the list "the map is clear" counts. Without the marker a
+     * level could read as cleared with something still producing on it, which would make the
+     * objective a lie every thirty seconds.
+     *
+     * <p>No death throes: what a destroyed nest leaves behind is the last brood out of it, not a body
+     * to walk round - the same answer a barrel and a turret give.
+     *
+     * <p>Spawn one before whatever stands on it. The renderer draws in spawn order, and a nest is
+     * ground with a hole in it rather than a thing standing on the ground.
+     */
+    public Entity spawnNest(UnitKind kind, float x, float y) {
+        SimConfig.NestConfig nest = config.nest();
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Nest.class)
+                .set(
+                        kind,
+                        nest.periodSeconds(),
+                        nest.broodMin(),
+                        nest.broodMax(),
+                        nest.deathBroodMin(),
+                        nest.deathBroodMax(),
+                        nest.hatchRadius(),
+                        nest.wakeRadius(),
+                        nest.rouseRadius()));
+        entity.add(engine.createComponent(Enemy.class));
+        entity.add(engine.createComponent(Faction.class).set(Side.ALIEN));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(nest.radius()));
+        entity.add(engine.createComponent(Collider.class).set(true, false));
+        entity.add(engine.createComponent(Health.class).set(nest.health()));
+        entity.add(engine.createComponent(Damage.class));
+        entity.add(engine.createComponent(Appearance.class).set(Look.NEST));
+        engine.addEntity(entity);
+        // What it has to lose, so the system that runs it can tell it is being hit from the bar alone.
+        entity.getComponent(Nest.class).watchedHealth = nest.health();
+        return entity;
+    }
+
+    /**
      * Spawns a control point: ground the squad takes by standing on it.
      *
      * <p><strong>No collider.</strong> A point is somewhere you walk, not something you walk into, so
@@ -671,6 +734,7 @@ public final class Spawner {
                 directionY,
                 weapon.projectileSpeed,
                 weapon.projectileRadius,
+                weapon.projectileRange,
                 weapon.damage,
                 weapon.projectileLook,
                 weapon.blastRadius,
@@ -689,6 +753,7 @@ public final class Spawner {
                 directionY,
                 gun.projectileSpeed(),
                 gun.projectileRadius(),
+                gun.projectileRange(),
                 gun.damage(),
                 gun.projectileLook(),
                 gun.blastRadius(),
@@ -702,12 +767,13 @@ public final class Spawner {
             float directionY,
             float speed,
             float radius,
+            float range,
             float damage,
             Look look,
             float blastRadius,
             Side side) {
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Projectile.class).from(x, y));
+        entity.add(engine.createComponent(Projectile.class).from(x, y).lasting(range));
         entity.add(engine.createComponent(Faction.class).set(side));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));

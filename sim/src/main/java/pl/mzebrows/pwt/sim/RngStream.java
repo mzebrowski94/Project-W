@@ -35,6 +35,18 @@ public enum RngStream {
     SPIT(0xA3C5_9AC3_0F8C_2E71L),
 
     /**
+     * How far off true each pellet of a gun that throws more than one leaves the muzzle.
+     *
+     * <p>A stream of its own rather than {@link #SPIT}'s, and the difference is the whole reason
+     * this enum exists: that one is how badly a <em>creature</em> aims and narrows as it settles,
+     * and this is how loosely a <em>gun</em> throws, which nothing improves. Retuning a shotgun's
+     * pattern must not reshuffle where a spitter's next shot goes.
+     *
+     * <p>One stream for every shooter that holds one, because it is one concern.
+     */
+    SCATTER(0x7B3D_1E6A_C420_95F9L),
+
+    /**
      * Every occasional decision the AI leaves to the dice - everything named in {@code AiChance}.
      *
      * <p>One stream for all of them rather than one each, because they are one concern: how often a
@@ -46,6 +58,9 @@ public enum RngStream {
 
     /** Where the aliens in a wave are put down when it arrives. */
     WAVE(0x8E9C_5AB1_02C7_6D45L),
+
+    /** How big a nest's brood is, and where it is put down around the hole. */
+    NEST(0x2A71_C6E4_9B03_58DFL),
 
     /**
      * Where a reinforcement is put down: a rescued trooper forming up on the commander, and the crate

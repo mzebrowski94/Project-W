@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Leap;
+import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -63,6 +64,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
+    private static final ComponentMapper<Nest> NEST = ComponentMapper.getFor(Nest.class);
     private static final ComponentMapper<Blast> BLAST = ComponentMapper.getFor(Blast.class);
     private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
     private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
@@ -92,6 +94,14 @@ public final class AppearanceSystem extends IteratingSystem {
      * tick from the fixed step, so it is a function of the tick count and a replay matches (pillar 6).
      */
     private float shinePhase;
+
+    /**
+     * How much of a nest's core is showing before its clock has started, as a fraction.
+     *
+     * <p>Small enough to read as a dot rather than as work in progress, and large enough to be seen -
+     * it is what a nest that has noticed nobody says about itself.
+     */
+    private static final float WAITING = 0.3f;
 
     public AppearanceSystem(SimConfig config) {
         super(Family.all(Appearance.class).get());
@@ -218,6 +228,16 @@ public final class AppearanceSystem extends IteratingSystem {
             // A point filling up is the same tell as a unit filling up, deliberately: one
             // way of drawing \"nearly there\", learnt once and read everywhere.
             appearance.charge = POINT.get(entity).progress();
+            return;
+        }
+        if (NEST.has(entity)) {
+            // What comes out of it, in that strain's own colour, and how close the next lot is. It
+            // never falls to nothing, which is the one thing on this channel that does not: every
+            // other charge is a thing in progress, and half of this one is an identity. A hole the
+            // player cannot tell a grunt nest from until it opens is a hole he learns about by being
+            // caught by it, and pillar 5 says what a thing is must be legible from how it looks.
+            appearance.chargeLook = units.of(NEST.get(entity).kind).look();
+            appearance.charge = WAITING + (1f - WAITING) * NEST.get(entity).progress();
             return;
         }
         if (PICKUP.has(entity)) {

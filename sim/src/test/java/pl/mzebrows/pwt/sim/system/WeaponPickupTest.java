@@ -5,6 +5,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RAILGUN_DAMAGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -18,8 +19,8 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Damage;
-import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -42,7 +43,7 @@ class WeaponPickupTest {
     void putsANewGunInTheCommandersHands() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(X, Y);
-        simulation.spawnPickup(PickupKind.ARMOURY, X, Y);
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, X, Y);
 
         simulation.step();
 
@@ -53,7 +54,7 @@ class WeaponPickupTest {
     void replacesEveryNumberOfTheGunItReplaces() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(X, Y);
-        simulation.spawnPickup(PickupKind.ARMOURY, X, Y);
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, X, Y);
 
         simulation.step();
 
@@ -65,7 +66,7 @@ class WeaponPickupTest {
     void showsWhichGunHeIsHoldingInWhatItFires() {
         Simulation simulation = simulation();
         simulation.spawnCommander(X, Y);
-        simulation.spawnPickup(PickupKind.ARMOURY, X, Y);
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, X, Y);
 
         simulation.step();
         simulation.step(new CommanderInput(0f, 0f, X + 10f, Y, true, false));
@@ -79,7 +80,7 @@ class WeaponPickupTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(X, Y);
         commander.getComponent(Weapon.class).remainingSeconds = 10f;
-        simulation.spawnPickup(PickupKind.ARMOURY, X, Y);
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, X, Y);
 
         simulation.step();
 
@@ -91,7 +92,7 @@ class WeaponPickupTest {
     void givesHimBackHisSidearmWhenHeComesBack() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(X, Y);
-        simulation.spawnPickup(PickupKind.ARMOURY, X, Y);
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, X, Y);
         simulation.step();
 
         kill(commander);
@@ -100,16 +101,20 @@ class WeaponPickupTest {
         assertThat(commander(simulation).getComponent(Weapon.class).kind).isEqualTo(WeaponKind.SIDEARM);
     }
 
-    /** The contest: a cache the commander does not reach first is a meal rather than a gun. */
+    /**
+     * A cache is the player's alone. Changed 2026-09-18: an alien that reached one first used to eat
+     * it, so a gun could be lost without anybody on either side firing a shot. It now walks over one
+     * and leaves it, and the gun is still there when somebody with hands for it arrives.
+     */
     @Test
-    void feedsAnEnemyThatReachesTheCacheFirst() {
+    void leavesTheCacheStandingForAnEnemyThatWalksOverIt() {
         Simulation simulation = simulation();
         Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, X, Y);
-        simulation.spawnPickup(PickupKind.ARMOURY, X, Y);
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, X, Y);
 
         simulation.step();
 
-        assertThat(grunt.getComponent(Feed.class).count).isEqualTo(1);
+        assertThat(count(simulation, Pickup.class)).isEqualTo(1);
         assertThat(grunt.getComponent(Weapon.class).kind).isNotEqualTo(WeaponKind.RAILGUN);
     }
 

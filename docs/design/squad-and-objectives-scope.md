@@ -217,8 +217,8 @@ and the facing to both be in place.
 - **Reinforcements becoming real troopers.** `Level.pendingReinforcements` counts rescued troopers
   and nothing reads it. The squad now exists, so this is finally buildable — and it is a separate
   piece of work, not a rider on this one.
-- **The frozen trooper being replaced.** Same reason. It is scaffolding whose named replacement is
-  "real troopers", but replacing it changes the feeding-ground scenario and belongs on its own.
+- ~~The frozen trooper being replaced.~~ **Done 2026-09-18:** it is a **supply drop** - kit rather
+  than a body, the player's alone, and the feeding ground now grows its own food instead.
 - **Line of sight for anything but a trooper's detection.** No weapon checks it, and aliens do not
   gain it.
 - **Obstacles and corpses blocking line.** Named as a known limit above.

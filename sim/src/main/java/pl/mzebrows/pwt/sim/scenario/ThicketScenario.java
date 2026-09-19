@@ -106,6 +106,6 @@ final class ThicketScenario implements Scenario {
         simulation.spawnObstacle(map.tileCentreX(28), map.tileCentreY(11));
 
         simulation.spawnPickup(PickupKind.MUSHROOM, map.tileCentreX(9), map.tileCentreY(15));
-        simulation.spawnPickup(PickupKind.ARMOURY, map.tileCentreX(13), map.tileCentreY(15));
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, map.tileCentreX(13), map.tileCentreY(15));
     }
 }

@@ -98,6 +98,7 @@ class ConfigDefaultsTest {
                         terrain(),
                         tint(),
                         mark(),
+                        nest(),
                         facing(),
                         charged(),
                         ordered(),
@@ -161,6 +162,10 @@ class ConfigDefaultsTest {
 
     private static StateTint tint() {
         return new StateTint(-0.4f, 0.85f, 0.5f, -0.3f, 0.35f, -0.7f, 0.6f, 0.45f);
+    }
+
+    private static NestMark nest() {
+        return new NestMark(4, 0.55f);
     }
 
     private static ChargeMark mark() {

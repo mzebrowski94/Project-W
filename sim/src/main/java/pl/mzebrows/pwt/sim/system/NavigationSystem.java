@@ -11,6 +11,7 @@ import java.util.Arrays;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.component.Approach;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -83,6 +84,7 @@ public final class NavigationSystem extends EntitySystem {
     private static final ComponentMapper<Ranged> RANGED = ComponentMapper.getFor(Ranged.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
+    private static final ComponentMapper<Approach> APPROACH = ComponentMapper.getFor(Approach.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -180,6 +182,12 @@ public final class NavigationSystem extends EntitySystem {
             Position position = POSITION.get(enemy);
             float speed = SPEED.get(enemy).value;
             float radius = BODY.get(enemy).radius;
+            // Its own line in, taken after the shooter's question above and before anything is
+            // steered: a rooted shooter asks how far away the man actually is, and everything else
+            // walks at a point of its own beside him so a pack arrives abreast rather than in a
+            // queue. The offset is spent by the time anything is close, so the last of the approach
+            // is straight at him whatever this did.
+            spreadOut(enemy, position, hunted);
             if (within(position, target, map.tileSize())
                     || map.isClearPath(position.x, position.y, target.x, target.y, radius)) {
                 straightAt(enemy, position, target, speed);
@@ -229,6 +237,46 @@ public final class NavigationSystem extends EntitySystem {
             count++;
         }
         return count;
+    }
+
+    /**
+     * Moves the point a creature is walking at sideways, onto the line it has taken for itself.
+     *
+     * <p><strong>The goal moves, not the course.</strong> Everything hunting one man was steered at
+     * one point, and a flow field's gradient in the open is grid-shaped, so a pack crossing open
+     * ground converged onto his row and came down it in single file. Avoidance cannot answer that -
+     * it is an opinion about what is in the way, and what is in the way is another creature heading
+     * for the identical spot. A different spot each makes the problem stop existing.
+     *
+     * <p>Which side and how wide is {@code Approach.bearing}, seeded from where the creature was
+     * spawned: nothing here is drawn from the {@code Rng}, so a pack fans out the same way on every
+     * run (G0012's argument, applied to an approach).
+     *
+     * <p>It mutates the scratch position the caller is about to steer by, and only that - the goals
+     * the flow field is flooded from are still the men themselves, so a creature that has to come
+     * round a wall is routed to him and takes its own line again on the open side of it.
+     */
+    private static void spreadOut(Entity enemy, Position from, Position target) {
+        if (!APPROACH.has(enemy)) {
+            return;
+        }
+        Approach approach = APPROACH.get(enemy);
+        if (!approach.active()) {
+            return;
+        }
+        float toTargetX = target.x - from.x;
+        float toTargetY = target.y - from.y;
+        float distance = (float) Math.sqrt(toTargetX * toTargetX + toTargetY * toTargetY);
+        if (distance <= EPSILON) {
+            return;
+        }
+        float swing = approach.swingAt(distance);
+        if (swing == 0f) {
+            return;
+        }
+        // Perpendicular to the line in, which is what keeps the offset a width rather than a
+        // distance: it never brings the creature closer or sends it further away, only wide.
+        target.set(target.x - toTargetY / distance * swing, target.y + toTargetX / distance * swing);
     }
 
     /**

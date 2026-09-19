@@ -36,6 +36,8 @@ import org.jspecify.annotations.Nullable;
  * @param avoidance how far ahead it looks for things in its way, and how hard it leans off them
  * @param leap how it closes the last of the distance
  * @param ranged how it shoots, if it shoots at all
+ * @param approach how wide of whatever it is hunting it closes, if it spreads out at all. What stops
+ *     a pack converging into a queue on one man
  * @param weave how hard it refuses to walk in a straight line at you, if it refuses at all
  * @param dodge how it answers a shot it can see coming, if it answers one at all. The same
  *     definition a rabbit carries: stepping aside from a bullet is one behaviour, not one per side
@@ -63,6 +65,7 @@ public record UnitDef(
         AvoidanceDef avoidance,
         LeapDef leap,
         RangedDef ranged,
+        ApproachDef approach,
         WeaveDef weave,
         DodgeDef dodge,
         Chances chances,

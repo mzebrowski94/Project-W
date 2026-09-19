@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.contesting;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 
@@ -95,19 +96,50 @@ class PickupSystemTest {
     }
 
     /**
+     * The aliens have no use for a crate of men. Changed 2026-09-18: a supply drop used to be a meal
+     * to whatever reached it first, which made it a race; it is now the player's alone and is left
+     * standing by anything else that walks over it.
+     */
+    @Test
+    void leavesASupplyDropStandingForAnAlien() {
+        Simulation simulation = simulation();
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, X, Y);
+        simulation.spawnPickup(PickupKind.SUPPLY_DROP, X, Y);
+
+        simulation.step();
+
+        assertThat(count(simulation, Pickup.class)).isEqualTo(1);
+        assertThat(grunt.getComponent(Feed.class).count).isZero();
+    }
+
+    /** And no use for a rack of guns it has no hands for. The same change, for the same reason. */
+    @Test
+    void leavesAWeaponsCacheStandingForAnAlien() {
+        Simulation simulation = simulation();
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, X, Y);
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, X, Y);
+
+        simulation.step();
+
+        assertThat(count(simulation, Pickup.class)).isEqualTo(1);
+        assertThat(grunt.getComponent(Feed.class).count).isZero();
+    }
+
+    /**
      * The contested case, and the reason a pickup carries a grant per side rather than a list of who
-     * may take it: the same frozen trooper is a reinforcement to the commander and a meal to whatever
-     * gets there first.
+     * may take it: one object, read differently by each side. Nothing in the shipped table uses both
+     * halves any more, so the world this runs in declares one that does - the mechanism is still the
+     * design.
      */
     @Test
     void givesTheCommanderAndAnEnemyDifferentThingsForTheSamePickup() {
-        Simulation rescued = simulation();
+        Simulation rescued = contesting();
         rescued.spawnCommander(X, Y);
-        rescued.spawnPickup(PickupKind.FROZEN_TROOPER, X, Y);
+        rescued.spawnPickup(PickupKind.SUPPLY_DROP, X, Y);
 
-        Simulation eaten = simulation();
+        Simulation eaten = contesting();
         Entity grunt = eaten.spawnUnit(UnitKind.GRUNT, X, Y);
-        eaten.spawnPickup(PickupKind.FROZEN_TROOPER, X, Y);
+        eaten.spawnPickup(PickupKind.SUPPLY_DROP, X, Y);
 
         rescued.step();
         eaten.step();
@@ -127,7 +159,7 @@ class PickupSystemTest {
     void landsALevelScopeGrantOnTheLevelRatherThanOnTheTaker() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(X, Y);
-        simulation.spawnPickup(PickupKind.FROZEN_TROOPER, X, Y);
+        simulation.spawnPickup(PickupKind.SUPPLY_DROP, X, Y);
 
         simulation.step();
 

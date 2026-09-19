@@ -1,5 +1,7 @@
 package pl.mzebrows.pwt.sim.scenario;
 
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
 import pl.mzebrows.pwt.map.Randomness;
 import pl.mzebrows.pwt.map.Scatter;
 import pl.mzebrows.pwt.map.Terrain;
@@ -7,7 +9,9 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Level;
+import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -236,6 +240,23 @@ final class AdventureScenario implements Scenario {
         point(simulation, map, 99, 21);
         point(simulation, map, 114, 9);
 
+        // Nests before boulders, and boulders reserve everything already standing: a nest is
+        // immovable and so is a boulder, so two of them in the same place is a knot the solver
+        // cannot untie. Points get the same protection out of the same call, which they never had.
+        //
+        // ONE MORE IN EACH BIOME THAN THE LAST. The march gets harder because the ground is filling
+        // in behind you faster, not because the numbers on the creatures went up - and every one of
+        // them sleeps until somebody comes near, so what the player meets is a nest rather than an
+        // hour of its output. The strain is whatever that biome teaches.
+        nests(simulation, map, UnitKind.GRUNT, 25, 5);
+        nests(simulation, map, UnitKind.GRUNT, 34, 25);
+        nests(simulation, map, UnitKind.SPITTER, 48, 11);
+        nests(simulation, map, UnitKind.RUNNER, 64, 6, 80, 24);
+        nests(simulation, map, UnitKind.GRUNT, 88, 14);
+        nests(simulation, map, UnitKind.BRUTE, 92, 16, 117, 12);
+        nests(simulation, map, UnitKind.SPITTER, 100, 6);
+        nests(simulation, map, UnitKind.GRUNT, 108, 20);
+
         deployPlayerSide(simulation);
 
         boulders(simulation, map);
@@ -304,15 +325,46 @@ final class AdventureScenario implements Scenario {
                 88,
                 5);
         grunts(simulation, map, 63, 13, 74, 3, 81, 26, 87, 20);
-        pickups(simulation, map, PickupKind.MUSHROOM, 65, 12, 71, 22, 78, 8, 86, 15, 69, 26);
-        pickups(simulation, map, PickupKind.FLOWER, 67, 9, 84, 21);
+        pickups(
+                simulation,
+                map,
+                PickupKind.MUSHROOM,
+                65,
+                12,
+                71,
+                22,
+                78,
+                8,
+                86,
+                15,
+                69,
+                26,
+                62,
+                15,
+                74,
+                5,
+                81,
+                18,
+                88,
+                24,
+                73,
+                27,
+                67,
+                19);
+        pickups(simulation, map, PickupKind.FLOWER, 67, 9, 84, 21, 72, 13, 79, 26, 89, 6);
         rabbits(simulation, map, 62, 24, 80, 11);
         // The first caches, and nothing before them. The plain and the dust are what a sidearm is
         // tuned for, and a better gun handed out in either would be a shortcut past the half of the
         // march that teaches you to aim. They are contested like anything else - a runner that
         // reaches one first eats it - so a gun this far east is something to get to rather than
         // something to collect.
-        pickups(simulation, map, PickupKind.ARMOURY, 76, 20, 87, 11);
+        // THREE KINDS OF CRATE, one per gun, and the growth is where he meets all of them. Each is
+        // the colour of what is in it, so which one is worth the walk is a decision rather than a
+        // surprise (pillar 5). The shotgun and the flamer are both answers to being close, which is
+        // exactly the problem runners set - and a railgun among them is the other half of the choice.
+        pickups(simulation, map, PickupKind.ARMOURY_SHOTGUN, 76, 20);
+        pickups(simulation, map, PickupKind.ARMOURY_FLAMER, 68, 22);
+        pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 87, 11);
 
         // The quarry: brutes in the way, spitters behind them, and barrels among them.
         units(simulation, map, UnitKind.BRUTE, 92, 7, 94, 18, 99, 3, 100, 25, 106, 22, 108, 9, 113, 15, 117, 5);
@@ -321,7 +373,9 @@ final class AdventureScenario implements Scenario {
         barrels(simulation, map, 94, 14, 100, 17, 109, 12, 115, 25);
         // More of them here, because everything in the quarry outlives a sidearm and a gun lost with
         // a death has to be findable again.
-        pickups(simulation, map, PickupKind.ARMOURY, 96, 16, 104, 6, 116, 22);
+        pickups(simulation, map, PickupKind.ARMOURY_FLAMER, 96, 16, 108, 12);
+        pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 104, 6, 99, 24);
+        pickups(simulation, map, PickupKind.ARMOURY_SHOTGUN, 115, 24);
 
         // Points only. Clearing a level this size of everything alive is a different game.
         Level level = simulation.level();
@@ -341,6 +395,15 @@ final class AdventureScenario implements Scenario {
     private static void boulders(Simulation simulation, TileMap map) {
         float radius = simulation.config().obstacle().radius();
         Scatter scatter = new Scatter(map, simulation.rng(), BOULDER_CLEARANCE, BOULDER_WALL_MARGIN);
+        // Everything already standing is reserved first. A boulder is immovable and so are a nest
+        // and a point, so one landing on either is a knot the solver cannot untie - and a boulder on
+        // top of a point would be ground the squad is told to take and cannot stand on.
+        for (Entity standing : simulation
+                .engine()
+                .getEntitiesFor(Family.all(Position.class, Body.class).get())) {
+            Position where = standing.getComponent(Position.class);
+            scatter.reserve(where.x, where.y, standing.getComponent(Body.class).radius);
+        }
         for (int biome = 0; biome < BIOME_COLS.length; biome++) {
             int from = BIOME_COLS[biome];
             int to = BIOME_COLS[biome] + BIOME_WIDTH;
@@ -349,6 +412,13 @@ final class AdventureScenario implements Scenario {
                     BOULDERS_PER_BIOME,
                     radius,
                     simulation::spawnObstacle);
+        }
+    }
+
+    /** A run of col/row pairs, all of one strain, for the holes that keep sending more of it out. */
+    private static void nests(Simulation simulation, TileMap map, UnitKind kind, int... colsAndRows) {
+        for (int i = 0; i < colsAndRows.length; i += 2) {
+            simulation.spawnNest(kind, map.tileCentreX(colsAndRows[i]), map.tileCentreY(colsAndRows[i + 1]));
         }
     }
 

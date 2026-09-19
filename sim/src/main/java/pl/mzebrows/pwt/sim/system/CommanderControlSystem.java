@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.ashley.utils.ImmutableArray;
+import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -61,6 +62,10 @@ public final class CommanderControlSystem extends IteratingSystem {
     private static final float MUZZLE_GAP = 0.05f;
 
     private final Spawner spawner;
+
+    /** A gun's own pattern, for the one he may be holding that throws more than one thing at once. */
+    private final Rng scatter;
+
     private final float leashRadius;
 
     /** Scratch, so working out where a shot leaves from costs no allocation per shot. */
@@ -73,7 +78,8 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     private int watched;
 
-    public CommanderControlSystem(SimConfig config, Spawner spawner) {
+    public CommanderControlSystem(SimConfig config, Spawner spawner, Rng scatter) {
+        this.scatter = scatter;
         super(Family.all(
                         Commander.class,
                         Intent.class,
@@ -238,9 +244,19 @@ public final class CommanderControlSystem extends IteratingSystem {
         }
         float directionX = toAimX / distance;
         float directionY = toAimY / distance;
-        Muzzle.next(
-                position.x, position.y, BODY.get(entity).radius, weapon, MUZZLE_GAP, directionX, directionY, muzzle);
-        spawner.spawnProjectile(muzzle[0], muzzle[1], directionX, directionY, weapon, FACTION.get(entity).side);
+        Guns.volley(
+                spawner,
+                scatter,
+                entity,
+                weapon,
+                position.x,
+                position.y,
+                BODY.get(entity).radius,
+                MUZZLE_GAP,
+                directionX,
+                directionY,
+                FACTION.get(entity).side,
+                muzzle);
         Guns.spend(entity, weapon, weapon.cooldownSeconds);
     }
 }

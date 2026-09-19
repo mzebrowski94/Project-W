@@ -31,11 +31,31 @@ public enum Look {
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */
     POST,
+    /**
+     * A hole in the ground that keeps sending more of one strain out of it.
+     *
+     * <p>Drawn as a thing you dig into rather than a creature standing on the ground - the client's
+     * business, like every other "how is this drawn" (G0003). What comes out of it is named on the
+     * charge channel instead, in that strain's own colour, so the nest says what it makes without the
+     * renderer being told what a nest is.
+     */
+    NEST,
     /** A gun on a mount that a man gets on. Square rather than round, because it is not a creature. */
     TURRET,
     PROJECTILE,
     /** A heavy shot, so a gun is visible in what it fires. */
     SLUG,
+    /**
+     * One pellet of flame. Fat, short-lived and thrown in numbers, so what the player reads is the
+     * cloud rather than any one of them.
+     */
+    FLAME,
+    /**
+     * One pellet of buckshot. Deliberately kin to the sidearm's round rather than a colour of its
+     * own: it <em>is</em> a small bullet, and what tells a shotgun apart is that six of them arrive
+     * at once in a fan.
+     */
+    PELLET,
     /**
      * What a turret fires: light, very fast, and unmistakably the player's. It arrives faster than
      * anything else on the field, so it must not be read as something coming the other way.
@@ -58,10 +78,19 @@ public enum Look {
     MUSHROOM,
     /** Alien food that transforms whatever eats it. */
     FLOWER,
-    /** A trooper in stasis, waiting to be thawed or eaten. */
-    FROZEN_TROOPER,
-    /** A weapons cache. */
-    ARMOURY,
+    /** A crate of men, waiting for somebody on the player's side to reach it. */
+    SUPPLY_DROP,
+    /**
+     * A weapons cache, one look per gun inside it.
+     *
+     * <p>Three crates rather than one crate with a label, because the renderer decides what to draw
+     * from a look and asks nothing else about an entity (G0003) - so "which gun is in this one" costs
+     * a constant here and a colour in {@code graphic.properties} rather than any drawing code. A
+     * player who cannot tell what he is walking across a level for is guessing (pillar 5).
+     */
+    ARMOURY_RAILGUN,
+    ARMOURY_FLAMER,
+    ARMOURY_SHOTGUN,
     /** Something on the field that goes off when it is killed. */
     BARREL,
     /** Alien food on legs. */
