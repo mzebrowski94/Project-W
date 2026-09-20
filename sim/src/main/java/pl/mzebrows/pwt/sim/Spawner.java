@@ -29,6 +29,7 @@ import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Focus;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Heat;
+import pl.mzebrows.pwt.sim.component.Hop;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
@@ -46,6 +47,8 @@ import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
 import pl.mzebrows.pwt.sim.component.Shake;
+import pl.mzebrows.pwt.sim.component.Slick;
+import pl.mzebrows.pwt.sim.component.SlicksOnDeath;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
@@ -66,6 +69,7 @@ import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
@@ -299,6 +303,9 @@ public final class Spawner {
         // what it has turned into, so evolving must not rewrite it.
         entity.add(engine.createComponent(Approach.class).bearingFrom(x, y));
         entity.add(engine.createComponent(Weave.class).phaseFrom(x, y));
+        // And its gait, for the third time and the same reason: two frogs put down apart hop out of
+        // step with each other, and the same level hops the same way on every run.
+        entity.add(engine.createComponent(Hop.class).phaseFrom(x, y));
         entity.add(engine.createComponent(Dodge.class));
         entity.add(engine.createComponent(Weapon.class));
         entity.add(engine.createComponent(Taking.class));
@@ -376,6 +383,12 @@ public final class Spawner {
                         def.leap().cooldownSeconds(),
                         def.leap().hesitationMinSeconds(),
                         def.leap().hesitationMaxSeconds());
+        entity.getComponent(Hop.class)
+                .set(
+                        def.hop().enabled(),
+                        def.hop().hopSeconds(),
+                        def.hop().restSeconds(),
+                        def.hop().burst());
         entity.getComponent(Approach.class)
                 .set(
                         def.approach().enabled(),
@@ -738,6 +751,8 @@ public final class Spawner {
                 weapon.damage,
                 weapon.projectileLook,
                 weapon.blastRadius,
+                weapon.slicks,
+                weapon.pierceIntervalSeconds,
                 side);
     }
 
@@ -757,6 +772,8 @@ public final class Spawner {
                 gun.damage(),
                 gun.projectileLook(),
                 gun.blastRadius(),
+                gun.slicks(),
+                gun.pierceIntervalSeconds(),
                 side);
     }
 
@@ -771,24 +788,80 @@ public final class Spawner {
             float damage,
             Look look,
             float blastRadius,
+            SlickDef slicks,
+            float pierceIntervalSeconds,
             Side side) {
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Projectile.class).from(x, y).lasting(range));
+        Projectile shot = engine.createComponent(Projectile.class).from(x, y).lasting(range);
+        if (pierceIntervalSeconds > 0f) {
+            // A shot that goes through things. The interval is its contact cooldown, which is the
+            // field that already means "how long before this may land another blow" - so one slug
+            // crossing one body owes one blow rather than one per tick it overlaps.
+            shot.piercing();
+        }
+        entity.add(shot);
         entity.add(engine.createComponent(Faction.class).set(side));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Velocity.class).set(directionX * speed, directionY * speed));
         entity.add(engine.createComponent(Body.class).set(radius));
         entity.add(engine.createComponent(Collider.class).set(false, true));
-        entity.add(
-                engine.createComponent(ContactDamage.class).set(damage, 0f, 0f).wounding());
+        entity.add(engine.createComponent(ContactDamage.class)
+                .set(damage, pierceIntervalSeconds, 0f)
+                .wounding());
         if (blastRadius > 0f) {
             // A shot that goes off where it stops, and it does so by dying, through the one reaction
             // everything that explodes uses (G0018). Hitting something and running out of arena are
             // the same event to it, because both end in the reaper's window.
             entity.add(engine.createComponent(BlastsOnDeath.class).set(blastRadius, blastRadius));
         }
+        if (slicks.leavesAnything()) {
+            // And a shot that ruins the ground where it stops, through the same reaction. A gun may
+            // name both: the blast is the moment, the spatter is what the moment leaves behind.
+            entity.add(engine.createComponent(SlicksOnDeath.class)
+                    .set(
+                            slicks.blobs(),
+                            slicks.radius(),
+                            slicks.spread(),
+                            slicks.seconds(),
+                            slicks.damage(),
+                            slicks.victimInvulnerableSeconds()));
+        }
         entity.add(engine.createComponent(Appearance.class).set(look));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns one circle of ruined ground: an ordinary body carrying an ordinary blow.
+     *
+     * <p>Non-solid, so anything walks into it rather than round it, and immovable, so a crowd cannot
+     * shove it off the ground it has ruined - the same two flags a pickup lying on the field
+     * declares, and the whole of what it takes to be in the pairwise path without being an obstacle.
+     *
+     * <p><strong>It is on the side of whatever fired the shot</strong>, which is the one way a slick
+     * differs from a blast and is the whole of how it is enforced: the collision rule already refuses
+     * to let damage stay inside a side, so venom reaches the player's men and not the frogs that
+     * spat it, with no system asking anything.
+     *
+     * <p>The blow it lands is a wounding one - a man goes down rather than dying, as he does to
+     * gunfire and to a blast - and it grants its victim a window afterwards. Without that window the
+     * next circle of the same spatter would finish him on the same tick, and a blow that leaves a
+     * casualty would be an outright kill everywhere it mattered.
+     */
+    public Entity spawnSlick(
+            float x, float y, float radius, float seconds, float damage, float victimInvulnerableSeconds, Side side) {
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Slick.class).set(seconds));
+        entity.add(engine.createComponent(Faction.class).set(side));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(radius));
+        entity.add(engine.createComponent(Collider.class).set(false, false));
+        entity.add(engine.createComponent(ContactDamage.class)
+                .set(damage, 0f, victimInvulnerableSeconds)
+                .wounding());
+        entity.add(engine.createComponent(Appearance.class).set(Look.SLICK));
         engine.addEntity(entity);
         return entity;
     }

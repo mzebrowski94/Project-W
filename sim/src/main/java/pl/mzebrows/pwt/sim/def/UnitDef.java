@@ -35,6 +35,9 @@ import org.jspecify.annotations.Nullable;
  * @param wander how it passes the time when it has noticed nobody
  * @param avoidance how far ahead it looks for things in its way, and how hard it leans off them
  * @param leap how it closes the last of the distance
+ * @param hop how it gets about: at a walk, or in bursts with a sit between them. A gait paces a
+ *     course and never chooses one, so a hopping strain goes where a walking one would and takes as
+ *     long about it - {@code speed} above still means the same thing
  * @param ranged how it shoots, if it shoots at all
  * @param approach how wide of whatever it is hunting it closes, if it spreads out at all. What stops
  *     a pack converging into a queue on one man
@@ -64,6 +67,7 @@ public record UnitDef(
         WanderDef wander,
         AvoidanceDef avoidance,
         LeapDef leap,
+        HopDef hop,
         RangedDef ranged,
         ApproachDef approach,
         WeaveDef weave,

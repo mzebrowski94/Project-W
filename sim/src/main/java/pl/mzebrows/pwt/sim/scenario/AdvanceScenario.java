@@ -137,7 +137,11 @@ final class AdvanceScenario implements Scenario {
         simulation.spawnUnit(UnitKind.GRUNT, map.tileCentreX(40), map.tileCentreY(3));
         simulation.spawnUnit(UnitKind.GRUNT, map.tileCentreX(40), map.tileCentreY(23));
         simulation.spawnUnit(UnitKind.BRUTE, map.tileCentreX(20), map.tileCentreY(12));
-        simulation.spawnUnit(UnitKind.BRUTE, map.tileCentreX(31), map.tileCentreY(11));
+        // A tile further from the middle wall than it was: a brute is 5.2 across, so one standing
+        // on the tile beside a wall is standing IN it. It read as clear at the test fixture's body
+        // sizes, which is why nothing said so until the layout rules were checked against the
+        // numbers the game actually ships.
+        simulation.spawnUnit(UnitKind.BRUTE, map.tileCentreX(30), map.tileCentreY(10));
         simulation.spawnUnit(UnitKind.BRUTE, map.tileCentreX(37), map.tileCentreY(NORTH_ROW - 3));
         simulation.spawnUnit(UnitKind.BRUTE, map.tileCentreX(37), map.tileCentreY(SOUTH_ROW + 3));
 

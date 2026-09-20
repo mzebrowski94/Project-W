@@ -91,12 +91,17 @@ public final class WorldRenderer implements Disposable {
         viewport.apply();
         shapes.setProjectionMatrix(viewport.getCamera().combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
+        drawGround(alpha);
         for (int i = 0; i < drawable.size(); i++) {
             Entity entity = drawable.get(i);
             Position position = POSITION.get(entity);
             PreviousPosition previous = PREVIOUS.get(entity);
             Body body = BODY.get(entity);
             Appearance appearance = APPEARANCE.get(entity);
+            if (ground(appearance.look)) {
+                // Already drawn, underneath everything.
+                continue;
+            }
             if (appearance.state == Appearance.State.ABOARD) {
                 // Inside something rather than standing on the ground. What the player sees is the
                 // thing he is in, which says for itself that somebody is on it.
@@ -139,6 +144,36 @@ public final class WorldRenderer implements Disposable {
         }
         shapes.end();
         drawRings();
+    }
+
+    /**
+     * Everything that is ground rather than something standing on it, drawn first so that nothing
+     * underfoot can hide a man standing in it (pillar 5).
+     *
+     * <p>A control point says the same thing by being spawned before anything stands on it, and
+     * that is the cheaper answer where it works. It does not work for ruined ground, which appears
+     * in the middle of a fight - so this is a pass rather than an ordering, and it is the third
+     * thing here that asks what a look is, beside the square one and the shelled one.
+     */
+    private void drawGround(float alpha) {
+        for (int i = 0; i < drawable.size(); i++) {
+            Entity entity = drawable.get(i);
+            Appearance appearance = APPEARANCE.get(entity);
+            if (!ground(appearance.look)) {
+                continue;
+            }
+            Position position = POSITION.get(entity);
+            PreviousPosition previous = PREVIOUS.get(entity);
+            float x = previous.x + (position.x - previous.x) * alpha;
+            float y = previous.y + (position.y - previous.y) * alpha;
+            shapes.setColor(tint(appearance));
+            shapes.circle(x, y, BODY.get(entity).radius, CIRCLE_SEGMENTS);
+        }
+    }
+
+    /** Whether a look is underfoot rather than standing on the ground. */
+    private static boolean ground(Look look) {
+        return look == Look.SLICK;
     }
 
     /**

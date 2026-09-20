@@ -38,6 +38,7 @@ import pl.mzebrows.pwt.sim.system.EnemyLeapSystem;
 import pl.mzebrows.pwt.sim.system.EnemyRangedSystem;
 import pl.mzebrows.pwt.sim.system.EvolutionSystem;
 import pl.mzebrows.pwt.sim.system.GrenadeSystem;
+import pl.mzebrows.pwt.sim.system.HopSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
 import pl.mzebrows.pwt.sim.system.NavigationSystem;
@@ -50,6 +51,7 @@ import pl.mzebrows.pwt.sim.system.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.ReaperSystem;
 import pl.mzebrows.pwt.sim.system.ReinforcementSystem;
 import pl.mzebrows.pwt.sim.system.RespawnSystem;
+import pl.mzebrows.pwt.sim.system.SlickSystem;
 import pl.mzebrows.pwt.sim.system.SquadOrderSystem;
 import pl.mzebrows.pwt.sim.system.StrikeSystem;
 import pl.mzebrows.pwt.sim.system.StunSystem;
@@ -166,6 +168,10 @@ public final class Simulation {
         engine.addSystem(new WanderSystem(Rng.stream(config.seed(), RngStream.WANDER), map));
         engine.addSystem(new AvoidanceSystem());
         engine.addSystem(new EnemyRangedSystem(map, spawner, Rng.stream(config.seed(), RngStream.SPIT), scatter));
+        // After everything that chooses a course, including planting a shooter, because a gait
+        // paces a course rather than choosing one - and before the dodge, which overwrites it: a
+        // sidestep from a shot you saw coming must not land in the middle of a sit.
+        engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
         engine.addSystem(new DriveSystem());
         engine.addSystem(new EnemyLeapSystem(Rng.stream(config.seed(), RngStream.LEAP)));
@@ -183,6 +189,11 @@ public final class Simulation {
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
         engine.addSystem(new BlastSystem(map, spawner));
+        // Beside the blast, and for the same reason: everything that leaves something behind does so
+        // by dying (G0018), so this belongs in the window between a thing being marked dead and
+        // being reaped. Unlike a blast it owes no damage of its own - what it leaves is ordinary
+        // bodies carrying ordinary blows, so the collision system decides who they catch.
+        engine.addSystem(new SlickSystem(map, spawner, Rng.stream(config.seed(), RngStream.SLICK)));
         engine.addSystem(new ProjectileBoundsSystem(map, spawner));
         // With the other systems that are about the level rather than about anything standing in it,
         // and after the solver has settled every position: a man who arrives forms up on where the
@@ -409,7 +420,16 @@ public final class Simulation {
 
     /** Spawns a projectile on a given side, so a test can fire something that is not the player's. */
     public Entity spawnProjectile(float x, float y, float directionX, float directionY, Side side) {
-        return spawner.spawnProjectile(x, y, directionX, directionY, config.weapon(WeaponKind.SIDEARM), side);
+        return spawnProjectile(x, y, directionX, directionY, WeaponKind.SIDEARM, side);
+    }
+
+    /**
+     * Spawns a shot from any gun in the table, for a harness or a test that wants one in the world
+     * without a shooter behind it. Everything about it - what it looks like, what it leaves where it
+     * stops - comes from the definition, exactly as it does when somebody pulls a trigger.
+     */
+    public Entity spawnProjectile(float x, float y, float directionX, float directionY, WeaponKind gun, Side side) {
+        return spawner.spawnProjectile(x, y, directionX, directionY, config.weapon(gun), side);
     }
 
     /**

@@ -23,12 +23,14 @@ import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.HeatDef;
+import pl.mzebrows.pwt.sim.def.HopDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.RangedDef;
+import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
@@ -298,6 +300,30 @@ public final class AlphaWorlds {
     /** Wide enough that a shot passing two units away still counts as coming at it. */
     public static final float DODGE_MARGIN = 1.5f;
 
+    /**
+     * The gait, as round numbers: half a second in the air and half a second sitting, which makes
+     * the burst exactly twice the pace and one whole cycle exactly one second of walking.
+     */
+    public static final float HOP_SECONDS = 0.5f;
+
+    public static final float REST_SECONDS = 0.5f;
+
+    /** How many circles one burst of venom leaves, and how big each of them is. */
+    public static final int SLICK_BLOBS = 3;
+
+    public static final float SLICK_RADIUS = 2f;
+
+    /** Well inside the radius, so every circle of a fixture spatter is on top of the burst. */
+    public static final float SLICK_SPREAD = 1f;
+
+    public static final float SLICK_SECONDS = 1f;
+
+    /** Far above any health in the fixture: standing in one is a decision, not a graze. */
+    public static final float SLICK_DAMAGE = 1000f;
+
+    /** How long a man one circle has put down is protected from the rest of the same spatter. */
+    public static final float SLICK_INVULNERABLE = 0.5f;
+
     public static final float SPITTER_RADIUS = 1f;
 
     public static final float SPITTER_SPEED = 30f;
@@ -360,6 +386,16 @@ public final class AlphaWorlds {
     public static final float RAILGUN_COOLDOWN = 1f;
 
     public static final float RAILGUN_DAMAGE = 400f;
+
+    /**
+     * How long a slug waits between the blows it lands. Above zero is a shot that goes through
+     * things; it is the fixture's only piercing gun, so a test about passing through has one to
+     * fire and every other test still has shots that stop where they hit.
+     *
+     * <p>Chosen against the fixture rather than against the game: a shot 0.5 across crossing a body
+     * 1 across at 60 a second is over it in 0.05 seconds, so one body owes one blow.
+     */
+    public static final float RAILGUN_PIERCE_INTERVAL = 0.05f;
 
     /** A third of the bar per shot, so a test can count to four and watch the gun stop itself. */
     public static final float TURRET_HEAT_PER_SHOT = 0.34f;
@@ -547,6 +583,7 @@ public final class AlphaWorlds {
                         .put(UnitKind.BRUTE, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.BRUTE))
                         .put(UnitKind.SPITTER, strain(SPITTER_RADIUS, SPITTER_SPEED, SPITTER_HEALTH, Look.SPITTER))
                         .put(UnitKind.RUNNER, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.RUNNER))
+                        .put(UnitKind.FROG, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.FROG))
                         .build(),
                 Defs.<PickupKind, PickupDef>builder(PickupKind.class)
                         .put(
@@ -610,7 +647,9 @@ public final class AlphaWorlds {
                                         0f,
                                         Look.PROJECTILE,
                                         0f,
+                                        SlickDef.off(),
                                         HeatDef.none(),
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.SPIT,
@@ -624,7 +663,9 @@ public final class AlphaWorlds {
                                         0f,
                                         Look.SPIT,
                                         0f,
+                                        SlickDef.off(),
                                         HeatDef.none(),
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.CHARGED_SPIT,
@@ -638,7 +679,9 @@ public final class AlphaWorlds {
                                         0f,
                                         Look.CHARGED_SPIT,
                                         CHARGED_SPIT_BLAST_RADIUS,
+                                        SlickDef.off(),
                                         HeatDef.none(),
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.RAILGUN,
@@ -652,8 +695,10 @@ public final class AlphaWorlds {
                                         0f,
                                         Look.SLUG,
                                         0f,
+                                        SlickDef.off(),
                                         HOT,
-                                        0f))
+                                        0f,
+                                        RAILGUN_PIERCE_INTERVAL))
                         .put(
                                 WeaponKind.FLAMER,
                                 new WeaponDef(
@@ -666,7 +711,9 @@ public final class AlphaWorlds {
                                         SCATTER_DEGREES,
                                         Look.FLAME,
                                         0f,
+                                        SlickDef.off(),
                                         HeatDef.none(),
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.SHOTGUN,
@@ -680,7 +727,31 @@ public final class AlphaWorlds {
                                         0f,
                                         Look.PELLET,
                                         0f,
+                                        SlickDef.off(),
                                         HeatDef.none(),
+                                        0f,
+                                        0f))
+                        .put(
+                                WeaponKind.VENOM,
+                                new WeaponDef(
+                                        COOLDOWN,
+                                        PROJECTILE_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        0f,
+                                        0f,
+                                        1,
+                                        0f,
+                                        Look.VENOM,
+                                        0f,
+                                        new SlickDef(
+                                                SLICK_BLOBS,
+                                                SLICK_RADIUS,
+                                                SLICK_SPREAD,
+                                                SLICK_SECONDS,
+                                                SLICK_DAMAGE,
+                                                SLICK_INVULNERABLE),
+                                        HeatDef.none(),
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.TURRET_GUN,
@@ -694,8 +765,10 @@ public final class AlphaWorlds {
                                         0f,
                                         Look.TURRET_SHOT,
                                         0f,
+                                        SlickDef.off(),
                                         HOT,
-                                        TURRET_MUZZLE_OFFSET))
+                                        TURRET_MUZZLE_OFFSET,
+                                        0f))
                         .build(),
                 noChances(),
                 new SimConfig.MeleeConfig(
@@ -779,6 +852,7 @@ public final class AlphaWorlds {
                 WanderDef.off(),
                 AvoidanceDef.off(),
                 LeapDef.off(),
+                HopDef.off(),
                 RangedDef.off(),
                 ApproachDef.off(),
                 WeaveDef.off(),
@@ -943,6 +1017,21 @@ public final class AlphaWorlds {
                 everyStrain(
                         config(), strain -> strain.withRanged(RangedDef.plain(SPIT_RANGE, 0f, true, WeaponKind.SPIT))),
                 map);
+    }
+
+    /**
+     * A world where every strain gets about in hops. Walking is the base config for the reason not
+     * leaping is: a test about something else wants a creature that comes at you predictably.
+     */
+    public static Simulation hopping() {
+        return new Simulation(
+                everyStrain(config(), strain -> strain.withHop(new HopDef(true, HOP_SECONDS, REST_SECONDS))));
+    }
+
+    /** A world where every strain throws venom, so a test about ruined ground has somebody to ruin it. */
+    public static Simulation spattering() {
+        return new Simulation(everyStrain(
+                config(), strain -> strain.withRanged(RangedDef.plain(SPIT_RANGE, 0f, true, WeaponKind.VENOM))));
     }
 
     /**

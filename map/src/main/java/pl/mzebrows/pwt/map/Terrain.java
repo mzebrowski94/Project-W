@@ -25,6 +25,12 @@ public enum Terrain {
     /** Alien growth. Passable; where the things that feed the strains take root. */
     ORGANIC(true),
 
+    /** Standing water and the mud round it. Passable; where the things that hop take root. */
+    MIRE(true),
+
+    /** Burnt ground. Passable; what is left where a place has already been fought over. */
+    ASH(true),
+
     /** Rock. The blocking terrain, and what anything outside the map reads as. */
     ROCK(false);
 

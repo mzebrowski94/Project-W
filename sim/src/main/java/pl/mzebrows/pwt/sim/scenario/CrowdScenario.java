@@ -43,9 +43,17 @@ final class CrowdScenario implements Scenario {
 
         simulation.spawnCommander(centreX, centreY);
 
+        // On top of each other, yes - that is the whole scenario - but not inside the wall. The ring
+        // is placed a fixed fraction of the way towards the southern edge, and on a map no taller
+        // than the one the game ships that fraction plus the ring's own width reaches past it: a
+        // grunt's body ended up partly outside the arena, which the solver then shoved back in on
+        // the first tick. Overlapping is what this is for; starting in rock is a different thing,
+        // and it is an enforced invariant.
+        float margin = RING_RADIUS + config.unit(UnitKind.GRUNT).radius();
+        float ringY = Math.max(margin, centreY - map.worldHeight() * 0.35f);
         for (int i = 0; i < config.unit(UnitKind.GRUNT).count(); i++) {
             float x = centreX + simulation.rng().nextFloat(-RING_RADIUS, RING_RADIUS);
-            float y = centreY - map.worldHeight() * 0.35f + simulation.rng().nextFloat(-RING_RADIUS, RING_RADIUS);
+            float y = ringY + simulation.rng().nextFloat(-RING_RADIUS, RING_RADIUS);
             simulation.spawnEnemy(x, y);
         }
     }

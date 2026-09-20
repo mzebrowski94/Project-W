@@ -13,9 +13,13 @@ import org.jspecify.annotations.Nullable;
  * rules it already has for a bullet and a claw, keeps the swing visible to the player rather than
  * being an invisible instant of authority, and keeps it replayable.
  *
- * <p>It is anchored where the commander stood when the swing was released rather than following him,
- * because a sweep that lasts a tenth of a second and tracks its owner is indistinguishable from one
- * that does not, and the anchor costs no reference to keep alive.
+ * <p><strong>The arc is centred on whoever swung it, tick by tick.</strong> It was anchored where he
+ * stood when the swing was released until 2026-09-19, on the argument that a sweep lasting a tenth of
+ * a second and one tracking its owner are indistinguishable. Play says otherwise: the commander
+ * covers several strides in that tenth of a second, so a sweep left standing where he started reads
+ * as coming out of his back, and the fastest way to make the hand strike look wrong was to use it
+ * while running. {@link #originX} and {@link #originY} are now where the arc is centred <em>now</em>
+ * rather than where it began, and a swing with nobody behind it keeps the last centre it had.
  *
  * <p>{@code owner} is who gets locked when the swing connects. It is the one entity reference held in
  * a pooled component in this codebase, so {@link #reset()} clearing it is not optional - a stale

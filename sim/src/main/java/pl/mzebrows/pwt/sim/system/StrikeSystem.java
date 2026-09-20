@@ -14,6 +14,12 @@ import pl.mzebrows.pwt.sim.component.Strike;
  * <p>Runs after movement and before collision, so the sweep is where it should be for this tick by
  * the time contacts are found. It writes a position directly rather than a velocity because it
  * travels on an arc, and a velocity integrated in a straight line for a tick would cut the corner.
+ *
+ * <p><strong>The arc is re-centred on whoever swung it before it is advanced</strong>, which is the
+ * whole of what keeps a sweep in front of a man who is walking. It matters that this runs after
+ * movement: the centre is where he ended up this tick, not where he set off from. A swing whose
+ * owner has left the world keeps the centre it last had rather than snapping to the corner of the
+ * arena, so a commander killed mid-swing does not fling his own fist across the level.
  */
 public final class StrikeSystem extends IteratingSystem {
 
@@ -30,6 +36,12 @@ public final class StrikeSystem extends IteratingSystem {
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
         Strike strike = STRIKE.get(entity);
+        Entity owner = strike.owner;
+        if (owner != null && POSITION.has(owner)) {
+            Position at = POSITION.get(owner);
+            strike.originX = at.x;
+            strike.originY = at.y;
+        }
         strike.elapsedSeconds += deltaTime;
         if (strike.spent()) {
             spawner.markDead(entity);

@@ -32,6 +32,9 @@ class MeleeSystemTest {
     private static final CommanderInput NORTH_AIM_EAST_WALK = new CommanderInput(1f, 0f, 50f, 60f, false, true);
     private static final CommanderInput IDLE_AIMED = new CommanderInput(0f, 0f, 60f, 50f, false, false);
 
+    /** Walking east and swinging east: the case where an anchored sweep is left behind him. */
+    private static final CommanderInput EAST_AIM_EAST_WALK = new CommanderInput(1f, 0f, 90f, 50f, false, true);
+
     @Test
     void putsASweepInTheWorldWhenTheMeleeInputIsPressed() {
         Simulation simulation = simulation();
@@ -85,6 +88,23 @@ class MeleeSystemTest {
 
         Position position = sweep(simulation).getComponent(Position.class);
         assertThat(position.y).isGreaterThan(50f + MELEE_REACH / 2f);
+    }
+
+    /**
+     * <strong>The sweep is in front of him, not behind where he set off from.</strong> The arc used
+     * to be centred where he stood when the swing was released, and a commander covers several
+     * strides while one is travelling - so using the hand strike while running put the sweep out of
+     * his back. Half an arc in, walking east, it must be east of him.
+     */
+    @Test
+    void keepsTheSweepInFrontOfHimWhileHeIsWalking() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+
+        steps(simulation, ticksIn(MELEE_ACTIVE) / 2, EAST_AIM_EAST_WALK);
+
+        assertThat(sweep(simulation).getComponent(Position.class).x)
+                .isCloseTo(commander.getComponent(Position.class).x + MELEE_REACH, Offset.offset(0.3f));
     }
 
     @Test

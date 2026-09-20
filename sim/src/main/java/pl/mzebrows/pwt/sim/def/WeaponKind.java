@@ -50,6 +50,17 @@ public enum WeaponKind {
      */
     SPIT,
     /**
+     * What a frog fires: a fat, slow, short-lived shot that bursts into a spatter of ruined ground.
+     *
+     * <p>It has a reach, so a miss bursts short rather than flying on - which is what makes a frog a
+     * problem about <em>where you are standing</em> rather than about being hit. What the spatter
+     * does is in the gun's {@code SlickDef}, through the one death reaction everything that leaves
+     * something behind uses (G0018).
+     *
+     * <p>In the same table as the commander's guns, and no pickup grants it.
+     */
+    VENOM,
+    /**
      * What a spitter fires after it has eaten something explosive. The same slow shot, and it goes
      * off where it stops (G0022).
      *

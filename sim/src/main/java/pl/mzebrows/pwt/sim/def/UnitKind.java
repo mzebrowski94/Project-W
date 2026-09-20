@@ -30,5 +30,18 @@ public enum UnitKind {
      * it closes and steps aside from shots it sees coming, so it is a target you have to lead rather
      * than one you have to out-run.
      */
-    RUNNER
+    RUNNER,
+    /**
+     * The one that gets about in hops and ruins the ground it is shooting at.
+     *
+     * <p>A shooter like a spitter and a different problem from one. It holds a middle distance, and
+     * what it throws is not a shot to be hit by but a spatter to be standing in - so the thing to
+     * read is the ground rather than the creature. It gets about in bursts with a sit between them,
+     * which is what makes it worth shooting at the moment it lands.
+     *
+     * <p>And it gives up easily: its lose range is barely past the range it notices you at, where
+     * everything else keeps hunting you half a screen further. Backing off actually works on one,
+     * which is the whole of what makes it a creature to leave alone rather than one to clear.
+     */
+    FROG
 }

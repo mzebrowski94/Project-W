@@ -17,9 +17,9 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
- * A march east through four biomes, two control points in each, for up to four players.
+ * A march east through six biomes, two control points in each, for up to four players.
  *
- * <p>The long level: six hundred world units across, which is about four screens, and the first
+ * <p>The long level: nine hundred world units across, which is about six screens, and the first
  * scenario that is a <em>level</em> rather than an arena built to show one system. What it is for is
  * everything that only goes wrong at length - the squad's pace, the shared camera, the leash, and
  * whether co-op holds together when the players want to be in two places.
@@ -38,6 +38,13 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  *       The biome that punishes walking past things.
  *   <li><strong>The quarry.</strong> Heavy rock, brutes, spitters behind them and barrels among them.
  *       Everything the first three taught, in the least room.
+ *   <li><strong>The mire.</strong> Standing water, and frogs. Nothing here chases you far - back off
+ *       and one loses you - but what they throw ruins the ground, so the biome is about where you
+ *       are standing rather than about what is coming at you. The one that teaches you to read the
+ *       floor.
+ *   <li><strong>The ashes.</strong> Burnt ground, and everything at once: brutes in the way,
+ *       spitters behind them, runners through the gaps and frogs ruining the ground under all of it.
+ *       The last biome asks for all five.
  * </ul>
  *
  * <p><strong>The squad holds every point it takes</strong> and waits to be told to push on, so the
@@ -52,7 +59,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  */
 final class AdventureScenario implements Scenario {
 
-    private static final int COLS = 120;
+    private static final int COLS = 180;
     private static final int ROWS = 30;
     private static final float TILE = 5f;
 
@@ -63,7 +70,7 @@ final class AdventureScenario implements Scenario {
      * biome a flat sheet of its own colour - four screens of that reads as a spreadsheet. Three means
      * the ground changes under you as you march as well as when you cross a wall.
      */
-    private static final int REGIONS = 12;
+    private static final int REGIONS = 18;
 
     /** How many columns one shading band covers. */
     private static final int BAND = COLS / REGIONS;
@@ -78,18 +85,24 @@ final class AdventureScenario implements Scenario {
 
     private static final int WALL_TWO = 60;
     private static final int WALL_THREE = 90;
+    private static final int WALL_FOUR = 120;
+    private static final int WALL_FIVE = 150;
 
     /** Each wall's gap: first row, and how many rows tall. Different heights, so the route snakes. */
     private static final int GAP_ONE_ROW = 3;
 
     private static final int GAP_TWO_ROW = 22;
     private static final int GAP_THREE_ROW = 13;
+    private static final int GAP_FOUR_ROW = 24;
+    private static final int GAP_FIVE_ROW = 8;
     private static final int GAP_HEIGHT = 4;
 
     private static final int SQUAD_SIZE = 5;
 
     /** The first column of each biome, and how wide one is, for scattering inside it. */
-    private static final int[] BIOME_COLS = {FIRST_ROW, WALL_ONE + 1, WALL_TWO + 1, WALL_THREE + 1};
+    private static final int[] BIOME_COLS = {
+        FIRST_ROW, WALL_ONE + 1, WALL_TWO + 1, WALL_THREE + 1, WALL_FOUR + 1, WALL_FIVE + 1
+    };
 
     private static final int BIOME_WIDTH = WALL_ONE - 2;
 
@@ -107,7 +120,7 @@ final class AdventureScenario implements Scenario {
 
     @Override
     public String description() {
-        return "Four biomes east, two points in each, and a squad that holds what it takes until you say forward.";
+        return "Six biomes east, two points in each, and a squad that holds what it takes until you say forward.";
     }
 
     /**
@@ -135,7 +148,9 @@ final class AdventureScenario implements Scenario {
         // meet somebody in.
         builder.rect(WALL_ONE, FIRST_ROW, WALL_TWO - WALL_ONE, LAST_ROW, Terrain.DUST);
         builder.rect(WALL_TWO, FIRST_ROW, WALL_THREE - WALL_TWO, LAST_ROW, Terrain.ORGANIC);
-        builder.rect(WALL_THREE, FIRST_ROW, COLS - WALL_THREE, LAST_ROW, Terrain.DUST);
+        builder.rect(WALL_THREE, FIRST_ROW, WALL_FOUR - WALL_THREE, LAST_ROW, Terrain.DUST);
+        builder.rect(WALL_FOUR, FIRST_ROW, WALL_FIVE - WALL_FOUR, LAST_ROW, Terrain.MIRE);
+        builder.rect(WALL_FIVE, FIRST_ROW, COLS - WALL_FIVE, LAST_ROW, Terrain.ASH);
 
         // Patches of a neighbouring ground inside each biome. They cost nothing - every one of them
         // is walkable and none of them changes a route - and they are most of what stops a biome
@@ -152,12 +167,21 @@ final class AdventureScenario implements Scenario {
         builder.rect(92, 15, 3, 3, Terrain.ORGANIC);
         builder.rect(115, 3, 3, 4, Terrain.PLAIN);
         builder.rect(100, 2, 3, 3, Terrain.PLAIN);
+        builder.rect(126, 19, 4, 3, Terrain.ORGANIC);
+        builder.rect(137, 4, 3, 3, Terrain.DUST);
+        builder.rect(145, 24, 3, 3, Terrain.ORGANIC);
+        builder.rect(133, 12, 4, 4, Terrain.MIRE);
+        builder.rect(156, 6, 3, 3, Terrain.DUST);
+        builder.rect(167, 21, 4, 3, Terrain.MIRE);
+        builder.rect(175, 11, 3, 4, Terrain.DUST);
         paintRegions(builder);
 
         builder.border(1, Terrain.ROCK);
         wall(builder, WALL_ONE, GAP_ONE_ROW);
         wall(builder, WALL_TWO, GAP_TWO_ROW);
         wall(builder, WALL_THREE, GAP_THREE_ROW);
+        wall(builder, WALL_FOUR, GAP_FOUR_ROW);
+        wall(builder, WALL_FIVE, GAP_FIVE_ROW);
         rock(builder);
         return builder.build();
     }
@@ -212,6 +236,23 @@ final class AdventureScenario implements Scenario {
         builder.rect(93, 22, 1, 2, Terrain.ROCK);
         builder.rect(107, 4, 2, 1, Terrain.ROCK);
         builder.rect(116, 19, 1, 3, Terrain.ROCK);
+
+        // The mire: open. What makes the ground hard to cross here is what is lying on it, not what
+        // is built out of it, so rock would only give the player somewhere safe to stand.
+        builder.rect(127, 11, 2, 3, Terrain.ROCK);
+        builder.rect(139, 20, 1, 2, Terrain.ROCK);
+        builder.rect(146, 5, 2, 1, Terrain.ROCK);
+
+        // The ashes: cover again, and more of it than anywhere, because everything the march taught
+        // has to be usable at once in the least room.
+        builder.rect(155, 13, 2, 7, Terrain.ROCK);
+        builder.rect(157, 16, 2, 2, Terrain.ROCK);
+        builder.rect(162, 3, 3, 2, Terrain.ROCK);
+        builder.rect(164, 5, 1, 4, Terrain.ROCK);
+        builder.rect(169, 14, 2, 6, Terrain.ROCK);
+        builder.rect(167, 24, 2, 2, Terrain.ROCK);
+        builder.rect(174, 4, 2, 5, Terrain.ROCK);
+        builder.rect(176, 18, 1, 3, Terrain.ROCK);
     }
 
     /** Bands of shading along the march, three to a biome, so the ground changes under you as you go. */
@@ -239,6 +280,10 @@ final class AdventureScenario implements Scenario {
         point(simulation, map, 83, 22);
         point(simulation, map, 99, 21);
         point(simulation, map, 114, 9);
+        point(simulation, map, 128, 6);
+        point(simulation, map, 142, 23);
+        point(simulation, map, 158, 20);
+        point(simulation, map, 172, 9);
 
         // Nests before boulders, and boulders reserve everything already standing: a nest is
         // immovable and so is a boulder, so two of them in the same place is a knot the solver
@@ -256,6 +301,11 @@ final class AdventureScenario implements Scenario {
         nests(simulation, map, UnitKind.BRUTE, 92, 16, 117, 12);
         nests(simulation, map, UnitKind.SPITTER, 100, 6);
         nests(simulation, map, UnitKind.GRUNT, 108, 20);
+        nests(simulation, map, UnitKind.FROG, 124, 14, 133, 26, 140, 4, 147, 17);
+        nests(simulation, map, UnitKind.GRUNT, 136, 9);
+        nests(simulation, map, UnitKind.FROG, 153, 7, 161, 22, 176, 14);
+        nests(simulation, map, UnitKind.BRUTE, 165, 10, 171, 26);
+        nests(simulation, map, UnitKind.RUNNER, 158, 3);
 
         deployPlayerSide(simulation);
 
@@ -376,6 +426,50 @@ final class AdventureScenario implements Scenario {
         pickups(simulation, map, PickupKind.ARMOURY_FLAMER, 96, 16, 108, 12);
         pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 104, 6, 99, 24);
         pickups(simulation, map, PickupKind.ARMOURY_SHOTGUN, 115, 24);
+
+        // THE MIRE: frogs, and almost nothing else. The biome that teaches them, so what it asks is
+        // one question at a time - where their stuff has landed, and whether backing off has worked.
+        // A handful of grunts so that standing still and reading the floor is not free.
+        units(
+                simulation,
+                map,
+                UnitKind.FROG,
+                123,
+                8,
+                125,
+                20,
+                129,
+                13,
+                131,
+                26,
+                134,
+                5,
+                137,
+                18,
+                140,
+                11,
+                143,
+                25,
+                145,
+                7,
+                148,
+                20);
+        grunts(simulation, map, 127, 24, 135, 15, 144, 3, 149, 12);
+        rabbits(simulation, map, 130, 4, 141, 27);
+        // A gun in the mire, because the ashes are past it and a sidearm is not an answer to them.
+        pickups(simulation, map, PickupKind.ARMOURY_SHOTGUN, 132, 21);
+
+        // THE ASHES: everything at once, and frogs underneath all of it. What makes this biome the
+        // last one is not that the creatures are worse but that the ground is also against you -
+        // ruined floor between you and the brutes, and runners through whatever gap is left.
+        units(simulation, map, UnitKind.FROG, 152, 12, 157, 25, 163, 6, 168, 18, 173, 26, 178, 8);
+        units(simulation, map, UnitKind.BRUTE, 154, 4, 160, 15, 166, 27, 172, 13, 177, 24);
+        units(simulation, map, UnitKind.SPITTER, 153, 19, 160, 9, 170, 5, 175, 24);
+        units(simulation, map, UnitKind.RUNNER, 152, 3, 161, 27, 168, 11, 177, 15);
+        grunts(simulation, map, 156, 22, 165, 17, 174, 3);
+        barrels(simulation, map, 158, 12, 167, 8, 173, 22);
+        pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 162, 15);
+        pickups(simulation, map, PickupKind.ARMOURY_FLAMER, 171, 4);
 
         // Points only. Clearing a level this size of everything alive is a different game.
         Level level = simulation.level();

@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.component;
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
@@ -43,8 +44,25 @@ public final class Weapon implements Component, Pool.Poolable {
     /** How wide a blast each shot leaves where it stops. Zero for every ordinary gun. */
     public float blastRadius;
 
+    /**
+     * What each shot leaves lying on the ground where it bursts. {@link SlickDef#off()} for every
+     * gun that leaves nothing, which is all of them but one.
+     *
+     * <p>The definition itself rather than its numbers spread across six fields here. It is an
+     * immutable record read straight out of the gun table, so a pooled {@code Weapon} holding one
+     * cannot be holding something that has since changed underneath it - which is the hazard that
+     * makes an {@code Entity} on a pooled component a mistake (G0010) and makes this not one.
+     */
+    public SlickDef slicks = SlickDef.off();
+
     /** How far to either side of the line of fire its muzzles sit. Zero for a gun with one. */
     public float muzzleOffset;
+
+    /**
+     * How long one of its shots waits between the blows it lands. Zero is a shot that stops at the
+     * first thing it touches, which is what every gun but one declares.
+     */
+    public float pierceIntervalSeconds;
 
     /** What one shot adds to whatever is holding this, as a fraction. Zero for a gun that stays cold. */
     public float heatPerShot;
@@ -73,7 +91,9 @@ public final class Weapon implements Component, Pool.Poolable {
         this.halfSpreadRadians = def.halfSpreadRadians();
         this.projectileLook = def.projectileLook();
         this.blastRadius = def.blastRadius();
+        this.slicks = def.slicks();
         this.muzzleOffset = def.muzzleOffset();
+        this.pierceIntervalSeconds = def.pierceIntervalSeconds();
         this.heatPerShot = def.heat().perShot();
         this.heatCoolPerSecond = def.heat().coolPerSecond();
         this.heatResumeBelow = def.heat().resumeBelow();
@@ -98,7 +118,9 @@ public final class Weapon implements Component, Pool.Poolable {
         halfSpreadRadians = 0f;
         projectileLook = Look.PROJECTILE;
         blastRadius = 0f;
+        slicks = SlickDef.off();
         muzzleOffset = 0f;
+        pierceIntervalSeconds = 0f;
         heatPerShot = 0f;
         heatCoolPerSecond = 0f;
         heatResumeBelow = 0f;

@@ -70,7 +70,15 @@ public enum RngStream {
      * because the level's layout is drawn from it before play starts, which is exactly the case
      * {@code RngStream} exists to protect: retuning how often men arrive must not reshuffle the map.
      */
-    REINFORCEMENT(0x4F2C_9D17_A85B_3E61L);
+    REINFORCEMENT(0x4F2C_9D17_A85B_3E61L),
+
+    /**
+     * Where the circles of a spatter fall around the shot that burst.
+     *
+     * <p>Its own stream for the reason every other one here has one: how a slick is shaped is a
+     * thing somebody will sit and tune, and doing that must not move a nest's brood or a wave.
+     */
+    SLICK(0x3B9A_C74D_1E52_806FL);
 
     private final long salt;
 

@@ -27,6 +27,8 @@ public enum Look {
     SPITTER,
     /** The fast strain that weaves and dodges. It must read as lighter than a grunt at a glance. */
     RUNNER,
+    /** The strain that hops and ruins the ground. It must read as kin to what it spits. */
+    FROG,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */
@@ -68,6 +70,18 @@ public enum Look {
      * tellable from an ordinary spit at a glance - the ground beside one is no longer safe.
      */
     CHARGED_SPIT,
+    /** What a frog fires. Fat and slow, and unmistakably the same stuff as the slick it leaves. */
+    VENOM,
+    /**
+     * One circle of ground a frog has ruined.
+     *
+     * <p>Drawn in the same colour family as the shot that made it, because the whole of what the
+     * player has to learn is that one becomes the other, and darker, because it is ground rather
+     * than a thing standing on it. A control point says the same thing by being spawned first; a
+     * slick appears mid-fight and cannot, so the renderer draws it underneath - which is the
+     * client's business and settled there (G0003).
+     */
+    SLICK,
     STRIKE,
     /** Something thrown that bounces and goes off where it stops. */
     GRENADE,

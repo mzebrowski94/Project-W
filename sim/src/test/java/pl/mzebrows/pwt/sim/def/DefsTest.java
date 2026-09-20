@@ -52,7 +52,8 @@ class DefsTest {
                         strain(RADIUS, Look.GRUNT),
                         strain(RADIUS * 2f, Look.BRUTE),
                         strain(RADIUS, Look.SPITTER),
-                        strain(RADIUS, Look.RUNNER));
+                        strain(RADIUS, Look.RUNNER),
+                        strain(RADIUS, Look.FROG));
     }
 
     @Test
@@ -66,6 +67,7 @@ class DefsTest {
                 .put(UnitKind.BRUTE, strain(RADIUS * 2f, Look.BRUTE))
                 .put(UnitKind.SPITTER, strain(RADIUS, Look.SPITTER))
                 .put(UnitKind.RUNNER, strain(RADIUS, Look.RUNNER))
+                .put(UnitKind.FROG, strain(RADIUS, Look.FROG))
                 .build();
     }
 
@@ -87,6 +89,7 @@ class DefsTest {
                 WanderDef.off(),
                 AvoidanceDef.off(),
                 LeapDef.off(),
+                HopDef.off(),
                 RangedDef.off(),
                 ApproachDef.off(),
                 WeaveDef.off(),

@@ -42,6 +42,7 @@ mechanic you are about to write appears there, it has already been rejected and 
 | [G0031](G0031-a-nest-is-a-place-that-produces.md) | A nest is a place that produces, and it sleeps until somebody arrives. | a spawner as a timer on the level; a nest that works from the first tick; a nest that goes back to sleep; a cap on its brood; a `NestKind` enum; a second rouse path; reading `Damage` to know it was hit | accepted |
 | [G0032](G0032-a-gun-may-have-a-reach.md) | A gun may have a reach, a cone and a pellet count; an aim may not. | a range or clamp on the aim; a range on the unit for the commander; damage falloff; a hitscan short gun; a cone-shaped overlap query; `pellets` on the shooter; expiring a shot by seconds | accepted |
 | [G0033](G0033-a-pack-spreads-by-moving-the-goal.md) | A pack spreads by each creature walking at a point beside the man, on a side seeded from where it was spawned. | a separation force or boids; a flow field per creature; rolling the side; slot assignment round the target; an offset that holds all the way in; the numbers on `AvoidanceDef` | accepted |
+| [G0034](G0034-a-slick-is-ground-not-an-explosion.md) | A slick is ground with a side and a life, not a blast that lingers. | a blast that lingers; damage that ticks or falls off; a slick on nobody's side; a system that asks whether something is a slick; one big circle instead of a spatter; a slick that finishes whatever is already lying in it | accepted |
 
 ## When to write one
 

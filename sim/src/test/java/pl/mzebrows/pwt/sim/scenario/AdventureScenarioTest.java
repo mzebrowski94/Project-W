@@ -25,8 +25,8 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  * The claims this level makes that a glance at it would not catch.
  *
  * <p>{@code ScenariosTest} already says nothing is inside rock and everything is reachable, for every
- * scenario there is. What is only true of this one is its <strong>shape</strong>: four biomes in
- * order, two points in each, and three walls whose gaps are the only way east. Every one of those is
+ * scenario there is. What is only true of this one is its <strong>shape</strong>: six biomes in
+ * order, two points in each, and five walls whose gaps are the only way east. Every one of those is
  * silent when it breaks - move a wall a tile and the level still plays, it has just stopped being a
  * march and become a corridor with scenery.
  */
@@ -36,7 +36,7 @@ class AdventureScenarioTest {
     private static final String NAME = "Adventure";
 
     /** Where each biome ends, in tile columns. The bands the whole level is built out of. */
-    private static final int[] BIOME_END = {30, 60, 90, 120};
+    private static final int[] BIOME_END = {30, 60, 90, 120, 150, 180};
 
     /** Every kind of weapons cache there is. One per gun, and this list must grow with that enum. */
     private static final EnumSet<PickupKind> CACHES =
@@ -173,7 +173,7 @@ class AdventureScenarioTest {
             perBiome[biomeOf(map.colAt(nest.getComponent(Position.class).x))]++;
         }
 
-        assertThat(perBiome).containsExactly(1, 2, 3, 4);
+        assertThat(perBiome).containsExactly(1, 2, 3, 4, 5, 6);
     }
 
     /** Every strain a biome teaches has a hole sending more of it out, somewhere in that biome. */
@@ -187,7 +187,8 @@ class AdventureScenarioTest {
         }
 
         assertThat(hatching)
-                .containsExactlyInAnyOrder(UnitKind.GRUNT, UnitKind.SPITTER, UnitKind.RUNNER, UnitKind.BRUTE);
+                .containsExactlyInAnyOrder(
+                        UnitKind.GRUNT, UnitKind.SPITTER, UnitKind.RUNNER, UnitKind.BRUTE, UnitKind.FROG);
     }
 
     private static List<Position> pointsOf(Simulation simulation) {
@@ -202,12 +203,13 @@ class AdventureScenarioTest {
     }
 
     /**
-     * A better gun exists on this march, and only in the half of it that needs one. The plain and the
-     * dust are what a sidearm is tuned for; a cache in either is a shortcut past the part that teaches
-     * you to aim, and it is exactly the kind of thing that gets added later without anyone noticing.
+     * A better gun exists on this march, and never in the part of it that a sidearm is tuned for. The
+     * plain and the dust are that part; a cache in either is a shortcut past the half of the march
+     * that teaches you to aim, and it is exactly the kind of thing that gets added later without
+     * anyone noticing.
      */
     @Test
-    void offersABetterGunOnlyInTheLastTwoBiomes() {
+    void offersABetterGunOnlyOncePastTheFirstTwoBiomes() {
         Simulation world = world();
         TileMap map = world.map();
 

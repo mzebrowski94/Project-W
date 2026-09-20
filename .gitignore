@@ -58,6 +58,11 @@ desktop.ini
 ## on demand, and none of it belongs to anyone but the machine that made it.
 /ai/
 
+## A personal note-to-self skill, not part of the project: what a session can and cannot do about
+## the power state of Mateusz's own machine. Useful to whoever is sitting at this checkout and
+## meaningless to anyone else, so it stays out of the history.
+/.claude/skills/shutdown-windows/
+
 ## Generated from assets-raw/ by `./gradlew :core:packTextures`, which is deliberately not wired into
 ## every build. NOTE: that means a fresh clone has no atlas. Harmless today because there is no source
 ## art yet - but when there is, this becomes a real choice: commit the atlas, or make packing part of

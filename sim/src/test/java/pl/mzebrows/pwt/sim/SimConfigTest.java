@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
@@ -29,6 +30,33 @@ class SimConfigTest {
                 .withUnit(UnitKind.BRUTE, brute -> brute.withRadius(HUGE).withCount(0));
 
         assertThat(config.largestRadius()).isEqualTo(HUGE);
+    }
+
+    /**
+     * <strong>Breaking a frog's aggro has to actually work.</strong> "It gives up easily" is a fact
+     * about two numbers and nothing else - how far past its detection range it will keep hunting you
+     * - and there is no system anywhere that would notice if somebody widened the gap to match the
+     * rest of the table while tuning. The mechanic would simply stop existing.
+     */
+    @Test
+    void letsGoOfHimSoonerThanAnythingElseOnTheFieldDoes() {
+        SimConfig config = SimConfig.defaults();
+
+        float frog = leeway(config, UnitKind.FROG);
+
+        for (UnitKind kind : UnitKind.values()) {
+            if (kind != UnitKind.FROG) {
+                assertThat(frog)
+                        .as("a frog must give up sooner than a %s", kind)
+                        .isLessThan(leeway(config, kind));
+            }
+        }
+    }
+
+    /** How much further than the range it noticed you at a strain will keep hunting you. */
+    private static float leeway(SimConfig config, UnitKind kind) {
+        PerceptionDef perception = config.unit(kind).perception();
+        return perception.loseRange() - perception.detectionRange();
     }
 
     @Test

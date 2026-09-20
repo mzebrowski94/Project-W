@@ -33,6 +33,17 @@ public final class Projectile implements Component, Pool.Poolable {
      */
     public float range;
 
+    /**
+     * Whether it passes through anything alive rather than stopping at the first of it.
+     *
+     * <p>A flag on the shot rather than a question about which gun fired it, for the reason every
+     * other difference between guns is data: the collision system asks what this shot does and never
+     * what it came out of. What it does <em>not</em> pass through is scenery - rock, an obstacle, the
+     * arena edge - which is the same test a thrown grenade already makes (G0019), so a wall stops a
+     * slug exactly as it always did.
+     */
+    public boolean piercing;
+
     /** Records the muzzle, and returns this component, for fluent spawning. */
     public Projectile from(float x, float y) {
         this.originX = x;
@@ -43,6 +54,12 @@ public final class Projectile implements Component, Pool.Poolable {
     /** Gives it a flight length, and returns this component, for fluent spawning. */
     public Projectile lasting(float newRange) {
         this.range = newRange;
+        return this;
+    }
+
+    /** Makes it a shot that goes through things, and returns this component, for fluent spawning. */
+    public Projectile piercing() {
+        this.piercing = true;
         return this;
     }
 
@@ -61,5 +78,6 @@ public final class Projectile implements Component, Pool.Poolable {
         originX = 0f;
         originY = 0f;
         range = 0f;
+        piercing = false;
     }
 }

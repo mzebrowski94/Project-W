@@ -124,6 +124,7 @@ public record GraphicConfig(
             case BRUTE -> "b53a5aff";
             case SPITTER -> "a05cf0ff";
             case RUNNER -> "ff9a4aff";
+            case FROG -> "4f9e3cff";
             case CONTROL_POINT -> "2b3a52ff";
             case POST -> "3a5230ff";
             case NEST -> "6b4a2aff";
@@ -135,6 +136,8 @@ public record GraphicConfig(
             case TURRET_SHOT -> "7fd8ffff";
             case SPIT -> "d08cffff";
             case CHARGED_SPIT -> "ff8ce0ff";
+            case VENOM -> "aef23cff";
+            case SLICK -> "5c7a1eff";
             case STRIKE -> "ffffffff";
             case GRENADE -> "c07820ff";
             case BLAST -> "ffb03aff";
@@ -185,6 +188,8 @@ public record GraphicConfig(
             case PLAIN -> "1c2130ff";
             case DUST -> "2a2620ff";
             case ORGANIC -> "16241cff";
+            case MIRE -> "14222aff";
+            case ASH -> "231f22ff";
             case ROCK -> "343442ff";
         };
     }

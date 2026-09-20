@@ -9,11 +9,13 @@ import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.HeatDef;
+import pl.mzebrows.pwt.sim.def.HopDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.RangedDef;
+import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
@@ -206,6 +208,7 @@ public final class SimConfigLoader {
                 wander(properties, prefix + ".wander", defaults.wander()),
                 avoidance(properties, prefix + ".avoidance", defaults.avoidance()),
                 leap(properties, prefix + ".leap", defaults.leap()),
+                hop(properties, prefix + ".hop", defaults.hop()),
                 ranged(properties, prefix + ".ranged", defaults.ranged()),
                 approach(properties, prefix + ".approach", defaults.approach()),
                 weave(properties, prefix + ".weave", defaults.weave()),
@@ -296,6 +299,28 @@ public final class SimConfigLoader {
                 properties.getFloat(prefix + ".hesitationMaxSeconds", defaults.hesitationMaxSeconds()));
     }
 
+    /** How a strain gets about, under {@code sim.unit.<kind>.hop}. Disabled is a strain that walks. */
+    private static HopDef hop(GameProperties properties, String prefix, HopDef defaults) {
+        return new HopDef(
+                properties.getBoolean(prefix + ".enabled", defaults.enabled()),
+                properties.getFloat(prefix + ".hopSeconds", defaults.hopSeconds()),
+                properties.getFloat(prefix + ".restSeconds", defaults.restSeconds()));
+    }
+
+    /**
+     * What a gun's shots leave lying on the ground, under {@code sim.weapon.<kind>.slick}. Zero
+     * blobs is a gun that leaves nothing, which is every gun but one.
+     */
+    private static SlickDef slicks(GameProperties properties, String prefix, SlickDef defaults) {
+        return new SlickDef(
+                properties.getInt(prefix + ".slick.blobs", defaults.blobs()),
+                properties.getFloat(prefix + ".slick.radius", defaults.radius()),
+                properties.getFloat(prefix + ".slick.spread", defaults.spread()),
+                properties.getFloat(prefix + ".slick.seconds", defaults.seconds()),
+                properties.getFloat(prefix + ".slick.damage", defaults.damage()),
+                properties.getFloat(prefix + ".slick.victimInvulnerableSeconds", defaults.victimInvulnerableSeconds()));
+    }
+
     private static SimConfig.MeleeConfig melee(GameProperties properties, SimConfig.MeleeConfig defaults) {
         return new SimConfig.MeleeConfig(
                 properties.getFloat("sim.melee.cooldownSeconds", defaults.cooldownSeconds()),
@@ -343,8 +368,10 @@ public final class SimConfigLoader {
                             properties.getFloat(prefix + ".spreadDegrees", fallback.spreadDegrees()),
                             fallback.projectileLook(),
                             properties.getFloat(prefix + ".blastRadius", fallback.blastRadius()),
+                            slicks(properties, prefix, fallback.slicks()),
                             heat(properties, prefix, fallback.heat()),
-                            properties.getFloat(prefix + ".muzzleOffset", fallback.muzzleOffset())));
+                            properties.getFloat(prefix + ".muzzleOffset", fallback.muzzleOffset()),
+                            properties.getFloat(prefix + ".pierceIntervalSeconds", fallback.pierceIntervalSeconds())));
         }
         return builder.build();
     }

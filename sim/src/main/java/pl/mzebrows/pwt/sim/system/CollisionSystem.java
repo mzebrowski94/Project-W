@@ -305,10 +305,20 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         return side != Side.NEUTRAL && side == FACTION.get(b).side;
     }
 
-    /** A projectile is used up on whatever stops it, whether or not that thing can be hurt. */
+    /**
+     * A projectile is used up on whatever stops it, whether or not that thing can be hurt.
+     *
+     * <p><strong>A piercing shot is stopped by scenery alone</strong> and passes through anything
+     * alive - the same rule, and the same {@link #prop} test, a thrown grenade has followed since
+     * G0019. Rock and the arena edge are not here at all: they stop a shot in
+     * {@code ProjectileBoundsSystem}, which asks nothing about what kind of shot it is, so "it only
+     * stops at walls" needs nothing said about walls.
+     */
     private void spend(Entity projectile, Entity target) {
         strike(projectile, target);
-        spawner.markDead(projectile);
+        if (!PROJECTILE.get(projectile).piercing || prop(target)) {
+            spawner.markDead(projectile);
+        }
     }
 
     /**

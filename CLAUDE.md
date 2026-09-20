@@ -65,6 +65,8 @@ Each line is a yes/no you can check yourself. A no is not done.
 - [ ] Diff contains nothing the task did not need.
 - [ ] A gameplay change wrote down what it settled: invariant row, decision record, or input-map row.
       If none, say so and why.
+- [ ] Your summary lists the `game.properties` and `graphic.properties` keys the change added or
+      moved, with their values.
 
 ## Modules
 
@@ -150,6 +152,12 @@ expect to need it.
 **Name friction when you hit it.** Anything a change on Mateusz's side would fix - a permission, an
 allowlist entry, an access grant, a setting - one line at the moment you hit it, then carry on. Do not
 silently work around the same obstacle every session. Known ones: `docs/workflow.md`.
+
+**Name the numbers a playtest will want to turn.** A change that touches gameplay ends its summary
+with the keys it added or moved in `assets/game.properties` and `assets/graphic.properties`, values
+included - the handful Mateusz would otherwise have to go and find before he can tune what he has
+just played. Keys and values, and a few words on what each one does to the feel where that is not
+obvious from the name. Not every key in the block; the ones the change is about.
 
 **Answer in the fewest words that carry the information.** No preamble, no restating the request, no
 summary of what the diff shows. Sacrifice grammar for concision; Mateusz asks when he wants more.

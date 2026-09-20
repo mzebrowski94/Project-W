@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.HeatDef;
+import pl.mzebrows.pwt.sim.def.HopDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
@@ -19,6 +20,7 @@ import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.RangedDef;
 import pl.mzebrows.pwt.sim.def.Require;
+import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
@@ -228,6 +230,7 @@ public record SimConfig(
                                 new WanderDef(true, 12f, 0.45f, 1.5f, 0.4f, 1.4f, 4f),
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 new LeapDef(true, 16f, 29f, 0.28f, 2, 0.18f, 1.6f, 0.08f, 0.22f),
+                                HopDef.off(),
                                 RangedDef.off(),
                                 new ApproachDef(true, 7f, 12f),
                                 WeaveDef.off(),
@@ -253,6 +256,7 @@ public record SimConfig(
                                 new WanderDef(true, 8f, 0.35f, 2f, 0.8f, 2.4f, 5f),
                                 new AvoidanceDef(true, 9f, 0.5f, 1.3f),
                                 new LeapDef(true, 22f, 24f, 0.42f, 3, 0.26f, 2.4f, 0.18f, 0.42f),
+                                HopDef.off(),
                                 RangedDef.off(),
                                 new ApproachDef(true, 9f, 14f),
                                 WeaveDef.off(),
@@ -278,6 +282,7 @@ public record SimConfig(
                                 new WanderDef(true, 10f, 0.4f, 1.5f, 0.5f, 1.6f, 4f),
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 LeapDef.off(),
+                                HopDef.off(),
                                 new RangedDef(
                                         true,
                                         18f,
@@ -323,6 +328,7 @@ public record SimConfig(
                                 new WanderDef(true, 16f, 0.5f, 1.5f, 0.3f, 1f, 4f),
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 new LeapDef(true, 14f, 34f, 0.24f, 2, 0.14f, 1.2f, 0.06f, 0.16f),
+                                HopDef.off(),
                                 RangedDef.off(),
                                 // Narrower than a grunt's, because it weaves on top of it: two wide
                                 // answers to the same question read as a creature that cannot decide.
@@ -331,6 +337,57 @@ public record SimConfig(
                                 new DodgeDef(true, 22f, 26f, 0.26f, 0.7f, 1.4f),
                                 Chances.standard(),
                                 Look.RUNNER))
+                .put(
+                        UnitKind.FROG,
+                        new UnitDef(
+                                1.6f,
+                                7.5f,
+                                4,
+                                60f,
+                                100f,
+                                200f,
+                                1.3f,
+                                0.6f,
+                                1.5f,
+                                1f,
+                                0,
+                                null,
+                                // Its lose range is barely past the range it notices you at, where
+                                // everything else keeps hunting half a screen further. Backing off
+                                // works on a frog, which is the whole of what makes it a creature to
+                                // leave alone rather than one to clear. The gap is still a gap: one
+                                // range would have it flicker between hunting and idling on the
+                                // boundary, which is the reason the two numbers exist at all.
+                                PerceptionDef.allRound(true, true, 26f, 30f, 12f),
+                                new WanderDef(true, 9f, 0.5f, 1.5f, 0.5f, 1.6f, 4f),
+                                new AvoidanceDef(true, 7f, 0.35f, 1.6f),
+                                LeapDef.off(),
+                                // The gait. A hop and rather more sitting than hopping, so what a
+                                // player reads is a creature that is repeatedly not going anywhere -
+                                // and the burst makes the whole cycle cover exactly what the speed
+                                // above says, so a frog is no faster and no slower than it looks.
+                                new HopDef(true, 0.26f, 0.42f),
+                                new RangedDef(
+                                        true,
+                                        26f,
+                                        10f,
+                                        true,
+                                        WeaponKind.VENOM,
+                                        false,
+                                        160f,
+                                        3f,
+                                        16f,
+                                        0.7f,
+                                        0,
+                                        1f,
+                                        null),
+                                // It shoots at ground rather than at a man, so there is no queue for
+                                // a spread to break up and nothing for a weave to make harder to hit.
+                                ApproachDef.off(),
+                                WeaveDef.off(),
+                                DodgeDef.off(),
+                                Chances.standard(),
+                                Look.FROG))
                 .build();
     }
 
@@ -342,11 +399,36 @@ public record SimConfig(
         return Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
                 .put(
                         WeaponKind.SIDEARM,
-                        new WeaponDef(0.3f, 42f, 0.6f, 0f, 50f, 1, 0f, Look.PROJECTILE, 0f, HeatDef.none(), 0f))
+                        new WeaponDef(
+                                0.3f,
+                                42f,
+                                0.6f,
+                                0f,
+                                50f,
+                                1,
+                                0f,
+                                Look.PROJECTILE,
+                                0f,
+                                SlickDef.off(),
+                                HeatDef.none(),
+                                0f,
+                                0f))
                 .put(
                         WeaponKind.RAILGUN,
                         new WeaponDef(
-                                1.2f, 85f, 1f, 0f, 300f, 1, 0f, Look.SLUG, 0f, new HeatDef(0.34f, 0.12f, 0.4f), 0f))
+                                1.2f,
+                                85f,
+                                1f,
+                                0f,
+                                300f,
+                                1,
+                                0f,
+                                Look.SLUG,
+                                0f,
+                                SlickDef.off(),
+                                new HeatDef(0.28f, 0.12f, 0.4f),
+                                0f,
+                                0.05f))
                 // The two that cover ground rather than a point. Both name a flight length, which is
                 // what makes them short-ranged - a property of the shot and never of the aim.
                 .put(
@@ -361,17 +443,78 @@ public record SimConfig(
                                 34f,
                                 Look.FLAME,
                                 0f,
+                                SlickDef.off(),
                                 new HeatDef(0.035f, 0.3f, 0.45f),
+                                0f,
                                 0f))
                 .put(
                         WeaponKind.SHOTGUN,
-                        new WeaponDef(0.75f, 60f, 0.5f, 26f, 22f, 6, 26f, Look.PELLET, 0f, HeatDef.none(), 0f))
+                        new WeaponDef(
+                                0.75f,
+                                60f,
+                                0.5f,
+                                26f,
+                                22f,
+                                6,
+                                26f,
+                                Look.PELLET,
+                                0f,
+                                SlickDef.off(),
+                                HeatDef.none(),
+                                0f,
+                                0f))
                 .put(
                         WeaponKind.SPIT,
-                        new WeaponDef(1.1f, 30f, 0.7f, 0f, 100f, 1, 0f, Look.SPIT, 0f, HeatDef.none(), 0f))
+                        new WeaponDef(
+                                1.1f,
+                                30f,
+                                0.7f,
+                                0f,
+                                100f,
+                                1,
+                                0f,
+                                Look.SPIT,
+                                0f,
+                                SlickDef.off(),
+                                HeatDef.none(),
+                                0f,
+                                0f))
                 .put(
                         WeaponKind.CHARGED_SPIT,
-                        new WeaponDef(1.1f, 30f, 0.8f, 0f, 100f, 1, 0f, Look.CHARGED_SPIT, 5f, HeatDef.none(), 0f))
+                        new WeaponDef(
+                                1.1f,
+                                30f,
+                                0.8f,
+                                0f,
+                                100f,
+                                1,
+                                0f,
+                                Look.CHARGED_SPIT,
+                                5f,
+                                SlickDef.off(),
+                                HeatDef.none(),
+                                0f,
+                                0f))
+                // What a frog throws. THE SHOT ITSELF DOES NOTHING - its damage is zero on purpose,
+                // because what a frog does to you is the ground and not the hit. It has a reach, so
+                // a miss bursts short of you rather than flying on, which is what makes standing in
+                // the wrong place the mistake rather than failing to dodge.
+                .put(
+                        WeaponKind.VENOM,
+                        new WeaponDef(
+                                2.4f,
+                                26f,
+                                0.9f,
+                                30f,
+                                0f,
+                                1,
+                                0f,
+                                Look.VENOM,
+                                0f,
+                                new SlickDef(5, 2.2f, 2.6f, 7f, 1000f, 1.6f),
+                                HeatDef.none(),
+                                0f,
+                                0f))
                 .put(
                         WeaponKind.TURRET_GUN,
                         new WeaponDef(
@@ -384,8 +527,10 @@ public record SimConfig(
                                 0f,
                                 Look.TURRET_SHOT,
                                 0f,
+                                SlickDef.off(),
                                 new HeatDef(0.1f, 0.35f, 0.6f),
-                                0.9f))
+                                0.9f,
+                                0f))
                 .build();
     }
 
@@ -442,6 +587,10 @@ public record SimConfig(
         largest = Math.max(largest, grenade.radius());
         for (WeaponDef gun : weapons.values()) {
             largest = Math.max(largest, gun.projectileRadius());
+            // A circle of ruined ground is an ordinary body in the pairwise path, unlike a blast,
+            // so the grid has to have room for one - and it is asked of the gun table rather than
+            // of a list somebody has to remember to extend.
+            largest = Math.max(largest, gun.slicks().radius());
         }
         for (UnitDef strain : units.values()) {
             largest = Math.max(largest, strain.radius());

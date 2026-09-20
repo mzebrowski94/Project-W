@@ -5,6 +5,7 @@ import pl.mzebrows.pwt.map.Randomness;
 import pl.mzebrows.pwt.map.Scatter;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.def.PickupKind;
@@ -49,6 +50,21 @@ final class ExpanseScenario implements Scenario {
 
     private static final float CLEARANCE = 2f;
     private static final float STANDOFF = 30f;
+
+    /**
+     * How wide the band of the far east an armoury is laid in, in tiles.
+     *
+     * <p>A band rather than a tile. This level generates its rock at random and then seals whatever
+     * pockets that made, so a tile chosen by hand is a tile that is <em>sometimes</em> inside a wall
+     * and sometimes walled off - which is exactly what happened to both crates at seeds 5 and 9, and
+     * what no single-seed test could see. Scattering into the band asks the map where there is room
+     * instead of telling it, and every tile still passable after the seal is reachable by
+     * construction, so the crate is always both outside rock and walkable to.
+     */
+    private static final int ARMOURY_BAND = 10;
+
+    /** One crate in the northern half of that band and one in the southern, so the two are a choice. */
+    private static final int ARMOURIES_PER_HALF = 1;
 
     private static final Terrain[] GROUNDS = {
         Terrain.PLAIN, Terrain.PLAIN, Terrain.PLAIN, Terrain.DUST, Terrain.DUST, Terrain.ORGANIC
@@ -108,13 +124,34 @@ final class ExpanseScenario implements Scenario {
         Scatter scatter = new Scatter(map, simulation.rng(), CLEARANCE, wallMargin);
         scatter.reserve(startX, startY, config.commander().radius() + STANDOFF);
 
-        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, map.tileCentreX(COLS - 8), map.tileCentreY(6));
-        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, map.tileCentreX(COLS - 8), map.tileCentreY(ROWS - 7));
+        armouries(simulation, scatter, config);
 
         scatter.scatter(config.obstacle().count(), config.obstacle().radius(), simulation::spawnObstacle);
         for (UnitKind kind : new UnitKind[] {UnitKind.GRUNT, UnitKind.BRUTE}) {
             UnitDef def = config.unit(kind);
             scatter.scatter(def.count(), def.radius(), (x, y) -> simulation.spawnUnit(kind, x, y));
         }
+    }
+
+    /**
+     * The two crates that are the reason to cross the map, one in each half of the far east.
+     *
+     * <p>Through the same {@code Scatter} everything else on this level goes through, and before the
+     * obstacles, so a crate is reserved ground rather than something a boulder can be dropped on.
+     */
+    private static void armouries(Simulation simulation, Scatter scatter, SimConfig config) {
+        float radius = config.pickup(PickupKind.ARMOURY_RAILGUN).radius();
+        int col = COLS - ARMOURY_BAND - 1;
+        int half = ROWS / 2;
+        scatter.scatter(
+                new TileRect(col, 1, ARMOURY_BAND, half - 1),
+                ARMOURIES_PER_HALF,
+                radius,
+                (x, y) -> simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, x, y));
+        scatter.scatter(
+                new TileRect(col, half, ARMOURY_BAND, half - 1),
+                ARMOURIES_PER_HALF,
+                radius,
+                (x, y) -> simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, x, y));
     }
 }
