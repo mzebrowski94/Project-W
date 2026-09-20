@@ -35,11 +35,34 @@ public final class Collider implements Component, Pool.Poolable {
      */
     public boolean present;
 
+    /**
+     * Whether a unit steers around it.
+     *
+     * <p><strong>Being in the way and being worth going round stopped being the same question</strong>
+     * the moment two things wanted to disagree about it. Burning ground pushes nobody and everybody
+     * should give it room; a mine is a solid little thing standing in the open and the whole mechanic
+     * is that the other side walks into it. Being solid is still the answer for everything else, so
+     * {@link #set} defaults this to it and only those two say otherwise.
+     *
+     * <p>Decided at the spawn rather than asked at the time, exactly as a pickup's {@code shunned}
+     * is - and for ruined ground it is derived rather than declared: fire is on nobody's side and
+     * catches everyone, so everyone gives it room; venom is somebody's problem and not everybody's,
+     * and the things that made it walk through it (G0034, G0035).
+     */
+    public boolean avoided;
+
     /** Sets both flags and returns this component, for fluent spawning. */
     public Collider set(boolean newSolid, boolean newMovable) {
         this.solid = newSolid;
         this.movable = newMovable;
         this.present = true;
+        this.avoided = newSolid;
+        return this;
+    }
+
+    /** Says whether a unit steers around this, where being solid is not the answer. */
+    public Collider avoided(boolean steeredAround) {
+        this.avoided = steeredAround;
         return this;
     }
 
@@ -48,5 +71,6 @@ public final class Collider implements Component, Pool.Poolable {
         solid = false;
         movable = false;
         present = false;
+        avoided = false;
     }
 }

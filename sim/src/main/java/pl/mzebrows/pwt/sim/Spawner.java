@@ -35,6 +35,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Melee;
+import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -566,6 +567,46 @@ public final class Spawner {
     }
 
     /**
+     * Spawns a mine: something small lying in the open that goes off when the other side comes near.
+     *
+     * <p><strong>Solid, and deliberately not avoided.</strong> Everything else solid is given a wide
+     * berth, because walking into it is a failure; the whole of what a mine is is something the other
+     * side walks into, so it is the one body in the game that says so on its collider. Solid rather
+     * than not because the commander can haul one, and the solver only keeps movable <em>solids</em>
+     * out of rock - a mine that could be dragged through a wall would be a mine lost inside one.
+     *
+     * <p>On nobody's side, exactly as a barrel is. That is what keeps it off the list of things an
+     * alien comes for (G0026) - a level that laid a dozen of them would otherwise have laid a dozen
+     * decoys - and it is what lets anything at all damage it, because damage from a neutral source
+     * crosses every faction line.
+     *
+     * <p>It carries {@code Health} so a shot or a blast reaches it, and {@code BlastsOnDeath} so
+     * every one of those ends the same way it does: by dying, through the one reaction (G0018). A
+     * mine caught in another mine's blast therefore chains, with no rule anywhere saying it should.
+     */
+    public Entity spawnMine(float x, float y) {
+        SimConfig.MineConfig mine = config.mine();
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Mine.class)
+                .set(mine.triggerRadius(), mine.fuseSeconds(), mine.flashFromSeconds(), mine.flashToSeconds()));
+        entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
+        entity.add(engine.createComponent(Body.class).set(mine.radius()));
+        entity.add(engine.createComponent(Collider.class).set(true, false).avoided(false));
+        entity.add(engine.createComponent(Health.class).set(mine.health()));
+        entity.add(engine.createComponent(Damage.class));
+        entity.add(engine.createComponent(BlastsOnDeath.class).set(mine.blastRadius(), mine.blastRadius()));
+        // Hauled exactly as a barrel is, by the same hands and the same component. Carrying one to
+        // where you want it is most of what a mine is worth (G0021).
+        entity.add(engine.createComponent(Dragged.class));
+        entity.add(engine.createComponent(Appearance.class).set(Look.MINE));
+        engine.addEntity(entity);
+        return entity;
+    }
+
+    /**
      * Spawns a nest: a hole in the ground that keeps sending more of one strain out of it.
      *
      * <p>Solid and immovable, exactly as a barrel and a turret are - it is a thing standing on the
@@ -707,8 +748,19 @@ public final class Spawner {
      * thing underneath.
      */
     public Entity spawnPost(float x, float y) {
+        return spawnPost(x, y, 0f);
+    }
+
+    /**
+     * The same, watching only the ground around it rather than the whole level.
+     *
+     * <p>Zero is the whole level, which is what a level the size of one fight means. A march names a
+     * distance instead, because "nothing hostile standing" cannot mean seven screens with nests
+     * still working four biomes back.
+     */
+    public Entity spawnPost(float x, float y, float watchRadius) {
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Post.class).set(config.controlPoint().radius()));
+        entity.add(engine.createComponent(Post.class).set(config.controlPoint().radius(), watchRadius));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(config.controlPoint().radius()));
@@ -818,14 +870,7 @@ public final class Spawner {
         if (slicks.leavesAnything()) {
             // And a shot that ruins the ground where it stops, through the same reaction. A gun may
             // name both: the blast is the moment, the spatter is what the moment leaves behind.
-            entity.add(engine.createComponent(SlicksOnDeath.class)
-                    .set(
-                            slicks.blobs(),
-                            slicks.radius(),
-                            slicks.spread(),
-                            slicks.seconds(),
-                            slicks.damage(),
-                            slicks.victimInvulnerableSeconds()));
+            entity.add(engine.createComponent(SlicksOnDeath.class).set(slicks));
         }
         entity.add(engine.createComponent(Appearance.class).set(look));
         engine.addEntity(entity);
@@ -850,18 +895,32 @@ public final class Spawner {
      * casualty would be an outright kill everywhere it mattered.
      */
     public Entity spawnSlick(
-            float x, float y, float radius, float seconds, float damage, float victimInvulnerableSeconds, Side side) {
+            float x,
+            float y,
+            float radius,
+            float seconds,
+            float growFraction,
+            float fadeFraction,
+            float damage,
+            float victimInvulnerableSeconds,
+            Look look,
+            Side side) {
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Slick.class).set(seconds));
+        Slick slick = engine.createComponent(Slick.class).set(seconds, radius, growFraction, fadeFraction);
+        entity.add(slick);
         entity.add(engine.createComponent(Faction.class).set(side));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
-        entity.add(engine.createComponent(Body.class).set(radius));
-        entity.add(engine.createComponent(Collider.class).set(false, false));
+        entity.add(engine.createComponent(Body.class).set(slick.radiusNow()));
+        // Steered around when it is on nobody's side, and not when it has taken one. Derived here
+        // rather than declared beside the numbers, exactly as a pickup's shunned is: ground that
+        // catches everybody is ground everybody gives room to, and ground that is somebody's problem
+        // is walked through by the things that made it (G0034, G0035).
+        entity.add(engine.createComponent(Collider.class).set(false, false).avoided(side == Side.NEUTRAL));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(damage, 0f, victimInvulnerableSeconds)
                 .wounding());
-        entity.add(engine.createComponent(Appearance.class).set(Look.SLICK));
+        entity.add(engine.createComponent(Appearance.class).set(look));
         engine.addEntity(entity);
         return entity;
     }
@@ -989,6 +1048,14 @@ public final class Spawner {
         entity.add(engine.createComponent(Appearance.class).set(Look.BLAST));
         entity.add(engine.createComponent(Shake.class)
                 .set(blast.shakeStrength(), radius * blast.shakeRadiusFactor(), blast.durationSeconds()));
+        SlickDef fire = config.fire().forBlast(radius);
+        if (fire.leavesAnything()) {
+            // What the explosion leaves burning, through the one reaction everything that leaves
+            // something behind uses (G0018, G0035). A blast is a thing that dies like any other, so
+            // nothing that explodes had to learn that fire exists - and a gun that leaves no blast,
+            // which is what the flamethrower is, leaves no fire either.
+            entity.add(engine.createComponent(SlicksOnDeath.class).set(fire));
+        }
         engine.addEntity(entity);
         return entity;
     }

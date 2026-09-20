@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_AGGRO_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_CAPTURE_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_RADIUS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmless;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -13,13 +14,17 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.def.Objective;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * Taking ground, and what the level makes of it.
@@ -36,6 +41,12 @@ class ControlPointTest {
     private static final float ELSEWHERE = 95f;
 
     private static final Offset<Float> TOLERANCE = Offset.offset(1e-3f);
+
+    /** How far the post a held point becomes watches. Any positive number; the value is the level's. */
+    private static final float WATCH = 20f;
+
+    /** A corner of the fixture arena for a wave to arrive in. */
+    private static final TileRect A_CORNER = new TileRect(16, 16, 2, 2);
 
     @Test
     void takesAPointHeldForLongEnough() {
@@ -227,5 +238,79 @@ class ControlPointTest {
                 .getEntitiesFor(Family.all(Level.class).get())
                 .get(0)
                 .getComponent(Level.class);
+    }
+
+    /**
+     * The last ground of a march: taking it is not the end of the level but the start of its last
+     * fight. A post goes down where it stands, and whatever the level was holding back is let go.
+     */
+    @Test
+    void putsAPostDownOnGroundThatIsHeldAfterwards() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        held(simulation);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        assertThat(count(simulation, Post.class)).isEqualTo(1);
+    }
+
+    /**
+     * And not before. A post on the field from the first tick sends everything that has noticed
+     * nobody walking at it from across the level, and turns "forward" round for the whole march
+     * (G0027) - so when it appears is the mechanic rather than a detail.
+     */
+    @Test
+    void namesNoPostWhileThatGroundIsStillBeingTaken() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        held(simulation);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS * 0.5f));
+
+        assertThat(count(simulation, Post.class)).isZero();
+    }
+
+    @Test
+    void leavesAnOrdinaryPointNamingNoPostWhenItIsTaken() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        assertThat(count(simulation, Post.class)).isZero();
+    }
+
+    @Test
+    void sendsNothingInWhileTheLevelIsStillHoldingItsScheduleBack() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(ELSEWHERE, ELSEWHERE);
+        held(simulation);
+        simulation.waves().holdBack().add(0.1f, UnitKind.GRUNT, 3, A_CORNER);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        assertThat(count(simulation, Enemy.class)).isZero();
+    }
+
+    @Test
+    void letsGoOfThatScheduleOnceTheGroundIsTaken() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        held(simulation);
+        simulation.waves().holdBack().add(0.1f, UnitKind.GRUNT, 3, A_CORNER);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + ticksIn(0.2f) + 4);
+
+        assertThat(count(simulation, Enemy.class)).isEqualTo(3);
+    }
+
+    /** A point in the middle of the arena that the level says is ground to hold afterwards. */
+    private static void held(Simulation simulation) {
+        simulation
+                .spawnControlPoint(MIDDLE, MIDDLE)
+                .getComponent(ControlPoint.class)
+                .holdAfterwards(WATCH);
     }
 }

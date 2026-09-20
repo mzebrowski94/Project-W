@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -34,6 +35,12 @@ import pl.mzebrows.pwt.sim.def.Side;
  * everything that leaves something behind does so by dying (G0018), so a shot that burst on a wall,
  * one that burst on a man and one that simply ran out of flight all arrive here the same way.
  *
+ * <p><strong>A blast arrives here too</strong> (G0035). An explosion is a thing that dies like any
+ * other, so the fire it leaves is the same reaction asked of a different carrier - which is why
+ * nothing that explodes had to learn that fire exists, and why a gun that leaves no blast leaves no
+ * fire either. The one difference is the side: a blast carries no faction, so its fire is on
+ * nobody's and burns whoever walks into it, where a frog's venom belongs to the frog.
+ *
  * <p>Nothing is left inside rock. A shot is thrown away by {@code ProjectileBoundsSystem} the moment
  * its middle reaches a wall, so a burst against one is a burst just short of it - but the circles
  * are scattered around that point and some of the scatter would land in the wall, and "nothing is
@@ -45,6 +52,7 @@ public final class SlickSystem extends EntitySystem {
     private static final ComponentMapper<SlicksOnDeath> REACTION = ComponentMapper.getFor(SlicksOnDeath.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
+    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
     /** Two pi, for turning a fraction of a turn into an angle. */
     private static final float FULL_TURN = 6.2831855f;
@@ -73,8 +81,21 @@ public final class SlickSystem extends EntitySystem {
     public void update(float deltaTime) {
         for (int i = slicks.size() - 1; i >= 0; i--) {
             Entity entity = slicks.get(i);
-            if (!entity.isScheduledForRemoval() && SLICK.get(entity).spent()) {
+            if (entity.isScheduledForRemoval()) {
+                continue;
+            }
+            Slick slick = SLICK.get(entity);
+            if (slick.spent()) {
                 spawner.markDead(entity);
+                continue;
+            }
+            if (slick.animated()) {
+                // The body is the drawing, so a circle that is swelling reaches further and one that
+                // is collapsing reaches less far, by the same number. That is what keeps G0034's
+                // promise - drawn and dangerous are the same interval - true of something that moves.
+                // Only fire is animated, and there are never many circles of it, so this is a write
+                // per burning circle per tick and no arithmetic at all for ruined ground.
+                BODY.get(entity).radius = slick.radiusNow();
             }
         }
         leaveSpattersWhereTheyFell();
@@ -130,7 +151,22 @@ public final class SlickSystem extends EntitySystem {
             // asked of each circle: a splash may lap against a wall, and none of it may be inside one.
             return;
         }
+        // How long this one circle lasts, drawn between the two the reaction names. Ruined ground
+        // names the same number twice and draws nothing at all, so re-tuning how long a fire burns
+        // cannot reshuffle where a spatter of venom lands (pillar 6).
+        float seconds = reaction.secondsMax > reaction.seconds
+                ? reaction.seconds + rng.nextFloat() * (reaction.secondsMax - reaction.seconds)
+                : reaction.seconds;
         spawner.spawnSlick(
-                x, y, reaction.radius, reaction.seconds, reaction.damage, reaction.victimInvulnerableSeconds, side);
+                x,
+                y,
+                reaction.radius,
+                seconds,
+                reaction.growFraction,
+                reaction.fadeFraction,
+                reaction.damage,
+                reaction.victimInvulnerableSeconds,
+                reaction.look,
+                side);
     }
 }

@@ -62,9 +62,11 @@ import pl.mzebrows.pwt.sim.def.WeaveDef;
  *     rather than by replacing this table on its own
  * @param melee the commander's hand strike
  * @param blast what an explosion does, wherever it came from
+ * @param fire what an explosion leaves burning behind it, wherever it came from
  * @param grenade what the commander throws
  * @param rabbit the neutral creature that wanders the field and is eaten
  * @param barrel the explosive one, which is neither eaten nor picked up
+ * @param mine the explosive one that the other side sets off by walking into it
  * @param nest the holes in the ground that keep sending more out
  * @param controlPoint what it takes to hold a point, and how far taking one carries
  * @param turret the gun on a mount that a man gets on
@@ -86,9 +88,11 @@ public record SimConfig(
         Chances chances,
         MeleeConfig melee,
         BlastConfig blast,
+        FireConfig fire,
         GrenadeConfig grenade,
         RabbitConfig rabbit,
         BarrelConfig barrel,
+        MineConfig mine,
         CasualtyConfig casualty,
         ActionConfig action,
         NestConfig nest,
@@ -192,6 +196,7 @@ public record SimConfig(
                 Chances.standard(),
                 new MeleeConfig(0.6f, 0f, 0.12f, 1.2f, 1.4f, 120f, 180f, 1f, true, 14f, 100f, 45f, 120f),
                 new BlastConfig(1000f, 0.25f, 3f, 2.5f),
+                new FireConfig(5, 0.3f, 0.65f, 5f, 10f, 1000f, 1.6f, 0.15f, 0.45f),
                 new GrenadeConfig(1.2f, 38f, 34f, 0.55f, 12f),
                 new RabbitConfig(
                         15f,
@@ -200,11 +205,12 @@ public record SimConfig(
                         new WanderDef(true, 18f, 0.7f, 1f, 0.3f, 1.1f, 3f),
                         new DodgeDef(true, 26f, 32f, 0.32f, 0.9f, 1.2f)),
                 new BarrelConfig(1f, 11f, 4f),
+                new MineConfig(0.7f, 3.5f, 1.1f, 1f, 9f, 0.34f, 0.09f),
                 new CasualtyConfig(8f, 0.8f, 0.4f, 1f, 0f, 1.6f),
                 new ActionConfig(2.5f, 0.45f, 0.35f, 0.4f),
                 new NestConfig(2.4f, 600f, 30f, 2, 3, 2, 3, 6f, 140f, 48f),
                 new ControlPointConfig(6f, 5f, 48f, 12f, 2, 3),
-                new TurretConfig(2.2f, 300f, 6f, 2.5f, 0.3f, 55f, 26f, 6f, WeaponKind.TURRET_GUN),
+                new TurretConfig(2.2f, 360f, 6f, 2.5f, 0.3f, 55f, 26f, 6f, WeaponKind.TURRET_GUN),
                 new ObstacleConfig(3.5f, 8),
                 new CollisionConfig(3));
     }
@@ -511,7 +517,7 @@ public record SimConfig(
                                 0f,
                                 Look.VENOM,
                                 0f,
-                                new SlickDef(5, 2.2f, 2.6f, 7f, 1000f, 1.6f),
+                                new SlickDef(5, 2.2f, 2.6f, 7f, 7f, 1000f, 1.6f, 0f, 0f, Look.SLICK),
                                 HeatDef.none(),
                                 0f,
                                 0f))
@@ -585,6 +591,10 @@ public record SimConfig(
         largest = Math.max(largest, trooper.radius());
         largest = Math.max(largest, melee.radius());
         largest = Math.max(largest, grenade.radius());
+        // Fire is an ordinary body too, and the widest one of it the game can produce is the one the
+        // widest explosion leaves. Asked of the blast radii rather than of a number somebody keeps
+        // in step by hand, for the same reason the gun table is asked below.
+        largest = Math.max(largest, fire.forBlast(largestBlastRadius()).radius());
         for (WeaponDef gun : weapons.values()) {
             largest = Math.max(largest, gun.projectileRadius());
             // A circle of ruined ground is an ordinary body in the pairwise path, unlike a blast,
@@ -597,6 +607,23 @@ public record SimConfig(
         }
         for (PickupDef pickup : pickups.values()) {
             largest = Math.max(largest, pickup.radius());
+        }
+        return Math.max(largest, mine.radius());
+    }
+
+    /**
+     * The widest explosion anything in the game can make, in world units.
+     *
+     * <p>Every one of them is a number somebody named on the thing that explodes - a barrel, a
+     * grenade, a turret, a gun that goes off where its shots land - and this is the one place that
+     * asks all of them at once, so what fire is sized against cannot fall behind a new explosive.
+     */
+    public float largestBlastRadius() {
+        float largest = Math.max(barrel.blastRadius(), grenade.blastRadius());
+        largest = Math.max(largest, turret.blastRadius());
+        largest = Math.max(largest, mine.blastRadius());
+        for (WeaponDef gun : weapons.values()) {
+            largest = Math.max(largest, gun.blastRadius());
         }
         return largest;
     }
@@ -1035,6 +1062,83 @@ public record SimConfig(
     }
 
     /**
+     * What an explosion leaves burning where it was.
+     *
+     * <p><strong>One block for every fire in the game</strong>, rather than one per thing that
+     * explodes. What makes a barrel's fire worse than a grenade's is that the barrel's blast was
+     * wider, and everything here is a fraction of that blast - so a new explosive gets fire without
+     * naming a single number, and re-tuning how a fire behaves cannot leave one explosive behind.
+     *
+     * <p>It produces a {@link SlickDef}, which is the whole of G0035: fire is ruined ground with a
+     * different declaration, not a second mechanic. The side is not here either - a blast is on
+     * nobody's side, and the spatter takes the side of whatever died, so fire is neutral without
+     * anything saying so.
+     *
+     * @param blobs how many circles one explosion leaves burning
+     * @param radiusFactor how wide each of them gets, as a fraction of the blast's own radius
+     * @param spreadFactor how far from the middle they fall, as a fraction of the blast's radius.
+     *     Well under one, so the fire sits inside the ground the explosion already had rather than
+     *     reaching past it - an explosion whose fire is wider than its own circle is a blast that
+     *     lingers, which G0018 refused
+     * @param minSeconds the shortest a circle burns for
+     * @param maxSeconds the longest. Drawn per circle between the two, so a fire goes out in patches
+     * @param damage what walking into one takes off. Wounding, like gunfire and like a blast: it
+     *     leaves a casualty somebody can come and get
+     * @param victimInvulnerableSeconds how long a man it has put down is protected from the rest of it
+     * @param growFraction how much of its life a circle spends swelling
+     * @param fadeFraction how much of it it spends collapsing again
+     */
+    @With
+    public record FireConfig(
+            int blobs,
+            float radiusFactor,
+            float spreadFactor,
+            float minSeconds,
+            float maxSeconds,
+            float damage,
+            float victimInvulnerableSeconds,
+            float growFraction,
+            float fadeFraction) {
+
+        public FireConfig {
+            Require.notNegative("fire blobs", blobs);
+            Require.notNegative("fire radiusFactor", radiusFactor);
+            Require.notNegative("fire spreadFactor", spreadFactor);
+            Require.notNegative("fire minSeconds", minSeconds);
+            Require.notNegative("fire damage", damage);
+            Require.notNegative("fire victimInvulnerableSeconds", victimInvulnerableSeconds);
+            Require.notNegative("fire growFraction", growFraction);
+            Require.notNegative("fire fadeFraction", fadeFraction);
+            if (maxSeconds < minSeconds) {
+                throw new IllegalArgumentException("fire cannot burn for less than its own minimum");
+            }
+        }
+
+        /** Whether an explosion leaves anything burning at all. Zero blobs is a game with no fire in it. */
+        public boolean leavesAnything() {
+            return blobs > 0 && radiusFactor > 0f && minSeconds > 0f;
+        }
+
+        /** What a blast of this radius leaves burning, as the ruined ground it is (G0035). */
+        public SlickDef forBlast(float blastRadius) {
+            if (!leavesAnything() || blastRadius <= 0f) {
+                return SlickDef.off();
+            }
+            return new SlickDef(
+                    blobs,
+                    blastRadius * radiusFactor,
+                    blastRadius * spreadFactor,
+                    minSeconds,
+                    maxSeconds,
+                    damage,
+                    victimInvulnerableSeconds,
+                    growFraction,
+                    fadeFraction,
+                    Look.FIRE);
+        }
+    }
+
+    /**
      * The neutral creature that wanders the field, is eaten by whatever catches it, and sidesteps a
      * shot it sees coming.
      *
@@ -1111,6 +1215,56 @@ public record SimConfig(
             Require.positive("barrel bittenBlastRadius", bittenBlastRadius);
             Require.positive("barrel health", health);
             Require.positive("barrel blastRadius", blastRadius);
+        }
+    }
+
+    /**
+     * The explosive that goes off when the other side walks into it.
+     *
+     * <p>The barrel's opposite number. A barrel is a thing standing in the open that the player
+     * shoots at the right moment; a mine is a thing lying in the open that decides for itself, so
+     * what it is worth is entirely where it was put. Both explode by dying, through the one reaction
+     * (G0018), so there is nothing about a blast here.
+     *
+     * @param radius how big the thing itself is, in world units. Small: it has to read as a dot on
+     *     the ground rather than as something standing on it, and it has to be walkable-into
+     * @param triggerRadius how close something on the other side has to come. Barely past the thing
+     *     itself on purpose - a mine that reaches out is a mine that goes off in the middle of a
+     *     pack, which is a grenade the player did not have to aim. A creature has to nearly stand on
+     *     one
+     * @param fuseSeconds how long it ticks before it goes off. The whole of the mechanic: long
+     *     enough that the player sees it start and something nearby might still walk clear, short
+     *     enough that whatever set it off is usually still standing there
+     * @param health what it absorbs before it goes off early. One of anything, like a barrel: it is
+     *     a trigger lying in the open, so shooting one is a way of choosing the moment yourself
+     * @param blastRadius how wide it goes off, in world units. Under a barrel's, deliberately - a
+     *     mine is something a level lays in numbers, and one worth as much as a barrel would make
+     *     the ground it is on unusable rather than dangerous
+     * @param flashFromSeconds how long one flash of the fuse lasts when it has just started
+     * @param flashToSeconds how long one lasts at the end. Shorter, so the flashing quickens - that
+     *     acceleration is the tell, and the number it is counting is never shown (pillar 1)
+     */
+    @With
+    public record MineConfig(
+            float radius,
+            float triggerRadius,
+            float fuseSeconds,
+            float health,
+            float blastRadius,
+            float flashFromSeconds,
+            float flashToSeconds) {
+
+        public MineConfig {
+            Require.positive("mine radius", radius);
+            Require.positive("mine triggerRadius", triggerRadius);
+            Require.positive("mine fuseSeconds", fuseSeconds);
+            Require.positive("mine health", health);
+            Require.positive("mine blastRadius", blastRadius);
+            Require.notNegative("mine flashFromSeconds", flashFromSeconds);
+            Require.notNegative("mine flashToSeconds", flashToSeconds);
+            if (flashToSeconds > flashFromSeconds) {
+                throw new IllegalArgumentException("a fuse that slows down as it runs out is not a warning");
+            }
         }
     }
 

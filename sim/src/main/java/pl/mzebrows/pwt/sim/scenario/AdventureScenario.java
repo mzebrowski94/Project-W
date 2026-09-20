@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.Objective;
@@ -17,9 +18,9 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
- * A march east through six biomes, two control points in each, for up to four players.
+ * A march east through seven biomes, two control points in each, and a stand at the end of it.
  *
- * <p>The long level: nine hundred world units across, which is about six screens, and the first
+ * <p>The long level: a thousand and eighty world units across, which is about seven screens, and the first
  * scenario that is a <em>level</em> rather than an arena built to show one system. What it is for is
  * everything that only goes wrong at length - the squad's pace, the shared camera, the leash, and
  * whether co-op holds together when the players want to be in two places.
@@ -44,8 +45,19 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  *       floor.
  *   <li><strong>The ashes.</strong> Burnt ground, and everything at once: brutes in the way,
  *       spitters behind them, runners through the gaps and frogs ruining the ground under all of it.
- *       The last biome asks for all five.
+ *       The biome that asks for all five.
+ *   <li><strong>The redoubt.</strong> A wide, bare square with ground to take in the middle of it and
+ *       four guns standing round that ground. <strong>Taking it is what starts the fight</strong>:
+ *       the level has been holding a wave schedule back all march, and the tick the bar fills a post
+ *       goes down where you are standing and they start coming in from all four corners at once.
+ *       Nothing here teaches anything new - it asks whether you can still do all of it with your back
+ *       to a wall you chose.
  * </ul>
+ *
+ * <p><strong>The last biome is the only one you have to hold.</strong> Everywhere else a point taken
+ * is a point taken; here the level is not done until the last wave has been seen in and the ground
+ * around the post is clear, which is what the post's own watch measures - "nothing hostile standing"
+ * cannot mean seven screens with nests still working four biomes back.
  *
  * <p><strong>The squad holds every point it takes</strong> and waits to be told to push on, so the
  * level advances at the commander's pace. An order reaches only what is within earshot (G0017), so
@@ -59,7 +71,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  */
 final class AdventureScenario implements Scenario {
 
-    private static final int COLS = 180;
+    private static final int COLS = 216;
     private static final int ROWS = 30;
     private static final float TILE = 5f;
 
@@ -70,7 +82,7 @@ final class AdventureScenario implements Scenario {
      * biome a flat sheet of its own colour - four screens of that reads as a spreadsheet. Three means
      * the ground changes under you as you march as well as when you cross a wall.
      */
-    private static final int REGIONS = 18;
+    private static final int REGIONS = 21;
 
     /** How many columns one shading band covers. */
     private static final int BAND = COLS / REGIONS;
@@ -87,6 +99,7 @@ final class AdventureScenario implements Scenario {
     private static final int WALL_THREE = 90;
     private static final int WALL_FOUR = 120;
     private static final int WALL_FIVE = 150;
+    private static final int WALL_SIX = 180;
 
     /** Each wall's gap: first row, and how many rows tall. Different heights, so the route snakes. */
     private static final int GAP_ONE_ROW = 3;
@@ -95,7 +108,31 @@ final class AdventureScenario implements Scenario {
     private static final int GAP_THREE_ROW = 13;
     private static final int GAP_FOUR_ROW = 24;
     private static final int GAP_FIVE_ROW = 8;
+    private static final int GAP_SIX_ROW = 14;
     private static final int GAP_HEIGHT = 4;
+
+    /** The middle of the redoubt: the ground you take, and then stand on. */
+    private static final int REDOUBT_COL = 197;
+
+    private static final int REDOUBT_ROW = 15;
+
+    /**
+     * How far around the post has to be clear before the level counts as held, in world units.
+     *
+     * <p>Comfortably past the far corners of the square - a creature standing in one of them is very
+     * much still a problem - and comfortably short of the ashes on the other side of the wall, where
+     * there are nests still working and a march is not a sweep.
+     */
+    private static final float REDOUBT_WATCH = 118f;
+
+    /** The four mouths of the last biome. They come in from every corner at once. */
+    private static final TileRect NORTH_WEST_GATE = new TileRect(183, 2, 4, 4);
+
+    private static final TileRect NORTH_EAST_GATE = new TileRect(209, 2, 4, 4);
+
+    private static final TileRect SOUTH_WEST_GATE = new TileRect(183, 23, 4, 4);
+
+    private static final TileRect SOUTH_EAST_GATE = new TileRect(209, 23, 4, 4);
 
     private static final int SQUAD_SIZE = 5;
 
@@ -120,7 +157,7 @@ final class AdventureScenario implements Scenario {
 
     @Override
     public String description() {
-        return "Six biomes east, two points in each, and a squad that holds what it takes until you say forward.";
+        return "Seven biomes east, and a last one you take and then have to hold against what comes in behind you.";
     }
 
     /**
@@ -150,7 +187,10 @@ final class AdventureScenario implements Scenario {
         builder.rect(WALL_TWO, FIRST_ROW, WALL_THREE - WALL_TWO, LAST_ROW, Terrain.ORGANIC);
         builder.rect(WALL_THREE, FIRST_ROW, WALL_FOUR - WALL_THREE, LAST_ROW, Terrain.DUST);
         builder.rect(WALL_FOUR, FIRST_ROW, WALL_FIVE - WALL_FOUR, LAST_ROW, Terrain.MIRE);
-        builder.rect(WALL_FIVE, FIRST_ROW, COLS - WALL_FIVE, LAST_ROW, Terrain.ASH);
+        builder.rect(WALL_FIVE, FIRST_ROW, WALL_SIX - WALL_FIVE, LAST_ROW, Terrain.ASH);
+        // The redoubt is bare dust rather than more ash: you have to be able to see across it, and it
+        // has to read as somewhere else the moment you come through the last gap.
+        builder.rect(WALL_SIX, FIRST_ROW, COLS - WALL_SIX, LAST_ROW, Terrain.DUST);
 
         // Patches of a neighbouring ground inside each biome. They cost nothing - every one of them
         // is walkable and none of them changes a route - and they are most of what stops a biome
@@ -174,6 +214,10 @@ final class AdventureScenario implements Scenario {
         builder.rect(156, 6, 3, 3, Terrain.DUST);
         builder.rect(167, 21, 4, 3, Terrain.MIRE);
         builder.rect(175, 11, 3, 4, Terrain.DUST);
+        builder.rect(188, 6, 4, 3, Terrain.ASH);
+        builder.rect(204, 21, 4, 3, Terrain.ASH);
+        builder.rect(196, 25, 3, 3, Terrain.ASH);
+        builder.rect(210, 9, 3, 4, Terrain.PLAIN);
         paintRegions(builder);
 
         builder.border(1, Terrain.ROCK);
@@ -182,6 +226,7 @@ final class AdventureScenario implements Scenario {
         wall(builder, WALL_THREE, GAP_THREE_ROW);
         wall(builder, WALL_FOUR, GAP_FOUR_ROW);
         wall(builder, WALL_FIVE, GAP_FIVE_ROW);
+        wall(builder, WALL_SIX, GAP_SIX_ROW);
         rock(builder);
         return builder.build();
     }
@@ -253,6 +298,15 @@ final class AdventureScenario implements Scenario {
         builder.rect(167, 24, 2, 2, Terrain.ROCK);
         builder.rect(174, 4, 2, 5, Terrain.ROCK);
         builder.rect(176, 18, 1, 3, Terrain.ROCK);
+
+        // The redoubt: four short pieces, well off the middle and well off the corners. They are
+        // there so a square this wide is not a billiard table and so there is somewhere to put your
+        // back - not to break it into rooms, because what the last biome asks is whether you can hold
+        // ground you can see all of.
+        builder.rect(188, 12, 2, 3, Terrain.ROCK);
+        builder.rect(205, 16, 2, 3, Terrain.ROCK);
+        builder.rect(196, 5, 3, 1, Terrain.ROCK);
+        builder.rect(197, 24, 3, 1, Terrain.ROCK);
     }
 
     /** Bands of shading along the march, three to a biome, so the ground changes under you as you go. */
@@ -284,6 +338,12 @@ final class AdventureScenario implements Scenario {
         point(simulation, map, 142, 23);
         point(simulation, map, 158, 20);
         point(simulation, map, 172, 9);
+        // The last one, and the only one that is more than a point taken: capturing it puts a post
+        // down where it stands and lets go of the schedule the level has been holding back all march.
+        simulation
+                .spawnControlPoint(map.tileCentreX(REDOUBT_COL), map.tileCentreY(REDOUBT_ROW))
+                .getComponent(ControlPoint.class)
+                .holdAfterwards(REDOUBT_WATCH);
 
         // Nests before boulders, and boulders reserve everything already standing: a nest is
         // immovable and so is a boulder, so two of them in the same place is a knot the solver
@@ -303,9 +363,11 @@ final class AdventureScenario implements Scenario {
         nests(simulation, map, UnitKind.GRUNT, 108, 20);
         nests(simulation, map, UnitKind.FROG, 124, 14, 133, 26, 140, 4, 147, 17);
         nests(simulation, map, UnitKind.GRUNT, 136, 9);
-        nests(simulation, map, UnitKind.FROG, 153, 7, 161, 22, 176, 14);
+        nests(simulation, map, UnitKind.FROG, 153, 7, 161, 22, 172, 21);
         nests(simulation, map, UnitKind.BRUTE, 165, 10, 171, 26);
         nests(simulation, map, UnitKind.RUNNER, 158, 3);
+        // None in the redoubt. What comes at the post arrives on a schedule and from the corners; a
+        // hole in the middle of the ground you are holding would be a second fight nobody asked for.
 
         deployPlayerSide(simulation);
 
@@ -462,18 +524,133 @@ final class AdventureScenario implements Scenario {
         // THE ASHES: everything at once, and frogs underneath all of it. What makes this biome the
         // last one is not that the creatures are worse but that the ground is also against you -
         // ruined floor between you and the brutes, and runners through whatever gap is left.
-        units(simulation, map, UnitKind.FROG, 152, 12, 157, 25, 163, 6, 168, 18, 173, 26, 178, 8);
-        units(simulation, map, UnitKind.BRUTE, 154, 4, 160, 15, 166, 27, 172, 13, 177, 24);
-        units(simulation, map, UnitKind.SPITTER, 153, 19, 160, 9, 170, 5, 175, 24);
-        units(simulation, map, UnitKind.RUNNER, 152, 3, 161, 27, 168, 11, 177, 15);
-        grunts(simulation, map, 156, 22, 165, 17, 174, 3);
-        barrels(simulation, map, 158, 12, 167, 8, 173, 22);
+        units(simulation, map, UnitKind.FROG, 152, 12, 157, 25, 163, 6, 168, 18, 172, 26, 166, 8);
+        units(simulation, map, UnitKind.BRUTE, 154, 4, 160, 15, 166, 27, 172, 11, 172, 24);
+        units(simulation, map, UnitKind.SPITTER, 153, 19, 160, 9, 170, 5, 167, 22);
+        units(simulation, map, UnitKind.RUNNER, 152, 3, 161, 27, 168, 11, 172, 16);
+        grunts(simulation, map, 156, 22, 165, 17, 171, 3);
+        // MORE OF THEM HERE THAN ANYWHERE. The ashes are the last biome you fight through rather than
+        // in, and a barrel is the only thing in the game that answers a brute and three runners at
+        // once - so the ground you are backing across has answers lying on it if you can reach one.
+        // Since G0035 every one of them leaves the ground burning afterwards, which is the other half
+        // of what makes setting one off a decision about where you are standing.
+        barrels(simulation, map, 158, 12, 167, 8, 173, 22, 155, 26, 163, 20, 173, 16, 177, 6, 178, 27);
+        // The first mines on the march, and deliberately only a handful: the ashes are where the
+        // player learns what one is worth before the redoubt hands him a field of them. Nothing on
+        // his side sets one off, so they are his to lay across whatever he is backing away from.
+        mines(simulation, map, 159, 22, 164, 11, 166, 19, 173, 12);
         pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 162, 15);
         pickups(simulation, map, PickupKind.ARMOURY_FLAMER, 171, 4);
 
-        // Points only. Clearing a level this size of everything alive is a different game.
+        redoubt(simulation, map);
+
+        // Both, and the second is what the last biome is for. Points, because clearing a level this
+        // size of everything alive is a different game and a slower one; and the post, because the
+        // ground the march ends on is ground you are told to hold rather than ground you tick off.
+        // The post does not exist until the last point is taken, so this cannot be met early.
         Level level = simulation.level();
         level.require(Objective.CAPTURE_POINTS);
+        level.require(Objective.HOLD_POINT);
+    }
+
+    /**
+     * The last biome: four guns round the ground you take, a minefield in front of the corners, and
+     * a schedule that does not start until you take it.
+     *
+     * <p><strong>Everything here is laid before the fighting rather than during it</strong>, because
+     * the whole of the decision is where you spend the quiet march up to the bar. The guns are far
+     * enough apart that one man cannot work two of them and near enough the post that getting off one
+     * and onto another is a run rather than a journey. The mines sit between the corners and the
+     * middle, where everything that arrives has to cross - and nothing on the player's side sets one
+     * off, so walking out to haul one somewhere better is a real thing to do with the time before the
+     * first wave (G0021).
+     *
+     * <p>The waves come from all four corners, which is the difference between this and the Defend
+     * arena: there is no side to face, so the squad has to be spread and the commander has to choose
+     * which corner he is the answer to. They are held back until the point is taken, so the player
+     * decides when the level's last fight starts.
+     */
+    private static void redoubt(Simulation simulation, TileMap map) {
+        // Four guns round the middle, at the corners of a square rather than on the axes: a gun on
+        // the axis covers one gate, and a gun on a diagonal covers two.
+        turret(simulation, map, REDOUBT_COL - 5, REDOUBT_ROW - 5);
+        turret(simulation, map, REDOUBT_COL + 5, REDOUBT_ROW - 5);
+        turret(simulation, map, REDOUBT_COL - 5, REDOUBT_ROW + 5);
+        turret(simulation, map, REDOUBT_COL + 5, REDOUBT_ROW + 5);
+
+        // Across the approaches from each corner, not around the post: a ring of mines round the
+        // ground you are standing on is a ring you eventually get shoved into.
+        mines(
+                simulation,
+                map,
+                188,
+                7,
+                191,
+                9,
+                186,
+                11,
+                190,
+                5,
+                206,
+                7,
+                203,
+                9,
+                208,
+                11,
+                204,
+                5,
+                188,
+                23,
+                191,
+                21,
+                186,
+                19,
+                190,
+                25,
+                206,
+                23,
+                203,
+                21,
+                208,
+                19,
+                204,
+                25,
+                193,
+                15,
+                201,
+                15,
+                197,
+                10,
+                197,
+                20);
+
+        // Barrels in the open between the guns, where a wave has to come past them.
+        barrels(simulation, map, 192, 12, 202, 12, 192, 18, 202, 18, 197, 7, 197, 23, 185, 15, 209, 15);
+
+        // A gun worth having for the last fight, behind the post rather than in front of it - it is
+        // for the man who loses his in the first wave, not a reward for arriving.
+        pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 194, 15);
+        pickups(simulation, map, PickupKind.ARMOURY_FLAMER, 200, 15);
+
+        // What comes in, and from where. Every lot arrives at a corner, and the corners alternate, so
+        // there is never a side of the square that is safe for long. Runners in among the slow ones
+        // for the reason Defend has them: they arrive first and pull the squad off the line the
+        // brutes are walking up. Held back until the point is taken.
+        simulation
+                .waves()
+                .holdBack()
+                .add(6f, UnitKind.GRUNT, 10, NORTH_WEST_GATE)
+                .add(5f, UnitKind.GRUNT, 10, SOUTH_EAST_GATE)
+                .add(4f, UnitKind.RUNNER, 8, NORTH_EAST_GATE)
+                .add(7f, UnitKind.SPITTER, 5, SOUTH_WEST_GATE)
+                .add(4f, UnitKind.RUNNER, 8, SOUTH_WEST_GATE)
+                .add(8f, UnitKind.BRUTE, 5, NORTH_EAST_GATE)
+                .add(5f, UnitKind.FROG, 6, SOUTH_EAST_GATE)
+                .add(4f, UnitKind.RUNNER, 10, NORTH_WEST_GATE)
+                .add(8f, UnitKind.GRUNT, 12, SOUTH_WEST_GATE)
+                .add(4f, UnitKind.SPITTER, 5, NORTH_WEST_GATE)
+                .add(8f, UnitKind.BRUTE, 6, SOUTH_EAST_GATE)
+                .add(4f, UnitKind.RUNNER, 12, NORTH_EAST_GATE);
     }
 
     /**
@@ -535,6 +712,17 @@ final class AdventureScenario implements Scenario {
         for (int i = 0; i < colsAndRows.length; i += 2) {
             simulation.spawnRabbit(map.tileCentreX(colsAndRows[i]), map.tileCentreY(colsAndRows[i + 1]));
         }
+    }
+
+    /** A run of col/row pairs, for the things that lie in the open waiting to be walked into. */
+    private static void mines(Simulation simulation, TileMap map, int... colsAndRows) {
+        for (int i = 0; i < colsAndRows.length; i += 2) {
+            simulation.spawnMine(map.tileCentreX(colsAndRows[i]), map.tileCentreY(colsAndRows[i + 1]));
+        }
+    }
+
+    private static void turret(Simulation simulation, TileMap map, int col, int row) {
+        simulation.spawnTurret(map.tileCentreX(col), map.tileCentreY(row));
     }
 
     private static void barrels(Simulation simulation, TileMap map, int... colsAndRows) {

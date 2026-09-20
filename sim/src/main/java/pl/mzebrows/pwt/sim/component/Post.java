@@ -23,14 +23,30 @@ public final class Post implements Component, Pool.Poolable {
     /** How wide the ground it marks is, in world units. What the renderer measures its circle from. */
     public float radius;
 
-    /** Sets how big it is and returns this component, for fluent spawning. */
-    public Post set(float newRadius) {
+    /**
+     * How far around it has to be clear before it counts as held, in world units.
+     *
+     * <p><strong>Zero means the whole level</strong>, which is what a level the size of one arena
+     * means by it and is why nothing had to name this until a level was bigger than a fight. On a
+     * march seven screens long, "nothing hostile standing" cannot mean the march - there are nests
+     * still working four biomes back - so a post on a level like that names the ground it is
+     * responsible for, and the objective asks about that ground rather than about the level.
+     *
+     * <p>It is deliberately not the capture radius above: what a post is worth is measured by what is
+     * standing anywhere near it, and what you stand on to hold it is a few strides across.
+     */
+    public float watchRadius;
+
+    /** Sets how big it is and how far it watches, returning this component, for fluent spawning. */
+    public Post set(float newRadius, float newWatchRadius) {
         this.radius = newRadius;
+        this.watchRadius = newWatchRadius;
         return this;
     }
 
     @Override
     public void reset() {
         radius = 0f;
+        watchRadius = 0f;
     }
 }

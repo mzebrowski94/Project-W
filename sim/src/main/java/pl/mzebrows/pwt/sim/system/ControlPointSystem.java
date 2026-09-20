@@ -7,10 +7,12 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Side;
 
 /**
@@ -29,6 +31,12 @@ import pl.mzebrows.pwt.sim.def.Side;
  * that is a new attempt and it is loud again. The shout itself is {@link Rouse}'s, shared with the
  * nest - a point being taken and a nest being hit mean the same thing to a creature.
  *
+ * <p><strong>One point on a march does more than be taken.</strong> The last one turns into ground
+ * the level then tells you to hold: a post goes down where it stands and whatever the level was
+ * holding back is let go, on the tick the bar fills. It is here rather than in a system of its own
+ * because it is the same event this one already decides, and it is on the point rather than on the
+ * level because which ground does it is a fact about that ground.
+ *
  * <p>Progress is not published here. {@code AppearanceSystem} is the only writer of what an entity
  * looks like, and a point filling up rides the same {@code charge} channel as a unit part-way to
  * evolving - one tell, drawn one way, wherever it appears.
@@ -41,10 +49,18 @@ public final class ControlPointSystem extends EntitySystem {
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
+    private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
+
+    private final Spawner spawner;
 
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> holders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
+
+    public ControlPointSystem(Spawner spawner) {
+        this.spawner = spawner;
+    }
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -54,6 +70,7 @@ public final class ControlPointSystem extends EntitySystem {
                 engine.getEntitiesFor(Family.all(Faction.class, Position.class).get());
         watchers = engine.getEntitiesFor(
                 Family.all(Perception.class, Position.class).get());
+        levels = engine.getEntitiesFor(Family.all(Waves.class).get());
     }
 
     @Override
@@ -75,12 +92,34 @@ public final class ControlPointSystem extends EntitySystem {
             if (point.heldSeconds >= point.captureSeconds) {
                 point.captured = true;
                 point.heldSeconds = point.captureSeconds;
+                if (point.holdsAfterwards) {
+                    standTo(point, at);
+                }
             }
             if (starting) {
                 // Through the one place that answers "there is trouble over there", shared with the
                 // nest: two copies of it is one chance for them to drift (G0016).
                 Rouse.within(watchers, at.x, at.y, point.aggroRadius);
             }
+        }
+    }
+
+    /**
+     * Turns ground that has just been taken into ground the level tells you to hold.
+     *
+     * <p>Two things, once, on the tick the bar fills: a post goes down where the point is, and
+     * whatever the level was holding back is let go. Both wait until now rather than being on the
+     * field from the first tick, and that is the decision rather than an implementation detail - a
+     * post existing from the start sends every creature that has noticed nobody walking at it from
+     * seven screens away, and turns "forward" round for the whole march (G0027).
+     *
+     * <p>The post is spawned rather than woken because there is nothing to wake: a post is a goal
+     * and has no state, so "there is one now" is the whole of the change.
+     */
+    private void standTo(ControlPoint point, Position at) {
+        spawner.spawnPost(at.x, at.y, point.watchRadius);
+        for (int i = 0; i < levels.size(); i++) {
+            WAVES.get(levels.get(i)).arm();
         }
     }
 

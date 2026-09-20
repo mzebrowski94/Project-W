@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Level;
+import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Objective;
@@ -37,6 +38,8 @@ public final class ObjectiveSystem extends EntitySystem {
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
+    private static final ComponentMapper<Post> POST = ComponentMapper.getFor(Post.class);
+    private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
 
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> enemies = new ImmutableArray<>(new Array<>());
@@ -46,9 +49,9 @@ public final class ObjectiveSystem extends EntitySystem {
     @Override
     public void addedToEngine(Engine engine) {
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
-        enemies = engine.getEntitiesFor(Family.all(Enemy.class).get());
+        enemies = engine.getEntitiesFor(Family.all(Enemy.class, Position.class).get());
         points = engine.getEntitiesFor(Family.all(ControlPoint.class).get());
-        posts = engine.getEntitiesFor(Family.all(Post.class).get());
+        posts = engine.getEntitiesFor(Family.all(Post.class, Position.class).get());
     }
 
     @Override
@@ -95,12 +98,47 @@ public final class ObjectiveSystem extends EntitySystem {
      * whole shape of a defence: an empty field means you have won if there is nothing left to come,
      * and means you are between waves if there is. The schedule is level state exactly as the
      * objectives are, so this is still recomputed from scratch every tick and latches nothing.
+     *
+     * <p><strong>"Nothing hostile standing" is measured against the post's own watch</strong>, and
+     * the whole level only when it names none. A level the size of one fight means the same thing
+     * either way; a march seven screens long does not, because there are nests still working four
+     * biomes back and the ground the level told you to hold is not the ground they are standing on.
      */
     private boolean postHeld(Entity level, boolean cleared) {
-        if (posts.size() == 0) {
+        if (posts.size() == 0 || (WAVES.has(level) && !WAVES.get(level).spent())) {
             return false;
         }
-        return cleared && (!WAVES.has(level) || WAVES.get(level).spent());
+        for (int i = 0; i < posts.size(); i++) {
+            Entity post = posts.get(i);
+            float watch = POST.get(post).watchRadius;
+            if (watch <= 0f ? !cleared : !clearAround(POSITION.get(post), watch)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Nothing hostile still on its feet within the ground this post is responsible for.
+     *
+     * <p>Only asked of a post that names a watch. One that does not is a level the size of a fight,
+     * where the whole field <em>is</em> the ground around the post and the cheaper count above says
+     * the same thing.
+     */
+    private boolean clearAround(Position at, float watch) {
+        for (int i = 0; i < enemies.size(); i++) {
+            Entity enemy = enemies.get(i);
+            if (DYING.has(enemy) && DYING.get(enemy).begun) {
+                continue;
+            }
+            Position where = POSITION.get(enemy);
+            float dx = where.x - at.x;
+            float dy = where.y - at.y;
+            if (dx * dx + dy * dy <= watch * watch) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Every point taken - and a map with no points on it has not taken them all. */

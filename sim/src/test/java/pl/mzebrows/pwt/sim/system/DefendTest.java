@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.system;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_PATCH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.harmless;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -42,6 +43,9 @@ class DefendTest {
     private static final float OUT_OF_THE_WAY = 10f;
 
     private static final float SECONDS = 1f;
+
+    /** How far a post that names its own ground watches, in the fixture arena. */
+    private static final float WATCH = 20f;
 
     private static final TileRect FAR_CORNER = new TileRect(16, 16, 2, 2);
 
@@ -122,6 +126,53 @@ class DefendTest {
         assertThat(beforeTheWave).isFalse();
         assertThat(duringTheWave).isFalse();
         assertThat(level.isMet(Objective.HOLD_POINT)).isTrue();
+    }
+
+    /**
+     * A post that names a watch asks about its own ground rather than about the level.
+     *
+     * <p>The two are the same thing on a level the size of one fight, which is why nothing had to say
+     * it until a level was a march: seven screens with nests still working four biomes back can never
+     * be clear, so a post there that meant "the level" would be an objective that could not be met.
+     */
+    @Test
+    void holdsAPostWhoseOwnGroundIsClearWithSomethingStillAliveAcrossTheLevel() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(POST_X, LANE);
+        simulation.spawnPost(POST_X, LANE, WATCH);
+        simulation.level().require(Objective.HOLD_POINT);
+        simulation.spawnUnit(UnitKind.GRUNT, POST_X + WATCH * 2f, LANE);
+
+        steps(simulation, 3);
+
+        assertThat(simulation.level().isMet(Objective.HOLD_POINT)).isTrue();
+    }
+
+    @Test
+    void refusesToHoldAPostWithSomethingStandingOnItsOwnGround() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(POST_X, LANE);
+        simulation.spawnPost(POST_X, LANE, WATCH);
+        simulation.level().require(Objective.HOLD_POINT);
+        simulation.spawnUnit(UnitKind.GRUNT, POST_X + WATCH * 0.5f, LANE);
+
+        steps(simulation, 3);
+
+        assertThat(simulation.level().isMet(Objective.HOLD_POINT)).isFalse();
+    }
+
+    /** A post that names no watch still means the whole level, which is every level built so far. */
+    @Test
+    void stillMeansTheWholeLevelForAPostThatNamesNoWatch() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(POST_X, LANE);
+        simulation.spawnPost(POST_X, LANE);
+        simulation.level().require(Objective.HOLD_POINT);
+        simulation.spawnUnit(UnitKind.GRUNT, EAST, LANE);
+
+        steps(simulation, 3);
+
+        assertThat(simulation.level().isMet(Objective.HOLD_POINT)).isFalse();
     }
 
     @Test

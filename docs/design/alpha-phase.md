@@ -113,6 +113,9 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | Troopers roam to seeded random points when nothing is left to take | Something that actually searches - a sweep, a last-known-position, a patrol route. Roaming is enough to see the squad clear a map and is not a decision about how they search. |
 | A unit that is filling up is drawn as a brighter core inside its circle | Whatever the art does with it. `Appearance.charge` is the hook and is already published as a fraction, so the renderer decides and the simulation never learns how it is shown. |
 | **Grenades are unlimited.** No count, no pickup, no cost but the cooldown. | Whatever ammunition turns out to be. The throw itself is designed (G0019); how many you have is not, and a count is one more number in `Thrower` rather than a change to any of it. |
+| **Fire is a handful of dull orange-red circles that swell, sit and collapse**, with a brightened core that shrinks as each one burns down | Whatever burning ground looks like. The circles, the lives, the ramps and the side are all real and so is the rule that the body is the drawing; what is missing is flame. The colour is deliberately off the blast's amber and pulled towards the barrel's orange-red - the flash lasts a quarter of a second and this is there for ten, and a player who reads one as the other walks into it. |
+| **A mine is a small dark green dot, and its fuse a near-black core that flashes faster as it runs out** | Whatever a mine looks like. The trigger, the fuse, the latch and the chain are all real. The near-black is the one thing on the `charge` channel that is darker than what it is drawn on, deliberately: everything else that fills up is good news or a clock, and this is the only one that is about to go off. `Appearance.chargeLook` is the hook and is already published, so the renderer decides. |
+| Turrets and mines in the redoubt are placed by hand, and its waves are a list written out by hand in `Adventure` | Whatever a level does about all three. Same standing as hand-laid rock and the `Defend` schedule beside it: the gun, the mine, the post and the schedule are all real, and where a level puts them is content that generated fragments will eventually say. |
 | A blast is a coloured circle with a core that collapses as it fades | The explosion animation. The radius, the timing, the one lethal tick and the shake are all real; only what plays inside the circle is missing. |
 | **A turret is a blue square, brighter when somebody is on it, and the man on it is not drawn at all.** | Whatever a gun emplacement and its crew look like. The square is the only shape in the game that is not a circle, and it is deliberate: everything alive is round and the one piece of equipment is not. `Appearance.State.CREWED` and `ABOARD` are the hooks and are already published, so the renderer decides. |
 | A gun's heat is an arc of straight pieces drawn over whatever is holding it, amber and then red | Whatever the art does with it. The bar, the stop and the two colours are real and published on `Appearance.heat` and `.overheated`; the arc is drawn in pieces only because `ShapeRenderer`'s own arc is a pie slice. |
@@ -133,8 +136,8 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 - **Avoidance looks at everything on the field, once per unit.** There is no broadphase for it: the
   collision grid is built after the AI has run, so a unit scores every other body every tick. At a few
   dozen entities that is free. Past a couple of hundred it wants either a second grid or the collision
-  grid moved earlier in the tick, and it will show up as frame time rather than as a bug. **`Defend` is
-  the level that will find out**: it sends a hundred and seventeen aliens in fourteen waves, and if the
+  grid moved earlier in the tick, and it will show up as frame time rather than as a bug. **`Defend` and the `Adventure`'s redoubt are
+  the levels that will find out**: each sends about a hundred aliens in a dozen-odd waves, and if the
   squad is losing, sixty of them can be standing at once. Watch the frame time on `F1` there before
   reaching for a profiler anywhere else.
 - **A provoked unit walks straight at what provoked it, and so does anything hunting somebody who is
@@ -142,6 +145,12 @@ Behaviour that looks like design and is not. Each line names what replaces it.
   units has a goal of its own - the per-unit cost a flow field exists to avoid. One that sets off from
   behind a wall walks into the wall and mills about. At the ranges a fight happens at that is rare; it
   stops being acceptable the moment something can be summoned from across the level.
+- **Every mine scores every alien on the field, once per tick,** to decide whether anything has come
+  near enough. A short list against a long one rather than a pair loop, the same trade
+  `ControlPointSystem` already makes for the same reason - but the redoubt lays twenty-four of them
+  and can have sixty aliens standing at once, so it is the second thing on this page that level will
+  find out about, after the avoidance scan below. It wants the same answer as that one if either ever
+  needs a broadphase.
 - **A sight line is blocked by rock and by nothing else.** Obstacles, corpses and other units do not
   hide anything, because they are entities and the test is a pure function of terrain (ADR 0009).
   Blocking on them needs the collision grid, which is built *after* the AI has run. Same asymmetry as

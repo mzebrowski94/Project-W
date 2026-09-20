@@ -37,11 +37,36 @@ public final class ControlPoint implements Component, Pool.Poolable {
     /** Whether it has been taken. One way, for now. */
     public boolean captured;
 
+    /**
+     * Whether taking this one turns it into ground the level then tells you to hold.
+     *
+     * <p>False on every point on every level built so far, which is what "take it and move on"
+     * looks like as data. True on one: the last ground of a march, where capturing is not the end of
+     * the level but the thing that starts the last fight of it. A post is put down where it stands
+     * and whatever the level was holding back is let go.
+     *
+     * <p>It is on the point rather than on the level because <em>which</em> ground does this is a
+     * fact about that ground - and because a post that existed from the first tick would send every
+     * sleeping creature on the level walking at it, and would turn "forward" round for the whole
+     * march (G0027).
+     */
+    public boolean holdsAfterwards;
+
+    /** How far around the post it becomes must be clear, in world units. Zero means the whole level. */
+    public float watchRadius;
+
     /** Sets what it takes to hold this one, and returns this component, for fluent spawning. */
     public ControlPoint set(float newRadius, float newCaptureSeconds, float newAggroRadius) {
         this.radius = newRadius;
         this.captureSeconds = newCaptureSeconds;
         this.aggroRadius = newAggroRadius;
+        return this;
+    }
+
+    /** Makes this the point a march ends on: taking it puts a post down and starts what was held back. */
+    public ControlPoint holdAfterwards(float newWatchRadius) {
+        this.holdsAfterwards = true;
+        this.watchRadius = newWatchRadius;
         return this;
     }
 
@@ -69,5 +94,7 @@ public final class ControlPoint implements Component, Pool.Poolable {
         aggroRadius = 0f;
         heldSeconds = 0f;
         captured = false;
+        holdsAfterwards = false;
+        watchRadius = 0f;
     }
 }

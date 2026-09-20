@@ -138,6 +138,9 @@ public record GraphicConfig(
             case CHARGED_SPIT -> "ff8ce0ff";
             case VENOM -> "aef23cff";
             case SLICK -> "5c7a1eff";
+            case FIRE -> "c4521cff";
+            case MINE -> "2f5d3aff";
+            case FUSE -> "0a0a0aff";
             case STRIKE -> "ffffffff";
             case GRENADE -> "c07820ff";
             case BLAST -> "ffb03aff";

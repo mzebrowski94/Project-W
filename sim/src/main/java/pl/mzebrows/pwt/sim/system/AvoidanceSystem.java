@@ -39,6 +39,12 @@ import pl.mzebrows.pwt.sim.def.Side;
  * berth as a rock by everything that would only set it off, and walked straight at by anything that
  * can swallow one. Wariness is about the pair, not about the thing.
  *
+ * <p><strong>Solid is not the whole of what is worth going round.</strong> A wall is avoided because
+ * walking into it is a failure; burning ground is avoided because walking into it is a casualty, and
+ * nothing is pushed by it at all; a mine is solid and is deliberately not avoided, because the whole
+ * of what a mine is is something the other side walks into. The collider carries the answer, decided
+ * where the thing was spawned, so this still asks no question about what anything is.
+ *
  * <p><strong>It never avoids the other side.</strong> A hazard on an opposing side is what the unit is
  * trying to reach, and a grunt that swerved around the commander would never land a blow. Everything
  * else solid is avoided, its own kind and the bodies of its own kind included.
@@ -175,7 +181,7 @@ public final class AvoidanceSystem extends EntitySystem {
         for (int i = 0; i < hazards.size(); i++) {
             Entity hazard = hazards.get(i);
             if (Objects.equals(hazard, entity)
-                    || !COLLIDER.get(hazard).solid
+                    || !COLLIDER.get(hazard).avoided
                     || (PICKUP.has(hazard) && !shunnedBy(entity, hazard))
                     || opposed(side, hazard)) {
                 continue;

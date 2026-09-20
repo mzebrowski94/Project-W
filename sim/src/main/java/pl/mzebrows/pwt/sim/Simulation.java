@@ -40,6 +40,7 @@ import pl.mzebrows.pwt.sim.system.EvolutionSystem;
 import pl.mzebrows.pwt.sim.system.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.HopSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
+import pl.mzebrows.pwt.sim.system.MineSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
 import pl.mzebrows.pwt.sim.system.NavigationSystem;
 import pl.mzebrows.pwt.sim.system.NestSystem;
@@ -188,6 +189,12 @@ public final class Simulation {
         engine.addSystem(new CasualtySystem(config, spawner));
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
+        // Immediately before the blast, and that is the whole of why it is here: the solver has
+        // settled every position, so "near enough to set one off" means where things actually ended
+        // up; and a fuse that runs out this tick reaches the death-reaction window below on this
+        // tick rather than being owed to the next one. It spawns nothing itself - a mine explodes by
+        // dying, through the one reaction everything that explodes uses (G0018).
+        engine.addSystem(new MineSystem(spawner));
         engine.addSystem(new BlastSystem(map, spawner));
         // Beside the blast, and for the same reason: everything that leaves something behind does so
         // by dying (G0018), so this belongs in the window between a thing being marked dead and
@@ -211,7 +218,7 @@ public final class Simulation {
         // before the reaper takes it. Before ObjectiveSystem for the reason WaveSystem is - a level
         // whose last nest dies this tick must not read as clear for the tick before its brood lands.
         engine.addSystem(new NestSystem(config, map, spawner, Rng.stream(config.seed(), RngStream.NEST)));
-        engine.addSystem(new ControlPointSystem());
+        engine.addSystem(new ControlPointSystem(spawner));
         engine.addSystem(new ObjectiveSystem());
         engine.addSystem(new AppearanceSystem(config));
         engine.addSystem(new ReaperSystem());
@@ -340,6 +347,11 @@ public final class Simulation {
         return spawner.spawnPost(x, y);
     }
 
+    /** Spawns a post that watches only the ground around it. Zero watches the whole level. */
+    public Entity spawnPost(float x, float y, float watchRadius) {
+        return spawner.spawnPost(x, y, watchRadius);
+    }
+
     /** Spawns ground a squad takes by standing on it. Spawn these before whatever stands on them. */
     public Entity spawnControlPoint(float x, float y) {
         return spawner.spawnControlPoint(x, y);
@@ -386,6 +398,11 @@ public final class Simulation {
     /** Spawns an explosive barrel: gunfire or something hungry sets it off. */
     public Entity spawnBarrel(float x, float y) {
         return spawner.spawnBarrel(x, y);
+    }
+
+    /** Spawns a mine: it starts ticking when something on the other side walks into it. */
+    public Entity spawnMine(float x, float y) {
+        return spawner.spawnMine(x, y);
     }
 
     /** Spawns something lying on the field for the first thing that touches it. */

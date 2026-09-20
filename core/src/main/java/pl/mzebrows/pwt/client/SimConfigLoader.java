@@ -54,9 +54,11 @@ public final class SimConfigLoader {
                 chances,
                 melee(properties, defaults.melee()),
                 blast(properties, defaults.blast()),
+                fire(properties, defaults.fire()),
                 grenade(properties, defaults.grenade()),
                 rabbit(properties, defaults.rabbit()),
                 barrel(properties, defaults.barrel()),
+                mine(properties, defaults.mine()),
                 casualty(properties, defaults.casualty()),
                 action(properties, defaults.action()),
                 nest(properties, defaults.nest()),
@@ -312,13 +314,21 @@ public final class SimConfigLoader {
      * blobs is a gun that leaves nothing, which is every gun but one.
      */
     private static SlickDef slicks(GameProperties properties, String prefix, SlickDef defaults) {
+        float seconds = properties.getFloat(prefix + ".slick.seconds", defaults.seconds());
         return new SlickDef(
                 properties.getInt(prefix + ".slick.blobs", defaults.blobs()),
                 properties.getFloat(prefix + ".slick.radius", defaults.radius()),
                 properties.getFloat(prefix + ".slick.spread", defaults.spread()),
-                properties.getFloat(prefix + ".slick.seconds", defaults.seconds()),
+                seconds,
+                // A gun that names one life gives every circle of its spatter the same one, which is
+                // what ruined ground has always done. Naming a second is what makes a burst go out
+                // raggedly instead of all at once.
+                properties.getFloat(prefix + ".slick.secondsMax", Math.max(seconds, defaults.secondsMax())),
                 properties.getFloat(prefix + ".slick.damage", defaults.damage()),
-                properties.getFloat(prefix + ".slick.victimInvulnerableSeconds", defaults.victimInvulnerableSeconds()));
+                properties.getFloat(prefix + ".slick.victimInvulnerableSeconds", defaults.victimInvulnerableSeconds()),
+                properties.getFloat(prefix + ".slick.growFraction", defaults.growFraction()),
+                properties.getFloat(prefix + ".slick.fadeFraction", defaults.fadeFraction()),
+                defaults.look());
     }
 
     private static SimConfig.MeleeConfig melee(GameProperties properties, SimConfig.MeleeConfig defaults) {
@@ -336,6 +346,24 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.melee.clinchCarryDecay", defaults.clinchCarryDecay()),
                 properties.getFloat("sim.melee.knockbackSpeed", defaults.knockbackSpeed()),
                 properties.getFloat("sim.melee.knockbackDecay", defaults.knockbackDecay()));
+    }
+
+    /**
+     * What an explosion leaves burning, under {@code sim.fire}. Every size here is a fraction of the
+     * blast's own radius, so a new explosive gets fire without naming a number (G0035).
+     */
+    private static SimConfig.FireConfig fire(GameProperties properties, SimConfig.FireConfig defaults) {
+        float minSeconds = properties.getFloat("sim.fire.minSeconds", defaults.minSeconds());
+        return new SimConfig.FireConfig(
+                properties.getInt("sim.fire.blobs", defaults.blobs()),
+                properties.getFloat("sim.fire.radiusFactor", defaults.radiusFactor()),
+                properties.getFloat("sim.fire.spreadFactor", defaults.spreadFactor()),
+                minSeconds,
+                properties.getFloat("sim.fire.maxSeconds", Math.max(minSeconds, defaults.maxSeconds())),
+                properties.getFloat("sim.fire.damage", defaults.damage()),
+                properties.getFloat("sim.fire.victimInvulnerableSeconds", defaults.victimInvulnerableSeconds()),
+                properties.getFloat("sim.fire.growFraction", defaults.growFraction()),
+                properties.getFloat("sim.fire.fadeFraction", defaults.fadeFraction()));
     }
 
     /** What an explosion does, under {@code sim.blast}. The radius belongs to whatever makes one. */
@@ -467,6 +495,18 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.action.dragSpeedFactor", defaults.dragSpeedFactor()),
                 properties.getFloat("sim.action.dragLateralFactor", defaults.dragLateralFactor()),
                 properties.getFloat("sim.action.dragGap", defaults.dragGap()));
+    }
+
+    /** The mine, under {@code sim.mine}. The barrel's opposite number: it decides its own moment. */
+    private static SimConfig.MineConfig mine(GameProperties properties, SimConfig.MineConfig defaults) {
+        return new SimConfig.MineConfig(
+                properties.getFloat("sim.mine.radius", defaults.radius()),
+                properties.getFloat("sim.mine.triggerRadius", defaults.triggerRadius()),
+                properties.getFloat("sim.mine.fuseSeconds", defaults.fuseSeconds()),
+                properties.getFloat("sim.mine.health", defaults.health()),
+                properties.getFloat("sim.mine.blastRadius", defaults.blastRadius()),
+                properties.getFloat("sim.mine.flashFromSeconds", defaults.flashFromSeconds()),
+                properties.getFloat("sim.mine.flashToSeconds", defaults.flashToSeconds()));
     }
 
     /** The other pickup with numbers of its own, because it is the one that goes off. */

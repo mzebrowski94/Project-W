@@ -43,6 +43,7 @@ mechanic you are about to write appears there, it has already been rejected and 
 | [G0032](G0032-a-gun-may-have-a-reach.md) | A gun may have a reach, a cone and a pellet count; an aim may not. | a range or clamp on the aim; a range on the unit for the commander; damage falloff; a hitscan short gun; a cone-shaped overlap query; `pellets` on the shooter; expiring a shot by seconds | accepted |
 | [G0033](G0033-a-pack-spreads-by-moving-the-goal.md) | A pack spreads by each creature walking at a point beside the man, on a side seeded from where it was spawned. | a separation force or boids; a flow field per creature; rolling the side; slot assignment round the target; an offset that holds all the way in; the numbers on `AvoidanceDef` | accepted |
 | [G0034](G0034-a-slick-is-ground-not-an-explosion.md) | A slick is ground with a side and a life, not a blast that lingers. | a blast that lingers; damage that ticks or falls off; a slick on nobody's side; a system that asks whether something is a slick; one big circle instead of a spatter; a slick that finishes whatever is already lying in it | accepted |
+| [G0035](G0035-fire-is-a-neutral-slick.md) | Fire is a slick with a different declaration, left by the blast dying: no side, steered around, and it swells and collapses. Narrows G0034. | a `Fire` component and system; a blast that lingers; fire that spares whoever caused it; fire on the flamethrower; a growth shape per explosive; avoidance asking whether something is a slick | accepted; narrows G0034's side rule to a declaration |
 
 ## When to write one
 

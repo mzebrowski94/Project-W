@@ -82,6 +82,15 @@ public enum Look {
      * client's business and settled there (G0003).
      */
     SLICK,
+    /**
+     * One circle of ground still burning after an explosion.
+     *
+     * <p>Kin to the blast it came out of and darker, because it is ground rather than a thing
+     * standing on it - the same relationship a slick has to the venom that made it. It swells and
+     * collapses and it is on nobody's side, so what it has to read as at a glance is <em>not walkable
+     * yet</em>, unmistakably, from across a fight somebody else is having.
+     */
+    FIRE,
     STRIKE,
     /** Something thrown that bounces and goes off where it stops. */
     GRENADE,
@@ -107,6 +116,24 @@ public enum Look {
     ARMOURY_SHOTGUN,
     /** Something on the field that goes off when it is killed. */
     BARREL,
+    /**
+     * A small thing lying in the open that goes off when the other side walks into it.
+     *
+     * <p>Deliberately dull and deliberately small: a mine the player can see from across the level
+     * is a mine the other side would obviously never walk into, and it has to read as something
+     * lying on the ground rather than as something standing on it. What makes one dangerous is the
+     * {@link #FUSE} once it has started, not the dot before it.
+     */
+    MINE,
+    /**
+     * The fuse on a mine that has started ticking.
+     *
+     * <p>A look rather than a colour setting, for the reason {@link #MENDING} is one: the renderer
+     * maps a look to a colour and asks nothing else (G0003). It rides the charge channel and is the
+     * only thing on it that is darker than what it is drawn on - everything else that fills up is
+     * brightened, and a thing that is about to kill you must not look like a thing filling up.
+     */
+    FUSE,
     /** Alien food on legs. */
     RABBIT,
     /**

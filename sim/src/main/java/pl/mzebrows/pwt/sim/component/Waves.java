@@ -30,6 +30,16 @@ public final class Waves implements Component, Pool.Poolable {
     /** How far down the list we are. */
     private int sent;
 
+    /**
+     * Whether the schedule has started at all.
+     *
+     * <p>True unless a level says otherwise, because every level that has waves has had them running
+     * from the first tick. A level that holds them back is one where the fighting starts when the
+     * player does something - taking the ground he is then told to hold - and until he does, the
+     * list is neither running nor spent, so the objective that asks whether it is spent says no.
+     */
+    private boolean armed = true;
+
     /** Adds one to the end of the list, for a scenario describing what it is going to throw at you. */
     public Waves add(float afterSeconds, UnitKind kind, int count, TileRect where) {
         return add(new Wave(afterSeconds, kind, count, where));
@@ -42,6 +52,27 @@ public final class Waves implements Component, Pool.Poolable {
         }
         pending.add(wave);
         return this;
+    }
+
+    /**
+     * Holds the whole schedule back until something arms it.
+     *
+     * <p>Called by a scenario while it is describing what it is going to throw at you, so a level
+     * that waits reads as one line beside the waves rather than as a flag somebody has to find.
+     */
+    public Waves holdBack() {
+        armed = false;
+        return this;
+    }
+
+    /** Starts the schedule. Does nothing to one that is already running. */
+    public void arm() {
+        armed = true;
+    }
+
+    /** Whether the clock is running at all. */
+    public boolean armed() {
+        return armed;
     }
 
     /** How many have been sent in so far. Published for the interface: pillar 5 covers the clock too. */
@@ -75,5 +106,6 @@ public final class Waves implements Component, Pool.Poolable {
         pending.clear();
         untilNext = 0f;
         sent = 0;
+        armed = true;
     }
 }

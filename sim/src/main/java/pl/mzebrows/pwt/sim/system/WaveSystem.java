@@ -26,6 +26,10 @@ import pl.mzebrows.pwt.sim.def.Wave;
  * the same {@code Scatter} that puts the squad down, for the same reason: a line of aliens arriving on
  * tile centres reads as a grid, and the grid is a unit of construction rather than of play.
  *
+ * <p><strong>A level may hold its schedule back.</strong> Nothing arrives until something arms it,
+ * which on a march is the moment the squad takes the ground it is then told to hold - so the last
+ * fight is one the player starts rather than one that is already running when he walks in.
+ *
  * <p>It draws from a stream of its own, so re-tuning when a wave arrives never reshuffles where the
  * squad roams or how a spitter aims (pillar 6).
  *
@@ -60,7 +64,7 @@ public final class WaveSystem extends EntitySystem {
     public void update(float deltaTime) {
         for (int i = 0; i < levels.size(); i++) {
             Waves waves = WAVES.get(levels.get(i));
-            if (waves.spent()) {
+            if (!waves.armed() || waves.spent()) {
                 continue;
             }
             waves.untilNext -= deltaTime;

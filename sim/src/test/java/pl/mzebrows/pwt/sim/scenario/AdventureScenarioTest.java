@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -25,10 +26,14 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  * The claims this level makes that a glance at it would not catch.
  *
  * <p>{@code ScenariosTest} already says nothing is inside rock and everything is reachable, for every
- * scenario there is. What is only true of this one is its <strong>shape</strong>: six biomes in
- * order, two points in each, and five walls whose gaps are the only way east. Every one of those is
- * silent when it breaks - move a wall a tile and the level still plays, it has just stopped being a
- * march and become a corridor with scenery.
+ * scenario there is. What is only true of this one is its <strong>shape</strong>: seven biomes in
+ * order, two points in each of the six you march through, and six walls whose gaps are the only way
+ * east. Every one of those is silent when it breaks - move a wall a tile and the level still plays,
+ * it has just stopped being a march and become a corridor with scenery.
+ *
+ * <p>The seventh is the exception to most of it, and is the only one with claims of its own: one
+ * point rather than two, no nests at all, and a schedule that does not start until that point is
+ * taken.
  */
 @SuppressWarnings("EnumOrdinal")
 class AdventureScenarioTest {
@@ -36,14 +41,17 @@ class AdventureScenarioTest {
     private static final String NAME = "Adventure";
 
     /** Where each biome ends, in tile columns. The bands the whole level is built out of. */
-    private static final int[] BIOME_END = {30, 60, 90, 120, 150, 180};
+    private static final int[] BIOME_END = {30, 60, 90, 120, 150, 180, 216};
+
+    /** The last biome: the one that is held rather than marched through. */
+    private static final int REDOUBT = BIOME_END.length - 1;
 
     /** Every kind of weapons cache there is. One per gun, and this list must grow with that enum. */
     private static final EnumSet<PickupKind> CACHES =
             EnumSet.of(PickupKind.ARMOURY_RAILGUN, PickupKind.ARMOURY_FLAMER, PickupKind.ARMOURY_SHOTGUN);
 
     @Test
-    void laysOutTwoPointsInEveryBiome() {
+    void laysOutTwoPointsInEveryBiomeItMarchesThrough() {
         List<Position> points = pointsOf(world());
         TileMap map = world().map();
 
@@ -52,8 +60,47 @@ class AdventureScenarioTest {
             perBiome[biomeOf(map.colAt(point.x))]++;
         }
 
-        assertThat(points).hasSize(2 * BIOME_END.length);
-        assertThat(perBiome).containsOnly(2);
+        assertThat(points).hasSize(2 * REDOUBT + 1);
+        assertThat(perBiome).containsExactly(2, 2, 2, 2, 2, 2, 1);
+    }
+
+    /**
+     * One point in the middle of the redoubt, and taking it is what starts the last fight. The claim
+     * worth pinning is not that the biome has a point - it is that this point is different from the
+     * twelve behind it, which is invisible from anywhere except the one field that says so.
+     */
+    @Test
+    void endsOnGroundThatIsHeldRatherThanMerelyTaken() {
+        Simulation world = world();
+        TileMap map = world.map();
+
+        List<ControlPoint> held = new ArrayList<>();
+        for (Entity entity : world.engine()
+                .getEntitiesFor(Family.all(ControlPoint.class, Position.class).get())) {
+            if (entity.getComponent(ControlPoint.class).holdsAfterwards) {
+                held.add(entity.getComponent(ControlPoint.class));
+                assertThat(biomeOf(map.colAt(entity.getComponent(Position.class).x)))
+                        .isEqualTo(REDOUBT);
+            }
+        }
+
+        assertThat(held).hasSize(1);
+        assertThat(held.get(0).watchRadius).isPositive();
+    }
+
+    /**
+     * Nothing is coming until he takes it, and there is nowhere to hold until he does. Both halves
+     * matter: a post on the field from the first tick would send every creature that has noticed
+     * nobody walking at it from seven screens away, and would turn "forward" round for the whole
+     * march (G0027).
+     */
+    @Test
+    void sendsNothingInAndNamesNoPostUntilThatGroundIsTaken() {
+        Simulation world = world();
+
+        assertThat(world.waves().armed()).isFalse();
+        assertThat(world.engine().getEntitiesFor(Family.all(Post.class).get()).size())
+                .isZero();
     }
 
     /** Different ground in different biomes, or they are four names for the same walk. */
@@ -173,7 +220,10 @@ class AdventureScenarioTest {
             perBiome[biomeOf(map.colAt(nest.getComponent(Position.class).x))]++;
         }
 
-        assertThat(perBiome).containsExactly(1, 2, 3, 4, 5, 6);
+        // And none at all in the redoubt: what comes at the post arrives on a schedule and from the
+        // corners, so a hole in the middle of the ground you are holding would be a second fight
+        // nobody asked for.
+        assertThat(perBiome).containsExactly(1, 2, 3, 4, 5, 6, 0);
     }
 
     /** Every strain a biome teaches has a hole sending more of it out, somewhere in that biome. */

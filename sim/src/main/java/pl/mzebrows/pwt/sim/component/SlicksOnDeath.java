@@ -2,6 +2,8 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.SlickDef;
 
 /**
  * A death reaction: this entity leaves a spatter of ruined ground where it fell.
@@ -11,20 +13,27 @@ import com.badlogic.gdx.utils.Pool;
  * that bursts on a trooper and one that simply runs out of flight all arrive at the same spatter
  * through the same reaction - there is no second path, and nothing that kills the shot needs to know
  * what it was carrying (G0004).
+ *
+ * <p><strong>A blast carries one too</strong> (G0035). An explosion is a thing that dies like any
+ * other, so fire is what its death leaves - which is why nothing that explodes had to learn that
+ * fire exists, and why the flamethrower, which leaves no blast, leaves no fire either.
  */
 public final class SlicksOnDeath implements Component, Pool.Poolable {
 
-    /** How many circles it leaves. Zero is a shot that leaves nothing, which never carries this. */
+    /** How many circles it leaves. Zero is a death that leaves nothing, which never carries this. */
     public int blobs;
 
-    /** How wide each of them is, in world units. */
+    /** How wide each of them gets at its widest, in world units. */
     public float radius;
 
     /** How far from here their centres may fall, in world units. */
     public float spread;
 
-    /** How long the ground stays ruined, in seconds. */
+    /** The shortest one of them stays on the ground, in seconds. */
     public float seconds;
+
+    /** The longest one of them stays, in seconds. Equal to {@link #seconds} means they all match. */
+    public float secondsMax;
 
     /** What touching one takes off. */
     public float damage;
@@ -32,20 +41,27 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
     /** How long a man one of them puts down is protected from the rest of the spatter. */
     public float victimInvulnerableSeconds;
 
-    /** Sets the reaction and returns this component, for fluent spawning. */
-    public SlicksOnDeath set(
-            int newBlobs,
-            float newRadius,
-            float newSpread,
-            float newSeconds,
-            float newDamage,
-            float newVictimInvulnerableSeconds) {
-        this.blobs = newBlobs;
-        this.radius = newRadius;
-        this.spread = newSpread;
-        this.seconds = newSeconds;
-        this.damage = newDamage;
-        this.victimInvulnerableSeconds = newVictimInvulnerableSeconds;
+    /** How much of its life a circle spends swelling, as a fraction. */
+    public float growFraction;
+
+    /** How much of its life it spends collapsing again, as a fraction. */
+    public float fadeFraction;
+
+    /** What the renderer draws each circle as. */
+    public Look look = Look.NONE;
+
+    /** Sets the reaction from the definition of what this leaves, for fluent spawning. */
+    public SlicksOnDeath set(SlickDef def) {
+        this.blobs = def.blobs();
+        this.radius = def.radius();
+        this.spread = def.spread();
+        this.seconds = def.seconds();
+        this.secondsMax = def.secondsMax();
+        this.damage = def.damage();
+        this.victimInvulnerableSeconds = def.victimInvulnerableSeconds();
+        this.growFraction = def.growFraction();
+        this.fadeFraction = def.fadeFraction();
+        this.look = def.look();
         return this;
     }
 
@@ -55,7 +71,11 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
         radius = 0f;
         spread = 0f;
         seconds = 0f;
+        secondsMax = 0f;
         damage = 0f;
         victimInvulnerableSeconds = 0f;
+        growFraction = 0f;
+        fadeFraction = 0f;
+        look = Look.NONE;
     }
 }

@@ -166,6 +166,24 @@ public final class AlphaWorlds {
     /** Half of it, so a test can stand something inside one circle and outside the other. */
     public static final float BARREL_BITTEN_BLAST_RADIUS = 4f;
 
+    /** The mine, in round numbers: a small thing with a trigger a test can walk in and out of. */
+    public static final float MINE_RADIUS = 1f;
+
+    /** Wide enough that a test can put something a clear distance outside it. */
+    public static final float MINE_TRIGGER_RADIUS = 4f;
+
+    /** Half a second, not the shipped one: a test that waits out a real fuse is a slow test. */
+    public static final float MINE_FUSE = 0.5f;
+
+    public static final float MINE_HEALTH = 1f;
+
+    /** Off the blast fixture's own radius, so a test cannot confuse the two. */
+    public static final float MINE_BLAST_RADIUS = 5f;
+
+    public static final float MINE_FLASH_FROM = 0.3f;
+
+    public static final float MINE_FLASH_TO = 0.1f;
+
     /** Half a second: long enough to be interrupted in a test, short enough not to slow one down. */
     public static final float CASUALTY_STABILISE = 0.5f;
 
@@ -323,6 +341,33 @@ public final class AlphaWorlds {
 
     /** How long a man one circle has put down is protected from the rest of the same spatter. */
     public static final float SLICK_INVULNERABLE = 0.5f;
+
+    /**
+     * How many circles of fire one explosion leaves, and how big each is against the blast itself.
+     *
+     * <p><strong>Fire is off in the base config</strong>, exactly as leaping is: most tests here are
+     * about something other than what an explosion leaves, and a fixture that burned the ground after
+     * every barrel would make every blast test a test about fire as well. {@link #burning()} switches
+     * it on.
+     */
+    public static final int FIRE_BLOBS = 3;
+
+    public static final float FIRE_RADIUS_FACTOR = 0.25f;
+
+    /** Well inside the radius, so every circle of a fixture fire is on top of the blast. */
+    public static final float FIRE_SPREAD_FACTOR = 0.25f;
+
+    /** The same number twice, so a test knows exactly which tick the ground goes out on. */
+    public static final float FIRE_SECONDS = 1f;
+
+    public static final float FIRE_DAMAGE = 1000f;
+
+    public static final float FIRE_INVULNERABLE = 0.5f;
+
+    /** No ramps in the fixture: a circle that changes size is a test about the ramp, not about fire. */
+    public static final float FIRE_GROW = 0f;
+
+    public static final float FIRE_FADE = 0f;
 
     public static final float SPITTER_RADIUS = 1f;
 
@@ -748,8 +793,12 @@ public final class AlphaWorlds {
                                                 SLICK_RADIUS,
                                                 SLICK_SPREAD,
                                                 SLICK_SECONDS,
+                                                SLICK_SECONDS,
                                                 SLICK_DAMAGE,
-                                                SLICK_INVULNERABLE),
+                                                SLICK_INVULNERABLE,
+                                                0f,
+                                                0f,
+                                                Look.SLICK),
                                         HeatDef.none(),
                                         0f,
                                         0f))
@@ -786,10 +835,19 @@ public final class AlphaWorlds {
                         KNOCKBACK_SPEED,
                         KNOCKBACK_DECAY),
                 new SimConfig.BlastConfig(BLAST_DAMAGE, BLAST_SECONDS, BLAST_SHAKE, BLAST_SHAKE_REACH),
+                new SimConfig.FireConfig(0, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f),
                 new SimConfig.GrenadeConfig(
                         GRENADE_COOLDOWN, GRENADE_SPEED, GRENADE_RANGE, GRENADE_RADIUS, GRENADE_BLAST_RADIUS),
                 new SimConfig.RabbitConfig(RABBIT_SPEED, RABBIT_HEALTH, RABBIT_THROES, WanderDef.off(), DodgeDef.off()),
                 new SimConfig.BarrelConfig(BARREL_HEALTH, BARREL_BLAST_RADIUS, BARREL_BITTEN_BLAST_RADIUS),
+                new SimConfig.MineConfig(
+                        MINE_RADIUS,
+                        MINE_TRIGGER_RADIUS,
+                        MINE_FUSE,
+                        MINE_HEALTH,
+                        MINE_BLAST_RADIUS,
+                        MINE_FLASH_FROM,
+                        MINE_FLASH_TO),
                 new SimConfig.CasualtyConfig(
                         CASUALTY_BLEED_OUT,
                         CASUALTY_STABILISE,
@@ -1026,6 +1084,30 @@ public final class AlphaWorlds {
     public static Simulation hopping() {
         return new Simulation(
                 everyStrain(config(), strain -> strain.withHop(new HopDef(true, HOP_SECONDS, REST_SECONDS))));
+    }
+
+    /**
+     * The base config with fire switched on: every explosion leaves burning ground behind it.
+     *
+     * <p>Off everywhere else, because a fixture that burned the ground after every barrel would make
+     * every test about an explosion a test about fire as well.
+     */
+    public static SimConfig burning() {
+        return burning(config());
+    }
+
+    /** The same, applied to a config a test has already adjusted. */
+    public static SimConfig burning(SimConfig config) {
+        return config.withFire(new SimConfig.FireConfig(
+                FIRE_BLOBS,
+                FIRE_RADIUS_FACTOR,
+                FIRE_SPREAD_FACTOR,
+                FIRE_SECONDS,
+                FIRE_SECONDS,
+                FIRE_DAMAGE,
+                FIRE_INVULNERABLE,
+                FIRE_GROW,
+                FIRE_FADE));
     }
 
     /** A world where every strain throws venom, so a test about ruined ground has somebody to ruin it. */

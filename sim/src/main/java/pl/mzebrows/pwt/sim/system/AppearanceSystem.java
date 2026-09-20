@@ -16,11 +16,13 @@ import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Leap;
+import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Ranged;
+import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Stunned;
@@ -80,6 +82,8 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
+    private static final ComponentMapper<Slick> SLICK = ComponentMapper.getFor(Slick.class);
+    private static final ComponentMapper<Mine> MINE = ComponentMapper.getFor(Mine.class);
 
     private final Defs<UnitKind, UnitDef> units;
     private final Defs<PickupKind, PickupDef> pickups;
@@ -222,6 +226,25 @@ public final class AppearanceSystem extends IteratingSystem {
             // A blast burning out rides the same channel as a unit filling up, read backwards. One
             // way of drawing "how far through this is", learnt once and recognised everywhere.
             appearance.charge = BLAST.get(entity).fade();
+            return;
+        }
+        if (MINE.has(entity)) {
+            // The fuse, in a colour of its own, and the only thing on this channel that is darker
+            // than what it is drawn on. Everything else that fills up is a body brightened, and a
+            // thing that is about to go off in your face must not read as a thing getting ready.
+            // Before it is armed it says nothing at all, which is what makes a minefield a field of
+            // dots until somebody steps into it.
+            appearance.chargeLook = Look.FUSE;
+            appearance.charge = MINE.get(entity).flash();
+            return;
+        }
+        if (SLICK.has(entity)) {
+            // Ground that is changing says how far through it is, and ground that is simply lying
+            // there says nothing. A fire swells, burns down and goes out, and the same channel that
+            // draws a blast burning out draws the heart of it; venom is the same circle from the
+            // tick it lands to the tick it is gone, and a core on it would be a tell about nothing.
+            Slick slick = SLICK.get(entity);
+            appearance.charge = slick.animated() ? slick.fade() : 0f;
             return;
         }
         if (POINT.has(entity)) {

@@ -151,9 +151,9 @@ public final class WorldRenderer implements Disposable {
      * underfoot can hide a man standing in it (pillar 5).
      *
      * <p>A control point says the same thing by being spawned before anything stands on it, and
-     * that is the cheaper answer where it works. It does not work for ruined ground, which appears
-     * in the middle of a fight - so this is a pass rather than an ordering, and it is the third
-     * thing here that asks what a look is, beside the square one and the shelled one.
+     * that is the cheaper answer where it works. It does not work for ruined ground or for fire,
+     * both of which appear in the middle of a fight - so this is a pass rather than an ordering, and
+     * it is the third thing here that asks what a look is, beside the square one and the shelled one.
      */
     private void drawGround(float alpha) {
         for (int i = 0; i < drawable.size(); i++) {
@@ -166,14 +166,23 @@ public final class WorldRenderer implements Disposable {
             PreviousPosition previous = PREVIOUS.get(entity);
             float x = previous.x + (position.x - previous.x) * alpha;
             float y = previous.y + (position.y - previous.y) * alpha;
+            float radius = BODY.get(entity).radius;
             shapes.setColor(tint(appearance));
-            shapes.circle(x, y, BODY.get(entity).radius, CIRCLE_SEGMENTS);
+            shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
+            if (appearance.charge > 0f) {
+                // The same core every other thing that fills up wears, on the one channel that draws
+                // it - so burning ground reads as hottest in the middle and cools as it dies without
+                // the simulation ever saying anything about a colour (G0003). Ground that publishes
+                // no charge, which is all ruined ground, gets nothing.
+                shapes.setColor(brightened(tint(appearance), chargeMark.tint()));
+                shapes.circle(x, y, chargeMark.radiusFor(radius, appearance.charge), CIRCLE_SEGMENTS);
+            }
         }
     }
 
     /** Whether a look is underfoot rather than standing on the ground. */
     private static boolean ground(Look look) {
-        return look == Look.SLICK;
+        return look == Look.SLICK || look == Look.FIRE;
     }
 
     /**
