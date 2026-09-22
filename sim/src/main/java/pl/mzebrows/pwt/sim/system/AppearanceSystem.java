@@ -8,6 +8,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Blast;
+import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
@@ -21,8 +22,10 @@ import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Slick;
+import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Stunned;
@@ -63,6 +66,9 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
+    private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
+    private static final ComponentMapper<Bloat> BLOAT = ComponentMapper.getFor(Bloat.class);
+    private static final ComponentMapper<Projectile> PROJECTILE = ComponentMapper.getFor(Projectile.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
@@ -132,6 +138,7 @@ public final class AppearanceSystem extends IteratingSystem {
         // What it is carrying goes off where it lands. A fact about the gun, so nothing here asks
         // what kind of creature is holding it.
         appearance.charged = WEAPON.has(entity) && WEAPON.get(entity).blastRadius > 0f;
+        publishTrail(entity, appearance);
         // How hot its gun is, and whether that has taken it away. Pillar 5: a bar the player cannot
         // see is a bar he is guessing at, and this one is entirely his own doing.
         appearance.heat = HEAT.has(entity) ? HEAT.get(entity).value : 0f;
@@ -188,6 +195,39 @@ public final class AppearanceSystem extends IteratingSystem {
     }
 
     /**
+     * Where a shot is drawn back to: the muzzle it came from, no further back than its gun allows.
+     *
+     * <p>Everything else in the game is a dot and publishes its own position, which the renderer
+     * reads as "no line". A gun that fires forty times a second is read as a stream of dots unless
+     * the dots are joined, and the beam is the whole of what the laser is (pillar 5) - so the shot
+     * says where it came from and the renderer joins the two ends.
+     *
+     * <p><strong>Every pixel of that line is on the path a real simulated shot actually took.</strong>
+     * Nothing here is a hitscan and nothing is invented: the line starts at the muzzle, grows at the
+     * shot's own speed, and stops dead where the shot did - which is what makes a beam that has hit
+     * something look different from one that has not.
+     */
+    private static void publishTrail(Entity entity, Appearance appearance) {
+        if (!PROJECTILE.has(entity)) {
+            return;
+        }
+        Projectile shot = PROJECTILE.get(entity);
+        if (shot.trailLength <= 0f) {
+            return;
+        }
+        Position at = POSITION.get(entity);
+        float backX = shot.originX - at.x;
+        float backY = shot.originY - at.y;
+        float flown = (float) Math.sqrt(backX * backX + backY * backY);
+        if (flown <= shot.trailLength || flown <= 0f) {
+            appearance.trailingFrom(shot.originX, shot.originY);
+            return;
+        }
+        float reach = shot.trailLength / flown;
+        appearance.trailingFrom(at.x + backX * reach, at.y + backY * reach);
+    }
+
+    /**
      * How far through something this entity is, in {@code [0, 1]}, and what that something is.
      *
      * <p>Pillar 5 says the player never tracks a number the game does not show, and how much an
@@ -213,6 +253,20 @@ public final class AppearanceSystem extends IteratingSystem {
             // must not be the same picture.
             appearance.chargeLook = Look.MENDING;
             appearance.charge = ACTION.get(entity).progress;
+            return;
+        }
+        if (BLOAT.has(entity) && BLOAT.get(entity).charged()) {
+            // A thing being pumped up, above everything else on this channel because it is the only
+            // thing here that is about to kill somebody. In a colour of its own for the reason the
+            // fuse has one: everything else that fills up is a thing getting ready, and two circles
+            // that ask for opposite reactions must not look alike.
+            //
+            // Drawn on the living as readily as on the dead, so the player can watch the thing he is
+            // burning fill up and decide whether to keep the beam on it through the kill. What he
+            // must not be able to read off it is any change to the creature itself - the ring grows
+            // over the body and the body is untouched.
+            appearance.chargeLook = Look.BLOAT;
+            appearance.charge = BLOAT.get(entity).charge;
             return;
         }
         if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
@@ -336,6 +390,11 @@ public final class AppearanceSystem extends IteratingSystem {
             if (leap.phase == Leap.Phase.HESITATING) {
                 return Appearance.State.WINDING_UP;
             }
+        }
+        if (SLOWED.has(entity) && SLOWED.get(entity).factor() < 1f) {
+            // Above unaware because being slowed means something is shooting at it, which means it
+            // has noticed somebody; a unit reported as both would be reported as the wrong one.
+            return Appearance.State.SLOWED;
         }
         if (PERCEPTION.has(entity) && !PERCEPTION.get(entity).aggro) {
             return Appearance.State.UNAWARE;

@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim;
 
 import java.util.function.UnaryOperator;
 import lombok.With;
+import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.def.AiChance;
@@ -11,6 +12,7 @@ import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
+import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.def.HeatDef;
 import pl.mzebrows.pwt.sim.def.HopDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
@@ -85,10 +87,12 @@ public record SimConfig(
         Defs<UnitKind, UnitDef> units,
         Defs<PickupKind, PickupDef> pickups,
         Defs<WeaponKind, WeaponDef> weapons,
+        Defs<Terrain, GroundDef> ground,
         Chances chances,
         MeleeConfig melee,
         BlastConfig blast,
         FireConfig fire,
+        BloatConfig bloat,
         GrenadeConfig grenade,
         RabbitConfig rabbit,
         BarrelConfig barrel,
@@ -126,6 +130,11 @@ public record SimConfig(
     /** The definition of one gun. */
     public WeaponDef weapon(WeaponKind kind) {
         return weapons.of(kind);
+    }
+
+    /** What standing on one kind of ground costs whatever is standing on it. */
+    public GroundDef ground(Terrain terrain) {
+        return ground.of(terrain);
     }
 
     /** How often one occasional behaviour happens for a unit with no override of its own. */
@@ -193,10 +202,12 @@ public record SimConfig(
                 defaultUnits(),
                 defaultPickups(),
                 defaultWeapons(),
+                defaultGround(),
                 Chances.standard(),
                 new MeleeConfig(0.6f, 0f, 0.12f, 1.2f, 1.4f, 120f, 180f, 1f, true, 14f, 100f, 45f, 120f),
                 new BlastConfig(1000f, 0.25f, 3f, 2.5f),
                 new FireConfig(5, 0.3f, 0.65f, 5f, 10f, 1000f, 1.6f, 0.15f, 0.45f),
+                new BloatConfig(1.8f, 0.6f, 0.15f, 5f, 1.2f),
                 new GrenadeConfig(1.2f, 38f, 34f, 0.55f, 12f),
                 new RabbitConfig(
                         15f,
@@ -418,6 +429,12 @@ public record SimConfig(
                                 SlickDef.off(),
                                 HeatDef.none(),
                                 0f,
+                                0f,
+                                1f,
+                                0f,
+                                1f,
+                                0f,
+                                0f,
                                 0f))
                 .put(
                         WeaponKind.RAILGUN,
@@ -434,7 +451,13 @@ public record SimConfig(
                                 SlickDef.off(),
                                 new HeatDef(0.28f, 0.12f, 0.4f),
                                 0f,
-                                0.05f))
+                                0.05f,
+                                1f,
+                                0f,
+                                1f,
+                                0f,
+                                0f,
+                                0f))
                 // The two that cover ground rather than a point. Both name a flight length, which is
                 // what makes them short-ranged - a property of the shot and never of the aim.
                 .put(
@@ -452,6 +475,12 @@ public record SimConfig(
                                 SlickDef.off(),
                                 new HeatDef(0.035f, 0.3f, 0.45f),
                                 0f,
+                                0f,
+                                1f,
+                                0f,
+                                1f,
+                                0f,
+                                0f,
                                 0f))
                 .put(
                         WeaponKind.SHOTGUN,
@@ -468,7 +497,39 @@ public record SimConfig(
                                 SlickDef.off(),
                                 HeatDef.none(),
                                 0f,
+                                0f,
+                                1f,
+                                0f,
+                                1f,
+                                0f,
+                                0f,
                                 0f))
+                // The beam. Forty shots a second worth seven each, through anything alive and out
+                // the far side, slowing whatever they land on - and the hottest gun a man can pick
+                // up, so about three seconds of holding it down is all there is before it stops
+                // itself. Every one of those is paid for out of the one bar.
+                .put(
+                        WeaponKind.LASER,
+                        new WeaponDef(
+                                0.05f,
+                                190f,
+                                0.3f,
+                                38f,
+                                7f,
+                                1,
+                                0f,
+                                Look.LASER,
+                                0f,
+                                SlickDef.off(),
+                                new HeatDef(0.0275f, 0.3f, 0.45f),
+                                0f,
+                                0f,
+                                0.4f,
+                                0.8f,
+                                0.72f,
+                                0.16f,
+                                40f,
+                                0.017f))
                 .put(
                         WeaponKind.SPIT,
                         new WeaponDef(
@@ -483,6 +544,12 @@ public record SimConfig(
                                 0f,
                                 SlickDef.off(),
                                 HeatDef.none(),
+                                0f,
+                                0f,
+                                1f,
+                                0f,
+                                1f,
+                                0f,
                                 0f,
                                 0f))
                 .put(
@@ -499,6 +566,12 @@ public record SimConfig(
                                 5f,
                                 SlickDef.off(),
                                 HeatDef.none(),
+                                0f,
+                                0f,
+                                1f,
+                                0f,
+                                1f,
+                                0f,
                                 0f,
                                 0f))
                 // What a frog throws. THE SHOT ITSELF DOES NOTHING - its damage is zero on purpose,
@@ -520,6 +593,12 @@ public record SimConfig(
                                 new SlickDef(5, 2.2f, 2.6f, 7f, 7f, 1000f, 1.6f, 0f, 0f, Look.SLICK),
                                 HeatDef.none(),
                                 0f,
+                                0f,
+                                1f,
+                                0f,
+                                1f,
+                                0f,
+                                0f,
                                 0f))
                 .put(
                         WeaponKind.TURRET_GUN,
@@ -536,6 +615,12 @@ public record SimConfig(
                                 SlickDef.off(),
                                 new HeatDef(0.1f, 0.35f, 0.6f),
                                 0.9f,
+                                0f,
+                                1f,
+                                0f,
+                                1f,
+                                0f,
+                                0f,
                                 0f))
                 .build();
     }
@@ -571,8 +656,35 @@ public record SimConfig(
                         PickupKind.ARMOURY_SHOTGUN,
                         new PickupDef(
                                 1.2f, Look.ARMOURY_SHOTGUN, new Grant.Arm(WeaponKind.SHOTGUN), Grant.NOTHING, 2.6f))
+                .put(
+                        PickupKind.ARMOURY_LASER,
+                        new PickupDef(1.2f, Look.ARMOURY_LASER, new Grant.Arm(WeaponKind.LASER), Grant.NOTHING, 2.6f))
                 .put(PickupKind.RABBIT, new PickupDef(0.8f, Look.RABBIT, Grant.NOTHING, new Grant.Feed(1), 0f))
                 .put(PickupKind.BARREL, new PickupDef(1f, Look.BARREL, Grant.NOTHING, Grant.DETONATE, 0f))
+                .build();
+    }
+
+    /**
+     * What every kind of ground is worth to walk on. All of it is open ground but one.
+     *
+     * <p>One entry per terrain rather than one per terrain that matters, because a table with a hole
+     * in it cannot be built - so a new kind of ground cannot quietly arrive with nobody having
+     * decided what it costs, which is the same guard {@code Defs} gives every other kind table.
+     */
+    private static Defs<Terrain, GroundDef> defaultGround() {
+        return Defs.<Terrain, GroundDef>builder(Terrain.class)
+                .put(Terrain.PLAIN, GroundDef.clear())
+                .put(Terrain.DUST, GroundDef.clear())
+                .put(Terrain.ORGANIC, GroundDef.clear())
+                .put(Terrain.MIRE, GroundDef.clear())
+                .put(Terrain.ASH, GroundDef.clear())
+                // The one that is worth anything. He wades; the things that live in it barely
+                // notice, which is what makes a thicket somewhere to be driven out of rather than
+                // somewhere to take cover.
+                .put(Terrain.THICKET, new GroundDef(0.45f, 0.82f))
+                // Nothing stands on rock, so what it would cost is a number nobody can reach. It is
+                // here because the table refuses to be built with a hole in it, which is the point.
+                .put(Terrain.ROCK, GroundDef.clear())
                 .build();
     }
 
@@ -1058,6 +1170,79 @@ public record SimConfig(
             Require.positive("blast durationSeconds", durationSeconds);
             Require.notNegative("blast shakeStrength", shakeStrength);
             Require.notNegative("blast shakeRadiusFactor", shakeRadiusFactor);
+        }
+    }
+
+    /**
+     * What a beam held on a body does to it, and what is left when it lets go.
+     *
+     * <p>One block for every unit in the game rather than a number per strain, because what varies
+     * between a grunt and a brute is already the body: the same fraction of the same rise makes a
+     * brute's corpse a bigger thing than a grunt's with nothing said about either. A per-strain
+     * radius is one field on {@code UnitDef} the day somebody wants one.
+     *
+     * @param referenceRadius the body a gun's {@code bloatPerShot} is quoted against, in world
+     *     units. <strong>A bigger thing takes longer to fill</strong>, in proportion to its radius,
+     *     so a brute is a decision and a grunt is an afterthought - and nothing had to be said per
+     *     strain, because a strain's size is already what differs. Set it to the ordinary chasing
+     *     strain's radius and a gun's number then means what it says
+     * @param livingFactor how much of a shot's worth a thing still on its feet banks, as a
+     *     fraction. <strong>This is where "partly charged beforehand and finished later" lives.</strong>
+     *     One would mean a creature burnt to death arrives dead and nearly full, with no decision
+     *     left to make about the body; too little and the kill counts for nothing and every corpse
+     *     starts from scratch. It wants to be a bit over half
+     * @param settlePerSecond how much of the charge falls away per second <strong>with nothing on
+     *     it</strong>. A thing being charged does not settle at all - draining it while the beam is
+     *     on it makes the gun fight the clock rather than the body. Slow enough that going and
+     *     dealing with something else and coming back is a real option, which is the whole of what a
+     *     partial charge is for
+     * @param blastFactor how wide the circle is when one bursts, as a multiple of the body's own
+     *     radius - so a brute leaves a bigger bang than a grunt, for the same reason it took longer
+     *     to fill. Four is twice the body's <em>diameter</em>. It leaves nothing burning: a corpse
+     *     bomb that fenced off the ground it went off on is a tool the player cannot use twice in
+     *     the same place
+     * @param holdSeconds the least a charged body has left to lie there, in seconds, refreshed for
+     *     as long as there is any charge on it. What makes a half-filled corpse a thing you can come
+     *     back to rather than a thing you had to finish in one go
+     */
+    @With
+    public record BloatConfig(
+            float referenceRadius, float livingFactor, float settlePerSecond, float blastFactor, float holdSeconds) {
+
+        public BloatConfig {
+            Require.positive("bloat referenceRadius", referenceRadius);
+            Require.notNegative("bloat settlePerSecond", settlePerSecond);
+            Require.notNegative("bloat blastFactor", blastFactor);
+            Require.notNegative("bloat holdSeconds", holdSeconds);
+            if (livingFactor < 0f || livingFactor > 1f) {
+                throw new IllegalArgumentException("bloat livingFactor must be in [0, 1], was " + livingFactor);
+            }
+        }
+
+        /** Whether a body pumped full is worth anything at all. Zero is a game without the mechanic. */
+        public boolean bursts() {
+            return blastFactor > 0f;
+        }
+
+        /**
+         * What one shot is worth against a body of this size.
+         *
+         * <p>In proportion to the radius rather than to the area, deliberately: squaring it would
+         * make a brute four times the work of a grunt rather than half again, and the thing the
+         * player has to be able to feel is that a bigger creature is <em>a bit</em> more expensive,
+         * not that it is a different mechanic.
+         *
+         * <p>A thing still on its feet banks only a fraction of it, which is what leaves a body
+         * <em>partly</em> charged at the moment it dies and a decision still to make about it.
+         */
+        public float perShotAgainst(float bodyRadius, float perShot, boolean alreadyDown) {
+            float forTheBody = bodyRadius <= 0f ? perShot : perShot * referenceRadius / bodyRadius;
+            return alreadyDown ? forTheBody : forTheBody * livingFactor;
+        }
+
+        /** How wide the circle a body of this size leaves when it bursts. */
+        public float blastFor(float bodyRadius) {
+            return bodyRadius * blastFactor;
         }
     }
 

@@ -96,8 +96,10 @@ class ConfigDefaultsTest {
                         Color.BLACK,
                         palette(),
                         terrain(),
+                        groundDetail(),
                         tint(),
                         mark(),
+                        bloat(),
                         nest(),
                         facing(),
                         charged(),
@@ -160,12 +162,20 @@ class ConfigDefaultsTest {
         return new TerrainPalette(colors, 0.05f, 0.03f, 4, 3);
     }
 
+    private static GroundDetail groundDetail() {
+        return new GroundDetail(3, 0.42f, Color.GREEN, 0.5f, Color.GRAY, 0.17f, 1f);
+    }
+
     private static StateTint tint() {
-        return new StateTint(-0.4f, 0.85f, 0.5f, -0.3f, 0.35f, -0.7f, 0.6f, 0.45f);
+        return new StateTint(-0.4f, 0.85f, 0.5f, -0.3f, 0.35f, -0.18f, -0.7f, 0.6f, 0.45f);
     }
 
     private static NestMark nest() {
         return new NestMark(4, 0.55f);
+    }
+
+    private static BloatMark bloat() {
+        return new BloatMark(1.5f, 0.5f);
     }
 
     private static ChargeMark mark() {

@@ -33,6 +33,28 @@ public enum WeaponKind {
      */
     SHOTGUN,
     /**
+     * A beam, as the game already draws a beam: a stream of very small, very fast shots with a
+     * reach, each one worth almost nothing and forty of them a second worth a great deal.
+     *
+     * <p><strong>It stops at the first thing it touches</strong>, and the drawn line stops with it,
+     * so what the picture says and what the gun does are the same sentence. It pierced when it was
+     * first built and only appeared to: the window that stops one shot hitting one body twice is a
+     * length of flight, and at this speed that length was five bodies deep, so the line was drawn
+     * through a crowd and exactly one of them was hit.
+     *
+     * <p><strong>Its three properties are one trade.</strong> It <em>slows</em> what it lands on, so
+     * staying on one thing is worth doing even while the damage is trickling; it <em>slows the man
+     * holding it</em>, so doing that is a commitment; and it <em>runs hottest of anything a man
+     * carries</em>, so the beam is a resource rather than a default. Every good thing about it is
+     * paid for out of the same bar, which is the whole of what makes it hard to master: a trigger
+     * held down is a trigger that will not be there in four seconds.
+     *
+     * <p>It is also the only gun that is worth pointing at something already dead, because what a
+     * sustained beam does to a body is inflate it (see {@code Bloat}). That is the same heat again -
+     * a corpse turned into a bomb is most of a bar not spent on what is still walking at you.
+     */
+    LASER,
+    /**
      * What a turret fires. Light, very fast and quick to repeat: it trades the damage of a carried
      * gun for a rate and a flight time neither side can step out of.
      *

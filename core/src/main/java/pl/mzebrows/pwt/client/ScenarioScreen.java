@@ -85,12 +85,16 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().palette(),
                 context.graphicConfig().stateTint(),
                 context.graphicConfig().chargeMark(),
+                context.graphicConfig().bloatMark(),
                 context.graphicConfig().nestMark(),
                 context.graphicConfig().facingMark(),
                 context.graphicConfig().chargedMark(),
                 context.graphicConfig().orderMark(),
                 context.graphicConfig().heatMark());
-        terrain = new TerrainRenderer(viewport, context.graphicConfig().terrainPalette());
+        terrain = new TerrainRenderer(
+                viewport,
+                context.graphicConfig().terrainPalette(),
+                context.graphicConfig().groundDetail());
         input = new InputReader(viewport, context.controlsConfig(), context.gamepads());
         session = new ScenarioSession(scenario, context.simConfig());
         camera = new CameraDirector(context.graphicConfig().camera());

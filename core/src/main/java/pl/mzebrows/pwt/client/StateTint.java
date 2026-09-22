@@ -17,6 +17,10 @@ import pl.mzebrows.pwt.sim.component.Appearance;
  * @param grappling both parties to a landed blow, for as long as the lock holds them. Winner and
  *     loser share it on purpose - see {@code AppearanceSystem}
  * @param staggered a unit shoved off a blow it survived, briefly unable to act
+ * @param slowed a unit robbed of some of its speed and still doing everything else. The one state
+ *     here that lasts rather than flashing past, and the one the player has to be able to read
+ *     while it is still walking at him - so it is a dulling rather than a flare: it is not off
+ *     balance and it is not out of the fight, it is wading
  * @param dying a body on the field that is not coming back up, with no exchange behind it
  * @param casualty a man down and bleeding out, who can still be put back on his feet. It must not be
  *     confusable with {@code dying} at a glance: one is somewhere to run to and the other is not,
@@ -32,6 +36,7 @@ public record StateTint(
         float airborne,
         float grappling,
         float staggered,
+        float slowed,
         float dying,
         float casualty,
         float crewed) {
@@ -44,6 +49,7 @@ public record StateTint(
             case AIRBORNE -> airborne;
             case GRAPPLING -> grappling;
             case STAGGERED -> staggered;
+            case SLOWED -> slowed;
             case DYING -> dying;
             case CASUALTY -> casualty;
             case CREWED -> crewed;

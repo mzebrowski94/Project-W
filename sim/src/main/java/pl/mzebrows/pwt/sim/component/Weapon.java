@@ -64,6 +64,25 @@ public final class Weapon implements Component, Pool.Poolable {
      */
     public float pierceIntervalSeconds;
 
+    /**
+     * How much of its speed a unit one of its shots lands on keeps, and for how long. One and zero
+     * for every gun that robs nothing, which is all of them but the beam.
+     */
+    public float slowFactor = 1f;
+
+    public float slowSeconds;
+
+    /** How much of his own speed the shooter keeps while he is firing this, and for how long. */
+    public float selfSlowFactor = 1f;
+
+    public float selfSlowSeconds;
+
+    /** How far back along its path one of its shots is drawn. Zero is a dot, which is almost every gun. */
+    public float trailLength;
+
+    /** How much of a body one of its shots pumps up. Zero for every gun that does nothing to one. */
+    public float bloatPerShot;
+
     /** What one shot adds to whatever is holding this, as a fraction. Zero for a gun that stays cold. */
     public float heatPerShot;
 
@@ -94,6 +113,12 @@ public final class Weapon implements Component, Pool.Poolable {
         this.slicks = def.slicks();
         this.muzzleOffset = def.muzzleOffset();
         this.pierceIntervalSeconds = def.pierceIntervalSeconds();
+        this.slowFactor = def.slowFactor();
+        this.slowSeconds = def.slowSeconds();
+        this.selfSlowFactor = def.selfSlowFactor();
+        this.selfSlowSeconds = def.selfSlowSeconds();
+        this.trailLength = def.trailLength();
+        this.bloatPerShot = def.bloatPerShot();
         this.heatPerShot = def.heat().perShot();
         this.heatCoolPerSecond = def.heat().coolPerSecond();
         this.heatResumeBelow = def.heat().resumeBelow();
@@ -121,6 +146,12 @@ public final class Weapon implements Component, Pool.Poolable {
         slicks = SlickDef.off();
         muzzleOffset = 0f;
         pierceIntervalSeconds = 0f;
+        slowFactor = 1f;
+        slowSeconds = 0f;
+        selfSlowFactor = 1f;
+        selfSlowSeconds = 0f;
+        trailLength = 0f;
+        bloatPerShot = 0f;
         heatPerShot = 0f;
         heatCoolPerSecond = 0f;
         heatResumeBelow = 0f;

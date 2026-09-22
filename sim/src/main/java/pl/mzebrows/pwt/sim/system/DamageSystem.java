@@ -5,15 +5,19 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dragged;
+import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
 
@@ -55,14 +59,19 @@ public final class DamageSystem extends IteratingSystem {
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
     private static final ComponentMapper<Dragged> DRAGGED = ComponentMapper.getFor(Dragged.class);
+    private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
+    private static final ComponentMapper<Bloat> BLOAT = ComponentMapper.getFor(Bloat.class);
+    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     private static final float EPSILON = 1e-4f;
 
     private final Spawner spawner;
+    private final SimConfig.BloatConfig bloatConfig;
 
-    public DamageSystem(Spawner spawner) {
+    public DamageSystem(SimConfig config, Spawner spawner) {
         super(Family.all(Health.class, Damage.class).get());
         this.spawner = spawner;
+        this.bloatConfig = config.bloat();
     }
 
     @Override
@@ -84,6 +93,10 @@ public final class DamageSystem extends IteratingSystem {
         boolean fatal = damage.fatal;
         float sourceX = damage.sourceX;
         float sourceY = damage.sourceY;
+        boolean slowed = damage.slowed();
+        float slowFactor = damage.slowFactor;
+        float slowSeconds = damage.slowSeconds;
+        float bloat = damage.bloat;
         damage.reset();
         if (INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active()) {
             return;
@@ -94,6 +107,22 @@ public final class DamageSystem extends IteratingSystem {
             // landed - an invulnerable target has already returned above, and being missed provokes
             // nobody.
             PERCEPTION.get(entity).provokeAt(sourceX, sourceY);
+        }
+        if (bloat > 0f && BLOAT.has(entity)) {
+            // It builds on the living as readily as on the dead, which is the whole of why holding
+            // the beam THROUGH a kill is worth more than starting again on the body - and what one
+            // shot is worth is divided by how big the thing is, so a brute is a decision and a grunt
+            // is an afterthought - and something still on its feet banks only a fraction, which is
+            // what leaves a body PARTLY charged at the moment it dies and a decision still to make
+            // about it. BloatSystem owns everything after this.
+            boolean down = DYING.has(entity) && DYING.get(entity).begun;
+            BLOAT.get(entity).feed(bloatConfig.perShotAgainst(BODY.get(entity).radius, bloat, down));
+        }
+        if (slowed && SLOWED.has(entity)) {
+            // Below the invulnerability check for the same reason the provocation is: a hit that did
+            // not land slows nobody. Above the health, because a blow that kills makes this moot and
+            // a blow that does not has to leave it wading whatever else happens to it this tick.
+            SLOWED.get(entity).apply(slowFactor, slowSeconds);
         }
         Health health = HEALTH.get(entity);
         health.current -= owed;

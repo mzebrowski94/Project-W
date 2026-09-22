@@ -1,0 +1,64 @@
+package pl.mzebrows.pwt.sim.system;
+
+import com.badlogic.ashley.core.ComponentMapper;
+import com.badlogic.ashley.core.Entity;
+import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Slowed;
+import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.GroundDef;
+import pl.mzebrows.pwt.sim.def.Side;
+
+/**
+ * How much of the speed it asked for a unit actually gets this tick, in one place, for everything
+ * that moves under its own power.
+ *
+ * <p>There are two ways to be slow and they are the same answer, so they are multiplied together
+ * here rather than answered twice. One is something that was <em>done</em> to the unit - a beam held
+ * on it - and lives on its {@link Slowed}; the other is where it is <em>standing</em>, which is a
+ * fact about the ground and is asked of the map rather than stored. A unit wading through a thicket
+ * with a laser on it is slow twice over, and nothing had to say so.
+ *
+ * <p>It is here rather than inside {@code DriveSystem} for the reason {@link Guns} and {@link Aid}
+ * are single places: the commander is the one thing on the field that does not go through
+ * {@code DriveSystem} - his own control system owns his velocity outright - so a rule that lived
+ * there would have been a rule the player was exempt from, which is the exact opposite of what
+ * ground like this is for.
+ *
+ * <p><strong>A slow scales a course; it never chooses one</strong> - the same contract a gait and a
+ * weave already keep. Nothing here turns anything, so a slowed unit walks exactly where it meant to
+ * and simply takes longer about it, and a route through a thicket is the same route it always was.
+ *
+ * <p>Allocates nothing and reads three component slots and one tile. It is paid once per driven unit
+ * per tick, which is the same order as everything else in the movement pipeline.
+ */
+final class Pace {
+
+    private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
+    private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
+
+    private Pace() {}
+
+    /**
+     * The fraction of its desired velocity this entity may actually have.
+     *
+     * <p>One for anything carrying neither a slow nor a position, which is what keeps this from
+     * being a rule every mover has to opt into.
+     */
+    static float of(Entity entity, TileMap map, Defs<Terrain, GroundDef> ground) {
+        float pace = SLOWED.has(entity) ? SLOWED.get(entity).factor() : 1f;
+        if (!POSITION.has(entity)) {
+            return pace;
+        }
+        Position at = POSITION.get(entity);
+        GroundDef under = ground.of(map.terrainAt(at.x, at.y));
+        if (!under.matters()) {
+            return pace;
+        }
+        Side side = FACTION.has(entity) ? FACTION.get(entity).side : Side.NEUTRAL;
+        return pace * under.factorFor(side);
+    }
+}

@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Heat;
+import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Side;
 
@@ -29,6 +30,7 @@ import pl.mzebrows.pwt.sim.def.Side;
 final class Guns {
 
     private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
+    private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
 
     private Guns() {}
 
@@ -40,11 +42,22 @@ final class Guns {
         return !HEAT.has(firer) || !HEAT.get(firer).locked;
     }
 
-    /** Charges a shot to the cooldown and to the heat, whichever of them this gun actually has. */
+    /**
+     * Charges a shot to the cooldown, to the heat, and to the shooter's own pace - whichever of the
+     * three this gun actually asks for.
+     *
+     * <p>The self-slow is here for the reason the heat is: a gun that slowed the commander in his
+     * hands and nobody on a mount would be a gun whose cost depended on who was holding it. A gun
+     * that names none writes nothing, and a shooter with no {@code Slowed} - a turret - is unaffected
+     * either way.
+     */
     static void spend(Entity firer, Weapon weapon, float cooldownSeconds) {
         weapon.remainingSeconds = cooldownSeconds;
         if (HEAT.has(firer)) {
             HEAT.get(firer).spend(weapon.heatPerShot);
+        }
+        if (SLOWED.has(firer)) {
+            SLOWED.get(firer).apply(weapon.selfSlowFactor, weapon.selfSlowSeconds);
         }
     }
 

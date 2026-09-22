@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.Look;
 
 /**
  * A death reaction: this entity leaves a blast where it fell.
@@ -33,10 +34,49 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
      */
     public float bittenRadius;
 
+    /**
+     * Whether the blast leaves the ground burning behind it.
+     *
+     * <p>True for everything that has ever exploded, which is why it is a field with a default
+     * rather than a question. G0035 made the <em>side</em> of what a blast leaves a declaration
+     * rather than a property of the mechanic; this makes its <em>existence</em> one, for the one
+     * case that wanted it: a body pumped full is a flash, not a fire, and a corpse bomb that fenced
+     * off the ground it went off on would be a tool the player could not use twice in one place.
+     *
+     * <p>It is still one reaction and one death. What changed is a field read before the death, not
+     * whether a second path to an explosion exists.
+     */
+    public boolean leavesFire = true;
+
+    /**
+     * What the circle is drawn as.
+     *
+     * <p>{@link Look#BLAST} for everything that has ever exploded, which is why it is a field with a
+     * default rather than a question. A body pumped full is the one explosion in the game the player
+     * <em>made</em> rather than set off, and it has to read as the payoff of the ring that charged
+     * it - the same colour, so the two are one event rather than two things that happened in the
+     * same place.
+     */
+    public Look look = Look.BLAST;
+
     /** Sets the reaction and returns this component, for fluent spawning. */
     public BlastsOnDeath set(float newRadius, float newBittenRadius) {
         this.radius = newRadius;
         this.bittenRadius = newBittenRadius;
+        this.leavesFire = true;
+        this.look = Look.BLAST;
+        return this;
+    }
+
+    /** Makes this a flash rather than a fire, and returns this component, for fluent spawning. */
+    public BlastsOnDeath withoutFire() {
+        this.leavesFire = false;
+        return this;
+    }
+
+    /** Draws this circle as something other than an ordinary explosion, for fluent spawning. */
+    public BlastsOnDeath drawnAs(Look newLook) {
+        this.look = newLook;
         return this;
     }
 
@@ -60,5 +100,7 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
     public void reset() {
         radius = 0f;
         bittenRadius = 0f;
+        leavesFire = true;
+        look = Look.BLAST;
     }
 }

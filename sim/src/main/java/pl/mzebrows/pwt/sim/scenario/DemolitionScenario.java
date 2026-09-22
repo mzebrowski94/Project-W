@@ -31,9 +31,15 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  *       The cascade is the thing to watch: five barrels going up a tick apart leave a strip of
  *       burning ground across the stack that has to go out before anybody can walk through it.
  *   <li><strong>The guns.</strong> Two crates of each on the left, before the wall, so the same
- *       throw and the same stack can be answered with a railgun, a flamethrower or a shotgun. Two of
- *       each because a gun is lost with a death and this arena is one of the easier places to die in.
- *       The flamethrower is the one gun that leaves no fire, because it leaves no blast.
+ *       throw and the same stack can be answered with a railgun, a flamethrower, a shotgun or the
+ *       beam. Two of each because a gun is lost with a death and this arena is one of the easier
+ *       places to die in. The flamethrower is the one gun that leaves no fire, because it leaves no
+ *       blast.
+ *   <li><strong>The beam, and what it does to what it has already killed.</strong> It stops at the
+ *       first thing it touches, so in ranks like these it is a gun for taking one thing apart while
+ *       the rest walk in - and what it leaves lying about can be inflated with the same beam until
+ *       it goes off on its own, which is how it answers the rest of them. Both come out of one heat
+ *       bar, and that is the decision the gun is really made of.
  *   <li><strong>The rest of the roster.</strong> Spitters behind the stack shooting out through the
  *       doorway, runners that arrive before you have lined the throw up, and frogs ruining the ground
  *       you were going to stand on. A stack of barrels among things that only walk at you is a
@@ -47,15 +53,15 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 final class DemolitionScenario implements Scenario {
 
     private static final int GRUNTS = 6;
-    private static final int BRUTES = 2;
-    private static final int SPITTERS = 3;
-    private static final int RUNNERS = 4;
+    private static final int BRUTES = 4;
+    private static final int SPITTERS = 1;
+    private static final int RUNNERS = 1;
     private static final int FROGS = 2;
     private static final int BARRELS_IN_THE_STACK = 5;
 
-    /** Two of every gun there is, so one throw can be answered three ways and twice each. */
+    /** Two of every gun there is, so one throw can be answered four ways and twice each. */
     private static final PickupKind[] CACHES = {
-        PickupKind.ARMOURY_RAILGUN, PickupKind.ARMOURY_FLAMER, PickupKind.ARMOURY_SHOTGUN
+        PickupKind.ARMOURY_RAILGUN, PickupKind.ARMOURY_FLAMER, PickupKind.ARMOURY_SHOTGUN, PickupKind.ARMOURY_LASER
     };
 
     /** The two columns the crates stand in, as fractions of the arena's width. Clear of the spawn. */
@@ -164,7 +170,7 @@ final class DemolitionScenario implements Scenario {
      * Two crates of every gun, in two columns on the near side of the wall.
      *
      * <p>Before the wall rather than past it, because the point is to answer the <em>same</em> stack
-     * three ways: walking to a crate must not be a fight in itself, or what is being compared is the
+     * four ways: walking to a crate must not be a fight in itself, or what is being compared is the
      * walk. Two of each because a gun is lost with a death and standing next to a barrel is how this
      * arena teaches its radius.
      */

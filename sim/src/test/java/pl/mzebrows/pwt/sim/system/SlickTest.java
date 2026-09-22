@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA_TILES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SLICK_BLOBS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SLICK_SECONDS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.VENOM_REACH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
@@ -22,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
@@ -54,6 +56,18 @@ class SlickTest {
 
     /** Long enough for a shot at sixty a second to cross thirty world units and burst. */
     private static final int UNTIL_IT_BURSTS = 40;
+
+    /** Long enough for one that hits nothing at all to fly its whole reach and burst on its own. */
+    private static final int UNTIL_IT_RUNS_OUT = 50;
+
+    /** Just short of where a shot that hits nothing bursts, so a second shot has to cross the mess. */
+    private static final float SHORT_OF_THE_SPATTER = SHOT_X + VENOM_REACH - 10f;
+
+    /** Comfortably past it, and comfortably inside the arena. */
+    private static final float PAST_THE_SPATTER = SHOT_X + VENOM_REACH + 5f;
+
+    /** Long enough for a shot at sixty a second to cross the spatter and come out the far side. */
+    private static final int ACROSS_THE_SPATTER = 20;
 
     @Test
     void ruinsTheGroundWhereItsShotBurst() {
@@ -89,6 +103,46 @@ class SlickTest {
         steps(simulation, UNTIL_IT_BURSTS);
 
         assertThat(countLiving(simulation, Enemy.class)).isEqualTo(1);
+    }
+
+    /**
+     * <strong>A miss has to ruin the ground too.</strong> What a frog throws does nothing on its own
+     * - the spatter is the weapon - so a shot that lands nowhere near anybody is not a wasted shot,
+     * it is ground you now have to go round. It ends by <em>dying</em> like every other end (G0018),
+     * so it arrives at the same reaction a burst on a man arrives at.
+     *
+     * <p>It did not, for as long as the gun existed: the system that throws away a shot which has
+     * flown its reach ran <em>after</em> the death reactions, so the shot was marked dead past the
+     * window that lays a spatter and reaped on the same tick. The fixture never caught it because
+     * the fixture's venom had no reach to run out of.
+     */
+    @Test
+    void ruinsTheGroundWhereItsShotRanOutOfFlight() {
+        Simulation simulation = harmless();
+        venomAt(simulation);
+
+        steps(simulation, UNTIL_IT_RUNS_OUT);
+
+        assertThat(count(simulation, Slick.class)).isEqualTo(SLICK_BLOBS);
+    }
+
+    /**
+     * <strong>Ruined ground is not cover.</strong> A slick is a circle lying on the floor rather than
+     * a thing standing on it, so a shot fired across one comes out the far side - otherwise a frog
+     * fencing off the ground fences off the gun with it, and the one place you must not stand
+     * becomes the one place you cannot shoot through.
+     */
+    @Test
+    void letsAShotFlyStraightOverIt() {
+        Simulation simulation = harmless();
+        venomAt(simulation);
+        steps(simulation, UNTIL_IT_RUNS_OUT);
+
+        Entity shot = simulation.spawnProjectile(SHORT_OF_THE_SPATTER, Y, 1f, 0f, Side.PLAYER);
+        steps(simulation, ACROSS_THE_SPATTER);
+
+        assertThat(count(simulation, Projectile.class)).isEqualTo(1);
+        assertThat(shot.getComponent(Position.class).x).isGreaterThan(PAST_THE_SPATTER);
     }
 
     /** A place rather than an event: it is still there long after the tick the shot ended on. */

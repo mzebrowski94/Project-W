@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.AiChance;
@@ -22,6 +23,7 @@ import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
+import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.def.HeatDef;
 import pl.mzebrows.pwt.sim.def.HopDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
@@ -342,6 +344,74 @@ public final class AlphaWorlds {
     /** How long a man one circle has put down is protected from the rest of the same spatter. */
     public static final float SLICK_INVULNERABLE = 0.5f;
 
+    /** How much of its speed a thicket leaves each side. He wades; they barely notice. */
+    public static final float THICKET_PLAYER_FACTOR = 0.25f;
+
+    public static final float THICKET_ALIEN_FACTOR = 0.75f;
+
+    /**
+     * The body a gun's {@code bloatPerShot} is quoted against.
+     *
+     * <p>Exactly the fixture enemy's own radius, so one shot against an ordinary enemy is worth
+     * exactly what the gun says and a test can count shots. Anything bigger is proportionally more
+     * work, which is the half a test about a brute is actually about.
+     */
+    public static final float BLOAT_REFERENCE_RADIUS = ENEMY_RADIUS;
+
+    /**
+     * How much of a shot a thing still on its feet banks.
+     *
+     * <p>One in the fixture, deliberately: almost every test here fires at something that is either
+     * alive throughout or dead throughout, and a fraction in between would make every one of them
+     * arithmetic. The one test that is about the fraction sets its own.
+     */
+    public static final float BLOAT_LIVING_FACTOR = 1f;
+
+    /** Slow enough that a test can watch a charge go down, and fast enough not to take all day. */
+    public static final float BLOAT_SETTLE_PER_SECOND = 0.5f;
+
+    /**
+     * How wide the circle a body leaves, as a multiple of its own radius. Six against the fixture's
+     * radius of one, so a test can put a bystander inside one and another outside it.
+     */
+    public static final float BLOAT_BLAST_FACTOR = 6f;
+
+    /** How long a charged body has left to lie there, refreshed while there is any charge on it. */
+    public static final float BLOAT_HOLD = 0.5f;
+
+    /**
+     * How much of a body one shot of the fixture's beam pumps up.
+     *
+     * <p>A quarter, so four hits fill one and a test can count ticks to a burst instead of running
+     * a gun for three seconds. The shipped number is far smaller, because the shipped number is
+     * what balances the mechanic against the heat bar and this one only has to be reachable.
+     */
+    public static final float LASER_BLOAT_PER_SHOT = 0.25f;
+
+    /** How much of his own speed the beam leaves the man holding it down, and for how long after. */
+    public static final float LASER_SELF_SLOW_FACTOR = 0.6f;
+
+    public static final float LASER_SELF_SLOW_SECONDS = 0.2f;
+
+    /** How far back a shot of the beam is drawn. Never read by the simulation; here so the table builds. */
+    public static final float LASER_TRAIL = 40f;
+
+    /** How much of its speed the beam leaves a unit it lands on, and for how long after the last hit. */
+    public static final float LASER_SLOW_FACTOR = 0.5f;
+
+    public static final float LASER_SLOW_SECONDS = 0.5f;
+
+    /**
+     * How far a shot of venom flies before it bursts of its own accord.
+     *
+     * <p>The fixture used to give it none, which is why nothing ever noticed that a <em>miss</em>
+     * left no spatter at all: with no reach the shot flew until it left the arena, and a burst
+     * outside the map lays nothing. The shipped gun has had a reach since it was written - it is
+     * what makes a frog a problem about where you are standing - so the fixture has one too, set
+     * comfortably past the lane the tests fire down.
+     */
+    public static final float VENOM_REACH = 45f;
+
     /**
      * How many circles of fire one explosion leaves, and how big each is against the blast itself.
      *
@@ -583,6 +653,25 @@ public final class AlphaWorlds {
     /** What the two guns that run hot in the fixtures declare. Both, so one test covers either. */
     private static final HeatDef HOT = new HeatDef(TURRET_HEAT_PER_SHOT, HEAT_COOL_PER_SECOND, HEAT_RESUME_BELOW);
 
+    /**
+     * What every kind of ground is worth to walk on in the fixture.
+     *
+     * <p>A thicket is the one that is worth anything, and it is a harsher number here than the game
+     * ships: a test asserting that something arrives later has to be able to tell, and halving a
+     * speed over twenty world units is a difference a test can measure without running for a minute.
+     */
+    private static Defs<Terrain, GroundDef> thickets() {
+        Defs.Builder<Terrain, GroundDef> builder = Defs.builder(Terrain.class);
+        for (Terrain terrain : Terrain.values()) {
+            builder.put(
+                    terrain,
+                    terrain == Terrain.THICKET
+                            ? new GroundDef(THICKET_PLAYER_FACTOR, THICKET_ALIEN_FACTOR)
+                            : GroundDef.clear());
+        }
+        return builder.build();
+    }
+
     private AlphaWorlds() {}
 
     public static SimConfig config() {
@@ -674,6 +763,14 @@ public final class AlphaWorlds {
                                         new Grant.Arm(WeaponKind.SHOTGUN),
                                         Grant.NOTHING,
                                         SHINE_SECONDS))
+                        .put(
+                                PickupKind.ARMOURY_LASER,
+                                new PickupDef(
+                                        PICKUP_RADIUS,
+                                        Look.ARMOURY_LASER,
+                                        new Grant.Arm(WeaponKind.LASER),
+                                        Grant.NOTHING,
+                                        SHINE_SECONDS))
                         .put(PickupKind.RABBIT, new PickupDef(RABBIT_RADIUS, Look.RABBIT, Grant.NOTHING, MOUTHFUL, 0f))
                         .put(
                                 PickupKind.BARREL,
@@ -695,6 +792,12 @@ public final class AlphaWorlds {
                                         SlickDef.off(),
                                         HeatDef.none(),
                                         0f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.SPIT,
@@ -710,6 +813,12 @@ public final class AlphaWorlds {
                                         0f,
                                         SlickDef.off(),
                                         HeatDef.none(),
+                                        0f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
                                         0f,
                                         0f))
                         .put(
@@ -727,6 +836,12 @@ public final class AlphaWorlds {
                                         SlickDef.off(),
                                         HeatDef.none(),
                                         0f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.RAILGUN,
@@ -743,7 +858,13 @@ public final class AlphaWorlds {
                                         SlickDef.off(),
                                         HOT,
                                         0f,
-                                        RAILGUN_PIERCE_INTERVAL))
+                                        RAILGUN_PIERCE_INTERVAL,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
+                                        0f))
                         .put(
                                 WeaponKind.FLAMER,
                                 new WeaponDef(
@@ -759,7 +880,37 @@ public final class AlphaWorlds {
                                         SlickDef.off(),
                                         HeatDef.none(),
                                         0f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
                                         0f))
+                        // The beam: it stops at the first thing it touches, and it runs hot. The
+                        // fixture keeps both, because both are what every test about it is about.
+                        .put(
+                                WeaponKind.LASER,
+                                new WeaponDef(
+                                        COOLDOWN,
+                                        PROJECTILE_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        0f,
+                                        WEAPON_DAMAGE,
+                                        1,
+                                        0f,
+                                        Look.LASER,
+                                        0f,
+                                        SlickDef.off(),
+                                        HOT,
+                                        0f,
+                                        0f,
+                                        LASER_SLOW_FACTOR,
+                                        LASER_SLOW_SECONDS,
+                                        LASER_SELF_SLOW_FACTOR,
+                                        LASER_SELF_SLOW_SECONDS,
+                                        LASER_TRAIL,
+                                        LASER_BLOAT_PER_SHOT))
                         .put(
                                 WeaponKind.SHOTGUN,
                                 new WeaponDef(
@@ -775,6 +926,12 @@ public final class AlphaWorlds {
                                         SlickDef.off(),
                                         HeatDef.none(),
                                         0f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.VENOM,
@@ -782,7 +939,7 @@ public final class AlphaWorlds {
                                         COOLDOWN,
                                         PROJECTILE_SPEED,
                                         PROJECTILE_RADIUS,
-                                        0f,
+                                        VENOM_REACH,
                                         0f,
                                         1,
                                         0f,
@@ -801,6 +958,12 @@ public final class AlphaWorlds {
                                                 Look.SLICK),
                                         HeatDef.none(),
                                         0f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.TURRET_GUN,
@@ -817,8 +980,15 @@ public final class AlphaWorlds {
                                         SlickDef.off(),
                                         HOT,
                                         TURRET_MUZZLE_OFFSET,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
                                         0f))
                         .build(),
+                thickets(),
                 noChances(),
                 new SimConfig.MeleeConfig(
                         MELEE_COOLDOWN,
@@ -836,6 +1006,12 @@ public final class AlphaWorlds {
                         KNOCKBACK_DECAY),
                 new SimConfig.BlastConfig(BLAST_DAMAGE, BLAST_SECONDS, BLAST_SHAKE, BLAST_SHAKE_REACH),
                 new SimConfig.FireConfig(0, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f),
+                new SimConfig.BloatConfig(
+                        BLOAT_REFERENCE_RADIUS,
+                        BLOAT_LIVING_FACTOR,
+                        BLOAT_SETTLE_PER_SECOND,
+                        BLOAT_BLAST_FACTOR,
+                        BLOAT_HOLD),
                 new SimConfig.GrenadeConfig(
                         GRENADE_COOLDOWN, GRENADE_SPEED, GRENADE_RANGE, GRENADE_RADIUS, GRENADE_BLAST_RADIUS),
                 new SimConfig.RabbitConfig(RABBIT_SPEED, RABBIT_HEALTH, RABBIT_THROES, WanderDef.off(), DodgeDef.off()),
@@ -1324,6 +1500,9 @@ public final class AlphaWorlds {
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
         entity.add(engine.createComponent(Steering.class));
+        // And a slow, because the seam this body exists to test is exactly the one a slow is spent
+        // at: everything in the game that is driven carries one.
+        entity.add(engine.createComponent(Slowed.class));
         engine.addEntity(entity);
         return entity;
     }

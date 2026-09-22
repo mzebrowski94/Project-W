@@ -37,8 +37,10 @@ public record GraphicConfig(
         Color backgroundColor,
         Palette palette,
         TerrainPalette terrainPalette,
+        GroundDetail groundDetail,
         StateTint stateTint,
         ChargeMark chargeMark,
+        BloatMark bloatMark,
         NestMark nestMark,
         FacingMark facingMark,
         ChargedMark chargedMark,
@@ -69,8 +71,10 @@ public record GraphicConfig(
                 color(properties, "graphic.backgroundColor", "101018ff"),
                 palette(properties),
                 terrainPalette(properties),
+                groundDetail(properties),
                 stateTint(properties),
                 chargeMark(properties),
+                bloatMark(properties),
                 nestMark(properties),
                 facingMark(properties),
                 chargedMark(properties),
@@ -133,6 +137,7 @@ public record GraphicConfig(
             case SLUG -> "fff3c4ff";
             case FLAME -> "ff7a2eff";
             case PELLET -> "ffd24dff";
+            case LASER -> "b4f6ffff";
             case TURRET_SHOT -> "7fd8ffff";
             case SPIT -> "d08cffff";
             case CHARGED_SPIT -> "ff8ce0ff";
@@ -144,6 +149,7 @@ public record GraphicConfig(
             case STRIKE -> "ffffffff";
             case GRENADE -> "c07820ff";
             case BLAST -> "ffb03aff";
+            case BLOAT -> "ff8a46ff";
             case OBSTACLE -> "4a4a5eff";
             case MUSHROOM -> "8fd97fff";
             case FLOWER -> "e07be0ff";
@@ -151,6 +157,7 @@ public record GraphicConfig(
             case ARMOURY_RAILGUN -> "d8a04aff";
             case ARMOURY_FLAMER -> "ff7a2eff";
             case ARMOURY_SHOTGUN -> "4ad8a0ff";
+            case ARMOURY_LASER -> "46c8e6ff";
             case BARREL -> "ff3a10ff";
             case RABBIT -> "f0f0f0ff";
             case MENDING -> "4ce88aff";
@@ -193,8 +200,25 @@ public record GraphicConfig(
             case ORGANIC -> "16241cff";
             case MIRE -> "14222aff";
             case ASH -> "231f22ff";
-            case ROCK -> "343442ff";
+            case THICKET -> "15291bff";
+            case ROCK -> "3f3f52ff";
         };
+    }
+
+    /**
+     * What is drawn on top of the flat ground, under {@code graphic.thicket} and
+     * {@code graphic.terrain.rockEdge}. See {@link GroundDetail} for why the transparency is a mix
+     * rather than a blend.
+     */
+    private static GroundDetail groundDetail(GameProperties properties) {
+        return new GroundDetail(
+                properties.getInt("graphic.thicket.cells", 3),
+                properties.getFloat("graphic.thicket.dot", 0.42f),
+                color(properties, "graphic.thicket.tint", "7fc46aff"),
+                properties.getFloat("graphic.thicket.alpha", 0.5f),
+                color(properties, "graphic.terrain.rockEdge", "7a7a98ff"),
+                properties.getFloat("graphic.terrain.rockEdgeWidth", 0.17f),
+                properties.getFloat("graphic.terrain.rockEdgeAlpha", 1f));
     }
 
     private static StateTint stateTint(GameProperties properties) {
@@ -204,9 +228,19 @@ public record GraphicConfig(
                 properties.getFloat("graphic.state.airborne", 0.5f),
                 properties.getFloat("graphic.state.grappling", -0.3f),
                 properties.getFloat("graphic.state.staggered", 0.35f),
+                properties.getFloat("graphic.state.slowed", -0.18f),
                 properties.getFloat("graphic.state.dying", -0.7f),
                 properties.getFloat("graphic.state.casualty", 0.6f),
                 properties.getFloat("graphic.state.crewed", 0.45f));
+    }
+
+    /**
+     * How a thing being pumped up is drawn, under {@code graphic.bloat}. The one mark in the game
+     * that is bigger than the body it is drawn on, and the one that is see-through.
+     */
+    private static BloatMark bloatMark(GameProperties properties) {
+        return new BloatMark(
+                properties.getFloat("graphic.bloat.scale", 1.5f), properties.getFloat("graphic.bloat.alpha", 0.5f));
     }
 
     private static ChargeMark chargeMark(GameProperties properties) {

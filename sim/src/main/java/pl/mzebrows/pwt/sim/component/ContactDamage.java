@@ -85,6 +85,21 @@ public final class ContactDamage implements Component, Pool.Poolable {
      */
     public float arcCosine = -1f;
 
+    /**
+     * How much of its speed a unit this blow lands on keeps, and for how long.
+     *
+     * <p>One and zero for everything but the beam, which is this component's way of saying "not
+     * mine" for a number whose neutral value is one. Recorded on the blow rather than granted at the
+     * moment of contact for the same reason the knockback is: nothing in the collision path decides
+     * what a hit costs.
+     */
+    public float slowFactor = 1f;
+
+    public float slowSeconds;
+
+    /** How much of a body this blow pumps up. Zero for everything but the beam. */
+    public float bloat;
+
     /** Sets the attack and leaves it ready to strike, returning this component, for fluent spawning. */
     public ContactDamage set(float newAmount, float newCooldownSeconds, float newVictimInvulnerableSeconds) {
         this.amount = newAmount;
@@ -99,6 +114,28 @@ public final class ContactDamage implements Component, Pool.Poolable {
         this.knockbackDecay = 0f;
         this.fatal = true;
         this.arcCosine = -1f;
+        this.slowFactor = 1f;
+        this.slowSeconds = 0f;
+        this.bloat = 0f;
+        return this;
+    }
+
+    /**
+     * Makes this a blow that robs what it lands on of speed, and returns this component, for fluent
+     * spawning. Chained after {@link #set}, so a blow that only hurts stays a one-line spawn.
+     */
+    public ContactDamage slowing(float newSlowFactor, float newSlowSeconds) {
+        this.slowFactor = newSlowFactor;
+        this.slowSeconds = newSlowSeconds;
+        return this;
+    }
+
+    /**
+     * Makes this a blow that pumps a body up, and returns this component, for fluent spawning.
+     * Chained after {@link #set}, like every other thing a blow does besides damage.
+     */
+    public ContactDamage pumping(float newBloat) {
+        this.bloat = newBloat;
         return this;
     }
 
@@ -164,5 +201,8 @@ public final class ContactDamage implements Component, Pool.Poolable {
         knockbackDecay = 0f;
         fatal = true;
         arcCosine = -1f;
+        slowFactor = 1f;
+        slowSeconds = 0f;
+        bloat = 0f;
     }
 }

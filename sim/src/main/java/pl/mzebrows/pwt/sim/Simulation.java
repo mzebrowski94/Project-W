@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.system.AidSystem;
 import pl.mzebrows.pwt.sim.system.AppearanceSystem;
 import pl.mzebrows.pwt.sim.system.AvoidanceSystem;
 import pl.mzebrows.pwt.sim.system.BlastSystem;
+import pl.mzebrows.pwt.sim.system.BloatSystem;
 import pl.mzebrows.pwt.sim.system.CasualtySystem;
 import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
@@ -144,7 +145,7 @@ public final class Simulation {
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new DragSystem());
-        engine.addSystem(new CommanderControlSystem(config, spawner, scatter));
+        engine.addSystem(new CommanderControlSystem(config, map, spawner, scatter));
         engine.addSystem(new MeleeSystem(spawner));
         // Immediately after the commander's own hands, and before anything looks around: a shot
         // fired from a turret this tick is in the world before the enemies decide what they can see,
@@ -174,7 +175,7 @@ public final class Simulation {
         // sidestep from a shot you saw coming must not land in the middle of a sit.
         engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
-        engine.addSystem(new DriveSystem());
+        engine.addSystem(new DriveSystem(map, config.ground()));
         engine.addSystem(new EnemyLeapSystem(Rng.stream(config.seed(), RngStream.LEAP)));
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
@@ -183,12 +184,26 @@ public final class Simulation {
         engine.addSystem(new GrenadeSystem(map, spawner));
         engine.addSystem(new PickupSystem(config, spawner));
         engine.addSystem(new EvolutionSystem(config, spawner));
-        engine.addSystem(new DamageSystem(spawner));
+        engine.addSystem(new DamageSystem(config, spawner));
         engine.addSystem(new ActionSystem(config));
         engine.addSystem(new AidSystem(config));
         engine.addSystem(new CasualtySystem(config, spawner));
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
+        // Before the death reactions below, and that is the whole of why it is here. A shot that
+        // runs out of flight, or flies into rock, or leaves the arena ends by DYING like every other
+        // end (G0018) - so it has to be marked dead while the reactions can still see it. Registered
+        // after the death chain, it was marked dead past that window and reaped on the same tick,
+        // which silently deleted the blast and the spatter every MISS should have left: a frog's
+        // venom burst only on the men it actually hit, and a charged spit that fell short left
+        // nothing at all. A shot that hit something is marked dead by the solver's contact long
+        // before this and is unaffected.
+        engine.addSystem(new ProjectileBoundsSystem(map, spawner));
+        // Beside the mine below, and for the same two reasons: this tick's hits are already on the
+        // component, and a body that fills this tick has to reach the death-reaction window on this
+        // tick rather than being owed to the next one. It spawns nothing itself - a body pumped full
+        // explodes by dying, through the one reaction (G0018).
+        engine.addSystem(new BloatSystem(config, spawner));
         // Immediately before the blast, and that is the whole of why it is here: the solver has
         // settled every position, so "near enough to set one off" means where things actually ended
         // up; and a fuse that runs out this tick reaches the death-reaction window below on this
@@ -201,7 +216,6 @@ public final class Simulation {
         // being reaped. Unlike a blast it owes no damage of its own - what it leaves is ordinary
         // bodies carrying ordinary blows, so the collision system decides who they catch.
         engine.addSystem(new SlickSystem(map, spawner, Rng.stream(config.seed(), RngStream.SLICK)));
-        engine.addSystem(new ProjectileBoundsSystem(map, spawner));
         // With the other systems that are about the level rather than about anything standing in it,
         // and after the solver has settled every position: a man who arrives forms up on where the
         // commander actually ended up. After the death chain too, so a trooper who arrives this tick

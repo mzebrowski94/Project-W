@@ -29,6 +29,7 @@ public final class TerrainRenderer implements Disposable {
 
     private final Viewport viewport;
     private final TerrainPalette palette;
+    private final GroundDetail detail;
     private final ShapeRenderer shapes = new ShapeRenderer();
 
     private @Nullable TileMap map;
@@ -36,14 +37,26 @@ public final class TerrainRenderer implements Disposable {
     /** One colour per terrain per region, resolved when the map is bound. Indexed terrain-major. */
     private Color[] resolved = new Color[0];
 
+    /**
+     * The hatch drawn over a thicket, and the rim drawn round rock, in the same index space.
+     *
+     * <p>Both are the tile's own colour mixed part of the way towards a mark colour, worked out here
+     * rather than blended at draw time - see {@link GroundDetail}. A mark therefore sits on its own
+     * shade of ground, so a thicket that crosses a region boundary still reads as one thicket.
+     */
+    private Color[] hatch = new Color[0];
+
+    private Color[] rim = new Color[0];
+
     private int regionCount;
     private int shadeCount = 1;
 
     private boolean disposed;
 
-    public TerrainRenderer(Viewport viewport, TerrainPalette palette) {
+    public TerrainRenderer(Viewport viewport, TerrainPalette palette, GroundDetail detail) {
         this.viewport = viewport;
         this.palette = palette;
+        this.detail = detail;
     }
 
     /** Points the renderer at a map. Call again after a restart - a new world is a new map. */
@@ -53,13 +66,29 @@ public final class TerrainRenderer implements Disposable {
         this.shadeCount = palette.tileShades();
         Terrain[] terrains = Terrain.values();
         this.resolved = new Color[terrains.length * regionCount * shadeCount];
+        this.hatch = new Color[resolved.length];
+        this.rim = new Color[resolved.length];
         for (Terrain terrain : terrains) {
             for (int region = 0; region < regionCount; region++) {
                 for (int shade = 0; shade < shadeCount; shade++) {
-                    resolved[index(terrain, region, shade)] = new Color(palette.colorFor(terrain, region, shade));
+                    int at = index(terrain, region, shade);
+                    Color ground = new Color(palette.colorFor(terrain, region, shade));
+                    resolved[at] = ground;
+                    hatch[at] = mixed(ground, detail.thicketTint(), detail.thicketAlpha());
+                    rim[at] = mixed(ground, detail.rockEdge(), detail.rockEdgeAlpha());
                 }
             }
         }
+    }
+
+    /** A copy of one colour carried part of the way towards another. The half-transparency, baked. */
+    private static Color mixed(Color ground, Color toward, float amount) {
+        Color mix = new Color(ground);
+        mix.r += (toward.r - mix.r) * amount;
+        mix.g += (toward.g - mix.g) * amount;
+        mix.b += (toward.b - mix.b) * amount;
+        mix.a = 1f;
+        return mix;
     }
 
     /** Draws every tile the camera can currently see. */
@@ -109,7 +138,83 @@ public final class TerrainRenderer implements Disposable {
                 runStart = runEnd + 1;
             }
         }
+        // The marks, after every flat tile rather than tile by tile, so a run is never broken by one.
+        // Both passes walk only what the camera can see, which is what keeps a map three screens
+        // wide costing what one screen costs.
+        for (int row = firstRow; row <= lastRow; row++) {
+            for (int col = firstCol; col <= lastCol; col++) {
+                Terrain terrain = current.terrainAtTile(col, row);
+                if (terrain == Terrain.THICKET) {
+                    undergrowth(current, col, row, tile);
+                } else if (terrain == Terrain.ROCK && detail.rimsRock()) {
+                    wallEdges(current, col, row, tile);
+                }
+            }
+        }
         shapes.end();
+    }
+
+    /**
+     * The hatch over one tile of undergrowth: a small grid of marks, each well inside its own cell.
+     *
+     * <p>Regular rather than scattered, deliberately. A random-looking texture reads as noise at this
+     * size and would have to be hashed off the tile to stay the same between frames; a grid reads as
+     * something woven, and what the player has to take from it is "this is not open ground" rather
+     * than any particular plant.
+     */
+    private void undergrowth(TileMap current, int col, int row, float tile) {
+        int cells = detail.thicketCells();
+        float cell = tile / cells;
+        float mark = cell * detail.thicketDot();
+        float inset = (cell - mark) * 0.5f;
+        shapes.setColor(hatch[index(Terrain.THICKET, region(current, col, row), palette.shadeStepFor(col, row))]);
+        float originX = col * tile;
+        float originY = row * tile;
+        for (int down = 0; down < cells; down++) {
+            for (int across = 0; across < cells; across++) {
+                shapes.rect(originX + across * cell + inset, originY + down * cell + inset, mark, mark);
+            }
+        }
+    }
+
+    /**
+     * The rim on every face of a wall that touches something walkable.
+     *
+     * <p>Rock and floor were two dark colours a shade apart, and at the pulled-back view that is a
+     * map you have to squint at to find the walls in. A lighter edge where the wall <em>stops</em>
+     * is what the eye actually reads a wall by, and it costs nothing on the tiles in the middle of
+     * one: an outcrop draws its outline and a solid block draws its perimeter.
+     *
+     * <p>Anything off the map counts as rock, so the border of a level is not outlined against
+     * nothing.
+     */
+    private void wallEdges(TileMap current, int col, int row, float tile) {
+        shapes.setColor(rim[index(Terrain.ROCK, region(current, col, row), palette.shadeStepFor(col, row))]);
+        float width = tile * detail.rockEdgeWidth();
+        float x = col * tile;
+        float y = row * tile;
+        if (open(current, col, row + 1)) {
+            shapes.rect(x, y + tile - width, tile, width);
+        }
+        if (open(current, col, row - 1)) {
+            shapes.rect(x, y, tile, width);
+        }
+        if (open(current, col - 1, row)) {
+            shapes.rect(x, y, width, tile);
+        }
+        if (open(current, col + 1, row)) {
+            shapes.rect(x + tile - width, y, width, tile);
+        }
+    }
+
+    /** Whether the tile next door is something a unit could stand on. Off the map is not. */
+    private static boolean open(TileMap current, int col, int row) {
+        return current.inBounds(col, row) && current.terrainAtTile(col, row) != Terrain.ROCK;
+    }
+
+    private int region(TileMap current, int col, int row) {
+        int region = current.regionAtTile(col, row);
+        return region < 0 ? 0 : region % regionCount;
     }
 
     private Color colorOf(Terrain terrain, int region, int shade) {

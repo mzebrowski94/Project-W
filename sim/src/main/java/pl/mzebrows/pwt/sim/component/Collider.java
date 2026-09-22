@@ -51,12 +51,28 @@ public final class Collider implements Component, Pool.Poolable {
      */
     public boolean avoided;
 
+    /**
+     * Whether a shot is used up on it.
+     *
+     * <p>The third question of the same shape, and it was found the same way {@link #avoided} was -
+     * by two things wanting to disagree. A shot is spent on whatever stops it, whether or not that
+     * thing can be hurt, which is right for a wall and for a body and wrong for <em>ground</em>:
+     * ruined ground is a circle lying on the floor and it was eating every bullet fired across it,
+     * so venom fenced the player's gun off as well as his feet.
+     *
+     * <p>Being in the way, being worth going round and stopping a shot are three questions, and this
+     * component is where all three are answered as data. Being solid is still the answer for
+     * everything else, so {@link #set} defaults this to it and only ruined ground says otherwise.
+     */
+    public boolean stopsShots;
+
     /** Sets both flags and returns this component, for fluent spawning. */
     public Collider set(boolean newSolid, boolean newMovable) {
         this.solid = newSolid;
         this.movable = newMovable;
         this.present = true;
         this.avoided = newSolid;
+        this.stopsShots = true;
         return this;
     }
 
@@ -66,11 +82,18 @@ public final class Collider implements Component, Pool.Poolable {
         return this;
     }
 
+    /** Says whether a shot is used up on this, where being solid is not the answer. */
+    public Collider stopsShots(boolean stopsAShot) {
+        this.stopsShots = stopsAShot;
+        return this;
+    }
+
     @Override
     public void reset() {
         solid = false;
         movable = false;
         present = false;
         avoided = false;
+        stopsShots = false;
     }
 }

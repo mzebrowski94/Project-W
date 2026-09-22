@@ -31,6 +31,17 @@ public enum Terrain {
     /** Burnt ground. Passable; what is left where a place has already been fought over. */
     ASH(true),
 
+    /**
+     * Dense undergrowth. Passable, and the first ground that is worth anything to walk round.
+     *
+     * <p>Every other terrain in this list is a colour and a mood; this one is a decision, and the
+     * only thing that makes it one is a number that is deliberately <em>not</em> here (see the class
+     * note). A route is still a route through it - nothing is closed off, so the flow field and
+     * every connectivity check treat a thicket as the open ground it is - and what it costs to cross
+     * is asked of {@code sim} at the moment something is standing in it.
+     */
+    THICKET(true),
+
     /** Rock. The blocking terrain, and what anything outside the map reads as. */
     ROCK(false);
 

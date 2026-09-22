@@ -4,8 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.sim.def.Grant;
+import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WeaponDef;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
  * The numbers here that fail silently. Everything else in {@code SimConfig} is validated at
@@ -15,6 +21,9 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 class SimConfigTest {
 
     private static final float HUGE = 40f;
+
+    /** Keeps a rate that never divides by zero from being a rate that divides by zero. */
+    private static final float TINY = 1e-6f;
 
     /** Brings the carry to a halt almost instantly, well short of the sweep's own reach. */
     private static final float HUGE_DECAY = 100_000f;
@@ -51,6 +60,60 @@ class SimConfigTest {
                         .isLessThan(leeway(config, kind));
             }
         }
+    }
+
+    /**
+     * <strong>The beam has to run out sooner than anything else he can pick up.</strong> Every good
+     * thing about the laser is bought out of one bar - the line through a crowd, the slow, and a
+     * body inflated until it goes off - so the moment some other gun runs hotter, the laser is
+     * simply the gun you hold down and none of those cost anything. That is two numbers on one
+     * definition and no system anywhere would notice it being tuned away.
+     *
+     * <p>Asked of the guns a <em>crate</em> grants, which is the honest definition of a gun a man
+     * can carry: a turret's gun runs hot too and nobody carries one away.
+     */
+    @Test
+    void runsHotterThanAnyOtherGunAManCanCarry() {
+        SimConfig config = SimConfig.defaults();
+
+        float beam = secondsOfHolding(config, WeaponKind.LASER);
+
+        for (PickupKind kind : PickupKind.values()) {
+            if (config.pickup(kind).playerGrant() instanceof Grant.Arm crate && crate.weapon() != WeaponKind.LASER) {
+                assertThat(beam)
+                        .as("the beam must stop itself sooner than the %s does", crate.weapon())
+                        .isLessThan(secondsOfHolding(config, crate.weapon()));
+            }
+        }
+    }
+
+    /**
+     * <strong>A thicket has to cost his side more than it costs theirs.</strong> Ground that slowed
+     * everybody equally is scenery - both sides arrive at the fight in the order they would have on
+     * open ground and the only thing that changed is how long the walk took. The asymmetry is the
+     * whole mechanic and it is two numbers in one table, so nothing else in the game would notice
+     * somebody evening them up while tuning how thick the undergrowth feels.
+     */
+    @Test
+    void costsThePlayersSideMoreToWadeThroughThanItCostsTheAliens() {
+        GroundDef thicket = SimConfig.defaults().ground(Terrain.THICKET);
+
+        assertThat(thicket.playerFactor()).isLessThan(thicket.alienFactor());
+        assertThat(thicket.matters()).isTrue();
+    }
+
+    /**
+     * How long the trigger can be held down before the gun stops itself. A gun cools whether or not
+     * it is firing, so what fills the bar is the difference between the two rates rather than either
+     * of them; a gun that stays cold is held down for ever.
+     */
+    private static float secondsOfHolding(SimConfig config, WeaponKind kind) {
+        WeaponDef gun = config.weapon(kind);
+        if (!gun.overheats()) {
+            return Float.POSITIVE_INFINITY;
+        }
+        float perSecond = gun.heat().perShot() / Math.max(gun.cooldownSeconds(), TINY);
+        return 1f / Math.max(perSecond - gun.heat().coolPerSecond(), TINY);
     }
 
     /** How much further than the range it noticed you at a strain will keep hunting you. */

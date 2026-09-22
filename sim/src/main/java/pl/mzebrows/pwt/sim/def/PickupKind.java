@@ -28,6 +28,7 @@ public enum PickupKind {
     ARMOURY_RAILGUN,
     ARMOURY_FLAMER,
     ARMOURY_SHOTGUN,
+    ARMOURY_LASER,
     /**
      * An explosive barrel. A pickup with nothing on offer to anybody: the commander is offered
      * nothing and leaves it standing, and what an alien gets for biting into one is the explosion.

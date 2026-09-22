@@ -96,6 +96,47 @@ public final class Damage implements Component, Pool.Poolable {
     public boolean fatal;
 
     /**
+     * The worst slow any of this tick's hits asked for, and how long it wanted to last.
+     *
+     * <p>It rides here rather than being applied at contact for the ordinary reason: contact records
+     * what is owed and {@code DamageSystem} decides what it costs. Unlike the knockback it does not
+     * turn on whether the victim survives - it belongs here because both are things a blow does
+     * <em>besides</em> damage, and neither may be decided where geometry is the only thing known.
+     */
+    public float slowFactor = 1f;
+
+    public float slowSeconds;
+
+    /** Records a slow, keeping the worst asked for this tick. Nothing at all for a blow that has none. */
+    public void slow(float factor, float seconds) {
+        if (factor >= 1f || seconds <= 0f || factor >= slowFactor) {
+            return;
+        }
+        slowFactor = factor;
+        slowSeconds = seconds;
+    }
+
+    /** True if something asked to rob this entity of speed this tick. */
+    public boolean slowed() {
+        return slowFactor < 1f && slowSeconds > 0f;
+    }
+
+    /**
+     * How much this tick's hits asked to pump this body up by, added rather than kept at the worst.
+     *
+     * <p>Added because unlike a slow it is a quantity rather than a state: two beams on one body
+     * fill it twice as fast, which is the right answer and the only one a player would guess.
+     */
+    public float bloat;
+
+    /** Records a shot's worth of pumping. Nothing at all for a blow that does none. */
+    public void pump(float extra) {
+        if (extra > 0f) {
+            bloat += extra;
+        }
+    }
+
+    /**
      * Records where a hit came from, keeping the <strong>first</strong> of the tick.
      *
      * <p>First rather than last so that two attackers landing in one tick resolve the same way on
@@ -183,5 +224,8 @@ public final class Damage implements Component, Pool.Poolable {
         sourceY = 0f;
         hasSource = false;
         fatal = false;
+        slowFactor = 1f;
+        slowSeconds = 0f;
+        bloat = 0f;
     }
 }

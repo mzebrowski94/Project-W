@@ -44,10 +44,26 @@ public final class Projectile implements Component, Pool.Poolable {
      */
     public boolean piercing;
 
+    /**
+     * How far back along its own path this shot is drawn, in world units. Zero is a dot, which is
+     * what every gun but the beam declares.
+     *
+     * <p>A drawing number living on a simulated component, exactly as the look a gun declares is:
+     * what the player can tell about the gun in his hands is not decoration (pillar 5). Nothing in
+     * the simulation reads it.
+     */
+    public float trailLength;
+
     /** Records the muzzle, and returns this component, for fluent spawning. */
     public Projectile from(float x, float y) {
         this.originX = x;
         this.originY = y;
+        return this;
+    }
+
+    /** Draws this as a line back along its own path rather than as a dot. */
+    public Projectile trailing(float newTrailLength) {
+        this.trailLength = newTrailLength;
         return this;
     }
 
@@ -75,6 +91,7 @@ public final class Projectile implements Component, Pool.Poolable {
 
     @Override
     public void reset() {
+        trailLength = 0f;
         originX = 0f;
         originY = 0f;
         range = 0f;

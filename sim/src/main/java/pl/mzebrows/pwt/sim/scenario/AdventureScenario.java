@@ -36,12 +36,15 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  *       - a trooper only engages through open ground, and so does what is shooting at it.
  *   <li><strong>The growth.</strong> Organic ground, runners, and food lying about. Leave the
  *       mushrooms and a grunt becomes a brute; leave a flower and something becomes worse than that.
- *       The biome that punishes walking past things.
+ *       The biome that punishes walking past things - and the first one with real <strong>thicket</strong>
+ *       in it, which is ground he wades through and the things chasing him barely notice. Runners
+ *       and undergrowth are the same lesson from both ends: you cannot outrun this, so stop trying.
  *   <li><strong>The quarry.</strong> Heavy rock, brutes, spitters behind them and barrels among them.
  *       Everything the first three taught, in the least room.
- *   <li><strong>The mire.</strong> Standing water, and frogs. Nothing here chases you far - back off
- *       and one loses you - but what they throw ruins the ground, so the biome is about where you
- *       are standing rather than about what is coming at you. The one that teaches you to read the
+ *   <li><strong>The mire.</strong> Standing water, reeds and frogs. Nothing here chases you far -
+ *       back off and one loses you - but what they throw ruins the ground, and the ground was
+ *       already slow. The biome is about where you are standing rather than about what is coming at
+ *       you, and it is where backing off stops being free. The one that teaches you to read the
  *       floor.
  *   <li><strong>The ashes.</strong> Burnt ground, and everything at once: brutes in the way,
  *       spitters behind them, runners through the gaps and frogs ruining the ground under all of it.
@@ -218,6 +221,7 @@ final class AdventureScenario implements Scenario {
         builder.rect(204, 21, 4, 3, Terrain.ASH);
         builder.rect(196, 25, 3, 3, Terrain.ASH);
         builder.rect(210, 9, 3, 4, Terrain.PLAIN);
+        thickets(builder);
         paintRegions(builder);
 
         builder.border(1, Terrain.ROCK);
@@ -229,6 +233,49 @@ final class AdventureScenario implements Scenario {
         wall(builder, WALL_SIX, GAP_SIX_ROW);
         rock(builder);
         return builder.build();
+    }
+
+    /**
+     * The undergrowth: ground he wades through and the things that live in it barely notice.
+     *
+     * <p>Painted before the walls and the outcrops rather than after, so rock always wins where the
+     * two meet and a thicket can never be something that has quietly grown over a route. It cannot
+     * close one off in any case - a thicket is passable ground and every flow field, every
+     * reachability check and every spawn treats it as the open ground it is - so what it does to a
+     * level is add a cost to a line rather than remove the line.
+     *
+     * <p><strong>It arrives in the dust as one patch and means nothing there</strong>, which is the
+     * point: the biome whose job is teaching that where you stand matters is where he should first
+     * walk into some and feel himself slow down, with nothing chasing him. It is worth something in
+     * the growth, where runners are already the argument against trying to outrun anything; it is
+     * worth a great deal in the mire, where backing off a frog is the whole answer to one and the
+     * reeds are what make backing off cost something; and it is scattered through the ashes because
+     * that biome asks for everything at once.
+     *
+     * <p>The quarry and the redoubt have none on purpose. The quarry's problem is rock and the room
+     * it leaves, and the redoubt is ground you have to be able to see all of and move across freely
+     * while it is being taken off you.
+     */
+    private static void thickets(TileMap.Builder builder) {
+        // The dust: one patch, off the line between the points, and nothing in it.
+        builder.rect(44, 16, 4, 5, Terrain.THICKET);
+
+        // The growth: enough of it to change how the biome is crossed.
+        builder.rect(63, 5, 6, 7, Terrain.THICKET);
+        builder.rect(72, 17, 7, 6, Terrain.THICKET);
+        builder.rect(82, 6, 5, 6, Terrain.THICKET);
+
+        // The mire: reeds. Kept off the control point at 128,6 - a point is a thing the squad has to
+        // stand still on, and one that also has to be waded to is two problems before he has met
+        // either.
+        builder.rect(124, 9, 6, 6, Terrain.THICKET);
+        builder.rect(132, 17, 8, 7, Terrain.THICKET);
+        builder.rect(142, 8, 6, 9, Terrain.THICKET);
+
+        // The ashes: scrub coming back through the burnt ground, in patches rather than in bands.
+        builder.rect(152, 20, 6, 6, Terrain.THICKET);
+        builder.rect(160, 3, 6, 5, Terrain.THICKET);
+        builder.rect(170, 19, 7, 6, Terrain.THICKET);
     }
 
     /**
@@ -374,7 +421,15 @@ final class AdventureScenario implements Scenario {
         boulders(simulation, map);
 
         // The plain: enough grunts to be a fight, and rabbits to deny before something eats them.
-        grunts(simulation, map, 6, 6, 10, 14, 12, 9, 15, 18, 19, 12, 21, 25, 23, 7, 26, 20, 27, 4, 28, 26);
+        //
+        // HALF AS MANY AS IT HAD, AND NONE OF THEM WITHIN SIGHT OF THE SPAWN. The spawn area is
+        // columns two to five, and this biome used to start at column six with ten grunts in it - so
+        // a squad that had been on the field for two seconds was already in a fight it had not
+        // chosen, on the one biome whose whole job is that nothing here is a problem yet. Nothing
+        // now stands west of column fourteen, which is about a screen's worth of walking, and there
+        // are five rather than ten because the first thing the march teaches is the order keys and
+        // you cannot learn a key while you are being bitten.
+        grunts(simulation, map, 14, 9, 17, 20, 21, 13, 24, 6, 27, 23);
         rabbits(simulation, map, 7, 26, 8, 22, 16, 26, 22, 16, 27, 10);
 
         // The dust: the same grunts in greater numbers, and the first things that shoot back.
@@ -474,6 +529,8 @@ final class AdventureScenario implements Scenario {
         // the colour of what is in it, so which one is worth the walk is a decision rather than a
         // surprise (pillar 5). The shotgun and the flamer are both answers to being close, which is
         // exactly the problem runners set - and a railgun among them is the other half of the choice.
+        // The beam is deliberately NOT here: it is the fourth gun and it arrives two biomes later,
+        // where there is finally something for a shot to go through.
         pickups(simulation, map, PickupKind.ARMOURY_SHOTGUN, 76, 20);
         pickups(simulation, map, PickupKind.ARMOURY_FLAMER, 68, 22);
         pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 87, 11);
@@ -488,6 +545,11 @@ final class AdventureScenario implements Scenario {
         pickups(simulation, map, PickupKind.ARMOURY_FLAMER, 96, 16, 108, 12);
         pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 104, 6, 99, 24);
         pickups(simulation, map, PickupKind.ARMOURY_SHOTGUN, 115, 24);
+        // THE FIRST BEAM, and the quarry is where it is first worth having. Everything here outlives
+        // a sidearm, and the beam is the gun that answers a thing rather than a crowd: it holds one
+        // brute at half pace while the squad works on it, and what it leaves behind is worth more
+        // than what it killed. In the least room on the march, that is a real answer.
+        pickups(simulation, map, PickupKind.ARMOURY_LASER, 111, 20);
 
         // THE MIRE: frogs, and almost nothing else. The biome that teaches them, so what it asks is
         // one question at a time - where their stuff has landed, and whether backing off has worked.
@@ -520,6 +582,10 @@ final class AdventureScenario implements Scenario {
         rabbits(simulation, map, 130, 4, 141, 27);
         // A gun in the mire, because the ashes are past it and a sidearm is not an answer to them.
         pickups(simulation, map, PickupKind.ARMOURY_SHOTGUN, 132, 21);
+        // And a beam, because the mire is where the ground stops being safe: what it buys here is a
+        // frog dropped before it has closed, and a body left where it fell turned into something the
+        // rest of them have to walk round.
+        pickups(simulation, map, PickupKind.ARMOURY_LASER, 144, 16);
 
         // THE ASHES: everything at once, and frogs underneath all of it. What makes this biome the
         // last one is not that the creatures are worse but that the ground is also against you -

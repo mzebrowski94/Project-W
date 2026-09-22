@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Slick;
+import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Wander;
@@ -51,6 +52,7 @@ public final class CooldownSystem extends EntitySystem {
     private static final ComponentMapper<Dodge> DODGE = ComponentMapper.getFor(Dodge.class);
     private static final ComponentMapper<Blast> BLAST = ComponentMapper.getFor(Blast.class);
     private static final ComponentMapper<Slick> SLICK = ComponentMapper.getFor(Slick.class);
+    private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
     private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
     private static final ComponentMapper<Thrower> THROWER = ComponentMapper.getFor(Thrower.class);
     private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
@@ -66,6 +68,7 @@ public final class CooldownSystem extends EntitySystem {
     private ImmutableArray<Entity> dodges = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> blasts = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> slicks = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> slows = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> shakes = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> throwers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> heats = new ImmutableArray<>(new Array<>());
@@ -83,6 +86,7 @@ public final class CooldownSystem extends EntitySystem {
         dodges = engine.getEntitiesFor(Family.all(Dodge.class).get());
         blasts = engine.getEntitiesFor(Family.all(Blast.class).get());
         slicks = engine.getEntitiesFor(Family.all(Slick.class).get());
+        slows = engine.getEntitiesFor(Family.all(Slowed.class).get());
         shakes = engine.getEntitiesFor(Family.all(Shake.class).get());
         throwers = engine.getEntitiesFor(Family.all(Thrower.class).get());
         heats = engine.getEntitiesFor(Family.all(Heat.class, Weapon.class).get());
@@ -138,6 +142,10 @@ public final class CooldownSystem extends EntitySystem {
         for (int i = 0; i < slicks.size(); i++) {
             Slick slick = SLICK.get(slicks.get(i));
             slick.remainingSeconds = countDown(slick.remainingSeconds, deltaTime);
+        }
+        for (int i = 0; i < slows.size(); i++) {
+            Slowed slowed = SLOWED.get(slows.get(i));
+            slowed.remainingSeconds = countDown(slowed.remainingSeconds, deltaTime);
         }
         for (int i = 0; i < shakes.size(); i++) {
             Shake shake = SHAKE.get(shakes.get(i));

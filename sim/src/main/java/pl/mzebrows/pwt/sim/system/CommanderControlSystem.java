@@ -5,6 +5,8 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.ashley.utils.ImmutableArray;
+import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
@@ -17,6 +19,8 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.GroundDef;
 
 /**
  * Turns a commander's intent into movement and gunfire.
@@ -68,6 +72,11 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     private final float leashRadius;
 
+    /** The ground he is standing on, and what each kind of it costs him. */
+    private final TileMap map;
+
+    private final Defs<Terrain, GroundDef> ground;
+
     /** Scratch, so working out where a shot leaves from costs no allocation per shot. */
     private final float[] muzzle = new float[2];
 
@@ -78,7 +87,7 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     private int watched;
 
-    public CommanderControlSystem(SimConfig config, Spawner spawner, Rng scatter) {
+    public CommanderControlSystem(SimConfig config, TileMap map, Spawner spawner, Rng scatter) {
         this.scatter = scatter;
         super(Family.all(
                         Commander.class,
@@ -91,6 +100,8 @@ public final class CommanderControlSystem extends IteratingSystem {
                         Faction.class)
                 .get());
         this.spawner = spawner;
+        this.map = map;
+        this.ground = config.ground();
         this.leashRadius = config.commander().leashRadius();
     }
 
@@ -174,15 +185,21 @@ public final class CommanderControlSystem extends IteratingSystem {
     /**
      * A move intent longer than one unit is normalised, so holding two keys is not faster than
      * holding one; a shorter one is kept as-is, so a half-pushed stick moves at half speed.
+     *
+     * <p>The speed it works from is {@link Pace}d first, which is the whole of why that question is
+     * a class of its own: he is the one thing on the field whose velocity is not committed by
+     * {@code DriveSystem}, and ground that slowed everything except the player would be ground with
+     * no decision in it. Scaling the speed rather than the finished velocity also keeps hauling
+     * honest - a man dragging a barrel through a thicket is capped off the speed he actually has.
      */
-    private static void drive(Entity entity, Intent intent) {
+    private void drive(Entity entity, Intent intent) {
         Velocity velocity = VELOCITY.get(entity);
         float length = (float) Math.sqrt(intent.moveX * intent.moveX + intent.moveY * intent.moveY);
         if (length <= EPSILON) {
             velocity.set(0f, 0f);
             return;
         }
-        float speed = SPEED.get(entity).value;
+        float speed = SPEED.get(entity).value * Pace.of(entity, map, ground);
         float scale = length > 1f ? speed / length : speed;
         haul(entity, velocity, intent.moveX * scale, intent.moveY * scale, speed);
     }

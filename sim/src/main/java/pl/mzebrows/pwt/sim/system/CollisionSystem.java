@@ -313,9 +313,17 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      * G0019. Rock and the arena edge are not here at all: they stop a shot in
      * {@code ProjectileBoundsSystem}, which asks nothing about what kind of shot it is, so "it only
      * stops at walls" needs nothing said about walls.
+     *
+     * <p><strong>Some things do not stop one at all.</strong> Ruined ground is a circle lying on the
+     * floor rather than something standing on it, and it was spending every shot fired across it -
+     * so a frog fencing off the ground also fenced off the gun. That is a flag on the collider like
+     * being solid and being worth going round, asked here and nowhere else.
      */
     private void spend(Entity projectile, Entity target) {
         strike(projectile, target);
+        if (COLLIDER.has(target) && !COLLIDER.get(target).stopsShots) {
+            return;
+        }
         if (!PROJECTILE.get(projectile).piercing || prop(target)) {
             spawner.markDead(projectile);
         }
@@ -358,6 +366,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         owed.add(attack.amount, attack.victimInvulnerableSeconds, attack.fatal);
+        // Recorded, not applied, exactly as the shove is: what a hit costs is decided by the system
+        // that knows the hit landed, and a blow with no slow on it writes nothing at all.
+        owed.slow(attack.slowFactor, attack.slowSeconds);
+        owed.pump(attack.bloat);
         recordSource(attacker, owed);
         lock(attacker, target, attack, owed);
     }

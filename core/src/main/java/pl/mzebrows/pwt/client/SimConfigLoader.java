@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import java.util.Locale;
+import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.ApproachDef;
@@ -8,6 +9,7 @@ import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
+import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.def.HeatDef;
 import pl.mzebrows.pwt.sim.def.HopDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
@@ -51,10 +53,12 @@ public final class SimConfigLoader {
                 units(properties, defaults, chances),
                 pickups(properties, defaults),
                 weapons(properties, defaults),
+                ground(properties, defaults),
                 chances,
                 melee(properties, defaults.melee()),
                 blast(properties, defaults.blast()),
                 fire(properties, defaults.fire()),
+                bloat(properties, defaults.bloat()),
                 grenade(properties, defaults.grenade()),
                 rabbit(properties, defaults.rabbit()),
                 barrel(properties, defaults.barrel()),
@@ -366,6 +370,16 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.fire.fadeFraction", defaults.fadeFraction()));
     }
 
+    /** What a beam held on a body does to it, under {@code sim.bloat}. */
+    private static SimConfig.BloatConfig bloat(GameProperties properties, SimConfig.BloatConfig defaults) {
+        return new SimConfig.BloatConfig(
+                properties.getFloat("sim.bloat.referenceRadius", defaults.referenceRadius()),
+                properties.getFloat("sim.bloat.livingFactor", defaults.livingFactor()),
+                properties.getFloat("sim.bloat.settlePerSecond", defaults.settlePerSecond()),
+                properties.getFloat("sim.bloat.blastFactor", defaults.blastFactor()),
+                properties.getFloat("sim.bloat.holdSeconds", defaults.holdSeconds()));
+    }
+
     /** What an explosion does, under {@code sim.blast}. The radius belongs to whatever makes one. */
     private static SimConfig.BlastConfig blast(GameProperties properties, SimConfig.BlastConfig defaults) {
         return new SimConfig.BlastConfig(
@@ -399,7 +413,34 @@ public final class SimConfigLoader {
                             slicks(properties, prefix, fallback.slicks()),
                             heat(properties, prefix, fallback.heat()),
                             properties.getFloat(prefix + ".muzzleOffset", fallback.muzzleOffset()),
-                            properties.getFloat(prefix + ".pierceIntervalSeconds", fallback.pierceIntervalSeconds())));
+                            properties.getFloat(prefix + ".pierceIntervalSeconds", fallback.pierceIntervalSeconds()),
+                            properties.getFloat(prefix + ".slowFactor", fallback.slowFactor()),
+                            properties.getFloat(prefix + ".slowSeconds", fallback.slowSeconds()),
+                            properties.getFloat(prefix + ".selfSlowFactor", fallback.selfSlowFactor()),
+                            properties.getFloat(prefix + ".selfSlowSeconds", fallback.selfSlowSeconds()),
+                            // Never read from properties, for the reason the look is not: it is how
+                            // the gun reads on screen rather than a number anybody balances.
+                            fallback.trailLength(),
+                            properties.getFloat(prefix + ".bloatPerShot", fallback.bloatPerShot())));
+        }
+        return builder.build();
+    }
+
+    /**
+     * What each kind of ground costs whatever is standing on it, each under
+     * {@code sim.ground.<terrain>} with the same two keys. One means open ground, which is what all
+     * of them but the thicket declare.
+     */
+    private static Defs<Terrain, GroundDef> ground(GameProperties properties, SimConfig defaults) {
+        Defs.Builder<Terrain, GroundDef> builder = Defs.builder(Terrain.class);
+        for (Terrain terrain : Terrain.values()) {
+            GroundDef fallback = defaults.ground(terrain);
+            String prefix = "sim.ground." + terrain.name().toLowerCase(Locale.ROOT);
+            builder.put(
+                    terrain,
+                    new GroundDef(
+                            properties.getFloat(prefix + ".playerFactor", fallback.playerFactor()),
+                            properties.getFloat(prefix + ".alienFactor", fallback.alienFactor())));
         }
         return builder.build();
     }

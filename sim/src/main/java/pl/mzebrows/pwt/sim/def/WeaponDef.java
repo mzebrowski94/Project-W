@@ -50,6 +50,34 @@ import lombok.With;
  *     exactly the test a grenade already makes (G0019), so rock and an obstacle still stop it. The
  *     number itself is what keeps one slug from landing on one body once per tick while it crosses
  *     it: a body is passed through in a few ticks, and a blow is owed only once in that window
+ * @param slowFactor how much of its speed a unit this gun hits keeps, as a fraction. <strong>One is
+ *     a gun that slows nothing</strong>, which is what every gun but the beam declares - the same
+ *     "not for me" {@link SlickDef#off()} and {@link HeatDef#none()} say with a zero, said with the
+ *     number whose neutral value happens to be one. It scales what a unit was already trying to do
+ *     and never turns it, so a slowed creature walks exactly where it meant to and takes longer
+ * @param slowSeconds how long that lasts after the last hit. Refreshed by every hit rather than
+ *     added to, so what buys the slow is keeping the beam <em>on</em> something; short, because a
+ *     slow the player cannot see running out is a slow he cannot plan around
+ * @param selfSlowFactor how much of his own speed the <em>shooter</em> keeps while he is firing
+ *     this, as a fraction. One is a gun that costs him nothing to hold down, which is every gun but
+ *     the beam. It is the other half of what makes the laser a commitment: a man holding a beam on
+ *     something is a man who is not getting out of the way quickly, so the gun that stops things
+ *     coming at you is also the gun that makes them worth being afraid of
+ * @param selfSlowSeconds how long that lasts after the last shot. A few cooldowns rather than a
+ *     second, so it is continuous while the trigger is down and gone almost at once when it is not -
+ *     a self-slow that outlived the burst would be a punishment rather than a cost
+ * @param trailLength how far back along its own path one of its shots is drawn, in world units.
+ *     Zero is a dot, which is what every gun but the beam declares. A drawing number rather than a
+ *     balance one, which is why it lives here beside {@code projectileLook} and is deliberately not
+ *     read from {@code game.properties}: what the player can tell about the gun in his hands is not
+ *     decoration (pillar 5). Nothing in the simulation reads it
+ * @param bloatPerShot how much of a body's capacity one of its shots fills, as a fraction.
+ *     <strong>Zero is a gun that does nothing to a corpse</strong>, which is what every gun but the
+ *     beam declares. It builds on the living too, invisibly, so holding the beam through a kill is
+ *     what leaves a body worth going off - but only something already dying is allowed to burst,
+ *     because a gun that killed by inflation rather than by damage would make health beside the
+ *     point. The number is what balances the whole mechanic against the heat bar: set so that
+ *     filling a body costs most of one
  */
 @With
 public record WeaponDef(
@@ -65,7 +93,13 @@ public record WeaponDef(
         SlickDef slicks,
         HeatDef heat,
         float muzzleOffset,
-        float pierceIntervalSeconds) {
+        float pierceIntervalSeconds,
+        float slowFactor,
+        float slowSeconds,
+        float selfSlowFactor,
+        float selfSlowSeconds,
+        float trailLength,
+        float bloatPerShot) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;
@@ -84,6 +118,38 @@ public record WeaponDef(
         Require.notNegative("weapon blastRadius", blastRadius);
         Require.notNegative("weapon muzzleOffset", muzzleOffset);
         Require.notNegative("weapon pierceIntervalSeconds", pierceIntervalSeconds);
+        Require.positive("weapon slowFactor", slowFactor);
+        Require.notNegative("weapon slowSeconds", slowSeconds);
+        Require.positive("weapon selfSlowFactor", selfSlowFactor);
+        Require.notNegative("weapon selfSlowSeconds", selfSlowSeconds);
+        Require.notNegative("weapon trailLength", trailLength);
+        Require.notNegative("weapon bloatPerShot", bloatPerShot);
+        if (selfSlowFactor > 1f) {
+            throw new IllegalArgumentException("a gun may slow its own shooter and may not speed him up");
+        }
+        if (slowFactor > 1f) {
+            throw new IllegalArgumentException("a gun may slow what it hits and may not speed it up");
+        }
+    }
+
+    /** True if what this gun hits keeps less of its speed for a while afterwards. */
+    public boolean slows() {
+        return slowFactor < 1f && slowSeconds > 0f;
+    }
+
+    /** True if holding this down costs the shooter some of his own pace. */
+    public boolean slowsItsShooter() {
+        return selfSlowFactor < 1f && selfSlowSeconds > 0f;
+    }
+
+    /** True if its shots are drawn as a line rather than as a dot. */
+    public boolean streaks() {
+        return trailLength > 0f;
+    }
+
+    /** True if sustained fire from this pumps a body up. */
+    public boolean bloats() {
+        return bloatPerShot > 0f;
     }
 
     /** True if firing this gun faster than it likes costs anything. */

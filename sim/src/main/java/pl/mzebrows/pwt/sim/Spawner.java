@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.sim.component.Approach;
 import pl.mzebrows.pwt.sim.component.Avoidance;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
+import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Collider;
@@ -50,6 +51,7 @@ import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.SlicksOnDeath;
+import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
@@ -190,6 +192,12 @@ public final class Spawner {
         // Carried always, because what he is holding changes: a gun that runs hot needs somewhere to
         // put it, and one that does not leaves this at zero for ever.
         entity.add(engine.createComponent(Heat.class));
+        entity.add(engine.createComponent(Slowed.class));
+        // He carries one too, and nothing on the alien side has a gun that fills it. It is here so
+        // that what a body is made of does not depend on whose side it was on - the day something
+        // over there carries a beam, the mechanic already works on him.
+        entity.add(engine.createComponent(Bloat.class));
+        entity.add(engine.createComponent(BlastsOnDeath.class));
         entity.add(engine.createComponent(Appearance.class)
                 .set(Look.COMMANDER, slot)
                 .face(1f, 0f));
@@ -223,6 +231,17 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(trooper.radius()));
         entity.add(engine.createComponent(Speed.class).set(trooper.speed()));
         entity.add(engine.createComponent(Steering.class));
+        // Carried always, by everything that moves under its own power, because what is slowing it
+        // changes: a beam held on it, and nothing else in the game yet. A unit nothing has touched
+        // keeps this at zero for ever, and adding it at the moment of the first hit would mutate a
+        // family mid-iteration.
+        entity.add(engine.createComponent(Slowed.class));
+        // And a body that can be pumped up, and a blast that is worth nothing until something has
+        // pumped it. Both carried by everything that can be killed, and both inert until a beam is
+        // pointed at it: a reaction with no radius leaves nothing behind, which is the same "zero
+        // means not for me" every other kind table uses (G0018).
+        entity.add(engine.createComponent(Bloat.class));
+        entity.add(engine.createComponent(BlastsOnDeath.class));
         entity.add(engine.createComponent(Collider.class).set(true, true));
         entity.add(engine.createComponent(Health.class).set(trooper.health()));
         entity.add(engine.createComponent(Damage.class));
@@ -286,6 +305,13 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class));
         entity.add(engine.createComponent(Speed.class));
         entity.add(engine.createComponent(Steering.class));
+        entity.add(engine.createComponent(Slowed.class));
+        // And a body that can be pumped up, and a blast that is worth nothing until something has
+        // pumped it. Both carried by everything that can be killed, and both inert until a beam is
+        // pointed at it: a reaction with no radius leaves nothing behind, which is the same "zero
+        // means not for me" every other kind table uses (G0018).
+        entity.add(engine.createComponent(Bloat.class));
+        entity.add(engine.createComponent(BlastsOnDeath.class));
         entity.add(engine.createComponent(Collider.class).set(true, true));
         entity.add(engine.createComponent(Health.class));
         entity.add(engine.createComponent(Damage.class));
@@ -502,6 +528,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(Dying.class).set(rabbit.deathThroesSeconds()));
         entity.add(engine.createComponent(Steering.class));
+        entity.add(engine.createComponent(Slowed.class));
         entity.add(engine.createComponent(Wander.class)
                 .set(
                         rabbit.wander().enabled(),
@@ -805,6 +832,10 @@ public final class Spawner {
                 weapon.blastRadius,
                 weapon.slicks,
                 weapon.pierceIntervalSeconds,
+                weapon.slowFactor,
+                weapon.slowSeconds,
+                weapon.bloatPerShot,
+                weapon.trailLength,
                 side);
     }
 
@@ -826,6 +857,10 @@ public final class Spawner {
                 gun.blastRadius(),
                 gun.slicks(),
                 gun.pierceIntervalSeconds(),
+                gun.slowFactor(),
+                gun.slowSeconds(),
+                gun.bloatPerShot(),
+                gun.trailLength(),
                 side);
     }
 
@@ -842,9 +877,16 @@ public final class Spawner {
             float blastRadius,
             SlickDef slicks,
             float pierceIntervalSeconds,
+            float slowFactor,
+            float slowSeconds,
+            float bloatPerShot,
+            float trailLength,
             Side side) {
         Entity entity = engine.createEntity();
-        Projectile shot = engine.createComponent(Projectile.class).from(x, y).lasting(range);
+        Projectile shot = engine.createComponent(Projectile.class)
+                .from(x, y)
+                .lasting(range)
+                .trailing(trailLength);
         if (pierceIntervalSeconds > 0f) {
             // A shot that goes through things. The interval is its contact cooldown, which is the
             // field that already means "how long before this may land another blow" - so one slug
@@ -860,7 +902,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(false, true));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(damage, pierceIntervalSeconds, 0f)
-                .wounding());
+                .wounding()
+                .slowing(slowFactor, slowSeconds)
+                .pumping(bloatPerShot));
         if (blastRadius > 0f) {
             // A shot that goes off where it stops, and it does so by dying, through the one reaction
             // everything that explodes uses (G0018). Hitting something and running out of arena are
@@ -916,7 +960,12 @@ public final class Spawner {
         // rather than declared beside the numbers, exactly as a pickup's shunned is: ground that
         // catches everybody is ground everybody gives room to, and ground that is somebody's problem
         // is walked through by the things that made it (G0034, G0035).
-        entity.add(engine.createComponent(Collider.class).set(false, false).avoided(side == Side.NEUTRAL));
+        // And it stops no shot. It is a circle lying on the floor, not a thing standing on it: a
+        // slick that ate bullets meant the frog fencing off the ground fenced off the gun too.
+        entity.add(engine.createComponent(Collider.class)
+                .set(false, false)
+                .avoided(side == Side.NEUTRAL)
+                .stopsShots(false));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(damage, 0f, victimInvulnerableSeconds)
                 .wounding());
@@ -1039,17 +1088,25 @@ public final class Spawner {
      * damage it owes is written straight onto whatever it caught, and never crosses the contact path.
      */
     public Entity spawnBlast(float x, float y, float radius) {
+        return spawnBlast(x, y, radius, true, Look.BLAST);
+    }
+
+    /**
+     * The same, saying whether it leaves the ground burning and what it is drawn as. Everything that
+     * explodes leaves fire and is drawn as an explosion, but one.
+     */
+    public Entity spawnBlast(float x, float y, float radius, boolean leavesFire, Look look) {
         SimConfig.BlastConfig blast = config.blast();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Blast.class).set(blast.damage(), blast.durationSeconds()));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(radius));
-        entity.add(engine.createComponent(Appearance.class).set(Look.BLAST));
+        entity.add(engine.createComponent(Appearance.class).set(look));
         entity.add(engine.createComponent(Shake.class)
                 .set(blast.shakeStrength(), radius * blast.shakeRadiusFactor(), blast.durationSeconds()));
         SlickDef fire = config.fire().forBlast(radius);
-        if (fire.leavesAnything()) {
+        if (leavesFire && fire.leavesAnything()) {
             // What the explosion leaves burning, through the one reaction everything that leaves
             // something behind uses (G0018, G0035). A blast is a thing that dies like any other, so
             // nothing that explodes had to learn that fire exists - and a gun that leaves no blast,

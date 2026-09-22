@@ -42,15 +42,34 @@ public final class PlayerSeats {
     /** Which seats were empty last frame, so a departure is logged once rather than sixty times a second. */
     private final boolean[] wasMissing = new boolean[Players.MAX];
 
+    /**
+     * How many pads this refresh had nowhere to put, and how many the last one did.
+     *
+     * <p>A count rather than a set of ids, and it exists for exactly the reason {@link #wasMissing}
+     * does: seating is recomputed from scratch sixty times a second, so anything said about a pad
+     * without remembering that it has already been said is said sixty times a second. With four pads
+     * plugged into a game whose slot zero is the keyboard's, the fourth one printed a line every
+     * frame for as long as it was plugged in.
+     *
+     * <p>Comparing counts is enough and needs no allocation in the loop: a pad that has just been
+     * turned away pushes the count above what it was last frame, and one that was already being
+     * turned away does not.
+     */
+    private int turnedAway;
+
+    private int wasTurnedAway;
+
     /** Brings the seating in line with what is plugged in, logging every change. */
     public void refresh(GamepadSource pads) {
         for (int slot = 0; slot < Players.MAX; slot++) {
             padBySlot[slot] = null;
         }
+        turnedAway = 0;
         int count = pads.count();
         for (int i = 0; i < count; i++) {
             seat(pads.get(i));
         }
+        wasTurnedAway = turnedAway;
         reportTheMissing();
     }
 
@@ -95,7 +114,10 @@ public final class PlayerSeats {
         }
         int free = lowestFreeSlot();
         if (free < 0) {
-            Log.info("gamepad ignored, all " + Players.MAX + " slots are taken: " + pad.name());
+            turnedAway++;
+            if (turnedAway > wasTurnedAway) {
+                Log.info("gamepad ignored, all " + Players.MAX + " slots are taken: " + pad.name());
+            }
             return;
         }
         idBySlot[free] = pad.id();

@@ -50,6 +50,20 @@ public final class Appearance implements Component, Pool.Poolable {
         /** Shoved and briefly unable to act, with nothing holding the other party. */
         STAGGERED,
         /**
+         * Wading: robbed of some of its speed and still doing everything else.
+         *
+         * <p>Unlike every other state here it is not something that stops a unit acting, which is
+         * exactly why it needs showing (pillar 5). A creature that is merely slow looks identical to
+         * one that is walking at you normally until you have watched it for a second, and a second
+         * is the whole of the window the slow bought. It is below being staggered, because a unit
+         * that is held still is not going anywhere at any speed.
+         *
+         * <p>Only what was <em>done</em> to it reports this. Ground that slows everything standing
+         * in it is already visible - the thicket is drawn - and tinting every creature in a thicket
+         * would say the same thing twice and hide what else they were doing.
+         */
+        SLOWED,
+        /**
          * Shot off his feet and bleeding out, but not gone: somebody who reaches him in time puts
          * him back on them. It must read as unmistakably different from {@link #DYING}, because the
          * two ask the player for opposite things - one is somewhere to run to and one is not.
@@ -122,6 +136,24 @@ public final class Appearance implements Component, Pool.Poolable {
     public float facingY;
 
     /**
+     * The far end of the streak this entity is drawn as, in world units; equal to its own position
+     * means it is a dot, which is what everything in the game publishes but one.
+     *
+     * <p>Pillar 5 for a gun that fires forty times a second. A stream of round shots at that rate is
+     * read as a stream of round shots, not as a beam, and the beam is the whole of what the laser
+     * <em>is</em> - so the shots say where they came from and the renderer joins the two ends. Every
+     * pixel of the line is on the path a real simulated shot actually took, which is why this is a
+     * published fact and not the renderer inventing geometry: there is still no hitscan anywhere.
+     *
+     * <p>Two floats on this component rather than the renderer reading a {@code Projectile}, for the
+     * reason the facing is two floats here: the renderer reads this and asks nothing else about an
+     * entity (G0003).
+     */
+    public float trailX;
+
+    public float trailY;
+
+    /**
      * Whether this entity is acting on an order rather than on its own judgement (3.f).
      *
      * <p>Pillar 5 applied to command: a player who cannot see which of his men heard him has no way
@@ -178,6 +210,18 @@ public final class Appearance implements Component, Pool.Poolable {
         return set(newLook, 0);
     }
 
+    /** Draws this back to the given point rather than as a dot, and returns this component. */
+    public Appearance trailingFrom(float fromX, float fromY) {
+        this.trailX = fromX;
+        this.trailY = fromY;
+        return this;
+    }
+
+    /** True if this is drawn as a line rather than as a dot. */
+    public boolean streaks() {
+        return trailX != 0f || trailY != 0f;
+    }
+
     /** Sets the look and which of its appearances to wear, and returns this component. */
     public Appearance set(Look newLook, int newVariant) {
         this.look = newLook;
@@ -215,6 +259,8 @@ public final class Appearance implements Component, Pool.Poolable {
         chargeLook = Look.NONE;
         facingX = 0f;
         facingY = 0f;
+        trailX = 0f;
+        trailY = 0f;
         ordered = false;
         charged = false;
         heat = 0f;

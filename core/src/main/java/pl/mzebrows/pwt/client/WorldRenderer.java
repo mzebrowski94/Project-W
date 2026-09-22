@@ -4,7 +4,9 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
@@ -37,6 +39,16 @@ import pl.mzebrows.pwt.sim.def.Look;
  * <p>What an entity is doing is drawn as a shift in its colour rather than as a different colour per
  * situation, so the same tell reads the same way on every kind of unit (pillar 5).
  *
+ * <p><strong>One thing is drawn as a line rather than as a dot</strong>, and it reads the same
+ * component as everything else: an entity that publishes a trail is drawn from that point to where
+ * it is now. A gun firing forty times a second is a stream of dots unless the dots are joined, and
+ * every pixel of the line is on the path a real shot actually took - there is no hitscan behind it,
+ * and the renderer is not inventing geometry (G0003).
+ *
+ * <p>Blending is on for the whole shape pass. Everything in it is opaque but one mark - the ring on
+ * a thing being pumped up, which has to be seen through - and turning it on once costs nothing that
+ * a flush per mark would not cost more of.
+ *
  * <p>Positions are interpolated between the previous tick and the current one. The simulation runs at
  * a fixed 60 ticks per second while the window may refresh at 144, so without this every entity
  * visibly steps. The cost is that what you see lags the simulation by up to one tick, which is the
@@ -54,10 +66,14 @@ public final class WorldRenderer implements Disposable {
             .get();
     private static final int CIRCLE_SEGMENTS = 16;
 
+    /** Reused, so drawing a see-through mark costs no colour per entity per frame. */
+    private static final Color SCRATCH = new Color();
+
     private final Viewport viewport;
     private final Palette palette;
     private final StateTint stateTint;
     private final ChargeMark chargeMark;
+    private final BloatMark bloatMark;
     private final NestMark nestMark;
     private final FacingMark facingMark;
     private final ChargedMark chargedMark;
@@ -89,6 +105,8 @@ public final class WorldRenderer implements Disposable {
             return;
         }
         viewport.apply();
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         shapes.setProjectionMatrix(viewport.getCamera().combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         drawGround(alpha);
@@ -114,6 +132,13 @@ public final class WorldRenderer implements Disposable {
                 shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
             } else if (shelled(appearance.look)) {
                 drawShells(x, y, body.radius, appearance);
+            } else if (appearance.streaks()) {
+                // Drawn back to where it says it came from, with a head on it so a beam that has
+                // just been fired is still something rather than a zero-length line. The far end is
+                // a fixed point in the world and is not interpolated; the head is, like everything
+                // else, so the line lengthens as smoothly as the shot moves.
+                shapes.rectLine(appearance.trailX, appearance.trailY, x, y, body.radius * 2f);
+                shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
             } else {
                 shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
             }
@@ -132,11 +157,22 @@ public final class WorldRenderer implements Disposable {
                 // the body's own colour brightened, which is what the mark has always been. The
                 // simulation says what the charge is and the palette says what that looks like
                 // (G0003) - there is no branch here on what the entity is.
-                shapes.setColor(
-                        appearance.chargeLook == Look.NONE
-                                ? brightened(tint(appearance), chargeMark.tint())
-                                : palette.colorFor(appearance.chargeLook));
-                shapes.circle(x, y, chargeMark.radiusFor(body.radius, appearance.charge), CIRCLE_SEGMENTS);
+                if (appearance.chargeLook == Look.BLOAT) {
+                    // The one charge that grows OUT past the body instead of filling it, because it
+                    // is the one that is about to kill whatever is standing nearby rather than
+                    // something the creature is doing. Half-transparent, so what it is charging can
+                    // still be seen and fought.
+                    Color ring = SCRATCH.set(palette.colorFor(Look.BLOAT));
+                    ring.a = bloatMark.alpha();
+                    shapes.setColor(ring);
+                    shapes.circle(x, y, bloatMark.radiusFor(body.radius, appearance.charge), CIRCLE_SEGMENTS);
+                } else {
+                    shapes.setColor(
+                            appearance.chargeLook == Look.NONE
+                                    ? brightened(tint(appearance), chargeMark.tint())
+                                    : palette.colorFor(appearance.chargeLook));
+                    shapes.circle(x, y, chargeMark.radiusFor(body.radius, appearance.charge), CIRCLE_SEGMENTS);
+                }
             }
             if (appearance.heat > 0f) {
                 drawHeat(x, y, body.radius, appearance);
@@ -144,6 +180,7 @@ public final class WorldRenderer implements Disposable {
         }
         shapes.end();
         drawRings();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
     /**

@@ -59,6 +59,11 @@ public enum Look {
      */
     PELLET,
     /**
+     * One shot of the beam. Small, pale and arriving in a stream, so what the player reads is the
+     * line rather than any one of them - the same relationship a flame pellet has to the cloud.
+     */
+    LASER,
+    /**
      * What a turret fires: light, very fast, and unmistakably the player's. It arrives faster than
      * anything else on the field, so it must not be read as something coming the other way.
      */
@@ -96,6 +101,15 @@ public enum Look {
     GRENADE,
     /** The circle an explosion makes lethal, for a moment. */
     BLAST,
+    /**
+     * A body being pumped up by a beam, on the charge channel.
+     *
+     * <p>A colour of its own for the reason {@link #FUSE} has one: everything else that fills up is
+     * something getting ready, and this is something about to go off. It has to read as kin to the
+     * blast it is going to become rather than to the creature it used to be - the thing the player
+     * needs at a glance is "that one is a bomb now", whether it was a grunt or a brute.
+     */
+    BLOAT,
     OBSTACLE,
     /** Alien food growing on the field. */
     MUSHROOM,
@@ -114,6 +128,7 @@ public enum Look {
     ARMOURY_RAILGUN,
     ARMOURY_FLAMER,
     ARMOURY_SHOTGUN,
+    ARMOURY_LASER,
     /** Something on the field that goes off when it is killed. */
     BARREL,
     /**
