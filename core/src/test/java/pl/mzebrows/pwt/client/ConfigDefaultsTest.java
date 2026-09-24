@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.badlogic.gdx.graphics.Color;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -38,6 +39,11 @@ class ConfigDefaultsTest {
     @Test
     void simConfigFallsBackToTheSimulationsOwnDefaults() {
         assertThat(SimConfigLoader.load()).isEqualTo(SimConfig.defaults());
+    }
+
+    @Test
+    void netConfigFallsBackToTheNetModulesOwnDefaults() {
+        assertThat(NetConfigLoader.load()).isEqualTo(NetConfig.defaults());
     }
 
     @Test

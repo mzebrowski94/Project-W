@@ -53,6 +53,9 @@ run {
 // You can uncomment the next line if your IDE claims a build failure even when the app closed properly.
   //setIgnoreExitValue(true)
   jvmArgs += "--enable-native-access=ALL-UNNAMED"
+  // Connection logs land in the repo, where git ignores them and Claude can read them. A build run
+  // any other way writes them to logs/net beside the game, which is network.properties' default.
+  systemProperty 'pwt.net.logDir', rootProject.file('ai/logs/net').path
   if (os.contains('mac')) jvmArgs += "-XstartOnFirstThread"
 }
 

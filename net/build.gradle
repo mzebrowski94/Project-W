@@ -1,0 +1,17 @@
+eclipse.project.name = appName + '-net'
+
+// Networking (ADR 0012): the transport port, its Netty adapter, the in-memory test network and the
+// connection log. No libGDX - NetArchitectureTest fails the build if that changes - and Netty only
+// inside the adapter package, so the library stays the replaceable part.
+dependencies {
+  implementation "io.netty:netty-transport:$nettyVersion"
+  implementation "io.netty:netty-codec-base:$nettyVersion"
+
+  testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
+}
+
+tasks.named('test') {
+  // Every buffer Netty hands out is tracked, and a leak is reported through its logger, which the
+  // Netty tests watch and fail on.
+  jvmArgs '-Dio.netty.leakDetection.level=paranoid', '--enable-native-access=ALL-UNNAMED'
+}

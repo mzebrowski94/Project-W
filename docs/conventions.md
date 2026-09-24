@@ -111,6 +111,8 @@ Framework-initialised fields (created in libGDX's `create()`, not the constructo
 ## Logging
 
 `Log` (in `core`) is a facade over `Gdx.app`, working before libGDX starts and in plain unit tests.
+Connections have their own: `NetLog` (in `net`), one file per instance - see `docs/architecture.md`. What
+happens per message goes into its `NetTrace`, never into a log call.
 
 - `Log.info` - lifecycle: startup, shutdown, screen changes.
 - `Log.debug` - initialisation detail, resolved configuration.

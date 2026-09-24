@@ -30,6 +30,7 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 |---|---|
 | Everything: format, compile, lint, test | `.claude/scripts/verify.sh` |
 | One module's tests | `.claude/scripts/verify.sh :sim:test` |
+| Networking tests, real sockets on this machine included | `.claude/scripts/verify.sh :net:test` |
 | One test class | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest'` |
 | One test method | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest.movesAnEntityByItsVelocityEachStep'` |
 | Format only | `.claude/scripts/gradle.sh spotlessApply` |
@@ -40,6 +41,13 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 
 Build outputs land in `~/.pwt/build/`, not `<project>/build` - see *Speed*. Test result XML under
 `~/.pwt/build/<module>/test-results/`. Verify log: `ai/logs/verify.log`.
+
+**Connection logs** are in `ai/logs/net/` when the game runs from Gradle, one file per instance,
+`<instance>-<yyyyMMdd-HHmmss>.log`; a build run any other way writes `logs/net/` beside itself, which is
+what a friend sends back. Every line is `key=value`: `grep "event=closed"` gives every link that ended and
+why, `grep "cat=stats"` each link's round trip and traffic once a second, and a link that closed badly is
+followed by `cat=trace` lines - its last messages, times counted back from the moment it went. Netty's
+own warnings arrive as `cat=netty msg="..."`.
 
 **Batch Gradle calls.** The daemon does not survive between shell invocations, so each call pays ~7s of
 JVM startup. Two tasks in one command beat two commands.

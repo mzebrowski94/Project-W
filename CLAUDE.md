@@ -30,7 +30,9 @@ belongs on the definition every kind already has rather than on the one kind tha
 `Spawner` (entity kinds), `Defs` (kind definitions), `Pool` (transients), `Rng` (randomness),
 `SpatialGrid` (neighbour queries), `ConstraintSolver` (where bodies may be), `Sight` (detection tests),
 `FlowField` (routes), `Scatter` (placement), `Maps` (layouts and their validity checks), `Log`,
-`GameProperties` (config), `AlphaWorlds` (test fixtures) - plus a component or system for most
+`GameProperties` (config), `AlphaWorlds` (test fixtures), `Transport` (links between machines),
+`LoopbackNetwork` and `ConditionedTransport` (networks for tests and lag on demand), `NetLog` (the
+connection log) - plus a component or system for most
 behaviour. `docs/glossary.md` is the cheap check: if the word exists, the thing usually does too.
 
 **Read narrow.** The target module, the classes the task names, their nearest tests. Widen only when a
@@ -49,7 +51,8 @@ Each line is a yes/no you can check yourself. A no is not done.
 - [ ] No wall clock, `Math.random`, `java.util.Random`, `HashMap`/`HashSet` iteration, or
       `Math.sin`/`cos`/`atan2` anywhere in `sim` or `map`.
 - [ ] No O(N²) entity-pair loop - go through `SpatialGrid`.
-- [ ] New tunables in `assets/game.properties` or `assets/graphic.properties`, never a literal.
+- [ ] New tunables in `assets/game.properties`, `assets/graphic.properties` or
+      `assets/network.properties`, never a literal.
 - [ ] New domain words in `docs/glossary.md`, and only that word used afterwards.
 - [ ] A new pooled component's `reset()` clears **every** field.
 - [ ] A new system registered in `Simulation` at a position that breaks none of
@@ -65,8 +68,8 @@ Each line is a yes/no you can check yourself. A no is not done.
 - [ ] Diff contains nothing the task did not need.
 - [ ] A gameplay change wrote down what it settled: invariant row, decision record, or input-map row.
       If none, say so and why.
-- [ ] Your summary lists the `game.properties` and `graphic.properties` keys the change added or
-      moved, with their values.
+- [ ] Your summary lists the `game.properties`, `graphic.properties` and `network.properties` keys the
+      change added or moved, with their values.
 
 ## Modules
 
@@ -75,11 +78,14 @@ Each line is a yes/no you can check yourself. A no is not done.
 | `map` | The ground a level is played on: tile grid, terrain, regions, generation. Depends on nothing at all. |
 | `sim` | The deterministic simulation: entities, components, systems, world state. No rendering, assets or I/O. |
 | `core` | The libGDX application: rendering, input, assets, screens, config loading. |
+| `net` | Networking (ADR 0012): the transport port and its Netty adapter, the in-memory test network, the connection log. No libGDX; Netty only inside `net.netty`. |
 | `lwjgl3` | Desktop launcher. |
 
-`lwjgl3` -> `core` -> `sim` -> `map`, one way. `ArchitectureTest` fails the build if `sim` reaches for
+`lwjgl3` -> `core` -> `net` and `sim` -> `map`, one way; `net` will depend on `sim` once sessions need
+its input types, never the reverse. `ArchitectureTest` fails the build if `sim` reaches for
 rendering, the wall clock, unseeded randomness or hash iteration order; `MapArchitectureTest` does the
-same for `map`, which may not reach for those *or* for an entity. Enforced, not remembered.
+same for `map`, which may not reach for those *or* for an entity; `NetArchitectureTest` keeps libGDX out
+of `net`, Netty inside its adapter and the clock behind `Clock`. Enforced, not remembered.
 
 **`map` owns the field; `sim` owns what stands on it and what happens over time** (ADR 0009). Pure
 function of terrain and geometry -> `map`. Reads a clock, an entity or a component -> `sim`.
@@ -159,8 +165,8 @@ allowlist entry, an access grant, a setting - one line at the moment you hit it,
 silently work around the same obstacle every session. Known ones: `docs/workflow.md`.
 
 **Name the numbers a playtest will want to turn.** A change that touches gameplay ends its summary
-with the keys it added or moved in `assets/game.properties` and `assets/graphic.properties`, values
-included - the handful Mateusz would otherwise have to go and find before he can tune what he has
+with the keys it added or moved in `assets/game.properties`, `assets/graphic.properties` and
+`assets/network.properties`, values included - the handful Mateusz would otherwise have to go and find before he can tune what he has
 just played. Keys and values, and a few words on what each one does to the feel where that is not
 obvious from the name. Not every key in the block; the ones the change is about.
 

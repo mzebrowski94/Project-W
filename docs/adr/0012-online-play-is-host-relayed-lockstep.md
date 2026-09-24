@@ -3,10 +3,10 @@
 **Trigger.** Anything that crosses the network; how a tick's inputs reach `Simulation.step` during a
 session; proposing state replication, prediction, rollback or a different transport library.
 
-**Enforced by.** Nothing mechanical yet - caught by reading. The guards arrive with the module: a
-`NetArchitectureTest` (no libGDX in `net`, nothing in `sim` that sees `net`, no network-library type
-outside the adapter), a multi-peer determinism test over every scenario, and a snapshot round-trip test.
-Promote this line when they exist.
+**Enforced by.** `NetArchitectureTest.netKnowsNothingOfTheWindow`, `.nettyStaysInsideItsAdapter`,
+`.onlyTheSystemClockReadsTheWallClock`, `.nothingIsDeserialisedByClassName`; the module graph keeps `sim`
+from seeing `net`. Still to come with the session layer: a multi-peer determinism test over every
+scenario, and the snapshot round-trip test (ADR 0014).
 
 **Supersedes** the Scope clause of ADR 0004 - "no networking code exists and none should be written".
 Everything else 0004 says stands, and is now what multiplayer rests on rather than what keeps it possible.

@@ -3,11 +3,13 @@
 ## The one line that matters
 
 ```
-lwjgl3  ->  core (client)  ->  sim  ->  map
+lwjgl3  ->  core (client)  ->  net
+                           ->  sim  ->  map
 ```
 
-Dependencies point one way. The simulation does not know that rendering, input, files, or a window
-exist. Everything else follows from that.
+Dependencies point one way. The simulation does not know that rendering, input, files, a window or a
+network exist. Everything else follows from that. `net` will depend on `sim` once online sessions need
+its input types (ADR 0012) - never the other way.
 
 ## map
 
@@ -140,6 +142,28 @@ A mechanic is a component plus a system, in that order. The `new-system` skill h
 The one thing worth knowing before you start: **system registration order is part of the
 simulation's behaviour.** Systems run in the order they were added to `Simulation`, and changing
 that order changes results. Add deliberately.
+
+## net
+
+Networking, and nothing the game's rules depend on (ADR 0012). No libGDX, and Netty only inside
+`net.netty` - `NetArchitectureTest` enforces both, and that the clock is read only through `Clock`.
+
+- `NetConfig` - the tunables, handed in parsed; the client loads them from `network.properties`.
+- `transport/` - the **port**. `Transport` opens **links** to other machines and carries
+  `Delivery.RELIABLE` and `Delivery.UNRELIABLE` messages across them; everything that happens is handed
+  over on the caller's thread by `poll`, never pushed from a network thread - the gamepad port's lesson
+  (ADR 0011) applied again. `ConditionedTransport` wraps any transport and makes it late, jittery, lossy
+  or repetitive, from a seed, which is how two instances on one machine and a test both get a bad
+  network on demand.
+- `loopback/` - `LoopbackNetwork`: transports that reach each other in memory, perfect on purpose, for
+  tests of everything above the port. Bad networks come from wrapping it, so there is one way to lag.
+- `netty/` - `NettyTransport`: TCP for reliable messages, UDP for unreliable ones, one port number. A
+  link opens only after a handshake proves the joiner's datagrams reach the host, so "cannot connect"
+  arrives with the step that failed. Heartbeats measure round trip and close a link that goes quiet.
+- `log/` - the connection log. `NetLog` writes one `key=value` line per event, one file per instance,
+  on `java.util.logging` so Netty's own lines land there too. **Nothing is logged per message:**
+  `NetTrace` records every message into a preallocated ring and dumps a link's part of it when the link
+  closes badly, and `LinkStats` writes each link's numbers every few seconds.
 
 ## core (client)
 
