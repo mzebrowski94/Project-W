@@ -61,6 +61,29 @@ class SessionTest {
         }
     }
 
+    /**
+     * A machine that stalls on its own - its window dragged, its garbage collected - comes back behind,
+     * and its input is late only because it is. That is not the network's round trip, and must not leave
+     * the machine playing with a long input delay after it has caught up. Found in the first playtest:
+     * a 0.4 s hitch left a lead of 27 ticks on a perfect link for 25 seconds.
+     */
+    @Test
+    void comesBackToItsInputDelaySoonAfterAStallOfItsOwn() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 29L, PERFECT)) {
+            session.host();
+            Machine hitching = session.join("hitching", PERFECT);
+            session.run(300);
+            int before = hitching.session.lead();
+
+            hitching.frozenFrames = 25;
+            session.run(25 + 120);
+
+            assertThat(hitching.session.lead())
+                    .as("lead two seconds after a hitch")
+                    .isLessThanOrEqualTo(before + 1);
+        }
+    }
+
     @Test
     void dropsAPlayerIntoAGameInProgress() {
         try (SessionHarness session = new SessionHarness("Adventure", 11L, PERFECT)) {

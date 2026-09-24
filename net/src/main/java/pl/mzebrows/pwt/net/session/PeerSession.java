@@ -72,6 +72,9 @@ public final class PeerSession implements AutoCloseable {
      */
     private static final int DRAIN_FRAMES = 60;
 
+    /** How many reports in a row must come early before the lead comes down: a second's worth. */
+    private static final int CALM_REPORTS = 60;
+
     /** The most unacknowledged orders sent in one message. */
     private static final int EVENTS_PER_MESSAGE = 16;
 
@@ -91,6 +94,7 @@ public final class PeerSession implements AutoCloseable {
 
     private State state = State.CLOSED;
     private @Nullable String refusal;
+    private @Nullable String closedBecause;
     private int link = -1;
     private long hostKey;
     private int peerId = -1;
@@ -116,6 +120,10 @@ public final class PeerSession implements AutoCloseable {
 
     private int lead;
     private int calm;
+
+    /** The least early any input was over the current run of early reports. */
+    private int calmLeast = Integer.MAX_VALUE;
+
     private int settle;
 
     private long accumulator;
@@ -124,6 +132,7 @@ public final class PeerSession implements AutoCloseable {
     private long lastInputNanos;
     private long nextStatsNanos;
     private int stalls;
+    private int starved;
     private int cushioned;
 
     private final int[] slotOfSeat = new int[Players.MAX];
@@ -223,6 +232,9 @@ public final class PeerSession implements AutoCloseable {
             // a burst when the next bundle comes.
             accumulator = tickNanos;
             stalls++;
+            starved++;
+        } else if (steps > 0) {
+            starved = 0;
         }
         sendInput(nowNanos, steps > 0);
         stats(nowNanos);
@@ -260,6 +272,16 @@ public final class PeerSession implements AutoCloseable {
         return refusal;
     }
 
+    /** Why the link closed, once it has. */
+    public @Nullable String closedBecause() {
+        return closedBecause;
+    }
+
+    /** What the host said this session plays - its config, scenario and seed - or null before the welcome. */
+    public @Nullable SessionSetup setup() {
+        return setup;
+    }
+
     /** The world as of the last tick played, or null before there is one. Replaced on a restart or a heal. */
     public @Nullable Simulation simulation() {
         return world;
@@ -282,6 +304,25 @@ public final class PeerSession implements AutoCloseable {
 
     public boolean paused() {
         return paused;
+    }
+
+    /**
+     * How far this frame is towards the next tick, for drawing between two: what the frame's time is
+     * worth past the last tick played. One while there is nothing to play, so a world that is waiting is
+     * drawn where it stands rather than part-way to a tick that has not come.
+     */
+    public float alpha() {
+        return tickNanos <= 0 ? 1f : Math.min(1f, (float) accumulator / tickNanos);
+    }
+
+    /** How many frames in a row this machine has had time for a tick and no tick to play. */
+    public int starvedFrames() {
+        return starved;
+    }
+
+    /** How long a tick is, in nanoseconds; zero before the welcome. */
+    public long tickNanos() {
+        return tickNanos;
     }
 
     /** The input delay this machine currently runs with, in ticks. */
@@ -407,6 +448,16 @@ public final class PeerSession implements AutoCloseable {
         transport.send(link, Delivery.RELIABLE, out.array(), 0, out.size());
     }
 
+    /**
+     * Steers the lead by how early this machine's input reached the sequencer.
+     *
+     * <p>Up at once when input was late - but not while this machine is behind the ticks it holds: then
+     * the input was late because the machine stalled on its own (its window dragged, its garbage
+     * collected), and catching up will cure it; the round trip has not changed. Down once a second's worth
+     * of reports all came early, by as much as the least early of them allows, so a lead raised by a
+     * passing spike is back where the round trip puts it within a second or two rather than a tick a
+     * second - which is what a 0.4 s hitch cost in the first playtest: 25 seconds at 27 ticks.
+     */
     private void adaptLead(int margin) {
         if (margin == Msg.NO_MARGIN) {
             return;
@@ -416,22 +467,30 @@ public final class PeerSession implements AutoCloseable {
             return;
         }
         if (margin < pacing.marginTicks()) {
+            calm = 0;
+            calmLeast = Integer.MAX_VALUE;
+            if (contiguous - tick > pacing.bufferTicks()) {
+                return;
+            }
             int was = lead;
             lead = Math.min(pacing.leadMaxTicks(), lead + pacing.marginTicks() - margin);
-            calm = 0;
             settle = lead;
             if (lead != was) {
                 log.debug("peer", "event=lead-up lead=" + lead + " margin=" + margin);
             }
         } else if (margin > pacing.marginTicks() + 1) {
-            if (++calm >= 60 && lead > pacing.leadMinTicks()) {
-                lead--;
+            calmLeast = Math.min(calmLeast, margin);
+            if (++calm >= CALM_REPORTS && lead > pacing.leadMinTicks()) {
+                int was = lead;
+                lead = Math.max(pacing.leadMinTicks(), lead - (calmLeast - pacing.marginTicks() - 1));
                 calm = 0;
+                calmLeast = Integer.MAX_VALUE;
                 settle = lead;
-                log.debug("peer", "event=lead-down lead=" + lead + " margin=" + margin);
+                log.debug("peer", "event=lead-down lead=" + lead + " was=" + was);
             }
         } else {
             calm = 0;
+            calmLeast = Integer.MAX_VALUE;
         }
     }
 
@@ -715,6 +774,7 @@ public final class PeerSession implements AutoCloseable {
             if (state != State.REFUSED) {
                 state = State.CLOSED;
             }
+            closedBecause = reason;
             log.info("peer", "event=closed reason=\"" + reason + "\"");
         }
     }

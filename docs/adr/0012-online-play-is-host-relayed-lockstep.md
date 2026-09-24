@@ -5,7 +5,8 @@ session; proposing state replication, prediction, rollback or a different transp
 
 **Enforced by.** `NetArchitectureTest.netKnowsNothingOfTheWindow`, `.nettyStaysInsideItsAdapter`,
 `.onlyTheSystemClockReadsTheWallClock`, `.nothingIsDeserialisedByClassName`; the module graph keeps `sim`
-from seeing `net`. `SessionTest` - a sequencer, the host's peer and others in one test over a lagging,
+from seeing `net`. `NettySessionTest` - the sequencer's thread, the host's peer and a joiner on real
+sockets, UDP and TCP, ending on one world. `SessionTest` - a sequencer, the host's peer and others in one test over a lagging,
 lossy network: every world the same at the same tick, a player dropped in mid-game, eight slots from four
 machines, a machine knocked out of step found, dumped and healed, restart and god mode refused to anyone
 but the host. `SequencerTest` - a peer written byte by byte: an order sealed once however often it is
@@ -78,8 +79,8 @@ handshake, the config and a snapshot of tens or hundreds of kilobytes reliably, 
 
 **Scope.** How a session stays in step and what crosses the wire. Not who sits in which slot, what
 joining looks like or how many players there may be - that is G0038. Not how a player on the internet
-finds a host: room codes and the relay are a later record, and a relay is only another way for the same
-packets to arrive. Not offline play, which steps from local inputs through `FixedStepClock` exactly as
+finds a host: room codes and LAN discovery are G0038's, the relay is a later record, and a relay is only
+another way for the same packets to arrive. Not offline play, which steps from local inputs through `FixedStepClock` exactly as
 now; online, a tick is never dropped, because a dropped tick is a desync.
 
 **Known hazards for the snapshot.** Two pooled components hold an `Entity`: `Strike.owner`, for the
@@ -118,10 +119,18 @@ run. *jvm-libp2p* - streams only, no hole punching, its relay in beta. *Nakama* 
 WebSocket, a database to host, and a Java client that targets Java 8 to 11.
 
 Rollback on top of this stream is not rejected, deferred: it is the answer if a playtest finds the input
-delay sluggish. The snapshot codec G0038 needs is a part of it and no more - rollback restores the world in
-place every tick, and a drop-in rebuilds it once. The latency playtest comes before the join screen so
-that this is known early; a cosmetic lead - the client drawing its own players' aim and facing from local
-input at once, feeding nothing back - is the first thing to try. A second transport - webrtc-java for direct
+delay sluggish. **The first latency playtest (2026-09-24, two and three copies on one PC, lag simulated on
+the joiner)** found it fine up to 50 ms each way - five ticks of input delay at 25, eight at 50 - and at
+100 ms each way, fourteen ticks (234 ms), walking noticeably late: not critical, should be better. The
+round trip is 200 of those 234 ms, so only prediction would hide it. Decided: measure real round trips
+over the relay first, and plan rollback only if real games land near 100 ms each way. The same playtest
+showed the sequencer's thread waking on time on Windows - median 1 ms late, worst 5 - and no desync in
+five sessions, drop-ins, restarts and god mode among them. The snapshot codec G0038 needs is a part of it and no more - rollback restores the world in
+place every tick, and a drop-in rebuilds it once. The latency playtest comes before the relay (stage 7)
+so that this is known before friends play across the internet - it was to come before the join screen,
+and the join screen went first by decision (2026-09-24), because rollback would change the session under
+the screens, not the screens; the cosmetic lead - the client drawing its own commanders facing their
+players' aim at once, feeding nothing back - is built and is the first thing tried (F2 switches it). A second transport - webrtc-java for direct
 peer-to-peer through NAT, or Steam's - is also deferred, and the port is what keeps either cheap.
 
 **Revisit when** a playtest in the same region reads as sluggish (rollback); the relay's detour measurably

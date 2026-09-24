@@ -41,6 +41,12 @@ public final class HarnessControls {
         if (keys.justPressed(Input.Keys.G)) {
             commands.add(HarnessCommand.TOGGLE_GOD_MODE);
         }
+        if (keys.justPressed(Input.Keys.F2)) {
+            commands.add(HarnessCommand.TOGGLE_COSMETIC_LEAD);
+        }
+        if (keys.justPressed(Input.Keys.F3)) {
+            commands.add(HarnessCommand.NEXT_LAG);
+        }
         return commands;
     }
 }

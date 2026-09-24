@@ -8,6 +8,7 @@ import com.badlogic.gdx.Gdx;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Enemy;
@@ -17,7 +18,6 @@ import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Order;
-import pl.mzebrows.pwt.sim.scenario.Scenario;
 
 /**
  * What the simulation is doing right now, in text.
@@ -30,12 +30,24 @@ import pl.mzebrows.pwt.sim.scenario.Scenario;
 public final class DebugOverlay {
 
     private final Hud hud;
-    private final Scenario scenario;
 
-    /** Draws the overlay. Never called from inside the simulation, so it may allocate freely. */
-    public void render(Simulation simulation, boolean paused, @Nullable Order lastOrder) {
+    /**
+     * Draws the overlay. Never called from inside the simulation, so it may allocate freely.
+     *
+     * @param ownSlot the slot this machine's keyboard plays, whose commander the overlay describes
+     * @param connection a line about the online session, or null offline
+     * @param invitation how friends join, while this copy hosts; null otherwise
+     */
+    public void render(
+            Simulation simulation,
+            int ownSlot,
+            String scenarioName,
+            boolean paused,
+            @Nullable Order lastOrder,
+            @Nullable String connection,
+            @Nullable String invitation) {
         hud.begin();
-        hud.line(0, scenario.name() + (paused ? "   [PAUSED]" : ""));
+        hud.line(0, scenarioName + (paused ? "   [PAUSED]" : ""));
         hud.line(1, "fps " + Gdx.graphics.getFramesPerSecond() + "    tick " + simulation.tick());
         hud.line(
                 2,
@@ -44,11 +56,28 @@ public final class DebugOverlay {
                         + count(simulation, Projectile.class) + "    obstacles "
                         + count(simulation, Obstacle.class));
         hud.line(3, "entities " + simulation.engine().getEntities().size());
-        hud.line(4, "commander " + commanderState(simulation));
+        hud.line(4, "commander " + commanderState(simulation, ownSlot));
         hud.line(5, "last order " + (lastOrder == null ? "-" : lastOrder.name().toLowerCase(Locale.ROOT)));
+        if (connection != null) {
+            hud.line(6, connection);
+        }
+        if (invitation != null) {
+            hud.line(7, invitation);
+        }
         hud.line(
                 hud.rows() - 1,
-                "1 follow  2 forward  3 defence  4 cancel      P pause  . step  R restart  G god  F1  ESC");
+                "1 follow  2 forward  3 defence  4 cancel      P pause  . step  R restart  G god  F1  F2 lead  F3 lag  ESC");
+        hud.end();
+    }
+
+    /**
+     * What an online screen shows before it has a world: where it is connecting, or why it is not.
+     * Escape still leaves.
+     */
+    public void renderWaiting(String connection) {
+        hud.begin();
+        hud.line(0, connection);
+        hud.line(hud.rows() - 1, "ESC back to the menu");
         hud.end();
     }
 
@@ -56,14 +85,14 @@ public final class DebugOverlay {
      * Health, or what it is doing instead of having any. Dying and respawning is invisible without
      * this - the commander simply vanishes for three seconds and reappears somewhere else.
      */
-    private static String commanderState(Simulation simulation) {
+    private static String commanderState(Simulation simulation, int slot) {
         ImmutableArray<Entity> commanders = simulation
                 .engine()
                 .getEntitiesFor(Family.all(Commander.class, Health.class).get());
-        if (commanders.size() == 0) {
+        Entity commander = Players.inSlot(commanders, slot);
+        if (commander == null) {
             return "dead, respawning";
         }
-        Entity commander = commanders.first();
         Health health = commander.getComponent(Health.class);
         Invulnerable protection = commander.getComponent(Invulnerable.class);
         Weapon weapon = commander.getComponent(Weapon.class);

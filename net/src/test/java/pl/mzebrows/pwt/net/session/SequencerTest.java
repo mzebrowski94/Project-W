@@ -132,6 +132,20 @@ class SequencerTest {
     }
 
     @Test
+    void tellsEveryPeerWhyWhenTheSessionEnds() {
+        RawPeer host = startedHost();
+        RawPeer friend = new RawPeer(network.endpoint("friend"), port);
+        frame(host, friend);
+
+        sequencer.close();
+        host.poll();
+        friend.poll();
+
+        assertThat(host.closedBecause).contains("the host left the game");
+        assertThat(friend.closedBecause).contains("the host left the game");
+    }
+
+    @Test
     void refusesAPeerSpeakingAnotherProtocol() {
         startedHost();
         RawPeer old = new RawPeer(network.endpoint("old"), port);
@@ -147,6 +161,25 @@ class SequencerTest {
         frame(old);
 
         assertThat(old.closedBecause).contains("protocol");
+    }
+
+    @Test
+    void keepsSlotZeroForTheHostsKeyboardWhoeverConnectsFirst() {
+        RawPeer early = new RawPeer(network.endpoint("early"), port);
+        frame(early);
+        early.send(
+                Delivery.RELIABLE,
+                new WireWriter(64)
+                        .putByte(Msg.HELLO)
+                        .putInt(Msg.PROTOCOL)
+                        .putString(BuildId.current())
+                        .putLong(0L));
+        early.send(Delivery.RELIABLE, new WireWriter(8).putByte(Msg.SEAT).putByte(0));
+        frame(early);
+        frame(early);
+
+        assertThat(slotsGiven(early)).containsExactly(1);
+        startedHost();
     }
 
     /** A raw host that has said hello, been welcomed and seated in slot 0. */
@@ -203,6 +236,17 @@ class SequencerTest {
         }
     }
 
+    /** Every slot the sequencer has told this peer it plays, in the order it said so. */
+    private List<Integer> slotsGiven(RawPeer peer) {
+        List<Integer> slots = new ArrayList<>();
+        for (byte[] message : peer.seen) {
+            if ((message[0] & 0xFF) == Msg.SLOT) {
+                slots.add(message[2] & 0xFF);
+            }
+        }
+        return slots;
+    }
+
     private List<Integer> ticksWithOrder(Order order) {
         List<Integer> ticks = new ArrayList<>();
         for (Map.Entry<Integer, Bundle> entry : sealed.entrySet()) {
@@ -226,6 +270,7 @@ class SequencerTest {
         final Transport transport;
         final int link;
         final List<byte[]> inbox = new ArrayList<>();
+        final List<byte[]> seen = new ArrayList<>();
 
         @Nullable
         String closedBecause;
@@ -255,6 +300,7 @@ class SequencerTest {
         @Override
         public void received(int from, Delivery delivery, byte[] data, int offset, int length) {
             inbox.add(Arrays.copyOfRange(data, offset, offset + length));
+            seen.add(Arrays.copyOfRange(data, offset, offset + length));
         }
 
         @Override

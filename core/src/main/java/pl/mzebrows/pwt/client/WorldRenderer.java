@@ -13,9 +13,11 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -61,6 +63,11 @@ public final class WorldRenderer implements Disposable {
     private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
+    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+
+    /** Where a cosmetic lead writes the facing it draws; reused, so it costs nothing per frame. */
+    private final float[] ahead = new float[2];
+
     private static final Family DRAWABLE = Family.all(
                     Position.class, PreviousPosition.class, Body.class, Appearance.class)
             .get();
@@ -95,8 +102,12 @@ public final class WorldRenderer implements Disposable {
         drawable = simulation.engine().getEntitiesFor(DRAWABLE);
     }
 
-    /** Draws one frame. {@code alpha} is how far the clock is towards the next tick, in {@code [0, 1)}. */
-    public void render(float alpha) {
+    /**
+     * Draws one frame. {@code alpha} is how far the clock is towards the next tick, in {@code [0, 1)}.
+     * With {@code lead}, a commander played on this machine is drawn facing its player's aim this frame
+     * rather than the world's - the cosmetic lead (ADR 0012); null draws the world as it is.
+     */
+    public void render(float alpha, @Nullable LocalAim lead) {
         if (disposed) {
             // Belt and braces. Drawing with a disposed ShapeRenderer writes to freed GL memory and
             // takes the JVM down with an access violation and no stack trace, so this turns the
@@ -143,14 +154,15 @@ public final class WorldRenderer implements Disposable {
                 shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
             }
             if (appearance.facingX != 0f || appearance.facingY != 0f) {
+                float facingX = appearance.facingX;
+                float facingY = appearance.facingY;
+                if (lead != null && COMMANDER.has(entity) && lead.facing(COMMANDER.get(entity).slot, x, y, ahead)) {
+                    facingX = ahead[0];
+                    facingY = ahead[1];
+                }
                 shapes.setColor(brightened(tint(appearance), facingMark.tint()));
                 float reach = facingMark.lengthFor(body.radius);
-                shapes.rectLine(
-                        x,
-                        y,
-                        x + appearance.facingX * reach,
-                        y + appearance.facingY * reach,
-                        facingMark.widthFor(body.radius));
+                shapes.rectLine(x, y, x + facingX * reach, y + facingY * reach, facingMark.widthFor(body.radius));
             }
             if (appearance.charge > 0f) {
                 // A charge that names a look of its own is drawn in that colour; everything else is

@@ -96,6 +96,12 @@ public final class Sequencer implements AutoCloseable {
     private int desyncs;
 
     /**
+     * The latest any tick was sealed after its time, since the last stats line. What a coarse timer on
+     * the sequencer's thread looks like from inside: Windows has been known to wake a sleeper 15 ms late.
+     */
+    private long lateMostNanos;
+
+    /**
      * @param setup what every peer builds its world from - the host's config, scenario and seed
      * @param capacity how many slots the session has; the ceiling is {@code Players.MAX}
      * @param tickSeconds the world's tick, from the host's config - bundles are sealed at this rate
@@ -188,6 +194,7 @@ public final class Sequencer implements AutoCloseable {
         int sealedNow = 0;
         if (started && !paused) {
             while (nowNanos - nextSealNanos >= 0 && sealedNow < pacing.catchUpTicks()) {
+                lateMostNanos = Math.max(lateMostNanos, nowNanos - nextSealNanos);
                 seal();
                 nextSealNanos += tickNanos;
                 sealedNow++;
@@ -205,6 +212,18 @@ public final class Sequencer implements AutoCloseable {
 
     @Override
     public void close() {
+        end("the host left the game");
+    }
+
+    /**
+     * Ends the session: tells every peer why, then lets go of the transport. A peer sees the link close
+     * with this reason, and its game goes back to the menu saying so (G0038) - rather than leaving its
+     * players looking at a world that will never move again.
+     */
+    public void end(String reason) {
+        for (int i = 0; i < peers.size(); i++) {
+            transport.disconnect(peers.get(i).link, reason);
+        }
         transport.close();
     }
 
@@ -333,8 +352,13 @@ public final class Sequencer implements AutoCloseable {
             return;
         }
         nextStatsNanos = now + statsNanos;
-        StringBuilder line =
-                new StringBuilder("tick=").append(sealed).append(" paused=").append(paused);
+        StringBuilder line = new StringBuilder("tick=")
+                .append(sealed)
+                .append(" paused=")
+                .append(paused)
+                .append(" sealLateMostMs=")
+                .append(lateMostNanos / 1_000_000L);
+        lateMostNanos = 0L;
         for (int i = 0; i < peers.size(); i++) {
             Peer peer = peers.get(i);
             if (peer.id >= 0) {
@@ -557,7 +581,10 @@ public final class Sequencer implements AutoCloseable {
         }
         int slot = peer.slotOfSeat[seat];
         if (slot < 0) {
-            for (int free = 0; free < capacity && slot < 0; free++) {
+            // Slot zero is the host's keyboard, held for it: it is the commander a scenario starts with,
+            // and the host plays from the first tick (G0038) - whoever's hello happened to arrive first.
+            boolean hostsKeyboard = peer.host && seat == 0;
+            for (int free = hostsKeyboard ? 0 : 1; free < capacity && slot < 0; free++) {
                 if (owner[free] < 0) {
                     slot = free;
                 }

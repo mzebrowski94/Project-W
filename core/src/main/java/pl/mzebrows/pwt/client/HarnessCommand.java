@@ -18,6 +18,13 @@ public enum HarnessCommand {
     TOGGLE_OVERLAY,
     /** Make the commander invulnerable, or stop. A dev tool - see Invulnerable.permanent. */
     TOGGLE_GOD_MODE,
+    /**
+     * Draw this machine's own commanders facing their players' aim at once, or as the world has them.
+     * Online, the difference is the input delay (ADR 0012); the switch is there to feel it.
+     */
+    TOGGLE_COSMETIC_LEAD,
+    /** A joining copy: step the simulated lag to the next of {@code net.conditions.latencySteps}. */
+    NEXT_LAG,
     /** Leave for the menu. */
     LEAVE
 }

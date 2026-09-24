@@ -92,6 +92,46 @@ class ConditionedTransportTest {
         assertThat(rig.pollReceived()).hasSize(1);
     }
 
+    @Test
+    void holdsAMessageComingTheOtherWayBackToo() {
+        Rig rig = Rig.with(new Conditions(50, 0, 0f, 0f, 1L));
+
+        rig.reply(Delivery.RELIABLE, 1);
+        List<RecordingListener.Heard> early = rig.pollReplies();
+        rig.clock.advanceMillis(50);
+        List<RecordingListener.Heard> onTime = rig.pollReplies();
+
+        assertThat(early).isEmpty();
+        assertThat(onTime).hasSize(1);
+    }
+
+    @Test
+    void losesUnreliableMessagesComingTheOtherWayToo() {
+        Rig rig = Rig.with(new Conditions(0, 0, 0.3f, 0f, 5L));
+
+        for (int i = 0; i < MESSAGES; i++) {
+            rig.reply(Delivery.UNRELIABLE, i);
+        }
+
+        assertThat(rig.pollReplies()).hasSizeBetween(600, 800);
+    }
+
+    @Test
+    void takesNewConditionsWhileItRuns() {
+        Rig rig = Rig.with(Conditions.NONE);
+        rig.send(Delivery.RELIABLE, 1);
+        assertThat(rig.pollReceived()).hasSize(1);
+
+        rig.joiner.conditions(new Conditions(30, 0, 0f, 0f, 1L));
+        rig.send(Delivery.RELIABLE, 2);
+
+        assertThat(rig.pollReceived()).isEmpty();
+        rig.clock.advanceMillis(30);
+        assertThat(rig.pollReceived())
+                .extracting(RecordingListener.Heard::firstByte)
+                .containsExactly(2);
+    }
+
     private static List<Integer> arrivals(Conditions conditions) {
         Rig rig = Rig.with(conditions);
         for (int i = 0; i < 100; i++) {
@@ -108,8 +148,9 @@ class ConditionedTransportTest {
     private static final class Rig {
         final ManualClock clock = new ManualClock();
         final Transport host;
-        final Transport joiner;
+        final ConditionedTransport joiner;
         final int link;
+        final int hostLink;
 
         private Rig(Conditions conditions) {
             LoopbackNetwork network = new LoopbackNetwork(NetConfig.defaults());
@@ -117,7 +158,9 @@ class ConditionedTransportTest {
             joiner = new ConditionedTransport(network.endpoint("joiner"), conditions, clock);
             host.listen(PORT, 0);
             link = joiner.connect("host", PORT);
-            host.poll(new RecordingListener());
+            RecordingListener opened = new RecordingListener();
+            host.poll(opened);
+            hostLink = opened.of("opened").get(0).link();
             joiner.poll(new RecordingListener());
         }
 
@@ -127,6 +170,16 @@ class ConditionedTransportTest {
 
         void send(Delivery delivery, int value) {
             joiner.send(link, delivery, new byte[] {(byte) value}, 0, 1);
+        }
+
+        void reply(Delivery delivery, int value) {
+            host.send(hostLink, delivery, new byte[] {(byte) value}, 0, 1);
+        }
+
+        List<RecordingListener.Heard> pollReplies() {
+            RecordingListener heard = new RecordingListener();
+            joiner.poll(heard);
+            return heard.of("received");
         }
 
         List<RecordingListener.Heard> pollReceived() {

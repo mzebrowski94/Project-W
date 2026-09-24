@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.Screen;
+import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
 
 /**
@@ -32,6 +33,12 @@ public interface GameContext {
      * player's seat.
      */
     GamepadSource gamepads();
+
+    /** The networking tunables, read once at startup from {@code network.properties}. */
+    NetConfig netConfig();
+
+    /** What this copy of the game was started with: which instance, which pads, where to join. */
+    LaunchOptions launchOptions();
 
     /** Shared screen-space text renderer, owned by the application rather than by any one screen. */
     Hud hud();

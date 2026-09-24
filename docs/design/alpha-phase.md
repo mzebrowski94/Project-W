@@ -67,7 +67,12 @@ Dev controls, available in any scenario. **These are not game bindings** - the r
 | `R` | Restart the scenario from its first tick |
 | `G` | Make the commander invulnerable, or stop. A dev tool - pillar 2 says he can be killed |
 | `F1` | Toggle the stats overlay |
+| `F2` | Online: draw your own commanders facing your aim at once, or as the world has them (the cosmetic lead, on by default) |
+| `F3` | Online, a joining copy: step the simulated lag through `net.conditions.latencySteps` |
 | `Esc` | Back to the scenario menu |
+
+Online, pause is anybody's and pauses every machine; restart and `G` are the host's, and do nothing
+from anyone else; a single step is offline only (G0038).
 
 The overlay shows frame rate, tick count and a count of each entity kind. Entity counts are the
 cheapest leak detector there is: projectiles that never despawn or enemies that never die show up
@@ -79,6 +84,52 @@ binding or add a command, change them there - the screen only draws.
 
 Restarting builds a whole new `Simulation` rather than emptying the old one, so a restarted run is
 identical to a cold start by construction.
+
+## Playing online
+
+On the scenario menu, **`H`** hosts the chosen scenario and **`J`** opens the join screen, which lists
+the games heard on this network - LAN or Hamachi - and takes a room code or an address typed in. The
+joining copy plays the host's scenario, tuning and seed, whatever its own files say (ADR 0012). In game,
+the overlay's line under the last order says where you are connected, your input delay in ticks and
+milliseconds, the simulated lag, and `WAITING FOR THE HOST` when ticks stop arriving; a hosting copy's
+next line is its room code and the addresses a friend can type.
+
+Launch options, for more than one copy on a PC:
+
+| Option | Does |
+|---|---|
+| `--instance=N` | Which copy this is: its window's title and place (side by side), its connection log's name, and its pads |
+| `--pads=all\|none\|0,2` | Which pads this copy reads. Copy 0 reads all and every other copy none, because SDL hands every pad to every copy |
+
+How to start two copies is in `docs/workflow.md`.
+
+### The latency playtest
+
+The gate before the relay (ADR 0012; it was to come before the join screen, which went first by
+decision): does the input delay lockstep costs still feel like
+pillar 1? Run it with two copies on one PC and play the **joining** one - it is the one with a round
+trip to cross. `net.conditions.latencySteps` are one-way, so the steps `0, 25, 50, 100` are round trips
+of 0, 50, 100 and 200 ms; 25 is about what the same region costs over the internet (D4), 50 is a bad
+evening.
+
+1. Host `Skirmish` in copy 0; join from copy 1 and play it, with the keyboard in its window or a pad
+   given to it (`--pads=all` on copy 1, `--pads=none` on copy 0).
+2. At each lag step (`F3`), play a couple of minutes: strafe while firing, turn and shoot at something
+   fast, dodge a leap. Then press `F2` and play the same again without the cosmetic lead.
+3. Note, per step, the input delay the overlay shows and a verdict for **moving**, **aiming** and
+   **shooting**: fine, noticeable, or not acceptable. Note anything that jumps or stutters.
+4. Repeat on `Adventure` at the step that felt worst but still playable.
+
+**Go** to the relay if 25 ms each way is fine or merely noticeable with the cosmetic lead on.
+**Stop** if it is not acceptable there: rollback (deferred in ADR 0012) comes before the relay. Either way,
+keep the connection logs from `ai/logs/net/` - each `cat=stats` line of the host's shows
+`sealLateMostMs`, how late the sequencer's thread woke on this machine, which is the one timing no
+test here can measure.
+
+**Run 2026-09-24**, two and three copies: fine up to 50 ms each way; walking noticeably late at 100 ms
+each way (234 ms of input delay), not critical. Go, with rollback left until the relay gives real round
+trips (ADR 0012). It also found a copy that stalled on its own playing on with an inflated input delay
+for 25 seconds, and players left in a frozen world when the host quit - both fixed.
 
 ## Still scaffolding
 
@@ -110,6 +161,8 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | A control point is a dark disc that fills up, drawn under everything standing on it | Whatever a control point looks like. The dwell, the reset and the radius are real, and the fill rides the same `charge` channel as everything else that fills up. |
 | A level's objectives are met and nothing happens | The level lifecycle. What a completed level *does* is an open question in `README.md`, and inventing an answer inside a system would settle it by accident. |
 | A scenario names its control points by hand, and the spawn area is a config value | Generated fragments saying where their own entrances and objectives are. Same standing as hand-laid rock. |
+| **Hosting is a key on the scenario list, and how to join it is a line in the stats overlay** | The game's own menu when there is one, and a place for the room code that is not the debug overlay. The session, the discovery and the join screen under them are real. |
+| **Where you are connected, and your input delay, are a line in the stats overlay** | Whatever tells a player the link is slow without reading numbers (pillar 5). The numbers are real and published by `OnlineSession`; what is missing is a tell. |
 | Troopers roam to seeded random points when nothing is left to take | Something that actually searches - a sweep, a last-known-position, a patrol route. Roaming is enough to see the squad clear a map and is not a decision about how they search. |
 | A unit that is filling up is drawn as a brighter core inside its circle | Whatever the art does with it. `Appearance.charge` is the hook and is already published as a fraction, so the renderer decides and the simulation never learns how it is shown. |
 | **Grenades are unlimited.** No count, no pickup, no cost but the cooldown. | Whatever ammunition turns out to be. The throw itself is designed (G0019); how many you have is not, and a count is one more number in `Thrower` rather than a change to any of it. |

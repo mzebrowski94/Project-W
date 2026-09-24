@@ -79,7 +79,7 @@ Each line is a yes/no you can check yourself. A no is not done.
 | `map` | The ground a level is played on: tile grid, terrain, regions, generation. Depends on nothing at all. |
 | `sim` | The deterministic simulation: entities, components, systems, world state. No rendering, assets or I/O. |
 | `core` | The libGDX application: rendering, input, assets, screens, config loading. |
-| `net` | Networking (ADR 0012): the transport port and its Netty adapter, the in-memory test network, the connection log, and the lockstep session on top - sequencer, peer, wire format. No libGDX; Netty only inside `net.netty`. |
+| `net` | Networking (ADR 0012): the transport port and its Netty adapter, the in-memory test network, the connection log, LAN discovery, and the lockstep session on top - sequencer, peer, wire format. No libGDX; Netty only inside `net.netty`. |
 | `lwjgl3` | Desktop launcher. |
 
 `lwjgl3` -> `core` -> `net` -> `sim` -> `map`, one way; `sim` never sees `net`. `ArchitectureTest` fails the build if `sim` reaches for

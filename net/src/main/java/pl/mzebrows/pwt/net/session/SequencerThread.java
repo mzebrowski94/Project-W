@@ -62,11 +62,11 @@ public final class SequencerThread implements AutoCloseable {
                     LockSupport.parkNanos(wait);
                 }
             }
+            sequencer.close();
         } catch (RuntimeException | Error e) {
             failure = e;
             log.error("sequencer", "event=failed", e);
-        } finally {
-            sequencer.close();
+            sequencer.end("the host's session failed: " + e);
         }
     }
 }

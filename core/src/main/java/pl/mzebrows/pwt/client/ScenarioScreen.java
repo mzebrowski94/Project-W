@@ -16,38 +16,41 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Focus;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.def.ActionKind;
-import pl.mzebrows.pwt.sim.scenario.Scenario;
 
 /**
  * Draws one running scenario, and does as little thinking as possible.
  *
- * <p>What the harness keys mean is {@link HarnessControls}; what a command does is {@link
- * ScenarioSession}. Both are unit-tested. What is left here needs a GL context and therefore cannot
- * be, which is exactly why there is so little of it.
+ * <p>What the harness keys mean is {@link HarnessControls}; what a command does is the {@link
+ * ScenarioPlay} it is handed - {@link ScenarioSession} offline, {@link OnlineSession} online. Both are
+ * unit-tested. What is left here needs a GL context and therefore cannot be, which is exactly why there is
+ * so little of it.
+ *
+ * <p>Online, the camera frames only the commanders played on this machine (G0038), and those are drawn
+ * facing their players' aim this frame rather than a lead of ticks ago - the cosmetic lead (ADR 0012).
  */
 public final class ScenarioScreen extends ScreenAdapter {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
     private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
+    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final Family FOCUSED =
             Family.all(Focus.class, Position.class, PreviousPosition.class).get();
     private static final Family SHAKEN = Family.all(Shake.class, Position.class).get();
 
     private final GameContext context;
-    private final Scenario scenario;
+    private final ScenarioPlay play;
     private final Viewport viewport;
+    private final LocalAim localAim = new LocalAim();
     private final DebugOverlay overlay;
     private final KeyPresses keys = keycode -> Gdx.input.isKeyJustPressed(keycode);
     private final KeyHolds held = keycode -> Gdx.input.isKeyPressed(keycode);
-
-    @SuppressWarnings("NullAway.Init")
-    private ScenarioSession session;
 
     @SuppressWarnings("NullAway.Init")
     private WorldRenderer renderer;
@@ -70,12 +73,13 @@ public final class ScenarioScreen extends ScreenAdapter {
     /** The world the renderer is currently bound to; a restart replaces it with a different one. */
     private @Nullable Simulation bound;
 
-    public ScenarioScreen(GameContext context, Scenario scenario) {
+    /** Takes {@code play} over: the screen closes it when it is hidden. */
+    public ScenarioScreen(GameContext context, ScenarioPlay play) {
         this.context = context;
-        this.scenario = scenario;
+        this.play = play;
         GraphicConfig graphicConfig = context.graphicConfig();
         this.viewport = new FitViewport(graphicConfig.virtualWidth(), graphicConfig.virtualHeight());
-        this.overlay = new DebugOverlay(context.hud(), scenario);
+        this.overlay = new DebugOverlay(context.hud());
     }
 
     @Override
@@ -96,7 +100,6 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().terrainPalette(),
                 context.graphicConfig().groundDetail());
         input = new InputReader(viewport, context.controlsConfig(), context.gamepads());
-        session = new ScenarioSession(scenario, context.simConfig());
         camera = new CameraDirector(context.graphicConfig().camera());
         bound = null;
     }
@@ -110,31 +113,69 @@ public final class ScenarioScreen extends ScreenAdapter {
         for (int joined = input.seats().nextNewlySeated();
                 joined >= 0;
                 joined = input.seats().nextNewlySeated()) {
-            session.seat(joined);
+            play.seat(joined);
         }
         for (HarnessCommand command : HarnessControls.poll(keys)) {
-            session.apply(command, players);
+            play.apply(command, players);
         }
         if (input.pauseRequested()) {
-            session.apply(HarnessCommand.PAUSE, players);
+            play.apply(HarnessCommand.PAUSE, players);
         }
         if (input.zoomToggled()) {
             camera.toggleWide();
         }
-        if (session.leaving()) {
+        if (play.leaving()) {
             context.queueScreen(new MenuScreen(context));
         }
-        session.advance(delta, players);
+        play.advance(delta, players);
+        String ended = play.ended();
+        if (ended != null) {
+            // Online, the game cannot go on: the host has left, the link has dropped, the host said no.
+            // Back to the menu, saying why, rather than a world that will never move again.
+            Log.info(ended);
+            context.queueScreen(new MenuScreen(context, ended));
+        }
+        Simulation world = play.simulation();
+        if (world == null) {
+            // Online, before the world has arrived: connecting, joining, or turned away.
+            ScreenUtils.clear(context.graphicConfig().backgroundColor());
+            String connection = play.connection();
+            overlay.renderWaiting(connection == null ? "..." : connection);
+            return;
+        }
         announceAction();
         announceWave();
-        rebindIfRestarted();
-        aimCamera(delta);
+        rebindIfRestarted(world);
+        aimCamera(world, delta);
+        aimAhead(players);
 
         ScreenUtils.clear(context.graphicConfig().backgroundColor());
         terrain.render();
-        renderer.render(session.renderAlpha());
-        if (session.overlayVisible()) {
-            overlay.render(session.simulation(), session.paused(), session.lastOrder());
+        renderer.render(play.renderAlpha(), play.cosmeticLead() ? localAim : null);
+        if (play.overlayVisible()) {
+            String name = play.scenarioName();
+            overlay.render(
+                    world,
+                    Math.max(0, play.slotOf(PlayerSeats.KEYBOARD_SLOT)),
+                    name == null ? "" : name,
+                    play.paused(),
+                    play.lastOrder(),
+                    play.connection(),
+                    play.invitation());
+        }
+    }
+
+    /**
+     * What each local player is aiming with this frame, by slot, for the cosmetic lead. A seat with no
+     * pad in it says nothing, or its idle aim would turn a commander left standing by an unplugged pad.
+     */
+    private void aimAhead(PlayerInputs players) {
+        localAim.clear();
+        for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
+            int slot = play.slotOf(seat);
+            if (slot >= 0 && (seat == PlayerSeats.KEYBOARD_SLOT || input.seats().taken(seat))) {
+                localAim.set(slot, players.get(seat));
+            }
         }
     }
 
@@ -146,11 +187,11 @@ public final class ScenarioScreen extends ScreenAdapter {
      * eventually read it.
      */
     private void announceWave() {
-        int arrived = session.newlyArrivedWave();
+        int arrived = play.newlyArrivedWave();
         if (arrived == 0) {
             return;
         }
-        Log.info("wave " + arrived + "/" + session.totalWaves());
+        Log.info("wave " + arrived + "/" + play.totalWaves());
     }
 
     /**
@@ -162,7 +203,7 @@ public final class ScenarioScreen extends ScreenAdapter {
      */
     private void announceAction() {
         for (int slot = 0; slot < Players.MAX; slot++) {
-            ActionKind offered = session.newlyOfferedAction(slot);
+            ActionKind offered = play.newlyOfferedAction(slot);
             if (offered == null) {
                 continue;
             }
@@ -180,10 +221,10 @@ public final class ScenarioScreen extends ScreenAdapter {
     public void hide() {
         renderer.dispose();
         terrain.dispose();
+        play.close();
     }
 
-    private void rebindIfRestarted() {
-        Simulation current = session.simulation();
+    private void rebindIfRestarted(Simulation current) {
         if (bound != current) {
             renderer.bind(current);
             terrain.bind(current.map());
@@ -195,15 +236,18 @@ public final class ScenarioScreen extends ScreenAdapter {
     }
 
     /**
-     * Points the view at everything the simulation marked with a {@code Focus}, using the same
-     * interpolated positions the renderer will draw at so the view does not lag what is on screen by
-     * a tick of its own.
+     * Points the view at everything the simulation marked with a {@code Focus} that is this machine's
+     * to watch - a commander only if he is played here (G0038) - using the same interpolated positions
+     * the renderer will draw at so the view does not lag what is on screen by a tick of its own.
      */
-    private void aimCamera(float delta) {
-        float alpha = session.renderAlpha();
+    private void aimCamera(Simulation world, float delta) {
+        float alpha = play.renderAlpha();
         camera.begin();
         for (int i = 0; i < focused.size(); i++) {
             Entity entity = focused.get(i);
+            if (COMMANDER.has(entity) && !play.local(COMMANDER.get(entity).slot)) {
+                continue;
+            }
             Position position = POSITION.get(entity);
             PreviousPosition previous = PREVIOUS.get(entity);
             camera.watch(
@@ -217,7 +261,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         }
         camera.heading(input.headingX(), input.headingY());
 
-        TileMap map = session.simulation().map();
+        TileMap map = world.map();
         camera.update(viewport.getWorldWidth(), viewport.getWorldHeight(), map.worldWidth(), map.worldHeight(), delta);
         if (viewport.getCamera() instanceof OrthographicCamera lens) {
             lens.zoom = camera.zoom();

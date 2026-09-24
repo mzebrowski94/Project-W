@@ -85,6 +85,10 @@ final class SessionHarness implements AutoCloseable {
             long now = clock.nanos();
             sequencer.pump(now);
             for (Machine machine : machines) {
+                if (machine.frozenFrames > 0) {
+                    machine.frozenFrames--;
+                    continue;
+                }
                 machine.script(frame);
                 machine.session.pump(now, machine.local);
             }
@@ -152,6 +156,9 @@ final class SessionHarness implements AutoCloseable {
         final PeerSession session;
         final PlayerInputs local = new PlayerInputs(Players.MAX);
         final int phase;
+
+        /** Frames this machine's game will not run at all - a window being dragged, a pause for GC. */
+        int frozenFrames;
 
         Machine(String name, PeerSession session, int phase) {
             this.name = name;

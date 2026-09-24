@@ -1,8 +1,5 @@
 package pl.mzebrows.pwt.client;
 
-import com.badlogic.ashley.core.ComponentMapper;
-import com.badlogic.ashley.core.Entity;
-import com.badlogic.ashley.core.Family;
 import java.util.Arrays;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.FixedStepClock;
@@ -10,9 +7,6 @@ import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Action;
-import pl.mzebrows.pwt.sim.component.Commander;
-import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
@@ -30,13 +24,7 @@ import pl.mzebrows.pwt.sim.scenario.Scenarios;
  * Callers holding a reference to the old world - the renderer does - must notice the swap; compare
  * {@link #simulation()} by identity.
  */
-public final class ScenarioSession {
-
-    /** Cached, because a {@code Family} built per frame is an allocation per frame. */
-    private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
-
-    private static final Family COMMANDERS =
-            Family.all(Commander.class, Action.class).get();
+public final class ScenarioSession implements ScenarioPlay {
 
     private final Scenario scenario;
     private final SimConfig baseConfig;
@@ -47,6 +35,7 @@ public final class ScenarioSession {
     private boolean overlayVisible = true;
     private boolean leaving;
     private boolean godMode;
+    private boolean cosmeticLead = true;
 
     /**
      * The last squad order the player gave, or null if none yet.
@@ -94,16 +83,6 @@ public final class ScenarioSession {
      */
     private final boolean[] seated = new boolean[Players.MAX];
 
-    /**
-     * The action last reported to the player, so the same one is not reported twice.
-     *
-     * <p>Alpha-phase scaffolding: the available action belongs on screen, beside the commander,
-     * where a player can see it without reading a log. Until there is an interface to put it in, it
-     * is announced once each time it changes - and once each time, rather than every frame, is the
-     * whole reason this field exists. A line per frame is not a prompt, it is a flood.
-     */
-    private final ActionKind[] announcedAction = filled();
-
     public ScenarioSession(Scenario scenario, SimConfig baseConfig) {
         this.scenario = scenario;
         this.baseConfig = baseConfig;
@@ -115,6 +94,7 @@ public final class ScenarioSession {
      * Carries out one harness command. {@code input} is only used by {@link HarnessCommand#STEP},
      * which advances the world by a tick and so needs to know what the player is currently holding.
      */
+    @Override
     public void apply(HarnessCommand command, PlayerInputs input) {
         switch (command) {
             case PAUSE -> paused = !paused;
@@ -122,72 +102,38 @@ public final class ScenarioSession {
             case RESTART -> restart();
             case TOGGLE_OVERLAY -> overlayVisible = !overlayVisible;
             case TOGGLE_GOD_MODE -> setGodMode(!godMode);
+            case TOGGLE_COSMETIC_LEAD -> cosmeticLead = !cosmeticLead;
+            case NEXT_LAG -> {
+                // Offline there is no link to lag.
+            }
             case LEAVE -> leaving = true;
         }
     }
 
-    /** How many waves had been sent when the console was last told. */
-    private int announcedWave;
+    private final Announcements announcements = new Announcements();
 
     /** The last squad order the player gave, for the overlay to show. Null until one is given. */
+    @Override
     public @Nullable Order lastOrder() {
         return lastOrder;
     }
 
-    /**
-     * The action the commander could take right now, but only if it has changed since this was last
-     * asked; null when it has not.
-     *
-     * <p>The change detection lives here rather than in the screen because it is a decision and the
-     * screen only draws. Asking is what marks it as reported, so a caller that asks twice in a frame
-     * gets it once - which is the behaviour a prompt wants.
-     *
-     * <p>Asked per player, because what is within one man's arm's length says nothing about what is
-     * within another's - and a prompt that told three players what the fourth could reach would be
-     * worse than none at all.
-     */
+    /** The action this slot's commander could take right now, if it has changed; see {@link Announcements}. */
+    @Override
     public @Nullable ActionKind newlyOfferedAction(int slot) {
-        Entity commander = Players.inSlot(simulation.engine().getEntitiesFor(COMMANDERS), slot);
-        ActionKind offered = commander == null ? ActionKind.NONE : ACTION.get(commander).available;
-        if (offered == announcedAction[slot]) {
-            return null;
-        }
-        announcedAction[slot] = offered;
-        return offered;
+        return announcements.newlyOfferedAction(simulation, slot);
     }
 
-    private static ActionKind[] filled() {
-        ActionKind[] none = new ActionKind[Players.MAX];
-        Arrays.fill(none, ActionKind.NONE);
-        return none;
-    }
-
-    /**
-     * The number of the wave that has just arrived, or zero if none has since this was last asked.
-     *
-     * <p>The same shape as {@link #newlyOfferedAction(int)} and for the same reason: the change is a
-     * decision, the screen only draws, and asking is what marks it reported - so a caller that asks
-     * twice in a frame is told once. A line per frame is a flood rather than a report.
-     *
-     * <p>Zero rather than null because it is a count, and because a level with no waves at all should
-     * not have to be told about in a different type.
-     */
+    /** The number of the wave that has just arrived, or zero; see {@link Announcements}. */
+    @Override
     public int newlyArrivedWave() {
-        int sent = waves().sent();
-        if (sent == announcedWave) {
-            return 0;
-        }
-        announcedWave = sent;
-        return sent;
+        return announcements.newlyArrivedWave(simulation);
     }
 
     /** How many waves this level has altogether, for the other half of the line. */
+    @Override
     public int totalWaves() {
-        return waves().total();
-    }
-
-    private Waves waves() {
-        return simulation.waves();
+        return simulation.waves().total();
     }
 
     /**
@@ -197,12 +143,14 @@ public final class ScenarioSession {
      * <p>Idempotent on purpose: the simulation leaves a slot that already has a commander alone, so a
      * pad reconnecting after the cable was kicked does not hand its player a second one.
      */
+    @Override
     public void seat(int slot) {
         seated[slot] = true;
         pendingJoin[slot] = true;
     }
 
     /** Runs however many fixed steps this frame's elapsed time is worth. Does nothing while paused. */
+    @Override
     public void advance(float deltaSeconds, PlayerInputs input) {
         remember(input);
         if (paused) {
@@ -219,10 +167,12 @@ public final class ScenarioSession {
      * state while paused, so a paused world is drawn exactly where it is rather than part-way to a
      * tick that is not coming.
      */
+    @Override
     public float renderAlpha() {
         return paused ? 1f : clock.alpha();
     }
 
+    @Override
     public Simulation simulation() {
         return simulation;
     }
@@ -231,10 +181,38 @@ public final class ScenarioSession {
         return scenario;
     }
 
+    @Override
+    public String scenarioName() {
+        return scenario.name();
+    }
+
+    @Override
+    public boolean cosmeticLead() {
+        return cosmeticLead;
+    }
+
+    /** Offline a seat is its slot (G0028). */
+    @Override
+    public int slotOf(int seat) {
+        return seat >= 0 && seat < PlayerSeats.SEATS ? seat : -1;
+    }
+
+    /** Offline there is no connection to speak of. */
+    @Override
+    public @Nullable String connection() {
+        return null;
+    }
+
+    /** Nothing held but the world, which goes with this. */
+    @Override
+    public void close() {}
+
+    @Override
     public boolean paused() {
         return paused;
     }
 
+    @Override
     public boolean overlayVisible() {
         return overlayVisible;
     }
@@ -245,6 +223,7 @@ public final class ScenarioSession {
     }
 
     /** True once the player has asked to go back to the menu. One-way. */
+    @Override
     public boolean leaving() {
         return leaving;
     }
@@ -302,8 +281,6 @@ public final class ScenarioSession {
     private void restart() {
         lastOrder = null;
         Arrays.fill(pendingOrder, null);
-        Arrays.fill(announcedAction, ActionKind.NONE);
-        announcedWave = 0;
         simulation = newWorld();
         clock = new FixedStepClock(simulation.config());
         paused = false;

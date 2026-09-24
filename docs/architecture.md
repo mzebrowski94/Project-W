@@ -156,8 +156,8 @@ Networking, and nothing the game's rules depend on (ADR 0012). No libGDX, and Ne
   `Delivery.RELIABLE` and `Delivery.UNRELIABLE` messages across them; everything that happens is handed
   over on the caller's thread by `poll`, never pushed from a network thread - the gamepad port's lesson
   (ADR 0011) applied again. `ConditionedTransport` wraps any transport and makes it late, jittery, lossy
-  or repetitive, from a seed, which is how two instances on one machine and a test both get a bad
-  network on demand.
+  or repetitive, both ways and from a seed, with conditions that can change while it runs - which is how
+  two instances on one machine, the latency playtest and a test all get a bad network on demand.
 - `loopback/` - `LoopbackNetwork`: transports that reach each other in memory, perfect on purpose, for
   tests of everything above the port. Bad networks come from wrapping it, so there is one way to lag.
 - `netty/` - `NettyTransport`: TCP for reliable messages, UDP for unreliable ones, one port number. A
@@ -167,6 +167,10 @@ Networking, and nothing the game's rules depend on (ADR 0012). No libGDX, and Ne
   on `java.util.logging` so Netty's own lines land there too. **Nothing is logged per message:**
   `NetTrace` records every message into a preallocated ring and dumps a link's part of it when the link
   closes badly, and `LinkStats` writes each link's numbers every few seconds.
+- `lan/` - finding a session on the local network (G0038). A host's `LanBeacon` sends a
+  `LanAnnouncement` once a second to every interface's broadcast address, and to this PC, as
+  `LanAddresses` finds them; a joiner's `LanListener` hears them on a shared port and keeps one entry per
+  session. `RoomCode` is what a player types to name one. JDK datagram sockets, polled like the transport.
 - `session/` - lockstep itself (ADR 0012). `Sequencer` seals one `Bundle` per tick - every seated slot's
   held input, the orders that have arrived, a restart or god mode switch - and holds no world;
   `SequencerThread` runs it beside the host's game. `PeerSession` is one machine's place in a session:
@@ -197,8 +201,21 @@ loop.
 - `ScenarioSession` / `HarnessControls` / `MenuSelection` - everything the client *decides*, kept out
   of the classes that draw so it can be unit-tested without a GL context. `ClientArchitectureTest`
   enforces both halves of that split.
+- `ScenarioPlay` - what the scenario screen plays through: `ScenarioSession` offline, `OnlineSession`
+  online (ADR 0012). `OnlineSession` is this machine's place in a session: hosting starts a `Sequencer`
+  on its own thread and joins it over `127.0.0.1`; joining connects through a `ConditionedTransport`
+  whose lag the playtest steps. Input arrives by local seat and the session says which slot each seat
+  plays; `local(slot)` is what the camera frames and what announcements are made for (G0038).
+  `ScenarioWorlds` builds a session's worlds from the host's shipped config. `Announcements` is what the
+  console has been told, shared by both.
+- `LaunchOptions` / `PadPolicy` / `ChosenGamepads` - the command line: which copy of the game this is,
+  and which pads it reads.
+- `JoinScreen` / `JoinChoices` - the join screen: sessions heard on the network, and a room code or an
+  address typed in; what Enter joins is `JoinChoices`, tested. A hosting `OnlineSession` holds an
+  `Invitation`: the beacon, and the line its overlay reads out to a friend.
 - `MenuScreen` / `ScenarioScreen` - the scenario list, and one running scenario with the alpha-phase
-  harness. Thin by design: they read input, hand commands to the session, and draw.
+  harness. Thin by design: they read input, hand commands to the play, and draw. `LocalAim` is this
+  frame's local aim, which `WorldRenderer` draws local commanders facing - the cosmetic lead.
 - `Hud` / `DebugOverlay` - text in screen space, on their own pixel-unit viewport. The font is
   libGDX's built-in one, so the harness needs no art at all.
 - `InputReader` - the only class that touches a keyboard or mouse for the *simulation*. Produces a

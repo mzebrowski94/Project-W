@@ -40,6 +40,7 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 | Repack art from `assets-raw/` | `.claude/scripts/gradle.sh :core:packTextures` |
 | Raw Gradle, any task | `.claude/scripts/gradle.sh <task>` |
 | Run the game | Windows only: `./gradlew lwjgl3:run` |
+| Run it as copy 1, say, of several | Windows only: `./gradlew lwjgl3:run --args="--instance=1"` |
 
 Build outputs land in `~/.pwt/build/`, not `<project>/build` - see *Speed*. Test result XML under
 `~/.pwt/build/<module>/test-results/`. Verify log: `ai/logs/verify.log`.
@@ -52,6 +53,26 @@ followed by `cat=trace` lines - its last messages, times counted back from the m
 own warnings arrive as `cat=netty msg="..."`. A session logs as `cat=sequencer` and `cat=peer`;
 `grep "event=desync"` finds a disagreement, and `cat=stats` lines carry each peer's lead, how far behind
 it runs, and how often the sequencer had to repeat its input.
+
+**Two copies on one PC** - for online play, and the latency playtest in `docs/design/alpha-phase.md`.
+Two `gradlew run`s at once contend for Gradle's locks, so build the jar once and start it twice, from
+`assets/` as the run task does, with the log pointed where the run task points it:
+
+```
+./gradlew lwjgl3:jar
+cd assets
+java -Dpwt.net.logDir=..\ai\logs\net -jar ..\lwjgl3\build\libs\Project-W-1.0.0.jar --instance=0
+java -Dpwt.net.logDir=..\ai\logs\net -jar ..\lwjgl3\build\libs\Project-W-1.0.0.jar --instance=1
+```
+
+(the second in another terminal; `java` must be 25 - `$env:JAVA_HOME\bin\java` if the one on the path
+is older). Host with `H` in one; in the other `J` opens the join screen, where the host is listed - it
+announces itself to this PC as well as to the network - and Enter joins it. The first time a copy hosts
+or opens the join screen, **Windows Firewall asks about Java**: two copies on one PC talk over
+`127.0.0.1` and need nothing, but for a LAN or Hamachi, allow it on the network type that adapter is in -
+Hamachi's is usually *Public* - or a friend's game is never listed and his join times out with nothing
+said. A friend on Hamachi sees the game in his list; one the list cannot reach types the host's room code
+or one of the addresses its overlay shows.
 
 **Desync dumps** land beside the connection log as `desync-t<tick>-peer<n>-<role>.bin`, one from the peer
 that diverged (`desynced`) and one from the host (`reference`), each with a `.txt` summary.

@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Screen;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
 
 /**
@@ -16,8 +17,10 @@ import pl.mzebrows.pwt.sim.SimConfig;
 public final class PwtGame extends Game implements GameContext {
 
     private final GraphicConfig graphicConfig;
+    private final LaunchOptions launchOptions;
 
     private SimConfig simConfig;
+    private NetConfig netConfig;
     private ControlsConfig controlsConfig;
     private GamepadSource gamepads;
     private Assets assets;
@@ -25,17 +28,22 @@ public final class PwtGame extends Game implements GameContext {
 
     private @Nullable Screen pendingScreen;
 
-    public PwtGame(GraphicConfig graphicConfig) {
+    public PwtGame(GraphicConfig graphicConfig, LaunchOptions launchOptions) {
         this.graphicConfig = graphicConfig;
+        this.launchOptions = launchOptions;
     }
 
     @Override
     public void create() {
-        Log.info("Starting Project-W");
+        Log.info("Starting Project-W, instance " + launchOptions.instance() + ", pads " + launchOptions.pads());
+        for (String problem : launchOptions.problems()) {
+            Log.error("Command line: " + problem, null);
+        }
         simConfig = SimConfigLoader.load();
         Log.debug("Simulation config: " + simConfig);
+        netConfig = NetConfigLoader.load();
         controlsConfig = ControlsConfig.load();
-        gamepads = new GdxGamepads(controlsConfig.hardware());
+        gamepads = new ChosenGamepads(new GdxGamepads(controlsConfig.hardware()), launchOptions.pads());
 
         assets = new Assets();
         assets.queueAll();
@@ -85,6 +93,16 @@ public final class PwtGame extends Game implements GameContext {
     @Override
     public SimConfig simConfig() {
         return simConfig;
+    }
+
+    @Override
+    public NetConfig netConfig() {
+        return netConfig;
+    }
+
+    @Override
+    public LaunchOptions launchOptions() {
+        return launchOptions;
     }
 
     @Override

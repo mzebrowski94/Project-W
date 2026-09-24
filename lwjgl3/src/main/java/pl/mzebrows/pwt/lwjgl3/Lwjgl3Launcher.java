@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.lwjgl3;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import pl.mzebrows.pwt.client.GraphicConfig;
+import pl.mzebrows.pwt.client.LaunchOptions;
 import pl.mzebrows.pwt.client.PwtGame;
 
 /** Launches the desktop (LWJGL3) application. */
@@ -15,15 +16,23 @@ public final class Lwjgl3Launcher {
             return; // Handles macOS support and helps on Windows.
         }
         GraphicConfig graphicConfig = GraphicConfig.load();
-        new Lwjgl3Application(new PwtGame(graphicConfig), configuration(graphicConfig));
+        LaunchOptions options = LaunchOptions.parse(args);
+        new Lwjgl3Application(new PwtGame(graphicConfig, options), configuration(graphicConfig, options));
     }
 
-    private static Lwjgl3ApplicationConfiguration configuration(GraphicConfig graphicConfig) {
+    private static Lwjgl3ApplicationConfiguration configuration(GraphicConfig graphicConfig, LaunchOptions options) {
         Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
-        configuration.setTitle("Project-W");
+        configuration.setTitle(options.instanceGiven() ? "Project-W  #" + options.instance() : "Project-W");
         configuration.useVsync(graphicConfig.vsync());
         configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate + 1);
         configuration.setWindowedMode(graphicConfig.windowWidth(), graphicConfig.windowHeight());
+        if (options.instanceGiven()) {
+            // Copies on one PC side by side, left and right, a row lower for every pair, so each window
+            // can be seen and clicked into.
+            int screenWidth = Lwjgl3ApplicationConfiguration.getDisplayMode().width;
+            int x = options.instance() % 2 == 0 ? 20 : Math.max(20, screenWidth - graphicConfig.windowWidth() - 20);
+            configuration.setWindowPosition(x, 60 + options.instance() / 2 * 60);
+        }
         configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
         return configuration;
     }

@@ -16,6 +16,7 @@ package pl.mzebrows.pwt.net;
  * @param conditions network conditions to simulate on top of the real ones, all zero for none
  * @param log where the connection log goes and how much it keeps
  * @param session how a lockstep session paces itself
+ * @param lan how sessions on the local network are found
  */
 public record NetConfig(
         int port,
@@ -27,7 +28,8 @@ public record NetConfig(
         int maxMessageBytes,
         Conditions conditions,
         LogConfig log,
-        Session session) {
+        Session session,
+        Lan lan) {
 
     public NetConfig {
         require(port > 0 && port < 65_536, "port", port);
@@ -51,7 +53,8 @@ public record NetConfig(
                 8 * 1024 * 1024,
                 Conditions.NONE,
                 LogConfig.DEFAULT,
-                Session.DEFAULT);
+                Session.DEFAULT,
+                Lan.DEFAULT);
     }
 
     /** The same config with other simulated conditions. */
@@ -66,7 +69,8 @@ public record NetConfig(
                 maxMessageBytes,
                 newConditions,
                 log,
-                session);
+                session,
+                lan);
     }
 
     /** The same config with another log setup. */
@@ -81,7 +85,8 @@ public record NetConfig(
                 maxMessageBytes,
                 conditions,
                 newLog,
-                session);
+                session,
+                lan);
     }
 
     /**
@@ -144,7 +149,8 @@ public record NetConfig(
                 maxMessageBytes,
                 conditions,
                 log,
-                newSession);
+                newSession,
+                lan);
     }
 
     /**
@@ -181,6 +187,25 @@ public record NetConfig(
             require(catchUpTicks >= 1, "catchUpTicks", catchUpTicks);
             require(checksumTicks >= 1, "checksumTicks", checksumTicks);
             require(historyTicks > leadMaxTicks + checksumTicks, "historyTicks", historyTicks);
+        }
+    }
+
+    /**
+     * How sessions on the local network are found: a host announces itself, a joiner listens.
+     *
+     * @param port the port joiners listen on and hosts announce to; shared, so several copies on one PC
+     *     can listen at once
+     * @param announceMillis how often a host announces itself
+     * @param forgetMillis how long a host that has gone quiet stays on a joiner's list
+     */
+    public record Lan(int port, int announceMillis, int forgetMillis) {
+
+        public static final Lan DEFAULT = new Lan(47_099, 1_000, 3_500);
+
+        public Lan {
+            require(port > 0 && port < 65_536, "lan.port", port);
+            require(announceMillis > 0, "lan.announceMillis", announceMillis);
+            require(forgetMillis > announceMillis, "lan.forgetMillis", forgetMillis);
         }
     }
 
