@@ -15,6 +15,9 @@ class ScatterTest {
     private static final float RADIUS = 1f;
     private static final float CLEARANCE = 1f;
 
+    /** Wider than anything that must get past, so a gap left beside rock is a way through. */
+    private static final float ROCK_MARGIN = 4f;
+
     @Test
     void placesEverythingItWasAskedForWhenThereIsRoom() {
         List<float[]> placed = new ArrayList<>();
@@ -49,6 +52,27 @@ class ScatterTest {
         for (float[] spot : placed) {
             assertThat(map.terrainAt(spot[0], spot[1])).isEqualTo(Terrain.ORGANIC);
         }
+    }
+
+    /**
+     * Something that never moves, laid nearly flush against rock, leaves a slot narrower than anything
+     * that must get past it - and nothing routes round an entity, so a man walks into the slot and stays
+     * there. Found by a probe in the Adventure, 2026-09-24.
+     */
+    @Test
+    void keepsSomethingThatNeverMovesOffRockByTheMarginItIsGiven() {
+        TileMap map = TileMap.builder(COLS, ROWS, TILE)
+                .fill(Terrain.PLAIN)
+                .rect(0, 9, COLS, 2, Terrain.ROCK)
+                .build();
+        List<float[]> placed = new ArrayList<>();
+
+        scatterer(map).keepingOffRock(ROCK_MARGIN).scatter(40, RADIUS, (x, y) -> placed.add(new float[] {x, y}));
+
+        assertThat(placed)
+                .isNotEmpty()
+                .allSatisfy(at -> assertThat(map.isClear(at[0], at[1], RADIUS + ROCK_MARGIN))
+                        .isTrue());
     }
 
     @Test

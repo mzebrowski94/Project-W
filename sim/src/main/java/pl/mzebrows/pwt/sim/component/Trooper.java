@@ -122,6 +122,53 @@ public final class Trooper implements Component, Pool.Poolable {
     public boolean sentOn;
 
     /**
+     * Whether it is holding a point the squad has taken, which is when {@link #holdRemaining} is counting.
+     *
+     * <p>Cleared the moment it is standing on no taken point, so every point held is a fresh hold. A
+     * fight on the point pauses the count rather than clearing it: he is still standing on it.
+     */
+    public boolean holding;
+
+    /**
+     * How much longer it holds before following a commander who has gone on ahead, in seconds (G0040).
+     * Drawn afresh each time it starts holding, so a squad peels off a point rather than leaving in step.
+     */
+    public float holdRemaining;
+
+    /**
+     * Whether it is timing a walk for progress, from {@link #sampleX}, {@link #sampleY}. Cleared
+     * whenever it stands still on purpose, so a man who stopped is never counted as a man who is stuck.
+     */
+    public boolean sampling;
+
+    /** Where it stood when the current sample began. */
+    public float sampleX;
+
+    public float sampleY;
+
+    /** How long the current sample has run, in seconds. */
+    public float sampleClock;
+
+    /** How much longer it is backing off to one side before trying its way again, in seconds. */
+    public float detourRemaining;
+
+    /** How many detours it has taken. Its parity picks the side, so a second try goes the other way. */
+    public int detours;
+
+    /**
+     * How much longer it is looking all round for whatever hit it, in seconds. Zero is calm.
+     *
+     * <p>Written where damage lands, read by the mind to forgive the arc and by the legs to turn the
+     * man towards {@link #alertX}, {@link #alertY}.
+     */
+    public float alertRemaining;
+
+    /** Where the last hit came from: a place, the muzzle, never who fired it (G0016). */
+    public float alertX;
+
+    public float alertY;
+
+    /**
      * Whether it has already picked a bearing to watch since it last stopped.
      *
      * <p>A trooper that stops takes a bearing of its own rather than keeping the one it was walking
@@ -174,6 +221,25 @@ public final class Trooper implements Component, Pool.Poolable {
     public int scanSide = 1;
 
     /**
+     * The first compass slot of its <strong>sector</strong>, or {@code -1} for none.
+     *
+     * <p>Men standing on a point split the circle between them, so what is standing still behind the
+     * squad is found rather than left at its back - a bearing each, drawn at random, left whole sides of
+     * a point unwatched. Written by {@code TrooperMindSystem}, which knows who is standing where, once a
+     * tick; a man arriving or leaving reshuffles the sectors on the same tick.
+     */
+    public int sectorFrom = -1;
+
+    /** How many compass slots its sector covers. Zero means no sector, and a bearing of its own instead. */
+    public int sectorSpan;
+
+    /**
+     * How many times it has swung its attention since it started watching, which picks the slot inside
+     * its sector it is looking at now. Written by {@code TrooperMoveSystem} as the sweep turns over.
+     */
+    public int sectorStep;
+
+    /**
      * What it is still due before it next swings at a leap, {@code Odds}' budget for
      * {@code AiChance.SWING_AT_A_LEAP}. Zero until the first time the chance comes up.
      */
@@ -196,6 +262,13 @@ public final class Trooper implements Component, Pool.Poolable {
         this.arcCosine = newArcCosine;
         this.requiresClearLine = newRequiresClearLine;
         return this;
+    }
+
+    /** Starts it looking for whatever hit it, from that place, for that long. */
+    public void hitFrom(float x, float y, float seconds) {
+        this.alertX = x;
+        this.alertY = y;
+        this.alertRemaining = seconds;
     }
 
     /** Points it somewhere, and returns this component, for fluent spawning. */
@@ -234,12 +307,26 @@ public final class Trooper implements Component, Pool.Poolable {
         lookY = 0f;
         scanRemaining = 0f;
         scanSide = 1;
+        sectorFrom = -1;
+        sectorSpan = 0;
+        sectorStep = 0;
         swingDue = 0f;
         turretDue = 0f;
         aidDue = 0f;
         order = null;
         orderedBy = 0;
         sentOn = false;
+        holding = false;
+        holdRemaining = 0f;
+        sampling = false;
+        sampleX = 0f;
+        sampleY = 0f;
+        sampleClock = 0f;
+        detourRemaining = 0f;
+        detours = 0;
+        alertRemaining = 0f;
+        alertX = 0f;
+        alertY = 0f;
         settled = false;
         forwardRemaining = 0f;
         baseLookX = 1f;

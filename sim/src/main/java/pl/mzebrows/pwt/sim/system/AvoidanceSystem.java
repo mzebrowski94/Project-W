@@ -58,43 +58,9 @@ import pl.mzebrows.pwt.sim.def.Side;
  */
 public final class AvoidanceSystem extends EntitySystem {
 
-    /**
-     * Twelve candidate directions, thirty degrees apart, as literals.
-     *
-     * <p>A table rather than a loop over an angle because {@code Math.sin} and {@code Math.cos} are
-     * banned in the simulation - they are specified only to within an ulp and may differ between JVM
-     * implementations, which is enough to make a replay stop replaying on somebody else's machine.
-     * Twelve is enough resolution to slip past a circle and few enough to score for every unit every
-     * tick without thinking about it.
-     */
-    private static final float[] DIRECTIONS = {
-        1f,
-        0f,
-        0.8660254f,
-        0.5f,
-        0.5f,
-        0.8660254f,
-        0f,
-        1f,
-        -0.5f,
-        0.8660254f,
-        -0.8660254f,
-        0.5f,
-        -1f,
-        0f,
-        -0.8660254f,
-        -0.5f,
-        -0.5f,
-        -0.8660254f,
-        0f,
-        -1f,
-        0.5f,
-        -0.8660254f,
-        0.8660254f,
-        -0.5f
-    };
+    /** Twelve candidate directions, thirty degrees apart - enough resolution to slip past a circle. */
+    private static final int SLOTS = Compass.SLOTS;
 
-    private static final int SLOTS = DIRECTIONS.length / 2;
     private static final float EPSILON = 1e-4f;
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
@@ -150,14 +116,14 @@ public final class AvoidanceSystem extends EntitySystem {
         int best = 0;
         float bestScore = -Float.MAX_VALUE;
         for (int slot = 0; slot < SLOTS; slot++) {
-            float interest = DIRECTIONS[slot * 2] * wantX + DIRECTIONS[slot * 2 + 1] * wantY;
+            float interest = Compass.x(slot) * wantX + Compass.y(slot) * wantY;
             float score = interest - avoidance.weight * danger[slot];
             if (score > bestScore) {
                 bestScore = score;
                 best = slot;
             }
         }
-        steering.set(DIRECTIONS[best * 2] * speed, DIRECTIONS[best * 2 + 1] * speed);
+        steering.set(Compass.x(best) * speed, Compass.y(best) * speed);
     }
 
     /**
@@ -209,7 +175,7 @@ public final class AvoidanceSystem extends EntitySystem {
             float unitX = towardsX / distance;
             float unitY = towardsY / distance;
             for (int slot = 0; slot < SLOTS; slot++) {
-                float alignment = DIRECTIONS[slot * 2] * unitX + DIRECTIONS[slot * 2 + 1] * unitY;
+                float alignment = Compass.x(slot) * unitX + Compass.y(slot) * unitY;
                 if (alignment <= 0f) {
                     continue;
                 }

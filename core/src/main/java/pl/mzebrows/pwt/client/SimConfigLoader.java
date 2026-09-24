@@ -121,7 +121,18 @@ public final class SimConfigLoader {
                 properties.getFloat("sim.trooper.forwardDistance", defaults.forwardDistance()),
                 properties.getFloat("sim.trooper.forwardSpeedFactor", defaults.forwardSpeedFactor()),
                 properties.getFloat("sim.trooper.followDistance", defaults.followDistance()),
-                properties.getFloat("sim.trooper.patchRadius", defaults.patchRadius()));
+                properties.getFloat("sim.trooper.patchRadius", defaults.patchRadius()),
+                approach(properties, "sim.trooper.approach", defaults.approach()),
+                properties.getFloat("sim.trooper.followAheadSeconds", defaults.followAheadSeconds()),
+                properties.getFloat("sim.trooper.holdSeconds", defaults.holdSeconds()),
+                properties.getFloat("sim.trooper.holdJitterSeconds", defaults.holdJitterSeconds()),
+                properties.getFloat("sim.trooper.rallyRadius", defaults.rallyRadius()),
+                properties.getFloat("sim.trooper.blockSeconds", defaults.blockSeconds()),
+                properties.getFloat("sim.trooper.blockDistance", defaults.blockDistance()),
+                properties.getFloat("sim.trooper.detourSeconds", defaults.detourSeconds()),
+                properties.getFloat("sim.trooper.alertSeconds", defaults.alertSeconds()),
+                properties.getFloat("sim.trooper.threatBonus", defaults.threatBonus()),
+                properties.getFloat("sim.trooper.sharedTargetPenalty", defaults.sharedTargetPenalty()));
     }
 
     /** Where the player's side starts, under {@code sim.spawn}. */

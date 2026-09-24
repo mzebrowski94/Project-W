@@ -258,8 +258,11 @@ public final class NavigationSystem extends EntitySystem {
      * <p>It mutates the scratch position the caller is about to steer by, and only that - the goals
      * the flow field is flooded from are still the men themselves, so a creature that has to come
      * round a wall is routed to him and takes its own line again on the open side of it.
+     *
+     * <p>A trooper walking to a point or after the commander uses it too (G0041), which is why it is
+     * reachable from {@code TrooperMoveSystem}: one spread, not a second way of doing it.
      */
-    private static void spreadOut(Entity enemy, Position from, Position target) {
+    static void spreadOut(Entity enemy, Position from, Position target) {
         if (!APPROACH.has(enemy)) {
             return;
         }

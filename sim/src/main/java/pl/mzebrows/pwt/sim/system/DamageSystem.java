@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
 
 /**
@@ -56,6 +57,7 @@ public final class DamageSystem extends IteratingSystem {
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
+    private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
     private static final ComponentMapper<Dragged> DRAGGED = ComponentMapper.getFor(Dragged.class);
@@ -67,11 +69,13 @@ public final class DamageSystem extends IteratingSystem {
 
     private final Spawner spawner;
     private final SimConfig.BloatConfig bloatConfig;
+    private final float alertSeconds;
 
     public DamageSystem(SimConfig config, Spawner spawner) {
         super(Family.all(Health.class, Damage.class).get());
         this.spawner = spawner;
         this.bloatConfig = config.bloat();
+        this.alertSeconds = config.trooper().alertSeconds();
     }
 
     @Override
@@ -107,6 +111,11 @@ public final class DamageSystem extends IteratingSystem {
             // landed - an invulnerable target has already returned above, and being missed provokes
             // nobody.
             PERCEPTION.get(entity).provokeAt(sourceX, sourceY);
+        }
+        if (hasSource && TROOPER.has(entity)) {
+            // The same place, for a man: being hit turns him round to look for what did it. Below the
+            // invulnerability check for the same reason - a hit that did not land alarms nobody.
+            TROOPER.get(entity).hitFrom(sourceX, sourceY, alertSeconds);
         }
         if (bloat > 0f && BLOAT.has(entity)) {
             // It builds on the living as readily as on the dead, which is the whole of why holding

@@ -40,6 +40,10 @@ public final class Scatter {
     private final Randomness rng;
     private final float clearance;
     private final float wallMargin;
+
+    /** How far off impassable ground a placed circle must stay. Zero is flush, which is the default. */
+    private float rockMargin;
+
     private final List<Circle> taken = new ArrayList<>();
 
     /**
@@ -53,6 +57,22 @@ public final class Scatter {
         this.rng = rng;
         this.clearance = clearance;
         this.wallMargin = wallMargin;
+    }
+
+    /**
+     * Keeps everything this scatter places at least {@code margin} off impassable ground, and returns
+     * this scatter.
+     *
+     * <p>For something that <strong>never moves</strong>. A boulder laid nearly flush against rock
+     * leaves a slot narrower than a man, and nothing routes round an entity - the route knows rock and
+     * steering knows entities - so a unit walks into the slot and stays there. That is the edge margin's
+     * argument, applied to the rock inside the map. Off by default, because something that moves is
+     * shoved out of a slot by the solver, and a unit hatched or put down in a narrow place has to fit
+     * there. Pass at least the diameter of the largest thing that must get past.
+     */
+    public Scatter keepingOffRock(float margin) {
+        this.rockMargin = margin;
+        return this;
     }
 
     /** Marks space as occupied without putting anything there - keeps a scatter off the commander. */
@@ -147,7 +167,7 @@ public final class Scatter {
         if (x < inset || y < inset || x > map.worldWidth() - inset || y > map.worldHeight() - inset) {
             return false;
         }
-        if (!map.isClear(x, y, radius)) {
+        if (!map.isClear(x, y, radius + rockMargin)) {
             return false;
         }
         for (Circle circle : taken) {

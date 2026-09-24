@@ -254,6 +254,14 @@ public final class Spawner {
                         config.casualty().stabiliseSeconds(),
                         config.casualty().hauledStabiliseFactor()));
         entity.add(engine.createComponent(Dragged.class));
+        // The pack's own spread (G0033), so a squad walking to a point or after him crosses the ground
+        // abreast. Seeded from where he was put down, like every alien's, so nothing is drawn.
+        entity.add(engine.createComponent(Approach.class)
+                .set(
+                        trooper.approach().enabled(),
+                        trooper.approach().offset(),
+                        trooper.approach().closeRange())
+                .bearingFrom(x, y));
         entity.add(engine.createComponent(Avoidance.class)
                 .set(
                         trooper.avoidance().enabled(),

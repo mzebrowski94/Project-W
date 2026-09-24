@@ -21,10 +21,12 @@ import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
+import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
+import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Order;
@@ -78,6 +80,8 @@ public final class TrooperMindSystem extends EntitySystem {
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
+    private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
+    private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
 
     private final TileMap map;
     private final Rng rng;
@@ -89,10 +93,33 @@ public final class TrooperMindSystem extends EntitySystem {
     private final float crewRadius;
     private final float pushDistance;
     private final float patchRadius;
+    private final float followAhead;
+    private final float holdSeconds;
+    private final float holdJitterSeconds;
+    private final float rallyRadius;
+    private final float threatBonus;
+    private final float sharedTargetPenalty;
+    private final float followDistance;
 
     /** One field per control point, parallel to the family. Rebuilt only if the set of points changes. */
     @NotState("cache of one flow field per control point, a pure function of the map and where the points are")
     private FlowField[] routes = new FlowField[0];
+
+    /** Scratch: how many men are shooting at each enemy this tick, parallel to the family. */
+    @NotState("scratch rebuilt every tick before any trooper chooses a target")
+    private int[] shooters = new int[0];
+
+    /** Scratch: which point each trooper is standing on this tick, in family order. */
+    @NotState("scratch rebuilt every tick by splitIntoSectors")
+    private int[] standingOnPoint = new int[0];
+
+    /** Scratch: how many men are watching from each point this tick, parallel to the family. */
+    @NotState("scratch rebuilt every tick by splitIntoSectors")
+    private int[] menOnPoint = new int[0];
+
+    /** Scratch: how many of them have been handed a sector so far. */
+    @NotState("scratch rebuilt every tick by splitIntoSectors")
+    private int[] placed = new int[0];
 
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
@@ -113,6 +140,13 @@ public final class TrooperMindSystem extends EntitySystem {
         this.crewRadius = config.turret().crewRadius();
         this.pushDistance = config.trooper().forwardDistance();
         this.patchRadius = config.trooper().patchRadius();
+        this.followAhead = config.trooper().followAheadSeconds();
+        this.holdSeconds = config.trooper().holdSeconds();
+        this.holdJitterSeconds = config.trooper().holdJitterSeconds();
+        this.rallyRadius = config.trooper().rallyRadius();
+        this.threatBonus = config.trooper().threatBonus();
+        this.sharedTargetPenalty = config.trooper().sharedTargetPenalty();
+        this.followDistance = config.trooper().followDistance();
     }
 
     @Override
@@ -134,6 +168,12 @@ public final class TrooperMindSystem extends EntitySystem {
     @Override
     public void update(float deltaTime) {
         buildRoutesIfNeeded();
+        if (shooters.length < enemies.size()) {
+            shooters = new int[enemies.size()];
+        }
+        for (int e = 0; e < enemies.size(); e++) {
+            shooters[e] = 0;
+        }
         for (int i = 0; i < troopers.size(); i++) {
             Entity entity = troopers.get(i);
             if (Drivers.held(entity)) {
@@ -141,15 +181,26 @@ public final class TrooperMindSystem extends EntitySystem {
             }
             Trooper trooper = TROOPER.get(entity);
             Position at = POSITION.get(entity);
+            if (takenPointUnder(at) < 0) {
+                // Off every taken point, so the next one it holds is a hold of its own. Asked before
+                // anything else, so a fight or an errand that took it off the point ends the hold too.
+                trooper.holding = false;
+            }
 
-            Position quarry = enemyFor(trooper, at);
-            if (quarry != null) {
+            if (trooper.alertRemaining > 0f) {
+                trooper.alertRemaining = Math.max(0f, trooper.alertRemaining - deltaTime);
+            }
+
+            int quarry = enemyFor(trooper, at);
+            if (quarry >= 0) {
+                Position where = POSITION.get(enemies.get(quarry));
+                shooters[quarry]++;
                 trooper.mode = Trooper.Mode.FIGHT;
-                trooper.headFor(quarry.x, quarry.y);
+                trooper.headFor(where.x, where.y);
                 continue;
             }
 
-            if (obeys(trooper)) {
+            if (obeys(trooper, at)) {
                 continue;
             }
 
@@ -161,7 +212,7 @@ public final class TrooperMindSystem extends EntitySystem {
                 continue;
             }
 
-            if (holdsWhatItHasTaken(trooper, at)) {
+            if (holdsWhatItHasTaken(trooper, at, deltaTime)) {
                 continue;
             }
 
@@ -187,6 +238,72 @@ public final class TrooperMindSystem extends EntitySystem {
                 roam(trooper, at);
             }
         }
+        splitIntoSectors();
+    }
+
+    /**
+     * Splits the circle round each point into sectors, one for each man standing on it.
+     *
+     * <p><strong>A bearing each, drawn at random, left whole sides unwatched.</strong> A trooper sees
+     * inside an arc, and four arcs pointed anywhere cover what they happen to cover - so a nest behind
+     * the squad was never found at any range. Each man on a point is handed a run of compass slots
+     * instead, the runs together making the whole circle, and turns through his own run a scan at a
+     * time; one man alone turns through all of it.
+     *
+     * <p>Who gets which run is their order in the family, which is spawn order and the same on every
+     * replay. A man arriving, leaving, or turning to fight reshuffles the runs on the same tick, so the
+     * ones still watching cover for him.
+     *
+     * <p>Two passes over the troopers and none over pairs of them: which point each stands on and how
+     * many stand on each, then each man's place among them.
+     */
+    private void splitIntoSectors() {
+        if (standingOnPoint.length < troopers.size()) {
+            standingOnPoint = new int[troopers.size()];
+        }
+        if (menOnPoint.length < points.size()) {
+            menOnPoint = new int[points.size()];
+            placed = new int[points.size()];
+        }
+        for (int p = 0; p < points.size(); p++) {
+            menOnPoint[p] = 0;
+            placed[p] = 0;
+        }
+        for (int i = 0; i < troopers.size(); i++) {
+            Entity entity = troopers.get(i);
+            Trooper trooper = TROOPER.get(entity);
+            standingOnPoint[i] = trooper.mode == Trooper.Mode.SECURE && !Drivers.held(entity)
+                    ? pointUnder(POSITION.get(entity))
+                    : -1;
+            if (standingOnPoint[i] >= 0) {
+                menOnPoint[standingOnPoint[i]]++;
+            }
+        }
+        for (int i = 0; i < troopers.size(); i++) {
+            Trooper trooper = TROOPER.get(troopers.get(i));
+            int point = standingOnPoint[i];
+            if (point < 0) {
+                trooper.sectorFrom = -1;
+                trooper.sectorSpan = 0;
+                continue;
+            }
+            int place = placed[point]++;
+            int count = menOnPoint[point];
+            int from = place * Compass.SLOTS / count;
+            int to = (place + 1) * Compass.SLOTS / count;
+            trooper.sectorFrom = from;
+            trooper.sectorSpan = Math.max(1, to - from);
+        }
+    }
+
+    /** Which point this position counts as standing on, or {@code -1}. The first, if they overlap. */
+    private int pointUnder(Position at) {
+        for (int p = 0; p < points.size(); p++) {
+            if (standingOn(points.get(p), at)) {
+                return p;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -299,7 +416,7 @@ public final class TrooperMindSystem extends EntitySystem {
      * rather than somewhere else to be, so it falls through to the objective and is spent by
      * {@code TrooperMoveSystem} as ground is covered.
      */
-    private boolean obeys(Trooper trooper) {
+    private boolean obeys(Trooper trooper, Position at) {
         if (trooper.order == Order.DEFENCE) {
             trooper.mode = Trooper.Mode.HOLD;
             trooper.clearTarget();
@@ -318,8 +435,30 @@ public final class TrooperMindSystem extends EntitySystem {
         }
         Position commander = POSITION.get(giver);
         trooper.mode = Trooper.Mode.FOLLOW;
-        trooper.headFor(commander.x, commander.y);
+        keepUpWith(trooper, at, commander, VELOCITY.get(giver));
         return true;
+    }
+
+    /**
+     * Keeps up with where the commander is going rather than where he is.
+     *
+     * <p>A follower that walks at the man himself chases the spot he has just left, so a squad strings
+     * out on his heels and cuts every corner behind him. Walking at where he will be in a moment - the
+     * squad formations of <em>Company of Heroes</em>, shrunk to one multiply - brings it alongside him
+     * when he turns. Once it is within its following distance it is aimed at the man himself, so it
+     * settles round him and never overtakes him into his own line of fire.
+     *
+     * <p>The point ahead is dropped where it would be inside rock; the route to him is always good.
+     */
+    private void keepUpWith(Trooper trooper, Position at, Position commander, Velocity moving) {
+        float aheadX = commander.x + moving.x * followAhead;
+        float aheadY = commander.y + moving.y * followAhead;
+        boolean closeEnough = Sight.withinRange(at.x, at.y, commander.x, commander.y, followDistance);
+        if (followAhead <= 0f || closeEnough || !map.isClear(aheadX, aheadY, bodyRadius)) {
+            trooper.headFor(commander.x, commander.y);
+            return;
+        }
+        trooper.headFor(aheadX, aheadY);
     }
 
     /**
@@ -407,27 +546,38 @@ public final class TrooperMindSystem extends EntitySystem {
     }
 
     /**
-     * The enemy this trooper is dealing with, or null if it has nothing to shoot at.
+     * The enemy this trooper is dealing with, as its index in the family, or {@code -1} if it has
+     * nothing to shoot at.
      *
      * <p><strong>Starting a fight and staying in one are different questions</strong>, and that
      * asymmetry is the whole of the hysteresis. Noticing something costs it every test the trooper
      * declares - range, arc, a clear line (G0015). Staying on it costs range alone, out to the longer
      * hold range: a trooper that lost its target every time it turned its head, or every time the
      * thing stepped behind a rock, would stutter between fighting and walking on at exactly the
-     * distance a fight actually happens at.
+     * distance a fight actually happens at. A man who has just been hit forgives the arc too: he is
+     * looking all round for what did it.
+     *
+     * <p><strong>Of what it can see, the one it would most rather shoot</strong>, as a distance it
+     * would rather it were. Something coming for somebody counts as {@code threatBonus} nearer than
+     * something that is not - a nest, an alien that has noticed nobody - so a man shoots the grunt
+     * walking at him before the nest behind it. And every man already shooting at a thing this tick
+     * makes it {@code sharedTargetPenalty} further, so a squad spreads its fire instead of all emptying
+     * into the nearest one. Threat ordering beat nearest-first for AI companions in the one study that
+     * compared them (Tremblay et al., 2014); this is the cheapest form of it that a player can read.
      *
      * <p>Re-resolved every tick and never held between them (G0010). What survives a tick is the
      * mode, not the thing - so an enemy reaped between ticks cannot come back as whatever was built
-     * from the recycled instance.
+     * from the recycled instance. The count of who is shooting what is scratch, rebuilt every tick.
      *
      * <p>Ties go to whichever was spawned first, because the family is in insertion order and the
      * comparison is strict.
      */
-    private @Nullable Position enemyFor(Trooper trooper, Position at) {
+    private int enemyFor(Trooper trooper, Position at) {
         boolean alreadyFighting = trooper.mode == Trooper.Mode.FIGHT;
+        boolean lookingAllRound = alreadyFighting || trooper.alertRemaining > 0f;
         float range = alreadyFighting ? trooper.holdRange : trooper.sightRange;
-        Position nearest = null;
-        float shortest = range * range;
+        int best = -1;
+        float bestScore = Float.MAX_VALUE;
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
             if (DYING.has(enemy) && DYING.get(enemy).begun) {
@@ -438,31 +588,39 @@ public final class TrooperMindSystem extends EntitySystem {
             Position where = POSITION.get(enemy);
             float dx = where.x - at.x;
             float dy = where.y - at.y;
-            float distance = dx * dx + dy * dy;
-            if (distance > shortest) {
+            float distanceSquared = dx * dx + dy * dy;
+            if (distanceSquared > range * range) {
                 continue;
             }
-            if (!inSight(trooper, at, where, alreadyFighting)) {
+            float score = (float) Math.sqrt(distanceSquared) + sharedTargetPenalty * shooters[i];
+            if (PERCEPTION.has(enemy) && PERCEPTION.get(enemy).aggro) {
+                score -= threatBonus;
+            }
+            if (score >= bestScore) {
                 continue;
             }
-            shortest = distance;
-            nearest = where;
+            if (!inSight(trooper, at, where, lookingAllRound)) {
+                continue;
+            }
+            bestScore = score;
+            best = i;
         }
-        return nearest;
+        return best;
     }
 
     /**
      * Every test this trooper declares, cheapest first.
      *
-     * <p><strong>A fight in progress forgives the arc and never the wall.</strong> The two are not
+     * <p><strong>A fight in progress forgives the arc and never the wall</strong> - and so does a man
+     * who has just been hit, for as long as he is looking round for what did it. The two are not
      * the same kind of hysteresis: where a man is looking is his own doing and changes twice a
      * second as he sweeps, so dropping a target the moment his head passes it would make a trooper
      * unable to hold a fight at all. Rock is not his doing and does not move. Forgiving both - which
      * is what this did - is a squad standing in the open firing into a wall the thing it was
      * shooting at stepped behind, which is the one thing a trooper must never look like doing.
      */
-    private boolean inSight(Trooper trooper, Position at, Position target, boolean alreadyFighting) {
-        return (alreadyFighting
+    private boolean inSight(Trooper trooper, Position at, Position target, boolean lookingAllRound) {
+        return (lookingAllRound
                         || Sight.withinArc(
                                 trooper.lookX, trooper.lookY, at.x, at.y, target.x, target.y, trooper.arcCosine))
                 && Sight.clearLine(map, at.x, at.y, target.x, target.y, trooper.requiresClearLine);
@@ -474,8 +632,9 @@ public final class TrooperMindSystem extends EntitySystem {
      * <p><strong>A point taken is a point held.</strong> Walking off the moment the bar fills meant
      * the squad ran the level on its own and the commander spent it catching up; waiting means ground
      * the squad has taken is ground somebody is still standing on, and the level advances at his pace.
-     * "Forward" is what sends them on, and because an order reaches only what is within earshot
-     * (G0017), sending them on means going to them first - which is the loop this is for.
+     * "Forward" sends them on at once, and because an order reaches only what is within earshot
+     * (G0017), that means going to them first. Since G0040 they also go on by themselves - but only
+     * to catch up with a commander who is already ahead of them, never to run ahead of one.
      *
      * <p>Only on a point it has <em>taken</em>. A trooper anywhere else advances as it always did, so
      * the first walk of a level needs no order, and a point somebody is still capturing is still
@@ -485,19 +644,97 @@ public final class TrooperMindSystem extends EntitySystem {
      * outward and not shuffling towards the middle is the same posture whether the bar is filling or
      * full, and the renderer already draws it.
      */
-    private boolean holdsWhatItHasTaken(Trooper trooper, Position at) {
+    private boolean holdsWhatItHasTaken(Trooper trooper, Position at, float deltaTime) {
         if (trooper.sentOn) {
             return false;
         }
-        for (int i = 0; i < points.size(); i++) {
-            Entity point = points.get(i);
-            if (POINT.get(point).captured && standingOn(point, at)) {
-                trooper.mode = Trooper.Mode.SECURE;
-                trooper.clearTarget();
+        int taken = takenPointUnder(at);
+        if (taken < 0) {
+            return false;
+        }
+        if (movesOn(trooper, at, taken, deltaTime)) {
+            // Permission to leave, exactly as "forward" gives it: spent on reaching the next point.
+            trooper.sentOn = true;
+            trooper.holding = false;
+            return false;
+        }
+        trooper.mode = Trooper.Mode.SECURE;
+        trooper.clearTarget();
+        return true;
+    }
+
+    /**
+     * Whether a man holding a taken point should go on to the next one without being told (G0040).
+     *
+     * <p><strong>The squad follows the war; it never runs ahead of it.</strong> A commander already near
+     * the next point sends the men on at once - waiting to be fetched by somebody who is standing where
+     * you are going reads as men who have not noticed the fight moving. Otherwise they hold for their
+     * own while, and then go only if a commander has gone on ahead of them by route and none is on this
+     * point with them. A commander behind them keeps them where they are however long they have held:
+     * that is G0029's reason, kept - the level still advances at his pace, not at theirs.
+     *
+     * <p>Every commander on his feet counts, whoever ordered what. "Forward" is untouched and still
+     * sends them at once.
+     */
+    private boolean movesOn(Trooper trooper, Position at, int taken, float deltaTime) {
+        int next = nearestUncapturedPoint(at);
+        if (next < 0) {
+            return false;
+        }
+        if (aCommanderAt(points.get(next))) {
+            return true;
+        }
+        if (!trooper.holding) {
+            trooper.holding = true;
+            trooper.holdRemaining = holdSeconds + rng.nextFloat(-holdJitterSeconds, holdJitterSeconds);
+        }
+        trooper.holdRemaining -= deltaTime;
+        return trooper.holdRemaining <= 0f && !aCommanderAt(points.get(taken)) && aCommanderAheadOf(at, next);
+    }
+
+    /** Whether any commander on his feet is within the rally radius of this point. */
+    private boolean aCommanderAt(Entity point) {
+        Position where = POSITION.get(point);
+        for (int i = 0; i < commanders.size(); i++) {
+            Entity commander = commanders.get(i);
+            if (Drivers.down(commander)) {
+                continue;
+            }
+            Position standing = POSITION.get(commander);
+            if (Sight.withinRange(standing.x, standing.y, where.x, where.y, rallyRadius)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /** Whether any commander on his feet is a shorter walk from that point than this position is. */
+    private boolean aCommanderAheadOf(Position at, int next) {
+        FlowField route = routes[next];
+        int own = route.stepsTo(map.colAt(at.x), map.rowAt(at.y));
+        for (int i = 0; i < commanders.size(); i++) {
+            Entity commander = commanders.get(i);
+            if (Drivers.down(commander)) {
+                continue;
+            }
+            Position standing = POSITION.get(commander);
+            int his = route.stepsTo(map.colAt(standing.x), map.rowAt(standing.y));
+            if (his >= 0 && his < own) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Which taken point this position counts as standing on, or {@code -1}. */
+    private int takenPointUnder(Position at) {
+        for (int p = 0; p < points.size(); p++) {
+            Entity point = points.get(p);
+            if (POINT.get(point).captured && standingOn(point, at)) {
+                return p;
+            }
+        }
+        return -1;
     }
 
     /**

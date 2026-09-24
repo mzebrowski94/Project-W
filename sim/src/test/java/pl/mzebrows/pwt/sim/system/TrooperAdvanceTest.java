@@ -3,8 +3,11 @@ package pl.mzebrows.pwt.sim.system;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.HOLD_JITTER_SECONDS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.HOLD_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_CAPTURE_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_RADIUS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.RALLY_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SCAN_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SPEED;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
@@ -18,6 +21,8 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.SimConfig;
@@ -30,6 +35,7 @@ import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * How a squad crosses a level: towards what the level wants taken, looking around on the way.
@@ -45,6 +51,9 @@ class TrooperAdvanceTest {
     private static final float CORNER = 95f;
 
     private static final float MIDDLE = 50f;
+
+    /** Long enough for one man to turn through half the circle a scan at a time, and no longer. */
+    private static final float WATCH_SECONDS = 8f;
 
     private static final Offset<Float> TOLERANCE = Offset.offset(0.5f);
 
@@ -122,6 +131,31 @@ class TrooperAdvanceTest {
         assertThat(lookedElsewhere).isTrue();
     }
 
+    /**
+     * <strong>A man standing on a point turns through his own share of the circle.</strong> Something
+     * that never moves - a nest - is found wherever it stands, rather than left working at the squad's
+     * back because every man happened to take a bearing the other way.
+     */
+    @ParameterizedTest
+    @CsvSource({"0, 28", "28, 0", "0, -28", "-28, 0"})
+    void findsANestOnWhicheverSideOfThePointItStands(float offsetX, float offsetY) {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(CORNER, CORNER);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+        Entity first = simulation.spawnTrooper(MIDDLE - 1f, MIDDLE);
+        Entity second = simulation.spawnTrooper(MIDDLE + 1f, MIDDLE);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE + offsetX, MIDDLE + offsetY);
+
+        boolean found = false;
+        for (int i = 0; i < ticksIn(WATCH_SECONDS) && !found; i++) {
+            steps(simulation, 1);
+            found = mode(first) == Trooper.Mode.FIGHT || mode(second) == Trooper.Mode.FIGHT;
+        }
+
+        assertThat(found).isTrue();
+    }
+
     /** 2.c. "Forward" is what sends them on, which is the whole of why the order exists now. */
     @Test
     void goesOnToTheNextPointWhenHeSaysForward() {
@@ -137,6 +171,103 @@ class TrooperAdvanceTest {
         steps(simulation, 90);
 
         assertThat(at(trooper).x).isGreaterThan(before + 5f);
+    }
+
+    /**
+     * <strong>A squad does not wait to be fetched by a commander who is already where it is going</strong>
+     * (G0040). He is near the next point, so the men holding this one set off at once, with no order.
+     */
+    @Test
+    void goesOnAtOnceWhenHeIsAlreadyAtTheNextPoint() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(80f, 20f + RALLY_RADIUS - 3f);
+        simulation.spawnControlPoint(20f, 20f);
+        simulation.spawnControlPoint(80f, 20f);
+        Entity trooper = simulation.spawnTrooper(20f, 20f);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
+
+        float before = at(trooper).x;
+        steps(simulation, 60);
+
+        assertThat(at(trooper).x).isGreaterThan(before + 5f);
+    }
+
+    /**
+     * He has gone on ahead and is nowhere near either point: the men hold a while, and then follow the
+     * war on to the next point on their own (G0040).
+     */
+    @Test
+    void goesOnAfterHoldingAWhileWhenHeHasGoneOnAhead() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(60f, 20f + RALLY_RADIUS + 5f);
+        simulation.spawnControlPoint(20f, 20f);
+        simulation.spawnControlPoint(80f, 20f);
+        Entity trooper = simulation.spawnTrooper(20f, 20f);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
+        float before = at(trooper).x;
+
+        steps(simulation, ticksIn(HOLD_SECONDS - HOLD_JITTER_SECONDS) - 10);
+        float whileHolding = at(trooper).x;
+        steps(simulation, ticksIn(2f * HOLD_JITTER_SECONDS) + 70);
+
+        assertThat(whileHolding).isCloseTo(before, Offset.offset(2f));
+        assertThat(at(trooper).x).isGreaterThan(before + 5f);
+    }
+
+    /** Each man holds for his own while, so a squad peels off a point rather than leaving it in step. */
+    @Test
+    void peelsOffThePointOneManAtATimeRatherThanInStep() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(60f, 20f + RALLY_RADIUS + 5f);
+        simulation.spawnControlPoint(20f, 20f);
+        simulation.spawnControlPoint(80f, 20f);
+        Entity first = simulation.spawnTrooper(19f, 19f);
+        Entity second = simulation.spawnTrooper(21f, 21f);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
+
+        int firstLeft = -1;
+        int secondLeft = -1;
+        for (int tick = 0; tick < ticksIn(3f * HOLD_SECONDS) && (firstLeft < 0 || secondLeft < 0); tick++) {
+            steps(simulation, 1);
+            firstLeft = firstLeft < 0 && mode(first) != Trooper.Mode.SECURE ? tick : firstLeft;
+            secondLeft = secondLeft < 0 && mode(second) != Trooper.Mode.SECURE ? tick : secondLeft;
+        }
+
+        assertThat(firstLeft).isNotNegative();
+        assertThat(secondLeft).isNotNegative().isNotEqualTo(firstLeft);
+    }
+
+    /** The tether: however long they have held, men never walk off ahead of a commander still behind them. */
+    @Test
+    void neverLeavesACommanderBehind() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(5f, 20f + RALLY_RADIUS + 5f);
+        simulation.spawnControlPoint(20f, 20f);
+        simulation.spawnControlPoint(80f, 20f);
+        Entity trooper = simulation.spawnTrooper(20f, 20f);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
+
+        float before = at(trooper).x;
+        steps(simulation, ticksIn(3f * HOLD_SECONDS));
+
+        assertThat(at(trooper).x).isCloseTo(before, Offset.offset(2f));
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);
+    }
+
+    /** He is standing on the point with them, even on its far side: they are holding it together. */
+    @Test
+    void staysWhileHeIsStandingOnThePointWithThem() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(30f + RALLY_RADIUS - 3f, 20f);
+        simulation.spawnControlPoint(30f, 20f);
+        simulation.spawnControlPoint(80f, 20f);
+        Entity trooper = simulation.spawnTrooper(26f, 20f);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
+
+        float before = at(trooper).x;
+        steps(simulation, ticksIn(3f * HOLD_SECONDS));
+
+        assertThat(at(trooper).x).isCloseTo(before, Offset.offset(2f));
     }
 
     /** One press, one point: it holds the next one too rather than running the level on its own. */

@@ -148,7 +148,7 @@ final class AdventureScenario implements Scenario {
 
     private static final int BOULDERS_PER_BIOME = 7;
 
-    /** Gap left round a boulder, and how far one stays off a wall - wide enough for a brute to pass. */
+    /** Gap left round a boulder, and how far one stays off a wall or rock - wide enough for a brute to pass. */
     private static final float BOULDER_CLEARANCE = 7f;
 
     private static final float BOULDER_WALL_MARGIN = 7f;
@@ -731,7 +731,10 @@ final class AdventureScenario implements Scenario {
      */
     private static void boulders(Simulation simulation, TileMap map) {
         float radius = simulation.config().obstacle().radius();
-        Scatter scatter = new Scatter(map, simulation.rng(), BOULDER_CLEARANCE, BOULDER_WALL_MARGIN);
+        // Off the rock as well as off the edge: a boulder nearly flush against a wall left a slot
+        // narrower than a man, and troopers routed along the rock walked into it and stayed there.
+        Scatter scatter = new Scatter(map, simulation.rng(), BOULDER_CLEARANCE, BOULDER_WALL_MARGIN)
+                .keepingOffRock(BOULDER_WALL_MARGIN);
         // Everything already standing is reserved first. A boulder is immovable and so are a nest
         // and a point, so one landing on either is a knot the solver cannot untie - and a boulder on
         // top of a point would be ground the squad is told to take and cannot stand on.

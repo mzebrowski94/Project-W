@@ -192,12 +192,23 @@ public record SimConfig(
                         0.7f,
                         1.6f,
                         3f,
-                        new PerceptionDef(false, true, 22f, 28f, 0f, 100f, true),
+                        new PerceptionDef(false, true, 34f, 40f, 0f, 100f, true),
                         22f,
                         40f,
                         1.6f,
                         7f,
-                        30f),
+                        30f,
+                        new ApproachDef(true, 8f, 10f),
+                        1f,
+                        10f,
+                        2f,
+                        30f,
+                        1.5f,
+                        2f,
+                        0.8f,
+                        3f,
+                        12f,
+                        8f),
                 new SpawnConfig(1, 2, 5),
                 defaultUnits(),
                 defaultPickups(),
@@ -984,6 +995,32 @@ public record SimConfig(
      *     units. The squad's own patch: with nothing in front of them they stay around the thing they
      *     were told to hold instead of wandering off across the level, in world
      *     units. Loose on purpose: a squad glued to him is a squad he cannot see past
+     * @param approach how wide of where it is going a trooper walks, so a squad crosses the ground
+     *     abreast rather than in single file - the pack's own spread (G0033), used for walking to a
+     *     point and for keeping up with the commander (G0041). Off walks straight at the place itself
+     * @param followAheadSeconds how far ahead of the commander a follower aims, in seconds of his own
+     *     walking. A squad that walks at where he will be comes alongside him when he turns, where one
+     *     that walks at where he is trails behind him. Zero aims at the man himself
+     * @param holdSeconds how long a man holds a point the squad has taken before he follows a
+     *     commander who has gone on ahead of him (G0040). He never goes on ahead of one
+     * @param holdJitterSeconds how much each man's hold differs from that, either way, drawn from the
+     *     squad's own stream when he starts holding - so a squad peels off a point rather than leaving it
+     *     in step
+     * @param rallyRadius how near a point a commander has to be to count as being at it, in world
+     *     units: at the next one, the men holding this one set off at once; at this one, they stay
+     * @param blockSeconds how long a walking man may make less than {@code blockDistance} of ground
+     *     before he counts as stuck and takes a detour. Zero never counts anybody as stuck
+     * @param blockDistance how much ground in that time still counts as getting somewhere, in world
+     *     units. Well under what a man slowed by a thicket or a beam covers, so slow is not stuck
+     * @param detourSeconds how long a stuck man backs off to one side before he tries his way again.
+     *     The side is his own and alternates, so a man who backed into rock tries the other side next
+     * @param alertSeconds how long a man who has been hit looks all round for what hit him, rather than
+     *     only inside his arc, and turns towards where it came from. Zero leaves him facing the way he was
+     * @param threatBonus how much nearer, in world units, something coming for somebody counts as being
+     *     than something that is not - so a man shoots the grunt walking at him before the nest behind it
+     * @param sharedTargetPenalty how much further, in world units, something counts as being for every
+     *     man already shooting at it this tick - so a squad spreads its fire instead of all emptying into
+     *     the nearest thing. Zero is every man for the nearest
      */
     @With
     public record TrooperConfig(
@@ -1006,7 +1043,18 @@ public record SimConfig(
             float forwardDistance,
             float forwardSpeedFactor,
             float followDistance,
-            float patchRadius) {
+            float patchRadius,
+            ApproachDef approach,
+            float followAheadSeconds,
+            float holdSeconds,
+            float holdJitterSeconds,
+            float rallyRadius,
+            float blockSeconds,
+            float blockDistance,
+            float detourSeconds,
+            float alertSeconds,
+            float threatBonus,
+            float sharedTargetPenalty) {
         public TrooperConfig {
             Require.positive("trooper radius", radius);
             Require.positive("trooper speed", speed);
@@ -1029,6 +1077,19 @@ public record SimConfig(
             Require.positive("trooper forwardSpeedFactor", forwardSpeedFactor);
             Require.positive("trooper followDistance", followDistance);
             Require.positive("trooper patchRadius", patchRadius);
+            Require.notNegative("trooper followAheadSeconds", followAheadSeconds);
+            Require.notNegative("trooper holdSeconds", holdSeconds);
+            Require.notNegative("trooper holdJitterSeconds", holdJitterSeconds);
+            Require.positive("trooper rallyRadius", rallyRadius);
+            Require.notNegative("trooper blockSeconds", blockSeconds);
+            Require.notNegative("trooper blockDistance", blockDistance);
+            Require.notNegative("trooper detourSeconds", detourSeconds);
+            Require.notNegative("trooper alertSeconds", alertSeconds);
+            Require.notNegative("trooper threatBonus", threatBonus);
+            Require.notNegative("trooper sharedTargetPenalty", sharedTargetPenalty);
+            if (holdJitterSeconds > holdSeconds) {
+                throw new IllegalArgumentException("trooper holdJitterSeconds must not be above holdSeconds");
+            }
         }
     }
 

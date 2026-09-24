@@ -11,6 +11,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmless;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.leapConfig;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.on;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 
 import com.badlogic.ashley.core.Entity;
@@ -28,7 +29,9 @@ import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * What a trooper does about something in front of it.
@@ -45,6 +48,9 @@ class TrooperCombatTest {
 
     /** Far enough that he pulls nothing towards himself and captures nothing. */
     private static final float CORNER = 95f;
+
+    /** Behind him, out of his arc and inside his sight, and far enough off not to wake a nest. */
+    private static final float BEHIND = 25f;
 
     @Test
     void shootsWhatItCanSeeInFrontOfIt() {
@@ -93,6 +99,82 @@ class TrooperCombatTest {
 
         assertThat(mode(trooper)).isNotEqualTo(Trooper.Mode.FIGHT);
         assertThat(count(simulation, Projectile.class)).isZero();
+    }
+
+    /**
+     * <strong>Being hit turns a man round.</strong> Something behind him he had not noticed shoots him,
+     * and he looks for it all round rather than standing there facing the other way - the place a shot
+     * came from, as an alien's provocation is (G0016), never who fired it.
+     */
+    @Test
+    void turnsOnWhateverShotItFromBehind() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE + 10f);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE - BEHIND, MIDDLE);
+        simulation.step(ordering(Order.DEFENCE));
+        facing(trooper, 1f, 0f);
+        steps(simulation, 30);
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.HOLD);
+
+        shotFrom(trooper, MIDDLE - BEHIND, MIDDLE);
+        steps(simulation, 3);
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+    }
+
+    /** Looking round forgives the arc and never the wall: what hit him from behind rock stays hidden. */
+    @Test
+    void stillWillNotLookThroughRockForWhateverShotIt() {
+        Simulation simulation =
+                on(harmless().config(), ground().rect(8, 8, 1, 4, Terrain.ROCK).build());
+        simulation.spawnCommander(MIDDLE, MIDDLE + 10f);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE - BEHIND, MIDDLE);
+        simulation.step(ordering(Order.DEFENCE));
+        facing(trooper, 1f, 0f);
+        steps(simulation, 30);
+
+        shotFrom(trooper, MIDDLE - BEHIND, MIDDLE);
+        steps(simulation, 3);
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.HOLD);
+    }
+
+    /**
+     * What is coming for somebody outranks what is standing still, even a little nearer: a man shoots
+     * the grunt walking at him before the nest behind it.
+     */
+    @Test
+    void shootsWhatIsComingForSomebodyBeforeWhatIsStandingStill() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE + 12f, MIDDLE);
+        simulation.spawnEnemy(MIDDLE + 22f, MIDDLE + 3f);
+        facing(trooper, 1f, 0f);
+
+        simulation.step();
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+        assertThat(trooper.getComponent(Trooper.class).targetX).isGreaterThan(MIDDLE + 15f);
+    }
+
+    /** Two men with two things in front of them shoot one each, rather than both at the nearer one. */
+    @Test
+    void spreadsItsFireRatherThanEveryManShootingTheSameThing() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity first = simulation.spawnTrooper(MIDDLE, MIDDLE - 2f);
+        Entity second = simulation.spawnTrooper(MIDDLE, MIDDLE + 2f);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE + 12f, MIDDLE);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE + 16f, MIDDLE);
+        facing(first, 1f, 0f);
+        facing(second, 1f, 0f);
+
+        simulation.step();
+
+        assertThat(first.getComponent(Trooper.class).targetX).isNotEqualTo(second.getComponent(Trooper.class).targetX);
     }
 
     @Test
@@ -249,6 +331,15 @@ class TrooperCombatTest {
     /** Whether this man's hands have been busy: a swing is what puts his melee on its cooldown. */
     private static boolean swung(Entity trooper) {
         return trooper.getComponent(Melee.class).remainingSeconds > 0f;
+    }
+
+    /** A hit landing on him this tick from a place, the way contact resolution records one. */
+    private static void shotFrom(Entity trooper, float x, float y) {
+        Damage damage = trooper.getComponent(Damage.class);
+        damage.amount = 1f;
+        damage.hasSource = true;
+        damage.sourceX = x;
+        damage.sourceY = y;
     }
 
     private static void facing(Entity trooper, float x, float y) {

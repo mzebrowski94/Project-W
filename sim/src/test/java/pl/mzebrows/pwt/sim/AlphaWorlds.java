@@ -642,6 +642,42 @@ public final class AlphaWorlds {
 
     public static final float FOLLOW_DISTANCE = 7f;
 
+    /**
+     * How wide of a point or of the commander a trooper walks, when a test switches the spread on. Off
+     * in the fixture, as it is for every strain, so no other test's geometry moves under it.
+     */
+    public static final ApproachDef TROOPER_APPROACH = new ApproachDef(true, 8f, 10f);
+
+    /** How far ahead of the commander a follower aims, when a test switches it on. */
+    public static final float FOLLOW_AHEAD_SECONDS = 1f;
+
+    /** How long a man holds a taken point before following a commander who has gone on ahead. */
+    public static final float HOLD_SECONDS = 2f;
+
+    /** How much one man's hold differs from that, either way. */
+    public static final float HOLD_JITTER_SECONDS = 0.5f;
+
+    /** How near a point a commander counts as being at it. Wider than a point, narrower than the arena. */
+    public static final float RALLY_RADIUS = 15f;
+
+    /** How long a walking trooper may make almost no ground before he counts as stuck. */
+    public static final float BLOCK_SECONDS = 1f;
+
+    /** How much ground in that time still counts as getting somewhere. */
+    public static final float BLOCK_DISTANCE = 1f;
+
+    /** How long a stuck trooper backs off to one side before trying his way again. */
+    public static final float DETOUR_SECONDS = 0.5f;
+
+    /** How long a trooper who has been hit looks all round for what hit him. */
+    public static final float ALERT_SECONDS = 2f;
+
+    /** How much nearer something coming for somebody counts as being. More than the head start a nest has in the tests. */
+    public static final float THREAT_BONUS = 15f;
+
+    /** How much further something counts as being for every man already shooting at it. */
+    public static final float SHARED_TARGET_PENALTY = 8f;
+
     /** How far from the post the squad roams in the fixtures. Round, and well inside the test arena. */
     public static final float TROOPER_PATCH = 20f;
 
@@ -711,7 +747,18 @@ public final class AlphaWorlds {
                         FORWARD_DISTANCE,
                         FORWARD_FACTOR,
                         FOLLOW_DISTANCE,
-                        TROOPER_PATCH),
+                        TROOPER_PATCH,
+                        ApproachDef.off(),
+                        0f,
+                        HOLD_SECONDS,
+                        HOLD_JITTER_SECONDS,
+                        RALLY_RADIUS,
+                        BLOCK_SECONDS,
+                        BLOCK_DISTANCE,
+                        DETOUR_SECONDS,
+                        ALERT_SECONDS,
+                        THREAT_BONUS,
+                        SHARED_TARGET_PENALTY),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 Defs.<UnitKind, UnitDef>builder(UnitKind.class)
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
