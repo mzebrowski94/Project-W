@@ -3,13 +3,12 @@
 ## The one line that matters
 
 ```
-lwjgl3  ->  core (client)  ->  net
-                           ->  sim  ->  map
+lwjgl3  ->  core (client)  ->  net  ->  sim  ->  map
 ```
 
 Dependencies point one way. The simulation does not know that rendering, input, files, a window or a
-network exist. Everything else follows from that. `net` will depend on `sim` once online sessions need
-its input types (ADR 0012) - never the other way.
+network exist. Everything else follows from that. `net` depends on `sim` because a session steps a
+`Simulation` and writes its snapshots (ADR 0012) - never the other way.
 
 ## map
 
@@ -75,6 +74,10 @@ system that changes world state.
   snapshot can write them (ADR 0014). `ArchitectureTest` refuses a stream started anywhere else.
 - `SpawnOrder` - keeps Ashley's entity list and every family in spawn order (ADR 0013). The one class
   that reaches inside Ashley.
+- `WorldCodec` - the whole world as bytes and back, and as one hash (ADR 0014): built once by
+  reflection from the component classes numbered in `component/Components.ALL`, so a new field needs no
+  code here. `snapshot`, `restore` into `Scenarios.blank`, `hash`, and `differences` - two worlds field
+  by field, which is what a desync report is made of.
 - `Spawner` - builds the entity kinds the game knows, so no system has to remember which components
   a commander or a projectile is made of.
 - `def/` - immutable definitions: what a kind of thing *is*, as data. `UnitKind`/`UnitDef` for
@@ -164,6 +167,16 @@ Networking, and nothing the game's rules depend on (ADR 0012). No libGDX, and Ne
   on `java.util.logging` so Netty's own lines land there too. **Nothing is logged per message:**
   `NetTrace` records every message into a preallocated ring and dumps a link's part of it when the link
   closes badly, and `LinkStats` writes each link's numbers every few seconds.
+- `session/` - lockstep itself (ADR 0012). `Sequencer` seals one `Bundle` per tick - every seated slot's
+  held input, the orders that have arrived, a restart or god mode switch - and holds no world;
+  `SequencerThread` runs it beside the host's game. `PeerSession` is one machine's place in a session:
+  it tags its players' input a lead of ticks ahead, steps its `Simulation` only on sealed bundles, sends a
+  checksum every `checksumTicks`, and restores a snapshot to drop in or be healed. The host's own game is a
+  `PeerSession` on a link to its sequencer like everyone else's. `WorldFactory` is how a session turns
+  the host's shipped `SessionSetup` - config text, scenario, seed - into worlds; the client's is
+  `ScenarioWorlds`. `BuildId` reads the id `:net:generateBuildId` writes. `DesyncDump` and
+  `DesyncReport` are what a desync leaves behind and how it is read. Messages are bytes written and read
+  by `WireWriter` and `WireReader` against `Msg`'s numbers - nothing on the wire names a class.
 
 ## core (client)
 

@@ -37,4 +37,15 @@ final class Streams {
     Rng of(RngStream concern) {
         return byConcern.of(concern);
     }
+
+    /** Every stream, root first and then in {@code RngStream} order - the order a snapshot writes them in. */
+    Rng[] inOrder() {
+        RngStream[] concerns = RngStream.values();
+        Rng[] all = new Rng[concerns.length + 1];
+        all[0] = root;
+        for (int i = 0; i < concerns.length; i++) {
+            all[i + 1] = byConcern.of(concerns[i]);
+        }
+        return all;
+    }
 }

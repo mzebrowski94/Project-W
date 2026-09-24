@@ -2,6 +2,8 @@ package pl.mzebrows.pwt.client;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import org.jspecify.annotations.Nullable;
 
@@ -23,18 +25,37 @@ public final class GameProperties {
 
     /** Loads the named classpath resource; returns an empty instance if it cannot be read. */
     public static GameProperties load(String resourceName) {
-        Properties loaded = new Properties();
+        return parse(resourceName, text(resourceName));
+    }
+
+    /**
+     * The named classpath resource as it is written, or empty if it cannot be read - what a host ships
+     * to the peers of an online session (ADR 0012), so everybody plays the host's tuning. Read as
+     * ISO-8859-1, which is what {@link Properties} reads a file as.
+     */
+    public static String text(String resourceName) {
         try (InputStream stream = GameProperties.class.getClassLoader().getResourceAsStream(resourceName)) {
             if (stream == null) {
                 Log.error("Config " + resourceName + " not found on classpath; using defaults", null);
-            } else {
-                loaded.load(stream);
-                Log.debug("Loaded config " + resourceName);
+                return "";
             }
+            Log.debug("Loaded config " + resourceName);
+            return new String(stream.readAllBytes(), StandardCharsets.ISO_8859_1);
         } catch (IOException e) {
             Log.error("Could not read config " + resourceName + "; using defaults", e);
+            return "";
         }
-        return new GameProperties(resourceName, loaded);
+    }
+
+    /** Reads properties from text rather than a file; {@code source} names it in any complaint. */
+    public static GameProperties parse(String source, String text) {
+        Properties parsed = new Properties();
+        try {
+            parsed.load(new StringReader(text));
+        } catch (IOException | IllegalArgumentException e) {
+            Log.error("Could not parse config " + source + "; using defaults", e);
+        }
+        return new GameProperties(source, parsed);
     }
 
     public int getInt(String key, int fallback) {

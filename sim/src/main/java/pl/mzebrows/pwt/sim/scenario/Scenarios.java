@@ -36,6 +36,20 @@ public final class Scenarios {
     }
 
     /**
+     * The registered scenario with this name - how an online session names the one it plays (ADR 0012).
+     *
+     * @throws IllegalArgumentException if there is none; peers on one build know the same scenarios
+     */
+    public static Scenario named(String name) {
+        for (Scenario scenario : ALL) {
+            if (scenario.name().equals(name)) {
+                return scenario;
+            }
+        }
+        throw new IllegalArgumentException("no scenario named \"" + name + "\"");
+    }
+
+    /**
      * Builds the world a scenario describes: its config, then its map, then a simulation on that map,
      * then its contents. <strong>This is the only place a playable world is assembled</strong>, so the
      * harness, the determinism test and the scenario tests cannot drift into building one differently
@@ -52,5 +66,16 @@ public final class Scenarios {
         // After the scenario, because it is the scenario that says where the control points are.
         scenario.deployReinforcements(simulation);
         return simulation;
+    }
+
+    /**
+     * The world a scenario describes with nothing in it but the level: its config and its map, and no
+     * contents. What a snapshot is restored into (ADR 0014) - the map is rebuilt from the seed on every
+     * machine rather than carried, and everything standing on it comes from the snapshot.
+     */
+    public static Simulation blank(Scenario scenario, SimConfig base) {
+        SimConfig config = scenario.configure(base);
+        TileMap map = scenario.map(config, Rng.stream(config.seed(), RngStream.MAP));
+        return new Simulation(config, map);
     }
 }

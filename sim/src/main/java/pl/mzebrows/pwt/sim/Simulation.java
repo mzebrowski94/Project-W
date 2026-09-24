@@ -524,8 +524,18 @@ public final class Simulation {
         return streams.of(concern);
     }
 
+    /** Every stream, for the snapshot to write and restore (ADR 0014). */
+    Streams streams() {
+        return streams;
+    }
+
     public SimConfig config() {
         return config;
+    }
+
+    /** How many slots this world was built for - what a {@link PlayerInputs} handed to it must hold. */
+    public int capacity() {
+        return solo.capacity();
     }
 
     /**

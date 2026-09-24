@@ -31,6 +31,8 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 | Everything: format, compile, lint, test | `.claude/scripts/verify.sh` |
 | One module's tests | `.claude/scripts/verify.sh :sim:test` |
 | Networking tests, real sockets on this machine included | `.claude/scripts/verify.sh :net:test` |
+| Whole online sessions in one test: host, peers, lag, drop-in, a desync healed | `.claude/scripts/gradle.sh :net:test --tests '*SessionTest'` |
+| Determinism fuzz, every scenario, about a minute (opt-in) | `PWT_FUZZ=1 .claude/scripts/gradle.sh :sim:test --tests '*DeterminismFuzzTest'` |
 | One test class | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest'` |
 | One test method | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest.movesAnEntityByItsVelocityEachStep'` |
 | Format only | `.claude/scripts/gradle.sh spotlessApply` |
@@ -47,7 +49,15 @@ Build outputs land in `~/.pwt/build/`, not `<project>/build` - see *Speed*. Test
 what a friend sends back. Every line is `key=value`: `grep "event=closed"` gives every link that ended and
 why, `grep "cat=stats"` each link's round trip and traffic once a second, and a link that closed badly is
 followed by `cat=trace` lines - its last messages, times counted back from the moment it went. Netty's
-own warnings arrive as `cat=netty msg="..."`.
+own warnings arrive as `cat=netty msg="..."`. A session logs as `cat=sequencer` and `cat=peer`;
+`grep "event=desync"` finds a disagreement, and `cat=stats` lines carry each peer's lead, how far behind
+it runs, and how often the sequencer had to repeat its input.
+
+**Desync dumps** land beside the connection log as `desync-t<tick>-peer<n>-<role>.bin`, one from the peer
+that diverged (`desynced`) and one from the host (`reference`), each with a `.txt` summary.
+`DesyncReport.compare(reference, desynced, worlds)` reads the pair: the fields that differ, which side a
+replay lands on, and where a replay through snapshots parts from a straight one - `SessionTest`'s
+desync test shows the call. Ask a friend for their `.bin` along with their log.
 
 **Batch Gradle calls.** The daemon does not survive between shell invocations, so each call pays ~7s of
 JVM startup. Two tasks in one command beat two commands.

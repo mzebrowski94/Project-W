@@ -12,10 +12,15 @@ public final class ManualClock implements Clock {
 
     /** Moves time forward. */
     public ManualClock advanceMillis(long millis) {
-        if (millis < 0) {
-            throw new IllegalArgumentException("time does not go backwards: " + millis);
+        return advanceNanos(millis * 1_000_000L);
+    }
+
+    /** Moves time forward by a fraction of a millisecond too - a tick is not a whole number of them. */
+    public ManualClock advanceNanos(long delta) {
+        if (delta < 0) {
+            throw new IllegalArgumentException("time does not go backwards: " + delta);
         }
-        nanos += millis * 1_000_000L;
+        nanos += delta;
         return this;
     }
 }

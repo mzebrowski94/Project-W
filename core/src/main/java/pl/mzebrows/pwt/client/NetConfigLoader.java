@@ -26,6 +26,7 @@ public final class NetConfigLoader {
         GameProperties properties = GameProperties.load(FILE);
         NetConfig.Conditions noConditions = defaults.conditions();
         NetConfig.LogConfig log = defaults.log();
+        NetConfig.Session session = defaults.session();
         return new NetConfig(
                 properties.getInt("net.port", defaults.port()),
                 properties.getInt("net.portSearch", defaults.portSearch()),
@@ -44,6 +45,14 @@ public final class NetConfigLoader {
                         System.getProperty(LOG_DIR_PROPERTY, properties.getString("net.log.dir", log.dir())),
                         properties.getString("net.log.level", log.level()),
                         properties.getInt("net.log.traceSize", log.traceSize()),
-                        properties.getInt("net.log.statsSeconds", log.statsSeconds())));
+                        properties.getInt("net.log.statsSeconds", log.statsSeconds())),
+                new NetConfig.Session(
+                        properties.getInt("net.session.leadMinTicks", session.leadMinTicks()),
+                        properties.getInt("net.session.leadMaxTicks", session.leadMaxTicks()),
+                        properties.getInt("net.session.marginTicks", session.marginTicks()),
+                        properties.getInt("net.session.bufferTicks", session.bufferTicks()),
+                        properties.getInt("net.session.catchUpTicks", session.catchUpTicks()),
+                        properties.getInt("net.session.checksumTicks", session.checksumTicks()),
+                        properties.getInt("net.session.historyTicks", session.historyTicks())));
     }
 }

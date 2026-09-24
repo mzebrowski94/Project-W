@@ -32,7 +32,8 @@ belongs on the definition every kind already has rather than on the one kind tha
 `FlowField` (routes), `Scatter` (placement), `Maps` (layouts and their validity checks), `Log`,
 `GameProperties` (config), `AlphaWorlds` (test fixtures), `Transport` (links between machines),
 `LoopbackNetwork` and `ConditionedTransport` (networks for tests and lag on demand), `NetLog` (the
-connection log) - plus a component or system for most
+connection log), `WorldCodec` (a world as bytes, a hash, a diff), `SessionHarness` (a whole online
+session in one test) - plus a component or system for most
 behaviour. `docs/glossary.md` is the cheap check: if the word exists, the thing usually does too.
 
 **Read narrow.** The target module, the classes the task names, their nearest tests. Widen only when a
@@ -78,11 +79,10 @@ Each line is a yes/no you can check yourself. A no is not done.
 | `map` | The ground a level is played on: tile grid, terrain, regions, generation. Depends on nothing at all. |
 | `sim` | The deterministic simulation: entities, components, systems, world state. No rendering, assets or I/O. |
 | `core` | The libGDX application: rendering, input, assets, screens, config loading. |
-| `net` | Networking (ADR 0012): the transport port and its Netty adapter, the in-memory test network, the connection log. No libGDX; Netty only inside `net.netty`. |
+| `net` | Networking (ADR 0012): the transport port and its Netty adapter, the in-memory test network, the connection log, and the lockstep session on top - sequencer, peer, wire format. No libGDX; Netty only inside `net.netty`. |
 | `lwjgl3` | Desktop launcher. |
 
-`lwjgl3` -> `core` -> `net` and `sim` -> `map`, one way; `net` will depend on `sim` once sessions need
-its input types, never the reverse. `ArchitectureTest` fails the build if `sim` reaches for
+`lwjgl3` -> `core` -> `net` -> `sim` -> `map`, one way; `sim` never sees `net`. `ArchitectureTest` fails the build if `sim` reaches for
 rendering, the wall clock, unseeded randomness or hash iteration order; `MapArchitectureTest` does the
 same for `map`, which may not reach for those *or* for an entity; `NetArchitectureTest` keeps libGDX out
 of `net`, Netty inside its adapter and the clock behind `Clock`. Enforced, not remembered.

@@ -15,6 +15,7 @@ package pl.mzebrows.pwt.net;
  * @param maxMessageBytes the largest reliable message - a snapshot has to fit
  * @param conditions network conditions to simulate on top of the real ones, all zero for none
  * @param log where the connection log goes and how much it keeps
+ * @param session how a lockstep session paces itself
  */
 public record NetConfig(
         int port,
@@ -25,7 +26,8 @@ public record NetConfig(
         int maxDatagramBytes,
         int maxMessageBytes,
         Conditions conditions,
-        LogConfig log) {
+        LogConfig log,
+        Session session) {
 
     public NetConfig {
         require(port > 0 && port < 65_536, "port", port);
@@ -39,7 +41,17 @@ public record NetConfig(
 
     /** The values the game ships with, and what every missing key in {@code network.properties} falls back to. */
     public static NetConfig defaults() {
-        return new NetConfig(47_100, 8, 5_000, 10_000, 250, 1_200, 8 * 1024 * 1024, Conditions.NONE, LogConfig.DEFAULT);
+        return new NetConfig(
+                47_100,
+                8,
+                5_000,
+                10_000,
+                250,
+                1_200,
+                8 * 1024 * 1024,
+                Conditions.NONE,
+                LogConfig.DEFAULT,
+                Session.DEFAULT);
     }
 
     /** The same config with other simulated conditions. */
@@ -53,7 +65,8 @@ public record NetConfig(
                 maxDatagramBytes,
                 maxMessageBytes,
                 newConditions,
-                log);
+                log,
+                session);
     }
 
     /** The same config with another log setup. */
@@ -67,7 +80,8 @@ public record NetConfig(
                 maxDatagramBytes,
                 maxMessageBytes,
                 conditions,
-                newLog);
+                newLog,
+                session);
     }
 
     /**
@@ -116,6 +130,57 @@ public record NetConfig(
         public LogConfig {
             require(traceSize > 0 && Integer.bitCount(traceSize) == 1, "traceSize", traceSize);
             require(statsSeconds >= 0, "statsSeconds", statsSeconds);
+        }
+    }
+
+    public NetConfig with(Session newSession) {
+        return new NetConfig(
+                port,
+                portSearch,
+                connectTimeoutMillis,
+                linkTimeoutMillis,
+                heartbeatMillis,
+                maxDatagramBytes,
+                maxMessageBytes,
+                conditions,
+                log,
+                newSession);
+    }
+
+    /**
+     * How a lockstep session paces itself (ADR 0012). Every value is in ticks.
+     *
+     * @param leadMinTicks the fewest ticks ahead a peer tags its input - the host's own peer, with no
+     *     network in the way, sits here
+     * @param leadMaxTicks the most; a peer that would need more is further away than a session is built
+     *     for (same region, D4), and plays with this much delay rather than more
+     * @param marginTicks how long before its tick is sealed a peer's input should reach the sequencer; each
+     *     peer's lead is adapted to keep it there
+     * @param bufferTicks how many sealed ticks a peer may hold unplayed before it plays faster to catch up
+     * @param catchUpTicks the most ticks a peer plays in one frame, however far behind it is
+     * @param checksumTicks how often peers compare worlds, and how often each keeps a keyframe for a dump
+     * @param historyTicks how many sealed ticks the sequencer keeps, so a peer dropping in or being healed
+     *     can be brought forward from a snapshot
+     */
+    public record Session(
+            int leadMinTicks,
+            int leadMaxTicks,
+            int marginTicks,
+            int bufferTicks,
+            int catchUpTicks,
+            int checksumTicks,
+            int historyTicks) {
+
+        public static final Session DEFAULT = new Session(2, 30, 1, 2, 4, 60, 600);
+
+        public Session {
+            require(leadMinTicks >= 1, "leadMinTicks", leadMinTicks);
+            require(leadMaxTicks >= leadMinTicks && leadMaxTicks <= 120, "leadMaxTicks", leadMaxTicks);
+            require(marginTicks >= 0, "marginTicks", marginTicks);
+            require(bufferTicks >= 0, "bufferTicks", bufferTicks);
+            require(catchUpTicks >= 1, "catchUpTicks", catchUpTicks);
+            require(checksumTicks >= 1, "checksumTicks", checksumTicks);
+            require(historyTicks > leadMaxTicks + checksumTicks, "historyTicks", historyTicks);
         }
     }
 

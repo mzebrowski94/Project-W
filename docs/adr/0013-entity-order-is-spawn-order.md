@@ -6,8 +6,9 @@ writing or restoring a snapshot; registering a family after the simulation has b
 **Enforced by.** `SpawnOrderTest.keepsTheSurvivorsInSpawnOrderWhenOthersDieOutOfOrder`,
 `.keepsAFamilyAskedForAfterTheWorldWasBuiltInSpawnOrderToo`; `CompositionTest` - every registered
 scenario, 600 ticks, and no entity's components change after the tick it appears. `SpawnOrder` itself
-fails the construction of every `Simulation` if the Ashley internals it reaches for have moved. Still
-to come: the snapshot round-trip test (ADR 0014) comparing every family's order after a restore.
+fails the construction of every `Simulation` if the Ashley internals it reaches for have moved.
+`SnapshotRoundTripTest` - every registered scenario restored from a snapshot, every family's order
+compared with the original's, before and after both step on.
 
 **Constraint.** The engine's entity list and every family's list are kept in the order their entities
 were spawned, and a removal closes the gap rather than moving the last entity into it. Ashley 1.7.4
@@ -15,7 +16,8 @@ keeps both in unordered gdx `Array`s (`new Array(false, 16)`), so a small shim s
 when the `Simulation` is built. It is the one place in the codebase that reaches inside Ashley.
 
 What that buys - **provided an entity's composition is fixed when it is spawned.** `ArchitectureTest`
-already says *who* may change it: the `Spawner`. This record adds *when*: at spawn, and never after, with
+already says *who* may change it: the `Spawner`, and `WorldCodec` restoring a snapshot, which is
+spawning from what another machine wrote down. This record adds *when*: at spawn, and never after, with
 one exception - `Dead`, which is reaped before the tick ends. A component added to a living entity would
 put it at the end of that family rather than in its spawn place, and nothing would notice until somebody
 dropped in. With that held, at every tick boundary **every family is the engine's list, filtered**. A snapshot records one order, and restoring it by adding entities in that

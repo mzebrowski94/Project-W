@@ -39,8 +39,21 @@ public final class SimConfigLoader {
 
     /** Loads simulation config, falling back to {@link SimConfig#defaults()} per missing value. */
     public static SimConfig load() {
+        return from(GameProperties.load(FILE));
+    }
+
+    /** {@code game.properties} as written - what a host ships to its peers (ADR 0012). */
+    public static String text() {
+        return GameProperties.text(FILE);
+    }
+
+    /** Simulation config from the text of a {@code game.properties}: the one a host shipped. */
+    public static SimConfig parse(String text) {
+        return from(GameProperties.parse("the host's " + FILE, text));
+    }
+
+    private static SimConfig from(GameProperties properties) {
         SimConfig defaults = SimConfig.defaults();
-        GameProperties properties = GameProperties.load(FILE);
         Chances chances = chances(properties, "sim.ai.chance", defaults.chances(), defaults.chances());
         return new SimConfig(
                 properties.getLong("sim.seed", defaults.seed()),

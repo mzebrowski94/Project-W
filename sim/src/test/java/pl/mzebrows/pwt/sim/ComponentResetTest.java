@@ -22,6 +22,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import pl.mzebrows.pwt.sim.component.Components;
 
 /**
  * Every pooled component, after {@code reset()}, is indistinguishable from a new one.
@@ -41,6 +42,14 @@ class ComponentResetTest {
     @Test
     void findsTheComponents() {
         assertThat(components()).hasSizeGreaterThan(40);
+    }
+
+    /** A component missing from the registry is one no snapshot can carry (ADR 0014). */
+    @Test
+    void numbersEveryComponentForTheSnapshot() {
+        assertThat(Components.ALL.stream().map(Class::getName))
+                .containsExactlyInAnyOrderElementsOf(
+                        components().map(Class::getName).toList());
     }
 
     @ParameterizedTest(name = "{0}")

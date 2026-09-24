@@ -2,21 +2,20 @@ package pl.mzebrows.pwt.sim;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.badlogic.ashley.core.Entity;
-import com.badlogic.ashley.core.Family;
-import com.badlogic.ashley.utils.ImmutableArray;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
 /**
  * The load-bearing test of the whole architecture. If this ever goes red, deterministic replay and
- * any future lockstep networking are gone - so treat a failure here as a design bug, not a flake.
+ * lockstep online play are gone - so treat a failure here as a design bug, not a flake.
+ *
+ * <p>Compares whole worlds - every field of every component and every random stream, as a snapshot
+ * writes them (ADR 0014) - not just where things stand: a desync starts in a field nobody draws.
  */
 class SimulationDeterminismTest {
 
@@ -51,7 +50,7 @@ class SimulationDeterminismTest {
         return Scenarios.all().stream().map(scenario -> Arguments.of(scenario.name(), scenario));
     }
 
-    private static float[] runBodies(long seed) {
+    private static byte[] runBodies(long seed) {
         Simulation simulation = new Simulation(configSeeded(seed));
         Rng rng = simulation.rng();
 
@@ -68,16 +67,16 @@ class SimulationDeterminismTest {
         for (int step = 0; step < STEPS; step++) {
             simulation.step();
         }
-        return snapshot(simulation);
+        return WorldCodec.snapshot(simulation);
     }
 
-    private static float[] runScenario(Scenario scenario) {
+    private static byte[] runScenario(Scenario scenario) {
         Simulation simulation = Scenarios.world(scenario, configSeeded(SEED));
 
         for (int step = 0; step < STEPS; step++) {
             simulation.step(ScriptedPlay.input(step));
         }
-        return snapshot(simulation);
+        return WorldCodec.snapshot(simulation);
     }
 
     /**
@@ -86,17 +85,5 @@ class SimulationDeterminismTest {
      */
     private static SimConfig configSeeded(long seed) {
         return SimConfig.defaults().withSeed(seed);
-    }
-
-    private static float[] snapshot(Simulation simulation) {
-        ImmutableArray<Entity> entities =
-                simulation.engine().getEntitiesFor(Family.all(Position.class).get());
-        float[] snapshot = new float[entities.size() * 2];
-        for (int i = 0; i < entities.size(); i++) {
-            Position position = entities.get(i).getComponent(Position.class);
-            snapshot[i * 2] = position.x;
-            snapshot[i * 2 + 1] = position.y;
-        }
-        return snapshot;
     }
 }

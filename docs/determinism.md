@@ -1,8 +1,8 @@
 # Determinism
 
 The simulation must produce identical output from identical input on every run and every machine. It is
-what makes replays, deterministic debugging, scenario tests and any future lockstep networking possible
-(ADR 0004, pillar 6). Cheap to keep, expensive to recover.
+what makes replays, deterministic debugging, scenario tests and lockstep online play possible
+(ADR 0004, ADR 0012, pillars 6 and 7). Cheap to keep, expensive to recover.
 
 ## The rules
 
@@ -37,10 +37,18 @@ reproducible from a single seed either way.
 |---|---|
 | `ArchitectureTest` | The mechanical bans, in `sim`. |
 | `MapArchitectureTest` | The same in `map`, plus all of `com.badlogic` and any reference to an entity. |
-| `SimulationDeterminismTest` | Everything else - replays every registered scenario twice and compares. |
+| `SimulationDeterminismTest` | Everything else - replays every registered scenario twice and compares whole worlds, every field of every component and every stream. |
+| `SnapshotRoundTripTest` | State a snapshot does not carry - a counter in a system, a cache that is not a pure function of the world (ADR 0014). |
+| `DeterminismFuzzTest` | Both, over five minutes of every scenario under random input with restores at random ticks. Opt-in: `PWT_FUZZ=1`, about a minute. |
+| `SessionTest` | The same across machines: peers over a bad network ending on one world (ADR 0012). |
 | `ScenariosTest` | Nothing spawned in or against rock; nothing spawned where the commander cannot walk. |
 
 A failure in `SimulationDeterminismTest` is a design bug, not a flake. Treat it that way.
+
+**Across machines** the check runs during play: every `checksumTicks` each peer hashes a snapshot of its
+world, and one that disagrees with the host is dumped and healed (ADR 0012). Windows and Linux have been
+shown to agree bit for bit over every scenario (2026-09-24); the dumps are what find the first case where
+they do not.
 
 ## The client has no such guard
 

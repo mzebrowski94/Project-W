@@ -5,8 +5,13 @@ session; proposing state replication, prediction, rollback or a different transp
 
 **Enforced by.** `NetArchitectureTest.netKnowsNothingOfTheWindow`, `.nettyStaysInsideItsAdapter`,
 `.onlyTheSystemClockReadsTheWallClock`, `.nothingIsDeserialisedByClassName`; the module graph keeps `sim`
-from seeing `net`. Still to come with the session layer: a multi-peer determinism test over every
-scenario, and the snapshot round-trip test (ADR 0014).
+from seeing `net`. `SessionTest` - a sequencer, the host's peer and others in one test over a lagging,
+lossy network: every world the same at the same tick, a player dropped in mid-game, eight slots from four
+machines, a machine knocked out of step found, dumped and healed, restart and god mode refused to anyone
+but the host. `SequencerTest` - a peer written byte by byte: an order sealed once however often it is
+resent, orders in the order given, a late player's input repeated, garbage and another protocol dropped.
+`BundleTest` - held input to the bit. `SnapshotRoundTripTest` and, opt-in, `DeterminismFuzzTest`
+(ADR 0014).
 
 **Supersedes** the Scope clause of ADR 0004 - "no networking code exists and none should be written".
 Everything else 0004 says stands, and is now what multiplayer rests on rather than what keeps it possible.
@@ -16,10 +21,11 @@ Everything else 0004 says stands, and is now what multiplayer rests on rather th
 - **Every peer runs the whole simulation. Only inputs cross the wire during play.** World state crosses
   once, as a snapshot, when a player drops in (G0038) - and in a desync dump, which is for us.
 - **The sequencer decides which input applies to a tick, never what happened in it.** It collects each
-  peer's inputs, holds a deadline, and broadcasts the confirmed **tick bundle**. It runs on a thread of its
+  peer's inputs, seals each tick when its time comes, and broadcasts the sealed **tick bundle**. It runs on a thread of its
   own and holds no simulation: the host's own world consumes its bundles exactly as every other peer's
   does, so a host whose frame loop stalls - a window being dragged, a pause for garbage collection - falls
-  behind and catches up like anyone else instead of freezing the session. Today it runs on the host's
+  behind and catches up like anyone else instead of freezing the session. A peer plays sealed ticks at the
+  world's rate, plays one extra a frame when it holds more than it should, and never skips one. Today it runs on the host's
   machine; nothing in it needs to, and moving it to the relay is how the host's advantage and the host's
   leaving stop mattering. A peer steps tick T only once it holds T's bundle; nothing is predicted.
 - **An input is held state plus events.** Held state - the sticks, the aim, the buttons being held - is
@@ -27,24 +33,34 @@ Everything else 0004 says stands, and is now what multiplayer rests on rather th
   Events - an order given, and every one-off press to come - are numbered, sent again until the sequencer
   acknowledges them, and applied once, at the first tick the sequencer holds them: never repeated by the
   deadline, never lost to it.
+- **Each peer sends its input a lead of ticks ahead** - tagged for the tick it is playing plus the lead -
+  and the sequencer reports how early each arrived. The lead follows: up at once when input is late, down
+  a tick after a second of arriving comfortably early, so it settles at the round trip plus a margin. The
+  lead is the input delay that peer's players feel.
 - **A local input goes through the same encode and decode as a remote one** before the simulation sees
-  it. The host is a peer like the others in this respect, or it drifts from the rest by a rounding.
+  it: the host's own game is a peer on a link to the sequencer like the others, and held input crosses
+  as raw float bits. The host is a peer like the others in this respect, or it drifts by a rounding.
 - **Nothing changes simulation state outside `Simulation.step` from a tick's input during a session.**
-  Pause, restart and the harness's invulnerability are session commands, tick-stamped by the sequencer
-  and carried in the same stream (who may ask for which is G0038). Offline play keeps doing what it does
-  today.
+  Restart and the harness's invulnerability are session commands, stamped on a tick by the sequencer and
+  carried in its bundle; pause is the sequencer sealing nothing until it is resumed, which every peer sees
+  alike (who may ask for which is G0038). Offline play keeps doing what it does today.
 - **Networking is its own module**, `net`: `lwjgl3 -> core -> net -> sim -> map`. `sim` does not know a
   network exists; `net` has no libGDX.
 - **The transport is a port.** `Transport` lives in `net`; Netty 4.2 sits behind it - UDP for tick
   traffic, TCP for control and snapshots - and an in-memory loopback serves the tests. No Netty type
   crosses it, for the reason ADR 0011 gives for gamepads: the library is the replaceable part.
-- **Peers run the same thing.** The build hash and protocol version must match at the handshake, or the
-  peer is refused. The config does not have to: the host sends its parsed config and every peer runs the
-  session on it, so a tuning playtest needs nobody to copy a file.
-- **A desync is detected, recorded and healed.** A world checksum every few ticks; on a mismatch the peer
-  that diverged writes a dump - snapshot, inputs since it, checksum history - under `ai/logs/net/`, which
-  replays headless, and the host sends it a fresh snapshot by the same path a drop-in takes. The session
-  carries on; the dump is how the bug gets fixed.
+- **Peers run the same thing.** The build id - a hash of the `map`, `sim` and `net` sources, generated at
+  build time - and the protocol version must match at the handshake, or the peer is refused. The config
+  does not have to: the host ships its `game.properties` as written, with its scenario and seed, and every
+  peer parses it with its own loader - which the build id says is the same one - so a tuning playtest
+  needs nobody to copy a file.
+- **A desync is detected, recorded and healed.** Every `checksumTicks` each peer snapshots its world,
+  keeps it as a keyframe and sends its hash; the host's is the reference. On a mismatch the peer that
+  diverged and the host each write a dump beside the connection log - the disputed keyframe, the last
+  agreed one and every bundle between - and the host's world is sent to the peer by the same path a
+  drop-in takes. `DesyncReport` reads the pair: the fields that differ, which side a replay lands on, and
+  the first tick a replay through snapshots parts from a straight one. The session carries on; the dump
+  is how the bug gets fixed.
 
 **Why lockstep.** The simulation was built for it: one `CommanderInput` per slot per tick is already the
 only input, randomness is one seeded `long` per stream, the transcendentals are `StrictMath`, nothing
@@ -52,7 +68,7 @@ iterates a hash, and since Java 17 floating point is strict on every platform (J
 a per-feature cost of nothing on the network - beyond the rule 0004 already enforces, the one thing a new
 mechanic owes is that its state is carried by the snapshot, which ADR 0014 makes automatic - a few tens of
 KB/s per peer, and any session replayable from a seed and a log. What it costs is input delay - roughly the round trip to the
-host plus a buffer, about four or five ticks for a peer in the same region and one for the host. That
+host plus a margin, about four to six ticks for a peer in the same region and two for the host. That
 is the number pillar 1 will judge, and it is why rollback is deferred rather than rejected.
 
 **Why Netty.** No library for the JVM offers lockstep sessions - Photon Quantum does, and is C# only -

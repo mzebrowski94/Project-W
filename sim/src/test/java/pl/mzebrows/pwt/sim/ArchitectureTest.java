@@ -88,6 +88,9 @@ final class ArchitectureTest {
     static final ArchRule onlyTheSpawnerChangesWhatAnEntityIsMadeOf = noClasses()
             .that()
             .doNotHaveSimpleName("Spawner")
+            // A snapshot being restored is entities being spawned from what another machine wrote down.
+            .and()
+            .doNotHaveSimpleName("WorldCodec")
             .should()
             .callMethod(com.badlogic.ashley.core.Entity.class, "add", com.badlogic.ashley.core.Component.class)
             .orShould()
