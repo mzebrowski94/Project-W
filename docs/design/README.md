@@ -230,6 +230,9 @@ rows become enforceable once the named feature exists - promote them then.
 | Every gameplay speed is one block in `game.properties` and is retuned together, so the ratios between units survive a pace change. | judgement - the PACE block |
 | Everything the AI does only *sometimes* is a named constant in `AiChance` with a number in `game.properties`, stated per second of opportunity. There is no conditional behaviour that is not on that list. | judgement - `AiChance` is the index; `Odds` is the only caller of the dice |
 | A behaviour switched off draws no random number at all, so turning one off cannot reshuffle what every other behaviour rolls. | enforced - `OddsTest.drawsNothingAtAllForABehaviourThatIsSwitchedOff` |
+| **A chance is dealt, not tossed** (G0039). The number a behaviour states per second of opportunity is its average exactly, and no unit waits longer than `sim.ai.chance.longestGap` times that average for something it has the opportunity to do. | enforced - `OddsTest.keepsToTheStatedRateHoweverItIsDealt`, `.neverLetsMoreThanTheLongestGapGoBy`, `.banksNothingFromASpellAtAChanceFarAboveOnePerTick` |
+| What a unit is still **due** is hidden, and stays that way only because it trims runs of luck and holds nothing to learn. A behaviour the player is meant to read as a pattern is not dealt this way (G0012). | judgement - pillar 5 |
+| **A count drawn over and over comes from a bag**: every value in its range once before any comes up again - a nest's brood sizes, the crates across a level's points. Drawn independently, the smallest three times running is a streak the player blames on the level. | enforced - `NestTest.sendsEveryBroodSizeInItsRangeOnceBeforeRepeatingOne`, `BagTest.dealsEveryValueOnceBeforeAnyComesUpAgain` |
 | A creature's claws reach into an arc in front of it, and **which way it is going is which way it is facing** - the same derivation the renderer makes, so a thing drawn walking away cannot bite you. Something standing still reaches all round, because it can turn on the spot. | enforced - `CombatTest.landsNoBlowOnWhatIsBehindIt`, `.landsOneOnWhatItIsWalkingAt`, `.reachesAllRoundWhileItIsNotGoingAnywhere` |
 | **A man who is off his feet is driven by nobody, the player included.** Every driver asks one question in one place; a private copy of it is how a commander shot off his feet went on walking and firing for four days. | enforced - `CasualtyTest.leavesACommanderWhoIsDownWhereHeFell`, `.takesNoShotFromACommanderWhoIsDown`; one writer - `Drivers.held` |
 | A shooter ambles inside its patch **once it is in position** - and only then, because everywhere else it has somewhere to be and the system that drives it there runs first. With nothing driving its legs it reads as a turret rather than a creature. | enforced - `SpitterTest.goesOnAmblingAboutWhileItShoots`, `.neverAmblesFurtherThanItsOwnPatch` |
@@ -381,6 +384,10 @@ contradiction three features later.
   fills it: the camera giving up at far zoom and a marker at the edge pointing at whoever is missing;
   splitting the view; or a soft pull that only starts once somebody is actually out of shot. None is
   chosen, and a marker is the cheapest thing to try first.
+- **How is a chance per attempt dealt, when there first is one?** Every chance today is per second of
+  opportunity and is dealt from a due (G0039). A critical hit, a drop or anything else rolled once per
+  attempt would want the same even deal counted in attempts - Dota's P = C x N or a hard pity - and
+  whether it is kept per unit or per slot (pillar 7) is a real choice. Nothing needs it yet.
 
 The alpha phase answers none of these. Where a system needs one of them to have an answer it uses
 scaffolding instead, listed in [`alpha-phase.md`](alpha-phase.md) so the scaffolding is not later

@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.def;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
@@ -27,5 +28,25 @@ class ChancesTest {
     void comparesByValueSoAConfigCanBeComparedWithItsDefaults() {
         assertThat(Chances.standard()).isEqualTo(Chances.standard());
         assertThat(Chances.standard().with(AiChance.AID_A_TROOPER, 0f)).isNotEqualTo(Chances.standard());
+        assertThat(Chances.standard().withLongestGap(0f)).isNotEqualTo(Chances.standard());
+    }
+
+    @Test
+    void dealsEvenlyUnlessToldToTossACoin() {
+        assertThat(Chances.standard().longestGap()).isGreaterThanOrEqualTo(1f);
+        assertThat(Chances.standard().withLongestGap(0f).longestGap()).isZero();
+    }
+
+    @Test
+    void refusesALongestGapNoDealCanKeepTo() {
+        assertThatThrownBy(() -> Chances.standard().withLongestGap(0.5f)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Chances.standard().withLongestGap(2.5f)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void keepsTheLongestGapWhenABehaviourIsRetuned() {
+        Chances retuned = Chances.standard().withLongestGap(1.5f).with(AiChance.SWING_AT_A_LEAP, 9f);
+
+        assertThat(retuned.longestGap()).isEqualTo(1.5f);
     }
 }

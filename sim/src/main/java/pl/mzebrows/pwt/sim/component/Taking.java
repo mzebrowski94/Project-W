@@ -41,6 +41,12 @@ public final class Taking implements Component, Pool.Poolable {
     public float biteChance;
 
     /**
+     * What it is still due before it next bites into something it is touching: {@code Odds}' budget
+     * for {@link #biteChance}. Zero until the first time it touches one.
+     */
+    public float biteDue;
+
+    /**
      * Whether it takes an explosive whole rather than setting it off.
      *
      * <p>True for anything with a gun a barrel can charge. It is the difference between a barrel
@@ -78,6 +84,7 @@ public final class Taking implements Component, Pool.Poolable {
     public void reset() {
         claimed = null;
         biteChance = 0f;
+        biteDue = 0f;
         swallows = false;
     }
 }

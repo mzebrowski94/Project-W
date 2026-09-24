@@ -756,8 +756,9 @@ public record SimConfig(
      *     how long the player can stand still and shoot with a brood already on the field
      * @param periodSeconds how long between broods
      * @param broodMin how few come out at a time
-     * @param broodMax how many, drawn between the two from the level's own stream. A fixed number
-     *     makes every nest worth exactly the same; a range means walking up to see
+     * @param broodMax how many, dealt between the two from the nest's own bag, so every size comes out
+     *     once before any comes out again. A fixed number makes every nest worth exactly the same; a
+     *     range means walking up to see. At most {@code Bag.MOST} sizes
      * @param deathBroodMin how few come out when it is destroyed
      * @param deathBroodMax how many. <strong>A nest is at its worst the moment you kill it</strong>,
      *     which is what makes destroying one a decision about timing rather than a chore
@@ -791,6 +792,7 @@ public record SimConfig(
             Require.notNegative("nest broodMin", broodMin);
             Require.notNegative("nest deathBroodMin", deathBroodMin);
             Require.atLeast("nest broodMax", broodMax, broodMin, "a nest cannot have a smaller most than fewest");
+            Require.fitsABag("nest brood", broodMin, broodMax);
             Require.atLeast(
                     "nest deathBroodMax",
                     deathBroodMax,
@@ -815,8 +817,9 @@ public record SimConfig(
      *     units. Outside the point's own radius, so fetching one is a step off the ground you are
      *     holding rather than something you collect by standing still
      * @param reinforcementsMin fewest crates a point is worth
-     * @param reinforcementsMax most. Drawn between the two from the level seed, so the points on a
-     *     level are not all worth exactly the same and none of them is worth guessing about
+     * @param reinforcementsMax most. Dealt between the two from one bag across the level's points,
+     *     so the points on a level are not all worth exactly the same and none of them is worth
+     *     guessing about. At most {@code Bag.MOST} values
      */
     @With
     public record ControlPointConfig(
@@ -835,6 +838,7 @@ public record SimConfig(
             if (reinforcementsMax < reinforcementsMin) {
                 throw new IllegalArgumentException("control point reinforcementsMax must not be below its minimum");
             }
+            Require.fitsABag("control point reinforcements", reinforcementsMin, reinforcementsMax);
         }
     }
 

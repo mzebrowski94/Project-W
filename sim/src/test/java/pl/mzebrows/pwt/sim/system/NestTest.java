@@ -6,13 +6,18 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_PERIOD;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_ROUSE_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_WAKE_RADIUS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Enemy;
@@ -70,6 +75,33 @@ class NestTest {
         steps(simulation, ONE_PERIOD * 2);
 
         assertThat(creatures(simulation)).isEqualTo(BROOD * 2);
+    }
+
+    /**
+     * Brood sizes come out of a bag: drawn independently, a nest could send its smallest three times
+     * running, which is a streak a player notices and blames on the level.
+     */
+    @Test
+    void sendsEveryBroodSizeInItsRangeOnceBeforeRepeatingOne() {
+        SimConfig config = config().withNest(config().nest().withBroodMin(1).withBroodMax(3));
+        Simulation simulation = new Simulation(config);
+        simulation.spawnNest(UnitKind.GRUNT, X, Y);
+        simulation.spawnCommander(X + 2f, Y);
+        godMode(simulation);
+        List<Integer> broods = new ArrayList<>();
+        int before = 0;
+
+        while (broods.size() < 6) {
+            simulation.step();
+            int now = creatures(simulation);
+            if (now > before) {
+                broods.add(now - before);
+                before = now;
+            }
+        }
+
+        assertThat(broods.subList(0, 3)).containsExactlyInAnyOrder(1, 2, 3);
+        assertThat(broods.subList(3, 6)).containsExactlyInAnyOrder(1, 2, 3);
     }
 
     /**

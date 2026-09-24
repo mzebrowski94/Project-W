@@ -1,5 +1,7 @@
 package pl.mzebrows.pwt.sim.def;
 
+import pl.mzebrows.pwt.map.Bag;
+
 /**
  * Argument checks shared by every definition and config record.
  *
@@ -30,6 +32,14 @@ public final class Require {
         if (value < minimum) {
             throw new IllegalArgumentException(
                     name + " must be at least " + minimum + " (" + because + "), was " + value);
+        }
+    }
+
+    /** Rejects a range with more values than a {@link Bag} can deal from. */
+    public static void fitsABag(String name, int fewest, int most) {
+        if (most - fewest + 1 > Bag.MOST) {
+            throw new IllegalArgumentException(name + " spans " + (most - fewest + 1)
+                    + " values, and a bag deals at most " + Bag.MOST + ": from " + fewest + " to " + most);
         }
     }
 

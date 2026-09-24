@@ -173,6 +173,22 @@ public final class Trooper implements Component, Pool.Poolable {
     /** Which way it is currently leaning: {@code +1} or {@code -1}. */
     public int scanSide = 1;
 
+    /**
+     * What it is still due before it next swings at a leap, {@code Odds}' budget for
+     * {@code AiChance.SWING_AT_A_LEAP}. Zero until the first time the chance comes up.
+     */
+    public float swingDue;
+
+    /** What it is still due before it next gets on a gun, for {@code AiChance.MAN_A_TURRET}. */
+    public float turretDue;
+
+    /**
+     * What it is still due before it next goes to pick somebody up. One budget for both rescues,
+     * {@code AiChance.AID_A_TROOPER} and {@code AID_THE_COMMANDER}: it is one willingness, spent faster
+     * when the man on the ground is the commander.
+     */
+    public float aidDue;
+
     /** Sets what this trooper can notice, and returns this component, for fluent spawning. */
     public Trooper sees(float newSightRange, float newHoldRange, float newArcCosine, boolean newRequiresClearLine) {
         this.sightRange = newSightRange;
@@ -218,6 +234,9 @@ public final class Trooper implements Component, Pool.Poolable {
         lookY = 0f;
         scanRemaining = 0f;
         scanSide = 1;
+        swingDue = 0f;
+        turretDue = 0f;
+        aidDue = 0f;
         order = null;
         orderedBy = 0;
         sentOn = false;

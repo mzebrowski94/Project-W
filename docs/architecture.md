@@ -43,6 +43,8 @@ reason it is a module rather than a package; ADR 0009 has the argument.
   because a unit has width and a diagonal pinch between two rock corners is not a way through.
 - `Randomness` - one method, `nextLong`, plus everything derived from it. The caller supplies the
   stream; `sim`'s `Rng` implements this, so there is one algorithm rather than two.
+- `Bag` - a shuffle bag over a range: every value once before any repeats. Its whole state is a `long`
+  the caller keeps, so a bag on a component is snapshotted like any other field.
 
 libGDX ships its own tiled map API and we deliberately do not use it as the model - `TiledMapTile`
 declares `getTextureRegion()`, so it is a rendering model with map data attached. ADR 0010 has the

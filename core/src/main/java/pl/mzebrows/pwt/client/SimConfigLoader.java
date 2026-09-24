@@ -54,7 +54,9 @@ public final class SimConfigLoader {
 
     private static SimConfig from(GameProperties properties) {
         SimConfig defaults = SimConfig.defaults();
-        Chances chances = chances(properties, "sim.ai.chance", defaults.chances(), defaults.chances());
+        Chances chances = chances(properties, "sim.ai.chance", defaults.chances(), defaults.chances())
+                .withLongestGap(properties.getFloat(
+                        "sim.ai.chance.longestGap", defaults.chances().longestGap()));
         return new SimConfig(
                 properties.getLong("sim.seed", defaults.seed()),
                 properties.getFloat("sim.tickSeconds", defaults.tickSeconds()),
@@ -179,7 +181,8 @@ public final class SimConfigLoader {
      * two levels collapse into one.
      */
     private static Chances chances(GameProperties properties, String prefix, Chances shared, Chances own) {
-        Chances loaded = own;
+        // How a chance is dealt is the shared block's alone; a strain's table only carries it.
+        Chances loaded = own.withLongestGap(shared.longestGap());
         for (AiChance kind : AiChance.values()) {
             String key = prefix + "." + kind.name().toLowerCase(Locale.ROOT);
             float fallback = own.of(kind) == kind.standard() ? shared.of(kind) : own.of(kind);

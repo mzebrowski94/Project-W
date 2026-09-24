@@ -59,6 +59,12 @@ public final class Nest implements Component, Pool.Poolable {
     /** What its health was last tick, so a system can tell it has been hit without reading damage. */
     public float watchedHealth;
 
+    /**
+     * Which brood sizes have already come out of the current bag, one bit per size above
+     * {@link #broodMin} ({@code map.Bag}). Zero is a full bag.
+     */
+    public long broodsDealt;
+
     /** Sets what this nest produces and how, and returns this component, for fluent spawning. */
     public Nest set(
             UnitKind newKind,
@@ -121,5 +127,6 @@ public final class Nest implements Component, Pool.Poolable {
         rouseRadius = 0f;
         awake = false;
         watchedHealth = 0f;
+        broodsDealt = 0L;
     }
 }

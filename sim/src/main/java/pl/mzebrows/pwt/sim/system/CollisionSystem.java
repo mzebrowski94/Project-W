@@ -30,6 +30,7 @@ import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
@@ -81,6 +82,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private final Spawner spawner;
     private final Defs<PickupKind, PickupDef> pickups;
     private final Rng rng;
+    private final Chances chances;
 
     /**
      * The length of the tick being resolved, for the one decision here that is a chance per second.
@@ -98,6 +100,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         this.solver = new ConstraintSolver(config, map, this);
         this.spawner = spawner;
         this.pickups = config.pickups();
+        this.chances = config.chances();
         this.rng = rng;
     }
 
@@ -251,8 +254,12 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (!pickups.of(pickup.kind).offersSomethingTo(FACTION.get(taker).side)) {
             return;
         }
-        if (pickup.shunned && !Odds.rolls(rng, TAKING.get(taker).biteChance, deltaTime)) {
-            return;
+        if (pickup.shunned) {
+            Taking taking = TAKING.get(taker);
+            taking.biteDue = Odds.spend(rng, taking.biteDue, chances, taking.biteChance, deltaTime);
+            if (!Odds.spent(taking.biteDue)) {
+                return;
+            }
         }
         if (TAKING.get(taker).claim(pickup.kind)) {
             pickup.claimed = true;

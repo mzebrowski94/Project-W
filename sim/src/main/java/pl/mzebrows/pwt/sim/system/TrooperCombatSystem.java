@@ -128,7 +128,9 @@ public final class TrooperCombatSystem extends EntitySystem {
             if (!Sight.withinRange(at.x, at.y, where.x, where.y, reach)) {
                 continue;
             }
-            if (!Odds.rolls(rng, chances, AiChance.SWING_AT_A_LEAP, deltaTime)) {
+            Trooper trooper = TROOPER.get(entity);
+            trooper.swingDue = Odds.spend(rng, trooper.swingDue, chances, AiChance.SWING_AT_A_LEAP, deltaTime);
+            if (!Odds.spent(trooper.swingDue)) {
                 return false;
             }
             melee.beginSwing(where.x, where.y);

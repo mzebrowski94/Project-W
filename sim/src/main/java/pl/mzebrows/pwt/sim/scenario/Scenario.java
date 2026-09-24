@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.scenario;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
+import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.Randomness;
 import pl.mzebrows.pwt.map.Scatter;
@@ -144,11 +145,16 @@ public interface Scenario {
             Position at = points.get(i).getComponent(Position.class);
             scatter.reserve(at.x, at.y, config.controlPoint().radius());
         }
+        // From a bag, so the points on a level are worth different amounts rather than, by chance, all
+        // the least.
+        long dealt = 0L;
         for (int i = 0; i < points.size(); i++) {
             Position at = points.get(i).getComponent(Position.class);
+            int extra = Bag.draw(rng, dealt, spread);
+            dealt = Bag.take(dealt, extra, spread);
             scatter.scatter(
                     TileRect.around(map, at.x, at.y, reach),
-                    fewest + rng.nextInt(spread),
+                    fewest + extra,
                     crateRadius,
                     (x, y) -> simulation.spawnPickup(PickupKind.SUPPLY_DROP, x, y));
         }

@@ -218,8 +218,11 @@ public final class TrooperMindSystem extends EntitySystem {
             }
             return false;
         }
-        if (trooper.mode != Trooper.Mode.CREW && !Odds.rolls(nerve, chances, AiChance.MAN_A_TURRET, deltaTime)) {
-            return false;
+        if (trooper.mode != Trooper.Mode.CREW) {
+            trooper.turretDue = Odds.spend(nerve, trooper.turretDue, chances, AiChance.MAN_A_TURRET, deltaTime);
+            if (!Odds.spent(trooper.turretDue)) {
+                return false;
+            }
         }
         trooper.mode = Trooper.Mode.CREW;
         if (Crews.gapTo(entity, station) <= reach) {
@@ -342,8 +345,12 @@ public final class TrooperMindSystem extends EntitySystem {
         if (subject == null) {
             return false;
         }
-        if (trooper.mode != Trooper.Mode.AID && !Odds.rolls(nerve, chances, willingness(subject), deltaTime)) {
-            return false;
+        if (trooper.mode != Trooper.Mode.AID) {
+            // One due for both kinds of rescue: it is one willingness, spent faster for the commander.
+            trooper.aidDue = Odds.spend(nerve, trooper.aidDue, chances, willingness(subject), deltaTime);
+            if (!Odds.spent(trooper.aidDue)) {
+                return false;
+            }
         }
         trooper.mode = Trooper.Mode.AID;
         if (Aid.gapBetween(at, BODY.get(entity).radius, subject) <= reach) {

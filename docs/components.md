@@ -14,7 +14,7 @@ and a component touched by many is where to check. Read the code before concludi
 
 | Component | What it holds | Touched by |
 |---|---|---|
-| **Action** | What the commander could do right now, and how far through doing it he is. | `Action`, `Aid`, `Appearance`, `Drag` · `Spawner` · client: `ScenarioSession` |
+| **Action** | What the commander could do right now, and how far through doing it he is. | `Action`, `Aid`, `Appearance`, `Drag` · `Spawner` · client: `Announcements` |
 | **Appearance** | What an entity is, and what it is currently doing, for the renderer to look at. | `Appearance`, `Perception` · `Spawner` · client: `StateTint`, `WorldRenderer` |
 | **Approach** | Which side of its target a creature closes on, and how wide. | `Navigation` · `Spawner` |
 | **Avoidance** | How far ahead a unit looks for things in its way, and how hard it leans off them. | `Avoidance` · `Spawner` |
@@ -24,7 +24,8 @@ and a component touched by many is where to check. Read the code before concludi
 | **Body** | An entity's circular extent, used for collision and for placeholder rendering. | `Action`, `Aid`, `Aid`, `Avoidance`, `Blast`, `Bloat`, `Collision`, `CommanderControl`, `Crews`, `Damage`, `Dodge`, `Drag`, `EnemyRanged`, `Grenade`, `Navigation`, `ProjectileBounds`, `Slick`, `TrooperCombat`, `TrooperMind`, `TrooperMove`, `Turret`, `Wander` · solver: `ConstraintSolver` · `Spawner` · client: `WorldRenderer` |
 | **Casualty** | A unit that has been shot or blasted off its feet but is not dead yet: it lies where it fell, bleeding out, and can be put back on its feet by somebody who reaches it in time. | `Action`, `Aid`, `Aid`, `Appearance`, `Casualty`, `Damage`, `Drag`, `Drivers`, `TrooperMind` · `Players`, `Spawner` |
 | **Collider** | How an entity takes part in collision, as data rather than as a class of entity. | `Avoidance`, `Collision`, `Crews`, `Deaths`, `Drag` · solver: `ConstraintSolver` · `Spawner` |
-| **Commander** | Marker: A player-controlled unit, and which player controls it. | `Action`, `CommanderControl`, `Drag`, `Reinforcement`, `Respawn`, `SquadOrder`, `TrooperMind` · `Players`, `Simulation`, `Spawner` · client: `DebugOverlay`, `ScenarioSession` |
+| **Commander** | Marker: A player-controlled unit, and which player controls it. | `Action`, `CommanderControl`, `Drag`, `Reinforcement`, `Respawn`, `SquadOrder`, `TrooperMind` · `Players`, `Simulation`, `Spawner` · client: `Announcements`, `DebugOverlay`, `OnlineSession`, `ScenarioScreen`, `WorldRenderer` |
+| **Components** | Every kind of component there is, in one list - the table a snapshot numbers them by (ADR 0014). | `WorldCodec` |
 | **ContactDamage** | What an entity does to something it touches on the other side. | `Collision`, `Cooldown` · `Spawner` |
 | **ControlPoint** | A place a squad takes by standing near it. | `Appearance`, `ControlPoint`, `Objective`, `TrooperMind` · `Spawner` |
 | **Crew** | Whether this man is aboard something, and which thing. | `Appearance`, `Crews`, `Drivers`, `Turret` · `Spawner` |
@@ -74,16 +75,16 @@ and a component touched by many is where to check. Read the code before concludi
 | **Turret** | A gun on a mount: where it is pointing, how fast it comes round, and whether anybody is on it. | `Action`, `Appearance`, `Crews`, `Drag`, `TrooperMind`, `Turret` · `Spawner` |
 | **Velocity** | How fast an entity moves, in world units per second. | `Appearance`, `Avoidance`, `Collision`, `CommanderControl`, `Crews`, `Damage`, `Deaths`, `Dodge`, `Drag`, `Drive`, `EnemyLeap`, `Grenade`, `Movement`, `Stun`, `Turret` · `Spawner` |
 | **Wander** | A unit's patch of ground, and where inside it it is currently headed. | `Cooldown`, `Wander` · `Spawner` |
-| **Waves** | What is still to arrive, and how long until the next of it. | `ControlPoint`, `Objective`, `Wave` · `Simulation`, `Spawner` · client: `ScenarioSession` |
+| **Waves** | What is still to arrive, and how long until the next of it. | `ControlPoint`, `Objective`, `Wave` · `Simulation`, `Spawner` |
 | **Weapon** | The gun a unit is carrying: which one, how often it may fire, and what it fires. | `Appearance`, `CommanderControl`, `Cooldown`, `EnemyRanged`, `Guns`, `Muzzle`, `TrooperCombat`, `Turret` · `Spawner` · client: `DebugOverlay` |
 | **Weave** | How far through its weave a creature is, and how hard it weaves. | `Weave` · `Spawner` |
 
 ## Before adding a component
 
-63 exist. Look for one that already holds what you need: most new mechanics want a field on an existing component, not a new component - G0010 makes that structural, because only `Spawner` may change what an entity is made of, so state cannot be a component that gets added and removed.
+64 exist. Look for one that already holds what you need: most new mechanics want a field on an existing component, not a new component - G0010 makes that structural, because only `Spawner` may change what an entity is made of, so state cannot be a component that gets added and removed.
 
 **Touched by exactly one system:** `Approach`, `Avoidance`, `Hop`, `Respawning`, `RespawnsOnDeath`, `Shake`, `SlicksOnDeath`, `Weave`.
 These satisfy the one-writer rule by construction. A second system writing one is the change worth thinking twice about.
 
-**Touched by no system:** `Focus`, `Obstacle`.
+**Touched by no system:** `Components`, `Focus`, `Obstacle`.
 Not dead code - markers read outside the system loop, by the client or by `Spawner` as it builds an entity. The `Touched by` column says which.

@@ -7,6 +7,7 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.map.Scatter;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
@@ -101,7 +102,7 @@ public final class NestSystem extends EntitySystem {
                 // The last of it, into whoever is standing over it. Nothing is reset afterwards -
                 // the reaper takes the entity at the end of this tick and the component goes back to
                 // the pool, so a second visit is impossible.
-                hatch(nest, at, nest.deathBroodMin, nest.deathBroodMax);
+                hatch(nest, at, between(nest.deathBroodMin, nest.deathBroodMax));
                 Rouse.within(watchers, at.x, at.y, nest.rouseRadius);
                 continue;
             }
@@ -119,7 +120,7 @@ public final class NestSystem extends EntitySystem {
             if (nest.untilNext > 0f) {
                 continue;
             }
-            hatch(nest, at, nest.broodMin, nest.broodMax);
+            hatch(nest, at, nextBrood(nest));
             nest.untilNext = nest.periodSeconds;
         }
     }
@@ -157,14 +158,29 @@ public final class NestSystem extends EntitySystem {
     }
 
     /**
+     * How big the next of a nest's broods is, dealt from the nest's own bag: every size in its range
+     * comes out once before any comes out again, so a nest never sends its smallest three times running.
+     */
+    private int nextBrood(Nest nest) {
+        int sizes = nest.broodMax - nest.broodMin + 1;
+        int size = Bag.draw(rng, nest.broodsDealt, sizes);
+        nest.broodsDealt = Bag.take(nest.broodsDealt, size, sizes);
+        return nest.broodMin + size;
+    }
+
+    /** How big the brood it leaves when it dies is. Once per nest, so there is nothing to deal evenly. */
+    private int between(int fewest, int most) {
+        return fewest >= most ? fewest : fewest + rng.nextInt(most - fewest + 1);
+    }
+
+    /**
      * One brood, scattered into the tiles around the nest.
      *
      * <p>The allocation is deliberate and safe, exactly as {@code WaveSystem}'s is: a brood arrives
      * every several seconds at worst, and this is not a per-entity loop. Keeping a {@code Scatter}
      * alive for the length of a level to save an object a handful of times would be the worse trade.
      */
-    private void hatch(Nest nest, Position at, int fewest, int most) {
-        int count = fewest >= most ? fewest : fewest + rng.nextInt(most - fewest + 1);
+    private void hatch(Nest nest, Position at, int count) {
         if (count <= 0) {
             return;
         }
