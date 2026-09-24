@@ -5,7 +5,6 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import java.util.Arrays;
 import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.FixedStepClock;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
@@ -71,8 +70,20 @@ public final class ScenarioSession {
      */
     private final @Nullable Order[] pendingOrder = new Order[Players.MAX];
 
-    /** Reused, so handing a tick its waiting orders costs no allocation per tick. */
+    /** Reused, so handing a tick its waiting events costs no allocation per tick. */
     private final PlayerInputs forThisTick = new PlayerInputs();
+
+    /**
+     * Players seated since the last tick, waiting for one to take their join.
+     *
+     * <p>Joining is an input event (ADR 0012): the simulation puts a commander on the field on the tick
+     * the join arrives, and nothing outside a tick changes the world. Held here for the same reason
+     * {@link #pendingOrder} is - a frame may run no tick at all, and an event must not be lost to it.
+     */
+    private final boolean[] pendingJoin = new boolean[Players.MAX];
+
+    /** Whether god mode has been switched since the last tick, which the next tick carries as an event. */
+    private boolean pendingGodModeSwitch;
 
     /**
      * Which slots have a player in them, so a restart puts everybody back.
@@ -180,16 +191,15 @@ public final class ScenarioSession {
     }
 
     /**
-     * Puts a player who has just picked up a pad onto the field, and remembers that he is there.
+     * Puts a player who has just picked up a pad onto the field on the next tick, and remembers that he
+     * is there.
      *
-     * <p>Idempotent on purpose: a slot that already has a commander is left alone, so a pad
-     * reconnecting after the cable was kicked does not hand its player a second one.
+     * <p>Idempotent on purpose: the simulation leaves a slot that already has a commander alone, so a
+     * pad reconnecting after the cable was kicked does not hand its player a second one.
      */
     public void seat(int slot) {
         seated[slot] = true;
-        if (Players.inSlot(simulation.engine().getEntitiesFor(COMMANDERS), slot) == null) {
-            simulation.joinCommander(slot);
-        }
+        pendingJoin[slot] = true;
     }
 
     /** Runs however many fixed steps this frame's elapsed time is worth. Does nothing while paused. */
@@ -248,7 +258,7 @@ public final class ScenarioSession {
      */
     private void remember(PlayerInputs input) {
         for (int slot = 0; slot < Players.MAX; slot++) {
-            Order given = input.get(slot).order();
+            Order given = input.orderOf(slot);
             if (given != null) {
                 lastOrder = given;
                 pendingOrder[slot] = given;
@@ -257,18 +267,26 @@ public final class ScenarioSession {
     }
 
     /**
-     * This tick's input, carrying a waiting order if there is one and spending it.
+     * This tick's held input, and every event waiting for a tick to take it - an order, a join, a god
+     * mode switch - each spent exactly once.
      *
      * <p>Spent rather than repeated: several ticks can run in one frame, and one press has to mean
      * one order or a single tap would recruit every trooper that walked into earshot during the
      * catch-up.
      */
     private PlayerInputs forThisTick(PlayerInputs input) {
+        forThisTick.clear();
         for (int slot = 0; slot < Players.MAX; slot++) {
-            CommanderInput held = input.get(slot);
-            Order order = pendingOrder[slot];
+            forThisTick.set(slot, input.get(slot)).order(slot, pendingOrder[slot]);
             pendingOrder[slot] = null;
-            forThisTick.set(slot, order == null && held.order() == null ? held : held.ordering(order));
+            if (pendingJoin[slot]) {
+                forThisTick.join(slot);
+                pendingJoin[slot] = false;
+            }
+        }
+        if (pendingGodModeSwitch) {
+            forThisTick.switchInvulnerability(godMode);
+            pendingGodModeSwitch = false;
         }
         return forThisTick;
     }
@@ -294,17 +312,17 @@ public final class ScenarioSession {
                 seat(slot);
             }
         }
+        // Carries god mode into the new world; restarting to try something again should not silently
+        // undo it. The new world starts with it off, so it is switched on again by the first tick.
+        pendingGodModeSwitch = godMode;
     }
 
     private void setGodMode(boolean enabled) {
         godMode = enabled;
-        simulation.setCommanderInvulnerable(enabled);
+        pendingGodModeSwitch = true;
     }
 
-    /** Carries god mode into the new world; restarting to try something again should not silently undo it. */
     private Simulation newWorld() {
-        Simulation world = Scenarios.world(scenario, baseConfig);
-        world.setCommanderInvulnerable(godMode);
-        return world;
+        return Scenarios.world(scenario, baseConfig);
     }
 }

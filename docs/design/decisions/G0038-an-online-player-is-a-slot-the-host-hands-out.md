@@ -3,9 +3,10 @@
 **Trigger.** Anything that seats, identifies or counts players across machines; a host or join screen;
 the player capacity; anything that assumes a machine has one player on it, or that a game has four.
 
-**Enforced by.** Nothing mechanical yet - caught by reading. The capacity tests arrive with the player
-model (stage 2 of the online plan) and the drop-in tests with the join screen (stage 6). Promote this
-line when they exist.
+**Enforced by.** `CoopTest.seatsAndHearsEveryPlayerOfAGameLargerThanTheCeiling` - nothing is sized by
+eight; `.putsAPlayerOnTheFieldOnTheTickHisJoinArrives`, `.leavesASlotThatAlreadyHasACommanderAloneWhenAJoinArrivesForIt`
+- joining is an input event. The network drop-in tests arrive with the join screen (stage 6 of the online
+plan).
 
 **Amends G0028.** Everything it says about a pad stands - joining is plugging one in, unplugging is not
 leaving, a slot is a number and never a reference, no lobby. Two things change: *slot zero is the

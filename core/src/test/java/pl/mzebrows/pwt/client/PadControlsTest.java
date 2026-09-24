@@ -116,8 +116,10 @@ class PadControlsTest {
         PadControls controls = new PadControls(CONTROLS);
         FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().orderFollowMe().button());
 
-        Order first = controls.read(pad).order();
-        Order second = controls.read(pad).order();
+        controls.read(pad);
+        Order first = controls.ordered();
+        controls.read(pad);
+        Order second = controls.ordered();
 
         assertThat(first).isEqualTo(Order.FOLLOW_ME);
         assertThat(second).isNull();
@@ -130,8 +132,8 @@ class PadControlsTest {
         controls.read(pad);
 
         controls.read(pad.release(CONTROLS.pad().orderDefence().button()));
-        Order again =
-                controls.read(pad.hold(CONTROLS.pad().orderDefence().button())).order();
+        controls.read(pad.hold(CONTROLS.pad().orderDefence().button()));
+        Order again = controls.ordered();
 
         assertThat(again).isEqualTo(Order.DEFENCE);
     }

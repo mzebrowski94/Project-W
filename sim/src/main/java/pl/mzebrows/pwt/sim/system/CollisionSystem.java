@@ -9,6 +9,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
@@ -88,6 +89,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      * that never varies within a tick through every contact would be a worse shape than setting it
      * once. Written at the top of {@link #update(float)} and read nowhere else.
      */
+    @NotState("scratch: this tick's step, set at the start of update for the contact callbacks")
     private float deltaTime;
 
     private ImmutableArray<Entity> bodies = new ImmutableArray<>(new Array<>());

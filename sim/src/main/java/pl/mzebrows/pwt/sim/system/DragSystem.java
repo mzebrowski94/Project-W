@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Intent;
+import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Turret;
@@ -59,14 +60,14 @@ public final class DragSystem extends EntitySystem {
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
 
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
+    private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
 
     private static final float EPSILON = 1e-4f;
 
     private ImmutableArray<Entity> draggers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> loads = new ImmutableArray<>(new Array<>());
 
-    /** Issued rather than derived, so an id is never reused and a stale one can never match. */
-    private long nextDragId = 1L;
+    private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -75,6 +76,7 @@ public final class DragSystem extends EntitySystem {
                         .get());
         loads = engine.getEntitiesFor(
                 Family.all(Dragged.class, Position.class, Body.class).get());
+        levels = engine.getEntitiesFor(Family.all(Level.class).get());
     }
 
     @Override
@@ -106,15 +108,16 @@ public final class DragSystem extends EntitySystem {
         if (load == null) {
             return;
         }
-        drag.load = nextDragId;
+        Level level = LEVEL.get(levels.first());
+        drag.load = level.nextDragId;
         boolean movable = !COLLIDER.has(load) || COLLIDER.get(load).movable;
-        DRAGGED.get(load).take(nextDragId, movable);
+        DRAGGED.get(load).take(level.nextDragId, movable);
         if (!movable) {
             // Scenery becomes a body for as long as it is in his hands, or the solver would let him
             // pull it through rock: only movable solids are kept out of terrain and inside the arena.
             COLLIDER.get(load).set(COLLIDER.get(load).solid, true);
         }
-        nextDragId++;
+        level.nextDragId++;
     }
 
     /**

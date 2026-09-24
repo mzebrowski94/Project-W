@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 
 import com.badlogic.ashley.core.Entity;
@@ -113,7 +114,7 @@ class DamageSystemTest {
     @Test
     void neverKillsAnythingUnderGodMode() {
         Simulation simulation = simulation();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity commander = simulation.spawnCommander(50f, 50f);
 
         owe(commander, 10_000f);

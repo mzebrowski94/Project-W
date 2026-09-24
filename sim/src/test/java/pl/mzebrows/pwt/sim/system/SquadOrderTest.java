@@ -16,7 +16,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -318,8 +318,8 @@ class SquadOrderTest {
         assertThat(trooper.getComponent(Trooper.class).pushingForward()).isFalse();
     }
 
-    private static CommanderInput order(Order given) {
-        return CommanderInput.IDLE.ordering(given);
+    private static PlayerInputs order(Order given) {
+        return new PlayerInputs().order(0, given);
     }
 
     private static float pace(Entity trooper) {

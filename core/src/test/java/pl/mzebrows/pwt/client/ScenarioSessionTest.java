@@ -9,7 +9,6 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileRect;
-import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
@@ -28,7 +27,6 @@ import pl.mzebrows.pwt.sim.scenario.Scenario;
 class ScenarioSessionTest {
 
     private static final float TICK = SimConfig.defaults().tickSeconds();
-    private static final CommanderInput IDLE = CommanderInput.IDLE;
 
     /** Nobody asking for anything, in any slot. Never mutated, so one of them serves every test. */
     private static final PlayerInputs NOBODY = new PlayerInputs();
@@ -128,6 +126,7 @@ class ScenarioSessionTest {
         ScenarioSession session = session();
 
         session.apply(HarnessCommand.TOGGLE_GOD_MODE, NOBODY);
+        session.advance(TICK, NOBODY);
 
         assertThat(session.godMode()).isTrue();
         assertThat(session.simulation().commanderInvulnerable()).isTrue();
@@ -138,7 +137,9 @@ class ScenarioSessionTest {
         ScenarioSession session = session();
 
         session.apply(HarnessCommand.TOGGLE_GOD_MODE, NOBODY);
+        session.advance(TICK, NOBODY);
         session.apply(HarnessCommand.TOGGLE_GOD_MODE, NOBODY);
+        session.advance(TICK, NOBODY);
 
         assertThat(session.simulation().commanderInvulnerable()).isFalse();
     }
@@ -150,6 +151,7 @@ class ScenarioSessionTest {
         session.apply(HarnessCommand.TOGGLE_GOD_MODE, NOBODY);
 
         session.apply(HarnessCommand.RESTART, NOBODY);
+        session.advance(TICK, NOBODY);
 
         assertThat(session.godMode()).isTrue();
         assertThat(session.simulation().commanderInvulnerable()).isTrue();
@@ -211,8 +213,8 @@ class ScenarioSessionTest {
     void remembersTheLastOrderTheirPlayerGave() {
         ScenarioSession session = session();
 
-        session.advance(TICK, only(IDLE.ordering(Order.FOLLOW_ME)));
-        session.advance(TICK, only(IDLE.ordering(Order.DEFENCE)));
+        session.advance(TICK, ordering(Order.FOLLOW_ME));
+        session.advance(TICK, ordering(Order.DEFENCE));
         session.advance(TICK, NOBODY);
 
         assertThat(session.lastOrder()).isEqualTo(Order.DEFENCE);
@@ -229,7 +231,7 @@ class ScenarioSessionTest {
         ScenarioSession session = session();
         session.apply(HarnessCommand.PAUSE, NOBODY);
 
-        session.advance(TICK, only(IDLE.ordering(Order.FORWARD)));
+        session.advance(TICK, ordering(Order.FORWARD));
 
         assertThat(session.lastOrder()).isEqualTo(Order.FORWARD);
     }
@@ -237,7 +239,7 @@ class ScenarioSessionTest {
     @Test
     void forgetsTheLastOrderWhenTheScenarioRestarts() {
         ScenarioSession session = session();
-        session.advance(TICK, only(IDLE.ordering(Order.FOLLOW_ME)));
+        session.advance(TICK, ordering(Order.FOLLOW_ME));
 
         session.apply(HarnessCommand.RESTART, NOBODY);
 
@@ -254,7 +256,7 @@ class ScenarioSessionTest {
     void deliversAnOrderGivenOnAFrameTooShortToRunATick() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
 
-        session.advance(TICK * 0.4f, only(IDLE.ordering(Order.DEFENCE)));
+        session.advance(TICK * 0.4f, ordering(Order.DEFENCE));
         session.advance(TICK, NOBODY);
 
         assertThat(trooperOrder(session)).isEqualTo(Order.DEFENCE);
@@ -265,7 +267,7 @@ class ScenarioSessionTest {
     void spendsAnOrderOnceEvenWhenAFrameRunsSeveralTicks() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
 
-        session.advance(TICK * 3f, only(IDLE.ordering(Order.DEFENCE)));
+        session.advance(TICK * 3f, ordering(Order.DEFENCE));
 
         assertThat(trooperOrder(session)).isEqualTo(Order.DEFENCE);
     }
@@ -340,6 +342,7 @@ class ScenarioSessionTest {
         session.advance(TICK, NOBODY);
 
         session.seat(1);
+        session.advance(TICK, NOBODY);
 
         assertThat(commanderSlots(session)).containsExactlyInAnyOrder(0, 1);
     }
@@ -349,8 +352,10 @@ class ScenarioSessionTest {
     void leavesAPlayerWhoIsAlreadyOnTheFieldAlone() {
         ScenarioSession session = session();
         session.seat(1);
+        session.advance(TICK, NOBODY);
 
         session.seat(1);
+        session.advance(TICK, NOBODY);
 
         assertThat(commanderSlots(session)).containsExactlyInAnyOrder(0, 1);
     }
@@ -361,8 +366,10 @@ class ScenarioSessionTest {
         ScenarioSession session = session();
         session.seat(1);
         session.seat(2);
+        session.advance(TICK, NOBODY);
 
         session.apply(HarnessCommand.RESTART, NOBODY);
+        session.advance(TICK, NOBODY);
 
         assertThat(commanderSlots(session)).containsExactlyInAnyOrder(0, 1, 2);
     }
@@ -377,9 +384,9 @@ class ScenarioSessionTest {
         return slots;
     }
 
-    /** One player asking for something and nobody else. */
-    private static PlayerInputs only(CommanderInput input) {
-        return new PlayerInputs().set(0, input);
+    /** Player one giving an order, holding nothing, and nobody else asking for anything. */
+    private static PlayerInputs ordering(Order order) {
+        return new PlayerInputs().order(0, order);
     }
 
     private static void putTheTrooperDown(ScenarioSession session) {

@@ -1,5 +1,7 @@
 package pl.mzebrows.pwt.sim.spike;
 
+import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
+
 import com.badlogic.ashley.core.Component;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.EntitySystem;
@@ -88,7 +90,7 @@ class OnlineSpikeTest {
             for (boolean idle : new boolean[] {true, false}) {
                 Simulation simulation =
                         Scenarios.world(scenario, SimConfig.defaults().withSeed(SEED));
-                simulation.setCommanderInvulnerable(true);
+                godMode(simulation);
                 for (int step = 0; step < 1_000; step++) {
                     simulation.step(idle ? CommanderInput.IDLE : scriptedInput(step));
                 }

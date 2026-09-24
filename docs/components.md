@@ -44,7 +44,7 @@ and a component touched by many is where to check. Read the code before concludi
 | **Intent** | What a commander is trying to do this tick. | `Action`, `Appearance`, `CommanderControl`, `Drag`, `Grenade`, `Melee`, `SquadOrder`, `Turret` · `Simulation`, `Spawner` |
 | **Invulnerable** | Damage this entity is currently ignoring. | `Aid`, `Collision`, `Cooldown`, `Damage`, `Deaths`, `Respawn` · `Simulation`, `Spawner` · client: `DebugOverlay` |
 | **Leap** | How a unit throws itself at the commander, and where it currently is in doing so. | `Appearance`, `Collision`, `Cooldown`, `EnemyLeap`, `TrooperCombat` · `Spawner` |
-| **Level** | State that belongs to the level rather than to anything standing in it. | `Objective`, `Pickup`, `Reinforcement` · `Simulation`, `Spawner` |
+| **Level** | State that belongs to the level rather than to anything standing in it. | `Appearance`, `Drag`, `Objective`, `Pickup`, `Reinforcement` · `Simulation`, `Spawner` |
 | **Melee** | A melee weapon: how often it may swing, and what the swing is made of. | `Cooldown`, `Melee`, `TrooperCombat` · `Spawner` |
 | **Mine** | Something small lying in the open that goes off when the other side comes too close. | `Appearance`, `Mine` · `Spawner` |
 | **Nest** | A hole in the ground that keeps sending more of one strain out of it. | `Appearance`, `Nest` · `Spawner` |

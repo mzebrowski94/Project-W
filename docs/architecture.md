@@ -65,8 +65,14 @@ system that changes world state.
   every number every other system gets afterwards.
 - `FixedStepClock` - turns a variable frame delta into a whole number of ticks, and exposes `alpha`
   for render interpolation. Long stalls are dropped, not queued.
-- `CommanderInput` - one tick of what the player asked for. The only way input enters the
-  simulation; `step` copies it into the commander's `Intent` before any system runs.
+- `CommanderInput` - one tick of what a player is *holding*. `PlayerInputs` carries one per slot plus
+  that tick's *input events* - an order, a join, the harness's invulnerability switch - which are
+  applied once and never held (ADR 0012). The only way input enters the simulation; `step` copies it
+  into each commander's `Intent`, and seats a joining player, before any system runs.
+- `Streams` - every random stream the level draws from, in one table built from the seed, so a
+  snapshot can write them (ADR 0014). `ArchitectureTest` refuses a stream started anywhere else.
+- `SpawnOrder` - keeps Ashley's entity list and every family in spawn order (ADR 0013). The one class
+  that reaches inside Ashley.
 - `Spawner` - builds the entity kinds the game knows, so no system has to remember which components
   a commander or a projectile is made of.
 - `def/` - immutable definitions: what a kind of thing *is*, as data. `UnitKind`/`UnitDef` for

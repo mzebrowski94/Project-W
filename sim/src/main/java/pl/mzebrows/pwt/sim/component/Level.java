@@ -48,6 +48,27 @@ public final class Level implements Component, Pool.Poolable {
 
     private int met;
 
+    /**
+     * How many ticks this level has run: the only clock the simulation has. {@code Simulation.tick()}
+     * reads it, and anything that pulses or counts in time derives from it rather than keeping a clock
+     * of its own - a clock kept in a system is state no snapshot sees (ADR 0014).
+     */
+    public long tick;
+
+    /**
+     * The id the next drag is given. Issued rather than derived, so an id is never reused and a stale
+     * one can never match; kept on the level because it is a counter that must survive a snapshot.
+     */
+    public long nextDragId = 1L;
+
+    /**
+     * Whether the harness has made every commander invulnerable. Switched only by an input event
+     * ({@code PlayerInputs.switchInvulnerability}), and kept here because it lasts until switched back -
+     * which makes it state, and state a snapshot has to carry. Pillar 2 says the commander can be
+     * killed; this is a switch for testing by hand and nothing else.
+     */
+    public boolean commandersInvulnerable;
+
     /** Adds an objective this level requires. */
     public void require(Objective objective) {
         required |= bit(objective);
@@ -94,5 +115,8 @@ public final class Level implements Component, Pool.Poolable {
         pendingReinforcements = 0;
         required = 0;
         met = 0;
+        tick = 0L;
+        nextDragId = 1L;
+        commandersInvulnerable = false;
     }
 }

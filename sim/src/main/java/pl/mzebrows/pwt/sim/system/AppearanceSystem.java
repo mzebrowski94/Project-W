@@ -1,9 +1,13 @@
 package pl.mzebrows.pwt.sim.system;
 
 import com.badlogic.ashley.core.ComponentMapper;
+import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
+import com.badlogic.ashley.utils.ImmutableArray;
+import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -17,6 +21,7 @@ import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Leap;
+import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -63,6 +68,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 public final class AppearanceSystem extends IteratingSystem {
 
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
+    private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
@@ -95,15 +101,19 @@ public final class AppearanceSystem extends IteratingSystem {
     private final Defs<PickupKind, PickupDef> pickups;
 
     /**
-     * How far through its pulse everything that shines currently is, in {@code [0, 1)}.
+     * How far into the level everything that shines is, in seconds, for this tick.
      *
      * <p>One phase for the whole level rather than one per entity, and that is the decision rather
      * than a shortcut: a crate carrying a phase of its own would be a field on a pooled component
      * that has to be reset, for a difference the player cannot see - two crates are rarely on screen
-     * close enough together for anybody to read whether they pulse together. It is advanced once per
-     * tick from the fixed step, so it is a function of the tick count and a replay matches (pillar 6).
+     * close enough together for anybody to read whether they pulse together. It is worked out from
+     * the level's tick at the start of each update rather than accumulated here, because a clock kept
+     * in a system is state no snapshot sees (ADR 0014).
      */
-    private float shinePhase;
+    @NotState("scratch: recomputed from the level's tick at the start of every update")
+    private float shineSeconds;
+
+    private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
     /**
      * How much of a nest's core is showing before its clock has started, as a fraction.
@@ -120,10 +130,18 @@ public final class AppearanceSystem extends IteratingSystem {
     }
 
     @Override
+    public void addedToEngine(Engine engine) {
+        super.addedToEngine(engine);
+        levels = engine.getEntitiesFor(Family.all(Level.class).get());
+    }
+
+    @Override
     public void update(float deltaTime) {
         // Once for the tick, before anything is published, so every shining thing on the field
-        // reports the same moment of the same pulse.
-        shinePhase += deltaTime;
+        // reports the same moment of the same pulse. Plus one because the level's tick is counted
+        // after the systems have run, and this is the end of the tick that is running now.
+        long tick = levels.size() == 0 ? 0L : LEVEL.get(levels.first()).tick;
+        shineSeconds = (float) ((tick + 1L) * (double) deltaTime);
         super.update(deltaTime);
     }
 
@@ -352,7 +370,7 @@ public final class AppearanceSystem extends IteratingSystem {
      * either brightening or dimming rather than sitting still at full.
      */
     private float pulse(float periodSeconds) {
-        float turns = shinePhase / periodSeconds;
+        float turns = shineSeconds / periodSeconds;
         float phase = turns - (float) Math.floor(turns);
         return 1f - Math.abs(phase * 2f - 1f);
     }

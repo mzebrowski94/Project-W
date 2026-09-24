@@ -11,6 +11,7 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
@@ -90,6 +91,7 @@ public final class TrooperMindSystem extends EntitySystem {
     private final float patchRadius;
 
     /** One field per control point, parallel to the family. Rebuilt only if the set of points changes. */
+    @NotState("cache of one flow field per control point, a pure function of the map and where the points are")
     private FlowField[] routes = new FlowField[0];
 
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());

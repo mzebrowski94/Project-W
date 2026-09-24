@@ -44,14 +44,15 @@ public final class SquadOrderSystem extends EntitySystem {
     private final float forwardDistance;
 
     /** Which slots have a commander on his feet this tick. Filled once a tick, read per trooper. */
-    private final boolean[] standing = new boolean[Players.MAX];
+    private final boolean[] standing;
 
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
 
-    public SquadOrderSystem(SimConfig config) {
+    public SquadOrderSystem(SimConfig config, int capacity) {
         this.earshot = config.trooper().orderRadius();
         this.forwardDistance = config.trooper().forwardDistance();
+        this.standing = new boolean[capacity];
     }
 
     @Override
@@ -70,7 +71,7 @@ public final class SquadOrderSystem extends EntitySystem {
         // slot is heard last and therefore wins. Whatever order Ashley holds the family in would
         // also be an answer, but it changes the moment somebody is killed and respawned - and a
         // rule that quiet is a rule nobody can play around.
-        for (int slot = 0; slot < Players.MAX; slot++) {
+        for (int slot = 0; slot < standing.length; slot++) {
             Entity commander = Players.inSlot(commanders, slot);
             if (commander == null) {
                 continue;

@@ -75,26 +75,9 @@ class SimulationDeterminismTest {
         Simulation simulation = Scenarios.world(scenario, configSeeded(SEED));
 
         for (int step = 0; step < STEPS; step++) {
-            simulation.step(scriptedInput(step));
+            simulation.step(ScriptedPlay.input(step));
         }
         return snapshot(simulation);
-    }
-
-    /**
-     * A commander walking in a circle, firing most ticks and swinging every so often - enough to
-     * exercise every system, the seeded wind-up before a leap among them.
-     */
-    private static CommanderInput scriptedInput(int step) {
-        double angle = step * 0.05;
-        return new CommanderInput(
-                        (float) StrictMath.cos(angle),
-                        (float) StrictMath.sin(angle),
-                        80f,
-                        45f,
-                        step % 7 != 0,
-                        step % 11 == 0)
-                .acting(step % 13 == 0)
-                .dragging(step % 17 == 0);
     }
 
     /**

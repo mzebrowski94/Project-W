@@ -1,12 +1,15 @@
 package pl.mzebrows.pwt.client;
 
 import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.sim.Players;
 
 /**
- * Who is sitting where: the keyboard in slot zero and a gamepad in each of the others.
+ * Who is sitting where on this machine: the keyboard in seat zero and a gamepad in each of the others.
  *
- * <p><strong>Slot zero is the keyboard's and no pad ever takes it</strong> (1.a), so four players is
+ * <p>A <strong>seat</strong> is a device's place on one machine, and there are {@link #SEATS} of them.
+ * Offline a seat and a slot are the same number, which is why the methods here still speak of slots;
+ * online the host maps each machine's seats to slots in the game (G0038).
+ *
+ * <p><strong>Seat zero is the keyboard's and no pad ever takes it</strong> (1.a), so four players is
  * one keyboard and three pads in the alpha. A pad claims the lowest free slot the first time it is
  * seen, which makes plugging one in the whole of joining the game - there is no lobby, no press-start
  * screen and nothing to choose.
@@ -30,17 +33,23 @@ public final class PlayerSeats {
     /** Player one, always the keyboard and mouse in the alpha phase. */
     public static final int KEYBOARD_SLOT = 0;
 
+    /**
+     * How many players one machine seats: one keyboard and three pads (G0038). Fewer than a game
+     * holds, because the rest of a game's players are on other machines.
+     */
+    public static final int SEATS = 4;
+
     /** The pad id sitting in each slot, or null for a free seat. Slot zero is never a pad's. */
-    private final @Nullable String[] idBySlot = new String[Players.MAX];
+    private final @Nullable String[] idBySlot = new String[SEATS];
 
     /** The live pad for each slot, or null while that slot's pad is unplugged. */
-    private final @Nullable Gamepad[] padBySlot = new Gamepad[Players.MAX];
+    private final @Nullable Gamepad[] padBySlot = new Gamepad[SEATS];
 
     /** Slots that have taken a pad for the first time and not yet been reported to the caller. */
-    private final boolean[] unreported = new boolean[Players.MAX];
+    private final boolean[] unreported = new boolean[SEATS];
 
     /** Which seats were empty last frame, so a departure is logged once rather than sixty times a second. */
-    private final boolean[] wasMissing = new boolean[Players.MAX];
+    private final boolean[] wasMissing = new boolean[SEATS];
 
     /**
      * How many pads this refresh had nowhere to put, and how many the last one did.
@@ -61,7 +70,7 @@ public final class PlayerSeats {
 
     /** Brings the seating in line with what is plugged in, logging every change. */
     public void refresh(GamepadSource pads) {
-        for (int slot = 0; slot < Players.MAX; slot++) {
+        for (int slot = 0; slot < SEATS; slot++) {
             padBySlot[slot] = null;
         }
         turnedAway = 0;
@@ -91,7 +100,7 @@ public final class PlayerSeats {
      * spawning him twice would be worse than not spawning him at all.
      */
     public int nextNewlySeated() {
-        for (int slot = 0; slot < Players.MAX; slot++) {
+        for (int slot = 0; slot < SEATS; slot++) {
             if (unreported[slot]) {
                 unreported[slot] = false;
                 return slot;
@@ -116,7 +125,7 @@ public final class PlayerSeats {
         if (free < 0) {
             turnedAway++;
             if (turnedAway > wasTurnedAway) {
-                Log.info("gamepad ignored, all " + Players.MAX + " slots are taken: " + pad.name());
+                Log.info("gamepad ignored, all " + SEATS + " seats on this machine are taken: " + pad.name());
             }
             return;
         }
@@ -128,7 +137,7 @@ public final class PlayerSeats {
     }
 
     private void reportTheMissing() {
-        for (int slot = 0; slot < Players.MAX; slot++) {
+        for (int slot = 0; slot < SEATS; slot++) {
             boolean missing = idBySlot[slot] != null && padBySlot[slot] == null;
             if (missing && !wasMissing[slot]) {
                 Log.info("gamepad in slot " + slot + " disconnected; his commander stays on the field");
@@ -138,7 +147,7 @@ public final class PlayerSeats {
     }
 
     private int slotOf(String id) {
-        for (int slot = 0; slot < Players.MAX; slot++) {
+        for (int slot = 0; slot < SEATS; slot++) {
             if (id.equals(idBySlot[slot])) {
                 return slot;
             }
@@ -147,7 +156,7 @@ public final class PlayerSeats {
     }
 
     private int lowestFreeSlot() {
-        for (int slot = KEYBOARD_SLOT + 1; slot < Players.MAX; slot++) {
+        for (int slot = KEYBOARD_SLOT + 1; slot < SEATS; slot++) {
             if (idBySlot[slot] == null) {
                 return slot;
             }

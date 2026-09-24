@@ -10,8 +10,10 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.utils.ImmutableArray;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
@@ -60,6 +62,41 @@ class CoopTest {
     }
 
     @Test
+    void putsAPlayerOnTheFieldOnTheTickHisJoinArrives() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+
+        simulation.step(new PlayerInputs().join(2));
+
+        assertThat(Players.inSlot(commanders(simulation), 2)).isNotNull();
+    }
+
+    @Test
+    void leavesASlotThatAlreadyHasACommanderAloneWhenAJoinArrivesForIt() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        simulation.step(new PlayerInputs().join(1));
+
+        simulation.step(new PlayerInputs().join(1));
+
+        assertThat(commanders(simulation).size()).isEqualTo(2);
+    }
+
+    @Test
+    void keepsInvulnerabilityFromTheTickItIsSwitchedOnUntilItIsSwitchedOff() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+
+        simulation.step(new PlayerInputs().switchInvulnerability(true));
+        simulation.step();
+        boolean heldOn = commander.getComponent(Invulnerable.class).permanent;
+        simulation.step(new PlayerInputs().switchInvulnerability(false));
+
+        assertThat(heldOn).isTrue();
+        assertThat(commander.getComponent(Invulnerable.class).permanent).isFalse();
+    }
+
+    @Test
     void leavesASlotNobodyIsSittingInIdle() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE, 1);
@@ -93,8 +130,32 @@ class CoopTest {
         simulation.spawnCommander(MIDDLE + 2f, MIDDLE, 1);
         Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE + 2f);
 
-        simulation.step(inputs(ordering(Order.DEFENCE), ordering(Order.FOLLOW_ME)));
+        simulation.step(orders(Order.DEFENCE, Order.FOLLOW_ME));
 
+        assertThat(orderOf(trooper)).isEqualTo(Order.FOLLOW_ME);
+    }
+
+    /**
+     * A game larger than the ceiling, so a table anywhere sized by eight rather than by the capacity it
+     * was handed fails here rather than on the day the ceiling is raised (G0038).
+     */
+    @Test
+    void seatsAndHearsEveryPlayerOfAGameLargerThanTheCeiling() {
+        int capacity = Players.MAX + 4;
+        Simulation simulation = new Simulation(AlphaWorlds.config(), capacity);
+        simulation.spawnCommander(MIDDLE - 2f, MIDDLE, 3);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE + 2f);
+        PlayerInputs joining = new PlayerInputs(capacity);
+        for (int slot = 0; slot < capacity; slot++) {
+            joining.join(slot);
+        }
+        simulation.step(joining);
+        Entity last = Players.inSlot(commanders(simulation), capacity - 1);
+        at(last).set(MIDDLE + 2f, MIDDLE);
+
+        simulation.step(new PlayerInputs(capacity).order(3, Order.DEFENCE).order(capacity - 1, Order.FOLLOW_ME));
+
+        assertThat(commanders(simulation).size()).isEqualTo(capacity);
         assertThat(orderOf(trooper)).isEqualTo(Order.FOLLOW_ME);
     }
 
@@ -106,7 +167,7 @@ class CoopTest {
         simulation.spawnCommander(MIDDLE + 2f, MIDDLE, 1);
         Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE + 2f);
 
-        simulation.step(inputs(ordering(Order.FOLLOW_ME), ordering(Order.DEFENCE)));
+        simulation.step(orders(Order.FOLLOW_ME, Order.DEFENCE));
 
         assertThat(orderOf(trooper)).isEqualTo(Order.DEFENCE);
     }
@@ -192,8 +253,16 @@ class CoopTest {
         return new CommanderInput(0f, 0f, x, y, false, false).aimingRelatively();
     }
 
-    private static CommanderInput ordering(Order order) {
-        return CommanderInput.IDLE.ordering(order);
+    private static ImmutableArray<Entity> commanders(Simulation simulation) {
+        return simulation.engine().getEntitiesFor(Family.all(Commander.class).get());
+    }
+
+    private static PlayerInputs orders(Order... bySlot) {
+        PlayerInputs inputs = new PlayerInputs();
+        for (int slot = 0; slot < bySlot.length; slot++) {
+            inputs.order(slot, bySlot[slot]);
+        }
+        return inputs;
     }
 
     private static void steps(Simulation simulation, int count, PlayerInputs inputs) {

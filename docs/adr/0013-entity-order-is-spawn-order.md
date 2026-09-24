@@ -3,11 +3,11 @@
 **Trigger.** Iterating entities anywhere the order can change a result; upgrading or replacing Ashley;
 writing or restoring a snapshot; registering a family after the simulation has been built.
 
-**Enforced by.** Nothing mechanical yet - caught by reading. Stage 2 of the online plan brings the shim
-with its tests - entities killed out of order leave every family reading in spawn order; the Ashley
-internals the shim reaches for have not been renamed - and an `ArchitectureTest` rule that only the
-`Spawner`'s spawn methods and `markDead` call `Entity.add`. The snapshot round-trip test (ADR 0014)
-compares every family's order after a restore, not only the world. Promote this line when they exist.
+**Enforced by.** `SpawnOrderTest.keepsTheSurvivorsInSpawnOrderWhenOthersDieOutOfOrder`,
+`.keepsAFamilyAskedForAfterTheWorldWasBuiltInSpawnOrderToo`; `CompositionTest` - every registered
+scenario, 600 ticks, and no entity's components change after the tick it appears. `SpawnOrder` itself
+fails the construction of every `Simulation` if the Ashley internals it reaches for have moved. Still
+to come: the snapshot round-trip test (ADR 0014) comparing every family's order after a restore.
 
 **Constraint.** The engine's entity list and every family's list are kept in the order their entities
 were spawned, and a removal closes the gap rather than moving the last entity into it. Ashley 1.7.4

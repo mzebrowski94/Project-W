@@ -28,6 +28,7 @@ import pl.mzebrows.pwt.sim.def.HeatDef;
 import pl.mzebrows.pwt.sim.def.HopDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
@@ -1138,6 +1139,19 @@ public final class AlphaWorlds {
 
     public static Simulation simulation() {
         return new Simulation(config());
+    }
+
+    /** Player one giving an order on this tick and holding nothing. */
+    public static PlayerInputs ordering(Order order) {
+        return new PlayerInputs().order(0, order);
+    }
+
+    /**
+     * The harness's invulnerability, on from the next tick until switched off. Sets the level's flag
+     * directly rather than stepping, so a test's tick count is not moved by switching it.
+     */
+    public static void godMode(Simulation simulation) {
+        simulation.level().commandersInvulnerable = true;
     }
 
     /** A leap with a fixed wind-up, so a test can count ticks to the jump instead of guessing. */

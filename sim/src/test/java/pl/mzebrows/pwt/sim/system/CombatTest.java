@@ -8,6 +8,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.WEAPON_DAMAGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.clawingForwardOnly;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -66,7 +67,7 @@ class CombatTest {
     @Test
     void landsNoBlowOnWhatIsBehindIt() {
         Simulation simulation = clawingForwardOnly();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnCommander(FAR_RIGHT, LANE);
         simulation.spawnEnemy(ENEMY_X, LANE);
         simulation.spawnTrooper(THE_LURE, LANE);
@@ -80,7 +81,7 @@ class CombatTest {
     @Test
     void landsOneOnWhatItIsWalkingAt() {
         Simulation simulation = clawingForwardOnly();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnCommander(FAR_RIGHT, LANE);
         simulation.spawnEnemy(ENEMY_X, LANE);
         Entity ahead = simulation.spawnTrooper(IN_FRONT_OF_THE_ENEMY, LANE);

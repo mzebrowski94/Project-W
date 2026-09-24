@@ -3,11 +3,12 @@
 **Trigger.** Adding a field to a component or a component to the game; giving a system a field; anything
 that writes or restores a snapshot; a desync that appears only after somebody dropped in.
 
-**Enforced by.** Nothing mechanical yet - caught by reading. The online plan brings, in stage 2, an
-`ArchitectureTest` rule on the types a component field may have and one forbidding a system a field that
-is not `final`; in stage 4, the snapshot round-trip test over every registered scenario - snapshot at a
-tick, restore into a fresh world, step both, compare the whole world and every family's order. Promote
-this line when they exist.
+**Enforced by.** `ArchitectureTest.componentFieldsAreWhatASnapshotCanWrite`,
+`.systemsHoldNoStateAcrossTicks` (a field that is neither final nor a family view says `@NotState`),
+`.onlyTheStreamTableStartsARandomStream`; `ComponentResetTest` - every component, after `reset()`,
+equal to a new one, private fields included. Still to come: the snapshot round-trip test over every
+registered scenario - snapshot at a tick, restore into a fresh world, step both, compare the whole world
+and every family's order - which is what proves a `@NotState` cache pure.
 
 **Constraint.**
 
@@ -15,8 +16,9 @@ this line when they exist.
   starts, reflection builds a plan per component class: its fields, in a fixed order, each with a writer.
   A snapshot walks the entities in spawn order (ADR 0013) and runs the plans. Nothing reflects during a
   tick, and a new component or a new field needs no codec code at all.
-- **A component field is a primitive, an enum, an `Entity`, or a collection the codec names.** An `Entity`
-  is written as its position in spawn order. The collections are the ones the codec knows how to write -
+- **A component field is a primitive, an enum, an `Entity`, an immutable record of those, or a
+  collection the codec names.** An `Entity` is written as its position in spawn order; a record - a
+  definition such as `Weapon.slicks` - is written as its values. The collections are the ones the codec knows how to write -
   today one, `Waves.pending` - and adding another is a line in the codec and a reason in the review.
   Anything else fails the build, not a session. Private fields count: a snapshot is the whole component.
 - **A system holds no state across ticks.** What must survive a tick lives on a component - on the level
@@ -30,7 +32,8 @@ this line when they exist.
 **Why.** Drop-in (G0038), desync recovery and desync dumps (ADR 0012) all need the whole world written
 down. The components were already shaped for it - public mutable fields and a `reset()`, no behaviour -
 and at the time of writing their public fields are 256 floats, 65 booleans, 17 ints, 4 longs, enums, two
-`Entity` references and nothing else. Writing that by hand would be a read and a write per component, kept
+`Entity` references, one definition record and nothing else, and the only collection anywhere is
+`Waves.pending`. Writing that by hand would be a read and a write per component, kept
 in step with every field forever: the tax a new mechanic would pay online, and a source of desyncs that
 only a drop-in reveals.
 

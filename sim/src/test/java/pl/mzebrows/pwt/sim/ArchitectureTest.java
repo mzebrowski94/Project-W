@@ -1,11 +1,24 @@
 package pl.mzebrows.pwt.sim;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.badlogic.ashley.core.Component;
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.EntitySystem;
+import com.badlogic.ashley.utils.ImmutableArray;
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaField;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
+import java.util.Set;
 
 /**
  * Guards the one boundary the whole architecture rests on: the simulation stays headless and
@@ -89,7 +102,9 @@ final class ArchitectureTest {
             .that()
             .resideInAPackage("pl.mzebrows.pwt.sim.scenario..")
             .should()
-            .callMethod(pl.mzebrows.pwt.sim.Simulation.class, "setCommanderInvulnerable", boolean.class)
+            .callMethod(PlayerInputs.class, "switchInvulnerability", boolean.class)
+            .orShould()
+            .accessField(pl.mzebrows.pwt.sim.component.Level.class, "commandersInvulnerable")
             .because("god mode is a harness switch for testing by hand; pillar 2 says the commander can be"
                     + " killed, and content that turns that off would quietly repeal it");
 
@@ -148,4 +163,66 @@ final class ArchitectureTest {
             .orShould()
             .callMethod(System.class, "nanoTime")
             .because("the simulation advances by fixed steps only, never by real time");
+
+    @ArchTest
+    static final ArchRule onlyTheStreamTableStartsARandomStream = noClasses()
+            .that()
+            .doNotHaveSimpleName("Streams")
+            .and()
+            .doNotHaveSimpleName("Rng")
+            .and()
+            .doNotHaveSimpleName("Scenarios")
+            .should()
+            .callMethod(Rng.class, "stream", long.class, RngStream.class)
+            .orShould()
+            .callConstructor(Rng.class, long.class)
+            .because("every stream a level draws from lives in one table a snapshot can write (ADR 0014);"
+                    + " a stream started anywhere else is state no snapshot sees. Scenarios lays the map out"
+                    + " before the world exists, and the map is rebuilt from the seed rather than carried");
+
+    @ArchTest
+    static final ArchRule systemsHoldNoStateAcrossTicks = fields().that()
+            .areDeclaredInClassesThat()
+            .areAssignableTo(EntitySystem.class)
+            .and()
+            .doNotHaveModifier(JavaModifier.STATIC)
+            .and()
+            .doNotHaveModifier(JavaModifier.FINAL)
+            .and()
+            .doNotHaveRawType(ImmutableArray.class)
+            .should()
+            .beAnnotatedWith(NotState.class)
+            .because("what must survive a tick lives on a component, where a snapshot carries it (ADR 0014);"
+                    + " a system may keep scratch it overwrites before reading, or a pure cache, and says"
+                    + " which with @NotState");
+
+    /** The collections the snapshot codec knows how to write, by the field that holds each. */
+    private static final Set<String> NAMED_COLLECTIONS = Set.of("Waves.pending");
+
+    @ArchTest
+    static final ArchRule componentFieldsAreWhatASnapshotCanWrite = fields().that()
+            .areDeclaredInClassesThat()
+            .areAssignableTo(Component.class)
+            .and()
+            .doNotHaveModifier(JavaModifier.STATIC)
+            .should(haveATypeTheSnapshotCanWrite())
+            .because("a snapshot is written from the components' own fields (ADR 0014): a primitive, an enum,"
+                    + " an Entity, an immutable record, or a collection the codec names");
+
+    private static ArchCondition<JavaField> haveATypeTheSnapshotCanWrite() {
+        DescribedPredicate<JavaClass> writable = DescribedPredicate.describe(
+                "writable",
+                type -> type.isPrimitive() || type.isEnum() || type.isRecord() || type.isEquivalentTo(Entity.class));
+        return new ArchCondition<>("have a type the snapshot can write") {
+            @Override
+            public void check(JavaField field, ConditionEvents events) {
+                String name = field.getOwner().getSimpleName() + "." + field.getName();
+                boolean ok = writable.test(field.getRawType()) || NAMED_COLLECTIONS.contains(name);
+                if (!ok) {
+                    events.add(SimpleConditionEvent.violated(
+                            field, name + " is a " + field.getRawType().getName() + ", which no snapshot writes"));
+                }
+            }
+        };
+    }
 }

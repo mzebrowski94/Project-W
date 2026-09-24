@@ -10,6 +10,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SPEED;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.on;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -19,7 +20,6 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
-import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -133,7 +133,7 @@ class TrooperAdvanceTest {
         steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
 
         float before = at(trooper).x;
-        simulation.step(CommanderInput.IDLE.ordering(Order.FORWARD));
+        simulation.step(ordering(Order.FORWARD));
         steps(simulation, 90);
 
         assertThat(at(trooper).x).isGreaterThan(before + 5f);
@@ -149,7 +149,7 @@ class TrooperAdvanceTest {
         simulation.spawnControlPoint(80f, 20f);
         Entity trooper = simulation.spawnTrooper(20f, 20f);
         steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
-        simulation.step(CommanderInput.IDLE.ordering(Order.FORWARD));
+        simulation.step(ordering(Order.FORWARD));
         steps(simulation, 400);
 
         float settled = at(trooper).x;

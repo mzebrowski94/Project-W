@@ -7,6 +7,7 @@ import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.ashley.utils.ImmutableArray;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
@@ -81,10 +82,13 @@ public final class CommanderControlSystem extends IteratingSystem {
     private final float[] muzzle = new float[2];
 
     /** The middle of the commanders, worked out once a tick before any of them is driven. */
+    @NotState("scratch: recomputed at the start of every update")
     private float centreX;
 
+    @NotState("scratch: recomputed at the start of every update")
     private float centreY;
 
+    @NotState("scratch: recomputed at the start of every update")
     private int watched;
 
     public CommanderControlSystem(SimConfig config, TileMap map, Spawner spawner, Rng scatter) {

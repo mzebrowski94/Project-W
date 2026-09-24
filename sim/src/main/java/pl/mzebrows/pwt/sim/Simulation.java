@@ -100,20 +100,18 @@ public final class Simulation {
 
     private final SimConfig config;
     private final TileMap map;
-    private final Rng rng;
+    private final Streams streams;
     private final PooledEngine engine;
     private final Spawner spawner;
     private final ImmutableArray<Entity> commanders;
     private final ImmutableArray<Entity> levels;
+    private final SpawnOrder spawnOrder;
 
     /**
      * Reused by {@link #step(CommanderInput)}, so driving one player costs no allocation per tick.
      * Never handed out; the multi-player path takes the caller's own holder instead.
      */
-    private final PlayerInputs solo = new PlayerInputs();
-
-    private long tick;
-    private boolean commanderInvulnerable;
+    private final PlayerInputs solo;
 
     /**
      * A world on plain open ground the size the config asks for. What tests and any caller that does
@@ -124,13 +122,28 @@ public final class Simulation {
     }
 
     /**
+     * Open ground for a game of this many slots. The capacity is what every per-player table in here is
+     * sized from; the tests build one larger than {@link Players#MAX} to prove nothing is sized by a
+     * literal (G0038).
+     */
+    public Simulation(SimConfig config, int capacity) {
+        this(config, plainGround(config), capacity);
+    }
+
+    /**
      * A world laid out on a given map. The map's extent is the arena, so nothing in here needs to be
      * told separately how big the level is.
      */
     public Simulation(SimConfig config, TileMap map) {
+        this(config, map, Players.MAX);
+    }
+
+    /** A world on a given map, for a game of this many slots. */
+    public Simulation(SimConfig config, TileMap map, int capacity) {
+        this.solo = new PlayerInputs(capacity);
         this.config = config;
         this.map = map;
-        this.rng = new Rng(config.seed());
+        this.streams = new Streams(config.seed());
         this.engine = new PooledEngine();
         this.spawner = new Spawner(engine, config, map);
         this.commanders = engine.getEntitiesFor(
@@ -140,7 +153,7 @@ public final class Simulation {
         // A gun's own pattern, shared by every shooter that holds one: how loosely a WEAPON throws is
         // one concern, and a different one from how badly a creature aims (RngStream.SPIT) or how
         // often a man does something he only sometimes does (NERVE).
-        Rng scatter = Rng.stream(config.seed(), RngStream.SCATTER);
+        Rng scatter = streams.of(RngStream.SCATTER);
 
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
@@ -159,24 +172,24 @@ public final class Simulation {
         // One stream for the squad, shared by the two systems that drive it: roaming and
         // sweeping are the same concern, and separating them would only mean two salts to
         // keep apart for no benefit.
-        Rng squad = Rng.stream(config.seed(), RngStream.TROOPER);
+        Rng squad = streams.of(RngStream.TROOPER);
         // Everything the AI leaves to the dice draws from one stream of its own, so re-tuning how
         // often a trooper swings never reshuffles where the squad roams (see AiChance).
-        Rng nerve = Rng.stream(config.seed(), RngStream.NERVE);
-        engine.addSystem(new SquadOrderSystem(config));
+        Rng nerve = streams.of(RngStream.NERVE);
+        engine.addSystem(new SquadOrderSystem(config, capacity));
         engine.addSystem(new TrooperMindSystem(config, map, squad, nerve));
         engine.addSystem(new TrooperMoveSystem(config, map, squad));
         engine.addSystem(new TrooperCombatSystem(config, spawner, nerve, scatter));
-        engine.addSystem(new WanderSystem(Rng.stream(config.seed(), RngStream.WANDER), map));
+        engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map));
         engine.addSystem(new AvoidanceSystem());
-        engine.addSystem(new EnemyRangedSystem(map, spawner, Rng.stream(config.seed(), RngStream.SPIT), scatter));
+        engine.addSystem(new EnemyRangedSystem(map, spawner, streams.of(RngStream.SPIT), scatter));
         // After everything that chooses a course, including planting a shooter, because a gait
         // paces a course rather than choosing one - and before the dodge, which overwrites it: a
         // sidestep from a shot you saw coming must not land in the middle of a sit.
         engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
         engine.addSystem(new DriveSystem(map, config.ground()));
-        engine.addSystem(new EnemyLeapSystem(Rng.stream(config.seed(), RngStream.LEAP)));
+        engine.addSystem(new EnemyLeapSystem(streams.of(RngStream.LEAP)));
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));
@@ -215,27 +228,27 @@ public final class Simulation {
         // by dying (G0018), so this belongs in the window between a thing being marked dead and
         // being reaped. Unlike a blast it owes no damage of its own - what it leaves is ordinary
         // bodies carrying ordinary blows, so the collision system decides who they catch.
-        engine.addSystem(new SlickSystem(map, spawner, Rng.stream(config.seed(), RngStream.SLICK)));
+        engine.addSystem(new SlickSystem(map, spawner, streams.of(RngStream.SLICK)));
         // With the other systems that are about the level rather than about anything standing in it,
         // and after the solver has settled every position: a man who arrives forms up on where the
         // commander actually ended up. After the death chain too, so a trooper who arrives this tick
         // is not counted among the dead this tick's reaper is about to take.
-        engine.addSystem(
-                new ReinforcementSystem(config, map, spawner, Rng.stream(config.seed(), RngStream.REINFORCEMENT)));
+        engine.addSystem(new ReinforcementSystem(config, map, spawner, streams.of(RngStream.REINFORCEMENT)));
         // Before the objectives, and at the end of the tick with the other systems that are about the
         // level rather than about anything standing in it: a level whose last wave lands this tick
         // must not read as complete for the tick before the aliens appear.
-        engine.addSystem(new WaveSystem(config, map, spawner, Rng.stream(config.seed(), RngStream.WAVE)));
+        engine.addSystem(new WaveSystem(config, map, spawner, streams.of(RngStream.WAVE)));
         // With the other systems that are about the level rather than about anything standing in it,
         // and after the death chain above: a nest destroyed this tick empties the last of itself
         // while its body is still on the field, in the same window respawning and blasts run in, and
         // before the reaper takes it. Before ObjectiveSystem for the reason WaveSystem is - a level
         // whose last nest dies this tick must not read as clear for the tick before its brood lands.
-        engine.addSystem(new NestSystem(config, map, spawner, Rng.stream(config.seed(), RngStream.NEST)));
+        engine.addSystem(new NestSystem(config, map, spawner, streams.of(RngStream.NEST)));
         engine.addSystem(new ControlPointSystem(spawner));
         engine.addSystem(new ObjectiveSystem());
         engine.addSystem(new AppearanceSystem(config));
         engine.addSystem(new ReaperSystem());
+        spawnOrder = new SpawnOrder(engine);
 
         spawner.spawnLevel();
     }
@@ -269,6 +282,17 @@ public final class Simulation {
      * no second kind of aim anywhere below this line.
      */
     public void step(PlayerInputs inputs) {
+        spawnOrder.keep();
+        // Joins first, so a player who takes his slot on this tick is driven by this tick's input.
+        for (int slot = 0; slot < inputs.capacity(); slot++) {
+            if (inputs.joins(slot) && Players.inSlot(commanders, slot) == null) {
+                joinCommander(slot);
+            }
+        }
+        Level level = level();
+        if (inputs.switchesInvulnerability()) {
+            level.commandersInvulnerable = inputs.invulnerable();
+        }
         for (int i = 0; i < commanders.size(); i++) {
             Entity commander = commanders.get(i);
             CommanderInput input = inputs.get(COMMANDER.get(commander).slot);
@@ -286,13 +310,13 @@ public final class Simulation {
                             input.throwing(),
                             input.acting(),
                             input.dragging(),
-                            input.order());
+                            inputs.orderOf(COMMANDER.get(commander).slot));
             if (INVULNERABLE.has(commander)) {
-                INVULNERABLE.get(commander).permanent = commanderInvulnerable;
+                INVULNERABLE.get(commander).permanent = level.commandersInvulnerable;
             }
         }
         engine.update(config.tickSeconds());
-        tick++;
+        level.tick++;
     }
 
     /** Spawns the first player's commander, which is the only one a single-player level has. */
@@ -312,7 +336,8 @@ public final class Simulation {
     }
 
     /**
-     * Puts a player who has just picked up a pad onto the field, wherever the fight currently is.
+     * Puts a player who has just taken a slot onto the field, wherever the fight currently is. Called
+     * from {@link #step(PlayerInputs)} on the tick his join event arrives, and from nowhere else.
      *
      * <p><strong>Joining is plugging a pad in</strong>, at any point in a level, and this is the one
      * place that answers where the newcomer appears - so it holds for every scenario there is rather
@@ -326,7 +351,7 @@ public final class Simulation {
      * whose first player has not been spawned yet - he goes to the middle of the level's spawn area,
      * which is where the level meant its players to start.
      */
-    public Entity joinCommander(int slot) {
+    private Entity joinCommander(int slot) {
         Entity standing = Players.standing(commanders);
         if (standing != null) {
             Position at = POSITION.get(standing);
@@ -463,21 +488,9 @@ public final class Simulation {
         return spawner.spawnProjectile(x, y, directionX, directionY, config.weapon(gun), side);
     }
 
-    /**
-     * Turns the harness god-mode toggle on or off. Re-applied every tick, so it survives the commander
-     * dying and coming back.
-     *
-     * <p><strong>Harness only.</strong> Pillar 2 says the commander can be killed; this exists to be
-     * switched on by hand while testing a system, never by a scenario or a config file.
-     * {@code ArchitectureTest} fails the build if a scenario calls it.
-     */
-    public void setCommanderInvulnerable(boolean invulnerable) {
-        this.commanderInvulnerable = invulnerable;
-    }
-
     /** Whether god mode is currently on, for the harness overlay. */
     public boolean commanderInvulnerable() {
-        return commanderInvulnerable;
+        return level().commandersInvulnerable;
     }
 
     /**
@@ -495,11 +508,20 @@ public final class Simulation {
 
     /** Number of fixed steps executed so far. */
     public long tick() {
-        return tick;
+        return level().tick;
     }
 
     public Rng rng() {
-        return rng;
+        return streams.root();
+    }
+
+    /**
+     * The one stream for a concern, for a scenario placing something that concern owns while it
+     * populates the world - where a level's crates go is drawn from the same stream as where its
+     * reinforcements land, because both are where a reinforcement lands.
+     */
+    public Rng stream(RngStream concern) {
+        return streams.of(concern);
     }
 
     public SimConfig config() {

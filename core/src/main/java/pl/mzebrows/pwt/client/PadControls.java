@@ -43,6 +43,7 @@ public final class PadControls {
     private boolean pauseWasDown;
     private boolean zoomToggled;
     private boolean pauseRequested;
+    private @Nullable Order ordered;
 
     private final boolean[] orderWasDown = new boolean[4];
 
@@ -69,6 +70,7 @@ public final class PadControls {
         zoomWasDown = held(pad, bindings.zoom());
         pauseRequested = wentDown(pad, bindings.pause(), pauseWasDown);
         pauseWasDown = held(pad, bindings.pause());
+        ordered = order(pad);
 
         return new CommanderInput(
                 rawMoveX * moveScale,
@@ -80,8 +82,15 @@ public final class PadControls {
                 throwing,
                 acting,
                 dragging,
-                order(pad),
                 true);
+    }
+
+    /**
+     * The order this pad gave on the last {@link #read}, or null. An input event rather than held
+     * state, so it travels beside the held input rather than inside it (ADR 0012).
+     */
+    public @Nullable Order ordered() {
+        return ordered;
     }
 
     /** True on the frame this pad asked to swap between the normal and pulled-back view. */

@@ -27,7 +27,7 @@ public final class InputReader {
     private final PlayerSeats seats = new PlayerSeats();
 
     /** One per slot, kept across frames: a pad remembers where it was pointing and what it last held. */
-    private final @Nullable PadControls[] padControls = new PadControls[Players.MAX];
+    private final @Nullable PadControls[] padControls = new PadControls[PlayerSeats.SEATS];
 
     /** Reused, so reading a frame of input allocates nothing but the records it fills in. */
     private final PlayerInputs inputs = new PlayerInputs();
@@ -53,17 +53,17 @@ public final class InputReader {
         pointer.set(Gdx.input.getX(), Gdx.input.getY(), 0f);
         viewport.unproject(pointer);
         inputs.set(
-                PlayerSeats.KEYBOARD_SLOT,
-                KeyControls.read(
-                        controls.keyboard(),
-                        held,
-                        pressed,
-                        Gdx.input.isButtonPressed(controls.keyboard().fireButton()),
-                        Gdx.input.isButtonPressed(controls.keyboard().strikeButton()),
-                        pointer.x,
-                        pointer.y));
+                        PlayerSeats.KEYBOARD_SLOT,
+                        KeyControls.read(
+                                controls.keyboard(),
+                                held,
+                                Gdx.input.isButtonPressed(controls.keyboard().fireButton()),
+                                Gdx.input.isButtonPressed(controls.keyboard().strikeButton()),
+                                pointer.x,
+                                pointer.y))
+                .order(PlayerSeats.KEYBOARD_SLOT, OrderKeys.poll(pressed, controls.keyboard()));
 
-        for (int slot = PlayerSeats.KEYBOARD_SLOT + 1; slot < Players.MAX; slot++) {
+        for (int slot = PlayerSeats.KEYBOARD_SLOT + 1; slot < PlayerSeats.SEATS; slot++) {
             Gamepad pad = seats.padIn(slot);
             if (pad == null) {
                 continue;
@@ -75,7 +75,7 @@ public final class InputReader {
                 Log.info("player " + (slot + 1) + ": "
                         + PadLabels.briefing(controls.pad(), PadLabels.isPlayStation(pad.name())));
             }
-            inputs.set(slot, pads.read(pad));
+            inputs.set(slot, pads.read(pad)).order(slot, pads.ordered());
             zoomToggled |= pads.zoomToggled();
             pauseRequested |= pads.pauseRequested();
         }

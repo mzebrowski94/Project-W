@@ -13,6 +13,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.SPIT_SPREAD_DEGREES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.WANDER_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.chargedByBarrels;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.holdingAPreferredDistance;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.huntingBarrels;
@@ -95,7 +96,7 @@ class SpitterTest {
     @Test
     void holdsItsGroundOnceWhatItIsHuntingIsInRange() {
         Simulation simulation = shooting();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE + INSIDE, MIDDLE);
 
@@ -112,7 +113,7 @@ class SpitterTest {
     @Test
     void closesTheDistanceWhileItIsStillTooFarAwayToShoot() {
         Simulation simulation = shooting();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE + SPIT_RANGE * 3f, MIDDLE);
 
@@ -124,7 +125,7 @@ class SpitterTest {
     @Test
     void firesOnceWhatItIsHuntingComesInsideItsRange() {
         Simulation simulation = shootingStraight();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE + INSIDE, MIDDLE);
 
@@ -136,7 +137,7 @@ class SpitterTest {
     @Test
     void firesNothingAtSomethingOutOfRange() {
         Simulation simulation = shootingStraight();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE + SPIT_RANGE * 3f, MIDDLE);
 
@@ -153,7 +154,7 @@ class SpitterTest {
     void willNotFireThroughRock() {
         Simulation simulation =
                 shootingStraight(ground().rect(11, 0, 1, 20, Terrain.ROCK).build());
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnUnit(UnitKind.SPITTER, 52f, MIDDLE);
         simulation.spawnCommander(52f + INSIDE, MIDDLE);
 
@@ -165,7 +166,7 @@ class SpitterTest {
     @Test
     void sendsAShotStraightWhenItHasNoSpreadToDrawFrom() {
         Simulation simulation = shootingStraight();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE + INSIDE, MIDDLE);
 
@@ -178,7 +179,7 @@ class SpitterTest {
     @Test
     void throwsItsShotsAroundTheAimRatherThanAlongIt() {
         Simulation simulation = shooting();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE + INSIDE, MIDDLE);
 
@@ -194,7 +195,7 @@ class SpitterTest {
     @Test
     void keepsEveryShotInsideTheConeItDeclares() {
         Simulation simulation = shooting();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE + INSIDE, MIDDLE);
 
@@ -212,7 +213,7 @@ class SpitterTest {
     @Test
     void sendsEveryShotOutAtTheSameSpeedHoweverFarOffTrueItIs() {
         Simulation simulation = shooting();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE + INSIDE, MIDDLE);
 
@@ -232,7 +233,7 @@ class SpitterTest {
     @Test
     void movesUpToItsFiringRangeAndNoFurther() {
         Simulation simulation = watchingItsArc();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         Entity commander = simulation.spawnCommander(MIDDLE + SPIT_RANGE * 3f, MIDDLE);
 
@@ -249,7 +250,7 @@ class SpitterTest {
     @Test
     void neverFollowsOnceItIsInPosition() {
         Simulation simulation = watchingItsArc();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         Entity commander = simulation.spawnCommander(MIDDLE + INSIDE, MIDDLE);
         steps(simulation, LONG_ENOUGH_TO_TAKE_A_POSITION);
@@ -268,7 +269,7 @@ class SpitterTest {
     @Test
     void walksToTheDistanceItShootsBestFrom() {
         Simulation simulation = holdingAPreferredDistance();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         Entity commander = simulation.spawnCommander(MIDDLE + SPIT_RANGE * 3f, MIDDLE);
 
@@ -281,7 +282,7 @@ class SpitterTest {
     @Test
     void takesAPositionAgainOnceItHasLostHimAltogether() {
         Simulation simulation = huntingBarrels();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         Entity commander = simulation.spawnCommander(MIDDLE + INSIDE, MIDDLE);
         steps(simulation, LONG_ENOUGH_TO_TAKE_A_POSITION);
@@ -302,7 +303,7 @@ class SpitterTest {
     @Test
     void willNotFireAtSomethingOutsideItsFieldOfView() {
         Simulation simulation = watchingItsArc();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE - BEHIND_IT, MIDDLE + BEHIND_IT);
 
@@ -312,7 +313,7 @@ class SpitterTest {
     @Test
     void swingsOntoItAndThenFires() {
         Simulation simulation = watchingItsArc();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE - BEHIND_IT, MIDDLE + BEHIND_IT);
 
@@ -327,7 +328,7 @@ class SpitterTest {
     @Test
     void swallowsABarrelAndFiresShotsThatGoOff() {
         Simulation simulation = chargedByBarrels();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnBarrel(MIDDLE + TOUCHING, MIDDLE);
         simulation.spawnCommander(MIDDLE - INSIDE, MIDDLE);
@@ -368,7 +369,7 @@ class SpitterTest {
     @Test
     void goesOnAmblingAboutWhileItShoots() {
         Simulation simulation = shufflingShooters();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE + INSIDE, MIDDLE);
 
@@ -381,7 +382,7 @@ class SpitterTest {
     @Test
     void neverAmblesFurtherThanItsOwnPatch() {
         Simulation simulation = shufflingShooters();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnCommander(MIDDLE + INSIDE, MIDDLE);
 
@@ -431,7 +432,7 @@ class SpitterTest {
     @Test
     void showsThatItIsCarryingABarrel() {
         Simulation simulation = chargedByBarrels();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE, MIDDLE);
         simulation.spawnBarrel(MIDDLE + TOUCHING, MIDDLE);
         simulation.spawnCommander(MIDDLE - INSIDE, MIDDLE);
@@ -450,7 +451,7 @@ class SpitterTest {
     @Test
     void comesToAPointBeingTakenOffIt() {
         Simulation simulation = huntingBarrels();
-        simulation.setCommanderInvulnerable(true);
+        godMode(simulation);
         simulation.spawnControlPoint(MIDDLE, MIDDLE);
         Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE + ROUSED_NOT_SEEN, MIDDLE);
         simulation.spawnCommander(MIDDLE, MIDDLE);

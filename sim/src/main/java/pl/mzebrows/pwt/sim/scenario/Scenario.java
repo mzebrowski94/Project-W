@@ -133,8 +133,10 @@ public interface Scenario {
         int fewest = config.controlPoint().reinforcementsMin();
         int spread = config.controlPoint().reinforcementsMax() - fewest + 1;
         // Its own stream: where a level lays its crates must not shift because something unrelated
-        // drew a number first, and the layout is settled once, here.
-        Rng rng = Rng.stream(config.seed(), RngStream.REINFORCEMENT);
+        // drew a number first, and the layout is settled once, here. The stream itself is the
+        // simulation's - the same instance the reinforcements will draw from afterwards, so the two
+        // halves of one concern are one sequence rather than two copies of it.
+        Rng rng = simulation.stream(RngStream.REINFORCEMENT);
         Scatter scatter = new Scatter(map, rng, crateRadius, crateRadius);
         // Every point is reserved before anything is placed, so a crate laid beside one point is not
         // laid on top of the next one along.

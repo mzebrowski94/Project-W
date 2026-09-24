@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Array;
 import java.util.Arrays;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Approach;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -115,8 +116,10 @@ public final class NavigationSystem extends EntitySystem {
     private ImmutableArray<Entity> targets = new ImmutableArray<>(new Array<>());
 
     /** Their tiles, reused between ticks so collecting them costs no allocation per tick. */
+    @NotState("scratch: refilled from the targets every update; only its capacity survives a tick")
     private int[] goalCols = new int[8];
 
+    @NotState("scratch: refilled from the targets every update; only its capacity survives a tick")
     private int[] goalRows = new int[8];
 
     public NavigationSystem(SimConfig config, TileMap map) {

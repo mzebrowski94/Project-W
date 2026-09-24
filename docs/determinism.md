@@ -22,7 +22,8 @@ Three that a table cannot express:
 ## One RNG stream per concern
 
 `Rng.stream` derives a generator per concern from the level seed; `RngStream` names them. Terrain,
-scatter and gameplay each get their own.
+scatter and gameplay each get their own. Every stream the simulation draws from lives in one table,
+`Streams`, one instance per concern, so a snapshot can write them all (ADR 0014).
 
 Sharing one sequence keeps every run reproducible and makes the game miserable to tune: re-tuning how
 often anything draws a number reshuffles every number every other system gets afterwards. A level stays

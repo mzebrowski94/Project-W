@@ -5,6 +5,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_BLEED_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_STABILISE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -12,7 +13,6 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.willing;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Damage;
@@ -122,7 +122,7 @@ class AidTest {
         Entity down = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
         Entity helper = simulation.spawnTrooper(MIDDLE + BESIDE * 2f, MIDDLE);
 
-        simulation.step(CommanderInput.IDLE.ordering(Order.DEFENCE));
+        simulation.step(ordering(Order.DEFENCE));
         wound(down, TROOPER_HEALTH);
         steps(simulation, LONG_ENOUGH_TO_WORK);
 

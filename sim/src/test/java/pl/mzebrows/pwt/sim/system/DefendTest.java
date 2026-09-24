@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_PATCH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmless;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -14,7 +15,6 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileRect;
-import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Enemy;
@@ -215,7 +215,7 @@ class DefendTest {
         simulation.spawnPost(POST_X, LANE);
         Entity trooper = simulation.spawnTrooper(POST_X + 6f, LANE);
 
-        simulation.step(CommanderInput.IDLE.ordering(Order.FORWARD));
+        simulation.step(ordering(Order.FORWARD));
         steps(simulation, 2);
 
         Trooper mind = trooper.getComponent(Trooper.class);
