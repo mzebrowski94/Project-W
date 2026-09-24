@@ -15,15 +15,15 @@ A term that could sit in two sections goes where a reader would look for it, not
 | Term | Meaning |
 |---|---|
 | **brute** | A heavy enemy: slower, tougher, and able to survive a hand strike. Carries everything an ordinary enemy carries, so only spawning and drawing tell them apart. |
-| **commander** *(source)* | The unit a player directly controls. There may be up to four, one per **slot**. |
-| **seat** | To put a **slot**'s device behind a commander. A pad is seated the first time it is seen and keeps its seat while it is unplugged, because a pulled cable is almost always followed by the pad coming back (G0028). |
+| **commander** *(source)* | The unit a player directly controls. There may be up to `Players.MAX`, one per **slot**. |
+| **seat** | A device's place on one machine, and putting it there. The keyboard's is zero; a pad is seated in the lowest free one the first time it is seen and keeps it while it is unplugged, because a pulled cable is almost always followed by the pad coming back (G0028). A machine has at most four. Not a **slot**: offline the two are the same number, and online the **host** maps each **peer**'s seats to slots (G0038). |
 | **faction** | Which side an entity is on. Damage only ever crosses sides. Scenery is on nobody's. |
 | **frog** | The hopping strain: green, middle-ranged, and a different problem from a spitter. What it throws does nothing on its own - the **slick** it leaves is the weapon - so what it makes you read is the ground rather than the creature. It gets about by **hopping**, and it gives up on you far sooner than anything else on the field, which makes backing off a real answer to one. |
 | **grunt** | The basic enemy strain. *Enemy* stays the umbrella word for everything on the alien side; *grunt* is the specific creature. |
 | **obstacle** | A static entity that blocks movement and projectiles. An entity like any other, not terrain data. |
 | **runner** | The fast strain: smaller, thinner, and it notices the commander from most of the way across a level. What makes it a different problem from a grunt is its line rather than its speed - it **weaves** as it closes and **dodges** shots it sees coming, so it is a target you have to lead rather than one you have to out-run. It dashes the last of the distance as a grunt does. |
 | **spitter** | The shooting strain: purple, fragile, and it holds its ground at a distance instead of closing. A different problem from the two above - one you have to go and solve rather than one that comes to you. |
-| **slot** | A player's seat at the game, as a number from zero to three. The whole of what ties a device to a commander: slot zero is the keyboard's and every other is a gamepad's, one input per slot arrives each tick, and a commander killed and brought back is the same player because the slot comes back with him. It is also the tie-break when two commanders order one trooper at once - the higher slot is heard last (G0028). |
+| **slot** | A player in the simulation, as a number below `Players.MAX`. The whole of what ties a player to a commander: offline it is the same number as the **seat** of the device driving it, online the **host** hands it out (G0038); one input per slot arrives each tick, and a commander killed and brought back is the same player because the slot comes back with him. It is also the tie-break when two commanders order one trooper at once - the higher slot is heard last (G0028). |
 | **squad** *(source)* | The group of troopers following the commanders. One squad, shared: an order from any commander overwrites an order from another, and a trooper follows the man who told it to. |
 | **strain** | The form a unit currently has. Grunt, brute and whatever they grow into are strains of one thing, not different classes of entity: a strain is an enum on a component and a table of numbers, and changing it is a field write. |
 | **trooper** | One AI-controlled member of a squad. |
@@ -180,6 +180,20 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **scenario** | One arena the alpha-phase menu can launch, built to make a system visible. Content, never design. |
 | **the level entity** | One entity, spawned with the world and never removed, carrying state that belongs to the level rather than to anything standing in it (G0007). |
 
+### Online play
+
+| Term | Meaning |
+|---|---|
+| **drop-in** | Joining a game already under way, at any point in any level, by plugging a pad in or by another machine connecting. There is no lobby and nobody waits for anybody (G0028, G0038). |
+| **host** | The **peer** that started the **session**. Its machine runs the **sequencer** and its config is the one every peer plays on (ADR 0012). The session ends when it leaves - for now: the sequencer holds no world, so it can move. |
+| **input delay** | How many ticks pass between a player pressing something and the tick that uses it. Expected to be about one on the host and four or five on a peer in the same region - the price of lockstep, and the number pillar 1 judges it by. |
+| **input event** | A one-off input - an order given, and every one-off press to come. Numbered and sent again until the **sequencer** has it, then applied once; never repeated for a late peer and never lost to one. Everything else a player does is held input, which a late peer's slot repeats from its previous tick (ADR 0012). |
+| **peer** | One machine in a **session**, with up to four **seats** on it. Every peer runs the whole simulation. |
+| **sequencer** | What decides which input applies to each tick: it collects every peer's, holds a deadline and sends out the **tick bundle**. It runs on a thread of its own and holds no simulation, so a stalled window on the host's machine stalls only that window (ADR 0012). |
+| **session** | One game shared by one or more **peers**, from the host starting it to the host leaving. A `ScenarioSession` is what one peer holds of it. |
+| **snapshot** | The whole simulation written down at the end of one tick - every entity, component, stream and counter - so that another machine can carry on from it. What a **drop-in** receives, what a peer that has desynced is healed with, and what a desync dump starts from. Written from the components' own fields (ADR 0014). |
+| **tick bundle** | Every slot's input for one tick, as the **sequencer** confirmed it. A peer steps a tick only once it holds that tick's bundle. |
+
 ### Time, space and randomness
 
 | Term | Meaning |
@@ -204,4 +218,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 - *mount*, *emplacement*, *vehicle* - say turret for the thing and station for the role.
 - *enter*, *board*, *ride* - say crew, or "aboard" for the state.
 - *update* for a simulation step - say tick.
+- *client* or *server* for a machine in a session - say peer, or host. *Client* already means the
+  `core` module.
+- *lobby* or *match* for a game other machines can join - say session.
 - *create* or *make* for bringing an entity into the world - say spawn.

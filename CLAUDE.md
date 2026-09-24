@@ -117,11 +117,16 @@ it rather than working around it.
    number the game does not show.
 6. **Every run is reproducible** (ADR 0004). No wall-clock effects, no unseeded variety, no bug that
    cannot be replayed.
+7. **Online is the same game on every machine** (ADR 0012-0014, G0038 - draft until the online work lands).
+   Every machine runs the whole simulation from the same inputs, so a feature is online-ready by being
+   deterministic, not by being networked: state changes only inside `Simulation.step` from a tick's
+   input, lives where a snapshot carries it, and holds no `Entity` across ticks. Anything per player is
+   keyed by slot and sized from capacity - never assumed to be one player, or four.
 
 Invariants, input map and open questions: `docs/design/README.md`. Read before any gameplay change -
 the `feature` skill has the procedure.
 
-The six are inline rather than on-demand by decision: a contradiction usually slips in during a session
+The seven are inline rather than on-demand by decision: a contradiction usually slips in during a session
 nobody framed as gameplay work, exactly when an on-demand file would not be read.
 
 ## How we work

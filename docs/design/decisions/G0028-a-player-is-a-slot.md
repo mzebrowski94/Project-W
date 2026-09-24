@@ -1,7 +1,8 @@
 # G0028: A player is a slot, and joining is plugging a pad in
 
 **Trigger.** Anything that adds, removes or identifies a player; anything that assumes there is one
-commander; any proposal for a lobby, a character select or a press-start screen.
+commander; any proposal for a lobby, a character select or a press-start screen. Amended by G0038 - seat
+zero is the keyboard, the ceiling is eight, and joining works over the network too. Read that too.
 
 **Enforced by.** `CoopTest.drivesEachCommanderFromItsOwnSlot`,
 `.letsTheHigherSlotsOrderStandWhenTwoCommandersSpeakAtOnce`, `.bringsHimBackIntoTheSlotHeLeft`;
