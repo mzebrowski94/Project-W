@@ -24,20 +24,9 @@ import pl.mzebrows.pwt.sim.def.Chances;
 /**
  * Shoots, and very occasionally swings.
  *
- * <p>A trooper fires at whatever its mind has settled on, and only while it is standing still to do
- * it (1.d) - the decision about <em>what</em> it is fighting is upstream in {@code TrooperMindSystem},
- * and nothing here asks that question again.
- *
- * <p><strong>The hand strike is rare on purpose, and that is a design constraint rather than a
- * tuning choice.</strong> Answering a leap with a sweep is the commander's moment: it is the one
- * exchange in the game that rewards reading a tell, and G0013 built the whole clinch rule around it.
- * A squad that reliably swatted leapers out of the air would quietly take that away from him. So a
- * trooper tries it seldom enough to read as a lucky break rather than as a tactic - and when it does
- * land, it pays the same clinch the commander pays, because it goes through the same code.
- *
- * <p>The roll goes through {@code Odds} against {@code AiChance.SWING_AT_A_LEAP}, like every other
- * occasional behaviour in the game: seeded, so a run replays identically (pillar 6), stated per
- * second rather than per tick, and findable from the one enum that indexes all of them.
+ * <p>Fires at what {@code TrooperMindSystem} settled on, standing still (1.d). <strong>The hand strike
+ * is rare on purpose</strong> - answering a leap is the commander's moment (G0013) - rolled through
+ * {@code Odds} on {@code AiChance.SWING_AT_A_LEAP}.
  */
 public final class TrooperCombatSystem extends EntitySystem {
 
@@ -105,12 +94,7 @@ public final class TrooperCombatSystem extends EntitySystem {
     /**
      * Tries a bare-handed sweep at something already committed to a leap, if the dice allow it.
      *
-     * <p>Only at something <em>committed</em>. A sweep at a creature merely walking is a swat that
-     * earns no clinch (G0013), and a trooper spending its swing on one would be worse than useless -
-     * it would be standing there with its hands busy while the thing walked into it.
-     *
-     * <p>Returns whether it swung, because a trooper that has just thrown a punch is not also firing
-     * a rifle in the same tick.
+     * <p>Only at something <em>committed</em> (G0013). Returns whether it swung; if so it does not fire.
      */
     private boolean swingAtALeap(Entity entity, float deltaTime) {
         Melee melee = MELEE.get(entity);
@@ -142,10 +126,7 @@ public final class TrooperCombatSystem extends EntitySystem {
     /**
      * One pull of the trigger at what it is aiming at, whenever the gun is ready.
      *
-     * <p>Through the same place the commander, a shooting alien and a gun on a mount go through, so
-     * what a pull puts in the air is a property of the gun and not of who is holding it. It worked
-     * out its own muzzle point until 2026-09-18 and was therefore the one shooter in the game that a
-     * twin mount or a scattergun would have behaved differently in.
+     * <p>Through {@link Guns} and {@link Muzzle}, as every other shooter.
      */
     private void fire(Entity entity, Trooper trooper) {
         Weapon weapon = WEAPON.get(entity);

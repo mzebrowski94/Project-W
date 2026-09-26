@@ -7,20 +7,9 @@ import pl.mzebrows.pwt.sim.def.Order;
  * One tick's worth of what every player is asking for, by slot: what each is holding, and the
  * <em>input events</em> that tick carries.
  *
- * <p><strong>Held state and events are kept apart on purpose</strong> (ADR 0012). Held state - one
- * {@link CommanderInput} per slot - is safe to repeat, which is what happens to a late player's slot
- * online. An event is a one-off and must be applied exactly once: an order given, a player joining,
- * the harness switching invulnerability on or off. A held flag standing in for one would be repeated
- * by that same rule - an order given twice - or lost inside a late window.
- *
- * <p>A mutable holder rather than a record, and deliberately so: it is filled and handed to {@link
- * Simulation#step(PlayerInputs)} sixty times a second, and a fresh one per tick would be an allocation
- * per tick for a thing that is read once and thrown away. The client keeps one and overwrites it;
- * nothing in the simulation holds on to it past {@code step}.
- *
- * <p>A slot nobody is sitting in reads as {@link CommanderInput#IDLE}, which is also what a slot
- * whose gamepad has just been unplugged reads as - a commander left on the field with nobody driving
- * him stands still rather than keeping whatever he was last told to do.
+ * <p><strong>Held state and events are kept apart</strong> (ADR 0012): held state is safe to repeat
+ * for a late slot; an event must apply exactly once. Mutable, to allocate nothing per tick; nothing
+ * holds it past {@code step}. An empty or unplugged slot reads as {@link CommanderInput#IDLE}.
  */
 public final class PlayerInputs {
 

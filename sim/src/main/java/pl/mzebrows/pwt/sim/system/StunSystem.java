@@ -15,14 +15,8 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  * landed, or on the throw the blow gave it, for the whole stun and then some. This is the only thing
  * that slows it down.
  *
- * <p>The decay is linear rather than exponential because a throw that visibly stops is easier to read
- * than one that asymptotes, and a unit that ends up exactly stationary is easier to reason about than
- * one drifting at a millionth of a unit per second.
- *
- * <p>A blow that throws nothing brings its victim to a stop at once. That is not a special case bolted
- * on: with no throw to bleed off there is nothing for a decay to describe, and a unit that kept
- * walking at full speed while held would make the whole idea of being held meaningless - a dead
- * commander slid the length of the arena before this was here.
+ * <p>Linear decay, so a throw visibly stops at exactly zero. A blow that throws nothing stops its
+ * victim at once.
  */
 public final class StunSystem extends IteratingSystem {
 

@@ -7,21 +7,8 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 /**
  * A hole in the ground that keeps sending more of one strain out of it.
  *
- * <p>Everything a level had was on the field from the first tick, or arrived on the level's own
- * schedule ({@code Waves}). A nest is the third thing: a <strong>place</strong> that produces, which
- * is what turns clearing ground into holding it. Leave one standing and the ground you walked through
- * fills in behind you.
- *
- * <p><strong>It sleeps until somebody comes near.</strong> On a march four screens long, a nest that
- * hatched from the first tick would have sent twenty creatures at empty ground before the squad
- * arrived, and the player would meet the accumulation rather than the nest. {@link #awake} latches:
- * once it has seen somebody it keeps working, because a nest that went quiet when you backed off
- * would be a nest you could wait out.
- *
- * <p>{@link #watchedHealth} is how it knows it is being attacked. Damage is applied and cleared long
- * before the system that runs a nest, so what is left to read is the bar itself - a nest with less
- * health than it had last tick is a nest somebody is hitting, and that is when it calls the
- * neighbours (G0016, the same answer a control point gives when an attempt starts on it).
+ * <p>A <strong>place</strong> that produces. <strong>It sleeps until somebody comes near</strong>, and
+ * {@link #awake} latches. {@link #watchedHealth} is how it knows it is being hit (G0016).
  */
 public final class Nest implements Component, Pool.Poolable {
 
@@ -98,9 +85,7 @@ public final class Nest implements Component, Pool.Poolable {
     /**
      * How close the next brood is, in {@code [0, 1]}.
      *
-     * <p>Published on the charge channel so the player can see one coming rather than be surprised by
-     * it (pillar 5). A nest that has not woken reports nothing, which is the honest answer: its clock
-     * is not running.
+     * <p>Pillar 5. A nest that has not woken reports nothing.
      */
     public float progress() {
         if (!awake || periodTicks <= 0) {

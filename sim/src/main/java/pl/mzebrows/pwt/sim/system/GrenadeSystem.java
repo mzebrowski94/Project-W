@@ -20,24 +20,11 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 /**
  * Throws what was asked for, and flies what is already in the air.
  *
- * <p><strong>Along the aim direction, never at the aim point.</strong> Throwing to the cursor is the
- * obvious implementation and it would quietly turn zoom into range - pull the view back with Tab and
- * the same click reaches further. Aim is a direction and never a distance, so the throw is a fixed
- * reach along a bearing, and how far away the player happens to be pointing changes nothing.
+ * <p><strong>Along the aim direction, never at the aim point</strong>, or zoom would become range. It
+ * spends a <em>distance</em>, and a bounce changes direction, never speed (G0019).
  *
- * <p>A grenade spends a <em>distance</em> rather than a countdown, and a bounce changes its direction
- * and not its speed, so every throw covers the same ground however many things it comes off. That is
- * what makes banking one off a wall a thing worth learning rather than a gamble.
- *
- * <p>It runs immediately after the constraint solver, which is the whole reason it sits where it
- * does: contacts for this tick have just been reported and written onto the grenade, and nothing has
- * moved since. It answers them here, and the reflected course is spent by {@code MovementSystem} on
- * the next tick - one tick of overlap that lasts a sixtieth of a second and is invisible.
- *
- * <p>Rock and the arena edge are handled here rather than by the solver, for the same reason a
- * projectile's are: the solver keeps <em>solid</em> bodies where they may be, and a grenade is
- * non-solid so that it slips past units rather than shoving a fight around. What being stopped by a
- * wall <em>means</em> differs between the two - a bullet is spent and a grenade comes off it.
+ * <p>Immediately after the solver, so this tick's contacts are fresh. Rock and the arena edge are
+ * handled here: a grenade is non-solid, so the solver does not.
  */
 public final class GrenadeSystem extends EntitySystem {
 
@@ -120,9 +107,7 @@ public final class GrenadeSystem extends EntitySystem {
     /**
      * Mirrors a course about a surface, and <strong>only while it is still heading into it</strong>.
      *
-     * <p>That guard is what stops the classic jitter. A grenade is non-solid, so nothing separates it
-     * from what it hit: it is still overlapping on the next tick and the contact is reported again,
-     * and without the test it would turn straight back into the wall and sit there shivering.
+     * <p>The guard stops the jitter: a non-solid grenade still overlaps next tick.
      */
     private static void reflect(Velocity velocity, float normalX, float normalY) {
         float into = velocity.x * normalX + velocity.y * normalY;
@@ -140,8 +125,7 @@ public final class GrenadeSystem extends EntitySystem {
      * only the sideways half of the step was blocked it came off a vertical face, and if neither half
      * was blocked on its own it went diagonally into an inside corner and comes back the way it came.
      *
-     * <p>It is put back where it started the tick rather than left inside the rock, because a grenade
-     * still buried next tick would be asked the same question again and answer it again.
+     * <p>It is put back where it started the tick, so it is not asked again next tick.
      */
     private void comeOffTheGround(Entity entity, Velocity velocity) {
         Position at = POSITION.get(entity);

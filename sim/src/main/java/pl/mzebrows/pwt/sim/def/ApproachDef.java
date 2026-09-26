@@ -27,8 +27,7 @@ import lombok.With;
  * clear; in a corridor it is not, the flow field answers instead, and a pack files through a crack
  * the way it has to.
  *
- * @param enabled whether this strain spreads out at all. Off leaves it walking at the man himself,
- *     which is what every strain did before this existed
+ * @param enabled whether this strain spreads out at all. Off walks at the man himself
  * @param offset how far to either side of the line it closes, in world units, at full swing. Sized
  *     against the strain's own body: below a body width it reads as a wobble rather than as a
  *     creature taking its own line in
@@ -47,7 +46,7 @@ public record ApproachDef(boolean enabled, float offset, float closeRange) {
         }
     }
 
-    /** A strain that walks straight at whatever it is hunting. What everything did before this. */
+    /** A strain that walks straight at whatever it is hunting. */
     public static ApproachDef off() {
         return new ApproachDef(false, 0f, 0f);
     }

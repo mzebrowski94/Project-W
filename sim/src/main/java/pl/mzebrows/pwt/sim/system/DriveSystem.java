@@ -15,17 +15,9 @@ import pl.mzebrows.pwt.sim.def.GroundDef;
  * Turns what a unit wants into what it is doing: commits {@link Steering} to {@link Velocity}, once,
  * after every system that had something to say about it.
  *
- * <p>One writer at the end of the pipeline is what lets several systems have an opinion about where a
- * unit is going without any of them having to know the others exist. Deciding is upstream; this is
- * the only place a decision becomes motion.
- *
- * <p>It clears the desired velocity after committing it, so a unit no system spoke for this tick
- * stops rather than coasting. That single rule is what makes "stand still" the default and removes
- * the halt-everything branch every driver used to need.
- *
- * <p><strong>A held unit is left entirely alone</strong> - not driven, and not stopped either. A
- * stunned unit's velocity belongs to {@code StunSystem} and a knocked-back one is mid-flight; writing
- * a zero over either would delete the throw without failing anything that tests the throw.
+ * <p>The only place a decision becomes motion (G0010). It clears the desired velocity after committing
+ * it, so standing still is the default. <strong>A held unit is left entirely alone</strong>, or its
+ * throw would be deleted.
  *
  * <p><strong>What it commits is scaled by {@link Pace}</strong>, which is how much of what it asked
  * for the unit may actually have - a beam held on it, the ground it is standing in, or both. Scaling

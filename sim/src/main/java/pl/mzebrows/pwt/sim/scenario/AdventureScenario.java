@@ -422,13 +422,8 @@ final class AdventureScenario implements Scenario {
 
         // The plain: enough grunts to be a fight, and rabbits to deny before something eats them.
         //
-        // HALF AS MANY AS IT HAD, AND NONE OF THEM WITHIN SIGHT OF THE SPAWN. The spawn area is
-        // columns two to five, and this biome used to start at column six with ten grunts in it - so
-        // a squad that had been on the field for two seconds was already in a fight it had not
-        // chosen, on the one biome whose whole job is that nothing here is a problem yet. Nothing
-        // now stands west of column fourteen, which is about a screen's worth of walking, and there
-        // are five rather than ten because the first thing the march teaches is the order keys and
-        // you cannot learn a key while you are being bitten.
+        // NONE WITHIN SIGHT OF THE SPAWN (columns two to five): nothing west of column fourteen, and
+        // only five, because the first thing the march teaches is the order keys.
         grunts(simulation, map, 14, 9, 17, 20, 21, 13, 24, 6, 27, 23);
         rabbits(simulation, map, 7, 26, 8, 22, 16, 26, 22, 16, 27, 10);
 
