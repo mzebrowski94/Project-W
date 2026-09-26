@@ -23,6 +23,15 @@ Decisions: `game.properties` is the truth · handles on Ashley · presentation l
 | C2 / A3 timers | Whole-tick countdowns (**not** the deadline model: that needed the current tick passed through 61 call sites; decided in chat). `Ticks.of` converts once where a duration enters. | **71 shipped durations had run a tick long** (flamer every 6th tick instead of every 5th). `TicksTest` was red and is now green. Determinism fuzz passes on 11 scenarios × 18k ticks. |
 | - | Deliberately left as floats | Heat, bloat, casualty bleed-out (the rate changes while dragged), capture progress, hop/weave/strike phases: continuous quantities, not timers. |
 
+### Stage 3 (entity handles)
+
+| Item | Done | Evidence |
+|---|---|---|
+| D1 handles | Every entity carries a `Handle` (a `long` from `Level.nextHandle`, issued in `Spawner.admit`, never reused). `Handles.resolve` is a binary search over the handle family, which is sorted because families keep spawn order. ADR 0016. | `HandleTest`: handles rise in spawn order; a reaped entity resolves to nobody even when its pooled object is reused. |
+| A5 | `Strike.owner` and `Damage.locksOnDeath` are handles. | Regression test: a swing whose owner was reaped no longer follows the grunt that reused his object. |
+| Two ad hoc id schemes | The drag counter on `Level` and the turret counter in `Spawner` are gone; drags and crews use handles. | This fixed a latent bug: `Spawner.nextStationId` was not in the snapshot, so a restored world could issue a duplicate turret id. |
+| Enforcement | `HandleTest.noComponentHoldsAnEntity`: a component field of type `Entity` fails the build. | Fuzz: 11 scenarios × 18k ticks with restores, green. |
+
 Stage 1 deliverable: verify, propose, plan. **No production code changed.** Baseline `:sim:test` green (864 tests).
 Numbers below come from throwaway probes run in this session and removed afterwards.
 

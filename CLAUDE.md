@@ -60,8 +60,9 @@ Each line is a yes/no you can check yourself. A no is not done.
 - [ ] A new pooled component's `reset()` clears **every** field.
 - [ ] A new system registered in `Simulation` at a position that breaks none of
       `docs/simulation-order.md`'s constraints, and you said why.
-- [ ] No system holds a reference to another, and no component holds an `Entity` across ticks
-      (G0004, G0010, G0016 - pooling makes a kept reference come back aimed at something else).
+- [ ] No system holds a reference to another, and no component holds an `Entity` - pooling makes a kept
+      reference come back aimed at something else. It holds the other entity's `Handle` and finds it
+      with `Handles.resolve` (ADR 0016; `HandleTest` fails the build).
 - [ ] A new kind of thing is a constant, a definition and a `game.properties` block - never a new
       class, marker, `spawn` method or branch (G0008).
 - [ ] Nothing in a dodge is drawn from the `Rng` - not the side, not the timing, not the distance

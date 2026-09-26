@@ -80,6 +80,8 @@ system that changes world state.
   snapshot can write them (ADR 0014). `ArchitectureTest` refuses a stream started anywhere else.
 - `SpawnOrder` - keeps Ashley's entity list and every family in spawn order (ADR 0013). The one class
   that reaches inside Ashley.
+- `Handles` - finding an entity again from its `Handle`, a `long` issued once per spawn and never
+  reused (ADR 0016). The only way a component refers to another entity across ticks.
 - `WorldCodec` - the whole world as bytes and back, and as one hash (ADR 0014): built once by
   reflection from the component classes numbered in `component/Components.ALL`, so a new field needs no
   code here. `snapshot`, `restore` into `Scenarios.blank`, `hash`, and `differences` - two worlds field

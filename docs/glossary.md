@@ -146,9 +146,9 @@ A term that could sit in two sections goes where a reader would look for it, not
 |---|---|
 | **action** | Something the commander does to whatever is within arm's length, on one key. He never picks from a list: what is in reach is what is on offer, nearest first, and the simulation publishes which kind it is for the interface to show (G0021). |
 | **crew** | To be aboard a **station** rather than standing on the ground. A man who is crewing one is driven by nobody, is out of the collision path entirely - nothing can shove, shoot or claw him - and is not drawn at all; what the player sees is the gun, which reads as manned. A **blast** still reaches him, which is what makes destroying a manned turret worth doing. Got on and off with the **action** key (G0024). |
-| **station** | Something a man can **crew**. One exists - the **turret** - and it is named by an issued id rather than by a reference, exactly as a **load** is (G0010). |
+| **station** | Something a man can **crew**. One exists - the **turret** - and a man aboard names it by its **handle**, exactly as a **load** is named (ADR 0016). |
 | **haul** | To drag a load - a casualty or a barrel - along behind you. It costs almost everything: he backs away and cannot press forwards, keeps only a fraction of his pace and a little sideways lean, and has no hand free for a weapon. **Hauled** latches on the load, because what it buys is paid for after he puts it down. |
-| **load** | Whatever is being hauled. Named by an issued id on both ends rather than by an entity reference, so a drag that outlives what it was holding can never come back attached to something else (G0010). |
+| **load** | Whatever is being hauled. Named by **handle** on both ends, so a drag that outlives what it was holding can never come back attached to something else (ADR 0016). |
 | **reach** | How close something must be, surface to surface, for the commander to do anything with it. One number for every action there is, so there is one distance to learn. |
 
 ### The map and the view
@@ -240,9 +240,10 @@ What the player is shown around the fight and how he moves through it. Decided i
 | **bag** | A range of values dealt without replacement: every one comes up once before any comes up again. The whole of one is a `long`, one bit per value (`map.Bag`). What a nest's brood sizes and a level's crates are drawn from. |
 | **due** | What a unit still has to spend before an occasional behaviour next happens: a budget averaging one, drawn after every occurrence and spent down by each tick of opportunity (G0039). Why a **chance** is dealt rather than tossed. |
 | **frame** | One rendered image. Zero or more ticks happen per frame. Never a tick. |
+| **handle** | Which entity this is, for anything that has to find it again later: a `long` issued once when it is spawned and never reused, so holding one across ticks is always safe - it finds the entity or nobody. How a component names another entity; never by the `Entity` object, which the engine recycles (ADR 0016). |
 | **longest gap** | The longest a unit ever waits for a behaviour it has the opportunity for, as a multiple of the average wait. Zero means no limit - a coin tossed every tick. One number for every **chance** (G0039). |
 | **stream** | One seeded generator per concern, all derived from the level seed. Sharing one sequence means re-tuning how often anything draws a number reshuffles every number every other system gets - reproducible, and miserable to iterate on. |
-| **tick** | One fixed simulation step, `SimConfig.tickSeconds()` long. Never a frame. |
+| **tick** | One fixed simulation step, `SimConfig.tickSeconds()` long. Never a frame. Every timer counts whole ticks, converted once from the seconds the config writes (`Ticks`). |
 | **world unit** | The simulation's unit of length. Never pixels. |
 
 ## Words we do not use
