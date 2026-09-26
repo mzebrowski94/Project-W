@@ -41,6 +41,18 @@ Decisions: `game.properties` is the truth · handles on Ashley · presentation l
 | C5 order | `SystemOrderTest`: 45 documented constraints held as data (a failure prints the doc's reason), first/last/adjacent positions, and the doc's numbered table checked against the constructor. | Seen failing with Avoidance and EnemyRanged swapped. |
 | C3 component split | **Not done, on purpose.** After the behaviour split each field has a visible owner: 13 fields are private to `TrooperMoveSystem` and each `*Due` belongs to one behaviour. Splitting would add 3-4 pooled components and about 90 rewritten accesses for little reading benefit, and it would not fix the implicit mode-plus-booleans state (no bug found there). | Overrule if wanted; the partition would be orders / sight / walk-and-look / dues. |
 
+### Stage 5 (optional items)
+
+Decisions: D3 = extract `Facing` only · C4 = skip for now · E4 = sweep `sim` now.
+
+| Item | Done | Evidence |
+|---|---|---|
+| D4 swept shots | `Collider.swept`: a shot is filed at the middle of its path and tested closest-point-on-segment, contact only, first pass only. `largestRadius` covers the swept reach. | `SweptShotTest`: the laser hit a barrel 12/12 phases (it had gone through 1 time in 5). Invariant row in `design/README.md`. |
+| D3 facing | `Facing` component, written by the new `FacingSystem` (44, just before `AppearanceSystem`, so the timing is unchanged). `PerceptionSystem` and the renderer read it, and `Appearance` no longer carries it. The rules no longer read a presentation component. | Positions and health of all 11 scenarios × 2400 ticks plus a crowd **identical** before and after. The raw hash changes because the snapshot layout did. `SystemOrderTest` row added. |
+| C4 state/def split | Skipped, as decided. | - |
+| E4 comment diet | Rule in `conventions.md`: a comment holds the contract, the invariant and a link. History goes to the G-record and git. Tuning rationale lives beside the number in `game.properties`. Sweep done across 76 files. | Comment lines **8,738 → 6,325 (-28%)**; `sim` source **1.15 MB → 0.95 MB (-18%, about 50k tokens)**. A strip-and-compare guard proved every commit touched only comments; code lines unchanged at 13,948. Fixed these stale docs on the way: int "seconds" that are ticks (`Trooper`, `Waves`), `Damage`/`Strike` still describing entity references, NavigationSystem's "routes for the commander only", `TrooperMindSystem` describing fields that had moved, `RangedDef`'s pre-shotgun spread note, and a duplicated paragraph in `PerceptionSystem`. |
+| - | The -18% is below my 30-40% estimate. | The estimate held for the heaviest files: `SimConfig` -27%, `Spawner` -20%, `Look` -45% (bytes). Scenario level notes and `WorldCodec` were left mostly alone: they are level design and contract, not history. |
+
 Stage 1 deliverable: verify, propose, plan. **No production code changed.** Baseline `:sim:test` green (864 tests).
 Numbers below come from throwaway probes run in this session and removed afterwards.
 
