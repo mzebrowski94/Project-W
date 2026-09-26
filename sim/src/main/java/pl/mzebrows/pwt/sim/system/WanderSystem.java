@@ -21,22 +21,9 @@ import pl.mzebrows.pwt.sim.def.Ticks;
 /**
  * Walks a unit that has noticed nobody slowly around the patch it was spawned in.
  *
- * <p>Pick a spot, walk to it, stand a moment, pick again. Nothing more, deliberately: exploring a
- * level is a different behaviour with different questions attached, and it is not designed yet.
- *
- * <p><strong>The patch is wherever it last had nothing to do</strong>, not where it was spawned. The
- * anchor is dragged along behind anything that is hunting or feeding, so the moment it gives up it is
- * already home. Anchoring to the spawn instead means a unit that broke off a chase turns round and
- * walks the length of the level back, which reads as the level rewinding rather than as a creature
- * losing interest.
- *
- * <p>It drives only units that are <em>not</em> hunting, and navigation drives only the ones that
- * are, so the two never write the same tick and neither has to know the other exists.
- * {@code PerceptionSystem} decided which is which, upstream of both.
- *
- * <p><strong>Waypoints are drawn from the wander stream, not the world's.</strong> Sharing one
- * sequence with the leap would mean re-tuning how often a unit ambles reshuffles every wind-up in the
- * game - see {@code RngStream}.
+ * <p>Pick a spot, walk to it, stand a moment, pick again. <strong>The patch is wherever it last had
+ * nothing to do</strong>: the anchor is dragged along while it hunts or feeds. It drives only units
+ * that are not hunting, so it never writes the same tick as navigation. Its own stream.
  */
 public final class WanderSystem extends EntitySystem {
 
@@ -49,8 +36,7 @@ public final class WanderSystem extends EntitySystem {
     private static final ComponentMapper<Ranged> RANGED = ComponentMapper.getFor(Ranged.class);
 
     /**
-     * How many spots it will try before settling for home. A cap rather than a loop: a unit walled
-     * into a space smaller than its own patch would otherwise search forever, once per tick.
+     * How many spots it will try before settling for home, so a walled-in unit cannot search forever.
      */
     private static final int PLACEMENT_ATTEMPTS = 8;
 
@@ -84,9 +70,7 @@ public final class WanderSystem extends EntitySystem {
             }
             Wander wander = WANDER.get(entity);
             if (PERCEPTION.has(entity) && PERCEPTION.get(entity).occupied() && !shuffles(entity)) {
-                // Its patch follows it while it has something better to do, so the ground it gives up
-                // on is the ground it settles into. A unit that broke off a chase and then walked the
-                // length of the level back to where it spawned read as the level rewinding.
+                // Its patch follows it while it has something better to do.
                 Position position = POSITION.get(entity);
                 wander.anchor(position.x, position.y);
                 wander.rest(0);
@@ -108,17 +92,8 @@ public final class WanderSystem extends EntitySystem {
     /**
      * Whether this unit goes on ambling even while it has something to shoot at.
      *
-     * <p>A shooter that holds ground has nothing else to do with its legs: it will not close and it
-     * will not follow, so without this it stands perfectly still for a whole fight - which reads as a
-     * turret somebody forgot to animate rather than as a creature. Ambling inside its patch while it
-     * fires is the whole of the difference, and the patch is small enough that it is still holding a
-     * line rather than wandering off one.
-     *
-     * <p><strong>Only once it is actually holding a position.</strong> Everywhere a rooted shooter
-     * does have somewhere to be - food, a place it was roused to, a firing position it has not
-     * reached yet - {@code NavigationSystem} is already driving it there, and this system runs
-     * later, so ambling would overwrite the walk every tick. That is precisely what made a roused
-     * spitter look about and turn back instead of coming to defend the point.
+     * <p>A shooter that holds ground ambles in its patch while it fires - <strong>only once it is
+     * holding a position</strong>, or this would overwrite {@code NavigationSystem}'s walk.
      */
     private static boolean shuffles(Entity entity) {
         if (!RANGED.has(entity) || !PERCEPTION.get(entity).aggro) {
@@ -145,11 +120,7 @@ public final class WanderSystem extends EntitySystem {
     /**
      * Chooses somewhere inside the patch that its body actually fits, or home if it cannot find one.
      *
-     * <p>Rejection sampling inside the bounding square rather than an angle and a radius, because an
-     * angle needs a sine and a cosine and {@code ArchitectureTest} bans both: they are specified only
-     * to within an ulp and may differ between JVMs, which would make a replay stop replaying on
-     * somebody else's machine. Rejecting the corners of a square costs about a quarter of the draws
-     * and is exact everywhere.
+     * <p>Rejection sampling in the bounding square: no trigonometry in {@code sim} (pillar 6).
      */
     private void pickSomewhere(Entity entity, Wander wander) {
         float bodyRadius = BODY.get(entity).radius;
