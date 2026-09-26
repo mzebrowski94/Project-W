@@ -28,7 +28,7 @@ public final class Nest implements Component, Pool.Poolable {
     /** What comes out of it. The whole of what makes one nest different from another. */
     public UnitKind kind = UnitKind.GRUNT;
 
-    /** How long between broods, in seconds. */
+    /** How long between broods, in ticks. */
     public int periodTicks;
 
     /** How long until the next one. Only counted down while it is awake. */

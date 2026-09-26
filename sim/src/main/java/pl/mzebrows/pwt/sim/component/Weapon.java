@@ -12,7 +12,7 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * The gun a unit is carrying: which one, how often it may fire, and what it fires.
  *
  * <p>Picking a gun up writes a different {@code WeaponDef} into these fields; nothing swaps a
- * component and nothing branches on which gun it is. {@code remainingSeconds} is the whole of its
+ * component and nothing branches on which gun it is. {@code remainingTicks} is the whole of its
  * runtime state, so a snapshot of it replays exactly.
  *
  * <p>The cooldown is deliberately <em>not</em> carried across a swap: a new gun arrives ready. A

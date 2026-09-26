@@ -6,7 +6,7 @@ import com.badlogic.gdx.utils.Pool;
 /**
  * Damage this entity is currently ignoring.
  *
- * <p>Two sources, one component. {@code remainingSeconds} counts down and covers the moments after
+ * <p>Two sources, one component. {@code remainingTicks} counts down and covers the moments after
  * being hit and after respawning. {@code permanent} is the harness god-mode toggle and never expires
  * - it is a dev tool, not a mechanic, and pillar 2 says the commander can be killed, so nothing in a
  * scenario or in {@code game.properties} may switch it on.
