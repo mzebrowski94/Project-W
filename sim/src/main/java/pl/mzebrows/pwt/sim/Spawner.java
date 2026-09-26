@@ -87,14 +87,11 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * The one place that builds entity state, so no system has to remember which components a commander
  * or a projectile is made of - or reach for the engine to create one.
  *
- * <p>Systems that spawn take one of these rather than a reference back to {@link Simulation}, which
- * keeps the dependency pointing one way and lets a system be tested without a whole world. Marking an
- * entity dead lives here for the same reason: it needs a pooled component, and component creation is
- * this class's job.
+ * <p>Systems that spawn take one of these rather than {@link Simulation}, so a system can be tested
+ * without a whole world. Marking dead lives here too: it creates a pooled component.
  *
- * <p>Every spawn seeds {@code PreviousPosition} at the spawn point. Leaving it at the origin would
- * make a new entity streak in from the corner of the arena on its first drawn frame, and that is the
- * kind of bug no test catches.
+ * <p>Every spawn seeds {@code PreviousPosition} at the spawn point, or the first drawn frame streaks
+ * in from the origin.
  */
 public final class Spawner {
 
@@ -193,11 +190,7 @@ public final class Spawner {
                         grenade.radius(),
                         grenade.blastRadius()));
         entity.add(engine.createComponent(Taking.class));
-        // He can be shot off his feet like his men, now that there is somebody who would come and
-        // get him (G0023). Claws, a sweep and a leap still kill him outright, as they kill everyone.
-        // His bleed-out is his own; everything else about being picked up is the same for him as for
-        // his men. The single place that reads it, which is what keeps the key from being one that
-        // lies (G0023).
+        // He can be shot off his feet like his men (G0023); his bleed-out is his own, read only here.
         entity.add(engine.createComponent(Casualty.class)
                 .set(
                         commander.bleedOutSeconds(),
@@ -210,13 +203,10 @@ public final class Spawner {
                         config.action().dragLateralFactor(),
                         config.action().dragGap()));
         entity.add(engine.createComponent(Crew.class));
-        // Carried always, because what he is holding changes: a gun that runs hot needs somewhere to
-        // put it, and one that does not leaves this at zero for ever.
+        // Carried always: what he holds changes, and a gun that does not run hot leaves it at zero.
         entity.add(engine.createComponent(Heat.class));
         entity.add(engine.createComponent(Slowed.class));
-        // He carries one too, and nothing on the alien side has a gun that fills it. It is here so
-        // that what a body is made of does not depend on whose side it was on - the day something
-        // over there carries a beam, the mechanic already works on him.
+        // What a body is made of does not depend on its side.
         entity.add(engine.createComponent(Bloat.class));
         entity.add(engine.createComponent(BlastsOnDeath.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER, slot));
@@ -228,10 +218,6 @@ public final class Spawner {
     /**
      * Spawns one trooper: a member of the squad, on the commander's side.
      *
-     * <p>It has a body, a gun and a life, and nothing drives it yet. That is the stage boundary
-     * rather than an oversight - a trooper that can be seen, shoved and killed is worth putting on
-     * the field before anything decides where it walks, because everything after this is judged by
-     * watching it move.
      */
     public Entity spawnTrooper(float x, float y) {
         SimConfig.TrooperConfig trooper = config.trooper();
@@ -251,15 +237,10 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(trooper.radius()));
         entity.add(engine.createComponent(Speed.class).set(trooper.speed()));
         entity.add(engine.createComponent(Steering.class));
-        // Carried always, by everything that moves under its own power, because what is slowing it
-        // changes: a beam held on it, and nothing else in the game yet. A unit nothing has touched
-        // keeps this at zero for ever, and adding it at the moment of the first hit would mutate a
+        // Carried always by everything that moves itself: adding it on the first hit would mutate a
         // family mid-iteration.
         entity.add(engine.createComponent(Slowed.class));
-        // And a body that can be pumped up, and a blast that is worth nothing until something has
-        // pumped it. Both carried by everything that can be killed, and both inert until a beam is
-        // pointed at it: a reaction with no radius leaves nothing behind, which is the same "zero
-        // means not for me" every other kind table uses (G0018).
+        // Carried by everything that can be killed; inert until a beam fills it (zero means off, G0018).
         entity.add(engine.createComponent(Bloat.class));
         entity.add(engine.createComponent(BlastsOnDeath.class));
         entity.add(engine.createComponent(Collider.class).set(true, true));
@@ -274,8 +255,7 @@ public final class Spawner {
                         config.casualty().stabiliseSeconds(),
                         config.casualty().hauledStabiliseFactor()));
         entity.add(engine.createComponent(Dragged.class));
-        // The pack's own spread (G0033), so a squad walking to a point or after him crosses the ground
-        // abreast. Seeded from where he was put down, like every alien's, so nothing is drawn.
+        // The pack's spread (G0033), seeded from where he was put down so nothing is drawn.
         entity.add(engine.createComponent(Approach.class)
                 .set(
                         trooper.approach().enabled(),
@@ -306,8 +286,7 @@ public final class Spawner {
                         melee.knockbackSpeed(),
                         melee.knockbackDecay()));
         entity.add(engine.createComponent(Taking.class));
-        // A trooper has hands too. The same component the commander carries, so the work a man does
-        // on a casualty is published and drawn the same way whoever is doing it.
+        // Hands, as the commander's, so work on a casualty is published the same way.
         entity.add(engine.createComponent(Action.class).set(config.action().reach()));
         // A trooper has hands for a gun on a mount too, though nothing decides to use one yet.
         entity.add(engine.createComponent(Crew.class));
@@ -320,9 +299,7 @@ public final class Spawner {
     /**
      * Spawns a chasing unit of the given strain, built entirely from that strain's definition.
      *
-     * <p>There is one method rather than one per strain because a strain <em>is</em> its numbers. A
-     * grunt and a brute differ in a {@code UnitDef} and in nothing else, so adding a strain is a
-     * definition and no code at all.
+     * <p>A strain is its numbers: adding one is a definition and no code (G0008).
      */
     public Entity spawnUnit(UnitKind kind, float x, float y) {
         Entity entity = engine.createEntity();
@@ -336,10 +313,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Speed.class));
         entity.add(engine.createComponent(Steering.class));
         entity.add(engine.createComponent(Slowed.class));
-        // And a body that can be pumped up, and a blast that is worth nothing until something has
-        // pumped it. Both carried by everything that can be killed, and both inert until a beam is
-        // pointed at it: a reaction with no radius leaves nothing behind, which is the same "zero
-        // means not for me" every other kind table uses (G0018).
+        // Carried by everything that can be killed; inert until a beam fills it (zero means off, G0018).
         entity.add(engine.createComponent(Bloat.class));
         entity.add(engine.createComponent(BlastsOnDeath.class));
         entity.add(engine.createComponent(Collider.class).set(true, true));
@@ -354,14 +328,11 @@ public final class Spawner {
         entity.add(engine.createComponent(Avoidance.class));
         entity.add(engine.createComponent(Leap.class));
         entity.add(engine.createComponent(Ranged.class));
-        // Both seeded from where it was put down, so a pack fans out and weaves out of step without a
-        // number being drawn for either - the same reason its patch is anchored here rather than in
-        // applyStrain. Which line a creature takes in is a fact about that individual, not about
-        // what it has turned into, so evolving must not rewrite it.
+        // Seeded from where it was put down, so a pack fans out and weaves out of step with nothing
+        // drawn. Set here, not in applyStrain: evolving must not rewrite an individual's line.
         entity.add(engine.createComponent(Approach.class).bearingFrom(x, y));
         entity.add(engine.createComponent(Weave.class).phaseFrom(x, y));
-        // And its gait, for the third time and the same reason: two frogs put down apart hop out of
-        // step with each other, and the same level hops the same way on every run.
+        // Its gait too, for the same reason.
         entity.add(engine.createComponent(Hop.class).phaseFrom(x, y));
         entity.add(engine.createComponent(Dodge.class));
         entity.add(engine.createComponent(Weapon.class));
@@ -377,23 +348,12 @@ public final class Spawner {
     /**
      * Writes a strain's definition into components the entity already has.
      *
-     * <p><strong>The single writer.</strong> Spawning calls it and so does evolving, which is what
-     * guarantees an evolved unit is indistinguishable from one spawned in that strain - no field can
-     * be updated in one path and forgotten in the other, because there is only one path.
+     * <p><strong>The single writer</strong>, for spawning and evolving alike, so an evolved unit is
+     * indistinguishable from one spawned in that strain. It changes field values, never the component
+     * set, so it is safe mid-tick.
      *
-     * <p>It changes no component <em>set</em>, only field values, so an entity may be run through it
-     * mid-tick without disturbing any family being iterated. That is the whole reason a strain is an
-     * enum on a component rather than a marker.
-     *
-     * <p>Where a unit lives is the one thing it does not rewrite - and which line it takes in is the
-     * other. {@code Wander.anchor}, {@code Weave.travelled} and {@code Approach.bearing} are set at
-     * the spawn and never again, so a grunt that becomes a brute keeps the patch the grunt was put in
-     * and the side it was already closing on: both are facts about that individual rather than about
-     * what it has turned into.
-     *
-     * <p>Health is set to the new strain's maximum rather than carried over as a fraction. A unit
-     * that has just become something else arrives whole; a grunt shot down to a sliver and then fed
-     * gets up as a full brute, and that reversal is the drama the mechanic is for.
+     * <p>It does not rewrite {@code Wander.anchor}, {@code Weave.travelled} or {@code Approach.bearing}:
+     * facts about the individual. Health is set to the new strain's maximum - it arrives whole.
      */
     public void applyStrain(Entity entity, UnitKind kind) {
         UnitDef def = config.unit(kind);
@@ -477,17 +437,14 @@ public final class Spawner {
                         def.ranged().settledSpreadFactor(),
                         def.ranged().chargedGun());
         if (def.ranged().enabled()) {
-            // A shooter starts out looking where everything else starts out looking, rather than
-            // already at you: a field of view is only a field of view if it starts somewhere. A
-            // strain that does not shoot publishes no aim at all, so its facing stays its heading.
+            // A shooter starts out looking where everything else does, not already at you. A
+            // strain that does not shoot publishes no aim, so its facing stays its heading.
             entity.getComponent(Ranged.class).aim(1f, 0f);
         }
-        // Through the same table and the same component the commander's own guns come through, so a
-        // strain that shoots needs no firing code of its own - only a definition saying which gun.
+        // The commander's gun table and component: a shooting strain needs no firing code.
         entity.getComponent(Weapon.class)
                 .set(def.ranged().gun(), config.weapon(def.ranged().gun()), config.tickSeconds());
-        // How readily this strain bites into something it should be wary of. Copied onto the
-        // component like every other per-strain number, so the place that asks needs no table.
+        // How readily this strain bites into something it should be wary of.
         entity.getComponent(Taking.class)
                 .set(def.chances().of(AiChance.BITE_A_BARREL), def.ranged().chargedGun() != null);
         entity.getComponent(Appearance.class).set(def.look());
@@ -496,9 +453,7 @@ public final class Spawner {
     /**
      * Puts a gun in a unit's hands, replacing whatever it was carrying.
      *
-     * <p>The single writer for weapons, as {@code applyStrain} is for strains: spawning and picking
-     * one up both come through here, so a gun found on the field behaves exactly like one spawned
-     * with. It changes no component set - only the fields of the {@code Weapon} the unit already has.
+     * <p>The single writer for weapons, for spawning and pickups alike. Changes no component set.
      */
     public void applyWeapon(Entity entity, WeaponKind kind) {
         Weapon weapon = entity.getComponent(Weapon.class);
@@ -510,13 +465,8 @@ public final class Spawner {
     /**
      * Spawns something lying on the field for the first thing that touches it.
      *
-     * <p>Non-solid, so units walk over it rather than round it, and immovable, so a crowd cannot
-     * shove it out of the way. Those two flags are the whole of what makes it a pickup as far as the
-     * constraint solver is concerned - it reports the contact and asks nothing further, exactly as it
-     * does for a projectile or a melee sweep.
-     *
-     * <p>Neutral, because a pickup is on nobody's side. What each side gets out of it is in the
-     * definition, not in a faction.
+     * <p>Non-solid and immovable: the solver reports the contact and nothing more. Neutral; what each
+     * side gets is in the definition.
      */
     public Entity spawnPickup(PickupKind kind, float x, float y) {
         PickupDef def = config.pickup(kind);
@@ -535,13 +485,8 @@ public final class Spawner {
     /**
      * Spawns a rabbit: alien food that walks, wanders, and steps aside from a shot it sees coming.
      *
-     * <p>A pickup in every way that matters - it is claimed on contact and its grants come from the
-     * same table - but solid and movable rather than the usual non-solid and immovable, because those
-     * two flags are what keep a body out of rock and inside the arena and this one moves under its own
-     * power. Avoidance is told to ignore pickups outright, so nothing steers around it.
-     *
-     * <p>It carries {@code Health} and {@code Damage} because it can be shot, and a shot body cannot
-     * be claimed - which is what makes killing one denial rather than a waste of a bullet.
+     * <p>A pickup, but solid and movable, so the solver keeps it out of rock. Avoidance ignores
+     * pickups. It can be shot, and a shot body cannot be claimed - killing one is denial.
      */
     public Entity spawnRabbit(float x, float y) {
         PickupDef def = config.pickup(PickupKind.RABBIT);
@@ -587,21 +532,10 @@ public final class Spawner {
     /**
      * Spawns an explosive barrel: a pickup nobody wants to pick up.
      *
-     * <p><strong>A pickup rather than an obstacle, and that is the design rather than a
-     * convenience.</strong> Being one is what makes "set off by gunfire" and "set off by something
-     * hungry" two paths that already existed meeting at one death, rather than two new rules.
-     *
-     * <p>It is the one pickup that is <em>shunned</em> (G0022): avoidance gives it as wide a berth as
-     * a rock and an idle alien no longer walks over to eat it. What gets a creature onto one is the
-     * dice - {@code AiChance.BITE_A_BARREL}, rolled while it is actually touching one - so a barrel
-     * reads as a hazard the aliens mostly respect and occasionally set off in their own faces.
-     *
-     * <p>Solid and immovable, unlike the growths: a barrel is a thing standing on the field rather
-     * than a dot to walk over. That changes nothing about being taken - the solver reports a contact
-     * before it separates anything.
-     *
-     * <p>It carries {@code Health} so a shot or a sweep reaches the damage path through it, exactly as
-     * a rabbit's does, and {@code BlastsOnDeath} so that both ways of ending it end the same way.
+     * <p>A pickup, not an obstacle, so gunfire and a bite are existing paths meeting at one death. The
+     * one <em>shunned</em> pickup (G0022): avoided like rock, and bitten only on
+     * {@code AiChance.BITE_A_BARREL} while touching. Solid and immovable; {@code BlastsOnDeath} ends
+     * both ways the same.
      */
     public Entity spawnBarrel(float x, float y) {
         PickupDef def = config.pickup(PickupKind.BARREL);
@@ -617,8 +551,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Health.class).set(barrel.health()));
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(BlastsOnDeath.class).set(barrel.blastRadius(), barrel.bittenBlastRadius()));
-        // It can be hauled, which is why it has a velocity at all. Immovable and therefore still
-        // scenery until somebody picks it up; nothing drives it, so the velocity stays zero.
+        // A velocity only because it can be hauled; nothing drives it.
         entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Appearance.class).set(def.look()));
         admit(entity);
@@ -628,20 +561,9 @@ public final class Spawner {
     /**
      * Spawns a mine: something small lying in the open that goes off when the other side comes near.
      *
-     * <p><strong>Solid, and deliberately not avoided.</strong> Everything else solid is given a wide
-     * berth, because walking into it is a failure; the whole of what a mine is is something the other
-     * side walks into, so it is the one body in the game that says so on its collider. Solid rather
-     * than not because the commander can haul one, and the solver only keeps movable <em>solids</em>
-     * out of rock - a mine that could be dragged through a wall would be a mine lost inside one.
-     *
-     * <p>On nobody's side, exactly as a barrel is. That is what keeps it off the list of things an
-     * alien comes for (G0026) - a level that laid a dozen of them would otherwise have laid a dozen
-     * decoys - and it is what lets anything at all damage it, because damage from a neutral source
-     * crosses every faction line.
-     *
-     * <p>It carries {@code Health} so a shot or a blast reaches it, and {@code BlastsOnDeath} so
-     * every one of those ends the same way it does: by dying, through the one reaction (G0018). A
-     * mine caught in another mine's blast therefore chains, with no rule anywhere saying it should.
+     * <p><strong>Solid, and deliberately not avoided</strong> - it is meant to be walked into. Solid so
+     * a hauled one stays out of rock. On nobody's side, so no alien comes for it (G0026) and anything
+     * can damage it. It explodes by dying (G0018), so mines chain.
      */
     public Entity spawnMine(float x, float y) {
         SimConfig.MineConfig mine = config.mine();
@@ -661,8 +583,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Health.class).set(mine.health()));
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(BlastsOnDeath.class).set(mine.blastRadius(), mine.blastRadius()));
-        // Hauled exactly as a barrel is, by the same hands and the same component. Carrying one to
-        // where you want it is most of what a mine is worth (G0021).
+        // Hauled exactly as a barrel is (G0021).
         entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.MINE));
         admit(entity);
@@ -672,21 +593,9 @@ public final class Spawner {
     /**
      * Spawns a nest: a hole in the ground that keeps sending more of one strain out of it.
      *
-     * <p>Solid and immovable, exactly as a barrel and a turret are - it is a thing standing on the
-     * field, and it is meant to be walked to and shot. It carries {@code Health} and {@code Damage}
-     * so that a shot, a sweep and a blast all reach it through the paths that already exist.
-     *
-     * <p><strong>On the alien side, and carrying {@code Enemy}.</strong> The side is what makes the
-     * player's fire reach it and the aliens' pass through; the marker is what puts it on the list a
-     * trooper and a turret shoot at, and on the list "the map is clear" counts. Without the marker a
-     * level could read as cleared with something still producing on it, which would make the
-     * objective a lie every thirty seconds.
-     *
-     * <p>No death throes: what a destroyed nest leaves behind is the last brood out of it, not a body
-     * to walk round - the same answer a barrel and a turret give.
-     *
-     * <p>Spawn one before whatever stands on it. The renderer draws in spawn order, and a nest is
-     * ground with a hole in it rather than a thing standing on the ground.
+     * <p>Solid, immovable and shootable. <strong>Alien side and {@code Enemy}</strong>: shot by troopers
+     * and turrets, and counted by "the map is clear". No death throes. Spawn before whatever stands on
+     * it - the renderer draws in spawn order.
      */
     public Entity spawnNest(UnitKind kind, float x, float y) {
         SimConfig.NestConfig nest = config.nest();
@@ -712,7 +621,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.NEST));
         admit(entity);
-        // What it has to lose, so the system that runs it can tell it is being hit from the bar alone.
+        // So the system that runs it can tell it is being hit from the bar alone.
         entity.getComponent(Nest.class).watchedHealth = nest.health();
         return entity;
     }
@@ -720,14 +629,8 @@ public final class Spawner {
     /**
      * Spawns a control point: ground the squad takes by standing on it.
      *
-     * <p><strong>No collider.</strong> A point is somewhere you walk, not something you walk into, so
-     * it never enters the pairwise path at all - which also means its body can be as wide as the
-     * capture radius without inflating the collision grid's cell size.
-     *
-     * <p>It carries a body anyway, because that is what the renderer measures a circle from, and a
-     * point drawn at its capture radius is a point whose edge the player can see. Spawn one before
-     * the units that will stand on it: the renderer draws in spawn order, so it wants to be the thing
-     * underneath.
+     * <p><strong>No collider</strong>, so its capture-radius body never sizes the collision grid. The
+     * body is what the renderer draws. Spawn before what stands on it.
      */
     public Entity spawnControlPoint(float x, float y) {
         SimConfig.ControlPointConfig point = config.controlPoint();
@@ -745,16 +648,8 @@ public final class Spawner {
     /**
      * Spawns a turret: a gun on a mount that a man gets on rather than picks up.
      *
-     * <p>Solid and immovable, exactly as a barrel is: it is a thing standing on the field, and it can
-     * be hauled to somewhere more useful by the same hands and the same component that haul one. It
-     * carries {@code Health} and {@code Damage} so it can be shot down, and {@code BlastsOnDeath} so
-     * that losing one is an event rather than a disappearance - and so that whoever was on it when it
-     * went is caught by the circle he was standing in the middle of.
-     *
-     * <p>It has no death throes. A barrel does not either, and for the same reason: what a destroyed
-     * explosive thing leaves behind is the blast, not a body to walk round.
-     *
-     * <p>On the player's side, so his own fire passes through it and the aliens' does not.
+     * <p>Solid, immovable and haulable, like a barrel. It can be shot down and blasts on death, catching
+     * whoever is on it. No death throes. Player side.
      */
     public Entity spawnTurret(float x, float y) {
         SimConfig.TurretConfig turret = config.turret();
@@ -773,8 +668,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Weapon.class)
                 .set(turret.weapon(), config.weapon(turret.weapon()), config.tickSeconds()));
-        // The heat belongs to the gun, not to whoever is on it. That is the whole of why stepping off
-        // a hot turret and back on again is not a way of putting the bar back.
+        // The heat belongs to the gun, not to whoever is on it.
         entity.add(engine.createComponent(Heat.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.TURRET));
         entity.add(engine.createComponent(Facing.class).face(1f, 0f));
@@ -785,16 +679,13 @@ public final class Spawner {
     /**
      * Spawns the level entity: one entity holding state that belongs to nobody in particular.
      *
-     * <p>Spawned with the world and never removed. It has no position, no body and nothing to draw,
-     * which is exactly why it is an entity - it means a level-scope reaction is an ordinary system
-     * reading an ordinary component, and no part of the simulation needs a message queue to reach it
-     * (G0004).
+     * <p>Spawned with the world and never removed; an entity so level-scope reactions are ordinary
+     * systems (G0004).
      */
     public Entity spawnLevel() {
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Level.class));
-        // What is still to arrive. Empty on every level built so far, which is what "everything is on
-        // the field from the first tick" looks like as data.
+        // What is still to arrive; empty means everything is on the field from the first tick.
         entity.add(engine.createComponent(Waves.class));
         admit(entity);
         return entity;
@@ -803,9 +694,7 @@ public final class Spawner {
     /**
      * Spawns the post: ground the level says you must hold, and the other side walks at.
      *
-     * <p>No collider, no health and no faction - it is a goal rather than a thing to fight. Spawn one
-     * before whatever stands on it: the renderer draws in spawn order, and a post wants to be the
-     * thing underneath.
+     * <p>No collider, health or faction. Spawn before what stands on it.
      */
     public Entity spawnPost(float x, float y) {
         return spawnPost(x, y, 0f);
@@ -814,9 +703,7 @@ public final class Spawner {
     /**
      * The same, watching only the ground around it rather than the whole level.
      *
-     * <p>Zero is the whole level, which is what a level the size of one fight means. A march names a
-     * distance instead, because "nothing hostile standing" cannot mean seven screens with nests
-     * still working four biomes back.
+     * <p>Zero is the whole level.
      */
     public Entity spawnPost(float x, float y, float watchRadius) {
         Entity entity = engine.createEntity();
@@ -845,11 +732,8 @@ public final class Spawner {
 
     /**
      * Spawns a projectile travelling along the given unit direction, on the firer's side so it cannot
-     * hit them or anything else friendly. The caller supplies the direction already normalised - it
-     * has usually just computed it to place the spawn point.
-     *
-     * <p>Everything about the shot comes from the gun's definition, its look included, so which gun
-     * fired it is visible without anything asking.
+     * hit them or anything else friendly. The direction must already be normalised. Everything about
+     * the shot, its look included, comes from the gun's definition.
      */
     public Entity spawnProjectile(float x, float y, float directionX, float directionY, Weapon weapon, Side side) {
         return projectile(
@@ -921,9 +805,7 @@ public final class Spawner {
                 .lasting(range)
                 .trailing(trailLength);
         if (pierceIntervalTicks > 0) {
-            // A shot that goes through things. The interval is its contact cooldown, which is the
-            // field that already means "how long before this may land another blow" - so one slug
-            // crossing one body owes one blow rather than one per tick it overlaps.
+            // A shot that goes through things: the contact cooldown makes one crossing one blow.
             shot.piercing();
         }
         entity.add(shot);
@@ -939,14 +821,11 @@ public final class Spawner {
                 .slowing(slowFactor, slowTicks)
                 .pumping(bloatPerShot));
         if (blastRadius > 0f) {
-            // A shot that goes off where it stops, and it does so by dying, through the one reaction
-            // everything that explodes uses (G0018). Hitting something and running out of arena are
-            // the same event to it, because both end in the reaper's window.
+            // A shot that goes off where it stops, by dying (G0018) - on a hit or at the arena edge.
             entity.add(engine.createComponent(BlastsOnDeath.class).set(blastRadius, blastRadius));
         }
         if (slicks.leavesAnything()) {
-            // And a shot that ruins the ground where it stops, through the same reaction. A gun may
-            // name both: the blast is the moment, the spatter is what the moment leaves behind.
+            // And one that ruins the ground where it stops; a gun may name both.
             entity.add(engine.createComponent(SlicksOnDeath.class).set(slicks));
         }
         entity.add(engine.createComponent(Appearance.class).set(look));
@@ -957,19 +836,9 @@ public final class Spawner {
     /**
      * Spawns one circle of ruined ground: an ordinary body carrying an ordinary blow.
      *
-     * <p>Non-solid, so anything walks into it rather than round it, and immovable, so a crowd cannot
-     * shove it off the ground it has ruined - the same two flags a pickup lying on the field
-     * declares, and the whole of what it takes to be in the pairwise path without being an obstacle.
-     *
-     * <p><strong>It is on the side of whatever fired the shot</strong>, which is the one way a slick
-     * differs from a blast and is the whole of how it is enforced: the collision rule already refuses
-     * to let damage stay inside a side, so venom reaches the player's men and not the frogs that
-     * spat it, with no system asking anything.
-     *
-     * <p>The blow it lands is a wounding one - a man goes down rather than dying, as he does to
-     * gunfire and to a blast - and it grants its victim a window afterwards. Without that window the
-     * next circle of the same spatter would finish him on the same tick, and a blow that leaves a
-     * casualty would be an outright kill everywhere it mattered.
+     * <p>Non-solid and immovable, like a pickup. <strong>On the side of whatever fired the
+     * shot</strong>, so the collision rule keeps it off its own side. Its blow wounds, and grants a
+     * window so the next circle of the same spatter cannot finish the casualty.
      */
     public Entity spawnSlick(
             float x,
@@ -989,12 +858,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(slick.radiusNow()));
-        // Steered around when it is on nobody's side, and not when it has taken one. Derived here
-        // rather than declared beside the numbers, exactly as a pickup's shunned is: ground that
-        // catches everybody is ground everybody gives room to, and ground that is somebody's problem
-        // is walked through by the things that made it (G0034, G0035).
-        // And it stops no shot. It is a circle lying on the floor, not a thing standing on it: a
-        // slick that ate bullets meant the frog fencing off the ground fenced off the gun too.
+        // Steered around only when neutral (G0034, G0035). It stops no shot: it lies on the floor.
         entity.add(engine.createComponent(Collider.class)
                 .set(false, false)
                 .avoided(side == Side.NEUTRAL)
@@ -1011,12 +875,8 @@ public final class Spawner {
      * Spawns one swing of a melee weapon: a real body in the world that sweeps through an arc and is
      * gone (G0005).
      *
-     * <p>It is non-solid, so it reports a contact without shoving what it touches, and immovable, so
-     * the solver leaves its position to the system driving the sweep. Its attack cooldown is the
-     * whole duration of the swing, which is what makes one swing land at most one blow.
-     *
-     * <p>It grants its victim no invulnerability, deliberately: a target held still by a connecting
-     * sweep is meant to be punished during the opening, not protected by it.
+     * <p>Non-solid and immovable. Its attack cooldown is the whole swing, so one swing lands at most one
+     * blow. It grants no invulnerability: the opening is meant to be punished.
      */
     public Entity spawnStrike(
             @Nullable Entity owner,
@@ -1060,13 +920,8 @@ public final class Spawner {
     /**
      * Spawns a grenade travelling along the given unit direction, thrown by a unit that carries one.
      *
-     * <p>Non-solid, so it slips past bodies rather than shoving a fight around, and movable, so it
-     * travels. Those two flags also mean the solver never keeps it out of rock or inside the arena -
-     * {@code GrenadeSystem} does both, because what a wall <em>means</em> to a grenade is a bounce
-     * rather than the end of it.
-     *
-     * <p>No faction, and no contact damage. A grenade in the air is harmless: everything it does, it
-     * does by dying.
+     * <p>Non-solid and movable, so the solver leaves walls to {@code GrenadeSystem}, which bounces it.
+     * Harmless in the air: everything it does, it does by dying.
      */
     public Entity spawnGrenade(float x, float y, float directionX, float directionY, Thrower thrower) {
         return grenade(x, y, directionX, directionY, thrower.speed, thrower.range, thrower.radius, thrower.blastRadius);
@@ -1115,17 +970,8 @@ public final class Spawner {
     /**
      * Spawns a blast: a circle of ground that is lethal for a moment, and on nobody's side.
      *
-     * <p><strong>No collider.</strong> A body this wide in the pairwise path would set the collision
-     * grid's cell size for the whole level in order to serve a quarter of a second of effect - the
-     * same trade {@link #spawnControlPoint} makes, for the same reason. {@code BlastSystem} does the
-     * radius test itself.
-     *
-     * <p>It carries a body anyway, because that is what the renderer measures a circle from - and here
-     * the drawn circle and the lethal circle are the same number, so the ring the player sees is the
-     * ring that killed him.
-     *
-     * <p>No faction, because a blast is on nobody's side. It is not a question anything asks it: the
-     * damage it owes is written straight onto whatever it caught, and never crosses the contact path.
+     * <p><strong>No collider</strong>, as {@link #spawnControlPoint}: {@code BlastSystem} does the radius
+     * test. The body is the drawn circle, and the same number as the lethal one.
      */
     public Entity spawnBlast(float x, float y, float radius) {
         return spawnBlast(x, y, radius, true, Look.BLAST);
@@ -1147,10 +993,7 @@ public final class Spawner {
                 .set(blast.shakeStrength(), radius * blast.shakeRadiusFactor(), ticks(blast.durationSeconds())));
         SlickDef fire = config.fire().forBlast(radius);
         if (leavesFire && fire.leavesAnything()) {
-            // What the explosion leaves burning, through the one reaction everything that leaves
-            // something behind uses (G0018, G0035). A blast is a thing that dies like any other, so
-            // nothing that explodes had to learn that fire exists - and a gun that leaves no blast,
-            // which is what the flamethrower is, leaves no fire either.
+            // What the explosion leaves burning, through the one reaction (G0018, G0035).
             entity.add(engine.createComponent(SlicksOnDeath.class).set(fire));
         }
         admit(entity);
@@ -1158,8 +1001,7 @@ public final class Spawner {
     }
 
     /**
-     * Spawns the pending-respawn ticket for a unit that just died. It has nothing to draw and nothing
-     * to collide with; it exists only to hold a countdown that the dead unit can no longer hold.
+     * Spawns the pending-respawn ticket for a unit that just died: a countdown and nothing else.
      */
     public Entity spawnRespawn(float delaySeconds, float x, float y, float invulnerableSeconds, int slot) {
         Entity entity = engine.createEntity();
