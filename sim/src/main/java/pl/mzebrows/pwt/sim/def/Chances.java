@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>It is built full rather than sparse: every constant has a value, always, so no caller anywhere
  * has a missing case to consider. Adding a constant to {@link AiChance} therefore cannot produce a
- * hole, and the number it starts at is the one declared on the constant itself.
+ * hole. It starts at zero - off - until the config says otherwise.
  *
  * <p><strong>It also says how every chance is dealt</strong>: the {@link #longestGap() longest gap}.
  * That is one number for the whole table rather than one per behaviour, because it is not an opinion
@@ -42,13 +42,9 @@ public final class Chances {
         this.longestGap = longestGap;
     }
 
-    /** Every behaviour at the number declared on its own constant. */
-    public static Chances standard() {
-        float[] values = new float[KINDS.length];
-        for (AiChance kind : KINDS) {
-            values[kind.ordinal()] = kind.standard();
-        }
-        return new Chances(values, STANDARD_LONGEST_GAP);
+    /** Every behaviour off, dealt the standard way - where a config starts before it is read. */
+    public static Chances none() {
+        return new Chances(new float[KINDS.length], STANDARD_LONGEST_GAP);
     }
 
     /** How often this behaviour happens, as a chance per second of opportunity. Never negative. */

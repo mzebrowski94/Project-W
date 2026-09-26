@@ -30,7 +30,7 @@ belongs on the definition every kind already has rather than on the one kind tha
 `Spawner` (entity kinds), `Defs` (kind definitions), `Pool` (transients), `Rng` (randomness),
 `SpatialGrid` (neighbour queries), `ConstraintSolver` (where bodies may be), `Sight` (detection tests),
 `FlowField` (routes), `Scatter` (placement), `Maps` (layouts and their validity checks), `Log`,
-`GameProperties` (config), `AlphaWorlds` (test fixtures), `Transport` (links between machines),
+`GameProperties` (config), `ConfigBinder` (config records from text), `AlphaWorlds` (test fixtures), `Transport` (links between machines),
 `LoopbackNetwork` and `ConditionedTransport` (networks for tests and lag on demand), `NetLog` (the
 connection log), `WorldCodec` (a world as bytes, a hash, a diff), `SessionHarness` (a whole online
 session in one test) - plus a component or system for most

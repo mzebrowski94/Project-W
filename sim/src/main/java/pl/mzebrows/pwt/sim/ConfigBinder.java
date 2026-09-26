@@ -179,7 +179,7 @@ final class ConfigBinder {
     }
 
     private Chances chances(String key) {
-        Chances chances = Chances.standard();
+        Chances chances = Chances.none();
         for (AiChance kind : AiChance.values()) {
             chances = chances.with(kind, (Float) own(key, lower(kind), float.class));
         }

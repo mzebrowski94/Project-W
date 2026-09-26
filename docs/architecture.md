@@ -59,8 +59,12 @@ The whole game world. Owns an Ashley `PooledEngine`, the seeded `Rng`, the tick 
 system that changes world state.
 
 - `Simulation` - the world. `step()` advances it by exactly one fixed tick.
-- `SimConfig` - the tunables it was built with. A record, handed in already parsed; `sim` reads no
-  files.
+- `SimConfig` - the tunables it was built with: exactly `assets/game.properties`, bound by
+  `ConfigBinder` from record component names, so a tunable is a component and a line in the file and
+  nothing else. `sim` reads no files: `:sim:generateShippedConfig` compiles the file's values into a
+  constant, which `SimConfig.defaults()` binds - what every test runs and what a missing or broken key
+  falls back to - and any other text (a player's file, a host's) arrives through `SimConfig.parse`.
+  There is no literal default anywhere in Java; a second copy of a number is how 21 of them drifted.
 - `Rng` - SplitMix64. The only randomness source. Its state is one `long`, so a world can be
   snapshotted and replayed exactly. `Rng.stream` derives one generator per concern from the level
   seed; `RngStream` names them. Sharing one sequence between concerns keeps every run reproducible
@@ -192,7 +196,8 @@ loop.
 - `PwtGame` - `ApplicationAdapter`. Per frame: ask `FixedStepClock` how many steps to run, run them,
   clear, render with `alpha`.
 - `GameProperties` / `SimConfigLoader` / `GraphicConfig` - config loading. Every value has a
-  fallback and logs when it is used.
+  fallback and logs when it is used. `SimConfigLoader` only finds `game.properties` and logs what
+  `SimConfig.parse` says was wrong with it; the shipped value stands for each.
 - `Assets` - every asset path as a constant, an `AssetManager` behind them. Missing files log and
   are skipped, never thrown.
 - `GameContext` - what a screen may ask of the application. Screens are given this rather than

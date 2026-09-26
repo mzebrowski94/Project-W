@@ -15,10 +15,10 @@ package pl.mzebrows.pwt.sim.def;
  * thing is actually possible, so 0.5 means a unit with the chance in front of it for two seconds
  * takes it about once.
  *
- * <p>The value here is the fallback. {@code game.properties} overrides it under
- * {@code sim.ai.chance.<name>}, and a strain that needs its own number overrides that again under
- * {@code sim.unit.<kind>.chances.<name>} - which is what makes a shooter far hungrier for a barrel
- * than a grunt without either of them being a special case in code.
+ * <p>The numbers are in {@code game.properties}, under {@code sim.ai.chance.<name>}, and a strain
+ * that needs its own overrides that under {@code sim.unit.<kind>.chances.<name>} - which is what
+ * makes a shooter far hungrier for a barrel than a grunt without either of them being a special case
+ * in code. Nothing here carries a number, so there is no second copy of one to drift.
  *
  * <p>Zero switches a behaviour off and draws no random number at all, so turning one off in a
  * scenario cannot reshuffle what every other behaviour rolls (pillar 6).
@@ -32,7 +32,7 @@ public enum AiChance {
      * Answering a leap is the commander's moment and the whole reason the clinch rule exists (G0013);
      * a squad that reliably swatted leapers out of the air would quietly take it away from him.
      */
-    SWING_AT_A_LEAP(0.5f),
+    SWING_AT_A_LEAP,
 
     /**
      * How often a creature standing against an explosive barrel bites into it.
@@ -42,10 +42,10 @@ public enum AiChance {
      * this is what decides whether touching it is the end of the barrel. Low for anything that
      * chases, and far higher for anything that shoots, which is what a strain override is for.
      */
-    BITE_A_BARREL(0.8f),
+    BITE_A_BARREL,
 
     /** How often a trooper with nothing better to do goes to pick up a comrade who is down. */
-    AID_A_TROOPER(0.4f),
+    AID_A_TROOPER,
 
     /**
      * How often a trooper standing near a free gun decides to get on it rather than get on with what
@@ -56,7 +56,7 @@ public enum AiChance {
      * already in the gun's reach - a man does not sit down at a gun for the view - and that the gun
      * puts him off again once there has been nothing to shoot at for a while.
      */
-    MAN_A_TURRET(2f),
+    MAN_A_TURRET,
 
     /**
      * How often a trooper goes to pick up the commander.
@@ -65,16 +65,5 @@ public enum AiChance {
      * choose between two bodies on the ground should be seen to choose. It is also the whole of the
      * answer to "who picks the commander up" - drop it to zero and he is unrescuable again.
      */
-    AID_THE_COMMANDER(1.5f);
-
-    private final float standard;
-
-    AiChance(float standard) {
-        this.standard = standard;
-    }
-
-    /** What this is worth with no configuration at all, as a chance per second of opportunity. */
-    public float standard() {
-        return standard;
-    }
+    AID_THE_COMMANDER
 }

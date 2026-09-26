@@ -30,9 +30,9 @@ class OddsTest {
     /** A thousand seconds: enough that a count is about the rate rather than about the seed. */
     private static final int TICKS = 60_000;
 
-    private static final Chances EVEN = Chances.standard();
+    private static final Chances EVEN = Chances.none();
 
-    private static final Chances COIN = Chances.standard().withLongestGap(0f);
+    private static final Chances COIN = Chances.none().withLongestGap(0f);
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("dealings")
@@ -106,7 +106,7 @@ class OddsTest {
 
     @Test
     void asksTheTableForTheNumberWhenItIsGivenOne() {
-        Chances chances = Chances.standard().with(AiChance.SWING_AT_A_LEAP, CERTAIN);
+        Chances chances = Chances.none().with(AiChance.SWING_AT_A_LEAP, CERTAIN);
 
         assertThat(Odds.spent(Odds.spend(new Rng(1L), 0f, chances, AiChance.SWING_AT_A_LEAP, TICK)))
                 .isTrue();

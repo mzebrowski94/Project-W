@@ -1,5 +1,7 @@
 package pl.mzebrows.pwt.sim;
 
+import java.util.List;
+import java.util.SortedMap;
 import java.util.function.UnaryOperator;
 import lombok.With;
 import pl.mzebrows.pwt.map.Terrain;
@@ -11,16 +13,11 @@ import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
-import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.GroundDef;
-import pl.mzebrows.pwt.sim.def.HeatDef;
-import pl.mzebrows.pwt.sim.def.HopDef;
-import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
-import pl.mzebrows.pwt.sim.def.RangedDef;
 import pl.mzebrows.pwt.sim.def.Require;
 import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
@@ -28,11 +25,12 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
-import pl.mzebrows.pwt.sim.def.WeaveDef;
 
 /**
- * Tunables the simulation reads at construction time. Loaded from {@code game.properties} by the
- * client module - the simulation itself never touches the filesystem.
+ * Tunables the simulation reads at construction time: exactly {@code game.properties}, bound by
+ * {@link ConfigBinder} from each component's name. The simulation never touches the filesystem - what
+ * ships is compiled in ({@link #defaults()}), and anything else arrives as text ({@link #parse}).
+ * <strong>A new tunable is a component here and a line in the file</strong>, and nothing else.
  *
  * <p>Grouped into nested records rather than one flat parameter list so a system can be handed only
  * the group it needs, and so adding a tunable touches one constructor instead of every call site.
@@ -105,6 +103,9 @@ public record SimConfig(
         ObstacleConfig obstacle,
         CollisionConfig collision) {
 
+    /** The prefix every key in {@code game.properties} starts with. */
+    private static final String ROOT = "sim";
+
     public SimConfig {
         Require.positive("tickSeconds", tickSeconds);
         Require.atLeastOne("maxTicksPerFrame", maxTicksPerFrame);
@@ -169,534 +170,43 @@ public record SimConfig(
         return withUnits(units.map(kind, change));
     }
 
-    /** Values used when {@code game.properties} is missing or unreadable. */
+    /**
+     * What ships: {@code assets/game.properties}, compiled in by {@code :sim:generateShippedConfig} and
+     * bound once. What every test runs, and what the client falls back to - so there is one copy of every
+     * number, and it is the one players play.
+     */
     public static SimConfig defaults() {
-        return new SimConfig(
-                1L,
-                1f / 60f,
-                5,
-                new MapConfig(32, 18, 5f, 6),
-                new CommanderConfig(2f, 19f, 100f, 5f, 1.5f, 1.5f, 6f, 2f, 120f),
-                new TrooperConfig(
-                        1.6f,
-                        13.5f,
-                        4,
-                        8,
-                        7f,
-                        100f,
-                        1f,
-                        WeaponKind.SIDEARM,
-                        new AvoidanceDef(true, 7f, 0.35f, 1.6f),
-                        0.55f,
-                        0.8f,
-                        0.7f,
-                        1.6f,
-                        3f,
-                        new PerceptionDef(false, true, 34f, 40f, 0f, 100f, true),
-                        22f,
-                        40f,
-                        1.6f,
-                        7f,
-                        30f,
-                        new ApproachDef(true, 8f, 10f),
-                        1f,
-                        10f,
-                        2f,
-                        30f,
-                        1.5f,
-                        2f,
-                        0.8f,
-                        3f,
-                        12f,
-                        8f),
-                new SpawnConfig(1, 2, 5),
-                defaultUnits(),
-                defaultPickups(),
-                defaultWeapons(),
-                defaultGround(),
-                Chances.standard(),
-                new MeleeConfig(0.6f, 0f, 0.12f, 1.2f, 1.4f, 120f, 180f, 1f, true, 14f, 100f, 45f, 120f),
-                new BlastConfig(1000f, 0.25f, 3f, 2.5f),
-                new FireConfig(5, 0.3f, 0.65f, 5f, 10f, 1000f, 1.6f, 0.15f, 0.45f),
-                new BloatConfig(1.8f, 0.6f, 0.15f, 5f, 1.2f),
-                new GrenadeConfig(1.2f, 38f, 34f, 0.55f, 6f),
-                new RabbitConfig(
-                        15f,
-                        1f,
-                        0.4f,
-                        new WanderDef(true, 18f, 0.7f, 1f, 0.3f, 1.1f, 3f),
-                        new DodgeDef(true, 26f, 32f, 0.32f, 0.9f, 1.2f)),
-                new BarrelConfig(1f, 11f, 4f),
-                new MineConfig(0.7f, 2f, 2.5f, 1f, 9f, 0.55f, 0.08f),
-                new CasualtyConfig(8f, 0.8f, 0.4f, 1f, 0f, 1.6f),
-                new ActionConfig(2.5f, 0.45f, 0.35f, 0.4f),
-                new NestConfig(2.4f, 600f, 30f, 2, 3, 2, 3, 6f, 140f, 48f),
-                new ControlPointConfig(6f, 5f, 48f, 12f, 2, 3),
-                new TurretConfig(2.2f, 360f, 6f, 2.5f, 0.3f, 55f, 26f, 6f, WeaponKind.TURRET_GUN),
-                new ObstacleConfig(3.5f, 8),
-                new CollisionConfig(3));
-    }
-
-    private static Defs<UnitKind, UnitDef> defaultUnits() {
-        return Defs.<UnitKind, UnitDef>builder(UnitKind.class)
-                .put(
-                        UnitKind.GRUNT,
-                        new UnitDef(
-                                1.8f,
-                                8.25f,
-                                12,
-                                150f,
-                                100f,
-                                200f,
-                                1.3f,
-                                0.6f,
-                                1.5f,
-                                1f,
-                                3,
-                                UnitKind.BRUTE,
-                                PerceptionDef.allRound(true, true, 30f, 45f, 14f),
-                                new WanderDef(true, 12f, 0.45f, 1.5f, 0.4f, 1.4f, 4f),
-                                new AvoidanceDef(true, 7f, 0.35f, 1.6f),
-                                new LeapDef(true, 16f, 29f, 0.28f, 2, 0.18f, 1.6f, 0.08f, 0.22f),
-                                HopDef.off(),
-                                RangedDef.off(),
-                                new ApproachDef(true, 7f, 12f),
-                                WeaveDef.off(),
-                                DodgeDef.off(),
-                                Chances.standard(),
-                                Look.GRUNT))
-                .put(
-                        UnitKind.BRUTE,
-                        new UnitDef(
-                                2.6f,
-                                4.75f,
-                                3,
-                                250f,
-                                100f,
-                                200f,
-                                1.5f,
-                                0.6f,
-                                1.5f,
-                                1f,
-                                0,
-                                null,
-                                PerceptionDef.allRound(true, true, 24f, 36f, 10f),
-                                new WanderDef(true, 8f, 0.35f, 2f, 0.8f, 2.4f, 5f),
-                                new AvoidanceDef(true, 9f, 0.5f, 1.3f),
-                                new LeapDef(true, 22f, 24f, 0.42f, 3, 0.26f, 2.4f, 0.18f, 0.42f),
-                                HopDef.off(),
-                                RangedDef.off(),
-                                new ApproachDef(true, 9f, 14f),
-                                WeaveDef.off(),
-                                DodgeDef.off(),
-                                Chances.standard(),
-                                Look.BRUTE))
-                .put(
-                        UnitKind.SPITTER,
-                        new UnitDef(
-                                1.7f,
-                                6f,
-                                4,
-                                70f,
-                                100f,
-                                200f,
-                                1.3f,
-                                0.6f,
-                                1.5f,
-                                1f,
-                                0,
-                                null,
-                                PerceptionDef.allRound(false, true, 30f, 45f, 14f),
-                                new WanderDef(true, 7f, 0.4f, 0.8f, 0.2f, 0.7f, 3f),
-                                new AvoidanceDef(true, 7f, 0.35f, 1.6f),
-                                LeapDef.off(),
-                                HopDef.off(),
-                                new RangedDef(
-                                        true,
-                                        18f,
-                                        14f,
-                                        true,
-                                        WeaponKind.SPIT,
-                                        true,
-                                        150f,
-                                        3f,
-                                        9f,
-                                        0.6f,
-                                        3,
-                                        0.35f,
-                                        WeaponKind.CHARGED_SPIT),
-                                // It takes its own ground rather than closing on him, so there is no
-                                // queue for a spread to break up.
-                                ApproachDef.off(),
-                                // It wants a barrel far more than anything that closes and claws
-                                // does, because a barrel is what turns its gun into an artillery
-                                // piece. Standing one next to a barrel is a decision a level makes.
-                                WeaveDef.off(),
-                                DodgeDef.off(),
-                                Chances.standard().with(AiChance.BITE_A_BARREL, 8f),
-                                Look.SPITTER))
-                .put(
-                        UnitKind.RUNNER,
-                        new UnitDef(
-                                1.4f,
-                                9.5f,
-                                6,
-                                60f,
-                                100f,
-                                200f,
-                                1.1f,
-                                0.6f,
-                                1.5f,
-                                0.8f,
-                                0,
-                                null,
-                                // It notices you from most of the way across a level, which is the
-                                // whole of what it is for: the strain that comes to find you.
-                                PerceptionDef.allRound(true, true, 60f, 80f, 14f),
-                                new WanderDef(true, 16f, 0.5f, 1.5f, 0.3f, 1f, 4f),
-                                new AvoidanceDef(true, 7f, 0.35f, 1.6f),
-                                new LeapDef(true, 14f, 34f, 0.24f, 2, 0.14f, 1.2f, 0.06f, 0.16f),
-                                HopDef.off(),
-                                RangedDef.off(),
-                                // Narrower than a grunt's, because it weaves on top of it: two wide
-                                // answers to the same question read as a creature that cannot decide.
-                                new ApproachDef(true, 5f, 10f),
-                                new WeaveDef(true, 0.55f, 9f),
-                                new DodgeDef(true, 22f, 26f, 0.26f, 0.7f, 1.4f),
-                                Chances.standard(),
-                                Look.RUNNER))
-                .put(
-                        UnitKind.FROG,
-                        new UnitDef(
-                                1.6f,
-                                7.5f,
-                                4,
-                                60f,
-                                100f,
-                                200f,
-                                1.3f,
-                                0.6f,
-                                1.5f,
-                                1f,
-                                0,
-                                null,
-                                // Its lose range is barely past the range it notices you at, where
-                                // everything else keeps hunting half a screen further. Backing off
-                                // works on a frog, which is the whole of what makes it a creature to
-                                // leave alone rather than one to clear. The gap is still a gap: one
-                                // range would have it flicker between hunting and idling on the
-                                // boundary, which is the reason the two numbers exist at all.
-                                PerceptionDef.allRound(false, true, 26f, 30f, 12f),
-                                new WanderDef(true, 9f, 0.5f, 1.5f, 0.5f, 1.6f, 4f),
-                                new AvoidanceDef(true, 7f, 0.35f, 1.6f),
-                                LeapDef.off(),
-                                // The gait. A hop and rather more sitting than hopping, so what a
-                                // player reads is a creature that is repeatedly not going anywhere -
-                                // and the burst makes the whole cycle cover exactly what the speed
-                                // above says, so a frog is no faster and no slower than it looks.
-                                new HopDef(true, 0.26f, 0.42f),
-                                new RangedDef(
-                                        true,
-                                        26f,
-                                        10f,
-                                        true,
-                                        WeaponKind.VENOM,
-                                        false,
-                                        160f,
-                                        3f,
-                                        16f,
-                                        0.7f,
-                                        0,
-                                        1f,
-                                        null),
-                                // It shoots at ground rather than at a man, so there is no queue for
-                                // a spread to break up and nothing for a weave to make harder to hit.
-                                ApproachDef.off(),
-                                WeaveDef.off(),
-                                DodgeDef.off(),
-                                Chances.standard(),
-                                Look.FROG))
-                .build();
+        return Shipped.CONFIG;
     }
 
     /**
-     * Every gun, by kind. The sidearm is what the commander starts and respawns with; the rest are
-     * things he has to find and then hold on to.
-     */
-    private static Defs<WeaponKind, WeaponDef> defaultWeapons() {
-        return Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
-                .put(
-                        WeaponKind.SIDEARM,
-                        new WeaponDef(
-                                0.3f,
-                                42f,
-                                0.6f,
-                                0f,
-                                50f,
-                                1,
-                                0f,
-                                Look.PROJECTILE,
-                                0f,
-                                SlickDef.off(),
-                                HeatDef.none(),
-                                0f,
-                                0f,
-                                1f,
-                                0f,
-                                1f,
-                                0f,
-                                0f,
-                                0f))
-                .put(
-                        WeaponKind.RAILGUN,
-                        new WeaponDef(
-                                1.2f,
-                                85f,
-                                1f,
-                                0f,
-                                300f,
-                                1,
-                                0f,
-                                Look.SLUG,
-                                0f,
-                                SlickDef.off(),
-                                new HeatDef(0.28f, 0.12f, 0.4f),
-                                0f,
-                                0.05f,
-                                1f,
-                                0f,
-                                1f,
-                                0f,
-                                0f,
-                                0f))
-                // The two that cover ground rather than a point. Both name a flight length, which is
-                // what makes them short-ranged - a property of the shot and never of the aim.
-                .put(
-                        WeaponKind.FLAMER,
-                        new WeaponDef(
-                                0.09f,
-                                34f,
-                                1.1f,
-                                17f,
-                                9f,
-                                4,
-                                34f,
-                                Look.FLAME,
-                                0f,
-                                SlickDef.off(),
-                                new HeatDef(0.035f, 0.3f, 0.45f),
-                                0f,
-                                0f,
-                                1f,
-                                0f,
-                                1f,
-                                0f,
-                                0f,
-                                0f))
-                .put(
-                        WeaponKind.SHOTGUN,
-                        new WeaponDef(
-                                0.75f,
-                                60f,
-                                0.5f,
-                                26f,
-                                22f,
-                                6,
-                                26f,
-                                Look.PELLET,
-                                0f,
-                                SlickDef.off(),
-                                HeatDef.none(),
-                                0f,
-                                0f,
-                                1f,
-                                0f,
-                                1f,
-                                0f,
-                                0f,
-                                0f))
-                // The beam. Forty shots a second worth seven each, through anything alive and out
-                // the far side, slowing whatever they land on - and the hottest gun a man can pick
-                // up, so about three seconds of holding it down is all there is before it stops
-                // itself. Every one of those is paid for out of the one bar.
-                .put(
-                        WeaponKind.LASER,
-                        new WeaponDef(
-                                0.05f,
-                                190f,
-                                0.3f,
-                                38f,
-                                7f,
-                                1,
-                                0f,
-                                Look.LASER,
-                                0f,
-                                SlickDef.off(),
-                                new HeatDef(0.0275f, 0.3f, 0.45f),
-                                0f,
-                                0f,
-                                0.4f,
-                                0.8f,
-                                0.72f,
-                                0.16f,
-                                40f,
-                                0.06f))
-                .put(
-                        WeaponKind.SPIT,
-                        new WeaponDef(
-                                1.1f,
-                                30f,
-                                0.7f,
-                                0f,
-                                100f,
-                                1,
-                                0f,
-                                Look.SPIT,
-                                0f,
-                                SlickDef.off(),
-                                HeatDef.none(),
-                                0f,
-                                0f,
-                                1f,
-                                0f,
-                                1f,
-                                0f,
-                                0f,
-                                0f))
-                .put(
-                        WeaponKind.CHARGED_SPIT,
-                        new WeaponDef(
-                                1.1f,
-                                30f,
-                                0.8f,
-                                0f,
-                                100f,
-                                1,
-                                0f,
-                                Look.CHARGED_SPIT,
-                                5f,
-                                SlickDef.off(),
-                                HeatDef.none(),
-                                0f,
-                                0f,
-                                1f,
-                                0f,
-                                1f,
-                                0f,
-                                0f,
-                                0f))
-                // What a frog throws. THE SHOT ITSELF DOES NOTHING - its damage is zero on purpose,
-                // because what a frog does to you is the ground and not the hit. It has a reach, so
-                // a miss bursts short of you rather than flying on, which is what makes standing in
-                // the wrong place the mistake rather than failing to dodge.
-                .put(
-                        WeaponKind.VENOM,
-                        new WeaponDef(
-                                2.4f,
-                                26f,
-                                0.9f,
-                                30f,
-                                0f,
-                                1,
-                                0f,
-                                Look.VENOM,
-                                0f,
-                                new SlickDef(5, 2.2f, 2.6f, 7f, 7f, 1000f, 1.6f, 0f, 0.3f, Look.SLICK),
-                                HeatDef.none(),
-                                0f,
-                                0f,
-                                1f,
-                                0f,
-                                1f,
-                                0f,
-                                0f,
-                                0f))
-                .put(
-                        WeaponKind.TURRET_GUN,
-                        new WeaponDef(
-                                0.16f,
-                                150f,
-                                0.45f,
-                                0f,
-                                30f,
-                                1,
-                                0f,
-                                Look.TURRET_SHOT,
-                                0f,
-                                SlickDef.off(),
-                                new HeatDef(0.1f, 0.35f, 0.6f),
-                                0.9f,
-                                0f,
-                                1f,
-                                0f,
-                                1f,
-                                0f,
-                                0f,
-                                0f))
-                .build();
-    }
-
-    /**
-     * What each kind of pickup is and does.
+     * A config from the text of a {@code game.properties} - a player's own, or the one a host shipped
+     * (ADR 0012) - with every value it lacks or garbles taken from {@link #defaults()} and named in the
+     * result, so the caller can say so. A key no record has is named too.
      *
-     * <p><strong>What a pickup grants is structure, not tuning</strong>, so it lives here rather than
-     * in {@code game.properties} - which effect an item has, and which strain it names, are decisions
-     * about the design rather than numbers to balance, and an evolution chain edited in a properties
-     * file could be edited into a loop. The number that actually balances an eating evolution is
-     * {@code feedToEvolve} on the strain, and that is loaded.
+     * @throws IllegalArgumentException if the values are readable but break a rule a record checks
      */
-    private static Defs<PickupKind, PickupDef> defaultPickups() {
-        return Defs.<PickupKind, PickupDef>builder(PickupKind.class)
-                .put(PickupKind.MUSHROOM, new PickupDef(0.9f, Look.MUSHROOM, Grant.NOTHING, new Grant.Feed(1), 0f))
-                .put(
-                        PickupKind.FLOWER,
-                        new PickupDef(0.9f, Look.FLOWER, Grant.NOTHING, new Grant.Mutate(UnitKind.BRUTE), 0f))
-                .put(
-                        PickupKind.SUPPLY_DROP,
-                        new PickupDef(0.9f, Look.SUPPLY_DROP, new Grant.Reinforce(3), Grant.NOTHING, 1.8f))
-                // One crate per gun. Same size and same pulse; only the colour says what is inside,
-                // which is a look and a key in graphic.properties rather than any drawing code (G0003).
-                .put(
-                        PickupKind.ARMOURY_RAILGUN,
-                        new PickupDef(
-                                1.2f, Look.ARMOURY_RAILGUN, new Grant.Arm(WeaponKind.RAILGUN), Grant.NOTHING, 2.6f))
-                .put(
-                        PickupKind.ARMOURY_FLAMER,
-                        new PickupDef(1.2f, Look.ARMOURY_FLAMER, new Grant.Arm(WeaponKind.FLAMER), Grant.NOTHING, 2.6f))
-                .put(
-                        PickupKind.ARMOURY_SHOTGUN,
-                        new PickupDef(
-                                1.2f, Look.ARMOURY_SHOTGUN, new Grant.Arm(WeaponKind.SHOTGUN), Grant.NOTHING, 2.6f))
-                .put(
-                        PickupKind.ARMOURY_LASER,
-                        new PickupDef(1.2f, Look.ARMOURY_LASER, new Grant.Arm(WeaponKind.LASER), Grant.NOTHING, 2.6f))
-                .put(PickupKind.RABBIT, new PickupDef(0.8f, Look.RABBIT, Grant.NOTHING, new Grant.Feed(1), 0f))
-                .put(PickupKind.BARREL, new PickupDef(1f, Look.BARREL, Grant.NOTHING, Grant.DETONATE, 0f))
-                .build();
+    public static Parsed parse(String text) {
+        ConfigBinder.Bound<SimConfig> bound =
+                ConfigBinder.bind(SimConfig.class, ROOT, ConfigBinder.parse(text), Shipped.VALUES);
+        SimConfig config = bound.value();
+        if (config == null) {
+            throw new IllegalArgumentException("config: " + String.join("; ", bound.problems()));
+        }
+        return new Parsed(config, bound.problems());
     }
 
-    /**
-     * What every kind of ground is worth to walk on. All of it is open ground but one.
-     *
-     * <p>One entry per terrain rather than one per terrain that matters, because a table with a hole
-     * in it cannot be built - so a new kind of ground cannot quietly arrive with nobody having
-     * decided what it costs, which is the same guard {@code Defs} gives every other kind table.
-     */
-    private static Defs<Terrain, GroundDef> defaultGround() {
-        return Defs.<Terrain, GroundDef>builder(Terrain.class)
-                .put(Terrain.PLAIN, GroundDef.clear())
-                .put(Terrain.DUST, GroundDef.clear())
-                .put(Terrain.ORGANIC, GroundDef.clear())
-                .put(Terrain.MIRE, GroundDef.clear())
-                .put(Terrain.ASH, GroundDef.clear())
-                // The one that is worth anything. He wades; the things that live in it barely
-                // notice, which is what makes a thicket somewhere to be driven out of rather than
-                // somewhere to take cover.
-                .put(Terrain.THICKET, new GroundDef(0.45f, 0.82f))
-                // Nothing stands on rock, so what it would cost is a number nobody can reach. It is
-                // here because the table refuses to be built with a hole in it, which is the point.
-                .put(Terrain.ROCK, GroundDef.clear())
-                .build();
+    /** A config read from text, and everything that had to be taken from what ships instead. */
+    public record Parsed(SimConfig config, List<String> problems) {}
+
+    /** Bound on first use rather than with the record, so a failure names the key rather than a class. */
+    private static final class Shipped {
+
+        static final SortedMap<String, String> VALUES = ConfigBinder.parse(ShippedConfig.TEXT);
+
+        static final SimConfig CONFIG = ConfigBinder.bindStrictly(SimConfig.class, ROOT, VALUES);
+
+        private Shipped() {}
     }
 
     /**

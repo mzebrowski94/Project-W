@@ -614,11 +614,7 @@ public final class AlphaWorlds {
      * consumed behind its back.
      */
     public static Chances noChances() {
-        Chances chances = Chances.standard();
-        for (AiChance kind : AiChance.values()) {
-            chances = chances.with(kind, 0f);
-        }
-        return chances;
+        return Chances.none();
     }
 
     /** The base config with one occasional behaviour certain to happen, for a test that is about it. */

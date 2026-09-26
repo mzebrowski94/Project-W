@@ -39,6 +39,7 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 | After changing a dependency | `.claude/scripts/verify.sh` then `.claude/scripts/gradle.sh --save-cache` |
 | Repack art from `assets-raw/` | `.claude/scripts/gradle.sh :core:packTextures` |
 | Raw Gradle, any task | `.claude/scripts/gradle.sh <task>` |
+| New sim tunable | A component on the config record and one line in `assets/game.properties` - nothing else. `ShippedConfigTest` fails on either alone. |
 | Run the game | Windows only: `./gradlew lwjgl3:run` |
 | Run it as copy 1, say, of several | Windows only: `./gradlew lwjgl3:run --args="--instance=1"` |
 

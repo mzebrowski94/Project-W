@@ -25,7 +25,7 @@ else
   rm -f "$PROBE" 2>/dev/null || CAN_DELETE=0
 fi
 
-NOISE='^WARNING: (A terminally deprecated|sun\.misc\.Unsafe|Please consider reporting)'
+NOISE='^(WARNING: (A terminally deprecated|sun\.misc\.Unsafe|Please consider reporting)|Picked up JAVA_TOOL_OPTIONS)'
 
 if [[ $CAN_DELETE -eq 1 ]]; then
   bash "$GRADLE" spotlessApply "${TASKS[@]}" > "$LOG" 2>&1

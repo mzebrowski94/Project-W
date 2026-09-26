@@ -94,7 +94,7 @@ class DefsTest {
                 ApproachDef.off(),
                 WeaveDef.off(),
                 DodgeDef.off(),
-                Chances.standard(),
+                Chances.none(),
                 look);
     }
 }
