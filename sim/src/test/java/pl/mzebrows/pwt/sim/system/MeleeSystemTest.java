@@ -141,7 +141,7 @@ class MeleeSystemTest {
     void swingsNothingWhileTheCommanderIsHeld() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
-        commander.getComponent(Stunned.class).apply(AlphaWorlds.MELEE_LOCK, 0f);
+        commander.getComponent(Stunned.class).apply(AlphaWorlds.ticksIn(AlphaWorlds.MELEE_LOCK), 0f);
 
         simulation.step(EAST);
 

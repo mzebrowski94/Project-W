@@ -180,7 +180,7 @@ public final class Simulation {
         engine.addSystem(new TrooperMindSystem(config, map, squad, nerve));
         engine.addSystem(new TrooperMoveSystem(config, map, squad));
         engine.addSystem(new TrooperCombatSystem(config, spawner, nerve, scatter));
-        engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map));
+        engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds()));
         engine.addSystem(new AvoidanceSystem(config, map));
         engine.addSystem(new EnemyRangedSystem(map, spawner, streams.of(RngStream.SPIT), scatter));
         // After everything that chooses a course, including planting a shooter, because a gait
@@ -189,7 +189,7 @@ public final class Simulation {
         engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
         engine.addSystem(new DriveSystem(map, config.ground()));
-        engine.addSystem(new EnemyLeapSystem(streams.of(RngStream.LEAP)));
+        engine.addSystem(new EnemyLeapSystem(streams.of(RngStream.LEAP), config.tickSeconds()));
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));

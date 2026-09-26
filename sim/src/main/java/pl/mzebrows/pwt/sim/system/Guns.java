@@ -51,13 +51,13 @@ final class Guns {
      * that names none writes nothing, and a shooter with no {@code Slowed} - a turret - is unaffected
      * either way.
      */
-    static void spend(Entity firer, Weapon weapon, float cooldownSeconds) {
-        weapon.remainingSeconds = cooldownSeconds;
+    static void spend(Entity firer, Weapon weapon, int cooldownTicks) {
+        weapon.remainingTicks = cooldownTicks;
         if (HEAT.has(firer)) {
             HEAT.get(firer).spend(weapon.heatPerShot);
         }
         if (SLOWED.has(firer)) {
-            SLOWED.get(firer).apply(weapon.selfSlowFactor, weapon.selfSlowSeconds);
+            SLOWED.get(firer).apply(weapon.selfSlowFactor, weapon.selfSlowTicks);
         }
     }
 

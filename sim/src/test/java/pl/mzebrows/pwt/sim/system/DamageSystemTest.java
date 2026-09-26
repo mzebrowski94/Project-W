@@ -6,6 +6,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
@@ -84,7 +85,7 @@ class DamageSystemTest {
     void ignoresDamageWhileInvulnerable() {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
-        enemy.getComponent(Invulnerable.class).grant(1f);
+        enemy.getComponent(Invulnerable.class).grant(ticksIn(1f));
 
         owe(enemy, ENEMY_HEALTH);
         simulation.step();
@@ -100,7 +101,7 @@ class DamageSystemTest {
     void forgetsDamageItIgnoredRatherThanSavingItUp() {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
-        enemy.getComponent(Invulnerable.class).grant(2f / 60f);
+        enemy.getComponent(Invulnerable.class).grant(2);
 
         owe(enemy, ENEMY_HEALTH);
         for (int i = 0; i < 10; i++) {
@@ -124,6 +125,6 @@ class DamageSystemTest {
     }
 
     private static void owe(Entity entity, float amount) {
-        entity.getComponent(Damage.class).add(amount, 0f);
+        entity.getComponent(Damage.class).add(amount, 0);
     }
 }

@@ -196,7 +196,7 @@ class ControlPointTest {
         assertThat(level(simulation).isMet(Objective.CLEAR_ENEMIES)).isFalse();
 
         enemy.getComponent(pl.mzebrows.pwt.sim.component.Damage.class)
-                .add(pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH, 0f);
+                .add(pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH, 0);
         simulation.step();
 
         assertThat(level(simulation).isMet(Objective.CLEAR_ENEMIES)).isTrue();

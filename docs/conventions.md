@@ -19,6 +19,7 @@ Banned APIs (below) are the index for the whole project. Per-entity cost rules l
 | `new`, boxing, varargs, `Optional`, string concatenation, streams, capturing lambdas, iterators over a `List` | Reuse a scratch instance, index a libGDX `Array`, cache the view | inside a per-entity loop | nothing - `docs/performance.md` |
 | Any log call, any level | Log outside the loop or not at all | inside a per-frame or per-entity loop | nothing |
 | A nested loop over two entity collections (O(N²)) | `SpatialGrid` | gameplay interactions | nothing |
+| A timer counted down in seconds (`remaining -= deltaTime`) | Whole ticks: a `...Ticks` field set once through `Ticks.of(seconds, tickSeconds)` where the duration enters from the config, taken down by one in `CooldownSystem`. A float tick is not exact; the residue ran 71 shipped durations a tick long. Continuous quantities - heat, bloat, a rate-scaled bleed-out - stay float | `sim` | `TicksTest` |
 | `./gradlew` in the sandbox | `.claude/scripts/gradle.sh` - the wrapper cannot reach the network there | sandbox shell | a confusing `UnknownHostException` |
 | `com.badlogic.gdx.Input*`, `gdx.controllers..` - polling a device | Input arrives as a per-tick value object (`CommanderInput`) | `sim` | `simulationDoesNotReadInputDirectly` |
 | `Simulation.setCommanderInvulnerable` from a scenario | Nothing. God mode is a harness switch; pillar 2 says the commander can be killed. | `sim.scenario` | `scenariosCannotSwitchOnGodMode` |

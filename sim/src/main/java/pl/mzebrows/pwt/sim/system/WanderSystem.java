@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Wander;
+import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * Walks a unit that has noticed nobody slowly around the patch it was spawned in.
@@ -54,12 +55,17 @@ public final class WanderSystem extends EntitySystem {
     private static final int PLACEMENT_ATTEMPTS = 8;
 
     private final Rng rng;
+
+    /** The tick a drawn pause is rounded to ({@link Ticks}). */
+    private final float tickSeconds;
+
     private final TileMap map;
 
     private ImmutableArray<Entity> idlers = new ImmutableArray<>(new Array<>());
 
-    public WanderSystem(Rng rng, TileMap map) {
+    public WanderSystem(Rng rng, TileMap map, float tickSeconds) {
         this.rng = rng;
+        this.tickSeconds = tickSeconds;
         this.map = map;
     }
 
@@ -83,14 +89,14 @@ public final class WanderSystem extends EntitySystem {
                 // length of the level back to where it spawned read as the level rewinding.
                 Position position = POSITION.get(entity);
                 wander.anchor(position.x, position.y);
-                wander.rest(0f);
+                wander.rest(0);
                 continue;
             }
             if (!wander.enabled) {
                 continue;
             }
             if (wander.phase == Wander.Phase.RESTING) {
-                if (wander.remainingSeconds <= 0f) {
+                if (wander.remainingTicks <= 0) {
                     pickSomewhere(entity, wander);
                 }
                 continue;
@@ -128,8 +134,8 @@ public final class WanderSystem extends EntitySystem {
         float toTargetX = wander.targetX - position.x;
         float toTargetY = wander.targetY - position.y;
         float distance = (float) Math.sqrt(toTargetX * toTargetX + toTargetY * toTargetY);
-        if (distance <= wander.arriveRadius || wander.remainingSeconds <= 0f) {
-            wander.rest(rng.nextFloat(wander.pauseMinSeconds, wander.pauseMaxSeconds));
+        if (distance <= wander.arriveRadius || wander.remainingTicks <= 0) {
+            wander.rest(Ticks.of(rng.nextFloat(wander.pauseMinSeconds, wander.pauseMaxSeconds), tickSeconds));
             return;
         }
         float speed = SPEED.get(entity).value * wander.speedFactor;

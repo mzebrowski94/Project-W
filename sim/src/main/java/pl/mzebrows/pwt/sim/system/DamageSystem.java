@@ -85,12 +85,12 @@ public final class DamageSystem extends IteratingSystem {
             return;
         }
         float owed = damage.amount;
-        float recovery = damage.recoverySeconds;
+        int recovery = damage.recoveryTicks;
         float shoveX = damage.knockbackX;
         float shoveY = damage.knockbackY;
         float shove = damage.knockbackSpeed;
         Entity locksOnDeath = damage.locksOnDeath;
-        float deathLock = damage.deathLockSeconds;
+        int deathLock = damage.deathLockTicks;
         float carrySpeed = damage.clinchCarrySpeed;
         float carryDecay = damage.clinchCarryDecay;
         boolean hasSource = damage.hasSource;
@@ -99,7 +99,7 @@ public final class DamageSystem extends IteratingSystem {
         float sourceY = damage.sourceY;
         boolean slowed = damage.slowed();
         float slowFactor = damage.slowFactor;
-        float slowSeconds = damage.slowSeconds;
+        int slowTicks = damage.slowTicks;
         float bloat = damage.bloat;
         damage.reset();
         if (INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active()) {
@@ -131,7 +131,7 @@ public final class DamageSystem extends IteratingSystem {
             // Below the invulnerability check for the same reason the provocation is: a hit that did
             // not land slows nobody. Above the health, because a blow that kills makes this moot and
             // a blow that does not has to leave it wading whatever else happens to it this tick.
-            SLOWED.get(entity).apply(slowFactor, slowSeconds);
+            SLOWED.get(entity).apply(slowFactor, slowTicks);
         }
         Health health = HEALTH.get(entity);
         health.current -= owed;
@@ -200,19 +200,19 @@ public final class DamageSystem extends IteratingSystem {
     private static void clinch(
             Entity target,
             @Nullable Entity attacker,
-            float seconds,
+            int ticks,
             float travelX,
             float travelY,
             float carrySpeed,
             float carryDecay) {
-        if (seconds <= 0f) {
+        if (ticks <= 0) {
             return;
         }
         if (attacker != null && STUNNED.has(attacker)) {
-            STUNNED.get(attacker).clinch(seconds);
+            STUNNED.get(attacker).clinch(ticks);
         }
         if (STUNNED.has(target)) {
-            STUNNED.get(target).clinch(seconds);
+            STUNNED.get(target).clinch(ticks);
         }
         carry(target, attacker, travelX, travelY, carrySpeed, carryDecay);
     }

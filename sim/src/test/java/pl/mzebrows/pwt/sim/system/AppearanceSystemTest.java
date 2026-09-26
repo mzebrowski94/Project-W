@@ -92,7 +92,7 @@ class AppearanceSystemTest {
         Entity enemy = simulation.spawnEnemy(60f, 50f);
         simulation.step();
 
-        enemy.getComponent(Stunned.class).apply(MELEE_LOCK, 0f);
+        enemy.getComponent(Stunned.class).apply(ticksIn(MELEE_LOCK), 0f);
         simulation.step();
 
         assertThat(state(enemy)).isEqualTo(Appearance.State.STAGGERED);
@@ -123,7 +123,7 @@ class AppearanceSystemTest {
         simulation.spawnCommander(50f, 50f);
         Entity enemy = simulation.spawnEnemy(70f, 50f);
 
-        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0f);
+        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
         simulation.step();
 
         assertThat(enemy.getComponent(Stunned.class).active()).isFalse();

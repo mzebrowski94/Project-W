@@ -487,7 +487,7 @@ class TrooperAdvanceTest {
         steps(simulation, 2);
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
 
-        enemy.getComponent(Damage.class).add(ENEMY_HEALTH * 2f, 0f);
+        enemy.getComponent(Damage.class).add(ENEMY_HEALTH * 2f, 0);
         steps(simulation, ticksIn(DEATH_THROES) + 4);
 
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);

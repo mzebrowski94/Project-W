@@ -37,20 +37,20 @@ public final class Leap implements Component, Pool.Poolable {
     public boolean enabled;
     public float triggerRange;
     public float speed;
-    public float airborneSeconds;
+    public int airborneTicks;
     public int sequenceLength;
-    public float betweenSeconds;
-    public float cooldownSeconds;
+    public int betweenTicks;
+    public int cooldownTicks;
     public float hesitationMinSeconds;
     public float hesitationMaxSeconds;
 
     public Phase phase = Phase.READY;
 
     /** Counts down the current phase. Decremented by {@code CooldownSystem} with every other timer. */
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /** Counts down the wait after a whole sequence. Also decremented by {@code CooldownSystem}. */
-    public float cooldownRemaining;
+    public int cooldownRemaining;
 
     /** Leaps still to come in the sequence being flown. */
     public int leapsLeft;
@@ -63,24 +63,24 @@ public final class Leap implements Component, Pool.Poolable {
             boolean newEnabled,
             float newTriggerRange,
             float newSpeed,
-            float newAirborneSeconds,
+            int newAirborneTicks,
             int newSequenceLength,
-            float newBetweenSeconds,
-            float newCooldownSeconds,
+            int newBetweenTicks,
+            int newCooldownTicks,
             float newHesitationMinSeconds,
             float newHesitationMaxSeconds) {
         this.enabled = newEnabled;
         this.triggerRange = newTriggerRange;
         this.speed = newSpeed;
-        this.airborneSeconds = newAirborneSeconds;
+        this.airborneTicks = newAirborneTicks;
         this.sequenceLength = newSequenceLength;
-        this.betweenSeconds = newBetweenSeconds;
-        this.cooldownSeconds = newCooldownSeconds;
+        this.betweenTicks = newBetweenTicks;
+        this.cooldownTicks = newCooldownTicks;
         this.hesitationMinSeconds = newHesitationMinSeconds;
         this.hesitationMaxSeconds = newHesitationMaxSeconds;
         this.phase = Phase.READY;
-        this.remainingSeconds = 0f;
-        this.cooldownRemaining = 0f;
+        this.remainingTicks = 0;
+        this.cooldownRemaining = 0;
         this.leapsLeft = 0;
         this.directionX = 0f;
         this.directionY = 0f;
@@ -100,8 +100,8 @@ public final class Leap implements Component, Pool.Poolable {
     /** Puts the unit back to walking and starts the wait before it may commit again. */
     public void finish() {
         phase = Phase.READY;
-        remainingSeconds = 0f;
-        cooldownRemaining = cooldownSeconds;
+        remainingTicks = 0;
+        cooldownRemaining = cooldownTicks;
         leapsLeft = 0;
         directionX = 0f;
         directionY = 0f;
@@ -112,15 +112,15 @@ public final class Leap implements Component, Pool.Poolable {
         enabled = false;
         triggerRange = 0f;
         speed = 0f;
-        airborneSeconds = 0f;
+        airborneTicks = 0;
         sequenceLength = 0;
-        betweenSeconds = 0f;
-        cooldownSeconds = 0f;
+        betweenTicks = 0;
+        cooldownTicks = 0;
         hesitationMinSeconds = 0f;
         hesitationMaxSeconds = 0f;
         phase = Phase.READY;
-        remainingSeconds = 0f;
-        cooldownRemaining = 0f;
+        remainingTicks = 0;
+        cooldownRemaining = 0;
         leapsLeft = 0;
         directionX = 0f;
         directionY = 0f;

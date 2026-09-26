@@ -16,15 +16,15 @@ import com.badlogic.gdx.utils.Pool;
  */
 public final class Melee implements Component, Pool.Poolable {
 
-    public float cooldownSeconds;
-    public float remainingSeconds;
-    public float windupSeconds;
+    public int cooldownTicks;
+    public int remainingTicks;
+    public int windupTicks;
     public float activeSeconds;
     public float reach;
     public float radius;
     public float damage;
     public float arcDegrees;
-    public float lockSeconds;
+    public int lockTicks;
 
     /** Whether that lock is spent only on a target already committed to attacking. */
     public boolean locksCommittedOnly;
@@ -39,7 +39,7 @@ public final class Melee implements Component, Pool.Poolable {
     public float knockbackDecay;
 
     /** Counts down a wind-up already asked for. Decremented by {@code CooldownSystem}. */
-    public float windupRemaining;
+    public int windupRemaining;
 
     public boolean swingPending;
 
@@ -48,34 +48,34 @@ public final class Melee implements Component, Pool.Poolable {
 
     /** Sets the weapon ready to swing immediately, and returns this component, for fluent spawning. */
     public Melee set(
-            float newCooldownSeconds,
-            float newWindupSeconds,
+            int newCooldownTicks,
+            int newWindupTicks,
             float newActiveSeconds,
             float newReach,
             float newRadius,
             float newDamage,
             float newArcDegrees,
-            float newLockSeconds,
+            int newLockTicks,
             boolean newLocksCommittedOnly,
             float newClinchCarrySpeed,
             float newClinchCarryDecay,
             float newKnockbackSpeed,
             float newKnockbackDecay) {
-        this.cooldownSeconds = newCooldownSeconds;
-        this.remainingSeconds = 0f;
-        this.windupSeconds = newWindupSeconds;
+        this.cooldownTicks = newCooldownTicks;
+        this.remainingTicks = 0;
+        this.windupTicks = newWindupTicks;
         this.activeSeconds = newActiveSeconds;
         this.reach = newReach;
         this.radius = newRadius;
         this.damage = newDamage;
         this.arcDegrees = newArcDegrees;
-        this.lockSeconds = newLockSeconds;
+        this.lockTicks = newLockTicks;
         this.locksCommittedOnly = newLocksCommittedOnly;
         this.clinchCarrySpeed = newClinchCarrySpeed;
         this.clinchCarryDecay = newClinchCarryDecay;
         this.knockbackSpeed = newKnockbackSpeed;
         this.knockbackDecay = newKnockbackDecay;
-        this.windupRemaining = 0f;
+        this.windupRemaining = 0;
         this.swingPending = false;
         this.pendingAimX = 0f;
         this.pendingAimY = 0f;
@@ -84,46 +84,46 @@ public final class Melee implements Component, Pool.Poolable {
 
     /** True if a fresh swing may be asked for: off cooldown, and not already winding one up. */
     public boolean ready() {
-        return remainingSeconds <= 0f && !swingPending;
+        return remainingTicks <= 0 && !swingPending;
     }
 
     /** Remembers where the player was aiming and starts the wind-up. */
     public void beginSwing(float aimX, float aimY) {
         swingPending = true;
-        windupRemaining = windupSeconds;
+        windupRemaining = windupTicks;
         pendingAimX = aimX;
         pendingAimY = aimY;
-        remainingSeconds = cooldownSeconds;
+        remainingTicks = cooldownTicks;
     }
 
     /** True once a pending swing has finished winding up and the sweep should appear. */
     public boolean releasing() {
-        return swingPending && windupRemaining <= 0f;
+        return swingPending && windupRemaining <= 0;
     }
 
     /** Clears the pending swing once its sweep has been spawned. */
     public void released() {
         swingPending = false;
-        windupRemaining = 0f;
+        windupRemaining = 0;
     }
 
     @Override
     public void reset() {
-        cooldownSeconds = 0f;
-        remainingSeconds = 0f;
-        windupSeconds = 0f;
+        cooldownTicks = 0;
+        remainingTicks = 0;
+        windupTicks = 0;
         activeSeconds = 0f;
         reach = 0f;
         radius = 0f;
         damage = 0f;
         arcDegrees = 0f;
-        lockSeconds = 0f;
+        lockTicks = 0;
         locksCommittedOnly = false;
         clinchCarrySpeed = 0f;
         clinchCarryDecay = 0f;
         knockbackSpeed = 0f;
         knockbackDecay = 0f;
-        windupRemaining = 0f;
+        windupRemaining = 0;
         swingPending = false;
         pendingAimX = 0f;
         pendingAimY = 0f;

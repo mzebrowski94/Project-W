@@ -235,6 +235,6 @@ class TrooperCrewTest {
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(BRUTE_HEALTH, 0f, true);
+        entity.getComponent(Damage.class).add(BRUTE_HEALTH, 0, true);
     }
 }

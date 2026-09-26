@@ -14,6 +14,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
+import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * A death reaction, and the countdown it starts.
@@ -93,7 +94,7 @@ public final class RespawnSystem extends EntitySystem {
                 continue;
             }
             Entity commander = spawner.spawnCommander(respawning.x, respawning.y, respawning.slot);
-            INVULNERABLE.get(commander).grant(respawning.invulnerableSeconds);
+            INVULNERABLE.get(commander).grant(Ticks.of(respawning.invulnerableSeconds, deltaTime));
             spawner.markDead(ticket);
         }
     }

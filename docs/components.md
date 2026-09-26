@@ -35,9 +35,9 @@ and a component touched by many is where to check. Read the code before concludi
 | **Drag** | What the commander has hold of, and which way it is from him. | `CommanderControl`, `Drag`, `Drivers` · `Spawner` |
 | **Dragged** | Something that can be hauled about: a man who is down, or a barrel. | `Aid`, `Casualty`, `Damage`, `Drag` · `Spawner` |
 | **Dying** | A death that takes time: the entity's body stays on the field for a while before it is removed. | `Aid`, `Appearance`, `Bloat`, `Casualty`, `Collision`, `Cooldown`, `Damage`, `Deaths`, `Drag`, `Drivers`, `Dying`, `Evolution`, `Mine`, `Objective`, `Perception`, `TrooperCombat`, `TrooperMind`, `Turret` · `Players`, `Spawner` |
-| **Enemy** | Marker: A unit that chases the commander. | `EnemyRanged`, `Mine`, `Navigation`, `Objective`, `TrooperMind`, `Turret` · `Spawner` · client: `DebugOverlay` |
+| **Enemy** | Marker: A unit that chases the commander. | `EnemyRanged`, `Mine`, `Navigation`, `Objective`, `Perception`, `TrooperMind`, `Turret` · `Spawner` · client: `DebugOverlay` |
 | **Faction** | Which side an entity is on. | `Avoidance`, `Collision`, `CommanderControl`, `ControlPoint`, `Drivers`, `EnemyRanged`, `Melee`, `Navigation`, `Nest`, `Pace`, `Perception`, `Pickup`, `Slick`, `TrooperCombat`, `Turret` · `Spawner` |
-| **Feed** | What a unit has eaten, and where that is taking it. | `Appearance`, `Evolution`, `Pickup` · `SimConfig`, `Spawner` |
+| **Feed** | What a unit has eaten, and where that is taking it. | `Appearance`, `Evolution`, `Pickup` · `Spawner` |
 | **Focus** | Marker: The view should keep this entity in shot. | `Spawner` · client: `ScenarioScreen` |
 | **Health** | How much damage an entity can take before it dies. | `Aid`, `Blast`, `Damage`, `Navigation`, `Nest`, `Perception` · `Spawner` · client: `DebugOverlay` |
 | **Heat** | How hot the gun this entity is holding has become, and whether it has stopped itself. | `Appearance`, `Cooldown`, `Guns` · `Spawner` |

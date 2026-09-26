@@ -79,7 +79,7 @@ class WeaponPickupTest {
     void handsHimTheNewGunReadyToFire() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(X, Y);
-        commander.getComponent(Weapon.class).remainingSeconds = 10f;
+        commander.getComponent(Weapon.class).remainingTicks = ticksIn(10f);
         simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, X, Y);
 
         simulation.step();
@@ -119,8 +119,8 @@ class WeaponPickupTest {
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
-        entity.getComponent(Invulnerable.class).remainingSeconds = 0f;
+        entity.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        entity.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 
     private static Entity commander(Simulation simulation) {

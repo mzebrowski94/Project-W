@@ -27,29 +27,29 @@ public final class Shake implements Component, Pool.Poolable {
     /** How far it is felt at all, in world units. Nothing beyond this notices. */
     public float radius;
 
-    public float durationSeconds;
+    public int durationTicks;
 
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /** Sets the event and starts its clock, returning this component, for fluent spawning. */
-    public Shake set(float newStrength, float newRadius, float newDurationSeconds) {
+    public Shake set(float newStrength, float newRadius, int newDurationTicks) {
         this.strength = newStrength;
         this.radius = newRadius;
-        this.durationSeconds = newDurationSeconds;
-        this.remainingSeconds = newDurationSeconds;
+        this.durationTicks = newDurationTicks;
+        this.remainingTicks = newDurationTicks;
         return this;
     }
 
     /** How much of it is left, in {@code [0, 1]}. Zero means it is over. */
     public float fade() {
-        return durationSeconds <= 0f ? 0f : remainingSeconds / durationSeconds;
+        return durationTicks <= 0 ? 0f : remainingTicks / (float) durationTicks;
     }
 
     @Override
     public void reset() {
         strength = 0f;
         radius = 0f;
-        durationSeconds = 0f;
-        remainingSeconds = 0f;
+        durationTicks = 0;
+        remainingTicks = 0;
     }
 }

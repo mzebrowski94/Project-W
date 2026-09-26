@@ -125,8 +125,8 @@ class RespawnSystemTest {
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
-        entity.getComponent(Invulnerable.class).remainingSeconds = 0f;
+        entity.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        entity.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 
     private static Entity commander(Simulation simulation) {

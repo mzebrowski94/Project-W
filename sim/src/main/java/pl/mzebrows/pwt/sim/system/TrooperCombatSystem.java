@@ -174,6 +174,6 @@ public final class TrooperCombatSystem extends EntitySystem {
                 directionY,
                 FACTION.get(entity).side,
                 muzzle);
-        weapon.remainingSeconds = weapon.cooldownSeconds;
+        weapon.remainingTicks = weapon.cooldownTicks;
     }
 }

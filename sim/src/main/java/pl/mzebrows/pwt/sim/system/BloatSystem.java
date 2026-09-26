@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * Pumps a body up while a beam is on it, lets it down again when the beam comes off, and bursts one
@@ -57,10 +58,14 @@ public final class BloatSystem extends IteratingSystem {
     private final Spawner spawner;
     private final SimConfig.BloatConfig config;
 
+    /** How long a charged body is held, in the ticks its throes count. */
+    private final int holdTicks;
+
     public BloatSystem(SimConfig config, Spawner spawner) {
         super(Family.all(Bloat.class, Body.class).get());
         this.spawner = spawner;
         this.config = config.bloat();
+        this.holdTicks = Ticks.of(config.bloat().holdSeconds(), config.tickSeconds());
     }
 
     @Override
@@ -89,8 +94,8 @@ public final class BloatSystem extends IteratingSystem {
         // Still worth something, so the body waits. Refreshed every tick rather than set once, so a
         // corpse the beam keeps coming back to keeps waiting.
         Dying throes = DYING.get(entity);
-        if (throes.remainingSeconds < config.holdSeconds()) {
-            throes.remainingSeconds = config.holdSeconds();
+        if (throes.remainingTicks < holdTicks) {
+            throes.remainingTicks = holdTicks;
         }
     }
 

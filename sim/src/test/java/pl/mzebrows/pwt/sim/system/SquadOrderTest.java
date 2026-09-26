@@ -158,7 +158,7 @@ class SquadOrderTest {
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
 
         enemy.getComponent(pl.mzebrows.pwt.sim.component.Damage.class)
-                .add(pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH, 0f);
+                .add(pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH, 0);
         steps(simulation, 3);
 
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.HOLD);
@@ -228,7 +228,7 @@ class SquadOrderTest {
         simulation.step(order(Order.FOLLOW_ME));
         assertThat(orderOf(trooper)).isEqualTo(Order.FOLLOW_ME);
 
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
+        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
         steps(simulation, 3);
 
         assertThat(orderOf(trooper)).isNull();
@@ -244,7 +244,7 @@ class SquadOrderTest {
         simulation.step(order(Order.DEFENCE));
         assertThat(trooper.getComponent(Appearance.class).ordered).isTrue();
 
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
+        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
         steps(simulation, 3);
 
         assertThat(trooper.getComponent(Appearance.class).ordered).isFalse();
@@ -263,7 +263,7 @@ class SquadOrderTest {
         Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
         simulation.step(order(Order.FOLLOW_ME));
 
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
+        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
         steps(simulation, ticksIn(DEATH_THROES + RESPAWN_DELAY) + 30);
 
         assertThat(countLiving(simulation, Commander.class)).isEqualTo(1);
@@ -312,7 +312,7 @@ class SquadOrderTest {
         simulation.step(order(Order.FORWARD));
         assertThat(trooper.getComponent(Trooper.class).pushingForward()).isTrue();
 
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
+        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
         steps(simulation, 3);
 
         assertThat(trooper.getComponent(Trooper.class).pushingForward()).isFalse();

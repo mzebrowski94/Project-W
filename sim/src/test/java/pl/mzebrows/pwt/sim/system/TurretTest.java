@@ -279,6 +279,6 @@ class TurretTest {
     }
 
     private static void shoot(Entity entity) {
-        entity.getComponent(Damage.class).add(TURRET_HEALTH, 0f, false);
+        entity.getComponent(Damage.class).add(TURRET_HEALTH, 0, false);
     }
 }

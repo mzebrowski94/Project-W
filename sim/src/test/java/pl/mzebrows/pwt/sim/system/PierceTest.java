@@ -140,7 +140,10 @@ class PierceTest {
         Entity commander = simulation.spawnCommander(X, Y);
         commander
                 .getComponent(Weapon.class)
-                .set(WeaponKind.RAILGUN, simulation.config().weapon(WeaponKind.RAILGUN));
+                .set(
+                        WeaponKind.RAILGUN,
+                        simulation.config().weapon(WeaponKind.RAILGUN),
+                        simulation.config().tickSeconds());
         return simulation;
     }
 

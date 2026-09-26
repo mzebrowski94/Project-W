@@ -105,7 +105,10 @@ class SlowTest {
         Entity commander = simulation.spawnCommander(START_X, LANE_Y);
         commander
                 .getComponent(Weapon.class)
-                .set(WeaponKind.LASER, simulation.config().weapon(WeaponKind.LASER));
+                .set(
+                        WeaponKind.LASER,
+                        simulation.config().weapon(WeaponKind.LASER),
+                        simulation.config().tickSeconds());
 
         steps(simulation, 4, FIRING);
 
@@ -119,7 +122,10 @@ class SlowTest {
         Entity commander = simulation.spawnCommander(START_X, LANE_Y);
         commander
                 .getComponent(Weapon.class)
-                .set(WeaponKind.LASER, simulation.config().weapon(WeaponKind.LASER));
+                .set(
+                        WeaponKind.LASER,
+                        simulation.config().weapon(WeaponKind.LASER),
+                        simulation.config().tickSeconds());
 
         steps(simulation, 4, FIRING);
         steps(simulation, ticksIn(LASER_SELF_SLOW_SECONDS) + 2);

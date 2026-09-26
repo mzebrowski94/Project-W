@@ -51,9 +51,9 @@ class StunTest {
     @Test
     void clearsTheThrowWhenAHoldBecomesAClinch() {
         Stunned stunned = new Stunned();
-        stunned.apply(1f, 60f);
+        stunned.apply(AlphaWorlds.ticksIn(1f), 60f);
 
-        stunned.clinch(1f);
+        stunned.clinch(AlphaWorlds.ticksIn(1f));
 
         assertThat(stunned.knockbackDecay).isZero();
         assertThat(stunned.grappling).isTrue();
@@ -150,7 +150,7 @@ class StunTest {
         Simulation simulation = survivableWorld();
         Entity commander = simulation.spawnCommander(50f, 50f);
         Entity enemy = simulation.spawnEnemy(50f, 50f);
-        enemy.getComponent(Stunned.class).apply(ENEMY_LOCK, 0f);
+        enemy.getComponent(Stunned.class).apply(AlphaWorlds.ticksIn(ENEMY_LOCK), 0f);
 
         simulation.step();
 
@@ -173,7 +173,7 @@ class StunTest {
     void bleedsAKnockbackAwayOverTheStun() {
         Simulation simulation = survivableWorld();
         Entity commander = simulation.spawnCommander(50f, 50f);
-        commander.getComponent(Stunned.class).apply(ENEMY_LOCK, AlphaWorlds.KNOCKBACK_DECAY);
+        commander.getComponent(Stunned.class).apply(AlphaWorlds.ticksIn(ENEMY_LOCK), AlphaWorlds.KNOCKBACK_DECAY);
         commander.getComponent(Velocity.class).set(AlphaWorlds.KNOCKBACK_SPEED, 0f);
 
         steps(simulation, ticksIn(AlphaWorlds.KNOCKBACK_SPEED / AlphaWorlds.KNOCKBACK_DECAY) + 2);

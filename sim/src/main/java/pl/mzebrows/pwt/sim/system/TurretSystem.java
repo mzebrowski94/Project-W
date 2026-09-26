@@ -254,6 +254,6 @@ public final class TurretSystem extends EntitySystem {
                 turret.aimY,
                 FACTION.get(station).side,
                 muzzle);
-        Guns.spend(station, weapon, weapon.cooldownSeconds);
+        Guns.spend(station, weapon, weapon.cooldownTicks);
     }
 }

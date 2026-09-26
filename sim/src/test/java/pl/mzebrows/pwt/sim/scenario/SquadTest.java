@@ -135,7 +135,7 @@ class SquadTest {
         Simulation simulation = deployed(config());
         Entity lost = all(simulation, Trooper.class).get(0);
 
-        lost.getComponent(Damage.class).add(TROOPER_HEALTH * 2f, 0f);
+        lost.getComponent(Damage.class).add(TROOPER_HEALTH * 2f, 0);
         steps(simulation, ticksIn(DEATH_THROES) + 30);
 
         assertThat(count(simulation, Trooper.class)).isEqualTo(SQUAD_SIZE - 1);

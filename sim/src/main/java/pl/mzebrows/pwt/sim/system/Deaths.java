@@ -59,7 +59,7 @@ final class Deaths {
             COLLIDER.get(entity).set(true, false);
         }
         if (INVULNERABLE.has(entity)) {
-            INVULNERABLE.get(entity).grant(throes.throesSeconds);
+            INVULNERABLE.get(entity).grant(throes.throesTicks);
         }
     }
 }

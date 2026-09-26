@@ -399,7 +399,7 @@ class ScenarioSessionTest {
                 .getEntitiesFor(Family.all(Trooper.class).get())
                 .get(0)
                 .getComponent(Damage.class)
-                .add(SimConfig.defaults().trooper().health(), 0f, false);
+                .add(SimConfig.defaults().trooper().health(), 0, false);
     }
 
     private static @Nullable Order trooperOrder(ScenarioSession session) {

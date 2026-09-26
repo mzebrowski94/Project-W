@@ -199,7 +199,7 @@ class DragTest {
         assertThat(trooper.getComponent(Casualty.class).begun).isFalse();
 
         steps(simulation, ticksIn(REVIVE_INVULNERABLE) + 2, STILL);
-        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0f, false);
+        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0, false);
         simulation.step(STILL);
 
         assertThat(trooper.getComponent(Casualty.class).begun).isTrue();
@@ -258,7 +258,7 @@ class DragTest {
 
     private static Entity downedTrooper(Simulation simulation) {
         Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
-        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0f, false);
+        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0, false);
         simulation.step(STILL);
         return trooper;
     }

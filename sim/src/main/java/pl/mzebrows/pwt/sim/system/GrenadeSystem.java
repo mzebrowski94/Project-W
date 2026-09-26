@@ -191,7 +191,7 @@ public final class GrenadeSystem extends EntitySystem {
             float muzzle = BODY.get(entity).radius + thrower.radius + MUZZLE_GAP;
             spawner.spawnGrenade(
                     at.x + directionX * muzzle, at.y + directionY * muzzle, directionX, directionY, thrower);
-            thrower.remainingSeconds = thrower.cooldownSeconds;
+            thrower.remainingTicks = thrower.cooldownTicks;
         }
     }
 

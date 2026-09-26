@@ -16,24 +16,24 @@ import com.badlogic.gdx.utils.Pool;
  */
 public final class Invulnerable implements Component, Pool.Poolable {
 
-    public float remainingSeconds;
+    public int remainingTicks;
     public boolean permanent;
 
     /** True if damage should be ignored right now. */
     public boolean active() {
-        return permanent || remainingSeconds > 0f;
+        return permanent || remainingTicks > 0;
     }
 
     /** Extends protection to at least this long, never shortening what is already running. */
-    public void grant(float seconds) {
-        if (seconds > remainingSeconds) {
-            remainingSeconds = seconds;
+    public void grant(int ticks) {
+        if (ticks > remainingTicks) {
+            remainingTicks = ticks;
         }
     }
 
     @Override
     public void reset() {
-        remainingSeconds = 0f;
+        remainingTicks = 0;
         permanent = false;
     }
 }

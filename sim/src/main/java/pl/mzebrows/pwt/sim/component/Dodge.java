@@ -16,15 +16,15 @@ public final class Dodge implements Component, Pool.Poolable {
     public boolean enabled;
     public float reactionRange;
     public float speed;
-    public float durationSeconds;
-    public float commitSeconds;
+    public int durationTicks;
+    public int commitTicks;
     public float margin;
 
     /** Counts down the sidestep itself. Decremented by {@code CooldownSystem} with every other timer. */
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /** Counts down the window before it may answer anything else. */
-    public float commitRemaining;
+    public int commitRemaining;
 
     public float directionX;
     public float directionY;
@@ -34,34 +34,34 @@ public final class Dodge implements Component, Pool.Poolable {
             boolean newEnabled,
             float newReactionRange,
             float newSpeed,
-            float newDurationSeconds,
-            float newCommitSeconds,
+            int newDurationTicks,
+            int newCommitTicks,
             float newMargin) {
         this.enabled = newEnabled;
         this.reactionRange = newReactionRange;
         this.speed = newSpeed;
-        this.durationSeconds = newDurationSeconds;
-        this.commitSeconds = newCommitSeconds;
+        this.durationTicks = newDurationTicks;
+        this.commitTicks = newCommitTicks;
         this.margin = newMargin;
         return this;
     }
 
     /** True while the sidestep is still running. */
     public boolean breaking() {
-        return remainingSeconds > 0f;
+        return remainingTicks > 0;
     }
 
     /** True while it is too committed to answer anything new. */
     public boolean committed() {
-        return commitRemaining > 0f;
+        return commitRemaining > 0;
     }
 
     /** Commits to one sidestep, in a direction decided once and then held. */
     public void breakAway(float newDirectionX, float newDirectionY) {
         this.directionX = newDirectionX;
         this.directionY = newDirectionY;
-        this.remainingSeconds = durationSeconds;
-        this.commitRemaining = commitSeconds;
+        this.remainingTicks = durationTicks;
+        this.commitRemaining = commitTicks;
     }
 
     @Override
@@ -69,11 +69,11 @@ public final class Dodge implements Component, Pool.Poolable {
         enabled = false;
         reactionRange = 0f;
         speed = 0f;
-        durationSeconds = 0f;
-        commitSeconds = 0f;
+        durationTicks = 0;
+        commitTicks = 0;
         margin = 0f;
-        remainingSeconds = 0f;
-        commitRemaining = 0f;
+        remainingTicks = 0;
+        commitRemaining = 0;
         directionX = 0f;
         directionY = 0f;
     }

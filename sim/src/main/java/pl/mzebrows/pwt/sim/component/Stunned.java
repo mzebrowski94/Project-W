@@ -27,7 +27,7 @@ import com.badlogic.gdx.utils.Pool;
  */
 public final class Stunned implements Component, Pool.Poolable {
 
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /** World units per second per second bled off the knockback while the stun runs. */
     public float knockbackDecay;
@@ -37,13 +37,13 @@ public final class Stunned implements Component, Pool.Poolable {
 
     /** True if this entity may not act right now. */
     public boolean active() {
-        return remainingSeconds > 0f;
+        return remainingTicks > 0;
     }
 
     /** Holds it still for at least this long, never shortening a stun already running. */
-    public void apply(float seconds, float decay) {
-        if (seconds > remainingSeconds) {
-            remainingSeconds = seconds;
+    public void apply(int ticks, float decay) {
+        if (ticks > remainingTicks) {
+            remainingTicks = ticks;
         }
         if (decay > 0f) {
             knockbackDecay = decay;
@@ -63,9 +63,9 @@ public final class Stunned implements Component, Pool.Poolable {
      * out from under the body he had just been clinched to - the gap reopening under a freeze that was
      * supposed to have closed it.
      */
-    public void clinch(float seconds) {
-        if (seconds > remainingSeconds) {
-            remainingSeconds = seconds;
+    public void clinch(int ticks) {
+        if (ticks > remainingTicks) {
+            remainingTicks = ticks;
         }
         knockbackDecay = 0f;
         grappling = true;
@@ -73,7 +73,7 @@ public final class Stunned implements Component, Pool.Poolable {
 
     @Override
     public void reset() {
-        remainingSeconds = 0f;
+        remainingTicks = 0;
         knockbackDecay = 0f;
         grappling = false;
     }

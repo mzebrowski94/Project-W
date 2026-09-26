@@ -16,21 +16,21 @@ public final class ContactDamage implements Component, Pool.Poolable {
     public float amount;
 
     /** How long after a hit before this can strike again. Zero for a projectile, which only hits once. */
-    public float cooldownSeconds;
+    public int cooldownTicks;
 
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /**
      * How long the victim is invulnerable after being hit by this. Stops a crowd deleting a unit in
      * one tick; zero for projectiles, so rapid fire is not wasted on a target that just took a shot.
      */
-    public float victimInvulnerableSeconds;
+    public int victimInvulnerableTicks;
 
     /**
      * How long a landed blow holds <em>both</em> parties still. Zero for a projectile - shooting
      * something does not commit the shooter to anything.
      */
-    public float lockSeconds;
+    public int lockTicks;
 
     /**
      * Whether the lock is only spent on a target that had already committed to attacking.
@@ -95,18 +95,18 @@ public final class ContactDamage implements Component, Pool.Poolable {
      */
     public float slowFactor = 1f;
 
-    public float slowSeconds;
+    public int slowTicks;
 
     /** How much of a body this blow pumps up. Zero for everything but the beam. */
     public float bloat;
 
     /** Sets the attack and leaves it ready to strike, returning this component, for fluent spawning. */
-    public ContactDamage set(float newAmount, float newCooldownSeconds, float newVictimInvulnerableSeconds) {
+    public ContactDamage set(float newAmount, int newCooldownTicks, int newVictimInvulnerableTicks) {
         this.amount = newAmount;
-        this.cooldownSeconds = newCooldownSeconds;
-        this.remainingSeconds = 0f;
-        this.victimInvulnerableSeconds = newVictimInvulnerableSeconds;
-        this.lockSeconds = 0f;
+        this.cooldownTicks = newCooldownTicks;
+        this.remainingTicks = 0;
+        this.victimInvulnerableTicks = newVictimInvulnerableTicks;
+        this.lockTicks = 0;
         this.locksCommittedOnly = false;
         this.clinchCarrySpeed = 0f;
         this.clinchCarryDecay = 0f;
@@ -115,7 +115,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
         this.fatal = true;
         this.arcCosine = -1f;
         this.slowFactor = 1f;
-        this.slowSeconds = 0f;
+        this.slowTicks = 0;
         this.bloat = 0f;
         return this;
     }
@@ -124,9 +124,9 @@ public final class ContactDamage implements Component, Pool.Poolable {
      * Makes this a blow that robs what it lands on of speed, and returns this component, for fluent
      * spawning. Chained after {@link #set}, so a blow that only hurts stays a one-line spawn.
      */
-    public ContactDamage slowing(float newSlowFactor, float newSlowSeconds) {
+    public ContactDamage slowing(float newSlowFactor, int newSlowTicks) {
         this.slowFactor = newSlowFactor;
-        this.slowSeconds = newSlowSeconds;
+        this.slowTicks = newSlowTicks;
         return this;
     }
 
@@ -163,13 +163,13 @@ public final class ContactDamage implements Component, Pool.Poolable {
      * hurts stays a one-line spawn.
      */
     public ContactDamage setLock(
-            float newLockSeconds,
+            int newLockTicks,
             boolean newLocksCommittedOnly,
             float newClinchCarrySpeed,
             float newClinchCarryDecay,
             float newKnockbackSpeed,
             float newKnockbackDecay) {
-        this.lockSeconds = newLockSeconds;
+        this.lockTicks = newLockTicks;
         this.locksCommittedOnly = newLocksCommittedOnly;
         this.clinchCarrySpeed = newClinchCarrySpeed;
         this.clinchCarryDecay = newClinchCarryDecay;
@@ -179,21 +179,21 @@ public final class ContactDamage implements Component, Pool.Poolable {
     }
 
     public boolean ready() {
-        return remainingSeconds <= 0f;
+        return remainingTicks <= 0;
     }
 
     /** True if a landed blow holds the attacker and the target still. */
     public boolean locks() {
-        return lockSeconds > 0f;
+        return lockTicks > 0;
     }
 
     @Override
     public void reset() {
         amount = 0f;
-        cooldownSeconds = 0f;
-        remainingSeconds = 0f;
-        victimInvulnerableSeconds = 0f;
-        lockSeconds = 0f;
+        cooldownTicks = 0;
+        remainingTicks = 0;
+        victimInvulnerableTicks = 0;
+        lockTicks = 0;
         locksCommittedOnly = false;
         clinchCarrySpeed = 0f;
         clinchCarryDecay = 0f;
@@ -202,7 +202,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
         fatal = true;
         arcCosine = -1f;
         slowFactor = 1f;
-        slowSeconds = 0f;
+        slowTicks = 0;
         bloat = 0f;
     }
 }

@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * Throws a unit at whoever it is hunting once he is close enough, and owns its velocity while it is
@@ -53,13 +54,17 @@ public final class EnemyLeapSystem extends EntitySystem {
 
     private final Rng rng;
 
+    /** The tick a drawn hesitation is rounded to ({@link Ticks}). */
+    private final float tickSeconds;
+
     /** Scratch for the place being leapt at, so reading it costs no allocation per unit per tick. */
     private final Position hunted = new Position();
 
     private ImmutableArray<Entity> leapers = new ImmutableArray<>(new Array<>());
 
-    public EnemyLeapSystem(Rng rng) {
+    public EnemyLeapSystem(Rng rng, float tickSeconds) {
         this.rng = rng;
+        this.tickSeconds = tickSeconds;
     }
 
     @Override
@@ -101,19 +106,19 @@ public final class EnemyLeapSystem extends EntitySystem {
             case READY -> commitIfClose(leap, position, target, velocity);
             case HESITATING -> {
                 velocity.set(0f, 0f);
-                if (leap.remainingSeconds <= 0f) {
+                if (leap.remainingTicks <= 0) {
                     launch(leap, position, target, velocity);
                 }
             }
             case AIRBORNE -> {
                 velocity.set(leap.directionX * leap.speed, leap.directionY * leap.speed);
-                if (leap.remainingSeconds <= 0f) {
+                if (leap.remainingTicks <= 0) {
                     land(leap, velocity);
                 }
             }
             case RECOVERING -> {
                 velocity.set(0f, 0f);
-                if (leap.remainingSeconds <= 0f) {
+                if (leap.remainingTicks <= 0) {
                     launch(leap, position, target, velocity);
                 }
             }
@@ -122,7 +127,7 @@ public final class EnemyLeapSystem extends EntitySystem {
 
     /** The tell: it stops dead, and only then does the wind-up clock start. */
     private void commitIfClose(Leap leap, Position position, Position target, Velocity velocity) {
-        if (leap.cooldownRemaining > 0f) {
+        if (leap.cooldownRemaining > 0) {
             return;
         }
         float toTargetX = target.x - position.x;
@@ -131,7 +136,8 @@ public final class EnemyLeapSystem extends EntitySystem {
             return;
         }
         leap.phase = Leap.Phase.HESITATING;
-        leap.remainingSeconds = rng.nextFloat(leap.hesitationMinSeconds, leap.hesitationMaxSeconds);
+        leap.remainingTicks =
+                Ticks.of(rng.nextFloat(leap.hesitationMinSeconds, leap.hesitationMaxSeconds), tickSeconds);
         leap.leapsLeft = leap.sequenceLength;
         velocity.set(0f, 0f);
     }
@@ -148,7 +154,7 @@ public final class EnemyLeapSystem extends EntitySystem {
         leap.directionX = toTargetX / distance;
         leap.directionY = toTargetY / distance;
         leap.phase = Leap.Phase.AIRBORNE;
-        leap.remainingSeconds = leap.airborneSeconds;
+        leap.remainingTicks = leap.airborneTicks;
         leap.leapsLeft--;
         velocity.set(leap.directionX * leap.speed, leap.directionY * leap.speed);
     }
@@ -157,7 +163,7 @@ public final class EnemyLeapSystem extends EntitySystem {
         velocity.set(0f, 0f);
         if (leap.leapsLeft > 0) {
             leap.phase = Leap.Phase.RECOVERING;
-            leap.remainingSeconds = leap.betweenSeconds;
+            leap.remainingTicks = leap.betweenTicks;
             return;
         }
         leap.finish();

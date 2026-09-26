@@ -291,7 +291,7 @@ class CoopTest {
     }
 
     private static void kill(Entity commander) {
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
-        commander.getComponent(Invulnerable.class).remainingSeconds = 0f;
+        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        commander.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 }

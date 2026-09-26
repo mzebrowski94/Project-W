@@ -29,32 +29,32 @@ public final class Blast implements Component, Pool.Poolable {
     public float damage;
 
     /** How long the flash lasts. Nothing to do with how long it is dangerous, which is one tick. */
-    public float durationSeconds;
+    public int durationTicks;
 
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /** True once it has caught what was standing in it. */
     public boolean spent;
 
     /** Sets the blast and starts its flash, returning this component, for fluent spawning. */
-    public Blast set(float newDamage, float newDurationSeconds) {
+    public Blast set(float newDamage, int newDurationTicks) {
         this.damage = newDamage;
-        this.durationSeconds = newDurationSeconds;
-        this.remainingSeconds = newDurationSeconds;
+        this.durationTicks = newDurationTicks;
+        this.remainingTicks = newDurationTicks;
         this.spent = false;
         return this;
     }
 
     /** How much of the flash is left, in {@code [0, 1]}, for the renderer to fade it out by. */
     public float fade() {
-        return durationSeconds <= 0f ? 0f : remainingSeconds / durationSeconds;
+        return durationTicks <= 0 ? 0f : remainingTicks / (float) durationTicks;
     }
 
     @Override
     public void reset() {
         damage = 0f;
-        durationSeconds = 0f;
-        remainingSeconds = 0f;
+        durationTicks = 0;
+        remainingTicks = 0;
         spent = false;
     }
 }

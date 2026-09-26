@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * Putting a man back on his feet, in one place, for everybody who can do it.
@@ -102,7 +103,7 @@ final class Aid {
         casualty.recover();
         HEALTH.get(subject).current = HEALTH.get(subject).max * healthFraction;
         if (INVULNERABLE.has(subject)) {
-            INVULNERABLE.get(subject).grant(invulnerableSeconds);
+            INVULNERABLE.get(subject).grant(Ticks.of(invulnerableSeconds, deltaTime));
         }
     }
 

@@ -28,7 +28,7 @@ public final class Slowed implements Component, Pool.Poolable {
     /** How much of its speed it keeps while this is running, as a fraction. */
     public float factor;
 
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /**
      * Robs it of speed, keeping the worst asked for and restarting the clock.
@@ -37,24 +37,24 @@ public final class Slowed implements Component, Pool.Poolable {
      * none draws nothing and touches nothing - the same "zero means not for me" shape as everywhere
      * else, asked of a number whose neutral value happens to be one.
      */
-    public void apply(float newFactor, float seconds) {
-        if (newFactor >= 1f || seconds <= 0f) {
+    public void apply(float newFactor, int ticks) {
+        if (newFactor >= 1f || ticks <= 0) {
             return;
         }
-        if (remainingSeconds <= 0f || newFactor < factor) {
+        if (remainingTicks <= 0 || newFactor < factor) {
             factor = newFactor;
         }
-        remainingSeconds = seconds;
+        remainingTicks = ticks;
     }
 
     /** How much of its speed it keeps right now. One once the slow has run out. */
     public float factor() {
-        return remainingSeconds > 0f ? factor : 1f;
+        return remainingTicks > 0 ? factor : 1f;
     }
 
     @Override
     public void reset() {
         factor = 0f;
-        remainingSeconds = 0f;
+        remainingTicks = 0;
     }
 }

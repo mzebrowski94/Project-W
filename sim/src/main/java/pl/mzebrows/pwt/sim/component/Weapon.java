@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.SlickDef;
+import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
@@ -22,8 +23,8 @@ public final class Weapon implements Component, Pool.Poolable {
     /** Which gun. Reset returns it to the starting one, so the field is never null. */
     public WeaponKind kind = WeaponKind.SIDEARM;
 
-    public float cooldownSeconds;
-    public float remainingSeconds;
+    public int cooldownTicks;
+    public int remainingTicks;
     public float projectileSpeed;
     public float projectileRadius;
 
@@ -70,12 +71,12 @@ public final class Weapon implements Component, Pool.Poolable {
      */
     public float slowFactor = 1f;
 
-    public float slowSeconds;
+    public int slowTicks;
 
     /** How much of his own speed the shooter keeps while he is firing this, and for how long. */
     public float selfSlowFactor = 1f;
 
-    public float selfSlowSeconds;
+    public int selfSlowTicks;
 
     /** How far back along its path one of its shots is drawn. Zero is a dot, which is almost every gun. */
     public float trailLength;
@@ -98,10 +99,10 @@ public final class Weapon implements Component, Pool.Poolable {
     public boolean nextMuzzleRight = true;
 
     /** Reads a gun's definition in, ready to fire, and returns this component, for fluent spawning. */
-    public Weapon set(WeaponKind newKind, WeaponDef def) {
+    public Weapon set(WeaponKind newKind, WeaponDef def, float tickSeconds) {
         this.kind = newKind;
-        this.cooldownSeconds = def.cooldownSeconds();
-        this.remainingSeconds = 0f;
+        this.cooldownTicks = Ticks.of(def.cooldownSeconds(), tickSeconds);
+        this.remainingTicks = 0;
         this.projectileSpeed = def.projectileSpeed();
         this.projectileRadius = def.projectileRadius();
         this.projectileRange = def.projectileRange();
@@ -114,9 +115,9 @@ public final class Weapon implements Component, Pool.Poolable {
         this.muzzleOffset = def.muzzleOffset();
         this.pierceIntervalSeconds = def.pierceIntervalSeconds();
         this.slowFactor = def.slowFactor();
-        this.slowSeconds = def.slowSeconds();
+        this.slowTicks = Ticks.of(def.slowSeconds(), tickSeconds);
         this.selfSlowFactor = def.selfSlowFactor();
-        this.selfSlowSeconds = def.selfSlowSeconds();
+        this.selfSlowTicks = Ticks.of(def.selfSlowSeconds(), tickSeconds);
         this.trailLength = def.trailLength();
         this.bloatPerShot = def.bloatPerShot();
         this.heatPerShot = def.heat().perShot();
@@ -127,14 +128,14 @@ public final class Weapon implements Component, Pool.Poolable {
     }
 
     public boolean ready() {
-        return remainingSeconds <= 0f;
+        return remainingTicks <= 0;
     }
 
     @Override
     public void reset() {
         kind = WeaponKind.SIDEARM;
-        cooldownSeconds = 0f;
-        remainingSeconds = 0f;
+        cooldownTicks = 0;
+        remainingTicks = 0;
         projectileSpeed = 0f;
         projectileRadius = 0f;
         projectileRange = 0f;
@@ -147,9 +148,9 @@ public final class Weapon implements Component, Pool.Poolable {
         muzzleOffset = 0f;
         pierceIntervalSeconds = 0f;
         slowFactor = 1f;
-        slowSeconds = 0f;
+        slowTicks = 0;
         selfSlowFactor = 1f;
-        selfSlowSeconds = 0f;
+        selfSlowTicks = 0;
         trailLength = 0f;
         bloatPerShot = 0f;
         heatPerShot = 0f;

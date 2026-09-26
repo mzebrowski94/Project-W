@@ -146,7 +146,7 @@ class MineTest {
         Entity enemy = simulation.spawnEnemy(MIDDLE + INSIDE, MIDDLE);
 
         simulation.step();
-        enemy.getComponent(Damage.class).add(1000f, 0f, true);
+        enemy.getComponent(Damage.class).add(1000f, 0, true);
         steps(simulation, UNTIL_IT_GOES);
 
         assertThat(count(simulation, Mine.class)).isZero();

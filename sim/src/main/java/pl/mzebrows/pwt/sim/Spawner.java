@@ -73,6 +73,7 @@ import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.SlickDef;
+import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
@@ -116,6 +117,11 @@ public final class Spawner {
         this.map = map;
     }
 
+    /** A duration from the config in the whole ticks every timer counts ({@link Ticks}). */
+    private int ticks(float seconds) {
+        return Ticks.of(seconds, config.tickSeconds());
+    }
+
     /** Spawns the player-controlled unit, armed, at full health, and ready to fire. */
     public Entity spawnCommander(float x, float y) {
         return spawnCommander(x, y, 0);
@@ -141,24 +147,25 @@ public final class Spawner {
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(Invulnerable.class));
         entity.add(engine.createComponent(Stunned.class));
-        entity.add(engine.createComponent(Dying.class).set(commander.deathThroesSeconds()));
+        entity.add(engine.createComponent(Dying.class).set(ticks(commander.deathThroesSeconds())));
         entity.add(engine.createComponent(RespawnsOnDeath.class)
                 .set(
                         commander.respawnDelaySeconds(),
                         commander.respawnMargin(),
                         map.worldHeight() * 0.5f,
                         commander.respawnInvulnerableSeconds()));
-        entity.add(engine.createComponent(Weapon.class).set(STARTING_WEAPON, config.weapon(STARTING_WEAPON)));
+        entity.add(engine.createComponent(Weapon.class)
+                .set(STARTING_WEAPON, config.weapon(STARTING_WEAPON), config.tickSeconds()));
         entity.add(engine.createComponent(Melee.class)
                 .set(
-                        melee.cooldownSeconds(),
-                        melee.windupSeconds(),
+                        ticks(melee.cooldownSeconds()),
+                        ticks(melee.windupSeconds()),
                         melee.activeSeconds(),
                         melee.reach(),
                         melee.radius(),
                         melee.damage(),
                         melee.arcDegrees(),
-                        melee.lockSeconds(),
+                        ticks(melee.lockSeconds()),
                         melee.locksCommittedOnly(),
                         melee.clinchCarrySpeed(),
                         melee.clinchCarryDecay(),
@@ -166,7 +173,7 @@ public final class Spawner {
                         melee.knockbackDecay()));
         entity.add(engine.createComponent(Thrower.class)
                 .set(
-                        grenade.cooldownSeconds(),
+                        ticks(grenade.cooldownSeconds()),
                         grenade.speed(),
                         grenade.range(),
                         grenade.radius(),
@@ -247,7 +254,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(Invulnerable.class));
         entity.add(engine.createComponent(Stunned.class));
-        entity.add(engine.createComponent(Dying.class).set(trooper.deathThroesSeconds()));
+        entity.add(engine.createComponent(Dying.class).set(ticks(trooper.deathThroesSeconds())));
         entity.add(engine.createComponent(Casualty.class)
                 .set(
                         config.casualty().bleedOutSeconds(),
@@ -268,17 +275,18 @@ public final class Spawner {
                         trooper.avoidance().scanRange(),
                         trooper.avoidance().lookaheadSeconds(),
                         trooper.avoidance().weight()));
-        entity.add(engine.createComponent(Weapon.class).set(trooper.weapon(), config.weapon(trooper.weapon())));
+        entity.add(engine.createComponent(Weapon.class)
+                .set(trooper.weapon(), config.weapon(trooper.weapon()), config.tickSeconds()));
         entity.add(engine.createComponent(Melee.class)
                 .set(
-                        melee.cooldownSeconds(),
-                        melee.windupSeconds(),
+                        ticks(melee.cooldownSeconds()),
+                        ticks(melee.windupSeconds()),
                         melee.activeSeconds(),
                         melee.reach(),
                         melee.radius(),
                         melee.damage(),
                         melee.arcDegrees(),
-                        melee.lockSeconds(),
+                        ticks(melee.lockSeconds()),
                         melee.locksCommittedOnly(),
                         melee.clinchCarrySpeed(),
                         melee.clinchCarryDecay(),
@@ -378,11 +386,11 @@ public final class Spawner {
         entity.getComponent(Body.class).set(def.radius());
         entity.getComponent(Speed.class).set(def.speed());
         entity.getComponent(Health.class).set(def.health());
-        entity.getComponent(Dying.class).set(def.deathThroesSeconds());
+        entity.getComponent(Dying.class).set(ticks(def.deathThroesSeconds()));
         entity.getComponent(ContactDamage.class)
-                .set(def.contactDamage(), def.attackCooldownSeconds(), def.victimInvulnerableSeconds())
+                .set(def.contactDamage(), ticks(def.attackCooldownSeconds()), ticks(def.victimInvulnerableSeconds()))
                 .reachingWithin(def.attackArcCosine())
-                .setLock(def.lockSeconds(), false, 0f, 0f, 0f, 0f);
+                .setLock(ticks(def.lockSeconds()), false, 0f, 0f, 0f, 0f);
         entity.getComponent(Perception.class)
                 .set(
                         def.perception().alwaysAggressive(),
@@ -400,7 +408,7 @@ public final class Spawner {
                         def.wander().arriveRadius(),
                         def.wander().pauseMinSeconds(),
                         def.wander().pauseMaxSeconds(),
-                        def.wander().waypointTimeoutSeconds());
+                        ticks(def.wander().waypointTimeoutSeconds()));
         entity.getComponent(Avoidance.class)
                 .set(
                         def.avoidance().enabled(),
@@ -412,10 +420,10 @@ public final class Spawner {
                         def.leap().enabled(),
                         def.leap().triggerRange(),
                         def.leap().speed(),
-                        def.leap().airborneSeconds(),
+                        ticks(def.leap().airborneSeconds()),
                         def.leap().sequenceLength(),
-                        def.leap().betweenSeconds(),
-                        def.leap().cooldownSeconds(),
+                        ticks(def.leap().betweenSeconds()),
+                        ticks(def.leap().cooldownSeconds()),
                         def.leap().hesitationMinSeconds(),
                         def.leap().hesitationMaxSeconds());
         entity.getComponent(Hop.class)
@@ -436,8 +444,8 @@ public final class Spawner {
                         def.dodge().enabled(),
                         def.dodge().reactionRange(),
                         def.dodge().speed(),
-                        def.dodge().durationSeconds(),
-                        def.dodge().commitSeconds(),
+                        ticks(def.dodge().durationSeconds()),
+                        ticks(def.dodge().commitSeconds()),
                         def.dodge().margin());
         entity.getComponent(Ranged.class)
                 .set(
@@ -462,7 +470,7 @@ public final class Spawner {
         // Through the same table and the same component the commander's own guns come through, so a
         // strain that shoots needs no firing code of its own - only a definition saying which gun.
         entity.getComponent(Weapon.class)
-                .set(def.ranged().gun(), config.weapon(def.ranged().gun()));
+                .set(def.ranged().gun(), config.weapon(def.ranged().gun()), config.tickSeconds());
         // How readily this strain bites into something it should be wary of. Copied onto the
         // component like every other per-strain number, so the place that asks needs no table.
         entity.getComponent(Taking.class)
@@ -480,7 +488,7 @@ public final class Spawner {
     public void applyWeapon(Entity entity, WeaponKind kind) {
         Weapon weapon = entity.getComponent(Weapon.class);
         if (weapon != null) {
-            weapon.set(kind, config.weapon(kind));
+            weapon.set(kind, config.weapon(kind), config.tickSeconds());
         }
     }
 
@@ -534,7 +542,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(true, true));
         entity.add(engine.createComponent(Health.class).set(rabbit.health()));
         entity.add(engine.createComponent(Damage.class));
-        entity.add(engine.createComponent(Dying.class).set(rabbit.deathThroesSeconds()));
+        entity.add(engine.createComponent(Dying.class).set(ticks(rabbit.deathThroesSeconds())));
         entity.add(engine.createComponent(Steering.class));
         entity.add(engine.createComponent(Slowed.class));
         entity.add(engine.createComponent(Wander.class)
@@ -545,15 +553,15 @@ public final class Spawner {
                         rabbit.wander().arriveRadius(),
                         rabbit.wander().pauseMinSeconds(),
                         rabbit.wander().pauseMaxSeconds(),
-                        rabbit.wander().waypointTimeoutSeconds())
+                        ticks(rabbit.wander().waypointTimeoutSeconds()))
                 .anchor(x, y));
         entity.add(engine.createComponent(Dodge.class)
                 .set(
                         rabbit.dodge().enabled(),
                         rabbit.dodge().reactionRange(),
                         rabbit.dodge().speed(),
-                        rabbit.dodge().durationSeconds(),
-                        rabbit.dodge().commitSeconds(),
+                        ticks(rabbit.dodge().durationSeconds()),
+                        ticks(rabbit.dodge().commitSeconds()),
                         rabbit.dodge().margin()));
         entity.add(engine.createComponent(Appearance.class).set(def.look()).face(1f, 0f));
         engine.addEntity(entity);
@@ -748,7 +756,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(BlastsOnDeath.class).set(turret.blastRadius(), turret.blastRadius()));
         entity.add(engine.createComponent(Dragged.class));
-        entity.add(engine.createComponent(Weapon.class).set(turret.weapon(), config.weapon(turret.weapon())));
+        entity.add(engine.createComponent(Weapon.class)
+                .set(turret.weapon(), config.weapon(turret.weapon()), config.tickSeconds()));
         // The heat belongs to the gun, not to whoever is on it. That is the whole of why stepping off
         // a hot turret and back on again is not a way of putting the bar back.
         entity.add(engine.createComponent(Heat.class));
@@ -839,9 +848,9 @@ public final class Spawner {
                 weapon.projectileLook,
                 weapon.blastRadius,
                 weapon.slicks,
-                weapon.pierceIntervalSeconds,
+                ticks(weapon.pierceIntervalSeconds),
                 weapon.slowFactor,
-                weapon.slowSeconds,
+                weapon.slowTicks,
                 weapon.bloatPerShot,
                 weapon.trailLength,
                 side);
@@ -864,9 +873,9 @@ public final class Spawner {
                 gun.projectileLook(),
                 gun.blastRadius(),
                 gun.slicks(),
-                gun.pierceIntervalSeconds(),
+                ticks(gun.pierceIntervalSeconds()),
                 gun.slowFactor(),
-                gun.slowSeconds(),
+                ticks(gun.slowSeconds()),
                 gun.bloatPerShot(),
                 gun.trailLength(),
                 side);
@@ -884,9 +893,9 @@ public final class Spawner {
             Look look,
             float blastRadius,
             SlickDef slicks,
-            float pierceIntervalSeconds,
+            int pierceIntervalTicks,
             float slowFactor,
-            float slowSeconds,
+            int slowTicks,
             float bloatPerShot,
             float trailLength,
             Side side) {
@@ -895,7 +904,7 @@ public final class Spawner {
                 .from(x, y)
                 .lasting(range)
                 .trailing(trailLength);
-        if (pierceIntervalSeconds > 0f) {
+        if (pierceIntervalTicks > 0) {
             // A shot that goes through things. The interval is its contact cooldown, which is the
             // field that already means "how long before this may land another blow" - so one slug
             // crossing one body owes one blow rather than one per tick it overlaps.
@@ -909,9 +918,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(radius));
         entity.add(engine.createComponent(Collider.class).set(false, true));
         entity.add(engine.createComponent(ContactDamage.class)
-                .set(damage, pierceIntervalSeconds, 0f)
+                .set(damage, pierceIntervalTicks, 0)
                 .wounding()
-                .slowing(slowFactor, slowSeconds)
+                .slowing(slowFactor, slowTicks)
                 .pumping(bloatPerShot));
         if (blastRadius > 0f) {
             // A shot that goes off where it stops, and it does so by dying, through the one reaction
@@ -958,7 +967,7 @@ public final class Spawner {
             Look look,
             Side side) {
         Entity entity = engine.createEntity();
-        Slick slick = engine.createComponent(Slick.class).set(seconds, radius, growFraction, fadeFraction);
+        Slick slick = engine.createComponent(Slick.class).set(ticks(seconds), radius, growFraction, fadeFraction);
         entity.add(slick);
         entity.add(engine.createComponent(Faction.class).set(side));
         entity.add(engine.createComponent(Position.class).set(x, y));
@@ -975,7 +984,7 @@ public final class Spawner {
                 .avoided(side == Side.NEUTRAL)
                 .stopsShots(false));
         entity.add(engine.createComponent(ContactDamage.class)
-                .set(damage, 0f, victimInvulnerableSeconds)
+                .set(damage, 0, ticks(victimInvulnerableSeconds))
                 .wounding());
         entity.add(engine.createComponent(Appearance.class).set(look));
         engine.addEntity(entity);
@@ -1012,9 +1021,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(melee.radius));
         entity.add(engine.createComponent(Collider.class).set(false, false));
         entity.add(engine.createComponent(ContactDamage.class)
-                .set(melee.damage, melee.activeSeconds, 0f)
+                .set(melee.damage, ticks(melee.activeSeconds), 0)
                 .setLock(
-                        melee.lockSeconds,
+                        melee.lockTicks,
                         melee.locksCommittedOnly,
                         melee.clinchCarrySpeed,
                         melee.clinchCarryDecay,
@@ -1106,13 +1115,13 @@ public final class Spawner {
     public Entity spawnBlast(float x, float y, float radius, boolean leavesFire, Look look) {
         SimConfig.BlastConfig blast = config.blast();
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Blast.class).set(blast.damage(), blast.durationSeconds()));
+        entity.add(engine.createComponent(Blast.class).set(blast.damage(), ticks(blast.durationSeconds())));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(radius));
         entity.add(engine.createComponent(Appearance.class).set(look));
         entity.add(engine.createComponent(Shake.class)
-                .set(blast.shakeStrength(), radius * blast.shakeRadiusFactor(), blast.durationSeconds()));
+                .set(blast.shakeStrength(), radius * blast.shakeRadiusFactor(), ticks(blast.durationSeconds())));
         SlickDef fire = config.fire().forBlast(radius);
         if (leavesFire && fire.leavesAnything()) {
             // What the explosion leaves burning, through the one reaction everything that leaves

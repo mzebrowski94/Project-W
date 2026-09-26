@@ -149,7 +149,7 @@ class ActionTest {
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
 
-        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0f);
+        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0);
         simulation.step(STILL);
 
         assertThat(commander.getComponent(Action.class).available).isEqualTo(ActionKind.NONE);
@@ -202,6 +202,6 @@ class ActionTest {
     }
 
     private static void putDown(Entity entity) {
-        entity.getComponent(Damage.class).add(TROOPER_HEALTH, 0f, false);
+        entity.getComponent(Damage.class).add(TROOPER_HEALTH, 0, false);
     }
 }

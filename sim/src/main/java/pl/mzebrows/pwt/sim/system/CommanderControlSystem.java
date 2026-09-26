@@ -278,6 +278,6 @@ public final class CommanderControlSystem extends IteratingSystem {
                 directionY,
                 FACTION.get(entity).side,
                 muzzle);
-        Guns.spend(entity, weapon, weapon.cooldownSeconds);
+        Guns.spend(entity, weapon, weapon.cooldownTicks);
     }
 }

@@ -15,9 +15,9 @@ import com.badlogic.gdx.utils.Pool;
  */
 public final class Thrower implements Component, Pool.Poolable {
 
-    public float cooldownSeconds;
+    public int cooldownTicks;
 
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /** How fast what it throws travels, in world units per second. */
     public float speed;
@@ -32,10 +32,9 @@ public final class Thrower implements Component, Pool.Poolable {
     public float blastRadius;
 
     /** Sets the throw ready to be used immediately, and returns this component, for fluent spawning. */
-    public Thrower set(
-            float newCooldownSeconds, float newSpeed, float newRange, float newRadius, float newBlastRadius) {
-        this.cooldownSeconds = newCooldownSeconds;
-        this.remainingSeconds = 0f;
+    public Thrower set(int newCooldownTicks, float newSpeed, float newRange, float newRadius, float newBlastRadius) {
+        this.cooldownTicks = newCooldownTicks;
+        this.remainingTicks = 0;
         this.speed = newSpeed;
         this.range = newRange;
         this.radius = newRadius;
@@ -44,13 +43,13 @@ public final class Thrower implements Component, Pool.Poolable {
     }
 
     public boolean ready() {
-        return remainingSeconds <= 0f;
+        return remainingTicks <= 0;
     }
 
     @Override
     public void reset() {
-        cooldownSeconds = 0f;
-        remainingSeconds = 0f;
+        cooldownTicks = 0;
+        remainingTicks = 0;
         speed = 0f;
         range = 0f;
         radius = 0f;

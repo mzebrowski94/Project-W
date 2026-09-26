@@ -18,7 +18,7 @@ class RangedTest {
     private static final float CLOSE_FACTOR = 0.5f;
     private static final int SETTLE_SHOTS = 4;
     private static final float SETTLED = 0.25f;
-    private static final float COOLDOWN = 2f;
+    private static final int COOLDOWN = 120;
 
     private static final Offset<Float> CLOSE_ENOUGH = Offset.offset(1e-5f);
 
@@ -61,7 +61,7 @@ class RangedTest {
         Ranged ranged = shooter();
 
         assertThat(ranged.halfSpreadFor(CLOSE_RANGE - 1f)).isCloseTo(CONE * CLOSE_FACTOR, CLOSE_ENOUGH);
-        assertThat(ranged.cooldownFor(COOLDOWN, CLOSE_RANGE - 1f)).isCloseTo(COOLDOWN * CLOSE_FACTOR, CLOSE_ENOUGH);
+        assertThat(ranged.cooldownFor(COOLDOWN, CLOSE_RANGE - 1f)).isEqualTo(Math.round(COOLDOWN * CLOSE_FACTOR));
     }
 
     @Test
@@ -69,7 +69,7 @@ class RangedTest {
         Ranged ranged = shooter();
 
         assertThat(ranged.halfSpreadFor(FAR)).isCloseTo(CONE, CLOSE_ENOUGH);
-        assertThat(ranged.cooldownFor(COOLDOWN, FAR)).isCloseTo(COOLDOWN, CLOSE_ENOUGH);
+        assertThat(ranged.cooldownFor(COOLDOWN, FAR)).isEqualTo(COOLDOWN);
     }
 
     private static Ranged shooter() {

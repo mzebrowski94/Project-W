@@ -250,7 +250,7 @@ class TrooperCombatTest {
         simulation.step();
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
 
-        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0f);
+        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
         steps(simulation, 3);
 
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.ADVANCE);
@@ -330,7 +330,7 @@ class TrooperCombatTest {
 
     /** Whether this man's hands have been busy: a swing is what puts his melee on its cooldown. */
     private static boolean swung(Entity trooper) {
-        return trooper.getComponent(Melee.class).remainingSeconds > 0f;
+        return trooper.getComponent(Melee.class).remainingTicks > 0;
     }
 
     /** A hit landing on him this tick from a place, the way contact resolution records one. */

@@ -27,9 +27,9 @@ import com.badlogic.gdx.utils.Pool;
 public final class Slick implements Component, Pool.Poolable {
 
     /** How long this circle lasts altogether. */
-    public float durationSeconds;
+    public int durationTicks;
 
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /** How wide it gets at its widest, in world units. The body is this once it has finished growing. */
     public float peakRadius;
@@ -41,9 +41,9 @@ public final class Slick implements Component, Pool.Poolable {
     public float fadeFraction;
 
     /** Sets the life and shape of the slick and starts it, returning this component, for fluent spawning. */
-    public Slick set(float newDurationSeconds, float newPeakRadius, float newGrowFraction, float newFadeFraction) {
-        this.durationSeconds = newDurationSeconds;
-        this.remainingSeconds = newDurationSeconds;
+    public Slick set(int newDurationTicks, float newPeakRadius, float newGrowFraction, float newFadeFraction) {
+        this.durationTicks = newDurationTicks;
+        this.remainingTicks = newDurationTicks;
         this.peakRadius = newPeakRadius;
         this.growFraction = newGrowFraction;
         this.fadeFraction = newFadeFraction;
@@ -52,7 +52,7 @@ public final class Slick implements Component, Pool.Poolable {
 
     /** How much of its life is left, in {@code [0, 1]}, for the renderer to fade it out by. */
     public float fade() {
-        return durationSeconds <= 0f ? 0f : remainingSeconds / durationSeconds;
+        return durationTicks <= 0 ? 0f : remainingTicks / (float) durationTicks;
     }
 
     /** True if this circle changes size over its life, and therefore has a body to rewrite each tick. */
@@ -69,7 +69,7 @@ public final class Slick implements Component, Pool.Poolable {
      * shape at all is honest as long as the body and the drawing are one number - which they are.
      */
     public float radiusNow() {
-        if (durationSeconds <= 0f) {
+        if (durationTicks <= 0) {
             return peakRadius;
         }
         float elapsed = 1f - fade();
@@ -84,13 +84,13 @@ public final class Slick implements Component, Pool.Poolable {
 
     /** True once the ground is clean again. */
     public boolean spent() {
-        return remainingSeconds <= 0f;
+        return remainingTicks <= 0;
     }
 
     @Override
     public void reset() {
-        durationSeconds = 0f;
-        remainingSeconds = 0f;
+        durationTicks = 0;
+        remainingTicks = 0;
         peakRadius = 0f;
         growFraction = 0f;
         fadeFraction = 0f;

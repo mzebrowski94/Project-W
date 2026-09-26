@@ -96,64 +96,64 @@ public final class CooldownSystem extends EntitySystem {
     public void update(float deltaTime) {
         for (int i = 0; i < invulnerable.size(); i++) {
             Invulnerable protection = INVULNERABLE.get(invulnerable.get(i));
-            protection.remainingSeconds = countDown(protection.remainingSeconds, deltaTime);
+            protection.remainingTicks = countDown(protection.remainingTicks);
         }
         for (int i = 0; i < attacks.size(); i++) {
             ContactDamage attack = CONTACT_DAMAGE.get(attacks.get(i));
-            attack.remainingSeconds = countDown(attack.remainingSeconds, deltaTime);
+            attack.remainingTicks = countDown(attack.remainingTicks);
         }
         for (int i = 0; i < weapons.size(); i++) {
             Weapon weapon = WEAPON.get(weapons.get(i));
-            weapon.remainingSeconds = countDown(weapon.remainingSeconds, deltaTime);
+            weapon.remainingTicks = countDown(weapon.remainingTicks);
         }
         for (int i = 0; i < melees.size(); i++) {
             Melee melee = MELEE.get(melees.get(i));
-            melee.remainingSeconds = countDown(melee.remainingSeconds, deltaTime);
-            melee.windupRemaining = countDown(melee.windupRemaining, deltaTime);
+            melee.remainingTicks = countDown(melee.remainingTicks);
+            melee.windupRemaining = countDown(melee.windupRemaining);
         }
         for (int i = 0; i < stunned.size(); i++) {
             Stunned hold = STUNNED.get(stunned.get(i));
-            hold.remainingSeconds = countDown(hold.remainingSeconds, deltaTime);
+            hold.remainingTicks = countDown(hold.remainingTicks);
         }
         for (int i = 0; i < dying.size(); i++) {
             Dying throes = DYING.get(dying.get(i));
             if (throes.begun) {
-                throes.remainingSeconds = countDown(throes.remainingSeconds, deltaTime);
+                throes.remainingTicks = countDown(throes.remainingTicks);
             }
         }
         for (int i = 0; i < leaps.size(); i++) {
             Leap leap = LEAP.get(leaps.get(i));
-            leap.remainingSeconds = countDown(leap.remainingSeconds, deltaTime);
-            leap.cooldownRemaining = countDown(leap.cooldownRemaining, deltaTime);
+            leap.remainingTicks = countDown(leap.remainingTicks);
+            leap.cooldownRemaining = countDown(leap.cooldownRemaining);
         }
         for (int i = 0; i < wanders.size(); i++) {
             Wander wander = WANDER.get(wanders.get(i));
-            wander.remainingSeconds = countDown(wander.remainingSeconds, deltaTime);
+            wander.remainingTicks = countDown(wander.remainingTicks);
         }
         for (int i = 0; i < dodges.size(); i++) {
             Dodge dodge = DODGE.get(dodges.get(i));
-            dodge.remainingSeconds = countDown(dodge.remainingSeconds, deltaTime);
-            dodge.commitRemaining = countDown(dodge.commitRemaining, deltaTime);
+            dodge.remainingTicks = countDown(dodge.remainingTicks);
+            dodge.commitRemaining = countDown(dodge.commitRemaining);
         }
         for (int i = 0; i < blasts.size(); i++) {
             Blast blast = BLAST.get(blasts.get(i));
-            blast.remainingSeconds = countDown(blast.remainingSeconds, deltaTime);
+            blast.remainingTicks = countDown(blast.remainingTicks);
         }
         for (int i = 0; i < slicks.size(); i++) {
             Slick slick = SLICK.get(slicks.get(i));
-            slick.remainingSeconds = countDown(slick.remainingSeconds, deltaTime);
+            slick.remainingTicks = countDown(slick.remainingTicks);
         }
         for (int i = 0; i < slows.size(); i++) {
             Slowed slowed = SLOWED.get(slows.get(i));
-            slowed.remainingSeconds = countDown(slowed.remainingSeconds, deltaTime);
+            slowed.remainingTicks = countDown(slowed.remainingTicks);
         }
         for (int i = 0; i < shakes.size(); i++) {
             Shake shake = SHAKE.get(shakes.get(i));
-            shake.remainingSeconds = countDown(shake.remainingSeconds, deltaTime);
+            shake.remainingTicks = countDown(shake.remainingTicks);
         }
         for (int i = 0; i < throwers.size(); i++) {
             Thrower thrower = THROWER.get(throwers.get(i));
-            thrower.remainingSeconds = countDown(thrower.remainingSeconds, deltaTime);
+            thrower.remainingTicks = countDown(thrower.remainingTicks);
         }
         for (int i = 0; i < heats.size(); i++) {
             Entity entity = heats.get(i);
@@ -165,12 +165,12 @@ public final class CooldownSystem extends EntitySystem {
         }
     }
 
-    /** Never runs below zero, so a spent timer cannot drift into a number nothing compares usefully. */
-    private static float countDown(float remaining, float deltaTime) {
-        if (remaining <= 0f) {
-            return remaining;
-        }
-        float left = remaining - deltaTime;
-        return left > 0f ? left : 0f;
+    /**
+     * One tick off a timer that is still running. Whole ticks, never a float tick: a duration set from
+     * the config has already been rounded to the ticks it lasts ({@code Ticks}), and it lasts exactly
+     * those.
+     */
+    private static int countDown(int remaining) {
+        return remaining > 0 ? remaining - 1 : 0;
     }
 }

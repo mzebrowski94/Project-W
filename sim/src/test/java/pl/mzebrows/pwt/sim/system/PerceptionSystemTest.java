@@ -11,6 +11,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.everyStrain;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.watching;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.watchingInFront;
 
@@ -98,8 +99,8 @@ class PerceptionSystemTest {
         Entity enemy = simulation.spawnEnemy(MIDDLE + DETECTION_RANGE - 1f, MIDDLE);
         simulation.step();
 
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
-        commander.getComponent(Invulnerable.class).remainingSeconds = 0f;
+        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        commander.getComponent(Invulnerable.class).remainingTicks = 0;
         steps(simulation, 2);
 
         assertThat(aggro(enemy)).isFalse();
@@ -123,7 +124,7 @@ class PerceptionSystemTest {
         Entity enemy = simulation.spawnEnemy(MIDDLE + DETECTION_RANGE - 1f, MIDDLE);
         simulation.step();
 
-        enemy.getComponent(Stunned.class).apply(HELD_SECONDS, KNOCKBACK_DECAY);
+        enemy.getComponent(Stunned.class).apply(ticksIn(HELD_SECONDS), KNOCKBACK_DECAY);
         commander.getComponent(Position.class).set(1f, 1f);
         simulation.step();
 
@@ -195,8 +196,8 @@ class PerceptionSystemTest {
         Entity enemy = simulation.spawnEnemy(MIDDLE + DETECTION_RANGE, MIDDLE);
         simulation.step();
 
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
-        commander.getComponent(Invulnerable.class).remainingSeconds = 0f;
+        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        commander.getComponent(Invulnerable.class).remainingTicks = 0;
         steps(simulation, 2);
 
         assertThat(aggro(enemy)).isFalse();

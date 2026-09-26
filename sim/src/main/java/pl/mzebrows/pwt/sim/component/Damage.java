@@ -38,7 +38,7 @@ public final class Damage implements Component, Pool.Poolable {
     public float amount;
 
     /** The longest recovery window any of this tick's hits asked for. Applied once the damage is. */
-    public float recoverySeconds;
+    public int recoveryTicks;
 
     /** Unit direction of the shove owed, pointing away from whoever swung. */
     public float knockbackX;
@@ -58,7 +58,7 @@ public final class Damage implements Component, Pool.Poolable {
      */
     public @Nullable Entity locksOnDeath;
 
-    public float deathLockSeconds;
+    public int deathLockTicks;
 
     /** How fast this body finishes its lunge into whoever killed it, if the blow proves fatal. */
     public float clinchCarrySpeed;
@@ -105,20 +105,20 @@ public final class Damage implements Component, Pool.Poolable {
      */
     public float slowFactor = 1f;
 
-    public float slowSeconds;
+    public int slowTicks;
 
     /** Records a slow, keeping the worst asked for this tick. Nothing at all for a blow that has none. */
-    public void slow(float factor, float seconds) {
-        if (factor >= 1f || seconds <= 0f || factor >= slowFactor) {
+    public void slow(float factor, int ticks) {
+        if (factor >= 1f || ticks <= 0 || factor >= slowFactor) {
             return;
         }
         slowFactor = factor;
-        slowSeconds = seconds;
+        slowTicks = ticks;
     }
 
     /** True if something asked to rob this entity of speed this tick. */
     public boolean slowed() {
-        return slowFactor < 1f && slowSeconds > 0f;
+        return slowFactor < 1f && slowTicks > 0;
     }
 
     /**
@@ -159,7 +159,7 @@ public final class Damage implements Component, Pool.Poolable {
      * does - claws, a sweep, a leap - and because it is what every caller meant before there was a
      * choice. A source that leaves a casualty says so explicitly.
      */
-    public void add(float extra, float recovery) {
+    public void add(float extra, int recovery) {
         add(extra, recovery, true);
     }
 
@@ -170,10 +170,10 @@ public final class Damage implements Component, Pool.Poolable {
      * takes a man to zero puts him on the ground, and claws that take him to zero finish him, and
      * the numbers may be identical.
      */
-    public void add(float extra, float recovery, boolean kills) {
+    public void add(float extra, int recovery, boolean kills) {
         amount += extra;
-        if (recovery > recoverySeconds) {
-            recoverySeconds = recovery;
+        if (recovery > recoveryTicks) {
+            recoveryTicks = recovery;
         }
         fatal |= kills;
     }
@@ -190,7 +190,7 @@ public final class Damage implements Component, Pool.Poolable {
 
     /** True once a hit that claims a recovery window has landed this tick. */
     public boolean staggered() {
-        return recoverySeconds > 0f;
+        return recoveryTicks > 0;
     }
 
     /** True if something asked to throw this entity this tick. */
@@ -199,12 +199,12 @@ public final class Damage implements Component, Pool.Poolable {
     }
 
     /** Records who to hold still if this kills, keeping the longest lock asked for this tick. */
-    public void lockOnDeath(Entity attacker, float seconds, float carrySpeed, float carryDecay) {
-        if (seconds <= deathLockSeconds) {
+    public void lockOnDeath(Entity attacker, int ticks, float carrySpeed, float carryDecay) {
+        if (ticks <= deathLockTicks) {
             return;
         }
         locksOnDeath = attacker;
-        deathLockSeconds = seconds;
+        deathLockTicks = ticks;
         clinchCarrySpeed = carrySpeed;
         clinchCarryDecay = carryDecay;
     }
@@ -212,12 +212,12 @@ public final class Damage implements Component, Pool.Poolable {
     @Override
     public void reset() {
         amount = 0f;
-        recoverySeconds = 0f;
+        recoveryTicks = 0;
         knockbackX = 0f;
         knockbackY = 0f;
         knockbackSpeed = 0f;
         locksOnDeath = null;
-        deathLockSeconds = 0f;
+        deathLockTicks = 0;
         clinchCarrySpeed = 0f;
         clinchCarryDecay = 0f;
         sourceX = 0f;
@@ -225,7 +225,7 @@ public final class Damage implements Component, Pool.Poolable {
         hasSource = false;
         fatal = false;
         slowFactor = 1f;
-        slowSeconds = 0f;
+        slowTicks = 0;
         bloat = 0f;
     }
 }

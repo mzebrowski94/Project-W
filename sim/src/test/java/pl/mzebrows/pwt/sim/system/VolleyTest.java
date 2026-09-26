@@ -142,7 +142,9 @@ class VolleyTest {
     private static Simulation holding(WeaponKind gun) {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(X, Y);
-        commander.getComponent(Weapon.class).set(gun, simulation.config().weapon(gun));
+        commander
+                .getComponent(Weapon.class)
+                .set(gun, simulation.config().weapon(gun), simulation.config().tickSeconds());
         return simulation;
     }
 

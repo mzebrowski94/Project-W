@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.KNOCKBACK_DECAY;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.spawnSteered;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
@@ -60,7 +61,7 @@ class DriveSystemTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
         enemy.getComponent(Velocity.class).set(60f, 0f);
-        enemy.getComponent(Stunned.class).apply(HELD_SECONDS, KNOCKBACK_DECAY);
+        enemy.getComponent(Stunned.class).apply(ticksIn(HELD_SECONDS), KNOCKBACK_DECAY);
 
         simulation.step();
 

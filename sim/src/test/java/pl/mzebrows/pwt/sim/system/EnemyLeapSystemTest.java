@@ -197,7 +197,8 @@ class EnemyLeapSystemTest {
         Entity enemy = simulation.spawnEnemy(50f, 60f);
         steps(simulation, ticksIn(LEAP_HESITATION) + 2);
 
-        enemy.getComponent(Stunned.class).apply(AlphaWorlds.MELEE_LOCK, AlphaWorlds.KNOCKBACK_DECAY);
+        enemy.getComponent(Stunned.class)
+                .apply(AlphaWorlds.ticksIn(AlphaWorlds.MELEE_LOCK), AlphaWorlds.KNOCKBACK_DECAY);
         simulation.step();
 
         Leap leap = enemy.getComponent(Leap.class);
@@ -229,27 +230,27 @@ class EnemyLeapSystemTest {
 
         simulation.step();
 
-        assertThat(first.getComponent(Leap.class).remainingSeconds)
-                .isNotEqualTo(second.getComponent(Leap.class).remainingSeconds);
+        assertThat(first.getComponent(Leap.class).remainingTicks)
+                .isNotEqualTo(second.getComponent(Leap.class).remainingTicks);
     }
 
     /** Same seed, same wind-up. Pillar 6 applies to the one place in the game that draws a random number. */
     @Test
     void drawsTheSameWindUpOnEveryRunOfTheSameSeed() {
-        float first = firstHesitation();
-        float second = firstHesitation();
+        int first = firstHesitation();
+        int second = firstHesitation();
 
         assertThat(first).isEqualTo(second);
     }
 
-    private static float firstHesitation() {
+    private static int firstHesitation() {
         Simulation simulation = variedHesitation();
         simulation.spawnCommander(50f, 50f);
         Entity enemy = simulation.spawnEnemy(50f, 62f);
 
         simulation.step();
 
-        return enemy.getComponent(Leap.class).remainingSeconds;
+        return enemy.getComponent(Leap.class).remainingTicks;
     }
 
     private static Simulation variedHesitation() {

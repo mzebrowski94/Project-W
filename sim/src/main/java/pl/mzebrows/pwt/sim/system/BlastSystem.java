@@ -86,7 +86,7 @@ public final class BlastSystem extends EntitySystem {
                 Position at = POSITION.get(entity);
                 catchEveryoneInside(at.x, at.y, BODY.get(entity).radius, blast.damage);
             }
-            if (blast.remainingSeconds <= 0f) {
+            if (blast.remainingTicks <= 0) {
                 spawner.markDead(entity);
             }
         }
@@ -136,7 +136,7 @@ public final class BlastSystem extends EntitySystem {
             // Wounding, like gunfire: a blast is still uniformly decisive inside its circle
             // (G0018) - everything in it goes down - but what it leaves behind depends on whether
             // anything on that side could come and get you. An alien cannot be rescued and dies.
-            owed.add(damage, 0f, false);
+            owed.add(damage, 0, false);
             owed.cameFrom(x, y);
         }
     }

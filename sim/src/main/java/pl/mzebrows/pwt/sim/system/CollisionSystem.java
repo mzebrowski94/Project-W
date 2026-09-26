@@ -364,20 +364,20 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         Damage owed = DAMAGE.get(target);
-        boolean staggering = attack.victimInvulnerableSeconds > 0f;
+        boolean staggering = attack.victimInvulnerableTicks > 0;
         if (staggering && owed.staggered()) {
             // Something already staggered this target this tick; a second blow does not connect, so it
             // does not cost this attacker its cooldown either.
             return;
         }
-        attack.remainingSeconds = attack.cooldownSeconds;
+        attack.remainingTicks = attack.cooldownTicks;
         if (INVULNERABLE.has(target) && INVULNERABLE.get(target).active()) {
             return;
         }
-        owed.add(attack.amount, attack.victimInvulnerableSeconds, attack.fatal);
+        owed.add(attack.amount, attack.victimInvulnerableTicks, attack.fatal);
         // Recorded, not applied, exactly as the shove is: what a hit costs is decided by the system
         // that knows the hit landed, and a blow with no slow on it writes nothing at all.
-        owed.slow(attack.slowFactor, attack.slowSeconds);
+        owed.slow(attack.slowFactor, attack.slowTicks);
         owed.pump(attack.bloat);
         recordSource(attacker, owed);
         lock(attacker, target, attack, owed);
@@ -412,7 +412,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         Entity source = owner == null ? attacker : owner;
         hold(target, attack);
         if (!attack.locksCommittedOnly || committed(target)) {
-            owed.lockOnDeath(source, attack.lockSeconds, attack.clinchCarrySpeed, attack.clinchCarryDecay);
+            owed.lockOnDeath(source, attack.lockTicks, attack.clinchCarrySpeed, attack.clinchCarryDecay);
         }
         throwBack(source, target, attack, owed);
     }
@@ -430,7 +430,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
 
     private static void hold(@Nullable Entity entity, ContactDamage attack) {
         if (entity != null && STUNNED.has(entity)) {
-            STUNNED.get(entity).apply(attack.lockSeconds, attack.knockbackDecay);
+            STUNNED.get(entity).apply(attack.lockTicks, attack.knockbackDecay);
         }
     }
 

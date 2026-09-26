@@ -273,7 +273,7 @@ public final class EnemyRangedSystem extends EntitySystem {
                 directionY,
                 FACTION.get(entity).side,
                 muzzle);
-        Guns.spend(entity, weapon, ranged.cooldownFor(weapon.cooldownSeconds, distance));
+        Guns.spend(entity, weapon, ranged.cooldownFor(weapon.cooldownTicks, distance));
         ranged.shotsOnTarget++;
     }
 }

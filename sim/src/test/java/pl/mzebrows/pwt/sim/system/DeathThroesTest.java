@@ -46,7 +46,7 @@ class DeathThroesTest {
         steps(simulation, 2);
 
         commander.getComponent(Position.class).set(50f, 50f);
-        commander.getComponent(Invulnerable.class).remainingSeconds = 0f;
+        commander.getComponent(Invulnerable.class).remainingTicks = 0;
         simulation.step();
 
         assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH);
@@ -143,7 +143,7 @@ class DeathThroesTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
+        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
         simulation.step();
 
         assertThat(count(simulation, Enemy.class)).isEqualTo(1);
@@ -155,7 +155,7 @@ class DeathThroesTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
+        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
         steps(simulation, ticksIn(ENEMY_THROES) + 2);
 
         assertThat(count(simulation, Enemy.class)).isZero();
@@ -167,7 +167,7 @@ class DeathThroesTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
+        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
         simulation.step();
 
         Collider collider = enemy.getComponent(Collider.class);
@@ -183,7 +183,7 @@ class DeathThroesTest {
         simulation.spawnCommander(50f, 50f);
         steps(simulation, 4);
 
-        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
+        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
         simulation.step();
 
         Velocity velocity = enemy.getComponent(Velocity.class);
@@ -199,15 +199,15 @@ class DeathThroesTest {
 
         kill(commander);
         simulation.step();
-        float afterFirst = commander.getComponent(Dying.class).remainingSeconds;
+        int afterFirst = commander.getComponent(Dying.class).remainingTicks;
         commander.getComponent(Health.class).current = 0f;
         simulation.step();
 
-        assertThat(commander.getComponent(Dying.class).remainingSeconds).isLessThan(afterFirst);
+        assertThat(commander.getComponent(Dying.class).remainingTicks).isLessThan(afterFirst);
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(COMMANDER_HEALTH, 0f);
-        entity.getComponent(Invulnerable.class).remainingSeconds = 0f;
+        entity.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        entity.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 }

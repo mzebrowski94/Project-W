@@ -131,7 +131,7 @@ class AidTest {
     }
 
     private static void wound(Entity entity, float amount) {
-        entity.getComponent(Damage.class).add(amount, 0f, false);
+        entity.getComponent(Damage.class).add(amount, 0, false);
     }
 
     private static Trooper.Mode mode(Entity trooper) {

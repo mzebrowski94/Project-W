@@ -237,7 +237,7 @@ class DefendTest {
         ImmutableArray<Entity> standing =
                 simulation.engine().getEntitiesFor(Family.all(Enemy.class).get());
         for (int i = 0; i < standing.size(); i++) {
-            standing.get(i).getComponent(Damage.class).add(LETHAL, 0f, true);
+            standing.get(i).getComponent(Damage.class).add(LETHAL, 0, true);
         }
     }
 }

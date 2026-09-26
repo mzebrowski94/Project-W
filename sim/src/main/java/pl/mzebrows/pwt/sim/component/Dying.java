@@ -20,17 +20,17 @@ import com.badlogic.gdx.utils.Pool;
 public final class Dying implements Component, Pool.Poolable {
 
     /** How long the body lingers once the killing blow lands. Configuration, not state. */
-    public float throesSeconds;
+    public int throesTicks;
 
     public boolean begun;
 
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /** Sets how long the body will linger, and returns this component, for fluent spawning. */
-    public Dying set(float newThroesSeconds) {
-        this.throesSeconds = newThroesSeconds;
+    public Dying set(int newThroesTicks) {
+        this.throesTicks = newThroesTicks;
         this.begun = false;
-        this.remainingSeconds = 0f;
+        this.remainingTicks = 0;
         return this;
     }
 
@@ -40,23 +40,23 @@ public final class Dying implements Component, Pool.Poolable {
             return;
         }
         begun = true;
-        remainingSeconds = throesSeconds;
+        remainingTicks = throesTicks;
     }
 
     /** True while the body is on the field but the entity is no longer alive. */
     public boolean active() {
-        return begun && remainingSeconds > 0f;
+        return begun && remainingTicks > 0;
     }
 
     /** True once the body has lain there long enough to be taken away. */
     public boolean spent() {
-        return begun && remainingSeconds <= 0f;
+        return begun && remainingTicks <= 0;
     }
 
     @Override
     public void reset() {
-        throesSeconds = 0f;
+        throesTicks = 0;
         begun = false;
-        remainingSeconds = 0f;
+        remainingTicks = 0;
     }
 }

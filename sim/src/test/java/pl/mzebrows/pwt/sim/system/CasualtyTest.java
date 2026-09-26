@@ -158,7 +158,7 @@ class CasualtyTest {
 
         for (int i = 0; i < ticksIn(COOLDOWN); i++) {
             simulation.step();
-            assertThat(trooper.getComponent(Weapon.class).remainingSeconds).isZero();
+            assertThat(trooper.getComponent(Weapon.class).remainingTicks).isZero();
         }
         assertThat(trooper.getComponent(Casualty.class).active()).isTrue();
     }
@@ -246,10 +246,10 @@ class CasualtyTest {
     }
 
     private static void wound(Entity entity, float amount) {
-        entity.getComponent(Damage.class).add(amount, 0f, false);
+        entity.getComponent(Damage.class).add(amount, 0, false);
     }
 
     private static void kill(Entity entity, float amount) {
-        entity.getComponent(Damage.class).add(amount, 0f);
+        entity.getComponent(Damage.class).add(amount, 0);
     }
 }

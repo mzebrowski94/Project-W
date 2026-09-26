@@ -211,8 +211,10 @@ public final class Ranged implements Component, Pool.Poolable {
     }
 
     /** How long it may wait before the next shot, given how far off the target is. */
-    public float cooldownFor(float cooldownSeconds, float distance) {
-        return closeRange > 0f && distance <= closeRange ? cooldownSeconds * closeFactor : cooldownSeconds;
+    public int cooldownFor(int cooldownTicks, float distance) {
+        return closeRange > 0f && distance <= closeRange
+                ? Math.max(1, Math.round(cooldownTicks * closeFactor))
+                : cooldownTicks;
     }
 
     /** How far in its aim has walked, as a fraction of the declared cone: one at the first shot. */

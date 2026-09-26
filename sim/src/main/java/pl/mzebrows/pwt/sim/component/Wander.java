@@ -30,7 +30,7 @@ public final class Wander implements Component, Pool.Poolable {
     public float arriveRadius;
     public float pauseMinSeconds;
     public float pauseMaxSeconds;
-    public float waypointTimeoutSeconds;
+    public int waypointTimeoutTicks;
 
     /** Where it was spawned: the centre of its patch, and where losing the commander takes it back to. */
     public float homeX;
@@ -48,7 +48,7 @@ public final class Wander implements Component, Pool.Poolable {
      * Counts down the current phase: the pause while resting, the patience while walking. Decremented
      * by {@code CooldownSystem} with every other timer.
      */
-    public float remainingSeconds;
+    public int remainingTicks;
 
     /** Sets what kind of idling this is, and returns this component, for fluent spawning. */
     public Wander set(
@@ -58,14 +58,14 @@ public final class Wander implements Component, Pool.Poolable {
             float newArriveRadius,
             float newPauseMinSeconds,
             float newPauseMaxSeconds,
-            float newWaypointTimeoutSeconds) {
+            int newWaypointTimeoutTicks) {
         this.enabled = newEnabled;
         this.radius = newRadius;
         this.speedFactor = newSpeedFactor;
         this.arriveRadius = newArriveRadius;
         this.pauseMinSeconds = newPauseMinSeconds;
         this.pauseMaxSeconds = newPauseMaxSeconds;
-        this.waypointTimeoutSeconds = newWaypointTimeoutSeconds;
+        this.waypointTimeoutTicks = newWaypointTimeoutTicks;
         return this;
     }
 
@@ -81,13 +81,13 @@ public final class Wander implements Component, Pool.Poolable {
         this.targetX = x;
         this.targetY = y;
         this.phase = Phase.WALKING;
-        this.remainingSeconds = waypointTimeoutSeconds;
+        this.remainingTicks = waypointTimeoutTicks;
     }
 
     /** Stops it where it is for a moment. */
-    public void rest(float seconds) {
+    public void rest(int ticks) {
         this.phase = Phase.RESTING;
-        this.remainingSeconds = seconds;
+        this.remainingTicks = ticks;
     }
 
     @Override
@@ -98,12 +98,12 @@ public final class Wander implements Component, Pool.Poolable {
         arriveRadius = 0f;
         pauseMinSeconds = 0f;
         pauseMaxSeconds = 0f;
-        waypointTimeoutSeconds = 0f;
+        waypointTimeoutTicks = 0;
         homeX = 0f;
         homeY = 0f;
         targetX = 0f;
         targetY = 0f;
         phase = Phase.RESTING;
-        remainingSeconds = 0f;
+        remainingTicks = 0;
     }
 }
