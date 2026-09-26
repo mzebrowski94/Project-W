@@ -187,6 +187,11 @@ final class ArchitectureTest {
     static final ArchRule systemsHoldNoStateAcrossTicks = fields().that()
             .areDeclaredInClassesThat()
             .areAssignableTo(EntitySystem.class)
+            // And every helper a system hands part of its work to - TrooperFight and its siblings - so
+            // splitting a system into classes cannot move its state out of this rule's sight.
+            .or()
+            .areDeclaredInClassesThat()
+            .resideInAPackage("..sim.system..")
             .and()
             .doNotHaveModifier(JavaModifier.STATIC)
             .and()
