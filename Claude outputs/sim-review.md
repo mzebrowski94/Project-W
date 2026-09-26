@@ -32,6 +32,15 @@ Decisions: `game.properties` is the truth · handles on Ashley · presentation l
 | Two ad hoc id schemes | The drag counter on `Level` and the turret counter in `Spawner` are gone; drags and crews use handles. | This fixed a latent bug: `Spawner.nextStationId` was not in the snapshot, so a restored world could issue a duplicate turret id. |
 | Enforcement | `HandleTest.noComponentHoldsAnEntity`: a component field of type `Entity` fails the build. | Fuzz: 11 scenarios × 18k ticks with restores, green. |
 
+### Stage 4 (trooper mind and system order)
+
+| Item | Done | Evidence |
+|---|---|---|
+| C3 behaviours | `TrooperMindSystem` 888 → 124 lines: it keeps only the cascade order (fight → orders → aid → crew → hold → advance → roam). Each behaviour is its own class: `TrooperFight`, `TrooperOrders`, `TrooperAid`, `TrooperCrew`, `TrooperObjective`, `TrooperRoam`, 98-332 lines, code moved verbatim. | **World hashes identical** on 11 scenarios × 2400 ticks plus a crowd with points and a turret: a pure refactor. |
+| - | `systemsHoldNoStateAcrossTicks` widened to every class in `sim.system`, so splitting a system cannot hide state from the rule. | Seen failing with one `@NotState` removed from `TrooperFight`. |
+| C5 order | `SystemOrderTest`: 45 documented constraints held as data (a failure prints the doc's reason), first/last/adjacent positions, and the doc's numbered table checked against the constructor. | Seen failing with Avoidance and EnemyRanged swapped. |
+| C3 component split | **Not done, on purpose.** After the behaviour split each field has a visible owner: 13 fields are private to `TrooperMoveSystem` and each `*Due` belongs to one behaviour. Splitting would add 3-4 pooled components and about 90 rewritten accesses for little reading benefit, and it would not fix the implicit mode-plus-booleans state (no bug found there). | Overrule if wanted; the partition would be orders / sight / walk-and-look / dues. |
+
 Stage 1 deliverable: verify, propose, plan. **No production code changed.** Baseline `:sim:test` green (864 tests).
 Numbers below come from throwaway probes run in this session and removed afterwards.
 
