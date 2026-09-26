@@ -22,29 +22,9 @@ import pl.mzebrows.pwt.sim.def.Side;
  * Leaves a spatter of ruined ground where something carrying one died, and cleans it up again when
  * it has had its time.
  *
- * <p>It lands no damage of its own, which is the whole difference between this and
- * {@code BlastSystem}. A blast is an event and has to ask every damageable body whether it was
- * standing in the circle on the one tick it went off; a slick is a <em>place</em> and every circle
- * of it is an ordinary body with an ordinary blow, so who it catches is decided by the collision
- * system with the rules it already has. <strong>That includes the side</strong>: a circle carries
- * the faction of whatever fired the shot, so venom is a problem for the player's men and not for the
- * things that spat it - the one way a slick differs from a blast, and an invariant rather than a
- * line of code.
- *
- * <p>It sits with the death reactions, immediately after {@code BlastSystem}, because it is one:
- * everything that leaves something behind does so by dying (G0018), so a shot that burst on a wall,
- * one that burst on a man and one that simply ran out of flight all arrive here the same way.
- *
- * <p><strong>A blast arrives here too</strong> (G0035). An explosion is a thing that dies like any
- * other, so the fire it leaves is the same reaction asked of a different carrier - which is why
- * nothing that explodes had to learn that fire exists, and why a gun that leaves no blast leaves no
- * fire either. The one difference is the side: a blast carries no faction, so its fire is on
- * nobody's and burns whoever walks into it, where a frog's venom belongs to the frog.
- *
- * <p>Nothing is left inside rock. A shot is thrown away by {@code ProjectileBoundsSystem} the moment
- * its middle reaches a wall, so a burst against one is a burst just short of it - but the circles
- * are scattered around that point and some of the scatter would land in the wall, and "nothing is
- * spawned inside rock" is an invariant rather than a preference.
+ * <p>It lands no damage of its own, unlike {@code BlastSystem}: every circle is an ordinary body with
+ * an ordinary blow, carrying the side of whatever died. A death reaction (G0018), for shots and blasts
+ * alike (G0035). Nothing is left inside rock.
  */
 public final class SlickSystem extends EntitySystem {
 
@@ -90,11 +70,7 @@ public final class SlickSystem extends EntitySystem {
                 continue;
             }
             if (slick.animated()) {
-                // The body is the drawing, so a circle that is swelling reaches further and one that
-                // is collapsing reaches less far, by the same number. That is what keeps G0034's
-                // promise - drawn and dangerous are the same interval - true of something that moves.
-                // Only fire is animated, and there are never many circles of it, so this is a write
-                // per burning circle per tick and no arithmetic at all for ruined ground.
+                // The body is the drawing, so drawn and dangerous stay the same interval (G0034).
                 BODY.get(entity).radius = slick.radiusNow();
             }
         }
@@ -105,8 +81,7 @@ public final class SlickSystem extends EntitySystem {
      * The death reaction, run in the window between a thing being marked dead and being reaped, where
      * every reaction to a death belongs (G0004).
      *
-     * <p>It runs once per death by construction: what it reads is taken off the field at the end of
-     * this tick, so there is no second visit to guard against.
+     * <p>Once per death: what it reads is reaped this tick.
      */
     private void leaveSpattersWhereTheyFell() {
         for (int i = 0; i < bursting.size(); i++) {
@@ -127,33 +102,23 @@ public final class SlickSystem extends EntitySystem {
      * One circle of the spatter. The first is on the burst itself and the rest are thrown round it,
      * so a slick always has a middle where the shot actually landed.
      *
-     * <p>The scatter is drawn from a stream of its own, so re-tuning how a spatter looks cannot
-     * reshuffle where a nest's brood lands or how badly a spitter aims.
-     *
-     * <p>The trigonometry here is paid once per circle of one burst, which happens when a shot ends
-     * rather than per entity per tick. It is {@link StrictMath} rather than {@code Math} for the
-     * reason everything in this module is: the latter's transcendentals are specified only to within
-     * an ulp and may differ between JVMs, which pillar 6 does not allow.
+     * <p>Its own stream. {@link StrictMath}, once per circle of a burst (pillar 6).
      */
     private void scatterOne(Position at, Side side, SlicksOnDeath reaction, int blob) {
         float x = at.x;
         float y = at.y;
         if (blob > 0 && reaction.spread > 0f) {
             float angle = rng.nextFloat() * FULL_TURN;
-            // The square root is what spreads the circles evenly over the disc rather than bunching
-            // them in the middle, which is the difference between a spatter and a rosette.
+            // The square root spreads the circles evenly over the disc.
             float distance = reaction.spread * (float) Math.sqrt(rng.nextFloat());
             x += (float) StrictMath.cos(angle) * distance;
             y += (float) StrictMath.sin(angle) * distance;
         }
         if (!map.passableAt(x, y)) {
-            // Its middle is in the wall. The same test that throws a shot away when it reaches rock,
-            // asked of each circle: a splash may lap against a wall, and none of it may be inside one.
+            // Its middle is in the wall: a splash may lap against rock, never sit inside it.
             return;
         }
-        // How long this one circle lasts, drawn between the two the reaction names. Ruined ground
-        // names the same number twice and draws nothing at all, so re-tuning how long a fire burns
-        // cannot reshuffle where a spatter of venom lands (pillar 6).
+        // Equal bounds draw nothing, so retuning fire cannot reshuffle venom (pillar 6).
         float seconds = reaction.secondsMax > reaction.seconds
                 ? reaction.seconds + rng.nextFloat() * (reaction.secondsMax - reaction.seconds)
                 : reaction.seconds;

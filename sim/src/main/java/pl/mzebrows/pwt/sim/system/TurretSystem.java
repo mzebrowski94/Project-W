@@ -26,28 +26,11 @@ import pl.mzebrows.pwt.sim.component.Weapon;
 /**
  * Works every gun that somebody is on: brings it round, fires it, and holds whoever is aboard.
  *
- * <p><strong>Who is on what is settled here, once a tick, from the riders.</strong> A station's
- * {@code crewed} flag is cleared and re-established rather than trusted, so a man who was killed,
- * blown off or simply removed cannot leave a gun looking manned for the rest of the level. The rider
- * is the truth and the station publishes it; two latched halves of one fact is how they disagree.
+ * <p><strong>Who is on what is settled here, once a tick, from the riders</strong>: {@code crewed} is
+ * cleared and re-established, never trusted. <strong>The gun fires where it is pointing</strong>,
+ * swung round slower while the trigger is down.
  *
- * <p><strong>The gun fires where it is pointing, not where the man is pointing.</strong> That is the
- * whole of what a mount costs: a carried gun is aimed on the tick you aim it, and this one has to be
- * swung round, slower while the trigger is down. Holding fire to track and holding the trigger to
- * kill are therefore different decisions, which is what makes stepping round the side of one work.
- *
- * <p>Nothing else drives a man who is aboard - {@link Drivers#held} answers for every driver at once
- * - so this is the only thing writing his position, and it writes the gun's. He is not in the
- * pairwise path at all while he is on it, so nothing can shove, shoot or claw him; what can still
- * reach him is a blast, because a blast is a radius test over everything that can be hurt. The gun
- * going up under him is meant to catch him.
- *
- * <p>It runs immediately after the commander's own control and his swing, and before anything looks
- * around: a shot fired from a turret this tick is in the world before the enemies decide what they
- * can see, exactly as a melee sweep is.
- *
- * <p>An {@code EntitySystem} rather than an {@code IteratingSystem} because it walks two families
- * against each other - every station is cleared before any rider claims one.
+ * <p>The only writer of a rider's position. He is out of the pairwise path; only a blast reaches him.
  */
 public final class TurretSystem extends EntitySystem {
 
@@ -69,9 +52,7 @@ public final class TurretSystem extends EntitySystem {
     /**
      * How nearly on target a gun has to be before a crew of its own judgement pulls the trigger.
      *
-     * <p>About ten degrees. The commander fires wherever his gun happens to be pointing, because
-     * that is his decision to get wrong; a trooper waits until the shot would land, or a squad would
-     * spray the arena every time something crossed behind it.
+     * <p>About ten degrees. The commander fires wherever it points; a trooper waits.
      */
     private static final float ON_TARGET = 0.985f;
 
@@ -118,8 +99,7 @@ public final class TurretSystem extends EntitySystem {
             }
             @Nullable Entity station = stationOf(crew.station);
             if (station == null || Drivers.down(rider)) {
-                // The gun was destroyed under him, or he was: a man who is off his feet is off the
-                // gun too, and one that no longer exists cannot be ridden.
+                // The gun or the man is gone, or he is off his feet.
                 Crews.leave(stations, rider);
                 continue;
             }
@@ -172,13 +152,8 @@ public final class TurretSystem extends EntitySystem {
      * A trooper's half: it shoots the nearest thing the <em>gun</em> can reach, and gets off once
      * there has been nothing to shoot at for long enough.
      *
-     * <p>The gun's range rather than the man's sight, which is the whole reason a trooper wants one:
-     * on it, it answers things that are still crossing the ground towards the squad. What it will
-     * not do is fire before it has come round - the commander may spray, a squad may not.
-     *
-     * <p>Leaving is the other half of that. A man sitting on a quiet gun is a man missing from the
-     * squad, and nothing else would ever move him: while he is aboard, every system that decides
-     * what a trooper should be doing skips him.
+     * <p>The gun's range, not the man's sight; never before it has come round. Getting off is decided
+     * here because every other trooper system skips a man aboard.
      */
     private void ofItsOwnJudgement(Entity rider, Entity station, Turret turret, Position at, float deltaTime) {
         Crew crew = CREW.get(rider);

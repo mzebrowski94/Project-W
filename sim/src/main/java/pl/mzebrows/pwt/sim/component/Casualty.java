@@ -7,25 +7,11 @@ import com.badlogic.gdx.utils.Pool;
  * A unit that has been shot or blasted off its feet but is not dead yet: it lies where it fell,
  * bleeding out, and can be put back on its feet by somebody who reaches it in time.
  *
- * <p><strong>Which blows do this is a property of the blow, not of the amount.</strong> Gunfire and
- * explosions leave a casualty; claws, a sweep and a leap kill outright. That split is carried on
- * {@link ContactDamage} and {@link Damage} rather than decided here, so a new damage source declares
- * what kind of thing it is once and never learns that casualties exist.
+ * <p><strong>Which blows do this is a property of the blow</strong> ({@link ContactDamage#fatal}).
+ * A casualty is at zero health, so the next hit of any kind kills him by the ordinary path.
  *
- * <p>A casualty is at zero health, which is what makes "anything that reaches him finishes him"
- * fall out of the arithmetic rather than out of a branch: the next hit of any kind takes him below
- * zero again and {@code DamageSystem} kills him by the path it always used. Being eaten is that
- * rule, not an exception to it.
- *
- * <p>The bleed-out is counted by {@code CasualtySystem} rather than by {@code CooldownSystem}, and
- * that is deliberate: the rate it runs at is something else's decision - it stops while he is being
- * dragged - and counting down at a rate you had to decide is deciding.
- *
- * <p>Carried permanently by anything that can be one, and read through {@link #begun}. Adding it at
- * the moment somebody goes down would mutate a family mid-iteration, which silently skips entities -
- * the same trap {@link Dying}, {@link Damage} and {@link Stunned} are all carried permanently to
- * avoid. Nothing that carries it is an alien: aliens die when they run out of health, and a strain
- * that could be rescued would need somebody on its side to do the rescuing.
+ * <p>The bleed-out is counted by {@code CasualtySystem}, not {@code CooldownSystem}: its rate varies
+ * while he is dragged. Carried permanently, read through {@link #begun}; no alien carries it.
  */
 public final class Casualty implements Component, Pool.Poolable {
 
@@ -38,11 +24,7 @@ public final class Casualty implements Component, Pool.Poolable {
     /**
      * What being hauled multiplies that by. Configuration.
      *
-     * <p>The other half of the bargain the drag offers. Hauling him stops his clock, so the ground
-     * you cross costs nothing; what it costs is the work at the far end, which is far longer than
-     * patching him up where he fell. Distance is therefore the thing the player is really trading,
-     * and neither answer - treat him here under fire, or take him somewhere quiet and pay for it -
-     * is the right one every time.
+     * <p>Hauling stops his clock; this is what it costs instead.
      */
     public float hauledStabiliseFactor = 1f;
 
@@ -51,10 +33,7 @@ public final class Casualty implements Component, Pool.Poolable {
     public float remainingSeconds;
 
     /**
-     * Seconds of work done on him so far. It falls back to nothing the moment the key is released,
-     * which is what makes a stabilise a commitment rather than an accumulation - a man interrupted
-     * halfway is a man you have to start again on, and that is the whole reason dragging him
-     * somewhere quiet is worth what it costs.
+     * Seconds of work done on him so far. Back to nothing the moment the work stops.
      */
     public float stabilised;
 
@@ -122,8 +101,7 @@ public final class Casualty implements Component, Pool.Poolable {
     /**
      * How much of the bleed-out is left, in {@code [0, 1]}, for the renderer.
      *
-     * <p>Pillar 5: how long a man on the ground has is exactly the sort of number a player would
-     * otherwise be counting in his head, and a rescue he cannot time is a rescue he cannot plan.
+     * <p>Pillar 5.
      */
     public float fraction() {
         if (!begun || bleedOutSeconds <= 0f) {
