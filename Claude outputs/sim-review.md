@@ -15,6 +15,14 @@ Decisions: `game.properties` is the truth · handles on Ashley · presentation l
 | B3 | Not done, on purpose: at 800 entities the step is 4 ms (Avoidance 61%, Navigation 19%, Collision 11%), within budget | `performance.md`: theoretical at this scale |
 | A5 | Moved to stage 3 (handles), where it is fixed properly rather than guarded | - |
 
+### Stage 2 (config and timers)
+
+| Item | Done | Evidence |
+|---|---|---|
+| C1 one config source | `ConfigBinder` binds every record from `game.properties` by component name. `:sim:generateShippedConfig` compiles the file in, so `SimConfig.defaults()` **is** the file. The literal defaults (~530 lines), the hand loader (~560 lines) and `AiChance`'s own numbers are gone. | The file was proven to bind to exactly the old defaults before deletion. `ShippedConfigTest` fails on any unknown or missing key. A bad key in a player's file is logged and the shipped value is used. |
+| C2 / A3 timers | Whole-tick countdowns (**not** the deadline model: that needed the current tick passed through 61 call sites; decided in chat). `Ticks.of` converts once where a duration enters. | **71 shipped durations had run a tick long** (flamer every 6th tick instead of every 5th). `TicksTest` was red and is now green. Determinism fuzz passes on 11 scenarios × 18k ticks. |
+| - | Deliberately left as floats | Heat, bloat, casualty bleed-out (the rate changes while dragged), capture progress, hop/weave/strike phases: continuous quantities, not timers. |
+
 Stage 1 deliverable: verify, propose, plan. **No production code changed.** Baseline `:sim:test` green (864 tests).
 Numbers below come from throwaway probes run in this session and removed afterwards.
 
