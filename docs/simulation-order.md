@@ -3,8 +3,9 @@
 Systems run in the order they were added to `Simulation`'s constructor. **Changing that order changes
 results.** Register deliberately, and say in your reply why you put a system where you put it.
 
-Transcribed from `Simulation`'s constructor and verified 2026-09-20 (45 systems). Re-verify if this list and the
-constructor ever disagree; the constructor wins.
+The constructor is the truth; `SystemOrderTest` fails if this table and it disagree, and holds every
+row of *Constraints that carry meaning* below as data - a reorder that breaks one fails with that
+row's reason. A new constraint is a row here and a row there.
 
 ## The order
 
