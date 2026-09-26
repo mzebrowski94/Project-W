@@ -17,7 +17,7 @@ package pl.mzebrows.pwt.sim.def;
  *
  * <p>The value here is the fallback. {@code game.properties} overrides it under
  * {@code sim.ai.chance.<name>}, and a strain that needs its own number overrides that again under
- * {@code sim.unit.<kind>.chance.<name>} - which is what makes a shooter far hungrier for a barrel
+ * {@code sim.unit.<kind>.chances.<name>} - which is what makes a shooter far hungrier for a barrel
  * than a grunt without either of them being a special case in code.
  *
  * <p>Zero switches a behaviour off and draws no random number at all, so turning one off in a
