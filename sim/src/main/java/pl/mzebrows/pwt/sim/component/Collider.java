@@ -66,6 +66,13 @@ public final class Collider implements Component, Pool.Poolable {
      */
     public boolean stopsShots;
 
+    /**
+     * Touches whatever lies along the way it came this tick, not only where it ended up. A shot is: it
+     * crosses more ground in a tick than a small body is wide, and tested only where it stands it went
+     * clean through a barrel one time in five. Nothing solid is, because nothing solid is fast.
+     */
+    public boolean swept;
+
     /** Sets both flags and returns this component, for fluent spawning. */
     public Collider set(boolean newSolid, boolean newMovable) {
         this.solid = newSolid;
@@ -73,6 +80,7 @@ public final class Collider implements Component, Pool.Poolable {
         this.present = true;
         this.avoided = newSolid;
         this.stopsShots = true;
+        this.swept = false;
         return this;
     }
 
@@ -83,6 +91,11 @@ public final class Collider implements Component, Pool.Poolable {
     }
 
     /** Says whether a shot is used up on this, where being solid is not the answer. */
+    public Collider swept(boolean alongItsPath) {
+        this.swept = alongItsPath;
+        return this;
+    }
+
     public Collider stopsShots(boolean stopsAShot) {
         this.stopsShots = stopsAShot;
         return this;
@@ -95,5 +108,6 @@ public final class Collider implements Component, Pool.Poolable {
         present = false;
         avoided = false;
         stopsShots = false;
+        swept = false;
     }
 }

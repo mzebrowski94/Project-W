@@ -928,7 +928,7 @@ public final class Spawner {
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Velocity.class).set(directionX * speed, directionY * speed));
         entity.add(engine.createComponent(Body.class).set(radius));
-        entity.add(engine.createComponent(Collider.class).set(false, true));
+        entity.add(engine.createComponent(Collider.class).set(false, true).swept(true));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(damage, pierceIntervalTicks, 0)
                 .wounding()

@@ -8,6 +8,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.PreviousPosition;
 
 /**
  * Decides where everything is allowed to be, after movement has said where it would like to be.
@@ -49,6 +50,7 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
+    private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
 
     /** Two centres closer than this are treated as coincident, and pushed apart along a fixed axis. */
     private static final float EPSILON = 1e-4f;
@@ -86,15 +88,28 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
                 // makes no pair with anything and the rest of this class needs no case for it.
                 continue;
             }
+            Collider collider = COLLIDER.get(entity);
+            Position position = POSITION.get(entity);
+            float atX = position.x;
+            float atY = position.y;
             float radius = BODY.get(entity).radius;
+            if (collider.swept && PREVIOUS.has(entity)) {
+                // Filed at the middle of the way it came, and as wide as half of it: whatever it can
+                // have touched along the way is then within the reach the grid guarantees.
+                PreviousPosition from = PREVIOUS.get(entity);
+                atX = (from.x + position.x) * 0.5f;
+                atY = (from.y + position.y) * 0.5f;
+                float halfX = position.x - atX;
+                float halfY = position.y - atY;
+                radius += (float) Math.sqrt(halfX * halfX + halfY * halfY);
+            }
             if (radius > largestRadius) {
                 // Loud, because the alternative is silent: pairs a cell apart are never reported, and
                 // units walk through the body with nothing failing. The fix is a line in largestRadius.
                 throw new IllegalStateException("A body of radius " + radius
                         + " is wider than SimConfig.largestRadius() (" + largestRadius + ") sized the grid for");
             }
-            Position position = POSITION.get(entity);
-            grid.insert(entity, position.x, position.y);
+            grid.insert(entity, atX, atY);
         }
         for (int pass = 0; pass < passes; pass++) {
             reportContacts = pass == 0;
@@ -106,6 +121,12 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
     @Override
     public void visit(Entity a, Entity b) {
         if (a.isScheduledForRemoval() || b.isScheduledForRemoval()) {
+            return;
+        }
+        Collider firstCollider = COLLIDER.get(a);
+        Collider secondCollider = COLLIDER.get(b);
+        if (firstCollider.swept || secondCollider.swept) {
+            touchAlongThePath(a, b, firstCollider.swept);
             return;
         }
         Position first = POSITION.get(a);
@@ -120,10 +141,46 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
         if (reportContacts) {
             listener.onContact(a, b);
         }
-        Collider firstCollider = COLLIDER.get(a);
-        Collider secondCollider = COLLIDER.get(b);
         if (firstCollider.solid && secondCollider.solid) {
             separate(a, b, firstCollider, secondCollider, dx, dy, (float) Math.sqrt(distanceSquared), contact);
+        }
+    }
+
+    /**
+     * Reports a contact if the swept one came within touching distance of the other anywhere along the
+     * way it moved this tick - the closest point of that segment to the other's centre. The other is
+     * taken where it stands now: it moves a fraction of what a shot does in a tick.
+     *
+     * <p>Contact only, and only on the first pass. Nothing swept is solid, so there is never anything
+     * to separate, and the passes after the first have nothing to add.
+     */
+    private void touchAlongThePath(Entity a, Entity b, boolean firstIsSwept) {
+        if (!reportContacts) {
+            return;
+        }
+        Entity mover = firstIsSwept ? a : b;
+        Entity other = firstIsSwept ? b : a;
+        Position to = POSITION.get(mover);
+        float fromX = to.x;
+        float fromY = to.y;
+        if (PREVIOUS.has(mover)) {
+            fromX = PREVIOUS.get(mover).x;
+            fromY = PREVIOUS.get(mover).y;
+        }
+        Position centre = POSITION.get(other);
+        float pathX = to.x - fromX;
+        float pathY = to.y - fromY;
+        float length = pathX * pathX + pathY * pathY;
+        float along = 1f;
+        if (length > EPSILON) {
+            along = ((centre.x - fromX) * pathX + (centre.y - fromY) * pathY) / length;
+            along = along < 0f ? 0f : (along > 1f ? 1f : along);
+        }
+        float gapX = centre.x - (fromX + pathX * along);
+        float gapY = centre.y - (fromY + pathY * along);
+        float contact = BODY.get(a).radius + BODY.get(b).radius;
+        if (gapX * gapX + gapY * gapY < contact * contact) {
+            listener.onContact(a, b);
         }
     }
 

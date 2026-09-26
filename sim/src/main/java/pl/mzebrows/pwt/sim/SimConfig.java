@@ -229,7 +229,9 @@ public record SimConfig(
         // in step by hand, for the same reason the gun table is asked below.
         largest = Math.max(largest, fire.forBlast(largestBlastRadius()).radius());
         for (WeaponDef gun : weapons.values()) {
-            largest = Math.max(largest, gun.projectileRadius());
+            // A shot is swept along its path, and filed at the middle of it, so what the grid must
+            // make room for is the shot's own radius plus half the ground it covers in a tick.
+            largest = Math.max(largest, gun.projectileRadius() + gun.projectileSpeed() * tickSeconds * 0.5f);
             // A circle of ruined ground is an ordinary body in the pairwise path, unlike a blast,
             // so the grid has to have room for one - and it is asked of the gun table rather than
             // of a list somebody has to remember to extend.
