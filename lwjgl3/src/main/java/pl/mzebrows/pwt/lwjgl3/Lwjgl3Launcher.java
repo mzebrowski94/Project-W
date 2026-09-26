@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.lwjgl3;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.graphics.glutils.HdpiMode;
 import pl.mzebrows.pwt.client.GraphicConfig;
 import pl.mzebrows.pwt.client.LaunchOptions;
 import pl.mzebrows.pwt.client.PwtGame;
@@ -26,6 +27,9 @@ public final class Lwjgl3Launcher {
         configuration.useVsync(graphicConfig.vsync());
         configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate + 1);
         configuration.setWindowedMode(graphicConfig.windowWidth(), graphicConfig.windowHeight());
+        // Every size, position and pointer in physical pixels: the letterbox is solved in them, so a UI
+        // pixel stays a whole number of real pixels however the operating system scales the desktop.
+        configuration.setHdpiMode(HdpiMode.Pixels);
         if (options.instanceGiven()) {
             // Copies on one PC side by side, left and right, a row lower for every pair, so each window
             // can be seen and clicked into.

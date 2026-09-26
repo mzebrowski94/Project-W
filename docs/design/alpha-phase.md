@@ -7,8 +7,9 @@ Two rules separate it from the POC:
 
 - **No shortcuts in logic.** A stand-in is allowed only while it is named in *Still scaffolding*
   below, and removing it is somebody's next session.
-- **Visuals stay minimal.** Coloured circles (G0003). Placeholder art is not on the roadmap; when
-  sprites arrive they replace one class in the client.
+- **Visuals stay minimal.** Coloured circles (G0003), except the commander, whose puppet, portrait
+  and the UI skin are the first atlas (G0043). Any other look gets art only with a record of its own;
+  a missing puppet falls back to the circle.
 
 ## How a session goes
 
@@ -66,7 +67,7 @@ Dev controls, available in any scenario. **These are not game bindings** - the r
 | `.` | Advance exactly one tick, while paused |
 | `R` | Restart the scenario from its first tick |
 | `G` | Make the commander invulnerable, or stop. A dev tool - pillar 2 says he can be killed |
-| `F1` | Toggle the stats overlay |
+| `F1` | Step the stats overlay: its panel in the top bar's right corner, then every line over the view's corner, then off |
 | `F2` | Online: draw your own commanders facing your aim at once, or as the world has them (the cosmetic lead, on by default) |
 | `F3` | Online, a joining copy: step the simulated lag through `net.conditions.latencySteps` |
 | `Esc` | Back to the scenario menu |
@@ -175,7 +176,6 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | Turrets are placed by hand in scenarios | Whatever a level does about them. Same standing as hand-laid rock and hand-placed barrels: the turret is designed, where turrets come from is not. |
 | A barrel is a small orange-red circle | Whatever a barrel looks like. The colour is deliberately off the grunt's red - a field where some red circles chase you and the others kill you when you shoot them is exactly the confusion pillar 5 exists to prevent. |
 | Barrels are placed by hand in `Demolition` and `Casualty` and nowhere else | Whatever a level does about them. Same standing as hand-laid rock: the barrel is designed, where barrels come from is not. |
-| The commander's gun is named only in the F1 overlay | A real HUD. What he is holding is visible in what he fires, which is enough to play; it is not enough to be told at a glance. |
 | **Each player's commander is a circle in a colour of its own** - cyan, amber, green, pink, and four provisional ones for the players a game on several machines can hold - and nothing else tells them apart | Whatever eight commanders look like. The colour is doing the whole job of pillar 5 here, which is enough to play and not enough to be one of four men in a fight: no number, no name, no marker over your own. `Appearance.variant` is the hook and is already published, so the renderer decides. |
 | **The leash is invisible.** A commander at the end of it simply stops walking outwards, with nothing on screen saying why | Whatever tells a player he has reached the edge of the fight. The rule itself is settled for the alpha and listed as an open question in `README.md`; what is certainly missing either way is the tell, and a wall with no tell is the one way this reads as a bug. |
 | **The action prompt and the wave line are one console each, for four players** | The same on-screen place both are already waiting for. With one player the console was half-served; with four, three of them cannot see a prompt addressed to them at all. The decisions are per player already - `newlyOfferedAction(slot)` - so what is missing is still a label rather than a system. |

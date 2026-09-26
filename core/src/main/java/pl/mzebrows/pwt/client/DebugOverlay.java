@@ -5,6 +5,8 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -22,6 +24,9 @@ import pl.mzebrows.pwt.sim.def.Order;
 /**
  * What the simulation is doing right now, in text.
  *
+ * <p>Drawn by {@link TopBarPainter}: its best lines in the top bar's right-hand panel, or all of them over
+ * the view's corner when expanded.
+ *
  * <p>The alpha phase exists to watch systems work, and a system you cannot see the state of is a
  * system you are guessing about. Entity counts catch leaks - projectiles that never despawn,
  * enemies that never die - long before they are visible on screen.
@@ -32,13 +37,14 @@ public final class DebugOverlay {
     private final Hud hud;
 
     /**
-     * Draws the overlay. Never called from inside the simulation, so it may allocate freely.
+     * The overlay's lines, most useful first, so a panel with room for four shows the four that matter
+     * most. Never called from inside the simulation, so it may allocate freely.
      *
      * @param ownSlot the slot this machine's keyboard plays, whose commander the overlay describes
      * @param connection a line about the online session, or null offline
      * @param invitation how friends join, while this copy hosts; null otherwise
      */
-    public void render(
+    public List<String> lines(
             Simulation simulation,
             int ownSlot,
             String scenarioName,
@@ -46,28 +52,24 @@ public final class DebugOverlay {
             @Nullable Order lastOrder,
             @Nullable String connection,
             @Nullable String invitation) {
-        hud.begin();
-        hud.line(0, scenarioName + (paused ? "   [PAUSED]" : ""));
-        hud.line(1, "fps " + Gdx.graphics.getFramesPerSecond() + "    tick " + simulation.tick());
-        hud.line(
-                2,
-                "commanders " + count(simulation, Commander.class) + "    enemies "
-                        + count(simulation, Enemy.class) + "    projectiles "
-                        + count(simulation, Projectile.class) + "    obstacles "
-                        + count(simulation, Obstacle.class));
-        hud.line(3, "entities " + simulation.engine().getEntities().size());
-        hud.line(4, "commander " + commanderState(simulation, ownSlot));
-        hud.line(5, "last order " + (lastOrder == null ? "-" : lastOrder.name().toLowerCase(Locale.ROOT)));
+        List<String> lines = new ArrayList<>();
+        lines.add(scenarioName + (paused ? "   [PAUSED]" : ""));
+        lines.add("fps " + Gdx.graphics.getFramesPerSecond() + "   tick " + simulation.tick());
         if (connection != null) {
-            hud.line(6, connection);
+            lines.add(connection);
         }
         if (invitation != null) {
-            hud.line(7, invitation);
+            lines.add(invitation);
         }
-        hud.line(
-                hud.rows() - 1,
-                "1 follow  2 forward  3 defence  4 cancel      P pause  . step  R restart  G god  F1  F2 lead  F3 lag  ESC");
-        hud.end();
+        lines.add("commander " + commanderState(simulation, ownSlot));
+        lines.add("commanders " + count(simulation, Commander.class) + "  enemies "
+                + count(simulation, Enemy.class) + "  projectiles "
+                + count(simulation, Projectile.class) + "  obstacles "
+                + count(simulation, Obstacle.class));
+        lines.add("entities " + simulation.engine().getEntities().size());
+        lines.add("last order " + (lastOrder == null ? "-" : lastOrder.name().toLowerCase(Locale.ROOT)));
+        lines.add("1 follow 2 forward 3 defence 4 cancel  P pause . step R restart G god F1 F2 lead F3 lag ESC");
+        return lines;
     }
 
     /**

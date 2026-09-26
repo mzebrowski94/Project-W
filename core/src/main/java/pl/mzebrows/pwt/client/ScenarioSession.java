@@ -32,7 +32,7 @@ public final class ScenarioSession implements ScenarioPlay {
     private Simulation simulation;
     private FixedStepClock clock;
     private boolean paused;
-    private boolean overlayVisible = true;
+    private OverlayMode overlayMode = OverlayMode.PANEL;
     private boolean leaving;
     private boolean godMode;
     private boolean cosmeticLead = true;
@@ -100,7 +100,7 @@ public final class ScenarioSession implements ScenarioPlay {
             case PAUSE -> paused = !paused;
             case STEP -> stepOnce(input);
             case RESTART -> restart();
-            case TOGGLE_OVERLAY -> overlayVisible = !overlayVisible;
+            case TOGGLE_OVERLAY -> overlayMode = overlayMode.next();
             case TOGGLE_GOD_MODE -> setGodMode(!godMode);
             case TOGGLE_COSMETIC_LEAD -> cosmeticLead = !cosmeticLead;
             case NEXT_LAG -> {
@@ -182,6 +182,11 @@ public final class ScenarioSession implements ScenarioPlay {
     }
 
     @Override
+    public String planet() {
+        return scenario.planet();
+    }
+
+    @Override
     public String scenarioName() {
         return scenario.name();
     }
@@ -213,8 +218,8 @@ public final class ScenarioSession implements ScenarioPlay {
     }
 
     @Override
-    public boolean overlayVisible() {
-        return overlayVisible;
+    public OverlayMode overlayMode() {
+        return overlayMode;
     }
 
     /** Whether the commander is currently unkillable. Survives a restart, because a restart is not a fix. */

@@ -16,6 +16,8 @@ rootProject.name = 'Project-W'
 // sim    - deterministic, headless game simulation. No rendering, no assets, no I/O.
 // net    - networking: the transport port, its Netty adapter, the test network, connection logs.
 //          No libGDX. Depends on sim once sessions need its input types (ADR 0012).
-// core   - libGDX application: rendering, input, assets, screens. Depends on net and sim.
+// ui     - what the player is shown and how he moves through it, as data (ADR 0015). No drawing,
+//          no devices, no net. Reads sim, never writes it.
+// core   - libGDX application: rendering, input, assets, screens. Depends on ui, net and sim.
 // lwjgl3 - desktop launcher.
-include 'map', 'sim', 'net', 'core', 'lwjgl3'
+include 'map', 'sim', 'net', 'ui', 'core', 'lwjgl3'

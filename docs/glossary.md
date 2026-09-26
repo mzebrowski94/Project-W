@@ -168,6 +168,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **thicket** | Dense undergrowth. Passable, and the only ground in the game worth going round: what standing on it costs is a **pace** rather than a route, so every flow field, reachability check and spawn treats it as the open ground it is. It **costs his side far more than theirs**, which is the whole of the mechanic and a declaration rather than a property of the ground - a thicket both sides waded equally would change how long the walk took and nothing else. Drawn as a hatch over the floor, because a thing that is going to cost you must not read as another colour of floor. |
 | **tile** | One cell of the grid a level is laid out on. A unit of *construction*, not of play: nothing moves tile by tile and nothing is centred in one (G0009). |
 | **variant** | Which of a look's several appearances an entity wears. Zero is the ordinary one. It exists for the commander: four identical circles is not a field anybody can read (pillar 5), so each player wears his own colour - and it is a number on `Appearance` rather than four looks in the enum, because the renderer decides what to draw from that component and asks nothing else about an entity (G0003). |
+| **view** | What the camera shows of the field. On screen, the rectangle of the **letterbox** between the **top bar** and the **bottom bar**: the only place the fight is drawn. Its height is always `virtualHeight` world units; its width follows its shape, which is kept inside an aspect range, so a wider screen sees further to the sides. |
 
 ### Levels and objectives
 
@@ -182,6 +183,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **control point** | Ground a squad takes by standing near it for a while. Captured by dwelling; the dwell goes back to zero the moment the last capturer leaves, rather than pausing, and starting an attempt wakes what is nearby. |
 | **level** *(source)* | One self-contained combat scenario, start to objective. |
 | **objective** | A condition a level requires before it counts as done. A level names a set and requires all of it. Two exist: clear the map of enemies, and capture every control point. What a completed level *does* is still open - in the alpha it does nothing. |
+| **proving ground** | The menu's training mode: pick a strain and a gun and fight it. A placeholder page for now. Not *arena*, which is the rectangle a level is played inside. |
 | **scenario** | One arena the alpha-phase menu can launch, built to make a system visible. Content, never design. |
 | **the level entity** | One entity, spawned with the world and never removed, carrying state that belongs to the level rather than to anything standing in it (G0007). |
 
@@ -206,6 +208,29 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **session** | One game shared by one or more **peers**, from the host starting it to the host leaving. An `OnlineSession` is what one machine holds of it; offline, a `ScenarioSession` is the whole game. |
 | **snapshot** | The whole simulation written down at the end of one tick - every entity, component, stream and counter - so that another machine can carry on from it. What a **drop-in** receives, what a peer that has desynced is healed with, and what a desync dump starts from. Written from the components' own fields (ADR 0014). |
 | **tick bundle** | Every slot's input for one tick, as the **sequencer** sealed it - held input, **input events**, and the session's own restart or god mode switch. A peer steps a tick only once it holds that tick's bundle. |
+
+### The interface
+
+What the player is shown around the fight and how he moves through it. Decided in the `ui` module
+(ADR 0015); the page-by-page specification is `docs/ui/menu_layout_agent.md`.
+
+| Term | Meaning |
+|---|---|
+| **bottom bar** | The black band under the **view**: four **player panels**, one per local seat. Its height is derived from what it holds, never configured. |
+| **entry** | One thing on a **page** or **modal** that can be selected and confirmed - a scenario in a list, RESUME. Not *item*, which is a pickup's banned word. |
+| **letterbox** | The screen's split into a **top bar**, the **view** and a **bottom bar**, with black pillars beside the view when the screen is wider than the view's aspect range allows. The fight is only ever in the view; the interface is only ever in the bars. |
+| **modal** | A **page** drawn over whatever is behind it rather than instead of it - the pause menu over the level, the exit confirm over the main menu. It takes the input until it closes. |
+| **modality** | Which kind of device the player last used meaningfully - pointer, or keys and pads. It decides how the **selection** is drawn, whether the cursor shows, and which button names the hints use. |
+| **page** | One screenful of the menu - the main page, the campaign list, the online page. Pages are a stack inside one libGDX `Screen`: going in pushes, Back pops. Never called a *screen*, which is the libGDX class that holds them. |
+| **paused banner** | One line over the top of the **view** saying the game is paused and which key opens the menu, shown when it is paused and no menu is open on this machine - somebody else paused, or the harness's `P`. Takes no input. |
+| **player panel** | One quarter of the **bottom bar**, belonging to one local seat and drawn in that player's colour: his label, **status**, gun and heat, and later his portrait and tally. A panel never moves when somebody joins or leaves. |
+| **readout** | The facts the interface shows, copied out of the simulation once a frame by the one class that reads `sim` for it. Everything in the bars is drawn from it, and nothing on screen is a number the readout does not carry (pillar 5). |
+| **reticle** | The mark drawn where the keyboard player's mouse aims, in his colour, over everything. The system cursor is hidden while he plays. |
+| **scrim** | The dark veil drawn over the **view** while a menu is open, dim enough to say the world is not live and light enough to read the frozen fight under it. |
+| **selection** | Which **entry** of a **page** confirming would act on, drawn as a ring or a hover. Each page remembers its own. Not *focus*, which is who the camera keeps in shot. |
+| **status** | The first line of a **player panel** after his label: empty while he stands, and otherwise the one word that matters - down (with his bleed-out), KIA (with the seconds to his return) or aboard. Not *health*: a commander has none worth a bar, because every hostile blow is **decisive**. |
+| **top bar** | The black band over the **view**: the mission and the current goal on the left, the dev overlay on the right. Its height is derived from what it holds. |
+| **UI canvas** | The pixel grid the interface is drawn on: `canvasHeight` UI pixels tall, each one a whole number of screen pixels square. Nothing on it is scaled by a fraction, so text and frames are always crisp. The world is not on it - the camera zooms smoothly. |
 
 ### Time, space and randomness
 
@@ -238,3 +263,7 @@ A term that could sit in two sections goes where a reader would look for it, not
   `core` module.
 - *lobby* or *match* for a game other machines can join - say session.
 - *create* or *make* for bringing an entity into the world - say spawn.
+- *focus* for the entry a menu would act on - say selection. Focus is who the camera keeps in shot.
+- *screen* for one screenful of the menu - say page. A `Screen` is the libGDX class that holds pages.
+- *arena* for the training mode - say proving ground.
+- *health bar* for a commander - say status. He has no health worth a bar.

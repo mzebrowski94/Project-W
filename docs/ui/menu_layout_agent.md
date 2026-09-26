@@ -22,12 +22,13 @@ reached until an open question is answered - the question is named).
 - A **Do not build** cell is binding. It names the decision record that already rejected it.
 
 Glossary words this file relies on (in `docs/glossary.md` once stage 0 lands, except where a stage
-is named): **page**, **modal**, **entry**, **focus**, **modality**, **letterbox**, **UI canvas**,
+is named): **page**, **modal**, **entry**, **selection**, **modality**, **letterbox**, **UI canvas**,
 **top bar**, **bottom bar**, **scrim**, **paused banner**, **reticle**, **player panel**, **status**,
 **proving ground**; **terminal** and **dispatch** (stage 6), **tally** (7), **portrait** (8).
 Words not used: *item* (say entry), *screen* for a page (a libGDX `Screen` is a class), *lobby* or
 *match* (say session), *mount* (say crew / get on a turret), *arena* for the training mode (arena is
-the rectangle a level is played inside).
+the rectangle a level is played inside), *focus* for the selected entry (focus is who the camera
+keeps in shot).
 
 ## 2. Traceability to the original outline
 
@@ -86,20 +87,20 @@ back here - an online game that ended under him) when there is one; that is toda
 | `options` | `ui.main.options = OPTIONS` | `OPEN(OPTIONS)` | always |
 | `exit` | `ui.main.exit = EXIT` | `OPEN(EXIT_CONFIRM)` | always |
 
-Back on this page moves focus to `exit`; it does not open the confirm and never quits.
-Default focus: `campaign`, or the entry focused when the player last left this page.
+Back on this page moves the selection to `exit`; it does not open the confirm and never quits.
+Default selection: `campaign`, or the entry selected when the player last left this page.
 
 ### `UI:main/campaign`
 
 Title `ui.campaign.title = CAMPAIGN`. One entry per scenario in `Scenarios.all()`, in registry
-order: label is `Scenario.name()`, and the focused entry shows `Scenario.description()` under the
+order: label is `Scenario.name()`, and the selected entry shows `Scenario.description()` under the
 list, wrapped to at most two lines (section 8). Confirm: `START(scenarioIndex)`. Number keys `1`-`9`
 jump and confirm, as `MenuScreen` does today. The list scrolls when it is taller than the page;
-focus drives the scroll. Selection logic is `MenuSelection`, which already exists and is tested -
+the selection drives the scroll. Selection logic is `MenuSelection`, which already exists and is tested -
 reuse it, do not write a second list cursor.
 
-Default focus: the scenario last played this session, else the first - so launch to a level is two
-confirms (MAIN's default focus is `campaign`). A one-confirm CONTINUE is plan Q25.
+Default selection: the scenario last played this session, else the first - so launch to a level is two
+confirms (MAIN's default selection is `campaign`). A one-confirm CONTINUE is plan Q25.
 
 Do not build: a separate campaign registry beside `Scenarios.ALL` (alpha-phase.md: "that list is the
 whole registry"); a level-select map; progression or unlocks (open questions on progression).
@@ -159,7 +160,7 @@ player's settings belong in a user file that does not exist yet (open question i
 ### `UI:main/exit` - modal
 
 Body `ui.exit.body = Quit Project-W?` Entries `stay` (`ui.common.no = NO`, intent `BACK`, default
-focus) and `quit` (`ui.common.yes = YES`, intent `QUIT_APP`). Default focus is `stay` so a repeated
+selection) and `quit` (`ui.common.yes = YES`, intent `QUIT_APP`). Default selection is `stay` so a repeated
 confirm press cannot quit by accident.
 
 ### `UI:connecting`
@@ -173,7 +174,7 @@ Shown while an online `ScenarioPlay` has no world: `ui.connecting.body = {connec
 The level. The HUD fills the letterbox (section 7); no page is open; the mouse aims, the system
 cursor is hidden and the reticle drawn (`UI:hud/view/reticle`). `Esc` or pad `START` opens
 `UI:play/pause`. Paused by somebody else - another machine, or the harness's `P` - with no menu open
-here: the paused banner (`UI:hud/view/paused`), no page, no focus taken.
+here: the paused banner (`UI:hud/view/paused`), no page, no selection taken.
 
 ### `UI:play/pause` - modal
 
@@ -199,7 +200,7 @@ the first tick of play (plan 6.2, `ReleaseLatch`).
 ### `UI:play/leave` - modal
 
 Body `ui.leave.body = Leave the mission?`, and online as host `ui.leave.bodyHost = Leaving ends the
-session for everyone.` Entries `stay` (default focus, `BACK`) and `leave` (`LEAVE`).
+session for everyone.` Entries `stay` (default selection, `BACK`) and `leave` (`LEAVE`).
 
 ### `UI:play/game-over` - modal, blocked
 
@@ -216,7 +217,7 @@ carried out by the screen that owns the page, through `GameContext.queueScreen` 
 |---|---|---|---|
 | any `UI:main...` page | `OPEN(p)` | `p` pushed | - |
 | any `UI:main...` page except `UI:main` | `BACK` | pop | - |
-| `UI:main` | `BACK` | `UI:main` | focus moves to `exit` |
+| `UI:main` | `BACK` | `UI:main` | the selection moves to `exit` |
 | `UI:main/exit` | `QUIT_APP` | - | `Gdx.app.exit()` |
 | `UI:main/campaign` | `START(i)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(...)))` |
 | `UI:main/online/host` | `HOST(i)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, OnlineSession.host(...)))`; on failure stay and show the notice |
@@ -224,7 +225,7 @@ carried out by the screen that owns the page, through `GameContext.queueScreen` 
 | `UI:connecting` | world arrives | `UI:play` | - |
 | `UI:connecting` | `BACK` / ended | `UI:main` | `queueScreen(new MenuScreen(ctx, reason))` |
 | `UI:play` | `PAUSE` (Esc, pad START) | `UI:play/pause` at once | `play.apply(HarnessCommand.PAUSE, ...)` unless already paused; this machine's commanders on neutral input until it lands |
-| `UI:play` | somebody paused (another machine, or `P`) | `UI:play`, paused banner shown | - (derived; no page, no focus taken) |
+| `UI:play` | somebody paused (another machine, or `P`) | `UI:play`, paused banner shown | - (derived; no page, no selection taken) |
 | `UI:play/pause` | `RESUME` / `BACK` | `UI:play` at once | `play.apply(HarnessCommand.PAUSE, ...)`; the press is spent (`ReleaseLatch`) |
 | `UI:play/pause`, `UI:play/leave` | anybody resumed | `UI:play` | - (derived) |
 | `UI:play/pause` | `RESTART` | `UI:play` | `play.apply(HarnessCommand.RESTART, ...)` |
@@ -243,7 +244,7 @@ buttons are named by position (ADR 0011); what the player is told to press comes
 
 | Semantic | Keyboard | Mouse | Pad | Context |
 |---|---|---|---|---|
-| Move focus | arrows, `W`/`S` (lists), `A`/`D` (rows) | hover | d-pad, left stick (threshold, repeat) | pages, modals |
+| Move the selection | arrows, `W`/`S` (lists), `A`/`D` (rows) | hover | d-pad, left stick (threshold, repeat) | pages, modals |
 | Confirm | `Enter`, `Space` | left click on an entry | `SOUTH` (A / Cross) | pages, modals |
 | Back | `Esc`, `Backspace` | right click | `EAST` (B / Circle) | pages, modals |
 | Jump to entry | `1`-`9` | - | - | scenario lists |
@@ -261,13 +262,13 @@ once - otherwise clicking RESUME fires, `SOUTH` on RESUME acts, and the `Enter` 
 reaches its first tick. Pages are not affected: a held direction still repeats.
 
 **Modality** (`InputModality`, module `ui`, pure): the last device that did something meaningful owns
-the look of focus.
+the look of the selection.
 
 - Pointer mode: entered on a mouse move of at least `ui.nav.pointerWakePixels` or any mouse button.
-  Cursor shown, the hovered entry is focused, no focus ring when nothing is hovered, `Enter` still
-  confirms the last focused entry.
+  Cursor shown, the hovered entry is selected, no selection ring when nothing is hovered, `Enter` still
+  confirms the last selected entry.
 - Digital mode: entered on any navigation key or pad input past the stick threshold. Cursor hidden,
-  focus ring shown; if nothing is focused, the page's remembered entry, else its default.
+  selection ring shown; if nothing is selected, the page's remembered entry, else its default.
 - Footer hints follow the mode and the last pad's label family: keyboard text in pointer mode or after
   a key, `PadLabels.of(button, playStation)` after a pad.
 - Any seated pad may drive a page or modal; online, only this machine's devices do.
@@ -278,17 +279,17 @@ the look of focus.
 
 | Id | Code anchor | Where | Shows | Status |
 |---|---|---|---|---|
-| `UI:hud/top/mission` | `HudSlot.MISSION` | top bar, left, line 1, dim | `ui.hud.planet = PLANET:` `{planet}` `ui.hud.mission = MISSION:` `{scenario name}`; the planet half hidden while `Scenario.planet()` is empty | planned |
-| `UI:hud/top/goal` | `HudSlot.GOAL` | top bar, left, line 2, bright | `ui.hud.goal = CURRENT GOAL:` `{goal}` - first unmet required objective, or `ui.hud.goal.complete = MISSION COMPLETED`, pulsing twice when it becomes true | planned |
-| `UI:hud/top/terminal` | `HudSlot.TERMINAL` | top bar, left, lines 3-4 | the last two dispatches, older dimmed, newest typing with a cursor (a high one appears at once) | planned |
-| `UI:hud/top/overlay` | `HudSlot.OVERLAY` | top bar, right | the F1 dev overlay (`DebugOverlay`), clipped to its panel; who owns this block without it is plan Q30 | planned (overlay built, drawn full screen today) |
-| `UI:hud/bottom/panel` | `HudSlot.PLAYER_PANEL` | bottom bar: four fixed quarters of the view's span, one per local seat in seat order; a quarter whose seat has no commander and no respawn pending stays black | frame in that player's commander colour, with `ui.hud.player = P{n}` in it | planned |
-| `UI:hud/bottom/portrait` | `HudSlot.PORTRAIT` | inside each player panel, left; dropped in a quarter under 160 UI px (4:3) | animated portrait (plan section 10.5), 32 x 32; a block in his colour until stage 8 | planned |
-| `UI:hud/bottom/status` | `HudSlot.STATUS` | inside each player panel, row 1, after the label | empty while he stands; `ui.hud.down = DOWN` with his bleed-out as a draining bar; `ui.hud.kia = KIA {seconds}`; `ui.hud.aboard = ABOARD`. `DOWN` and `KIA` in alert. No health bar: every hostile blow is decisive (plan Q22) | planned |
-| `UI:hud/bottom/weapon` | `HudSlot.WEAPON` | inside each player panel, row 2 | `ui.weapon.*` name (≤ 7 characters) and a heat bar in the world's heat colours; while overheated `ui.hud.overheat = OVERHEAT` in alert in the bar's place. No ammunition | planned |
+| `UI:hud/top/mission` | `HudSlot.MISSION` | top bar, left, line 1, dim | `ui.hud.planet = PLANET:` `{planet}` `ui.hud.mission = MISSION:` `{scenario name}`; the planet half hidden while `Scenario.planet()` is empty | built |
+| `UI:hud/top/goal` | `HudSlot.GOAL` | top bar, left, line 2, bright | `ui.hud.goal = CURRENT GOAL:` `{goal}` - first unmet required objective, or `ui.hud.goal.complete = MISSION COMPLETED`, pulsing twice when it becomes true | built |
+| `UI:hud/top/terminal` | `HudSlot.TERMINAL` | top bar, left, lines 3-4 | the last two dispatches, older dimmed, newest typing with a cursor (a high one appears at once) | planned (stage 6); its two lines are reserved |
+| `UI:hud/top/overlay` | `HudSlot.OVERLAY` | top bar, right | the F1 dev overlay (`DebugOverlay`), clipped to its panel; who owns this block without it is plan Q30 | built (F1 steps panel / expanded / off) |
+| `UI:hud/bottom/panel` | `HudSlot.PLAYER_PANEL` | bottom bar: four fixed quarters of the view's span, one per local seat in seat order; a quarter whose seat has no commander and no respawn pending stays black | frame in that player's commander colour, with `ui.hud.player = P{n}` in it | built |
+| `UI:hud/bottom/portrait` | `HudSlot.PORTRAIT` | inside each player panel, left; dropped in a quarter under 160 UI px (4:3) | animated portrait (plan section 10.5), 32 x 32; a block in his colour until stage 8 | built as a block in his colour; frames planned (stage 8) |
+| `UI:hud/bottom/status` | `HudSlot.STATUS` | inside each player panel, row 1, after the label | empty while he stands; `ui.hud.down = DOWN` with his bleed-out as a draining bar; `ui.hud.kia = KIA {seconds}`; `ui.hud.aboard = ABOARD`. `DOWN` and `KIA` in alert. No health bar: every hostile blow is decisive (plan Q22) | built |
+| `UI:hud/bottom/weapon` | `HudSlot.WEAPON` | inside each player panel, row 2 | `ui.weapon.*` name (≤ 7 characters) and a heat bar in the world's heat colours; while overheated `ui.hud.overheat = OVERHEAT` in alert in the bar's place. No ammunition | built |
 | `UI:hud/bottom/tally` | `HudSlot.TALLY` | inside each player panel, row 3, dim | three icons and per-life numbers - kills, goals, stabilised - `999+` above 999; the labelled form (`ui.hud.kills = KILL COUNT:`, `ui.hud.goals = MISSION GOALS:`, `ui.hud.stabilised = UNITS HEALED:`) is on `UI:play/pause` | planned; needs the tally (plan section 9) |
 | `UI:hud/view/paused` | `HudSlot.PAUSED` | over the view, top, over a light scrim | `ui.hud.paused = PAUSED` and `ui.hud.pausedHint = {key}: MENU`, while paused with no menu open on this machine | planned |
-| `UI:hud/view/reticle` | `HudSlot.RETICLE` | over everything, at the pointer's screen position | the keyboard player's reticle, in his colour, outlined (plan 7.5) | planned |
+| `UI:hud/view/reticle` | `HudSlot.RETICLE` | over everything, at the pointer's screen position | the keyboard player's reticle, in his colour, outlined (plan 7.5) | built |
 
 Four panels always fit: a quarter is 160 UI px on every 16:9 and 16:10 screen, and the plan's pixel
 budget (7.2) holds label, status, weapon and tally in a 19-character text column. A quarter under 160
@@ -325,7 +326,7 @@ name is the source path without `.png`.
 | `ui/pixel.png` | `ui/pixel` | bars, fills, lines | 1 x 1 white |
 | `ui/panel.9.png` | `ui/panel` | page and modal frames | nine-patch, 12 x 12 |
 | `ui/overlay.9.png` | `ui/overlay` | dev overlay border (red, as the mock-up) | nine-patch, 8 x 8 |
-| `ui/focus.9.png` | `ui/focus` | focus ring | nine-patch, 8 x 8 |
+| `ui/selection.9.png` | `ui/selection` | selection ring | nine-patch, 8 x 8 |
 | `ui/cursor.png` | `ui/cursor` | pointer in pages | 8 x 8 |
 | `ui/portrait/commander_<pose>.png` | `ui/portrait/commander_<pose>` | portrait; poses `idle blink fire strain down kia` | 32 x 32, greyscale, tinted per player |
 | `ui/reticle.png` | `ui/reticle` | the keyboard player's aim point | 9 x 9, white with a one-texel dark outline, tinted |
@@ -342,7 +343,7 @@ fallback, so a missing file degrades the look and never stops the game (plan sec
 The rules are the plan's (sections 6.4, 6.5, 7.0, 7.4); what every page and slot must honour:
 
 - Motion says that something changed or it is not built. Pages move within 0.12 s, the scrim within
-  0.08 s, focus instantly - and a press during any of it finishes it and is applied. Nothing moves
+  0.08 s, the selection instantly - and a press during any of it finishes it and is applied. Nothing moves
   in the bars when nothing changed.
 - Everything that moves or flashes reads `graphic.ui.motionScale` / `graphic.ui.flashScale`; 0 turns
   it off. Nothing flashes more than three times a second.

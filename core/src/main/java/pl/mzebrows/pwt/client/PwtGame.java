@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.NetConfig;
@@ -49,7 +50,8 @@ public final class PwtGame extends Game implements GameContext {
         assets.queueAll();
         assets.finishLoading();
 
-        hud = new Hud();
+        hud = new Hud(graphicConfig.layout(), graphicConfig.hud().reticleSize());
+        hud.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         setScreen(new MenuScreen(this));
     }
 

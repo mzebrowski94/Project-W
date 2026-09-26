@@ -38,6 +38,15 @@ public interface Scenario {
     String description();
 
     /**
+     * Where it is set, for the top bar; empty says nothing and the bar shows only the mission. Whether
+     * a level has a planet at all - content, generated from the seed, or dropped - is still open (plan
+     * Q9), so no scenario names one yet.
+     */
+    default String planet() {
+        return "";
+    }
+
+    /**
      * Adjusts the config this scenario runs with. The default changes nothing; override to vary one
      * thing - a crowd of enemies, an empty arena - without restating the rest.
      */

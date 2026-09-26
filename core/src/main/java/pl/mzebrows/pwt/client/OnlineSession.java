@@ -57,7 +57,7 @@ public final class OnlineSession implements ScenarioPlay {
     private final @Nullable Invitation invitation;
     private final Announcements announcements = new Announcements();
 
-    private boolean overlayVisible = true;
+    private OverlayMode overlayMode = OverlayMode.PANEL;
     private boolean cosmeticLead = true;
     private boolean leaving;
     private boolean toldStepIsOffline;
@@ -184,7 +184,7 @@ public final class OnlineSession implements ScenarioPlay {
                 }
             }
             case RESTART -> peer.restart();
-            case TOGGLE_OVERLAY -> overlayVisible = !overlayVisible;
+            case TOGGLE_OVERLAY -> overlayMode = overlayMode.next();
             case TOGGLE_GOD_MODE -> {
                 Simulation world = peer.simulation();
                 if (world != null) {
@@ -245,8 +245,8 @@ public final class OnlineSession implements ScenarioPlay {
     }
 
     @Override
-    public boolean overlayVisible() {
-        return overlayVisible;
+    public OverlayMode overlayMode() {
+        return overlayMode;
     }
 
     @Override

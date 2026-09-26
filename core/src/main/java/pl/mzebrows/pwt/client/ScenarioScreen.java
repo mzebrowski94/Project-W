@@ -6,11 +6,12 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
-import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.PlayerInputs;
@@ -22,6 +23,13 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.def.ActionKind;
+import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.ui.hud.GoalLine;
+import pl.mzebrows.pwt.ui.hud.PanelAlarms;
+import pl.mzebrows.pwt.ui.hud.Readout;
+import pl.mzebrows.pwt.ui.hud.ReadoutWriter;
+import pl.mzebrows.pwt.ui.layout.Rect;
+import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
 /**
  * Draws one running scenario, and does as little thinking as possible.
@@ -30,6 +38,9 @@ import pl.mzebrows.pwt.sim.def.ActionKind;
  * ScenarioPlay} it is handed - {@link ScenarioSession} offline, {@link OnlineSession} online. Both are
  * unit-tested. What is left here needs a GL context and therefore cannot be, which is exactly why there is
  * so little of it.
+ *
+ * <p>The screen is letterboxed ({@link ScreenLayout}): the world is drawn only into the view between the
+ * two bars, and the bars are the interface's.
  *
  * <p>Online, the camera frames only the commanders played on this machine (G0038), and those are drawn
  * facing their players' aim this frame rather than a lead of ticks ago - the cosmetic lead (ADR 0012).
@@ -46,9 +57,15 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     private final GameContext context;
     private final ScenarioPlay play;
-    private final Viewport viewport;
+    private final LetterboxViewport viewport = new LetterboxViewport();
     private final LocalAim localAim = new LocalAim();
     private final DebugOverlay overlay;
+    private final Readout readout = new Readout();
+    private final ReadoutWriter readoutWriter = new ReadoutWriter();
+    private final GoalLine goalLine;
+    private final PanelAlarms alarms;
+    private final TopBarPainter topBar;
+    private final BottomBarPainter bottomBar;
     private final KeyPresses keys = keycode -> Gdx.input.isKeyJustPressed(keycode);
     private final KeyHolds held = keycode -> Gdx.input.isKeyPressed(keycode);
 
@@ -78,8 +95,16 @@ public final class ScenarioScreen extends ScreenAdapter {
         this.context = context;
         this.play = play;
         GraphicConfig graphicConfig = context.graphicConfig();
-        this.viewport = new FitViewport(graphicConfig.virtualWidth(), graphicConfig.virtualHeight());
         this.overlay = new DebugOverlay(context.hud());
+        HudStyle style = graphicConfig.hud();
+        UiStrings strings = UiStrings.load();
+        this.goalLine = new GoalLine(style.goalHoldSeconds(), style.pulseHz(), style.flashScale());
+        this.alarms = new PanelAlarms(
+                style.alarmSeconds(), style.alarmShake(), style.pulseHz(), style.motionScale(), style.flashScale());
+        this.topBar = new TopBarPainter(
+                context.hud(), strings, style, graphicConfig.layout().metrics());
+        this.bottomBar = new BottomBarPainter(
+                context.hud(), strings, style, graphicConfig.layout().metrics(), graphicConfig.palette());
     }
 
     @Override
@@ -138,6 +163,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         Simulation world = play.simulation();
         if (world == null) {
             // Online, before the world has arrived: connecting, joining, or turned away.
+            context.hud().showSystemCursor();
             ScreenUtils.clear(context.graphicConfig().backgroundColor());
             String connection = play.connection();
             overlay.renderWaiting(connection == null ? "..." : connection);
@@ -149,20 +175,43 @@ public final class ScenarioScreen extends ScreenAdapter {
         aimCamera(world, delta);
         aimAhead(players);
 
-        ScreenUtils.clear(context.graphicConfig().backgroundColor());
+        String name = play.scenarioName();
+        readoutWriter.fill(world, name == null ? "" : name, play.planet(), readout);
+        goalLine.update(readout, delta);
+        alarms.update(readout, delta);
+
+        clearLetterbox();
         terrain.render();
         renderer.render(play.renderAlpha(), play.cosmeticLead() ? localAim : null);
-        if (play.overlayVisible()) {
-            String name = play.scenarioName();
-            overlay.render(
-                    world,
-                    Math.max(0, play.slotOf(PlayerSeats.KEYBOARD_SLOT)),
-                    name == null ? "" : name,
-                    play.paused(),
-                    play.lastOrder(),
-                    play.connection(),
-                    play.invitation());
+        ScreenLayout layout = context.hud().layout();
+        OverlayMode mode = play.overlayMode();
+        List<String> lines = mode == OverlayMode.OFF
+                ? List.of()
+                : overlay.lines(
+                        world,
+                        Math.max(0, play.slotOf(PlayerSeats.KEYBOARD_SLOT)),
+                        name == null ? "" : name,
+                        play.paused(),
+                        play.lastOrder(),
+                        play.connection(),
+                        play.invitation());
+        topBar.render(layout, readout, goalLine, lines, mode);
+        bottomBar.render(layout, readout, play, alarms);
+        drawReticle();
+    }
+
+    /**
+     * The keyboard player's aim point (plan 7.5), last, over everything - a bar included, since the
+     * pointer still aims from there. At the pointer's own screen position, in his colour.
+     */
+    private void drawReticle() {
+        context.hud().hideSystemCursor();
+        int slot = play.slotOf(PlayerSeats.KEYBOARD_SLOT);
+        if (slot < 0) {
+            return;
         }
+        Color own = context.graphicConfig().palette().colorFor(Look.COMMANDER, readout.player(slot).variant);
+        context.hud().reticle(Gdx.input.getX(), Gdx.graphics.getHeight() - 1 - Gdx.input.getY(), own);
     }
 
     /**
@@ -214,11 +263,33 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     @Override
     public void resize(int width, int height) {
-        viewport.update(width, height, true);
+        ScreenLayout layout = context.hud().layout();
+        viewport.fit(layout.toScreen(layout.view()), context.graphicConfig().virtualHeight());
+    }
+
+    /**
+     * Black everywhere - bars, pillars and the odd pixels round the canvas - then the ground colour
+     * inside the view only, so where the map ends reads as ground beyond the map and never as the
+     * letterbox.
+     */
+    private void clearLetterbox() {
+        ScreenUtils.clear(context.graphicConfig().hud().bar());
+        ScreenLayout layout = context.hud().layout();
+        Rect view = layout.toScreen(layout.view());
+        if (view.isEmpty()) {
+            return;
+        }
+        Color ground = context.graphicConfig().backgroundColor();
+        Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+        Gdx.gl.glScissor(view.x(), view.y(), view.width(), view.height());
+        Gdx.gl.glClearColor(ground.r, ground.g, ground.b, ground.a);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
     }
 
     @Override
     public void hide() {
+        context.hud().showSystemCursor();
         renderer.dispose();
         terrain.dispose();
         play.close();

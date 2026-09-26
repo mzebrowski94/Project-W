@@ -254,10 +254,11 @@ loop.
 
 ## Coordinates
 
-The simulation works in **world units** and knows nothing about pixels. `graphic.virtualWidth` and
-`graphic.virtualHeight` describe how many world units fill the viewport; `FitViewport` handles every
-window size and aspect ratio from there. No code outside the viewport setup converts between world
-units and pixels.
+The simulation works in **world units** and knows nothing about pixels. The screen is a letterbox
+(`ScreenLayout`, module `ui`): a top bar, the **view** and a bottom bar, on a UI canvas scaled by a
+whole number. `graphic.virtualHeight` is how many world units fill the view top to bottom; its width
+follows the view's shape on this screen (`LetterboxViewport`), kept inside `graphic.view.aspectMin`
+.. `aspectMax`. No code outside the viewport setup converts between world units and pixels.
 
 There is a third space, **tile coordinates**, and exactly one class converts to it: `TileMap`. World
 units are the currency everywhere else - a tile size is a number a map was built with, not something

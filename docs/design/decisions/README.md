@@ -11,7 +11,7 @@ mechanic you are about to write appears there, it has already been rejected and 
 |---|---|---|---|
 | [G0001](G0001-inspired-by-not-remake.md) | Inspired by *Triumph! War 2099*, not a remake of it. | a faithful remake; the original levels or roster | accepted |
 | [G0002](G0002-aim-is-independent-of-movement.md) | Aim is independent of movement. | facing that follows movement | accepted |
-| [G0003](G0003-the-renderer-reads-a-component.md) | The renderer reads a component; it never asks what an entity is. | branching on kind in the renderer; placeholder sprites; colour on a gameplay component | accepted |
+| [G0003](G0003-the-renderer-reads-a-component.md) | The renderer reads a component; it never asks what an entity is. | branching on kind in the renderer; placeholder sprites; colour on a gameplay component | accepted; temporary half superseded by G0043 for looks with a puppet |
 | [G0004](G0004-no-event-bus.md) | No event bus - reactions are components, feedback is a spawned entity. | an event bus, message queue, listener registry or signal | accepted |
 | [G0005](G0005-the-strike-is-an-entity.md) | A melee strike is an entity, not an overlap query. | a grid query for the arc that writes `Damage` directly | accepted |
 | [G0006](G0006-a-pickup-is-claimed-then-applied.md) | A pickup is claimed on contact and applied afterwards; exactly one taker, and a side offered nothing leaves it standing. | applying a grant in `onContact`; a `canTake` flag or side mask; removing a claimed pickup | accepted |
@@ -51,6 +51,7 @@ mechanic you are about to write appears there, it has already been rejected and 
 | [G0040](G0040-the-squad-follows-the-war-on.md) | A squad holding a taken point follows a commander who is at the next point at once, or who is ahead of it by route after a hold of its own; it never leaves one behind. Supersedes G0029 in part. | leaving after a hold unless he is on the point; "approaching" from his heading; one hold for the whole squad; a countdown on "forward" | accepted |
 | [G0041](G0041-a-squad-spreads-as-a-pack-does.md) | A squad walks to a point and after the commander on the pack's own spread (G0033), and a follower aims at where he is going. | formation slots round the commander; a separation force or boids; aiming ahead of him all the way in | accepted |
 | [G0042](G0042-a-stuck-man-detours.md) | A trooper who has stopped getting anywhere detours to his own side; boulders are laid off rock. | re-pathing on a block; teleporting or nudging; rolling the side; a rock margin on every scatter | accepted |
+| [G0043](G0043-the-first-atlas-is-the-commanders.md) | The first atlas is the commander's puppet, his portrait and the UI skin; every other look stays a shape until its own record, and a missing puppet falls back to the shape. Supersedes G0003's temporary half for those looks. | sprites for other looks without a record; choosing a puppet by class or component; gameplay reading a sprite; animation on the wall clock | accepted |
 
 ## When to write one
 

@@ -17,6 +17,9 @@ public final class Assets implements Disposable {
     /** Packed atlas produced by {@code ./gradlew :core:packTextures}. */
     public static final String GAME_ATLAS = "atlas/game.atlas";
 
+    /** Every word the interface shows ({@link UiStrings}); a classpath resource, like the config files. */
+    public static final String UI_STRINGS = "i18n/ui.properties";
+
     private final AssetManager manager = new AssetManager();
 
     /** Queues everything the game needs; call {@link #finishLoading()} or poll {@link #update()}. */

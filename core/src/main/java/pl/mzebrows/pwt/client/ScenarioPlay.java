@@ -42,7 +42,13 @@ public interface ScenarioPlay extends AutoCloseable {
 
     boolean paused();
 
-    boolean overlayVisible();
+    /** How much of the dev overlay is shown; {@code F1} steps through the modes. */
+    OverlayMode overlayMode();
+
+    /** Where the scenario is set, for the top bar; empty when it says nothing. */
+    default String planet() {
+        return "";
+    }
 
     /**
      * Whether this machine's own commanders are drawn facing where their players aim right now rather

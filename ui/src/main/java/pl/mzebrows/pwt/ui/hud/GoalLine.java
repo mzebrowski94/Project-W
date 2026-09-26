@@ -1,0 +1,127 @@
+package pl.mzebrows.pwt.ui.hud;
+
+import pl.mzebrows.pwt.sim.def.Objective;
+
+/**
+ * The top bar's second line - the one that is always current: the first objective the level still
+ * wants, or that it has everything it wants.
+ *
+ * <p>Objectives are recomputed every tick rather than latched ({@code Level}), so the line may go back
+ * from completed to a goal when a new wave walks onto a cleared field. That is the truth and it is
+ * shown - but a change of goal waits {@code minHoldSeconds}, so a one-tick flip never flickers. The
+ * counts on a goal change at once: they only ever say more has happened.
+ *
+ * <p>Becoming complete pulses the line twice, then it holds still: motion says something changed and
+ * nothing moves when nothing did (plan 6.4). Frame time, not simulation time.
+ */
+public final class GoalLine {
+
+    /** The order goals are named in: ground first, then holding it, then what is left standing. */
+    private static final Objective[] ORDER = {Objective.CAPTURE_POINTS, Objective.HOLD_POINT, Objective.CLEAR_ENEMIES};
+
+    private static final int PULSES = 2;
+
+    private final float minHoldSeconds;
+    private final float pulseHz;
+    private final boolean flashes;
+
+    private long worldSerial = Long.MIN_VALUE;
+    private Goal shown = Goal.NONE;
+    private int first;
+    private int second;
+    private float heldSeconds;
+    private float completedSeconds = Float.MAX_VALUE;
+    private int revision;
+
+    /**
+     * @param minHoldSeconds how long a goal stays before another may replace it
+     * @param pulseHz how fast completing pulses
+     * @param flashScale 0 turns the pulse into a steady change; anything else leaves it on
+     */
+    public GoalLine(float minHoldSeconds, float pulseHz, float flashScale) {
+        this.minHoldSeconds = minHoldSeconds;
+        this.pulseHz = pulseHz;
+        this.flashes = flashScale > 0f && pulseHz > 0f;
+    }
+
+    /** The goal the level asks for right now, with no memory and no hold. */
+    public static Goal resolve(Readout readout) {
+        if (readout.objectivesRequired == 0) {
+            return Goal.NONE;
+        }
+        if (readout.complete()) {
+            return Goal.COMPLETE;
+        }
+        for (Objective objective : ORDER) {
+            if (readout.requires(objective) && !readout.met(objective)) {
+                return goalOf(objective);
+            }
+        }
+        return Goal.COMPLETE;
+    }
+
+    /** Follows the readout. Call once a frame. */
+    public void update(Readout readout, float frameSeconds) {
+        heldSeconds += frameSeconds;
+        completedSeconds += frameSeconds;
+        Goal wanted = resolve(readout);
+        boolean newWorld = readout.worldSerial != worldSerial;
+        worldSerial = readout.worldSerial;
+        if (newWorld || (wanted != shown && heldSeconds >= minHoldSeconds)) {
+            if (wanted == Goal.COMPLETE && shown != Goal.COMPLETE && !newWorld) {
+                completedSeconds = 0f;
+            }
+            shown = wanted;
+            heldSeconds = 0f;
+            revision++;
+        }
+        int wantedFirst =
+                shown == Goal.CAPTURE_POINTS ? readout.pointsTaken : shown == Goal.HOLD_POINT ? readout.wavesSent : 0;
+        int wantedSecond =
+                shown == Goal.CAPTURE_POINTS ? readout.pointsTotal : shown == Goal.HOLD_POINT ? readout.wavesTotal : 0;
+        if (wantedFirst != first || wantedSecond != second) {
+            first = wantedFirst;
+            second = wantedSecond;
+            revision++;
+        }
+    }
+
+    public Goal shown() {
+        return shown;
+    }
+
+    /** Points taken, or waves sent - whichever the goal counts. */
+    public int first() {
+        return first;
+    }
+
+    /** Points there are, or waves there will be. */
+    public int second() {
+        return second;
+    }
+
+    /** Moves on whenever the words would change, so a painter rebuilds its text only then. */
+    public int revision() {
+        return revision;
+    }
+
+    /** Whether the line is drawn bright this frame: false only in the off half of a completion pulse. */
+    public boolean bright() {
+        if (!flashes || shown != Goal.COMPLETE) {
+            return true;
+        }
+        float cycles = completedSeconds * pulseHz;
+        if (cycles >= PULSES) {
+            return true;
+        }
+        return cycles - (int) cycles >= 0.5f;
+    }
+
+    private static Goal goalOf(Objective objective) {
+        return switch (objective) {
+            case CAPTURE_POINTS -> Goal.CAPTURE_POINTS;
+            case HOLD_POINT -> Goal.HOLD_POINT;
+            case CLEAR_ENEMIES -> Goal.CLEAR_ENEMIES;
+        };
+    }
+}

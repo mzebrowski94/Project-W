@@ -1,0 +1,11 @@
+eclipse.project.name = appName + '-ui'
+
+// What the player is shown and how he moves through it, as data (ADR 0015): layout, pages,
+// navigation, the HUD readout, poses. Reads the simulation, never writes it, and draws nothing -
+// UiArchitectureTest fails the build if Gdx, graphics, scene2d, input devices or net leak in here.
+dependencies {
+  // Components are read through families; sim brings libGDX's math and collections, and Ashley.
+  api project(':sim')
+
+  testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
+}

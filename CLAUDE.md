@@ -79,13 +79,15 @@ Each line is a yes/no you can check yourself. A no is not done.
 | `map` | The ground a level is played on: tile grid, terrain, regions, generation. Depends on nothing at all. |
 | `sim` | The deterministic simulation: entities, components, systems, world state. No rendering, assets or I/O. |
 | `core` | The libGDX application: rendering, input, assets, screens, config loading. |
+| `ui` | What the player is shown and how he moves through it, as data (ADR 0015): screen layout, pages, navigation, the HUD readout, poses. No drawing, no devices, no `net`; reads `sim`, never writes it. |
 | `net` | Networking (ADR 0012): the transport port and its Netty adapter, the in-memory test network, the connection log, LAN discovery, and the lockstep session on top - sequencer, peer, wire format. No libGDX; Netty only inside `net.netty`. |
 | `lwjgl3` | Desktop launcher. |
 
-`lwjgl3` -> `core` -> `net` -> `sim` -> `map`, one way; `sim` never sees `net`. `ArchitectureTest` fails the build if `sim` reaches for
+`lwjgl3` -> `core` -> {`ui`, `net`} -> `sim` -> `map`, one way; `sim` never sees `net` or `ui`, and `ui` and `net` never see each other. `ArchitectureTest` fails the build if `sim` reaches for
 rendering, the wall clock, unseeded randomness or hash iteration order; `MapArchitectureTest` does the
 same for `map`, which may not reach for those *or* for an entity; `NetArchitectureTest` keeps libGDX out
-of `net`, Netty inside its adapter and the clock behind `Clock`. Enforced, not remembered.
+of `net`, Netty inside its adapter and the clock behind `Clock`; `UiArchitectureTest` keeps drawing,
+devices and `net` out of `ui`, and stops it writing a component or stepping the simulation. Enforced, not remembered.
 
 **`map` owns the field; `sim` owns what stands on it and what happens over time** (ADR 0009). Pure
 function of terrain and geometry -> `map`. Reads a clock, an entity or a component -> `sim`.
@@ -147,6 +149,10 @@ is the point - specifics discovered while implementing beat specifics guessed be
 a real case, not noise. For a bug fix, start instead with the smallest test that reproduces it.
 Conventions: `unit-tests` skill.
 
+**CLAUDE.md may be edited when a change needs it** - a new module, a new rule, a row in a table here.
+Mateusz has approved that standing; what he asks in return is that every edit is named in the
+session's summary, one line each, so he can review it with the rest of the diff.
+
 **Mateusz commits.** Never `git commit`, `git add`, `git push`. Leave the tree for review. Suggest a
 commit message when done: past tense, one line, imperative, what changed rather than how - `Add enemy leap and
 player hand strike`. No body unless something cannot be inferred from the diff.
@@ -200,6 +206,7 @@ Read the row that matches. On-demand by design - loading all of them costs more 
 | `docs/design/alpha-phase.md` | **Every session right now** - how a phase session goes, how to add a scenario, what is still scaffolding. |
 | `docs/adr/README.md` | Before proposing to change a structural decision. |
 | `docs/design/decisions/` | Before re-proposing a gameplay alternative. |
+| `docs/ui/menu_layout_agent.md` | Adding or changing any page, modal or HUD slot - ids, entries, transitions, input per context. |
 
 | Skill | Use it before |
 |---|---|

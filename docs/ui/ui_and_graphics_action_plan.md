@@ -43,6 +43,8 @@ numbers.
 | D2 | The menu's ARENA collides with the glossary's *arena*. | **PROVING GROUND.** | Glossary gets *proving ground*; code says `PROVING_GROUND`. |
 | D3 | Commander sprites contradict G0003's temporary half. | **Supersede it for the commander.** | New record G0043 (section 16). The first atlas is the commander's puppet, the portrait and the UI skin. Every other look stays a shape until its own decision; a puppet with missing art falls back to the circle. |
 | D4 | Where does Gdx-free UI logic live? | **A new Gradle module `ui`.** | `lwjgl3 -> core -> {ui, net} -> sim -> map`. New ADR 0015. Same reasoning ADR 0003 gave for `sim`: a compile-time wall, not a remembered convention. |
+| D5 | The UI's "focus" collides with the glossary's *focus* (who the camera keeps in shot). (2026-09-26) | **selection.** | Glossary and `menu_layout_agent.md` say *selection*; code says `SelectionMemory`, `ui/selection` for the ring. Where this plan still says focus in the UI sense, read selection. |
+| D6 | The greybox needs text at the planned metrics before Q3 is answered. (2026-09-26) | **A hand-authored 5 x 8 ASCII pixel font, drawn in code, 6 px advance.** | It is the permanent fallback instead of libGDX's built-in font (E11 changes accordingly: the fallback has the real metrics, so `TextFit` never switches to measured widths). Glyphs outside it draw as `?`. Q3 still picks the real font. |
 
 ---
 
@@ -1203,7 +1205,7 @@ Docs touched across the stages: `docs/glossary.md` (T0.3, then each stage's own 
 `docs/design/README.md` input map and invariant rows (T0.4, T7.1), `docs/design/alpha-phase.md`
 harness table and scaffolding rows (T0.2, T0.4, T3.4, T5.2, T6.4, T11.3), `docs/adr/README.md` and
 `docs/design/decisions/README.md` tables, `docs/architecture.md` (T11.3), `docs/components.md`
-regenerated for `Tally` (T7.2), and CLAUDE.md only by Mateusz (T0.5).
+regenerated for `Tally` (T7.2), and CLAUDE.md (T0.5 applied 2026-09-26; edits allowed when needed and named in the summary).
 
 ### Not in scope, with the reason
 

@@ -6,13 +6,17 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.ui.layout.HudMetrics;
+import pl.mzebrows.pwt.ui.layout.LayoutSpec;
 
 /**
  * Rendering tunables, read from {@code graphic.properties}. Kept apart from {@link SimConfig} on
  * purpose: changing anything here must never change what the simulation does.
  *
- * @param virtualWidth viewport width in world units
- * @param virtualHeight viewport height in world units
+ * @param virtualHeight the view's height in world units - the camera's distance. Its width is not a
+ *     setting: it follows the shape the letterbox gives the view on this screen
+ * @param layout how the screen is split into the UI canvas, the bars and the view
+ * @param hud how the bars look
  * @param windowWidth initial window width in pixels
  * @param windowHeight initial window height in pixels
  * @param vsync whether to wait for vertical sync
@@ -29,8 +33,9 @@ import pl.mzebrows.pwt.sim.def.Look;
  * @param camera how the view follows what it is watching, and how far out it may sit
  */
 public record GraphicConfig(
-        float virtualWidth,
         float virtualHeight,
+        LayoutSpec layout,
+        HudStyle hud,
         int windowWidth,
         int windowHeight,
         boolean vsync,
@@ -50,9 +55,18 @@ public record GraphicConfig(
 
     private static final String FILE = "graphic.properties";
 
+    /**
+     * Rows of text beside the portrait in a player panel: label and status, gun and heat, tally. The
+     * panel's shape rather than a setting - a fourth row is a design change, not a number to turn.
+     */
+    private static final int PANEL_ROWS = 3;
+
+    /** Lines in the top bar besides the terminal's: the mission and the current goal. */
+    private static final int TOP_LINES_BESIDES_TERMINAL = 2;
+
     public GraphicConfig {
-        if (virtualWidth <= 0f || virtualHeight <= 0f) {
-            throw new IllegalArgumentException("virtual size must be positive");
+        if (virtualHeight <= 0f) {
+            throw new IllegalArgumentException("virtual height must be positive");
         }
         if (windowWidth < 1 || windowHeight < 1) {
             throw new IllegalArgumentException("window size must be positive");
@@ -63,8 +77,9 @@ public record GraphicConfig(
     public static GraphicConfig load() {
         GameProperties properties = GameProperties.load(FILE);
         return new GraphicConfig(
-                properties.getFloat("graphic.virtualWidth", 160f),
                 properties.getFloat("graphic.virtualHeight", 90f),
+                layout(properties),
+                hud(properties),
                 properties.getInt("graphic.windowWidth", 1280),
                 properties.getInt("graphic.windowHeight", 720),
                 properties.getBoolean("graphic.vsync", true),
@@ -81,6 +96,44 @@ public record GraphicConfig(
                 orderMark(properties),
                 heatMark(properties),
                 camera(properties));
+    }
+
+    /**
+     * The letterbox, under {@code graphic.view} and {@code graphic.ui}. The bars' heights are not here:
+     * they are derived from the font, the lines and the portrait they hold ({@link HudMetrics}).
+     */
+    private static LayoutSpec layout(GameProperties properties) {
+        HudMetrics metrics = new HudMetrics(
+                properties.getInt("graphic.ui.padding", 4),
+                properties.getInt("graphic.ui.fontSize", PixelFont.SIZE),
+                properties.getInt("graphic.ui.leading", 2),
+                TOP_LINES_BESIDES_TERMINAL + properties.getInt("graphic.hud.terminal.lines", 2),
+                PANEL_ROWS,
+                properties.getInt("graphic.hud.portrait.size", 32));
+        return new LayoutSpec(
+                properties.getInt("graphic.ui.canvasHeight", 360),
+                properties.getInt("graphic.ui.scale", 0),
+                properties.getFloat("graphic.view.aspectMin", 1.6f),
+                properties.getFloat("graphic.view.aspectMax", 2.39f),
+                properties.getFloat("graphic.view.topShare", 0.5f),
+                metrics);
+    }
+
+    private static HudStyle hud(GameProperties properties) {
+        return new HudStyle(
+                color(properties, "graphic.hud.color.text", "e8e8e8ff"),
+                color(properties, "graphic.hud.color.textDim", "8a8a8aff"),
+                color(properties, "graphic.hud.color.alert", "ff3030ff"),
+                color(properties, "graphic.hud.color.overlayFrame", "e02020ff"),
+                color(properties, "graphic.hud.color.bar", "000000ff"),
+                properties.getFloat("graphic.hud.overlay.widthShare", 0.34f),
+                properties.getFloat("graphic.ui.motionScale", 1f),
+                properties.getFloat("graphic.ui.flashScale", 1f),
+                properties.getFloat("graphic.hud.panel.alarmSeconds", 0.15f),
+                properties.getInt("graphic.hud.panel.alarmShake", 1),
+                properties.getFloat("graphic.hud.alert.pulseHz", 2f),
+                properties.getFloat("graphic.hud.goal.minHoldSeconds", 1f),
+                properties.getInt("graphic.hud.reticle.size", 9));
     }
 
     /**

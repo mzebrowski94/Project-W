@@ -1,6 +1,7 @@
 # G0003: The renderer reads a component; it never asks what an entity is
 
-**Trigger.** Writing or changing a renderer; adding a kind of entity that must be drawn.
+**Trigger.** Writing or changing a renderer; adding a kind of entity that must be drawn. Its temporary
+half is superseded by G0043 for looks with a puppet - the commander's is the first. Read that too.
 
 **Enforced by.** Nothing. The record says so: `ArchitectureTest` catches `sim` importing libGDX, not `sim` carrying three floats only a renderer cares about.
 

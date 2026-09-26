@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.ui.layout.LayoutSpec;
 
 /**
  * The config files live in assets/, which is only on the launcher's classpath - so here both loaders
@@ -23,8 +24,10 @@ class ConfigDefaultsTest {
     void graphicConfigFallsBackToUsableDefaults() {
         GraphicConfig config = GraphicConfig.load();
 
-        assertThat(config.virtualWidth()).isPositive();
         assertThat(config.virtualHeight()).isPositive();
+        assertThat(config.layout().metrics().topMin()).isEqualTo(46);
+        assertThat(config.layout().metrics().bottomMin()).isEqualTo(40);
+        assertThat(config.hud()).isNotNull();
         assertThat(config.windowWidth()).isGreaterThan(0);
         assertThat(config.windowHeight()).isGreaterThan(0);
         assertThat(config.backgroundColor()).isNotNull();
@@ -34,6 +37,27 @@ class ConfigDefaultsTest {
         assertThat(config.chargeMark()).isNotNull();
         assertThat(config.chargedMark()).isNotNull();
         assertThat(config.camera()).isNotNull();
+    }
+
+    @Test
+    void refusesAnAlertThatPulsesFasterThanThreeTimesASecond() {
+        HudStyle hud = GraphicConfig.load().hud();
+
+        assertThatThrownBy(() -> new HudStyle(
+                        hud.text(),
+                        hud.textDim(),
+                        hud.alert(),
+                        hud.overlayFrame(),
+                        hud.bar(),
+                        hud.overlayWidthShare(),
+                        hud.motionScale(),
+                        hud.flashScale(),
+                        hud.alarmSeconds(),
+                        hud.alarmShake(),
+                        3.5f,
+                        hud.goalHoldSeconds(),
+                        hud.reticleSize()))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -92,10 +116,13 @@ class ConfigDefaultsTest {
     }
 
     @Test
-    void rejectsANonPositiveVirtualSize() {
+    void rejectsANonPositiveVirtualHeight() {
+        LayoutSpec layout = GraphicConfig.load().layout();
+        HudStyle hud = GraphicConfig.load().hud();
         assertThatThrownBy(() -> new GraphicConfig(
                         0f,
-                        90f,
+                        layout,
+                        hud,
                         1280,
                         720,
                         true,
