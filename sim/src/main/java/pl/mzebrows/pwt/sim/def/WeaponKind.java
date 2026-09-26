@@ -3,10 +3,7 @@ package pl.mzebrows.pwt.sim.def;
 /**
  * Every gun the commander can be carrying.
  *
- * <p>{@link #SIDEARM} is what he starts with and what he comes back with, so a gun is something you
- * find and then have to keep hold of rather than something you own. That is the whole of the
- * progression a weapon pickup adds, and it is deliberately the whole of it: pillar 3 says nothing is
- * bought, equipped or configured between levels.
+ * <p>{@link #SIDEARM} is what he starts and respawns with; anything better is found and lost (pillar 3).
  */
 public enum WeaponKind {
     /** The gun he starts every life with. Two shots kill a grunt. */
@@ -14,81 +11,43 @@ public enum WeaponKind {
     /** Slow, heavy and fast-flying. One shot kills anything a sidearm needs five for. */
     RAILGUN,
     /**
-     * A wall of fire a few strides long. It throws several fat, short-lived pellets per pull into a
-     * wide cone, so it covers ground rather than a point - and the ground it covers is right in front
-     * of him, because the flame goes out.
-     *
-     * <p>It runs hot, which is the whole of what stops it being the answer to everything: held down
-     * it takes itself away, and it is the gun most likely to be held down. Reach, not damage, is what
-     * it trades - anything at all past its range is a problem for a different gun.
+     * A wall of fire a few strides long: several short-lived pellets per pull in a wide cone. It runs
+     * hot, and trades reach.
      */
     FLAMER,
     /**
-     * A handful of pellets thrown wide with every pull, slowly. Devastating with the muzzle against
-     * something and close to useless across a room: the cone is the same width at every distance, so
-     * how much of it lands is entirely how close he was willing to get.
-     *
-     * <p>It stays cold. What it costs is the wait between pulls, which is long enough that a miss is
-     * a decision the player has to live with.
+     * A handful of pellets thrown wide with every pull, slowly: devastating up close. It stays cold;
+     * it costs the wait between pulls.
      */
     SHOTGUN,
     /**
-     * A beam, as the game already draws a beam: a stream of very small, very fast shots with a
-     * reach, each one worth almost nothing and forty of them a second worth a great deal.
+     * A beam: a stream of very small, very fast shots with a reach.
      *
-     * <p><strong>It stops at the first thing it touches</strong>, and the drawn line stops with it,
-     * so what the picture says and what the gun does are the same sentence. It pierced when it was
-     * first built and only appeared to: the window that stops one shot hitting one body twice is a
-     * length of flight, and at this speed that length was five bodies deep, so the line was drawn
-     * through a crowd and exactly one of them was hit.
-     *
-     * <p><strong>Its three properties are one trade.</strong> It <em>slows</em> what it lands on, so
-     * staying on one thing is worth doing even while the damage is trickling; it <em>slows the man
-     * holding it</em>, so doing that is a commitment; and it <em>runs hottest of anything a man
-     * carries</em>, so the beam is a resource rather than a default. Every good thing about it is
-     * paid for out of the same bar, which is the whole of what makes it hard to master: a trigger
-     * held down is a trigger that will not be there in four seconds.
-     *
-     * <p>It is also the only gun that is worth pointing at something already dead, because what a
-     * sustained beam does to a body is inflate it (see {@code Bloat}). That is the same heat again -
-     * a corpse turned into a bomb is most of a bar not spent on what is still walking at you.
+     * <p><strong>It stops at the first thing it touches</strong>, and the drawn line stops with it.
+     * It slows what it lands on, slows the man holding it, runs hottest of anything carried, and
+     * inflates a body it is held on ({@code Bloat}).
      */
     LASER,
     /**
-     * What a turret fires. Light, very fast and quick to repeat: it trades the damage of a carried
-     * gun for a rate and a flight time neither side can step out of.
-     *
-     * <p>It is in the same table as the commander's guns and cannot be picked up, because nothing
-     * grants it - a turret is somewhere you stand, not something you carry away.
+     * What a turret fires: light, very fast and quick to repeat. No pickup grants it.
      */
     TURRET_GUN,
     /**
-     * What a spitter fires. Slow enough in the air to be seen coming and walked out of, which is
-     * what makes a firing line something to read rather than something to be hit by.
-     *
-     * <p>It is in the same table as the commander's guns and cannot be picked up, because nothing
-     * grants it: what a pickup offers each side is in its {@code PickupDef}, and no pickup offers
-     * this.
+     * What a spitter fires: slow enough to be seen coming and walked out of. No pickup grants it.
      */
     SPIT,
     /**
      * What a frog fires: a fat, slow, short-lived shot that bursts into a spatter of ruined ground.
      *
-     * <p>It has a reach, so a miss bursts short rather than flying on - which is what makes a frog a
-     * problem about <em>where you are standing</em> rather than about being hit. What the spatter
-     * does is in the gun's {@code SlickDef}, through the one death reaction everything that leaves
-     * something behind uses (G0018).
-     *
-     * <p>In the same table as the commander's guns, and no pickup grants it.
+     * <p>A miss bursts short at its reach. The spatter is the gun's {@code SlickDef} (G0018). No pickup
+     * grants it.
      */
     VENOM,
     /**
      * What a spitter fires after it has eaten something explosive. The same slow shot, and it goes
      * off where it stops (G0022).
      *
-     * <p>A kind rather than a flag on the spitter, so the power-up is a definition and a block in
-     * {@code game.properties} - what it costs the player is that the ground beside a shot is no
-     * longer safe, and every number in that is tunable without touching a system.
+     * <p>A kind, not a flag, so the power-up is a definition (G0008).
      */
     CHARGED_SPIT
 }
