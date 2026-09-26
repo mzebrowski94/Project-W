@@ -19,6 +19,7 @@ public final class PwtGame extends Game implements GameContext {
 
     private final GraphicConfig graphicConfig;
     private final LaunchOptions launchOptions;
+    private final SystemPointer pointer;
 
     private SimConfig simConfig;
     private NetConfig netConfig;
@@ -29,9 +30,10 @@ public final class PwtGame extends Game implements GameContext {
 
     private @Nullable Screen pendingScreen;
 
-    public PwtGame(GraphicConfig graphicConfig, LaunchOptions launchOptions) {
+    public PwtGame(GraphicConfig graphicConfig, LaunchOptions launchOptions, SystemPointer pointer) {
         this.graphicConfig = graphicConfig;
         this.launchOptions = launchOptions;
+        this.pointer = pointer;
     }
 
     @Override
@@ -50,7 +52,7 @@ public final class PwtGame extends Game implements GameContext {
         assets.queueAll();
         assets.finishLoading();
 
-        hud = new Hud(graphicConfig.layout(), graphicConfig.hud().reticleSize());
+        hud = new Hud(graphicConfig.layout(), graphicConfig.hud().reticleSize(), pointer);
         hud.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         setScreen(new MenuScreen(this));
     }

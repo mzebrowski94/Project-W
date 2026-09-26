@@ -22,6 +22,11 @@ import com.badlogic.gdx.graphics.Color;
  * @param pulseHz how fast an alert pulses; refused above three a second (WCAG 2.3.1)
  * @param goalHoldSeconds the least time a goal stays on the goal line before another replaces it
  * @param reticleSize the reticle's side in texels, drawn at the UI scale
+ * @param keyboardReticle whether the keyboard player aims with the game's reticle instead of the
+ *     operating system's pointer
+ * @param padReticles whether each pad player gets a reticle a fixed distance along his aim
+ * @param padReticleDistance how far along his aim a pad player's reticle sits, in world units
+ * @param rollCallAtStart whether a level opens on the roll call rather than the players' panels
  */
 public record HudStyle(
         Color text,
@@ -36,7 +41,11 @@ public record HudStyle(
         int alarmShake,
         float pulseHz,
         float goalHoldSeconds,
-        int reticleSize) {
+        int reticleSize,
+        boolean keyboardReticle,
+        boolean padReticles,
+        float padReticleDistance,
+        boolean rollCallAtStart) {
 
     /** Nothing may flash more often than this a second - the photosensitive-seizure threshold. */
     public static final float MAX_PULSE_HZ = 3f;
@@ -49,7 +58,12 @@ public record HudStyle(
             throw new IllegalArgumentException(
                     "an alert may pulse at most " + MAX_PULSE_HZ + " times a second, not " + pulseHz);
         }
-        if (motionScale < 0f || flashScale < 0f || alarmSeconds < 0f || alarmShake < 0 || reticleSize < 1) {
+        if (motionScale < 0f
+                || flashScale < 0f
+                || alarmSeconds < 0f
+                || alarmShake < 0
+                || reticleSize < 1
+                || padReticleDistance < 0f) {
             throw new IllegalArgumentException("HUD motion out of range");
         }
     }

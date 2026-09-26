@@ -105,8 +105,8 @@ public record GraphicConfig(
     private static LayoutSpec layout(GameProperties properties) {
         HudMetrics metrics = new HudMetrics(
                 properties.getInt("graphic.ui.padding", 4),
-                properties.getInt("graphic.ui.fontSize", PixelFont.SIZE),
-                properties.getInt("graphic.ui.leading", 2),
+                properties.getInt("graphic.ui.fontSize", 9),
+                properties.getInt("graphic.ui.leading", 3),
                 TOP_LINES_BESIDES_TERMINAL + properties.getInt("graphic.hud.terminal.lines", 2),
                 PANEL_ROWS,
                 properties.getInt("graphic.hud.portrait.size", 32));
@@ -133,7 +133,11 @@ public record GraphicConfig(
                 properties.getInt("graphic.hud.panel.alarmShake", 1),
                 properties.getFloat("graphic.hud.alert.pulseHz", 2f),
                 properties.getFloat("graphic.hud.goal.minHoldSeconds", 1f),
-                properties.getInt("graphic.hud.reticle.size", 9));
+                properties.getInt("graphic.hud.reticle.size", 9),
+                properties.getBoolean("graphic.hud.reticle.keyboard", false),
+                properties.getBoolean("graphic.hud.reticle.pads", false),
+                properties.getFloat("graphic.hud.reticle.padDistance", 24f),
+                properties.getBoolean("graphic.hud.rollCall", false));
     }
 
     /**

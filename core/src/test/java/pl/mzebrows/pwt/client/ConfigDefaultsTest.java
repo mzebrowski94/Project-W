@@ -25,8 +25,8 @@ class ConfigDefaultsTest {
         GraphicConfig config = GraphicConfig.load();
 
         assertThat(config.virtualHeight()).isPositive();
-        assertThat(config.layout().metrics().topMin()).isEqualTo(46);
-        assertThat(config.layout().metrics().bottomMin()).isEqualTo(40);
+        assertThat(config.layout().metrics().topMin()).isEqualTo(53);
+        assertThat(config.layout().metrics().bottomMin()).isEqualTo(41);
         assertThat(config.hud()).isNotNull();
         assertThat(config.windowWidth()).isGreaterThan(0);
         assertThat(config.windowHeight()).isGreaterThan(0);
@@ -56,7 +56,11 @@ class ConfigDefaultsTest {
                         hud.alarmShake(),
                         3.5f,
                         hud.goalHoldSeconds(),
-                        hud.reticleSize()))
+                        hud.reticleSize(),
+                        hud.keyboardReticle(),
+                        hud.padReticles(),
+                        hud.padReticleDistance(),
+                        hud.rollCallAtStart()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

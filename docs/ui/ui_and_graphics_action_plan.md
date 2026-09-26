@@ -45,6 +45,13 @@ numbers.
 | D4 | Where does Gdx-free UI logic live? | **A new Gradle module `ui`.** | `lwjgl3 -> core -> {ui, net} -> sim -> map`. New ADR 0015. Same reasoning ADR 0003 gave for `sim`: a compile-time wall, not a remembered convention. |
 | D5 | The UI's "focus" collides with the glossary's *focus* (who the camera keeps in shot). (2026-09-26) | **selection.** | Glossary and `menu_layout_agent.md` say *selection*; code says `SelectionMemory`, `ui/selection` for the ring. Where this plan still says focus in the UI sense, read selection. |
 | D6 | The greybox needs text at the planned metrics before Q3 is answered. (2026-09-26) | **A hand-authored 5 x 8 ASCII pixel font, drawn in code, 6 px advance.** | It is the permanent fallback instead of libGDX's built-in font (E11 changes accordingly: the fallback has the real metrics, so `TextFit` never switches to measured widths). Glyphs outside it draw as `?`. Q3 still picks the real font. |
+| D7 | Gate A (2026-09-26): Q1, Q2. | **Accepted as proposed**: view aspect 1.6-2.39, 90 world units tall; maps narrower than the view show ground beyond them. | - |
+| D8 | Q3: which font? | **monogram** (datagoblin, CC0), built from its glyph table - Latin-1, Latin Extended-A (Polish), Cyrillic. | `assets/ui/fonts/monogram/`, `UiFont`; `graphic.ui.fontSize` 9 (cap 7 + descender 2), `leading` 3 (accents above a capital). Bars 53 / 41 UI px; 1080p view 640 x 266. `PixelFont` stays the fallback. |
+| D9 | Gate B (2026-09-26): Q10, Q33. | **Name the gun in the panel** (for now). **An empty quarter stays black; a disconnected player's panel is grey** and says OFFLINE. | Offline an unplugged pad is detected; a remote player's disconnection is not published to peers yet - a net change, not built. |
+| D10 | Q15: remote players in the bottom bar? | **Everybody while there are four players or fewer, local and online**; with more, this machine's seats. A compact **roll call** view for big games is future work (section 19); a placeholder swaps in on `` ` ``. | `PanelAssignment`; *roll call* in the glossary (not *roster*: G0017). |
+| D11 | Q22: is every hostile blow decisive? | **Not decided.** The interface acts as if an outcome is either lethal (KIA) or non-lethal (DOWN); no health bar, no invariant test yet. | Revisit if a chipping blow appears. |
+| D12 | Q24: a reticle for pad players? | **Yes, a fixed distance along his aim** (`graphic.hud.reticle.padDistance` 24 world units) - and both reticles, the keyboard's included, **off by default** (`graphic.hud.reticle.keyboard`, `.pads`). | With the keyboard's off the system pointer shows. |
+| D13 | Q30: who owns the top bar's right block? | **A reserved slot** (`UI:hud/top/aside`), content open; the dev overlay sits in it in the alpha. | - |
 
 ---
 
@@ -1324,3 +1331,23 @@ questions the first checklist did not have. An answer that needs Mateusz points 
 Stage numbers, old → new: 0 → 0 · 1 → 1 · 2 → 2 (+ greybox, gate A) · 5 → 3 (+ panel, reticle, gate B)
 · 3 and 4 → 4 (flow and pause) and 5 (main menu) · 6 → 6 · 7 → 7 · 8 → 3 (panel) and 8 (portrait)
 · 9 → 9 · new 10 (options) · 10 → 11.
+
+---
+
+## 19. Future: the roll call (not built - design open)
+
+Added 2026-09-26 at gate B (D10). Mateusz wants to think about it more before anything is built
+beyond the placeholder.
+
+- **What it is.** The bottom bar's second view: one small row per player with minimal information -
+  his colour, his status, his tally - so a game of five to eight players (online, G0038) can show
+  everybody, which four player panels cannot.
+- **What exists.** `UI:hud/bottom/roll-call` in the spec; `` ` `` (`controls.key.rollCall`, keyboard
+  only) swaps the bar between the panels and the roll call; `graphic.hud.rollCall` opens a level on
+  it; it draws `ROLL CALL - PLACEHOLDER`.
+- **Open.** Row layout and how many fit (8 rows of one text line need about 100 UI px - taller than
+  the bar, so probably two columns of four); whether it switches on by itself above four players;
+  whether a pad can swap it; what a disconnected player's row shows; whether its words become the
+  pause menu's tally lines.
+- **Depends on.** The tally (stage 7) for its third column, and a published per-slot connection state
+  from `net` for remote players (D9).

@@ -72,7 +72,7 @@ final class TopBarPainter {
         int padding = metrics.padding();
         int height = metrics.topMin() - 2;
         hud.frame(x, bottom + 1, width - 1, height, style.overlayFrame());
-        int columns = TextFit.columns(width - 3 * padding, PixelFont.ADVANCE);
+        int columns = TextFit.columns(width - 3 * padding, UiFont.ADVANCE);
         int rows = Math.min(lines.size(), metrics.topLines());
         for (int i = 0; i < rows; i++) {
             hud.text(TextFit.fit(lines.get(i), columns), x + padding, blockTop - i * line, style.textDim());
@@ -86,13 +86,13 @@ final class TopBarPainter {
         for (String text : lines) {
             longest = Math.max(longest, text.length());
         }
-        int width = Math.min(view.width(), longest * PixelFont.ADVANCE + 2 * padding);
+        int width = Math.min(view.width(), longest * UiFont.ADVANCE + 2 * padding);
         int height = Math.min(view.height(), lines.size() * line + 2 * padding);
         int x = view.right() - width;
         int y = view.top() - height;
         hud.fill(x, y, width, height, style.bar());
         hud.frame(x, y, width, height, style.overlayFrame());
-        int columns = TextFit.columns(width - 2 * padding, PixelFont.ADVANCE);
+        int columns = TextFit.columns(width - 2 * padding, UiFont.ADVANCE);
         for (int i = 0; i < lines.size() && (i + 1) * line <= height - padding; i++) {
             hud.text(TextFit.fit(lines.get(i), columns), x + padding, view.top() - padding - i * line, style.text());
         }
@@ -100,7 +100,7 @@ final class TopBarPainter {
 
     private void rebuild(ScreenLayout layout, Readout readout, GoalLine goalLine, int span) {
         boolean resized = !layout.equals(builtFor);
-        int columns = TextFit.columns(bar.textWidth(span), PixelFont.ADVANCE);
+        int columns = TextFit.columns(bar.textWidth(span), UiFont.ADVANCE);
         if (resized || !readout.mission.equals(builtMission) || !readout.planet.equals(builtPlanet)) {
             String named = strings.format("ui.hud.mission", readout.mission);
             mission = readout.planet.isEmpty()

@@ -35,6 +35,7 @@ public final class InputReader {
     private final Vector3 pointer = new Vector3();
 
     private boolean zoomToggled;
+    private boolean rollCallToggled;
     private boolean pauseRequested;
 
     public InputReader(Viewport viewport, ControlsConfig controls, GamepadSource gamepads) {
@@ -48,6 +49,7 @@ public final class InputReader {
         seats.refresh(gamepads);
         inputs.clear();
         zoomToggled = ViewControls.zoomToggled(pressed, controls.keyboard());
+        rollCallToggled = ViewControls.rollCallToggled(pressed, controls.keyboard());
         pauseRequested = false;
 
         pointer.set(Gdx.input.getX(), Gdx.input.getY(), 0f);
@@ -85,6 +87,11 @@ public final class InputReader {
     /** Who is sitting where, so a new arrival can be given a commander. */
     public PlayerSeats seats() {
         return seats;
+    }
+
+    /** True on the frame the keyboard asked to swap the bottom bar's view. */
+    public boolean rollCallToggled() {
+        return rollCallToggled;
     }
 
     /** True on the frame anybody asked to swap between the normal and pulled-back view. */

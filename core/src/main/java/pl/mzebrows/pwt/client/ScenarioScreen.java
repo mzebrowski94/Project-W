@@ -9,8 +9,10 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
+import java.util.Arrays;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
@@ -18,6 +20,7 @@ import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Focus;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
@@ -26,6 +29,8 @@ import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.ui.hud.GoalLine;
 import pl.mzebrows.pwt.ui.hud.PanelAlarms;
+import pl.mzebrows.pwt.ui.hud.PanelAssignment;
+import pl.mzebrows.pwt.ui.hud.Posture;
 import pl.mzebrows.pwt.ui.hud.Readout;
 import pl.mzebrows.pwt.ui.hud.ReadoutWriter;
 import pl.mzebrows.pwt.ui.layout.Rect;
@@ -51,9 +56,13 @@ public final class ScenarioScreen extends ScreenAdapter {
     private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
     private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+    private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
     private static final Family FOCUSED =
             Family.all(Focus.class, Position.class, PreviousPosition.class).get();
     private static final Family SHAKEN = Family.all(Shake.class, Position.class).get();
+    private static final Family COMMANDERS = Family.all(
+                    Commander.class, Facing.class, Position.class, PreviousPosition.class)
+            .get();
 
     private final GameContext context;
     private final ScenarioPlay play;
@@ -64,6 +73,13 @@ public final class ScenarioScreen extends ScreenAdapter {
     private final ReadoutWriter readoutWriter = new ReadoutWriter();
     private final GoalLine goalLine;
     private final PanelAlarms alarms;
+    private final PanelAssignment seating = new PanelAssignment();
+    private final int[] slotOfSeat = new int[PlayerSeats.SEATS];
+    private final boolean[] connected = new boolean[Players.MAX];
+
+    /** Whether the bottom bar shows the roll call instead of the players' panels. This machine's view. */
+    private boolean rollCall;
+
     private final TopBarPainter topBar;
     private final BottomBarPainter bottomBar;
     private final KeyPresses keys = keycode -> Gdx.input.isKeyJustPressed(keycode);
@@ -84,6 +100,12 @@ public final class ScenarioScreen extends ScreenAdapter {
     /** Cached: Ashley keeps this view live, so it must not be re-queried per frame. */
     private ImmutableArray<Entity> focused = new ImmutableArray<>(new Array<>());
 
+    /** Every commander, for the pad players' reticles. */
+    private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
+
+    /** Scratch for projecting a reticle into the view; overwritten before every read. */
+    private final Vector2 aimPoint = new Vector2();
+
     /** Everything violent enough for the view to notice. Almost always empty. */
     private ImmutableArray<Entity> shaken = new ImmutableArray<>(new Array<>());
 
@@ -98,6 +120,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         this.overlay = new DebugOverlay(context.hud());
         HudStyle style = graphicConfig.hud();
         UiStrings strings = UiStrings.load();
+        this.rollCall = style.rollCallAtStart();
         this.goalLine = new GoalLine(style.goalHoldSeconds(), style.pulseHz(), style.flashScale());
         this.alarms = new PanelAlarms(
                 style.alarmSeconds(), style.alarmShake(), style.pulseHz(), style.motionScale(), style.flashScale());
@@ -149,6 +172,9 @@ public final class ScenarioScreen extends ScreenAdapter {
         if (input.zoomToggled()) {
             camera.toggleWide();
         }
+        if (input.rollCallToggled()) {
+            rollCall = !rollCall;
+        }
         if (play.leaving()) {
             context.queueScreen(new MenuScreen(context));
         }
@@ -179,6 +205,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         readoutWriter.fill(world, name == null ? "" : name, play.planet(), readout);
         goalLine.update(readout, delta);
         alarms.update(readout, delta);
+        seatPanels();
 
         clearLetterbox();
         terrain.render();
@@ -196,22 +223,84 @@ public final class ScenarioScreen extends ScreenAdapter {
                         play.connection(),
                         play.invitation());
         topBar.render(layout, readout, goalLine, lines, mode);
-        bottomBar.render(layout, readout, play, alarms);
-        drawReticle();
+        if (rollCall) {
+            bottomBar.renderRollCall(layout);
+        } else {
+            bottomBar.render(layout, readout, seating, connected, alarms);
+        }
+        drawReticles(play.renderAlpha());
     }
 
     /**
-     * The keyboard player's aim point (plan 7.5), last, over everything - a bar included, since the
-     * pointer still aims from there. At the pointer's own screen position, in his colour.
+     * The game's own aim marks (plan 7.5), last, over everything - a bar included, since the pointer
+     * still aims from there. Each is optional: the keyboard player's sits on the mouse and hides the
+     * system pointer; a pad player's sits a fixed distance along where his commander faces, which is
+     * where he aims (G0002). Pad reticles are drawn only for a commander on his feet.
      */
-    private void drawReticle() {
-        context.hud().hideSystemCursor();
-        int slot = play.slotOf(PlayerSeats.KEYBOARD_SLOT);
-        if (slot < 0) {
+    private void drawReticles(float alpha) {
+        HudStyle style = context.graphicConfig().hud();
+        Hud hud = context.hud();
+        int keyboard = play.slotOf(PlayerSeats.KEYBOARD_SLOT);
+        if (style.keyboardReticle() && keyboard >= 0) {
+            hud.hideSystemCursor();
+            hud.reticle(Gdx.input.getX(), Gdx.graphics.getHeight() - 1 - Gdx.input.getY(), colourOf(keyboard));
+        } else {
+            hud.showSystemCursor();
+        }
+        if (!style.padReticles()) {
             return;
         }
-        Color own = context.graphicConfig().palette().colorFor(Look.COMMANDER, readout.player(slot).variant);
-        context.hud().reticle(Gdx.input.getX(), Gdx.graphics.getHeight() - 1 - Gdx.input.getY(), own);
+        for (int i = 0; i < commanders.size(); i++) {
+            Entity commander = commanders.get(i);
+            int slot = COMMANDER.get(commander).slot;
+            if (!onALocalPad(slot) || readout.player(slot).posture != Posture.STANDING) {
+                continue;
+            }
+            Facing facing = FACING.get(commander);
+            if (facing.x == 0f && facing.y == 0f) {
+                continue;
+            }
+            Position position = POSITION.get(commander);
+            PreviousPosition previous = PREVIOUS.get(commander);
+            float x = previous.x + (position.x - previous.x) * alpha;
+            float y = previous.y + (position.y - previous.y) * alpha;
+            aimPoint.set(x + facing.x * style.padReticleDistance(), y + facing.y * style.padReticleDistance());
+            viewport.project(aimPoint);
+            hud.reticle(Math.round(aimPoint.x), Math.round(aimPoint.y), colourOf(slot));
+        }
+    }
+
+    /**
+     * Who has a panel, and whose is grey. A local seat whose pad is unplugged is offline; his commander
+     * stays on the field. Whether a player on another machine is still connected is not published to
+     * this one yet, so remote players read as connected.
+     */
+    private void seatPanels() {
+        Arrays.fill(connected, true);
+        for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
+            int slot = play.slotOf(seat);
+            slotOfSeat[seat] = slot;
+            boolean padGone = seat != PlayerSeats.KEYBOARD_SLOT
+                    && input.seats().taken(seat)
+                    && input.seats().padIn(seat) == null;
+            if (slot >= 0 && slot < Players.MAX && padGone) {
+                connected[slot] = false;
+            }
+        }
+        seating.update(readout, slotOfSeat);
+    }
+
+    private boolean onALocalPad(int slot) {
+        for (int seat = PlayerSeats.KEYBOARD_SLOT + 1; seat < PlayerSeats.SEATS; seat++) {
+            if (play.slotOf(seat) == slot && input.seats().taken(seat)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Color colourOf(int slot) {
+        return context.graphicConfig().palette().colorFor(Look.COMMANDER, readout.player(slot).variant);
     }
 
     /**
@@ -301,6 +390,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             terrain.bind(current.map());
             focused = current.engine().getEntitiesFor(FOCUSED);
             shaken = current.engine().getEntitiesFor(SHAKEN);
+            commanders = current.engine().getEntitiesFor(COMMANDERS);
             camera = new CameraDirector(context.graphicConfig().camera());
             bound = current;
         }

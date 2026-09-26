@@ -1,11 +1,14 @@
 package pl.mzebrows.pwt.client;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
 /**
  * Every word the interface shows, by key, from {@code i18n/ui.properties}. A key the file lacks draws
  * as {@code #key} and is logged once, so a missing word is visible on screen and never a crash.
+ *
+ * <p>The file is UTF-8, unlike the config files, so a translation can be written in its own letters.
  *
  * <p>Arguments are {@code {0}}, {@code {1}}. Callers format when a value changes, not every frame.
  */
@@ -19,7 +22,8 @@ public final class UiStrings {
     }
 
     public static UiStrings load() {
-        return new UiStrings(GameProperties.load(Assets.UI_STRINGS));
+        return new UiStrings(GameProperties.parse(
+                Assets.UI_STRINGS, GameProperties.text(Assets.UI_STRINGS, StandardCharsets.UTF_8)));
     }
 
     /** The word for a key, or {@code #key} if there is none. */

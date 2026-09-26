@@ -20,6 +20,9 @@ public final class Assets implements Disposable {
     /** Every word the interface shows ({@link UiStrings}); a classpath resource, like the config files. */
     public static final String UI_STRINGS = "i18n/ui.properties";
 
+    /** Monogram's glyph table, which {@link UiFont} builds the interface's font from. */
+    public static final String UI_FONT = "ui/fonts/monogram/monogram-bitmap.json";
+
     private final AssetManager manager = new AssetManager();
 
     /** Queues everything the game needs; call {@link #finishLoading()} or poll {@link #update()}. */

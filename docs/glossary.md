@@ -216,19 +216,20 @@ What the player is shown around the fight and how he moves through it. Decided i
 
 | Term | Meaning |
 |---|---|
-| **bottom bar** | The black band under the **view**: four **player panels**, one per local seat. Its height is derived from what it holds, never configured. |
+| **bottom bar** | The black band under the **view**: four **player panels**, or the **roll call**. Its height is derived from what it holds, never configured. |
 | **entry** | One thing on a **page** or **modal** that can be selected and confirmed - a scenario in a list, RESUME. Not *item*, which is a pickup's banned word. |
 | **letterbox** | The screen's split into a **top bar**, the **view** and a **bottom bar**, with black pillars beside the view when the screen is wider than the view's aspect range allows. The fight is only ever in the view; the interface is only ever in the bars. |
 | **modal** | A **page** drawn over whatever is behind it rather than instead of it - the pause menu over the level, the exit confirm over the main menu. It takes the input until it closes. |
 | **modality** | Which kind of device the player last used meaningfully - pointer, or keys and pads. It decides how the **selection** is drawn, whether the cursor shows, and which button names the hints use. |
 | **page** | One screenful of the menu - the main page, the campaign list, the online page. Pages are a stack inside one libGDX `Screen`: going in pushes, Back pops. Never called a *screen*, which is the libGDX class that holds them. |
 | **paused banner** | One line over the top of the **view** saying the game is paused and which key opens the menu, shown when it is paused and no menu is open on this machine - somebody else paused, or the harness's `P`. Takes no input. |
-| **player panel** | One quarter of the **bottom bar**, belonging to one local seat and drawn in that player's colour: his label, **status**, gun and heat, and later his portrait and tally. A panel never moves when somebody joins or leaves. |
+| **player panel** | One quarter of the **bottom bar**, belonging to one player and drawn in his colour: his label, **status**, gun and heat, and later his portrait and tally. While a game has four players or fewer, local and online alike, every one of them has a panel; with more, only this machine's seats do. A player keeps his quarter while he is in the game, so nobody's panel moves when somebody joins. Grey, and saying OFFLINE, while his pad or his link is gone. |
 | **readout** | The facts the interface shows, copied out of the simulation once a frame by the one class that reads `sim` for it. Everything in the bars is drawn from it, and nothing on screen is a number the readout does not carry (pillar 5). |
-| **reticle** | The mark drawn where the keyboard player's mouse aims, in his colour, over everything. The system cursor is hidden while he plays. |
+| **reticle** | The game's own aim mark, in a player's colour, over everything: the keyboard player's on the mouse, hiding the system pointer; a pad player's a fixed distance along his aim. Each is a setting, off by default. |
+| **roll call** | The **bottom bar**'s other view: one compact row per player - colour, **status**, tally - for games of more than four, where **player panels** cannot hold everybody. Swapped with the panels by a key. A placeholder for now. Not *roster*, which G0017 rules out for the squad. |
 | **scrim** | The dark veil drawn over the **view** while a menu is open, dim enough to say the world is not live and light enough to read the frozen fight under it. |
 | **selection** | Which **entry** of a **page** confirming would act on, drawn as a ring or a hover. Each page remembers its own. Not *focus*, which is who the camera keeps in shot. |
-| **status** | The first line of a **player panel** after his label: empty while he stands, and otherwise the one word that matters - down (with his bleed-out), KIA (with the seconds to his return) or aboard. Not *health*: a commander has none worth a bar, because every hostile blow is **decisive**. |
+| **status** | The first line of a **player panel** after his label: empty while he stands, and otherwise the one word that matters - down (with his bleed-out), KIA (with the seconds to his return) or aboard. Not *health*: a commander has none worth a bar - what reaches him either downs him or kills him. |
 | **top bar** | The black band over the **view**: the mission and the current goal on the left, the dev overlay on the right. Its height is derived from what it holds. |
 | **UI canvas** | The pixel grid the interface is drawn on: `canvasHeight` UI pixels tall, each one a whole number of screen pixels square. Nothing on it is scaled by a fraction, so text and frames are always crisp. The world is not on it - the camera zooms smoothly. |
 

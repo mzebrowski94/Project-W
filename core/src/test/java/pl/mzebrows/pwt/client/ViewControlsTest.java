@@ -16,6 +16,14 @@ class ViewControlsTest {
     }
 
     @Test
+    void swapsTheBottomBarsViewOnTheBacktick() {
+        assertThat(ViewControls.rollCallToggled(keycode -> keycode == Input.Keys.GRAVE, BINDINGS))
+                .isTrue();
+        assertThat(ViewControls.rollCallToggled(keycode -> keycode == Input.Keys.TAB, BINDINGS))
+                .isFalse();
+    }
+
+    @Test
     void leavesTheViewAloneWhenNothingWasPressed() {
         assertThat(zoomToggled(keycode -> false)).isFalse();
     }

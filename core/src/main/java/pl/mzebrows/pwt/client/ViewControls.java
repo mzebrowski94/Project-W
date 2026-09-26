@@ -22,4 +22,12 @@ public final class ViewControls {
     public static boolean zoomToggled(KeyPresses keys, ControlsConfig.Keyboard bindings) {
         return keys.justPressed(bindings.zoom());
     }
+
+    /**
+     * True on the frame the player asked to swap the bottom bar between the players' panels and the
+     * roll call. Keyboard only for now; the bar is this machine's, so it swaps for everybody on it.
+     */
+    public static boolean rollCallToggled(KeyPresses keys, ControlsConfig.Keyboard bindings) {
+        return keys.justPressed(bindings.rollCall());
+    }
 }

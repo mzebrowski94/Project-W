@@ -2,7 +2,6 @@ package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -35,16 +34,17 @@ public final class Hud implements Disposable {
 
     private final LayoutSpec spec;
     private final PixelViewport canvas = new PixelViewport();
-    private final BitmapFont pixelFont = PixelFont.create();
+    private final BitmapFont pixelFont = UiFont.load();
     private final Texture pixel = whitePixel();
     private final Texture reticle;
-    private final Cursor blankCursor = blankCursor();
+    private final SystemPointer pointer;
     private ScreenLayout layout = ScreenLayout.NONE;
     private boolean warnedSmall;
     private boolean cursorHidden;
 
-    public Hud(LayoutSpec spec, int reticleSize) {
+    public Hud(LayoutSpec spec, int reticleSize, SystemPointer pointer) {
         this.spec = spec;
+        this.pointer = pointer;
         this.reticle = reticle(reticleSize);
     }
 
@@ -122,7 +122,7 @@ public final class Hud implements Disposable {
     public void hideSystemCursor() {
         if (!cursorHidden) {
             cursorHidden = true;
-            Gdx.graphics.setCursor(blankCursor);
+            pointer.hide();
         }
     }
 
@@ -130,7 +130,7 @@ public final class Hud implements Disposable {
     public void showSystemCursor() {
         if (cursorHidden) {
             cursorHidden = false;
-            Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
+            pointer.show();
         }
     }
 
@@ -176,19 +176,16 @@ public final class Hud implements Disposable {
         pixelFont.dispose();
         pixel.dispose();
         reticle.dispose();
-        blankCursor.dispose();
     }
 
     /**
-     * The atlas's {@code ui/reticle}, before there is an atlas: a cross with a hole where the aim is,
-     * white with a one-texel dark outline, so its tint reads on every ground and through a blast.
+     * The atlas's {@code ui/reticle}, before there is an atlas: four short arms round an open middle,
+     * white, each outlined by one dark texel along its sides and ends - never diagonally, so the middle
+     * stays open and nothing dark sits where the aim is.
      */
     private static Texture reticle(int size) {
         int side = size | 1;
         int middle = side / 2;
-        Pixmap pixmap = new Pixmap(side, side, Pixmap.Format.RGBA8888);
-        pixmap.setColor(0f, 0f, 0f, 0f);
-        pixmap.fill();
         boolean[][] lit = new boolean[side][side];
         for (int i = 1; i < side - 1; i++) {
             if (Math.abs(i - middle) > 1) {
@@ -196,18 +193,17 @@ public final class Hud implements Disposable {
                 lit[i][middle] = true;
             }
         }
-        pixmap.setColor(0f, 0f, 0f, 0.85f);
-        for (int x = 0; x < side; x++) {
-            for (int y = 0; y < side; y++) {
-                if (!lit[x][y] && touches(lit, x, y)) {
-                    pixmap.drawPixel(x, y);
-                }
-            }
-        }
-        pixmap.setColor(Color.WHITE);
+        Pixmap pixmap = new Pixmap(side, side, Pixmap.Format.RGBA8888);
+        pixmap.setBlending(Pixmap.Blending.None);
+        pixmap.setColor(0f, 0f, 0f, 0f);
+        pixmap.fill();
         for (int x = 0; x < side; x++) {
             for (int y = 0; y < side; y++) {
                 if (lit[x][y]) {
+                    pixmap.setColor(Color.WHITE);
+                    pixmap.drawPixel(x, y);
+                } else if (besideAnArm(lit, x, y)) {
+                    pixmap.setColor(0f, 0f, 0f, 0.85f);
                     pixmap.drawPixel(x, y);
                 }
             }
@@ -218,26 +214,13 @@ public final class Hud implements Disposable {
         return texture;
     }
 
-    private static boolean touches(boolean[][] lit, int x, int y) {
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
-                int nx = x + dx;
-                int ny = y + dy;
-                if (nx >= 0 && ny >= 0 && nx < lit.length && ny < lit.length && lit[nx][ny]) {
-                    return true;
-                }
-            }
-        }
-        return false;
+    /** Next to a lit texel along a row or a column; the four diagonal neighbours do not count. */
+    private static boolean besideAnArm(boolean[][] lit, int x, int y) {
+        return isLit(lit, x - 1, y) || isLit(lit, x + 1, y) || isLit(lit, x, y - 1) || isLit(lit, x, y + 1);
     }
 
-    private static Cursor blankCursor() {
-        Pixmap pixmap = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
-        pixmap.setColor(0f, 0f, 0f, 0f);
-        pixmap.fill();
-        Cursor cursor = Gdx.graphics.newCursor(pixmap, 0, 0);
-        pixmap.dispose();
-        return cursor;
+    private static boolean isLit(boolean[][] lit, int x, int y) {
+        return x >= 0 && y >= 0 && x < lit.length && y < lit.length && lit[x][y];
     }
 
     /** The one texture every fill is drawn from - the atlas's {@code ui/pixel}, before there is an atlas. */

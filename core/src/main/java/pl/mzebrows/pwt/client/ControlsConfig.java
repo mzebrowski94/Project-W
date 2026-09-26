@@ -48,6 +48,7 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
      * @param action key that acts on whatever is in reach
      * @param drag key that takes hold of a load, or lets go
      * @param zoom key that pulls the view back and puts it again
+     * @param rollCall key that swaps the bottom bar between the players' panels and the roll call
      * @param orderFollowMe, orderForward, orderDefence, orderCancel the four order keys. Alpha-phase
      *     scaffolding, as the input map says - the intended binding is one button and a radial menu
      */
@@ -60,6 +61,7 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
             int action,
             int drag,
             int zoom,
+            int rollCall,
             int orderFollowMe,
             int orderForward,
             int orderDefence,
@@ -162,6 +164,7 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
                 key(properties, "controls.key.action", Input.Keys.E),
                 key(properties, "controls.key.drag", Input.Keys.F),
                 key(properties, "controls.key.zoom", Input.Keys.TAB),
+                key(properties, "controls.key.rollCall", Input.Keys.GRAVE),
                 key(properties, "controls.key.orderFollowMe", Input.Keys.NUM_1),
                 key(properties, "controls.key.orderForward", Input.Keys.NUM_2),
                 key(properties, "controls.key.orderDefence", Input.Keys.NUM_3),

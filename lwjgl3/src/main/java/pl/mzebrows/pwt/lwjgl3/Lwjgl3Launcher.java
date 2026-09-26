@@ -18,7 +18,8 @@ public final class Lwjgl3Launcher {
         }
         GraphicConfig graphicConfig = GraphicConfig.load();
         LaunchOptions options = LaunchOptions.parse(args);
-        new Lwjgl3Application(new PwtGame(graphicConfig, options), configuration(graphicConfig, options));
+        new Lwjgl3Application(
+                new PwtGame(graphicConfig, options, new GlfwPointer()), configuration(graphicConfig, options));
     }
 
     private static Lwjgl3ApplicationConfiguration configuration(GraphicConfig graphicConfig, LaunchOptions options) {

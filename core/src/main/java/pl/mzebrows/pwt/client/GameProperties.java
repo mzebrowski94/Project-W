@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import org.jspecify.annotations.Nullable;
@@ -34,13 +35,18 @@ public final class GameProperties {
      * ISO-8859-1, which is what {@link Properties} reads a file as.
      */
     public static String text(String resourceName) {
+        return text(resourceName, StandardCharsets.ISO_8859_1);
+    }
+
+    /** The named classpath resource in the given encoding - UTF-8 for text a player reads. */
+    public static String text(String resourceName, Charset charset) {
         try (InputStream stream = GameProperties.class.getClassLoader().getResourceAsStream(resourceName)) {
             if (stream == null) {
                 Log.error("Config " + resourceName + " not found on classpath; using defaults", null);
                 return "";
             }
             Log.debug("Loaded config " + resourceName);
-            return new String(stream.readAllBytes(), StandardCharsets.ISO_8859_1);
+            return new String(stream.readAllBytes(), charset);
         } catch (IOException e) {
             Log.error("Could not read config " + resourceName + "; using defaults", e);
             return "";

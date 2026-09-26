@@ -362,6 +362,7 @@ do not treat one as taken when adding a game binding. None of them is on the pad
 | `3` | D-pad down | Squad order: defence | built - scaffolding, see below |
 | `4` | D-pad left | Squad order: cancel | built - scaffolding, see below |
 | `Tab` | `LB` / `L1` | Pull the view back for a look, and put it back. **One camera, so anybody's press moves everybody's view** | built |
+| `` ` `` | - | Swap the bottom bar between the players' panels and the roll call. This machine's bar, so it swaps for everybody on it | built - the roll call is a placeholder |
 | - | `Start` / `Options` | Pause | built (pad only; `Esc` is the harness's, and `P` pauses there) |
 | - | - | Unbound on the pad: `Y`/`Triangle`, `Back`/`Share`, both stick clicks. Left free on purpose | - |
 

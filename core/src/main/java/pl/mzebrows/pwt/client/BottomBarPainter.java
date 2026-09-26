@@ -8,6 +8,7 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.ui.hud.PanelAlarms;
+import pl.mzebrows.pwt.ui.hud.PanelAssignment;
 import pl.mzebrows.pwt.ui.hud.PanelLayout;
 import pl.mzebrows.pwt.ui.hud.PlayerReadout;
 import pl.mzebrows.pwt.ui.hud.Posture;
@@ -17,10 +18,11 @@ import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
 /**
- * The bottom bar ({@code UI:hud/bottom/...}): four fixed quarters, one per local seat in seat order,
- * each holding that player's panel - frame and label in his colour, his status, his gun and its heat,
- * a block where his portrait will be, and a row kept for his tally. A seat with no commander and no
- * respawn pending stays black.
+ * The bottom bar ({@code UI:hud/bottom/...}): four fixed quarters, each holding one player's panel -
+ * frame and label in his colour, his status, his gun and its heat, a block where his portrait will be,
+ * and a row kept for his tally. Who is in which quarter is {@link PanelAssignment}'s: everybody while
+ * there are four or fewer, this machine's seats otherwise. A quarter nobody holds stays black; a player
+ * whose pad or link is gone is drawn grey and says OFFLINE.
  *
  * <p>Status is empty while he stands: quiet until it matters, and always in the same place when it
  * does. DOWN, KIA and OVERHEAT are the only red, drawn as black text on it (plan 7.0).
@@ -41,6 +43,8 @@ final class BottomBarPainter {
     private final String kiaTemplate;
     private final String aboard;
     private final String overheat;
+    private final String offline;
+    private final String rollCall;
     private final String[] kia = new String[Players.MAX];
     private final int[] kiaTenths = new int[Players.MAX];
     private final Color dimAlert;
@@ -51,7 +55,7 @@ final class BottomBarPainter {
         this.style = style;
         this.metrics = metrics;
         this.palette = palette;
-        this.panels = new PanelLayout(metrics.padding(), metrics.portraitSize(), PixelFont.ADVANCE);
+        this.panels = new PanelLayout(metrics.padding(), metrics.portraitSize(), UiFont.ADVANCE);
         int longest = 0;
         for (WeaponKind kind : WeaponKind.values()) {
             String name = strings.get("ui.weapon." + kind.name());
@@ -68,29 +72,37 @@ final class BottomBarPainter {
         this.kiaTemplate = strings.get("ui.hud.kia");
         this.aboard = strings.get("ui.hud.aboard");
         this.overheat = strings.get("ui.hud.overheat");
+        this.offline = strings.get("ui.hud.offline");
+        this.rollCall = strings.get("ui.hud.rollCall");
         this.dimAlert = new Color(style.alert()).mul(DIM_ALERT, DIM_ALERT, DIM_ALERT, 1f);
     }
 
-    void render(ScreenLayout layout, Readout readout, ScenarioPlay play, PanelAlarms alarms) {
+    /**
+     * @param connected by slot: false for a player whose pad or link is gone, whose panel is greyed
+     */
+    void render(
+            ScreenLayout layout, Readout readout, PanelAssignment seating, boolean[] connected, PanelAlarms alarms) {
         Rect bottom = layout.bottomBar();
         if (bottom.isEmpty()) {
             return;
         }
         hud.beginCanvas();
-        for (int seat = 0; seat < PanelLayout.QUARTERS; seat++) {
-            int slot = play.slotOf(seat);
-            if (slot < 0 || slot >= Players.MAX || readout.player(slot).posture == Posture.ABSENT) {
+        for (int quarter = 0; quarter < PanelLayout.QUARTERS; quarter++) {
+            int slot = seating.slotIn(quarter);
+            if (slot < 0 || slot >= Players.MAX) {
                 continue;
             }
-            int x = panels.quarterX(seat, layout.contentLeft(), layout.view().width()) + alarms.shakeOffset(slot);
-            int width = panels.quarterWidth(seat, layout.view().width());
-            panel(slot, readout.player(slot), x, width, bottom.top(), alarms);
+            int x = panels.quarterX(quarter, layout.contentLeft(), layout.view().width()) + alarms.shakeOffset(slot);
+            int width = panels.quarterWidth(quarter, layout.view().width());
+            panel(slot, readout.player(slot), connected[slot], x, width, bottom.top(), alarms);
         }
         hud.endCanvas();
     }
 
-    private void panel(int slot, PlayerReadout player, int x, int width, int top, PanelAlarms alarms) {
-        Color own = palette.colorFor(Look.COMMANDER, player.variant);
+    private void panel(
+            int slot, PlayerReadout player, boolean connected, int x, int width, int top, PanelAlarms alarms) {
+        Color own = connected ? palette.colorFor(Look.COMMANDER, player.variant) : style.textDim();
+        Color text = connected ? style.text() : style.textDim();
         int padding = metrics.padding();
         int height = metrics.bottomMin();
         int line = metrics.fontSize() + metrics.leading();
@@ -105,25 +117,27 @@ final class BottomBarPainter {
 
         int row = top - padding;
         hud.text(labels[slot], textX, row, own);
-        int statusX = textX + (labels[slot].length() + 1) * PixelFont.ADVANCE;
+        int statusX = textX + (labels[slot].length() + 1) * UiFont.ADVANCE;
         switch (player.posture) {
             case CASUALTY -> {
                 inverse(down, statusX, row, alert);
-                int barX = statusX + (down.length() + 1) * PixelFont.ADVANCE;
+                int barX = statusX + (down.length() + 1) * UiFont.ADVANCE;
                 bar(barX, row, textRight - barX, player.bleedOut, style.alert());
             }
             case DYING -> inverse(kiaText(slot, -1f), statusX, row, alert);
             case RESPAWNING -> inverse(kiaText(slot, player.respawnSeconds), statusX, row, alert);
-            case ABOARD -> hud.text(aboard, statusX, row, style.text());
+            case ABOARD -> hud.text(connected ? aboard : offline, statusX, row, text);
             default -> {
-                // Standing: nothing to say.
+                if (!connected) {
+                    hud.text(offline, statusX, row, text);
+                }
             }
         }
 
         row -= line;
         if (player.posture == Posture.STANDING || player.posture == Posture.ABOARD) {
-            hud.text(weapons.getOrDefault(player.weapon, ""), textX, row, style.text());
-            int heatX = textX + (weaponColumns + 1) * PixelFont.ADVANCE;
+            hud.text(weapons.getOrDefault(player.weapon, ""), textX, row, text);
+            int heatX = textX + (weaponColumns + 1) * UiFont.ADVANCE;
             if (player.overheated) {
                 inverse(overheat, heatX, row, alert);
             } else {
@@ -133,6 +147,27 @@ final class BottomBarPainter {
             hud.text(weapons.getOrDefault(player.weapon, ""), textX, row, style.textDim());
         }
         // Row 3 is the tally's, which arrives with stage 7.
+    }
+
+    /**
+     * The roll call ({@code UI:hud/bottom/roll-call}): a compact row per player - colour, status, tally
+     * - for games of more than four. A placeholder until its design is settled.
+     */
+    void renderRollCall(ScreenLayout layout) {
+        Rect bottom = layout.bottomBar();
+        if (bottom.isEmpty()) {
+            return;
+        }
+        int padding = metrics.padding();
+        hud.beginCanvas();
+        hud.frame(
+                layout.contentLeft() + 1,
+                bottom.top() - metrics.bottomMin() + 1,
+                layout.view().width() - 2,
+                metrics.bottomMin() - 2,
+                style.textDim());
+        hud.text(rollCall, layout.contentLeft() + padding, bottom.top() - padding, style.textDim());
+        hud.endCanvas();
     }
 
     /** {@code KIA} and the seconds to his return, formatted only when the tenth changes. */
@@ -149,7 +184,7 @@ final class BottomBarPainter {
 
     /** Black text on the alert colour: the only way alert red is ever drawn. */
     private void inverse(String text, int x, int top, Color alert) {
-        hud.fill(x - 1, top - metrics.fontSize(), text.length() * PixelFont.ADVANCE + 1, metrics.fontSize() + 1, alert);
+        hud.fill(x - 1, top - metrics.fontSize(), text.length() * UiFont.ADVANCE + 1, metrics.fontSize() + 1, alert);
         hud.text(text, x, top, style.bar());
     }
 
