@@ -46,6 +46,8 @@ to `sim/src core/src map/src docs` - `grep` across the repo times out on the Win
 Each line is a yes/no you can check yourself. A no is not done.
 
 - [ ] `.claude/scripts/verify.sh` green. Reading the code is not evidence it compiles.
+- [ ] Cloud session only: committed and pushed to the `claude/*` branch with `cloud-commit.sh`, tree
+      clean. Local session: nothing committed.
 - [ ] Nothing allocates **inside a per-entity loop** - no `new`, boxing, varargs, capturing lambda,
       stream, iterator. Once per system per tick is fine.
 - [ ] No log call inside a per-frame or per-entity loop, any level.
@@ -153,14 +155,18 @@ Conventions: `unit-tests` skill.
 Mateusz has approved that standing; what he asks in return is that every edit is named in the
 session's summary, one line each, so he can review it with the rest of the diff.
 
-**Mateusz commits.** Never `git commit`, `git add`, `git push`. Leave the tree for review. Suggest a
-commit message when done: past tense, one line, imperative, what changed rather than how - `Add enemy leap and
-player hand strike`. No body unless something cannot be inferred from the diff.
+**Mateusz commits - except in a Claude cloud session.**
 
-**Except in a cloud session** (`CLAUDE_CODE_REMOTE=true`), where the container is thrown away and
-unpushed work is lost: there Claude commits and pushes its own `claude/*` branch, and only through
-`.claude/scripts/cloud-commit.sh` - raw git stays denied. Never main, never a force-push, no pull
-request unless asked; Mateusz merges. Same message rule. Procedure: `docs/workflow.md`, *Cloud sessions*.
+- **Local session** (Mateusz's machine): never `git commit`, `git add`, `git push`. Leave the tree for
+  review and suggest a commit message.
+- **Cloud session** (`CLAUDE_CODE_REMOTE=true`, Claude Code on the web): the container is thrown away
+  and unpushed work is lost, so Claude **commits and pushes its own `claude/*` branch** - through
+  `.claude/scripts/cloud-commit.sh` only, since raw git stays denied for every session. Commit at each
+  stage the work could stop after. Never main, never a force-push, no pull request unless asked;
+  Mateusz reviews the branch and merges it himself. Procedure: `docs/workflow.md`, *Cloud sessions*.
+
+Either way the message is past tense, one line, imperative, what changed rather than how - `Add enemy
+leap and player hand strike`. No body unless something cannot be inferred from the diff.
 
 Reading git state is fine, but **always `git --no-optional-locks status --porcelain`** - a bare
 `git status` takes `.git/index.lock`, and if delete permission has lapsed it cannot give it back,
