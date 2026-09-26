@@ -133,7 +133,7 @@ public final class Trooper implements Component, Pool.Poolable {
      * How much longer it holds before following a commander who has gone on ahead, in seconds (G0040).
      * Drawn afresh each time it starts holding, so a squad peels off a point rather than leaving in step.
      */
-    public float holdRemaining;
+    public int holdRemaining;
 
     /**
      * Whether it is timing a walk for progress, from {@link #sampleX}, {@link #sampleY}. Cleared
@@ -147,10 +147,10 @@ public final class Trooper implements Component, Pool.Poolable {
     public float sampleY;
 
     /** How long the current sample has run, in seconds. */
-    public float sampleClock;
+    public int sampleClock;
 
     /** How much longer it is backing off to one side before trying its way again, in seconds. */
-    public float detourRemaining;
+    public int detourRemaining;
 
     /** How many detours it has taken. Its parity picks the side, so a second try goes the other way. */
     public int detours;
@@ -161,7 +161,7 @@ public final class Trooper implements Component, Pool.Poolable {
      * <p>Written where damage lands, read by the mind to forgive the arc and by the legs to turn the
      * man towards {@link #alertX}, {@link #alertY}.
      */
-    public float alertRemaining;
+    public int alertRemaining;
 
     /** Where the last hit came from: a place, the muzzle, never who fired it (G0016). */
     public float alertX;
@@ -215,7 +215,7 @@ public final class Trooper implements Component, Pool.Poolable {
     public boolean requiresClearLine;
 
     /** How long until it sweeps its attention the other way, in seconds. */
-    public float scanRemaining;
+    public int scanRemaining;
 
     /** Which way it is currently leaning: {@code +1} or {@code -1}. */
     public int scanSide = 1;
@@ -265,10 +265,10 @@ public final class Trooper implements Component, Pool.Poolable {
     }
 
     /** Starts it looking for whatever hit it, from that place, for that long. */
-    public void hitFrom(float x, float y, float seconds) {
+    public void hitFrom(float x, float y, int ticks) {
         this.alertX = x;
         this.alertY = y;
-        this.alertRemaining = seconds;
+        this.alertRemaining = ticks;
     }
 
     /** Points it somewhere, and returns this component, for fluent spawning. */
@@ -305,7 +305,7 @@ public final class Trooper implements Component, Pool.Poolable {
         hasTarget = false;
         lookX = 1f;
         lookY = 0f;
-        scanRemaining = 0f;
+        scanRemaining = 0;
         scanSide = 1;
         sectorFrom = -1;
         sectorSpan = 0;
@@ -317,14 +317,14 @@ public final class Trooper implements Component, Pool.Poolable {
         orderedBy = 0;
         sentOn = false;
         holding = false;
-        holdRemaining = 0f;
+        holdRemaining = 0;
         sampling = false;
         sampleX = 0f;
         sampleY = 0f;
-        sampleClock = 0f;
-        detourRemaining = 0f;
+        sampleClock = 0;
+        detourRemaining = 0;
         detours = 0;
-        alertRemaining = 0f;
+        alertRemaining = 0;
         alertX = 0f;
         alertY = 0f;
         settled = false;

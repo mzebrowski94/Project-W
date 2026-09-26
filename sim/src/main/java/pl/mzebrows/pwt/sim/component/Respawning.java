@@ -12,10 +12,10 @@ import com.badlogic.gdx.utils.Pool;
  */
 public final class Respawning implements Component, Pool.Poolable {
 
-    public float remainingSeconds;
+    public int remainingTicks;
     public float x;
     public float y;
-    public float invulnerableSeconds;
+    public int invulnerableTicks;
 
     /**
      * The player slot the man who died was sitting in, so he comes back as the same player.
@@ -26,22 +26,21 @@ public final class Respawning implements Component, Pool.Poolable {
     public int slot;
 
     /** Sets the pending respawn and returns this component, for fluent spawning. */
-    public Respawning set(
-            float newRemainingSeconds, float newX, float newY, float newInvulnerableSeconds, int newSlot) {
-        this.remainingSeconds = newRemainingSeconds;
+    public Respawning set(int newRemainingTicks, float newX, float newY, int newInvulnerableTicks, int newSlot) {
+        this.remainingTicks = newRemainingTicks;
         this.x = newX;
         this.y = newY;
-        this.invulnerableSeconds = newInvulnerableSeconds;
+        this.invulnerableTicks = newInvulnerableTicks;
         this.slot = newSlot;
         return this;
     }
 
     @Override
     public void reset() {
-        remainingSeconds = 0f;
+        remainingTicks = 0;
         x = 0f;
         y = 0f;
-        invulnerableSeconds = 0f;
+        invulnerableTicks = 0;
         slot = 0;
     }
 }

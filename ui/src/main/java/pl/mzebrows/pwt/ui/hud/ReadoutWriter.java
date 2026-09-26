@@ -113,7 +113,8 @@ public final class ReadoutWriter {
             PlayerReadout player = out.player(respawning.slot);
             if (player.posture == Posture.ABSENT) {
                 player.posture = Posture.RESPAWNING;
-                player.respawnSeconds = Math.max(0f, respawning.remainingSeconds);
+                player.respawnSeconds =
+                        Math.max(0, respawning.remainingTicks) * world.config().tickSeconds();
                 player.variant = respawning.slot;
             }
         }

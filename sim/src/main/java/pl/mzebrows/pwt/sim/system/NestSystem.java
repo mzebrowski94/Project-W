@@ -116,12 +116,12 @@ public final class NestSystem extends EntitySystem {
                 }
                 continue;
             }
-            nest.untilNext -= deltaTime;
-            if (nest.untilNext > 0f) {
+            nest.untilNext--;
+            if (nest.untilNext > 0) {
                 continue;
             }
             hatch(nest, at, nextBrood(nest));
-            nest.untilNext = nest.periodSeconds;
+            nest.untilNext = nest.periodTicks;
         }
     }
 

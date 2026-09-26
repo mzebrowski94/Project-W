@@ -116,7 +116,7 @@ class ReadoutWriterTest {
     void countsDownToHisReturnWhileHeIsDead() {
         Simulation world = world();
         Entity pending = world.engine().createEntity();
-        pending.add(world.engine().createComponent(Respawning.class).set(1.5f, 0f, 0f, 0f, 3));
+        pending.add(world.engine().createComponent(Respawning.class).set(90, 0f, 0f, 0, 3));
         world.engine().addEntity(pending);
 
         PlayerReadout player = fill(new ReadoutWriter(), world).player(3);

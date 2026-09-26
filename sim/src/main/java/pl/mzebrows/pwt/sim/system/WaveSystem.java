@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Waves;
+import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.Wave;
 
 /**
@@ -67,8 +68,8 @@ public final class WaveSystem extends EntitySystem {
             if (!waves.armed() || waves.spent()) {
                 continue;
             }
-            waves.untilNext -= deltaTime;
-            if (waves.untilNext > 0f) {
+            waves.waited++;
+            if (waves.waited < Ticks.of(waves.next().afterSeconds(), deltaTime)) {
                 continue;
             }
             send(waves.next());

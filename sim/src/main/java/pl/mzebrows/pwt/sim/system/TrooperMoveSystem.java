@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * Walks each trooper towards whatever it has been given to head for, sweeping its attention from side
@@ -73,9 +74,9 @@ public final class TrooperMoveSystem extends EntitySystem {
     private final float forwardSpeedFactor;
     private final float followDistance;
     private final float walkingSpeed;
-    private final float blockSeconds;
+    private final int blockTicks;
     private final float blockDistance;
-    private final float detourSeconds;
+    private final int detourTicks;
 
     /** One field, re-aimed at whatever a trooper is currently walking to. */
     private final FlowField route;
@@ -99,9 +100,9 @@ public final class TrooperMoveSystem extends EntitySystem {
         this.forwardSpeedFactor = trooper.forwardSpeedFactor();
         this.followDistance = trooper.followDistance();
         this.walkingSpeed = trooper.speed();
-        this.blockSeconds = trooper.blockSeconds();
+        this.blockTicks = Ticks.of(trooper.blockSeconds(), config.tickSeconds());
         this.blockDistance = trooper.blockDistance();
-        this.detourSeconds = trooper.detourSeconds();
+        this.detourTicks = Ticks.of(trooper.detourSeconds(), config.tickSeconds());
         this.route = FlowField.over(map, trooper.radius());
     }
 
@@ -158,9 +159,9 @@ public final class TrooperMoveSystem extends EntitySystem {
             trooper.settled = false;
             trooper.baseLookX = direction[0];
             trooper.baseLookY = direction[1];
-            watchForABlock(trooper, at, deltaTime);
-            if (trooper.detourRemaining > 0f) {
-                trooper.detourRemaining -= deltaTime;
+            watchForABlock(trooper, at);
+            if (trooper.detourRemaining > 0) {
+                trooper.detourRemaining--;
                 sidestep(entity, trooper);
             } else if (way == STRAIGHT) {
                 // Only in the open. Following the route means rock is close by, and a lean
@@ -184,7 +185,7 @@ public final class TrooperMoveSystem extends EntitySystem {
      */
     private void keepWatching(Trooper trooper, Position at) {
         trooper.sampling = false;
-        if (trooper.alertRemaining > 0f) {
+        if (trooper.alertRemaining > 0) {
             turnTowardsTheHit(trooper, at);
         } else if (trooper.sectorSpan > 0) {
             watchItsSector(trooper);
@@ -313,13 +314,13 @@ public final class TrooperMoveSystem extends EntitySystem {
      * keeps a squad's sweeps from all resetting together when a grenade goes off among them.
      */
     private void sweep(Trooper trooper, float deltaTime) {
-        trooper.scanRemaining -= deltaTime;
-        if (trooper.scanRemaining > 0f) {
+        trooper.scanRemaining--;
+        if (trooper.scanRemaining > 0) {
             return;
         }
         trooper.scanSide = -trooper.scanSide;
         trooper.sectorStep++;
-        trooper.scanRemaining = rng.nextFloat(scanMinSeconds, scanMaxSeconds);
+        trooper.scanRemaining = Ticks.of(rng.nextFloat(scanMinSeconds, scanMaxSeconds), deltaTime);
     }
 
     /**
@@ -382,28 +383,28 @@ public final class TrooperMoveSystem extends EntitySystem {
      * an entity against rock. So the answer is a change of course rather than of plan: a short detour,
      * after which he tries his way again from somewhere else.
      */
-    private void watchForABlock(Trooper trooper, Position at, float deltaTime) {
-        if (blockSeconds <= 0f) {
+    private void watchForABlock(Trooper trooper, Position at) {
+        if (blockTicks <= 0) {
             return;
         }
         if (!trooper.sampling) {
             trooper.sampling = true;
             trooper.sampleX = at.x;
             trooper.sampleY = at.y;
-            trooper.sampleClock = 0f;
+            trooper.sampleClock = 0;
             return;
         }
-        trooper.sampleClock += deltaTime;
-        if (trooper.sampleClock < blockSeconds) {
+        trooper.sampleClock++;
+        if (trooper.sampleClock < blockTicks) {
             return;
         }
         boolean stuck = Sight.withinRange(at.x, at.y, trooper.sampleX, trooper.sampleY, blockDistance)
-                && trooper.detourRemaining <= 0f;
+                && trooper.detourRemaining <= 0;
         trooper.sampleX = at.x;
         trooper.sampleY = at.y;
-        trooper.sampleClock = 0f;
+        trooper.sampleClock = 0;
         if (stuck) {
-            trooper.detourRemaining = detourSeconds;
+            trooper.detourRemaining = detourTicks;
             trooper.detours++;
         }
     }

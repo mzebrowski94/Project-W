@@ -25,7 +25,7 @@ public final class Waves implements Component, Pool.Poolable {
     private final Array<Wave> pending = new Array<>();
 
     /** How long until the next one, in seconds. */
-    public float untilNext;
+    public int waited;
 
     /** How far down the list we are. */
     private int sent;
@@ -47,9 +47,6 @@ public final class Waves implements Component, Pool.Poolable {
 
     /** The same, from a wave a caller already has in hand. */
     public Waves add(Wave wave) {
-        if (pending.isEmpty()) {
-            untilNext = wave.afterSeconds();
-        }
         pending.add(wave);
         return this;
     }
@@ -98,13 +95,13 @@ public final class Waves implements Component, Pool.Poolable {
     /** Marks the due one as sent and starts the clock on the one after it. */
     public void advance() {
         sent++;
-        untilNext = spent() ? 0f : next().afterSeconds();
+        waited = 0;
     }
 
     @Override
     public void reset() {
         pending.clear();
-        untilNext = 0f;
+        waited = 0;
         sent = 0;
         armed = true;
     }

@@ -29,10 +29,10 @@ public final class Nest implements Component, Pool.Poolable {
     public UnitKind kind = UnitKind.GRUNT;
 
     /** How long between broods, in seconds. */
-    public float periodSeconds;
+    public int periodTicks;
 
     /** How long until the next one. Only counted down while it is awake. */
-    public float untilNext;
+    public int untilNext;
 
     /** How many come out at a time, drawn between the two. */
     public int broodMin;
@@ -68,7 +68,7 @@ public final class Nest implements Component, Pool.Poolable {
     /** Sets what this nest produces and how, and returns this component, for fluent spawning. */
     public Nest set(
             UnitKind newKind,
-            float newPeriodSeconds,
+            int newPeriodTicks,
             int newBroodMin,
             int newBroodMax,
             int newDeathBroodMin,
@@ -77,8 +77,8 @@ public final class Nest implements Component, Pool.Poolable {
             float newWakeRadius,
             float newRouseRadius) {
         this.kind = newKind;
-        this.periodSeconds = newPeriodSeconds;
-        this.untilNext = newPeriodSeconds;
+        this.periodTicks = newPeriodTicks;
+        this.untilNext = newPeriodTicks;
         this.broodMin = newBroodMin;
         this.broodMax = newBroodMax;
         this.deathBroodMin = newDeathBroodMin;
@@ -92,7 +92,7 @@ public final class Nest implements Component, Pool.Poolable {
     /** Starts the first clock. Called once, when somebody first comes near enough. */
     public void wake() {
         this.awake = true;
-        this.untilNext = periodSeconds;
+        this.untilNext = periodTicks;
     }
 
     /**
@@ -103,10 +103,10 @@ public final class Nest implements Component, Pool.Poolable {
      * is not running.
      */
     public float progress() {
-        if (!awake || periodSeconds <= 0f) {
+        if (!awake || periodTicks <= 0) {
             return 0f;
         }
-        float spent = (periodSeconds - untilNext) / periodSeconds;
+        float spent = (periodTicks - untilNext) / (float) periodTicks;
         if (spent < 0f) {
             return 0f;
         }
@@ -116,8 +116,8 @@ public final class Nest implements Component, Pool.Poolable {
     @Override
     public void reset() {
         kind = UnitKind.GRUNT;
-        periodSeconds = 0f;
-        untilNext = 0f;
+        periodTicks = 0;
+        untilNext = 0;
         broodMin = 0;
         broodMax = 0;
         deathBroodMin = 0;

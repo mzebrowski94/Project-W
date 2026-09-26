@@ -14,7 +14,6 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
-import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * A death reaction, and the countdown it starts.
@@ -64,7 +63,7 @@ public final class RespawnSystem extends EntitySystem {
     @Override
     public void update(float deltaTime) {
         openTickets();
-        closeExpiredTickets(deltaTime);
+        closeExpiredTickets();
     }
 
     /** Runs once per death: the unit is marked dead now and reaped at the end of this same tick. */
@@ -85,16 +84,16 @@ public final class RespawnSystem extends EntitySystem {
         }
     }
 
-    private void closeExpiredTickets(float deltaTime) {
+    private void closeExpiredTickets() {
         for (int i = pending.size() - 1; i >= 0; i--) {
             Entity ticket = pending.get(i);
             Respawning respawning = PENDING.get(ticket);
-            respawning.remainingSeconds -= deltaTime;
-            if (respawning.remainingSeconds > 0f) {
+            respawning.remainingTicks--;
+            if (respawning.remainingTicks > 0) {
                 continue;
             }
             Entity commander = spawner.spawnCommander(respawning.x, respawning.y, respawning.slot);
-            INVULNERABLE.get(commander).grant(Ticks.of(respawning.invulnerableSeconds, deltaTime));
+            INVULNERABLE.get(commander).grant(respawning.invulnerableTicks);
             spawner.markDead(ticket);
         }
     }

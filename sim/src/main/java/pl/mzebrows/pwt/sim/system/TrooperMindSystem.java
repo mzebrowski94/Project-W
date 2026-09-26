@@ -30,6 +30,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * Decides, once a tick, what each trooper is doing and where it is headed.
@@ -187,8 +188,8 @@ public final class TrooperMindSystem extends EntitySystem {
                 trooper.holding = false;
             }
 
-            if (trooper.alertRemaining > 0f) {
-                trooper.alertRemaining = Math.max(0f, trooper.alertRemaining - deltaTime);
+            if (trooper.alertRemaining > 0) {
+                trooper.alertRemaining--;
             }
 
             int quarry = enemyFor(trooper, at);
@@ -574,7 +575,7 @@ public final class TrooperMindSystem extends EntitySystem {
      */
     private int enemyFor(Trooper trooper, Position at) {
         boolean alreadyFighting = trooper.mode == Trooper.Mode.FIGHT;
-        boolean lookingAllRound = alreadyFighting || trooper.alertRemaining > 0f;
+        boolean lookingAllRound = alreadyFighting || trooper.alertRemaining > 0;
         float range = alreadyFighting ? trooper.holdRange : trooper.sightRange;
         int best = -1;
         float bestScore = Float.MAX_VALUE;
@@ -686,10 +687,11 @@ public final class TrooperMindSystem extends EntitySystem {
         }
         if (!trooper.holding) {
             trooper.holding = true;
-            trooper.holdRemaining = holdSeconds + rng.nextFloat(-holdJitterSeconds, holdJitterSeconds);
+            trooper.holdRemaining =
+                    Ticks.of(holdSeconds + rng.nextFloat(-holdJitterSeconds, holdJitterSeconds), deltaTime);
         }
-        trooper.holdRemaining -= deltaTime;
-        return trooper.holdRemaining <= 0f && !aCommanderAt(points.get(taken)) && aCommanderAheadOf(at, next);
+        trooper.holdRemaining--;
+        return trooper.holdRemaining <= 0 && !aCommanderAt(points.get(taken)) && aCommanderAheadOf(at, next);
     }
 
     /** Whether any commander on his feet is within the rally radius of this point. */

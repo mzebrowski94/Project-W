@@ -21,6 +21,7 @@ import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * Turns the damage owed this tick into lost health, and health at zero into a death.
@@ -69,13 +70,13 @@ public final class DamageSystem extends IteratingSystem {
 
     private final Spawner spawner;
     private final SimConfig.BloatConfig bloatConfig;
-    private final float alertSeconds;
+    private final int alertTicks;
 
     public DamageSystem(SimConfig config, Spawner spawner) {
         super(Family.all(Health.class, Damage.class).get());
         this.spawner = spawner;
         this.bloatConfig = config.bloat();
-        this.alertSeconds = config.trooper().alertSeconds();
+        this.alertTicks = Ticks.of(config.trooper().alertSeconds(), config.tickSeconds());
     }
 
     @Override
@@ -115,7 +116,7 @@ public final class DamageSystem extends IteratingSystem {
         if (hasSource && TROOPER.has(entity)) {
             // The same place, for a man: being hit turns him round to look for what did it. Below the
             // invulnerability check for the same reason - a hit that did not land alarms nobody.
-            TROOPER.get(entity).hitFrom(sourceX, sourceY, alertSeconds);
+            TROOPER.get(entity).hitFrom(sourceX, sourceY, alertTicks);
         }
         if (bloat > 0f && BLOAT.has(entity)) {
             // It builds on the living as readily as on the dead, which is the whole of why holding

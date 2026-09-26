@@ -26,26 +26,26 @@ public final class Mine implements Component, Pool.Poolable {
     public float triggerRadius;
 
     /** How long it ticks before it goes off. The moment - long enough to see and too short to answer. */
-    public float fuseSeconds;
+    public int fuseTicks;
 
-    public float remainingSeconds;
+    public int remainingTicks;
 
-    /** How long one flash lasts when it has only just started ticking, in seconds. */
-    public float flashFromSeconds;
+    /** How long one flash lasts when it has only just started ticking, in ticks - fractional, being a rhythm. */
+    public float flashFromTicks;
 
     /** How long one lasts at the end. Shorter, so the flashing quickens as the moment comes. */
-    public float flashToSeconds;
+    public float flashToTicks;
 
     /** True once something has come near enough. It never goes back. */
     public boolean armed;
 
     /** Sets what it takes to set this one off, and returns this component, for fluent spawning. */
-    public Mine set(float newTriggerRadius, float newFuseSeconds, float newFlashFromSeconds, float newFlashToSeconds) {
+    public Mine set(float newTriggerRadius, int newFuseTicks, float newFlashFromTicks, float newFlashToTicks) {
         this.triggerRadius = newTriggerRadius;
-        this.fuseSeconds = newFuseSeconds;
-        this.remainingSeconds = newFuseSeconds;
-        this.flashFromSeconds = newFlashFromSeconds;
-        this.flashToSeconds = newFlashToSeconds;
+        this.fuseTicks = newFuseTicks;
+        this.remainingTicks = newFuseTicks;
+        this.flashFromTicks = newFlashFromTicks;
+        this.flashToTicks = newFlashToTicks;
         this.armed = false;
         return this;
     }
@@ -57,7 +57,7 @@ public final class Mine implements Component, Pool.Poolable {
 
     /** True once the clock has run out. */
     public boolean spent() {
-        return armed && remainingSeconds <= 0f;
+        return armed && remainingTicks <= 0;
     }
 
     /**
@@ -73,15 +73,15 @@ public final class Mine implements Component, Pool.Poolable {
      * only to within an ulp and may differ between JVMs, which pillar 6 does not allow.
      */
     public float flash() {
-        if (!armed || fuseSeconds <= 0f || flashFromSeconds <= 0f) {
+        if (!armed || fuseTicks <= 0 || flashFromTicks <= 0f) {
             return 0f;
         }
-        float left = remainingSeconds / fuseSeconds;
-        float period = flashToSeconds + (flashFromSeconds - flashToSeconds) * left;
+        float left = remainingTicks / (float) fuseTicks;
+        float period = flashToTicks + (flashFromTicks - flashToTicks) * left;
         if (period <= 0f) {
             return 0f;
         }
-        float turns = remainingSeconds / period;
+        float turns = remainingTicks / period;
         float phase = turns - (float) Math.floor(turns);
         return 1f - Math.abs(phase * 2f - 1f);
     }
@@ -89,10 +89,10 @@ public final class Mine implements Component, Pool.Poolable {
     @Override
     public void reset() {
         triggerRadius = 0f;
-        fuseSeconds = 0f;
-        remainingSeconds = 0f;
-        flashFromSeconds = 0f;
-        flashToSeconds = 0f;
+        fuseTicks = 0;
+        remainingTicks = 0;
+        flashFromTicks = 0f;
+        flashToTicks = 0f;
         armed = false;
     }
 }

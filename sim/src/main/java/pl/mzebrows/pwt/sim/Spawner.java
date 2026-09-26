@@ -631,7 +631,11 @@ public final class Spawner {
         SimConfig.MineConfig mine = config.mine();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Mine.class)
-                .set(mine.triggerRadius(), mine.fuseSeconds(), mine.flashFromSeconds(), mine.flashToSeconds()));
+                .set(
+                        mine.triggerRadius(),
+                        ticks(mine.fuseSeconds()),
+                        mine.flashFromSeconds() / config.tickSeconds(),
+                        mine.flashToSeconds() / config.tickSeconds()));
         entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
@@ -674,7 +678,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Nest.class)
                 .set(
                         kind,
-                        nest.periodSeconds(),
+                        ticks(nest.periodSeconds()),
                         nest.broodMin(),
                         nest.broodMax(),
                         nest.deathBroodMin(),
@@ -1140,7 +1144,8 @@ public final class Spawner {
      */
     public Entity spawnRespawn(float delaySeconds, float x, float y, float invulnerableSeconds, int slot) {
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Respawning.class).set(delaySeconds, x, y, invulnerableSeconds, slot));
+        entity.add(engine.createComponent(Respawning.class)
+                .set(ticks(delaySeconds), x, y, ticks(invulnerableSeconds), slot));
         engine.addEntity(entity);
         return entity;
     }

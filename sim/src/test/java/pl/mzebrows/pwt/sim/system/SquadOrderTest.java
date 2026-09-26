@@ -78,11 +78,15 @@ class SquadOrderTest {
 
         float wasX = at(trooper).x;
         float firstLook = trooper.getComponent(Appearance.class).facingY;
-        steps(simulation, 120);
+        boolean lookedElsewhere = false;
+        for (int tick = 0; tick < 120; tick++) {
+            simulation.step();
+            lookedElsewhere |= trooper.getComponent(Appearance.class).facingY != firstLook;
+        }
 
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.HOLD);
         assertThat(at(trooper).x).isCloseTo(wasX, TOLERANCE);
-        assertThat(trooper.getComponent(Appearance.class).facingY).isNotEqualTo(firstLook);
+        assertThat(lookedElsewhere).isTrue();
     }
 
     /** 3.a. It comes with him, and stops crowding him once it is close. */

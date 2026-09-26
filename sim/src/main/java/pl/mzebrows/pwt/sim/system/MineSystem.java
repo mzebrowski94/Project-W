@@ -73,7 +73,9 @@ public final class MineSystem extends EntitySystem {
                 }
                 continue;
             }
-            mine.remainingSeconds -= deltaTime;
+            if (mine.remainingTicks > 0) {
+                mine.remainingTicks--;
+            }
             if (mine.spent()) {
                 spawner.markDead(entity);
             }
