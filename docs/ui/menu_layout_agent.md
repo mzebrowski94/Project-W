@@ -48,14 +48,14 @@ keeps in shot).
 
 | Id | Kind | Parent | Code anchor | Implemented by | Status |
 |---|---|---|---|---|---|
-| `UI:main` | page | - | `UiPage.MAIN` | `MenuScreen` (restyled) | planned |
-| `UI:main/campaign` | page | `UI:main` | `UiPage.CAMPAIGN` | `MenuScreen` + scenario list | planned (list itself built today as the whole menu) |
+| `UI:main` | page | - | `UiPage.MAIN` | `MenuScreen` | built |
+| `UI:main/campaign` | page | `UI:main` | `UiPage.CAMPAIGN` | `MenuScreen` + scenario list | built |
 | `UI:main/proving-ground` | page | `UI:main` | `UiPage.PROVING_GROUND` | `MenuScreen` | placeholder |
-| `UI:main/online` | page | `UI:main` | `UiPage.ONLINE` | `MenuScreen` | planned |
-| `UI:main/online/join` | page | `UI:main/online` | `UiPage.ONLINE_JOIN` | `JoinScreen` / `JoinChoices` | built (reached by `J` today) |
-| `UI:main/online/host` | page | `UI:main/online` | `UiPage.ONLINE_HOST` | `MenuScreen` + scenario list | planned (hosting built, reached by `H` today) |
+| `UI:main/online` | page | `UI:main` | `UiPage.ONLINE` | `MenuScreen` | built |
+| `UI:main/online/join` | page | `UI:main/online` | `UiPage.ONLINE_JOIN` | `JoinScreen` / `JoinChoices` / `CodePicker` | built (on the canvas; the pad's letter picker) |
+| `UI:main/online/host` | page | `UI:main/online` | `UiPage.ONLINE_HOST` | `MenuScreen` + scenario list | built |
 | `UI:main/options` | page | `UI:main` | `UiPage.OPTIONS` | `MenuScreen` | placeholder |
-| `UI:main/exit` | modal | `UI:main` | `UiPage.EXIT_CONFIRM` | `MenuScreen` | planned |
+| `UI:main/exit` | modal | `UI:main` | `UiPage.EXIT_CONFIRM` | `MenuScreen` | built |
 | `UI:connecting` | page | - | `UiPage.CONNECTING` | `PlayMenus` (no world yet) | built (a panel on the canvas; Back leaves) |
 | `UI:play` | state | - | `UiPage.PLAY` | `ScenarioScreen` | built |
 | `UI:play/pause` | modal | `UI:play` | `UiPage.PAUSE` | `PlayMenus` | built |
@@ -129,11 +129,15 @@ Title `ui.online.title = PLAY ONLINE`.
 
 Today's `JoinScreen`: sessions heard on this network (LAN or Hamachi), and a room code or an address
 typed in; what Enter joins is `JoinChoices` (tested). Confirm: `JOIN(choice)`, which leads to
-`UI:connecting`. Restyling it into the page skin is its own task; its logic does not change.
+`UI:connecting`. Title `ui.join.title = JOIN GAME`; one entry per session heard, then the code line.
+`JoinScreen` is its own libGDX `Screen` (it listens on the network while open) but draws on the canvas
+with the same painter and selection as the other pages; Back returns to `UI:main/online`.
 
 With only a pad, the sessions heard are one press away, and the room code is entered with a
-four-slot letter picker - up/down changes the letter, left/right the slot (plan Q6, proposed). Valve's
-Steam Deck review fails a game whose text entry needs a keyboard.
+four-slot letter picker (`CodePicker`, module `ui`) - confirm on the code line opens it, up/down
+changes the letter, left/right the slot, confirm joins, Back closes it (plan Q6). Valve's Steam Deck
+review fails a game whose text entry needs a keyboard. A keyboard types straight into the code line;
+while it does, only the arrows move the selection and only `Esc` goes back.
 
 Do not build: a player list, a ready button, choosing a slot, colour or character (G0038); a
 password.

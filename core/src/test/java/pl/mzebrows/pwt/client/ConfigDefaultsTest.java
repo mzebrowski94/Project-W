@@ -64,7 +64,10 @@ class ConfigDefaultsTest {
                         hud.rollCallAtStart(),
                         hud.scrimAlpha(),
                         hud.bannerScrimAlpha(),
-                        hud.scrimSeconds()))
+                        hud.scrimSeconds(),
+                        hud.pageSeconds(),
+                        hud.pageSlide(),
+                        hud.pageColumns()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

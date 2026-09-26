@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client;
 import com.badlogic.gdx.Screen;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.ui.nav.SelectionMemory;
 
 /**
  * What a screen is allowed to ask of the application.
@@ -42,6 +43,12 @@ public interface GameContext {
 
     /** Shared screen-space text renderer, owned by the application rather than by any one screen. */
     Hud hud();
+
+    /**
+     * Which entry each menu page had selected, for this run of the game: coming back to a page lands
+     * where the player was, and the campaign list opens on the scenario last played.
+     */
+    SelectionMemory selections();
 
     /** Asks for a screen change. It happens once the current frame has finished drawing. */
     void queueScreen(Screen next);

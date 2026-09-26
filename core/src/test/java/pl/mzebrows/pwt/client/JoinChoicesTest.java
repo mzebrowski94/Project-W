@@ -25,6 +25,26 @@ class JoinChoicesTest {
     }
 
     @Test
+    void joinsTheSessionPickedOnTheList() {
+        choices.heard(List.of(skirmish, defend));
+
+        choices.select(1);
+
+        assertThat(choices.choose(PORT)).isEqualTo(target("25.1.2.3", 47_101, defend));
+    }
+
+    @Test
+    void joinsTheSessionWhoseRoomCodeWasPickedOnAPad() {
+        choices.heard(List.of(skirmish, defend));
+        typeIn("zz");
+
+        choices.replaceTyped(defend.announcement().code().text());
+
+        assertThat(choices.typed()).isEqualTo(defend.announcement().code().text());
+        assertThat(choices.choose(PORT)).isEqualTo(target("25.1.2.3", 47_101, defend));
+    }
+
+    @Test
     void joinsTheSessionWhoseRoomCodeIsTypedHoweverItIsTyped() {
         choices.heard(List.of(skirmish, defend));
         typeIn(defend.announcement().code().text().toLowerCase(java.util.Locale.ROOT));

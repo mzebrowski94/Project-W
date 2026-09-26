@@ -40,6 +40,24 @@ public final class JoinChoices {
         selected = sessions.isEmpty() ? 0 : Math.min(selected, sessions.size() - 1);
     }
 
+    /** Highlights a session by its place in {@link #sessions()}; out of range is ignored. */
+    public void select(int session) {
+        if (session >= 0 && session < sessions.size()) {
+            selected = session;
+        }
+    }
+
+    /**
+     * Replaces what was typed - with a room code picked on a pad, a letter at a time. Filtered as typing
+     * is, so nothing a keyboard could not have typed gets in.
+     */
+    public void replaceTyped(String text) {
+        typed.setLength(0);
+        for (int i = 0; i < text.length(); i++) {
+            type(text.charAt(i));
+        }
+    }
+
     public void up() {
         if (!sessions.isEmpty()) {
             selected = Math.floorMod(selected - 1, sessions.size());

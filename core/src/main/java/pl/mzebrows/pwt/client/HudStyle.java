@@ -31,6 +31,9 @@ import com.badlogic.gdx.graphics.Color;
  *     light enough to read the frozen fight
  * @param bannerScrimAlpha how dark it goes under the paused banner, with no menu open here
  * @param scrimSeconds how long the scrim takes to come and go, before the motion scale
+ * @param pageSeconds how long a page takes to arrive, before the motion scale
+ * @param pageSlide how far an arriving page slides, in UI pixels
+ * @param pageColumns how many characters wide every page's panel is, whatever it holds
  */
 public record HudStyle(
         Color text,
@@ -52,7 +55,10 @@ public record HudStyle(
         boolean rollCallAtStart,
         float scrimAlpha,
         float bannerScrimAlpha,
-        float scrimSeconds) {
+        float scrimSeconds,
+        float pageSeconds,
+        int pageSlide,
+        int pageColumns) {
 
     /** Nothing may flash more often than this a second - the photosensitive-seizure threshold. */
     public static final float MAX_PULSE_HZ = 3f;

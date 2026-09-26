@@ -1,5 +1,8 @@
 package pl.mzebrows.pwt.ui.hud;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Makes a line fit its slot. The font is monospace, so a slot is a number of columns and every fit is
  * arithmetic - testable without a display.
@@ -44,6 +47,34 @@ public final class TextFit {
             return template.replace(ARGUMENT, fit(argument, room));
         }
         return fit(whole, columns);
+    }
+
+    /**
+     * Words laid into at most {@code maxLines} lines of {@code columns} characters, breaking between
+     * words; what does not fit is cut, the last line ending in {@value #ELLIPSIS}. A word longer than a
+     * line is cut where it must be.
+     */
+    public static List<String> wrap(String text, int columns, int maxLines) {
+        List<String> lines = new ArrayList<>(maxLines);
+        String rest = text.trim();
+        while (!rest.isEmpty() && lines.size() < maxLines) {
+            if (rest.length() <= columns) {
+                lines.add(rest);
+                rest = "";
+                break;
+            }
+            int cut = rest.lastIndexOf(' ', columns);
+            if (cut <= 0) {
+                cut = columns;
+            }
+            lines.add(rest.substring(0, cut).trim());
+            rest = rest.substring(cut).trim();
+        }
+        if (!rest.isEmpty() && !lines.isEmpty()) {
+            int last = lines.size() - 1;
+            lines.set(last, fit(lines.get(last) + " " + rest, columns));
+        }
+        return lines;
     }
 
     /** A count for a slot four characters wide: the number, or {@code 999+} above it. */

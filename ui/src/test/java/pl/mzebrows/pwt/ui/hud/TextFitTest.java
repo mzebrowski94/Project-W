@@ -47,6 +47,23 @@ class TextFitTest {
         assertThat(TextFit.fit("MISSION: {0}", "Duel", 20)).isEqualTo("MISSION: Duel");
     }
 
+    @Test
+    void wrapsADescriptionOnWordsIntoTwoLines() {
+        assertThat(TextFit.wrap("Two squads and a nest in open ground", 20, 2))
+                .containsExactly("Two squads and a", "nest in open ground");
+    }
+
+    @Test
+    void cutsWhatTwoLinesCannotHoldAndSaysSo() {
+        assertThat(TextFit.wrap("one two three four five six seven eight", 10, 2))
+                .containsExactly("one two", "three f...");
+    }
+
+    @Test
+    void cutsAWordLongerThanALine() {
+        assertThat(TextFit.wrap("Feedinggroundfeeding", 8, 2)).containsExactly("Feedingg", "round...");
+    }
+
     @ParameterizedTest(name = "{0} -> {1}")
     @CsvSource({"0, 0", "7, 7", "999, 999", "1000, 999+", "123456, 999+", "-3, 0"})
     void showsACountAboveNineHundredAndNinetyNineAsNineHundredAndNinetyNinePlus(int value, String shown) {

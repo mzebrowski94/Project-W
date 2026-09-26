@@ -88,7 +88,7 @@ identical to a cold start by construction.
 
 ## Playing online
 
-On the scenario menu, **`H`** hosts the chosen scenario and **`J`** opens the join screen, which lists
+From the main menu, **PLAY ONLINE → HOST GAME** hosts the chosen scenario and **JOIN GAME** opens the join page, which lists
 the games heard on this network - LAN or Hamachi - and takes a room code or an address typed in. The
 joining copy plays the host's scenario, tuning and seed, whatever its own files say (ADR 0012). In game,
 the overlay's line under the last order says where you are connected, your input delay in ticks and
@@ -162,7 +162,7 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | A control point is a dark disc that fills up, drawn under everything standing on it | Whatever a control point looks like. The dwell, the reset and the radius are real, and the fill rides the same `charge` channel as everything else that fills up. |
 | A level's objectives are met and nothing happens | The level lifecycle. What a completed level *does* is an open question in `README.md`, and inventing an answer inside a system would settle it by accident. |
 | A scenario names its control points by hand, and the spawn area is a config value | Generated fragments saying where their own entrances and objectives are. Same standing as hand-laid rock. |
-| **Hosting is a key on the scenario list, and how to join it is a line in the stats overlay** | The game's own menu when there is one, and a place for the room code that is not the debug overlay. The session, the discovery and the join screen under them are real. |
+| **How to join a hosted game is a line in the stats overlay** (and the pause menu's room line) | A place for the room code that is not the debug overlay - a terminal dispatch when hosting starts (UI plan, stage 6). Hosting and joining are the main menu's own pages now; the session, the discovery and the join page under them are real. |
 | **Where you are connected, and your input delay, are a line in the stats overlay** | Whatever tells a player the link is slow without reading numbers (pillar 5). The numbers are real and published by `OnlineSession`; what is missing is a tell. |
 | Troopers roam to seeded random points when nothing is left to take | Something that actually searches - a sweep, a last-known-position, a patrol route. Roaming is enough to see the squad clear a map and is not a decision about how they search. |
 | A unit that is filling up is drawn as a brighter core inside its circle | Whatever the art does with it. `Appearance.charge` is the hook and is already published as a fraction, so the renderer decides and the simulation never learns how it is shown. |

@@ -159,7 +159,7 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().layout().metrics(),
                 context.controlsConfig(),
                 strings,
-                input.seats());
+                context.gamepads());
         // The press that started the level - Enter, Space, a click, SOUTH - is spent, not fired.
         input.spendHeldPresses();
         bound = null;

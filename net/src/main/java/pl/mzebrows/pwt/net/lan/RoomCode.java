@@ -13,8 +13,8 @@ import org.jspecify.annotations.Nullable;
  */
 public record RoomCode(String text) {
 
-    static final String ALPHABET = "ACDEFGHJKMNPQRTUVWXY34679";
-    static final int LENGTH = 4;
+    public static final String ALPHABET = "ACDEFGHJKMNPQRTUVWXY34679";
+    public static final int LENGTH = 4;
 
     public RoomCode {
         if (text.length() != LENGTH) {

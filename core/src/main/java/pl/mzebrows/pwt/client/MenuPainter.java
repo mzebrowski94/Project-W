@@ -23,6 +23,9 @@ final class MenuPainter {
     private final HudMetrics metrics;
     private final MenuLayout layout;
     private final Color scrim = new Color();
+    private final Color text = new Color();
+    private final Color dim = new Color();
+    private final Color bar = new Color();
 
     MenuPainter(Hud hud, HudStyle style, HudMetrics metrics) {
         this.hud = hud;
@@ -63,11 +66,13 @@ final class MenuPainter {
      * A page's panel.
      *
      * @param head title and body lines, already in words; the first is drawn bright
-     * @param entries the entries' words
+     * @param entries every entry's words; only {@code visible} of them from {@code scroll} are drawn
      * @param enabled which entries can be confirmed
      * @param selected the selected entry, or -1 for none (pointer mode, nothing hovered)
      * @param foot lines under the entries, dim
      * @param hint the last line: which buttons select and go back
+     * @param offsetX where the page's arrival has it, in UI pixels
+     * @param alpha how opaque its arrival has it
      */
     Rect page(
             Rect view,
@@ -76,27 +81,30 @@ final class MenuPainter {
             List<String> entries,
             boolean[] enabled,
             int selected,
+            int scroll,
+            int visible,
             List<String> foot,
-            String hint) {
-        int lines = firstEntryLine(head) + entries.size() + foot.size() + 2;
-        int widest = Math.max(hint.length(), Math.max(longest(head), Math.max(longest(entries), longest(foot))));
-        Rect panel = layout.panel(view, anchor, lines, widest);
+            String hint,
+            int offsetX,
+            float alpha) {
+        int shown = Math.min(visible, entries.size() - scroll);
+        int lines = firstEntryLine(head) + shown + foot.size() + 2;
+        Rect placed = layout.panel(view, anchor, lines, style.pageColumns());
+        Rect panel = new Rect(placed.x() + offsetX, placed.y(), placed.width(), placed.height());
         int columns = TextFit.columns(panel.width() - 4 * metrics.padding(), UiFont.ADVANCE);
         int x = layout.lineX(panel);
+        Color text = faded(this.text, style.text(), alpha);
+        Color dim = faded(this.dim, style.textDim(), alpha);
 
         hud.beginCanvas();
-        hud.fill(panel.x(), panel.y(), panel.width(), panel.height(), style.bar());
-        hud.frame(panel.x(), panel.y(), panel.width(), panel.height(), style.textDim());
+        hud.fill(panel.x(), panel.y(), panel.width(), panel.height(), faded(this.bar, style.bar(), alpha));
+        hud.frame(panel.x(), panel.y(), panel.width(), panel.height(), dim);
         int line = 0;
         for (int i = 0; i < head.size(); i++, line++) {
-            hud.text(
-                    TextFit.fit(head.get(i), columns),
-                    x,
-                    layout.lineTop(panel, line),
-                    i == 0 ? style.text() : style.textDim());
+            hud.text(TextFit.fit(head.get(i), columns), x, layout.lineTop(panel, line), i == 0 ? text : dim);
         }
         line = firstEntryLine(head);
-        for (int i = 0; i < entries.size(); i++, line++) {
+        for (int i = scroll; i < scroll + shown; i++, line++) {
             int top = layout.lineTop(panel, line);
             if (i == selected) {
                 hud.frame(
@@ -104,17 +112,38 @@ final class MenuPainter {
                         top - metrics.fontSize() - metrics.leading() / 2 - 1,
                         panel.width() - 2 * metrics.padding(),
                         metrics.fontSize() + metrics.leading() + 2,
-                        style.text());
+                        text);
             }
-            hud.text(TextFit.fit(entries.get(i), columns), x, top, enabled[i] ? style.text() : style.textDim());
+            hud.text(TextFit.fit(entries.get(i), columns), x, top, enabled[i] ? text : dim);
+        }
+        if (scroll > 0) {
+            hud.text(
+                    "^",
+                    panel.right() - 2 * metrics.padding() - UiFont.ADVANCE,
+                    layout.lineTop(panel, firstEntryLine(head)),
+                    dim);
+        }
+        if (scroll + shown < entries.size()) {
+            hud.text("v", panel.right() - 2 * metrics.padding() - UiFont.ADVANCE, layout.lineTop(panel, line - 1), dim);
         }
         line++;
         for (int i = 0; i < foot.size(); i++, line++) {
-            hud.text(TextFit.fit(foot.get(i), columns), x, layout.lineTop(panel, line), style.textDim());
+            hud.text(TextFit.fit(foot.get(i), columns), x, layout.lineTop(panel, line), dim);
         }
-        hud.text(TextFit.fit(hint, columns), x, layout.lineTop(panel, line), style.textDim());
+        hud.text(TextFit.fit(hint, columns), x, layout.lineTop(panel, line), dim);
         hud.endCanvas();
         return panel;
+    }
+
+    /** How many entries a panel in this view has room for, with this much head and foot. */
+    int visibleEntries(Rect view, List<String> head, int entries, int footLines) {
+        int pitch = metrics.fontSize() + metrics.leading();
+        int room = (view.height() - 3 * metrics.padding()) / pitch - firstEntryLine(head) - footLines - 2;
+        return Math.max(1, Math.min(entries, room));
+    }
+
+    private static Color faded(Color into, Color from, float alpha) {
+        return into.set(from.r, from.g, from.b, from.a * alpha);
     }
 
     /** The line the first entry is on - a blank line under the head - for finding what the pointer is over. */
@@ -126,11 +155,12 @@ final class MenuPainter {
         return layout;
     }
 
-    private static int longest(List<String> lines) {
-        int longest = 0;
-        for (String line : lines) {
-            longest = Math.max(longest, line.length());
-        }
-        return longest;
+    /**
+     * Adds {@code text} to {@code lines} wrapped to a page's width, on at most {@code maxLines} lines -
+     * the last one cut with an ellipsis if it runs over. For body lines and descriptions, which are
+     * sentences; titles, entries and hints are short enough for one line.
+     */
+    void addWrapped(List<String> lines, String text, int maxLines) {
+        lines.addAll(TextFit.wrap(text, style.pageColumns(), maxLines));
     }
 }

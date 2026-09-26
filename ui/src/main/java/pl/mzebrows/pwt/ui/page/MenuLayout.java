@@ -8,7 +8,7 @@ import pl.mzebrows.pwt.ui.layout.Rect;
  *
  * <p>A page is a column of lines in one panel: a head (title, body), the entries, and a foot (anything
  * the page lists under its entries, then the hint). In a level the panel is <b>docked</b> to the left
- * third of the view, because the camera centres on the player's man and a centred menu covers exactly
+ * edge of the view, because the camera centres on the player's man and a centred menu covers exactly
  * what he needs to see (plan 6.5); elsewhere it is centred.
  *
  * @param padding UI pixels between the panel's frame and its lines
@@ -23,17 +23,26 @@ public record MenuLayout(int padding, int pitch, int advance, int fontSize) {
         CENTRED
     }
 
-    /** The panel for this many lines, the widest {@code widestChars} characters long. */
-    public Rect panel(Rect view, Anchor anchor, int lines, int widestChars) {
-        int wanted = widestChars * advance + 4 * padding;
+    /**
+     * The panel for this many lines, {@code columns} characters wide whatever it holds - a page never
+     * changes width as its selection, its description or the device's hint changes. Only a view too
+     * narrow for it makes it narrower.
+     */
+    public Rect panel(Rect view, Anchor anchor, int lines, int columns) {
+        int wanted = width(columns);
         int height = Math.min(view.height(), lines * pitch + 3 * padding);
         if (anchor == Anchor.DOCKED_LEFT) {
-            int width = Math.min(view.width() - 4 * padding, Math.max(view.width() / 3, wanted));
+            int width = Math.min(view.width() - 4 * padding, wanted);
             int top = view.top() - 2 * padding;
             return new Rect(view.x() + 2 * padding, top - height, width, height);
         }
-        int width = Math.min(view.width(), wanted);
+        int width = Math.min(view.width() - 4 * padding, wanted);
         return new Rect(view.x() + (view.width() - width) / 2, view.y() + (view.height() - height) / 2, width, height);
+    }
+
+    /** How wide a panel of this many columns is: its text, and twice the padding each side. */
+    public int width(int columns) {
+        return columns * advance + 4 * padding;
     }
 
     /** The top of a line in a panel - where its capitals start. */

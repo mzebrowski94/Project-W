@@ -140,7 +140,10 @@ public record GraphicConfig(
                 properties.getBoolean("graphic.hud.rollCall", false),
                 properties.getFloat("graphic.ui.scrimAlpha", 0.55f),
                 properties.getFloat("graphic.ui.bannerScrimAlpha", 0.25f),
-                properties.getFloat("graphic.ui.motion.scrimSeconds", 0.08f));
+                properties.getFloat("graphic.ui.motion.scrimSeconds", 0.08f),
+                properties.getFloat("graphic.ui.motion.pageSeconds", 0.12f),
+                properties.getInt("graphic.ui.motion.pageSlide", 6),
+                properties.getInt("graphic.ui.page.columns", 60));
     }
 
     /**

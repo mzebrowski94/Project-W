@@ -6,6 +6,7 @@ import com.badlogic.gdx.Screen;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.ui.nav.SelectionMemory;
 
 /**
  * Application entry point: owns everything that outlives a single screen - configuration, assets and
@@ -27,6 +28,8 @@ public final class PwtGame extends Game implements GameContext {
     private GamepadSource gamepads;
     private Assets assets;
     private Hud hud;
+
+    private final SelectionMemory selections = new SelectionMemory();
 
     private @Nullable Screen pendingScreen;
 
@@ -132,6 +135,11 @@ public final class PwtGame extends Game implements GameContext {
     @Override
     public Hud hud() {
         return hud;
+    }
+
+    @Override
+    public SelectionMemory selections() {
+        return selections;
     }
 
     @Override

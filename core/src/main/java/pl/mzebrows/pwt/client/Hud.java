@@ -12,25 +12,20 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
 /**
- * Everything drawn in screen space rather than in the world: the UI canvas the bars are painted on,
- * and the older screen-pixel text the menu and the debug overlay still use.
+ * Everything drawn in screen space rather than in the world: the UI canvas the bars, the menus and the
+ * overlay are painted on, and the reticle.
  *
  * <p><b>The canvas</b> is the letterbox's pixel grid ({@link ScreenLayout}): one unit is one UI pixel, a
- * whole number of screen pixels square, drawn with {@link PixelFont} at whole positions only. It owns
- * the current layout, recomputed on every resize from the back buffer's size - physical pixels, so an
+ * whole number of screen pixels square, drawn with the UI font at whole positions only. It owns the
+ * current layout, recomputed on every resize from the back buffer's size - physical pixels, so an
  * operating system's display scaling cannot put a fraction in it.
  *
- * <p><b>Screen text</b> ({@link #line}) is libGDX's built-in font at one screen pixel per unit, which
- * lives inside the gdx jar rather than in {@code assets/}, so the harness works with no art at all.
- * It stays until the menu and the overlay move onto the canvas.
+ * <p><b>The reticle</b> alone is placed in screen pixels, so it follows the mouse exactly.
  */
 public final class Hud implements Disposable {
 
-    private static final float MARGIN = 24f;
-
     private final ScreenViewport viewport = new ScreenViewport();
     private final SpriteBatch batch = new SpriteBatch();
-    private final BitmapFont font = new BitmapFont();
 
     private final LayoutSpec spec;
     private final PixelViewport canvas = new PixelViewport();
@@ -139,40 +134,9 @@ public final class Hud implements Disposable {
         batch.end();
     }
 
-    /** Starts a screen-text pass. Every {@link #line} call must sit between this and {@link #end()}. */
-    public void begin() {
-        viewport.apply();
-        batch.setProjectionMatrix(viewport.getCamera().combined);
-        batch.begin();
-    }
-
-    /** Draws one line, counting down from the top of the screen. Row 0 is the topmost. */
-    public void line(int row, String text) {
-        font.draw(batch, text, MARGIN, viewport.getWorldHeight() - MARGIN - row * lineHeight());
-    }
-
-    /** Draws one line indented, for list items and hints. */
-    public void indentedLine(int row, String text) {
-        font.draw(batch, text, MARGIN * 2f, viewport.getWorldHeight() - MARGIN - row * lineHeight());
-    }
-
-    public void end() {
-        batch.end();
-    }
-
-    public float lineHeight() {
-        return font.getLineHeight() * 1.15f;
-    }
-
-    /** How many lines fit on screen, so a caller can anchor something to the bottom. */
-    public int rows() {
-        return (int) ((viewport.getWorldHeight() - MARGIN * 2f) / lineHeight());
-    }
-
     @Override
     public void dispose() {
         batch.dispose();
-        font.dispose();
         pixelFont.dispose();
         pixel.dispose();
         reticle.dispose();
