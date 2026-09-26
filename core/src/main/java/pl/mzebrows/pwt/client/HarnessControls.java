@@ -17,15 +17,12 @@ public final class HarnessControls {
     /**
      * This frame's harness commands, in the order they should be applied.
      *
-     * <p>{@link HarnessCommand#LEAVE} comes first when present. Pressing escape together with
-     * anything else should leave, not pause and then leave, and putting that ordering here rather
-     * than in the caller is what makes it testable.
+     * <p>{@code Esc} is not one of them any more: in a level it opens the pause menu, whose LEAVE asks
+     * first ({@code UI:play/leave}). {@code P} still pauses without a menu, so single-stepping with
+     * {@code .} sees the world.
      */
     public static List<HarnessCommand> poll(KeyPresses keys) {
         List<HarnessCommand> commands = new ArrayList<>(2);
-        if (keys.justPressed(Input.Keys.ESCAPE)) {
-            commands.add(HarnessCommand.LEAVE);
-        }
         if (keys.justPressed(Input.Keys.P)) {
             commands.add(HarnessCommand.PAUSE);
         }

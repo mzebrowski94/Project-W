@@ -137,7 +137,10 @@ public record GraphicConfig(
                 properties.getBoolean("graphic.hud.reticle.keyboard", false),
                 properties.getBoolean("graphic.hud.reticle.pads", false),
                 properties.getFloat("graphic.hud.reticle.padDistance", 24f),
-                properties.getBoolean("graphic.hud.rollCall", false));
+                properties.getBoolean("graphic.hud.rollCall", false),
+                properties.getFloat("graphic.ui.scrimAlpha", 0.55f),
+                properties.getFloat("graphic.ui.bannerScrimAlpha", 0.25f),
+                properties.getFloat("graphic.ui.motion.scrimSeconds", 0.08f));
     }
 
     /**

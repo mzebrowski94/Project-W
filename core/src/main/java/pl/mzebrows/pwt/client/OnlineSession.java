@@ -245,6 +245,21 @@ public final class OnlineSession implements ScenarioPlay {
     }
 
     @Override
+    public void setPaused(boolean on) {
+        peer.pause(on);
+    }
+
+    @Override
+    public boolean canRestart() {
+        return invitation != null;
+    }
+
+    @Override
+    public boolean online() {
+        return true;
+    }
+
+    @Override
     public OverlayMode overlayMode() {
         return overlayMode;
     }

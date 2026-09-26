@@ -52,6 +52,9 @@ numbers.
 | D11 | Q22: is every hostile blow decisive? | **Not decided.** The interface acts as if an outcome is either lethal (KIA) or non-lethal (DOWN); no health bar, no invariant test yet. | Revisit if a chipping blow appears. |
 | D12 | Q24: a reticle for pad players? | **Yes, a fixed distance along his aim** (`graphic.hud.reticle.padDistance` 24 world units) - and both reticles, the keyboard's included, **off by default** (`graphic.hud.reticle.keyboard`, `.pads`). | With the keyboard's off the system pointer shows. |
 | D13 | Q30: who owns the top bar's right block? | **A reserved slot** (`UI:hud/top/aside`), content open; the dev overlay sits in it in the alpha. | - |
+| D14 | Stage 4: pages as scene2d widgets (6.1)? | **No - painted on the UI canvas like the bars.** `MenuLayout` (ui) places lines and hit-tests the pointer; `MenuPainter` (core) draws. | The pages are short columns in the interface's own pixel font; widgets would only wrap them, and the decisions stay testable without a display. The skin-file restyle of 6.1 becomes `graphic.properties` colours for now. Revisit for the campaign list's scrolling (stage 5) or Options (stage 10) if either needs real widgets. |
+| D15 | A pad unplugged and plugged back in was seated as a new player. (2026-09-26) | **An unknown pad takes back a seat whose pad is missing** - same name first, else the lowest - before it seats a new player. | gdx-controllers' desktop backend makes up a random id per connection (`JamepadController`), so the id cannot recognise a returning pad. Accepted cost: somebody new plugging in while a player's pad is out takes over that player's commander. |
+| D16 | Q7, Q26, Q27, Q29 (stage 4). | **As proposed**: offline, a lost window or an unplugged seated pad opens the pause menu; online neither does. No "get ready" beat on resume. The pause shared, the menu local, `P` menu-less. | Q8 (who paused) stays `PAUSED`. |
 
 ---
 

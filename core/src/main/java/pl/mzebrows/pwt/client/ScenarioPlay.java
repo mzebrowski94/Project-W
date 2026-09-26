@@ -42,6 +42,22 @@ public interface ScenarioPlay extends AutoCloseable {
 
     boolean paused();
 
+    /**
+     * Asks for the pause to be on or off - not a toggle, because online a pause asked for a moment ago
+     * may not have landed yet, and toggling on top of it would undo it. Offline it happens at once.
+     */
+    void setPaused(boolean on);
+
+    /** Whether RESTART is this machine's to give: offline, or while it hosts. */
+    default boolean canRestart() {
+        return true;
+    }
+
+    /** Whether other machines share this game - so a lost window or an unplugged pad does not pause it. */
+    default boolean online() {
+        return false;
+    }
+
     /** How much of the dev overlay is shown; {@code F1} steps through the modes. */
     OverlayMode overlayMode();
 

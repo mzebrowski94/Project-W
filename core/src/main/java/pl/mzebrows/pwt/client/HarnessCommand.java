@@ -25,6 +25,6 @@ public enum HarnessCommand {
     TOGGLE_COSMETIC_LEAD,
     /** A joining copy: step the simulated lag to the next of {@code net.conditions.latencySteps}. */
     NEXT_LAG,
-    /** Leave for the menu. */
+    /** Leave for the menu - what the pause menu's LEAVE carries out, once confirmed. */
     LEAVE
 }

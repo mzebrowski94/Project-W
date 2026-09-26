@@ -17,8 +17,12 @@ import org.jspecify.annotations.Nullable;
  * <p><strong>A seat is kept when its pad goes away.</strong> A pulled cable, a flat battery and
  * somebody kicking the dongle all look the same from here, and all three are almost always followed
  * by the pad coming back. So the seat stays, the commander stays standing on the field, and the pad
- * that comes back is put in the seat it left rather than in a new one - which is what the pad's id is
- * for. What the player loses is the seconds he was unplugged, and his commander spends them standing
+ * that comes back is put in the seat it left rather than in a new one. <strong>Not by its id alone</strong>:
+ * the desktop backend gives a pad a new random id every time it is plugged in, so a pad that returns is
+ * a stranger by id. A pad the seats do not know therefore takes back a seat whose pad is missing - one
+ * whose pad had the same name first, else the lowest - and only claims a new seat when none is missing.
+ * The cost, accepted: somebody new plugging in while a player's pad is out takes that player's
+ * commander, which on one sofa is a word across the room. What the player loses is the seconds he was unplugged, and his commander spends them standing
  * still, because an empty seat reads as an idle input rather than as the last thing he was holding.
  *
  * <p>Detections are logged, both ways. A pad that does not work is the single most likely thing to go
@@ -42,11 +46,17 @@ public final class PlayerSeats {
     /** The pad id sitting in each slot, or null for a free seat. Slot zero is never a pad's. */
     private final @Nullable String[] idBySlot = new String[SEATS];
 
+    /** The name of the pad last seen in each slot, so a returning pad can find its own seat first. */
+    private final @Nullable String[] nameBySlot = new String[SEATS];
+
     /** The live pad for each slot, or null while that slot's pad is unplugged. */
     private final @Nullable Gamepad[] padBySlot = new Gamepad[SEATS];
 
     /** Slots that have taken a pad for the first time and not yet been reported to the caller. */
     private final boolean[] unreported = new boolean[SEATS];
+
+    /** Seats whose pad has just gone and that have not been reported to the caller yet. */
+    private final boolean[] unreportedUnplug = new boolean[SEATS];
 
     /** Which seats were empty last frame, so a departure is logged once rather than sixty times a second. */
     private final boolean[] wasMissing = new boolean[SEATS];
@@ -75,8 +85,15 @@ public final class PlayerSeats {
         }
         turnedAway = 0;
         int count = pads.count();
+        // Two passes: every pad the seats know first, so a stranger can only take back a seat whose
+        // own pad is really gone this frame - not one whose pad simply comes later in the list.
         for (int i = 0; i < count; i++) {
-            seat(pads.get(i));
+            reseat(pads.get(i));
+        }
+        for (int i = 0; i < count; i++) {
+            if (slotOf(pads.get(i).id()) < 0) {
+                seat(pads.get(i));
+            }
         }
         wasTurnedAway = turnedAway;
         reportTheMissing();
@@ -109,7 +126,8 @@ public final class PlayerSeats {
         return -1;
     }
 
-    private void seat(Gamepad pad) {
+    /** Puts a pad the seats already know back in its seat. Does nothing for a stranger. */
+    private void reseat(Gamepad pad) {
         int existing = slotOf(pad.id());
         if (existing >= 0) {
             // Against wasMissing, not against padBySlot - that is cleared at the top of every
@@ -119,6 +137,32 @@ public final class PlayerSeats {
                 Log.info("gamepad reconnected in slot " + existing + ": " + pad.name());
             }
             padBySlot[existing] = pad;
+            nameBySlot[existing] = pad.name();
+        }
+    }
+
+    /**
+     * The lowest seat whose pad has just been unplugged, or -1. Asking clears it, as {@link
+     * #nextNewlySeated()} does - offline, it is what pauses the game for the player who lost his pad.
+     */
+    public int nextNewlyUnplugged() {
+        for (int slot = 0; slot < SEATS; slot++) {
+            if (unreportedUnplug[slot]) {
+                unreportedUnplug[slot] = false;
+                return slot;
+            }
+        }
+        return -1;
+    }
+
+    /** Seats a pad the seats do not know: in a seat whose pad is gone, else a free one. */
+    private void seat(Gamepad pad) {
+        int returning = missingSeatFor(pad.name());
+        if (returning >= 0) {
+            idBySlot[returning] = pad.id();
+            padBySlot[returning] = pad;
+            nameBySlot[returning] = pad.name();
+            Log.info("gamepad reconnected in slot " + returning + ": " + pad.name());
             return;
         }
         int free = lowestFreeSlot();
@@ -131,6 +175,7 @@ public final class PlayerSeats {
         }
         idBySlot[free] = pad.id();
         padBySlot[free] = pad;
+        nameBySlot[free] = pad.name();
         unreported[free] = true;
         Log.info("gamepad seated in slot " + free + ": " + pad.name()
                 + (PadLabels.isPlayStation(pad.name()) ? " (PlayStation labels)" : " (Xbox labels)"));
@@ -140,10 +185,31 @@ public final class PlayerSeats {
         for (int slot = 0; slot < SEATS; slot++) {
             boolean missing = idBySlot[slot] != null && padBySlot[slot] == null;
             if (missing && !wasMissing[slot]) {
+                unreportedUnplug[slot] = true;
                 Log.info("gamepad in slot " + slot + " disconnected; his commander stays on the field");
             }
             wasMissing[slot] = missing;
         }
+    }
+
+    /**
+     * A seat whose pad is not plugged in this refresh: the one whose pad had this name, else the
+     * lowest. -1 if no seat is waiting for its pad.
+     */
+    private int missingSeatFor(String name) {
+        int any = -1;
+        for (int slot = KEYBOARD_SLOT + 1; slot < SEATS; slot++) {
+            if (idBySlot[slot] == null || padBySlot[slot] != null) {
+                continue;
+            }
+            if (name.equals(nameBySlot[slot])) {
+                return slot;
+            }
+            if (any < 0) {
+                any = slot;
+            }
+        }
+        return any;
     }
 
     private int slotOf(String id) {

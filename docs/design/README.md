@@ -363,8 +363,15 @@ do not treat one as taken when adding a game binding. None of them is on the pad
 | `4` | D-pad left | Squad order: cancel | built - scaffolding, see below |
 | `Tab` | `LB` / `L1` | Pull the view back for a look, and put it back. **One camera, so anybody's press moves everybody's view** | built |
 | `` ` `` | - | Swap the bottom bar between the players' panels and the roll call. This machine's bar, so it swaps for everybody on it | built - the roll call is a placeholder |
-| - | `Start` / `Options` | Pause | built (pad only; `Esc` is the harness's, and `P` pauses there) |
+| `Esc` | `Start` / `Options` | Open the pause menu, which asks for the pause. **The pause is everybody's; the menu is this machine's** - another machine sees the paused banner. Offline, losing the window or a seated pad opens it too | built |
 | - | - | Unbound on the pad: `Y`/`Triangle`, `Back`/`Share`, both stick clicks. Left free on purpose | - |
+
+**In pages and modals** (the pause menu, and the menus to come): arrows or `W`/`S` and the d-pad or
+left stick move the selection, repeating while held; `Enter`/`Space` and `A`/`Cross` confirm;
+`Esc`/`Backspace`, `B`/`Circle` and the right mouse button go back; the mouse hovers and clicks; a pad's
+`Start` resumes. These are the same buttons that act and throw in a level, so **a press that changes
+context is spent**: whatever is held when a menu opens or closes, or a level starts, does nothing in the
+game until it has been let go once. Bindings: `controls.ui.*` in `controls.properties`.
 
 Plugging a pad in **is** joining, and unplugging is not leaving (G0028). There is no binding for
 either and there is not going to be one.

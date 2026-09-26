@@ -80,6 +80,7 @@ public final class ScenarioScreen extends ScreenAdapter {
     /** Whether the bottom bar shows the roll call instead of the players' panels. This machine's view. */
     private boolean rollCall;
 
+    private final UiStrings strings;
     private final TopBarPainter topBar;
     private final BottomBarPainter bottomBar;
     private final KeyPresses keys = keycode -> Gdx.input.isKeyJustPressed(keycode);
@@ -96,6 +97,9 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     @SuppressWarnings("NullAway.Init")
     private CameraDirector camera;
+
+    @SuppressWarnings("NullAway.Init")
+    private PlayMenus menus;
 
     /** Cached: Ashley keeps this view live, so it must not be re-queried per frame. */
     private ImmutableArray<Entity> focused = new ImmutableArray<>(new Array<>());
@@ -117,9 +121,9 @@ public final class ScenarioScreen extends ScreenAdapter {
         this.context = context;
         this.play = play;
         GraphicConfig graphicConfig = context.graphicConfig();
-        this.overlay = new DebugOverlay(context.hud());
+        this.overlay = new DebugOverlay();
         HudStyle style = graphicConfig.hud();
-        UiStrings strings = UiStrings.load();
+        this.strings = UiStrings.load();
         this.rollCall = style.rollCallAtStart();
         this.goalLine = new GoalLine(style.goalHoldSeconds(), style.pulseHz(), style.flashScale());
         this.alarms = new PanelAlarms(
@@ -149,7 +153,21 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().groundDetail());
         input = new InputReader(viewport, context.controlsConfig(), context.gamepads());
         camera = new CameraDirector(context.graphicConfig().camera());
+        menus = new PlayMenus(
+                context.hud(),
+                context.graphicConfig().hud(),
+                context.graphicConfig().layout().metrics(),
+                context.controlsConfig(),
+                strings,
+                input.seats());
+        // The press that started the level - Enter, Space, a click, SOUTH - is spent, not fired.
+        input.spendHeldPresses();
         bound = null;
+    }
+
+    /** The window lost focus: offline, the pause menu opens (plan Q7). */
+    public void focusLost() {
+        menus.focusLost();
     }
 
     @Override
@@ -157,17 +175,20 @@ public final class ScenarioScreen extends ScreenAdapter {
         // Input is read first, and therefore against the camera as it was when the frame the player
         // reacted to was drawn. Moving the camera before reading would interpret the mouse against a
         // view they have not seen yet.
-        PlayerInputs players = input.read(held, keys);
+        PlayerInputs players = input.read(held, keys, menus.menuOpen());
         for (int joined = input.seats().nextNewlySeated();
                 joined >= 0;
                 joined = input.seats().nextNewlySeated()) {
             play.seat(joined);
         }
+        ScreenLayout layout = context.hud().layout();
+        if (play.simulation() == null) {
+            menus.updateConnecting(delta, play, players, keys, held, input, layout);
+        } else if (menus.update(delta, play, input, players, keys, held, layout)) {
+            input.spendHeldPresses();
+        }
         for (HarnessCommand command : HarnessControls.poll(keys)) {
             play.apply(command, players);
-        }
-        if (input.pauseRequested()) {
-            play.apply(HarnessCommand.PAUSE, players);
         }
         if (input.zoomToggled()) {
             camera.toggleWide();
@@ -190,9 +211,9 @@ public final class ScenarioScreen extends ScreenAdapter {
         if (world == null) {
             // Online, before the world has arrived: connecting, joining, or turned away.
             context.hud().showSystemCursor();
-            ScreenUtils.clear(context.graphicConfig().backgroundColor());
+            ScreenUtils.clear(context.graphicConfig().hud().bar());
             String connection = play.connection();
-            overlay.renderWaiting(connection == null ? "..." : connection);
+            menus.drawConnecting(layout, connection == null ? "..." : connection);
             return;
         }
         announceAction();
@@ -210,7 +231,6 @@ public final class ScenarioScreen extends ScreenAdapter {
         clearLetterbox();
         terrain.render();
         renderer.render(play.renderAlpha(), play.cosmeticLead() ? localAim : null);
-        ScreenLayout layout = context.hud().layout();
         OverlayMode mode = play.overlayMode();
         List<String> lines = mode == OverlayMode.OFF
                 ? List.of()
@@ -228,6 +248,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         } else {
             bottomBar.render(layout, readout, seating, connected, alarms);
         }
+        menus.draw(layout, play);
         drawReticles(play.renderAlpha());
     }
 
@@ -240,6 +261,15 @@ public final class ScenarioScreen extends ScreenAdapter {
     private void drawReticles(float alpha) {
         HudStyle style = context.graphicConfig().hud();
         Hud hud = context.hud();
+        if (menus.menuOpen()) {
+            // In a menu the pointer is the menu's, and nobody is aiming.
+            if (menus.wantsPointer()) {
+                hud.showSystemCursor();
+            } else {
+                hud.hideSystemCursor();
+            }
+            return;
+        }
         int keyboard = play.slotOf(PlayerSeats.KEYBOARD_SLOT);
         if (style.keyboardReticle() && keyboard >= 0) {
             hud.hideSystemCursor();

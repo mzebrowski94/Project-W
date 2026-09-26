@@ -218,6 +218,11 @@ public final class ScenarioSession implements ScenarioPlay {
     }
 
     @Override
+    public void setPaused(boolean on) {
+        paused = on;
+    }
+
+    @Override
     public OverlayMode overlayMode() {
         return overlayMode;
     }

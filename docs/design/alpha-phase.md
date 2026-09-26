@@ -63,14 +63,14 @@ Dev controls, available in any scenario. **These are not game bindings** - the r
 
 | Key | Does |
 |---|---|
-| `P` | Pause and unpause |
+| `P` | Pause and unpause, with no menu: the paused banner shows and `.` single-steps a world you can see |
 | `.` | Advance exactly one tick, while paused |
 | `R` | Restart the scenario from its first tick |
 | `G` | Make the commander invulnerable, or stop. A dev tool - pillar 2 says he can be killed |
 | `F1` | Step the stats overlay: its panel in the top bar's right corner, then every line over the view's corner, then off |
 | `F2` | Online: draw your own commanders facing your aim at once, or as the world has them (the cosmetic lead, on by default) |
 | `F3` | Online, a joining copy: step the simulated lag through `net.conditions.latencySteps` |
-| `Esc` | Back to the scenario menu |
+| `Esc` | Not the harness's any more: in a level it opens the pause menu, whose LEAVE TO MENU asks first |
 
 Online, pause is anybody's and pauses every machine; restart and `G` are the host's, and do nothing
 from anyone else; a single step is offline only (G0038).

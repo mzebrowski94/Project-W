@@ -83,6 +83,16 @@ public final class PwtGame extends Game implements GameContext {
         }
     }
 
+    /**
+     * The window lost focus. Offline, a level opens its pause menu - an alt-tab mid-fight would otherwise
+     * cost the player his man; online nothing stops for one player's alt-tab.
+     */
+    public void focusLost() {
+        if (getScreen() instanceof ScenarioScreen level) {
+            level.focusLost();
+        }
+    }
+
     @Override
     public void resize(int width, int height) {
         hud.resize(width, height);

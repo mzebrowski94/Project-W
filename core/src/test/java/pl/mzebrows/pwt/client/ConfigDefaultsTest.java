@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
@@ -60,8 +61,22 @@ class ConfigDefaultsTest {
                         hud.keyboardReticle(),
                         hud.padReticles(),
                         hud.padReticleDistance(),
-                        hud.rollCallAtStart()))
+                        hud.rollCallAtStart(),
+                        hud.scrimAlpha(),
+                        hud.bannerScrimAlpha(),
+                        hud.scrimSeconds()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void drivesPagesWithEnterEscapeAndThePadsSouthAndEast() {
+        ControlsConfig.Ui ui = ControlsConfig.load().ui();
+
+        assertThat(ui.confirm()).isEqualTo(Input.Keys.ENTER);
+        assertThat(ui.back()).isEqualTo(Input.Keys.ESCAPE);
+        assertThat(ui.padConfirm()).isEqualTo(GamepadButton.SOUTH);
+        assertThat(ui.padBack()).isEqualTo(GamepadButton.EAST);
+        assertThat(ui.repeatDelaySeconds()).isGreaterThan(ui.repeatIntervalSeconds());
     }
 
     @Test

@@ -8,7 +8,6 @@ import com.badlogic.gdx.Gdx;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
@@ -31,10 +30,7 @@ import pl.mzebrows.pwt.sim.def.Order;
  * system you are guessing about. Entity counts catch leaks - projectiles that never despawn,
  * enemies that never die - long before they are visible on screen.
  */
-@RequiredArgsConstructor
 public final class DebugOverlay {
-
-    private final Hud hud;
 
     /**
      * The overlay's lines, most useful first, so a panel with room for four shows the four that matter
@@ -68,19 +64,8 @@ public final class DebugOverlay {
                 + count(simulation, Obstacle.class));
         lines.add("entities " + simulation.engine().getEntities().size());
         lines.add("last order " + (lastOrder == null ? "-" : lastOrder.name().toLowerCase(Locale.ROOT)));
-        lines.add("1 follow 2 forward 3 defence 4 cancel  P pause . step R restart G god F1 F2 lead F3 lag ESC");
+        lines.add("1 follow 2 forward 3 defence 4 cancel  P pause . step R restart G god F1 F2 lead F3 lag ESC menu");
         return lines;
-    }
-
-    /**
-     * What an online screen shows before it has a world: where it is connecting, or why it is not.
-     * Escape still leaves.
-     */
-    public void renderWaiting(String connection) {
-        hud.begin();
-        hud.line(0, connection);
-        hud.line(hud.rows() - 1, "ESC back to the menu");
-        hud.end();
     }
 
     /**

@@ -1,0 +1,187 @@
+package pl.mzebrows.pwt.ui.page;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+
+class UiFlowTest {
+
+    @Test
+    void goesBackOnePageAtATime() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+        flow.apply(UiIntent.open(UiPage.ONLINE));
+        flow.apply(UiIntent.open(UiPage.ONLINE_HOST));
+
+        flow.apply(UiIntent.BACK);
+
+        assertThat(flow.top()).isEqualTo(UiPage.ONLINE);
+        flow.apply(UiIntent.BACK);
+        assertThat(flow.top()).isEqualTo(UiPage.MAIN);
+    }
+
+    @Test
+    void neverQuitsOnBackFromTheMainPage() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+
+        UiEffect effect = flow.apply(UiIntent.BACK);
+
+        assertThat(effect).isEqualTo(UiEffect.SELECT_EXIT);
+        assertThat(flow.top()).isEqualTo(UiPage.MAIN);
+    }
+
+    @Test
+    void quitsOnlyFromTheExitConfirm() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+
+        assertThat(flow.apply(UiIntent.QUIT_APP)).isEqualTo(UiEffect.NONE);
+        flow.apply(UiIntent.open(UiPage.EXIT_CONFIRM));
+        assertThat(flow.apply(UiIntent.QUIT_APP)).isEqualTo(UiEffect.QUIT_APP);
+    }
+
+    @Test
+    void opensOnlyAPageThatBelongsUnderTheOneOpen() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+
+        flow.apply(UiIntent.open(UiPage.ONLINE_JOIN));
+
+        assertThat(flow.top()).isEqualTo(UiPage.MAIN);
+    }
+
+    @Test
+    void startsTheScenarioChosenOnTheCampaignPage() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+        flow.apply(UiIntent.open(UiPage.CAMPAIGN));
+
+        UiEffect effect = flow.apply(UiIntent.start(3));
+
+        assertThat(effect).isEqualTo(new UiEffect(UiEffect.Kind.START, 3));
+    }
+
+    @Test
+    void opensTheMenuAtOnceAndAsksForThePause() {
+        UiFlow flow = playing(false);
+
+        UiEffect effect = flow.apply(UiIntent.PAUSE);
+
+        assertThat(flow.top()).isEqualTo(UiPage.PAUSE);
+        assertThat(flow.menuOpen()).isTrue();
+        assertThat(effect).isEqualTo(UiEffect.REQUEST_PAUSE);
+    }
+
+    @Test
+    void keepsTheMenuOpenWhileThePauseIsStillOnItsWay() {
+        UiFlow flow = playing(false);
+        flow.apply(UiIntent.PAUSE);
+
+        flow.observe(false, true);
+        flow.observe(false, true);
+
+        assertThat(flow.top()).isEqualTo(UiPage.PAUSE);
+    }
+
+    @Test
+    void asksToResumeAPauseThatHadNotLandedYet() {
+        UiFlow flow = playing(false);
+        flow.apply(UiIntent.PAUSE);
+
+        UiEffect effect = flow.apply(UiIntent.BACK);
+
+        assertThat(effect).isEqualTo(UiEffect.REQUEST_RESUME);
+        assertThat(flow.top()).isEqualTo(UiPage.PLAY);
+    }
+
+    @Test
+    void asksForNoPauseWhenTheGameIsAlreadyPaused() {
+        UiFlow flow = playing(true);
+
+        assertThat(flow.apply(UiIntent.PAUSE)).isEqualTo(UiEffect.NONE);
+        assertThat(flow.top()).isEqualTo(UiPage.PAUSE);
+    }
+
+    @Test
+    void showsTheBannerAndTakesNoSelectionWhenSomebodyElsePauses() {
+        UiFlow flow = playing(false);
+
+        flow.observe(true, true);
+
+        assertThat(flow.top()).isEqualTo(UiPage.PLAY);
+        assertThat(flow.menuOpen()).isFalse();
+        assertThat(flow.showsPausedBanner()).isTrue();
+    }
+
+    @Test
+    void closesTheMenuWhenAnybodyResumes() {
+        UiFlow flow = playing(false);
+        flow.apply(UiIntent.PAUSE);
+        flow.observe(true, true);
+        flow.apply(UiIntent.open(UiPage.LEAVE_CONFIRM));
+
+        flow.observe(false, true);
+
+        assertThat(flow.top()).isEqualTo(UiPage.PLAY);
+    }
+
+    @Test
+    void resumesOnBackFromThePauseMenuAndStepsBackFromTheLeaveConfirm() {
+        UiFlow flow = playing(true);
+        flow.apply(UiIntent.PAUSE);
+        flow.apply(UiIntent.open(UiPage.LEAVE_CONFIRM));
+
+        assertThat(flow.apply(UiIntent.BACK)).isEqualTo(UiEffect.NONE);
+        assertThat(flow.top()).isEqualTo(UiPage.PAUSE);
+        assertThat(flow.apply(UiIntent.BACK)).isEqualTo(UiEffect.REQUEST_RESUME);
+        assertThat(flow.top()).isEqualTo(UiPage.PLAY);
+    }
+
+    @Test
+    void leavesOnlyThroughTheConfirm() {
+        UiFlow flow = playing(true);
+        flow.apply(UiIntent.PAUSE);
+
+        assertThat(flow.apply(UiIntent.LEAVE)).isEqualTo(UiEffect.NONE);
+        flow.apply(UiIntent.open(UiPage.LEAVE_CONFIRM));
+        assertThat(flow.apply(UiIntent.LEAVE)).isEqualTo(UiEffect.LEAVE);
+    }
+
+    @Test
+    void hidesRestartFromAPeerThatDoesNotHost() {
+        UiFlow flow = playing(true);
+        flow.observe(true, false);
+        flow.apply(UiIntent.PAUSE);
+
+        assertThat(flow.canRestart()).isFalse();
+        assertThat(flow.apply(UiIntent.RESTART)).isEqualTo(UiEffect.NONE);
+        assertThat(flow.top()).isEqualTo(UiPage.PAUSE);
+    }
+
+    @Test
+    void restartsFromThePauseMenuAndClosesIt() {
+        UiFlow flow = playing(true);
+        flow.apply(UiIntent.PAUSE);
+
+        assertThat(flow.apply(UiIntent.RESTART)).isEqualTo(UiEffect.RESTART);
+        assertThat(flow.top()).isEqualTo(UiPage.PLAY);
+    }
+
+    @Test
+    void cannotReachGameOver() {
+        UiFlow flow = playing(true);
+
+        flow.apply(UiIntent.open(UiPage.GAME_OVER));
+
+        assertThat(flow.top()).isEqualTo(UiPage.PLAY);
+    }
+
+    @Test
+    void leavesWhenBackIsPressedWhileConnecting() {
+        UiFlow flow = new UiFlow(UiPage.CONNECTING);
+
+        assertThat(flow.apply(UiIntent.BACK)).isEqualTo(UiEffect.LEAVE);
+    }
+
+    private static UiFlow playing(boolean paused) {
+        UiFlow flow = new UiFlow(UiPage.PLAY);
+        flow.observe(paused, true);
+        return flow;
+    }
+}

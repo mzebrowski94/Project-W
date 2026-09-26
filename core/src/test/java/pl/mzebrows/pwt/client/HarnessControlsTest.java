@@ -31,14 +31,10 @@ class HarnessControlsTest {
                 .containsExactlyInAnyOrder(HarnessCommand.PAUSE, HarnessCommand.TOGGLE_OVERLAY);
     }
 
-    /**
-     * Escape together with anything else means leave, not do-the-other-thing-and-then-leave. The
-     * order is a promise the session relies on, so it is pinned here rather than left to the caller.
-     */
+    /** Esc opens the pause menu now, which is the game's; the harness must not also leave on it. */
     @Test
-    void putsLeaveFirstWhenItIsPressedAlongsideSomethingElse() {
-        assertThat(HarnessControls.poll(pressed(Input.Keys.R, Input.Keys.ESCAPE)))
-                .startsWith(HarnessCommand.LEAVE);
+    void leavesEscapeToThePauseMenu() {
+        assertThat(HarnessControls.poll(pressed(Input.Keys.ESCAPE))).isEmpty();
     }
 
     @Test
@@ -49,7 +45,6 @@ class HarnessControlsTest {
 
     private static Stream<Arguments> bindings() {
         return Stream.of(
-                Arguments.of("escape", Input.Keys.ESCAPE, HarnessCommand.LEAVE),
                 Arguments.of("p", Input.Keys.P, HarnessCommand.PAUSE),
                 Arguments.of("period", Input.Keys.PERIOD, HarnessCommand.STEP),
                 Arguments.of("r", Input.Keys.R, HarnessCommand.RESTART),

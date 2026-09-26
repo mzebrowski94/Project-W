@@ -20,7 +20,7 @@ import java.util.Locale;
  * an Xbox pad and a PlayStation one and {@link PadLabels} decides what the player is told to press.
  * Binding an action to {@link GamepadButton#NONE} is how the file says "not on the pad".
  */
-public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware hardware) {
+public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware hardware, Ui ui) {
 
     private static final String FILE = "controls.properties";
 
@@ -140,10 +140,50 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
         }
     }
 
+    /**
+     * How pages and modals are driven (plan 6.2). Pad buttons by position (ADR 0011): in a page
+     * {@code SOUTH} confirms and {@code EAST} goes back, which in a level are act and throw - the
+     * release latch keeps the one from becoming the other.
+     *
+     * @param confirm, confirmAlias keys that confirm the selected entry
+     * @param back, backAlias keys that go back a page
+     * @param padConfirm, padBack pad buttons that confirm and go back
+     * @param stickThreshold how far a stick must be pushed to move the selection
+     * @param repeatDelaySeconds how long a held direction waits before it repeats
+     * @param repeatIntervalSeconds how often it repeats after that
+     * @param pointerWakePixels how far the mouse must move, in screen pixels, to take the selection
+     */
+    public record Ui(
+            int confirm,
+            int confirmAlias,
+            int back,
+            int backAlias,
+            GamepadButton padConfirm,
+            GamepadButton padBack,
+            float stickThreshold,
+            float repeatDelaySeconds,
+            float repeatIntervalSeconds,
+            int pointerWakePixels) {}
+
     /** Loads the bindings, falling back to the defaults below for anything missing or malformed. */
     public static ControlsConfig load() {
         GameProperties properties = GameProperties.load(FILE);
-        return new ControlsConfig(keyboard(properties), pad(properties), feel(properties), hardware(properties));
+        return new ControlsConfig(
+                keyboard(properties), pad(properties), feel(properties), hardware(properties), ui(properties));
+    }
+
+    private static Ui ui(GameProperties properties) {
+        return new Ui(
+                key(properties, "controls.ui.key.confirm", Input.Keys.ENTER),
+                key(properties, "controls.ui.key.confirmAlias", Input.Keys.SPACE),
+                key(properties, "controls.ui.key.back", Input.Keys.ESCAPE),
+                key(properties, "controls.ui.key.backAlias", Input.Keys.BACKSPACE),
+                button(properties, "controls.ui.pad.confirm", GamepadButton.SOUTH),
+                button(properties, "controls.ui.pad.back", GamepadButton.EAST),
+                properties.getFloat("controls.ui.nav.stickThreshold", 0.5f),
+                properties.getFloat("controls.ui.nav.repeatDelaySeconds", 0.35f),
+                properties.getFloat("controls.ui.nav.repeatIntervalSeconds", 0.09f),
+                properties.getInt("controls.ui.nav.pointerWakePixels", 4));
     }
 
     private static Keyboard keyboard(GameProperties properties) {

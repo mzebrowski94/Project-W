@@ -56,10 +56,10 @@ keeps in shot).
 | `UI:main/online/host` | page | `UI:main/online` | `UiPage.ONLINE_HOST` | `MenuScreen` + scenario list | planned (hosting built, reached by `H` today) |
 | `UI:main/options` | page | `UI:main` | `UiPage.OPTIONS` | `MenuScreen` | placeholder |
 | `UI:main/exit` | modal | `UI:main` | `UiPage.EXIT_CONFIRM` | `MenuScreen` | planned |
-| `UI:connecting` | page | - | `UiPage.CONNECTING` | `ScenarioScreen` (no world yet) | built as `DebugOverlay.renderWaiting`; restyle planned |
+| `UI:connecting` | page | - | `UiPage.CONNECTING` | `PlayMenus` (no world yet) | built (a panel on the canvas; Back leaves) |
 | `UI:play` | state | - | `UiPage.PLAY` | `ScenarioScreen` | built |
-| `UI:play/pause` | modal | `UI:play` | `UiPage.PAUSE` | `ScenarioScreen` | planned |
-| `UI:play/leave` | modal | `UI:play/pause` | `UiPage.LEAVE_CONFIRM` | `ScenarioScreen` | planned |
+| `UI:play/pause` | modal | `UI:play` | `UiPage.PAUSE` | `PlayMenus` | built |
+| `UI:play/leave` | modal | `UI:play/pause` | `UiPage.LEAVE_CONFIRM` | `PlayMenus` | built |
 | `UI:play/game-over` | modal | `UI:play` | `UiPage.GAME_OVER` | `ScenarioScreen` | **blocked** - "On failure, do you retry the level, or is the run over?" and the scaffolding row "The commander always respawns" (`docs/design/README.md`, `alpha-phase.md`) |
 
 `MenuScreen` stays the one libGDX `Screen` for every `UI:main...` page: pages are a stack inside it,
@@ -224,9 +224,9 @@ carried out by the screen that owns the page, through `GameContext.queueScreen` 
 | `UI:main/online/join` | `JOIN(c)` | `UI:connecting` | `OnlineSession.join(...)` |
 | `UI:connecting` | world arrives | `UI:play` | - |
 | `UI:connecting` | `BACK` / ended | `UI:main` | `queueScreen(new MenuScreen(ctx, reason))` |
-| `UI:play` | `PAUSE` (Esc, pad START) | `UI:play/pause` at once | `play.apply(HarnessCommand.PAUSE, ...)` unless already paused; this machine's commanders on neutral input until it lands |
+| `UI:play` | `PAUSE` (Esc, pad START) | `UI:play/pause` at once | `play.setPaused(true)` unless already paused; this machine's commanders on neutral input until it lands |
 | `UI:play` | somebody paused (another machine, or `P`) | `UI:play`, paused banner shown | - (derived; no page, no selection taken) |
-| `UI:play/pause` | `RESUME` / `BACK` | `UI:play` at once | `play.apply(HarnessCommand.PAUSE, ...)`; the press is spent (`ReleaseLatch`) |
+| `UI:play/pause` | `RESUME` / `BACK` | `UI:play` at once | `play.setPaused(false)` - also for a pause still on its way; the press is spent (`ReleaseLatch`) |
 | `UI:play/pause`, `UI:play/leave` | anybody resumed | `UI:play` | - (derived) |
 | `UI:play/pause` | `RESTART` | `UI:play` | `play.apply(HarnessCommand.RESTART, ...)` |
 | `UI:play/pause` | `OPEN(LEAVE_CONFIRM)` | `UI:play/leave` | - |
@@ -290,7 +290,7 @@ the look of the selection.
 | `UI:hud/bottom/status` | `HudSlot.STATUS` | inside each player panel, row 1, after the label | empty while he stands; `ui.hud.down = DOWN` with his bleed-out as a draining bar; `ui.hud.kia = KIA {seconds}`; `ui.hud.aboard = ABOARD`. `DOWN` and `KIA` in alert. No health bar: an outcome is non-lethal (DOWN) or lethal (KIA) (plan D11) | built |
 | `UI:hud/bottom/weapon` | `HudSlot.WEAPON` | inside each player panel, row 2 | `ui.weapon.*` name (≤ 7 characters) and a heat bar in the world's heat colours; while overheated `ui.hud.overheat = OVERHEAT` in alert in the bar's place. No ammunition | built |
 | `UI:hud/bottom/tally` | `HudSlot.TALLY` | inside each player panel, row 3, dim | three icons and per-life numbers - kills, goals, stabilised - `999+` above 999; the labelled form (`ui.hud.kills = KILL COUNT:`, `ui.hud.goals = MISSION GOALS:`, `ui.hud.stabilised = UNITS HEALED:`) is on `UI:play/pause` | planned; needs the tally (plan section 9) |
-| `UI:hud/view/paused` | `HudSlot.PAUSED` | over the view, top, over a light scrim | `ui.hud.paused = PAUSED` and `ui.hud.pausedHint = {key}: MENU`, while paused with no menu open on this machine | planned |
+| `UI:hud/view/paused` | `HudSlot.PAUSED` | over the view, top, over a light scrim | `ui.hud.paused = PAUSED` and `ui.hud.pausedHint = {key}: MENU`, while paused with no menu open on this machine | built |
 | `UI:hud/bottom/roll-call` | `HudSlot.ROLL_CALL` | bottom bar, instead of the panels, swapped by `controls.key.rollCall` (`` ` ``); `graphic.hud.rollCall` opens a level on it | one compact row per player - colour, status, tally - for games of more than four. `ui.hud.rollCall = ROLL CALL - PLACEHOLDER` for now | placeholder; design open (plan section 19) |
 | `UI:hud/view/reticle` | `HudSlot.RETICLE` | over everything: the keyboard player's at the pointer's screen position, a pad player's `graphic.hud.reticle.padDistance` world units along his aim | the player's reticle, in his colour, outlined (plan 7.5). Each off by default (`graphic.hud.reticle.keyboard`, `.pads`); with the keyboard's off, the system pointer shows | built |
 

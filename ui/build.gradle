@@ -9,3 +9,10 @@ dependencies {
 
   testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
 }
+
+// Tests read shipped files - the specification UiSpecTest locks the enums to, and the words TextFitTest
+// fits - so a change to either must rerun them rather than leave the task up to date.
+tasks.named('test') {
+  inputs.file(rootProject.file('docs/ui/menu_layout_agent.md')).withPathSensitivity(PathSensitivity.RELATIVE)
+  inputs.dir(rootProject.file('assets/i18n')).withPathSensitivity(PathSensitivity.RELATIVE)
+}

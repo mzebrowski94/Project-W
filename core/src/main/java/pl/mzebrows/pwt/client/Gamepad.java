@@ -11,12 +11,10 @@ package pl.mzebrows.pwt.client;
 public interface Gamepad {
 
     /**
-     * Something that identifies this pad for as long as it is plugged in, and identifies it again
-     * when it is plugged back in.
-     *
-     * <p>What a player's slot is reclaimed by: unplugging a pad leaves its commander standing on the
-     * field, and plugging it back in has to put the same player behind him rather than seating a
-     * fifth one.
+     * Something that identifies this pad for as long as it is plugged in. Not necessarily when it is
+     * plugged back in: gdx-controllers' desktop backend makes up a new random id for every connection,
+     * which is why {@link PlayerSeats} gives a stranger back a seat whose pad is missing before it
+     * seats a new player.
      */
     String id();
 

@@ -27,6 +27,10 @@ import com.badlogic.gdx.graphics.Color;
  * @param padReticles whether each pad player gets a reticle a fixed distance along his aim
  * @param padReticleDistance how far along his aim a pad player's reticle sits, in world units
  * @param rollCallAtStart whether a level opens on the roll call rather than the players' panels
+ * @param scrimAlpha how dark the view goes under a menu - dark enough to say the world is not live,
+ *     light enough to read the frozen fight
+ * @param bannerScrimAlpha how dark it goes under the paused banner, with no menu open here
+ * @param scrimSeconds how long the scrim takes to come and go, before the motion scale
  */
 public record HudStyle(
         Color text,
@@ -45,7 +49,10 @@ public record HudStyle(
         boolean keyboardReticle,
         boolean padReticles,
         float padReticleDistance,
-        boolean rollCallAtStart) {
+        boolean rollCallAtStart,
+        float scrimAlpha,
+        float bannerScrimAlpha,
+        float scrimSeconds) {
 
     /** Nothing may flash more often than this a second - the photosensitive-seizure threshold. */
     public static final float MAX_PULSE_HZ = 3f;

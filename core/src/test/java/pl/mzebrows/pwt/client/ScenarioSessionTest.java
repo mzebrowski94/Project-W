@@ -118,6 +118,25 @@ class ScenarioSessionTest {
     }
 
     @Test
+    void pausesAndResumesWhenAskedRatherThanToggling() {
+        ScenarioSession session = session();
+
+        session.setPaused(true);
+        session.setPaused(true);
+        assertThat(session.paused()).isTrue();
+        session.setPaused(false);
+        assertThat(session.paused()).isFalse();
+    }
+
+    @Test
+    void letsAnOfflinePlayerRestartAndPausesForHisLostWindow() {
+        ScenarioSession session = session();
+
+        assertThat(session.canRestart()).isTrue();
+        assertThat(session.online()).isFalse();
+    }
+
+    @Test
     void startsWithGodModeOff() {
         ScenarioSession session = session();
 

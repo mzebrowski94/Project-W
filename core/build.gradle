@@ -16,6 +16,12 @@ dependencies {
   testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
 }
 
+// UiFontTest reads the shipped font and words; a change to either must rerun it.
+tasks.named('test') {
+  inputs.dir(rootProject.file('assets/ui')).withPathSensitivity(PathSensitivity.RELATIVE)
+  inputs.dir(rootProject.file('assets/i18n')).withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 // Packs assets-raw/ into a single atlas under assets/atlas/. Run manually after
 // changing source art: ./gradlew :core:packTextures
 configurations {

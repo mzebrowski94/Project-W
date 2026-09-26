@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.lwjgl3;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter;
 import com.badlogic.gdx.graphics.glutils.HdpiMode;
 import pl.mzebrows.pwt.client.GraphicConfig;
 import pl.mzebrows.pwt.client.LaunchOptions;
@@ -18,8 +19,16 @@ public final class Lwjgl3Launcher {
         }
         GraphicConfig graphicConfig = GraphicConfig.load();
         LaunchOptions options = LaunchOptions.parse(args);
-        new Lwjgl3Application(
-                new PwtGame(graphicConfig, options, new GlfwPointer()), configuration(graphicConfig, options));
+        PwtGame game = new PwtGame(graphicConfig, options, new GlfwPointer());
+        Lwjgl3ApplicationConfiguration configuration = configuration(graphicConfig, options);
+        // Offline, a lost window opens the pause menu (plan Q7); the game decides, this only tells it.
+        configuration.setWindowListener(new Lwjgl3WindowAdapter() {
+            @Override
+            public void focusLost() {
+                game.focusLost();
+            }
+        });
+        new Lwjgl3Application(game, configuration);
     }
 
     private static Lwjgl3ApplicationConfiguration configuration(GraphicConfig graphicConfig, LaunchOptions options) {
