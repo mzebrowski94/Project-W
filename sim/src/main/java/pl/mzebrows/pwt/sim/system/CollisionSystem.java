@@ -41,23 +41,14 @@ import pl.mzebrows.pwt.sim.def.Side;
 /**
  * Runs the constraint solver, then decides what this tick's contacts mean.
  *
- * <p>The split matters: the solver knows geometry and nothing else, and this class knows the game and
- * no geometry at all.
+ * <p>The solver knows geometry and nothing else; this class knows the game and no geometry.
  *
- * <p>There is one rule for every contact, and it is about sides rather than about kinds. Nothing
- * happens between two entities on the same side, which is what stops a commander shooting itself and
- * enemies eating each other with no special case for either. Across sides, whoever carries a
- * {@link ContactDamage} that is off cooldown lands a hit - claws, bullets and a swung fist alike,
- * differing only in their numbers.
+ * <p><strong>One rule for every contact, about sides rather than kinds</strong>: nothing happens
+ * within a side; across sides, whoever carries a {@link ContactDamage} off cooldown lands a hit. A
+ * blow with a lock holds <em>both</em> parties still and throws whatever survives it.
  *
- * <p>A blow that carries a lock holds <em>both</em> parties still and throws whatever survives it.
- * That one rule covers both halves of the melee exchange: an enemy that reaches the commander is
- * committed to the kill for three seconds, and a sweep that answers a leap costs the commander a
- * shorter opening of his own. The asymmetry is entirely in the numbers.
- *
- * <p>It never subtracts health and never removes anything. A hit adds to the target's {@link Damage},
- * and a spent projectile is marked dead; what those mean is decided later in the tick, by systems
- * that know nothing about collision.
+ * <p>It never subtracts health and never removes anything: a hit adds to {@link Damage}, a spent shot
+ * is marked dead, and later systems decide what those mean.
  */
 public final class CollisionSystem extends EntitySystem implements ConstraintSolver.ContactListener {
 
@@ -89,9 +80,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * The length of the tick being resolved, for the one decision here that is a chance per second.
      *
-     * <p>A field because contacts arrive through a callback the solver owns, and threading a number
-     * that never varies within a tick through every contact would be a worse shape than setting it
-     * once. Written at the top of {@link #update(float)} and read nowhere else.
+     * <p>A field because contacts arrive through the solver's callback. Written at the top of
+     * {@link #update(float)}.
      */
     @NotState("scratch: this tick's step, set at the start of update for the contact callbacks")
     private float deltaTime;
@@ -157,17 +147,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * Notes which way a thrown thing came off whatever it ran into, and stops there.
      *
-     * <p>Recorded rather than answered, for the reason everything in this class is: geometry knows two
-     * circles overlapped, and whether that is a bounce depends on which way the thing was already
-     * travelling - which is {@code GrenadeSystem}'s question. It is the same split as damage owed and
-     * a pickup claimed.
-     *
-     * <p>It comes off <em>scenery</em> and nothing else, so one grenade passes through another, through
-     * a bullet, and through every unit on the field. That is the whole test, and it is a question about
-     * collider flags rather than about what any of it is.
-     *
-     * <p>First in the method, and it returns, because a grenade in the air is harmless: nothing should
-     * spend an enemy's attack cooldown on it or offer it a mushroom.
+     * <p>Recorded, not answered: whether it bounces is {@code GrenadeSystem}'s question. It comes off
+     * <em>scenery</em> alone. First in the method, and it returns: a grenade in the air is harmless.
      */
     private static void bounce(Entity a, Entity b) {
         if (THROWN.has(a) && prop(b)) {
@@ -192,17 +173,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * Scenery: something standing on the field that never moves and is not on its way out.
      *
-     * <p><strong>A grenade passes through anything alive.</strong> It came off units when this was
-     * first built, and one playtest in a crowd showed why that is wrong: with a dozen bodies between
-     * the commander and where he was aiming, where a throw ends up stops being anything a player can
-     * predict, and the bank off a wall - the whole reason the throw is worth having - is drowned in
-     * noise. Nothing had to be added to fix it: a unit is solid <em>and movable</em>, so it drops out
-     * of this test on its own.
-     *
-     * <p>The corpse clause is the one deliberate exclusion. A dying body is scenery everywhere else in
-     * the game - solid, immovable, and it stops bullets - but it appears and vanishes on a one-second
-     * clock, and a surface that comes and goes unannounced is exactly the unpredictability the rest of
-     * this rule exists to remove.
+     * <p><strong>A grenade passes through anything alive</strong> (G0019): a unit is solid and movable,
+     * so it drops out. A corpse is excluded too - it comes and goes unannounced.
      */
     private static boolean prop(Entity entity) {
         if (!COLLIDER.has(entity)) {
@@ -215,14 +187,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * A shot at a pickup that can be hurt, rather than something reaching out to take it.
      *
-     * <p>Almost every pickup is scenery a weapon passes through, and being taken is the only thing
-     * that can happen to one - which is why contact with a pickup is a claim and nothing else. A
-     * pickup that carries health is the exception: it can be denied, and a shot or a sweep at one has
-     * to reach the damage path rather than being absorbed by the claim that fails.
-     *
-     * <p>Only a weapon asks. A unit walking into a rabbit is having dinner, not attacking it, however
-     * much contact damage it happens to carry - which is exactly why this is a question about the
-     * thing that touched it rather than about whether that thing can hurt things.
+     * <p>Contact with a pickup is a claim, except a weapon touching one that carries health: that
+     * reaches the damage path. A unit walking into a rabbit is eating it, not attacking it.
      */
     private static boolean shotAt(Entity pickup, Entity other) {
         return (PROJECTILE.has(other) || STRIKE.has(other)) && DAMAGE.has(pickup);
@@ -231,26 +197,13 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * Marks a pickup as taken by whoever touched it, if that side has anything to gain.
      *
-     * <p>Nothing is granted here. The claim is recorded on both parties and {@code PickupSystem}
-     * decides what it means, for the same reason contact never subtracts health: geometry knows two
-     * circles overlapped and nothing else. It does not know whether the taker is dying, what a grant
-     * does, or where a level-scope one has to land.
+     * <p>Nothing is granted here: the claim is recorded and {@code PickupSystem} decides what it means.
+     * A pickup already dying or already claimed this tick is not claimable, and a side it offers
+     * nothing passes over it - so it goes to exactly one taker.
      *
-     * <p>A pickup already dying is not claimable either. It matters for exactly one of them: shooting
-     * something that runs away is only denial if the corpse cannot then be eaten.
-     *
-     * <p><strong>A shunned pickup is taken only if the dice say so</strong> (G0022). It is the one
-     * decision here that is not settled by what the two things are, and it belongs with the other
-     * two guards rather than in {@code PickupSystem}: this is where a claim is <em>made</em>, and a
-     * claim made and then taken back would leave a barrel spent for nothing. Touching one is the
-     * opportunity and {@code AiChance.BITE_A_BARREL} is how often it is taken, per second of it - so
-     * a creature shoved against a barrel in a crowd goes off with it, and one that brushes past does
-     * not. The commander is offered nothing by a barrel and so never reaches this at all.
-     *
-     * <p>The two guards above are what make a pickup go to exactly one taker and never vanish for nothing.
-     * A pickup already claimed this tick is spent, so the second unit to reach it walks on; a side the
-     * definition offers nothing simply passes over it and leaves it standing, which is what lets one
-     * item mean different things to the commander and to what is chasing him.
+     * <p><strong>A shunned pickup is taken only if the dice say so</strong> (G0022), per second of
+     * touching it ({@code AiChance.BITE_A_BARREL}). Decided here, where a claim is made, so a claim is
+     * never taken back.
      */
     private void claim(Entity pickupEntity, Entity taker) {
         Pickup pickup = PICKUP.get(pickupEntity);
@@ -269,8 +222,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         }
         if (TAKING.get(taker).claim(pickup.kind)) {
             pickup.claimed = true;
-            // Which of the two things a barrel can be is decided by what reached it, so it is
-            // recorded here with the claim and read where the claim is spent.
+            // What reached it decides which blast a barrel makes; read where the claim is spent.
             pickup.swallowed = TAKING.get(taker).swallows;
         }
     }
@@ -278,10 +230,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * A body in its throes is scenery. Scenery does not go shopping, and it does not fight either.
      *
-     * <p>Both halves of that matter. A unit killed by a <em>blow</em> is clinched, so the stun already
-     * stopped it swinging; a unit killed by a <em>shot</em> is not stunned at all, because shooting
-     * something commits the shooter to nothing. Its claws stayed live for the whole of its throes, and
-     * walking over something you had just shot killed you.
+     * <p>A unit shot dead is not stunned, so without this its claws stay live through its throes.
      */
     private static boolean inert(@Nullable Entity entity) {
         return entity != null && DYING.has(entity) && DYING.get(entity).begun;
@@ -290,16 +239,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * Whether the attacker can reach the target at all, given the arc its blow declares.
      *
-     * <p><strong>Which way it is going is which way it is facing.</strong> That is the same
-     * derivation the renderer already makes for everything that steers itself, so the picture and
-     * the rule cannot disagree - a creature drawn walking away from you is a creature that cannot
-     * bite you. Reading the published facing instead would mean gameplay depending on a component
-     * written for the renderer, and written a dozen systems later in the tick at that.
-     *
-     * <p>Something standing perfectly still reaches all round, because {@code Sight.withinArc} treats
-     * a facing of nothing as facing everywhere. That is the right answer rather than a gap: a
-     * creature that has stopped can turn on the spot, and anything pressing into the commander is
-     * moving into him even while the solver holds it apart.
+     * <p><strong>Which way it is going is which way it is facing</strong> - this tick's velocity, not
+     * last tick's {@code Facing}. Something standing still reaches all round: it can turn on the spot.
      */
     private static boolean reaches(Entity attacker, Entity target, float arcCosine) {
         if (arcCosine <= -1f || !VELOCITY.has(attacker) || !POSITION.has(attacker) || !POSITION.has(target)) {
@@ -323,16 +264,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * A projectile is used up on whatever stops it, whether or not that thing can be hurt.
      *
-     * <p><strong>A piercing shot is stopped by scenery alone</strong> and passes through anything
-     * alive - the same rule, and the same {@link #prop} test, a thrown grenade has followed since
-     * G0019. Rock and the arena edge are not here at all: they stop a shot in
-     * {@code ProjectileBoundsSystem}, which asks nothing about what kind of shot it is, so "it only
-     * stops at walls" needs nothing said about walls.
-     *
-     * <p><strong>Some things do not stop one at all.</strong> Ruined ground is a circle lying on the
-     * floor rather than something standing on it, and it was spending every shot fired across it -
-     * so a frog fencing off the ground also fenced off the gun. That is a flag on the collider like
-     * being solid and being worth going round, asked here and nowhere else.
+     * <p><strong>A piercing shot is stopped by scenery alone</strong> ({@link #prop}, G0019); rock and the
+     * arena edge are {@code ProjectileBoundsSystem}'s. Ruined ground stops nothing - a collider flag.
      */
     private void spend(Entity projectile, Entity target) {
         strike(projectile, target);
@@ -357,8 +290,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         if (held(attacker) || held(owner(attacker))) {
-            // Something already landed on this attacker; it is not swinging at anything until it
-            // comes round. Its cooldown is not spent either - it never got the blow off.
+            // Held still or off its feet: no blow, and no cooldown spent.
             return;
         }
         ContactDamage attack = CONTACT_DAMAGE.get(attacker);
@@ -372,8 +304,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         Damage owed = DAMAGE.get(target);
         boolean staggering = attack.victimInvulnerableTicks > 0;
         if (staggering && owed.staggered()) {
-            // Something already staggered this target this tick; a second blow does not connect, so it
-            // does not cost this attacker its cooldown either.
+            // Already staggered this tick: no second blow, and no cooldown spent.
             return;
         }
         attack.remainingTicks = attack.cooldownTicks;
@@ -381,8 +312,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         owed.add(attack.amount, attack.victimInvulnerableTicks, attack.fatal);
-        // Recorded, not applied, exactly as the shove is: what a hit costs is decided by the system
-        // that knows the hit landed, and a blow with no slow on it writes nothing at all.
+        // Recorded, not applied, as the shove is.
         owed.slow(attack.slowFactor, attack.slowTicks);
         owed.pump(attack.bloat);
         recordSource(attacker, owed);
@@ -392,23 +322,12 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * Holds both parties still, and throws the target away from whoever swung.
      *
-     * <p>Both halves resolve to the swing's owner where there is one. For the lock that is because a
-     * sweep is gone in a tenth of a second and it is the commander who has to live with the opening it
-     * costs him. For the throw it is because a sweep can be on the <em>far</em> side of what it hits -
-     * it travels an arc - and pushing away from the sweep would then shove the target into the
-     * commander's face, which is the exact opposite of what a parry is for.
+     * <p>Both resolve to the swing's owner where there is one: he lives with the opening, and a sweep on
+     * the far side of its target must not throw it into his face. <strong>The lock is what a parry
+     * earns</strong>: spent only on something committed to attacking.
      *
-     * <p><strong>The lock is what a parry earns, not what a kill costs.</strong> A melee weapon spends
-     * it only on something that had already committed to attacking; a sweep that kills something
-     * merely walking towards him is a swat, and he keeps his feet. Without that, the safest thing on
-     * the field would be the most expensive to kill, which is exactly backwards.
-     *
-     * <p>Both of those are recorded rather than applied, because both depend on whether the target
-     * survives and nothing here has touched its health yet - {@code DamageSystem} decides. A blow that
-     * kills throws nothing and locks its author: the body stops where it was struck and the two of them
-     * are tangled together for a beat. A blow that is survived throws its target and locks nobody: the
-     * commander has shoved something away, which is not the same as being caught up with it, and he
-     * keeps fighting.
+     * <p>Both are recorded, since they depend on survival: a killing blow locks its author and throws
+     * nothing; a survived one throws its target and locks nobody.
      */
     private void lock(Entity attacker, Entity target, ContactDamage attack, Damage owed) {
         if (!attack.locks()) {
@@ -426,9 +345,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * Already coming at you: wound up to leap, in the air, or between the leaps of a sequence.
      *
-     * <p>The hesitation counts. It is the moment the unit has committed to the jump and the moment the
-     * player is answering, so a sweep that lands on the wind-up is the same parry as one that lands on
-     * the jump - and treating only the airborne half as committed would make the tell a trap.
+     * <p>The wind-up counts: a sweep on it is the same parry as one on the jump.
      */
     private static boolean committed(Entity target) {
         return LEAP.has(target) && LEAP.get(target).committed();
@@ -459,10 +376,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      * Notes where the blow came from, so that whatever decides what it costs can also decide what it
      * provokes (G0016).
      *
-     * <p>For a shot that is the <em>muzzle</em> rather than the impact: a projectile lands a stride
-     * from its victim, and walking at that is walking on the spot. For a sweep it is whoever swung,
-     * because a sweep travels an arc and is often on the far side of what it hits. For anything
-     * else - claws, a body - it is the attacker itself.
+     * <p>A shot's <em>muzzle</em>, a sweep's owner, and otherwise the attacker itself.
      */
     private void recordSource(Entity attacker, Damage owed) {
         if (PROJECTILE.has(attacker)) {
@@ -489,11 +403,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /**
      * Not swinging at anything: held still by a blow, or off its feet.
      *
-     * <p>Asked through {@link Drivers} rather than answered here. Three systems used to carry their
-     * own copy of this question and one of them had already drifted - a commander shot off his feet
-     * went on walking and firing, because his copy knew about being stunned and dying and not about
-     * being a casualty. The cost of a private copy is that the drift is invisible until somebody
-     * plays it.
+     * <p>Asked through {@link Drivers}, the one copy of this question.
      */
     private static boolean held(@Nullable Entity entity) {
         return entity != null && Drivers.held(entity);

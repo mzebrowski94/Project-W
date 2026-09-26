@@ -44,22 +44,10 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 /**
  * Publishes what each entity is doing, so the renderer can show it without asking (G0003, pillar 5).
  *
- * <p>Every state an entity can be in is derived here, in one place and in one order, rather than
- * written by whichever system happened to cause it. Two systems writing the same field is how a unit
- * ends up drawn as winding up while it is actually stunned - which would be worse than no tell at
- * all, because the player would have learned to trust it.
- *
- * <p>The precedence is worst-news-first, with one deliberate exception at the top. <strong>A
- * <em>fatal</em> lock outranks being dead</strong>, and only a fatal one: something swatted while it
- * walked is stunned as it dies and reads as dying, because the player has no reason to be in suspense
- * about it. Both parties to a landed blow read as {@code GRAPPLING} for the
- * whole lock, the loser included, so that for that beat the player cannot tell from the picture which
- * of them is getting back up - only when the lock ends does the loser fail to stand.
- *
- * <p>That is a knowing exception to pillar 5, and it is narrow: it lasts exactly as long as the lock,
- * it applies only to an entity that has just been in an exchange, and everything else about the two
- * is still on screen. A death with no exchange behind it - anything shot - reads as {@code DYING}
- * immediately, as it should.
+ * <p>Every state is derived here, in one place and one order, never written by whichever system
+ * caused it. The precedence is worst-news-first, with one deliberate exception: <strong>a
+ * <em>fatal</em> lock outranks being dead</strong>, so both parties read as {@code GRAPPLING} for the
+ * whole lock - a narrow, knowing exception to pillar 5. Anything shot reads as {@code DYING} at once.
  */
 public final class AppearanceSystem extends IteratingSystem {
 
@@ -95,12 +83,8 @@ public final class AppearanceSystem extends IteratingSystem {
     /**
      * How far into the level everything that shines is, in seconds, for this tick.
      *
-     * <p>One phase for the whole level rather than one per entity, and that is the decision rather
-     * than a shortcut: a crate carrying a phase of its own would be a field on a pooled component
-     * that has to be reset, for a difference the player cannot see - two crates are rarely on screen
-     * close enough together for anybody to read whether they pulse together. It is worked out from
-     * the level's tick at the start of each update rather than accumulated here, because a clock kept
-     * in a system is state no snapshot sees (ADR 0014).
+     * <p>One phase for the whole level, worked out from the level's tick each update - a clock kept in
+     * a system is state no snapshot sees (ADR 0014).
      */
     @NotState("scratch: recomputed from the level's tick at the start of every update")
     private float shineSeconds;
@@ -110,8 +94,7 @@ public final class AppearanceSystem extends IteratingSystem {
     /**
      * How much of a nest's core is showing before its clock has started, as a fraction.
      *
-     * <p>Small enough to read as a dot rather than as work in progress, and large enough to be seen -
-     * it is what a nest that has noticed nobody says about itself.
+     * <p>A dot, not work in progress.
      */
     private static final float WAITING = 0.3f;
 
@@ -129,9 +112,7 @@ public final class AppearanceSystem extends IteratingSystem {
 
     @Override
     public void update(float deltaTime) {
-        // Once for the tick, before anything is published, so every shining thing on the field
-        // reports the same moment of the same pulse. Plus one because the level's tick is counted
-        // after the systems have run, and this is the end of the tick that is running now.
+        // Once for the tick. Plus one: the level's tick is counted after the systems run.
         long tick = levels.size() == 0 ? 0L : LEVEL.get(levels.first()).tick;
         shineSeconds = (float) ((tick + 1L) * (double) deltaTime);
         super.update(deltaTime);
@@ -144,12 +125,10 @@ public final class AppearanceSystem extends IteratingSystem {
         publishCharge(entity, appearance);
         appearance.ordered = TROOPER.has(entity)
                 && (TROOPER.get(entity).order != null || TROOPER.get(entity).pushingForward());
-        // What it is carrying goes off where it lands. A fact about the gun, so nothing here asks
-        // what kind of creature is holding it.
+        // A fact about the gun, not the creature.
         appearance.charged = WEAPON.has(entity) && WEAPON.get(entity).blastRadius > 0f;
         publishTrail(entity, appearance);
-        // How hot its gun is, and whether that has taken it away. Pillar 5: a bar the player cannot
-        // see is a bar he is guessing at, and this one is entirely his own doing.
+        // How hot its gun is, and whether that has taken it away (pillar 5).
         appearance.heat = HEAT.has(entity) ? HEAT.get(entity).value : 0f;
         appearance.overheated = HEAT.has(entity) && HEAT.get(entity).locked;
     }
@@ -157,15 +136,7 @@ public final class AppearanceSystem extends IteratingSystem {
     /**
      * Where a shot is drawn back to: the muzzle it came from, no further back than its gun allows.
      *
-     * <p>Everything else in the game is a dot and publishes its own position, which the renderer
-     * reads as "no line". A gun that fires forty times a second is read as a stream of dots unless
-     * the dots are joined, and the beam is the whole of what the laser is (pillar 5) - so the shot
-     * says where it came from and the renderer joins the two ends.
-     *
-     * <p><strong>Every pixel of that line is on the path a real simulated shot actually took.</strong>
-     * Nothing here is a hitscan and nothing is invented: the line starts at the muzzle, grows at the
-     * shot's own speed, and stops dead where the shot did - which is what makes a beam that has hit
-     * something look different from one that has not.
+     * <p><strong>Every pixel of that line is on the path a real simulated shot took</strong> - no hitscan.
      */
     private static void publishTrail(Entity entity, Appearance appearance) {
         if (!PROJECTILE.has(entity)) {
@@ -190,97 +161,61 @@ public final class AppearanceSystem extends IteratingSystem {
     /**
      * How far through something this entity is, in {@code [0, 1]}, and what that something is.
      *
-     * <p>Pillar 5 says the player never tracks a number the game does not show, and how much an
-     * enemy has eaten is exactly such a number. Published as a fraction rather than as a count so the
-     * renderer needs to know nothing about strains or thresholds - and so that anything else that
-     * fills up can use the same channel later.
-     *
-     * <p>A strain with nowhere to grow reports nothing, which is what almost everything reports.
-     *
-     * <p>It publishes the look alongside the number, in one pass, for the reason this whole class
-     * exists: two methods walking the same conditions is how a charge ends up drawn in the colour of
-     * the mechanic above the one that set it.
+     * <p>A fraction, so the renderer knows nothing about thresholds (pillar 5). Number and look are
+     * published in one pass, so they cannot come from different branches.
      */
     private void publishCharge(Entity entity, Appearance appearance) {
         appearance.chargeLook = Look.NONE;
         if (ACTION.has(entity) && ACTION.get(entity).progress > 0f) {
-            // The work shows on the man doing it, not on the man being worked on - the casualty's
-            // own circle is already saying how long he has left, and one circle cannot carry two
-            // meanings without the player having to guess which.
-            //
-            // It is the one charge with a colour of its own. Everything else on this channel is a
-            // clock the player is losing; this is the one he is winning, and at a glance the two
-            // must not be the same picture.
+            // The work shows on the man doing it; the casualty's circle shows his clock. Its own
+            // colour: the one clock the player is winning.
             appearance.chargeLook = Look.MENDING;
             appearance.charge = ACTION.get(entity).progress;
             return;
         }
         if (BLOAT.has(entity) && BLOAT.get(entity).charged()) {
-            // A thing being pumped up, above everything else on this channel because it is the only
-            // thing here that is about to kill somebody. In a colour of its own for the reason the
-            // fuse has one: everything else that fills up is a thing getting ready, and two circles
-            // that ask for opposite reactions must not look alike.
-            //
-            // Drawn on the living as readily as on the dead, so the player can watch the thing he is
-            // burning fill up and decide whether to keep the beam on it through the kill. What he
-            // must not be able to read off it is any change to the creature itself - the ring grows
-            // over the body and the body is untouched.
+            // A body being pumped up: above everything else here, in its own colour. On the living
+            // too; the ring grows over the body and the body is untouched.
             appearance.chargeLook = Look.BLOAT;
             appearance.charge = BLOAT.get(entity).charge;
             return;
         }
         if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
-            // How long a man on the ground has left, on the same channel as everything else that
-            // fills up - read backwards, as a blast is. Pillar 5 at its sharpest: a rescue the
-            // player cannot time is a rescue he cannot decide to attempt.
+            // How long a man on the ground has left, read backwards (pillar 5).
             appearance.charge = CASUALTY.get(entity).fraction();
             return;
         }
         if (BLAST.has(entity)) {
-            // A blast burning out rides the same channel as a unit filling up, read backwards. One
-            // way of drawing "how far through this is", learnt once and recognised everywhere.
+            // A blast burning out, read backwards.
             appearance.charge = BLAST.get(entity).fade();
             return;
         }
         if (MINE.has(entity)) {
-            // The fuse, in a colour of its own, and the only thing on this channel that is darker
-            // than what it is drawn on. Everything else that fills up is a body brightened, and a
-            // thing that is about to go off in your face must not read as a thing getting ready.
-            // Before it is armed it says nothing at all, which is what makes a minefield a field of
-            // dots until somebody steps into it.
+            // The fuse, in its own colour; nothing before it is armed.
             appearance.chargeLook = Look.FUSE;
             appearance.charge = MINE.get(entity).flash();
             return;
         }
         if (SLICK.has(entity)) {
-            // Ground that is changing says how far through it is, and ground that is simply lying
-            // there says nothing. A fire swells, burns down and goes out, and the same channel that
-            // draws a blast burning out draws the heart of it; venom is the same circle from the
-            // tick it lands to the tick it is gone, and a core on it would be a tell about nothing.
+            // Ground that is changing says how far through it is; ground that is not says nothing.
             Slick slick = SLICK.get(entity);
             appearance.charge = slick.animated() ? slick.fade() : 0f;
             return;
         }
         if (POINT.has(entity)) {
-            // A point filling up is the same tell as a unit filling up, deliberately: one
-            // way of drawing \"nearly there\", learnt once and read everywhere.
+            // A point filling up, the same tell as a unit filling up.
             appearance.charge = POINT.get(entity).progress();
             return;
         }
         if (NEST.has(entity)) {
-            // What comes out of it, in that strain's own colour, and how close the next lot is. It
-            // never falls to nothing, which is the one thing on this channel that does not: every
-            // other charge is a thing in progress, and half of this one is an identity. A hole the
-            // player cannot tell a grunt nest from until it opens is a hole he learns about by being
-            // caught by it, and pillar 5 says what a thing is must be legible from how it looks.
+            // What comes out of it, in that strain's colour, and how close the next lot is. Never
+            // nothing: half of it is an identity (pillar 5).
             appearance.chargeLook = units.of(NEST.get(entity).kind).look();
             appearance.charge = WAITING + (1f - WAITING) * NEST.get(entity).progress();
             return;
         }
         if (PICKUP.has(entity)) {
-            // Something small on a large map, saying so. It is never full and never empty, which is
-            // what separates a glow from every other thing on this channel - all of those are going
-            // somewhere, and this one is only asking to be noticed.
+            // Something small on a large map, saying so: never full, never empty.
             PickupDef def = pickups.of(PICKUP.get(entity).kind);
             if (def.shines()) {
                 appearance.chargeLook = Look.GLEAM;
@@ -306,10 +241,7 @@ public final class AppearanceSystem extends IteratingSystem {
     /**
      * One slow triangle wave, in {@code [0, 1]}, for something that shines.
      *
-     * <p>A triangle rather than a sine because {@code sin} is banned in {@code sim} - it is specified
-     * only to within an ulp and may differ between JVMs, which pillar 6 does not allow. At this speed
-     * nobody can tell the two apart, and the wave never rests at either end, so the thing is always
-     * either brightening or dimming rather than sitting still at full.
+     * <p>A triangle rather than a sine: {@code sin} is banned in {@code sim} (pillar 6).
      */
     private float pulse(float periodSeconds) {
         float turns = shineSeconds / periodSeconds;
@@ -326,9 +258,7 @@ public final class AppearanceSystem extends IteratingSystem {
             return Appearance.State.DYING;
         }
         if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
-            // Above staggered, below dying. A man who was shoved and then shot off his feet is a
-            // casualty, not a stagger - worst news first - but a casualty who ran out of time is a
-            // corpse, and the two must never be confused for each other.
+            // Above staggered, below dying: worst news first.
             return Appearance.State.CASUALTY;
         }
         if (held) {
@@ -338,8 +268,7 @@ public final class AppearanceSystem extends IteratingSystem {
             return Appearance.State.CREWED;
         }
         if (CREW.has(entity) && CREW.get(entity).aboard()) {
-            // Inside the gun rather than standing beside it. Below the states that say he is hurt,
-            // because a man blown off a gun is a casualty first and a passenger not at all.
+            // Below the states that say he is hurt.
             return Appearance.State.ABOARD;
         }
         if (LEAP.has(entity)) {
@@ -352,8 +281,7 @@ public final class AppearanceSystem extends IteratingSystem {
             }
         }
         if (SLOWED.has(entity) && SLOWED.get(entity).factor() < 1f) {
-            // Above unaware because being slowed means something is shooting at it, which means it
-            // has noticed somebody; a unit reported as both would be reported as the wrong one.
+            // Above unaware: being shot at means it has noticed somebody.
             return Appearance.State.SLOWED;
         }
         if (PERCEPTION.has(entity) && !PERCEPTION.get(entity).aggro) {

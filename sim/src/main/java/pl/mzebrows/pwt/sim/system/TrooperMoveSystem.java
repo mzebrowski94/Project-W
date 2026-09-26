@@ -23,21 +23,11 @@ import pl.mzebrows.pwt.sim.def.Ticks;
  * Walks each trooper towards whatever it has been given to head for, sweeping its attention from side
  * to side as it goes.
  *
- * <p><strong>Urgency blends the route against the sweep, and never the speed.</strong> At one a
- * trooper makes a beeline; at zero it weaves so hard it barely advances. Speed is deliberately left
- * alone, because "forward" is the thing that changes speed - one dial doing both would make that
- * order invisible, which is the sort of overlap that quietly removes a mechanic.
+ * <p><strong>Urgency blends the route against the sweep, and never the speed</strong> - "forward"
+ * changes speed. The sweep is "looking around": its look is written from the lean, not the walk. How
+ * long a lean lasts is drawn from the squad's stream, so a squad does not sweep in lockstep.
  *
- * <p>The sweep is what "looking around" actually is. Leaning off the route turns the trooper, and its
- * facing is written from the lean rather than from where it happens to be walking - so a trooper that
- * stops still has somewhere it is looking, which is what the stand-still order will need.
- *
- * <p>How long a lean lasts is drawn from the squad's own stream between two bounds, so a squad does
- * not sweep in lockstep. Sweeping together reads as a chorus line rather than as men watching their
- * own arcs, and it is the sort of thing only visible by running it.
- *
- * <p>It writes a desired velocity rather than a velocity, so avoidance still gets a say and
- * {@code DriveSystem} has the last word.
+ * <p>Writes a desired velocity; {@code DriveSystem} commits it.
  */
 public final class TrooperMoveSystem extends EntitySystem {
 
@@ -124,10 +114,7 @@ public final class TrooperMoveSystem extends EntitySystem {
             if (trooper.mode == Trooper.Mode.HOLD
                     || trooper.mode == Trooper.Mode.SECURE
                     || (trooper.mode == Trooper.Mode.AID && !trooper.hasTarget)) {
-                // 3.c, a squad holding a point, and a man standing over somebody: all still watching.
-                // Each asks for no velocity at all rather than for a zero one, so DriveSystem stops
-                // it and a shove still moves it. A trooper aiding has nowhere to head for precisely
-                // when it has arrived, so the two questions are the same question.
+                // Holding, securing, or standing over somebody: asks for no velocity, still watching.
                 keepWatching(trooper, POSITION.get(entity));
                 continue;
             }
@@ -137,9 +124,7 @@ public final class TrooperMoveSystem extends EntitySystem {
             }
             Position at = POSITION.get(entity);
             if (trooper.mode == Trooper.Mode.FIGHT) {
-                // 1.d: a trooper stands still to shoot, and looks straight at what it is shooting
-                // rather than sweeping past it. It has stopped watching its own arc, so when the
-                // fight ends it takes a fresh bearing rather than resuming the one it had before.
+                // 1.d: stands still to shoot, facing its target; a fresh bearing when the fight ends.
                 trooper.settled = false;
                 trooper.sampling = false;
                 aimAt(trooper, at);
@@ -151,8 +136,7 @@ public final class TrooperMoveSystem extends EntitySystem {
                 continue;
             }
             if (trooper.mode == Trooper.Mode.FOLLOW && closeEnoughToTheCommander(at, trooper)) {
-                // 3.a: a loose formation, not a queue on his heels. Close enough is close enough, and
-                // it goes on watching while it waits.
+                // 3.a: a loose formation, still watching while it waits.
                 keepWatching(trooper, at);
                 continue;
             }
@@ -164,8 +148,7 @@ public final class TrooperMoveSystem extends EntitySystem {
                 trooper.detourRemaining--;
                 sidestep(entity, trooper);
             } else if (way == STRAIGHT) {
-                // Only in the open. Following the route means rock is close by, and a lean
-                // perpendicular to a corridor is a lean into its walls.
+                // Only in the open: on the route a lean is a lean into the walls.
                 lean(trooper);
             }
             trooper.lookX = direction[0];
@@ -176,12 +159,7 @@ public final class TrooperMoveSystem extends EntitySystem {
     }
 
     /**
-     * Goes on watching without moving: the sweep leans off the direction it was last looking, rather
-     * than off wherever it happens to be walking, because it is not walking.
-     *
-     * <p>This is the reason a trooper carries a look direction of its own instead of inheriting one
-     * from its velocity. A unit told to hold that kept pointing wherever it last moved would be a
-     * unit staring at the ground it came from.
+     * Goes on watching without moving: the sweep leans off the direction it was last looking.
      */
     private void keepWatching(Trooper trooper, Position at) {
         trooper.sampling = false;
@@ -200,9 +178,7 @@ public final class TrooperMoveSystem extends EntitySystem {
     }
 
     /**
-     * Faces where the last hit came from, while it is still looking for what did it. What a man does
-     * when he is shot from behind: he turns round. The mind forgives his arc for the same while, so
-     * whether he then finds anything is the ordinary question of range and a clear line.
+     * Faces where the last hit came from while it is alert; the mind forgives his arc as long.
      */
     private static void turnTowardsTheHit(Trooper trooper, Position at) {
         float toX = trooper.alertX - at.x;
@@ -220,9 +196,7 @@ public final class TrooperMoveSystem extends EntitySystem {
      * Looks along its own sector of the circle, one slot further each time the sweep turns over, and
      * back again at the end of the run rather than jumping across it.
      *
-     * <p>The sector is handed out upstream by {@code TrooperMindSystem}, which knows who else is standing
-     * on the point; this only turns through it. The sweep's lean still applies on top, so a man is
-     * never staring down one exact line.
+     * <p>The sector is handed out by {@code TrooperMindSystem}; the sweep's lean still applies on top.
      */
     private static void watchItsSector(Trooper trooper) {
         int span = trooper.sectorSpan;
@@ -241,14 +215,8 @@ public final class TrooperMoveSystem extends EntitySystem {
     /**
      * Gives a trooper that has just stopped somewhere of its own to watch.
      *
-     * <p><strong>Once per stop, and different for each man.</strong> Keeping the direction it was
-     * walking in means a squad following the commander all faces him and a squad on a point all faces
-     * its middle - four men looking at the same thing, which is the opposite of a squad covering its
-     * surroundings. A bearing each, drawn from the squad's seeded stream, reads as men watching their
-     * own arcs and still replays identically (pillar 6).
-     *
-     * <p>Rejection sampled inside the unit circle rather than taken from an angle, because turning an
-     * angle into a direction needs trigonometry and {@code ArchitectureTest} bans it here.
+     * <p><strong>Once per stop, and different for each man</strong>, from the squad's seeded stream.
+     * Rejection sampled inside the unit circle: no trigonometry in {@code sim}.
      */
     private void takeABearing(Trooper trooper) {
         if (trooper.settled) {
@@ -272,9 +240,7 @@ public final class TrooperMoveSystem extends EntitySystem {
     /**
      * How much faster it is walking than usual, and spends the push as it goes.
      *
-     * <p>Forward buys a <em>distance</em>, so it is charged for ground covered rather than for time
-     * elapsed. A squad told to push on and then pinned by a fight gets the whole push afterwards,
-     * which is what the order would look like it promised.
+     * <p>Charged for ground covered, not time elapsed.
      */
     private float pace(Trooper trooper, float deltaTime) {
         if (!trooper.pushingForward()) {
@@ -292,10 +258,7 @@ public final class TrooperMoveSystem extends EntitySystem {
     /**
      * Turns to face what it is shooting at, without moving.
      *
-     * <p>Its facing is written even though it is standing still, which is the point of a trooper
-     * owning a look direction rather than inheriting one from its velocity: a stationary unit that
-     * kept pointing wherever it was last walking would be aiming somewhere other than where its
-     * bullets went.
+     * <p>Its look is written even though it stands still, so it faces where its bullets go.
      */
     private static void aimAt(Trooper trooper, Position at) {
         float toX = trooper.targetX - at.x;
@@ -310,8 +273,7 @@ public final class TrooperMoveSystem extends EntitySystem {
     /**
      * Counts down to the next sweep and flips which way it is leaning.
      *
-     * <p>Runs for a held trooper too - being knocked down does not stop you looking about, and it
-     * keeps a squad's sweeps from all resetting together when a grenade goes off among them.
+     * <p>Runs for a held trooper too, so a squad's sweeps do not reset together.
      */
     private void sweep(Trooper trooper, float deltaTime) {
         trooper.scanRemaining--;
@@ -327,10 +289,7 @@ public final class TrooperMoveSystem extends EntitySystem {
      * Writes the unit direction to walk into {@link #direction}, and reports how it got it: straight
      * at the place, by the route, or {@link #NOWHERE} when it is already standing on it.
      *
-     * <p>Straight at it when the way is clear, and by the grid when it is not - the same order the
-     * enemies' navigation uses, and for the same reason: a four-connected field's gradient in the
-     * open is grid-shaped, so a squad crossing an empty arena would converge onto one row and walk
-     * along it.
+     * <p>Straight when the way is clear, by the grid when not, as {@code NavigationSystem}.
      */
     private int headingTowards(Entity entity, Position at, Trooper trooper) {
         float toX = trooper.targetX - at.x;
@@ -341,9 +300,7 @@ public final class TrooperMoveSystem extends EntitySystem {
             return NOWHERE;
         }
         if (walksAbreast(trooper)) {
-            // The pack's spread (G0033, G0041): a point beside where it is going, on its own side, so a
-            // squad crosses the ground abreast rather than down one line. Only while the line to that
-            // point is clear - out of it the route answers, and a corridor still files.
+            // The pack's spread (G0033, G0041), only while the line to that point is clear.
             goal.set(trooper.targetX, trooper.targetY);
             NavigationSystem.spreadOut(entity, at, goal);
             float toGoalX = goal.x - at.x;
@@ -374,14 +331,8 @@ public final class TrooperMoveSystem extends EntitySystem {
     /**
      * Notices a man who is walking and getting nowhere, and sends him off to one side for a moment.
      *
-     * <p><strong>Block detection</strong>, as engines ship it (Unreal's path following samples where an
-     * agent is at an interval and calls it blocked when the samples will not spread out): where he was
-     * a while ago against where he is now. Less than the block distance in the block time is stuck.
-     *
-     * <p>Asking the route again would not help - it is a function of terrain, so it gives the same
-     * answer - and the place he is stuck in is exactly where the route and steering are both blind:
-     * an entity against rock. So the answer is a change of course rather than of plan: a short detour,
-     * after which he tries his way again from somewhere else.
+     * <p><strong>Block detection</strong>: less than the block distance in the block time is stuck. The
+     * route would give the same answer again, so the answer is a short detour.
      */
     private void watchForABlock(Trooper trooper, Position at) {
         if (blockTicks <= 0) {
@@ -413,10 +364,7 @@ public final class TrooperMoveSystem extends EntitySystem {
      * Turns the way he wanted to go two thirds of the way round, to one side: back off and across,
      * out of whatever he walked into.
      *
-     * <p>Which side is his own - the sign of the spread he was seeded with where he was put down, so
-     * nothing is drawn (G0012's argument) - and it alternates with every detour, so a man who backed
-     * into rock the first time goes the other way the second. The angle is a pair of literals because
-     * {@code Math.sin} and {@code Math.cos} are banned here.
+     * <p>The side is seeded at spawn and alternates with every detour; nothing is drawn.
      */
     private void sidestep(Entity entity, Trooper trooper) {
         float own = APPROACH.has(entity) && APPROACH.get(entity).bearing < 0f ? -1f : 1f;
@@ -438,8 +386,7 @@ public final class TrooperMoveSystem extends EntitySystem {
     /**
      * Leans the direction off the route by however much urgency leaves over.
      *
-     * <p>The lean is perpendicular to the route, so the trooper keeps making ground while it looks:
-     * a sweep that pointed it away from the objective would be a patrol rather than an advance.
+     * <p>Perpendicular to the route, so the trooper keeps making ground while it looks.
      */
     private void lean(Trooper trooper) {
         float lateral = scanSpread * (1f - urgency) * trooper.scanSide;

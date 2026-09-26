@@ -74,21 +74,8 @@ import pl.mzebrows.pwt.sim.system.WeaveSystem;
  * byte-identical state on every run, which is what deterministic replay and any future lockstep
  * networking depend on.
  *
- * <p><strong>System order is behaviour.</strong> Positions are recorded for interpolation before
- * anything moves; timers count down; whatever he has hold of is pulled along behind him; intent
- * becomes velocity - constrained to backing away, if his hands are full - and gunfire, then a swing
- * if one was asked for; every unit that can notice the commander decides whether it has; enemies that have
- * decide where they want to be going and the ones that have not amble around their patch instead,
- * and either way that course is bent around whatever it was about to walk into, and anything with a
- * shot coming at it breaks aside whatever it had been doing, and then all of that becomes a velocity, and any of them
- * mid-leap overwrite it with where they already committed to going; whatever is held still bleeds off
- * the blow that held it; everything moves; swings travel their arc; the constraint solver decides where things may be
- * and what touched what; damage owed becomes damage taken, and anything out of health either dies
- * now, starts dying, or goes down on the ground with a clock running; whatever is within the
- * commander's reach decides what his hands are offered and he gets on with it; a clock that runs out
- * is a death like any other; bodies that have lain long enough are marked; reactions run while the dead are
- * still there to react to; everything publishes how it should be drawn; and only then are the dead
- * removed. Reordering these changes what the game does.
+ * <p><strong>System order is behaviour.</strong> The order and the constraints that carry meaning are
+ * {@code docs/simulation-order.md}; {@code SystemOrderTest} holds both to the constructor below.
  */
 public final class Simulation {
 
@@ -151,9 +138,7 @@ public final class Simulation {
                 Family.all(Commander.class, Intent.class, Position.class).get());
         this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
 
-        // A gun's own pattern, shared by every shooter that holds one: how loosely a WEAPON throws is
-        // one concern, and a different one from how badly a creature aims (RngStream.SPIT) or how
-        // often a man does something he only sometimes does (NERVE).
+        // How loosely a gun throws, for every shooter; not how badly a creature aims (SPIT).
         Rng scatter = streams.of(RngStream.SCATTER);
 
         engine.addSystem(new PositionHistorySystem());
@@ -161,21 +146,15 @@ public final class Simulation {
         engine.addSystem(new DragSystem());
         engine.addSystem(new CommanderControlSystem(config, map, spawner, scatter));
         engine.addSystem(new MeleeSystem(spawner));
-        // Immediately after the commander's own hands, and before anything looks around: a shot
-        // fired from a turret this tick is in the world before the enemies decide what they can see,
-        // exactly as a melee sweep is.
+        // After the commander's hands, before anything looks around.
         engine.addSystem(new TurretSystem(map, spawner, scatter));
         engine.addSystem(new PerceptionSystem(config, map));
         engine.addSystem(new NavigationSystem(config, map));
-        // Immediately after the course it bends, and well before avoidance: a weave that could steer
-        // something into rock would stop being a weave the moment a level had walls in it.
+        // After the course it bends, before avoidance.
         engine.addSystem(new WeaveSystem());
-        // One stream for the squad, shared by the two systems that drive it: roaming and
-        // sweeping are the same concern, and separating them would only mean two salts to
-        // keep apart for no benefit.
+        // One stream for the squad's mind and legs: one concern.
         Rng squad = streams.of(RngStream.TROOPER);
-        // Everything the AI leaves to the dice draws from one stream of its own, so re-tuning how
-        // often a trooper swings never reshuffles where the squad roams (see AiChance).
+        // Everything the AI leaves to the dice (AiChance), apart from where the squad roams.
         Rng nerve = streams.of(RngStream.NERVE);
         engine.addSystem(new SquadOrderSystem(config, capacity));
         engine.addSystem(new TrooperMindSystem(config, map, squad, nerve));
@@ -184,9 +163,7 @@ public final class Simulation {
         engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds()));
         engine.addSystem(new AvoidanceSystem(config, map));
         engine.addSystem(new EnemyRangedSystem(map, spawner, streams.of(RngStream.SPIT), scatter));
-        // After everything that chooses a course, including planting a shooter, because a gait
-        // paces a course rather than choosing one - and before the dodge, which overwrites it: a
-        // sidestep from a shot you saw coming must not land in the middle of a sit.
+        // After everything that chooses a course; before the dodge, which overwrites it.
         engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
         engine.addSystem(new DriveSystem(map, config.ground()));
@@ -204,46 +181,22 @@ public final class Simulation {
         engine.addSystem(new CasualtySystem(config, spawner));
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
-        // Before the death reactions below, and that is the whole of why it is here. A shot that
-        // runs out of flight, or flies into rock, or leaves the arena ends by DYING like every other
-        // end (G0018) - so it has to be marked dead while the reactions can still see it. Registered
-        // after the death chain, it was marked dead past that window and reaped on the same tick,
-        // which silently deleted the blast and the spatter every MISS should have left: a frog's
-        // venom burst only on the men it actually hit, and a charged spit that fell short left
-        // nothing at all. A shot that hit something is marked dead by the solver's contact long
-        // before this and is unaffected.
+        // Before the death reactions: a shot that misses ends by dying too (G0018), and must leave
+        // its blast or spatter.
         engine.addSystem(new ProjectileBoundsSystem(map, spawner));
-        // Beside the mine below, and for the same two reasons: this tick's hits are already on the
-        // component, and a body that fills this tick has to reach the death-reaction window on this
-        // tick rather than being owed to the next one. It spawns nothing itself - a body pumped full
-        // explodes by dying, through the one reaction (G0018).
+        // Beside the mine, for the same reasons; a full body explodes by dying (G0018).
         engine.addSystem(new BloatSystem(config, spawner));
-        // Immediately before the blast, and that is the whole of why it is here: the solver has
-        // settled every position, so "near enough to set one off" means where things actually ended
-        // up; and a fuse that runs out this tick reaches the death-reaction window below on this
-        // tick rather than being owed to the next one. It spawns nothing itself - a mine explodes by
-        // dying, through the one reaction everything that explodes uses (G0018).
+        // After the solver settles positions, and immediately before the blast, so a fuse that runs
+        // out reaches this tick's death reactions (G0018).
         engine.addSystem(new MineSystem(spawner));
         engine.addSystem(new BlastSystem(map, spawner));
-        // Beside the blast, and for the same reason: everything that leaves something behind does so
-        // by dying (G0018), so this belongs in the window between a thing being marked dead and
-        // being reaped. Unlike a blast it owes no damage of its own - what it leaves is ordinary
-        // bodies carrying ordinary blows, so the collision system decides who they catch.
+        // Beside the blast: in the window between marked dead and reaped (G0018).
         engine.addSystem(new SlickSystem(map, spawner, streams.of(RngStream.SLICK)));
-        // With the other systems that are about the level rather than about anything standing in it,
-        // and after the solver has settled every position: a man who arrives forms up on where the
-        // commander actually ended up. After the death chain too, so a trooper who arrives this tick
-        // is not counted among the dead this tick's reaper is about to take.
+        // Level systems from here, after the solver and the death chain.
         engine.addSystem(new ReinforcementSystem(config, map, spawner, streams.of(RngStream.REINFORCEMENT)));
-        // Before the objectives, and at the end of the tick with the other systems that are about the
-        // level rather than about anything standing in it: a level whose last wave lands this tick
-        // must not read as complete for the tick before the aliens appear.
+        // Before the objectives.
         engine.addSystem(new WaveSystem(config, map, spawner, streams.of(RngStream.WAVE)));
-        // With the other systems that are about the level rather than about anything standing in it,
-        // and after the death chain above: a nest destroyed this tick empties the last of itself
-        // while its body is still on the field, in the same window respawning and blasts run in, and
-        // before the reaper takes it. Before ObjectiveSystem for the reason WaveSystem is - a level
-        // whose last nest dies this tick must not read as clear for the tick before its brood lands.
+        // After the death chain, before the reaper and the objectives.
         engine.addSystem(new NestSystem(config, map, spawner, streams.of(RngStream.NEST)));
         engine.addSystem(new ControlPointSystem(spawner));
         engine.addSystem(new ObjectiveSystem());
@@ -278,10 +231,7 @@ public final class Simulation {
      * commander's intent before any system runs, so systems read a component and never the input
      * object itself.
      *
-     * <p><strong>This is the one place a relative aim becomes a place on the field.</strong> A stick
-     * sends an offset because it does not know where its commander is standing; adding his position
-     * here means every system downstream reads the absolute point it has always read, and there is
-     * no second kind of aim anywhere below this line.
+     * <p><strong>This is the one place a relative aim becomes a place on the field.</strong>
      */
     public void step(PlayerInputs inputs) {
         spawnOrder.keep();
@@ -329,9 +279,7 @@ public final class Simulation {
     /**
      * Spawns a commander for one player.
      *
-     * <p>The slot is what ties him to a device, and nothing checks here whether it is already taken:
-     * who sits where is the client's question, and a simulation that refused a duplicate would be
-     * answering it twice.
+     * <p>Nothing checks whether the slot is taken: that is the client's question.
      */
     public Entity spawnCommander(float x, float y, int slot) {
         return spawner.spawnCommander(x, y, slot);
@@ -341,17 +289,9 @@ public final class Simulation {
      * Puts a player who has just taken a slot onto the field, wherever the fight currently is. Called
      * from {@link #step(PlayerInputs)} on the tick his join event arrives, and from nowhere else.
      *
-     * <p><strong>Joining is plugging a pad in</strong>, at any point in a level, and this is the one
-     * place that answers where the newcomer appears - so it holds for every scenario there is rather
-     * than being something each one remembers to support.
-     *
-     * <p>He arrives <em>on</em> whoever is still standing, which is the same answer a man coming back
-     * from the dead gets and for the same reasons: it is ground somebody is demonstrably standing on,
-     * so it is neither rock nor unreachable and needs no map query to establish; it is inside the
-     * leash; and it puts him in the fight rather than at the edge of the level watching it. The
-     * solver untangles the overlap on the tick he appears. With nobody standing - a wipe, or a level
-     * whose first player has not been spawned yet - he goes to the middle of the level's spawn area,
-     * which is where the level meant its players to start.
+     * <p><strong>Joining is plugging a pad in</strong>, at any point in a level. He arrives <em>on</em>
+     * whoever is still standing, as a respawn does - reachable ground inside the leash - and the solver
+     * untangles the overlap. With nobody standing, the middle of the spawn area.
      */
     private Entity joinCommander(int slot) {
         Entity standing = Players.standing(commanders);
@@ -366,8 +306,7 @@ public final class Simulation {
     /**
      * The level entity's state, for a scenario naming what it wants done (G0007).
      *
-     * <p>There is always exactly one: it is spawned in this constructor, before any scenario runs, so
-     * nothing here has a null case to consider.
+     * <p>Always exactly one, spawned in the constructor.
      */
     public Level level() {
         return LEVEL.get(levels.first());
@@ -376,8 +315,7 @@ public final class Simulation {
     /**
      * What the level still has to throw at you, for a scenario describing its waves (G0007).
      *
-     * <p>There is always exactly one, spawned with the world before any scenario runs, so nothing
-     * here has a null case to consider - exactly as {@link #level()} does not.
+     * <p>Always exactly one, as {@link #level()}.
      */
     public Waves waves() {
         return WAVES.get(levels.first());
@@ -464,8 +402,7 @@ public final class Simulation {
     /**
      * Spawns a blast: a circle of ground lethal for a moment, on nobody's side.
      *
-     * <p>For the harness and for tests that want one in the world without something dying to make it.
-     * In play a blast is a death reaction, so nothing needs to reach for this.
+     * <p>For the harness and tests; in play a blast is a death reaction.
      */
     public Entity spawnBlast(float x, float y, float radius) {
         return spawner.spawnBlast(x, y, radius);
@@ -483,8 +420,7 @@ public final class Simulation {
 
     /**
      * Spawns a shot from any gun in the table, for a harness or a test that wants one in the world
-     * without a shooter behind it. Everything about it - what it looks like, what it leaves where it
-     * stops - comes from the definition, exactly as it does when somebody pulls a trigger.
+     * without a shooter behind it.
      */
     public Entity spawnProjectile(float x, float y, float directionX, float directionY, WeaponKind gun, Side side) {
         return spawner.spawnProjectile(x, y, directionX, directionY, config.weapon(gun), side);
