@@ -6,19 +6,8 @@ import com.badlogic.gdx.utils.Pool;
 /**
  * A place a squad takes by standing near it.
  *
- * <p>Capture is <strong>dwell</strong>: somebody on the player's side has to be inside the radius,
- * and stay there. It is not a race to touch it, and it is not a thing one man does instantly - the
- * seconds it takes are the seconds the level gets to send something at you, which is the only reason
- * a point is interesting at all.
- *
- * <p><strong>The progress resets when the last capturer leaves.</strong> Not decays - resets. A
- * partial capture that quietly persists means the player is tracking a number across minutes, and
- * pillar 5 would then need it drawn permanently; an all-or-nothing dwell is one thing to see and one
- * thing to defend. It is also the version that makes an enemy pushing a trooper off the point worth
- * doing.
- *
- * <p>Once taken it stays taken. Nothing in the game recaptures a point yet, and whether the other
- * side can is a question about what the aliens are trying to do, which is not designed.
+ * <p>Capture is <strong>dwell</strong>, and <strong>the progress resets when the last capturer
+ * leaves</strong> - not decays. Once taken it stays taken; recapture is not designed.
  */
 public final class ControlPoint implements Component, Pool.Poolable {
 
@@ -40,15 +29,7 @@ public final class ControlPoint implements Component, Pool.Poolable {
     /**
      * Whether taking this one turns it into ground the level then tells you to hold.
      *
-     * <p>False on every point on every level built so far, which is what "take it and move on"
-     * looks like as data. True on one: the last ground of a march, where capturing is not the end of
-     * the level but the thing that starts the last fight of it. A post is put down where it stands
-     * and whatever the level was holding back is let go.
-     *
-     * <p>It is on the point rather than on the level because <em>which</em> ground does this is a
-     * fact about that ground - and because a post that existed from the first tick would send every
-     * sleeping creature on the level walking at it, and would turn "forward" round for the whole
-     * march (G0027).
+     * <p>A post is put down where it stands and what the level held back is let go (G0027).
      */
     public boolean holdsAfterwards;
 
@@ -73,8 +54,7 @@ public final class ControlPoint implements Component, Pool.Poolable {
     /**
      * How far along this attempt is, in {@code [0, 1]}, for the renderer to draw (pillar 5).
      *
-     * <p>A captured point reports full rather than nothing, so it reads as taken rather than as
-     * untouched - the two must not look alike.
+     * <p>A captured point reports full, so it does not read as untouched.
      */
     public float progress() {
         if (captured) {

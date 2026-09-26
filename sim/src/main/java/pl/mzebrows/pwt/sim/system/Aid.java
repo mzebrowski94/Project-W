@@ -17,20 +17,8 @@ import pl.mzebrows.pwt.sim.def.Ticks;
 /**
  * Putting a man back on his feet, in one place, for everybody who can do it.
  *
- * <p>Two things can now: the commander, on his action key, and a trooper that has decided to go and
- * fetch somebody. <strong>They must do exactly the same thing.</strong> How long the work takes, what
- * being hauled costs, how much health he gets back and how long he is protected as he stands up are
- * all rules about the man on the ground rather than about who reached him - and two copies of them
- * is how a man revived by a trooper quietly comes up with a full bar.
- *
- * <p>It is the same argument {@link Drivers} makes for its two questions and {@link Deaths} makes for
- * the one death path, and this is the third case of it in the codebase.
- *
- * <p>Nothing here holds an entity across ticks. Who is being worked on is re-resolved every tick by
- * whoever is doing the working, exactly as {@code Perception} re-resolves what a unit is hunting: a
- * pooled component keeping a reference for a second and a half would come back aimed at whatever was
- * built from the recycled instance (G0010). Nothing is lost by re-deciding - a man who has walked
- * away from the body he was working on is no longer working on it.
+ * <p>The commander and a trooper <strong>must do exactly the same thing</strong>: every rule is about
+ * the man on the ground, not who reached him. Who is being worked on is re-resolved every tick (G0010).
  */
 final class Aid {
 
@@ -48,14 +36,8 @@ final class Aid {
      * The man on the ground this one would reach first, or null if there is nobody within arm's
      * length.
      *
-     * <p>A scan of the casualties rather than a neighbour query: there are almost never any, and on
-     * the worst day there are a handful. The collision grid exists for pairs of everything against
-     * everything, which this is not.
-     *
-     * <p>Nearest by the gap between surfaces, so a wide man and a narrow one standing equally close
-     * are equally close. Nothing already dying is offered, or the key would do nothing over a corpse
-     * that had just run out of time - and nobody is offered himself, which matters now that the men
-     * who can do this are the same men it can be done to.
+     * <p>A scan: there are only ever a handful. Nearest surface to surface; nothing dying, and nobody
+     * himself.
      */
     static @Nullable Entity nearest(ImmutableArray<Entity> casualties, Entity helper, float reach) {
         Position at = POSITION.get(helper);
@@ -90,9 +72,7 @@ final class Aid {
     /**
      * A tick's worth of work on him, and puts him back on his feet once there has been enough of it.
      *
-     * <p>He comes up hurt and briefly protected. Both are the point: picking a man up is not the same
-     * as getting him out, and without the moment of protection the round that was already in the air
-     * undoes the whole rescue, which reads as the game cheating rather than as bad luck.
+     * <p>He comes up hurt and briefly protected.
      */
     static void work(Entity subject, float deltaTime, float healthFraction, float invulnerableSeconds) {
         Casualty casualty = CASUALTY.get(subject);
@@ -110,10 +90,7 @@ final class Aid {
     /**
      * Loses the work done so far.
      *
-     * <p>A stabilise is a commitment rather than an accumulation: a man interrupted halfway is a man
-     * you have to start again on. Banking the work would mean tapping the key on every pass, which
-     * is no commitment at all - and it is the whole reason hauling him somewhere quiet is worth what
-     * it costs.
+     * <p>A commitment, not an accumulation.
      */
     static void letGo(Entity subject) {
         CASUALTY.get(subject).stabilised = 0f;

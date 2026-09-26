@@ -27,24 +27,10 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 /**
  * Hauling something along behind you.
  *
- * <p>It takes hold, lets go, decides the grip has been lost, and drives the load. What it does
- * <strong>not</strong> do is touch the commander's velocity: it publishes which way the load lies
- * and {@code CommanderControlSystem} - the one system that owns his velocity - does the constraining.
- * Two systems writing one velocity is how a unit ends up travelling in a direction neither asked for.
- *
- * <p>The load is moved by writing its velocity, never its position. Placing it would put it through
- * rock, and a man dragged through a wall is the kind of thing that makes every other rule look
- * negotiable. Written velocity plus the constraint solver means a load that snags is a load that
- * stops - and a grip stretched past what an arm could hold is dropped, which is what turns a corner
- * of rock into something the player has to walk around rather than through.
- *
- * <p><strong>What may be grabbed is "has nothing else driving it".</strong> A man who is down
- * qualifies because he is down; a barrel qualifies because it never had a will of its own. A trooper
- * on his feet carries the same component and cannot be taken. That is one rule rather than a list of
- * kinds, which is what keeps the next draggable thing from being a branch in here (G0008).
- *
- * <p>It runs before {@code CommanderControlSystem}, so the constraint that system applies is about
- * the grip as it is this tick rather than as it was last tick.
+ * <p>It never touches the commander's velocity: it publishes the load's bearing and
+ * {@code CommanderControlSystem} constrains him. The load is moved by velocity, never position, so it
+ * snags on rock; a grip stretched past an arm's reach is dropped. <strong>What may be grabbed is "has
+ * nothing else driving it"</strong> (G0008).
  */
 public final class DragSystem extends EntitySystem {
 
@@ -112,8 +98,7 @@ public final class DragSystem extends EntitySystem {
         boolean movable = !COLLIDER.has(load) || COLLIDER.get(load).movable;
         DRAGGED.get(load).take(Handles.of(dragger), movable);
         if (!movable) {
-            // Scenery becomes a body for as long as it is in his hands, or the solver would let him
-            // pull it through rock: only movable solids are kept out of terrain and inside the arena.
+            // Movable while held, so the solver keeps it out of rock.
             COLLIDER.get(load).set(COLLIDER.get(load).solid, true);
         }
     }
@@ -121,9 +106,7 @@ public final class DragSystem extends EntitySystem {
     /**
      * Pulls the load to where it should be trailing, and drops it if it is no longer there to pull.
      *
-     * <p>The grip breaks when the load falls further behind than an arm could stretch, which is what
-     * happens when it snags on rock: the solver will not let it through, this keeps asking, and the
-     * distance between them grows until he has plainly lost it.
+     * <p>The grip breaks when the load falls further behind than an arm could stretch.
      */
     private void haul(Entity dragger, Drag drag, float deltaTime) {
         if (!drag.active()) {
@@ -145,8 +128,7 @@ public final class DragSystem extends EntitySystem {
             return;
         }
         if (apart <= EPSILON) {
-            // Standing on top of it: keep whatever bearing was last published rather than picking a
-            // new one out of nothing, or the constraint on his movement would flip about.
+            // Standing on top of it: keep the last bearing.
             return;
         }
         drag.towardLoadX = toX / apart;
@@ -230,9 +212,7 @@ public final class DragSystem extends EntitySystem {
      * Whether this has nothing else driving it. A man who is down does not; a barrel never did; a man
      * on his feet does, and a corpse is past helping.
      *
-     * <p>A gun with somebody on it does too: the man aboard owns where it points and what it fires,
-     * and hauling a working gun about by the barrel is the same mistake as picking up a trooper who
-     * is still standing.
+     * <p>A crewed gun has somebody driving it.
      */
     private static boolean grabbable(Entity entity) {
         if (DYING.has(entity) && DYING.get(entity).begun) {

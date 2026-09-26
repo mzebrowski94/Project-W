@@ -20,28 +20,9 @@ import pl.mzebrows.pwt.sim.component.Position;
 /**
  * Runs the blasts on the field: each catches what is standing in it, once, and then burns out.
  *
- * <p><strong>A blast is on nobody's side.</strong> It asks nothing about factions, so it kills the
- * commander, his squad and the aliens alike - which is what makes throwing one a decision rather than
- * a free button, and what keeps pillar 2 intact when the thing that kills him is his own.
- *
- * <p>One radius, and death inside it. No falloff: a curve the player cannot see turns "am I clear of
- * that?" into arithmetic, and pillar 1 says a mechanic that makes the player stop and compute belongs
- * in a different game. The circle drawn is the circle that kills, because both are the entity's own
- * {@code Body}.
- *
- * <p>Rock stops it, by the same clear-line test perception already uses - otherwise a grenade kills
- * round corners, and the standing rule that rock stops a shot would hold for bullets and not for
- * explosions.
- *
- * <p>It owes damage rather than applying it, exactly as contact resolution does: {@code DamageSystem}
- * is the only thing that reduces health. That system has already run by the time this one does, so a
- * blast lands on the tick <em>after</em> it appears - which is what makes a row of barrels go off as a
- * cascade rather than all at once.
- *
- * <p>An {@code EntitySystem} rather than an {@code IteratingSystem} because a blast asks a question
- * about every damageable body, so the two families are walked against each other. There is almost
- * never a blast on the field, and never more than a handful, so this costs nothing on the ticks it
- * does nothing.
+ * <p><strong>A blast is on nobody's side.</strong> One radius and death inside it, no falloff (pillar
+ * 1); the drawn circle is the lethal one. Rock stops it. It owes damage, which lands the tick
+ * <em>after</em> it appears - so a row of barrels cascades.
  */
 public final class BlastSystem extends EntitySystem {
 
@@ -94,16 +75,8 @@ public final class BlastSystem extends EntitySystem {
     }
 
     /**
-     * The death reaction, run in the window between a thing being marked dead and being reaped -
-     * where every reaction to a death belongs (G0004), and the same window {@code RespawnSystem} uses
-     * one system earlier.
-     *
-     * <p>It runs once per death by construction: the entity it reads is taken off the field at the end
-     * of this tick, so there is no second visit to guard against.
-     *
-     * <p>A blast spawned here is not in the family above until the engine has flushed this system, so
-     * it goes off on the next tick rather than this one. That delay is what makes a row of barrels
-     * read as a cascade instead of one flat bang.
+     * The death reaction, between marked dead and reaped (G0004); once per death. A blast spawned here
+     * goes off next tick.
      */
     private void leaveBlastsWhereTheyFell() {
         for (int i = 0; i < detonating.size(); i++) {
@@ -111,9 +84,7 @@ public final class BlastSystem extends EntitySystem {
             BlastsOnDeath reaction = REACTION.get(entity);
             float radius = reaction.radius;
             if (radius <= 0f) {
-                // A reaction with no radius leaves nothing: a barrel swallowed whole rather than set
-                // off (G0022). Still one death and still one path to a blast - this one just has no
-                // circle to draw.
+                // No radius, nothing left: a barrel swallowed whole (G0022).
                 continue;
             }
             Position at = POSITION.get(entity);
@@ -122,8 +93,7 @@ public final class BlastSystem extends EntitySystem {
     }
 
     /**
-     * Measured centre to centre, deliberately. "Your middle is inside the circle" is a rule a player
-     * can see being applied; "your edge clipped it" is one they would have to be told about.
+     * Centre to centre, deliberately: a rule the player can see applied.
      */
     private void catchEveryoneInside(float x, float y, float radius, float damage) {
         for (int i = 0; i < victims.size(); i++) {
@@ -133,9 +103,7 @@ public final class BlastSystem extends EntitySystem {
                 continue;
             }
             Damage owed = DAMAGE.get(victim);
-            // Wounding, like gunfire: a blast is still uniformly decisive inside its circle
-            // (G0018) - everything in it goes down - but what it leaves behind depends on whether
-            // anything on that side could come and get you. An alien cannot be rescued and dies.
+            // Wounding, like gunfire: everything in it goes down (G0018); an alien just dies.
             owed.add(damage, 0, false);
             owed.cameFrom(x, y);
         }

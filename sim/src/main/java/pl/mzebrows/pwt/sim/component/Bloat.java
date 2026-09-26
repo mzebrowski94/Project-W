@@ -6,28 +6,10 @@ import com.badlogic.gdx.utils.Pool;
 /**
  * How far along something is towards bursting, and the body it will go back to if it is let alone.
  *
- * <p>Sustained beam on a thing pumps it up. While it is <strong>alive</strong> that is a number and
- * nothing else - a creature does not visibly inflate while it is still coming at you, and a beam
- * that killed by inflation rather than by damage would make health beside the point. What it buys
- * is that the charge is already there when the thing dies, so holding the beam <em>through</em> a
- * kill is what turns a body into a bomb. Sweeping across a crowd buys nothing at all.
- *
- * <p>What it fills is <strong>drawn on</strong> the thing rather than done to it: a bright ring
- * growing over the body, published on the charge channel and sized by the client. The body itself is
- * never touched - a corpse that swelled was a corpse that shoved everything around it and changed
- * what a doorway was worth, which is a lot of consequence for a tell. At the brim it bursts, by
- * dying, through the one death reaction everything that explodes uses (G0018).
- *
- * <p>Let go and the charge falls away and the ring shrinks with it; the corpse waits while there is
- * any charge on it at all, so a man who has spent half a heat bar on one can go and deal with
- * something and come back to it.
- *
- * <p><strong>A bigger body takes longer.</strong> What one shot is worth is divided by how large the
- * thing is, so a brute is a real decision and a grunt is an afterthought - and nothing had to be
- * said per strain, because a strain's size is already the thing that differs.
- *
- * <p>Carried permanently by everything that can be killed, like {@link Dying}: adding it at the
- * moment the first shot lands would mutate a family mid-iteration.
+ * <p>Sustained beam pumps a thing up; on the living it is only a number, so holding the beam
+ * <em>through</em> a kill makes a bomb. It is <strong>drawn on</strong> the thing, never done to the
+ * body. At the brim a dying body bursts, by dying (G0018). Let go, it falls away; the corpse waits
+ * while any is left. A bigger body takes longer. Carried permanently.
  */
 public final class Bloat implements Component, Pool.Poolable {
 
@@ -37,14 +19,8 @@ public final class Bloat implements Component, Pool.Poolable {
     /**
      * Whether a shot reached it this tick.
      *
-     * <p>Without it the charge fell away on the very ticks the beam was on it, so a corpse gained
-     * what the gun put in and lost what the clock took out - a net of almost nothing on a grunt and
-     * an actual <em>loss</em> on a brute, whose bigger body takes the beam more slowly than the clock
-     * empties it. A thing being charged does not settle; that is the whole of the rule, and it needs
-     * one bit to say so.
-     *
-     * <p>Written where the blow lands and read once, later in the same tick, by the system that
-     * owns everything else about this.
+     * <p>A thing being charged does not settle. Written where the blow lands, read by
+     * {@code BloatSystem}.
      */
     public boolean fed;
 

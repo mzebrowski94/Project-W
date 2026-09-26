@@ -19,18 +19,8 @@ import pl.mzebrows.pwt.sim.def.Objective;
 /**
  * Answers, once a tick, whether the level's objectives are met.
  *
- * <p>Every objective is <strong>recomputed from the world</strong> rather than latched when it first
- * becomes true. A latch would turn "the map is clear" into "the map was clear once", so a wave
- * arriving after the last kill would leave the level saying it was finished; recomputing costs two
- * counts and cannot drift from what is actually standing on the field.
- *
- * <p><strong>Nothing reads the answer.</strong> That is this stage's boundary, not an oversight: what
- * a completed level does - extract, cut away, send another wave - is an open question, and inventing
- * one here would answer it by accident. The level entity knows; the game does not react yet, and
- * `docs/design/alpha-phase.md` lists that as scaffolding with the question it is waiting on.
- *
- * <p>It runs after everything that can kill something and after {@code ControlPointSystem}, so the
- * answer is about the world at the end of the tick rather than the middle of it.
+ * <p>Every objective is <strong>recomputed from the world</strong>, never latched. <strong>Nothing
+ * reads the answer yet</strong> - scaffolding, in {@code docs/design/alpha-phase.md}.
  */
 public final class ObjectiveSystem extends EntitySystem {
 
@@ -73,16 +63,12 @@ public final class ObjectiveSystem extends EntitySystem {
     /**
      * Nothing hostile still on its feet.
      *
-     * <p>A body in its throes does not count against it. The throes are a second of animation after a
-     * unit is already dead, and a level that refused to acknowledge its last kill for that second
-     * would read as the objective sticking.
+     * <p>A body in its throes does not count against it.
      */
     private boolean nothingLeftStanding() {
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
-            // Dead, not merely held. A stunned enemy is very much still a problem, and asking
-            // Drivers.held here would have declared the map clear every time the commander landed a
-            // blow on the last one.
+            // Dead, not merely held: a stunned enemy is still a problem.
             if (!DYING.has(enemy) || !DYING.get(enemy).begun) {
                 return false;
             }
@@ -94,15 +80,8 @@ public final class ObjectiveSystem extends EntitySystem {
      * The post held: there is one, everything the level had to send has been sent, and nothing
      * hostile is left standing.
      *
-     * <p>Two of those three are questions about the world and the middle one is not, which is the
-     * whole shape of a defence: an empty field means you have won if there is nothing left to come,
-     * and means you are between waves if there is. The schedule is level state exactly as the
-     * objectives are, so this is still recomputed from scratch every tick and latches nothing.
-     *
-     * <p><strong>"Nothing hostile standing" is measured against the post's own watch</strong>, and
-     * the whole level only when it names none. A level the size of one fight means the same thing
-     * either way; a march seven screens long does not, because there are nests still working four
-     * biomes back and the ground the level told you to hold is not the ground they are standing on.
+     * <p>Recomputed every tick. <strong>"Nothing hostile standing" is measured against the post's own
+     * watch</strong>, and the whole level only when it names none.
      */
     private boolean postHeld(Entity level, boolean cleared) {
         if (posts.size() == 0 || (WAVES.has(level) && !WAVES.get(level).spent())) {
@@ -121,9 +100,7 @@ public final class ObjectiveSystem extends EntitySystem {
     /**
      * Nothing hostile still on its feet within the ground this post is responsible for.
      *
-     * <p>Only asked of a post that names a watch. One that does not is a level the size of a fight,
-     * where the whole field <em>is</em> the ground around the post and the cheaper count above says
-     * the same thing.
+     * <p>Only asked of a post that names a watch.
      */
     private boolean clearAround(Position at, float watch) {
         for (int i = 0; i < enemies.size(); i++) {

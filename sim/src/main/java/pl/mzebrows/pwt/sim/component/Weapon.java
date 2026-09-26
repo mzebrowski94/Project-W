@@ -11,12 +11,8 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
 /**
  * The gun a unit is carrying: which one, how often it may fire, and what it fires.
  *
- * <p>Picking a gun up writes a different {@code WeaponDef} into these fields; nothing swaps a
- * component and nothing branches on which gun it is. {@code remainingTicks} is the whole of its
- * runtime state, so a snapshot of it replays exactly.
- *
- * <p>The cooldown is deliberately <em>not</em> carried across a swap: a new gun arrives ready. A
- * commander who has just paid the walk to a weapons cache should not then be told to wait.
+ * <p>Picking a gun up writes a different {@code WeaponDef} in; nothing branches on which gun it is.
+ * The cooldown and the muzzle side are its runtime state; a new gun arrives ready.
  */
 public final class Weapon implements Component, Pool.Poolable {
 
@@ -49,10 +45,7 @@ public final class Weapon implements Component, Pool.Poolable {
      * What each shot leaves lying on the ground where it bursts. {@link SlickDef#off()} for every
      * gun that leaves nothing, which is all of them but one.
      *
-     * <p>The definition itself rather than its numbers spread across six fields here. It is an
-     * immutable record read straight out of the gun table, so a pooled {@code Weapon} holding one
-     * cannot be holding something that has since changed underneath it - which is the hazard that
-     * makes an {@code Entity} on a pooled component a mistake (G0010) and makes this not one.
+     * <p>The immutable record itself: safe on a pooled component, unlike an {@code Entity}.
      */
     public SlickDef slicks = SlickDef.off();
 
