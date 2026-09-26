@@ -32,6 +32,7 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Blast;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Velocity;
@@ -422,7 +423,7 @@ class SpitterTest {
 
         steps(simulation, LONG_ENOUGH_TO_TURN_ROUND);
 
-        assertThat(spitter.getComponent(Appearance.class).facingX).isLessThan(0f);
+        assertThat(spitter.getComponent(Facing.class).x).isLessThan(0f);
     }
 
     /**

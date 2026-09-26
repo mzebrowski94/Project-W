@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -63,6 +64,7 @@ public final class WorldRenderer implements Disposable {
     private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
+    private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
 
     /** Where a cosmetic lead writes the facing it draws; reused, so it costs nothing per frame. */
@@ -153,9 +155,9 @@ public final class WorldRenderer implements Disposable {
             } else {
                 shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
             }
-            if (appearance.facingX != 0f || appearance.facingY != 0f) {
-                float facingX = appearance.facingX;
-                float facingY = appearance.facingY;
+            if (FACING.has(entity) && (FACING.get(entity).x != 0f || FACING.get(entity).y != 0f)) {
+                float facingX = FACING.get(entity).x;
+                float facingY = FACING.get(entity).y;
                 if (lead != null && COMMANDER.has(entity) && lead.facing(COMMANDER.get(entity).slot, x, y, ahead)) {
                     facingX = ahead[0];
                     facingY = ahead[1];

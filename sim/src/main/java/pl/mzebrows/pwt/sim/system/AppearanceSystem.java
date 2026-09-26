@@ -19,7 +19,6 @@ import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Heat;
-import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Mine;
@@ -28,15 +27,12 @@ import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
-import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.Slowed;
-import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
-import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -83,11 +79,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
     private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
-    private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
-    private static final ComponentMapper<Ranged> RANGED = ComponentMapper.getFor(Ranged.class);
-    private static final ComponentMapper<Steering> STEERING = ComponentMapper.getFor(Steering.class);
-    private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
@@ -150,7 +142,6 @@ public final class AppearanceSystem extends IteratingSystem {
         Appearance appearance = APPEARANCE.get(entity);
         appearance.state = stateOf(entity);
         publishCharge(entity, appearance);
-        face(entity, appearance);
         appearance.ordered = TROOPER.has(entity)
                 && (TROOPER.get(entity).order != null || TROOPER.get(entity).pushingForward());
         // What it is carrying goes off where it lands. A fact about the gun, so nothing here asks
@@ -161,55 +152,6 @@ public final class AppearanceSystem extends IteratingSystem {
         // see is a bar he is guessing at, and this one is entirely his own doing.
         appearance.heat = HEAT.has(entity) ? HEAT.get(entity).value : 0f;
         appearance.overheated = HEAT.has(entity) && HEAT.get(entity).locked;
-    }
-
-    /**
-     * Points the entity where it is looking, for anything whose facing the player has a reason to
-     * read.
-     *
-     * <p><strong>Aim first, and never a heading, for anything with an {@link Intent}</strong> - that
-     * is G0002 at the one place the two are easiest to conflate. A commander backing away while
-     * shooting forwards must be drawn facing his shots, or the tell contradicts the bullets.
-     *
-     * <p>A shooter faces what it is aiming at, and everything else that steers itself faces the way it
-     * is going. What decides whether a facing is published at all is whether the entity drives itself - an {@link Intent} or a
-     * {@link Steering} - rather than what it is, so a bullet reports none and the renderer never has
-     * to ask what it is looking at (G0003).
-     */
-    private static void face(Entity entity, Appearance appearance) {
-        if (TURRET.has(entity)) {
-            // A gun on a mount faces where it is pointing, which is the whole tell: the player has to
-            // be able to read how far it still has to come round before it can reach him.
-            Turret turret = TURRET.get(entity);
-            appearance.face(turret.aimX, turret.aimY);
-            return;
-        }
-        if (TROOPER.has(entity)) {
-            // A trooper decides where it is looking rather than looking wherever it is walking. That
-            // is what lets it stand still and keep watching, and what makes its arc a thing the
-            // player can read off the picture.
-            Trooper trooper = TROOPER.get(entity);
-            appearance.face(trooper.lookX, trooper.lookY);
-            return;
-        }
-        if (INTENT.has(entity) && POSITION.has(entity)) {
-            Position at = POSITION.get(entity);
-            Intent intent = INTENT.get(entity);
-            appearance.face(intent.aimX - at.x, intent.aimY - at.y);
-            return;
-        }
-        if (RANGED.has(entity) && RANGED.get(entity).aiming()) {
-            // A shooter faces where its gun is pointing, not where it last walked. Its field of view
-            // is measured from that same direction, so this is the tell that makes the arc something
-            // the player can read off the picture rather than learn by being shot (pillar 5, G0015).
-            Ranged ranged = RANGED.get(entity);
-            appearance.face(ranged.aimX, ranged.aimY);
-            return;
-        }
-        if (STEERING.has(entity) && VELOCITY.has(entity)) {
-            Velocity velocity = VELOCITY.get(entity);
-            appearance.face(velocity.x, velocity.y);
-        }
     }
 
     /**

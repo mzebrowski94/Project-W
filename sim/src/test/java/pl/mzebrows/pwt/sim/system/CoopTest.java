@@ -18,9 +18,9 @@ import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
@@ -285,9 +285,9 @@ class CoopTest {
     }
 
     private static void assertFacing(Entity commander, float x, float y) {
-        Appearance appearance = commander.getComponent(Appearance.class);
-        assertThat(appearance.facingX).isCloseTo(x, TOLERANCE);
-        assertThat(appearance.facingY).isCloseTo(y, TOLERANCE);
+        Facing facing = commander.getComponent(Facing.class);
+        assertThat(facing.x).isCloseTo(x, TOLERANCE);
+        assertThat(facing.y).isCloseTo(y, TOLERANCE);
     }
 
     private static void kill(Entity commander) {

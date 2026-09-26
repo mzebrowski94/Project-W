@@ -24,9 +24,6 @@ import pl.mzebrows.pwt.sim.def.Look;
  */
 public final class Appearance implements Component, Pool.Poolable {
 
-    /** Below this squared length a direction is noise rather than a heading. */
-    private static final float FACING_EPSILON = 1e-4f;
-
     /** What the entity is doing, where that changes how it must read at a glance. */
     public enum State {
         NORMAL,
@@ -120,22 +117,6 @@ public final class Appearance implements Component, Pool.Poolable {
     public Look chargeLook = Look.NONE;
 
     /**
-     * Which way the entity is pointing, as a unit vector; {@code (0, 0)} means it has no facing worth
-     * showing and the renderer draws none.
-     *
-     * <p>A vector rather than an angle because an angle would have to be written with {@code atan2}
-     * and read back with trigonometry, and {@code ArchitectureTest} bans both here - they are only
-     * specified to within an ulp and may differ between JVMs, which pillar 6 does not allow. The
-     * renderer wants a direction anyway, so nothing is lost.
-     *
-     * <p>Pillar 5, and load-bearing rather than decorative: a unit that engages only what is in front
-     * of it is unreadable unless the player can see where its front is (G0015).
-     */
-    public float facingX;
-
-    public float facingY;
-
-    /**
      * The far end of the streak this entity is drawn as, in world units; equal to its own position
      * means it is a dot, which is what everything in the game publishes but one.
      *
@@ -145,9 +126,8 @@ public final class Appearance implements Component, Pool.Poolable {
      * pixel of the line is on the path a real simulated shot actually took, which is why this is a
      * published fact and not the renderer inventing geometry: there is still no hitscan anywhere.
      *
-     * <p>Two floats on this component rather than the renderer reading a {@code Projectile}, for the
-     * reason the facing is two floats here: the renderer reads this and asks nothing else about an
-     * entity (G0003).
+     * <p>Two floats on this component rather than the renderer reading a {@code Projectile}: the
+     * renderer reads this and asks nothing else about an entity (G0003).
      */
     public float trailX;
 
@@ -232,24 +212,6 @@ public final class Appearance implements Component, Pool.Poolable {
         return this;
     }
 
-    /**
-     * Points the entity along the given direction, which need not be normalised, and returns this
-     * component for fluent spawning.
-     *
-     * <p>A direction too short to mean anything leaves the facing alone, so a unit that stops keeps
-     * looking where it was looking instead of snapping to nowhere.
-     */
-    public Appearance face(float dirX, float dirY) {
-        float lengthSquared = dirX * dirX + dirY * dirY;
-        if (lengthSquared < FACING_EPSILON) {
-            return this;
-        }
-        float scale = 1f / (float) Math.sqrt(lengthSquared);
-        this.facingX = dirX * scale;
-        this.facingY = dirY * scale;
-        return this;
-    }
-
     @Override
     public void reset() {
         look = Look.NONE;
@@ -257,8 +219,6 @@ public final class Appearance implements Component, Pool.Poolable {
         state = State.NORMAL;
         charge = 0f;
         chargeLook = Look.NONE;
-        facingX = 0f;
-        facingY = 0f;
         trailX = 0f;
         trailY = 0f;
         ordered = false;

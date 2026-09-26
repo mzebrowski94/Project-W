@@ -11,7 +11,7 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.Facing;
 
 /**
  * Which way a thing is pointing, published for the renderer.
@@ -75,8 +75,8 @@ class FacingTest {
 
     /**
      * A bullet has a heading and no business showing one. The renderer draws a facing whenever there
-     * is one, so anything that does not steer itself has to report none rather than be filtered out
-     * by the client asking what it is (G0003).
+     * is one, so anything that does not steer itself carries none rather than be filtered out by the
+     * client asking what it is (G0003).
      */
     @Test
     void publishesNoFacingForSomethingThatDoesNotSteerItself() {
@@ -86,7 +86,7 @@ class FacingTest {
 
         simulation.step();
 
-        assertThat(length(projectile)).isZero();
+        assertThat(projectile.getComponent(Facing.class)).isNull();
     }
 
     @Test
@@ -103,15 +103,15 @@ class FacingTest {
     }
 
     private static float facingX(Entity entity) {
-        return entity.getComponent(Appearance.class).facingX;
+        return entity.getComponent(Facing.class).x;
     }
 
     private static float facingY(Entity entity) {
-        return entity.getComponent(Appearance.class).facingY;
+        return entity.getComponent(Facing.class).y;
     }
 
     private static float length(Entity entity) {
-        Appearance appearance = entity.getComponent(Appearance.class);
-        return (float) Math.sqrt(appearance.facingX * appearance.facingX + appearance.facingY * appearance.facingY);
+        Facing facing = entity.getComponent(Facing.class);
+        return (float) Math.sqrt(facing.x * facing.x + facing.y * facing.y);
     }
 }

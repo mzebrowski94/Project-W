@@ -10,9 +10,9 @@ import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
-import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -67,7 +67,7 @@ public final class PerceptionSystem extends EntitySystem {
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
     private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
-    private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
+    private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
 
     private final Defs<PickupKind, PickupDef> pickupDefs;
     private final TileMap map;
@@ -188,24 +188,17 @@ public final class PerceptionSystem extends EntitySystem {
     /**
      * Whether the target is inside the cone this unit notices within, centred on the way it is facing.
      *
-     * <p>The facing read here is the one the renderer drew last frame, deliberately: the arc the game
+     * <p>The facing read here is last tick's, the one the renderer drew, deliberately: the arc the game
      * uses is then exactly the arc the player was shown. A unit that has no facing to speak of - it
      * has never moved, or does not steer itself - notices all round rather than nothing, so an arc
      * cannot accidentally blind something before it has taken a step.
      */
     private static boolean withinArc(Entity watcher, Perception perception, Position position, Position target) {
-        if (!APPEARANCE.has(watcher)) {
+        if (!FACING.has(watcher)) {
             return true;
         }
-        Appearance appearance = APPEARANCE.get(watcher);
-        return Sight.withinArc(
-                appearance.facingX,
-                appearance.facingY,
-                position.x,
-                position.y,
-                target.x,
-                target.y,
-                perception.arcCosine);
+        Facing facing = FACING.get(watcher);
+        return Sight.withinArc(facing.x, facing.y, position.x, position.y, target.x, target.y, perception.arcCosine);
     }
 
     /**

@@ -38,6 +38,7 @@ import pl.mzebrows.pwt.sim.system.DyingSystem;
 import pl.mzebrows.pwt.sim.system.EnemyLeapSystem;
 import pl.mzebrows.pwt.sim.system.EnemyRangedSystem;
 import pl.mzebrows.pwt.sim.system.EvolutionSystem;
+import pl.mzebrows.pwt.sim.system.FacingSystem;
 import pl.mzebrows.pwt.sim.system.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.HopSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
@@ -246,6 +247,7 @@ public final class Simulation {
         engine.addSystem(new NestSystem(config, map, spawner, streams.of(RngStream.NEST)));
         engine.addSystem(new ControlPointSystem(spawner));
         engine.addSystem(new ObjectiveSystem());
+        engine.addSystem(new FacingSystem());
         engine.addSystem(new AppearanceSystem(config));
         engine.addSystem(new ReaperSystem());
         spawnOrder = new SpawnOrder(engine);

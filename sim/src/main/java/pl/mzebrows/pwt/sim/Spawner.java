@@ -27,6 +27,7 @@ import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Focus;
@@ -218,9 +219,8 @@ public final class Spawner {
         // over there carries a beam, the mechanic already works on him.
         entity.add(engine.createComponent(Bloat.class));
         entity.add(engine.createComponent(BlastsOnDeath.class));
-        entity.add(engine.createComponent(Appearance.class)
-                .set(Look.COMMANDER, slot)
-                .face(1f, 0f));
+        entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER, slot));
+        entity.add(engine.createComponent(Facing.class).face(1f, 0f));
         admit(entity);
         return entity;
     }
@@ -311,7 +311,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Action.class).set(config.action().reach()));
         // A trooper has hands for a gun on a mount too, though nothing decides to use one yet.
         entity.add(engine.createComponent(Crew.class));
-        entity.add(engine.createComponent(Appearance.class).set(Look.TROOPER).face(1f, 0f));
+        entity.add(engine.createComponent(Appearance.class).set(Look.TROOPER));
+        entity.add(engine.createComponent(Facing.class).face(1f, 0f));
         admit(entity);
         return entity;
     }
@@ -366,7 +367,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Weapon.class));
         entity.add(engine.createComponent(Taking.class));
         entity.add(engine.createComponent(Feed.class));
-        entity.add(engine.createComponent(Appearance.class).face(1f, 0f));
+        entity.add(engine.createComponent(Appearance.class));
+        entity.add(engine.createComponent(Facing.class).face(1f, 0f));
         applyStrain(entity, kind);
         admit(entity);
         return entity;
@@ -576,7 +578,8 @@ public final class Spawner {
                         ticks(rabbit.dodge().durationSeconds()),
                         ticks(rabbit.dodge().commitSeconds()),
                         rabbit.dodge().margin()));
-        entity.add(engine.createComponent(Appearance.class).set(def.look()).face(1f, 0f));
+        entity.add(engine.createComponent(Appearance.class).set(def.look()));
+        entity.add(engine.createComponent(Facing.class).face(1f, 0f));
         admit(entity);
         return entity;
     }
@@ -773,7 +776,8 @@ public final class Spawner {
         // The heat belongs to the gun, not to whoever is on it. That is the whole of why stepping off
         // a hot turret and back on again is not a way of putting the bar back.
         entity.add(engine.createComponent(Heat.class));
-        entity.add(engine.createComponent(Appearance.class).set(Look.TURRET).face(1f, 0f));
+        entity.add(engine.createComponent(Appearance.class).set(Look.TURRET));
+        entity.add(engine.createComponent(Facing.class).face(1f, 0f));
         admit(entity);
         return entity;
     }

@@ -35,6 +35,7 @@ import pl.mzebrows.pwt.sim.system.DyingSystem;
 import pl.mzebrows.pwt.sim.system.EnemyLeapSystem;
 import pl.mzebrows.pwt.sim.system.EnemyRangedSystem;
 import pl.mzebrows.pwt.sim.system.EvolutionSystem;
+import pl.mzebrows.pwt.sim.system.FacingSystem;
 import pl.mzebrows.pwt.sim.system.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.HopSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
@@ -209,6 +210,10 @@ class SystemOrderTest {
         rows.add(new Before(WaveSystem.class, ControlPointSystem.class, "a schedule armed this tick sends next tick"));
         rows.add(new Before(
                 ControlPointSystem.class, ObjectiveSystem.class, "the post exists on the tick it is asked about"));
+        rows.add(new Before(
+                CollisionSystem.class,
+                FacingSystem.class,
+                "a facing is where the tick ended looking - perception reads it next tick, the arc the renderer drew"));
         return rows.stream().map(Arguments::of);
     }
 

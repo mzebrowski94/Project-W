@@ -38,6 +38,7 @@ public final class Components {
                     Dragged.class,
                     Dying.class,
                     Enemy.class,
+                    Facing.class,
                     Faction.class,
                     Feed.class,
                     Focus.class,

@@ -31,9 +31,9 @@ row's reason. A new constraint is a row here and a row there.
 | 18 | `DodgeSystem` | 41 | `NestSystem` |
 | 19 | `DriveSystem` | 42 | `ControlPointSystem` |
 | 20 | `EnemyLeapSystem` | 43 | `ObjectiveSystem` |
-| 21 | `StunSystem` | 44 | `AppearanceSystem` |
-| 22 | `MovementSystem` | 45 | `ReaperSystem` |
-| 23 | `StrikeSystem` | | |
+| 21 | `StunSystem` | 44 | `FacingSystem` |
+| 22 | `MovementSystem` | 45 | `AppearanceSystem` |
+| 23 | `StrikeSystem` | 46 | `ReaperSystem` |
 
 Before system 1, `step(PlayerInputs)` copies each slot's `CommanderInput` into that commander's
 `Intent`. That is the only way input enters the simulation, and it is also **the one place a relative
@@ -73,9 +73,10 @@ against the order above on 2026-09-13 and hold.
 | `DyingSystem` (32) after `DamageSystem` (28) | Marks a body that has lain out its throes; damage decides who is dying. |
 | Reactions - `RespawnSystem` (33) - run **while the dead are still there** | They react to a body that has not been removed yet. |
 | `WaveSystem` (40) **before** `ObjectiveSystem` (43) | A level whose last wave lands this tick must not read as complete for the tick before the aliens appear. It sits with the other systems that are about the level rather than about anything standing in it, at the end of the tick. |
-| `NestSystem` (41) **after** the death chain (28-38) and **before** `ReaperSystem` (45) | A destroyed nest empties the last of itself while its body is still on the field - the same window, and the same reason, as respawning and blasts. One system earlier and the brood would be owed to a tick that had already gone; one later and there would be nothing left to react to. |
+| `NestSystem` (41) **after** the death chain (28-38) and **before** `ReaperSystem` (46) | A destroyed nest empties the last of itself while its body is still on the field - the same window, and the same reason, as respawning and blasts. One system earlier and the brood would be owed to a tick that had already gone; one later and there would be nothing left to react to. |
 | `NestSystem` (41) **before** `ObjectiveSystem` (43) | The same reason `WaveSystem` is: a level whose last nest dies this tick must not read as clear for the tick before its brood appears. |
-| `ReaperSystem` **last** (45) | Nothing else in the simulation removes an entity; `onlyTheReaperRemovesEntities` fails the build if it tries. |
+| `ReaperSystem` **last** (46) | Nothing else in the simulation removes an entity; `onlyTheReaperRemovesEntities` fails the build if it tries. |
+| `FacingSystem` (44) **after** every aim and move has settled - `CollisionSystem` (24) is the last of them | A facing is where the thing ended the tick looking. `PerceptionSystem` (7) reads it on the next tick, so the arc the game notices within is exactly the one the renderer drew (G0015, pillar 5). |
 | Drivers write *desired* velocity; `DriveSystem` (19) commits it once and clears it | Several systems may have an opinion without knowing the others exist. A unit no system spoke for stands still, and no driver needs a halt-everything branch (G0010). |
 | `WeaveSystem` (9) **after** `NavigationSystem` (8) and **before** `AvoidanceSystem` (15) | It bends the course navigation has just written, and avoidance keeps the last word about it - a weave that could steer a creature into rock would stop being a weave the moment a level had walls in it. Its phase advances with ground covered rather than with the clock, which is why it reads the desired velocity before anything has moved. |
 | `AvoidanceSystem` (15) **before** `DodgeSystem` (18) | A dodge bent around a rock would not be the same dodge twice, and G0012 promises it is. A cornered rabbit sidesteps into a wall - what being cornered should cost it. |

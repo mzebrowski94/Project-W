@@ -17,7 +17,7 @@ import pl.mzebrows.pwt.sim.Players;
  */
 final class LocalAim {
 
-    /** What {@code Appearance.face} treats as no direction at all. */
+    /** What {@code Facing.face} treats as no direction at all. */
     private static final float SHORTEST = 1e-4f;
 
     private final boolean[] aiming = new boolean[Players.MAX];

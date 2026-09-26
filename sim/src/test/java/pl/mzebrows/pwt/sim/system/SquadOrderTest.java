@@ -21,6 +21,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
@@ -77,11 +78,11 @@ class SquadOrderTest {
         simulation.step(order(Order.DEFENCE));
 
         float wasX = at(trooper).x;
-        float firstLook = trooper.getComponent(Appearance.class).facingY;
+        float firstLook = trooper.getComponent(Facing.class).y;
         boolean lookedElsewhere = false;
         for (int tick = 0; tick < 120; tick++) {
             simulation.step();
-            lookedElsewhere |= trooper.getComponent(Appearance.class).facingY != firstLook;
+            lookedElsewhere |= trooper.getComponent(Facing.class).y != firstLook;
         }
 
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.HOLD);
@@ -216,7 +217,7 @@ class SquadOrderTest {
     }
 
     private static float facing(Entity trooper) {
-        return trooper.getComponent(Appearance.class).facingX;
+        return trooper.getComponent(Facing.class).x;
     }
 
     /**

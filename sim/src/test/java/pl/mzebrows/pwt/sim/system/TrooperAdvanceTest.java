@@ -27,9 +27,9 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Trooper;
@@ -361,9 +361,9 @@ class TrooperAdvanceTest {
         Entity trooper = simulation.spawnTrooper(20f, 20f);
         steps(simulation, 5);
 
-        float first = trooper.getComponent(Appearance.class).facingY;
+        float first = trooper.getComponent(Facing.class).y;
         steps(simulation, ticksIn(2f));
-        float later = trooper.getComponent(Appearance.class).facingY;
+        float later = trooper.getComponent(Facing.class).y;
 
         assertThat(first).isNotEqualTo(later);
     }
@@ -377,9 +377,8 @@ class TrooperAdvanceTest {
 
         simulation.step();
 
-        Appearance appearance = trooper.getComponent(Appearance.class);
-        assertThat(appearance.facingX * appearance.facingX + appearance.facingY * appearance.facingY)
-                .isGreaterThan(0.9f);
+        Facing facing = trooper.getComponent(Facing.class);
+        assertThat(facing.x * facing.x + facing.y * facing.y).isGreaterThan(0.9f);
     }
 
     /**
@@ -494,7 +493,7 @@ class TrooperAdvanceTest {
     }
 
     private static float facing(Entity trooper) {
-        return trooper.getComponent(Appearance.class).facingX;
+        return trooper.getComponent(Facing.class).x;
     }
 
     private static Simulation withUrgency(float urgency) {

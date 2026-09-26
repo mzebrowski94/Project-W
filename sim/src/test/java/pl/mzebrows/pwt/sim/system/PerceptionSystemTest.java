@@ -19,8 +19,8 @@ import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -211,7 +211,7 @@ class PerceptionSystemTest {
     void noticesWhatIsInsideItsArcAndNotWhatIsBehindIt() {
         Simulation simulation = watchingInFront(ground().build());
         Entity watcher = simulation.spawnEnemy(MIDDLE, MIDDLE);
-        watcher.getComponent(Appearance.class).face(1f, 0f);
+        watcher.getComponent(Facing.class).face(1f, 0f);
         simulation.spawnCommander(MIDDLE - 5f, MIDDLE);
 
         simulation.step();
@@ -223,7 +223,7 @@ class PerceptionSystemTest {
     void noticesWhatItIsFacing() {
         Simulation simulation = watchingInFront(ground().build());
         Entity watcher = simulation.spawnEnemy(MIDDLE, MIDDLE);
-        watcher.getComponent(Appearance.class).face(-1f, 0f);
+        watcher.getComponent(Facing.class).face(-1f, 0f);
         simulation.spawnCommander(MIDDLE - 5f, MIDDLE);
 
         simulation.step();
@@ -240,7 +240,7 @@ class PerceptionSystemTest {
         Simulation simulation =
                 watchingInFront(ground().rect(9, 0, 1, 20, Terrain.ROCK).build());
         Entity watcher = simulation.spawnEnemy(52f, MIDDLE);
-        watcher.getComponent(Appearance.class).face(-1f, 0f);
+        watcher.getComponent(Facing.class).face(-1f, 0f);
         simulation.spawnCommander(43f, MIDDLE);
 
         simulation.step();
@@ -252,7 +252,7 @@ class PerceptionSystemTest {
     void noticesTheSameManThroughTheSameGapWhenTheRockIsNotInTheWay() {
         Simulation simulation = watchingInFront(ground().build());
         Entity watcher = simulation.spawnEnemy(52f, MIDDLE);
-        watcher.getComponent(Appearance.class).face(-1f, 0f);
+        watcher.getComponent(Facing.class).face(-1f, 0f);
         simulation.spawnCommander(43f, MIDDLE);
 
         simulation.step();
@@ -269,11 +269,11 @@ class PerceptionSystemTest {
     void keepsHuntingHimAfterItTurnsAwayFromHim() {
         Simulation simulation = watchingInFront(ground().build());
         Entity watcher = simulation.spawnEnemy(MIDDLE, MIDDLE);
-        watcher.getComponent(Appearance.class).face(-1f, 0f);
+        watcher.getComponent(Facing.class).face(-1f, 0f);
         simulation.spawnCommander(MIDDLE - 5f, MIDDLE);
         simulation.step();
 
-        watcher.getComponent(Appearance.class).face(1f, 0f);
+        watcher.getComponent(Facing.class).face(1f, 0f);
         simulation.step();
 
         assertThat(aggro(watcher)).isTrue();
