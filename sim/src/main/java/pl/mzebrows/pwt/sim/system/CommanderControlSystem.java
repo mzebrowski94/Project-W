@@ -30,24 +30,11 @@ import pl.mzebrows.pwt.sim.def.GroundDef;
  * this writes says nothing about where the commander is pointing, and the direction a projectile
  * leaves in says nothing about where the commander is walking.
  *
- * <p>A commander held still by a blow - or lying on the field having taken a fatal one - runs none of
- * this. It does not zero his velocity either: while he is held, that belongs to {@code StunSystem},
- * which bleeds off whatever the blow gave him.
+ * <p>A held commander runs none of this, and his velocity is {@code StunSystem}'s.
  *
- * <p><strong>The leash lives here because this system owns a commander's velocity.</strong> Pillar 4
- * says there is one fight and the player can always see it, and one shared view cannot frame four
- * players free to walk apart for ever - so a step that would take a commander further than
- * {@code leashRadius} from the middle of the commanders has its outward part refused. It is refused
- * exactly, down to what is left of the rope, so he stops on the line rather than a step past it.
- *
- * <p><strong>It never pushes.</strong> Only the outward part of a step the player asked for is
- * touched; sideways and inward are untouched, and a commander already past the line - knocked there,
- * or brought back while the others walked on - simply walks home himself. A leash that shoved would
- * be the camera driving a unit, and pillar 2 says the commander is a unit rather than a cursor.
- *
- * <p>The distance is a number in {@code game.properties} sized against the near-zoom view by hand,
- * and is never read from the camera: zoom is a rendering setting and a leash that grew with it would
- * make pulling the view back into extra rope.
+ * <p><strong>The leash lives here because this system owns a commander's velocity</strong> (pillar
+ * 4): the outward part of a step past {@code leashRadius} from the middle of the commanders is refused
+ * exactly. <strong>It never pushes</strong> (pillar 2) - one past the line walks home himself.
  */
 public final class CommanderControlSystem extends IteratingSystem {
 
@@ -112,8 +99,7 @@ public final class CommanderControlSystem extends IteratingSystem {
     /**
      * Where the commanders are, before any of them has been driven.
      *
-     * <p>Once a tick rather than once per commander: the middle has to be the same answer for all of
-     * them, or the first one driven would be leashed to a different place from the last.
+     * <p>Once a tick, so every commander is leashed to the same place.
      */
     @Override
     public void update(float deltaTime) {
@@ -155,9 +141,7 @@ public final class CommanderControlSystem extends IteratingSystem {
     /**
      * Takes off whatever part of this step would carry him past the end of the rope.
      *
-     * <p>The allowance is what is left of the rope divided by the step, so the velocity that survives
-     * lands him exactly on the line. Clamping the position afterwards instead would be a second
-     * system writing where he is, which is how a unit ends up somewhere neither asked for.
+     * <p>What survives lands him exactly on the line; the position is never clamped.
      */
     private void leash(Entity entity, float deltaTime) {
         if (leashRadius <= 0f || watched < 2 || deltaTime <= 0f) {
@@ -190,11 +174,7 @@ public final class CommanderControlSystem extends IteratingSystem {
      * A move intent longer than one unit is normalised, so holding two keys is not faster than
      * holding one; a shorter one is kept as-is, so a half-pushed stick moves at half speed.
      *
-     * <p>The speed it works from is {@link Pace}d first, which is the whole of why that question is
-     * a class of its own: he is the one thing on the field whose velocity is not committed by
-     * {@code DriveSystem}, and ground that slowed everything except the player would be ground with
-     * no decision in it. Scaling the speed rather than the finished velocity also keeps hauling
-     * honest - a man dragging a barrel through a thicket is capped off the speed he actually has.
+     * <p>The speed is {@link Pace}d first: his velocity is not committed by {@code DriveSystem}.
      */
     private void drive(Entity entity, Intent intent) {
         Velocity velocity = VELOCITY.get(entity);
@@ -212,15 +192,9 @@ public final class CommanderControlSystem extends IteratingSystem {
      * Writes the velocity he actually gets, which is the one he asked for unless he is hauling
      * something.
      *
-     * <p><strong>Backing away, and only backing away.</strong> The step is split along the line to
-     * the load: whatever part of it points towards what he is dragging is thrown away outright, and
-     * whatever part is sideways survives only in part. So he reverses out of a fight with a man in
-     * one hand, leaning left and right, and cannot walk forwards over him. Everything that is left
-     * is then slowed, because hauling is not walking.
-     *
-     * <p>It happens here rather than in {@code DragSystem} because this system owns his velocity.
-     * Two systems writing one velocity is how a unit ends up travelling somewhere neither asked for,
-     * so the other one publishes the bearing and this one decides what to do about it.
+     * <p><strong>Backing away, and only backing away</strong>: the part towards the load is dropped,
+     * the sideways part partly kept, and the rest slowed. Here, not in {@code DragSystem}, because this
+     * system owns his velocity.
      */
     private static void haul(Entity entity, Velocity velocity, float wantX, float wantY, float speed) {
         if (!Drivers.handsFull(entity)) {
@@ -231,9 +205,7 @@ public final class CommanderControlSystem extends IteratingSystem {
         float awayX = -drag.towardLoadX;
         float awayY = -drag.towardLoadY;
         float along = wantX * awayX + wantY * awayY;
-        // Split first, clamp second. Clamping to zero and then subtracting would leave the whole
-        // step behind as "sideways", so walking straight at the load would carry him straight over
-        // it at full lateral speed - the constraint reading as if it were not there at all.
+        // Split first, clamp second, or a step straight at the load survives as "sideways".
         float sidewaysX = (wantX - along * awayX) * drag.lateralFactor;
         float sidewaysY = (wantY - along * awayY) * drag.lateralFactor;
         if (along < 0f) {

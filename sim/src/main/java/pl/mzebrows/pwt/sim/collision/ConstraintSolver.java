@@ -13,31 +13,16 @@ import pl.mzebrows.pwt.sim.component.PreviousPosition;
 /**
  * Decides where everything is allowed to be, after movement has said where it would like to be.
  *
- * <p>Three constraints, applied together: bodies may not overlap, movable solids may not stand in
- * impassable terrain, and movable solids may not leave the arena. Applying them in sequence once is
- * not enough - pushing a unit out of an obstacle can shove it through a wall, and clamping it back
- * puts it inside the obstacle again - so the set is applied repeatedly, a few passes per tick, and
- * the result satisfies all three.
+ * <p>Three constraints, applied together over a few passes per tick: bodies may not overlap, movable
+ * solids may not stand in impassable terrain, and may not leave the arena. <strong>Terrain is a clamp,
+ * not a body</strong> (G0009, ADR 0007): a circle spans at most four tiles, so no broad phase.
  *
- * <p><strong>Terrain is a clamp, not a body.</strong> Impassable ground never enters the pairwise
- * path and is never an entity (G0009); it constrains a position exactly as the arena boundary already
- * does, which is why circles-only collision (ADR 0007) is untouched by it. The grid makes the lookup
- * free: a circle spans at most four tiles, so there is no broad phase and nothing to iterate.
+ * <p>Purely geometric: it reads {@link Collider} flags, separates pairs of solids, reports contacts,
+ * and writes only movable bodies. What a contact means is the caller's.
  *
- * <p>Purely geometric. It reads {@link Collider} flags and never asks what an entity <em>is</em>: a
- * pair of solids is separated, a pair where either is non-solid only reports a contact, and only
- * movable bodies are ever written to. What a contact <em>means</em> - damage, a pickup, a trigger -
- * is the caller's business.
- *
- * <p><strong>The three constraints are not equal.</strong> Arena containment is applied last on every
- * pass and is therefore absolute: nothing ever ends a tick outside the arena. Terrain sits in the same
- * tier, applied on every pass after separation, so a wall holds under crowd pressure - you would far
- * rather watch two units overlap than watch one squeeze through a rock face. Staying out of a solid
- * body is the one that gives, because a crowd driven into a dead end is an unsatisfiable set of
- * constraints and something has to. Positional separation of this kind always resolves that by letting
- * bodies overlap, and raising the pass count reduces the squeeze without ever removing it. If deep
- * penetration under crowd pressure ever becomes a real problem, the fix is a different model -
- * impulses, or a mass hierarchy where an immovable body cannot be penetrated - not more passes.
+ * <p><strong>The constraints are not equal.</strong> Arena and terrain are applied after separation on
+ * every pass, so they hold; separation is the one that gives under crowd pressure. More passes reduce
+ * that squeeze and never remove it; the fix, if ever needed, is a different model.
  */
 public final class ConstraintSolver implements SpatialGrid.PairVisitor {
 
@@ -84,8 +69,7 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
         for (int i = 0; i < bodies.size(); i++) {
             Entity entity = bodies.get(i);
             if (!COLLIDER.get(entity).present) {
-                // Not on the field at all - a man inside the gun he is firing. Never inserted, so it
-                // makes no pair with anything and the rest of this class needs no case for it.
+                // Not on the field - a man inside a gun. Never inserted.
                 continue;
             }
             Collider collider = COLLIDER.get(entity);
@@ -223,11 +207,8 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
     }
 
     /**
-     * Keeps solid movable bodies out of rock and inside the arena, in that order, so the boundary has
-     * the last word. Non-solid ones - projectiles - are deliberately left alone: a projectile leaves
-     * the arena and flies into a wall rather than stopping at either, and {@code ProjectileBoundsSystem}
-     * is what despawns it. An immovable body is left alone too, so terrain never rearranges the
-     * scenery a level put down.
+     * Keeps solid movable bodies out of rock and inside the arena, in that order. Projectiles are
+     * {@code ProjectileBoundsSystem}'s; immovable scenery is never moved.
      */
     private void constrainMovableSolids(ImmutableArray<Entity> bodies) {
         for (int i = 0; i < bodies.size(); i++) {
@@ -248,12 +229,9 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
      * Pushes a body out of every impassable tile it is touching - at most four of them, because a
      * circle that size cannot span more.
      *
-     * <p><strong>Pushes are gathered and then resolved, never applied one tile at a time.</strong>
-     * Applying each independently looks correct and is not: a body squeezed into a gap narrower than
-     * itself gets an equal push from the rock above and the rock below, the two cancel exactly, and it
-     * slides through a wall it does not fit through while overlapping both sides. Gathering them makes
-     * that case visible as what it is - an axis with no room on it - and the answer is to leave the way
-     * it came in, which is the nearer end of the tiles doing the squeezing.
+     * <p><strong>Pushes are gathered, then resolved</strong>: applied one tile at a time, opposite pushes
+     * in a gap too narrow cancel and the body slides through the wall. An axis with no room is left the
+     * way it came in.
      */
     private void pushOutOfTerrain(Position position, float radius) {
         if (map.inBounds(map.colAt(position.x), map.rowAt(position.y)) && !map.passableAt(position.x, position.y)) {
@@ -330,12 +308,8 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
     /**
      * Whether the face or corner we are about to be pushed away from is on the outside of the wall.
      *
-     * <p>Without this, a wall made of tiles behaves like a row of separate blocks: a body sliding
-     * along it is resolved against each tile independently, and the tile it has half left pushes it
-     * sideways off its own corner - which the player feels as catching on every seam. The fix is that
-     * a face buried in the next tile of the same wall is not a surface, and neither is a corner with a
-     * solid tile beside it. Anything outside the map reads as impassable, so the arena edge is
-     * correctly never treated as an exposed face either.
+     * <p>A face buried in the next tile of the same wall is not a surface, nor a corner beside a solid
+     * tile - or a body sliding along a wall catches on every seam.
      */
     private boolean exposed(int col, int row, int stepX, int stepY) {
         if (stepX != 0 && stepY != 0) {
@@ -349,8 +323,7 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
      * nearest face that actually opens onto somewhere it can stand. A body walled in on all four sides
      * is left where it is; a later pass frees it once whatever put it there has been resolved.
      *
-     * <p>This should not happen in play. It happens when a crowd drives something into a wall hard
-     * enough, and it is the difference between recovering and staying stuck inside the rock.
+     * <p>Happens when a crowd drives something into a wall hard enough.
      */
     private void ejectFromInside(Position position, float radius) {
         int col = map.colAt(position.x);

@@ -92,13 +92,10 @@ final class TrooperObjective {
         Entity point = points.get(nearest);
         Position where = POSITION.get(point);
         trooper.headFor(where.x, where.y);
-        // Already standing on it: hold this spot and watch, rather than shuffling towards
-        // the middle. Everyone inside the radius counts equally, so walking further in buys
-        // nothing and a squad piled on one spot cannot see past itself.
+        // Already standing on it: hold this spot and watch, not shuffle towards the middle.
         boolean arrived = standingOn(point, at);
         if (arrived) {
-            // The walk is over, so the order that paid for it is spent. One "forward" buys
-            // one point, and the squad settles again on the one it has just reached.
+            // One "forward" buys one point: spent on arrival.
             trooper.sentOn = false;
         }
         trooper.mode = arrived ? Trooper.Mode.SECURE : Trooper.Mode.ADVANCE;
@@ -108,18 +105,9 @@ final class TrooperObjective {
     /**
      * Splits the circle round each point into sectors, one for each man standing on it.
      *
-     * <p><strong>A bearing each, drawn at random, left whole sides unwatched.</strong> A trooper sees
-     * inside an arc, and four arcs pointed anywhere cover what they happen to cover - so a nest behind
-     * the squad was never found at any range. Each man on a point is handed a run of compass slots
-     * instead, the runs together making the whole circle, and turns through his own run a scan at a
-     * time; one man alone turns through all of it.
-     *
-     * <p>Who gets which run is their order in the family, which is spawn order and the same on every
-     * replay. A man arriving, leaving, or turning to fight reshuffles the runs on the same tick, so the
-     * ones still watching cover for him.
-     *
-     * <p>Two passes over the troopers and none over pairs of them: which point each stands on and how
-     * many stand on each, then each man's place among them.
+     * <p>Each man gets a run of compass slots, the runs together making the whole circle, handed out in
+     * family (spawn) order and reshuffled on the same tick anyone arrives, leaves or turns to fight. Two
+     * passes, no pairs.
      */
     void splitIntoSectors() {
         if (standingOnPoint.length < troopers.size()) {
@@ -173,9 +161,7 @@ final class TrooperObjective {
     /**
      * Whether this trooper is far enough inside the point to stop walking.
      *
-     * <p>Short of the edge rather than at it: a trooper that stopped exactly on the boundary would be
-     * one shove away from dropping out of the radius, and the capture resets the moment the last
-     * holder leaves. The margin is what makes a squad holding a point robust to being jostled.
+     * <p>Short of the edge, so one shove does not drop it out and reset the capture.
      */
     private static boolean standingOn(Entity point, Position at) {
         ControlPoint held = POINT.get(point);
@@ -186,20 +172,9 @@ final class TrooperObjective {
     /**
      * Holds ground the squad has already taken, unless it has been told to push on.
      *
-     * <p><strong>A point taken is a point held.</strong> Walking off the moment the bar fills meant
-     * the squad ran the level on its own and the commander spent it catching up; waiting means ground
-     * the squad has taken is ground somebody is still standing on, and the level advances at his pace.
-     * "Forward" sends them on at once, and because an order reaches only what is within earshot
-     * (G0017), that means going to them first. Since G0040 they also go on by themselves - but only
-     * to catch up with a commander who is already ahead of them, never to run ahead of one.
-     *
-     * <p>Only on a point it has <em>taken</em>. A trooper anywhere else advances as it always did, so
-     * the first walk of a level needs no order, and a point somebody is still capturing is still
-     * being captured.
-     *
-     * <p>{@code SECURE} rather than a mode of its own: standing on a point, stationary, watching
-     * outward and not shuffling towards the middle is the same posture whether the bar is filling or
-     * full, and the renderer already draws it.
+     * <p><strong>A point taken is a point held</strong> (G0029): the level advances at the commander's
+     * pace. "Forward" sends them on (G0017); they also go on by themselves to catch up with a commander
+     * who is ahead, never to run ahead of one (G0040). Posture is {@code SECURE}, as while capturing.
      */
     boolean holdsWhatItHasTaken(Trooper trooper, Position at, float deltaTime) {
         if (trooper.sentOn) {
@@ -223,15 +198,9 @@ final class TrooperObjective {
     /**
      * Whether a man holding a taken point should go on to the next one without being told (G0040).
      *
-     * <p><strong>The squad follows the war; it never runs ahead of it.</strong> A commander already near
-     * the next point sends the men on at once - waiting to be fetched by somebody who is standing where
-     * you are going reads as men who have not noticed the fight moving. Otherwise they hold for their
-     * own while, and then go only if a commander has gone on ahead of them by route and none is on this
-     * point with them. A commander behind them keeps them where they are however long they have held:
-     * that is G0029's reason, kept - the level still advances at his pace, not at theirs.
-     *
-     * <p>Every commander on his feet counts, whoever ordered what. "Forward" is untouched and still
-     * sends them at once.
+     * <p><strong>The squad follows the war; it never runs ahead of it.</strong> A commander near the
+     * next point sends them at once; otherwise they hold their own while, then go only if a commander
+     * is ahead by route and none is on this point. Every commander on his feet counts.
      */
     private boolean movesOn(Trooper trooper, Position at, int taken, float deltaTime) {
         int next = nearestUncapturedPoint(at);
@@ -298,8 +267,7 @@ final class TrooperObjective {
     /**
      * Which uncaptured point is the shortest walk away, or {@code -1} if none can be reached.
      *
-     * <p>Ties go to whichever was spawned first, because the family is in insertion order and the
-     * comparison is strict - so two points equally far away pull the same way on every replay.
+     * <p>Ties go to the first spawned: insertion order and a strict comparison.
      */
     private int nearestUncapturedPoint(Position at) {
         int col = map.colAt(at.x);

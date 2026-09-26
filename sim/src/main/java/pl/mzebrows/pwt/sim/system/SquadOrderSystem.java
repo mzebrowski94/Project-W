@@ -19,20 +19,9 @@ import pl.mzebrows.pwt.sim.def.Order;
 /**
  * Passes the commander's orders to the troopers near enough to hear them (G0017).
  *
- * <p><strong>Near enough, and no further.</strong> There is no selection and no roster: who hears an
- * order is decided by where the commander is standing, which is the one thing that makes commanding
- * interesting. When the squad is together - which pillar 4 says is most of the time - the radius
- * costs the player nothing; when it is strung out, getting close enough to be heard is a real
- * decision made with the same input as everything else, movement.
- *
- * <p>An order is delivered <strong>once</strong>, on the tick it is given, and then stands on
- * whoever heard it. Holding the key does not keep issuing it to whatever has since wandered into
- * range, and a trooper that walks away later keeps what it was told - which is what "follow me"
- * has to mean to be worth saying.
- *
- * <p>Nothing here decides what an order <em>does</em>. It writes a field; {@code TrooperMindSystem}
- * reads it, below the fight and above the objective. That is the ordering 3.e asks for, and it needs
- * no queue: a trooper interrupted by a fight has not lost its order, because nothing consumed it.
+ * <p><strong>Near enough, and no further</strong>: no selection, no roster. Delivered
+ * <strong>once</strong>, on the tick it is given, then it stands on whoever heard it. It writes a
+ * field; {@code TrooperMindSystem} decides what it does (3.e).
  */
 public final class SquadOrderSystem extends EntitySystem {
 
@@ -67,10 +56,7 @@ public final class SquadOrderSystem extends EntitySystem {
     public void update(float deltaTime) {
         takeStock();
         release();
-        // Ascending slot, so when two commanders shout at one trooper on the same tick the higher
-        // slot is heard last and therefore wins. Whatever order Ashley holds the family in would
-        // also be an answer, but it changes the moment somebody is killed and respawned - and a
-        // rule that quiet is a rule nobody can play around.
+        // Ascending slot: on a tie the higher slot is heard last and wins, stable across respawns.
         for (int slot = 0; slot < standing.length; slot++) {
             Entity commander = Players.inSlot(commanders, slot);
             if (commander == null) {
@@ -78,8 +64,7 @@ public final class SquadOrderSystem extends EntitySystem {
             }
             @Nullable Order order = INTENT.get(commander).order;
             if (order == null || Drivers.held(commander)) {
-                // A commander held still by a blow is not giving orders. Being able to shout while
-                // clinched would make the one moment he is genuinely out of the fight free.
+                // A held commander is not giving orders.
                 continue;
             }
             Position at = POSITION.get(commander);
@@ -107,23 +92,9 @@ public final class SquadOrderSystem extends EntitySystem {
     /**
      * Drops every standing order whose giver is on the ground.
      *
-     * <p><strong>His going down releases the squad</strong>, which is the same rule the other side
-     * already lives by: nothing stands to attention over a corpse. A squad holding a formation around
-     * a body, or still walking to where he was when he died, is the game holding its breath - and the
-     * seconds after a death are supposed to be a beat rather than a freeze frame.
-     *
-     * <p>It clears the burst of pace as well as the standing orders, so one death means one rule
-     * rather than "some of what he said survives him". The ring goes out with it, so what the player
-     * sees and what the squad is doing agree again.
-     *
-     * <p>Orders are <strong>not</strong> restored when he comes back. An order is a live instruction
-     * from a living commander; resuming a formation he asked for two deaths ago would be the game
-     * remembering something the player has long stopped meaning.
-     *
-     * <p><strong>Each commander releases only his own men.</strong> With one commander that is the
-     * rule as it was written; with four, releasing the lot when any of them fell would let a death
-     * across the map cancel the formation somebody else was holding. What is orphaned is what he
-     * said, and nothing else.
+     * <p><strong>His going down releases the squad</strong> - standing orders and the burst of pace
+     * alike - and nothing is restored when he comes back. <strong>Each commander releases only his own
+     * men.</strong>
      */
     private void release() {
         for (int i = 0; i < troopers.size(); i++) {
@@ -144,15 +115,8 @@ public final class SquadOrderSystem extends EntitySystem {
     /**
      * Writes one order onto one trooper.
      *
-     * <p>Two of these stand and two do not. Follow and defence are states a trooper stays in until it
-     * is told otherwise; forward is a burst of ground to cover plus permission to leave a point
-     * (G0029), so it lands as a distance and a flag rather than as a standing order, and expires by
-     * being spent.
-     *
-     * <p><strong>Forward also drops whatever standing order it had</strong>, because every one of
-     * them is a reason not to advance. Cancel still exists and is not the same thing: it stops the
-     * squad without sending it anywhere, and it is the one key that puts a man back to his own
-     * judgement rather than giving him something else to do.
+     * <p>Follow and defence stand; forward is a distance and a flag, spent (G0029). <strong>Forward also
+     * drops any standing order</strong>. Cancel stops the squad without sending it anywhere.
      */
     private void give(Trooper trooper, Order order, int slot) {
         trooper.orderedBy = slot;
@@ -160,16 +124,10 @@ public final class SquadOrderSystem extends EntitySystem {
             case FOLLOW_ME -> trooper.order = Order.FOLLOW_ME;
             case DEFENCE -> trooper.order = Order.DEFENCE;
             case FORWARD -> {
-                // Pushing on cancels whatever it was doing instead of advancing - holding a place,
-                // or keeping station on him. Either would swallow the order: a man told to hold
-                // pushes on and then stands still again, and a man following stays at your shoulder
-                // while you walk. Having to cancel first was one press too many for the order that
-                // sets a level's pace.
+                // Pushing on cancels a hold or a follow, either of which would swallow it.
                 trooper.order = null;
                 trooper.forwardRemaining = forwardDistance;
-                // And it leaves the point it is holding. One order buys one point: the flag is spent
-                // when it reaches the next, so the squad advances at the commander's pace rather than
-                // running the level on its own.
+                // And it leaves the point it is holding: one order buys one point.
                 trooper.sentOn = true;
             }
             case CANCEL -> {

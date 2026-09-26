@@ -26,44 +26,15 @@ import pl.mzebrows.pwt.sim.def.Side;
 /**
  * Bends a unit's course around whatever it is about to run into, before it runs into it.
  *
- * <p><strong>Context steering.</strong> A fixed ring of candidate directions is scored twice: how much
- * the unit wanted to go that way, and how dangerous that way is. It goes the best-scoring way. The
- * alternative shape - feelers, and a turn when one is tripped - gets stuck in a concave arrangement,
- * which two obstacles and a wall make by accident, and cannot express "this way is bad but it is the
- * least bad".
+ * <p><strong>Context steering</strong>: a fixed ring of directions scored for desire and danger. Both
+ * parties are projected {@code lookaheadSeconds} ahead, so it avoids where things will be.
  *
- * <p><strong>What makes it proactive is one multiply.</strong> Both parties are projected forward by
- * {@code lookaheadSeconds} before the gap between them is measured, so the unit is avoiding where
- * something is going to be rather than where it is. Something beside it and moving into its path is a
- * hazard; something dead ahead and moving away is not.
+ * <p>What is worth going round is on the collider ({@code avoided}), decided at spawn. <strong>Never
+ * a pickup it wants</strong>, except one it shuns (G0022, a question about the pair), and
+ * <strong>never the other side</strong> - that is what it is trying to reach.
  *
- * <p><strong>It never avoids a pickup it wants.</strong> A pickup is a thing you walk over, and one
- * that walks has to be solid to stay out of rock - so without this a hungry alien would steer politely
- * around its own dinner. The exception is a pickup that goes off (G0022): a barrel is given as wide a
- * berth as a rock by everything that would only set it off, and walked straight at by anything that
- * can swallow one. Wariness is about the pair, not about the thing.
- *
- * <p><strong>Solid is not the whole of what is worth going round.</strong> A wall is avoided because
- * walking into it is a failure; burning ground is avoided because walking into it is a casualty, and
- * nothing is pushed by it at all; a mine is solid and is deliberately not avoided, because the whole
- * of what a mine is is something the other side walks into. The collider carries the answer, decided
- * where the thing was spawned, so this still asks no question about what anything is.
- *
- * <p><strong>It never avoids the other side.</strong> A hazard on an opposing side is what the unit is
- * trying to reach, and a grunt that swerved around the commander would never land a blow. Everything
- * else solid is avoided, its own kind and the bodies of its own kind included.
- *
- * <p>It adjusts a desired velocity and never sets one, so a unit nothing is driving stays undriven -
- * avoidance is an opinion about a course, not a reason to move.
- *
- * <p>It runs after navigation and wandering and before {@code DriveSystem}, which is the whole reason
- * those write a desired velocity rather than a velocity: this system has to be able to see what the
- * unit intended in order to adjust it.
- *
- * <p>Hazards are filed in a grid once per tick and each unit asks only the cells within reach of it.
- * The reach is a bound, not a tuning: nothing outside it can come within {@code scanRange} after both
- * are projected forward, and danger is kept as a maximum, which no order changes - so the answer is
- * the one a scan over every hazard gives.
+ * <p>Adjusts a desired velocity, never sets one. Hazards are filed in a grid once a tick; the query
+ * reach is an exact bound, so the answer equals a scan over every hazard.
  */
 public final class AvoidanceSystem extends EntitySystem {
 
@@ -181,8 +152,7 @@ public final class AvoidanceSystem extends EntitySystem {
      * Scores every candidate direction against everything worth avoiding, and reports whether anything
      * was.
      *
-     * <p>False means the way ahead is clear, and the unit keeps exactly the course it was given -
-     * which is what makes a straight line stay straight rather than drifting by a rounding error.
+     * <p>False: the course is kept exactly, not rounded.
      */
     private boolean mapDanger(Entity entity, Avoidance avoidance) {
         for (int slot = 0; slot < SLOTS; slot++) {
@@ -251,11 +221,7 @@ public final class AvoidanceSystem extends EntitySystem {
     /**
      * Whether this steerer gives that pickup a wide berth.
      *
-     * <p>A question about the pair rather than about the pickup. A barrel is shunned by everything
-     * that would only set one off in its own face, and not shunned at all by anything that can
-     * swallow one and carry it off as ammunition (G0022) - a creature that steered politely round the
-     * thing it was crossing the field to eat would be the very bug this method's caller exists to
-     * prevent.
+     * <p>A question about the pair: not shunned by anything that can swallow one (G0022).
      */
     private static boolean shunnedBy(Entity steerer, Entity hazard) {
         if (!PICKUP.get(hazard).shunned) {

@@ -23,50 +23,14 @@ import pl.mzebrows.pwt.sim.component.Weapon;
 /**
  * An alien that shoots: it holds its ground at a distance and spits, roughly, at what it is hunting.
  *
- * <p>The counterpart of {@code TrooperCombatSystem} on the other side of the field, and deliberately
- * the same shape - a range test, a clear line, a gun that is ready, a projectile spawned from the
- * same {@code Spawner} call. Everything that makes a shooter a shooter already existed; this decides
- * only when to pull the trigger and in roughly which direction.
+ * <p><strong>It shoots what {@code PerceptionSystem} published</strong> (G0026), never a target of its
+ * own. The creature's cone rotates the aim, drawn from its own stream (pillar 6); the gun then
+ * scatters each pellet. <strong>It has a field of view and swings onto you</strong> at a rate.
+ * <strong>Its facing is its aim, always</strong>: with nothing to shoot, the aim follows where it is
+ * about to walk.
  *
- * <p><strong>It shoots what it is hunting, and that is whoever on the player's side is nearest</strong>
- * (G0026) - the commander, a trooper, or a gun. It does not work that out here: {@code
- * PerceptionSystem} decides and publishes the place, and a firing system that resolved a target of
- * its own would be a second targeting rule that could disagree with the first. The cone is wide
- * enough that a shot meant for one man reaches those standing near him, which is still most of what
- * a firing line does to a squad.
- *
- * <p><strong>The spread is drawn from a stream of its own</strong> (pillar 6). Sharing one with the
- * leap would mean re-tuning how often something shoots quietly reshuffles when everything jumps -
- * the failure that is reproducible, so no test catches it, and miserable to iterate against.
- *
- * <p>The cone is applied by rotating the aim, not by jittering a target point. Rotating keeps every
- * shot the same length and the cone the same width at every distance; nudging a point makes a
- * creature wilder the further away it is, which is backwards.
- *
- * <p><strong>It has a field of view, and it has to swing onto you.</strong> Only what is inside the
- * arc it declares is fired at, and its aim walks onto a target at a rate rather than snapping - which
- * is what makes stepping round one a real move and the arc a rule the player can feel rather than a
- * number in a file. The arc is wider than a trooper's: a thing built around a gun should be harder to
- * get behind than a man is.
- *
- * <p><strong>It never advances on what it is hunting</strong> when its strain holds ground. That is
- * {@code NavigationSystem}'s to enforce, because walking at things is its job, and it is named here
- * because it is half of what a shooter <em>is</em>: you are driven off, not chased down.
- *
- * <p><strong>A shooter's facing is its aim, always.</strong> With something to shoot at, the aim
- * swings onto it; with nothing, it follows wherever the creature is about to walk - so a spitter
- * crossing the ground to eat something faces the thing it is going to eat rather than the fight it
- * has left behind, and an idling one sweeps about as it ambles. One source for the facing, and no
- * state that says "aiming" separately from where the gun points.
- *
- * <p><strong>The first shot is the wild one.</strong> Every shot it lands on the same target narrows
- * the cone towards the floor its strain declares, and being close narrows it further and shortens the
- * wait between shots. Losing it - by range, by rock, or by leaving its arc - throws all of that away.
- * Standing in a shooter's sights is therefore the mistake, rather than being shot at once.
- *
- * <p>It runs after everything that decides where an enemy wants to be going, because planting a
- * shooter has to beat the course avoidance just finished bending - and before {@code DriveSystem},
- * because a desired velocity is spent on the tick it is written.
+ * <p><strong>The first shot is the wild one</strong>: shots on one target and closeness narrow the
+ * cone; losing the target throws that away. Holding ground is {@code NavigationSystem}'s.
  */
 public final class EnemyRangedSystem extends EntitySystem {
 
@@ -126,8 +90,7 @@ public final class EnemyRangedSystem extends EntitySystem {
             boolean hunting = !PERCEPTION.has(entity) || PERCEPTION.get(entity).aggro;
             @Nullable Position target = hunting ? hunted(entity) : null;
             if (!hunting) {
-                // It has lost him, not merely lost sight of him. That is what releases the position
-                // it took as well as the aim it had walked in.
+                // Lost him outright: releases the position as well as the aim.
                 ranged.giveUpPosition();
             }
             if (target == null || !hasASolution(entity, ranged, at, target)) {
@@ -136,9 +99,7 @@ public final class EnemyRangedSystem extends EntitySystem {
                 continue;
             }
             if (ranged.haltsToFire && !ranged.holdsGround && STEERING.has(entity)) {
-                // Planting a unit that was closing. A unit that never closes has nothing to plant -
-                // and clearing its course here would delete the amble that stops it reading as a
-                // turret, because this runs after the wander that wrote it.
+                // Planting a unit that was closing; one that never closes keeps its amble.
                 STEERING.get(entity).clear();
             }
             float toX = target.x - at.x;
@@ -148,17 +109,14 @@ public final class EnemyRangedSystem extends EntitySystem {
                 continue;
             }
             if (distance <= ranged.preferredRange()) {
-                // It has the ground it wanted. From here it holds it, however far he goes - which is
-                // a fact about arriving rather than about shooting, because it opens fire on the way
-                // in and a first shot at the edge of its reach must not pin it out there.
+                // Arrived: it holds from here. About arriving, not about the first shot.
                 ranged.inPosition = true;
             }
             float aimX = toX / distance;
             float aimY = toY / distance;
             swingOnto(ranged, aimX, aimY, deltaTime);
             if (ranged.aimX * aimX + ranged.aimY * aimY < ranged.arcCosine) {
-                // Still coming round. It has you in range and cannot bring the gun to bear yet,
-                // which is the whole of what its field of view buys the player.
+                // In range, still coming round.
                 continue;
             }
             fire(entity, ranged, at, aimX, aimY, distance);
@@ -168,9 +126,7 @@ public final class EnemyRangedSystem extends EntitySystem {
     /**
      * Where whatever this shooter is hunting was standing this tick, or null if it is hunting nobody.
      *
-     * <p>Read from what {@code PerceptionSystem} published rather than resolved again here: one
-     * system decides who each alien has noticed, and a firing system that asked the question a
-     * second time would be a second targeting rule that could disagree with the first (G0026).
+     * <p>Read from what {@code PerceptionSystem} published (G0026).
      */
     private @Nullable Position hunted(Entity entity) {
         if (!PERCEPTION.has(entity)) {
@@ -185,8 +141,7 @@ public final class EnemyRangedSystem extends EntitySystem {
      * Whether it has something it could shoot at this tick: noticed, inside its range, with nothing
      * solid in between. Whether there is a living target at all is asked at the call site, once.
      *
-     * <p>It will not fire into rock. The shot would stop there anyway; what this saves is the picture
-     * of a creature emptying itself into a wall, which reads as broken.
+     * <p>It will not fire into rock.
      */
     private boolean hasASolution(Entity entity, Ranged ranged, Position at, Position target) {
         if (PERCEPTION.has(entity) && !PERCEPTION.get(entity).aggro) {
@@ -201,16 +156,7 @@ public final class EnemyRangedSystem extends EntitySystem {
     /**
      * Points the gun where the creature is going, for as long as it has nothing to shoot at.
      *
-     * <p><strong>A shooter's facing is its aim</strong>, because its aim is the thing the player has
-     * to read. The consequence is that a shooter with a stale aim walks about pointing at where a
-     * fight used to be - which on the field looks exactly like a creature walking backwards, and is
-     * what playtesting caught. So when there is nothing to aim at, the aim follows what it is doing:
-     * it turns to face the food it is crossing the ground for, and sweeps about as it ambles.
-     *
-     * <p>It reads the <em>desired</em> velocity rather than the velocity, because that is where it is
-     * about to go: everything that decides a course for an alien has already run this tick, and
-     * nothing has moved yet. A creature standing still keeps the aim it had, which is what lets it
-     * hold a bearing between waypoints instead of snapping back to nothing.
+     * <p>Reads the <em>desired</em> velocity: where it is about to go. Standing still keeps the aim.
      */
     private void lookWhereItIsGoing(Entity entity, Ranged ranged, float deltaTime) {
         if (!STEERING.has(entity)) {
@@ -227,19 +173,12 @@ public final class EnemyRangedSystem extends EntitySystem {
     /**
      * Swings its aim towards where the target is, by a fraction of what is left to cover.
      *
-     * <p>An exponential approach rather than a fixed number of degrees per second: it turns quickly
-     * when it is badly out and settles rather than overshooting, and - the part that matters here -
-     * it is a lerp between two unit vectors, so it needs no trigonometry at all. Rotating by an angle
-     * would, and {@code Math.sin} and {@code Math.cos} are banned in this module because they are
-     * specified only to within an ulp and may differ between JVMs (pillar 6).
-     *
-     * <p>A turn rate of zero means it is always already looking at you, which is what everything that
-     * shot before there were fields of view declares.
+     * <p>An exponential approach, a lerp between unit vectors: no trigonometry (pillar 6). A turn rate
+     * of zero is always already looking at you.
      */
     private void swingOnto(Ranged ranged, float aimX, float aimY, float deltaTime) {
         if (!ranged.aiming()) {
-            // It has no bearing to come round from. Everything else is {@link Aim}'s, including the
-            // case where what it wants to shoot is exactly behind it.
+            // No bearing to come round from. Everything else is Aim's.
             ranged.aim(aimX, aimY);
             return;
         }
@@ -258,8 +197,7 @@ public final class EnemyRangedSystem extends EntitySystem {
         float sin = (float) StrictMath.sin(turn);
         float directionX = aimX * cos - aimY * sin;
         float directionY = aimX * sin + aimY * cos;
-        // The creature's cone has been spent on the aim above, once for the whole volley - it is one
-        // bad guess rather than one per pellet. What the gun does to each of them is the gun's.
+        // The creature's cone is spent once per volley; each pellet's scatter is the gun's.
         Guns.volley(
                 spawner,
                 scatter,
