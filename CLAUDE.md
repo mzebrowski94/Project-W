@@ -157,12 +157,17 @@ session's summary, one line each, so he can review it with the rest of the diff.
 commit message when done: past tense, one line, imperative, what changed rather than how - `Add enemy leap and
 player hand strike`. No body unless something cannot be inferred from the diff.
 
+**Except in a cloud session** (`CLAUDE_CODE_REMOTE=true`), where the container is thrown away and
+unpushed work is lost: there Claude commits and pushes its own `claude/*` branch, and only through
+`.claude/scripts/cloud-commit.sh` - raw git stays denied. Never main, never a force-push, no pull
+request unless asked; Mateusz merges. Same message rule. Procedure: `docs/workflow.md`, *Cloud sessions*.
+
 Reading git state is fine, but **always `git --no-optional-locks status --porcelain`** - a bare
 `git status` takes `.git/index.lock`, and if delete permission has lapsed it cannot give it back,
 which strands a lock that breaks Mateusz's own `git add` until somebody deletes it by hand.
 
-**Ask for delete permission in your first message.** It resets every session; without it Spotless
-cannot rewrite a file and nothing can be renamed or removed. Mid-task is when Mateusz is least likely
+**Ask for delete permission in your first message** (local sessions only - a cloud container has it).
+It resets every session; without it Spotless cannot rewrite a file and nothing can be renamed or removed. Mid-task is when Mateusz is least likely
 to be watching and the task stalls on an unanswered prompt. Ask once, up front, whether or not you
 expect to need it.
 

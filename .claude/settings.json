@@ -3,6 +3,7 @@
     "allow": [
       "Bash(.claude/scripts/verify.sh:*)",
       "Bash(.claude/scripts/gradle.sh:*)",
+      "Bash(.claude/scripts/cloud-commit.sh:*)",
       "Bash(./gradlew:*)"
     ],
     "deny": [
@@ -11,6 +12,19 @@
       "Bash(git push:*)",
       "Bash(git reset:*)",
       "Bash(git checkout:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh\"",
+            "timeout": 600
+          }
+        ]
+      }
     ]
   }
 }

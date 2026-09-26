@@ -28,12 +28,12 @@ fi
 NOISE='^WARNING: (A terminally deprecated|sun\.misc\.Unsafe|Please consider reporting)'
 
 if [[ $CAN_DELETE -eq 1 ]]; then
-  "$GRADLE" spotlessApply "${TASKS[@]}" > "$LOG" 2>&1
+  bash "$GRADLE" spotlessApply "${TASKS[@]}" > "$LOG" 2>&1
   STATUS=$?
 else
   # `check` depends on spotlessCheck; exclude it so unformatted code does not fail the whole
   # build when we are not allowed to fix it, then report formatting separately below.
-  "$GRADLE" "${TASKS[@]}" -x spotlessCheck -x spotlessJavaCheck > "$LOG" 2>&1
+  bash "$GRADLE" "${TASKS[@]}" -x spotlessCheck -x spotlessJavaCheck > "$LOG" 2>&1
   STATUS=$?
 fi
 
@@ -45,7 +45,7 @@ if [[ $STATUS -eq 0 ]]; then
   done
   grep -E "warning: \[" "$LOG" | grep -vE "$NOISE" | sed 's/^/  /' | head -20
   if [[ $CAN_DELETE -eq 0 ]]; then
-    if "$GRADLE" spotlessCheck >> "$LOG" 2>&1; then
+    if bash "$GRADLE" spotlessCheck >> "$LOG" 2>&1; then
       echo "  formatting: clean (not applied - no delete permission this session)"
     else
       echo "  formatting: NEEDS APPLYING, and cannot be applied without delete permission."

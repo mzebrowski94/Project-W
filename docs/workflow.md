@@ -101,7 +101,8 @@ again and leaves a zero-byte lock file that makes Mateusz's own `git add` fail w
 process seems to be running". The lock is not doing anything; it is litter that only looks like a
 running process, and clearing it needs the delete grant the sandbox may not have.
 
-Nothing here should ever run `git add`, `commit` or `push` - see `CLAUDE.md`. So no command from this
+Nothing here should ever run `git add`, `commit` or `push` - see `CLAUDE.md`; a cloud session commits
+only through `cloud-commit.sh` (*Cloud sessions*, below). So no command from this
 side has any business writing the index at all, and the flag makes that true rather than hoped for.
 
 ## Verification ladder
@@ -147,9 +148,32 @@ Only things actually hit. Add what you hit; delete what stops happening.
 | `Could not create service of type FileHasher ... java.io.IOException: Input/output error`, and `rm` on `.gradle/**` says `Permission denied` | IntelliJ or a Windows `gradlew` daemon holds `<project>/.gradle`'s lock files, which the sandbox VM may not touch. Reads like a corrupt cache; is not one. | Nothing to do: `gradle.sh` passes `--project-cache-dir`. If it reappears, check that flag is still there before deleting anything. |
 | An input that is "just pressed" is ignored at random | A frame shorter than one tick runs **zero** simulation steps, so a one-frame input reaches no tick. Above 60 Hz that is most frames. | Latch it until a tick spends it, as `ScenarioSession.pendingOrder` does. Anything read with `isKeyJustPressed` and handed to `advance()` has this. |
 | `error: warnings found and -Werror specified` | A real warning. Most often a javadoc orphaned by inserting a method *above* the one it documented. | Fix it. Do not disable the check - eight warnings accumulated in one session before anyone noticed. |
+| `.claude/scripts/verify.sh: Permission denied` (cloud) | The scripts were committed as `100644` from Windows, so a Linux clone cannot execute them. Hit 2026-09-26; now committed as `100755`, and `verify.sh` calls `gradle.sh` through `bash`. | Run `bash .claude/scripts/verify.sh`. The session-start hook also restores the bit. |
 | `sandbox-helper: no Plan9 drive shares mounted under /mnt/.virtiofs-root/shared` | The device shell cannot mount `D:` at all. Hit 2026-09-11, attributed to a Windows update of 2026-09-08; fixed on Mateusz's side 2026-09-12. | Nothing in the build can run. Say so and fall back to the file tools - see below. |
 | IntelliJ or the command line says `Unable to create '.git/index.lock': File exists. Another git process seems to be running` | **A `git` command run from the sandbox left its lock behind.** Plain `git status` takes `index.lock` to write a refreshed index cache, and removing it again needs delete rights on `D:` - which reset between sessions, so a status run without them strands a zero-byte lock that blocks Mateusz's own git indefinitely. Hit 2026-09-17. | Delete `.git/index.lock` (needs delete permission), then **always** `git --no-optional-locks ...` for anything read-only. See the recipe below. |
 | `too deeply nested to stage: N folders below the connected folder` | `device_stage_files` supports 7 folders; Java sources sit 8-9 deep. | Not workable around from here. Read the file another way or ask Mateusz to connect a deeper folder. |
+
+## Cloud sessions
+
+A Claude Code session on the web runs in a Linux container cloned fresh from GitHub: no Windows mount, no
+IntelliJ, no display, and **thrown away** after a while idle. `CLAUDE_CODE_REMOTE=true` says you are in one.
+What differs from the sandbox on Mateusz's machine:
+
+- **The toolchain is provisioned before you start.** `.claude/hooks/session-start.sh` (SessionStart,
+  cloud only) downloads JDK 25 and Gradle into `ai/toolchain` and compiles main and test sources, so the
+  first `verify.sh` is a build rather than a two-minute download. Its log: `ai/logs/session-start.log`.
+  If it failed, `verify.sh` simply redoes the bootstrap.
+- **Commit and push, or lose the work.** `.claude/scripts/cloud-commit.sh -m "Subject" -m "trailer"...
+  [-- path...]` stages (everything, or the paths given), commits and pushes to the current `claude/*`
+  branch with retries. It refuses outside a cloud session, on any other branch, and with nothing staged;
+  it never amends or forces. Raw `git add/commit/push` stay denied in `.claude/settings.json` for every
+  session - the script is the one door, and its guards are what make it safe to leave open.
+  Commit at each stage a change can stop after, not only at the end. Mateusz merges into main.
+- **Several commits for several concerns**: pass paths after `--` to commit one concern at a time.
+- **No delete-permission ask**, no index-lock hazard, no Windows mount: the local-only rules above
+  (`--no-optional-locks`, scoped greps) are harmless here and stay the habit.
+- **Build output** is in `~/.pwt/out/<module>/build/`, test XML under `.../test-results/test/`.
+- **The game cannot run.** Level 5 of the ladder is still Mateusz's machine.
 
 ## When the mount is down
 
