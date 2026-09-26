@@ -7,25 +7,14 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 /**
  * Which form a unit currently has.
  *
- * <p>This replaced a marker component per form, and the reason is evolution. Turning a grunt into a
- * brute by adding a {@code Brute} marker would mean changing an entity's component set in the middle
- * of a tick, which mutates the families being iterated and silently skips entities - the same trap
- * that {@code Damage}, {@code Dying} and {@code Stunned} are all carried permanently to avoid.
- * Writing an enum here changes nothing about which families the entity belongs to.
- *
- * <p>Everything that used to ask "is this a brute?" now asks what its strain is, and everything that
- * did not care - chasing, leaping, taking a bullet - still selects on {@link Enemy} and never learns
- * that strains exist.
- *
- * <p>The look and every number a strain has live in its {@code UnitDef}. Nothing copies them here;
- * {@code Spawner.applyStrain} is the single place that reads a definition into an entity's
- * components, so the strain and what is drawn cannot drift apart.
+ * <p>An enum, not a marker per form, so evolving changes no component set mid-tick. Behaviour that
+ * does not care selects on {@link Enemy}. Every number lives in the {@code UnitDef};
+ * {@code Spawner.applyStrain} is the single place that writes it into components.
  */
 public final class Strain implements Component, Pool.Poolable {
 
     /**
-     * The form. Reset returns it to the first strain rather than to nothing, so the field is never
-     * null and no hot path has to check; every spawn sets it before anything reads it.
+     * The form. Never null: reset returns it to the first strain.
      */
     public UnitKind kind = UnitKind.GRUNT;
 

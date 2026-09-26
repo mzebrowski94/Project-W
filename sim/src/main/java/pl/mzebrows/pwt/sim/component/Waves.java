@@ -24,7 +24,7 @@ public final class Waves implements Component, Pool.Poolable {
     /** Still to come, in order. Filled by a scenario before the first tick and only read afterwards. */
     private final Array<Wave> pending = new Array<>();
 
-    /** How long until the next one, in seconds. */
+    /** Ticks waited since the last one was sent, counting up to the next one's delay. */
     public int waited;
 
     /** How far down the list we are. */
@@ -33,10 +33,8 @@ public final class Waves implements Component, Pool.Poolable {
     /**
      * Whether the schedule has started at all.
      *
-     * <p>True unless a level says otherwise, because every level that has waves has had them running
-     * from the first tick. A level that holds them back is one where the fighting starts when the
-     * player does something - taking the ground he is then told to hold - and until he does, the
-     * list is neither running nor spent, so the objective that asks whether it is spent says no.
+     * <p>True unless a level holds them back until the player does something; until then the list is
+     * neither running nor spent.
      */
     private boolean armed = true;
 

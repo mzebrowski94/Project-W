@@ -6,10 +6,8 @@ import com.badlogic.gdx.utils.Pool;
 /**
  * What an entity does to something it touches on the other side.
  *
- * <p>An enemy's claws, a projectile's impact and a melee sweep are all this component - one with a
- * cooldown and a long recovery window for its victim, one with neither, one that holds both parties
- * still and throws the survivor. Keeping the difference in the numbers rather than in a branch is
- * what lets the collision system have a single rule for "attacker touched target".
+ * <p>Claws, a shot and a melee sweep are all this component, differing only in numbers, so the
+ * collision system has a single rule for "attacker touched target".
  */
 public final class ContactDamage implements Component, Pool.Poolable {
 
@@ -35,11 +33,8 @@ public final class ContactDamage implements Component, Pool.Poolable {
     /**
      * Whether the lock is only spent on a target that had already committed to attacking.
      *
-     * <p>True for a melee weapon and false for everything else, and the difference is the mechanic. A
-     * sweep that answers something already in the air is a clinch - the two of them are tangled and
-     * neither is going anywhere for a beat, and that is what the timing was worth. The same sweep on
-     * something merely walking towards you is a swat, and a swat that rooted you to the spot would
-     * make killing the harmless thing more expensive than killing the dangerous one.
+     * <p>True for a melee weapon: a sweep on something in the air is a clinch, on something walking a
+     * swat.
      */
     public boolean locksCommittedOnly;
 
@@ -61,37 +56,22 @@ public final class ContactDamage implements Component, Pool.Poolable {
     /**
      * Whether this blow kills outright rather than leaving a casualty on the ground.
      *
-     * <p>True for everything by default, and false for exactly two things: gunfire and blasts. The
-     * asymmetry is the mechanic. Being shot from across the field is survivable if somebody comes
-     * for you; something reaching you with its claws is not, and neither is being caught by a sweep
-     * or landed on. That is what makes distance worth keeping and what makes a man who goes down in
-     * the open worth going to get.
+     * <p>False only for gunfire, blasts and ruined ground: those leave a casualty (G0023).
      */
     public boolean fatal = true;
 
     /**
      * The cosine of half the arc this blow can reach into, measured from the way the attacker is
-     * going. {@code -1} reaches all round, which is what everything declared before there was an arc.
+     * going. {@code -1} reaches all round.
      *
-     * <p><strong>A creature has to be facing you to bite you.</strong> Without it, walking into the
-     * back of something that had not noticed you killed you outright - which reads as the game
-     * cheating rather than as a mistake you made, because there was nothing on screen to warn you.
-     * The arc is deliberately generous: a lunging creature is not precise, and a blind spot wide
-     * enough to exploit reliably would turn every fight into a dance round behind things.
-     *
-     * <p>It is a number on the blow rather than a question about what is attacking, so the collision
-     * system keeps its single rule for "attacker touched target" - a projectile and a melee sweep
-     * declare all round and pay one comparison for it.
+     * <p><strong>A creature has to be facing you to bite you.</strong>
      */
     public float arcCosine = -1f;
 
     /**
      * How much of its speed a unit this blow lands on keeps, and for how long.
      *
-     * <p>One and zero for everything but the beam, which is this component's way of saying "not
-     * mine" for a number whose neutral value is one. Recorded on the blow rather than granted at the
-     * moment of contact for the same reason the knockback is: nothing in the collision path decides
-     * what a hit costs.
+     * <p>One and zero - not mine - for everything but the beam.
      */
     public float slowFactor = 1f;
 
@@ -121,8 +101,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
     }
 
     /**
-     * Makes this a blow that robs what it lands on of speed, and returns this component, for fluent
-     * spawning. Chained after {@link #set}, so a blow that only hurts stays a one-line spawn.
+     * Makes this a blow that robs what it lands on of speed. Chained after {@link #set}.
      */
     public ContactDamage slowing(float newSlowFactor, int newSlowTicks) {
         this.slowFactor = newSlowFactor;
@@ -131,8 +110,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
     }
 
     /**
-     * Makes this a blow that pumps a body up, and returns this component, for fluent spawning.
-     * Chained after {@link #set}, like every other thing a blow does besides damage.
+     * Makes this a blow that pumps a body up. Chained after {@link #set}.
      */
     public ContactDamage pumping(float newBloat) {
         this.bloat = newBloat;
@@ -140,9 +118,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
     }
 
     /**
-     * Narrows this blow to an arc in front of whatever is landing it, and returns this component,
-     * for fluent spawning. Chained after {@link #set}, so a blow that reaches all round stays a
-     * one-line spawn.
+     * Narrows this blow to an arc in front of whatever is landing it. Chained after {@link #set}.
      */
     public ContactDamage reachingWithin(float newArcCosine) {
         this.arcCosine = newArcCosine;
@@ -150,8 +126,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
     }
 
     /**
-     * Makes this a blow that puts a man down rather than killing him, and returns this component,
-     * for fluent spawning. Chained after {@link #set}, so the killing case stays a one-line spawn.
+     * Makes this a blow that puts a man down rather than killing him. Chained after {@link #set}.
      */
     public ContactDamage wounding() {
         this.fatal = false;
@@ -159,8 +134,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
     }
 
     /**
-     * Adds what a landed blow does beyond damage. Chained after {@link #set}, so an attack that only
-     * hurts stays a one-line spawn.
+     * Adds what a landed blow does beyond damage. Chained after {@link #set}.
      */
     public ContactDamage setLock(
             int newLockTicks,

@@ -9,25 +9,12 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * How a unit uses the gun it is carrying: what it can see, how close it lets you get, how loosely it
  * shoots, and where it is currently looking.
  *
- * <p>What it fires is on {@link Weapon}, which is the same component a trooper and the commander
- * carry and is filled from the same table. This is only the half that is a fact about the creature
- * rather than about the gun.
+ * <p>What it fires is on {@link Weapon}; this is the half that is about the creature. Carried by every
+ * chasing unit and switched on per strain ({@code enabled}), never added mid-tick. Angles are stored
+ * as radians and a cosine, converted once in {@code RangedDef}.
  *
- * <p>Carried by every chasing unit and switched on per strain, exactly as {@link Leap},
- * {@link Wander} and {@link Avoidance} are. A strain that does not shoot reports {@code enabled}
- * false and costs one comparison; nothing adds or removes a component to make a unit a shooter,
- * because changing an entity's component set mid-tick silently skips entities.
- *
- * <p>The cone is held as half its width in radians and the field of view as a cosine, rather than as
- * degrees, because that is what the firing system wants and because converting either in a
- * per-entity loop would mean a transcendental in a hot path, which is banned here. Both conversions
- * happen once, at spawn, in {@code RangedDef}.
- *
- * <p><strong>Two of these fields are runtime state rather than configuration</strong>, and they are
- * what make a shooter something to get away from rather than something to stand in front of. The aim
- * is where it is actually looking, swung onto its target over time; the shot count is how long it has
- * had you, which is what tightens the cone. Both are reset the moment it loses you - and losing it is
- * therefore the counter to it, which is the whole point.
+ * <p><strong>The aim and the shot count are runtime state</strong>: the aim swings onto its target
+ * and the count tightens the cone. Both reset the moment it loses you.
  */
 public final class Ranged implements Component, Pool.Poolable {
 
@@ -54,10 +41,7 @@ public final class Ranged implements Component, Pool.Poolable {
     /**
      * The distance it is best at, in world units - and therefore the distance it walks to.
      *
-     * <p>Inside it the thing fires faster and straighter, and a shooter that holds ground closes to
-     * it rather than to the edge of its reach. One number with one meaning: this is where it wants to
-     * be. Zero switches both halves off, leaving a shooter that shoots the same everywhere and stops
-     * as soon as it can reach.
+     * <p>Inside it the thing fires faster and straighter. Zero switches both halves off.
      */
     public float closeRange;
 
@@ -74,11 +58,8 @@ public final class Ranged implements Component, Pool.Poolable {
     public @Nullable WeaponKind chargedGun;
 
     /**
-     * Where it is looking, as a unit vector. Published for the renderer, and the thing its field of
-     * view is measured from.
-     *
-     * <p>{@code (0, 0)} means it is not aiming at anything and whatever else decides its facing -
-     * where it is walking - has it. That is what makes an idling shooter look like it is idling.
+     * Where it is looking, as a unit vector. {@code (0, 0)} means not aiming, and its heading decides
+     * its facing.
      */
     public float aimX;
 
@@ -90,16 +71,9 @@ public final class Ranged implements Component, Pool.Poolable {
     /**
      * Whether it has reached the distance it wanted against what it is currently hunting.
      *
-     * <p><strong>This is what "it never chases you" is actually made of.</strong> A shooter that
-     * holds ground still has to cross the gap between noticing you and being able to fight you - it
-     * notices at thirty and is best at nine - so a creature that refused to move at all would stand
-     * and watch. It moves up once, and from the moment it has the ground it wanted it holds that
-     * ground however far you then go.
-     *
-     * <p>It therefore outlives {@link #shotsOnTarget} on purpose. Stepping out of its range resets
-     * the cone - a shooter has to walk its aim in again - but it does <em>not</em> re-arm the
-     * approach, or backing off would simply pull the thing after you, which is the behaviour holding
-     * ground exists to rule out. Only losing you outright does that.
+     * <p><strong>What "it never chases you" is made of</strong>: a ground-holder moves up once, then
+     * holds. It outlives {@link #shotsOnTarget} - leaving its range resets the cone, not the approach.
+     * Only losing you outright re-arms it.
      */
     public boolean inPosition;
 
@@ -131,8 +105,7 @@ public final class Ranged implements Component, Pool.Poolable {
         this.chargedGun = newChargedGun;
         this.shotsOnTarget = 0;
         this.inPosition = false;
-        // Cleared, not kept. This is called again when a unit evolves, and a strain that has stopped
-        // being a shooter must stop publishing a facing that nothing is driving any more.
+        // Cleared: called again on evolving, and a strain that stopped shooting must stop aiming.
         this.aimX = 0f;
         this.aimY = 0f;
         return this;
@@ -142,9 +115,7 @@ public final class Ranged implements Component, Pool.Poolable {
      * Whether it still wants to close the distance: it has not opened fire on this contact and
      * cannot reach it from here.
      *
-     * <p>Only ever true of a shooter that holds ground - everything else closes for its own reasons
-     * and never asks. What it buys is a creature that walks up to a fight and then defends the ground
-     * it chose, rather than one that either charges you or stands rooted where it happened to spawn.
+     * <p>Only ever true of a shooter that holds ground.
      */
     public boolean takingUpPosition(float distance) {
         return !inPosition && distance > preferredRange();
@@ -154,11 +125,7 @@ public final class Ranged implements Component, Pool.Poolable {
      * The distance it wants to be at: the range it shoots best from, or the edge of its reach if it
      * has no preference.
      *
-     * <p>Not the edge of its range, which is where it <em>can</em> shoot from. Stopping there leaves
-     * it ambling in and out of its own reach, firing on about half the ticks it should - and a
-     * creature that walks all the way up to a fight and then cannot hold a shot is worse than one
-     * that stayed put. {@link #closeRange} is already the distance it is best at, so it is the
-     * distance it goes to; a shooter that names none settles for being able to reach at all.
+     * <p>Not the edge of its range, or it ambles in and out of reach.
      */
     public float preferredRange() {
         return closeRange > 0f ? closeRange : range;
@@ -167,8 +134,7 @@ public final class Ranged implements Component, Pool.Poolable {
     /**
      * Forgets the contact entirely: the cone, and the position it took against it.
      *
-     * <p>Called when it stops hunting rather than when it merely stops shooting. That is the whole
-     * difference between "you got out of its way" and "you got away".
+     * <p>Called when it stops hunting, not when it merely stops shooting.
      */
     public void giveUpPosition() {
         shotsOnTarget = 0;
@@ -188,8 +154,7 @@ public final class Ranged implements Component, Pool.Poolable {
     }
 
     /**
-     * Forgets what it had. The aim goes with the count, so a shooter that has lost you stops staring
-     * at where you were - and has to walk its aim in again from the first wild shot when it finds you.
+     * Forgets what it had: the aim goes with the count.
      */
     public void loseTarget() {
         shotsOnTarget = 0;
@@ -198,9 +163,7 @@ public final class Ranged implements Component, Pool.Poolable {
     /**
      * How wide the cone is for the next shot, in radians, given how far off the target is.
      *
-     * <p>Two things narrow it and they multiply: how long it has had you, and how close you are.
-     * Neither is a special case in the firing system - both are numbers a strain declares, and a
-     * strain that declares neither shoots exactly as loosely on its tenth shot as on its first.
+     * <p>How long it has had you and how close you are narrow it, multiplied.
      */
     public float halfSpreadFor(float distance) {
         float factor = settled();

@@ -8,17 +8,11 @@ import pl.mzebrows.pwt.sim.def.Order;
 /**
  * One AI-controlled member of the squad, and the whole of what it is thinking.
  *
- * <p>A trooper is not a strain. Grunt and brute are forms of one creature and differ only in numbers,
- * which is why they share a {@code UnitKind} and a definition table; a trooper is on the other side,
- * fights with a gun rather than its body, takes orders, and has nothing to evolve into. Making it a
- * strain would mean every strain carrying a feed threshold and a leap it can never use, and would put
- * troopers inside {@code everyStrain(...)} in the fixtures, quietly reconfiguring the squad in every
- * test about aliens.
+ * <p>Not a strain: it takes orders, fights with a gun and has nothing to evolve into.
  *
  * <p><strong>What it is doing is a field here, not a component that comes and goes</strong> (G0010).
- * One system writes {@link #mode} and where it is headed; another reads them and drives. Nothing
- * holds a reference to what it is interested in - a trooper walks to a <em>place</em>, so a point
- * reaped between ticks cannot come back as whatever was built from the recycled instance.
+ * {@code TrooperMindSystem} writes {@link #mode} and where it is headed; {@code TrooperMoveSystem}
+ * drives. It walks to a <em>place</em>, never an entity.
  */
 public final class Trooper implements Component, Pool.Poolable {
 
@@ -42,18 +36,13 @@ public final class Trooper implements Component, Pool.Poolable {
         /**
          * Going to pick somebody up, or standing over him doing it.
          *
-         * <p>One mode for both halves, because they differ only in whether it has arrived - which is
-         * a distance, not a state to keep. It ranks below a standing order and above the level's
-         * objectives: a man told to hold a corner holds it while somebody bleeds, and a squad with
-         * nothing but an objective to walk to goes and fetches him.
+         * <p>Ranks below a standing order and above the level's objectives.
          */
         AID,
         /**
          * Walking to a gun on a mount, or sitting on one.
          *
-         * <p>One mode for both halves, as {@link #AID} is: they differ only in whether it has
-         * arrived. It ranks below going to fetch somebody and above the level's objectives - a gun
-         * is worth leaving a walk for and never worth leaving a man on the ground for.
+         * <p>Ranks below {@link #AID} and above the level's objectives.
          */
         CREW
     }
@@ -70,10 +59,8 @@ public final class Trooper implements Component, Pool.Poolable {
     /**
      * Which way it is looking, as a unit vector.
      *
-     * <p>Written by whatever is driving it and published by {@code AppearanceSystem}, so a trooper's
-     * facing is a decision rather than a side effect of where it happens to be walking. That matters
-     * for two things it will be asked to do: engage only what is in front of it, and stand still
-     * while still looking around.
+     * <p>Published as its {@code Facing} by {@code FacingSystem}: a decision, not a side effect of
+     * where it walks, so it can stand still and keep watching.
      */
     public float lookX = 1f;
 
@@ -82,56 +69,42 @@ public final class Trooper implements Component, Pool.Poolable {
     /**
      * What it was last told to do, or null for nothing standing.
      *
-     * <p>A standing instruction rather than a queued message. It outranks the level's objectives and
-     * never an ongoing fight - and because what a trooper is doing is chosen fresh every tick, with
-     * the fight looked at first, "carry it out once the shooting stops" needs no queue and no memory
-     * of having been interrupted (G0017).
+     * <p>A standing instruction, not a queued message: it outranks the level's objectives and never a
+     * fight (G0017).
      */
     public @Nullable Order order;
 
     /**
      * How much further this trooper is pushing on at speed, in world units.
      *
-     * <p>A distance rather than a countdown, because "forward" is about ground covered: a squad told
-     * to push on and then held up by a fight should still get its full push afterwards, rather than
-     * having spent it standing still.
+     * <p>A distance, not a countdown: a fight does not spend it.
      */
     public float forwardRemaining;
 
     /**
      * Which player's slot gave the standing order, so "follow me" means the man who said it.
      *
-     * <p>A number rather than the commander himself: a component may not hold an entity across ticks
-     * (G0016), and the commander this refers to is one of the likeliest in the game to be killed and
-     * recycled. It is meaningless while {@link #order} is null, and is set fresh every time an order
-     * lands, so a stale slot is never read.
+     * <p>Meaningless while {@link #order} is null; set fresh with every order.
      */
     public int orderedBy;
 
     /**
      * Whether it has been told to leave the point it is holding and go and take the next one.
      *
-     * <p>A trooper standing on a <strong>captured</strong> point waits there; "forward" is what sends
-     * it on, and one order buys one point. Spent the moment it reaches the next point, so the squad
-     * settles again rather than running the level on its own.
-     *
-     * <p>It is a flag rather than a distance, which {@code forwardRemaining} beside it already is:
-     * the two halves of "forward" are a burst of pace, which is ground, and permission to leave, which
-     * is not. A distance cannot express the second - the next point may be one tile away or thirty.
+     * <p>One "forward" buys one point: spent the moment it reaches the next one.
      */
     public boolean sentOn;
 
     /**
      * Whether it is holding a point the squad has taken, which is when {@link #holdRemaining} is counting.
      *
-     * <p>Cleared the moment it is standing on no taken point, so every point held is a fresh hold. A
-     * fight on the point pauses the count rather than clearing it: he is still standing on it.
+     * <p>Cleared when it stands on no taken point. A fight on the point pauses the count.
      */
     public boolean holding;
 
     /**
-     * How much longer it holds before following a commander who has gone on ahead, in seconds (G0040).
-     * Drawn afresh each time it starts holding, so a squad peels off a point rather than leaving in step.
+     * How much longer it holds before following a commander who has gone on ahead, in ticks (G0040).
+     * Drawn afresh each time it starts holding.
      */
     public int holdRemaining;
 
@@ -146,17 +119,17 @@ public final class Trooper implements Component, Pool.Poolable {
 
     public float sampleY;
 
-    /** How long the current sample has run, in seconds. */
+    /** How long the current sample has run, in ticks. */
     public int sampleClock;
 
-    /** How much longer it is backing off to one side before trying its way again, in seconds. */
+    /** How much longer it is backing off to one side before trying its way again, in ticks. */
     public int detourRemaining;
 
     /** How many detours it has taken. Its parity picks the side, so a second try goes the other way. */
     public int detours;
 
     /**
-     * How much longer it is looking all round for whatever hit it, in seconds. Zero is calm.
+     * How much longer it is looking all round for whatever hit it, in ticks. Zero is calm.
      *
      * <p>Written where damage lands, read by the mind to forgive the arc and by the legs to turn the
      * man towards {@link #alertX}, {@link #alertY}.
@@ -171,19 +144,14 @@ public final class Trooper implements Component, Pool.Poolable {
     /**
      * Whether it has already picked a bearing to watch since it last stopped.
      *
-     * <p>A trooper that stops takes a bearing of its own rather than keeping the one it was walking
-     * on. Without that, a squad told to follow all stares at the commander and a squad on a point all
-     * stares at the middle of it, which reads as four men looking at the same thing rather than as a
-     * squad watching its surroundings. Cleared the moment it moves again, so every stop picks afresh.
+     * <p>Every stop picks a bearing of its own; cleared the moment it moves again.
      */
     public boolean settled;
 
     /**
      * The direction it is looking before its sweep is applied.
      *
-     * <p>Kept apart from {@link #lookX} so that a trooper told to hold still can go on watching: the
-     * sweep leans off this, and with nothing driving it this stays put instead of decaying to
-     * wherever the last lean left it.
+     * <p>The sweep leans off this, so a trooper holding still keeps watching the same way.
      */
     public float baseLookX = 1f;
 
@@ -192,21 +160,14 @@ public final class Trooper implements Component, Pool.Poolable {
     /**
      * What this trooper can notice, as the tests it declares (G0015).
      *
-     * <p>Its own fields rather than a {@code Perception} component, because that component answers a
-     * different question - "am I hunting the commander" - and is driven by a system built around him.
-     * A trooper asks "is there anything in front of me to shoot", which is the same three tests
-     * applied to a different subject. The tests are shared in {@code Sight}; only the numbers live
-     * here.
+     * <p>Not a {@code Perception}, which answers "am I hunting somebody". The tests are {@code Sight}'s.
      */
     public float sightRange;
 
     /**
      * How far a fight can drift before the trooper gives it up and goes back to work.
      *
-     * <p>Never below the sight range, for the reason {@code PerceptionDef} gives at length: one
-     * number would make a trooper standing at exactly that distance start and stop fighting every
-     * tick. Once it is fighting, this is checked on range alone - turning your head must not make you
-     * forget what you are shooting at.
+     * <p>Never below the sight range (hysteresis, as {@code PerceptionDef}). Checked on range alone.
      */
     public float holdRange;
 
@@ -214,7 +175,7 @@ public final class Trooper implements Component, Pool.Poolable {
 
     public boolean requiresClearLine;
 
-    /** How long until it sweeps its attention the other way, in seconds. */
+    /** How long until it sweeps its attention the other way, in ticks. */
     public int scanRemaining;
 
     /** Which way it is currently leaning: {@code +1} or {@code -1}. */
@@ -223,10 +184,8 @@ public final class Trooper implements Component, Pool.Poolable {
     /**
      * The first compass slot of its <strong>sector</strong>, or {@code -1} for none.
      *
-     * <p>Men standing on a point split the circle between them, so what is standing still behind the
-     * squad is found rather than left at its back - a bearing each, drawn at random, left whole sides of
-     * a point unwatched. Written by {@code TrooperMindSystem}, which knows who is standing where, once a
-     * tick; a man arriving or leaving reshuffles the sectors on the same tick.
+     * <p>Men standing on a point split the circle between them. Written by {@code TrooperMindSystem}
+     * once a tick.
      */
     public int sectorFrom = -1;
 

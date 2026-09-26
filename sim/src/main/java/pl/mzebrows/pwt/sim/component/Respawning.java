@@ -6,9 +6,7 @@ import com.badlogic.gdx.utils.Pool;
 /**
  * A pending respawn, counting down.
  *
- * <p>Lives on an entity of its own - no position, no body, nothing to draw - because the unit it
- * will bring back no longer exists to hold it. That keeps the dead entity genuinely dead rather than
- * lingering in a half-alive state that every family would then have to exclude.
+ * <p>An entity of its own, because the unit it brings back no longer exists to hold it.
  */
 public final class Respawning implements Component, Pool.Poolable {
 
@@ -20,8 +18,7 @@ public final class Respawning implements Component, Pool.Poolable {
     /**
      * The player slot the man who died was sitting in, so he comes back as the same player.
      *
-     * <p>On the ticket rather than looked up on arrival, because the commander who held it no longer
-     * exists by then - which is the same reason the countdown is here.
+     * <p>On the ticket: the commander who held it no longer exists by then.
      */
     public int slot;
 
