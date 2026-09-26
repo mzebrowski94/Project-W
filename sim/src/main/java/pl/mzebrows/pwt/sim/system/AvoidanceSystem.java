@@ -8,6 +8,10 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import java.util.Objects;
+import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.NotState;
+import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.collision.SpatialGrid;
 import pl.mzebrows.pwt.sim.component.Avoidance;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
@@ -55,6 +59,11 @@ import pl.mzebrows.pwt.sim.def.Side;
  * <p>It runs after navigation and wandering and before {@code DriveSystem}, which is the whole reason
  * those write a desired velocity rather than a velocity: this system has to be able to see what the
  * unit intended in order to adjust it.
+ *
+ * <p>Hazards are filed in a grid once per tick and each unit asks only the cells within reach of it.
+ * The reach is a bound, not a tuning: nothing outside it can come within {@code scanRange} after both
+ * are projected forward, and danger is kept as a maximum, which no order changes - so the answer is
+ * the one a scan over every hazard gives.
  */
 public final class AvoidanceSystem extends EntitySystem {
 
@@ -76,8 +85,26 @@ public final class AvoidanceSystem extends EntitySystem {
     /** Danger per candidate direction, refilled per unit. One array, reused, so nothing allocates. */
     private final float[] danger = new float[SLOTS];
 
+    /** Every hazard, filed once per tick so each unit asks only the cells within reach of it. */
+    private final SpatialGrid grid;
+
+    /** What one unit's query found, reused so nothing allocates. */
+    private final Array<Entity> nearby = new Array<>();
+
+    /** The widest hazard filed this tick, for the reach bound. */
+    @NotState("scratch: recomputed every update")
+    private float widestHazard;
+
+    /** The fastest hazard filed this tick, for the reach bound. */
+    @NotState("scratch: recomputed every update")
+    private float fastestHazard;
+
     private ImmutableArray<Entity> steerers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> hazards = new ImmutableArray<>(new Array<>());
+
+    public AvoidanceSystem(SimConfig config, TileMap map) {
+        this.grid = new SpatialGrid(map.worldWidth(), map.worldHeight(), config.largestRadius() * 2f);
+    }
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -90,6 +117,7 @@ public final class AvoidanceSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
+        fileHazards();
         for (int i = 0; i < steerers.size(); i++) {
             Entity entity = steerers.get(i);
             if (Drivers.held(entity)) {
@@ -100,6 +128,29 @@ public final class AvoidanceSystem extends EntitySystem {
                 steer(entity, avoidance);
             }
         }
+    }
+
+    /** Files everything that is steered around, and measures the widest and fastest of it. */
+    private void fileHazards() {
+        grid.clear();
+        widestHazard = 0f;
+        fastestHazard = 0f;
+        for (int i = 0; i < hazards.size(); i++) {
+            Entity hazard = hazards.get(i);
+            if (!COLLIDER.get(hazard).avoided) {
+                continue;
+            }
+            Position at = POSITION.get(hazard);
+            grid.insert(hazard, at.x, at.y);
+            widestHazard = Math.max(widestHazard, BODY.get(hazard).radius);
+            if (VELOCITY.has(hazard)) {
+                fastestHazard = Math.max(fastestHazard, speedOf(VELOCITY.get(hazard)));
+            }
+        }
+    }
+
+    private static float speedOf(Velocity velocity) {
+        return (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
     }
 
     private void steer(Entity entity, Avoidance avoidance) {
@@ -144,8 +195,17 @@ public final class AvoidanceSystem extends EntitySystem {
         float aheadX = position.x + velocity.x * avoidance.lookaheadSeconds;
         float aheadY = position.y + velocity.y * avoidance.lookaheadSeconds;
         boolean threatened = false;
-        for (int i = 0; i < hazards.size(); i++) {
-            Entity hazard = hazards.get(i);
+        // Nothing further than this can project to within scanRange: the gap between projected
+        // centres is at most the gap now plus how far each can travel in the lookahead. The extra
+        // unit is slack for rounding, and only ever widens the query.
+        float reach = avoidance.scanRange
+                + radius
+                + widestHazard
+                + avoidance.lookaheadSeconds * (speedOf(velocity) + fastestHazard)
+                + 1f;
+        grid.near(position.x, position.y, reach, nearby);
+        for (int i = 0; i < nearby.size; i++) {
+            Entity hazard = nearby.get(i);
             if (Objects.equals(hazard, entity)
                     || !COLLIDER.get(hazard).avoided
                     || (PICKUP.has(hazard) && !shunnedBy(entity, hazard))

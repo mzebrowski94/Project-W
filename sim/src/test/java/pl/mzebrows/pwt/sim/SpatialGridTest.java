@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.gdx.utils.Array;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -95,6 +96,46 @@ class SpatialGridTest {
         assertThat(pairs(grid)).isEmpty();
     }
 
+    @Test
+    void findsEverythingWithinTheRadiusWhateverCellItIsIn() {
+        SpatialGrid grid = grid();
+        insert(grid, 1, 50f, 50f);
+        insert(grid, 2, 57f, 50f);
+        insert(grid, 3, 44f, 43f);
+
+        assertThat(near(grid, 50f, 50f, 8f)).containsExactlyInAnyOrder(1, 2, 3);
+    }
+
+    @Test
+    void leavesOutWhatNoCellInReachHolds() {
+        SpatialGrid grid = grid();
+        insert(grid, 1, 50f, 50f);
+        insert(grid, 2, 85f, 85f);
+
+        assertThat(near(grid, 50f, 50f, 8f)).containsExactly(1);
+    }
+
+    @Test
+    void findsWhatStandsOutsideTheArenaFromTheEdge() {
+        SpatialGrid grid = grid();
+        insert(grid, 1, -40f, 5f);
+
+        assertThat(near(grid, 2f, 5f, 3f)).containsExactly(1);
+    }
+
+    @Test
+    void replacesWhateverTheLastQueryFound() {
+        SpatialGrid grid = grid();
+        insert(grid, 1, 5f, 5f);
+        insert(grid, 2, 85f, 85f);
+        Array<Entity> found = new Array<>();
+        grid.near(85f, 85f, 1f, found);
+
+        grid.near(5f, 5f, 1f, found);
+
+        assertThat(labels(found)).containsExactly(1);
+    }
+
     private static SpatialGrid grid() {
         return new SpatialGrid(ARENA, ARENA, CELL);
     }
@@ -109,5 +150,19 @@ class SpatialGridTest {
         List<String> found = new ArrayList<>();
         grid.forEachPair((a, b) -> found.add(Math.min(a.flags, b.flags) + ":" + Math.max(a.flags, b.flags)));
         return found;
+    }
+
+    private static List<Integer> near(SpatialGrid grid, float x, float y, float radius) {
+        Array<Entity> found = new Array<>();
+        grid.near(x, y, radius, found);
+        return labels(found);
+    }
+
+    private static List<Integer> labels(Array<Entity> entities) {
+        List<Integer> labels = new ArrayList<>();
+        for (Entity entity : entities) {
+            labels.add(entity.flags);
+        }
+        return labels;
     }
 }

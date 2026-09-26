@@ -42,7 +42,7 @@ public enum AiChance {
      * this is what decides whether touching it is the end of the barrel. Low for anything that
      * chases, and far higher for anything that shoots, which is what a strain override is for.
      */
-    BITE_A_BARREL(0.4f),
+    BITE_A_BARREL(0.8f),
 
     /** How often a trooper with nothing better to do goes to pick up a comrade who is down. */
     AID_A_TROOPER(0.4f),

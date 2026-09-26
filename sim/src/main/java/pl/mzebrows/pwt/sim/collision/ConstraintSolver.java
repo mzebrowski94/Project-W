@@ -60,6 +60,9 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
     private final float height;
     private final int passes;
 
+    /** The widest body the grid's cells were sized for; anything wider could miss a contact. */
+    private final float largestRadius;
+
     /** Set for the duration of a pass, so contacts are announced once rather than once per pass. */
     private boolean reportContacts;
 
@@ -69,7 +72,8 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
         this.width = map.worldWidth();
         this.height = map.worldHeight();
         this.passes = config.collision().passes();
-        this.grid = new SpatialGrid(width, height, config.largestRadius() * 2f);
+        this.largestRadius = config.largestRadius();
+        this.grid = new SpatialGrid(width, height, largestRadius * 2f);
     }
 
     /** Resolves every constraint for this tick. The entity view must have position, body and collider. */
@@ -81,6 +85,13 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
                 // Not on the field at all - a man inside the gun he is firing. Never inserted, so it
                 // makes no pair with anything and the rest of this class needs no case for it.
                 continue;
+            }
+            float radius = BODY.get(entity).radius;
+            if (radius > largestRadius) {
+                // Loud, because the alternative is silent: pairs a cell apart are never reported, and
+                // units walk through the body with nothing failing. The fix is a line in largestRadius.
+                throw new IllegalStateException("A body of radius " + radius
+                        + " is wider than SimConfig.largestRadius() (" + largestRadius + ") sized the grid for");
             }
             Position position = POSITION.get(entity);
             grid.insert(entity, position.x, position.y);

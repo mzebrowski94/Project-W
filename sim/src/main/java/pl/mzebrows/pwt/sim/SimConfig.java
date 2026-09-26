@@ -219,7 +219,7 @@ public record SimConfig(
                 new BlastConfig(1000f, 0.25f, 3f, 2.5f),
                 new FireConfig(5, 0.3f, 0.65f, 5f, 10f, 1000f, 1.6f, 0.15f, 0.45f),
                 new BloatConfig(1.8f, 0.6f, 0.15f, 5f, 1.2f),
-                new GrenadeConfig(1.2f, 38f, 34f, 0.55f, 12f),
+                new GrenadeConfig(1.2f, 38f, 34f, 0.55f, 6f),
                 new RabbitConfig(
                         15f,
                         1f,
@@ -227,7 +227,7 @@ public record SimConfig(
                         new WanderDef(true, 18f, 0.7f, 1f, 0.3f, 1.1f, 3f),
                         new DodgeDef(true, 26f, 32f, 0.32f, 0.9f, 1.2f)),
                 new BarrelConfig(1f, 11f, 4f),
-                new MineConfig(0.7f, 3.5f, 1.1f, 1f, 9f, 0.34f, 0.09f),
+                new MineConfig(0.7f, 2f, 2.5f, 1f, 9f, 0.55f, 0.08f),
                 new CasualtyConfig(8f, 0.8f, 0.4f, 1f, 0f, 1.6f),
                 new ActionConfig(2.5f, 0.45f, 0.35f, 0.4f),
                 new NestConfig(2.4f, 600f, 30f, 2, 3, 2, 3, 6f, 140f, 48f),
@@ -245,7 +245,7 @@ public record SimConfig(
                                 1.8f,
                                 8.25f,
                                 12,
-                                100f,
+                                150f,
                                 100f,
                                 200f,
                                 1.3f,
@@ -306,8 +306,8 @@ public record SimConfig(
                                 1f,
                                 0,
                                 null,
-                                PerceptionDef.allRound(true, true, 30f, 45f, 14f),
-                                new WanderDef(true, 10f, 0.4f, 1.5f, 0.5f, 1.6f, 4f),
+                                PerceptionDef.allRound(false, true, 30f, 45f, 14f),
+                                new WanderDef(true, 7f, 0.4f, 0.8f, 0.2f, 0.7f, 3f),
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 LeapDef.off(),
                                 HopDef.off(),
@@ -386,7 +386,7 @@ public record SimConfig(
                                 // leave alone rather than one to clear. The gap is still a gap: one
                                 // range would have it flicker between hunting and idling on the
                                 // boundary, which is the reason the two numbers exist at all.
-                                PerceptionDef.allRound(true, true, 26f, 30f, 12f),
+                                PerceptionDef.allRound(false, true, 26f, 30f, 12f),
                                 new WanderDef(true, 9f, 0.5f, 1.5f, 0.5f, 1.6f, 4f),
                                 new AvoidanceDef(true, 7f, 0.35f, 1.6f),
                                 LeapDef.off(),
@@ -540,7 +540,7 @@ public record SimConfig(
                                 0.72f,
                                 0.16f,
                                 40f,
-                                0.017f))
+                                0.06f))
                 .put(
                         WeaponKind.SPIT,
                         new WeaponDef(
@@ -601,7 +601,7 @@ public record SimConfig(
                                 0f,
                                 Look.VENOM,
                                 0f,
-                                new SlickDef(5, 2.2f, 2.6f, 7f, 7f, 1000f, 1.6f, 0f, 0f, Look.SLICK),
+                                new SlickDef(5, 2.2f, 2.6f, 7f, 7f, 1000f, 1.6f, 0f, 0.3f, Look.SLICK),
                                 HeatDef.none(),
                                 0f,
                                 0f,
@@ -731,6 +731,8 @@ public record SimConfig(
         for (PickupDef pickup : pickups.values()) {
             largest = Math.max(largest, pickup.radius());
         }
+        largest = Math.max(largest, nest.radius());
+        largest = Math.max(largest, turret.radius());
         return Math.max(largest, mine.radius());
     }
 

@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.OBSTACLE_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
@@ -9,6 +10,7 @@ import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
@@ -137,5 +139,20 @@ class CollisionSystemTest {
         float dx = second.x - first.x;
         float dy = second.y - first.y;
         return (float) Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /**
+     * A body wider than the grid was sized for can sit a cell away from something it overlaps, and
+     * that pair is never reported - units walk through it with nothing failing. So it fails here.
+     */
+    @Test
+    void refusesABodyWiderThanTheGridWasSizedFor() {
+        Simulation simulation = simulation();
+        Entity obstacle = simulation.spawnObstacle(50f, 50f);
+        obstacle.getComponent(Body.class).radius = simulation.config().largestRadius() + 1f;
+
+        assertThatThrownBy(simulation::step)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("largestRadius");
     }
 }

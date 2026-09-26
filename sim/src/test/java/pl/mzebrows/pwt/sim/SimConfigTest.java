@@ -41,6 +41,25 @@ class SimConfigTest {
         assertThat(config.largestRadius()).isEqualTo(HUGE);
     }
 
+    /** Neither a strain nor a pickup, so neither table's loop measures one; both are solid bodies. */
+    @Test
+    void measuresANestWiderThanAnythingElse() {
+        SimConfig config = SimConfig.defaults();
+
+        SimConfig wide = config.withNest(config.nest().withRadius(HUGE));
+
+        assertThat(wide.largestRadius()).isEqualTo(HUGE);
+    }
+
+    @Test
+    void measuresATurretWiderThanAnythingElse() {
+        SimConfig config = SimConfig.defaults();
+
+        SimConfig wide = config.withTurret(config.turret().withRadius(HUGE));
+
+        assertThat(wide.largestRadius()).isEqualTo(HUGE);
+    }
+
     /**
      * <strong>Breaking a frog's aggro has to actually work.</strong> "It gives up easily" is a fact
      * about two numbers and nothing else - how far past its detection range it will keep hunting you

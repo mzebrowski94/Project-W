@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -85,8 +86,11 @@ public final class PerceptionSystem extends EntitySystem {
     public void addedToEngine(Engine engine) {
         watchers = engine.getEntitiesFor(
                 Family.all(Perception.class, Position.class).get());
-        sides = engine.getEntitiesFor(
-                Family.all(Faction.class, Health.class, Position.class).get());
+        // Aliens excluded by family, not by the huntable test: an enemy is never on the player's side,
+        // and leaving them in made every alien scan every other alien each tick.
+        sides = engine.getEntitiesFor(Family.all(Faction.class, Health.class, Position.class)
+                .exclude(Enemy.class)
+                .get());
         posts = engine.getEntitiesFor(Family.all(Post.class, Position.class).get());
         edible = engine.getEntitiesFor(Family.all(Pickup.class, Position.class).get());
     }

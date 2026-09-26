@@ -47,6 +47,10 @@ Streams, lambdas and allocation are all fine in setup, loading, scenarios, tooli
 Not an argument, not an instinct: before and after numbers, said out loud in the change that introduces
 it.
 
+The numbers come from `SimulationBenchmarkTest` (`PWT_BENCH=1`): ms per step for crowds of 100 to 800
+grunts, failing if the largest no longer fits one tick. 2026-09-26, after the avoidance grid: 0.47 / 0.70
+/ 1.55 / 4.07 ms (it was 0.71 / 1.92 / 6.60 / 28.9).
+
 This is deliberate. The game is a few hundred circles on hardware that draws millions, and the previous
 version of this rule - zero allocation anywhere in an update path - cost readability twice without
 anyone ever timing what it saved. An optimization nobody measured is a guess with a maintenance bill.

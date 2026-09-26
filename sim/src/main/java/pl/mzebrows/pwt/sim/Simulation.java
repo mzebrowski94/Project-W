@@ -181,7 +181,7 @@ public final class Simulation {
         engine.addSystem(new TrooperMoveSystem(config, map, squad));
         engine.addSystem(new TrooperCombatSystem(config, spawner, nerve, scatter));
         engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map));
-        engine.addSystem(new AvoidanceSystem());
+        engine.addSystem(new AvoidanceSystem(config, map));
         engine.addSystem(new EnemyRangedSystem(map, spawner, streams.of(RngStream.SPIT), scatter));
         // After everything that chooses a course, including planting a shooter, because a gait
         // paces a course rather than choosing one - and before the dodge, which overwrites it: a

@@ -85,6 +85,25 @@ public final class SpatialGrid {
         }
     }
 
+    /**
+     * Replaces {@code out} with everything filed in a cell the square around a point reaches. A broad
+     * phase like {@link #forEachPair}: it can return more than lies within the radius, never less, so
+     * the caller measures what it actually needs. Results come in cell order, not spawn order - a
+     * caller whose answer depends on order has to break ties itself.
+     */
+    public void near(float x, float y, float radius, Array<Entity> out) {
+        out.clear();
+        int minColumn = clamp((int) Math.floor((x - radius) / cellSize), columns);
+        int maxColumn = clamp((int) Math.floor((x + radius) / cellSize), columns);
+        int minRow = clamp((int) Math.floor((y - radius) / cellSize), rows);
+        int maxRow = clamp((int) Math.floor((y + radius) / cellSize), rows);
+        for (int row = minRow; row <= maxRow; row++) {
+            for (int column = minColumn; column <= maxColumn; column++) {
+                out.addAll(cells.get(row * columns + column));
+            }
+        }
+    }
+
     private static void visitWithin(Array<Entity> cell, PairVisitor visitor) {
         for (int i = 0; i < cell.size; i++) {
             for (int j = i + 1; j < cell.size; j++) {
