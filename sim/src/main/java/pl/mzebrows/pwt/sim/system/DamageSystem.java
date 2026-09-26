@@ -1,10 +1,14 @@
 package pl.mzebrows.pwt.sim.system;
 
 import com.badlogic.ashley.core.ComponentMapper;
+import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
+import com.badlogic.ashley.utils.ImmutableArray;
+import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Bloat;
@@ -13,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -72,11 +77,20 @@ public final class DamageSystem extends IteratingSystem {
     private final SimConfig.BloatConfig bloatConfig;
     private final int alertTicks;
 
+    /** Every entity with a handle, for finding one named by it. */
+    private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
+
     public DamageSystem(SimConfig config, Spawner spawner) {
         super(Family.all(Health.class, Damage.class).get());
         this.spawner = spawner;
         this.bloatConfig = config.bloat();
         this.alertTicks = Ticks.of(config.trooper().alertSeconds(), config.tickSeconds());
+    }
+
+    @Override
+    public void addedToEngine(Engine engine) {
+        super.addedToEngine(engine);
+        handled = engine.getEntitiesFor(Family.all(Handle.class).get());
     }
 
     @Override
@@ -90,7 +104,7 @@ public final class DamageSystem extends IteratingSystem {
         float shoveX = damage.knockbackX;
         float shoveY = damage.knockbackY;
         float shove = damage.knockbackSpeed;
-        Entity locksOnDeath = damage.locksOnDeath;
+        long locksOnDeath = damage.locksOnDeath;
         int deathLock = damage.deathLockTicks;
         float carrySpeed = damage.clinchCarrySpeed;
         float carryDecay = damage.clinchCarryDecay;
@@ -146,7 +160,7 @@ public final class DamageSystem extends IteratingSystem {
             float travelX = VELOCITY.has(entity) ? VELOCITY.get(entity).x : 0f;
             float travelY = VELOCITY.has(entity) ? VELOCITY.get(entity).y : 0f;
             Deaths.kill(spawner, entity);
-            clinch(entity, locksOnDeath, deathLock, travelX, travelY, carrySpeed, carryDecay);
+            clinch(entity, Handles.resolve(handled, locksOnDeath), deathLock, travelX, travelY, carrySpeed, carryDecay);
             return;
         }
         if (shove > 0f && VELOCITY.has(entity)) {

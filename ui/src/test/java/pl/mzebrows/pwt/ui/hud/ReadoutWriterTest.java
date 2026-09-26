@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -12,7 +13,6 @@ import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Respawning;
-import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
@@ -99,7 +99,7 @@ class ReadoutWriterTest {
         Simulation world = world();
         Entity commander = world.spawnCommander(40f, 40f, 0);
         Entity turret = world.spawnTurret(42f, 40f);
-        commander.getComponent(Crew.class).station = turret.getComponent(Turret.class).id;
+        commander.getComponent(Crew.class).station = Handles.of(turret);
         commander.getComponent(Appearance.class).state = Appearance.State.ABOARD;
         turret.getComponent(Appearance.class).heat = 0.5f;
         turret.getComponent(Appearance.class).overheated = true;

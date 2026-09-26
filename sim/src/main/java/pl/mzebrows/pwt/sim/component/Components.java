@@ -41,6 +41,7 @@ public final class Components {
                     Faction.class,
                     Feed.class,
                     Focus.class,
+                    Handle.class,
                     Health.class,
                     Heat.class,
                     Hop.class,

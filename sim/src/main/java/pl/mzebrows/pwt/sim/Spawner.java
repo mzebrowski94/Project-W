@@ -1,7 +1,9 @@
 package pl.mzebrows.pwt.sim;
 
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
+import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Action;
@@ -28,6 +30,7 @@ import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Focus;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Hop;
@@ -104,17 +107,27 @@ public final class Spawner {
     private final SimConfig config;
     private final TileMap map;
 
-    /**
-     * Issued rather than derived, so a station's id is never reused. A man aboard a gun that is blown
-     * up is left holding a number nothing on the field will ever carry again, which is the whole
-     * safety argument for naming a station by one instead of by a reference (G0010).
-     */
-    private long nextStationId = 1L;
+    private final ImmutableArray<Entity> levels;
 
     Spawner(PooledEngine engine, SimConfig config, TileMap map) {
         this.engine = engine;
         this.config = config;
         this.map = map;
+        this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
+    }
+
+    /**
+     * Puts a finished entity into the world with its {@link Handle}. Every spawn ends here, so every
+     * entity has one and handles rise in the order entities are added - which is the order every
+     * family keeps (ADR 0013), and what makes {@link Handles#resolve} a binary search.
+     */
+    private void admit(Entity entity) {
+        Level level = entity.getComponent(Level.class);
+        if (level == null) {
+            level = levels.first().getComponent(Level.class);
+        }
+        entity.add(engine.createComponent(Handle.class)).getComponent(Handle.class).id = level.nextHandle++;
+        engine.addEntity(entity);
     }
 
     /** A duration from the config in the whole ticks every timer counts ({@link Ticks}). */
@@ -208,7 +221,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Appearance.class)
                 .set(Look.COMMANDER, slot)
                 .face(1f, 0f));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -299,7 +312,7 @@ public final class Spawner {
         // A trooper has hands for a gun on a mount too, though nothing decides to use one yet.
         entity.add(engine.createComponent(Crew.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.TROOPER).face(1f, 0f));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -355,7 +368,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Feed.class));
         entity.add(engine.createComponent(Appearance.class).face(1f, 0f));
         applyStrain(entity, kind);
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -513,7 +526,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(def.radius()));
         entity.add(engine.createComponent(Collider.class).set(false, false));
         entity.add(engine.createComponent(Appearance.class).set(def.look()));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -564,7 +577,7 @@ public final class Spawner {
                         ticks(rabbit.dodge().commitSeconds()),
                         rabbit.dodge().margin()));
         entity.add(engine.createComponent(Appearance.class).set(def.look()).face(1f, 0f));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -605,7 +618,7 @@ public final class Spawner {
         // scenery until somebody picks it up; nothing drives it, so the velocity stays zero.
         entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Appearance.class).set(def.look()));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -649,7 +662,7 @@ public final class Spawner {
         // where you want it is most of what a mine is worth (G0021).
         entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.MINE));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -695,7 +708,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Health.class).set(nest.health()));
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.NEST));
-        engine.addEntity(entity);
+        admit(entity);
         // What it has to lose, so the system that runs it can tell it is being hit from the bar alone.
         entity.getComponent(Nest.class).watchedHealth = nest.health();
         return entity;
@@ -722,7 +735,7 @@ public final class Spawner {
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(point.radius()));
         entity.add(engine.createComponent(Appearance.class).set(Look.CONTROL_POINT));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -744,12 +757,7 @@ public final class Spawner {
         SimConfig.TurretConfig turret = config.turret();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Turret.class)
-                .set(
-                        nextStationId++,
-                        turret.turnRate(),
-                        turret.firingTurnFactor(),
-                        turret.range(),
-                        turret.quietSeconds()));
+                .set(turret.turnRate(), turret.firingTurnFactor(), turret.range(), turret.quietSeconds()));
         entity.add(engine.createComponent(Faction.class).set(Side.PLAYER));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
@@ -766,7 +774,7 @@ public final class Spawner {
         // a hot turret and back on again is not a way of putting the bar back.
         entity.add(engine.createComponent(Heat.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.TURRET).face(1f, 0f));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -784,7 +792,7 @@ public final class Spawner {
         // What is still to arrive. Empty on every level built so far, which is what "everything is on
         // the field from the first tick" looks like as data.
         entity.add(engine.createComponent(Waves.class));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -813,7 +821,7 @@ public final class Spawner {
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(config.controlPoint().radius()));
         entity.add(engine.createComponent(Appearance.class).set(Look.POST));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -827,7 +835,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(config.obstacle().radius()));
         entity.add(engine.createComponent(Collider.class).set(true, false));
         entity.add(engine.createComponent(Appearance.class).set(Look.OBSTACLE));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -938,7 +946,7 @@ public final class Spawner {
             entity.add(engine.createComponent(SlicksOnDeath.class).set(slicks));
         }
         entity.add(engine.createComponent(Appearance.class).set(look));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -991,7 +999,7 @@ public final class Spawner {
                 .set(damage, 0, ticks(victimInvulnerableSeconds))
                 .wounding());
         entity.add(engine.createComponent(Appearance.class).set(look));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -1018,7 +1026,14 @@ public final class Spawner {
         float y = originY + (float) StrictMath.sin(startAngle) * melee.reach;
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Strike.class)
-                .set(owner, originX, originY, melee.reach, startAngle, sweepRadians, melee.activeSeconds));
+                .set(
+                        owner == null ? Handles.NOBODY : Handles.of(owner),
+                        originX,
+                        originY,
+                        melee.reach,
+                        startAngle,
+                        sweepRadians,
+                        melee.activeSeconds));
         entity.add(engine.createComponent(Faction.class).set(side));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
@@ -1034,7 +1049,7 @@ public final class Spawner {
                         melee.knockbackSpeed,
                         melee.knockbackDecay));
         entity.add(engine.createComponent(Appearance.class).set(Look.STRIKE));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -1089,7 +1104,7 @@ public final class Spawner {
         // Nothing bites a grenade out of the air, so both ways of ending it are the same circle.
         entity.add(engine.createComponent(BlastsOnDeath.class).set(blastRadius, blastRadius));
         entity.add(engine.createComponent(Appearance.class).set(Look.GRENADE));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -1134,7 +1149,7 @@ public final class Spawner {
             // which is what the flamethrower is, leaves no fire either.
             entity.add(engine.createComponent(SlicksOnDeath.class).set(fire));
         }
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 
@@ -1146,7 +1161,7 @@ public final class Spawner {
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Respawning.class)
                 .set(ticks(delaySeconds), x, y, ticks(invulnerableSeconds), slot));
-        engine.addEntity(entity);
+        admit(entity);
         return entity;
     }
 

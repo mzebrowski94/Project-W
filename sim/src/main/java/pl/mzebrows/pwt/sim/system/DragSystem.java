@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Casualty;
@@ -16,8 +17,8 @@ import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Intent;
-import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Turret;
@@ -60,14 +61,13 @@ public final class DragSystem extends EntitySystem {
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
 
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
-    private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
 
     private static final float EPSILON = 1e-4f;
 
     private ImmutableArray<Entity> draggers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> loads = new ImmutableArray<>(new Array<>());
 
-    private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -76,7 +76,7 @@ public final class DragSystem extends EntitySystem {
                         .get());
         loads = engine.getEntitiesFor(
                 Family.all(Dragged.class, Position.class, Body.class).get());
-        levels = engine.getEntitiesFor(Family.all(Level.class).get());
+        handled = engine.getEntitiesFor(Family.all(Handle.class).get());
     }
 
     @Override
@@ -88,12 +88,12 @@ public final class DragSystem extends EntitySystem {
             boolean pressed = held && !drag.wasHeld;
             drag.wasHeld = held;
             if (Drivers.held(dragger)) {
-                letGo(drag);
+                letGo(dragger, drag);
                 continue;
             }
             if (pressed) {
                 if (drag.active()) {
-                    letGo(drag);
+                    letGo(dragger, drag);
                 } else {
                     takeHold(dragger, drag);
                 }
@@ -108,16 +108,14 @@ public final class DragSystem extends EntitySystem {
         if (load == null) {
             return;
         }
-        Level level = LEVEL.get(levels.first());
-        drag.load = level.nextDragId;
+        drag.load = Handles.of(load);
         boolean movable = !COLLIDER.has(load) || COLLIDER.get(load).movable;
-        DRAGGED.get(load).take(level.nextDragId, movable);
+        DRAGGED.get(load).take(Handles.of(dragger), movable);
         if (!movable) {
             // Scenery becomes a body for as long as it is in his hands, or the solver would let him
             // pull it through rock: only movable solids are kept out of terrain and inside the arena.
             COLLIDER.get(load).set(COLLIDER.get(load).solid, true);
         }
-        level.nextDragId++;
     }
 
     /**
@@ -131,9 +129,9 @@ public final class DragSystem extends EntitySystem {
         if (!drag.active()) {
             return;
         }
-        Entity load = loadOf(drag.load);
+        Entity load = loadOf(dragger, drag);
         if (load == null || !grabbable(load)) {
-            letGo(drag);
+            letGo(dragger, drag);
             return;
         }
         Position at = POSITION.get(dragger);
@@ -143,7 +141,7 @@ public final class DragSystem extends EntitySystem {
         float apart = (float) Math.sqrt(toX * toX + toY * toY);
         float tether = BODY.get(dragger).radius + BODY.get(load).radius + drag.gap;
         if (apart > tether + ACTION.get(dragger).reach) {
-            letGo(drag);
+            letGo(dragger, drag);
             return;
         }
         if (apart <= EPSILON) {
@@ -179,11 +177,11 @@ public final class DragSystem extends EntitySystem {
         VELOCITY.get(load).set(dx, dy);
     }
 
-    private void letGo(Drag drag) {
+    private void letGo(Entity dragger, Drag drag) {
         if (!drag.active()) {
             return;
         }
-        Entity load = loadOf(drag.load);
+        Entity load = loadOf(dragger, drag);
         if (load != null) {
             Dragged dragged = DRAGGED.get(load);
             if (!dragged.wasMovable && COLLIDER.has(load)) {
@@ -197,13 +195,13 @@ public final class DragSystem extends EntitySystem {
         drag.release();
     }
 
-    private @Nullable Entity loadOf(long dragId) {
-        for (int i = 0; i < loads.size(); i++) {
-            if (DRAGGED.get(loads.get(i)).by == dragId) {
-                return loads.get(i);
-            }
+    /** What this man is holding, if it is still on the field and still his - nobody else took it. */
+    private @Nullable Entity loadOf(Entity dragger, Drag drag) {
+        Entity load = Handles.resolve(handled, drag.load);
+        if (load == null || !DRAGGED.has(load) || DRAGGED.get(load).by != Handles.of(dragger)) {
+            return null;
         }
-        return null;
+        return load;
     }
 
     private @Nullable Entity nearestGrabbable(Entity dragger, float reach) {

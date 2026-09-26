@@ -56,10 +56,11 @@ public final class Level implements Component, Pool.Poolable {
     public long tick;
 
     /**
-     * The id the next drag is given. Issued rather than derived, so an id is never reused and a stale
-     * one can never match; kept on the level because it is a counter that must survive a snapshot.
+     * The {@link Handle} the next entity is given. Issued rather than derived, so a handle is never
+     * reused and a stale one can never match; kept on the level because it is a counter that must
+     * survive a snapshot. Zero is nobody, so the first handle is one.
      */
-    public long nextDragId = 1L;
+    public long nextHandle = 1L;
 
     /**
      * Whether the harness has made every commander invulnerable. Switched only by an input event
@@ -116,7 +117,7 @@ public final class Level implements Component, Pool.Poolable {
         required = 0;
         met = 0;
         tick = 0L;
-        nextDragId = 1L;
+        nextHandle = 1L;
         commandersInvulnerable = false;
     }
 }

@@ -1,9 +1,7 @@
 package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
-import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.utils.Pool;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Damage owed to an entity this tick, waiting to be applied.
@@ -56,7 +54,7 @@ public final class Damage implements Component, Pool.Poolable {
      * {@link #reset()} clearing it is not optional: a stale one here would keep a dead commander
      * reachable from the pool for as long as the game ran.
      */
-    public @Nullable Entity locksOnDeath;
+    public long locksOnDeath = Handle.NOBODY;
 
     public int deathLockTicks;
 
@@ -199,7 +197,7 @@ public final class Damage implements Component, Pool.Poolable {
     }
 
     /** Records who to hold still if this kills, keeping the longest lock asked for this tick. */
-    public void lockOnDeath(Entity attacker, int ticks, float carrySpeed, float carryDecay) {
+    public void lockOnDeath(long attacker, int ticks, float carrySpeed, float carryDecay) {
         if (ticks <= deathLockTicks) {
             return;
         }
@@ -216,7 +214,7 @@ public final class Damage implements Component, Pool.Poolable {
         knockbackX = 0f;
         knockbackY = 0f;
         knockbackSpeed = 0f;
-        locksOnDeath = null;
+        locksOnDeath = Handle.NOBODY;
         deathLockTicks = 0;
         clinchCarrySpeed = 0f;
         clinchCarryDecay = 0f;

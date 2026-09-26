@@ -52,7 +52,7 @@ class SpawnerTest {
                 .first();
         assertThat(strike.getComponent(Position.class)).isNotNull();
         assertThat(strike.getComponent(Body.class)).isNotNull();
-        assertThat(strike.getComponent(Strike.class).owner).isSameAs(commander);
+        assertThat(strike.getComponent(Strike.class).owner).isEqualTo(Handles.of(commander));
     }
 
     /**

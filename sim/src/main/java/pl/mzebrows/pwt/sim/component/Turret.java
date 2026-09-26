@@ -11,8 +11,8 @@ import com.badlogic.gdx.utils.Pool;
  * onto a bearing at a rate, and swings slower while it is firing - so getting round the side of one
  * is a real move, and holding the trigger costs you the ability to track.
  *
- * <p>{@link #id} is issued at spawn from a counter that never goes back, and is how a man aboard
- * names it without holding a reference to it (G0010). {@link #crewed} is the other direction and is
+ * <p>A man aboard names it by its {@link Handle}, never by a reference to it (G0010). {@link #crewed}
+ * is the other direction and is
  * <em>derived</em>: {@code TurretSystem} clears it and re-establishes it from whoever is actually
  * aboard, every tick, so nothing that dies can leave a gun looking manned.
  *
@@ -21,12 +21,6 @@ import com.badlogic.gdx.utils.Pool;
  * because they are specified only to within an ulp and may differ between JVMs (pillar 6).
  */
 public final class Turret implements Component, Pool.Poolable {
-
-    /** No station. Only ever the value of a component that has been recycled and not yet rebuilt. */
-    public static final long NO_STATION = 0L;
-
-    /** This station's id, issued at spawn. A man aboard carries the same number. */
-    public long id = NO_STATION;
 
     /** Whether anybody is on it. Recomputed every tick from the riders; never trusted between ticks. */
     public boolean crewed;
@@ -57,8 +51,7 @@ public final class Turret implements Component, Pool.Poolable {
     public float quietSeconds;
 
     /** Sets what this gun is and returns this component, for fluent spawning. */
-    public Turret set(long newId, float newTurnRate, float newFiringTurnFactor, float newRange, float newQuiet) {
-        this.id = newId;
+    public Turret set(float newTurnRate, float newFiringTurnFactor, float newRange, float newQuiet) {
         this.turnRate = newTurnRate;
         this.firingTurnFactor = newFiringTurnFactor;
         this.range = newRange;
@@ -82,7 +75,6 @@ public final class Turret implements Component, Pool.Poolable {
 
     @Override
     public void reset() {
-        id = NO_STATION;
         crewed = false;
         aimX = 1f;
         aimY = 0f;

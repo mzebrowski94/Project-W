@@ -6,6 +6,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Strike;
 
@@ -64,6 +65,6 @@ class ComponentPoolingTest {
                         .getEntitiesFor(Family.all(Strike.class).get())
                         .first());
 
-        assertThat(used.owner).isNull();
+        assertThat(used.owner).isEqualTo(Handle.NOBODY);
     }
 }

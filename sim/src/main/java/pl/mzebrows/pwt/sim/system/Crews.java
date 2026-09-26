@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Crew;
@@ -75,7 +76,7 @@ final class Crews {
     static void board(Entity man, Entity station) {
         Turret turret = TURRET.get(station);
         Crew crew = CREW.get(man);
-        crew.station = turret.id;
+        crew.station = Handles.of(station);
         crew.quietSeconds = 0f;
         turret.crewed = true;
         Position at = POSITION.get(station);
@@ -102,9 +103,8 @@ final class Crews {
     static void leave(ImmutableArray<Entity> stations, Entity man) {
         Crew crew = CREW.get(man);
         for (int i = 0; i < stations.size(); i++) {
-            Turret turret = TURRET.get(stations.get(i));
-            if (turret.id == crew.station) {
-                turret.crewed = false;
+            if (Handles.of(stations.get(i)) == crew.station) {
+                TURRET.get(stations.get(i)).crewed = false;
                 break;
             }
         }

@@ -1,10 +1,15 @@
 package pl.mzebrows.pwt.sim.system;
 
 import com.badlogic.ashley.core.ComponentMapper;
+import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
+import com.badlogic.ashley.utils.ImmutableArray;
+import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Strike;
 
@@ -28,15 +33,24 @@ public final class StrikeSystem extends IteratingSystem {
 
     private final Spawner spawner;
 
+    /** Every entity with a handle, for finding one named by it. */
+    private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
+
     public StrikeSystem(Spawner spawner) {
         super(Family.all(Strike.class, Position.class).get());
         this.spawner = spawner;
     }
 
     @Override
+    public void addedToEngine(Engine engine) {
+        super.addedToEngine(engine);
+        handled = engine.getEntitiesFor(Family.all(Handle.class).get());
+    }
+
+    @Override
     protected void processEntity(Entity entity, float deltaTime) {
         Strike strike = STRIKE.get(entity);
-        Entity owner = strike.owner;
+        Entity owner = Handles.resolve(handled, strike.owner);
         if (owner != null && POSITION.has(owner)) {
             Position at = POSITION.get(owner);
             strike.originX = at.x;

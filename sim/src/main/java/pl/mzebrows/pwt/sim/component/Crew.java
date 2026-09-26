@@ -26,7 +26,7 @@ import com.badlogic.gdx.utils.Pool;
 public final class Crew implements Component, Pool.Poolable {
 
     /** Not aboard anything. Zero rather than a negative, so a cleared component reads as on foot. */
-    public static final long ON_FOOT = 0L;
+    public static final long ON_FOOT = Handle.NOBODY;
 
     /** The id of the station this man is on, or {@link #ON_FOOT}. */
     public long station = ON_FOOT;

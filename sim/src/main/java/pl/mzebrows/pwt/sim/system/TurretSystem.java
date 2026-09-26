@@ -9,6 +9,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -131,7 +132,7 @@ public final class TurretSystem extends EntitySystem {
     /** The station carrying this id, or null if it is no longer on the field. */
     private @Nullable Entity stationOf(long id) {
         for (int i = 0; i < stations.size(); i++) {
-            if (TURRET.get(stations.get(i)).id == id) {
+            if (Handles.of(stations.get(i)) == id) {
                 return stations.get(i);
             }
         }

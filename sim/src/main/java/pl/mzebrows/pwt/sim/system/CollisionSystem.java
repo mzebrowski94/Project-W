@@ -9,6 +9,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
@@ -20,6 +21,7 @@ import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Pickup;
@@ -96,6 +98,9 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
 
     private ImmutableArray<Entity> bodies = new ImmutableArray<>(new Array<>());
 
+    /** Every entity with a handle, for finding who swung a strike. */
+    private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
+
     public CollisionSystem(SimConfig config, TileMap map, Spawner spawner, Rng rng) {
         this.solver = new ConstraintSolver(config, map, this);
         this.spawner = spawner;
@@ -108,6 +113,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     public void addedToEngine(Engine engine) {
         bodies = engine.getEntitiesFor(
                 Family.all(Position.class, Body.class, Collider.class).get());
+        handled = engine.getEntitiesFor(Family.all(Handle.class).get());
     }
 
     @Override
@@ -404,7 +410,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      * commander has shoved something away, which is not the same as being caught up with it, and he
      * keeps fighting.
      */
-    private static void lock(Entity attacker, Entity target, ContactDamage attack, Damage owed) {
+    private void lock(Entity attacker, Entity target, ContactDamage attack, Damage owed) {
         if (!attack.locks()) {
             return;
         }
@@ -412,7 +418,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         Entity source = owner == null ? attacker : owner;
         hold(target, attack);
         if (!attack.locksCommittedOnly || committed(target)) {
-            owed.lockOnDeath(source, attack.lockTicks, attack.clinchCarrySpeed, attack.clinchCarryDecay);
+            owed.lockOnDeath(Handles.of(source), attack.lockTicks, attack.clinchCarrySpeed, attack.clinchCarryDecay);
         }
         throwBack(source, target, attack, owed);
     }
@@ -458,7 +464,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      * because a sweep travels an arc and is often on the far side of what it hits. For anything
      * else - claws, a body - it is the attacker itself.
      */
-    private static void recordSource(Entity attacker, Damage owed) {
+    private void recordSource(Entity attacker, Damage owed) {
         if (PROJECTILE.has(attacker)) {
             Projectile shot = PROJECTILE.get(attacker);
             owed.cameFrom(shot.originX, shot.originY);
@@ -473,11 +479,11 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     }
 
     /** The entity that swung this, where the attacker is a swing rather than a unit. */
-    private static @Nullable Entity owner(@Nullable Entity attacker) {
+    private @Nullable Entity owner(@Nullable Entity attacker) {
         if (attacker == null || !STRIKE.has(attacker)) {
             return null;
         }
-        return STRIKE.get(attacker).owner;
+        return Handles.resolve(handled, STRIKE.get(attacker).owner);
     }
 
     /**

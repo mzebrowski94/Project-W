@@ -1,9 +1,7 @@
 package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
-import com.badlogic.ashley.core.Entity;
 import com.badlogic.gdx.utils.Pool;
-import org.jspecify.annotations.Nullable;
 
 /**
  * One swing of a melee weapon, in the world.
@@ -27,7 +25,8 @@ import org.jspecify.annotations.Nullable;
  */
 public final class Strike implements Component, Pool.Poolable {
 
-    public @Nullable Entity owner;
+    /** Who swung it, by {@link Handle}; {@link Handle#NOBODY} for a swing with nobody behind it. */
+    public long owner = Handle.NOBODY;
 
     public float originX;
     public float originY;
@@ -44,7 +43,7 @@ public final class Strike implements Component, Pool.Poolable {
 
     /** Sets the sweep and returns this component, for fluent spawning. */
     public Strike set(
-            @Nullable Entity newOwner,
+            long newOwner,
             float newOriginX,
             float newOriginY,
             float newReach,
@@ -83,7 +82,7 @@ public final class Strike implements Component, Pool.Poolable {
 
     @Override
     public void reset() {
-        owner = null;
+        owner = Handle.NOBODY;
         originX = 0f;
         originY = 0f;
         reach = 0f;

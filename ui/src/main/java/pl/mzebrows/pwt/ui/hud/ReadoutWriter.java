@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -42,7 +43,6 @@ public final class ReadoutWriter {
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Respawning> RESPAWNING = ComponentMapper.getFor(Respawning.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
-    private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
 
     /** Once: {@code values()} hands out a new array on every call, and this runs every frame. */
     private static final Objective[] OBJECTIVES = Objective.values();
@@ -149,7 +149,7 @@ public final class ReadoutWriter {
     private void aboard(long station, PlayerReadout player) {
         for (int i = 0; i < turrets.size(); i++) {
             Entity turret = turrets.get(i);
-            if (TURRET.get(turret).id == station) {
+            if (Handles.of(turret) == station) {
                 Appearance appearance = APPEARANCE.get(turret);
                 player.weapon = WEAPON.has(turret) ? WEAPON.get(turret).kind : WeaponKind.TURRET_GUN;
                 player.heat = appearance.heat;

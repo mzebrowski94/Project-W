@@ -21,7 +21,7 @@ import com.badlogic.gdx.utils.Pool;
 public final class Drag implements Component, Pool.Poolable {
 
     /** Nothing is held at this id. Zero rather than a negative so a cleared component reads as empty. */
-    public static final long NOTHING = 0L;
+    public static final long NOTHING = Handle.NOBODY;
 
     /** Which load he has hold of, or {@link #NOTHING}. */
     public long load = NOTHING;
