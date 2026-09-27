@@ -47,9 +47,18 @@ Streams, lambdas and allocation are all fine in setup, loading, scenarios, tooli
 Not an argument, not an instinct: before and after numbers, said out loud in the change that introduces
 it.
 
-The numbers come from `SimulationBenchmarkTest` (`PWT_BENCH=1`): ms per step for crowds of 100 to 800
-grunts, failing if the largest no longer fits one tick. 2026-09-26, after the avoidance grid: 0.47 / 0.70
-/ 1.55 / 4.07 ms (it was 0.71 / 1.92 / 6.60 / 28.9).
+The numbers come from `SimulationBenchmarkTest` (`PWT_BENCH=1`, about 25 s): ms and bytes per step for
+crowds of 100 to 800 grunts. 2026-09-27: 0.43 / 0.65 / 1.56 / 3.89 ms (before the avoidance grid, 0.71 /
+1.92 / 6.60 / 28.9) and tens of bytes per step in all. It fails on three things, the last two independent
+of the machine:
+
+- the 800 crowd no longer fits one tick;
+- 8× the crowd costs more than 13× the time - an entity-pair loop (a light one measured 16-17×);
+- a step allocates 2 bytes or more per entity - an allocation inside a per-entity loop (one `new float[4]`
+  measured 32).
+
+Run it after any change to a system, the solver or `SpatialGrid`, and quote the 800 line in the summary. A
+time failure within a hair of the line: rerun once; twice over is a regression.
 
 This is deliberate. The game is a few hundred circles on hardware that draws millions, and the previous
 version of this rule - zero allocation anywhere in an update path - cost readability twice without
