@@ -42,6 +42,7 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 | Raw Gradle, any task | `.claude/scripts/gradle.sh <task>` |
 | New sim tunable | A component on the config record and one line in `assets/game.properties` - nothing else. `ShippedConfigTest` fails on either alone. |
 | Run the game | Windows only: `./gradlew lwjgl3:run` |
+| Windows exe, Java bundled, for friends | Windows only: `./gradlew lwjgl3:packageWinX64` -> `dist/` (`docs/packaging.md`) |
 | Run it as copy 1, say, of several | Windows only: `./gradlew lwjgl3:run --args="--instance=1"` |
 
 Build outputs land in `~/.pwt/build/`, not `<project>/build` - see *Speed*. Test result XML under

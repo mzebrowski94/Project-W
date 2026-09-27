@@ -27,6 +27,7 @@ JDK 25. Gradle comes from the wrapper.
 ./gradlew spotlessApply   # reformat
 ./gradlew :core:packTextures   # pack assets-raw/ into assets/atlas/
 ./gradlew lwjgl3:jar      # runnable jar in lwjgl3/build/libs
+./gradlew lwjgl3:packageWinX64  # Windows exe + bundled Java in dist/ - see docs/packaging.md
 ```
 
 ## Configuration

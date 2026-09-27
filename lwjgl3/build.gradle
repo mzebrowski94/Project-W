@@ -4,7 +4,7 @@ buildscript {
     gradlePluginPortal()
   }
   dependencies {
-    classpath "io.github.fourlastor:construo:2.1.0"
+    classpath "io.github.fourlastor:construo:$construoVersion"
     if(enableGraalNative == 'true') {
       classpath "org.graalvm.buildtools.native:org.graalvm.buildtools.native.gradle.plugin:0.9.28"
     }
@@ -125,46 +125,72 @@ tasks.register("jarWin") {
   }
 }
 
+// Native packages: a folder with <appName>.exe (or the Linux/macOS equivalent), the game jar and a
+// trimmed Java runtime, zipped. Nobody needs Java installed to play. See docs/packaging.md.
+//   ./gradlew lwjgl3:packageWinX64   ->   dist/Project-W-winX64.zip
+// The runtime must be the same major version the code is compiled for (options.release, 25): a
+// JDK 21 runtime starts the launcher and then dies on UnsupportedClassVersionError.
+def temurin = "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-${packagedJdkVersion.replace('+', '%2B')}"
+def temurinFile = packagedJdkVersion.replace('+', '_')
+
 construo {
   // name of the executable
   name.set(appName)
   // human-readable name, used for example in the `.app` name for macOS
   humanName.set(appName)
+  mainClass.set(application.mainClass)
+  outputDir.set(rootProject.file('dist'))
+
   jlink {
     guessModulesFromJar.set(false)
-    // You may need to add more modules, as needed.
-    modules.addAll("java.base", "java.management", "java.desktop", "jdk.unsupported")
+    // From `jdeps --list-deps` on the game jar. java.logging and jdk.jfr are Netty's: without them
+    // online play fails in the packaged game and nowhere else. Re-run jdeps after adding a library.
+    modules.addAll("java.base", "java.desktop", "java.logging", "java.management", "jdk.jfr", "jdk.unsupported")
+  }
+
+  roast {
+    // The launcher starts the JVM itself, not with `java -jar`, so the jar manifest's
+    // Enable-Native-Access never applies; LWJGL needs it said here or Java 25 warns on every start.
+    vmArgs.addAll("--enable-native-access=ALL-UNNAMED", "-Xmx1G")
   }
 
   targets.configure {
+    register("winX64", Target.Windows) {
+      architecture.set(Target.Architecture.X86_64)
+      icon.set(project.file("icons/logo.png"))
+      jdkUrl.set("${temurin}/OpenJDK25U-jdk_x64_windows_hotspot_${temurinFile}.zip")
+      // Prefer the discrete GPU on laptops with two.
+      useGpuHint.set(true)
+      // Set to true to get a console window with the game's output - handy for a debugging build.
+      useConsole.set(false)
+    }
     register("linuxX64", Target.Linux) {
       architecture.set(Target.Architecture.X86_64)
-      jdkUrl.set("https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_x64_linux_hotspot_21.0.10_7.tar.gz")
-      // Linux does not currently have a way to set the icon on the executable
+      jdkUrl.set("${temurin}/OpenJDK25U-jdk_x64_linux_hotspot_${temurinFile}.tar.gz")
     }
     register("macM1", Target.MacOs) {
       architecture.set(Target.Architecture.AARCH64)
-      jdkUrl.set("https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.10_7.tar.gz")
-      // macOS needs an identifier
+      jdkUrl.set("${temurin}/OpenJDK25U-jdk_aarch64_mac_hotspot_${temurinFile}.tar.gz")
       identifier.set("pl.mzebrows.pwt." + appName)
-      // Optional: icon for macOS, as an ICNS file
       macIcon.set(project.file("icons/logo.icns"))
     }
     register("macX64", Target.MacOs) {
       architecture.set(Target.Architecture.X86_64)
-      jdkUrl.set("https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_x64_mac_hotspot_21.0.10_7.tar.gz")
-      // macOS needs an identifier
+      jdkUrl.set("${temurin}/OpenJDK25U-jdk_x64_mac_hotspot_${temurinFile}.tar.gz")
       identifier.set("pl.mzebrows.pwt." + appName)
-      // Optional: icon for macOS, as an ICNS file
       macIcon.set(project.file("icons/logo.icns"))
     }
-    register("winX64", Target.Windows) {
-      architecture.set(Target.Architecture.X86_64)
-      // Optional: icon for Windows, as a PNG
-      icon.set(project.file("icons/logo.png"))
-      jdkUrl.set("https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.10%2B7/OpenJDK21U-jdk_x64_windows_hotspot_21.0.10_7.zip")
-      // Uncomment the next line to show a console when the game runs, to print messages.
-      //useConsole.set(true)
+  }
+}
+
+// Temurin 24 and later ship no jmods (JEP 493), so jlink can only copy the JDK Gradle itself runs on:
+// a winX64 package built on Linux gets Linux libraries and an exe that cannot start. Build each target
+// on its own OS; fail before jlink rather than hand over a zip that looks right and is not.
+tasks.matching { it.name ==~ /(downloadJdk|jlink|package)(WinX64|LinuxX64|MacM1|MacX64)/ }.configureEach { task ->
+  doFirst {
+    def needed = task.name.contains('Win') ? 'windows' : task.name.contains('Linux') ? 'linux' : 'mac'
+    if (!os.contains(needed)) {
+      throw new GradleException("${task.name} must run on ${needed}, not ${os}: the bundled Java runtime is copied from the JDK running Gradle.")
     }
   }
 }

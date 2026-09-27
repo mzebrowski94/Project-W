@@ -5,6 +5,7 @@
 
 ## Build output
 build/
+/dist/
 bin/
 .gradle/
 gradle-app.setting
