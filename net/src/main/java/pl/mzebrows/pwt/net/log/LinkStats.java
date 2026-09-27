@@ -4,7 +4,7 @@ import java.util.Locale;
 
 /**
  * One link's numbers: how much crossed it each way, how long a round trip takes, how many heartbeats
- * went unanswered. Counted per message, written to the log once every few seconds - never per message.
+ * went unanswered. Counted per message, written to the log once every {@code statsSeconds} - never per message.
  *
  * <p>Plain fields, reset after each line, so counting costs an increment and nothing else.
  */

@@ -17,6 +17,17 @@ stage 4 splits: do them.
 
 Key added: `net.session.redundantTicks=3`.
 
+### Stage 2 (guards)
+
+| Item | Done | Evidence |
+|---|---|---|
+| D5 buttons | `BundleTest.carriesEveryComponentOfAHeldInput`: builds a `CommanderInput` through its canonical constructor with each component set alone and round-trips it, so a new button or axis that `Bundle` does not carry fails by name. | Seen failing, naming `aimRelative`, with that bit dropped from `Bundle.buttons`; restored. |
+| D4 drain | **Not changed, on purpose.** Measured under a 30 ± 12 ms link for 20 s: held ticks played early **0.05/s at 30, 60, 144 and 240 Hz alike**. At high frame rates the cushion resets whenever a frame has nothing extra, so the frame count never reaches 60. The rule is frame-based but costs nothing measurable. | Throwaway probe with a temporary counter, both removed. |
+| M3 rings | `NetConfig.Session.MOST_LEAD_TICKS` (120) is the one ceiling; `Sequencer.AHEAD` and `PeerSession.OWN` are derived from it (still 128). | Arithmetic: `highestOneBit(120) · 2 = 128`, so behaviour is unchanged; the whole suite passes. |
+| Class 11 | `NetArchitectureTest.nothingElseReadsTheCalendarOrSleeps`: no `java.time` `now()` and no `Thread.sleep` outside `NetLog`. | Seen failing on a probe calling `Instant.now()` and `Thread.sleep` (2 violations, only the new rule red); restored. |
+| Stale docs | `NetLog` dangling "3.b of the online plan" removed; "every few seconds" → `statsSeconds` (`NetLog`, `LinkStats`, `architecture.md`); `WorldFactory` no longer claims `net` cannot parse a config; ADR index row for 0012 notes that 0016 supersedes its `Entity` snapshot hazards. | Strip-and-compare against the previous commit: `NetLog`, `LinkStats`, `WorldFactory` code identical. |
+| - | Full `verify.sh` green, 1473 tests. | - |
+
 Stage 1 deliverable: verify, propose, plan. **No production code changed.** Baseline `:net:test` green (65
 tests). Numbers come from throwaway probes (`Zz*ProbeTest`) run on `SessionHarness` / `LoopbackNetwork` in
 this session and deleted afterwards. Nothing here re-proposes a `docs/backlog.md` entry.

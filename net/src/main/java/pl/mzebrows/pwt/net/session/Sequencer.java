@@ -37,8 +37,11 @@ import pl.mzebrows.pwt.sim.def.Order;
  */
 public final class Sequencer implements AutoCloseable {
 
-    /** How many ticks ahead of the last sealed one a slot's input can be held. A power of two. */
-    private static final int AHEAD = 128;
+    /**
+     * How many ticks ahead of the last sealed one a slot's input can be held: more than any lead. A power
+     * of two.
+     */
+    private static final int AHEAD = Integer.highestOneBit(NetConfig.Session.MOST_LEAD_TICKS) * 2;
 
     /** How many checksum ticks back the host's hashes are remembered, waiting for slower peers'. */
     private static final int HASHES = 16;

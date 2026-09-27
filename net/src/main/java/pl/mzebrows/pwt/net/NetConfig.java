@@ -182,9 +182,15 @@ public record NetConfig(
 
         public static final Session DEFAULT = new Session(2, 30, 1, 2, 4, 60, 600, 3);
 
+        /**
+         * The ceiling on {@code leadMaxTicks}. The rings that hold input ahead of its tick are sized from
+         * it, so raising it is the one edit.
+         */
+        public static final int MOST_LEAD_TICKS = 120;
+
         public Session {
             require(leadMinTicks >= 1, "leadMinTicks", leadMinTicks);
-            require(leadMaxTicks >= leadMinTicks && leadMaxTicks <= 120, "leadMaxTicks", leadMaxTicks);
+            require(leadMaxTicks >= leadMinTicks && leadMaxTicks <= MOST_LEAD_TICKS, "leadMaxTicks", leadMaxTicks);
             require(marginTicks >= 0, "marginTicks", marginTicks);
             require(bufferTicks >= 0, "bufferTicks", bufferTicks);
             require(catchUpTicks >= 1, "catchUpTicks", catchUpTicks);

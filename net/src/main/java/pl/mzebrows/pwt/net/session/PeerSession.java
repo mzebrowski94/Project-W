@@ -59,8 +59,8 @@ public final class PeerSession implements AutoCloseable {
         REFUSED
     }
 
-    /** How many of this machine's own ticks of input are kept to send. A power of two. */
-    private static final int OWN = 128;
+    /** How many of this machine's own ticks of input are kept to send: more than any lead. A power of two. */
+    private static final int OWN = Integer.highestOneBit(NetConfig.Session.MOST_LEAD_TICKS) * 2;
 
     /** How many keyframes are kept: the one a desync is reported on, and the agreed ones before it. */
     private static final int KEYFRAMES = 3;

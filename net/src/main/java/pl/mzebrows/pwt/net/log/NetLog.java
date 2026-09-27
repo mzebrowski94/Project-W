@@ -20,7 +20,7 @@ import pl.mzebrows.pwt.net.NetConfig.LogConfig;
 
 /**
  * The connection log: one file per running instance, one line per event, every line {@code key=value}
- * so it can be grepped by a person and read by Claude (3.b of the online plan).
+ * so it can be grepped by a person and read by Claude.
  *
  * <p>Built on {@code java.util.logging}, so a library that logs there - Netty does - lands in the same
  * file, leak reports included, with no bridge to maintain.
@@ -28,7 +28,7 @@ import pl.mzebrows.pwt.net.NetConfig.LogConfig;
  * <p><strong>Never called per message.</strong> CLAUDE.md bans a log call inside a per-frame loop, and a
  * network sends several messages a frame. What happens per message goes into a {@link NetTrace} - a
  * ring of plain numbers, no allocation - and is written out only when a link closes; each link's
- * numbers are written once every few seconds from {@link LinkStats}. The log itself is for events:
+ * numbers are written once every {@code statsSeconds} from {@link LinkStats}. The log itself is for events:
  * a link opening, a handshake stalling, a timeout, a reason.
  *
  * <p>Every line looks like {@code t=2026-09-24T10:11:12.345 lvl=INFO inst=host cat=link link=3

@@ -2,6 +2,8 @@ package pl.mzebrows.pwt.net;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -40,6 +42,26 @@ final class NetArchitectureTest {
             .callMethod(System.class, "currentTimeMillis")
             .because("time reaches networking through the Clock port, so a test can drive a timeout or a"
                     + " second of lag without waiting for it");
+
+    /**
+     * The same rule for the rest of the JDK's clocks. {@code NetLog} stamps its file names and lines with
+     * the date, which is for people and decides nothing.
+     */
+    @ArchTest
+    static final ArchRule nothingElseReadsTheCalendarOrSleeps = noClasses()
+            .that()
+            .doNotHaveSimpleName("NetLog")
+            .should()
+            .callMethodWhere(new DescribedPredicate<JavaMethodCall>("java.time now() or Thread.sleep") {
+                @Override
+                public boolean test(JavaMethodCall call) {
+                    String owner = call.getTargetOwner().getName();
+                    return (call.getName().equals("now") && owner.startsWith("java.time."))
+                            || (call.getName().equals("sleep") && owner.equals(Thread.class.getName()));
+                }
+            })
+            .because("time reaches networking through the Clock port, and a thread that waits parks on a"
+                    + " deadline from it");
 
     @ArchTest
     static final ArchRule nothingIsDeserialisedByClassName = noClasses()
