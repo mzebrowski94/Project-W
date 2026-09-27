@@ -51,7 +51,12 @@ public final class Appearance implements Component, Pool.Poolable {
         /**
          * Manned: readable from outside its arc.
          */
-        CREWED
+        CREWED,
+        /**
+         * In something's jaws and being carried off (G0045). His clock is on the charge channel, read
+         * backwards like a casualty's; this says why it is running.
+         */
+        GRIPPED
     }
 
     public Look look = Look.NONE;

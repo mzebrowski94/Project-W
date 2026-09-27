@@ -154,6 +154,8 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | The stabilise shows as a green `charge` filling inside whoever is doing it | Whatever the art does with it. The hook is `Action.progress` and `Appearance.chargeLook`, both published, so the renderer decides. The colour is the one thing here that is a decision rather than a stand-in: every other charge in the game is a clock the player is losing and this is the one he is winning. |
 | A trooper that has decided to fetch somebody just walks there and stands over him | Whatever a man carrying out a rescue looks like. The ranking, the roll and the work are all real; it has no call, no posture and no way of telling the player it is going. |
 | A runner is an orange circle, slightly smaller than a grunt's | Whatever the fast strain looks like. The weave, the dodge and the dash are all real. The colour is deliberately off both the grunt's red and the spitter's purple: what will not hold still has to be tellable at a glance from what is walking straight at you. |
+| **An ant is two ochre circles along its facing, the head darker, and a man in its jaws is a brightened circle being pulled along beside it** | Whatever an ant and a man being carried off look like. The head arc, the grip, the carry and the clock are real (G0045); the segments are the client's drawing of one body (`SegmentMark`), and `Appearance.State.GRIPPED` and the charge ring are the hooks for the rest. |
+| Ants, like everything else in `Adventure 2`, are placed by hand, and its waves are a list written out by hand | Generated fragments. Same standing as the first march. |
 | A spitter is a purple circle and its spit a purple dot | Whatever a shooting alien looks like. The halt, the cone and the range are real. The colour is deliberately off both reds: what is coming for you and what is shooting at you need different answers, and a field where they look alike is the confusion pillar 5 exists to prevent. |
 | Spitters, their barrels and the cover they stand behind are placed by hand in `Casualty` | Whatever a level does about them. Same standing as hand-laid rock and hand-placed barrels. |
 | A charged spitter is the same purple circle inside an orange-red ring | Whatever a creature carrying an explosive looks like. The swallow, the gun and the blast are all real, and the ring is the colour of the thing it swallowed. `Appearance.charged` is the hook and is already published, so the renderer decides. |
@@ -179,6 +181,11 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | **The action prompt is one console, for four players** | The on-screen prompt it is waiting for. With one player the console was half-served; with four, three of them cannot see a prompt addressed to them at all. The decision is per player already - each player's action is in the readout, and `ActionPrompts` says it when it changes - so what is missing is still a label rather than a system. |
 
 ## Known limits, accepted on purpose
+
+- **An ant carrying a man walks straight away from whoever is nearest him**, with no flow field, and
+  avoidance and the solver slide it along what it meets. Into a corner it stops, and the rescue is
+  easier for it. That is the limit a provoked unit already lives with; routing a carry costs a grid pass
+  per ant holding somebody.
 
 - **Every alien scores every living thing on the player's side, once per tick,** to decide who it is
   coming for (G0026). That is a commander, a handful of men and whatever guns a level put down - a

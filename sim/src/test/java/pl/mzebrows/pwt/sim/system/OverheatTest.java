@@ -176,6 +176,27 @@ class OverheatTest {
         assertThat(commander.getComponent(Heat.class).value).isPositive();
     }
 
+    /**
+     * <strong>The bar belongs to the gun, not to the man carrying it</strong> (G0025). A gun from a crate
+     * is a gun nobody has fired, so a man who ran his last one into the stop picks up a cold one - the
+     * stop was the other gun's, and it went with it.
+     */
+    @Test
+    void handsAManWhoseLastGunStoppedItselfAColdOneFromACrate() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Heat heat = commander.getComponent(Heat.class);
+        heat.value = 1f;
+        heat.locked = true;
+
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, MIDDLE, MIDDLE);
+        simulation.step(STILL);
+
+        assertThat(heat.locked).isFalse();
+        assertThat(heat.value).isCloseTo(0f, CLOSE);
+        assertThat(commander.getComponent(Appearance.class).overheated).isFalse();
+    }
+
     private static CommanderInput firing() {
         return new CommanderInput(0f, 0f, MIDDLE + BESIDE + AHEAD, MIDDLE, true, false);
     }

@@ -31,6 +31,8 @@ import org.jspecify.annotations.Nullable;
  * @param approach how wide of whatever it is hunting it closes, if it spreads out at all
  * @param weave how hard it refuses to walk in a straight line at you, if it refuses at all
  * @param dodge how it answers a shot it can see coming, if at all; the definition a rabbit carries
+ * @param grip what its leap does to a man it lands on, if it does anything but bite him (G0045)
+ * @param armour where on it gunfire glances off, if anywhere (G0045)
  * @param chances how often each occasional behaviour happens for this strain: the shared table, with
  *     this strain's overrides resolved in
  * @param look what a renderer draws it as
@@ -58,6 +60,8 @@ public record UnitDef(
         ApproachDef approach,
         WeaveDef weave,
         DodgeDef dodge,
+        GripDef grip,
+        ArmourDef armour,
         Chances chances,
         Look look) {
 

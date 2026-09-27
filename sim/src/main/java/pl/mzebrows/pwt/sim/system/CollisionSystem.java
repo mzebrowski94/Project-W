@@ -15,12 +15,16 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.collision.ConstraintSolver;
+import pl.mzebrows.pwt.sim.component.Armour;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Grip;
+import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
@@ -67,6 +71,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Thrown> THROWN = ComponentMapper.getFor(Thrown.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
+    private static final ComponentMapper<Armour> ARMOUR = ComponentMapper.getFor(Armour.class);
+    private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
+    private static final ComponentMapper<Grip> GRIP = ComponentMapper.getFor(Grip.class);
+    private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
 
     /** Below this two bodies are on top of each other and give no direction to be thrown along. */
     private static final float EPSILON = 1e-4f;
@@ -268,13 +276,34 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      * arena edge are {@code ProjectileBoundsSystem}'s. Ruined ground stops nothing - a collider flag.
      */
     private void spend(Entity projectile, Entity target) {
-        strike(projectile, target);
+        if (!glancesOff(projectile, target)) {
+            strike(projectile, target);
+        }
         if (COLLIDER.has(target) && !COLLIDER.get(target).stopsShots) {
             return;
         }
         if (!PROJECTILE.get(projectile).piercing || prop(target)) {
             spawner.markDead(projectile);
         }
+    }
+
+    /**
+     * Whether a shot arrives at an armoured head and glances off it (G0045): coming at the thing from
+     * inside the arc round the way it faces, judged by the way the shot is flying rather than where on
+     * the body it touched. The shot is still spent; it lands nothing.
+     */
+    private static boolean glancesOff(Entity projectile, Entity target) {
+        if (!ARMOUR.has(target) || !ARMOUR.get(target).enabled || !FACING.has(target) || !VELOCITY.has(projectile)) {
+            return false;
+        }
+        Facing facing = FACING.get(target);
+        Velocity flight = VELOCITY.get(projectile);
+        float speed = (float) Math.sqrt(flight.x * flight.x + flight.y * flight.y);
+        if (speed <= EPSILON || (facing.x == 0f && facing.y == 0f)) {
+            return false;
+        }
+        // Back along the shot, towards where it came from, against the way the head is pointing.
+        return -(flight.x * facing.x + flight.y * facing.y) / speed >= ARMOUR.get(target).arcCosine;
     }
 
     /**
@@ -291,6 +320,9 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         }
         if (held(attacker) || held(owner(attacker))) {
             // Held still or off its feet: no blow, and no cooldown spent.
+            return;
+        }
+        if (GRIP.has(attacker) && GRIP.get(attacker).enabled && takesHoldInsteadOfBiting(attacker, target)) {
             return;
         }
         ContactDamage attack = CONTACT_DAMAGE.get(attacker);
@@ -318,6 +350,35 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         owed.creditTo(attack.credit);
         recordSource(attacker, owed);
         lock(attacker, target, attack, owed);
+    }
+
+    /**
+     * What a creature whose leap grips does instead of biting (G0045), and whether it did.
+     *
+     * <p><strong>Jaws full, it bites nobody</strong>, the man in them included. <strong>In the air, it
+     * takes hold</strong> of a man on his feet whom nothing else has hold of, and never kills on landing:
+     * whatever it lands on that it cannot take - a man already taken, a man who is down, a gun - it
+     * simply lands on. On the ground it bites like anything else. The leap ends as it takes hold.
+     */
+    private boolean takesHoldInsteadOfBiting(Entity attacker, Entity target) {
+        Grip grip = GRIP.get(attacker);
+        if (grip.holding()) {
+            return true;
+        }
+        if (!LEAP.has(attacker) || !LEAP.get(attacker).airborne()) {
+            return false;
+        }
+        if (GRIPPED.has(target)
+                && !GRIPPED.get(target).held()
+                && !Drivers.down(target)
+                && !Drivers.aboard(target)
+                && !(INVULNERABLE.has(target) && INVULNERABLE.get(target).active())) {
+            grip.take(Handles.of(target));
+            GRIPPED.get(target).by = Handles.of(attacker);
+            GRIPPED.get(target).fraction = 1f;
+            LEAP.get(attacker).finish();
+        }
+        return true;
     }
 
     /**
@@ -402,11 +463,12 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     }
 
     /**
-     * Not swinging at anything: held still by a blow, or off its feet.
+     * Not swinging at anything: held still by a blow, or off its feet. A man in something's jaws is held
+     * and still swings - that is how he gets out (G0045).
      *
      * <p>Asked through {@link Drivers}, the one copy of this question.
      */
     private static boolean held(@Nullable Entity entity) {
-        return entity != null && Drivers.held(entity);
+        return entity != null && Drivers.held(entity) && !Drivers.gripped(entity);
     }
 }

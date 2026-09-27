@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.Weapon;
 
 /**
  * Decides, once a tick, what each trooper is doing and where it is headed.
@@ -28,6 +29,7 @@ public final class TrooperMindSystem extends EntitySystem {
 
     private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
 
     // The cascade, highest first. Each half owns its own queries and scratch; this class owns the order.
     private final TrooperFight fight;
@@ -81,7 +83,7 @@ public final class TrooperMindSystem extends EntitySystem {
                 trooper.alertRemaining--;
             }
 
-            if (fight.engages(trooper, at)
+            if (fight.engages(trooper, at, shotWidth(entity))
                     || orders.obeys(trooper, at)
                     || aid.aids(entity, trooper, at, deltaTime)
                     || crew.crews(entity, trooper, at, deltaTime)
@@ -92,5 +94,14 @@ public final class TrooperMindSystem extends EntitySystem {
             roam.explores(trooper, at);
         }
         objective.splitIntoSectors();
+    }
+
+    /** How far either side of the line this man's shot reaches: the round itself, and a twin mount's offset. */
+    private static float shotWidth(Entity entity) {
+        if (!WEAPON.has(entity)) {
+            return 0f;
+        }
+        Weapon weapon = WEAPON.get(entity);
+        return weapon.projectileRadius + weapon.muzzleOffset;
     }
 }

@@ -85,6 +85,7 @@ public final class WorldRenderer implements Disposable {
     private final BloatMark bloatMark;
     private final NestMark nestMark;
     private final FacingMark facingMark;
+    private final SegmentMark segmentMark;
     private final ChargedMark chargedMark;
     private final OrderMark orderMark;
     private final HeatMark heatMark;
@@ -143,6 +144,8 @@ public final class WorldRenderer implements Disposable {
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {
                 shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
+            } else if (segmented(appearance.look) && faces(entity)) {
+                drawSegments(x, y, body.radius, FACING.get(entity), appearance);
             } else if (shelled(appearance.look)) {
                 drawShells(x, y, body.radius, appearance);
             } else if (appearance.streaks()) {
@@ -328,6 +331,35 @@ public final class WorldRenderer implements Disposable {
      */
     private static boolean shelled(Look look) {
         return look == Look.NEST;
+    }
+
+    /**
+     * Whether a look is drawn as two segments along its facing rather than as one circle - the client's
+     * decision, as the square is. Only the one strain whose head and back are different things (G0045).
+     */
+    private static boolean segmented(Look look) {
+        return look == Look.ANT;
+    }
+
+    private static boolean faces(Entity entity) {
+        return FACING.has(entity) && (FACING.get(entity).x != 0f || FACING.get(entity).y != 0f);
+    }
+
+    /**
+     * A body behind and a darker head in front, both inside the circle that is hit, so the end a bullet
+     * glances off is the end that looks hard (pillar 5).
+     */
+    private void drawSegments(float x, float y, float radius, Facing facing, Appearance appearance) {
+        float length = (float) Math.sqrt(facing.x * facing.x + facing.y * facing.y);
+        float aheadX = facing.x / length;
+        float aheadY = facing.y / length;
+        shapes.setColor(tint(appearance));
+        float back = segmentMark.bodyOffset() * radius;
+        shapes.circle(x - aheadX * back, y - aheadY * back, segmentMark.bodyScale() * radius, CIRCLE_SEGMENTS);
+        shapes.setColor(darkened(tint(appearance), segmentMark.headShade()));
+        float front = segmentMark.headOffset() * radius;
+        shapes.circle(x + aheadX * front, y + aheadY * front, segmentMark.headScale() * radius, CIRCLE_SEGMENTS);
+        shapes.setColor(tint(appearance));
     }
 
     /**

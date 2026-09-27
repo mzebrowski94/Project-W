@@ -9,6 +9,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Approach;
+import pl.mzebrows.pwt.sim.component.Armour;
 import pl.mzebrows.pwt.sim.component.Avoidance;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
@@ -31,6 +32,8 @@ import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Focus;
+import pl.mzebrows.pwt.sim.component.Grip;
+import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Heat;
@@ -206,6 +209,8 @@ public final class Spawner {
                         config.action().dragLateralFactor(),
                         config.action().dragGap()));
         entity.add(engine.createComponent(Crew.class));
+        // Carried always, like his men: a leap that grips takes him as readily as one of them (G0045).
+        entity.add(engine.createComponent(Gripped.class));
         // Carried always: what he holds changes, and a gun that does not run hot leaves it at zero.
         entity.add(engine.createComponent(Heat.class));
         entity.add(engine.createComponent(Slowed.class));
@@ -293,6 +298,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Action.class).set(config.action().reach()));
         // A trooper has hands for a gun on a mount too, though nothing decides to use one yet.
         entity.add(engine.createComponent(Crew.class));
+        entity.add(engine.createComponent(Gripped.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.TROOPER));
         entity.add(engine.createComponent(Facing.class).face(1f, 0f));
         admit(entity);
@@ -338,6 +344,8 @@ public final class Spawner {
         // Its gait too, for the same reason.
         entity.add(engine.createComponent(Hop.class).phaseFrom(x, y));
         entity.add(engine.createComponent(Dodge.class));
+        entity.add(engine.createComponent(Grip.class));
+        entity.add(engine.createComponent(Armour.class));
         entity.add(engine.createComponent(Weapon.class));
         entity.add(engine.createComponent(Taking.class));
         entity.add(engine.createComponent(Feed.class));
@@ -425,6 +433,13 @@ public final class Spawner {
                         ticks(def.dodge().durationSeconds()),
                         ticks(def.dodge().commitSeconds()),
                         def.dodge().margin());
+        entity.getComponent(Grip.class)
+                .set(
+                        def.grip().enabled(),
+                        def.grip().carrySpeed(),
+                        ticks(def.grip().holdSeconds()));
+        entity.getComponent(Armour.class)
+                .set(def.armour().enabled(), def.armour().arcCosine());
         entity.getComponent(Ranged.class)
                 .set(
                         def.ranged().enabled(),
@@ -457,11 +472,19 @@ public final class Spawner {
      * Puts a gun in a unit's hands, replacing whatever it was carrying.
      *
      * <p>The single writer for weapons, for spawning and pickups alike. Changes no component set.
+     *
+     * <p><strong>The new gun arrives cold</strong> (G0025): the bar is the gun's, and the gun that ran
+     * hot is the one he let go of. A mount never comes through here - its gun is never swapped - so
+     * stepping off a hot turret still cools nothing.
      */
     public void applyWeapon(Entity entity, WeaponKind kind) {
         Weapon weapon = entity.getComponent(Weapon.class);
         if (weapon != null) {
             weapon.set(kind, config.weapon(kind), config.tickSeconds());
+        }
+        Heat heat = entity.getComponent(Heat.class);
+        if (heat != null) {
+            heat.reset();
         }
     }
 
@@ -869,10 +892,11 @@ public final class Spawner {
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(slick.radiusNow()));
-        // Steered around only when neutral (G0034, G0035). It stops no shot: it lies on the floor.
+        // Steered around by whoever it could catch - avoidance asks about the pair (G0035). It stops no
+        // shot: it lies on the floor.
         entity.add(engine.createComponent(Collider.class)
                 .set(false, false)
-                .avoided(side == Side.NEUTRAL)
+                .avoided(true)
                 .stopsShots(false));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(damage, 0, ticks(victimInvulnerableSeconds))

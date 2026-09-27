@@ -48,7 +48,8 @@ public final class MeleeSystem extends IteratingSystem {
 
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
-        if (Drivers.held(entity)) {
+        if (Drivers.held(entity) && !Drivers.gripped(entity)) {
+            // A man in something's jaws is held and may still swing: that is how he gets out (G0045).
             return;
         }
         Melee melee = MELEE.get(entity);

@@ -25,6 +25,11 @@ public enum Look {
     RUNNER,
     /** The strain that hops and ruins the ground. It must read as kin to what it spits. */
     FROG,
+    /**
+     * The strain in two segments, drawn as two: a body and, along its facing, a head a shade darker -
+     * the part a bullet glances off (pillar 5).
+     */
+    ANT,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */

@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
+import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Velocity;
@@ -71,6 +72,7 @@ public final class TurretSystem extends EntitySystem {
     private ImmutableArray<Entity> stations = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> riders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> quarry = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> obstacles = new ImmutableArray<>(new Array<>());
 
     public TurretSystem(TileMap map, Spawner spawner, Rng scatter) {
         this.scatter = scatter;
@@ -85,6 +87,8 @@ public final class TurretSystem extends EntitySystem {
                         .get());
         riders = engine.getEntitiesFor(Family.all(Crew.class, Position.class).get());
         quarry = engine.getEntitiesFor(Family.all(Enemy.class, Position.class).get());
+        obstacles = engine.getEntitiesFor(
+                Family.all(Obstacle.class, Position.class, Body.class).get());
     }
 
     @Override
@@ -158,7 +162,8 @@ public final class TurretSystem extends EntitySystem {
      */
     private void ofItsOwnJudgement(Entity rider, Entity station, Turret turret, Position at, float deltaTime) {
         Crew crew = CREW.get(rider);
-        @Nullable Position target = nearestQuarry(at, turret.range);
+        Weapon weapon = WEAPON.get(station);
+        @Nullable Position target = nearestQuarry(at, turret.range, weapon.projectileRadius + weapon.muzzleOffset);
         if (target == null) {
             crew.quietSeconds += deltaTime;
             if (crew.quietSeconds >= turret.quietSeconds) {
@@ -181,8 +186,12 @@ public final class TurretSystem extends EntitySystem {
         }
     }
 
-    /** The nearest thing on the other side this gun could reach, or null if there is nothing. */
-    private @Nullable Position nearestQuarry(Position at, float range) {
+    /**
+     * The nearest thing on the other side this gun could reach, or null if there is nothing.
+     *
+     * <p>Reach means a clear shot, boulders included: a man on a twin mount does not pour rounds into one.
+     */
+    private @Nullable Position nearestQuarry(Position at, float range, float shotWidth) {
         @Nullable Position nearest = null;
         float nearestDistance = Float.MAX_VALUE;
         for (int i = 0; i < quarry.size(); i++) {
@@ -197,7 +206,9 @@ public final class TurretSystem extends EntitySystem {
             float toX = where.x - at.x;
             float toY = where.y - at.y;
             float distance = toX * toX + toY * toY;
-            if (distance < nearestDistance && map.clearLine(at.x, at.y, where.x, where.y)) {
+            if (distance < nearestDistance
+                    && map.clearLine(at.x, at.y, where.x, where.y)
+                    && Sight.clearShot(obstacles, at.x, at.y, where.x, where.y, shotWidth)) {
                 nearestDistance = distance;
                 nearest = where;
             }

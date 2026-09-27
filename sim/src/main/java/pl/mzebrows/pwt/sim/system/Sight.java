@@ -1,6 +1,11 @@
 package pl.mzebrows.pwt.sim.system;
 
+import com.badlogic.ashley.core.ComponentMapper;
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.utils.ImmutableArray;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Position;
 
 /**
  * The three tests a unit can declare about what it is able to notice (G0015), in one place.
@@ -21,6 +26,9 @@ import pl.mzebrows.pwt.map.TileMap;
  * differ between JVMs, which pillar 6 does not allow.
  */
 final class Sight {
+
+    private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
     private Sight() {}
 
@@ -62,5 +70,32 @@ final class Sight {
      */
     static boolean clearLine(TileMap map, float fromX, float fromY, float toX, float toY, boolean required) {
         return !required || map.clearLine(fromX, fromY, toX, toY);
+    }
+
+    /**
+     * Whether a shot this wide gets from one point to the other without meeting a boulder.
+     *
+     * <p><strong>A clear shot is a different question from a clear line.</strong> Sight is terrain alone
+     * (the note on {@link #clearLine}), but a boulder eats a shot as surely as rock does, so a unit that
+     * <em>fires</em> asks this as well - after the others, because it is a pass over every obstacle.
+     * {@code clearance} is how far either side of the line the shot reaches: its own radius, plus how
+     * far off the line a twin mount's muzzles sit.
+     */
+    static boolean clearShot(
+            ImmutableArray<Entity> obstacles, float fromX, float fromY, float toX, float toY, float clearance) {
+        float spanX = toX - fromX;
+        float spanY = toY - fromY;
+        float lengthSquared = spanX * spanX + spanY * spanY;
+        for (int i = 0; i < obstacles.size(); i++) {
+            Entity obstacle = obstacles.get(i);
+            Position at = POSITION.get(obstacle);
+            float reach = BODY.get(obstacle).radius + clearance;
+            float along = lengthSquared <= 0f ? 0f : ((at.x - fromX) * spanX + (at.y - fromY) * spanY) / lengthSquared;
+            along = Math.max(0f, Math.min(1f, along));
+            if (withinRange(fromX + spanX * along, fromY + spanY * along, at.x, at.y, reach)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

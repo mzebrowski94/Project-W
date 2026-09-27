@@ -27,6 +27,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param stateTint how far to shift that colour for what the entity is currently doing
  * @param chargeMark how to draw an entity that is filling up towards something
  * @param facingMark how to draw which way an entity is pointing
+ * @param segmentMark how to draw a creature in two segments, head and body
  * @param chargedMark how to draw a unit whose gun goes off where its shots land
  * @param nestMark how to draw a hole in the ground
  * @param orderMark how to draw a unit that is acting on an order
@@ -50,6 +51,7 @@ public record GraphicConfig(
         BloatMark bloatMark,
         NestMark nestMark,
         FacingMark facingMark,
+        SegmentMark segmentMark,
         ChargedMark chargedMark,
         OrderMark orderMark,
         HeatMark heatMark,
@@ -95,6 +97,7 @@ public record GraphicConfig(
                 bloatMark(properties),
                 nestMark(properties),
                 facingMark(properties),
+                segmentMark(properties),
                 chargedMark(properties),
                 orderMark(properties),
                 heatMark(properties),
@@ -211,6 +214,7 @@ public record GraphicConfig(
             case SPITTER -> "a05cf0ff";
             case RUNNER -> "ff9a4aff";
             case FROG -> "4f9e3cff";
+            case ANT -> "c9a227ff";
             case CONTROL_POINT -> "2b3a52ff";
             case POST -> "3a5230ff";
             case NEST -> "6b4a2aff";
@@ -313,7 +317,18 @@ public record GraphicConfig(
                 properties.getFloat("graphic.state.slowed", -0.18f),
                 properties.getFloat("graphic.state.dying", -0.7f),
                 properties.getFloat("graphic.state.casualty", 0.6f),
-                properties.getFloat("graphic.state.crewed", 0.45f));
+                properties.getFloat("graphic.state.crewed", 0.45f),
+                properties.getFloat("graphic.state.gripped", 0.3f));
+    }
+
+    /** How a creature in two segments is drawn, under {@code graphic.segments}. */
+    private static SegmentMark segmentMark(GameProperties properties) {
+        return new SegmentMark(
+                properties.getFloat("graphic.segments.bodyOffset", 0.35f),
+                properties.getFloat("graphic.segments.bodyScale", 0.65f),
+                properties.getFloat("graphic.segments.headOffset", 0.5f),
+                properties.getFloat("graphic.segments.headScale", 0.5f),
+                properties.getFloat("graphic.segments.headShade", 0.35f));
     }
 
     /**

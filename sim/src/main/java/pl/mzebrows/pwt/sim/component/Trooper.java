@@ -204,6 +204,12 @@ public final class Trooper implements Component, Pool.Poolable {
      */
     public float swingDue;
 
+    /**
+     * What it is still due before it next swings at whatever has it in its jaws, for
+     * {@code AiChance.STRUGGLE} (G0045).
+     */
+    public float struggleDue;
+
     /** What it is still due before it next gets on a gun, for {@code AiChance.MAN_A_TURRET}. */
     public float turretDue;
 
@@ -270,6 +276,7 @@ public final class Trooper implements Component, Pool.Poolable {
         sectorSpan = 0;
         sectorStep = 0;
         swingDue = 0f;
+        struggleDue = 0f;
         turretDue = 0f;
         aidDue = 0f;
         order = null;

@@ -43,5 +43,13 @@ public enum AiChance {
      *
      * <p>Zero makes him unrescuable.
      */
-    AID_THE_COMMANDER
+    AID_THE_COMMANDER,
+
+    /**
+     * How often a trooper in something's jaws swings at it (G0045).
+     *
+     * <p><strong>Slow on purpose</strong>: a man who freed himself every time would make being taken a
+     * formality, and the commander coming for him is the point. Rolled only while he is held.
+     */
+    STRUGGLE
 }

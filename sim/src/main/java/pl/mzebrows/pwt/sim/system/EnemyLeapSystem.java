@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.Rng;
+import pl.mzebrows.pwt.sim.component.Grip;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -48,6 +49,7 @@ public final class EnemyLeapSystem extends EntitySystem {
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
+    private static final ComponentMapper<Grip> GRIP = ComponentMapper.getFor(Grip.class);
 
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
     private static final float EPSILON = 1e-4f;
@@ -69,8 +71,9 @@ public final class EnemyLeapSystem extends EntitySystem {
 
     @Override
     public void addedToEngine(Engine engine) {
-        leapers = engine.getEntitiesFor(Family.all(Leap.class, Position.class, Velocity.class, Perception.class)
-                .get());
+        leapers = engine.getEntitiesFor(
+                Family.all(Leap.class, Grip.class, Position.class, Velocity.class, Perception.class)
+                        .get());
     }
 
     @Override
@@ -84,7 +87,8 @@ public final class EnemyLeapSystem extends EntitySystem {
                 }
                 continue;
             }
-            if (!leap.enabled) {
+            if (!leap.enabled || GRIP.get(entity).holding()) {
+                // Jaws full: nothing to leap with until it lets go (G0045).
                 continue;
             }
             Perception perception = PERCEPTION.get(entity);

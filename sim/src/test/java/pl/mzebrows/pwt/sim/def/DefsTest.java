@@ -53,7 +53,8 @@ class DefsTest {
                         strain(RADIUS * 2f, Look.BRUTE),
                         strain(RADIUS, Look.SPITTER),
                         strain(RADIUS, Look.RUNNER),
-                        strain(RADIUS, Look.FROG));
+                        strain(RADIUS, Look.FROG),
+                        strain(RADIUS, Look.ANT));
     }
 
     @Test
@@ -68,6 +69,7 @@ class DefsTest {
                 .put(UnitKind.SPITTER, strain(RADIUS, Look.SPITTER))
                 .put(UnitKind.RUNNER, strain(RADIUS, Look.RUNNER))
                 .put(UnitKind.FROG, strain(RADIUS, Look.FROG))
+                .put(UnitKind.ANT, strain(RADIUS, Look.ANT))
                 .build();
     }
 
@@ -94,6 +96,8 @@ class DefsTest {
                 ApproachDef.off(),
                 WeaveDef.off(),
                 DodgeDef.off(),
+                GripDef.off(),
+                ArmourDef.off(),
                 Chances.none(),
                 look);
     }

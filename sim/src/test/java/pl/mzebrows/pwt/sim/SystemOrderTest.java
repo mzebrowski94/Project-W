@@ -37,6 +37,7 @@ import pl.mzebrows.pwt.sim.system.EnemyRangedSystem;
 import pl.mzebrows.pwt.sim.system.EvolutionSystem;
 import pl.mzebrows.pwt.sim.system.FacingSystem;
 import pl.mzebrows.pwt.sim.system.GrenadeSystem;
+import pl.mzebrows.pwt.sim.system.GripSystem;
 import pl.mzebrows.pwt.sim.system.HopSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.MineSystem;
@@ -150,6 +151,11 @@ class SystemOrderTest {
                 new Before(TurretSystem.class, PerceptionSystem.class, "a shot is in the world before anything looks"));
         rows.add(new Before(NavigationSystem.class, WeaveSystem.class, "a weave bends the course navigation wrote"));
         rows.add(new Before(WeaveSystem.class, AvoidanceSystem.class, "avoidance keeps the last word over a weave"));
+        rows.add(
+                new Before(WeaveSystem.class, GripSystem.class, "a carry overwrites the course a creature set itself"));
+        rows.add(new Before(
+                GripSystem.class, TrooperMindSystem.class, "the carry is the only thing moving a man it holds"));
+        rows.add(new Before(GripSystem.class, AvoidanceSystem.class, "a carry is bent round rock like any other walk"));
         for (Class<? extends EntitySystem> course : List.of(
                 PerceptionSystem.class,
                 NavigationSystem.class,

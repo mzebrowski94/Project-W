@@ -2,6 +2,9 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA_TILES;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.AVOID_LOOKAHEAD;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.AVOID_RANGE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.AVOID_WEIGHT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SLICK_BLOBS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SLICK_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.VENOM_REACH;
@@ -15,9 +18,11 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Dying;
@@ -25,6 +30,7 @@ import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Slick;
+import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
@@ -68,6 +74,22 @@ class SlickTest {
 
     /** Long enough for a shot at sixty a second to cross the spatter and come out the far side. */
     private static final int ACROSS_THE_SPATTER = 20;
+
+    /** Where a point is put for a man to walk past the spatter to. */
+    private static final float BEYOND_THE_SPATTER = PAST_THE_SPATTER + 20f;
+
+    private static final float CORNER = 5f;
+
+    /** Long enough for a man to walk from short of the spatter to well past it, the long way round. */
+    private static final int WALK_PAST_IT = 180;
+
+    /** Long enough for something walking at it to be in the middle of it. */
+    private static final int INTO_THE_SPATTER = 20;
+
+    private static final float LASTING_SECONDS = 30f;
+
+    /** How far off its line something walking dead straight may drift. */
+    private static final float STRAIGHT = 0.1f;
 
     @Test
     void ruinsTheGroundWhereItsShotBurst() {
@@ -186,6 +208,61 @@ class SlickTest {
             Position at = slick.getComponent(Position.class);
             assertThat(map.passableAt(at.x, at.y)).isTrue();
         }
+    }
+
+    /**
+     * <strong>Venom is given room by whoever it could catch</strong> - a question about the pair, the
+     * way a barrel is (G0022). It used to be walked straight through by the player's men, twice over:
+     * ground with a side was never steered around, and nothing on the other side ever was either.
+     */
+    @Test
+    void isGivenRoomByAManItCouldCatch() {
+        Simulation simulation = new Simulation(lasting(steering(config())));
+        simulation.spawnCommander(CORNER, CORNER);
+        venomAt(simulation);
+        steps(simulation, UNTIL_IT_RUNS_OUT);
+
+        simulation.spawnControlPoint(BEYOND_THE_SPATTER, Y);
+        Entity trooper = simulation.spawnTrooper(SHORT_OF_THE_SPATTER, Y);
+        boolean wentDown = false;
+        for (int tick = 0; tick < WALK_PAST_IT; tick++) {
+            simulation.step();
+            wentDown |= trooper.getComponent(Casualty.class).begun;
+        }
+
+        assertThat(wentDown).isFalse();
+        assertThat(trooper.getComponent(Position.class).x).isGreaterThan(PAST_THE_SPATTER);
+    }
+
+    /** And the other half of the pair: what spat it walks through it, as it always has. */
+    @Test
+    void isWalkedThroughByTheSideThatSpatIt() {
+        Simulation simulation = new Simulation(lasting(steering(config())));
+        simulation.spawnCommander(BEYOND_THE_SPATTER, Y);
+        venomAt(simulation);
+        steps(simulation, UNTIL_IT_RUNS_OUT);
+
+        Entity enemy = simulation.spawnEnemy(SHORT_OF_THE_SPATTER, Y);
+        steps(simulation, INTO_THE_SPATTER);
+
+        assertThat(enemy.getComponent(Position.class).y).isCloseTo(Y, Offset.offset(STRAIGHT));
+    }
+
+    /** Venom that lies about for as long as a test takes to walk past it. */
+    private static SimConfig lasting(SimConfig config) {
+        return config.withWeapons(config.weapons()
+                .map(
+                        WeaponKind.VENOM,
+                        gun -> gun.withSlicks(
+                                gun.slicks().withSecondsMax(LASTING_SECONDS).withSeconds(LASTING_SECONDS))));
+    }
+
+    /** Everything that walks steers, and nothing hits back. */
+    private static SimConfig steering(SimConfig config) {
+        AvoidanceDef avoiding = new AvoidanceDef(true, AVOID_RANGE, AVOID_LOOKAHEAD, AVOID_WEIGHT);
+        SimConfig everyone =
+                everyStrain(config, strain -> strain.withContactDamage(0f).withAvoidance(avoiding));
+        return everyone.withTrooper(everyone.trooper().withAvoidance(avoiding));
     }
 
     /** Nothing on the field hits back, so a test about ruined ground is only about ruined ground. */

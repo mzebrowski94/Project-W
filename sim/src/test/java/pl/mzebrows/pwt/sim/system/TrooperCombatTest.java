@@ -193,6 +193,40 @@ class TrooperCombatTest {
     }
 
     /**
+     * <strong>A boulder hides nothing and eats every shot</strong>, so a man who can see something
+     * behind one does not waste his rounds on it. Sight stays terrain alone (G0015); this is the
+     * question a man who <em>fires</em> asks on top of it.
+     */
+    @Test
+    void doesNotPourShotsIntoABoulderInTheWay() {
+        Simulation simulation = stillEnemies();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnObstacle(MIDDLE + 8f, MIDDLE + 0.5f);
+        simulation.spawnEnemy(MIDDLE + 15f, MIDDLE);
+        facing(trooper, 1f, 0f);
+
+        simulation.step();
+
+        assertThat(mode(trooper)).isNotEqualTo(Trooper.Mode.FIGHT);
+    }
+
+    /** A boulder off to one side is not in the way. */
+    @Test
+    void stillShootsPastABoulderThatIsNotInTheWay() {
+        Simulation simulation = stillEnemies();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnObstacle(MIDDLE + 8f, MIDDLE + 6f);
+        simulation.spawnEnemy(MIDDLE + 15f, MIDDLE);
+        facing(trooper, 1f, 0f);
+
+        simulation.step();
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+    }
+
+    /**
      * The other half of the hysteresis, and the half that was missing: a fight in progress forgives
      * the arc and never the wall.
      *

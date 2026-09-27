@@ -19,6 +19,7 @@ public final class Components {
     public static final List<Class<? extends Component>> ALL = Stream.<Class<? extends Component>>of(
                     Action.class,
                     Appearance.class,
+                    Armour.class,
                     Approach.class,
                     Avoidance.class,
                     Blast.class,
@@ -41,6 +42,8 @@ public final class Components {
                     Facing.class,
                     Faction.class,
                     Feed.class,
+                    Grip.class,
+                    Gripped.class,
                     Focus.class,
                     Handle.class,
                     Health.class,

@@ -189,6 +189,7 @@ class ConfigBinderTest {
                 sim.ai.chance.aid_a_trooper=0.4
                 sim.ai.chance.man_a_turret=2
                 sim.ai.chance.aid_the_commander=1.5
+                sim.ai.chance.struggle=0.4
                 sim.ai.chance.longestGap=2
                 """;
     }

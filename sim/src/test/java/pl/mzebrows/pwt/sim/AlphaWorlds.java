@@ -18,11 +18,13 @@ import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.ApproachDef;
+import pl.mzebrows.pwt.sim.def.ArmourDef;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
+import pl.mzebrows.pwt.sim.def.GripDef;
 import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.def.HeatDef;
 import pl.mzebrows.pwt.sim.def.HopDef;
@@ -762,6 +764,7 @@ public final class AlphaWorlds {
                         .put(UnitKind.SPITTER, strain(SPITTER_RADIUS, SPITTER_SPEED, SPITTER_HEALTH, Look.SPITTER))
                         .put(UnitKind.RUNNER, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.RUNNER))
                         .put(UnitKind.FROG, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.FROG))
+                        .put(UnitKind.ANT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.ANT))
                         .build(),
                 Defs.<PickupKind, PickupDef>builder(PickupKind.class)
                         .put(
@@ -1135,6 +1138,8 @@ public final class AlphaWorlds {
                 ApproachDef.off(),
                 WeaveDef.off(),
                 DodgeDef.off(),
+                GripDef.off(),
+                ArmourDef.off(),
                 noChances(),
                 look);
     }

@@ -160,6 +160,7 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().bloatMark(),
                 context.graphicConfig().nestMark(),
                 context.graphicConfig().facingMark(),
+                context.graphicConfig().segmentMark(),
                 context.graphicConfig().chargedMark(),
                 context.graphicConfig().orderMark(),
                 context.graphicConfig().heatMark());

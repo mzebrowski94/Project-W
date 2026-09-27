@@ -29,6 +29,8 @@ import pl.mzebrows.pwt.sim.component.Appearance;
  * @param crewed a gun with somebody on it. Brighter than an abandoned one, because the difference
  *     between a turret that is about to shoot at you and a turret that is scenery is the difference
  *     between two completely different approaches to it
+ * @param gripped a man in something's jaws being carried off (G0045). Brightened, as a casualty is:
+ *     he is somewhere to run to, and his clock is on him
  */
 public record StateTint(
         float unaware,
@@ -39,7 +41,8 @@ public record StateTint(
         float slowed,
         float dying,
         float casualty,
-        float crewed) {
+        float crewed,
+        float gripped) {
 
     /** How far to shift the base colour, in {@code [-1, 1]}. */
     public float forState(Appearance.State state) {
@@ -53,6 +56,7 @@ public record StateTint(
             case DYING -> dying;
             case CASUALTY -> casualty;
             case CREWED -> crewed;
+            case GRIPPED -> gripped;
             // A man aboard something is inside it: the renderer draws the thing he is in and not
             // him, so there is no colour for this one to shift.
             case ABOARD, NORMAL -> 0f;

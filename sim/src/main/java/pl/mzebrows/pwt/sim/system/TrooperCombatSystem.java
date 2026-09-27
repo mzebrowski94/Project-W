@@ -7,12 +7,15 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Gripped;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -27,7 +30,8 @@ import pl.mzebrows.pwt.sim.def.Chances;
  *
  * <p>Fires at what {@code TrooperMindSystem} settled on, standing still (1.d). <strong>The hand strike
  * is rare on purpose</strong> - answering a leap is the commander's moment (G0013) - rolled through
- * {@code Odds} on {@code AiChance.SWING_AT_A_LEAP}.
+ * {@code Odds} on {@code AiChance.SWING_AT_A_LEAP}. A man in something's jaws fires nothing and
+ * swings at what holds him, now and then ({@code AiChance.STRUGGLE}, G0045).
  */
 public final class TrooperCombatSystem extends EntitySystem {
 
@@ -39,6 +43,7 @@ public final class TrooperCombatSystem extends EntitySystem {
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
+    private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
 
     /** Clear of its own body, so a trooper never shoots itself in the foot. */
     private static final float MUZZLE_GAP = 0.1f;
@@ -59,6 +64,9 @@ public final class TrooperCombatSystem extends EntitySystem {
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> leapers = new ImmutableArray<>(new Array<>());
 
+    /** Every entity with a handle, for finding what has a man in its jaws. */
+    private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
+
     public TrooperCombatSystem(SimConfig config, Spawner spawner, Rng rng, Rng scatter) {
         this.scatter = scatter;
         this.spawner = spawner;
@@ -72,12 +80,17 @@ public final class TrooperCombatSystem extends EntitySystem {
                 Family.all(Trooper.class, Position.class, Weapon.class, Melee.class, Faction.class)
                         .get());
         leapers = engine.getEntitiesFor(Family.all(Leap.class, Position.class).get());
+        handled = engine.getEntitiesFor(Family.all(Handle.class).get());
     }
 
     @Override
     public void update(float deltaTime) {
         for (int i = 0; i < troopers.size(); i++) {
             Entity entity = troopers.get(i);
+            if (Drivers.gripped(entity)) {
+                struggle(entity, deltaTime);
+                continue;
+            }
             if (Drivers.held(entity)) {
                 continue;
             }
@@ -122,6 +135,31 @@ public final class TrooperCombatSystem extends EntitySystem {
             return true;
         }
         return false;
+    }
+
+    /**
+     * A man in something's jaws swings at it, now and then (G0045).
+     *
+     * <p><strong>Slow on purpose</strong>, through {@code Odds} on {@code AiChance.STRUGGLE}: every swing
+     * lands on the thing holding him, and a man who freed himself every time would make being taken a
+     * formality. The commander coming for him is meant to matter.
+     */
+    private void struggle(Entity entity, float deltaTime) {
+        Melee melee = MELEE.get(entity);
+        if (!melee.ready()) {
+            return;
+        }
+        Entity holder = Handles.resolve(handled, GRIPPED.get(entity).by);
+        if (holder == null || !POSITION.has(holder)) {
+            return;
+        }
+        Trooper trooper = TROOPER.get(entity);
+        trooper.struggleDue = Odds.spend(rng, trooper.struggleDue, chances, AiChance.STRUGGLE, deltaTime);
+        if (!Odds.spent(trooper.struggleDue)) {
+            return;
+        }
+        Position where = POSITION.get(holder);
+        melee.beginSwing(where.x, where.y);
     }
 
     /**

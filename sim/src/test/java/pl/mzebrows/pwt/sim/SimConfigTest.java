@@ -82,6 +82,22 @@ class SimConfigTest {
     }
 
     /**
+     * <strong>The hand strike deletes an ordinary enemy and staggers a brute</strong> - the contrast the
+     * whole parry is built on (G0013). It is two numbers in two blocks, and it was quietly broken for
+     * as long as a grunt's health had been raised past the strike's damage: the sweep landed, the grunt
+     * stood, and its claws killed him on the next tick.
+     */
+    @Test
+    void deletesAnOrdinaryEnemyWithOneSwingAndNotABrute() {
+        SimConfig config = SimConfig.defaults();
+
+        assertThat(config.melee().damage())
+                .isGreaterThanOrEqualTo(config.unit(UnitKind.GRUNT).health());
+        assertThat(config.melee().damage())
+                .isLessThan(config.unit(UnitKind.BRUTE).health());
+    }
+
+    /**
      * <strong>The beam has to run out sooner than anything else he can pick up.</strong> Every good
      * thing about the laser is bought out of one bar - the line through a crowd, the slow, and a
      * body inflated until it goes off - so the moment some other gun runs hotter, the laser is

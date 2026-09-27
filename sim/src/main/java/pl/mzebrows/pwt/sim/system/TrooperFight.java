@@ -9,8 +9,10 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
+import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
@@ -38,6 +40,9 @@ final class TrooperFight {
 
     private ImmutableArray<Entity> enemies = new ImmutableArray<>(new Array<>());
 
+    /** The boulders, which stop a shot though they hide nothing (G0015). */
+    private ImmutableArray<Entity> obstacles = new ImmutableArray<>(new Array<>());
+
     TrooperFight(SimConfig config, TileMap map) {
         this.map = map;
         this.threatBonus = config.trooper().threatBonus();
@@ -47,6 +52,8 @@ final class TrooperFight {
     /** Takes the views it reads from the engine, once, as its system is added. */
     void bind(Engine engine) {
         enemies = engine.getEntitiesFor(Family.all(Enemy.class, Position.class).get());
+        obstacles = engine.getEntitiesFor(
+                Family.all(Obstacle.class, Position.class, Body.class).get());
     }
 
     /** Forgets who was shooting at what last tick. */
@@ -59,9 +66,13 @@ final class TrooperFight {
         }
     }
 
-    /** Picks a target and heads for it, or reports that there is nothing worth shooting. */
-    boolean engages(Trooper trooper, Position at) {
-        int quarry = enemyFor(trooper, at);
+    /**
+     * Picks a target and heads for it, or reports that there is nothing worth shooting.
+     *
+     * <p>{@code shotWidth} is how far either side of the line his shot reaches, for {@link Sight#clearShot}.
+     */
+    boolean engages(Trooper trooper, Position at, float shotWidth) {
+        int quarry = enemyFor(trooper, at, shotWidth);
         if (quarry < 0) {
             return false;
         }
@@ -78,13 +89,15 @@ final class TrooperFight {
      *
      * <p><strong>Starting a fight and staying in one are different questions</strong> (the hysteresis):
      * starting costs every declared test (G0015), staying the longer hold range and a clear line.
+     * <strong>Both need a clear shot</strong>: a boulder hides nothing but eats every round fired at
+     * what stands behind it.
      *
      * <p><strong>The one it would most rather shoot</strong>, as an effective distance: {@code
      * threatBonus} nearer for something coming for somebody, {@code sharedTargetPenalty} further per man
      * already on it (threat ordering, Tremblay et al. 2014). Re-resolved every tick (G0010); ties go to
      * the first spawned.
      */
-    private int enemyFor(Trooper trooper, Position at) {
+    private int enemyFor(Trooper trooper, Position at, float shotWidth) {
         boolean alreadyFighting = trooper.mode == Trooper.Mode.FIGHT;
         boolean lookingAllRound = alreadyFighting || trooper.alertRemaining > 0;
         float range = alreadyFighting ? trooper.holdRange : trooper.sightRange;
@@ -110,7 +123,9 @@ final class TrooperFight {
             if (score >= bestScore) {
                 continue;
             }
-            if (!inSight(trooper, at, where, lookingAllRound)) {
+            if (!inSight(trooper, at, where, lookingAllRound)
+                    || !Sight.clearShot(obstacles, at.x, at.y, where.x, where.y, shotWidth)) {
+                // Seen or not, a shot a boulder would eat is not worth firing.
                 continue;
             }
             bestScore = score;

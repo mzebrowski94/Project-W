@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
+import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Level;
@@ -72,6 +73,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
     private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
+    private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
     private static final ComponentMapper<Slick> SLICK = ComponentMapper.getFor(Slick.class);
@@ -185,6 +187,11 @@ public final class AppearanceSystem extends IteratingSystem {
             appearance.charge = CASUALTY.get(entity).fraction();
             return;
         }
+        if (GRIPPED.has(entity) && GRIPPED.get(entity).held()) {
+            // How long a man in something's jaws has left, read backwards like a casualty's (G0045).
+            appearance.charge = GRIPPED.get(entity).fraction;
+            return;
+        }
         if (BLAST.has(entity)) {
             // A blast burning out, read backwards.
             appearance.charge = BLAST.get(entity).fade();
@@ -260,6 +267,10 @@ public final class AppearanceSystem extends IteratingSystem {
         if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
             // Above staggered, below dying: worst news first.
             return Appearance.State.CASUALTY;
+        }
+        if (GRIPPED.has(entity) && GRIPPED.get(entity).held()) {
+            // Below the states that say he is down; above one that says he was shoved.
+            return Appearance.State.GRIPPED;
         }
         if (held) {
             return Appearance.State.STAGGERED;

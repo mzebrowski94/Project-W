@@ -43,5 +43,14 @@ public enum UnitKind {
      * everything else keeps hunting you half a screen further. Backing off actually works on one,
      * which is the whole of what makes it a creature to leave alone rather than one to clear.
      */
-    FROG
+    FROG,
+    /**
+     * The one in two segments, whose head turns a bullet and whose leap takes a man away (G0045).
+     *
+     * <p>A different problem from everything above, twice over. Shooting it in the face does
+     * nothing, so a squad standing in a line in front of it is a squad doing nothing - somebody has to
+     * get round it, or put a fist in its face. And what its leap lands on is not killed but carried
+     * off, so the fight moves: a man is being taken somewhere and the clock on him is running.
+     */
+    ANT
 }

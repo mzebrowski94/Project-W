@@ -15,6 +15,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.everyStrain;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
@@ -34,6 +35,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.Order;
 
 /**
  * Ground left burning by an explosion.
@@ -75,6 +77,17 @@ class FireTest {
     private static final int WELL_BEFORE_CONTACT = 40;
 
     private static final float A_CLEAR_DEVIATION = 1f;
+
+    /** How much wider than its blast a swelling fire gets. */
+    private static final float SWELLING_FACTOR = 1.5f;
+
+    /** Outside the blast, well inside where the swelling fire ends up. */
+    private static final float FIRE_REACH_OUTSIDE_THE_BLAST = BARREL_BLAST_RADIUS + 2f;
+
+    private static final float STANDING_X = 60f;
+
+    /** Near enough that he hears the order, far enough off the lane that he is out of the fire. */
+    private static final float ORDER_REACH = 18f;
 
     @Test
     void burnsTheGroundWhereAnExplosionWent() {
@@ -195,6 +208,28 @@ class FireTest {
         }
     }
 
+    /**
+     * <strong>A man standing still steps off ground that is about to burn him.</strong> Avoidance used
+     * to be about a course, so a man with no course - holding, securing, standing to shoot - watched
+     * fire swell up round his boots. Standing is not a reason to stand in it.
+     */
+    @Test
+    void stepsAManStandingStillOffGroundThatIsCatchingFire() {
+        Simulation simulation = new Simulation(swelling(avoidingSquad()));
+        simulation.spawnCommander(STANDING_X, LANE + ORDER_REACH);
+        Entity trooper = simulation.spawnTrooper(STANDING_X, LANE);
+        simulation.step(ordering(Order.DEFENCE));
+
+        simulation.spawnBlast(STANDING_X - FIRE_REACH_OUTSIDE_THE_BLAST, LANE, BARREL_BLAST_RADIUS);
+        boolean wentDown = false;
+        for (int tick = 0; tick < ticksIn(FIRE_SECONDS); tick++) {
+            simulation.step();
+            wentDown |= trooper.getComponent(Casualty.class).begun;
+        }
+
+        assertThat(wentDown).isFalse();
+    }
+
     /** Fire on, and nothing on the field hits back, so a test about burning ground is only about that. */
     private static Simulation burningWorld() {
         return new Simulation(burning(everyStrain(config(), strain -> strain.withContactDamage(0f))));
@@ -205,6 +240,27 @@ class FireTest {
                 config(),
                 strain -> strain.withContactDamage(0f)
                         .withAvoidance(new AvoidanceDef(true, AVOID_RANGE, AVOID_LOOKAHEAD, AVOID_WEIGHT)))));
+    }
+
+    /** A squad that steers, so a test about what it gives room to has somebody to give it. */
+    private static SimConfig avoidingSquad() {
+        SimConfig config = everyStrain(config(), strain -> strain.withContactDamage(0f));
+        return config.withTrooper(
+                config.trooper().withAvoidance(new AvoidanceDef(true, AVOID_RANGE, AVOID_LOOKAHEAD, AVOID_WEIGHT)));
+    }
+
+    /**
+     * Fire that swells over half its life to half as wide again as the blast that left it, all of it
+     * on the spot the blast went off - so it reaches ground the blast never touched, slowly enough
+     * that a man who moves is not caught.
+     */
+    private static SimConfig swelling(SimConfig config) {
+        return burning(config)
+                .withFire(burning(config)
+                        .fire()
+                        .withRadiusFactor(SWELLING_FACTOR)
+                        .withSpreadFactor(0f)
+                        .withGrowFraction(0.5f));
     }
 
     /** Fire that spends a quarter of its life swelling and another quarter collapsing again. */

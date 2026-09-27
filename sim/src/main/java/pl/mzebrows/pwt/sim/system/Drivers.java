@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -28,15 +29,17 @@ final class Drivers {
     private static final ComponentMapper<Drag> DRAG = ComponentMapper.getFor(Drag.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
+    private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
 
     private Drivers() {}
 
     /**
-     * Held still by a blow, dead on the ground, or down on it waiting for somebody. None of the three
-     * drives itself, and no driver may zero its velocity - that would delete knockback or a drag.
+     * Held still by a blow, dead on the ground, down on it waiting for somebody, or in something's jaws.
+     * None of them drives itself, and no driver may zero its velocity - that would delete knockback, a
+     * drag or a carry.
      */
     static boolean held(Entity entity) {
-        if (aboard(entity)) {
+        if (aboard(entity) || gripped(entity)) {
             return true;
         }
         if (STUNNED.has(entity) && STUNNED.get(entity).active()) {
@@ -46,6 +49,14 @@ final class Drivers {
             return true;
         }
         return DYING.has(entity) && DYING.get(entity).begun;
+    }
+
+    /**
+     * In something's jaws (G0045). Held like any other held unit, with one exception every caller that
+     * cares asks for by name: <strong>he may still swing</strong>, because that is how a man gets out.
+     */
+    static boolean gripped(Entity entity) {
+        return GRIPPED.has(entity) && GRIPPED.get(entity).held();
     }
 
     /**
