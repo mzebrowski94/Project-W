@@ -3,8 +3,8 @@ package pl.mzebrows.pwt.net.session;
 import pl.mzebrows.pwt.sim.Simulation;
 
 /**
- * How a session turns a {@link SessionSetup} into a world. {@code net} cannot parse a config - that is
- * the client's loader - so the client hands one of these in, and a test hands in one of its own.
+ * How a session turns a {@link SessionSetup} into a world. The client hands in one that parses the host's
+ * config with its own loader, which logs what was wrong with it; a test hands in one of its own.
  */
 public interface WorldFactory {
 

@@ -59,8 +59,8 @@ public final class PeerSession implements AutoCloseable {
         REFUSED
     }
 
-    /** How many of this machine's own ticks of input are kept to send. A power of two. */
-    private static final int OWN = 128;
+    /** How many of this machine's own ticks of input are kept to send: more than any lead. A power of two. */
+    private static final int OWN = Integer.highestOneBit(NetConfig.Session.MOST_LEAD_TICKS) * 2;
 
     /** How many keyframes are kept: the one a desync is reported on, and the agreed ones before it. */
     private static final int KEYFRAMES = 3;
@@ -550,6 +550,15 @@ public final class PeerSession implements AutoCloseable {
                 Simulation current = world;
                 if (current != null && state == State.PLAYING) {
                     byte[] snapshot = WorldCodec.snapshot(current);
+                    if (snapshot.length > maxMessageBytes - Msg.SNAPSHOT_HEADER) {
+                        // The joiner waits; a crash here would end the session for everybody already in it.
+                        log.error(
+                                "peer",
+                                "event=snapshot-too-big for=" + forPeer + " bytes=" + snapshot.length + " limit="
+                                        + (maxMessageBytes - Msg.SNAPSHOT_HEADER),
+                                null);
+                        return;
+                    }
                     out.reset()
                             .putByte(Msg.SNAPSHOT_TAKEN)
                             .putInt(forPeer)

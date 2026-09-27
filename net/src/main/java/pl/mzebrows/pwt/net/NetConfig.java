@@ -1,9 +1,15 @@
 package pl.mzebrows.pwt.net;
 
+import java.util.List;
+import java.util.SortedMap;
+import pl.mzebrows.pwt.sim.ConfigBinder;
+import pl.mzebrows.pwt.sim.ConfigKey;
+
 /**
- * The networking tunables, handed in already parsed. {@code net} reads no config file itself: the
- * client loads this from {@code network.properties}, as it loads {@code SimConfig} from
- * {@code game.properties}.
+ * The networking tunables: {@code network.properties}, bound by component name ({@link ConfigBinder}),
+ * so a tunable is a field here and a line there and nothing else. {@code net} reads no file: the shipped
+ * one is compiled in ({@code :net:generateShippedNetConfig}) and is {@link #defaults()}; the client finds
+ * a player's copy and hands its text to {@link #parse}.
  *
  * @param port the port a host listens on, for both TCP and UDP
  * @param portSearch how many ports after {@code port} a host tries when it is taken - a second instance
@@ -14,6 +20,8 @@ package pl.mzebrows.pwt.net;
  * @param maxDatagramBytes the largest unreliable message, kept under a typical path MTU so nothing fragments
  * @param maxMessageBytes the largest reliable message - a snapshot has to fit
  * @param conditions network conditions to simulate on top of the real ones, all zero for none
+ * @param latencySteps the one-way latencies, in milliseconds, a joining copy steps through during a
+ *     latency playtest; the rest of the conditions stay as set
  * @param log where the connection log goes and how much it keeps
  * @param session how a lockstep session paces itself
  * @param lan how sessions on the local network are found
@@ -27,9 +35,12 @@ public record NetConfig(
         int maxDatagramBytes,
         int maxMessageBytes,
         Conditions conditions,
+        @ConfigKey("conditions.latencySteps") List<Integer> latencySteps,
         LogConfig log,
         Session session,
         Lan lan) {
+
+    private static final String ROOT = "net";
 
     public NetConfig {
         require(port > 0 && port < 65_536, "port", port);
@@ -39,22 +50,45 @@ public record NetConfig(
         require(linkTimeoutMillis > heartbeatMillis, "linkTimeoutMillis", linkTimeoutMillis);
         require(maxDatagramBytes >= 64 && maxDatagramBytes <= 65_000, "maxDatagramBytes", maxDatagramBytes);
         require(maxMessageBytes >= maxDatagramBytes, "maxMessageBytes", maxMessageBytes);
+        require(
+                !latencySteps.isEmpty() && latencySteps.stream().allMatch(step -> step >= 0),
+                "latencySteps",
+                latencySteps);
+        latencySteps = List.copyOf(latencySteps);
     }
 
-    /** The values the game ships with, and what every missing key in {@code network.properties} falls back to. */
+    /** What ships: {@code assets/network.properties}, compiled in. What every test runs. */
     public static NetConfig defaults() {
-        return new NetConfig(
-                47_100,
-                8,
-                5_000,
-                10_000,
-                250,
-                1_200,
-                8 * 1024 * 1024,
-                Conditions.NONE,
-                LogConfig.DEFAULT,
-                Session.DEFAULT,
-                Lan.DEFAULT);
+        return Shipped.CONFIG;
+    }
+
+    /**
+     * A config from the text of a {@code network.properties}, with every value it lacks or garbles taken
+     * from {@link #defaults()} and named in the result, as is every key no record has.
+     *
+     * @throws IllegalArgumentException if the values are readable but break a rule a record checks
+     */
+    public static Parsed parse(String text) {
+        ConfigBinder.Bound<NetConfig> bound =
+                ConfigBinder.bind(NetConfig.class, ROOT, ConfigBinder.parse(text), Shipped.VALUES);
+        NetConfig config = bound.value();
+        if (config == null) {
+            throw new IllegalArgumentException("network config: " + String.join("; ", bound.problems()));
+        }
+        return new Parsed(config, bound.problems());
+    }
+
+    /** A config read from text, and everything that had to be taken from what ships instead. */
+    public record Parsed(NetConfig config, List<String> problems) {}
+
+    /** Bound on first use, so a failure names the key rather than a class. */
+    private static final class Shipped {
+
+        static final SortedMap<String, String> VALUES = ConfigBinder.parse(ShippedNetConfig.TEXT);
+
+        static final NetConfig CONFIG = ConfigBinder.bindStrictly(NetConfig.class, ROOT, VALUES);
+
+        private Shipped() {}
     }
 
     /** The same config with other simulated conditions. */
@@ -68,6 +102,7 @@ public record NetConfig(
                 maxDatagramBytes,
                 maxMessageBytes,
                 newConditions,
+                latencySteps,
                 log,
                 session,
                 lan);
@@ -84,6 +119,7 @@ public record NetConfig(
                 maxDatagramBytes,
                 maxMessageBytes,
                 conditions,
+                latencySteps,
                 newLog,
                 session,
                 lan);
@@ -130,8 +166,6 @@ public record NetConfig(
      */
     public record LogConfig(String dir, String level, int traceSize, int statsSeconds) {
 
-        public static final LogConfig DEFAULT = new LogConfig("logs/net", "INFO", 4_096, 1);
-
         public LogConfig {
             require(traceSize > 0 && Integer.bitCount(traceSize) == 1, "traceSize", traceSize);
             require(statsSeconds >= 0, "statsSeconds", statsSeconds);
@@ -148,6 +182,7 @@ public record NetConfig(
                 maxDatagramBytes,
                 maxMessageBytes,
                 conditions,
+                latencySteps,
                 log,
                 newSession,
                 lan);
@@ -167,6 +202,8 @@ public record NetConfig(
      * @param checksumTicks how often peers compare worlds, and how often each keeps a keyframe for a dump
      * @param historyTicks how many sealed ticks the sequencer keeps, so a peer dropping in or being healed
      *     can be brought forward from a snapshot
+     * @param redundantTicks how many of the newest unacknowledged ticks every bundle datagram repeats;
+     *     older ones are sent again only when a round trip has passed without their acknowledgement
      */
     public record Session(
             int leadMinTicks,
@@ -175,18 +212,24 @@ public record NetConfig(
             int bufferTicks,
             int catchUpTicks,
             int checksumTicks,
-            int historyTicks) {
+            int historyTicks,
+            int redundantTicks) {
 
-        public static final Session DEFAULT = new Session(2, 30, 1, 2, 4, 60, 600);
+        /**
+         * The ceiling on {@code leadMaxTicks}. The rings that hold input ahead of its tick are sized from
+         * it, so raising it is the one edit.
+         */
+        public static final int MOST_LEAD_TICKS = 120;
 
         public Session {
             require(leadMinTicks >= 1, "leadMinTicks", leadMinTicks);
-            require(leadMaxTicks >= leadMinTicks && leadMaxTicks <= 120, "leadMaxTicks", leadMaxTicks);
+            require(leadMaxTicks >= leadMinTicks && leadMaxTicks <= MOST_LEAD_TICKS, "leadMaxTicks", leadMaxTicks);
             require(marginTicks >= 0, "marginTicks", marginTicks);
             require(bufferTicks >= 0, "bufferTicks", bufferTicks);
             require(catchUpTicks >= 1, "catchUpTicks", catchUpTicks);
             require(checksumTicks >= 1, "checksumTicks", checksumTicks);
             require(historyTicks > leadMaxTicks + checksumTicks, "historyTicks", historyTicks);
+            require(redundantTicks >= 1 && redundantTicks <= 8, "redundantTicks", redundantTicks);
         }
     }
 
@@ -199,8 +242,6 @@ public record NetConfig(
      * @param forgetMillis how long a host that has gone quiet stays on a joiner's list
      */
     public record Lan(int port, int announceMillis, int forgetMillis) {
-
-        public static final Lan DEFAULT = new Lan(47_099, 1_000, 3_500);
 
         public Lan {
             require(port > 0 && port < 65_536, "lan.port", port);

@@ -95,7 +95,7 @@ class NettySessionTest {
     }
 
     private NettyTransport transport() {
-        return new NettyTransport(config, SystemClock.INSTANCE, log);
+        return new NettyTransport(config, SystemClock.INSTANCE, log, "test");
     }
 
     private static NetConfig config() {
@@ -109,8 +109,9 @@ class NettySessionTest {
                 shipped.maxDatagramBytes(),
                 shipped.maxMessageBytes(),
                 NetConfig.Conditions.NONE,
+                shipped.latencySteps(),
                 new NetConfig.LogConfig("unused", "INFO", 1024, 0),
-                NetConfig.Session.DEFAULT,
-                NetConfig.Lan.DEFAULT);
+                shipped.session(),
+                shipped.lan());
     }
 }

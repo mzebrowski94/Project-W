@@ -118,6 +118,19 @@ class SequencerTest {
     }
 
     @Test
+    void keepsSendingNewTicksToAPeerWhoseAcknowledgementsAreLate() {
+        RawPeer host = startedHost();
+
+        for (int frame = 0; frame < 200; frame++) {
+            frame(host);
+        }
+
+        assertThat(sealed.keySet())
+                .as("every tick sealed, although the peer has acknowledged none")
+                .containsAll(ticksUpTo(sequencer.sealedTick() - 1));
+    }
+
+    @Test
     void dropsALinkThatSendsSomethingThatIsNotAMessage() {
         RawPeer host = startedHost();
         RawPeer stranger = new RawPeer(network.endpoint("stranger"), port);
@@ -234,6 +247,14 @@ class SequencerTest {
                 }
             }
         }
+    }
+
+    private static List<Integer> ticksUpTo(int last) {
+        List<Integer> ticks = new ArrayList<>();
+        for (int tick = 0; tick <= last; tick++) {
+            ticks.add(tick);
+        }
+        return ticks;
     }
 
     /** Every slot the sequencer has told this peer it plays, in the order it said so. */

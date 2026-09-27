@@ -3,6 +3,8 @@ package pl.mzebrows.pwt.net.session;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.RecordComponent;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
@@ -25,6 +27,33 @@ class BundleTest {
         assertThat(read).isEqualTo(odd);
         assertThat(Float.floatToRawIntBits(read.moveX())).isEqualTo(Float.floatToRawIntBits(-0f));
         assertThat(out.size()).isEqualTo(Bundle.HELD_BYTES);
+    }
+
+    /**
+     * Every component of a held input, one at a time. The wire lists its fields by hand, so a button
+     * added to {@code CommanderInput} and not to {@link Bundle} would never reach any peer, the host's
+     * own included - no desync, only a feature that does nothing online.
+     */
+    @Test
+    void carriesEveryComponentOfAHeldInput() throws ReflectiveOperationException {
+        RecordComponent[] components = CommanderInput.class.getRecordComponents();
+        Class<?>[] types = new Class<?>[components.length];
+        for (int i = 0; i < components.length; i++) {
+            types[i] = components[i].getType();
+        }
+        Constructor<CommanderInput> canonical = CommanderInput.class.getDeclaredConstructor(types);
+        for (int changed = 0; changed < components.length; changed++) {
+            Object[] values = new Object[components.length];
+            for (int i = 0; i < components.length; i++) {
+                values[i] = types[i] == boolean.class ? (Object) (i == changed) : (Object) (i == changed ? 0.75f : 0f);
+            }
+            CommanderInput sent = canonical.newInstance(values);
+
+            Bundle.writeHeld(out.reset(), sent);
+            CommanderInput read = Bundle.readHeld(in.wrap(out.array(), 0, out.size()), CommanderInput.IDLE);
+
+            assertThat(read).as(components[changed].getName()).isEqualTo(sent);
+        }
     }
 
     @Test

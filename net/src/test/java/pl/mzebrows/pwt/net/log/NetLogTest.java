@@ -52,7 +52,7 @@ class NetLogTest {
     @Test
     void dumpsOnlyTheLinkAskedAboutAndOnlyItsLatestEvents() throws IOException {
         try (NetLog log = NetLog.open(config("INFO"), "host")) {
-            NetTrace trace = log.trace();
+            NetTrace trace = log.trace("test");
             for (int i = 0; i < 5; i++) {
                 trace.record(i * 1_000_000L, NetTrace.Kind.SENT_UNRELIABLE, 1, 10 + i);
                 trace.record(i * 1_000_000L, NetTrace.Kind.SENT_UNRELIABLE, 2, 99);
@@ -65,6 +65,27 @@ class NetLogTest {
                 lines().stream().filter(line -> line.contains("kind=")).toList();
         assertThat(events).hasSize(2).allMatch(line -> line.contains("link=1"));
         assertThat(events.getLast()).contains("bytes=14").contains("dt=0.0ms");
+    }
+
+    /**
+     * The host runs two transports on two threads - its sequencer's and its own game's - on one log, and
+     * both number their links from 1. Each needs a ring of its own, and its dumps must say whose.
+     */
+    @Test
+    void handsEachTransportARingOfItsOwnNamedInItsDump() throws IOException {
+        try (NetLog log = NetLog.open(config("INFO"), "host")) {
+            NetTrace sequencer = log.trace("sequencer");
+            NetTrace peer = log.trace("peer");
+            sequencer.record(0L, NetTrace.Kind.SENT_UNRELIABLE, 1, 11);
+            peer.record(0L, NetTrace.Kind.SENT_UNRELIABLE, 1, 22);
+
+            sequencer.dump(log, 1, "lost", 10);
+        }
+
+        List<String> events =
+                lines().stream().filter(line -> line.contains("kind=")).toList();
+        assertThat(events).hasSize(1);
+        assertThat(events.getFirst()).contains("tr=sequencer").contains("bytes=11");
     }
 
     private LogConfig config(String level) {

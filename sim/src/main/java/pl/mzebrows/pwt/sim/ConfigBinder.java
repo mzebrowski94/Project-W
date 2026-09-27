@@ -21,14 +21,15 @@ import pl.mzebrows.pwt.sim.def.Defs;
 
 /**
  * Fills a config record from {@code key=value} text by the names of its components, so a tunable is a
- * record field and a line in {@code game.properties} and nothing else - no literal default, no loader
- * line to keep in step.
+ * record field and a line in {@code game.properties} (or {@code network.properties}) and nothing else -
+ * no literal default, no loader line to keep in step.
  *
  * <p>A component is read from {@code <prefix>.<name>}, or from its {@link ConfigKey}. What each type
  * reads as:
  *
  * <ul>
- *   <li>numbers and {@code true}/{@code false} as written;
+ *   <li>numbers, text and {@code true}/{@code false} as written;
+ *   <li>a {@code List<Integer>} as whole numbers separated by commas;
  *   <li>an enum as its constant's name in lower case, and a {@code @Nullable} one as {@code none} for
  *       nothing;
  *   <li>a nested record as a block of keys under its own name - and a block the file says nothing
@@ -48,7 +49,7 @@ import pl.mzebrows.pwt.sim.def.Defs;
  *
  * <p>Reflection, once, while a world is being set up; never during a tick (ADR 0014).
  */
-final class ConfigBinder {
+public final class ConfigBinder {
 
     /** The block a strain's chances fall back to, key by key. */
     static final String SHARED_CHANCES = "sim.ai.chance";
@@ -58,7 +59,7 @@ final class ConfigBinder {
     private static final List<String> OFF_FACTORIES = List.of("off", "none", "clear");
 
     /** What a text bound to, and everything wrong with it. The value is null only if something is. */
-    record Bound<T>(@Nullable T value, List<String> problems) {}
+    public record Bound<T>(@Nullable T value, List<String> problems) {}
 
     private final SortedMap<String, String> values;
     private final SortedMap<String, String> fallback;
@@ -74,7 +75,7 @@ final class ConfigBinder {
      * {@code key=value} lines, sorted by key. Blank lines and lines starting {@code #} or {@code !} are
      * comments; keys and values are trimmed.
      */
-    static SortedMap<String, String> parse(String text) {
+    public static SortedMap<String, String> parse(String text) {
         SortedMap<String, String> parsed = new TreeMap<>();
         for (String line : text.lines().toList()) {
             String trimmed = line.strip();
@@ -94,7 +95,7 @@ final class ConfigBinder {
     }
 
     /** Binds with no fallback, and refuses the whole text if anything at all is wrong with it. */
-    static <T extends Record> T bindStrictly(Class<T> type, String root, SortedMap<String, String> values) {
+    public static <T extends Record> T bindStrictly(Class<T> type, String root, SortedMap<String, String> values) {
         Bound<T> bound = bind(type, root, values, new TreeMap<>());
         T value = bound.value();
         if (value == null || !bound.problems().isEmpty()) {
@@ -104,7 +105,7 @@ final class ConfigBinder {
     }
 
     /** Binds, taking whatever {@code values} lacks or garbles from {@code fallback}, and says what that was. */
-    static <T extends Record> Bound<T> bind(
+    public static <T extends Record> Bound<T> bind(
             Class<T> type, String root, SortedMap<String, String> values, SortedMap<String, String> fallback) {
         ConfigBinder binder = new ConfigBinder(values, fallback);
         Object value = binder.record(root, type);
@@ -126,6 +127,10 @@ final class ConfigBinder {
         }
         if (raw == Chances.class) {
             return chances(key);
+        }
+        if (raw == List.class
+                && !(type instanceof ParameterizedType list && list.getActualTypeArguments()[0] == Integer.class)) {
+            throw new IllegalArgumentException("no reading for " + type + " at " + key);
         }
         return leaf(key, raw, nullable);
     }
@@ -223,6 +228,16 @@ final class ConfigBinder {
         }
         if (type == long.class) {
             return Long.parseLong(text);
+        }
+        if (type == String.class) {
+            return text;
+        }
+        if (type == List.class) {
+            List<Integer> numbers = new ArrayList<>();
+            for (String part : text.split(",", -1)) {
+                numbers.add(Integer.parseInt(part.strip()));
+            }
+            return List.copyOf(numbers);
         }
         if (type == boolean.class) {
             if (!text.equals("true") && !text.equals("false")) {
