@@ -217,6 +217,7 @@ Read the row that matches. On-demand by design - loading all of them costs more 
 | `docs/design/README.md` | Any gameplay change - invariants, input map, open questions. |
 | `docs/design/alpha-phase.md` | **Every session right now** - how a phase session goes, how to add a scenario, what is still scaffolding. |
 | `docs/adr/README.md` | Before proposing to change a structural decision. |
+| `docs/backlog.md` | Before proposing a refactor or perf fix - it may already be deferred, with the trigger that brings it back. Add what you defer. |
 | `docs/design/decisions/` | Before re-proposing a gameplay alternative. |
 | `docs/ui/menu_layout_agent.md` | Adding or changing any page, modal or HUD slot - ids, entries, transitions, input per context. |
 

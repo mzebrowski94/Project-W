@@ -33,6 +33,7 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 | Networking tests, real sockets on this machine included | `.claude/scripts/verify.sh :net:test` |
 | Whole online sessions in one test: host, peers, lag, drop-in, a desync healed | `.claude/scripts/gradle.sh :net:test --tests '*SessionTest'` |
 | Determinism fuzz, every scenario, about a minute (opt-in) | `PWT_FUZZ=1 .claude/scripts/gradle.sh :sim:test --tests '*DeterminismFuzzTest'` |
+| Performance guard: time and allocation per step, 100 to 800 grunts, about 25 s (opt-in) | `PWT_BENCH=1 .claude/scripts/gradle.sh :sim:test --tests '*SimulationBenchmarkTest' --rerun-tasks -i` |
 | One test class | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest'` |
 | One test method | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest.movesAnEntityByItsVelocityEachStep'` |
 | Format only | `.claude/scripts/gradle.sh spotlessApply` |
@@ -116,6 +117,7 @@ Start at the cheapest level that can refute the change. Escalate on a trigger, n
 | 2 | `gradle.sh :sim:test --tests '*TheOneTest'` | Iterating on one behaviour. The default while working. |
 | 3 | `verify.sh :sim:test` | That module's logic is settled. |
 | 4 | `verify.sh` | Before saying anything is done. Also whenever a public API, a module boundary, system registration order, `sim`/`map` logic, or shared infrastructure changed. |
+| 4b | the performance guard above | A system, the solver, `SpatialGrid` or anything else in a per-entity loop changed. `docs/performance.md`. |
 | 5 | `./gradlew lwjgl3:run`, on Windows | Rendering, input or feel changed - the part no test covers. Mateusz runs it. |
 
 Escalate immediately when the current level fails: a level-2 failure is not evidence about level 4.
