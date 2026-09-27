@@ -52,5 +52,14 @@ public enum UnitKind {
      * get round it, or put a fist in its face. And what its leap lands on is not killed but carried
      * off, so the fight moves: a man is being taken somewhere and the clock on him is running.
      */
-    ANT
+    ANT,
+    /**
+     * The one at the end: a grunt grown too big to walk, sat among holes that keep sending more of
+     * everything, and a barrage for anybody who will not come close enough to claw (G0048).
+     *
+     * <p>A different problem from all of the above because it is the one that does not come to you and
+     * cannot be got round: it is a place, like a nest, that shoots in patterns - so what to read is
+     * the gap in the next salvo, and what to do is walk into it and keep firing.
+     */
+    BOSS_GRUNT
 }

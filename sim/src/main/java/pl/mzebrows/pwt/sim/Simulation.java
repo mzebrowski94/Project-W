@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Waves;
@@ -23,6 +24,7 @@ import pl.mzebrows.pwt.sim.system.ActionSystem;
 import pl.mzebrows.pwt.sim.system.AidSystem;
 import pl.mzebrows.pwt.sim.system.AppearanceSystem;
 import pl.mzebrows.pwt.sim.system.AvoidanceSystem;
+import pl.mzebrows.pwt.sim.system.BarrageSystem;
 import pl.mzebrows.pwt.sim.system.BlastSystem;
 import pl.mzebrows.pwt.sim.system.BloatSystem;
 import pl.mzebrows.pwt.sim.system.CasualtySystem;
@@ -42,6 +44,7 @@ import pl.mzebrows.pwt.sim.system.FacingSystem;
 import pl.mzebrows.pwt.sim.system.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.GripSystem;
 import pl.mzebrows.pwt.sim.system.HopSystem;
+import pl.mzebrows.pwt.sim.system.LairSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.MineSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
@@ -82,6 +85,7 @@ public final class Simulation {
 
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
+    private static final ComponentMapper<Lair> LAIR = ComponentMapper.getFor(Lair.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
@@ -203,6 +207,10 @@ public final class Simulation {
         engine.addSystem(new WaveSystem(config, map, spawner, streams.of(RngStream.WAVE)));
         // After the death chain, before the reaper and the objectives.
         engine.addSystem(new NestSystem(config, map, spawner, streams.of(RngStream.NEST)));
+        // Beside the waves and the nests, for their reason: what rises this tick counts this tick (G0048).
+        engine.addSystem(new LairSystem(map, spawner));
+        // After everything that could have put a boss down or killed one, reading this tick's perception.
+        engine.addSystem(new BarrageSystem(config, spawner));
         engine.addSystem(new ControlPointSystem(spawner));
         engine.addSystem(new ObjectiveSystem());
         engine.addSystem(new FacingSystem());
@@ -324,6 +332,16 @@ public final class Simulation {
      */
     public Waves waves() {
         return WAVES.get(levels.first());
+    }
+
+    /**
+     * What the level keeps off the field until every player is standing in one place, for a scenario
+     * describing its boss (G0048).
+     *
+     * <p>Always exactly one, as {@link #level()}.
+     */
+    public Lair lair() {
+        return LAIR.get(levels.first());
     }
 
     /** Spawns the post: ground the level says you must hold, and the other side comes for. */

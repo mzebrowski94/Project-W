@@ -4,14 +4,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Nest;
+import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Strain;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
@@ -25,6 +33,11 @@ class AdventureTwoScenarioTest {
 
     /** Where each biome ends, in tile columns. */
     private static final int[] BIOME_END = {30, 60, 90, 120, 150, 180, 216};
+
+    /** A tile just through the keep's west gap, clear of everything laid in it. */
+    private static final int KEEP_ENTRANCE_COL = 183;
+
+    private static final int KEEP_ENTRANCE_ROW = 14;
 
     /** Ants standing, or holes that send them out, in every biome but the first - and none in it. */
     @Test
@@ -78,6 +91,127 @@ class AdventureTwoScenarioTest {
                 .isEqualTo(Scenarios.world(Scenarios.named("Adventure"), SimConfig.defaults())
                         .map()
                         .cols());
+    }
+
+    /**
+     * The end of the march (G0048): nothing of the boss is on the field until every player is inside the
+     * keep, so pulling the view back from the brake shows an empty one.
+     */
+    @Test
+    void keepsTheBossOffTheFieldUntilEveryPlayerIsInTheKeep() {
+        Simulation world = world();
+        TileMap map = world.map();
+        world.step();
+
+        assertThat(bosses(world)).isEmpty();
+
+        enterTheKeep(world);
+        world.step();
+
+        List<Entity> bosses = bosses(world);
+        assertThat(bosses).hasSize(1);
+        assertThat(biomeOf(map.colAt(bosses.getFirst().getComponent(Position.class).x)))
+                .isEqualTo(BIOME_END.length - 1);
+    }
+
+    /**
+     * Six holes, one of every strain that walks, and a cache of every gun, round a boss - none of it in
+     * rock, on top of anything, or sealed off.
+     */
+    @Test
+    void raisesTheBossAmongANestOfEveryStrainAndEveryGunClearOfRockAndOfEachOther() {
+        Simulation world = world();
+        TileMap map = world.map();
+        world.step();
+        List<Entity> before = nests(world);
+        List<Entity> cachesBefore = caches(world);
+
+        enterTheKeep(world);
+        world.step();
+
+        List<Entity> risen = nests(world);
+        risen.removeAll(before);
+        assertThat(risen.stream().map(nest -> nest.getComponent(Nest.class).kind))
+                .containsExactlyInAnyOrder(
+                        UnitKind.GRUNT, UnitKind.SPITTER, UnitKind.RUNNER, UnitKind.FROG, UnitKind.ANT, UnitKind.BRUTE);
+        List<Entity> caches = caches(world);
+        caches.removeAll(cachesBefore);
+        assertThat(caches.stream().map(cache -> cache.getComponent(Pickup.class).kind))
+                .containsExactlyInAnyOrder(
+                        PickupKind.ARMOURY_SHOTGUN,
+                        PickupKind.ARMOURY_RAILGUN,
+                        PickupKind.ARMOURY_LASER,
+                        PickupKind.ARMOURY_FLAMER);
+        risen.addAll(caches);
+        risen.addAll(bosses(world));
+        Position entrance = world.engine()
+                .getEntitiesFor(Family.all(Commander.class).get())
+                .first()
+                .getComponent(Position.class);
+        boolean[] reachable = Maps.reachableFrom(map, map.colAt(entrance.x), map.rowAt(entrance.y));
+        for (int i = 0; i < risen.size(); i++) {
+            Entity entity = risen.get(i);
+            Position at = entity.getComponent(Position.class);
+            float radius = entity.getComponent(Body.class).radius;
+            assertThat(map.isClear(at.x, at.y, radius))
+                    .as("clear of rock at %s,%s", at.x, at.y)
+                    .isTrue();
+            assertThat(reachable[map.rowAt(at.y) * map.cols() + map.colAt(at.x)])
+                    .as("reachable at %s,%s", at.x, at.y)
+                    .isTrue();
+            for (int j = i + 1; j < risen.size(); j++) {
+                Entity other = risen.get(j);
+                Position there = other.getComponent(Position.class);
+                float apart = (float) Math.hypot(there.x - at.x, there.y - at.y);
+                assertThat(apart)
+                        .as("room between %s,%s and %s,%s", at.x, at.y, there.x, there.y)
+                        .isGreaterThan(radius + other.getComponent(Body.class).radius);
+            }
+        }
+    }
+
+    /** Every commander, stood just inside the keep's west gap. */
+    private static void enterTheKeep(Simulation world) {
+        TileMap map = world.map();
+        float x = map.tileCentreX(KEEP_ENTRANCE_COL);
+        float y = map.tileCentreY(KEEP_ENTRANCE_ROW);
+        for (Entity commander :
+                world.engine().getEntitiesFor(Family.all(Commander.class).get())) {
+            commander.getComponent(Position.class).set(x, y);
+            commander.getComponent(PreviousPosition.class).set(x, y);
+        }
+    }
+
+    private static List<Entity> bosses(Simulation world) {
+        List<Entity> bosses = new ArrayList<>();
+        for (Entity entity :
+                world.engine().getEntitiesFor(Family.all(Strain.class).get())) {
+            if (entity.getComponent(Strain.class).kind == UnitKind.BOSS_GRUNT) {
+                bosses.add(entity);
+            }
+        }
+        return bosses;
+    }
+
+    /** Every gun lying on the field waiting to be picked up. */
+    private static List<Entity> caches(Simulation world) {
+        List<Entity> caches = new ArrayList<>();
+        for (Entity entity :
+                world.engine().getEntitiesFor(Family.all(Pickup.class).get())) {
+            if (entity.getComponent(Pickup.class).kind.name().startsWith("ARMOURY_")) {
+                caches.add(entity);
+            }
+        }
+        return caches;
+    }
+
+    private static List<Entity> nests(Simulation world) {
+        List<Entity> nests = new ArrayList<>();
+        for (Entity entity :
+                world.engine().getEntitiesFor(Family.all(Nest.class).get())) {
+            nests.add(entity);
+        }
+        return nests;
     }
 
     private static int biomeOf(int col) {

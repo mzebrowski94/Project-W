@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.ApproachDef;
 import pl.mzebrows.pwt.sim.def.ArmourDef;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
+import pl.mzebrows.pwt.sim.def.BarrageDef;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
@@ -73,6 +74,13 @@ public final class AlphaWorlds {
     public static final float COMMANDER_SPEED = 60f;
     public static final float ENEMY_RADIUS = 1f;
     public static final float ENEMY_SPEED = 30f;
+
+    /** The boss's body: several grunts across, so a ring of shots leaves it well clear of itself. */
+    public static final float BOSS_RADIUS = 4f;
+
+    /** Deep enough that nothing a test fires by accident takes it down. */
+    public static final float BOSS_HEALTH = 5000f;
+
     public static final float COOLDOWN = 0.5f;
 
     /**
@@ -765,6 +773,8 @@ public final class AlphaWorlds {
                         .put(UnitKind.RUNNER, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.RUNNER))
                         .put(UnitKind.FROG, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.FROG))
                         .put(UnitKind.ANT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.ANT))
+                        // Rooted, big and deep, with no barrage: the fixtures about one switch it on.
+                        .put(UnitKind.BOSS_GRUNT, strain(BOSS_RADIUS, 0f, BOSS_HEALTH, Look.BOSS_GRUNT))
                         .build(),
                 Defs.<PickupKind, PickupDef>builder(PickupKind.class)
                         .put(
@@ -857,6 +867,28 @@ public final class AlphaWorlds {
                                         1,
                                         0f,
                                         Look.SPIT,
+                                        0f,
+                                        SlickDef.off(),
+                                        HeatDef.none(),
+                                        0f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
+                                        0f))
+                        .put(
+                                WeaponKind.SPEW,
+                                new WeaponDef(
+                                        SPIT_COOLDOWN,
+                                        SPIT_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        0f,
+                                        SPIT_DAMAGE,
+                                        1,
+                                        0f,
+                                        Look.SPEW,
                                         0f,
                                         SlickDef.off(),
                                         HeatDef.none(),
@@ -1140,6 +1172,7 @@ public final class AlphaWorlds {
                 DodgeDef.off(),
                 GripDef.off(),
                 ArmourDef.off(),
+                BarrageDef.off(),
                 noChances(),
                 look);
     }

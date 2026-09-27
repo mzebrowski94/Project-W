@@ -30,6 +30,8 @@ public enum Look {
      * the part a bullet glances off (pillar 5).
      */
     ANT,
+    /** The boss: a grunt grown huge. Kin to a grunt at a glance, and darker, because it does not move. */
+    BOSS_GRUNT,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */
@@ -69,6 +71,8 @@ public enum Look {
     CHARGED_SPIT,
     /** What a frog fires. Fat and slow, and unmistakably the same stuff as the slick it leaves. */
     VENOM,
+    /** What the boss throws, twenty at a time. Must read against every other shot, the player's and a spit alike. */
+    SPEW,
     /**
      * One circle of ground a frog has ruined.
      *

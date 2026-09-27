@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.Casualty;
@@ -19,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Gripped;
+import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Level;
@@ -78,6 +80,8 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
     private static final ComponentMapper<Slick> SLICK = ComponentMapper.getFor(Slick.class);
     private static final ComponentMapper<Mine> MINE = ComponentMapper.getFor(Mine.class);
+    private static final ComponentMapper<Barrage> BARRAGE = ComponentMapper.getFor(Barrage.class);
+    private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
 
     private final Defs<UnitKind, UnitDef> units;
     private final Defs<PickupKind, PickupDef> pickups;
@@ -232,6 +236,12 @@ public final class AppearanceSystem extends IteratingSystem {
             }
             return;
         }
+        if (BARRAGE.has(entity) && BARRAGE.get(entity).enabled && HEALTH.has(entity)) {
+            // A boss says how much of it is left, read down like every other clock (pillar 5): no
+            // player can count seven thousand points of damage by eye (G0048).
+            appearance.charge = HEALTH.get(entity).fraction();
+            return;
+        }
         if (!FEED.has(entity) || !STRAIN.has(entity)) {
             appearance.charge = 0f;
             return;
@@ -281,6 +291,10 @@ public final class AppearanceSystem extends IteratingSystem {
         if (CREW.has(entity) && CREW.get(entity).aboard()) {
             // Below the states that say he is hurt.
             return Appearance.State.ABOARD;
+        }
+        if (BARRAGE.has(entity) && BARRAGE.get(entity).windingUp()) {
+            // The tell before a pattern, the same one a leap gives: something is about to come at you.
+            return Appearance.State.WINDING_UP;
         }
         if (LEAP.has(entity)) {
             Leap leap = LEAP.get(entity);

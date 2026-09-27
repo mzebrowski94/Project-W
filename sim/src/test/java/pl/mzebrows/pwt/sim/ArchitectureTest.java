@@ -205,7 +205,7 @@ final class ArchitectureTest {
                     + " which with @NotState");
 
     /** The collections the snapshot codec knows how to write, by the field that holds each. */
-    private static final Set<String> NAMED_COLLECTIONS = Set.of("Waves.pending");
+    private static final Set<String> NAMED_COLLECTIONS = Set.of("Waves.pending", "Lair.pending");
 
     @ArchTest
     static final ArchRule componentFieldsAreWhatASnapshotCanWrite = fields().that()

@@ -54,7 +54,8 @@ class DefsTest {
                         strain(RADIUS, Look.SPITTER),
                         strain(RADIUS, Look.RUNNER),
                         strain(RADIUS, Look.FROG),
-                        strain(RADIUS, Look.ANT));
+                        strain(RADIUS, Look.ANT),
+                        strain(RADIUS * 3f, Look.BOSS_GRUNT));
     }
 
     @Test
@@ -70,6 +71,7 @@ class DefsTest {
                 .put(UnitKind.RUNNER, strain(RADIUS, Look.RUNNER))
                 .put(UnitKind.FROG, strain(RADIUS, Look.FROG))
                 .put(UnitKind.ANT, strain(RADIUS, Look.ANT))
+                .put(UnitKind.BOSS_GRUNT, strain(RADIUS * 3f, Look.BOSS_GRUNT))
                 .build();
     }
 
@@ -98,6 +100,7 @@ class DefsTest {
                 DodgeDef.off(),
                 GripDef.off(),
                 ArmourDef.off(),
+                BarrageDef.off(),
                 Chances.none(),
                 look);
     }

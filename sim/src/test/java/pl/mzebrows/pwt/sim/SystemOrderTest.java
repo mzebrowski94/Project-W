@@ -20,6 +20,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import pl.mzebrows.pwt.sim.system.ActionSystem;
 import pl.mzebrows.pwt.sim.system.AidSystem;
 import pl.mzebrows.pwt.sim.system.AvoidanceSystem;
+import pl.mzebrows.pwt.sim.system.BarrageSystem;
 import pl.mzebrows.pwt.sim.system.BlastSystem;
 import pl.mzebrows.pwt.sim.system.BloatSystem;
 import pl.mzebrows.pwt.sim.system.CasualtySystem;
@@ -39,6 +40,7 @@ import pl.mzebrows.pwt.sim.system.FacingSystem;
 import pl.mzebrows.pwt.sim.system.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.GripSystem;
 import pl.mzebrows.pwt.sim.system.HopSystem;
+import pl.mzebrows.pwt.sim.system.LairSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.MineSystem;
 import pl.mzebrows.pwt.sim.system.MovementSystem;
@@ -213,6 +215,11 @@ class SystemOrderTest {
         rows.add(new Before(WaveSystem.class, ObjectiveSystem.class, "a last wave landing this tick is not a win"));
         rows.add(new Before(
                 NestSystem.class, ObjectiveSystem.class, "a last nest dying this tick is not a clear level"));
+        rows.add(new Before(
+                SlickSystem.class, LairSystem.class, "a lair reads the commanders once the death chain has run"));
+        rows.add(new Before(LairSystem.class, ObjectiveSystem.class, "a boss rising this tick counts this tick"));
+        rows.add(new Before(
+                PerceptionSystem.class, BarrageSystem.class, "a boss shoots at what perception wrote (G0026)"));
         rows.add(new Before(WaveSystem.class, ControlPointSystem.class, "a schedule armed this tick sends next tick"));
         rows.add(new Before(
                 ControlPointSystem.class, ObjectiveSystem.class, "the post exists on the tick it is asked about"));

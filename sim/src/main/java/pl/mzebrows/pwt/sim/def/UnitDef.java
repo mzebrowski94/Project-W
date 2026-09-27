@@ -9,7 +9,8 @@ import org.jspecify.annotations.Nullable;
  * <p>A chasing unit is built from this at spawn and rebuilt from another when it evolves (G0008).
  *
  * @param radius circular body, in world units
- * @param speed world units per second; slower than the commander, or there is no escaping them
+ * @param speed world units per second; slower than the commander, or there is no escaping them. Zero
+ *     is a strain that never walks at all: it stands where it was put, and nothing shoves it (G0048)
  * @param count how many of this strain a scenario spawns
  * @param health damage one absorbs before dying
  * @param contactDamage what it does to whatever it touches on the other side
@@ -33,6 +34,7 @@ import org.jspecify.annotations.Nullable;
  * @param dodge how it answers a shot it can see coming, if at all; the definition a rabbit carries
  * @param grip what its leap does to a man it lands on, if it does anything but bite him (G0045)
  * @param armour where on it gunfire glances off, if anywhere (G0045)
+ * @param barrage the cycle of patterns it shoots, if it is a boss (G0048)
  * @param chances how often each occasional behaviour happens for this strain: the shared table, with
  *     this strain's overrides resolved in
  * @param look what a renderer draws it as
@@ -62,12 +64,13 @@ public record UnitDef(
         DodgeDef dodge,
         GripDef grip,
         ArmourDef armour,
+        BarrageDef barrage,
         Chances chances,
         Look look) {
 
     public UnitDef {
         Require.positive("unit radius", radius);
-        Require.positive("unit speed", speed);
+        Require.notNegative("unit speed", speed);
         Require.notNegative("unit count", count);
         Require.positive("unit health", health);
         Require.notNegative("unit contactDamage", contactDamage);
@@ -89,6 +92,14 @@ public record UnitDef(
      */
     public float attackArcCosine() {
         return (float) StrictMath.cos(StrictMath.toRadians(attackArcDegrees * 0.5));
+    }
+
+    /**
+     * True for a strain that never walks: it stands where it was put, the solver pushes whatever it
+     * meets out of its way rather than it out of theirs, and a blow does not throw it (G0048).
+     */
+    public boolean rooted() {
+        return speed <= 0f;
     }
 
     /** True if feeding alone can turn this strain into another one. */

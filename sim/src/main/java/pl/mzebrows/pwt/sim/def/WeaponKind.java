@@ -49,5 +49,11 @@ public enum WeaponKind {
      *
      * <p>A kind, not a flag, so the power-up is a definition (G0008).
      */
-    CHARGED_SPIT
+    CHARGED_SPIT,
+    /**
+     * What the boss throws in its patterns: slower than a spit and half as hard, because it comes
+     * twenty at a time and the pattern is the threat rather than any one shot (G0048). No pickup
+     * grants it.
+     */
+    SPEW
 }

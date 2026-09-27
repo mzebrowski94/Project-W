@@ -423,6 +423,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (attack.knockbackSpeed <= 0f || !VELOCITY.has(target) || !POSITION.has(source) || !POSITION.has(target)) {
             return;
         }
+        if (COLLIDER.has(target) && !COLLIDER.get(target).movable) {
+            // Something rooted is not thrown: the solver would never bring it back out of rock (G0048).
+            return;
+        }
         Position from = POSITION.get(source);
         Position to = POSITION.get(target);
         float awayX = to.x - from.x;

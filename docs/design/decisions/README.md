@@ -56,6 +56,7 @@ mechanic you are about to write appears there, it has already been rejected and 
 | [G0045](G0045-the-ant-is-got-round-and-its-leap-takes-a-man.md) | The ant's head turns gunfire by the side the shot arrives from; its leap grips and carries a man off on a clock, and killing it is the only way out. | the head as a second body; a struggle meter that frees him unharmed; troopers holding fire at a face; a grab that kills on landing; armour against blasts or fists | accepted |
 | [G0046](G0046-ground-is-given-room-by-whoever-it-can-catch.md) | Ground is given room by whoever it can catch, and a unit standing still steps off it. Narrows G0035. | avoidance asking whether something is a slick; ruined ground in the flow field | accepted; narrows G0035's avoidance declaration |
 | [G0047](G0047-a-gun-from-a-crate-arrives-cold.md) | A gun from a crate arrives cold. Narrows G0025. | heat kept per gun kind on the man | accepted; narrows G0025 |
+| [G0048](G0048-the-boss-is-rooted-and-rises-from-a-lair.md) | The boss is a strain: speed zero is rooted and a barrage is a counted cycle of patterns it shoots at what perception published, through blows; it rises from a lair - level state that puts everything down once every commander standing is on its ground. | a `Boss` component or system; a barrage that pauses when stunned; rolled patterns; a boss spawned asleep or hidden; a lair that wakes on the first player in | accepted |
 
 ## When to write one
 

@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Approach;
 import pl.mzebrows.pwt.sim.component.Armour;
 import pl.mzebrows.pwt.sim.component.Avoidance;
+import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
 import pl.mzebrows.pwt.sim.component.Bloat;
@@ -40,6 +41,7 @@ import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Hop;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Melee;
@@ -346,6 +348,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Dodge.class));
         entity.add(engine.createComponent(Grip.class));
         entity.add(engine.createComponent(Armour.class));
+        entity.add(engine.createComponent(Barrage.class));
         entity.add(engine.createComponent(Weapon.class));
         entity.add(engine.createComponent(Taking.class));
         entity.add(engine.createComponent(Feed.class));
@@ -440,6 +443,13 @@ public final class Spawner {
                         ticks(def.grip().holdSeconds()));
         entity.getComponent(Armour.class)
                 .set(def.armour().enabled(), def.armour().arcCosine());
+        entity.getComponent(Barrage.class)
+                .set(
+                        def.barrage(),
+                        ticks(def.barrage().windUpSeconds()),
+                        ticks(def.barrage().restSeconds()));
+        // A strain that never walks is scenery to the solver: what it meets is pushed out of its way (G0048).
+        entity.getComponent(Collider.class).movable = !def.rooted();
         entity.getComponent(Ranged.class)
                 .set(
                         def.ranged().enabled(),
@@ -713,6 +723,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Level.class));
         // What is still to arrive; empty means everything is on the field from the first tick.
         entity.add(engine.createComponent(Waves.class));
+        // What is kept off the field until the players are all in one place; empty keeps nothing (G0048).
+        entity.add(engine.createComponent(Lair.class));
         admit(entity);
         return entity;
     }
@@ -786,8 +798,9 @@ public final class Spawner {
     }
 
     /**
-     * The same, from a gun's definition rather than from a gun somebody is holding. For the harness
-     * and for tests that want a shot in the world without a shooter behind it.
+     * The same, from a gun's definition rather than from a gun somebody is holding. For a barrage, whose
+     * patterns name their guns rather than hold them (G0048), for the harness, and for tests that want a
+     * shot in the world without a shooter behind it.
      */
     public Entity spawnProjectile(float x, float y, float directionX, float directionY, WeaponDef gun, Side side) {
         return projectile(

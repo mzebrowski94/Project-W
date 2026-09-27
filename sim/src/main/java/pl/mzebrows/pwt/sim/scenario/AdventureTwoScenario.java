@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.Objective;
@@ -41,10 +42,13 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  *   <li><strong>The brake.</strong> Runners and ants in undergrowth, which he wades through and they
  *       barely notice: the one biome where the chase after a man who has been taken is uphill.
  *   <li><strong>The keep.</strong> Four guns round ground you take and then hold, and the waves that
- *       come in from the corners have ants among them.
+ *       come in from the corners have ants among them. And at its east end, once every player is
+ *       through the last gap, the boss grunt rises among six nests and a cache of every gun (G0048) -
+ *       kept off the field until then, so pulling the view back from the brake shows an empty keep.
  * </ul>
  *
  * <p>Only the points are required, as in the first march, and the last one is held rather than taken.
+ * The boss sits inside the keep's watch, so holding it means killing him.
  */
 final class AdventureTwoScenario implements Scenario {
 
@@ -86,6 +90,14 @@ final class AdventureTwoScenario implements Scenario {
 
     private static final int SQUAD_SIZE = 5;
 
+    /** The keep, wall to border: where every player has to be before the boss rises. */
+    private static final TileRect LAIR = new TileRect(181, FIRST_ROW, 34, LAST_ROW);
+
+    /** Where the boss sits: the keep's east end, a little further from the point than it notices anybody. */
+    private static final int BOSS_COL = 210;
+
+    private static final int BOSS_ROW = 15;
+
     /** The first column of each biome marched through, for scattering boulders inside it. */
     private static final int[] BIOME_COLS = {FIRST_ROW, 31, 61, 91, 121, 151};
 
@@ -105,7 +117,8 @@ final class AdventureTwoScenario implements Scenario {
 
     @Override
     public String description() {
-        return "A second march east with ants in every biome but the first: get round them, and get your men back.";
+        return "A second march east with ants in every biome but the first: get round them, get your men back,"
+                + " and see what waits at the end of the keep.";
     }
 
     /** Nothing awake at the start, as in the first march. */
@@ -357,7 +370,8 @@ final class AdventureTwoScenario implements Scenario {
         turret(simulation, map, KEEP_COL - 5, KEEP_ROW + 5);
         turret(simulation, map, KEEP_COL + 5, KEEP_ROW + 5);
         mines(simulation, map, 188, 7, 191, 9, 206, 7, 203, 9, 188, 23, 191, 21, 206, 23, 203, 21, 193, 15, 201, 15);
-        barrels(simulation, map, 192, 12, 202, 12, 192, 18, 202, 18, 185, 15, 209, 15);
+        // No east barrel: that is where the boss rises, and his first ring would set it off in his own face.
+        barrels(simulation, map, 192, 12, 202, 12, 192, 18, 202, 18, 185, 15);
         units(simulation, map, UnitKind.ANT, 184, 14, 212, 14);
         pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 194, 15);
         pickups(simulation, map, PickupKind.ARMOURY_LASER, 200, 15);
@@ -378,6 +392,40 @@ final class AdventureTwoScenario implements Scenario {
                 .add(6f, UnitKind.ANT, 5, NORTH_EAST_GATE)
                 .add(8f, UnitKind.GRUNT, 12, SOUTH_EAST_GATE)
                 .add(6f, UnitKind.ANT, 6, SOUTH_WEST_GATE);
+
+        lair(simulation, map);
+    }
+
+    /**
+     * The end of the march (G0048): the boss grunt at the keep's east end, ringed by a nest of every
+     * strain that walks and a cache of every gun - kept off the field until every player is inside the
+     * keep.
+     */
+    private static void lair(Simulation simulation, TileMap map) {
+        Lair lair = simulation.lair().at(LAIR);
+        // Holes first, as with everything placed by hand: the renderer draws in spawn order, and a nest
+        // is ground rather than a thing standing on it.
+        lairNest(lair, map, UnitKind.GRUNT, BOSS_COL, BOSS_ROW - 6);
+        lairNest(lair, map, UnitKind.SPITTER, BOSS_COL - 4, BOSS_ROW - 3);
+        lairNest(lair, map, UnitKind.RUNNER, BOSS_COL + 3, BOSS_ROW - 3);
+        lairNest(lair, map, UnitKind.FROG, BOSS_COL - 3, BOSS_ROW + 5);
+        lairNest(lair, map, UnitKind.ANT, BOSS_COL + 3, BOSS_ROW + 3);
+        lairNest(lair, map, UnitKind.BRUTE, BOSS_COL, BOSS_ROW + 6);
+        // A cache of every gun, inside his reach: taking one means stepping into the patterns. Three in
+        // an arc on the near side, and the flamer behind him - the close gun, for whoever gets round.
+        lairPickup(lair, map, PickupKind.ARMOURY_SHOTGUN, BOSS_COL - 6, BOSS_ROW - 3);
+        lairPickup(lair, map, PickupKind.ARMOURY_RAILGUN, BOSS_COL - 6, BOSS_ROW);
+        lairPickup(lair, map, PickupKind.ARMOURY_LASER, BOSS_COL - 7, BOSS_ROW + 3);
+        lairPickup(lair, map, PickupKind.ARMOURY_FLAMER, BOSS_COL + 3, BOSS_ROW);
+        lair.unit(UnitKind.BOSS_GRUNT, map.tileCentreX(BOSS_COL), map.tileCentreY(BOSS_ROW));
+    }
+
+    private static void lairPickup(Lair lair, TileMap map, PickupKind kind, int col, int row) {
+        lair.pickup(kind, map.tileCentreX(col), map.tileCentreY(row));
+    }
+
+    private static void lairNest(Lair lair, TileMap map, UnitKind kind, int col, int row) {
+        lair.nest(kind, map.tileCentreX(col), map.tileCentreY(row));
     }
 
     /** Boulders, scattered from the simulation's own stream, off rock and off everything already standing. */

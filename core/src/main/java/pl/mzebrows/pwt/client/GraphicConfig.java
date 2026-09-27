@@ -215,6 +215,7 @@ public record GraphicConfig(
             case RUNNER -> "ff9a4aff";
             case FROG -> "4f9e3cff";
             case ANT -> "c9a227ff";
+            case BOSS_GRUNT -> "c8242eff";
             case CONTROL_POINT -> "2b3a52ff";
             case POST -> "3a5230ff";
             case NEST -> "6b4a2aff";
@@ -228,6 +229,7 @@ public record GraphicConfig(
             case SPIT -> "d08cffff";
             case CHARGED_SPIT -> "ff8ce0ff";
             case VENOM -> "aef23cff";
+            case SPEW -> "ff3d7aff";
             case SLICK -> "5c7a1eff";
             case FIRE -> "c4521cff";
             case MINE -> "2f5d3aff";
