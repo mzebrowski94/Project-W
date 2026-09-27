@@ -1,5 +1,10 @@
 # `net` module - critical review and staged plan
 
+## Decisions (2026-09-27)
+
+Stage 1 before the Hamachi test · D1 fixed by X1 (timer resend + redundancy) · M2 through `ConfigBinder` ·
+stage 4 splits: do them.
+
 Stage 1 deliverable: verify, propose, plan. **No production code changed.** Baseline `:net:test` green (65
 tests). Numbers come from throwaway probes (`Zz*ProbeTest`) run on `SessionHarness` / `LoopbackNetwork` in
 this session and deleted afterwards. Nothing here re-proposes a `docs/backlog.md` entry.
