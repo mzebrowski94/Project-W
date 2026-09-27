@@ -5,6 +5,18 @@
 Stage 1 before the Hamachi test · D1 fixed by X1 (timer resend + redundancy) · M2 through `ConfigBinder` ·
 stage 4 splits: do them.
 
+### Stage 1 (before the Hamachi test)
+
+| Item | Done | Evidence |
+|---|---|---|
+| D1 bundle window | `Sequencer.writeBundles`: every datagram reserves room for the newest `redundantTicks` (3) unacknowledged ticks; older ones go oldest first, only if never sent or unacknowledged for a round trip + 2 ticks. The round trip is measured per peer from a tick's first send to its ack, and logged as `rttMs` in `cat=stats`. The wire format did not change. | Two new tests, red before: `SessionTest.keepsAFarMachineInStepWhenEverySeatIsTaken` (8 seats, 120 ms ±10, 5% loss: **460 ticks behind → ≤ 24**) and `SequencerTest.keepsSendingNewTicksToAPeerWhoseAcknowledgementsAreLate`. Probe rerun: behind is half a round trip at every seat count; **8 seats at 60/90/120 ms: 401/600/602 → 4/6/8 ticks behind, lead 30 → 10/14/18**. Bundle bytes to a far peer per tick: **2 seats at 120 ms 758 → 142; 8 seats 1072 → 466**. |
+| D2 trace | `NetLog.trace(owner)` hands each transport its own ring; `NettyTransport` takes a name (`sequencer` / `peer`), and every dump line carries `tr=`. | `NetLogTest.handsEachTransportARingOfItsOwnNamedInItsDump`. The race is gone by construction: no ring is shared between threads. |
+| D3 oversized snapshot | The host peer logs `event=snapshot-too-big` and sends nothing, so the joiner waits and the session plays on. The sequencer's bound now leaves room for the 13-byte header (`Msg.SNAPSHOT_HEADER`). | `SessionTest.leavesAJoinerWaitingRatherThanFailWhenTheWorldIsTooBigToSend`: red with an `IllegalArgumentException` out of `pump`, now green. |
+| E2 desync runner | `DesyncReportRunnerTest` (core, `PWT_DESYNC=<dir>`) pairs dumps by tick, replays with `ScenarioWorlds` (the host's shipped config) and writes `desync-t<tick>.report.txt` beside them. Recipe in `workflow.md`. | Run on dumps from a real knocked-out session: fields listed, "the reference's world", "no hidden state". |
+| - | Full `verify.sh` green, 1471 tests. | - |
+
+Key added: `net.session.redundantTicks=3`.
+
 Stage 1 deliverable: verify, propose, plan. **No production code changed.** Baseline `:net:test` green (65
 tests). Numbers come from throwaway probes (`Zz*ProbeTest`) run on `SessionHarness` / `LoopbackNetwork` in
 this session and deleted afterwards. Nothing here re-proposes a `docs/backlog.md` entry.

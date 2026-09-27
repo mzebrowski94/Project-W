@@ -550,6 +550,15 @@ public final class PeerSession implements AutoCloseable {
                 Simulation current = world;
                 if (current != null && state == State.PLAYING) {
                     byte[] snapshot = WorldCodec.snapshot(current);
+                    if (snapshot.length > maxMessageBytes - Msg.SNAPSHOT_HEADER) {
+                        // The joiner waits; a crash here would end the session for everybody already in it.
+                        log.error(
+                                "peer",
+                                "event=snapshot-too-big for=" + forPeer + " bytes=" + snapshot.length + " limit="
+                                        + (maxMessageBytes - Msg.SNAPSHOT_HEADER),
+                                null);
+                        return;
+                    }
                     out.reset()
                             .putByte(Msg.SNAPSHOT_TAKEN)
                             .putInt(forPeer)

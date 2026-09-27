@@ -8,7 +8,8 @@ package pl.mzebrows.pwt.net.log;
  * something asks - a link closing dumps its part of the ring into the {@link NetLog}, which is how the
  * last seconds before a drop reach the file without the seconds before that flooding it.
  *
- * <p>Single-threaded: the transport records from the thread that polls it.
+ * <p>Single-threaded: each transport has its own, recorded from the thread that polls it. The host runs
+ * two transports on two threads, so it has two rings; its dumps say which with {@code tr=}.
  */
 public final class NetTrace {
 
@@ -27,6 +28,7 @@ public final class NetTrace {
 
     private static final Kind[] KINDS = Kind.values();
 
+    private final String owner;
     private final long[] nanos;
     private final byte[] kinds;
     private final int[] links;
@@ -34,10 +36,11 @@ public final class NetTrace {
     private final int mask;
     private long written;
 
-    NetTrace(int size) {
+    NetTrace(String owner, int size) {
         if (size <= 0 || Integer.bitCount(size) != 1) {
             throw new IllegalArgumentException("trace size must be a power of two, was " + size);
         }
+        this.owner = owner;
         nanos = new long[size];
         kinds = new byte[size];
         links = new int[size];
@@ -79,8 +82,8 @@ public final class NetTrace {
         int skip = Math.max(0, count - most);
         log.info(
                 "trace",
-                "link=" + link + " event=dump-begin reason=\"" + reason + "\" events=" + count + " shown="
-                        + (count - skip));
+                "tr=" + owner + " link=" + link + " event=dump-begin reason=\"" + reason + "\" events=" + count
+                        + " shown=" + (count - skip));
         for (long i = first; i < written; i++) {
             int slot = (int) (i & mask);
             if (links[slot] != link) {
@@ -92,9 +95,10 @@ public final class NetTrace {
             }
             log.info(
                     "trace",
-                    "link=" + link + " dt=" + String.format(java.util.Locale.ROOT, "%.1f", (nanos[slot] - last) / 1e6)
-                            + "ms kind=" + KINDS[kinds[slot]] + " bytes=" + sizes[slot]);
+                    "tr=" + owner + " link=" + link + " dt="
+                            + String.format(java.util.Locale.ROOT, "%.1f", (nanos[slot] - last) / 1e6) + "ms kind="
+                            + KINDS[kinds[slot]] + " bytes=" + sizes[slot]);
         }
-        log.info("trace", "link=" + link + " event=dump-end");
+        log.info("trace", "tr=" + owner + " link=" + link + " event=dump-end");
     }
 }

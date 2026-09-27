@@ -151,7 +151,7 @@ class NettyTransportTest {
     @Test
     void writesTheLifeOfALinkToTheHostsLog(@TempDir Path dir) throws IOException {
         NetLog hostLog = NetLog.open(new NetConfig.LogConfig(dir.toString(), "INFO", 1024, 0), "host");
-        NettyTransport host = new NettyTransport(config(), SystemClock.INSTANCE, hostLog);
+        NettyTransport host = new NettyTransport(config(), SystemClock.INSTANCE, hostLog, "host");
         transports.add(host);
         NettyTransport joiner = transport();
         host.listen(47_360, 0);
@@ -187,7 +187,7 @@ class NettyTransportTest {
     }
 
     private NettyTransport transport() {
-        NettyTransport transport = new NettyTransport(config(), SystemClock.INSTANCE, NetLog.silent(1024));
+        NettyTransport transport = new NettyTransport(config(), SystemClock.INSTANCE, NetLog.silent(1024), "test");
         transports.add(transport);
         return transport;
     }

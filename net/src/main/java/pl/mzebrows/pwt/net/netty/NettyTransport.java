@@ -106,11 +106,12 @@ public final class NettyTransport implements Transport {
     private long lastStats;
     private boolean closed;
 
-    public NettyTransport(NetConfig config, Clock clock, NetLog log) {
+    /** @param name what this transport's trace dumps are marked with - which end of the host it is, say */
+    public NettyTransport(NetConfig config, Clock clock, NetLog log, String name) {
         this.config = config;
         this.clock = clock;
         this.log = log;
-        this.trace = log.trace();
+        this.trace = log.trace(name);
         this.group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         this.lastStats = clock.nanos();
         this.nextStats = lastStats + statsNanos();

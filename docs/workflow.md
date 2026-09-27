@@ -32,6 +32,7 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 | One module's tests | `.claude/scripts/verify.sh :sim:test` |
 | Networking tests, real sockets on this machine included | `.claude/scripts/verify.sh :net:test` |
 | Whole online sessions in one test: host, peers, lag, drop-in, a desync healed | `.claude/scripts/gradle.sh :net:test --tests '*SessionTest'` |
+| Read a desync: every `reference`/`desynced` dump pair in a directory, report written beside them | `PWT_DESYNC=<dir> .claude/scripts/gradle.sh :core:test --tests '*DesyncReportRunnerTest' -i` |
 | Determinism fuzz, every scenario, about a minute (opt-in) | `PWT_FUZZ=1 .claude/scripts/gradle.sh :sim:test --tests '*DeterminismFuzzTest'` |
 | Performance guard: time and allocation per step, 100 to 800 grunts, about 25 s (opt-in) | `PWT_BENCH=1 .claude/scripts/gradle.sh :sim:test --tests '*SimulationBenchmarkTest' --rerun-tasks -i` |
 | One test class | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest'` |
@@ -51,10 +52,12 @@ Build outputs land in `~/.pwt/build/`, not `<project>/build` - see *Speed*. Test
 `<instance>-<yyyyMMdd-HHmmss>.log`; a build run any other way writes `logs/net/` beside itself, which is
 what a friend sends back. Every line is `key=value`: `grep "event=closed"` gives every link that ended and
 why, `grep "cat=stats"` each link's round trip and traffic once a second, and a link that closed badly is
-followed by `cat=trace` lines - its last messages, times counted back from the moment it went. Netty's
+followed by `cat=trace` lines - its last messages, times counted back from the moment it went; a host
+has two transports, and `tr=sequencer` / `tr=peer` says whose. Netty's
 own warnings arrive as `cat=netty msg="..."`. A session logs as `cat=sequencer` and `cat=peer`;
 `grep "event=desync"` finds a disagreement, and `cat=stats` lines carry each peer's lead, how far behind
-it runs, and how often the sequencer had to repeat its input.
+it runs, its round trip as the sequencer measures it (`rttMs`), and how often the sequencer had to repeat
+its input.
 
 **Two copies on one PC** - for online play, and the latency playtest in `docs/design/alpha-phase.md`.
 Two `gradlew run`s at once contend for Gradle's locks, so build the jar once and start it twice, from
@@ -79,8 +82,8 @@ or one of the addresses its overlay shows.
 **Desync dumps** land beside the connection log as `desync-t<tick>-peer<n>-<role>.bin`, one from the peer
 that diverged (`desynced`) and one from the host (`reference`), each with a `.txt` summary.
 `DesyncReport.compare(reference, desynced, worlds)` reads the pair: the fields that differ, which side a
-replay lands on, and where a replay through snapshots parts from a straight one - `SessionTest`'s
-desync test shows the call. Ask a friend for their `.bin` along with their log.
+replay lands on, and where a replay through snapshots parts from a straight one. The `PWT_DESYNC` recipe
+above runs it on a directory, with the host's shipped config. Ask a friend for their `.bin` along with their log.
 
 **Batch Gradle calls.** The daemon does not survive between shell invocations, so each call pays ~7s of
 JVM startup. Two tasks in one command beat two commands.

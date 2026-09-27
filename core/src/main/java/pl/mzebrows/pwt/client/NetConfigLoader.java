@@ -88,7 +88,8 @@ public final class NetConfigLoader {
                         properties.getInt("net.session.bufferTicks", session.bufferTicks()),
                         properties.getInt("net.session.catchUpTicks", session.catchUpTicks()),
                         properties.getInt("net.session.checksumTicks", session.checksumTicks()),
-                        properties.getInt("net.session.historyTicks", session.historyTicks())),
+                        properties.getInt("net.session.historyTicks", session.historyTicks()),
+                        properties.getInt("net.session.redundantTicks", session.redundantTicks())),
                 new NetConfig.Lan(
                         properties.getInt("net.lan.port", lan.port()),
                         properties.getInt("net.lan.announceMillis", lan.announceMillis()),

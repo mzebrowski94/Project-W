@@ -309,20 +309,57 @@ public final class Sequencer implements AutoCloseable {
             out.reset().putByte(Msg.BUNDLES).putInt(peer.eventsApplied).putInt(peer.margin);
             int countAt = out.size();
             out.putByte(0);
-            int count = 0;
-            for (int tick = peer.acked + 1; tick <= sealed && count < 255; tick++) {
-                int at = tick % history.length;
-                if (out.size() + historyLength[at] > maxDatagramBytes) {
-                    break;
-                }
-                out.putRaw(history[at], 0, historyLength[at]);
-                count++;
-            }
-            out.array()[countAt] = (byte) count;
+            out.array()[countAt] = (byte) writeBundles(peer);
             transport.send(peer.link, Delivery.UNRELIABLE, out.array(), 0, out.size());
             peer.margin = Msg.NO_MARGIN;
             peer.lastSentNanos = now;
         }
+    }
+
+    /**
+     * Fills a datagram for one peer and returns how many bundles went in. The newest {@code
+     * redundantTicks} unacknowledged ticks always go, so one lost datagram costs nothing; room is kept for
+     * them first. Older unacknowledged ticks go oldest first, but only those never sent or not
+     * acknowledged within the peer's round trip, so however long the round trip, a peer is never sent
+     * the same oldest ticks while the newest wait.
+     */
+    private int writeBundles(Peer peer) {
+        int newestFrom = Math.max(peer.acked + 1, sealed - pacing.redundantTicks() + 1);
+        int newestBytes = 0;
+        for (int tick = newestFrom; tick <= sealed; tick++) {
+            newestBytes += historyLength[tick % history.length];
+        }
+        long resendAfter = peer.roundTripNanos == 0L ? 0L : peer.roundTripNanos + 2 * tickNanos;
+        int count = 0;
+        for (int tick = peer.acked + 1; tick < newestFrom && count < 255; tick++) {
+            int at = tick % history.length;
+            if (peer.sentTick[at] == tick && now - peer.sentNanos[at] < resendAfter) {
+                continue;
+            }
+            if (out.size() + historyLength[at] + newestBytes > maxDatagramBytes) {
+                break;
+            }
+            writeBundle(peer, tick);
+            count++;
+        }
+        for (int tick = newestFrom; tick <= sealed && count < 255; tick++) {
+            if (out.size() + historyLength[tick % history.length] > maxDatagramBytes) {
+                break;
+            }
+            writeBundle(peer, tick);
+            count++;
+        }
+        return count;
+    }
+
+    private void writeBundle(Peer peer, int tick) {
+        int at = tick % history.length;
+        out.putRaw(history[at], 0, historyLength[at]);
+        if (peer.sentTick[at] != tick) {
+            peer.sentTick[at] = tick;
+            peer.firstSentNanos[at] = now;
+        }
+        peer.sentNanos[at] = now;
     }
 
     private void askForSnapshots() {
@@ -368,6 +405,8 @@ public final class Sequencer implements AutoCloseable {
                         .append(sealed - peer.acked)
                         .append(",repeats:")
                         .append(peer.repeats)
+                        .append(",rttMs:")
+                        .append(peer.roundTripNanos / 1_000_000L)
                         .append(",state:")
                         .append(peer.state);
                 peer.repeats = 0;
@@ -449,6 +488,7 @@ public final class Sequencer implements AutoCloseable {
         int newestTag = in.getInt();
         if (generation == peer.generation && acked > peer.acked && acked <= sealed) {
             peer.acked = acked;
+            peer.measure(acked, now);
         }
         if (newestTag >= 0) {
             // How many ticks before its seal the newest input arrived: what the peer's lead is steered by.
@@ -546,7 +586,7 @@ public final class Sequencer implements AutoCloseable {
         int forPeer = in.getInt();
         int tick = in.getInt();
         int length = in.getInt();
-        if (length < 0 || length > in.remaining() || length > maxMessageBytes) {
+        if (length < 0 || length > in.remaining() || length > maxMessageBytes - Msg.SNAPSHOT_HEADER) {
             throw new WireException("a snapshot of " + length + " bytes");
         }
         int start = in.position();
@@ -712,6 +752,15 @@ public final class Sequencer implements AutoCloseable {
         final Order[] eventOrder = new Order[32];
         int eventCount;
 
+        /** Per history slot: which tick was last sent there, when first and when last. */
+        final int[] sentTick = new int[history.length];
+
+        final long[] firstSentNanos = new long[history.length];
+        final long[] sentNanos = new long[history.length];
+
+        /** From a bundle's first send to its acknowledgement, smoothed; zero until the first is heard. */
+        long roundTripNanos;
+
         /** Checksums waiting for the host's for the same tick. */
         final int[] waitingTick = new int[HASHES];
 
@@ -721,6 +770,16 @@ public final class Sequencer implements AutoCloseable {
             this.link = link;
             Arrays.fill(slotOfSeat, -1);
             Arrays.fill(waitingTick, -1);
+            Arrays.fill(sentTick, -1);
+        }
+
+        void measure(int ackedTick, long nowNanos) {
+            int at = ackedTick % history.length;
+            if (sentTick[at] != ackedTick) {
+                return;
+            }
+            long sample = Math.max(1L, nowNanos - firstSentNanos[at]);
+            roundTripNanos = roundTripNanos == 0L ? sample : (3 * roundTripNanos + sample) / 4;
         }
 
         void hold(int seq, int slot, Order order) {

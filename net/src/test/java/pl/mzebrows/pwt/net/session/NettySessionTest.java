@@ -95,7 +95,7 @@ class NettySessionTest {
     }
 
     private NettyTransport transport() {
-        return new NettyTransport(config, SystemClock.INSTANCE, log);
+        return new NettyTransport(config, SystemClock.INSTANCE, log, "test");
     }
 
     private static NetConfig config() {

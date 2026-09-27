@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.NetConfig.Conditions;
 import pl.mzebrows.pwt.net.session.SessionHarness.Machine;
 import pl.mzebrows.pwt.sim.PlayerInputs;
@@ -81,6 +82,63 @@ class SessionTest {
             assertThat(hitching.session.lead())
                     .as("lead two seconds after a hitch")
                     .isLessThanOrEqualTo(before + 1);
+        }
+    }
+
+    /**
+     * Eight seats make a bundle 152 bytes, so a datagram holds seven, and a machine 120 ms away always has
+     * more than seven ticks unacknowledged. It still gets every tick about half a round trip after it is
+     * sealed.
+     */
+    @Test
+    void keepsAFarMachineInStepWhenEverySeatIsTaken() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 31L, PERFECT)) {
+            Machine host = session.host();
+            Machine second = session.join("second", PERFECT);
+            Machine third = session.join("third", PERFECT);
+            Machine far = session.join("far", new Conditions(120, 10, 0.05f, 0f, 9L));
+            for (Machine machine : List.of(host, second, third, far)) {
+                machine.session.seat(1);
+            }
+
+            session.run(1800);
+
+            assertThat(session.sequencer.sealedTick() - far.session.tick())
+                    .as("ticks the far machine is behind")
+                    .isLessThanOrEqualTo(24);
+            assertThat(far.session.lead())
+                    .as("the far machine's input delay")
+                    .isLessThan(session.config.session().leadMaxTicks());
+            session.agreedHash();
+            assertThat(session.sequencer.desyncs()).isZero();
+        }
+    }
+
+    @Test
+    void leavesAJoinerWaitingRatherThanFailWhenTheWorldIsTooBigToSend() {
+        NetConfig d = NetConfig.defaults();
+        NetConfig small = new NetConfig(
+                d.port(),
+                d.portSearch(),
+                d.connectTimeoutMillis(),
+                d.linkTimeoutMillis(),
+                d.heartbeatMillis(),
+                d.maxDatagramBytes(),
+                20_000,
+                d.conditions(),
+                d.log(),
+                d.session(),
+                d.lan());
+        try (SessionHarness session = new SessionHarness(small, "Advance", 3L, PERFECT)) {
+            Machine host = session.host();
+            session.run(120);
+            Machine late = session.join("late", PERFECT);
+
+            session.run(300);
+
+            assertThat(host.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(host.session.tick()).isGreaterThan(300);
+            assertThat(late.session.state()).isEqualTo(PeerSession.State.JOINING);
         }
     }
 

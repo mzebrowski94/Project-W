@@ -167,6 +167,8 @@ public record NetConfig(
      * @param checksumTicks how often peers compare worlds, and how often each keeps a keyframe for a dump
      * @param historyTicks how many sealed ticks the sequencer keeps, so a peer dropping in or being healed
      *     can be brought forward from a snapshot
+     * @param redundantTicks how many of the newest unacknowledged ticks every bundle datagram repeats;
+     *     older ones are sent again only when a round trip has passed without their acknowledgement
      */
     public record Session(
             int leadMinTicks,
@@ -175,9 +177,10 @@ public record NetConfig(
             int bufferTicks,
             int catchUpTicks,
             int checksumTicks,
-            int historyTicks) {
+            int historyTicks,
+            int redundantTicks) {
 
-        public static final Session DEFAULT = new Session(2, 30, 1, 2, 4, 60, 600);
+        public static final Session DEFAULT = new Session(2, 30, 1, 2, 4, 60, 600, 3);
 
         public Session {
             require(leadMinTicks >= 1, "leadMinTicks", leadMinTicks);
@@ -187,6 +190,7 @@ public record NetConfig(
             require(catchUpTicks >= 1, "catchUpTicks", catchUpTicks);
             require(checksumTicks >= 1, "checksumTicks", checksumTicks);
             require(historyTicks > leadMaxTicks + checksumTicks, "historyTicks", historyTicks);
+            require(redundantTicks >= 1 && redundantTicks <= 8, "redundantTicks", redundantTicks);
         }
     }
 

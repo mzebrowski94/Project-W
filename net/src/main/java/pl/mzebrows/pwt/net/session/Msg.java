@@ -4,8 +4,9 @@ package pl.mzebrows.pwt.net.session;
  * The session protocol's message types, the first byte of every message (ADR 0012). Numbers, never
  * class names, so nothing on the wire decides what gets built.
  *
- * <p>Two go unreliable and are sent every tick - {@link #INPUT} and {@link #BUNDLES} - each carrying
- * everything the other side has not yet acknowledged, so a lost one costs nothing but its own copy.
+ * <p>Two go unreliable and are sent every tick. {@link #INPUT} carries everything the sequencer has not
+ * yet acknowledged; {@link #BUNDLES} carries the newest unacknowledged ticks and any older one a round
+ * trip has passed without, so a lost one costs nothing but its own copy.
  * Everything else is rare, goes reliable, and is sent once.
  */
 final class Msg {
@@ -42,6 +43,13 @@ final class Msg {
 
     /** The longest text a control message carries - a build id, a scenario name, a reason. */
     static final int MAX_TEXT = 256;
+
+    /**
+     * What a snapshot message carries besides the world: its type, then three ints - a peer and a tick,
+     * or a generation and a tick - then the world's length. The world may be this much less than {@code
+     * maxMessageBytes}.
+     */
+    static final int SNAPSHOT_HEADER = 1 + 4 + 4 + 4;
 
     /** The longest config a host ships. {@code game.properties} is a few tens of KB. */
     static final int MAX_CONFIG = 1024 * 1024;

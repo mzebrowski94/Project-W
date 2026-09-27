@@ -102,7 +102,7 @@ public final class OnlineSession implements ScenarioPlay {
         NetLog log = NetLog.open(net.log(), options.logName() + "-host");
         long key = new SecureRandom().nextLong() | 1L;
         Sequencer sequencer = new Sequencer(
-                new NettyTransport(net, clock, log),
+                new NettyTransport(net, clock, log, "sequencer"),
                 net,
                 log,
                 new SessionSetup(SimConfigLoader.text(), scenario.name(), config.seed()),
@@ -120,7 +120,12 @@ public final class OnlineSession implements ScenarioPlay {
         }
         SequencerThread thread = new SequencerThread(sequencer, clock, log).start();
         PeerSession peer = new PeerSession(
-                new NettyTransport(net, clock, log), net, log, new ScenarioWorlds(), dumps(net), BuildId.current());
+                new NettyTransport(net, clock, log, "peer"),
+                net,
+                log,
+                new ScenarioWorlds(),
+                dumps(net),
+                BuildId.current());
         peer.connect(LOCAL, port, key);
         long session = new SecureRandom().nextLong();
         Invitation invitation = new Invitation(
@@ -145,7 +150,7 @@ public final class OnlineSession implements ScenarioPlay {
         Clock clock = SystemClock.INSTANCE;
         NetLog log = NetLog.open(net.log(), options.logName() + "-join");
         ConditionedTransport lag =
-                new ConditionedTransport(new NettyTransport(net, clock, log), net.conditions(), clock);
+                new ConditionedTransport(new NettyTransport(net, clock, log, "peer"), net.conditions(), clock);
         PeerSession peer = new PeerSession(lag, net, log, new ScenarioWorlds(), dumps(net), BuildId.current());
         peer.connect(host, port, 0L);
         Log.info("joining " + host + ":" + port + ", build " + BuildId.current());

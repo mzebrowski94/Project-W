@@ -26,7 +26,7 @@ import pl.mzebrows.pwt.net.NetConfig.LogConfig;
  * file, leak reports included, with no bridge to maintain.
  *
  * <p><strong>Never called per message.</strong> CLAUDE.md bans a log call inside a per-frame loop, and a
- * network sends several messages a frame. What happens per message goes into the {@link NetTrace} - a
+ * network sends several messages a frame. What happens per message goes into a {@link NetTrace} - a
  * ring of plain numbers, no allocation - and is written out only when a link closes; each link's
  * numbers are written once every few seconds from {@link LinkStats}. The log itself is for events:
  * a link opening, a handshake stalling, a timeout, a reason.
@@ -43,15 +43,15 @@ public final class NetLog implements AutoCloseable {
     private final String instance;
     private final Logger logger;
     private final @Nullable Handler handler;
-    private final NetTrace trace;
+    private final int traceSize;
     private final List<Logger> adopted = new ArrayList<>();
     private final @Nullable Path file;
 
-    private NetLog(String instance, Logger logger, @Nullable Handler handler, NetTrace trace, @Nullable Path file) {
+    private NetLog(String instance, Logger logger, @Nullable Handler handler, int traceSize, @Nullable Path file) {
         this.instance = instance;
         this.logger = logger;
         this.handler = handler;
-        this.trace = trace;
+        this.traceSize = traceSize;
         this.file = file;
     }
 
@@ -66,7 +66,6 @@ public final class NetLog implements AutoCloseable {
         Logger logger = Logger.getAnonymousLogger();
         logger.setUseParentHandlers(false);
         logger.setLevel(level);
-        NetTrace trace = new NetTrace(config.traceSize());
         try {
             Path dir = Path.of(config.dir());
             Files.createDirectories(dir);
@@ -78,19 +77,19 @@ public final class NetLog implements AutoCloseable {
             handler.setFormatter(new LineFormatter(instance));
             handler.setEncoding("UTF-8");
             logger.addHandler(handler);
-            return new NetLog(instance, logger, handler, trace, file);
+            return new NetLog(instance, logger, handler, config.traceSize(), file);
         } catch (IOException | RuntimeException e) {
             System.err.println("[net] could not open a log in " + config.dir() + ": " + e);
-            return new NetLog(instance, logger, null, trace, null);
+            return new NetLog(instance, logger, null, config.traceSize(), null);
         }
     }
 
-    /** A log that writes nothing, for tests that are not about the log. Its trace still records. */
+    /** A log that writes nothing, for tests that are not about the log. Its traces still record. */
     public static NetLog silent(int traceSize) {
         Logger logger = Logger.getAnonymousLogger();
         logger.setUseParentHandlers(false);
         logger.setLevel(Level.OFF);
-        return new NetLog("silent", logger, null, new NetTrace(traceSize), null);
+        return new NetLog("silent", logger, null, traceSize, null);
     }
 
     /** The file being written, or null for a log that writes nothing. */
@@ -98,9 +97,12 @@ public final class NetLog implements AutoCloseable {
         return file;
     }
 
-    /** The ring the transport records every message into. */
-    public NetTrace trace() {
-        return trace;
+    /**
+     * A new ring for one transport to record every message into, named {@code owner} in its dumps. One
+     * per transport: a ring is not shared between threads.
+     */
+    public NetTrace trace(String owner) {
+        return new NetTrace(owner, traceSize);
     }
 
     /**
