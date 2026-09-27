@@ -38,7 +38,7 @@ Key added: `net.session.redundantTicks=3`.
 
 ### Stopped here (2026-09-27)
 
-Stage 4 (splits), stage 5 (X2 delta held input, X3 `ScenarioWorlds` into `net`) and E1 (429 retry) are in
+Stage 4 (splits), stage 5 (X2, X3), E1 (429 retry), P2 (checksum on the game thread), E5 (network bench), the silent wait after D3, and LAN adapters read once are in
 `docs/backlog.md`, each with what brings it back. D4 needs no entry: measured, it costs nothing.
 
 Stage 1 deliverable: verify, propose, plan. **No production code changed.** Baseline `:net:test` green (65
