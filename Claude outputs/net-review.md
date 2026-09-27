@@ -28,6 +28,14 @@ Key added: `net.session.redundantTicks=3`.
 | Stale docs | `NetLog` dangling "3.b of the online plan" removed; "every few seconds" → `statsSeconds` (`NetLog`, `LinkStats`, `architecture.md`); `WorldFactory` no longer claims `net` cannot parse a config; ADR index row for 0012 notes that 0016 supersedes its `Entity` snapshot hazards. | Strip-and-compare against the previous commit: `NetLog`, `LinkStats`, `WorldFactory` code identical. |
 | - | Full `verify.sh` green, 1473 tests. | - |
 
+### Stage 3 (one config source)
+
+| Item | Done | Evidence |
+|---|---|---|
+| M2 / D6 | `network.properties` is bound by `ConfigBinder`, now public in `sim`, with two new readings: text, and a comma list of whole numbers. `:net:generateShippedNetConfig` compiles the file in; `NetConfig.defaults()` **is** the file. `NetConfig.parse` falls back per key and names every problem. `NetConfigLoader` went from 97 lines of per-key reads to finding the text, logging problems and applying the `pwt.net.logDir` override. The literal defaults (`NetConfig.defaults()`, `LogConfig`/`Session`/`Lan.DEFAULT`, `NetConfigLoader.LATENCY_STEPS`) are gone. `Conditions.NONE` stays: it means "no conditions", not a tunable. | A throwaway probe: the bound defaults **equal the old literals** field for field. `ShippedNetConfigTest` (4 tests): the shipped file names every value and nothing else; it is what `defaults()` binds; a misspelt key is reported as both `missing` and `unknown` and the shipped value stands. With `net.session.bufferTicks` misspelt in the shipped file, the build fails loudly at bind (restored). |
+| `latencySteps` | Now `NetConfig.latencySteps`, read from the same key (`@ConfigKey("conditions.latencySteps")`); must be non-empty and non-negative. | Key unchanged; `readsTheLatencyStepsAsAList`. |
+| - | Full `verify.sh` green, 1477 tests. No key added, moved or renamed. | - |
+
 Stage 1 deliverable: verify, propose, plan. **No production code changed.** Baseline `:net:test` green (65
 tests). Numbers come from throwaway probes (`Zz*ProbeTest`) run on `SessionHarness` / `LoopbackNetwork` in
 this session and deleted afterwards. Nothing here re-proposes a `docs/backlog.md` entry.

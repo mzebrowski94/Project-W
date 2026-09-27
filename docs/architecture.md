@@ -159,7 +159,8 @@ that order changes results. Add deliberately.
 Networking, and nothing the game's rules depend on (ADR 0012). No libGDX, and Netty only inside
 `net.netty` - `NetArchitectureTest` enforces both, and that the clock is read only through `Clock`.
 
-- `NetConfig` - the tunables, handed in parsed; the client loads them from `network.properties`.
+- `NetConfig` - the tunables: `network.properties` bound by component name (`ConfigBinder`), the shipped
+  file compiled in as `defaults()`; the client finds a player's copy and hands its text to `parse`.
 - `transport/` - the **port**. `Transport` opens **links** to other machines and carries
   `Delivery.RELIABLE` and `Delivery.UNRELIABLE` messages across them; everything that happens is handed
   over on the caller's thread by `poll`, never pushed from a network thread - the gamepad port's lesson

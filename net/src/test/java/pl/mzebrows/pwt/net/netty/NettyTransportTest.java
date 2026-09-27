@@ -203,9 +203,10 @@ class NettyTransportTest {
                 shipped.maxDatagramBytes(),
                 shipped.maxMessageBytes(),
                 NetConfig.Conditions.NONE,
+                shipped.latencySteps(),
                 new NetConfig.LogConfig("unused", "INFO", 1024, 0),
-                NetConfig.Session.DEFAULT,
-                NetConfig.Lan.DEFAULT);
+                shipped.session(),
+                shipped.lan());
     }
 
     private static void pollUntil(BooleanSupplier done, Ends ends) {

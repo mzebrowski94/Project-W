@@ -126,6 +126,7 @@ class SessionTest {
                 d.maxDatagramBytes(),
                 20_000,
                 d.conditions(),
+                d.latencySteps(),
                 d.log(),
                 d.session(),
                 d.lan());
