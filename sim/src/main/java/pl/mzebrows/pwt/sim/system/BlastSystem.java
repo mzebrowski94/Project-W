@@ -65,7 +65,7 @@ public final class BlastSystem extends EntitySystem {
             if (!blast.spent) {
                 blast.spent = true;
                 Position at = POSITION.get(entity);
-                catchEveryoneInside(at.x, at.y, BODY.get(entity).radius, blast.damage);
+                catchEveryoneInside(at.x, at.y, BODY.get(entity).radius, blast.damage, blast.credit);
             }
             if (blast.remainingTicks <= 0) {
                 spawner.markDead(entity);
@@ -88,14 +88,14 @@ public final class BlastSystem extends EntitySystem {
                 continue;
             }
             Position at = POSITION.get(entity);
-            spawner.spawnBlast(at.x, at.y, radius, reaction.leavesFire, reaction.look);
+            spawner.spawnBlast(at.x, at.y, radius, reaction.leavesFire, reaction.look, reaction.credit);
         }
     }
 
     /**
      * Centre to centre, deliberately: a rule the player can see applied.
      */
-    private void catchEveryoneInside(float x, float y, float radius, float damage) {
+    private void catchEveryoneInside(float x, float y, float radius, float damage, int credit) {
         for (int i = 0; i < victims.size(); i++) {
             Entity victim = victims.get(i);
             Position at = POSITION.get(victim);
@@ -106,6 +106,7 @@ public final class BlastSystem extends EntitySystem {
             // Wounding, like gunfire: everything in it goes down (G0018); an alien just dies.
             owed.add(damage, 0, false);
             owed.cameFrom(x, y);
+            owed.creditTo(credit);
         }
     }
 }

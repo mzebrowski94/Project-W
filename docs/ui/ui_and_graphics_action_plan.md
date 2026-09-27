@@ -55,8 +55,11 @@ numbers.
 | D14 | Stage 4: pages as scene2d widgets (6.1)? | **No - painted on the UI canvas like the bars.** `MenuLayout` (ui) places lines and hit-tests the pointer; `MenuPainter` (core) draws. | The pages are short columns in the interface's own pixel font; widgets would only wrap them, and the decisions stay testable without a display. The skin-file restyle of 6.1 becomes `graphic.properties` colours for now. Revisit for the campaign list's scrolling (stage 5) or Options (stage 10) if either needs real widgets. |
 | D15 | A pad unplugged and plugged back in was seated as a new player. (2026-09-26) | **An unknown pad takes back a seat whose pad is missing** - same name first, else the lowest - before it seats a new player. | gdx-controllers' desktop backend makes up a random id per connection (`JamepadController`), so the id cannot recognise a returning pad. Accepted cost: somebody new plugging in while a player's pad is out takes over that player's commander. |
 | D16 | Q7, Q26, Q27, Q29 (stage 4). | **As proposed**: offline, a lost window or an unplugged seated pad opens the pause menu; online neither does. No "get ready" beat on resume. The pause shared, the menu local, `P` menu-less. | Q8 (who paused) stays `PAUSED`. |
-| D17 | Stage 5 (2026-09-26), built on the proposed defaults of Q5, Q6, Q25 - Mateusz confirms them at the stage's playtest. | **Black behind the main menu. The room code's pad letter picker is built** (`CodePicker`). **No CONTINUE**: CAMPAIGN opens on the scenario last played this run (`SelectionMemory`), so launch to a level is two confirms. Pages slide in 6 UI px and fade over 0.12 s (`graphic.ui.motion.page*`); any input finishes the motion. `H`/`J` are retired. | `PageControls` and `PageHints` (core) are the one selection and hint logic for every page, the pause menu's included. The screen-pixel text path of `Hud` is gone - nothing draws outside the canvas but the reticle. |
+| D17 | Stage 5 (2026-09-26): Q5, Q6, Q25 as proposed - confirmed by Mateusz "for now". | **Black behind the main menu. The room code's pad letter picker is built** (`CodePicker`). **No CONTINUE**: CAMPAIGN opens on the scenario last played this run (`SelectionMemory`), so launch to a level is two confirms. Pages slide in 6 UI px and fade over 0.12 s (`graphic.ui.motion.page*`); any input finishes the motion. `H`/`J` are retired. | `PageControls` and `PageHints` (core) are the one selection and hint logic for every page, the pause menu's included. The screen-pixel text path of `Hud` is gone - nothing draws outside the canvas but the reticle. |
 | D18 | A page's panel widened and narrowed with its longest line - the selected scenario's description, the device's hint. (2026-09-26 playtest) | **Every page is one fixed width**, `graphic.ui.page.columns` (60, about the left third of a 16:9 view). Body lines, descriptions and the room line wrap into it; a scenario's description always takes its two lines, so the height holds too. Only a view too narrow for it narrows it. | `MenuLayout.panel` takes columns, not the widest line. Titles, entries and hints stay one line, cut with an ellipsis if a translation runs over. |
+| D19 | Stage 6 (2026-09-26): shape details the plan left open. *Partly superseded by D20: points, objectives, hosting and `COUNT` are gone.* | **Coalescing** is per kind and player: `NEWEST` replaces the numbers (a point taken twice reads `2/3`, not a count), `COUNT` says `x2`, `SUM` adds (`+3`); the per-player kinds (down, lost, back, turret, weapon) merge as `NEWEST`. **A high line preempts at once**, even another high one's hold - with two lines on show, two alarms together are both visible. **The objective that completes the mission is said as `MISSION COMPLETED`**, not twice. There is no `MissionReporter`: `Reporters` files `MISSION_STARTED` and `HOSTING` on bind; `ObjectiveReporter` files the completion. The newest line sits on the bottom row and pushes older ones up. Copy is in capitals like the rest of the bars. | Reporters write to a `DispatchSink` (the `Terminal`, or a recorder in tests) rather than to `Terminal` itself. The console action prompt is `ActionPrompts`, a reporter that writes to the log; `Announcements` and `ScenarioPlay.newlyOfferedAction/newlyArrivedWave/totalWaves` are gone. |
+| D20 | Stage 6 playtest (2026-09-27): what the terminal says. | **The terminal is the battlefield's voice, not a log** - narrative, never technical; nothing the goal line or a panel shows; no spam (8.3's four rules). Kept: mission started, commander joined, weapon acquired, reinforcements, few troopers left (below `graphic.hud.terminal.fewTroopers` = 5), commander down → lost **in place**. Dropped: hosting, turret, points, waves, squad losses, nests, objectives, mission completed, commander back. | `DispatchKind.supersedes()` rewrites a line in place; `COUNT` coalescing and `PointReporter`, `WaveReporter`, `NestReporter`, `ObjectiveReporter` are gone. Weapon acquired, joined and respawn silence were Claude's reading of "only narrative" - flip any in `DispatchKind`. |
+| D21 | Q11-Q14 (Mateusz, 2026-09-27): the tally. | **As proposed.** Kills: his shots, strikes, grenades and anything he crews; a blast credits whoever's blow killed the thing that exploded; squad kills credit nobody (Q11). Goals: a control point taken while he stood inside it (Q12). Friendly fire ignored (Q13). A stabilise is a stabilise, another player's commander included (Q14). | G0044. Credit is `ContactDamage.credit` / `Blast.credit` / `BlastsOnDeath.credit`, gathered in `Damage.credit` (higher slot wins a tie), read once in `DamageSystem`. A nest is on the other side, so destroying one is a kill. No new system, no tunables. Panel icons are data (`TallyIcon`); the plus is `graphic.color.mending`, the game's one "good news" green. |
 
 ---
 
@@ -619,36 +622,45 @@ file the same dispatches; a peer that drops in reports from its first frame (sec
 | `Readout` | Every fact the HUD shows, copied once per frame into preallocated fields: `worldSerial`, mission name, planet, objective bits required/met, points taken/total, waves sent/total/armed, nests standing, troopers standing, and `PlayerReadout[Players.MAX]` by slot. | Filled only by `ReadoutWriter`. Plain fields, no Gdx, no allocation after construction. |
 | `PlayerReadout` | Per slot: present, local, seat, posture (standing / casualty / dying / aboard / respawning), weapon kind, heat, overheated, fired, bleed-out (the `charge` fraction while a casualty), respawn seconds left, tally (kills, goals, stabilised), colour variant. | Keyed by **slot**, never by `Entity`. |
 | `ReadoutWriter` | The **one place** the HUD reads `sim`. Iterates cached families (commanders, control points, nests, troopers) and the level entity. | Families cached (a `Family` built per frame allocates). Reads only. |
-| `Reporter` | `void report(Readout previous, Readout now, Terminal out)`. One per fact: `MissionReporter`, `PlayerReporter` (joined, weapon, turret, down, lost, back), `PointReporter`, `WaveReporter`, `SquadReporter`, `NestReporter`, `ObjectiveReporter`. | Compares **counters** where the sim has them (points taken, waves sent, nests standing), because steps 4-6 run once per frame over any number of ticks and a flag that flips twice between frames is invisible. Never formats text. |
+| `Reporter` | `void report(Readout previous, Readout now, Terminal out)`. One per fact: `PlayerReporter` (joined, weapon, down, lost), `SquadReporter` (reinforced, few left) - after D20. | Compares **counters** where the sim has them (troopers standing), because steps 4-6 run once per frame over any number of ticks and a flag that flips twice between frames is invisible. Never formats text. |
 | `Dispatch` | `kind`, `slot` (or -1), `a`, `b` (int arguments), `count` (for coalescing), `bornAt`. | Pooled in a fixed ring inside `Terminal`; never allocated per event. |
 | `DispatchKind` | Enum: template key, priority, coalescing rule. A new event is a constant here, a key in `ui.properties`, and - only if the fact is new - one reporter. | Mirrors the house rule for kinds (G0008): a constant and a definition, not a class per event. |
 | `Terminal` | Bounded queue plus the two visible lines and their typewriter state. `offer(kind, slot, a, b)`, `advance(frameDt)`, `visible(i)`, `reset()`. | Pure, frame-time driven, fully tested. |
 
-### 8.3 Dispatch catalogue (initial)
+### 8.3 Dispatch catalogue
+
+**The terminal's voice (Mateusz, 2026-09-27; D20).** The terminal is an in-game terminal serving the
+narrative, not a log. The rules every line - and every future kind - must pass:
+
+1. **Narrative, never technical.** Say what the battlefield would say over the radio: *new commander
+   joined the battlefield*, not *a new player has joined the game*. Nothing about the session, the
+   network, the machine or the room code.
+2. **No duplicates.** Whatever the goal line or a player panel already shows is not repeated here:
+   waves, control points, objectives, the mission completed, nests, heat, getting up, respawning,
+   climbing onto a turret.
+3. **No spam.** One line per story beat. A commander down who then dies is **one** line that changes
+   from DOWN to LOST in place, without scrolling. Squad losses one by one are noise; the moment the
+   squad falls below a handful is news.
+4. When in doubt, leave it out. A kind is added only when it is relevant to the story of the fight.
 
 | Kind | Fact it reads | Priority | Coalesce | Default copy (`ui.properties`) |
 |---|---|---|---|---|
-| `MISSION_STARTED` | `worldSerial` changed | high | - | `Mission started` |
-| `HOSTING` | this machine hosts, on world bind | high | - | `Hosting - room {code}` |
-| `PLAYER_JOINED` | slot present for the first time since bind | normal | - | `{player} joined` |
-| `WEAPON_ACQUIRED` | slot's weapon kind changed | low | per slot, newest wins | `{player}{weapon} acquired` |
-| `TURRET_CREWED` | slot posture → aboard | low | per slot | `{player}Turret crewed` |
-| `POINT_TAKEN` | points taken rose | normal | count | `Control point taken {a}/{b}` |
-| `WAVE_INBOUND` | waves sent rose | normal | - | `Wave {a}/{b} inbound` |
-| `REINFORCED` | troopers standing rose | low | sum | `Reinforcements +{count}` |
-| `SQUAD_LOSS` | troopers standing fell | low | sum | `Squad losses {count}` |
-| `NEST_DESTROYED` | nests standing fell | normal | count | `Nest destroyed` |
-| `OBJECTIVE_MET` | a required objective bit rose | normal | - | `{objective} - done` |
-| `MISSION_COMPLETE` | all required bits met (rising edge) | high | - | `Mission completed` |
-| `COMMANDER_DOWN` | slot posture → casualty | high | per slot | `{player}Commander down` |
-| `COMMANDER_LOST` | slot present → absent | high | per slot | `{player}Commander lost` |
-| `COMMANDER_BACK` | slot absent → present, and it had a commander earlier since bind (the first time is `PLAYER_JOINED`) | normal | per slot | `{player}Commander back` |
+| `MISSION_STARTED` | a world is bound | high | - | `MISSION STARTED - GOOD HUNTING` |
+| `COMMANDER_JOINED` | a slot fills for the first time since bind | normal | - | `NEW COMMANDER JOINED THE BATTLEFIELD` |
+| `WEAPON_ACQUIRED` | a standing commander's gun changes | low | per player, newest wins | `{player}{weapon} ACQUIRED` |
+| `REINFORCED` | troopers standing rose | low | sum | `REINFORCEMENTS HAVE ARRIVED: +{a}` |
+| `FEW_TROOPERS` | troopers standing fell below `graphic.hud.terminal.fewTroopers` (5) | normal | - | `SQUAD DEPLETED - FEW TROOPERS LEFT` |
+| `COMMANDER_DOWN` | slot posture → casualty | high | per player | `{player}COMMANDER DOWN` |
+| `COMMANDER_LOST` | slot posture → dying, or present → gone without dying | high | **supersedes** that player's `COMMANDER_DOWN` line in place | `{player}COMMANDER LOST` |
+
+Retired by D20 (built in stage 6, removed after its playtest): `HOSTING`, `TURRET_CREWED`,
+`POINT_TAKEN`, `WAVE_INBOUND`, `SQUAD_LOSS`, `NEST_DESTROYED`, `OBJECTIVE_MET`, `MISSION_COMPLETE`,
+`COMMANDER_BACK` - each fails rule 1, 2 or 3.
 
 `{player}` is empty while one commander is on the field and `P2 ` (and so on) once there are more.
-`{weapon}` and `{objective}` resolve through `ui.properties` keys named after the enum constants
-(`ui.weapon.FLAMER = Flamethrower`), so no string is built from `toString()`.
+`{weapon}` resolves through `ui.weapon.<KIND>`, so no string is built from `toString()`.
 Troopers standing rises on a reinforcement and falls on a death; a casualty is still standing in
-this count, so a man shot down and stabilised files nothing - the tally and the world show that.
+this count, so a man shot down and stabilised files nothing.
 
 ### 8.4 Terminal behaviour
 
@@ -669,7 +681,7 @@ reset():  on a new world (restart, heal, first world online) - clear everything
 ```
 
 - **World bind is silent.** When `worldSerial` changes, every reporter first takes the new readout as
-  its baseline without reporting, then `MISSION_STARTED` (and `HOSTING`) are filed. A peer dropping
+  its baseline without reporting, then `MISSION_STARTED` is filed. A peer dropping
   in mid-level therefore does not announce every point already taken.
 - Frame time, not simulation time: the terminal keeps typing while the game is paused, and receives
   nothing, because a paused world changes nothing.
@@ -1035,7 +1047,7 @@ your eye mid-fight?* Answers **Q10** (confirm), **Q15**, **Q22**, **Q24**, **Q30
 | Task | Skill | Do | Tests | Done when |
 |---|---|---|---|---|
 | T6.1 | `unit-tests` | `Dispatch`, `DispatchKind`, `Terminal`. Glossary: terminal, dispatch, reporter. | `TerminalTest.showsTheTwoLatestDispatches`, `.typesTheNewestAtItsRate`, `.showsAHighDispatchAtOnce`, `.stopsBlinkingOnceTheLineIsTyped`, `.holdsANewLineBeforeTheNextPushesItUp`, `.mergesRepeatsInsideTheWindow`, `.dropsANormalDispatchThatWaitedTooLong`, `.evictsTheOldestOfTheLowestPriorityWhenFull`, `.neverEvictsAHighDispatchForALowerOne`, `.startsEmptyOnANewWorld` | No allocation per offer. |
-| T6.2 | `unit-tests` | The reporters of 8.3; silent bind. | `ReportersTest.reportsAPointOnceWhenTheCountRises`, `.reportsNothingOnTheFrameAWorldArrives`, `.reportsTwoWavesThatArriveInOneFrame`, `.prefixesThePlayerOnlyWhenThereIsMoreThanOne` | - |
+| T6.2 | `unit-tests` | The reporters of 8.3; silent bind. | `ReportersTest.reportsNothingOnTheFrameAWorldArrives`, `.prefixesThePlayerOnlyWhenThereIsMoreThanOne`, `.saysADownedCommanderLostOnceAsHeDies`, `.reportsReinforcementsAndAFewLeftButNotEachLoss` (after D20) | - |
 | T6.3 | - | Fold `Announcements`: the wave half becomes `WaveReporter`; the action-prompt half stays a console line (G0021 wants it beside the commander, not in the terminal) but is computed by a reporter writing to `Log` rather than by a second edge-detector. `ScenarioPlay` loses `newlyArrivedWave`/`totalWaves` if nothing else calls them. | existing `OnlineSessionTest`, `ScenarioSessionTest` adjusted | One edge-detection mechanism in the client. |
 | T6.4 | - | Terminal lines painted in the top bar: dim older, bright newer with cursor. `HOSTING` dispatch. | - | The alpha-phase rows for the wave line and the room code are rewritten. |
 
@@ -1105,7 +1117,7 @@ your eye mid-fight?* Answers **Q10** (confirm), **Q15**, **Q22**, **Q24**, **Q30
 | E13 | Shader fails to compile | Nearest filtering; logged once | `SharpPixelShader` | - |
 | E14 | Long scenario name, planet or weapon copy | Argument truncated first, then template, `...` | `TextFit` | `TextFitTest` over every template |
 | E15 | Many events in one frame (a blast kills 30) | Coalesced into counted lines; queue bounded; high priority survives | `Terminal` | `TerminalTest` |
-| E16 | Two waves between two frames | Counter rose by 2 → two dispatches, not one | `WaveReporter` | `ReportersTest.reportsTwoWavesThatArriveInOneFrame` |
+| E16 | Two waves between two frames | Not the terminal's since D20 - the goal line shows the wave count | `GoalLine` | - |
 | E17 | Restart, heal, or first world online | Terminal and reporter baselines reset; `MISSION_STARTED` once; tallies zero because the world is new | reporters, `Terminal` | `.reportsNothingOnTheFrameAWorldArrives` |
 | E18 | Drop-in mid-level | Tallies from the snapshot; no burst of old events | `ReadoutWriter`, reporters | `SessionHarness` test |
 | E19 | Objective met then lost (a new wave after a clear) | Goal line tells the truth, with minimum hold; no "lost" dispatch spam | `GoalLine` | `GoalLineTest` |

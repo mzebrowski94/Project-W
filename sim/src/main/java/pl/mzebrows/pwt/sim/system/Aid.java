@@ -72,19 +72,21 @@ final class Aid {
     /**
      * A tick's worth of work on him, and puts him back on his feet once there has been enough of it.
      *
-     * <p>He comes up hurt and briefly protected.
+     * <p>He comes up hurt and briefly protected. Returns whether this was the tick he came up - the
+     * stabilise a commander's tally counts (G0044).
      */
-    static void work(Entity subject, float deltaTime, float healthFraction, float invulnerableSeconds) {
+    static boolean work(Entity subject, float deltaTime, float healthFraction, float invulnerableSeconds) {
         Casualty casualty = CASUALTY.get(subject);
         casualty.stabilised += deltaTime;
         if (!casualty.stabilisedEnough(hauled(subject))) {
-            return;
+            return false;
         }
         casualty.recover();
         HEALTH.get(subject).current = HEALTH.get(subject).max * healthFraction;
         if (INVULNERABLE.has(subject)) {
             INVULNERABLE.get(subject).grant(Ticks.of(invulnerableSeconds, deltaTime));
         }
+        return true;
     }
 
     /**

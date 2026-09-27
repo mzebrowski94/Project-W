@@ -25,14 +25,17 @@ import pl.mzebrows.pwt.sim.component.Focus;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Shake;
-import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.ui.hud.GoalLine;
 import pl.mzebrows.pwt.ui.hud.PanelAlarms;
 import pl.mzebrows.pwt.ui.hud.PanelAssignment;
+import pl.mzebrows.pwt.ui.hud.PlayerReporter;
 import pl.mzebrows.pwt.ui.hud.Posture;
 import pl.mzebrows.pwt.ui.hud.Readout;
 import pl.mzebrows.pwt.ui.hud.ReadoutWriter;
+import pl.mzebrows.pwt.ui.hud.Reporters;
+import pl.mzebrows.pwt.ui.hud.SquadReporter;
+import pl.mzebrows.pwt.ui.hud.Terminal;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
@@ -72,6 +75,14 @@ public final class ScenarioScreen extends ScreenAdapter {
     private final Readout readout = new Readout();
     private final ReadoutWriter readoutWriter = new ReadoutWriter();
     private final GoalLine goalLine;
+    private final Terminal terminal;
+
+    /**
+     * Everything that narrates the level: the terminal's reporters, one per fact, and the console's
+     * action prompt. This list is the whole registry (plan 8.5).
+     */
+    private final Reporters reporters;
+
     private final PanelAlarms alarms;
     private final PanelAssignment seating = new PanelAssignment();
     private final int[] slotOfSeat = new int[PlayerSeats.SEATS];
@@ -126,6 +137,11 @@ public final class ScenarioScreen extends ScreenAdapter {
         this.strings = UiStrings.load();
         this.rollCall = style.rollCallAtStart();
         this.goalLine = new GoalLine(style.goalHoldSeconds(), style.pulseHz(), style.flashScale());
+        this.terminal = new Terminal(graphicConfig.terminal(), new DispatchText(strings));
+        this.reporters = new Reporters(List.of(
+                new PlayerReporter(),
+                new SquadReporter(graphicConfig.terminal().fewTroopers()),
+                new ActionPrompts(play::local, Log::info)));
         this.alarms = new PanelAlarms(
                 style.alarmSeconds(), style.alarmShake(), style.pulseHz(), style.motionScale(), style.flashScale());
         this.topBar = new TopBarPainter(
@@ -216,8 +232,6 @@ public final class ScenarioScreen extends ScreenAdapter {
             menus.drawConnecting(layout, connection == null ? "..." : connection);
             return;
         }
-        announceAction();
-        announceWave();
         rebindIfRestarted(world);
         aimCamera(world, delta);
         aimAhead(players);
@@ -225,6 +239,8 @@ public final class ScenarioScreen extends ScreenAdapter {
         String name = play.scenarioName();
         readoutWriter.fill(world, name == null ? "" : name, play.planet(), readout);
         goalLine.update(readout, delta);
+        reporters.report(readout, terminal);
+        terminal.advance(delta);
         alarms.update(readout, delta);
         seatPanels();
 
@@ -242,7 +258,7 @@ public final class ScenarioScreen extends ScreenAdapter {
                         play.lastOrder(),
                         play.connection(),
                         play.invitation());
-        topBar.render(layout, readout, goalLine, lines, mode);
+        topBar.render(layout, readout, goalLine, terminal, lines, mode);
         if (rollCall) {
             bottomBar.renderRollCall(layout);
         } else {
@@ -344,39 +360,6 @@ public final class ScenarioScreen extends ScreenAdapter {
             if (slot >= 0 && (seat == PlayerSeats.KEYBOARD_SLOT || input.seats().taken(seat))) {
                 localAim.set(slot, players.get(seat));
             }
-        }
-    }
-
-    /**
-     * Says which wave has just walked in, and how many there are.
-     *
-     * <p>Scaffolding in exactly the sense the action prompt is: what the level has left to send is
-     * something the player is entitled to know (pillar 5), and the console is not where he will
-     * eventually read it.
-     */
-    private void announceWave() {
-        int arrived = play.newlyArrivedWave();
-        if (arrived == 0) {
-            return;
-        }
-        Log.info("wave " + arrived + "/" + play.totalWaves());
-    }
-
-    /**
-     * Says what the action key would do, each time that changes.
-     *
-     * <p>Alpha-phase scaffolding standing in for an on-screen prompt: the console is not where a
-     * player looks mid-fight, and pillar 5 wants this beside the commander. What it is standing in
-     * for is a label, not a system - the decision is already made in the simulation and published.
-     */
-    private void announceAction() {
-        for (int slot = 0; slot < Players.MAX; slot++) {
-            ActionKind offered = play.newlyOfferedAction(slot);
-            if (offered == null) {
-                continue;
-            }
-            String who = slot == 0 ? "" : "player " + (slot + 1) + " ";
-            Log.info(offered == ActionKind.NONE ? who + "action: nothing in reach" : who + "action: " + offered);
         }
     }
 

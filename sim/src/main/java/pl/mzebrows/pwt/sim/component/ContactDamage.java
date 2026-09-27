@@ -80,6 +80,18 @@ public final class ContactDamage implements Component, Pool.Poolable {
     /** How much of a body this blow pumps up. Zero for everything but the beam. */
     public float bloat;
 
+    /**
+     * The slot of the player behind this blow, whose tally a kill it lands counts for, or {@link
+     * Tally#NOBODY}. Set where the blow is spawned, from whoever fired, swung or crewed it.
+     */
+    public int credit = Tally.NOBODY;
+
+    /** Credits whatever this blow kills to a player's slot, returning this component, for fluent spawning. */
+    public ContactDamage credited(int slot) {
+        this.credit = slot;
+        return this;
+    }
+
     /** Sets the attack and leaves it ready to strike, returning this component, for fluent spawning. */
     public ContactDamage set(float newAmount, int newCooldownTicks, int newVictimInvulnerableTicks) {
         this.amount = newAmount;
@@ -163,6 +175,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
 
     @Override
     public void reset() {
+        credit = Tally.NOBODY;
         amount = 0f;
         cooldownTicks = 0;
         remainingTicks = 0;

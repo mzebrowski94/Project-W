@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
@@ -17,8 +16,12 @@ import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Order;
-import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
+import pl.mzebrows.pwt.ui.hud.DispatchKind;
+import pl.mzebrows.pwt.ui.hud.DispatchSink;
+import pl.mzebrows.pwt.ui.hud.Readout;
+import pl.mzebrows.pwt.ui.hud.ReadoutWriter;
+import pl.mzebrows.pwt.ui.hud.Reporters;
 
 /**
  * The harness state machine, tested with no window and no GL context. Everything the alpha-phase
@@ -296,63 +299,69 @@ class ScenarioSessionTest {
     }
 
     /**
-     * Scaffolding for the console prompt: the action is announced when it changes and not otherwise.
-     * Reporting it every frame is the failure this exists to prevent - a line per frame is a flood,
-     * not a prompt, and the player would stop reading it.
+     * Scaffolding for the console prompt: the action is said when it changes and not otherwise. Saying
+     * it every frame is the failure this exists to prevent - a line per frame is a flood, not a prompt,
+     * and the player would stop reading it.
      */
     @Test
-    void reportsAnActionWhenOneComesWithinReach() {
+    void promptsAnActionWhenOneComesWithinReach() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
+        Narration narration = new Narration(session);
         session.advance(TICK, NOBODY);
+        narration.frame();
 
         putTheTrooperDown(session);
         session.advance(TICK, NOBODY);
+        narration.frame();
 
-        assertThat(session.newlyOfferedAction(0)).isEqualTo(ActionKind.STABILISE);
-    }
-
-    /** The other half of the console scaffolding: which wave has walked in, once, when it does. */
-    @Test
-    void reportsAWaveWhenItArrives() {
-        ScenarioSession session = new ScenarioSession(new OneWave(), SimConfig.defaults());
-
-        session.advance(TICK, NOBODY);
-
-        assertThat(session.newlyArrivedWave()).isEqualTo(1);
-        assertThat(session.totalWaves()).isEqualTo(1);
+        assertThat(narration.readout.player(0).action).isEqualTo(ActionKind.STABILISE);
+        assertThat(narration.console).containsExactly("action: " + ActionKind.STABILISE);
     }
 
     @Test
-    void reportsNothingWhileNoFurtherWaveHasArrived() {
-        ScenarioSession session = new ScenarioSession(new OneWave(), SimConfig.defaults());
-        session.advance(TICK, NOBODY);
-        session.newlyArrivedWave();
-
-        session.advance(TICK, NOBODY);
-
-        assertThat(session.newlyArrivedWave()).isZero();
-    }
-
-    @Test
-    void reportsNothingOnALevelThatSendsNoWaves() {
-        ScenarioSession session = session();
-
-        session.advance(TICK, NOBODY);
-
-        assertThat(session.newlyArrivedWave()).isZero();
-        assertThat(session.totalWaves()).isZero();
-    }
-
-    @Test
-    void reportsNothingWhileTheAvailableActionHasNotChanged() {
+    void promptsNothingWhileTheAvailableActionHasNotChanged() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
+        Narration narration = new Narration(session);
+        narration.frame();
         putTheTrooperDown(session);
         session.advance(TICK, NOBODY);
-        session.newlyOfferedAction(0);
+        narration.frame();
 
         session.advance(TICK, NOBODY);
+        narration.frame();
 
-        assertThat(session.newlyOfferedAction(0)).isNull();
+        assertThat(narration.console).hasSize(1);
+    }
+
+    /** What the screen does each frame after the ticks: read the world, then let the reporters compare. */
+    private static final class Narration implements DispatchSink {
+
+        final Readout readout = new Readout();
+        final List<String> lines = new ArrayList<>();
+        final List<String> console = new ArrayList<>();
+        private final ScenarioSession session;
+        private final ReadoutWriter writer = new ReadoutWriter();
+        private final Reporters reporters;
+
+        Narration(ScenarioSession session) {
+            this.session = session;
+            this.reporters = new Reporters(List.of(new ActionPrompts(slot -> true, console::add)));
+        }
+
+        void frame() {
+            writer.fill(session.simulation(), "", "", readout);
+            reporters.report(readout, this);
+        }
+
+        @Override
+        public void offer(DispatchKind kind, int slot, int a, int b) {
+            lines.add(kind.name());
+        }
+
+        @Override
+        public void reset() {
+            lines.clear();
+        }
     }
 
     /**
@@ -449,25 +458,6 @@ class ScenarioSessionTest {
         @Override
         public void populate(Simulation simulation) {
             simulation.spawnCommander(10f, 10f);
-        }
-    }
-
-    /** A commander and one wave due immediately, for the console line that says what has arrived. */
-    private static final class OneWave implements Scenario {
-        @Override
-        public String name() {
-            return "One wave";
-        }
-
-        @Override
-        public String description() {
-            return "A commander and one lot of aliens, due on the first tick.";
-        }
-
-        @Override
-        public void populate(Simulation simulation) {
-            simulation.spawnCommander(10f, 10f);
-            simulation.waves().add(0f, UnitKind.GRUNT, 2, new TileRect(5, 5, 2, 2));
         }
     }
 

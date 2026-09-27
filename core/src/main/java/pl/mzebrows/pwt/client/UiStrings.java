@@ -26,6 +26,11 @@ public final class UiStrings {
                 Assets.UI_STRINGS, GameProperties.text(Assets.UI_STRINGS, StandardCharsets.UTF_8)));
     }
 
+    /** Words from a file's text, as {@link #load()} reads the shipped one - for a test outside the game. */
+    static UiStrings parse(String text) {
+        return new UiStrings(GameProperties.parse(Assets.UI_STRINGS, text));
+    }
+
     /** The word for a key, or {@code #key} if there is none. */
     public String get(String key) {
         String value = strings.getString(key, "");

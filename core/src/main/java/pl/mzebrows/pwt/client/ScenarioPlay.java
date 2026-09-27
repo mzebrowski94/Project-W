@@ -3,7 +3,6 @@ package pl.mzebrows.pwt.client;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Order;
 
 /**
@@ -78,16 +77,6 @@ public interface ScenarioPlay extends AutoCloseable {
     /** The last squad order a player here gave, for the overlay. Null until one is given. */
     @Nullable
     Order lastOrder();
-
-    /** The action this slot's commander could take right now, if it has changed; see {@link Announcements}. */
-    @Nullable
-    ActionKind newlyOfferedAction(int slot);
-
-    /** The wave that has just arrived, or zero; see {@link Announcements}. */
-    int newlyArrivedWave();
-
-    /** How many waves this level has altogether. */
-    int totalWaves();
 
     /** The slot a local seat plays in, or -1 if it has none. */
     int slotOf(int seat);

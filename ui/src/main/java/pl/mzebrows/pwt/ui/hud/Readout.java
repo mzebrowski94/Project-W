@@ -13,6 +13,9 @@ import pl.mzebrows.pwt.sim.def.Objective;
  */
 public final class Readout {
 
+    /** Player slots, empty or not. */
+    public static final int SLOTS = Players.MAX;
+
     /** Changes whenever the world changes - a restart, a heal, the first world online. */
     public long worldSerial;
 

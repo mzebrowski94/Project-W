@@ -1,5 +1,6 @@
 package pl.mzebrows.pwt.ui.hud;
 
+import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
@@ -28,6 +29,18 @@ public final class PlayerReadout {
     /** Which of the commander's colours he wears. */
     public int variant;
 
+    /** What the action key would do for him right now. */
+    public ActionKind action = ActionKind.NONE;
+
+    /**
+     * His tally for this life (G0044) - kills, goals, men stabilised; the life that just ended while he
+     * waits to come back.
+     */
+    public int kills;
+
+    public int goals;
+    public int stabilised;
+
     void clear() {
         posture = Posture.ABSENT;
         weapon = WeaponKind.SIDEARM;
@@ -36,6 +49,10 @@ public final class PlayerReadout {
         bleedOut = 0f;
         respawnSeconds = 0f;
         variant = 0;
+        action = ActionKind.NONE;
+        kills = 0;
+        goals = 0;
+        stabilised = 0;
     }
 
     void copyFrom(PlayerReadout other) {
@@ -46,5 +63,9 @@ public final class PlayerReadout {
         bleedOut = other.bleedOut;
         respawnSeconds = other.respawnSeconds;
         variant = other.variant;
+        action = other.action;
+        kills = other.kills;
+        goals = other.goals;
+        stabilised = other.stabilised;
     }
 }

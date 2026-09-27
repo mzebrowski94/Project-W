@@ -214,9 +214,8 @@ loop.
   online (ADR 0012). `OnlineSession` is this machine's place in a session: hosting starts a `Sequencer`
   on its own thread and joins it over `127.0.0.1`; joining connects through a `ConditionedTransport`
   whose lag the playtest steps. Input arrives by local seat and the session says which slot each seat
-  plays; `local(slot)` is what the camera frames and what announcements are made for (G0038).
-  `ScenarioWorlds` builds a session's worlds from the host's shipped config. `Announcements` is what the
-  console has been told, shared by both.
+  plays; `local(slot)` is what the camera frames and whom the console's action prompt is for (G0038).
+  `ScenarioWorlds` builds a session's worlds from the host's shipped config.
 - `LaunchOptions` / `PadPolicy` / `ChosenGamepads` - the command line: which copy of the game this is,
   and which pads it reads.
 - `JoinScreen` / `JoinChoices` - the join screen: sessions heard on the network, and a room code or an

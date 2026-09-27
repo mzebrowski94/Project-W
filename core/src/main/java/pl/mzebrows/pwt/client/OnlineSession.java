@@ -24,7 +24,6 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
-import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 
@@ -55,7 +54,6 @@ public final class OnlineSession implements ScenarioPlay {
     private final Clock clock;
     private final String where;
     private final @Nullable Invitation invitation;
-    private final Announcements announcements = new Announcements();
 
     private OverlayMode overlayMode = OverlayMode.PANEL;
     private boolean cosmeticLead = true;
@@ -277,24 +275,6 @@ public final class OnlineSession implements ScenarioPlay {
     @Override
     public @Nullable Order lastOrder() {
         return lastOrder;
-    }
-
-    @Override
-    public @Nullable ActionKind newlyOfferedAction(int slot) {
-        Simulation world = peer.simulation();
-        return world == null || !local(slot) ? null : announcements.newlyOfferedAction(world, slot);
-    }
-
-    @Override
-    public int newlyArrivedWave() {
-        Simulation world = peer.simulation();
-        return world == null ? 0 : announcements.newlyArrivedWave(world);
-    }
-
-    @Override
-    public int totalWaves() {
-        Simulation world = peer.simulation();
-        return world == null ? 0 : world.waves().total();
     }
 
     /**

@@ -7,7 +7,6 @@ import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
@@ -110,30 +109,10 @@ public final class ScenarioSession implements ScenarioPlay {
         }
     }
 
-    private final Announcements announcements = new Announcements();
-
     /** The last squad order the player gave, for the overlay to show. Null until one is given. */
     @Override
     public @Nullable Order lastOrder() {
         return lastOrder;
-    }
-
-    /** The action this slot's commander could take right now, if it has changed; see {@link Announcements}. */
-    @Override
-    public @Nullable ActionKind newlyOfferedAction(int slot) {
-        return announcements.newlyOfferedAction(simulation, slot);
-    }
-
-    /** The number of the wave that has just arrived, or zero; see {@link Announcements}. */
-    @Override
-    public int newlyArrivedWave() {
-        return announcements.newlyArrivedWave(simulation);
-    }
-
-    /** How many waves this level has altogether, for the other half of the line. */
-    @Override
-    public int totalWaves() {
-        return simulation.waves().total();
     }
 
     /**

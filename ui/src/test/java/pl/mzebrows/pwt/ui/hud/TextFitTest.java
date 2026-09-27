@@ -114,6 +114,28 @@ class TextFitTest {
         }
     }
 
+    /** Every dispatch has words, and with its longest player, numbers and name still fits, cursor and all. */
+    @Test
+    void fitsEveryTerminalLineWithItsLongestArgumentsOnA640Canvas() {
+        int columns = TextFit.columns(TOP.textWidth(640), ADVANCE) - 1;
+        String player = STRINGS.getProperty("ui.hud.player").replace("{0}", Integer.toString(Players.MAX)) + " ";
+        String name = "";
+        for (WeaponKind kind : WeaponKind.values()) {
+            name = longestOf(name, STRINGS.getProperty("ui.weapon." + kind.name()));
+        }
+
+        for (DispatchKind kind : DispatchKind.values()) {
+            String template = STRINGS.getProperty(kind.key());
+            assertThat(template).as(kind.key()).isNotNull();
+            String line = template.replace("{0}", player)
+                    .replace("{1}", "99")
+                    .replace("{2}", "99")
+                    .replace("{3}", name);
+
+            assertThat(line.length()).as(line).isLessThanOrEqualTo(columns);
+        }
+    }
+
     @Test
     void fitsAPanelsTextBesideItsPortraitOnEverySixteenByNineScreen() {
         assertThat(PANEL.textColumns(PANEL.quarterWidth(0, 640))).isGreaterThanOrEqualTo(PanelLayout.TEXT_COLUMNS);

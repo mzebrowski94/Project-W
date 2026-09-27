@@ -8,6 +8,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.NotState;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
@@ -249,6 +250,7 @@ public final class CommanderControlSystem extends IteratingSystem {
                 directionX,
                 directionY,
                 FACTION.get(entity).side,
+                Players.credit(entity),
                 muzzle);
         Guns.spend(entity, weapon, weapon.cooldownTicks);
     }

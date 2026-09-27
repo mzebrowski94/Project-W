@@ -6,6 +6,7 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Slowed;
+import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Side;
 
@@ -51,6 +52,8 @@ final class Guns {
      *
      * <p>The aim must be a unit vector already carrying the shooter's cone; the gun's scatter is applied
      * here per pellet, by rotation. Cost is {@link #spend}'s. {@code muzzle} is the caller's scratch.
+     * {@code credit} is the slot of the player whose tally a kill by these shots counts for, or {@link
+     * Tally#NOBODY} (G0044).
      */
     static void volley(
             Spawner spawner,
@@ -64,6 +67,7 @@ final class Guns {
             float aimX,
             float aimY,
             Side side,
+            int credit,
             float[] muzzle) {
         int pellets = weapon.pellets < 1 ? 1 : weapon.pellets;
         for (int pellet = 0; pellet < pellets; pellet++) {
@@ -77,7 +81,7 @@ final class Guns {
                 directionY = aimX * sin + aimY * cos;
             }
             Muzzle.next(x, y, bodyRadius, weapon, gap, directionX, directionY, muzzle);
-            spawner.spawnProjectile(muzzle[0], muzzle[1], directionX, directionY, weapon, side);
+            spawner.spawnProjectile(muzzle[0], muzzle[1], directionX, directionY, weapon, side, credit);
         }
     }
 }

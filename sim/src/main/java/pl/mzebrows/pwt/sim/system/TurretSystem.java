@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -144,7 +145,7 @@ public final class TurretSystem extends EntitySystem {
             swingOnto(turret, toX / distance, toY / distance, intent.firing, deltaTime);
         }
         if (intent.firing) {
-            fire(station, turret);
+            fire(station, turret, Players.credit(rider));
         }
     }
 
@@ -176,7 +177,7 @@ public final class TurretSystem extends EntitySystem {
         float ontoY = toY / distance;
         swingOnto(turret, ontoX, ontoY, true, deltaTime);
         if (turret.aimX * ontoX + turret.aimY * ontoY >= ON_TARGET) {
-            fire(station, turret);
+            fire(station, turret, Players.credit(rider));
         }
     }
 
@@ -210,8 +211,11 @@ public final class TurretSystem extends EntitySystem {
         turret.aim(swung[0], swung[1]);
     }
 
-    /** One shot, out of whichever muzzle is next. The cooldown is counted down by {@code CooldownSystem}. */
-    private void fire(Entity station, Turret turret) {
+    /**
+     * One shot, out of whichever muzzle is next, credited to whoever crews the gun - a commander's
+     * slot, nobody's for a trooper (G0044). The cooldown is counted down by {@code CooldownSystem}.
+     */
+    private void fire(Entity station, Turret turret, int credit) {
         Weapon weapon = WEAPON.get(station);
         if (!Guns.ready(station, weapon)) {
             return;
@@ -229,6 +233,7 @@ public final class TurretSystem extends EntitySystem {
                 turret.aimX,
                 turret.aimY,
                 FACTION.get(station).side,
+                credit,
                 muzzle);
         Guns.spend(station, weapon, weapon.cooldownTicks);
     }

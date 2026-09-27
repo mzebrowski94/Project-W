@@ -4,10 +4,12 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
+import java.util.Arrays;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -17,10 +19,12 @@ import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Respawning;
+import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
@@ -36,6 +40,7 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
 public final class ReadoutWriter {
 
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+    private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
@@ -43,6 +48,7 @@ public final class ReadoutWriter {
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Respawning> RESPAWNING = ComponentMapper.getFor(Respawning.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
+    private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
 
     /** Once: {@code values()} hands out a new array on every call, and this runs every frame. */
     private static final Objective[] OBJECTIVES = Objective.values();
@@ -55,6 +61,12 @@ public final class ReadoutWriter {
     private static final Family TROOPERS = Family.all(Trooper.class).get();
     private static final Family TURRETS =
             Family.all(Turret.class, Appearance.class).get();
+
+    /**
+     * Each slot's tally as it last stood, so a player waiting to respawn still sees the life that just
+     * ended until the new one starts (plan 7.2). Forgotten with the world.
+     */
+    private final int[][] lastLife = new int[Players.MAX][3];
 
     private @Nullable Simulation bound;
     private long serial;
@@ -116,6 +128,10 @@ public final class ReadoutWriter {
                 player.respawnSeconds =
                         Math.max(0, respawning.remainingTicks) * world.config().tickSeconds();
                 player.variant = respawning.slot;
+                int[] last = lastLife[respawning.slot];
+                player.kills = last[0];
+                player.goals = last[1];
+                player.stabilised = last[2];
             }
         }
     }
@@ -131,6 +147,17 @@ public final class ReadoutWriter {
         player.weapon = WEAPON.has(entity) ? WEAPON.get(entity).kind : WeaponKind.SIDEARM;
         player.heat = appearance.heat;
         player.overheated = appearance.overheated;
+        player.action = ACTION.has(entity) ? ACTION.get(entity).available : ActionKind.NONE;
+        if (TALLY.has(entity)) {
+            Tally tally = TALLY.get(entity);
+            player.kills = tally.kills;
+            player.goals = tally.goals;
+            player.stabilised = tally.stabilised;
+            int[] last = lastLife[slot];
+            last[0] = tally.kills;
+            last[1] = tally.goals;
+            last[2] = tally.stabilised;
+        }
         player.posture = switch (appearance.state) {
             case CASUALTY -> Posture.CASUALTY;
             case DYING -> Posture.DYING;
@@ -161,6 +188,9 @@ public final class ReadoutWriter {
 
     private void bind(Simulation world) {
         bound = world;
+        for (int[] last : lastLife) {
+            Arrays.fill(last, 0);
+        }
         serial++;
         commanders = world.engine().getEntitiesFor(COMMANDERS);
         respawns = world.engine().getEntitiesFor(RESPAWNS);

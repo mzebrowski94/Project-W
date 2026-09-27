@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Side;
 
@@ -30,6 +31,7 @@ public final class ControlPointSystem extends EntitySystem {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
+    private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
 
     private final Spawner spawner;
 
@@ -37,6 +39,7 @@ public final class ControlPointSystem extends EntitySystem {
     private ImmutableArray<Entity> holders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
 
     public ControlPointSystem(Spawner spawner) {
         this.spawner = spawner;
@@ -51,6 +54,8 @@ public final class ControlPointSystem extends EntitySystem {
         watchers = engine.getEntitiesFor(
                 Family.all(Perception.class, Position.class).get());
         levels = engine.getEntitiesFor(Family.all(Waves.class).get());
+        commanders =
+                engine.getEntitiesFor(Family.all(Tally.class, Position.class).get());
     }
 
     @Override
@@ -72,6 +77,7 @@ public final class ControlPointSystem extends EntitySystem {
             if (point.heldSeconds >= point.captureSeconds) {
                 point.captured = true;
                 point.heldSeconds = point.captureSeconds;
+                creditTheTaking(at, point.radius);
                 if (point.holdsAfterwards) {
                     standTo(point, at);
                 }
@@ -93,6 +99,19 @@ public final class ControlPointSystem extends EntitySystem {
         spawner.spawnPost(at.x, at.y, point.watchRadius);
         for (int i = 0; i < levels.size(); i++) {
             WAVES.get(levels.get(i)).arm();
+        }
+    }
+
+    /**
+     * A goal on the tally of every commander standing inside the point the tick it is taken (G0044) -
+     * the same men who count as holding it, so a body in its throes takes no credit.
+     */
+    private void creditTheTaking(Position at, float radius) {
+        for (int i = 0; i < commanders.size(); i++) {
+            Entity commander = commanders.get(i);
+            if (!Drivers.held(commander) && within(at, POSITION.get(commander), radius)) {
+                TALLY.get(commander).goals++;
+            }
         }
     }
 

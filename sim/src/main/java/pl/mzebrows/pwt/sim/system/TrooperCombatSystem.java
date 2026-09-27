@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.AiChance;
@@ -154,6 +155,7 @@ public final class TrooperCombatSystem extends EntitySystem {
                 directionX,
                 directionY,
                 FACTION.get(entity).side,
+                Tally.NOBODY,
                 muzzle);
         weapon.remainingTicks = weapon.cooldownTicks;
     }

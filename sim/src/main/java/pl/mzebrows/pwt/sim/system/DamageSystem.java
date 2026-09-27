@@ -9,14 +9,18 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
 import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Casualty;
+import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
@@ -24,8 +28,10 @@ import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
@@ -54,6 +60,9 @@ public final class DamageSystem extends IteratingSystem {
     private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
     private static final ComponentMapper<Bloat> BLOAT = ComponentMapper.getFor(Bloat.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
+    private static final ComponentMapper<BlastsOnDeath> REACTION = ComponentMapper.getFor(BlastsOnDeath.class);
+    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
+    private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -63,6 +72,9 @@ public final class DamageSystem extends IteratingSystem {
 
     /** Every entity with a handle, for finding one named by it. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
+
+    /** Every commander, for crediting a kill to the one in a slot. */
+    private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
 
     public DamageSystem(SimConfig config, Spawner spawner) {
         super(Family.all(Health.class, Damage.class).get());
@@ -75,6 +87,8 @@ public final class DamageSystem extends IteratingSystem {
     public void addedToEngine(Engine engine) {
         super.addedToEngine(engine);
         handled = engine.getEntitiesFor(Family.all(Handle.class).get());
+        commanders =
+                engine.getEntitiesFor(Family.all(Commander.class, Tally.class).get());
     }
 
     @Override
@@ -100,6 +114,7 @@ public final class DamageSystem extends IteratingSystem {
         float slowFactor = damage.slowFactor;
         int slowTicks = damage.slowTicks;
         float bloat = damage.bloat;
+        int credit = damage.credit;
         damage.reset();
         if (INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active()) {
             return;
@@ -132,12 +147,33 @@ public final class DamageSystem extends IteratingSystem {
             }
             float travelX = VELOCITY.has(entity) ? VELOCITY.get(entity).x : 0f;
             float travelY = VELOCITY.has(entity) ? VELOCITY.get(entity).y : 0f;
-            Deaths.kill(spawner, entity);
+            if (Deaths.kill(spawner, entity)) {
+                credit(entity, credit);
+            }
             clinch(entity, Handles.resolve(handled, locksOnDeath), deathLock, travelX, travelY, carrySpeed, carryDecay);
             return;
         }
         if (shove > 0f && VELOCITY.has(entity)) {
             VELOCITY.get(entity).set(shoveX * shove, shoveY * shove);
+        }
+    }
+
+    /**
+     * Whose kill this was (G0044). An enemy's death counts on the tally of the player whose blow it was;
+     * friendly fire and anything nobody's counts for nobody. Whatever the body sets off when it goes -
+     * a barrel, a charged corpse - carries the same credit, so a blast is credited to whoever's blow
+     * set it off.
+     */
+    private void credit(Entity entity, int credit) {
+        if (REACTION.has(entity)) {
+            REACTION.get(entity).credit = credit;
+        }
+        if (credit == Tally.NOBODY || !FACTION.has(entity) || FACTION.get(entity).side != Side.ALIEN) {
+            return;
+        }
+        Entity killer = Players.inSlot(commanders, credit);
+        if (killer != null) {
+            TALLY.get(killer).kills++;
         }
     }
 

@@ -7,6 +7,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Tally;
 
 /**
  * How many commanders there can be, and which one is in a given slot.
@@ -29,6 +30,14 @@ public final class Players {
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     private Players() {}
+
+    /**
+     * The slot a blow from this entity is credited to (G0044): a commander's own slot, and {@link
+     * Tally#NOBODY} for anything else - a trooper's kills credit no player.
+     */
+    public static int credit(@Nullable Entity entity) {
+        return entity != null && COMMANDER.has(entity) ? COMMANDER.get(entity).slot : Tally.NOBODY;
+    }
 
     /**
      * The commander sitting in this slot, or null if nobody is.

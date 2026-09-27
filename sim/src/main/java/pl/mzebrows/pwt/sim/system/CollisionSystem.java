@@ -315,6 +315,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         // Recorded, not applied, as the shove is.
         owed.slow(attack.slowFactor, attack.slowTicks);
         owed.pump(attack.bloat);
+        owed.creditTo(attack.credit);
         recordSource(attacker, owed);
         lock(attacker, target, attack, owed);
     }

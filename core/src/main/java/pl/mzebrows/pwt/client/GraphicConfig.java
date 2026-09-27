@@ -6,6 +6,7 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.ui.hud.Terminal;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.LayoutSpec;
 
@@ -31,6 +32,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param orderMark how to draw a unit that is acting on an order
  * @param heatMark how to draw how hot the gun a unit is holding has become
  * @param camera how the view follows what it is watching, and how far out it may sit
+ * @param terminal how the top bar's terminal paces its lines
  */
 public record GraphicConfig(
         float virtualHeight,
@@ -51,7 +53,8 @@ public record GraphicConfig(
         ChargedMark chargedMark,
         OrderMark orderMark,
         HeatMark heatMark,
-        CameraDirector.Settings camera) {
+        CameraDirector.Settings camera,
+        Terminal.Settings terminal) {
 
     private static final String FILE = "graphic.properties";
 
@@ -95,7 +98,8 @@ public record GraphicConfig(
                 chargedMark(properties),
                 orderMark(properties),
                 heatMark(properties),
-                camera(properties));
+                camera(properties),
+                terminal(properties));
     }
 
     /**
@@ -117,6 +121,21 @@ public record GraphicConfig(
                 properties.getFloat("graphic.view.aspectMax", 2.39f),
                 properties.getFloat("graphic.view.topShare", 0.5f),
                 metrics);
+    }
+
+    /** The terminal (plan 8.4), under {@code graphic.hud.terminal}. Its line count also sizes the top bar. */
+    private static Terminal.Settings terminal(GameProperties properties) {
+        return new Terminal.Settings(
+                properties.getInt("graphic.hud.terminal.lines", 2),
+                properties.getFloat("graphic.hud.terminal.charsPerSecond", 45f),
+                properties.getFloat("graphic.hud.terminal.highCharsPerSecond", 0f),
+                properties.getFloat("graphic.hud.terminal.minHoldSeconds", 1.2f),
+                properties.getFloat("graphic.hud.terminal.maxAgeSeconds", 4f),
+                properties.getInt("graphic.hud.terminal.queue", 8),
+                properties.getFloat("graphic.hud.terminal.coalesceSeconds", 2f),
+                properties.getFloat("graphic.hud.terminal.blinkSeconds", 0.5f),
+                properties.getFloat("graphic.hud.terminal.cursorLingerSeconds", 1f),
+                properties.getInt("graphic.hud.terminal.fewTroopers", 5));
     }
 
     private static HudStyle hud(GameProperties properties) {

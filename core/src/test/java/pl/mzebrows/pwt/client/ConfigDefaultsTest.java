@@ -160,7 +160,8 @@ class ConfigDefaultsTest {
                         charged(),
                         ordered(),
                         heat(),
-                        camera()))
+                        camera(),
+                        GraphicConfig.load().terminal()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

@@ -157,6 +157,20 @@ public final class Damage implements Component, Pool.Poolable {
         return knockbackSpeed > 0f;
     }
 
+    /**
+     * The slot whose tally a kill by this tick's blows counts for, or {@link Tally#NOBODY}. When two
+     * players' blows land on one tick the <strong>higher slot</strong> is credited - the rule orders
+     * already follow (G0028) - never whichever the collision grid happened to visit first.
+     */
+    public int credit = Tally.NOBODY;
+
+    /** Records the player behind a blow, keeping the higher slot of the tick. */
+    public void creditTo(int slot) {
+        if (slot > credit) {
+            credit = slot;
+        }
+    }
+
     /** Records who to hold still if this kills, keeping the longest lock asked for this tick. */
     public void lockOnDeath(long attacker, int ticks, float carrySpeed, float carryDecay) {
         if (ticks <= deathLockTicks) {
@@ -186,5 +200,6 @@ public final class Damage implements Component, Pool.Poolable {
         slowFactor = 1f;
         slowTicks = 0;
         bloat = 0f;
+        credit = Tally.NOBODY;
     }
 }

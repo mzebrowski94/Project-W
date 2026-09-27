@@ -36,6 +36,19 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
      */
     public Look look = Look.BLAST;
 
+    /**
+     * The slot whose tally the blast it leaves credits: the thrower of a grenade, the shooter of an
+     * explosive shot, or - written by the blow that kills a barrel or a charged body - whoever landed
+     * it. {@link Tally#NOBODY} otherwise.
+     */
+    public int credit = Tally.NOBODY;
+
+    /** Credits the blast this leaves to a player's slot, returning this component, for fluent spawning. */
+    public BlastsOnDeath credited(int slot) {
+        this.credit = slot;
+        return this;
+    }
+
     /** Sets the reaction and returns this component, for fluent spawning. */
     public BlastsOnDeath set(float newRadius, float newBittenRadius) {
         this.radius = newRadius;
@@ -77,5 +90,6 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
         bittenRadius = 0f;
         leavesFire = true;
         look = Look.BLAST;
+        credit = Tally.NOBODY;
     }
 }

@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import pl.mzebrows.pwt.ui.hud.TallyIcon;
 import pl.mzebrows.pwt.ui.layout.LayoutSpec;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
@@ -32,6 +33,9 @@ public final class Hud implements Disposable {
     private final BitmapFont pixelFont = UiFont.load();
     private final Texture pixel = whitePixel();
     private final Texture reticle;
+    private final Texture skull = icon(TallyIcon.KILLS);
+    private final Texture flag = icon(TallyIcon.GOALS);
+    private final Texture plus = icon(TallyIcon.STABILISED);
     private final SystemPointer pointer;
     private ScreenLayout layout = ScreenLayout.NONE;
     private boolean warnedSmall;
@@ -96,6 +100,13 @@ public final class Hud implements Disposable {
         pixelFont.draw(batch, text, x, top);
     }
 
+    /** Draws a tally icon whose top is at {@code top}, like a capital's, a UI pixel per texel, tinted. */
+    public void icon(TallyIcon icon, int x, int top, Color color) {
+        batch.setColor(color);
+        batch.draw(texture(icon), x, top - TallyIcon.SIZE, TallyIcon.SIZE, TallyIcon.SIZE);
+        batch.setColor(Color.WHITE);
+    }
+
     /**
      * Draws the reticle centred on a screen pixel, a UI pixel per texel, tinted. Screen pixels rather than
      * the UI grid, so it follows the mouse exactly instead of stepping by a whole UI pixel.
@@ -140,6 +151,9 @@ public final class Hud implements Disposable {
         pixelFont.dispose();
         pixel.dispose();
         reticle.dispose();
+        skull.dispose();
+        flag.dispose();
+        plus.dispose();
     }
 
     /**
@@ -168,6 +182,31 @@ public final class Hud implements Disposable {
                     pixmap.drawPixel(x, y);
                 } else if (besideAnArm(lit, x, y)) {
                     pixmap.setColor(0f, 0f, 0f, 0.85f);
+                    pixmap.drawPixel(x, y);
+                }
+            }
+        }
+        Texture texture = new Texture(pixmap);
+        pixmap.dispose();
+        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        return texture;
+    }
+
+    private Texture texture(TallyIcon icon) {
+        return switch (icon) {
+            case KILLS -> skull;
+            case GOALS -> flag;
+            case STABILISED -> plus;
+        };
+    }
+
+    /** A tally icon as a white texture to tint - the atlas's {@code ui/tally/*}, before there is an atlas. */
+    private static Texture icon(TallyIcon icon) {
+        Pixmap pixmap = new Pixmap(TallyIcon.SIZE, TallyIcon.SIZE, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.WHITE);
+        for (int y = 0; y < TallyIcon.SIZE; y++) {
+            for (int x = 0; x < TallyIcon.SIZE; x++) {
+                if (icon.lit(x, y)) {
                     pixmap.drawPixel(x, y);
                 }
             }

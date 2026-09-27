@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Steering;
+import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Weapon;
 
 /**
@@ -210,6 +211,7 @@ public final class EnemyRangedSystem extends EntitySystem {
                 directionX,
                 directionY,
                 FACTION.get(entity).side,
+                Tally.NOBODY,
                 muzzle);
         Guns.spend(entity, weapon, ranged.cooldownFor(weapon.cooldownTicks, distance));
         ranged.shotsOnTarget++;

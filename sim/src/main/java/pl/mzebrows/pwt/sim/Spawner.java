@@ -62,6 +62,7 @@ import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Taking;
+import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Trooper;
@@ -145,6 +146,8 @@ public final class Spawner {
         SimConfig.GrenadeConfig grenade = config.grenade();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Commander.class).set(slot));
+        // His life's count, from nothing: a respawn is a new man with a new tally (G0044).
+        entity.add(engine.createComponent(Tally.class));
         entity.add(engine.createComponent(Focus.class));
         entity.add(engine.createComponent(Faction.class).set(Side.PLAYER));
         entity.add(engine.createComponent(Position.class).set(x, y));
@@ -733,9 +736,11 @@ public final class Spawner {
     /**
      * Spawns a projectile travelling along the given unit direction, on the firer's side so it cannot
      * hit them or anything else friendly. The direction must already be normalised. Everything about
-     * the shot, its look included, comes from the gun's definition.
+     * the shot, its look included, comes from the gun's definition. {@code credit} is the slot of the
+     * player a kill by it counts for, or {@link Tally#NOBODY}.
      */
-    public Entity spawnProjectile(float x, float y, float directionX, float directionY, Weapon weapon, Side side) {
+    public Entity spawnProjectile(
+            float x, float y, float directionX, float directionY, Weapon weapon, Side side, int credit) {
         return projectile(
                 x,
                 y,
@@ -753,7 +758,8 @@ public final class Spawner {
                 weapon.slowTicks,
                 weapon.bloatPerShot,
                 weapon.trailLength,
-                side);
+                side,
+                credit);
     }
 
     /**
@@ -778,7 +784,8 @@ public final class Spawner {
                 ticks(gun.slowSeconds()),
                 gun.bloatPerShot(),
                 gun.trailLength(),
-                side);
+                side,
+                Tally.NOBODY);
     }
 
     private Entity projectile(
@@ -798,7 +805,8 @@ public final class Spawner {
             int slowTicks,
             float bloatPerShot,
             float trailLength,
-            Side side) {
+            Side side,
+            int credit) {
         Entity entity = engine.createEntity();
         Projectile shot = engine.createComponent(Projectile.class)
                 .from(x, y)
@@ -819,10 +827,13 @@ public final class Spawner {
                 .set(damage, pierceIntervalTicks, 0)
                 .wounding()
                 .slowing(slowFactor, slowTicks)
-                .pumping(bloatPerShot));
+                .pumping(bloatPerShot)
+                .credited(credit));
         if (blastRadius > 0f) {
             // A shot that goes off where it stops, by dying (G0018) - on a hit or at the arena edge.
-            entity.add(engine.createComponent(BlastsOnDeath.class).set(blastRadius, blastRadius));
+            entity.add(engine.createComponent(BlastsOnDeath.class)
+                    .set(blastRadius, blastRadius)
+                    .credited(credit));
         }
         if (slicks.leavesAnything()) {
             // And one that ruins the ground where it stops; a gun may name both.
@@ -911,7 +922,8 @@ public final class Spawner {
                         melee.clinchCarrySpeed,
                         melee.clinchCarryDecay,
                         melee.knockbackSpeed,
-                        melee.knockbackDecay));
+                        melee.knockbackDecay)
+                .credited(Players.credit(owner)));
         entity.add(engine.createComponent(Appearance.class).set(Look.STRIKE));
         admit(entity);
         return entity;
@@ -921,10 +933,20 @@ public final class Spawner {
      * Spawns a grenade travelling along the given unit direction, thrown by a unit that carries one.
      *
      * <p>Non-solid and movable, so the solver leaves walls to {@code GrenadeSystem}, which bounces it.
-     * Harmless in the air: everything it does, it does by dying.
+     * Harmless in the air: everything it does, it does by dying. {@code credit} is the slot of the
+     * player who threw it, or {@link Tally#NOBODY}.
      */
-    public Entity spawnGrenade(float x, float y, float directionX, float directionY, Thrower thrower) {
-        return grenade(x, y, directionX, directionY, thrower.speed, thrower.range, thrower.radius, thrower.blastRadius);
+    public Entity spawnGrenade(float x, float y, float directionX, float directionY, Thrower thrower, int credit) {
+        return grenade(
+                x,
+                y,
+                directionX,
+                directionY,
+                thrower.speed,
+                thrower.range,
+                thrower.radius,
+                thrower.blastRadius,
+                credit);
     }
 
     /**
@@ -941,7 +963,8 @@ public final class Spawner {
                 grenade.speed(),
                 grenade.range(),
                 grenade.radius(),
-                grenade.blastRadius());
+                grenade.blastRadius(),
+                Tally.NOBODY);
     }
 
     private Entity grenade(
@@ -952,7 +975,8 @@ public final class Spawner {
             float speed,
             float range,
             float radius,
-            float blastRadius) {
+            float blastRadius,
+            int credit) {
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Thrown.class).set(speed, range));
         entity.add(engine.createComponent(Position.class).set(x, y));
@@ -961,7 +985,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(radius));
         entity.add(engine.createComponent(Collider.class).set(false, true));
         // Nothing bites a grenade out of the air, so both ways of ending it are the same circle.
-        entity.add(engine.createComponent(BlastsOnDeath.class).set(blastRadius, blastRadius));
+        entity.add(engine.createComponent(BlastsOnDeath.class)
+                .set(blastRadius, blastRadius)
+                .credited(credit));
         entity.add(engine.createComponent(Appearance.class).set(Look.GRENADE));
         admit(entity);
         return entity;
@@ -974,17 +1000,20 @@ public final class Spawner {
      * test. The body is the drawn circle, and the same number as the lethal one.
      */
     public Entity spawnBlast(float x, float y, float radius) {
-        return spawnBlast(x, y, radius, true, Look.BLAST);
+        return spawnBlast(x, y, radius, true, Look.BLAST, Tally.NOBODY);
     }
 
     /**
      * The same, saying whether it leaves the ground burning and what it is drawn as. Everything that
-     * explodes leaves fire and is drawn as an explosion, but one.
+     * explodes leaves fire and is drawn as an explosion, but one. {@code credit} is the slot what it
+     * kills counts for, or {@link Tally#NOBODY}.
      */
-    public Entity spawnBlast(float x, float y, float radius, boolean leavesFire, Look look) {
+    public Entity spawnBlast(float x, float y, float radius, boolean leavesFire, Look look, int credit) {
         SimConfig.BlastConfig blast = config.blast();
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Blast.class).set(blast.damage(), ticks(blast.durationSeconds())));
+        entity.add(engine.createComponent(Blast.class)
+                .set(blast.damage(), ticks(blast.durationSeconds()))
+                .credited(credit));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(radius));

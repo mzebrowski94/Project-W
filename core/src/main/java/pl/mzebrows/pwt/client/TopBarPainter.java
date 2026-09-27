@@ -1,9 +1,11 @@
 package pl.mzebrows.pwt.client;
 
+import java.util.Arrays;
 import java.util.List;
 import pl.mzebrows.pwt.ui.hud.Goal;
 import pl.mzebrows.pwt.ui.hud.GoalLine;
 import pl.mzebrows.pwt.ui.hud.Readout;
+import pl.mzebrows.pwt.ui.hud.Terminal;
 import pl.mzebrows.pwt.ui.hud.TextFit;
 import pl.mzebrows.pwt.ui.hud.TopBarLayout;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
@@ -12,13 +14,16 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
 /**
  * The top bar ({@code UI:hud/top/...}): the mission, dim - read once; the current goal, bright - the one
- * line always current; two lines for the terminal (empty until stage 6); and the dev overlay's panel on
- * the right.
+ * line always current; the terminal's lines under them, the newest at the bottom, bright and typed out,
+ * the older ones dim above it; and the dev overlay's panel on the right.
  *
  * <p>Content sits inside the view's span and hangs from the bar's bottom edge, the one touching the
  * view, so a taller bar grows empty space outwards. Text is rebuilt only when what it says changes.
  */
 final class TopBarPainter {
+
+    /** The mission and the goal. */
+    private static final int LINES_ABOVE_TERMINAL = 2;
 
     private final Hud hud;
     private final UiStrings strings;
@@ -31,6 +36,13 @@ final class TopBarPainter {
     private String builtMission = "";
     private String builtPlanet = "";
     private int builtRevision = -1;
+
+    /** The terminal's lines, fitted to the bar, newest first; and the part of the newest typed so far. */
+    private final String[] said;
+
+    private int builtTerminal = -1;
+    private String typed = "";
+    private int typedLength = -1;
     private ScreenLayout builtFor = ScreenLayout.NONE;
 
     TopBarPainter(Hud hud, UiStrings strings, HudStyle style, HudMetrics metrics) {
@@ -39,16 +51,26 @@ final class TopBarPainter {
         this.style = style;
         this.metrics = metrics;
         this.bar = new TopBarLayout(metrics.padding(), style.overlayWidthShare());
+        this.said = new String[Math.max(1, metrics.topLines() - LINES_ABOVE_TERMINAL)];
+        Arrays.fill(said, "");
     }
 
     /**
      * Draws the bar. {@code overlay} is the dev overlay's lines, most useful first, or empty when it is
      * off; {@code mode} says whether they go in the panel or over the view's corner.
      */
-    void render(ScreenLayout layout, Readout readout, GoalLine goalLine, List<String> overlay, OverlayMode mode) {
+    void render(
+            ScreenLayout layout,
+            Readout readout,
+            GoalLine goalLine,
+            Terminal terminal,
+            List<String> overlay,
+            OverlayMode mode) {
         Rect top = layout.topBar();
         int span = layout.contentRight() - layout.contentLeft();
+        boolean resized = !layout.equals(builtFor);
         rebuild(layout, readout, goalLine, span);
+        rebuildTerminal(terminal, resized, TextFit.columns(bar.textWidth(span), UiFont.ADVANCE) - 1);
         int padding = metrics.padding();
         int line = metrics.fontSize() + metrics.leading();
         int left = layout.contentLeft();
@@ -58,6 +80,7 @@ final class TopBarPainter {
         if (!top.isEmpty()) {
             hud.text(mission, left + padding, blockTop, style.textDim());
             hud.text(goal, left + padding, blockTop - line, goalLine.bright() ? style.text() : style.textDim());
+            terminal(terminal, left + padding, blockTop - LINES_ABOVE_TERMINAL * line, line);
             if (mode == OverlayMode.PANEL) {
                 panel(overlay, left + span - bar.overlayWidth(span), top.y(), bar.overlayWidth(span), blockTop, line);
             }
@@ -66,6 +89,40 @@ final class TopBarPainter {
             expanded(overlay, layout.view(), line);
         }
         hud.endCanvas();
+    }
+
+    /**
+     * The terminal's lines, newest on the bottom row so a new line pushes the others up; the newest as far
+     * as it is typed, with the cursor after it while it blinks.
+     */
+    private void terminal(Terminal terminal, int x, int firstTop, int line) {
+        int bottomRow = said.length - 1;
+        for (int age = 1; age < terminal.showing(); age++) {
+            hud.text(said[age], x, firstTop - (bottomRow - age) * line, style.textDim());
+        }
+        if (terminal.showing() == 0) {
+            return;
+        }
+        int top = firstTop - bottomRow * line;
+        hud.text(typed, x, top, style.text());
+        if (terminal.cursor()) {
+            hud.text("_", x + typed.length() * UiFont.ADVANCE, top, style.text());
+        }
+    }
+
+    private void rebuildTerminal(Terminal terminal, boolean resized, int columns) {
+        if (resized || terminal.revision() != builtTerminal) {
+            for (int age = 0; age < said.length; age++) {
+                said[age] = age < terminal.showing() ? TextFit.fit(terminal.line(age), columns) : "";
+            }
+            builtTerminal = terminal.revision();
+            typedLength = -1;
+        }
+        int length = Math.min(terminal.revealed(), said[0].length());
+        if (length != typedLength) {
+            typed = said[0].substring(0, length);
+            typedLength = length;
+        }
     }
 
     private void panel(List<String> lines, int x, int bottom, int width, int blockTop, int line) {

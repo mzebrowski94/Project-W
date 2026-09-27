@@ -73,6 +73,7 @@ public final class Components {
                     Strike.class,
                     Stunned.class,
                     Taking.class,
+                    Tally.class,
                     Thrower.class,
                     Thrown.class,
                     Trooper.class,

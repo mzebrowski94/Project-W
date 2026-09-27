@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Intent;
@@ -174,7 +175,12 @@ public final class GrenadeSystem extends EntitySystem {
             float directionY = towardsY / distance;
             float muzzle = BODY.get(entity).radius + thrower.radius + MUZZLE_GAP;
             spawner.spawnGrenade(
-                    at.x + directionX * muzzle, at.y + directionY * muzzle, directionX, directionY, thrower);
+                    at.x + directionX * muzzle,
+                    at.y + directionY * muzzle,
+                    directionX,
+                    directionY,
+                    thrower,
+                    Players.credit(entity));
             thrower.remainingTicks = thrower.cooldownTicks;
         }
     }

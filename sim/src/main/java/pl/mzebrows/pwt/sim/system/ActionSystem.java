@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 
@@ -47,6 +48,7 @@ import pl.mzebrows.pwt.sim.def.ActionKind;
  */
 public final class ActionSystem extends EntitySystem {
 
+    private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
     private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
 
@@ -107,7 +109,11 @@ public final class ActionSystem extends EntitySystem {
             }
             action.available = ActionKind.STABILISE;
             if (acting) {
-                Aid.work(subject, deltaTime, reviveHealthFraction, reviveInvulnerableSeconds);
+                if (Aid.work(subject, deltaTime, reviveHealthFraction, reviveInvulnerableSeconds)
+                        && TALLY.has(commander)) {
+                    // A stabilise is a stabilise, whoever he put back on his feet (G0044).
+                    TALLY.get(commander).stabilised++;
+                }
             } else {
                 Aid.letGo(subject);
             }

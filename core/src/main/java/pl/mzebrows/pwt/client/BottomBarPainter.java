@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.graphics.Color;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
@@ -13,6 +14,7 @@ import pl.mzebrows.pwt.ui.hud.PanelLayout;
 import pl.mzebrows.pwt.ui.hud.PlayerReadout;
 import pl.mzebrows.pwt.ui.hud.Posture;
 import pl.mzebrows.pwt.ui.hud.Readout;
+import pl.mzebrows.pwt.ui.hud.TallyIcon;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
@@ -32,6 +34,12 @@ final class BottomBarPainter {
     private static final int HEAT_BAR_WIDTH = 68;
     private static final float DIM_ALERT = 0.55f;
 
+    /** The tally row's marks, in order. */
+    private static final TallyIcon[] TALLY_ICONS = {TallyIcon.KILLS, TallyIcon.GOALS, TallyIcon.STABILISED};
+
+    /** Characters a count takes at most: {@code 999+}. */
+    private static final int TALLY_COLUMNS = 4;
+
     private final Hud hud;
     private final HudStyle style;
     private final HudMetrics metrics;
@@ -47,6 +55,8 @@ final class BottomBarPainter {
     private final String rollCall;
     private final String[] kia = new String[Players.MAX];
     private final int[] kiaTenths = new int[Players.MAX];
+    private final int[][] tallyShown = new int[Players.MAX][3];
+    private final String[][] tallyText = new String[Players.MAX][3];
     private final Color dimAlert;
     private final int weaponColumns;
 
@@ -67,6 +77,8 @@ final class BottomBarPainter {
             labels[slot] = strings.format("ui.hud.player", slot + 1);
             kia[slot] = "";
             kiaTenths[slot] = -1;
+            Arrays.fill(tallyShown[slot], -1);
+            Arrays.fill(tallyText[slot], "");
         }
         this.down = strings.get("ui.hud.down");
         this.kiaTemplate = strings.get("ui.hud.kia");
@@ -146,7 +158,41 @@ final class BottomBarPainter {
         } else if (player.posture == Posture.CASUALTY) {
             hud.text(weapons.getOrDefault(player.weapon, ""), textX, row, style.textDim());
         }
-        // Row 3 is the tally's, which arrives with stage 7.
+
+        row -= line;
+        if (player.posture != Posture.ABSENT) {
+            tally(slot, player, textX, row);
+        }
+    }
+
+    private static int count(PlayerReadout player, int icon) {
+        return switch (icon) {
+            case 0 -> player.kills;
+            case 1 -> player.goals;
+            default -> player.stabilised;
+        };
+    }
+
+    /**
+     * Row 3: the tally, dim - a skull and his kills, a flag and his goals, a green plus and the men he
+     * put back on their feet. Icons and numbers only; the words are the pause menu's (plan 7.2). Counts
+     * are turned into text only when they change.
+     */
+    private void tally(int slot, PlayerReadout player, int x, int row) {
+        int[] shown = tallyShown[slot];
+        String[] text = tallyText[slot];
+        int group = TallyIcon.SIZE + 2 + TALLY_COLUMNS * UiFont.ADVANCE + UiFont.ADVANCE;
+        for (int i = 0; i < TALLY_ICONS.length; i++) {
+            int now = count(player, i);
+            if (shown[i] != now) {
+                shown[i] = now;
+                text[i] = TallyIcon.count(now);
+            }
+            TallyIcon icon = TALLY_ICONS[i];
+            Color tint = icon == TallyIcon.STABILISED ? palette.colorFor(Look.MENDING) : style.textDim();
+            hud.icon(icon, x + i * group, row, tint);
+            hud.text(text[i], x + i * group + TallyIcon.SIZE + 2, row, style.textDim());
+        }
     }
 
     /**

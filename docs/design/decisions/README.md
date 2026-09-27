@@ -52,6 +52,7 @@ mechanic you are about to write appears there, it has already been rejected and 
 | [G0041](G0041-a-squad-spreads-as-a-pack-does.md) | A squad walks to a point and after the commander on the pack's own spread (G0033), and a follower aims at where he is going. | formation slots round the commander; a separation force or boids; aiming ahead of him all the way in | accepted |
 | [G0042](G0042-a-stuck-man-detours.md) | A trooper who has stopped getting anywhere detours to his own side; boulders are laid off rock. | re-pathing on a block; teleporting or nudging; rolling the side; a rock margin on every scatter | accepted |
 | [G0043](G0043-the-first-atlas-is-the-commanders.md) | The first atlas is the commander's puppet, his portrait and the UI skin; every other look stays a shape until its own record, and a missing puppet falls back to the shape. Supersedes G0003's temporary half for those looks. | sprites for other looks without a record; choosing a puppet by class or component; gameplay reading a sprite; animation on the wall clock | accepted |
+| [G0044](G0044-a-tally-belongs-to-a-life.md) | A tally belongs to a life: kills, goals and men stabilised live on the commander and die with him; credit is the slot the killing blow carried, the higher slot on a tie; a blast carries the credit of the blow that set it off; only the other side's dead count. | a score or currency; a tally on the level or across lives; credit by entity or handle; the grid's first visit deciding; a trooper's kill for the commander who ordered him | accepted |
 
 ## When to write one
 

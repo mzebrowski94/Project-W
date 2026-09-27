@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Collider;
+import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Velocity;
@@ -22,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 final class Deaths {
 
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
+    private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
@@ -41,18 +43,22 @@ final class Deaths {
      * - anything shot - the body has nothing to hide and reads as dead at once. What keeps a corpse
      * from still chasing is that the drivers treat dying as inert in its own right, not a stun
      * standing in for it.
+     *
+     * <p>Returns whether this was the blow that killed it - false for a body already dead or already in
+     * its throes, so a death is credited once however often the corpse is hit (G0044).
      */
-    static void kill(Spawner spawner, Entity entity) {
+    static boolean kill(Spawner spawner, Entity entity) {
         if (VELOCITY.has(entity)) {
             VELOCITY.get(entity).set(0f, 0f);
         }
         if (!DYING.has(entity)) {
+            boolean alive = !DEAD.has(entity);
             spawner.markDead(entity);
-            return;
+            return alive;
         }
         Dying throes = DYING.get(entity);
         if (throes.begun) {
-            return;
+            return false;
         }
         throes.begin();
         if (COLLIDER.has(entity)) {
@@ -61,5 +67,6 @@ final class Deaths {
         if (INVULNERABLE.has(entity)) {
             INVULNERABLE.get(entity).grant(throes.throesTicks);
         }
+        return true;
     }
 }

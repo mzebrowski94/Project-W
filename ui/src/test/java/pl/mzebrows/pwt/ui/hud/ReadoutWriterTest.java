@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Respawning;
+import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
@@ -124,6 +125,44 @@ class ReadoutWriterTest {
         assertThat(player.posture).isEqualTo(Posture.RESPAWNING);
         assertThat(player.respawnSeconds).isCloseTo(1.5f, TOLERANCE);
         assertThat(player.variant).isEqualTo(3);
+    }
+
+    @Test
+    void copiesHisTally() {
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 2);
+        commander.getComponent(Tally.class).kills = 7;
+        commander.getComponent(Tally.class).goals = 1;
+        commander.getComponent(Tally.class).stabilised = 2;
+
+        PlayerReadout player = fill(new ReadoutWriter(), world).player(2);
+
+        assertThat(player.kills).isEqualTo(7);
+        assertThat(player.goals).isEqualTo(1);
+        assertThat(player.stabilised).isEqualTo(2);
+    }
+
+    /** Dead and waiting, he still sees what his last life came to - until the new one starts from nothing. */
+    @Test
+    void keepsTheLastLifeUntilHeComesBack() {
+        ReadoutWriter writer = new ReadoutWriter();
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 1);
+        commander.getComponent(Tally.class).kills = 5;
+        fill(writer, world);
+        world.engine().removeEntity(commander);
+        Entity pending = world.engine().createEntity();
+        pending.add(world.engine().createComponent(Respawning.class).set(90, 0f, 0f, 0, 1));
+        world.engine().addEntity(pending);
+
+        PlayerReadout waiting = fill(writer, world).player(1);
+        world.engine().removeEntity(pending);
+        world.spawnCommander(40f, 40f, 1);
+        PlayerReadout back = fill(writer, world).player(1);
+
+        assertThat(waiting.posture).isEqualTo(Posture.RESPAWNING);
+        assertThat(waiting.kills).isEqualTo(5);
+        assertThat(back.kills).isZero();
     }
 
     @Test

@@ -36,6 +36,18 @@ public final class Blast implements Component, Pool.Poolable {
     /** True once it has caught what was standing in it. */
     public boolean spent;
 
+    /**
+     * The slot whose tally what it kills counts for: whoever threw the grenade, or whoever's blow set off
+     * the thing that exploded. {@link Tally#NOBODY} for a blast nobody caused.
+     */
+    public int credit = Tally.NOBODY;
+
+    /** Credits what this blast kills to a player's slot, returning this component, for fluent spawning. */
+    public Blast credited(int slot) {
+        this.credit = slot;
+        return this;
+    }
+
     /** Sets the blast and starts its flash, returning this component, for fluent spawning. */
     public Blast set(float newDamage, int newDurationTicks) {
         this.damage = newDamage;
@@ -56,5 +68,6 @@ public final class Blast implements Component, Pool.Poolable {
         durationTicks = 0;
         remainingTicks = 0;
         spent = false;
+        credit = Tally.NOBODY;
     }
 }
