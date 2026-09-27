@@ -36,6 +36,11 @@ Key added: `net.session.redundantTicks=3`.
 | `latencySteps` | Now `NetConfig.latencySteps`, read from the same key (`@ConfigKey("conditions.latencySteps")`); must be non-empty and non-negative. | Key unchanged; `readsTheLatencyStepsAsAList`. |
 | - | Full `verify.sh` green, 1477 tests. No key added, moved or renamed. | - |
 
+### Stopped here (2026-09-27)
+
+Stage 4 (splits), stage 5 (X2 delta held input, X3 `ScenarioWorlds` into `net`) and E1 (429 retry) are in
+`docs/backlog.md`, each with what brings it back. D4 needs no entry: measured, it costs nothing.
+
 Stage 1 deliverable: verify, propose, plan. **No production code changed.** Baseline `:net:test` green (65
 tests). Numbers come from throwaway probes (`Zz*ProbeTest`) run on `SessionHarness` / `LoopbackNetwork` in
 this session and deleted afterwards. Nothing here re-proposes a `docs/backlog.md` entry.
