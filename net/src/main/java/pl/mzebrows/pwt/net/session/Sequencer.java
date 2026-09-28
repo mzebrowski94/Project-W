@@ -288,6 +288,11 @@ public final class Sequencer implements AutoCloseable {
     private void sendBundles(boolean sealedNow) {
         for (int i = 0; i < peers.size(); i++) {
             Peer peer = peers.get(i);
+            if (peer.state == PeerState.LOADING && sealed - peer.acked >= history.length) {
+                neverLoaded(peer);
+                i--;
+                continue;
+            }
             if (peer.state != PeerState.PLAYING) {
                 continue;
             }
@@ -301,7 +306,8 @@ public final class Sequencer implements AutoCloseable {
                 if (!peer.host) {
                     log.warn(
                             "sequencer",
-                            "event=fell-behind peer=" + peer.id + " acked=" + peer.acked + " sealed=" + sealed);
+                            "event=fell-behind peer=" + peer.id + " acked=" + peer.acked + " sealed=" + sealed
+                                    + " generation=" + peer.generation);
                     heal(peer);
                 } else if (now - peer.lastSentNanos >= statsNanos) {
                     log.error("sequencer", "event=host-fell-behind acked=" + peer.acked + " sealed=" + sealed, null);
@@ -376,7 +382,7 @@ public final class Sequencer implements AutoCloseable {
                 out.reset().putByte(Msg.SNAPSHOT_WANTED).putInt(peer.id);
                 transport.send(host.link, Delivery.RELIABLE, out.array(), 0, out.size());
                 peer.snapshotAsked = true;
-                log.info("sequencer", "event=snapshot-asked for=" + peer.id + " from=" + host.id);
+                log.debug("sequencer", "event=snapshot-asked for=" + peer.id + " from=" + host.id);
             }
         }
     }
@@ -387,8 +393,45 @@ public final class Sequencer implements AutoCloseable {
         peer.snapshotAsked = false;
     }
 
+    /**
+     * The peer has built the world it was sent - its first input about it says so - and from here is sent
+     * every tick since, oldest first. Nothing was sent while it loaded: ticks it could not have placed
+     * would only have been thrown away, and waited for again (the second Hamachi playtest).
+     */
+    private void loaded(Peer peer) {
+        peer.state = PeerState.PLAYING;
+        peer.catchUpTo = sealed;
+        peer.newestHeard = -1;
+        log.info(
+                "sequencer",
+                "event=loaded peer=" + peer.id + " generation=" + peer.generation + " ms="
+                        + millis(now - peer.snapshotSentNanos) + " behind=" + (sealed - peer.acked));
+    }
+
+    /**
+     * A peer that has not built the world it was sent before the ticks since it fell out of the history
+     * can never be brought up to date from it, and another snapshot would take as long again. It is let
+     * go, and told why, rather than healed every ten seconds for as long as it stays.
+     */
+    private void neverLoaded(Peer peer) {
+        long seconds = (now - peer.snapshotSentNanos) / 1_000_000_000L;
+        log.warn(
+                "sequencer",
+                "event=never-loaded peer=" + peer.id + " generation=" + peer.generation + " ms="
+                        + millis(now - peer.snapshotSentNanos));
+        peers.remove(peer);
+        left(peer, "never loaded");
+        transport.disconnect(
+                peer.link,
+                "could not load the world in " + seconds + " s - the connection to the host is too slow to catch up");
+    }
+
+    private static long millis(long nanos) {
+        return nanos / 1_000_000L;
+    }
+
     private void stats() {
-        if (statsNanos <= 0 || now - nextStatsNanos < 0 || !started) {
+        if (statsNanos <= 0 || now - nextStatsNanos < 0 || !started || paused) {
             return;
         }
         nextStatsNanos = now + statsNanos;
@@ -463,8 +506,9 @@ public final class Sequencer implements AutoCloseable {
                 .putLong(tickNanos)
                 .putString(setup.scenario())
                 .putLong(setup.seed())
-                .putBytes(config);
+                .putPacked(config, 0, config.length);
         transport.send(peer.link, Delivery.RELIABLE, out.array(), 0, out.size());
+        int welcomeBytes = out.size();
         if (fresh) {
             started = true;
             peer.state = PeerState.PLAYING;
@@ -475,7 +519,8 @@ public final class Sequencer implements AutoCloseable {
         }
         log.info(
                 "sequencer",
-                "event=welcome peer=" + peer.id + " link=" + peer.link + " host=" + peer.host + " fresh=" + fresh);
+                "event=welcome peer=" + peer.id + " link=" + peer.link + " host=" + peer.host + " fresh=" + fresh
+                        + " configBytes=" + config.length + " wireBytes=" + welcomeBytes);
     }
 
     private void refuse(Peer peer, String reason) {
@@ -489,11 +534,28 @@ public final class Sequencer implements AutoCloseable {
         int generation = in.getInt();
         int acked = in.getInt();
         int newestTag = in.getInt();
-        if (generation == peer.generation && acked > peer.acked && acked <= sealed) {
+        boolean current = generation == peer.generation;
+        if (current && peer.state == PeerState.LOADING) {
+            loaded(peer);
+        }
+        if (current && acked > peer.acked && acked <= sealed) {
             peer.acked = acked;
             peer.measure(acked, now);
+            if (peer.catchUpTo >= 0 && acked >= peer.catchUpTo) {
+                log.info(
+                        "sequencer",
+                        "event=caught-up peer=" + peer.id + " generation=" + generation + " ms="
+                                + millis(now - peer.snapshotSentNanos));
+                peer.catchUpTo = -1;
+            }
         }
-        if (newestTag >= 0) {
+        // Only input about the world it was sent: a peer still playing the one it is being healed from
+        // tags ticks long gone, and would drive its lead to the ceiling for nothing. And only a tag heard
+        // for the first time: how early it came is known then, and a peer with nothing new to tag - starved
+        // by a gap in the network - says it again with every input, later each tick, though nothing it
+        // sent was late (the third playtest: a 180 ms gap raised a lead from 8 to 18).
+        if (current && newestTag > peer.newestHeard) {
+            peer.newestHeard = newestTag;
             // How many ticks before its seal the newest input arrived: what the peer's lead is steered by.
             int margin = newestTag - sealed;
             peer.margin = peer.margin == Msg.NO_MARGIN ? margin : Math.min(peer.margin, margin);
@@ -604,16 +666,17 @@ public final class Sequencer implements AutoCloseable {
             return;
         }
         target.generation++;
-        out.reset().putByte(Msg.SNAPSHOT).putInt(target.generation).putInt(tick).putBytes(in.array(), start, length);
+        out.reset().putByte(Msg.SNAPSHOT).putInt(target.generation).putInt(tick).putPacked(in.array(), start, length);
         transport.send(target.link, Delivery.RELIABLE, out.array(), 0, out.size());
         target.acked = tick;
-        target.state = PeerState.PLAYING;
+        target.state = PeerState.LOADING;
+        target.snapshotSentNanos = now;
         target.wantsSnapshot = false;
         target.snapshotAsked = false;
         log.info(
                 "sequencer",
-                "event=snapshot-sent peer=" + target.id + " tick=" + tick + " bytes=" + length + " generation="
-                        + target.generation);
+                "event=snapshot-sent peer=" + target.id + " tick=" + tick + " bytes=" + length + " wireBytes="
+                        + out.size() + " generation=" + target.generation);
     }
 
     private void seat(Peer peer) {
@@ -726,8 +789,12 @@ public final class Sequencer implements AutoCloseable {
     }
 
     private enum PeerState {
+        /** Linked, not yet welcomed. */
         HELLO,
+        /** Waiting for the host to snapshot its world: a drop-in, or a heal. */
         JOINING,
+        /** Sent a snapshot and building it; sent no ticks until its first input about that world. */
+        LOADING,
         PLAYING
     }
 
@@ -740,12 +807,24 @@ public final class Sequencer implements AutoCloseable {
         boolean host;
         PeerState state = PeerState.HELLO;
         int acked = -1;
+
+        /** How many worlds it has been sent: one for its drop-in, one more for each heal. */
         int generation;
+
         int margin = Msg.NO_MARGIN;
         int repeats;
         long lastSentNanos;
         boolean wantsSnapshot;
         boolean snapshotAsked;
+
+        /** When its last snapshot went, for how long loading and catching up took. */
+        long snapshotSentNanos;
+
+        /** The newest tag it has said, in the world it plays: a tag is judged when first heard. */
+        int newestHeard = -1;
+
+        /** The tick sealed when it loaded: it has caught up once it acknowledges that, -1 once it has. */
+        int catchUpTo = -1;
 
         /** Orders heard but not yet sealed: numbered, applied in number order, once each. */
         int eventsApplied;
@@ -781,7 +860,11 @@ public final class Sequencer implements AutoCloseable {
             if (sentTick[at] != ackedTick) {
                 return;
             }
-            long sample = Math.max(1L, nowNanos - firstSentNanos[at]);
+            // Clamped to the longest round trip a session can be played over - the lead that has to cover
+            // it stops at leadMaxTicks each way. Anything longer is the peer not listening (loading the world
+            // it was sent, stalled), and believed, it held a gap's resends back until the peer fell out of
+            // the history, every time: the second Hamachi playtest read 9.9 s over a 60 ms link.
+            long sample = Math.min(Math.max(1L, nowNanos - firstSentNanos[at]), 2L * pacing.leadMaxTicks() * tickNanos);
             roundTripNanos = roundTripNanos == 0L ? sample : (3 * roundTripNanos + sample) / 4;
         }
 

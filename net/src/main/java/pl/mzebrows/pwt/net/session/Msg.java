@@ -12,7 +12,7 @@ package pl.mzebrows.pwt.net.session;
 final class Msg {
 
     /** Bumped whenever a message changes shape. The build id catches that too; this names it in the log. */
-    static final int PROTOCOL = 1;
+    static final int PROTOCOL = 2;
 
     // Peer to sequencer.
     static final int HELLO = 1;
@@ -51,7 +51,7 @@ final class Msg {
      */
     static final int SNAPSHOT_HEADER = 1 + 4 + 4 + 4;
 
-    /** The longest config a host ships. {@code game.properties} is a few tens of KB. */
+    /** The longest config a host ships, unpacked. {@code game.properties} without its comments is about 26 KB. */
     static final int MAX_CONFIG = 1024 * 1024;
 
     private Msg() {}

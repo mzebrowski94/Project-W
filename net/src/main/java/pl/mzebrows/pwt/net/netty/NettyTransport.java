@@ -62,7 +62,9 @@ import pl.mzebrows.pwt.net.transport.TransportListener;
  *
  * <p>A heartbeat goes out on every open link; one that hears nothing for {@code linkTimeoutMillis} is
  * closed. Every message is recorded in the log's trace, each link's numbers are written to the log every
- * {@code statsSeconds}, and a link that closes badly has its part of the trace dumped to the log.
+ * {@code statsSeconds} - but not a link to this same machine, the host's own game above all, which
+ * measures no network and was a third of the host's log - and a link that closes badly has its part of
+ * the trace dumped to the log.
  */
 @SuppressWarnings("FutureReturnValueIgnored") // failures surface through the channel closing, which is watched
 public final class NettyTransport implements Transport {
@@ -223,7 +225,7 @@ public final class NettyTransport implements Transport {
         if (statsNanos() > 0 && now >= nextStats) {
             double seconds = (now - lastStats) / 1e9;
             for (Link link : links.values()) {
-                if (link.state == State.OPEN) {
+                if (link.state == State.OPEN && !link.local) {
                     link.stats.writeTo(log, seconds);
                 }
             }
@@ -261,6 +263,7 @@ public final class NettyTransport implements Transport {
                     return;
                 }
                 link.tcp = connected.channel();
+                link.local = isLocal(connected.channel());
                 link.state = State.HANDSHAKING;
                 link.lastHeard = now;
                 byChannel.put(connected.channel(), link);
@@ -298,6 +301,7 @@ public final class NettyTransport implements Transport {
                 id, false, String.valueOf(channel.remoteAddress()), now + millis(config.connectTimeoutMillis()));
         link.state = State.HANDSHAKING;
         link.tcp = channel;
+        link.local = isLocal(channel);
         link.lastHeard = now;
         long token;
         do {
@@ -408,6 +412,12 @@ public final class NettyTransport implements Transport {
             }
             case CLOSED -> {}
         }
+    }
+
+    private static boolean isLocal(Channel channel) {
+        return channel.remoteAddress() instanceof InetSocketAddress address
+                && address.getAddress() != null
+                && address.getAddress().isLoopbackAddress();
     }
 
     private String stuckReason(Link link) {
@@ -616,6 +626,9 @@ public final class NettyTransport implements Transport {
         final long deadline;
         final LinkStats stats;
         State state = State.CONNECTING;
+
+        /** To this same machine: its numbers say nothing about a network, and are not written. */
+        boolean local;
 
         @Nullable
         Channel tcp;

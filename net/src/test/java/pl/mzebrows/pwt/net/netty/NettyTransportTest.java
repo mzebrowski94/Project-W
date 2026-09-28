@@ -174,6 +174,30 @@ class NettyTransportTest {
                 .contains("event=closed reason=\"remote: leaving\"");
     }
 
+    /**
+     * The host's own game reaches its sequencer over this machine, and both ends wrote that link's numbers
+     * every second - a third of the host's log, measuring no network at all.
+     */
+    @Test
+    void writesNoNumbersForALinkToThisSameMachine(@TempDir Path dir) throws IOException {
+        NetConfig counted = config().with(new NetConfig.LogConfig(dir.toString(), "INFO", 1024, 1));
+        NetLog hostLog = NetLog.open(counted.log(), "host");
+        NettyTransport host = new NettyTransport(counted, SystemClock.INSTANCE, hostLog, "host");
+        transports.add(host);
+        NettyTransport joiner = transport();
+        host.listen(47_370, 0);
+        RecordingListener atHost = new RecordingListener();
+        RecordingListener atJoiner = new RecordingListener();
+        Ends ends = new Ends(host, joiner, joiner.connect(HERE, 47_370), atHost, atJoiner);
+        pollUntil(() -> !atHost.of("opened").isEmpty(), ends);
+
+        pollFor(1_500, ends);
+        hostLog.close();
+
+        String written = Files.readString(Objects.requireNonNull(hostLog.file()), StandardCharsets.UTF_8);
+        assertThat(written).contains("event=opened").doesNotContain("cat=stats");
+    }
+
     private Ends open(int port) {
         NettyTransport host = transport();
         NettyTransport joiner = transport();
@@ -215,6 +239,15 @@ class NettyTransportTest {
             ends.host.poll(ends.atHost);
             ends.joiner.poll(ends.atJoiner);
             pause(deadline);
+        }
+    }
+
+    private static void pollFor(long millis, Ends ends) {
+        long until = System.nanoTime() + millis * 1_000_000L;
+        while (System.nanoTime() < until) {
+            ends.host.poll(ends.atHost);
+            ends.joiner.poll(ends.atJoiner);
+            pauseQuietly(5);
         }
     }
 

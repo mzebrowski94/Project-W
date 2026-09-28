@@ -48,11 +48,13 @@ Everything else 0004 says stands, and is now what multiplayer rests on rather th
 - **Networking is its own module**, `net`: `lwjgl3 -> core -> net -> sim -> map`. `sim` does not know a
   network exists; `net` has no libGDX.
 - **The transport is a port.** `Transport` lives in `net`; Netty 4.2 sits behind it - UDP for tick
-  traffic, TCP for control and snapshots - and an in-memory loopback serves the tests. No Netty type
+  traffic, TCP for control and snapshots, the config and snapshot a join waits for deflated - and an
+  in-memory loopback serves the tests. No Netty type
   crosses it, for the reason ADR 0011 gives for gamepads: the library is the replaceable part.
 - **Peers run the same thing.** The build id - a hash of the `map`, `sim` and `net` sources, generated at
   build time - and the protocol version must match at the handshake, or the peer is refused. The config
-  does not have to: the host ships its `game.properties` as written, with its scenario and seed, and every
+  does not have to: the host ships its `game.properties` as its parser reads it - every key and value, the
+  comments left out - with its scenario and seed, and every
   peer parses it with its own loader - which the build id says is the same one - so a tuning playtest
   needs nobody to copy a file.
 - **A desync is detected, recorded and healed.** Every `checksumTicks` each peer snapshots its world,
@@ -113,6 +115,9 @@ to every friend before the next playtest.
 **No:** *Java serialization, Kryo's reflective mode, or any decoder that instantiates a class a packet
 names.* Every byte from the wire is read by code that knows exactly what it expects.
 
+**No:** *Quantised or delta-encoded snapshots.* A snapshot has to restore bit-exact or the joiner is
+desynced from its first tick, and it is sent once a join; deflate already takes it to a tenth.
+
 **No:** *KryoNet* - no release since August 2024, reflective serialization, an object per message.
 *Aeron* - built for datacentre streams, with no notion of a player or a connection, and JVM flags to
 run. *jvm-libp2p* - streams only, no hole punching, its relay in beta. *Nakama* - realtime over
@@ -133,5 +138,43 @@ the screens, not the screens; the cosmetic lead - the client drawing its own com
 players' aim at once, feeding nothing back - is built and is the first thing tried (F2 switches it). A second transport - webrtc-java for direct
 peer-to-peer through NAT, or Steam's - is also deferred, and the port is what keeps either cheap.
 
-**Revisit when** a playtest in the same region reads as sluggish (rollback); the relay's detour measurably
+**The second playtest (2026-09-27, friends over Hamachi and ZeroTier)** measured what the first could
+not: real round trips of 15-80 ms, so rollback is still not indicated. It found joins, not ticks, to be
+the problem. A drop-in sent about 213 KB over TCP - the config with its comments and the world - and
+over Hamachi it took six to eight seconds (the fourth playtest found why: full-size TCP packets from that
+host were dropped for about three seconds, then crawled - not a slow link), while the sequencer streamed
+it ticks it could not yet place; a round-trip estimate timed from those ticks' first sends read ten
+seconds, held back their resends, and the joiner was sent the world every ten seconds for as long as it
+stayed. Decided, after the literature (Age of Empires' lockstep, Factorio's join, Photon Quantum's late
+join, Fiedler, RFC 6298 - `claude/project-w-join-cost-and-netcode-literature.md`): a join's config and
+world cross deflated and the config without comments, about 16 KB in all; a peer sent a world is sent no
+ticks until its first input about that world says it has built it, then every tick since, oldest first; a
+peer that has not built it before those ticks leave the history is let go and told why, as Factorio does,
+rather than sent it again; a round-trip sample is capped at twice the lead ceiling; and the log says how
+long each join took to load and to catch up. TCP beside UDP stays: the literature warns that a TCP burst
+costs a shared link's datagrams, and the burst is now a thirteenth of what it was.
+
+**The third playtest (2026-09-28, ZeroTier both ways, 60 ms round trip)** saw joins take under half a
+second and the log say so, and found the lead judged on input that was late for reasons of the peer's
+own: its first seconds after a join spent at 17 and 18 ticks, and a 180 ms gap in delivery raising it
+from 8 to 18. Decided: a peer sends no newest tag while it is catching up - after a join, a heal or a
+stall of its own - and the sequencer judges a tag only when it first hears it, so one said again by a
+peer with nothing new to tag is not taken for late input. The lead rises for input that was late in
+step, as before; a peer that runs dry on a gap in the network is still left with a cushion of a tick or
+none, and whether one more tick of standing delay is worth the stalls it would save is for a later
+playtest to say.
+
+**The fourth playtest (2026-09-28, Hamachi both ways)** confirmed the lead fixes - a joiner 199 ticks
+behind caught up without its lead moving - and found what had made Hamachi joins slow: from one host, the
+first TCP data to a joiner - even a 4.5 KB welcome - arrived only after about three seconds, every time,
+while that link's small datagrams crossed at 60 ms without loss and the same joiner's own host was
+reached in a tenth of a second. Full-size TCP packets on one side of that Hamachi path were being
+dropped until the sender's TCP gave up on them - a path-MTU black hole - which datagrams kept under
+`maxDatagramBytes` never meet. A join over that path now takes about three and a half seconds rather than
+half a second; it completes, and the history leaves room for it. Not yet decided: whether that is worth
+sending the welcome and the snapshot as paced UDP slices, which the next trigger below already names.
+
+**Revisit when** a playtest in the same region reads as sluggish (rollback); the log shows ticks lost
+around joins, or a join held up by TCP on a path that carries datagrams (the welcome and the snapshot as
+paced UDP slices, Fiedler's large blocks); the relay's detour measurably
 hurts (hole punching, or WebRTC behind the port); or a platform other than the desktop matters.

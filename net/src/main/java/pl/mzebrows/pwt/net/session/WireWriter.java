@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.net.session;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.zip.Deflater;
 
 /**
  * Bytes out, big-endian, into a buffer kept from one message to the next - so sending sixty bundles a
@@ -59,6 +60,33 @@ final class WireWriter {
     /** UTF-8, length first. For the few control messages that carry text, never for a tick. */
     WireWriter putString(String text) {
         return putBytes(text.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * The length, then the bytes deflated, their own length first. For the two things a join waits for -
+     * the host's config and a world - which cross a slow link as a tenth of themselves. Never for a tick.
+     */
+    WireWriter putPacked(byte[] source, int offset, int length) {
+        Deflater deflater = new Deflater();
+        try {
+            deflater.setInput(source, offset, length);
+            deflater.finish();
+            putInt(length);
+            int packedLengthAt = size;
+            putInt(0);
+            while (!deflater.finished()) {
+                ensure(Math.max(1024, length / 4));
+                size += deflater.deflate(bytes, size, bytes.length - size);
+            }
+            int packed = size - packedLengthAt - 4;
+            bytes[packedLengthAt] = (byte) (packed >>> 24);
+            bytes[packedLengthAt + 1] = (byte) (packed >>> 16);
+            bytes[packedLengthAt + 2] = (byte) (packed >>> 8);
+            bytes[packedLengthAt + 3] = (byte) packed;
+        } finally {
+            deflater.end();
+        }
+        return this;
     }
 
     /** Appends what another writer holds, as it is. */

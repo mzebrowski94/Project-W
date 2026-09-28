@@ -2,6 +2,8 @@ package pl.mzebrows.pwt.net.session;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.zip.DataFormatException;
+import java.util.zip.Inflater;
 
 /**
  * Bytes in, big-endian, with every read checked against what is actually there: a message that runs
@@ -50,6 +52,48 @@ final class WireReader {
         byte[] copy = Arrays.copyOfRange(bytes, at, at + length);
         at += length;
         return copy;
+    }
+
+    /**
+     * What {@link WireWriter#putPacked} wrote, inflated. Refused if it claims more than {@code maxLength}
+     * - so a hostile or garbled message cannot make it allocate more - or does not inflate to exactly the
+     * length it claims.
+     */
+    byte[] getPacked(int maxLength) {
+        int length = getInt();
+        if (length < 0 || length > maxLength) {
+            throw new WireException("a packed run of " + length + " bytes, where at most " + maxLength + " fit");
+        }
+        int packed = getInt();
+        if (packed < 0) {
+            throw new WireException("a packed run " + packed + " bytes long");
+        }
+        need(packed);
+        byte[] raw = new byte[length];
+        Inflater inflater = new Inflater();
+        try {
+            inflater.setInput(bytes, at, packed);
+            int inflated = 0;
+            while (inflated < length) {
+                int more = inflater.inflate(raw, inflated, length - inflated);
+                if (more == 0) {
+                    break;
+                }
+                inflated += more;
+            }
+            if (inflated != length
+                    || inflater.inflate(new byte[1]) != 0
+                    || !inflater.finished()
+                    || inflater.getRemaining() != 0) {
+                throw new WireException("a packed run that does not inflate to the " + length + " bytes it claims");
+            }
+        } catch (DataFormatException e) {
+            throw new WireException("a packed run that does not inflate: " + e.getMessage());
+        } finally {
+            inflater.end();
+        }
+        at += packed;
+        return raw;
     }
 
     String getString(int maxBytes) {

@@ -3,14 +3,17 @@ package pl.mzebrows.pwt.net.session;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.NetConfig.Conditions;
+import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.session.SessionHarness.Machine;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
@@ -26,6 +29,12 @@ class SessionTest {
 
     /** Across a city: 40 ms each way give or take 10, one message in ten lost, one in twenty doubled. */
     private static final Conditions ACROSS_A_CITY = new Conditions(40, 10, 0.1f, 0.05f, 7L);
+
+    /** 40 ms each way, every time: whatever the lead does on it, the network did not ask for. */
+    private static final Conditions STEADY_40_MS = new Conditions(40, 0, 0f, 0f, 13L);
+
+    /** A link whose messages take anything up to a quarter of a second, so a later one often arrives first. */
+    private static final Conditions OVERTAKING = new Conditions(0, 250, 0f, 0f, 11L);
 
     @Test
     void playsTheSameWorldOnEveryMachine() {
@@ -86,6 +95,24 @@ class SessionTest {
     }
 
     /**
+     * A drop-in loads a dozen ticks behind the host and catches up, and what it tags while it does is late
+     * for the same reason as after a stall. The third playtest: the lead jumped to 17 and 18 on joining
+     * over a steady 60 ms link, and took three seconds to settle at 6.
+     */
+    @Test
+    void dropsInWithTheInputDelayItsLinkNeedsAndNoMore() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 53L, PERFECT)) {
+            session.host();
+            session.run(300);
+            Machine late = session.join("late", STEADY_40_MS);
+
+            int most = mostLeadOver(session, late, 240);
+
+            assertThat(most).as("the most lead in its first four seconds").isLessThanOrEqualTo(late.session.lead() + 1);
+        }
+    }
+
+    /**
      * Eight seats make a bundle 152 bytes, so a datagram holds seven, and a machine 120 ms away always has
      * more than seven ticks unacknowledged. It still gets every tick about half a round trip after it is
      * sealed.
@@ -112,6 +139,74 @@ class SessionTest {
             session.agreedHash();
             assertThat(session.sequencer.desyncs()).isZero();
         }
+    }
+
+    /**
+     * The welcome goes by the stream and carries the host's game.properties, so over a real network it
+     * can take several round trips while the session's ticks go by datagram and get there first. Both
+     * joiners in the first Hamachi playtest were dropped on the spot: "slot 0 in a session of 0".
+     */
+    @Test
+    void joinsARunningSessionWhenItsTicksOvertakeTheWelcome() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 41L, PERFECT)) {
+            session.host();
+            session.run(60);
+            Machine late = session.join("late", OVERTAKING);
+
+            session.run(300);
+
+            assertThat(late.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            session.agreedHash();
+            assertThat(session.sequencer.desyncs()).isZero();
+        }
+    }
+
+    /**
+     * A machine that stops for longer than its tick ring holds - a window held by its title bar, a slow
+     * load - comes back to a gap only resends can fill, and acknowledges them late. Timed from their first
+     * send, those late acknowledgements made the round trip read as seconds, so the gap was resent ever
+     * more slowly until the machine fell out of the history and was sent the world again, every ten
+     * seconds. The second Hamachi playtest: 9.9 s of round trip over a 60 ms link.
+     */
+    @Test
+    void catchesUpSoonAfterAStallLongerThanItsTickRing() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 43L, PERFECT)) {
+            session.host();
+            Machine stalled = session.join("stalled", PERFECT);
+            session.run(300);
+
+            stalled.frozenFrames = 400;
+            session.run(400 + 180);
+
+            assertThat(session.sequencer.sealedTick() - stalled.session.tick())
+                    .as("ticks behind three seconds after a stall of nearly seven")
+                    .isLessThanOrEqualTo(session.config.session().bufferTicks() + 2);
+        }
+    }
+
+    /**
+     * What the host's log says about a drop-in is what the second Hamachi playtest could not tell: how long
+     * the world took to reach the joiner and be built there, and how long it then took to catch up.
+     */
+    @Test
+    void logsHowLongAJoinerTookToLoadItsWorldAndToCatchUp(@TempDir Path dir) throws IOException {
+        NetConfig logged = NetConfig.defaults().with(new NetConfig.LogConfig(dir.toString(), "INFO", 64, 0));
+        NetLog log = NetLog.open(logged.log(), "host");
+        try (SessionHarness session = new SessionHarness(logged, "Skirmish", 47L, PERFECT, log)) {
+            session.host();
+            session.run(120);
+            session.join("late", ACROSS_A_CITY);
+
+            session.run(240);
+        }
+        log.close();
+
+        String written = Files.readString(Objects.requireNonNull(log.file()), StandardCharsets.UTF_8);
+        assertThat(written)
+                .containsPattern("event=welcome peer=1 .* configBytes=\\d+ wireBytes=\\d+")
+                .containsPattern("event=snapshot-sent peer=1 tick=\\d+ bytes=\\d+ wireBytes=\\d+ generation=1")
+                .containsPattern("event=loaded peer=1 generation=1 ms=\\d+ behind=\\d+")
+                .containsPattern("event=caught-up peer=1 generation=1 ms=\\d+");
     }
 
     @Test
@@ -272,5 +367,14 @@ class SessionTest {
                     .as("nobody's slot left for a ninth player")
                     .isEqualTo(-1);
         }
+    }
+
+    private static int mostLeadOver(SessionHarness session, Machine machine, int frames) {
+        int most = machine.session.lead();
+        for (int frame = 0; frame < frames; frame++) {
+            session.run(1);
+            most = Math.max(most, machine.session.lead());
+        }
+        return most;
     }
 }

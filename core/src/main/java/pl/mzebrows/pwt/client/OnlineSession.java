@@ -93,7 +93,7 @@ public final class OnlineSession implements ScenarioPlay {
      * Hosts {@code scenario}: starts a sequencer on the configured port (the next free one if a copy on
      * this PC already has it), joins it, and announces it to the local network under a room code. What
      * is shipped to peers is this copy's {@code
-     * game.properties} as written, and its seed.
+     * game.properties} as its parser reads it, comments left out, and its seed.
      *
      * @throws RuntimeException if no port could be had; nothing is left open
      */
@@ -105,7 +105,7 @@ public final class OnlineSession implements ScenarioPlay {
                 new NettyTransport(net, clock, log, "sequencer"),
                 net,
                 log,
-                new SessionSetup(SimConfigLoader.text(), scenario.name(), config.seed()),
+                new SessionSetup(SimConfigLoader.shipped(), scenario.name(), config.seed()),
                 Players.MAX,
                 config.tickSeconds(),
                 key,

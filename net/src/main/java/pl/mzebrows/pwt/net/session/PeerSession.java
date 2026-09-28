@@ -75,6 +75,12 @@ public final class PeerSession implements AutoCloseable {
     /** How many reports in a row must come early before the lead comes down: a second's worth. */
     private static final int CALM_REPORTS = 60;
 
+    /**
+     * While paused, how many ticks apart this machine sends input with nothing new in it: enough to keep
+     * acknowledging, not sixty messages a second of nothing.
+     */
+    private static final int PAUSED_INPUT_TICKS = 15;
+
     /** The most unacknowledged orders sent in one message. */
     private static final int EVENTS_PER_MESSAGE = 16;
 
@@ -231,7 +237,9 @@ public final class PeerSession implements AutoCloseable {
             // Nothing left to play: waiting, not falling behind. Banking the wait would only replay it as
             // a burst when the next bundle comes.
             accumulator = tickNanos;
-            stalls++;
+            if (!paused) {
+                stalls++;
+            }
             starved++;
         } else if (steps > 0) {
             starved = 0;
@@ -398,14 +406,19 @@ public final class PeerSession implements AutoCloseable {
     }
 
     private void sendInput(long nowNanos, boolean stepped) {
-        if (!stepped && eventCount == 0 && nowNanos - lastInputNanos < tickNanos) {
+        long every = paused ? PAUSED_INPUT_TICKS * tickNanos : tickNanos;
+        if (!stepped && eventCount == 0 && nowNanos - lastInputNanos < every) {
             return;
         }
         lastInputNanos = nowNanos;
         // The newest tag goes even when no held input does - when every tick this machine has tagged is
         // one it already knows was sealed. That is exactly when its lead is too short, and the sequencer
-        // can only say so if it hears what the tag was.
-        out.reset().putByte(Msg.INPUT).putInt(generation).putInt(contiguous).putInt(newestTag);
+        // can only say so if it hears what the tag was. But not while this machine is behind the ticks it
+        // holds - catching up after a drop-in, a heal or a stall: what it tags then is late because it is,
+        // and a report of it comes back a round trip later, when adaptLead can no longer tell. The third
+        // playtest: a lead of 17 and 18 for the first seconds after every join.
+        boolean catchingUp = contiguous - tick > pacing.bufferTicks();
+        out.reset().putByte(Msg.INPUT).putInt(generation).putInt(contiguous).putInt(catchingUp ? -1 : newestTag);
         int seated = 0;
         for (int seat = 0; seat < slotOfSeat.length; seat++) {
             seated += slotOfSeat[seat] >= 0 ? 1 : 0;
@@ -495,7 +508,7 @@ public final class PeerSession implements AutoCloseable {
     }
 
     private void stats(long nowNanos) {
-        if (statsNanos <= 0 || nowNanos - nextStatsNanos < 0) {
+        if (statsNanos <= 0 || nowNanos - nextStatsNanos < 0 || paused) {
             return;
         }
         nextStatsNanos = nowNanos + statsNanos;
@@ -565,7 +578,7 @@ public final class PeerSession implements AutoCloseable {
                             .putInt(tick)
                             .putBytes(snapshot);
                     transport.send(link, Delivery.RELIABLE, out.array(), 0, out.size());
-                    log.info(
+                    log.debug(
                             "peer",
                             "event=snapshot-taken for=" + forPeer + " tick=" + tick + " bytes=" + snapshot.length);
                 }
@@ -581,7 +594,7 @@ public final class PeerSession implements AutoCloseable {
         tickNanos = in.getLong();
         String scenario = in.getString(Msg.MAX_TEXT);
         long seed = in.getLong();
-        String config = new String(in.getBytes(Msg.MAX_CONFIG), StandardCharsets.UTF_8);
+        String config = new String(in.getPacked(Msg.MAX_CONFIG), StandardCharsets.UTF_8);
         in.expectEnd();
         if (capacity < 1 || capacity > Players.MAX || tickNanos <= 0) {
             throw new WireException("a session of " + capacity + " slots at " + tickNanos + " ns a tick");
@@ -600,7 +613,7 @@ public final class PeerSession implements AutoCloseable {
         log.info(
                 "peer",
                 "event=welcome peer=" + peerId + " fresh=" + fresh + " scenario=\"" + scenario + "\" seed=" + seed
-                        + " capacity=" + capacity);
+                        + " capacity=" + capacity + " configBytes=" + config.length());
         if (fresh) {
             world = worlds.fresh(built);
             tick = -1;
@@ -617,6 +630,12 @@ public final class PeerSession implements AutoCloseable {
     }
 
     private void bundles() {
+        if (setup == null) {
+            // Ticks come by datagram and the welcome by the stream, carrying the host's game.properties, so
+            // over a real network the first ticks can arrive before it - and there is no reading them without
+            // the session's size. The sequencer sends a tick again until it is acknowledged, so this loses none.
+            return;
+        }
         int applied = in.getInt();
         int margin = in.getInt();
         int count = in.getByte();
@@ -642,12 +661,16 @@ public final class PeerSession implements AutoCloseable {
     private void snapshot() {
         int newGeneration = in.getInt();
         int at = in.getInt();
-        byte[] snapshot = in.getBytes(maxMessageBytes);
+        byte[] snapshot = in.getPacked(maxMessageBytes);
         in.expectEnd();
         SessionSetup built = setup;
         if (built == null) {
             throw new WireException("a snapshot before the welcome");
         }
+        // Logged before the world is built, so the gap to the line after says what building it cost.
+        log.info(
+                "peer",
+                "event=snapshot-received tick=" + at + " bytes=" + snapshot.length + " generation=" + newGeneration);
         Simulation restored = worlds.blank(built);
         WorldCodec.restore(restored, snapshot);
         world = restored;

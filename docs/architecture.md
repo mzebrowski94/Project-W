@@ -175,7 +175,10 @@ Networking, and nothing the game's rules depend on (ADR 0012). No libGDX, and Ne
 - `log/` - the connection log. `NetLog` writes one `key=value` line per event, one file per instance,
   on `java.util.logging` so Netty's own lines land there too. **Nothing is logged per message:**
   `NetTrace` records every message into a preallocated ring and dumps a link's part of it when the link
-  closes badly, and `LinkStats` writes each link's numbers every `statsSeconds`.
+  closes badly, and `LinkStats` writes each link's numbers every `statsSeconds` - but not a link to this
+  same machine, which measures no network. A drop-in is metered in stages on the host - `welcome`,
+  `snapshot-sent`, `loaded`, `caught-up`, each with its size or how long it took - and on the joiner
+  `snapshot-received` then `restored`, whose timestamps say what building the world cost.
 - `lan/` - finding a session on the local network (G0038). A host's `LanBeacon` sends a
   `LanAnnouncement` once a second to every interface's broadcast address, and to this PC, as
   `LanAddresses` finds them; a joiner's `LanListener` hears them on a shared port and keeps one entry per

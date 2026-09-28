@@ -44,13 +44,18 @@ final class SessionHarness implements AutoCloseable {
     }
 
     SessionHarness(NetConfig config, String scenario, long seed, Conditions atTheHost) {
+        this(config, scenario, seed, atTheHost, NetLog.silent(64));
+    }
+
+    /** @param sequencerLog where the sequencer writes, for a test about what it writes */
+    SessionHarness(NetConfig config, String scenario, long seed, Conditions atTheHost, NetLog sequencerLog) {
         this.config = config;
         network = new LoopbackNetwork(config);
         Transport hostEnd = conditioned(network.endpoint("host"), atTheHost);
         sequencer = new Sequencer(
                 hostEnd,
                 config,
-                NetLog.silent(64),
+                sequencerLog,
                 new SessionSetup("", scenario, seed),
                 Players.MAX,
                 1f / 60f,

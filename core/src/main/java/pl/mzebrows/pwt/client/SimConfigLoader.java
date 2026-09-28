@@ -1,5 +1,7 @@
 package pl.mzebrows.pwt.client;
 
+import java.util.Map;
+import pl.mzebrows.pwt.sim.ConfigBinder;
 import pl.mzebrows.pwt.sim.SimConfig;
 
 /**
@@ -26,6 +28,23 @@ public final class SimConfigLoader {
     /** {@code game.properties} as written - what a host ships to its peers (ADR 0012). */
     public static String text() {
         return GameProperties.text(FILE);
+    }
+
+    /**
+     * What a host ships to its peers (ADR 0012): {@link #text()} as the parser reads it - every key with
+     * its value, one a line - and none of the comments, which are seven tenths of the file, mean nothing
+     * to a peer, and are what a join over a slow link waits for.
+     */
+    public static String shipped() {
+        return withoutComments(text());
+    }
+
+    static String withoutComments(String text) {
+        StringBuilder kept = new StringBuilder(text.length() / 3);
+        for (Map.Entry<String, String> entry : ConfigBinder.parse(text).entrySet()) {
+            kept.append(entry.getKey()).append('=').append(entry.getValue()).append('\n');
+        }
+        return kept.toString();
     }
 
     /**

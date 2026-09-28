@@ -43,6 +43,7 @@ class SequencerTest {
     private final int port = sequencer.listen(config.port(), 0);
     private final Map<Integer, Bundle> sealed = new TreeMap<>();
     private long now;
+    private int snapshotsAnswered;
 
     @AfterEach
     void close() {
@@ -115,6 +116,25 @@ class SequencerTest {
         }
 
         assertThat(held(lastTagged + 10, 0)).isEqualTo(running);
+    }
+
+    /**
+     * A peer that has nothing new to tag - starved of ticks by a gap in the network, or paused - says its
+     * newest tag again with every input. How early a tag was is known when it is first heard; heard again
+     * after its tick is sealed it is not late input, and was once taken for it: a 180 ms gap in the third
+     * playtest raised a lead from 8 to 18.
+     */
+    @Test
+    void judgesHowEarlyATagCameOnlyWhenItFirstHearsIt() {
+        RawPeer host = startedHost();
+        int tag = sequencer.sealedTick() + 3;
+
+        for (int frame = 0; frame < 30; frame++) {
+            host.send(Delivery.UNRELIABLE, input(tag, CommanderInput.IDLE).putByte(0));
+            frame(host);
+        }
+
+        assertThat(marginsSentTo(host)).isNotEmpty().allMatch(margin -> margin >= 0);
     }
 
     @Test
@@ -195,6 +215,40 @@ class SequencerTest {
         startedHost();
     }
 
+    @Test
+    void sendsAJoinerNoTicksUntilItHasBuiltTheWorldItWasSent() {
+        RawPeer host = startedHost();
+        RawPeer joiner = joined("joiner", host);
+        int snapshotTick = snapshotTickSentTo(joiner);
+
+        for (int frame = 0; frame < 30; frame++) {
+            frame(host, joiner);
+        }
+        List<Integer> whileLoading = ticksSentTo(joiner);
+        joiner.send(Delivery.UNRELIABLE, loadedInput(1, snapshotTick));
+        for (int frame = 0; frame < 3; frame++) {
+            frame(host, joiner);
+        }
+
+        assertThat(whileLoading).isEmpty();
+        assertThat(ticksSentTo(joiner)).first().isEqualTo(snapshotTick + 1);
+    }
+
+    @Test
+    void letsGoAJoinerThatNeverBuildsItsWorldRatherThanSendingItAgainAndAgain() {
+        RawPeer host = startedHost();
+        RawPeer joiner = joined("joiner", host);
+
+        for (int frame = 0; frame < config.session().historyTicks() + 60; frame++) {
+            frame(host, joiner);
+            answerSnapshots(host);
+        }
+
+        assertThat(joiner.closedBecause).contains("could not load the world");
+        assertThat(messagesOfType(joiner, Msg.SNAPSHOT)).hasSize(1);
+        assertThat(host.closedBecause).isNull();
+    }
+
     /** A raw host that has said hello, been welcomed and seated in slot 0. */
     private RawPeer startedHost() {
         RawPeer host = new RawPeer(network.endpoint("host"), port);
@@ -212,6 +266,104 @@ class SequencerTest {
         }
         assertThat(sequencer.sealedTick()).as("started").isGreaterThanOrEqualTo(0);
         return host;
+    }
+
+    /**
+     * A second machine that has said hello and asked for a seat, and been sent the world - the raw host
+     * answering the sequencer's request with a snapshot of its own. It has not built that world yet.
+     */
+    private RawPeer joined(String name, RawPeer host) {
+        RawPeer joiner = new RawPeer(network.endpoint(name), port);
+        frame(host, joiner);
+        joiner.send(
+                Delivery.RELIABLE,
+                new WireWriter(64)
+                        .putByte(Msg.HELLO)
+                        .putInt(Msg.PROTOCOL)
+                        .putString(BuildId.current())
+                        .putLong(0L));
+        joiner.send(Delivery.RELIABLE, new WireWriter(8).putByte(Msg.SEAT).putByte(0));
+        for (int frame = 0; frame < 3; frame++) {
+            frame(host, joiner);
+            answerSnapshots(host);
+        }
+        assertThat(messagesOfType(joiner, Msg.SNAPSHOT)).as("sent the world").hasSize(1);
+        return joiner;
+    }
+
+    /** Answers every snapshot the sequencer has asked the raw host for since the last call. */
+    private void answerSnapshots(RawPeer host) {
+        List<byte[]> asked = messagesOfType(host, Msg.SNAPSHOT_WANTED);
+        for (int i = snapshotsAnswered; i < asked.size(); i++) {
+            WireReader in = new WireReader().wrap(asked.get(i), 1, asked.get(i).length - 1);
+            host.send(
+                    Delivery.RELIABLE,
+                    new WireWriter(64)
+                            .putByte(Msg.SNAPSHOT_TAKEN)
+                            .putInt(in.getInt())
+                            .putInt(sequencer.sealedTick())
+                            .putBytes(new byte[] {1, 2, 3}));
+        }
+        snapshotsAnswered = asked.size();
+    }
+
+    /** What a peer says once it has built the world of {@code generation}: nothing held, nothing ordered. */
+    private static WireWriter loadedInput(int generation, int acked) {
+        return new WireWriter(64)
+                .putByte(Msg.INPUT)
+                .putInt(generation)
+                .putInt(acked)
+                .putInt(-1)
+                .putByte(0)
+                .putInt(acked + 1)
+                .putByte(0)
+                .putByte(0);
+    }
+
+    private static int snapshotTickSentTo(RawPeer peer) {
+        byte[] snapshot = messagesOfType(peer, Msg.SNAPSHOT).getFirst();
+        WireReader in = new WireReader().wrap(snapshot, 1, snapshot.length - 1);
+        in.getInt();
+        return in.getInt();
+    }
+
+    /** Every tick a peer has been sent, in the order it was sent them, repeats and all. */
+    private static List<Integer> ticksSentTo(RawPeer peer) {
+        List<Integer> ticks = new ArrayList<>();
+        for (byte[] message : messagesOfType(peer, Msg.BUNDLES)) {
+            WireReader in = new WireReader().wrap(message, 1, message.length - 1);
+            in.getInt();
+            in.getInt();
+            int count = in.getByte();
+            for (int i = 0; i < count; i++) {
+                ticks.add(new Bundle(Players.MAX).read(in).tick());
+            }
+        }
+        return ticks;
+    }
+
+    /** Every margin the sequencer has reported to a peer, leaving out the reports that had none. */
+    private static List<Integer> marginsSentTo(RawPeer peer) {
+        List<Integer> margins = new ArrayList<>();
+        for (byte[] message : messagesOfType(peer, Msg.BUNDLES)) {
+            WireReader in = new WireReader().wrap(message, 1, message.length - 1);
+            in.getInt();
+            int margin = in.getInt();
+            if (margin != Msg.NO_MARGIN) {
+                margins.add(margin);
+            }
+        }
+        return margins;
+    }
+
+    private static List<byte[]> messagesOfType(RawPeer peer, int type) {
+        List<byte[]> found = new ArrayList<>();
+        for (byte[] message : peer.seen) {
+            if ((message[0] & 0xFF) == type) {
+                found.add(message);
+            }
+        }
+        return found;
     }
 
     /** An INPUT for slot 0 holding one tick's input at {@code tag}, missing only its event count. */

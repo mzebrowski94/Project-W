@@ -25,6 +25,18 @@ class ShippedConfigTest {
         assertThat(parsed.problems()).isEmpty();
     }
 
+    /** A join over a slow link waits for every byte the host ships, and seven in ten were comments. */
+    @Test
+    void shipsToPeersWithoutItsCommentsAsTheSameConfig() throws IOException {
+        String file = Files.readString(SHIPPED, StandardCharsets.ISO_8859_1);
+
+        String shipped = SimConfigLoader.withoutComments(file);
+
+        assertThat(SimConfigLoader.parse(shipped)).isEqualTo(SimConfigLoader.parse(file));
+        assertThat(shipped.lines()).noneMatch(line -> line.startsWith("#") || line.isBlank());
+        assertThat(shipped.length()).isLessThan(file.length() / 3);
+    }
+
     /** Proves the compiled-in copy is this file rather than an older build of it. */
     @Test
     void isWhatTheSimulationDefaultsTo() throws IOException {
