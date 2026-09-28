@@ -216,6 +216,7 @@ Read the row that matches. On-demand by design - loading all of them costs more 
 | `docs/glossary.md` | Naming anything in the game domain. Read the whole section, not just the word you had in mind. |
 | `docs/design/README.md` | Any gameplay change - invariants, input map, open questions. |
 | `docs/design/alpha-phase.md` | **Every session right now** - how a phase session goes, how to add a scenario, what is still scaffolding. |
+| `docs/design/upgrades-scope.md` | Any session of the upgrade work - the plan, the decisions taken 2026-09-28, which session is next. Expires when adaptations ship. |
 | `docs/adr/README.md` | Before proposing to change a structural decision. |
 | `docs/backlog.md` | Before proposing a refactor or perf fix - it may already be deferred, with the trigger that brings it back. Add what you defer. |
 | `docs/design/decisions/` | Before re-proposing a gameplay alternative. |
