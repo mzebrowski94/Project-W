@@ -215,8 +215,10 @@ from S2.
 | **card** | One **upgrade** on a **draft**, dealt when the draft is earned. |
 | **chooser** | The slot a **draft** belongs to. |
 | **draft** | One offer of up to three **upgrades** to one player, earned by an objective: a point taken, a hold wave cleared, a boss killed. He takes one card, when he likes; nothing expires. |
+| **draft bar** | The top bar while a **draft** is open: the **chooser** on the left, his **cards** across the rest. One per machine, driven by the seat that opened it; it pauses a solo game. |
 | **effect** | One change an upgrade makes: scale a **stat**, add to a count, raise a chance, scale one gun, or add cards to the **armoury deck**. Each names its **target**. |
 | **ledger** | What each side holds, with **ranks** - level state on the level entity (G0007). Numbers are folded from it where they are read, never written back. |
+| **pending tell** | `UPGRADE x2 C` at the end of a player's panel's first row: his slot holds **drafts**, and the key that opens them. |
 | **pick** | Taking a **card**: an input event naming the draft and the upgrade, never the card's position. |
 | **rank** | How many times one upgrade has been taken (I, II, III). Each rank applies its effects once more. |
 | **rotation** | The order **drafts** go round the present players: ascending slot order, starting after the last **chooser**, skipping anyone **away**. |

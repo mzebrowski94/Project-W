@@ -19,7 +19,15 @@ public enum DispatchKind {
     REINFORCED(Priority.LOW, Coalesce.SUM),
     FEW_TROOPERS(Priority.NORMAL, Coalesce.NONE),
     COMMANDER_DOWN(Priority.HIGH, Coalesce.NEWEST),
-    COMMANDER_LOST(Priority.HIGH, Coalesce.NEWEST);
+    COMMANDER_LOST(Priority.HIGH, Coalesce.NEWEST),
+    /** A player's slot earned an upgrade draft (G0049). */
+    DRAFT_EARNED(Priority.NORMAL, Coalesce.NONE),
+    /** Somebody took an upgrade: its kind as the first number, its new rank as the second. */
+    UPGRADE_TAKEN(Priority.NORMAL, Coalesce.NONE),
+    /** A draft went on to another player because its chooser left (D4). */
+    DRAFT_PASSED(Priority.NORMAL, Coalesce.NONE),
+    /** A draft was owed and the pool had nothing left to deal. */
+    NOTHING_LEFT(Priority.LOW, Coalesce.NEWEST);
 
     /**
      * How much a line matters. A high one is an alarm: it is shown at once, never dropped for being

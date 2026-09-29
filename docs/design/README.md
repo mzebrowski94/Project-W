@@ -290,20 +290,22 @@ rows become enforceable once the named feature exists - promote them then.
 | **Only the other side's dead are kills.** Friendly fire is neither counted nor subtracted. | enforced - `TallyTest.countsNothingForKillingSomebodyOnHisOwnSide` |
 | **A goal is a control point taken while he stood inside it**; a stabilise is any man he put back on his feet, another player's commander included. | enforced - `TallyTest.countsAPointTakenWhileHeStoodOnIt`, `.countsAStabiliseForTheManWhoFinishedIt`, `.countsPuttingAnotherPlayerBackOnHisFeet` |
 | **A tally is shown, never spent** (pillar 3): nothing buys, unlocks or scales with it. | judgement |
-| **An upgrade changes numbers, never what an entity is made of** (ADR 0017). Behaviour an upgrade unlocks is carried from spawn by every unit that could use it and is off at zero. | deferred - S3: `onlyTheSpawnerChangesWhatAnEntityIsMadeOf`, `CompositionTest` |
+| **An upgrade changes numbers, never what an entity is made of** (ADR 0017). Behaviour an upgrade unlocks is carried from spawn by every unit that could use it and is off at zero. | enforced - `ArchitectureTest.onlyTheSpawnerChangesWhatAnEntityIsMadeOf`, `CompositionTest`; the effects are numbers by construction (`Effect`) |
 | **Every number an upgrade may move has exactly one reader**, and a stat nobody reads fails the build. | enforced - `ArchitectureTest.everyStatIsReadInExactlyOnePlace` |
-| **A unit spawned after an upgrade is identical to one that was on the field when it landed.** Numbers are folded where they are read, never written back. | deferred - S3: `UpgradeTest` |
-| The same seed and the same inputs deal the same drafts; a pick is an input event. | deferred - S3: `SimulationDeterminismTest`, `DeterminismFuzzTest` with picks |
-| **A draft belongs to one chooser, in slot rotation.** A pick from anyone else, or for a draft that is gone, changes nothing (G0049). | deferred - S3: `DraftTest` |
-| An away slot is skipped by the rotation, and its drafts pass on (G0052). | deferred - S3, S8: `DraftTest`, `SessionTest` |
-| **An upgrade belongs to the slot or the side, never to a life** - a commander who respawns keeps what his slot chose, the opposite of the tally. | deferred - S3: `DraftTest` |
-| Drafts come from objectives only - a point taken, a hold wave cleared, a boss killed - at their configured rate. | deferred - S3: `DraftTest` |
-| The relational guarantees `SimConfigTest` holds hold at every upgrade's and adaptation's highest rank, through the same fold the game uses. Body size is never a stat. | deferred - S4, S10: `SimConfigTest` through `Modifiers` |
-| Every upgrade and adaptation in force is on screen with its rank, and so is who holds a draft (pillar 5). A card's text is generated from its effects, so tuning a number cannot leave a card lying. | deferred - S5: readout tests, and judgement |
-| A machine's top bar shows at most one draft, and never over the view. | deferred - S5: bar test |
+| **A unit spawned after an upgrade is identical to one that was on the field when it landed.** Numbers are folded where they are read, never written back. | enforced - `UpgradeTest.readsTheSameCooldownForATrooperOnTheFieldAndOneWhoArrivesAfterwards`, `.chargesAPullTheShorterWaitFromTheTickAfterThePick` |
+| The same seed and the same inputs deal the same drafts; a pick is an input event. | enforced - `DraftTest.dealsTheSameDraftsAndAppliesTheSamePicksOnEveryRun`, `.carriesTheLedgerAndTheDraftsThroughASnapshot`, `DeterminismFuzzTest` (random picks and presence) |
+| **A draft belongs to one chooser, in slot rotation.** A pick from anyone else, or for a draft that is gone, changes nothing (G0049). | enforced - `DraftTest.goesRoundThePresentSlotsInOrder`, `.changesNothingForAPickThatIsWrongInAnyWay`, `.changesNothingForAKindTheDraftDoesNotOffer`, `RotationTest` |
+| An away slot is skipped by the rotation, and its drafts pass on (G0052). | enforced offline - `DraftTest.passesTheDraftsOfAnAwaySlotOnAndTakesItBackIntoTheRotation`, `RotationTest`; online deferred - S8: `SessionTest` |
+| **An upgrade belongs to the slot or the side, never to a life** - a commander who respawns keeps what his slot chose, the opposite of the tally. | enforced - `DraftTest.keepsHisSlotsPersonalRanksWhenHeComesBack` |
+| Drafts come from objectives only - a point taken, a hold wave cleared, a boss killed - at their configured rate. | enforced - `DraftTest.earnsAtTheConfiguredRateFromEachSource`, `.earnsNothingWhileNothingIsTaken`, `DefendTest.marksAWaveClearedOnlyOnceTheLastOfItsAliensGoesDown`, `BarrageTest.countsABossDownOnceWhenItsThroesBegin` |
+| The relational guarantees `SimConfigTest` holds hold at every upgrade's and adaptation's highest rank, through the same fold the game uses. Body size is never a stat. | enforced for the players' upgrades - `SimConfigTest.runsHotterThanAnyOtherGunAManCanCarryWithEveryUpgradeAtItsHighestRank`, `.keepsTheSquadSlowerThanTheCommanderAtEveryUpgradesHighestRank`; adaptations deferred - S10 |
+| Every upgrade and adaptation in force is on screen with its rank, and so is who holds a draft (pillar 5). A card's text is generated from its effects, so tuning a number cannot leave a card lying. | enforced for the players' upgrades - `ReadoutWriterTest.showsWhoHoldsADraftAndItsCardsWithTheRankEachWouldHave`, `.listsWhatIsHeldWithItsRanksAndTheMostItCanHave`, `CardTextTest.hasWordsForEveryShippedUpgradeThatFitACard`; the aside and the tell are judgement; adaptations deferred - S10 |
+| A machine's top bar shows at most one draft, and never over the view. Only the seat that opened it drives it. | enforced - `DraftBarTest.belongsToTheSeatThatOpenedIt`; drawn in the bar only (`TopBarPainter`) |
+| Opening a draft pauses the game only while one player is in it, offline, and closing resumes only that pause (D2). | enforced - `DraftPauseTest`; online the game runs on - S8 |
+| While a draft is open its seat's order inputs work it and give no order; every other seat plays on (D12). | enforced - `DraftKeysTest.takesTheChoosersOrderAndLeavesEveryOtherSeatsAlone` |
 | A sealed cache shows its gun before any commander can reach it (G0050). | deferred - S6: `SimConfigTest`, `PickupSystemTest` |
 | A trooper's grenade never lands where its blast reaches the player's side (G0051). | deferred - S7: `TrooperGrenadeTest` |
-| A crewed turret fires the place's gun (G0024), and no upgrade covers it. | deferred - S3: `Scope` resolves no target to a turret; judgement until then |
+| A crewed turret fires the place's gun (G0024), and no upgrade covers it. | enforced - `UpgradeTest.reachesNoTurret` |
 
 The no-hitscan rows are load-bearing in three directions at once: they keep collision uniform, keep
 the simulation deterministic, and keep every threat visible to the player. They are the rows most
@@ -397,9 +399,9 @@ do not treat one as taken when adding a game binding. None of them is on the pad
 | `Tab` | `LB` / `L1` | Pull the view back for a look, and put it back. **One camera, so anybody's press moves everybody's view** | built |
 | `` ` `` | - | Swap the bottom bar between the players' panels and the roll call. This machine's bar, so it swaps for everybody on it | built - the roll call is a placeholder |
 | `Esc` | `Start` / `Options` | Open the pause menu, which asks for the pause. **The pause is everybody's; the menu is this machine's** - another machine sees the paused banner. Offline, losing the window or a seated pad opens it too | built |
-| `C` | `Y` / `Triangle` | Open the oldest upgrade draft of this seat's slot in the top bar; with it open, take the highlighted card (G0049). This machine's top bar, one draft at a time | proposed - settles in S5 |
-| `1`-`3`, while a draft is open | D-pad left / right | Choose a card. The chooser's order inputs give no order while his draft is open; his move, aim, fire, strike, grenade and action stay live | proposed - settles in S5 |
-| `4`, while a draft is open | D-pad down | Close the draft and keep it | proposed - settles in S5 |
+| `C` | `Y` / `Triangle` | Open the oldest upgrade draft of this seat's slot in the top bar; with it open, take the highlighted card (G0049). This machine's top bar, one draft at a time. Solo, it pauses while open (D2) | built |
+| `1`-`3`, while a draft is open | D-pad left / right | Choose a card. The chooser's order inputs give no order while his draft is open; his move, aim, fire, strike, grenade and action stay live | built |
+| `4`, while a draft is open | D-pad down | Close the draft and keep it | built |
 | - | - | Unbound on the pad: `Back`/`Share`, both stick clicks. Left free on purpose | - |
 
 **In pages and modals** (the pause menu, and the menus to come): arrows or `W`/`S` and the d-pad or

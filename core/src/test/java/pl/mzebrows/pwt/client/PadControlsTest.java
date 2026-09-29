@@ -153,6 +153,23 @@ class PadControlsTest {
     }
 
     @Test
+    void pressesTheDraftButtonOnceForEachPress() {
+        PadControls controls = new PadControls(CONTROLS);
+        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().draft().button());
+
+        controls.read(pad);
+        boolean first = controls.drafted();
+        controls.read(pad);
+        boolean held = controls.drafted();
+        controls.read(pad.release(CONTROLS.pad().draft().button()));
+        controls.read(pad.hold(CONTROLS.pad().draft().button()));
+
+        assertThat(first).isTrue();
+        assertThat(held).isFalse();
+        assertThat(controls.drafted()).isTrue();
+    }
+
+    @Test
     void asksToPauseOnceForEachPressOfTheStartButton() {
         PadControls controls = new PadControls(CONTROLS);
         FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().pause().button());

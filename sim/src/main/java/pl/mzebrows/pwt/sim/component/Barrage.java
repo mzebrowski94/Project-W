@@ -70,6 +70,9 @@ public final class Barrage implements Component, Pool.Poolable {
     /** How many times it has been all the way round, which is what decides which way a pattern turns. */
     public int cycles;
 
+    /** Whether its going down has been counted on the level, so a boss is counted once. */
+    public boolean fallen;
+
     /** Sets the barrage from its definition and returns this component. Starts nothing. */
     public Barrage set(BarrageDef def, int newWindUpTicks, int newRestTicks) {
         this.enabled = def.enabled();
@@ -126,5 +129,6 @@ public final class Barrage implements Component, Pool.Poolable {
         phaseTicks = 0;
         salvo = 0;
         cycles = 0;
+        fallen = false;
     }
 }

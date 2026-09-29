@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.ui.hud.PlayerReadout;
 import pl.mzebrows.pwt.ui.hud.Posture;
 import pl.mzebrows.pwt.ui.hud.Readout;
 import pl.mzebrows.pwt.ui.hud.TallyIcon;
+import pl.mzebrows.pwt.ui.hud.UpgradeTell;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
@@ -27,11 +28,17 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
  * whose pad or link is gone is drawn grey and says OFFLINE.
  *
  * <p>Status is empty while he stands: quiet until it matters, and always in the same place when it
- * does. DOWN, KIA and OVERHEAT are the only red, drawn as black text on it (plan 7.0).
+ * does. DOWN, KIA and OVERHEAT are the only red, drawn as black text on it (plan 7.0). While his slot
+ * holds upgrade drafts, the tell ({@code UI:hud/bottom/upgrade}) says so at the row's right end, in his
+ * colour, with the key that opens them.
  */
 final class BottomBarPainter {
 
     private static final int HEAT_BAR_WIDTH = 68;
+
+    /** Columns a bleed-out bar keeps however much the tell wants. */
+    private static final int MIN_BLEED_COLUMNS = 4;
+
     private static final float DIM_ALERT = 0.55f;
 
     /** The tally row's marks, in order. */
@@ -59,6 +66,11 @@ final class BottomBarPainter {
     private final String[][] tallyText = new String[Players.MAX][3];
     private final Color dimAlert;
     private final int weaponColumns;
+    private final UpgradeTell tell;
+    private final String[] tellText = new String[Players.MAX];
+    private final int[] tellDrafts = new int[Players.MAX];
+    private final int[] tellColumns = new int[Players.MAX];
+    private final String[] tellKey = new String[Players.MAX];
 
     BottomBarPainter(Hud hud, UiStrings strings, HudStyle style, HudMetrics metrics, Palette palette) {
         this.hud = hud;
@@ -87,13 +99,25 @@ final class BottomBarPainter {
         this.offline = strings.get("ui.hud.offline");
         this.rollCall = strings.get("ui.hud.rollCall");
         this.dimAlert = new Color(style.alert()).mul(DIM_ALERT, DIM_ALERT, DIM_ALERT, 1f);
+        this.tell = new UpgradeTell(
+                strings.get("ui.hud.upgrade"), strings.get("ui.hud.upgrades"), strings.get("ui.hud.upgradeBrief"));
+        Arrays.fill(tellText, "");
+        Arrays.fill(tellKey, "");
+        Arrays.fill(tellDrafts, -1);
     }
 
     /**
      * @param connected by slot: false for a player whose pad or link is gone, whose panel is greyed
+     * @param draftKeys by slot: what that player presses to open his drafts, or empty when he is not
+     *     played here
      */
     void render(
-            ScreenLayout layout, Readout readout, PanelAssignment seating, boolean[] connected, PanelAlarms alarms) {
+            ScreenLayout layout,
+            Readout readout,
+            PanelAssignment seating,
+            boolean[] connected,
+            PanelAlarms alarms,
+            String[] draftKeys) {
         Rect bottom = layout.bottomBar();
         if (bottom.isEmpty()) {
             return;
@@ -106,13 +130,20 @@ final class BottomBarPainter {
             }
             int x = panels.quarterX(quarter, layout.contentLeft(), layout.view().width()) + alarms.shakeOffset(slot);
             int width = panels.quarterWidth(quarter, layout.view().width());
-            panel(slot, readout.player(slot), connected[slot], x, width, bottom.top(), alarms);
+            panel(slot, readout.player(slot), connected[slot], x, width, bottom.top(), alarms, draftKeys[slot]);
         }
         hud.endCanvas();
     }
 
     private void panel(
-            int slot, PlayerReadout player, boolean connected, int x, int width, int top, PanelAlarms alarms) {
+            int slot,
+            PlayerReadout player,
+            boolean connected,
+            int x,
+            int width,
+            int top,
+            PanelAlarms alarms,
+            String draftKey) {
         Color own = connected ? palette.colorFor(Look.COMMANDER, player.variant) : style.textDim();
         Color text = connected ? style.text() : style.textDim();
         int padding = metrics.padding();
@@ -130,11 +161,21 @@ final class BottomBarPainter {
         int row = top - padding;
         hud.text(labels[slot], textX, row, own);
         int statusX = textX + (labels[slot].length() + 1) * UiFont.ADVANCE;
+        String upgrade = tell(
+                slot,
+                player.drafts,
+                draftKey,
+                panels.textColumns(width) - labels[slot].length() - 1 - statusColumns(slot, player, connected) - 1);
+        int tellX = textRight - upgrade.length() * UiFont.ADVANCE;
+        if (!upgrade.isEmpty()) {
+            hud.text(upgrade, tellX, row, own);
+        }
         switch (player.posture) {
             case CASUALTY -> {
                 inverse(down, statusX, row, alert);
                 int barX = statusX + (down.length() + 1) * UiFont.ADVANCE;
-                bar(barX, row, textRight - barX, player.bleedOut, style.alert());
+                int barRight = upgrade.isEmpty() ? textRight : tellX - UiFont.ADVANCE;
+                bar(barX, row, barRight - barX, player.bleedOut, style.alert());
             }
             case DYING -> inverse(kiaText(slot, -1f), statusX, row, alert);
             case RESPAWNING -> inverse(kiaText(slot, player.respawnSeconds), statusX, row, alert);
@@ -163,6 +204,28 @@ final class BottomBarPainter {
         if (player.posture != Posture.ABSENT) {
             tally(slot, player, textX, row);
         }
+    }
+
+    /** Columns row 1's status takes after the label, a bleed-out bar's least width included. */
+    private int statusColumns(int slot, PlayerReadout player, boolean connected) {
+        return switch (player.posture) {
+            case CASUALTY -> down.length() + 1 + MIN_BLEED_COLUMNS;
+            case DYING -> kiaText(slot, -1f).length();
+            case RESPAWNING -> kiaText(slot, player.respawnSeconds).length();
+            case ABOARD -> connected ? aboard.length() : offline.length();
+            default -> connected ? 0 : offline.length();
+        };
+    }
+
+    /** The tell, formatted only when the count, the key or the room for it changes. */
+    private String tell(int slot, int drafts, String key, int columns) {
+        if (drafts != tellDrafts[slot] || columns != tellColumns[slot] || !key.equals(tellKey[slot])) {
+            tellDrafts[slot] = drafts;
+            tellColumns[slot] = columns;
+            tellKey[slot] = key;
+            tellText[slot] = tell.text(drafts, key, columns);
+        }
+        return tellText[slot];
     }
 
     private static int count(PlayerReadout player, int icon) {

@@ -25,6 +25,7 @@ import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dodge;
+import pl.mzebrows.pwt.sim.component.Drafts;
 import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
@@ -52,6 +53,7 @@ import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Post;
+import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Ranged;
@@ -72,6 +74,7 @@ import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
+import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.component.Waves;
@@ -313,9 +316,19 @@ public final class Spawner {
      * <p>A strain is its numbers: adding one is a definition and no code (G0008).
      */
     public Entity spawnUnit(UnitKind kind, float x, float y) {
+        return spawnUnit(kind, x, y, 0);
+    }
+
+    /**
+     * The same, for one sent by a wave: {@code wave} counts from one, and zero is a unit nothing sent.
+     * The stamp is what says a wave is cleared once all it sent is down.
+     */
+    public Entity spawnUnit(UnitKind kind, float x, float y, int wave) {
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Enemy.class));
-        entity.add(engine.createComponent(Strain.class));
+        Strain strain = engine.createComponent(Strain.class);
+        strain.wave = wave;
+        entity.add(strain);
         entity.add(engine.createComponent(Faction.class).set(Side.ALIEN));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
@@ -725,6 +738,10 @@ public final class Spawner {
         entity.add(engine.createComponent(Waves.class));
         // What is kept off the field until the players are all in one place; empty keeps nothing (G0048).
         entity.add(engine.createComponent(Lair.class));
+        // What each side holds, the drafts waiting to be picked, and who is away (ADR 0017, G0049, G0052).
+        entity.add(engine.createComponent(Upgrades.class));
+        entity.add(engine.createComponent(Drafts.class));
+        entity.add(engine.createComponent(Presence.class));
         admit(entity);
         return entity;
     }

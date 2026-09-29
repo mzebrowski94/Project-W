@@ -26,5 +26,12 @@ public enum HarnessCommand {
     /** A joining copy: step the simulated lag to the next of {@code net.conditions.latencySteps}. */
     NEXT_LAG,
     /** Leave for the menu - what the pause menu's LEAVE carries out, once confirmed. */
-    LEAVE
+    LEAVE,
+    /**
+     * Take the first, second or third card of the keyboard seat's oldest draft. Scaffolding until the
+     * draft bar (upgrades S5); offline only until online drafts (S8).
+     */
+    TAKE_FIRST_CARD,
+    TAKE_SECOND_CARD,
+    TAKE_THIRD_CARD
 }

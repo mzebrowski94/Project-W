@@ -28,8 +28,9 @@ import pl.mzebrows.pwt.sim.component.Components;
  * then every entity in spawn order (ADR 0013), then each entity's components in registry order - and a
  * new component or a new field needs nothing here at all. The field types a plan can handle are the
  * ones {@code ArchitectureTest.componentFieldsAreWhatASnapshotCanWrite} allows: primitives, enums, an
- * {@code Entity} (written as its place in spawn order), records made of those, and the two named lists of
- * records, {@code Waves.pending} and {@code Lair.pending}.
+ * {@code Entity} (written as its place in spawn order), records made of those, and the named lists of
+ * records {@code ArchitectureTest.NAMED_COLLECTIONS} admits - the level's schedule and lair, and the
+ * upgrade ledger, drafts and presence.
  *
  * <p><strong>One walk, two uses.</strong> The same walk writes bytes for a snapshot or feeds a hash for a
  * checksum, so the two can never disagree about what the world is.

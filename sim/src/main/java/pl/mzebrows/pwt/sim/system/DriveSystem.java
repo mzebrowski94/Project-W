@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.GroundDef;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Turns what a unit wants into what it is doing: commits {@link Steering} to {@link Velocity}, once,
@@ -33,18 +34,21 @@ public final class DriveSystem extends IteratingSystem {
 
     private final TileMap map;
     private final Defs<Terrain, GroundDef> ground;
+    private final Modifiers modifiers;
 
-    public DriveSystem(TileMap map, Defs<Terrain, GroundDef> ground) {
+    public DriveSystem(TileMap map, Defs<Terrain, GroundDef> ground, Modifiers modifiers) {
         super(Family.all(Steering.class, Velocity.class).get());
         this.map = map;
         this.ground = ground;
+        this.modifiers = modifiers;
     }
 
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
         Steering steering = STEERING.get(entity);
         if (!Drivers.held(entity)) {
-            float pace = Pace.of(entity, map, ground);
+            // Where the SPEED stat is read: a driven unit's pace, folded (ADR 0017).
+            float pace = modifiers.pace(entity, Pace.of(entity, map, ground));
             VELOCITY.get(entity).set(steering.desiredX * pace, steering.desiredY * pace);
         }
         steering.clear();

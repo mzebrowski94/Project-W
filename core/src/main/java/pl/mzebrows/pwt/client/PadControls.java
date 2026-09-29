@@ -43,6 +43,8 @@ public final class PadControls {
     private boolean pauseWasDown;
     private boolean zoomToggled;
     private boolean pauseRequested;
+    private boolean draftWasDown;
+    private boolean drafted;
     private @Nullable Order ordered;
 
     private final boolean[] orderWasDown = new boolean[4];
@@ -70,6 +72,8 @@ public final class PadControls {
         zoomWasDown = held(pad, bindings.zoom());
         pauseRequested = wentDown(pad, bindings.pause(), pauseWasDown);
         pauseWasDown = held(pad, bindings.pause());
+        drafted = wentDown(pad, bindings.draft(), draftWasDown);
+        draftWasDown = held(pad, bindings.draft());
         ordered = order(pad);
 
         return new CommanderInput(
@@ -96,6 +100,11 @@ public final class PadControls {
     /** True on the frame this pad asked to swap between the normal and pulled-back view. */
     public boolean zoomToggled() {
         return zoomToggled;
+    }
+
+    /** True on the frame this pad pressed its draft button: open his draft, or take the card. */
+    public boolean drafted() {
+        return drafted;
     }
 
     /** True on the frame this pad asked to stop or start the clock. */

@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * One scenario being played: the world, the clock that drives it, and the harness state around it.
@@ -57,6 +58,14 @@ public final class ScenarioSession implements ScenarioPlay {
      * exactly one order, at any refresh rate.
      */
     private final @Nullable Order[] pendingOrder = new Order[Players.MAX];
+
+    /**
+     * A card taken with a harness key that no tick has taken yet, by slot: the kind and the draft it was
+     * on. Held for the reason {@link #pendingOrder} is, and spent once.
+     */
+    private final @Nullable UpgradeKind[] pendingPick = new UpgradeKind[Players.MAX];
+
+    private final int[] pendingPickSerial = new int[Players.MAX];
 
     /** Reused, so handing a tick its waiting events costs no allocation per tick. */
     private final PlayerInputs forThisTick = new PlayerInputs();
@@ -106,7 +115,38 @@ public final class ScenarioSession implements ScenarioPlay {
                 // Offline there is no link to lag.
             }
             case LEAVE -> leaving = true;
+            case TAKE_FIRST_CARD -> take(0);
+            case TAKE_SECOND_CARD -> take(1);
+            case TAKE_THIRD_CARD -> take(2);
         }
+    }
+
+    /**
+     * Takes the card at this place on the keyboard seat's oldest draft, from the next tick. The card is
+     * read now, as it is shown, and handed on as its kind (G0049).
+     */
+    private void take(int position) {
+        int slot = slotOf(0);
+        if (slot < 0) {
+            return;
+        }
+        int serial = simulation.upgradeView().oldestDraftOf(slot);
+        @Nullable
+        UpgradeKind kind = serial == 0 ? null : simulation.upgradeView().card(serial, position);
+        if (kind != null) {
+            pick(0, serial, kind);
+        }
+    }
+
+    /** Held until the next tick runs, and remembered while paused - a solo draft is taken paused (D2). */
+    @Override
+    public void pick(int seat, int serial, UpgradeKind kind) {
+        int slot = slotOf(seat);
+        if (slot < 0 || slot >= pendingPick.length) {
+            return;
+        }
+        pendingPick[slot] = kind;
+        pendingPickSerial[slot] = serial;
     }
 
     /** The last squad order the player gave, for the overlay to show. Null until one is given. */
@@ -247,6 +287,11 @@ public final class ScenarioSession implements ScenarioPlay {
         for (int slot = 0; slot < Players.MAX; slot++) {
             forThisTick.set(slot, input.get(slot)).order(slot, pendingOrder[slot]);
             pendingOrder[slot] = null;
+            UpgradeKind picked = pendingPick[slot];
+            if (picked != null) {
+                forThisTick.pick(slot, pendingPickSerial[slot], picked);
+                pendingPick[slot] = null;
+            }
             if (pendingJoin[slot]) {
                 forThisTick.join(slot);
                 pendingJoin[slot] = false;
@@ -270,6 +315,7 @@ public final class ScenarioSession implements ScenarioPlay {
     private void restart() {
         lastOrder = null;
         Arrays.fill(pendingOrder, null);
+        Arrays.fill(pendingPick, null);
         simulation = newWorld();
         clock = new FixedStepClock(simulation.config());
         paused = false;

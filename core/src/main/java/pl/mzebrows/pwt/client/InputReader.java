@@ -1,12 +1,15 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import java.util.Arrays;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
+import pl.mzebrows.pwt.ui.hud.DraftBar;
 import pl.mzebrows.pwt.ui.nav.ReleaseLatch;
 
 /**
@@ -43,6 +46,9 @@ public final class InputReader {
     private final PlayerInputs inputs = new PlayerInputs();
 
     private final Vector3 pointer = new Vector3();
+
+    /** What each seat asked of the draft this frame, or null. */
+    private final DraftBar.@Nullable Key[] draftKeys = new DraftBar.Key[PlayerSeats.SEATS];
 
     private boolean zoomToggled;
     private boolean rollCallToggled;
@@ -94,21 +100,24 @@ public final class InputReader {
 
     /** Samples the devices as they are right now, one slot at a time. */
     public PlayerInputs read(KeyHolds held, KeyPresses pressed) {
-        return read(held, pressed, false);
+        return read(held, pressed, false, -1);
     }
 
     /**
      * Samples the devices, spent presses masked.
      *
      * @param neutral a menu is open on this machine: its commanders keep their aim and hold nothing
+     * @param drafting the seat whose draft is open in the top bar, or -1: its order inputs work the
+     *     draft and give no order ({@link DraftKeys}), and everybody else plays on
      */
-    public PlayerInputs read(KeyHolds rawHeld, KeyPresses pressed, boolean neutral) {
+    public PlayerInputs read(KeyHolds rawHeld, KeyPresses pressed, boolean neutral, int drafting) {
         KeyHolds held = keycode -> latch.filter(keycode, rawHeld.held(keycode));
         seats.refresh(gamepads);
         inputs.clear();
         zoomToggled = ViewControls.zoomToggled(pressed, controls.keyboard());
         rollCallToggled = ViewControls.rollCallToggled(pressed, controls.keyboard());
         pauseRequested = false;
+        Arrays.fill(draftKeys, null);
 
         pointer.set(Gdx.input.getX(), Gdx.input.getY(), 0f);
         viewport.unproject(pointer);
@@ -122,6 +131,9 @@ public final class InputReader {
                                 pointer.x,
                                 pointer.y))
                 .order(PlayerSeats.KEYBOARD_SLOT, OrderKeys.poll(pressed, controls.keyboard()));
+        if (pressed.justPressed(controls.keyboard().draft())) {
+            draftKeys[PlayerSeats.KEYBOARD_SLOT] = DraftBar.Key.DRAFT;
+        }
 
         for (int slot = PlayerSeats.KEYBOARD_SLOT + 1; slot < PlayerSeats.SEATS; slot++) {
             Gamepad pad = seats.padIn(slot);
@@ -136,10 +148,20 @@ public final class InputReader {
                         + PadLabels.briefing(controls.pad(), PadLabels.isPlayStation(pad.name())));
             }
             inputs.set(slot, pads.read(latchedPads[slot].over(pad))).order(slot, pads.ordered());
+            if (pads.drafted()) {
+                draftKeys[slot] = DraftBar.Key.DRAFT;
+            }
             zoomToggled |= pads.zoomToggled();
             pauseRequested |= pads.pauseRequested();
         }
+        if (drafting >= 0 && drafting < PlayerSeats.SEATS) {
+            DraftBar.Key key = DraftKeys.route(inputs, drafting);
+            if (draftKeys[drafting] == null) {
+                draftKeys[drafting] = key;
+            }
+        }
         if (neutral) {
+            Arrays.fill(draftKeys, null);
             for (int slot = 0; slot < PlayerSeats.SEATS; slot++) {
                 CommanderInput was = inputs.get(slot);
                 inputs.set(
@@ -164,6 +186,29 @@ public final class InputReader {
 
     private boolean mouse(int button) {
         return latch.filter(LatchedGamepad.MOUSE + button, Gdx.input.isButtonPressed(button));
+    }
+
+    /** What this seat asked of the draft this frame, or null. */
+    public DraftBar.@Nullable Key draftKey(int seat) {
+        return draftKeys[seat];
+    }
+
+    /**
+     * What this seat is told to press for its draft, in its own device's words: the key, or the button
+     * as his pad names it. Allocates; asked when the tell changes, not per frame.
+     */
+    public String draftKeyLabel(int seat) {
+        if (seat == PlayerSeats.KEYBOARD_SLOT) {
+            return Input.Keys.toString(controls.keyboard().draft());
+        }
+        Gamepad pad = seats.padIn(seat);
+        return PadLabels.of(controls.pad().draft(), pad != null && PadLabels.isPlayStation(pad.name()));
+    }
+
+    /** Whether the pad in this seat names its buttons the PlayStation way; false for the keyboard. */
+    public boolean playStation(int seat) {
+        Gamepad pad = seat == PlayerSeats.KEYBOARD_SLOT ? null : seats.padIn(seat);
+        return pad != null && PadLabels.isPlayStation(pad.name());
     }
 
     /** Who is sitting where, so a new arrival can be given a commander. */

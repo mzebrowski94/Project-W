@@ -27,6 +27,8 @@ import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
 
 /**
  * The one place the interface reads the simulation. Once a frame, after however many ticks ran, it
@@ -117,6 +119,7 @@ public final class ReadoutWriter {
         for (int i = 0; i < commanders.size(); i++) {
             commander(commanders.get(i), out);
         }
+        upgrades(world.upgradeView(), out);
         for (int i = 0; i < respawns.size(); i++) {
             Respawning respawning = RESPAWNING.get(respawns.get(i));
             if (!inRange(respawning.slot)) {
@@ -170,6 +173,39 @@ public final class ReadoutWriter {
         if (player.posture == Posture.ABOARD && CREW.has(entity)) {
             aboard(CREW.get(entity).station, player);
         }
+    }
+
+    /**
+     * Each slot's drafts and the cards of his oldest, and what the side holds (G0049) - through {@link
+     * UpgradeView}, never the ledger itself (ADR 0017).
+     */
+    private static void upgrades(UpgradeView view, Readout out) {
+        out.upgradeRevision = view.revision();
+        out.draftsDry = view.dry();
+        for (int slot = 0; slot < Players.MAX; slot++) {
+            PlayerReadout player = out.player(slot);
+            player.drafts = view.draftsOf(slot);
+            int serial = view.oldestDraftOf(slot);
+            player.draftSerial = serial;
+            int count = 0;
+            for (UpgradeKind kind = serial == 0 ? null : view.cardOf(serial, 0);
+                    kind != null && count < PlayerReadout.CARDS;
+                    kind = view.cardOf(serial, count)) {
+                player.cards[count] = kind;
+                player.cardRanks[count] = view.rankOnceTaken(kind, slot);
+                count++;
+            }
+            player.cardCount = count;
+        }
+        int held = Math.min(view.heldCount(), Readout.HELD);
+        for (int i = 0; i < held; i++) {
+            UpgradeKind kind = view.heldKind(i);
+            out.heldKind[i] = kind;
+            out.heldSlot[i] = view.heldSlot(i);
+            out.heldRanks[i] = view.heldRanks(i);
+            out.heldMaxRanks[i] = view.ranksOf(kind);
+        }
+        out.heldCount = held;
     }
 
     /** Heat belongs to the gun (G0025): aboard, the panel shows the turret's gun and its heat. */

@@ -49,7 +49,10 @@ class HarnessControlsTest {
                 Arguments.of("period", Input.Keys.PERIOD, HarnessCommand.STEP),
                 Arguments.of("r", Input.Keys.R, HarnessCommand.RESTART),
                 Arguments.of("f1", Input.Keys.F1, HarnessCommand.TOGGLE_OVERLAY),
-                Arguments.of("g", Input.Keys.G, HarnessCommand.TOGGLE_GOD_MODE));
+                Arguments.of("g", Input.Keys.G, HarnessCommand.TOGGLE_GOD_MODE),
+                Arguments.of("f5", Input.Keys.F5, HarnessCommand.TAKE_FIRST_CARD),
+                Arguments.of("f6", Input.Keys.F6, HarnessCommand.TAKE_SECOND_CARD),
+                Arguments.of("f7", Input.Keys.F7, HarnessCommand.TAKE_THIRD_CARD));
     }
 
     private static KeyPresses pressed(int... keycodes) {

@@ -11,7 +11,9 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Health;
+import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.BarrageDef;
@@ -45,6 +47,8 @@ public final class BarrageSystem extends EntitySystem {
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
+    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
+    private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
 
     /** Clear of its own body, so nothing shoots itself in the foot. */
     private static final float MUZZLE_GAP = 0.1f;
@@ -55,6 +59,7 @@ public final class BarrageSystem extends EntitySystem {
     private final Spawner spawner;
 
     private ImmutableArray<Entity> bosses = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
     public BarrageSystem(SimConfig config, Spawner spawner) {
         this.config = config;
@@ -66,6 +71,7 @@ public final class BarrageSystem extends EntitySystem {
         bosses = engine.getEntitiesFor(
                 Family.all(Barrage.class, Position.class, Body.class, Health.class, Perception.class)
                         .get());
+        levels = engine.getEntitiesFor(Family.all(Level.class).get());
     }
 
     @Override
@@ -73,7 +79,11 @@ public final class BarrageSystem extends EntitySystem {
         for (int i = 0; i < bosses.size(); i++) {
             Entity entity = bosses.get(i);
             Barrage barrage = BARRAGE.get(entity);
-            if (!barrage.enabled || Drivers.down(entity)) {
+            if (!barrage.enabled) {
+                continue;
+            }
+            if (Drivers.down(entity)) {
+                fall(entity, barrage);
                 continue;
             }
             Perception perception = PERCEPTION.get(entity);
@@ -85,6 +95,20 @@ public final class BarrageSystem extends EntitySystem {
             float targetY = perception.aggro ? perception.targetY : perception.provokedY;
             float pace = enraged(barrage, HEALTH.get(entity)) ? barrage.enragedFactor : 1f;
             advance(entity, barrage, targetX, targetY, pace, deltaTime);
+        }
+    }
+
+    /**
+     * Counts a boss down on the level, once, on the tick its throes begin - a source of drafts
+     * (G0049). A boss is a unit whose barrage is not off, so nothing else needs to know it is one.
+     */
+    private void fall(Entity entity, Barrage barrage) {
+        if (barrage.fallen || !DYING.has(entity) || !DYING.get(entity).begun) {
+            return;
+        }
+        barrage.fallen = true;
+        for (int i = 0; i < levels.size(); i++) {
+            LEVEL.get(levels.get(i)).bossesDown++;
         }
     }
 

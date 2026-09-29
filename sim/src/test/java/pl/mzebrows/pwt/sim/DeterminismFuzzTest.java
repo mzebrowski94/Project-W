@@ -10,6 +10,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * Five minutes of every scenario under seeded random input - four players, orders, a late join, god mode
@@ -26,6 +27,7 @@ class DeterminismFuzzTest {
     private static final int TICKS = 18_000;
     private static final int SLOTS = 4;
     private static final Order[] ORDERS = Order.values();
+    private static final UpgradeKind[] KINDS = UpgradeKind.values();
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("registeredScenarios")
@@ -47,6 +49,18 @@ class DeterminismFuzzTest {
             }
             if (tick == 1 || tick == 2_000 + (int) (seed & 1023)) {
                 inputs.join(tick == 1 ? 1 : 2 + dice.nextInt(SLOTS - 2));
+            }
+            if (dice.nextFloat() < 0.002f) {
+                // A pick is an input event: most name a draft that is gone or a card not offered, and change nothing.
+                inputs.pick(dice.nextInt(SLOTS), 1 + dice.nextInt(8), KINDS[dice.nextInt(KINDS.length)]);
+            }
+            if (dice.nextFloat() < 0.0005f) {
+                int slot = 1 + dice.nextInt(SLOTS - 1);
+                if (dice.nextFloat() < 0.5f) {
+                    inputs.away(slot);
+                } else {
+                    inputs.back(slot);
+                }
             }
             if (dice.nextFloat() < 0.001f) {
                 invulnerable = !invulnerable;

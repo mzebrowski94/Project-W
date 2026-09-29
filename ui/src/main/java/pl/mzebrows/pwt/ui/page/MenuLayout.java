@@ -20,6 +20,8 @@ public record MenuLayout(int padding, int pitch, int advance, int fontSize) {
 
     public enum Anchor {
         DOCKED_LEFT,
+        /** Beside a page docked left: what it shows alongside, like the pause menu's list of upgrades. */
+        DOCKED_RIGHT,
         CENTRED
     }
 
@@ -35,6 +37,11 @@ public record MenuLayout(int padding, int pitch, int advance, int fontSize) {
             int width = Math.min(view.width() - 4 * padding, wanted);
             int top = view.top() - 2 * padding;
             return new Rect(view.x() + 2 * padding, top - height, width, height);
+        }
+        if (anchor == Anchor.DOCKED_RIGHT) {
+            int width = Math.min(view.width() - 4 * padding, wanted);
+            int top = view.top() - 2 * padding;
+            return new Rect(view.right() - 2 * padding - width, top - height, width, height);
         }
         int width = Math.min(view.width() - 4 * padding, wanted);
         return new Rect(view.x() + (view.width() - width) / 2, view.y() + (view.height() - height) / 2, width, height);

@@ -25,6 +25,11 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.upgrade.DraftDef;
+import pl.mzebrows.pwt.sim.upgrade.Stat;
+import pl.mzebrows.pwt.sim.upgrade.StatDef;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * Tunables the simulation reads at construction time: exactly {@code assets/sim/*.properties}, read in
@@ -64,6 +69,9 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * @param turret the gun on a mount that a man gets on
  * @param obstacle the static circles that block movement
  * @param collision how hard the constraint solver works
+ * @param draft how drafts are earned and dealt (G0049)
+ * @param stats how far each number an upgrade may move can be moved
+ * @param upgrades every upgrade and adaptation, by kind (ADR 0017)
  */
 @With
 public record SimConfig(
@@ -93,7 +101,10 @@ public record SimConfig(
         ControlPointConfig controlPoint,
         TurretConfig turret,
         ObstacleConfig obstacle,
-        CollisionConfig collision) {
+        CollisionConfig collision,
+        @ConfigKey("upgrade.draft") DraftDef draft,
+        @ConfigKey("upgrade.stat") Defs<Stat, StatDef> stats,
+        @ConfigKey("upgrade") Defs<UpgradeKind, UpgradeDef> upgrades) {
 
     /** The prefix every key in {@code assets/sim/*.properties} starts with. */
     private static final String ROOT = "sim";
@@ -108,6 +119,7 @@ public record SimConfig(
                     melee.longestReachableGap(commander.radius()),
                     "a clinch that stops short of the commander leaves the freeze playing across a gap");
         }
+        UpgradeDef.checkCatalogue(draft, stats, upgrades);
     }
 
     /** The definition of one strain, for a system or a scenario that needs its numbers. */

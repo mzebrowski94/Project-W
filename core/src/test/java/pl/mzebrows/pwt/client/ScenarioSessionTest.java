@@ -6,17 +6,21 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
 import pl.mzebrows.pwt.ui.hud.DispatchKind;
 import pl.mzebrows.pwt.ui.hud.DispatchSink;
 import pl.mzebrows.pwt.ui.hud.Readout;
@@ -296,6 +300,118 @@ class ScenarioSessionTest {
         session.advance(TICK * 3f, ordering(Order.DEFENCE));
 
         assertThat(trooperOrder(session)).isEqualTo(Order.DEFENCE);
+    }
+
+    /** A card taken with a harness key is an event like an order: a frame too short for a tick keeps it. */
+    @Test
+    void deliversAPickGivenOnAFrameTooShortToRunATick() {
+        ScenarioSession session = new ScenarioSession(new OnTakenPoints(1), SimConfig.defaults());
+        session.advance(TICK, NOBODY);
+
+        session.apply(HarnessCommand.TAKE_FIRST_CARD, NOBODY);
+        session.advance(TICK * 0.4f, NOBODY);
+        session.advance(TICK, NOBODY);
+
+        assertThat(ranksHeld(session)).isEqualTo(1);
+    }
+
+    /** One press is one card, however many ticks the frame after it runs, and a second draft stays. */
+    @Test
+    void spendsAPickOnceEvenWhenAFrameRunsSeveralTicks() {
+        ScenarioSession session = new ScenarioSession(new OnTakenPoints(3), SimConfig.defaults());
+        session.advance(TICK, NOBODY);
+
+        session.apply(HarnessCommand.TAKE_FIRST_CARD, NOBODY);
+        session.advance(TICK * 3f, NOBODY);
+
+        assertThat(ranksHeld(session)).isEqualTo(1);
+        assertThat(session.simulation().upgradeView().draftsOf(0)).isEqualTo(1);
+    }
+
+    @Test
+    void remembersAPickMadeWhilePaused() {
+        ScenarioSession session = new ScenarioSession(new OnTakenPoints(1), SimConfig.defaults());
+        session.advance(TICK, NOBODY);
+        session.apply(HarnessCommand.PAUSE, NOBODY);
+
+        session.apply(HarnessCommand.TAKE_SECOND_CARD, NOBODY);
+        session.advance(TICK, NOBODY);
+        int whilePaused = ranksHeld(session);
+        session.apply(HarnessCommand.PAUSE, NOBODY);
+        session.advance(TICK, NOBODY);
+
+        assertThat(whilePaused).isZero();
+        assertThat(ranksHeld(session)).isEqualTo(1);
+    }
+
+    /** The draft bar's pick: a solo draft is taken while paused, and lands on the first tick after. */
+    @Test
+    void takesTheCardTheDraftBarPicksForTheSeatsSlotOnceTheGameRuns() {
+        ScenarioSession session = new ScenarioSession(new OnTakenPoints(1), SimConfig.defaults());
+        session.advance(TICK, NOBODY);
+        int serial = session.simulation().upgradeView().oldestDraftOf(0);
+        UpgradeKind kind =
+                Objects.requireNonNull(session.simulation().upgradeView().cardOf(serial, 1));
+        session.setPaused(true);
+
+        session.pick(0, serial, kind);
+        session.advance(TICK, NOBODY);
+        int whilePaused = ranksHeld(session);
+        session.setPaused(false);
+        session.advance(TICK, NOBODY);
+
+        assertThat(whilePaused).isZero();
+        assertThat(session.simulation().upgradeView().heldKind(0)).isEqualTo(kind);
+    }
+
+    @Test
+    void ignoresAPickFromASeatWithNoSlot() {
+        ScenarioSession session = new ScenarioSession(new OnTakenPoints(1), SimConfig.defaults());
+        session.advance(TICK, NOBODY);
+        int serial = session.simulation().upgradeView().oldestDraftOf(0);
+        UpgradeKind kind =
+                Objects.requireNonNull(session.simulation().upgradeView().cardOf(serial, 0));
+
+        session.pick(3, serial, kind);
+        session.advance(TICK, NOBODY);
+
+        assertThat(ranksHeld(session)).isZero();
+    }
+
+    private static int ranksHeld(ScenarioSession session) {
+        UpgradeView view = session.simulation().upgradeView();
+        int ranks = 0;
+        for (int i = 0; i < view.heldCount(); i++) {
+            ranks += view.heldRanks(i);
+        }
+        return ranks;
+    }
+
+    /** One commander, and this many control points already taken: drafts on the first tick. */
+    private static final class OnTakenPoints implements Scenario {
+        private final int points;
+
+        OnTakenPoints(int points) {
+            this.points = points;
+        }
+
+        @Override
+        public String name() {
+            return "On taken points";
+        }
+
+        @Override
+        public String description() {
+            return "A commander among control points already taken.";
+        }
+
+        @Override
+        public void populate(Simulation simulation) {
+            simulation.spawnCommander(10f, 10f);
+            for (int i = 0; i < points; i++) {
+                simulation.spawnControlPoint(30f + 10f * i, 30f).getComponent(ControlPoint.class).captured = true;
+            }
+        }
     }
 
     /**

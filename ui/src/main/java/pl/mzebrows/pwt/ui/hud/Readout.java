@@ -1,7 +1,9 @@
 package pl.mzebrows.pwt.ui.hud;
 
+import java.util.Arrays;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.def.Objective;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * Every fact the HUD shows, copied out of the simulation once a frame by {@link ReadoutWriter} - the one
@@ -37,12 +39,33 @@ public final class Readout {
     /** Troopers on the field who are not dying. A man shot down is still standing in this count. */
     public int troopersStanding;
 
+    /** Entries the ledger can hold at most: every kind, once for the side and once per slot. */
+    public static final int HELD = UpgradeKind.values().length * (Players.MAX + 1);
+
+    /**
+     * What the side holds (the ledger), in the order it was first taken: the kind, whose it is - a slot,
+     * or -1 for the side's - its ranks, and the most it can have.
+     */
+    public int heldCount;
+
+    public final UpgradeKind[] heldKind = new UpgradeKind[HELD];
+    public final int[] heldSlot = new int[HELD];
+    public final int[] heldRanks = new int[HELD];
+    public final int[] heldMaxRanks = new int[HELD];
+
+    /** Moves whenever a draft or the ledger changes, so text built from them is rebuilt only then. */
+    public long upgradeRevision;
+
+    /** How many drafts a source was owed that nothing was left to deal. */
+    public int draftsDry;
+
     private final PlayerReadout[] players = new PlayerReadout[Players.MAX];
 
     public Readout() {
         for (int slot = 0; slot < players.length; slot++) {
             players[slot] = new PlayerReadout();
         }
+        Arrays.fill(heldKind, UpgradeKind.LARGER_ARMY);
     }
 
     /** The facts about one slot's player. Every slot has one; an empty seat reads {@link Posture#ABSENT}. */
@@ -77,6 +100,13 @@ public final class Readout {
         wavesArmed = other.wavesArmed;
         nestsStanding = other.nestsStanding;
         troopersStanding = other.troopersStanding;
+        heldCount = other.heldCount;
+        System.arraycopy(other.heldKind, 0, heldKind, 0, other.heldCount);
+        System.arraycopy(other.heldSlot, 0, heldSlot, 0, other.heldCount);
+        System.arraycopy(other.heldRanks, 0, heldRanks, 0, other.heldCount);
+        System.arraycopy(other.heldMaxRanks, 0, heldMaxRanks, 0, other.heldCount);
+        upgradeRevision = other.upgradeRevision;
+        draftsDry = other.draftsDry;
         for (int slot = 0; slot < players.length; slot++) {
             players[slot].copyFrom(other.players[slot]);
         }
@@ -92,6 +122,9 @@ public final class Readout {
         wavesArmed = false;
         nestsStanding = 0;
         troopersStanding = 0;
+        heldCount = 0;
+        upgradeRevision = 0L;
+        draftsDry = 0;
         for (PlayerReadout player : players) {
             player.clear();
         }

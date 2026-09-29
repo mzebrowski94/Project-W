@@ -3,9 +3,11 @@ package pl.mzebrows.pwt.ui.hud;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.badlogic.ashley.core.Entity;
+import java.util.Objects;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -16,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 class ReadoutWriterTest {
 
@@ -195,6 +198,68 @@ class ReadoutWriterTest {
         writer.fill(world, MISSION, "", readout);
 
         assertThat(readout.worldSerial).isEqualTo(serial);
+    }
+
+    @Test
+    void showsWhoHoldsADraftAndItsCardsWithTheRankEachWouldHave() {
+        Simulation world = world();
+        world.spawnCommander(40f, 40f, 0);
+        world.spawnControlPoint(30f, 30f).getComponent(ControlPoint.class).captured = true;
+        world.step();
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        PlayerReadout player = readout.player(0);
+        assertThat(player.drafts).isEqualTo(1);
+        assertThat(player.draftSerial).isEqualTo(world.upgradeView().oldestDraftOf(0));
+        assertThat(player.cardCount).isEqualTo(world.config().draft().options());
+        for (int i = 0; i < player.cardCount; i++) {
+            assertThat(player.cards[i]).isEqualTo(world.upgradeView().cardOf(player.draftSerial, i));
+            assertThat(player.cardRanks[i]).isEqualTo(1);
+        }
+        assertThat(readout.player(1).drafts).isZero();
+        assertThat(readout.upgradeRevision).isNotZero();
+    }
+
+    @Test
+    void listsWhatIsHeldWithItsRanksAndTheMostItCanHave() {
+        Simulation world = world();
+        world.spawnCommander(40f, 40f, 0);
+        world.spawnControlPoint(30f, 30f).getComponent(ControlPoint.class).captured = true;
+        world.step();
+        int serial = world.upgradeView().oldestDraftOf(0);
+        UpgradeKind taken = Objects.requireNonNull(world.upgradeView().cardOf(serial, 0));
+        world.step(new PlayerInputs().pick(0, serial, taken));
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        assertThat(readout.heldCount).isEqualTo(1);
+        assertThat(readout.heldKind[0]).isEqualTo(taken);
+        assertThat(readout.heldRanks[0]).isEqualTo(1);
+        assertThat(readout.heldMaxRanks[0])
+                .isEqualTo(world.config().upgrades().of(taken).ranks());
+        assertThat(readout.player(0).drafts).isZero();
+    }
+
+    @Test
+    void copiesTheDraftsAndWhatIsHeldIntoAnotherReadout() {
+        Readout from = new Readout();
+        from.heldCount = 1;
+        from.heldKind[0] = UpgradeKind.MARKSMEN;
+        from.heldSlot[0] = 2;
+        from.heldRanks[0] = 2;
+        from.player(2).drafts = 3;
+        from.player(2).cardCount = 1;
+        from.player(2).cards[0] = UpgradeKind.GRENADIER;
+        Readout to = new Readout();
+
+        to.copyFrom(from);
+
+        assertThat(to.heldKind[0]).isEqualTo(UpgradeKind.MARKSMEN);
+        assertThat(to.heldSlot[0]).isEqualTo(2);
+        assertThat(to.heldRanks[0]).isEqualTo(2);
+        assertThat(to.player(2).drafts).isEqualTo(3);
+        assertThat(to.player(2).cards[0]).isEqualTo(UpgradeKind.GRENADIER);
     }
 
     private static Readout fill(ReadoutWriter writer, Simulation world) {

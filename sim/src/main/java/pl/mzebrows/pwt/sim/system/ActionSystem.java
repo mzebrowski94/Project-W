@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.ActionKind;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Decides what the commander could do with his hands right now, and does it while he asks.
@@ -54,12 +55,14 @@ public final class ActionSystem extends EntitySystem {
 
     private final float reviveHealthFraction;
     private final float reviveInvulnerableSeconds;
+    private final Modifiers modifiers;
 
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> casualties = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> stations = new ImmutableArray<>(new Array<>());
 
-    public ActionSystem(SimConfig config) {
+    public ActionSystem(SimConfig config, Modifiers modifiers) {
+        this.modifiers = modifiers;
         this.reviveHealthFraction = config.casualty().reviveHealthFraction();
         this.reviveInvulnerableSeconds = config.casualty().reviveInvulnerableSeconds();
     }
@@ -109,7 +112,7 @@ public final class ActionSystem extends EntitySystem {
             }
             action.available = ActionKind.STABILISE;
             if (acting) {
-                if (Aid.work(subject, deltaTime, reviveHealthFraction, reviveInvulnerableSeconds)
+                if (Aid.work(modifiers, commander, subject, deltaTime, reviveHealthFraction, reviveInvulnerableSeconds)
                         && TALLY.has(commander)) {
                     // A stabilise is a stabilise, whoever he put back on his feet (G0044).
                     TALLY.get(commander).stabilised++;

@@ -27,6 +27,16 @@ public final class Waves implements Component, Pool.Poolable {
     /** Ticks waited since the last one was sent, counting up to the next one's delay. */
     public int waited;
 
+    /**
+     * A bit per wave sent, set once nothing it sent is still on its feet: bit {@code w} for the wave
+     * sent {@code w}-th, counting from zero. Written by {@code WaveSystem}; read by the upgrade package,
+     * which earns drafts from cleared waves (G0049).
+     */
+    public long cleared;
+
+    /** The most waves a level may hold, one bit of {@link #cleared} each. */
+    public static final int MOST = 63;
+
     /** How far down the list we are. */
     private int sent;
 
@@ -45,6 +55,9 @@ public final class Waves implements Component, Pool.Poolable {
 
     /** The same, from a wave a caller already has in hand. */
     public Waves add(Wave wave) {
+        if (pending.size >= MOST) {
+            throw new IllegalStateException("a level holds at most " + MOST + " waves");
+        }
         pending.add(wave);
         return this;
     }
@@ -102,5 +115,6 @@ public final class Waves implements Component, Pool.Poolable {
         waited = 0;
         sent = 0;
         armed = true;
+        cleared = 0L;
     }
 }

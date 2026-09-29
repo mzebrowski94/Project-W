@@ -217,6 +217,18 @@ final class ArchitectureTest {
                     + " which with @NotState");
 
     @ArchTest
+    static final ArchRule onlyTheUpgradePackageTouchesTheLedgerAndTheDrafts = noClasses()
+            .that()
+            .resideOutsideOfPackages("..sim.upgrade..", "..sim.component..")
+            .and()
+            .doNotBelongToAnyOf(WorldCodec.class, Spawner.class)
+            .should()
+            .dependOnClassesThat()
+            .belongToAnyOf(pl.mzebrows.pwt.sim.component.Upgrades.class, pl.mzebrows.pwt.sim.component.Drafts.class)
+            .because("the ledger and the drafts are written by the upgrade package alone and read through"
+                    + " Modifiers (ADR 0017); the codec writes them and the spawner creates them");
+
+    @ArchTest
     static final ArchRule upgradesAreCalledAndDoNotCall = noClasses()
             .that()
             .resideInAPackage("..sim.upgrade..")
@@ -263,7 +275,15 @@ final class ArchitectureTest {
     private static final String UPGRADE = "pl.mzebrows.pwt.sim.upgrade";
 
     /** The collections the snapshot codec knows how to write, by the field that holds each. */
-    private static final Set<String> NAMED_COLLECTIONS = Set.of("Waves.pending", "Lair.pending");
+    private static final Set<String> NAMED_COLLECTIONS = Set.of(
+            "Waves.pending",
+            "Lair.pending",
+            "Upgrades.held",
+            "Drafts.pending",
+            "Drafts.cards",
+            "Drafts.passed",
+            "Drafts.submitted",
+            "Presence.away");
 
     @ArchTest
     static final ArchRule componentFieldsAreWhatASnapshotCanWrite = fields().that()

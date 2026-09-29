@@ -211,7 +211,7 @@ Read the row that matches. On-demand by design - loading all of them costs more 
 | `docs/performance.md` | Writing or reviewing anything in a per-entity loop. |
 | `docs/determinism.md` | Touching `sim` or `map` logic, randomness, time or iteration order. |
 | `docs/architecture.md` | Adding a system or component, or crossing the sim/client line. |
-| `docs/components.md` | Before adding a component - what the 39 existing ones hold and what touches each. |
+| `docs/components.md` | Before adding a component - what the existing ones hold and what touches each. |
 | `docs/simulation-order.md` | Registering a system, or debugging a one-tick ordering bug. |
 | `docs/workflow.md` | Builds, the verification ladder, something broke, environment friction. |
 | `docs/glossary.md` | Naming anything in the game domain. Read the whole section, not just the word you had in mind. |

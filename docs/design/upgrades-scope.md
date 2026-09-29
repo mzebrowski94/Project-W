@@ -1,6 +1,6 @@
 # Upgrades and adaptations — scoped work
 
-**Status: planned 2026-09-28; S0-S2 done 2026-09-29, next is S3. D18 amended 2026-09-29: the
+**Status: planned 2026-09-28; S0-S5 done 2026-09-29, next is S6. D18 amended 2026-09-29: the
 draft is shown in the top bar, not the bottom bar.** Read this first in every session of the upgrade work,
 and tick the session in §0 when it lands. **This doc expires when adaptations ship (S10).** As each
 session lands, what it settles moves where it belongs - invariants and the input map into
@@ -19,9 +19,9 @@ claims against `main` at `e7cf245`, and five rounds of questions Mateusz answere
 | S0 | Records and words | S | docs only | done 2026-09-29 |
 | S1 | Config split and the binder | M | the same game, an identical bound config | done 2026-09-29 |
 | S2 | Seams, nothing held | M | the same game, the same hashes | done 2026-09-29 |
-| S3 | The draft core | L | drafts earned, dealt, rotated, picked and passed on - headless | planned |
-| S4 | The cheap upgrades and dev keys | M | playable offline with dev keys | planned |
-| S5 | The interface | L | playable offline for real, solo and local co-op | planned |
+| S3 | The draft core | L | drafts earned, dealt, rotated, picked and passed on - headless | done 2026-09-29 |
+| S4 | The cheap upgrades and dev keys | M | playable offline with dev keys | done 2026-09-29 |
+| S5 | The interface | L | playable offline for real, solo and local co-op | done 2026-09-29 |
 | S6 | Firepower: sealed caches and the armoury deck | M | Adventure's caches dealt on reveal | planned |
 | S7 | Explosives: troopers throw | M | troopers grenade packs, never the squad | planned |
 | S8 | Online | L | playable online, drop-in and dropped links included | planned |
@@ -560,7 +560,8 @@ The numbers are starting points; S9 tunes them.
 | *Marksmen* (cheap) | squad | 2 | 1 | gun damage +15 % | `Guns.volley` | S4 |
 | *Field Medicine* (cheap) | squad | 2 | 1 | aid-a-trooper +0.2/s, aid-the-commander +0.5/s (base 0.4 and 1.5) | `Odds` | S4 |
 | *Grenadier* (cheap, **personal**) | chooser | 3 | 1 | grenade cooldown -20 % | `Throws` | S4 |
-| *a fourth cheap one* | - | - | - | Mateusz picks at the start of S4. Candidates: squad speed (`DriveSystem` reads a trooper's speed; the commander's own speed would be a second stat), or a quicker stabilise (its seam in `Aid` is still to confirm). | - | S4 |
+| *Forced March* (cheap) | squad | 2 | 1 | squad speed +10 % (stat `SPEED`, read by `DriveSystem`; never the commander's) | `DriveSystem` | S4 |
+| *First Aid* (cheap) | team | 2 | 1 | stabilise work +25 % a tick, a fifth off the time (stat `STABILISE_SPEED`) | `Aid.work` | S4 |
 
 Weapon Handling shortens the cooldown but never the heat per shot, so a hot gun overheats sooner: it
 buys bursts, not sustained fire. Whether "the beam runs hottest" survives it is for the max-rank
@@ -833,6 +834,29 @@ end.
 **Stops.** Stages 1-3 register nothing and stand alone. After stage 4 the facts are published and
 nothing reads them yet. Stages 5-6 turn the draft on.
 
+**As built (2026-09-29).**
+
+- **Config.** Three `SimConfig` components: `@ConfigKey("upgrade.draft") DraftDef draft`,
+  `@ConfigKey("upgrade.stat") Defs<Stat, StatDef> stats` and `@ConfigKey("upgrade") Defs<UpgradeKind,
+  UpgradeDef> upgrades`, checked together by `UpgradeDef.checkCatalogue`. `Stat` carries its `Form`
+  (scale, count, chance) and its `Reader` (gun, unit, side); a stat block states all three keys, and
+  the ones its form does not use must be zero. `Effect.Chance` is written `chance <ai_chance>
+  <target> <perSecond>`. A tier counts the drafts earned *before* the one being dealt.
+- **Dealing.** What the chooser passed over is dealt only after everything else has been, rather
+  than left out, so a short pool still fills. A stale card is re-dealt only on a tick with a pick or a
+  pass-on; one nothing can replace is dropped, and a draft left with no cards goes. An empty pool
+  earns nothing - the source is still credited - and its dispatch waits for S5.
+- **Facts.** `Waves.cleared` is worked out before the tick's wave is sent, because Ashley adds what
+  a system spawns only after that system has run. Each wave's aliens carry `Strain.wave` through
+  `Spawner.spawnUnit(kind, x, y, wave)`; a level holds at most `Waves.MOST` (63) waves.
+- **Input.** `PlayerInputs.pick(slot, serial, kind)`, `.away(slot)` and `.back(slot)`, read as
+  `pickOf`/`pickSerialOf`, `goesAway` and `comesBack`. `Presence.leave`/`comeBack` are the only
+  writes, in `Simulation.step`. Nothing sends them yet: the dev keys are S4, the sequencer S8.
+- `Modifiers(engine, config)` reads the level entity's ledger through a family; `Scope` and `Target`
+  landed here, as S2 recorded. `UpgradeView` is S5's.
+- The fact tests went beside their systems (`DefendTest`, `BarrageTest`) rather than a file of
+  their own. `DeterminismFuzzTest` (opt-in) sends random picks and presence; all 12 scenarios green.
+
 ### S4 - First catalogue, playable offline
 
 **Goal.** Mateusz can play Adventure offline, earn drafts, see what is offered and take it.
@@ -857,6 +881,26 @@ nothing reads them yet. Stages 5-6 turn the draft on.
   chooser's commander.
 
 **Done when.** Verify is green and an Adventure run with drafts is playable.
+
+**As built (2026-09-29).** Mateusz chose both candidates for the fourth, so the catalogue is seven:
+Forced March (squad speed) and First Aid (quicker stabilise) beside the three above.
+
+- Two new stats. `SPEED` has a reader kind of its own, `DRIVEN`: it is read where `DriveSystem`
+  commits a course, so an effect on it may reach the squad or the aliens and never a commander,
+  whose pace is his own control's (G0010) - a bind-time refusal, not a quiet no-op.
+  `STABILISE_SPEED` scales the work one tick does, read in `Aid.work` for whoever is working, so the
+  commander and a trooper stay the same (the `Aid` rule).
+- `UpgradeView` (entry point 4) landed early, read-only: the harness needs a slot's oldest draft and
+  its cards. `Drafts.revision` moves on any draft change; `UpgradeView.revision()` joins it with the
+  ledger's. S5 builds on it.
+- Dev keys: `HarnessCommand.TAKE_FIRST_CARD`..`TAKE_THIRD_CARD` on `F5`-`F7`. `ScenarioSession` reads
+  the card at press time and holds the pick by slot until a tick spends it. `DraftAnnouncer` says
+  each local player's oldest draft and the held list on the console when they change. Online, the
+  keys say once that they are offline only.
+- Relational checks at the highest rank, through `Modifiers`: the beam still runs hottest, and the
+  squad at its fastest is still slower than the commander.
+- In the test fixture the five new upgrades have weight zero, so the draft tests keep dealing two
+  kinds; each upgrade's test holds it directly.
 
 ### S5 - The interface
 
@@ -902,6 +946,42 @@ the aside strip, the dispatches and the solo pause.
 - `ScenarioSessionTest` for the solo pause.
 
 **Done when.** Verify is green, and Mateusz plays Adventure solo and in local co-op with the real bar.
+
+**As built (2026-09-29).**
+
+- **Readout.** `ReadoutWriter` reads `UpgradeView` alone: each slot's draft count, his oldest draft's
+  serial and up to three cards with the rank each would have (`PlayerReadout`), and the ledger with
+  each entry's most ranks (`Readout.held*`). `UpgradeView` gained `cardOf` (the n-th card still on a
+  draft, skipping a dropped place), `effects`, `ranksOf` and `dry`, over a new `Drafts.dry` count of
+  drafts a source was owed that the pool could not deal. Fence 1's interface half:
+  `UiArchitectureTest.theInterfaceReadsUpgradesThroughTheirView`,
+  `ClientArchitectureTest.theClientReadsUpgradesThroughTheirView`.
+- **Input per seat.** `InputReader.read` takes the seat driving the draft; `DraftKeys` takes that
+  seat's order out of the frame and turns it into a draft key by the order's place - keyboard
+  `1`-`3` choose, `4` closes; pad right/left move the highlight, down closes, up does nothing. Every
+  other seat's orders are untouched. `controls.key.draft=C` and `controls.pad.draft=NORTH` (with
+  `draftTrigger=NONE`) open the draft and take the highlighted card.
+- **The bar.** `DraftBar` (ui, pure) is the one draft per machine: whose, which serial, which card is
+  highlighted; only the seat that opened it drives it, it follows the world once a frame, and taking
+  a card closes it and hands back the pick, which goes through the new `ScenarioPlay.pick` (offline;
+  online it says once that picks wait for S8). `DraftLayout` is the arithmetic, `TopBarPainter` the
+  drawing, `CardText` the words - names `ui.upgrade.*`, one template per effect
+  `ui.effect.<form>.<stat>` / `ui.effect.chance.<chance>`, who it reaches `ui.target.*` - rebuilt only
+  when the draft, the highlight or the seat changes.
+- **Solo pause** (D2): `DraftPause` pauses when a draft opens with one player in the game offline and
+  resumes only a pause it made; a menu opening closes the draft and takes the pause over. The paused
+  banner and its scrim stay off a draft's pause (`PlayMenus.quietPause`). *A back while paused solo
+  also resumes* is not built: offline nobody is ever away, so it waits for S8.
+- **The rest.** The tell (`UpgradeTell`, `HudSlot.UPGRADE_TELL`) right-aligned on the panel's first
+  row, shortened beside a status and never over it. The aside strip lists the ledger with pips when the
+  F1 overlay is not in its panel. `UpgradeReporter` files `DRAFT_EARNED`, `UPGRADE_TAKEN` (the taker
+  inferred from whose drafts went down), `DRAFT_PASSED` and `NOTHING_LEFT`. **The terminal holds its
+  queue while the bar is up**: `ScenarioScreen` does not advance it, so its clock stops and nothing
+  ages out unseen.
+- `DraftAnnouncer` is gone with the console offers; `F5`-`F7` stay as harness keys.
+- From the playtest: the pause menu shows every upgrade held beside it, docked right
+  (`HeldUpgradesPainter`), since the aside has room for four rows. Only with the menu open - a modal -
+  so the paused banner still leaves the view clear (the UI spec's do-not-build list).
 
 ### S6 - Firepower: sealed caches and the armoury deck
 
@@ -1078,7 +1158,7 @@ clamps, and tick rounding. That covers the sources' "test rounding and precision
 
 | Scaffolding | Replaced by |
 |---|---|
-| Dev keys `F5`-`F7` take a card, and offers go to the console (S4) | The draft bar (S5). The keys stay as harness keys or go. |
+| Dev keys `F5`-`F7` take a card (S4) | Replaced by the draft bar in S5; the keys stay as harness keys, and the console offers are gone. |
 | Cards, pips and the sealed cache are text and coloured shapes | Art, each with a record of its own |
 | The catalogue is eight upgrades | Content, after S9 |
 | Every level draws drafts at the same rate | Per-level overrides, as levels are designed |

@@ -26,6 +26,8 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.ui.hud.DraftBar;
+import pl.mzebrows.pwt.ui.hud.DraftPause;
 import pl.mzebrows.pwt.ui.hud.GoalLine;
 import pl.mzebrows.pwt.ui.hud.PanelAlarms;
 import pl.mzebrows.pwt.ui.hud.PanelAssignment;
@@ -36,6 +38,7 @@ import pl.mzebrows.pwt.ui.hud.ReadoutWriter;
 import pl.mzebrows.pwt.ui.hud.Reporters;
 import pl.mzebrows.pwt.ui.hud.SquadReporter;
 import pl.mzebrows.pwt.ui.hud.Terminal;
+import pl.mzebrows.pwt.ui.hud.UpgradeReporter;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
@@ -94,6 +97,10 @@ public final class ScenarioScreen extends ScreenAdapter {
     private final UiStrings strings;
     private final TopBarPainter topBar;
     private final BottomBarPainter bottomBar;
+
+    /** Every upgrade held, beside the pause menu: more than the aside has room for. */
+    private final HeldUpgradesPainter heldUpgrades;
+
     private final KeyPresses keys = keycode -> Gdx.input.isKeyJustPressed(keycode);
     private final KeyHolds held = keycode -> Gdx.input.isKeyPressed(keycode);
 
@@ -124,6 +131,15 @@ public final class ScenarioScreen extends ScreenAdapter {
     /** Everything violent enough for the view to notice. Almost always empty. */
     private ImmutableArray<Entity> shaken = new ImmutableArray<>(new Array<>());
 
+    /** The draft in the top bar - one per machine (D18) - and the pause it makes in a solo game (D2). */
+    private final DraftBar draftBar = new DraftBar();
+
+    private final DraftPause draftPause = new DraftPause();
+    private final DraftHints draftHints;
+
+    /** By slot, what that player presses to open his drafts; empty for a slot not played here. */
+    private final String[] draftKeys = new String[Players.MAX];
+
     /** The world the renderer is currently bound to; a restart replaces it with a different one. */
     private @Nullable Simulation bound;
 
@@ -141,11 +157,16 @@ public final class ScenarioScreen extends ScreenAdapter {
         this.reporters = new Reporters(List.of(
                 new PlayerReporter(),
                 new SquadReporter(graphicConfig.terminal().fewTroopers()),
+                new UpgradeReporter(),
                 new ActionPrompts(play::local, Log::info)));
+        this.draftHints = new DraftHints(context.controlsConfig());
         this.alarms = new PanelAlarms(
                 style.alarmSeconds(), style.alarmShake(), style.pulseHz(), style.motionScale(), style.flashScale());
         this.topBar = new TopBarPainter(
-                context.hud(), strings, style, graphicConfig.layout().metrics());
+                context.hud(), strings, style, graphicConfig.layout().metrics(), graphicConfig.palette());
+        Arrays.fill(draftKeys, "");
+        this.heldUpgrades = new HeldUpgradesPainter(
+                context.hud(), strings, style, graphicConfig.layout().metrics(), graphicConfig.palette());
         this.bottomBar = new BottomBarPainter(
                 context.hud(), strings, style, graphicConfig.layout().metrics(), graphicConfig.palette());
     }
@@ -192,7 +213,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         // Input is read first, and therefore against the camera as it was when the frame the player
         // reacted to was drawn. Moving the camera before reading would interpret the mouse against a
         // view they have not seen yet.
-        PlayerInputs players = input.read(held, keys, menus.menuOpen());
+        PlayerInputs players = input.read(held, keys, menus.menuOpen(), draftBar.seat());
         for (int joined = input.seats().nextNewlySeated();
                 joined >= 0;
                 joined = input.seats().nextNewlySeated()) {
@@ -204,6 +225,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         } else if (menus.update(delta, play, input, players, keys, held, layout)) {
             input.spendHeldPresses();
         }
+        draft();
         for (HarnessCommand command : HarnessControls.poll(keys)) {
             play.apply(command, players);
         }
@@ -239,9 +261,14 @@ public final class ScenarioScreen extends ScreenAdapter {
 
         String name = play.scenarioName();
         readoutWriter.fill(world, name == null ? "" : name, play.planet(), readout);
+        draftBar.follow(readout);
         goalLine.update(readout, delta);
         reporters.report(readout, terminal);
-        terminal.advance(delta);
+        if (!draftBar.open()) {
+            // The terminal holds its queue while the draft hides it, so a line said meanwhile types out
+            // after it rather than ageing out unseen.
+            terminal.advance(delta);
+        }
         alarms.update(readout, delta);
         seatPanels();
 
@@ -259,14 +286,58 @@ public final class ScenarioScreen extends ScreenAdapter {
                         play.lastOrder(),
                         play.connection(),
                         play.invitation());
-        topBar.render(layout, readout, goalLine, terminal, lines, mode);
+        if (draftBar.open()) {
+            draftHints.follow(draftBar.seat(), input.playStation(draftBar.seat()));
+        }
+        topBar.render(layout, readout, goalLine, terminal, lines, mode, draftBar, world.upgradeView(), draftHints);
         if (rollCall) {
             bottomBar.renderRollCall(layout);
         } else {
-            bottomBar.render(layout, readout, seating, connected, alarms);
+            bottomBar.render(layout, readout, seating, connected, alarms, draftKeys);
         }
         menus.draw(layout, play);
+        if (menus.showsPausePage()) {
+            heldUpgrades.draw(layout.view(), readout, menus.pageAlpha());
+        }
         drawReticles(play.renderAlpha());
+    }
+
+    /**
+     * The draft bar's frame (upgrades S5): a menu opening closes it; otherwise each local seat's draft key
+     * and - for the seat driving it - its order inputs work it, and a card taken is a pick for that seat's
+     * slot. Then the solo pause (D2): opening pauses a game with one player in it, closing resumes, and
+     * the paused banner stays off a pause the draft made.
+     */
+    private void draft() {
+        if (menus.menuOpen()) {
+            draftBar.close();
+        } else {
+            for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
+                DraftBar.Key key = input.draftKey(seat);
+                if (key != null && draftBar.press(seat, play.slotOf(seat), key, readout)) {
+                    play.pick(seat, draftBar.takenSerial(), draftBar.takenKind());
+                }
+            }
+        }
+        boolean solo = !play.online() && playersIn() <= 1;
+        switch (draftPause.next(draftBar.open(), solo, play.paused(), menus.menuOpen())) {
+            case PAUSE -> play.setPaused(true);
+            case RESUME -> play.setPaused(false);
+            case NONE -> {
+                // Nothing to change.
+            }
+        }
+        menus.quietPause(draftPause.ours());
+    }
+
+    private int playersIn() {
+        int count = 0;
+        for (int slot = 0; slot < Players.MAX; slot++) {
+            if (readout.player(slot).posture != Posture.ABSENT) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /**
@@ -324,9 +395,13 @@ public final class ScenarioScreen extends ScreenAdapter {
      */
     private void seatPanels() {
         Arrays.fill(connected, true);
+        Arrays.fill(draftKeys, "");
         for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
             int slot = play.slotOf(seat);
             slotOfSeat[seat] = slot;
+            if (slot >= 0 && slot < Players.MAX && readout.player(slot).drafts > 0) {
+                draftKeys[slot] = input.draftKeyLabel(seat);
+            }
             boolean padGone = seat != PlayerSeats.KEYBOARD_SLOT
                     && input.seats().taken(seat)
                     && input.seats().padIn(seat) == null;
@@ -406,6 +481,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             shaken = current.engine().getEntitiesFor(SHAKEN);
             commanders = current.engine().getEntitiesFor(COMMANDERS);
             camera = new CameraDirector(context.graphicConfig().camera());
+            draftBar.close();
             bound = current;
         }
     }

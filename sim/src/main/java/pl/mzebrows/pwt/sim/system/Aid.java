@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.Ticks;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Putting a man back on his feet, in one place, for everybody who can do it.
@@ -73,11 +74,18 @@ final class Aid {
      * A tick's worth of work on him, and puts him back on his feet once there has been enough of it.
      *
      * <p>He comes up hurt and briefly protected. Returns whether this was the tick he came up - the
-     * stabilise a commander's tally counts (G0044).
+     * stabilise a commander's tally counts (G0044). How much a tick of work is worth is the one place
+     * the {@code STABILISE_SPEED} stat is read, for whoever is doing it.
      */
-    static boolean work(Entity subject, float deltaTime, float healthFraction, float invulnerableSeconds) {
+    static boolean work(
+            Modifiers modifiers,
+            Entity helper,
+            Entity subject,
+            float deltaTime,
+            float healthFraction,
+            float invulnerableSeconds) {
         Casualty casualty = CASUALTY.get(subject);
-        casualty.stabilised += deltaTime;
+        casualty.stabilised += modifiers.stabiliseWork(helper, deltaTime);
         if (!casualty.stabilisedEnough(hauled(subject))) {
             return false;
         }

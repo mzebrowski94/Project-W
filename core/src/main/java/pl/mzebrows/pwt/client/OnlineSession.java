@@ -26,6 +26,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * This machine's place in an online session, as the scenario screen plays it (ADR 0012, G0038).
@@ -59,6 +60,7 @@ public final class OnlineSession implements ScenarioPlay {
     private boolean cosmeticLead = true;
     private boolean leaving;
     private boolean toldStepIsOffline;
+    private boolean toldPickIsOffline;
     private int lagStep = -1;
     private @Nullable Order lastOrder;
 
@@ -197,6 +199,20 @@ public final class OnlineSession implements ScenarioPlay {
             case TOGGLE_COSMETIC_LEAD -> cosmeticLead = !cosmeticLead;
             case NEXT_LAG -> nextLag();
             case LEAVE -> leaving = true;
+            case TAKE_FIRST_CARD, TAKE_SECOND_CARD, TAKE_THIRD_CARD -> pickIsOffline();
+        }
+    }
+
+    /** Not yet: picks cross the wire in upgrades S8. */
+    @Override
+    public void pick(int seat, int serial, UpgradeKind kind) {
+        pickIsOffline();
+    }
+
+    private void pickIsOffline() {
+        if (!toldPickIsOffline) {
+            Log.info("taking a card is offline only until drafts cross the wire (upgrades S8)");
+            toldPickIsOffline = true;
         }
     }
 

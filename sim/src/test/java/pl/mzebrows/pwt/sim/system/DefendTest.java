@@ -233,6 +233,27 @@ class DefendTest {
         return entity.getComponent(Position.class);
     }
 
+    /** A wave is cleared once everything it sent is off its feet - a source of drafts (G0049) - and not before. */
+    @Test
+    void marksAWaveClearedOnlyOnceTheLastOfItsAliensGoesDown() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(EAST, LANE);
+        simulation.waves().add(SECONDS, UnitKind.GRUNT, 2, FAR_CORNER);
+        steps(simulation, ticksIn(SECONDS) + 2);
+        ImmutableArray<Entity> aliens =
+                simulation.engine().getEntitiesFor(Family.all(Enemy.class).get());
+        assertThat(aliens.size()).isEqualTo(2);
+
+        aliens.get(0).getComponent(Damage.class).add(LETHAL, 0, true);
+        steps(simulation, 2);
+        long withOneStanding = simulation.waves().cleared;
+        killEveryEnemy(simulation);
+        steps(simulation, 2);
+
+        assertThat(withOneStanding).isZero();
+        assertThat(simulation.waves().cleared).isEqualTo(1L);
+    }
+
     private static void killEveryEnemy(Simulation simulation) {
         ImmutableArray<Entity> standing =
                 simulation.engine().getEntitiesFor(Family.all(Enemy.class).get());

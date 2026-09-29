@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.ui.hud.DispatchKind;
 import pl.mzebrows.pwt.ui.hud.Terminal;
 
@@ -45,6 +46,13 @@ class DispatchTextTest {
     void namesTheGunHePickedUp() {
         assertThat(said(DispatchKind.WEAPON_ACQUIRED, -1, WeaponKind.FLAMER.ordinal(), 0))
                 .isEqualTo("FLAMER ACQUIRED");
+    }
+
+    @Test
+    @SuppressWarnings("EnumOrdinal") // a dispatch carries an enum as its number
+    void namesTheUpgradeTakenWithItsNewRank() {
+        assertThat(said(DispatchKind.UPGRADE_TAKEN, 1, UpgradeKind.LARGER_ARMY.ordinal(), 2))
+                .isEqualTo("P2 TOOK LARGER ARMY II");
     }
 
     @Test

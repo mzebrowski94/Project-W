@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
+import java.util.List;
 import java.util.function.UnaryOperator;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.Terrain;
@@ -36,6 +37,7 @@ import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.RangedDef;
+import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -43,6 +45,13 @@ import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.WeaveDef;
+import pl.mzebrows.pwt.sim.upgrade.DraftDef;
+import pl.mzebrows.pwt.sim.upgrade.Effect;
+import pl.mzebrows.pwt.sim.upgrade.Stat;
+import pl.mzebrows.pwt.sim.upgrade.StatDef;
+import pl.mzebrows.pwt.sim.upgrade.Target;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * Shared fixture for the alpha-phase system tests: one simulation config with numbers chosen to make
@@ -1140,7 +1149,88 @@ public final class AlphaWorlds {
                         TURRET_QUIET_SECONDS,
                         WeaponKind.TURRET_GUN),
                 new SimConfig.ObstacleConfig(OBSTACLE_RADIUS, 0),
-                new SimConfig.CollisionConfig(3));
+                new SimConfig.CollisionConfig(3),
+                new DraftDef(DRAFT_OPTIONS, 1, 1, 1, List.of(0, TIER_TWO_FROM)),
+                stats(),
+                upgrades());
+    }
+
+    /** Cards a draft deals here - more than the catalogue has, so every draft offers all it can. */
+    public static final int DRAFT_OPTIONS = 3;
+
+    /** Drafts earned before a tier-two upgrade is dealt. */
+    public static final int TIER_TWO_FROM = 2;
+
+    /** What one rank of Larger Army adds to a crate, and to the squad's headroom. */
+    public static final int ARMY_MEN = 1;
+
+    public static final int ARMY_HEADROOM = 2;
+
+    /** What one rank of Weapon Handling takes off a cooldown, in percent - large, so a test can see it. */
+    public static final int HANDLING_PERCENT = -25;
+
+    /** Every stat: a scaled one may come down by half or double; a count has no floor above zero. */
+    public static Defs<Stat, StatDef> stats() {
+        Defs.Builder<Stat, StatDef> stats = Defs.builder(Stat.class);
+        for (Stat stat : Stat.values()) {
+            stats.put(stat, stat.form() == Stat.Form.SCALE ? new StatDef(-50, 100, 0) : new StatDef(0, 0, 0));
+        }
+        return stats.build();
+    }
+
+    /** The shipped two, with numbers a test can see move. */
+    public static Defs<UpgradeKind, UpgradeDef> upgrades() {
+        return Defs.<UpgradeKind, UpgradeDef>builder(UpgradeKind.class)
+                .put(
+                        UpgradeKind.LARGER_ARMY,
+                        new UpgradeDef(
+                                Side.PLAYER,
+                                10,
+                                3,
+                                1,
+                                null,
+                                0,
+                                List.of(
+                                        new Effect.Count(Stat.MEN_PER_CRATE, Target.SIDE, ARMY_MEN),
+                                        new Effect.Count(Stat.SQUAD_HEADROOM, Target.SIDE, ARMY_HEADROOM))))
+                .put(
+                        UpgradeKind.WEAPON_HANDLING,
+                        new UpgradeDef(
+                                Side.PLAYER,
+                                10,
+                                3,
+                                1,
+                                null,
+                                0,
+                                List.of(new Effect.Scale(Stat.FIRE_COOLDOWN, Target.TEAM, HANDLING_PERCENT))))
+                // The rest are switched off (weight zero), so a draft here offers the two above and a test
+                // about dealing can say which; a test about one of these holds it directly.
+                .put(UpgradeKind.MARKSMEN, off(2, new Effect.Scale(Stat.GUN_DAMAGE, Target.SQUAD, MARKSMEN_PERCENT)))
+                .put(
+                        UpgradeKind.FIELD_MEDICINE,
+                        off(
+                                2,
+                                new Effect.Chance(AiChance.AID_A_TROOPER, Target.SQUAD, MEDICINE_PER_SECOND),
+                                new Effect.Chance(AiChance.AID_THE_COMMANDER, Target.SQUAD, MEDICINE_PER_SECOND)))
+                .put(
+                        UpgradeKind.GRENADIER,
+                        off(3, new Effect.Scale(Stat.GRENADE_COOLDOWN, Target.CHOOSER, GRENADIER_PERCENT)))
+                .put(UpgradeKind.FORCED_MARCH, off(2, new Effect.Scale(Stat.SPEED, Target.SQUAD, MARCH_PERCENT)))
+                .put(
+                        UpgradeKind.FIRST_AID,
+                        off(2, new Effect.Scale(Stat.STABILISE_SPEED, Target.TEAM, FIRST_AID_PERCENT)))
+                .build();
+    }
+
+    public static final int MARKSMEN_PERCENT = 15;
+    public static final float MEDICINE_PER_SECOND = 0.2f;
+    public static final int GRENADIER_PERCENT = -20;
+    public static final int MARCH_PERCENT = 10;
+    public static final int FIRST_AID_PERCENT = 25;
+
+    /** An upgrade no draft here deals, for a test to hold directly. */
+    private static UpgradeDef off(int ranks, Effect... effects) {
+        return new UpgradeDef(Side.PLAYER, 0, ranks, 1, null, 0, List.of(effects));
     }
 
     /**

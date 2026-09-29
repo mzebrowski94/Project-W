@@ -65,6 +65,7 @@ import pl.mzebrows.pwt.sim.system.TurretSystem;
 import pl.mzebrows.pwt.sim.system.WanderSystem;
 import pl.mzebrows.pwt.sim.system.WaveSystem;
 import pl.mzebrows.pwt.sim.system.WeaveSystem;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeSystem;
 
 /**
  * System order is behaviour, and {@code docs/simulation-order.md} says which orderings are decisions.
@@ -227,6 +228,27 @@ class SystemOrderTest {
                 CollisionSystem.class,
                 FacingSystem.class,
                 "a facing is where the tick ended looking - perception reads it next tick, the arc the renderer drew"));
+        rows.add(new Before(
+                WaveSystem.class, UpgradeSystem.class, "a wave cleared this tick earns its draft this tick"));
+        rows.add(new Before(
+                BarrageSystem.class, UpgradeSystem.class, "a boss felled this tick earns its draft this tick"));
+        rows.add(new Before(
+                ControlPointSystem.class, UpgradeSystem.class, "a point taken this tick earns its draft this tick"));
+        for (Class<? extends EntitySystem> reader : List.of(
+                CommanderControlSystem.class,
+                TurretSystem.class,
+                TrooperMindSystem.class,
+                TrooperCombatSystem.class,
+                EnemyRangedSystem.class,
+                CollisionSystem.class,
+                GrenadeSystem.class,
+                PickupSystem.class,
+                ReinforcementSystem.class,
+                DriveSystem.class,
+                ActionSystem.class,
+                AidSystem.class)) {
+            rows.add(new Before(reader, UpgradeSystem.class, "every reader in a tick sees the same ledger"));
+        }
         return rows.stream().map(Arguments::of);
     }
 

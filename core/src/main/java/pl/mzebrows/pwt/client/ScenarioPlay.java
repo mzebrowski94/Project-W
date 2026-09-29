@@ -4,6 +4,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * What the scenario screen plays through: offline, a world stepped on this machine ({@link
@@ -18,6 +19,12 @@ public interface ScenarioPlay extends AutoCloseable {
 
     /** A local seat has a player in it now - a pad just picked up. */
     void seat(int seat);
+
+    /**
+     * Takes a card from the draft bar for the slot this seat plays: the draft, by serial, and the card's
+     * kind, as it was shown (G0049). It counts from the next tick, like an order.
+     */
+    void pick(int seat, int serial, UpgradeKind kind);
 
     /** Carries out one harness command. {@code local} is what the players are holding, for a single step. */
     void apply(HarnessCommand command, PlayerInputs local);

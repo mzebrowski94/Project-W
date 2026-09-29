@@ -56,7 +56,14 @@ public enum RngStream {
      *
      * <p>Its own, so tuning a slick's shape moves nothing else.
      */
-    SLICK(0x3B9A_C74D_1E52_806FL);
+    SLICK(0x3B9A_C74D_1E52_806FL),
+
+    /**
+     * The cards a draft is dealt, when it is earned, and any card re-dealt in place (G0049).
+     *
+     * <p>Its own, so earning a draft never moves where a wave lands or how a man aims.
+     */
+    DRAFT(0xC2B2_AE3D_27D4_EB4FL);
 
     private final long salt;
 

@@ -7,11 +7,13 @@ public enum HudSlot {
     TERMINAL("UI:hud/top/terminal"),
     ASIDE("UI:hud/top/aside"),
     OVERLAY("UI:hud/top/overlay"),
+    DRAFT("UI:hud/top/draft"),
     PLAYER_PANEL("UI:hud/bottom/panel"),
     PORTRAIT("UI:hud/bottom/portrait"),
     STATUS("UI:hud/bottom/status"),
     WEAPON("UI:hud/bottom/weapon"),
     TALLY("UI:hud/bottom/tally"),
+    UPGRADE_TELL("UI:hud/bottom/upgrade"),
     ROLL_CALL("UI:hud/bottom/roll-call"),
     PAUSED("UI:hud/view/paused"),
     RETICLE("UI:hud/view/reticle");

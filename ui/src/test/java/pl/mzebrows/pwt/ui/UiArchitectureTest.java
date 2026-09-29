@@ -57,6 +57,17 @@ final class UiArchitectureTest {
                     + " to the world no tick made, and a desync online");
 
     @ArchTest
+    static final ArchRule theInterfaceReadsUpgradesThroughTheirView = noClasses()
+            .should()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName("pl.mzebrows.pwt.sim.component.Upgrades")
+            .orShould()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName("pl.mzebrows.pwt.sim.component.Drafts")
+            .because("the ledger and the drafts are the upgrade package's; the interface reads them through"
+                    + " UpgradeView alone (ADR 0017, fence 1)");
+
+    @ArchTest
     static final ArchRule theInterfaceNeverStepsTheSimulation = noClasses()
             .should()
             .callMethodWhere(DescribedPredicate.describe(

@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -70,6 +71,9 @@ import pl.mzebrows.pwt.sim.system.WanderSystem;
 import pl.mzebrows.pwt.sim.system.WaveSystem;
 import pl.mzebrows.pwt.sim.system.WeaveSystem;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.upgrade.Picks;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeSystem;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
 
 /**
  * The whole game world and everything that happens in it.
@@ -91,6 +95,7 @@ public final class Simulation {
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+    private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
 
     private final SimConfig config;
     private final TileMap map;
@@ -100,6 +105,12 @@ public final class Simulation {
     private final ImmutableArray<Entity> commanders;
     private final ImmutableArray<Entity> levels;
     private final SpawnOrder spawnOrder;
+
+    /** Where a tick's picks enter the upgrade package. */
+    private final Picks picks;
+
+    /** What the interface may read of the upgrades. */
+    private final UpgradeView upgradeView;
 
     /**
      * Reused by {@link #step(CommanderInput)}, so driving one player costs no allocation per tick.
@@ -140,7 +151,9 @@ public final class Simulation {
         this.streams = new Streams(config.seed());
         this.engine = new PooledEngine();
         this.spawner = new Spawner(engine, config, map);
-        Modifiers modifiers = new Modifiers();
+        Modifiers modifiers = new Modifiers(engine, config);
+        this.picks = new Picks(engine);
+        this.upgradeView = new UpgradeView(engine, config);
         this.commanders = engine.getEntitiesFor(
                 Family.all(Commander.class, Intent.class, Position.class).get());
         this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
@@ -177,7 +190,7 @@ public final class Simulation {
         // After everything that chooses a course; before the dodge, which overwrites it.
         engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
-        engine.addSystem(new DriveSystem(map, config.ground()));
+        engine.addSystem(new DriveSystem(map, config.ground(), modifiers));
         engine.addSystem(new EnemyLeapSystem(streams.of(RngStream.LEAP), config.tickSeconds()));
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
@@ -187,8 +200,8 @@ public final class Simulation {
         engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(config, spawner));
-        engine.addSystem(new ActionSystem(config));
-        engine.addSystem(new AidSystem(config));
+        engine.addSystem(new ActionSystem(config, modifiers));
+        engine.addSystem(new AidSystem(config, modifiers));
         engine.addSystem(new CasualtySystem(config, spawner));
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
@@ -214,6 +227,9 @@ public final class Simulation {
         // After everything that could have put a boss down or killed one, reading this tick's perception.
         engine.addSystem(new BarrageSystem(config, spawner));
         engine.addSystem(new ControlPointSystem(spawner));
+        // After every source of a draft (41, 44, 45), so what was earned this tick is dealt this tick; and
+        // after every reader of Modifiers, so the ledger changes once, at the end, for every reader alike.
+        engine.addSystem(new UpgradeSystem(config, streams.of(RngStream.DRAFT), capacity));
         engine.addSystem(new ObjectiveSystem());
         engine.addSystem(new FacingSystem());
         engine.addSystem(new AppearanceSystem(config));
@@ -256,6 +272,17 @@ public final class Simulation {
                 joinCommander(slot);
             }
         }
+        // Then presence, before anything reads it (G0052), and the tick's picks, applied at its end (G0049).
+        Presence presence = PRESENCE.get(levels.first());
+        for (int slot = 0; slot < inputs.capacity(); slot++) {
+            if (inputs.goesAway(slot)) {
+                presence.leave(slot);
+            }
+            if (inputs.comesBack(slot)) {
+                presence.comeBack(slot);
+            }
+        }
+        picks.submit(inputs);
         Level level = level();
         if (inputs.switchesInvulnerability()) {
             level.commandersInvulnerable = inputs.invulnerable();
@@ -284,6 +311,11 @@ public final class Simulation {
         }
         engine.update(config.tickSeconds());
         level.tick++;
+    }
+
+    /** The drafts waiting and what is held, read-only, for the interface (ADR 0017). */
+    public UpgradeView upgradeView() {
+        return upgradeView;
     }
 
     /** Spawns the first player's commander, which is the only one a single-player level has. */

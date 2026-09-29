@@ -44,6 +44,17 @@ final class ClientArchitectureTest {
                     + " itself puts the crash above back within reach");
 
     @ArchTest
+    static final ArchRule theClientReadsUpgradesThroughTheirView = noClasses()
+            .should()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName("pl.mzebrows.pwt.sim.component.Upgrades")
+            .orShould()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName("pl.mzebrows.pwt.sim.component.Drafts")
+            .because("the ledger and the drafts are the upgrade package's; the client reads them through"
+                    + " UpgradeView alone and changes them only by a pick (ADR 0017, fence 1)");
+
+    @ArchTest
     static final ArchRule decisionLogicDoesNotTouchTheRunningApplication = noClasses()
             .that()
             .haveSimpleNameEndingWith("Session")

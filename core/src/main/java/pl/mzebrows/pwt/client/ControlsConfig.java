@@ -51,6 +51,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
      * @param rollCall key that swaps the bottom bar between the players' panels and the roll call
      * @param orderFollowMe, orderForward, orderDefence, orderCancel the four order keys. Alpha-phase
      *     scaffolding, as the input map says - the intended binding is one button and a radial menu
+     * @param draft key that opens his oldest upgrade draft in the top bar, and takes the highlighted card
+     *     while it is open (G0049). With it open the order keys choose a card instead
      */
     public record Keyboard(
             KeyAxis moveX,
@@ -65,7 +67,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
             int orderFollowMe,
             int orderForward,
             int orderDefence,
-            int orderCancel) {}
+            int orderCancel,
+            int draft) {}
 
     /**
      * What a gamepad does. Every player but the first, in the alpha.
@@ -83,6 +86,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
      *     everybody's camera
      * @param pause what stops the clock
      * @param orderFollowMe, orderForward, orderDefence, orderCancel the four orders, on the d-pad
+     * @param draft what opens his oldest upgrade draft, and takes the highlighted card while it is open.
+     *     With it open the d-pad moves the highlight instead of giving orders
      */
     public record Pad(
             GamepadAxis moveX,
@@ -99,7 +104,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
             PadBinding orderFollowMe,
             PadBinding orderForward,
             PadBinding orderDefence,
-            PadBinding orderCancel) {}
+            PadBinding orderCancel,
+            PadBinding draft) {}
 
     /**
      * Facts about the hardware that {@link GdxGamepads} needs and no decision above it does.
@@ -208,7 +214,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
                 key(properties, "controls.key.orderFollowMe", Input.Keys.NUM_1),
                 key(properties, "controls.key.orderForward", Input.Keys.NUM_2),
                 key(properties, "controls.key.orderDefence", Input.Keys.NUM_3),
-                key(properties, "controls.key.orderCancel", Input.Keys.NUM_4));
+                key(properties, "controls.key.orderCancel", Input.Keys.NUM_4),
+                key(properties, "controls.key.draft", Input.Keys.C));
     }
 
     private static Pad pad(GameProperties properties) {
@@ -227,7 +234,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
                 binding(properties, "controls.pad.orderFollowMe", GamepadButton.DPAD_UP, GamepadAxis.NONE),
                 binding(properties, "controls.pad.orderForward", GamepadButton.DPAD_RIGHT, GamepadAxis.NONE),
                 binding(properties, "controls.pad.orderDefence", GamepadButton.DPAD_DOWN, GamepadAxis.NONE),
-                binding(properties, "controls.pad.orderCancel", GamepadButton.DPAD_LEFT, GamepadAxis.NONE));
+                binding(properties, "controls.pad.orderCancel", GamepadButton.DPAD_LEFT, GamepadAxis.NONE),
+                binding(properties, "controls.pad.draft", GamepadButton.NORTH, GamepadAxis.NONE));
     }
 
     private static Hardware hardware(GameProperties properties) {

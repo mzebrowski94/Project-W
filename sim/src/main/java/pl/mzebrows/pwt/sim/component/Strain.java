@@ -18,6 +18,13 @@ public final class Strain implements Component, Pool.Poolable {
      */
     public UnitKind kind = UnitKind.GRUNT;
 
+    /**
+     * The wave that sent it, counting from one; zero for one a level placed, a nest bred or a lair
+     * raised. Stamped at spawn and never changed - an evolution keeps it - so a wave is known to be
+     * cleared once nothing it sent is still on its feet.
+     */
+    public int wave;
+
     /** Sets the strain and returns this component, for fluent spawning. */
     public Strain set(UnitKind newKind) {
         this.kind = newKind;
@@ -27,5 +34,6 @@ public final class Strain implements Component, Pool.Poolable {
     @Override
     public void reset() {
         kind = UnitKind.GRUNT;
+        wave = 0;
     }
 }

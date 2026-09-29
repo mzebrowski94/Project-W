@@ -195,6 +195,13 @@ machine). Drawn docked to the left third of the view over a scrim (plan 6.5); th
 | `restart` | `ui.pause.restart = RESTART` | `RESTART` (`HarnessCommand.RESTART`) | offline, or this machine is the host |
 | `leave` | `ui.pause.leave = LEAVE TO MENU` | `OPEN(LEAVE_CONFIRM)` | always |
 
+Beside it, docked to the right of the view over the same scrim (`MenuLayout.Anchor.DOCKED_RIGHT`,
+`HeldUpgradesPainter`): `ui.pause.upgrades = UPGRADES` and every upgrade the side holds, one a row -
+`ui.upgrade.*` and its rank in words, a personal one prefixed `P{n}` and in his colour, rank pips at
+the right - or `ui.pause.upgradesNone = NONE TAKEN YET`. The top bar's aside has room for a few; a
+paused player has time for all of them. More than the view has lines for ends in
+`ui.hud.aside.more`. Built (upgrades S5, asked for in its playtest).
+
 Under the entries, one line per local player with his tally in words - `P1  KILL COUNT: 1234  MISSION
 GOALS: 2  UNITS HEALED: 2` - the labelled form the panel has no room for, and whole numbers.
 Online it also shows `ui.pause.room = ROOM {code}` and the addresses, from `Invitation`, while this
@@ -255,6 +262,13 @@ buttons are named by position (ADR 0011); what the player is told to press comes
 | Page tabs (future Options) | `Q` / `E` | - | `L1` / `R1` | pages with tabs |
 | Swap panels / roll call | `` ` `` | - | - | `UI:play` |
 | Pause | `Esc` | - | `START` | `UI:play` |
+| Open his oldest upgrade draft; with it open, take the highlighted card | `C` | - | `NORTH` (Y / Triangle) | `UI:play`, `UI:hud/top/draft` |
+| Choose a card | `1`-`3` | - | d-pad right / left | `UI:hud/top/draft`, the seat that opened it only |
+| Close the draft and keep it | `4` | - | d-pad down | `UI:hud/top/draft` |
+
+While a draft is open its seat's order inputs work it and give no order; his move, aim, fire, strike,
+grenade and action stay live (D12), and every other seat plays on (`DraftKeys`). A menu opening closes
+it.
 
 `Esc` in `UI:play` changes meaning: today it is the harness's "back to the scenario menu"
 (alpha-phase.md). The same change edits that harness table and the input map in
@@ -287,13 +301,15 @@ the look of the selection.
 | `UI:hud/top/mission` | `HudSlot.MISSION` | top bar, left, line 1, dim | `ui.hud.planet = PLANET:` `{planet}` `ui.hud.mission = MISSION:` `{scenario name}`; the planet half hidden while `Scenario.planet()` is empty | built |
 | `UI:hud/top/goal` | `HudSlot.GOAL` | top bar, left, line 2, bright | `ui.hud.goal = CURRENT GOAL:` `{goal}` - first unmet required objective, or `ui.hud.goal.complete = MISSION COMPLETED`, pulsing twice when it becomes true | built |
 | `UI:hud/top/terminal` | `HudSlot.TERMINAL` | top bar, left, lines 3-4 | the last two dispatches - the battlefield's voice, narrative only, nothing the goal line or a panel shows (plan 8.3) - older dimmed, newest typing with a cursor (a high one appears at once) | built (`Terminal`, the reporters, `TopBarPainter`) |
-| `UI:hud/top/aside` | `HudSlot.ASIDE` | top bar, right: the block beside the goal, `graphic.hud.overlay.widthShare` of the view's span | reserved; what a player sees here is open (plan Q30). In the alpha the dev overlay's panel sits in it | reserved |
+| `UI:hud/top/aside` | `HudSlot.ASIDE` | top bar, right: the block beside the goal, `graphic.hud.overlay.widthShare` of the view's span | what the side holds, one upgrade a row, `ui.upgrade.*` name - a personal one prefixed `P{n}` and in his colour - and its rank as pips, filled to its ranks out of its most; a last row `ui.hud.aside.more = +{n} MORE` when more is held than fits. A first answer to plan Q30; the aliens' adaptations join it (upgrades S10). The dev overlay's panel takes it while F1 steps it on | built (upgrades S5) |
 | `UI:hud/top/overlay` | `HudSlot.OVERLAY` | top bar, right, inside `UI:hud/top/aside` | the F1 dev overlay (`DebugOverlay`), clipped to its panel; off when a level starts | built (F1 steps off / panel / expanded) |
+| `UI:hud/top/draft` | `HudSlot.DRAFT` | the whole top bar, instead of mission, goal, terminal and aside, while a draft is open (D18) - one per machine, opened by `controls.key.draft` / `controls.pad.draft` | on the left the chooser's portrait block and `ui.hud.player`, with `ui.draft.count = {n}/{m}` under it while he holds more than one; across the rest his cards (`DraftLayout`), each framed - the highlighted one in his colour - with `ui.upgrade.*` and the rank it will have once taken, up to two effect lines generated from its definition (`ui.effect.*`), and a hint (`ui.draft.take`, `ui.draft.choose`). Opening pauses a solo game with no banner, closing resumes (D2); the terminal holds its queue while it is open | built (upgrades S5) |
 | `UI:hud/bottom/panel` | `HudSlot.PLAYER_PANEL` | bottom bar: four fixed quarters of the view's span. With four players or fewer in the game, local and online, everybody has one - this machine's seats first, then the rest by slot; with more, this machine's seats only, each in its seat's quarter (`PanelAssignment`). A player keeps his quarter while he is in the game; a quarter nobody holds stays black | frame in that player's commander colour, with `ui.hud.player = P{n}` in it; grey with `ui.hud.offline = OFFLINE` while his pad is unplugged or his link is gone (remote disconnection is not published yet) | built |
 | `UI:hud/bottom/portrait` | `HudSlot.PORTRAIT` | inside each player panel, left; dropped in a quarter under 160 UI px (4:3) | animated portrait (plan section 10.5), 32 x 32; a block in his colour until stage 8 | built as a block in his colour; frames planned (stage 8) |
 | `UI:hud/bottom/status` | `HudSlot.STATUS` | inside each player panel, row 1, after the label | empty while he stands; `ui.hud.down = DOWN` with his bleed-out as a draining bar; `ui.hud.kia = KIA {seconds}`; `ui.hud.aboard = ABOARD`. `DOWN` and `KIA` in alert. No health bar: an outcome is non-lethal (DOWN) or lethal (KIA) (plan D11) | built |
 | `UI:hud/bottom/weapon` | `HudSlot.WEAPON` | inside each player panel, row 2 | `ui.weapon.*` name (≤ 7 characters) and a heat bar in the world's heat colours; while overheated `ui.hud.overheat = OVERHEAT` in alert in the bar's place. No ammunition | built |
 | `UI:hud/bottom/tally` | `HudSlot.TALLY` | inside each player panel, row 3, dim | three icons and per-life numbers - kills, goals, stabilised - `999+` above 999; the labelled form (`ui.hud.kills = KILL COUNT:`, `ui.hud.goals = MISSION GOALS:`, `ui.hud.stabilised = UNITS HEALED:`) is on `UI:play/pause` | built in the panel (`TallyIcon`, G0044); the pause menu's labelled form planned |
+| `UI:hud/bottom/upgrade` | `HudSlot.UPGRADE_TELL` | inside each player panel, row 1, right end, in his colour | while his slot holds drafts: `ui.hud.upgrade = UPGRADE {key}`, `ui.hud.upgrades = UPGRADE x{n} {key}`, or beside a status `ui.hud.upgradeBrief = +{n} {key}` (`UpgradeTell`); never over the status, and a bleed-out bar shortens for it | built (upgrades S5) |
 | `UI:hud/view/paused` | `HudSlot.PAUSED` | over the view, top, over a light scrim | `ui.hud.paused = PAUSED` and `ui.hud.pausedHint = {key}: MENU`, while paused with no menu open on this machine | built |
 | `UI:hud/bottom/roll-call` | `HudSlot.ROLL_CALL` | bottom bar, instead of the panels, swapped by `controls.key.rollCall` (`` ` ``); `graphic.hud.rollCall` opens a level on it | one compact row per player - colour, status, tally - for games of more than four. `ui.hud.rollCall = ROLL CALL - PLACEHOLDER` for now | placeholder; design open (plan section 19) |
 | `UI:hud/view/reticle` | `HudSlot.RETICLE` | over everything: the keyboard player's at the pointer's screen position, a pad player's `graphic.hud.reticle.padDistance` world units along his aim | the player's reticle, in his colour, outlined (plan 7.5). Each off by default (`graphic.hud.reticle.keyboard`, `.pads`); with the keyboard's off, the system pointer shows | built |

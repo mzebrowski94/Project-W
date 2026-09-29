@@ -14,6 +14,7 @@ import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.ActionKind;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * A trooper standing over a man on the ground, doing the work.
@@ -50,11 +51,13 @@ public final class AidSystem extends EntitySystem {
 
     private final float reviveHealthFraction;
     private final float reviveInvulnerableSeconds;
+    private final Modifiers modifiers;
 
     private ImmutableArray<Entity> helpers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> casualties = new ImmutableArray<>(new Array<>());
 
-    public AidSystem(SimConfig config) {
+    public AidSystem(SimConfig config, Modifiers modifiers) {
+        this.modifiers = modifiers;
         this.reviveHealthFraction = config.casualty().reviveHealthFraction();
         this.reviveInvulnerableSeconds = config.casualty().reviveInvulnerableSeconds();
     }
@@ -82,7 +85,7 @@ public final class AidSystem extends EntitySystem {
                 continue;
             }
             action.available = ActionKind.STABILISE;
-            Aid.work(subject, deltaTime, reviveHealthFraction, reviveInvulnerableSeconds);
+            Aid.work(modifiers, helper, subject, deltaTime, reviveHealthFraction, reviveInvulnerableSeconds);
             action.progress = Aid.progress(subject);
         }
     }

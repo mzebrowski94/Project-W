@@ -12,6 +12,8 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.Wave;
@@ -41,6 +43,8 @@ import pl.mzebrows.pwt.sim.def.Wave;
 public final class WaveSystem extends EntitySystem {
 
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
+    private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
+    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     private final TileMap map;
     private final SimConfig config;
@@ -48,6 +52,7 @@ public final class WaveSystem extends EntitySystem {
     private final Rng rng;
 
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> aliens = new ImmutableArray<>(new Array<>());
 
     public WaveSystem(SimConfig config, TileMap map, Spawner spawner, Rng rng) {
         this.config = config;
@@ -59,12 +64,14 @@ public final class WaveSystem extends EntitySystem {
     @Override
     public void addedToEngine(Engine engine) {
         levels = engine.getEntitiesFor(Family.all(Waves.class).get());
+        aliens = engine.getEntitiesFor(Family.all(Strain.class).get());
     }
 
     @Override
     public void update(float deltaTime) {
         for (int i = 0; i < levels.size(); i++) {
             Waves waves = WAVES.get(levels.get(i));
+            publishCleared(waves);
             if (!waves.armed() || waves.spent()) {
                 continue;
             }
@@ -72,9 +79,31 @@ public final class WaveSystem extends EntitySystem {
             if (waves.waited < Ticks.of(waves.next().afterSeconds(), deltaTime)) {
                 continue;
             }
-            send(waves.next());
+            send(waves.next(), waves.sent() + 1);
             waves.advance();
         }
+    }
+
+    /**
+     * Marks every wave sent whose aliens are all off their feet - their throes begun, the test the
+     * objectives use. Before this tick's wave is sent, because what it sends is not on the field until
+     * the system has run.
+     */
+    private void publishCleared(Waves waves) {
+        int sent = waves.sent();
+        if (sent == 0) {
+            return;
+        }
+        long standing = 0L;
+        for (int i = 0; i < aliens.size(); i++) {
+            Entity alien = aliens.get(i);
+            int wave = STRAIN.get(alien).wave;
+            if (wave == 0 || wave > sent || (DYING.has(alien) && DYING.get(alien).begun)) {
+                continue;
+            }
+            standing |= 1L << (wave - 1);
+        }
+        waves.cleared |= ((1L << sent) - 1L) & ~standing;
     }
 
     /**
@@ -84,9 +113,9 @@ public final class WaveSystem extends EntitySystem {
      * this is not a per-entity loop. Doing it any other way would mean a scatter kept alive for the
      * length of a level to save an object a handful of times.
      */
-    private void send(Wave wave) {
+    private void send(Wave wave, int stamp) {
         float radius = config.unit(wave.kind()).radius();
         Scatter scatter = new Scatter(map, rng, radius, radius);
-        scatter.scatter(wave.where(), wave.count(), radius, (x, y) -> spawner.spawnUnit(wave.kind(), x, y));
+        scatter.scatter(wave.where(), wave.count(), radius, (x, y) -> spawner.spawnUnit(wave.kind(), x, y, stamp));
     }
 }

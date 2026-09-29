@@ -3,15 +3,23 @@ package pl.mzebrows.pwt.sim;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * The numbers here that fail silently. Everything else in {@code SimConfig} is validated at
@@ -123,6 +131,46 @@ class SimConfigTest {
     }
 
     /**
+     * The same, with every upgrade the players can hold at its highest rank, read through the fold the
+     * game uses (ADR 0017). Weapon Handling shortens every cooldown and cools nothing, so it is the
+     * rounding of cooldowns to whole ticks that could tip it.
+     */
+    @Test
+    void runsHotterThanAnyOtherGunAManCanCarryWithEveryUpgradeAtItsHighestRank() {
+        SimConfig config = SimConfig.defaults();
+        Simulation world = everythingHeld(config);
+        Entity commander = world.spawnCommander(10f, 10f, 0);
+        Modifiers modifiers = new Modifiers(world.engine(), config);
+
+        float beam = secondsOfHolding(config, WeaponKind.LASER, modifiers, commander);
+
+        for (PickupKind kind : PickupKind.values()) {
+            if (config.pickup(kind).playerGrant() instanceof Grant.Arm crate && crate.weapon() != WeaponKind.LASER) {
+                assertThat(beam)
+                        .as("the beam must stop itself sooner than the %s does", crate.weapon())
+                        .isLessThan(secondsOfHolding(config, crate.weapon(), modifiers, commander));
+            }
+        }
+    }
+
+    /**
+     * <strong>The squad at its fastest is still slower than the commander.</strong> A squad following
+     * him strings out behind rather than crowding him (the trooper block says why), and Forced March
+     * must not undo that at its last rank.
+     */
+    @Test
+    void keepsTheSquadSlowerThanTheCommanderAtEveryUpgradesHighestRank() {
+        SimConfig config = SimConfig.defaults();
+        Simulation world = everythingHeld(config);
+        world.spawnCommander(10f, 10f, 0);
+        Entity trooper = world.spawnTrooper(20f, 10f);
+
+        float fastest = config.trooper().speed() * new Modifiers(world.engine(), config).pace(trooper, 1f);
+
+        assertThat(fastest).isLessThan(config.commander().speed());
+    }
+
+    /**
      * <strong>A thicket has to cost his side more than it costs theirs.</strong> Ground that slowed
      * everybody equally is scenery - both sides arrive at the fight in the order they would have on
      * open ground and the only thing that changed is how long the walk took. The asymmetry is the
@@ -149,6 +197,33 @@ class SimConfigTest {
         }
         float perSecond = gun.heat().perShot() / Math.max(gun.cooldownSeconds(), TINY);
         return 1f / Math.max(perSecond - gun.heat().coolPerSecond(), TINY);
+    }
+
+    /** The same, for the cooldown a shooter is charged once every upgrade reaching him has been folded in. */
+    private static float secondsOfHolding(SimConfig config, WeaponKind kind, Modifiers modifiers, Entity who) {
+        WeaponDef gun = config.weapon(kind);
+        if (!gun.overheats()) {
+            return Float.POSITIVE_INFINITY;
+        }
+        int ticks = modifiers.fireCooldownTicks(who, kind, Ticks.of(gun.cooldownSeconds(), config.tickSeconds()));
+        float perSecond = gun.heat().perShot() / Math.max(ticks * config.tickSeconds(), TINY);
+        return 1f / Math.max(perSecond - gun.heat().coolPerSecond(), TINY);
+    }
+
+    /** A world holding every players' upgrade at its highest rank, personal ones for slot zero. */
+    private static Simulation everythingHeld(SimConfig config) {
+        Simulation world = new Simulation(config);
+        Upgrades ledger = world.engine()
+                .getEntitiesFor(Family.all(Upgrades.class).get())
+                .first()
+                .getComponent(Upgrades.class);
+        for (UpgradeKind kind : UpgradeKind.values()) {
+            UpgradeDef def = config.upgrades().of(kind);
+            if (def.side() == Side.PLAYER) {
+                ledger.held.add(new Upgrades.Held(kind, def.personal() ? 0 : Upgrades.SHARED, def.ranks()));
+            }
+        }
+        return world;
     }
 
     /** How much further than the range it noticed you at a strain will keep hunting you. */

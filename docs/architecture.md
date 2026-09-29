@@ -147,10 +147,11 @@ held still - a driver that zeroed a stunned unit's velocity itself would silentl
 which is why `DriveSystem` leaves a held unit entirely alone rather than writing a zero over it.
 - `component/` - pooled data. Public mutable fields, `reset()`, no behaviour.
 - `system/` - all behaviour. One system, one responsibility.
-- `upgrade/` - the upgrade subsystem, fenced (ADR 0017): the read port every upgradeable number is
-  asked through (`Modifiers`, one `@Reads` method per `Stat`) and how a number is folded from its base
-  (`Fold`); from S3 of `docs/design/upgrades-scope.md` also its own system and the ledger's rules. The
-  one package besides `system/` a system lives in.
+- `upgrade/` - the upgrade subsystem, fenced (ADR 0017): the catalogue (`UpgradeKind`, `UpgradeDef`,
+  `Effect`), the read port every upgradeable number is asked through (`Modifiers`, one `@Reads` method
+  per `Stat`), how a number is folded from its base (`Fold`), and `UpgradeSystem`, the only writer of
+  the ledger and the drafts on the level entity - the one system that lives outside `system/`. `Picks`
+  is where a tick's picks enter it.
 
 ### Adding to the simulation
 

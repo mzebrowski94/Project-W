@@ -57,6 +57,9 @@ final class PlayMenus {
     private boolean focusLost;
     private @Nullable String footFor;
 
+    /** The pause in force is a solo draft's (D2): no banner and no scrim over the game being chosen for. */
+    private boolean quiet;
+
     PlayMenus(
             Hud hud,
             HudStyle style,
@@ -75,6 +78,11 @@ final class PlayMenus {
     /** Whether a page is open here: this machine's commanders stand still and its presses are the menu's. */
     boolean menuOpen() {
         return flow.menuOpen();
+    }
+
+    /** Whether the pause in force is the draft's own, which the paused banner does not show over. */
+    void quietPause(boolean draft) {
+        quiet = draft;
     }
 
     /** The window lost focus; offline, the next frame opens the menu. */
@@ -157,7 +165,7 @@ final class PlayMenus {
                     hints.selectAndBack(modality),
                     motion.offsetX(),
                     motion.alpha());
-        } else if (flow.showsPausedBanner()) {
+        } else if (flow.showsPausedBanner() && !quiet) {
             painter.banner(
                     view,
                     strings.get("ui.hud.paused") + "  "
@@ -182,6 +190,16 @@ final class PlayMenus {
                 hints.back(modality),
                 0,
                 1f);
+    }
+
+    /** Whether the pause menu itself is the page on show - not the leave confirm over it. */
+    boolean showsPausePage() {
+        return flow.menuOpen() && flow.top() == UiPage.PAUSE;
+    }
+
+    /** How opaque the page's arrival has it, for what is drawn beside it. */
+    float pageAlpha() {
+        return motion.alpha();
     }
 
     /** Whether the system pointer should show: in a menu, while the mouse is what the player is using. */
@@ -281,7 +299,7 @@ final class PlayMenus {
         if (flow.menuOpen()) {
             return style.scrimAlpha();
         }
-        return flow.showsPausedBanner() ? style.bannerScrimAlpha() : 0f;
+        return flow.showsPausedBanner() && !quiet ? style.bannerScrimAlpha() : 0f;
     }
 
     /** Moves the scrim towards where it should be; at once with motion off. */

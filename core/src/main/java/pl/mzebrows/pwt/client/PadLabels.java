@@ -65,6 +65,7 @@ public final class PadLabels {
                 + ", pull " + of(pad.drag(), playStation)
                 + ", zoom " + of(pad.zoom(), playStation)
                 + ", pause " + of(pad.pause(), playStation)
+                + ", upgrades " + of(pad.draft(), playStation)
                 + ", orders on the d-pad";
     }
 

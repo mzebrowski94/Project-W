@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * Every template the bars draw, with its longest argument, against the slot it goes in - at the 640-wide
@@ -123,6 +124,9 @@ class TextFitTest {
         for (WeaponKind kind : WeaponKind.values()) {
             name = longestOf(name, STRINGS.getProperty("ui.weapon." + kind.name()));
         }
+        for (UpgradeKind kind : UpgradeKind.values()) {
+            name = longestOf(name, STRINGS.getProperty("ui.upgrade." + kind.name()) + " III");
+        }
 
         for (DispatchKind kind : DispatchKind.values()) {
             String template = STRINGS.getProperty(kind.key());
@@ -134,6 +138,32 @@ class TextFitTest {
 
             assertThat(line.length()).as(line).isLessThanOrEqualTo(columns);
         }
+    }
+
+    /** A card's title is its name and the rank it will have: fifteen characters and a space and III. */
+    @Test
+    void namesEveryUpgradeInFifteenCharactersOrFewer() {
+        for (UpgradeKind kind : UpgradeKind.values()) {
+            String name = STRINGS.getProperty("ui.upgrade." + kind.name());
+
+            assertThat(name).as("ui.upgrade.%s", kind).isNotNull();
+            assertThat(name.length()).as("ui.upgrade.%s", kind).isLessThanOrEqualTo(15);
+        }
+    }
+
+    /** The whole tell beside a standing player's label, the short one beside the worst status. */
+    @Test
+    void fitsTheUpgradeTellBesideTheLabelAndBesideTheWorstStatus() {
+        UpgradeTell tell = new UpgradeTell(
+                STRINGS.getProperty("ui.hud.upgrade"),
+                STRINGS.getProperty("ui.hud.upgrades"),
+                STRINGS.getProperty("ui.hud.upgradeBrief"));
+        String label = STRINGS.getProperty("ui.hud.player").replace("{0}", Integer.toString(Players.MAX));
+        String kia = STRINGS.getProperty("ui.hud.kia").replace("{0}", "9.9");
+        int beside = PanelLayout.TEXT_COLUMNS - label.length() - 2;
+
+        assertThat(tell.text(9, "C", beside)).isEqualTo("UPGRADE x9 C");
+        assertThat(tell.text(9, "Y", beside - kia.length())).isEqualTo("+9 Y");
     }
 
     @Test

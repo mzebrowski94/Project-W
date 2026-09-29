@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim;
 
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * One tick's worth of what every player is asking for, by slot: what each is holding, and the
@@ -19,6 +20,14 @@ public final class PlayerInputs {
 
     private final boolean[] joins;
 
+    private final @Nullable UpgradeKind[] picks;
+
+    private final int[] pickSerials;
+
+    private final boolean[] leaving;
+
+    private final boolean[] returning;
+
     private boolean invulnerabilitySwitched;
 
     private boolean invulnerable;
@@ -33,6 +42,10 @@ public final class PlayerInputs {
         this.bySlot = new CommanderInput[capacity];
         this.orders = new Order[capacity];
         this.joins = new boolean[capacity];
+        this.picks = new UpgradeKind[capacity];
+        this.pickSerials = new int[capacity];
+        this.leaving = new boolean[capacity];
+        this.returning = new boolean[capacity];
         clear();
     }
 
@@ -84,6 +97,59 @@ public final class PlayerInputs {
     }
 
     /**
+     * This slot's player takes the card of this kind from the draft with this serial (G0049). An event:
+     * the kind, never the card's place, so a card re-dealt between the press and the tick cannot hand
+     * him something he never saw. Whether it counts is the simulation's to decide.
+     */
+    public PlayerInputs pick(int slot, int serial, UpgradeKind kind) {
+        requireSlot(slot);
+        picks[slot] = kind;
+        pickSerials[slot] = serial;
+        return this;
+    }
+
+    /** The kind this slot picks on this tick, or null if it picks nothing. */
+    public @Nullable UpgradeKind pickOf(int slot) {
+        requireSlot(slot);
+        return picks[slot];
+    }
+
+    /** The serial of the draft this slot picks from on this tick. */
+    public int pickSerialOf(int slot) {
+        requireSlot(slot);
+        return pickSerials[slot];
+    }
+
+    /**
+     * This slot's link has dropped: it is away from this tick (G0052). An event the host's sequencer
+     * seals; offline nothing sends it.
+     */
+    public PlayerInputs away(int slot) {
+        requireSlot(slot);
+        leaving[slot] = true;
+        return this;
+    }
+
+    /** Whether this slot goes away on this tick. */
+    public boolean goesAway(int slot) {
+        requireSlot(slot);
+        return leaving[slot];
+    }
+
+    /** This slot's machine is back and re-seated: it is present again from this tick (G0052). */
+    public PlayerInputs back(int slot) {
+        requireSlot(slot);
+        returning[slot] = true;
+        return this;
+    }
+
+    /** Whether this slot comes back on this tick. */
+    public boolean comesBack(int slot) {
+        requireSlot(slot);
+        return returning[slot];
+    }
+
+    /**
      * Switches the harness's invulnerability on or off from this tick. An event: it stays as switched,
      * on the level, until another switch arrives. Harness only - pillar 2 says the commander can be
      * killed, and {@code ArchitectureTest} keeps scenarios from calling this.
@@ -113,6 +179,10 @@ public final class PlayerInputs {
             bySlot[slot] = CommanderInput.IDLE;
             orders[slot] = null;
             joins[slot] = false;
+            picks[slot] = null;
+            pickSerials[slot] = 0;
+            leaving[slot] = false;
+            returning[slot] = false;
         }
         invulnerabilitySwitched = false;
         invulnerable = false;

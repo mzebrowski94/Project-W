@@ -46,6 +46,12 @@ public final class Level implements Component, Pool.Poolable {
      */
     public boolean commandersInvulnerable;
 
+    /**
+     * How many bosses have gone down this level, counted on the tick each one's throes begin. Written
+     * by {@code BarrageSystem}, once per boss; read by the upgrade package as a source of drafts.
+     */
+    public int bossesDown;
+
     /** Adds an objective this level requires. */
     public void require(Objective objective) {
         required |= bit(objective);
@@ -92,5 +98,6 @@ public final class Level implements Component, Pool.Poolable {
         tick = 0L;
         nextHandle = 1L;
         commandersInvulnerable = false;
+        bossesDown = 0;
     }
 }

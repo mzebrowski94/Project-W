@@ -21,6 +21,16 @@ class MenuLayoutTest {
     }
 
     @Test
+    void docksTheUpgradeListToTheRightClearOfThePauseMenu() {
+        Rect menu = LAYOUT.panel(VIEW, MenuLayout.Anchor.DOCKED_LEFT, 6, 34);
+        Rect list = LAYOUT.panel(VIEW, MenuLayout.Anchor.DOCKED_RIGHT, 12, 34);
+
+        assertThat(list.right()).isEqualTo(VIEW.right() - 8);
+        assertThat(list.top()).isEqualTo(VIEW.top() - 8);
+        assertThat(list.x()).isGreaterThan(menu.right());
+    }
+
+    @Test
     void centresAPanelOnTheMainMenu() {
         Rect panel = LAYOUT.panel(VIEW, MenuLayout.Anchor.CENTRED, 4, 20);
 

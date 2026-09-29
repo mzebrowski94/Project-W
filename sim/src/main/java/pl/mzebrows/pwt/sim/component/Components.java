@@ -86,6 +86,9 @@ public final class Components {
                     Velocity.class,
                     Wander.class,
                     Waves.class,
+                    Upgrades.class,
+                    Drafts.class,
+                    Presence.class,
                     Weapon.class,
                     Weave.class)
             .sorted(Comparator.comparing(Class::getSimpleName))

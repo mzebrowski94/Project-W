@@ -44,6 +44,15 @@ public final class HarnessControls {
         if (keys.justPressed(Input.Keys.F3)) {
             commands.add(HarnessCommand.NEXT_LAG);
         }
+        if (keys.justPressed(Input.Keys.F5)) {
+            commands.add(HarnessCommand.TAKE_FIRST_CARD);
+        }
+        if (keys.justPressed(Input.Keys.F6)) {
+            commands.add(HarnessCommand.TAKE_SECOND_CARD);
+        }
+        if (keys.justPressed(Input.Keys.F7)) {
+            commands.add(HarnessCommand.TAKE_THIRD_CARD);
+        }
         return commands;
     }
 }

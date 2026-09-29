@@ -2,12 +2,14 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import java.util.stream.Stream;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
@@ -23,7 +25,7 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 class OddsTest {
 
     /** The dealing is under test, not an upgrade: nothing is held, so every chance is its base. */
-    private static final Modifiers NOTHING_HELD = new Modifiers();
+    private static final Modifiers NOTHING_HELD = new Modifiers(new Engine(), AlphaWorlds.config());
 
     private static final Entity UNIT = new Entity();
 

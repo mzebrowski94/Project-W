@@ -1,7 +1,9 @@
 package pl.mzebrows.pwt.ui.hud;
 
+import java.util.Arrays;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * One player's facts, by slot, as his panel shows them. Plain fields, filled only by {@link
@@ -9,6 +11,9 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * next comes back as something else (G0016).
  */
 public final class PlayerReadout {
+
+    /** Most cards a draft shows. */
+    public static final int CARDS = 3;
 
     public Posture posture = Posture.ABSENT;
 
@@ -41,6 +46,22 @@ public final class PlayerReadout {
     public int goals;
     public int stabilised;
 
+    /** How many drafts his slot holds (G0049). */
+    public int drafts;
+
+    /** His oldest draft - the one his draft key opens - by serial; zero while he holds none. */
+    public int draftSerial;
+
+    /** Its cards, in deal order, and the rank each will have once he takes it. */
+    public int cardCount;
+
+    public final UpgradeKind[] cards = new UpgradeKind[CARDS];
+    public final int[] cardRanks = new int[CARDS];
+
+    public PlayerReadout() {
+        Arrays.fill(cards, UpgradeKind.LARGER_ARMY);
+    }
+
     void clear() {
         posture = Posture.ABSENT;
         weapon = WeaponKind.SIDEARM;
@@ -53,6 +74,9 @@ public final class PlayerReadout {
         kills = 0;
         goals = 0;
         stabilised = 0;
+        drafts = 0;
+        draftSerial = 0;
+        cardCount = 0;
     }
 
     void copyFrom(PlayerReadout other) {
@@ -67,5 +91,10 @@ public final class PlayerReadout {
         kills = other.kills;
         goals = other.goals;
         stabilised = other.stabilised;
+        drafts = other.drafts;
+        draftSerial = other.draftSerial;
+        cardCount = other.cardCount;
+        System.arraycopy(other.cards, 0, cards, 0, CARDS);
+        System.arraycopy(other.cardRanks, 0, cardRanks, 0, CARDS);
     }
 }
