@@ -9,7 +9,7 @@ import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
 /**
  * The worlds of an online session, built from what the host shipped (ADR 0012): its {@code
- * game.properties} text parsed with this build's loader, its scenario, its seed. Every peer builds from
+ * assets/sim/*.properties} text parsed with this build's loader, its scenario, its seed. Every peer builds from
  * the host's tuning, not its own file - which is what lets a tuning playtest need no file copied.
  */
 public final class ScenarioWorlds implements WorldFactory {

@@ -69,8 +69,7 @@ public record NetConfig(
      * @throws IllegalArgumentException if the values are readable but break a rule a record checks
      */
     public static Parsed parse(String text) {
-        ConfigBinder.Bound<NetConfig> bound =
-                ConfigBinder.bind(NetConfig.class, ROOT, ConfigBinder.parse(text), Shipped.VALUES);
+        ConfigBinder.Bound<NetConfig> bound = ConfigBinder.bind(NetConfig.class, ROOT, text, Shipped.VALUES);
         NetConfig config = bound.value();
         if (config == null) {
             throw new IllegalArgumentException("network config: " + String.join("; ", bound.problems()));
@@ -86,7 +85,7 @@ public record NetConfig(
 
         static final SortedMap<String, String> VALUES = ConfigBinder.parse(ShippedNetConfig.TEXT);
 
-        static final NetConfig CONFIG = ConfigBinder.bindStrictly(NetConfig.class, ROOT, VALUES);
+        static final NetConfig CONFIG = ConfigBinder.bindStrictly(NetConfig.class, ROOT, ShippedNetConfig.TEXT);
 
         private Shipped() {}
     }

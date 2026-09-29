@@ -19,7 +19,7 @@ reason it is a module rather than a package; ADR 0009 has the argument.
 - `Terrain` - a kind of ground. Names a role, never a colour and never a number to balance. Carries
   one thing beyond its name, `passable`, because that is geometry rather than gameplay and generation
   cannot check connectivity or find a spot without it. What terrain *costs* a unit is a number in
-  `game.properties`, read by a system.
+  `assets/sim/*.properties`, read by a system.
 - `TileMap` - the grid: terrain and a region id per tile, immutable once built. **It owns the only
   conversion between world units and tile coordinates**; nothing else may open-code
   `(int) (x / tileSize)`. Anything outside the grid reads as `ROCK` and therefore as impassable, so
@@ -59,10 +59,11 @@ The whole game world. Owns an Ashley `PooledEngine`, the seeded `Rng`, the tick 
 system that changes world state.
 
 - `Simulation` - the world. `step()` advances it by exactly one fixed tick.
-- `SimConfig` - the tunables it was built with: exactly `assets/game.properties`, bound by
-  `ConfigBinder` from record component names, so a tunable is a component and a line in the file and
-  nothing else. `sim` reads no files: `:sim:generateShippedConfig` compiles the file's values into a
-  constant, which `SimConfig.defaults()` binds - what every test runs and what a missing or broken key
+- `SimConfig` - the tunables it was built with: exactly `assets/sim/*.properties`, read in name order
+  and bound as one by `ConfigBinder` from record component names, so a tunable is a component and a
+  line in the file its prefix lives in, and nothing else. `sim` reads no files:
+  `:sim:generateShippedConfig` compiles each file's values into a constant, with the file list beside
+  them, which `SimConfig.defaults()` binds - what every test runs and what a missing or broken key
   falls back to - and any other text (a player's file, a host's) arrives through `SimConfig.parse`.
   There is no literal default anywhere in Java; a second copy of a number is how 21 of them drifted.
 - `Rng` - SplitMix64. The only randomness source. Its state is one `long`, so a world can be
@@ -100,7 +101,8 @@ system that changes world state.
   are allowed to be - separating overlapping pairs, pushing bodies out of impassable terrain, and
   clamping them inside the arena, in that order, a few passes per tick. Terrain is a clamp and never
   a body, so circles-only collision is untouched by it. Both are purely geometric and read `Collider` flags rather than asking what an
-  entity is. Systems still all live in `system/`; this package is the machinery they call.
+  entity is. Systems live in `system/` - all but `UpgradeSystem`, which lives with the rules it runs in
+  the fenced `upgrade/` package (ADR 0017); this package is the machinery they call.
 - `scenario/` - the arenas the menu can launch. `Scenarios` is the registry, and the list in it is
   the menu. `Scenarios.world` is the **only** place a playable world is assembled - config, then map,
   then simulation, then contents, in that order, because the map's extent is the arena and everything
@@ -145,6 +147,9 @@ held still - a driver that zeroed a stunned unit's velocity itself would silentl
 which is why `DriveSystem` leaves a held unit entirely alone rather than writing a zero over it.
 - `component/` - pooled data. Public mutable fields, `reset()`, no behaviour.
 - `system/` - all behaviour. One system, one responsibility.
+- `upgrade/` - the upgrade subsystem, fenced (ADR 0017): its own system, the ledger's rules and the
+  read port every upgradeable number is asked through. The one package besides `system/` a system
+  lives in. Arrives in S2 of `docs/design/upgrades-scope.md`.
 
 ### Adding to the simulation
 
@@ -202,7 +207,7 @@ loop.
 - `PwtGame` - `ApplicationAdapter`. Per frame: ask `FixedStepClock` how many steps to run, run them,
   clear, render with `alpha`.
 - `GameProperties` / `SimConfigLoader` / `GraphicConfig` - config loading. Every value has a
-  fallback and logs when it is used. `SimConfigLoader` only finds `game.properties` and logs what
+  fallback and logs when it is used. `SimConfigLoader` only finds `sim/*.properties` - the files `SimConfig.shippedFiles()` names - and logs what
   `SimConfig.parse` says was wrong with it; the shipped value stands for each.
 - `Assets` - every asset path as a constant, an `AssetManager` behind them. Missing files log and
   are skipped, never thrown.

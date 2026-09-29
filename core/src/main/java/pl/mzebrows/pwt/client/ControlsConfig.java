@@ -6,7 +6,7 @@ import java.util.Locale;
 /**
  * Every binding and every feel number, read from {@code controls.properties}.
  *
- * <p>Kept apart from {@link GraphicConfig} and from {@code game.properties} on purpose. A binding is
+ * <p>Kept apart from {@link GraphicConfig} and from {@code assets/sim/*.properties} on purpose. A binding is
  * not a rendering setting and it is emphatically not a simulation number: what the fire button is
  * called cannot be allowed to change what firing does, and nothing here ever reaches the simulation
  * except as the {@code CommanderInput} it produces.

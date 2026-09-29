@@ -1,6 +1,7 @@
 # Upgrades and adaptations — scoped work
 
-**Status: planned 2026-09-28, nothing built.** Read this first in every session of the upgrade work,
+**Status: planned 2026-09-28; S0 and S1 done 2026-09-29, next is S2. D18 amended 2026-09-29: the
+draft is shown in the top bar, not the bottom bar.** Read this first in every session of the upgrade work,
 and tick the session in §0 when it lands. **This doc expires when adaptations ship (S10).** As each
 session lands, what it settles moves where it belongs - invariants and the input map into
 `README.md`, words into `glossary.md`, records into `decisions/` and `docs/adr/`, scaffolding into
@@ -15,8 +16,8 @@ claims against `main` at `e7cf245`, and five rounds of questions Mateusz answere
 
 | # | Session | Size | Stops with | Status |
 |---|---|---|---|---|
-| S0 | Records and words | S | docs only | planned |
-| S1 | Config split and the binder | M | the same game, an identical bound config | planned |
+| S0 | Records and words | S | docs only | done 2026-09-29 |
+| S1 | Config split and the binder | M | the same game, an identical bound config | done 2026-09-29 |
 | S2 | Seams, nothing held | M | the same game, the same hashes | planned |
 | S3 | The draft core | L | drafts earned, dealt, rotated, picked and passed on - headless | planned |
 | S4 | The cheap upgrades and dev keys | M | playable offline with dev keys | planned |
@@ -78,7 +79,7 @@ S6 and S7 if online co-op is the next thing to playtest.
 | D15 | Where do sealed caches appear first? | **About half of each Adventure level's weapons caches** | Tuned in S9. The lair's cache of every gun stays as laid. |
 | D16 | How does the draft look in solo? | **The same as in co-op** | One layout (D18); solo also pauses (D2). |
 | D17 | Each Adventure level holds about 25 draft sources - how often is a draft earned? | **One per N per source, configurable** | `pointsPerDraft=2`, `wavesPerDraft=4`, `bossesPerDraft=1`. The first of each source earns at once. About ten drafts a level; a scenario may override. |
-| D18 | Where is the draft shown? | **The whole bottom bar turns into it** (Mateusz's own answer) | Like the roll-call swap: the chooser's portrait and name on the left, his cards across the rest. Nothing is drawn over the view, so the UI spec's rule stands. A machine's bar shows one draft at a time. |
+| D18 | Where is the draft shown? | **The whole top bar turns into it** (Mateusz, amended 2026-09-29; first answer was the bottom bar) | The top bar is already the terminal, where the draft's dispatches land. While a draft is open, its mission, goal, terminal and aside give way to the chooser's portrait and name on the left and his cards across the rest - the same span the bottom bar would have given them. The bottom bar is untouched, so every player's panel and its alarms stay in sight. Nothing is drawn over the view, so the UI spec's rule stands. A machine's top bar shows one draft at a time. |
 | D19 | How does the simulation know a player left? | **The host seals away/back** | A dropped link puts an *away* event in the next bundle, and a return puts a *back*. The rotation skips away slots and their drafts pass on. "Solo" means one present player. Amends G0038. |
 
 ## 3. Invariant check (`feature` skill, step 2)
@@ -98,7 +99,7 @@ S6 and S7 if online co-op is the next thing to playtest.
 | G0019: the grenade is a fixed throw | A trooper's throw is the same throw: along a bearing, a fixed range, passing through the living. |
 | G0028: a player is a slot | An upgrade belongs to the slot or the side, never to a life. A commander who respawns keeps what his slot chose - the opposite of G0044's tally, stated so nobody "fixes" it. |
 | G0039: a chance is dealt, not tossed | Trooper throws go through `Odds`; the armoury deck is a `Bag`. |
-| The UI spec's do-not-build: nothing drawn over the view in `UI:play` except modals and the rest | The draft takes the bottom bar, as the roll call does (D18). |
+| The UI spec's do-not-build: nothing drawn over the view in `UI:play` except modals and the rest | The draft takes the top bar, in the bar and never over the view (D18). |
 
 ### Amended
 
@@ -463,14 +464,16 @@ error:
 ### 5.11 The interface (S5)
 
 - **The draft bar** (D18). `C`, or `NORTH` on a pad (`Y`/`Triangle`, left free on purpose), opens
-  the oldest draft of that seat's slot. The **whole bottom bar** swaps to it, just as `` ` `` swaps it
-  to the roll call:
+  the oldest draft of that seat's slot. The **whole top bar** swaps to it - mission, goal, terminal
+  and aside, the dev overlay's panel included - as `` ` `` swaps the bottom bar to the roll call. The
+  top bar is the terminal already, the place the game talks to the player, and its span is the
+  view's, the same the bottom bar would have given the cards:
   - on the left, the chooser's portrait and `P{n}`;
   - across the rest, his cards. Each shows a name with the rank it will have once taken
     (`LARGER ARMY II`) and up to two effect lines generated from the definition (`+1 MAN PER CRATE`,
     `+2 SQUAD ROOM`);
   - the highlighted card is framed in his colour, and `1/2` shows when he holds more than one draft.
-- **A machine's bar shows one draft at a time.** If another local seat presses `C` while the bar is
+- **A machine's top bar shows one draft at a time.** If another local seat presses `C` while the bar is
   taken, it only shows whose draft it is. Other machines are not affected.
 - **Input while the draft is open** comes only from the chooser's seat, and only from the order
   inputs and the draft key:
@@ -486,14 +489,19 @@ error:
 - **Solo pause** (D2). With one present player, opening the bar pauses the game
   (`ScenarioSession.setPaused`; online, `OnlineSession` with the draft reason) and closing it
   resumes. The PAUSED banner does not show over a draft.
-- **While the bar is up, the other local players' panels are hidden.** Their alarms (DOWN, KIA,
-  OVERHEAT) must still reach them. The proposal is that the bar's frame flashes in that player's
-  colour on `PanelAlarms`' cadence; S5 decides.
+- **The bottom bar is untouched while a draft is open**, so every player's panel and its alarms
+  (DOWN, KIA, OVERHEAT) stay in sight - the reason D18 moved. What the draft hides is the mission,
+  the goal line and the terminal. The goal line comes back as it was when the bar closes. S5 decides
+  whether `Terminal` holds its queue while the bar is up, so a dispatch said meanwhile - *P2 TOOK
+  LARGER ARMY II* among them - types out after it rather than ageing out unseen
+  (`graphic.hud.terminal.maxAgeSeconds`).
 - **The pending tell.** Each player's panel shows `UPGRADE ×n` and the key while his slot holds
   drafts, within its 19-column text budget.
 - **The aside strip** (`UI:hud/top/aside`, reserved - plan Q30) shows the side's upgrades with rank
-  pips, and later the aliens' adaptations. This is a first answer to Q30. The F1 overlay still takes
-  the strip when it is stepped on.
+  pips, and later the aliens' adaptations. This is a first answer to Q30. The F1 overlay, off by
+  default since 2026-09-29, still takes the strip when it is stepped on. While a draft is open the
+  strip is hidden with the rest of the bar; each card names the rank it will have, so the chooser
+  still sees what he holds of what is offered.
 - **Dispatches** in the terminal, narrative only:
   - a draft earned;
   - an upgrade taken (`P2 TOOK LARGER ARMY II`);
@@ -507,7 +515,7 @@ error:
   formatted when a draft changes and never per frame. Glyphs are placeholders; no art without a
   record of its own (alpha rule).
 - **Spec rows.**
-  - In `menu_layout_agent.md` §7: `UI:hud/bottom/draft` (`HudSlot.DRAFT`), and the tell with a
+  - In `menu_layout_agent.md` §7: `UI:hud/top/draft` (`HudSlot.DRAFT`), and the tell with a
     `HudSlot` constant of its own. `UiSpecTest` pairs §7 with `HudSlot` (and §3 with `UiPage`), so
     each row lands with its constant.
   - The §6 input rows, which no test checks, so they are kept by hand.
@@ -834,14 +842,15 @@ nothing reads them yet. Stages 5-6 turn the draft on.
 
 ### S5 - The interface
 
-**Goal.** Playable offline for real, solo and in local co-op: the bottom-bar draft (D18), the tell,
+**Goal.** Playable offline for real, solo and in local co-op: the top-bar draft (D18), the tell,
 the aside strip, the dispatches and the solo pause.
 
 **Read first.**
 
 - `docs/ui/menu_layout_agent.md` (all of it), and §7-§8 of `docs/ui/ui_and_graphics_action_plan.md`.
 - Readout: `ReadoutWriter`, `Readout`.
-- Bottom bar: `BottomBarPainter`, `PanelLayout`, `PanelAssignment`, `PanelAlarms`.
+- Top bar: `TopBarPainter`, `TopBarLayout`, `Terminal`, `HudMetrics.topLines`.
+- Bottom bar, for the tell only: `BottomBarPainter`, `PanelLayout`.
 - Input: `InputReader`, `PadControls`, `OrderKeys`, `ControlsConfig`.
 - Flow: `PlayMenus`, `UiFlow`.
 - Text: `Terminal`, `DispatchKind`, `DispatchText`, `UiStrings`.
@@ -856,15 +865,16 @@ the aside strip, the dispatches and the solo pause.
    input-map rows.
 3. **The bar.**
    - `HudSlot.DRAFT` and the tell's own constant, each with its §7 row in the same change.
-   - The layout arithmetic: portrait and name, then N cards across the rest, within the §8 text rules
+   - The layout arithmetic: portrait and name, then N cards across the rest of the top bar's span,
+     each card a name and two effect lines inside the bar's `topLines`, within the §8 text rules
      (including a pseudo-locale 30 % longer).
    - The highlight and the `1/2` count; taking a card closes the bar.
    - One draft per machine's bar.
 4. **Text.** The `ui.upgrade.*` and `ui.effect.*` templates, formatted when a draft changes.
 5. **The solo pause and its banner.** Closing resumes. A *back* while paused solo also resumes; S8
    completes the online side.
-6. **The rest.** The tell in each panel, the aside strip, the dispatches, and the decision on how
-   alarms show through the bar.
+6. **The rest.** The tell in each panel, the aside strip, the dispatches, and whether the terminal
+   holds its queue while the bar is up.
 
 **Tests.**
 
@@ -1006,7 +1016,7 @@ These are the invariant rows S0 writes as `deferred`; each turns `enforced` in i
 | Drafts come from objectives only, at their configured rate | `DraftTest` | S3 |
 | The relational guarantees hold at every upgrade's and adaptation's highest rank | `SimConfigTest`, through `Modifiers` | S4, S10 |
 | Every upgrade and adaptation in force is on screen with its rank, and so is who holds a draft | readout tests, and judgement | S5 |
-| A machine's bottom bar shows at most one draft | bar test | S5 |
+| A machine's top bar shows at most one draft | bar test | S5 |
 | A sealed cache shows its gun before a commander can reach it | `SimConfigTest`, `PickupSystemTest` | S6 |
 | A trooper's grenade never lands where its blast reaches the player's side | `TrooperGrenadeTest` | S7 |
 
@@ -1027,8 +1037,9 @@ clamps, and tick rounding. That covers the sources' "test rounding and precision
 - **Trooper grenades near the squad (S7).** The rules make friendly fire impossible at the moment of
   the throw. Men walk, and a grenade flies for about a second: `safetyMargin` covers that walk, and
   the playtest is where it gets checked.
-- **The bar hides the other local panels (S5).** A player can miss a DOWN while a friend chooses. The
-  alarm flashing through the bar is the proposed answer.
+- **The draft hides the goal and the terminal (S5).** Every panel stays in sight (D18), so nobody
+  misses a DOWN while a friend chooses; what a player can miss is a dispatch. Holding the terminal's
+  queue while the bar is up is the proposed answer.
 - **Snapshot churn.** New streams and components change every hash. Determinism tests compare runs,
   not stored values, so nothing breaks, but a desync dump grows by these fields.
 

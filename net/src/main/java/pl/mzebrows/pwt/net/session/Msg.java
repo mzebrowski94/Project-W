@@ -51,7 +51,7 @@ final class Msg {
      */
     static final int SNAPSHOT_HEADER = 1 + 4 + 4 + 4;
 
-    /** The longest config a host ships, unpacked. {@code game.properties} without its comments is about 26 KB. */
+    /** The longest config a host ships, unpacked. {@code assets/sim/*.properties} without their comments are about 26 KB. */
     static final int MAX_CONFIG = 1024 * 1024;
 
     private Msg() {}

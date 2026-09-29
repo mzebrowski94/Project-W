@@ -5,18 +5,22 @@ import pl.mzebrows.pwt.sim.ConfigBinder;
 import pl.mzebrows.pwt.sim.SimConfig;
 
 /**
- * Builds a {@link SimConfig} from {@code game.properties}.
+ * Builds a {@link SimConfig} from {@code assets/sim/*.properties}.
  *
  * <p>This lives in the client module because the simulation does no file I/O - it is handed its
  * configuration as text. Binding the text is the simulation's own ({@link SimConfig#parse}); what is
- * left here is finding the file and saying out loud what was wrong with it. A key the records do not
+ * left here is finding the files and saying out loud what was wrong with them. A key the records do not
  * have, or a value that is missing or unreadable, is logged and the shipped value is used, so an edited
- * or outdated file degrades the game rather than stopping it. The shipped file itself is held to
+ * or outdated file degrades the game rather than stopping it. The shipped files themselves are held to
  * stricter terms by {@code ShippedConfigTest}.
  */
 public final class SimConfigLoader {
 
-    private static final String FILE = "game.properties";
+    /** Where the files are on the classpath; which files, and in what order, the simulation says. */
+    private static final String DIRECTORY = "sim/";
+
+    /** What a complaint names. */
+    private static final String FILES = DIRECTORY + "*.properties";
 
     private SimConfigLoader() {}
 
@@ -25,9 +29,16 @@ public final class SimConfigLoader {
         return parse(text());
     }
 
-    /** {@code game.properties} as written - what a host ships to its peers (ADR 0012). */
+    /**
+     * Every file in {@link SimConfig#shippedFiles()}, as written and in that order, as one text - what a
+     * host ships to its peers (ADR 0012).
+     */
     public static String text() {
-        return GameProperties.text(FILE);
+        StringBuilder text = new StringBuilder();
+        for (String file : SimConfig.shippedFiles()) {
+            text.append(GameProperties.text(DIRECTORY + file)).append('\n');
+        }
+        return text.toString();
     }
 
     /**
@@ -48,8 +59,8 @@ public final class SimConfigLoader {
     }
 
     /**
-     * Simulation config from the text of a {@code game.properties}: this machine's, or the one a host
-     * shipped. Empty text - no file at all, already logged where it was looked for - is what ships.
+     * Simulation config from the text of the {@code sim/*.properties} files: this machine's, or the one a
+     * host shipped. Empty text - no file at all, already logged where it was looked for - is what ships.
      */
     public static SimConfig parse(String text) {
         if (text.isBlank()) {
@@ -57,10 +68,10 @@ public final class SimConfigLoader {
         }
         SimConfig.Parsed parsed = SimConfig.parse(text);
         if (!parsed.problems().isEmpty()) {
-            Log.error(FILE + ": " + parsed.problems().size() + " problem(s); the shipped value stands for each", null);
+            Log.error(FILES + ": " + parsed.problems().size() + " problem(s); the shipped value stands for each", null);
         }
         for (String problem : parsed.problems()) {
-            Log.error(FILE + ": " + problem, null);
+            Log.error(FILES + ": " + problem, null);
         }
         return parsed.config();
     }

@@ -34,7 +34,8 @@ JDK 25. Gradle comes from the wrapper.
 
 Tunables are external, never literals in code:
 
-- `assets/game.properties` - simulation. Changing these changes what the game does.
+- `assets/sim/*.properties` - simulation, one file per domain, read as one. Changing these changes what
+  the game does.
 - `assets/graphic.properties` - rendering. Changing these must never change what the game does.
 
 ## Quality gates

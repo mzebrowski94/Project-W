@@ -22,7 +22,7 @@ public enum PickupKind {
      *
      * <p><strong>One kind per gun</strong>, so which gun is in a crate is legible before he has
      * walked to it (pillar 5). It is the ordinary way this codebase adds a kind of thing - a
-     * constant, a definition and a block in {@code game.properties}, never a branch (G0008) - and it
+     * constant, a definition and a block in {@code assets/sim/*.properties}, never a branch (G0008) - and it
      * means a fourth gun needs no new idea, only a fourth crate.
      */
     ARMOURY_RAILGUN,

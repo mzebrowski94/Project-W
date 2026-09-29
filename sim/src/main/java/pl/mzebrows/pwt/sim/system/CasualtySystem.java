@@ -24,7 +24,7 @@ import pl.mzebrows.pwt.sim.component.Dying;
  * counting down required a decision it moved out.
  *
  * <p>That the rate is a number rather than a rule is the point: whether hauling a man buys time,
- * costs it, or does neither is a question for play, and it is answered in {@code game.properties}
+ * costs it, or does neither is a question for play, and it is answered in {@code assets/sim/*.properties}
  * rather than in here.
  *
  * <p>It runs after {@code DamageSystem}, which is what puts a man down, and before

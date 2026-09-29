@@ -7,7 +7,7 @@ package pl.mzebrows.pwt.sim.def;
  * here. <strong>Every number is a chance per second of opportunity</strong>, never per tick: the clock
  * runs only while the thing is possible, so 0.5 with two seconds of chance is about once.
  *
- * <p>Numbers are in {@code game.properties} under {@code sim.ai.chance.<name>}, overridden per strain
+ * <p>Numbers are in {@code assets/sim/*.properties} under {@code sim.ai.chance.<name>}, overridden per strain
  * under {@code sim.unit.<kind>.chances.<name>}. Zero switches a behaviour off and draws nothing, so it
  * cannot reshuffle other rolls (pillar 6).
  */

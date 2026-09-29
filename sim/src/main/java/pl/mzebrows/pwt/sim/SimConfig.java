@@ -27,11 +27,12 @@ import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
- * Tunables the simulation reads at construction time: exactly {@code game.properties}, bound by
- * {@link ConfigBinder} from each component's name. The simulation never touches the filesystem - what
+ * Tunables the simulation reads at construction time: exactly {@code assets/sim/*.properties}, read in
+ * name order and bound as one text by {@link ConfigBinder} from each component's name. The simulation never touches the filesystem - what
  * ships is compiled in ({@link #defaults()}), and anything else arrives as text ({@link #parse}).
- * <strong>A new tunable is a component here and a line in the file</strong>, and nothing else. Why a
- * number is set where it is lives beside it in the file; the docs here say only what it means.
+ * <strong>A new tunable is a component here and a line in the file its prefix lives in</strong>, and
+ * nothing else. Why a number is set where it is lives beside it in the file; the docs here say only what
+ * it means.
  *
  * <p>Nested records so a system is handed only the group it needs. {@code @With} on each makes
  * varying one number a single call: {@code config.withObstacle(config.obstacle().withCount(0))}.
@@ -94,7 +95,7 @@ public record SimConfig(
         ObstacleConfig obstacle,
         CollisionConfig collision) {
 
-    /** The prefix every key in {@code game.properties} starts with. */
+    /** The prefix every key in {@code assets/sim/*.properties} starts with. */
     private static final String ROOT = "sim";
 
     public SimConfig {
@@ -159,7 +160,7 @@ public record SimConfig(
     }
 
     /**
-     * What ships: {@code assets/game.properties}, compiled in by {@code :sim:generateShippedConfig} and
+     * What ships: {@code assets/sim/*.properties}, compiled in by {@code :sim:generateShippedConfig} and
      * bound once. What every test runs, and what the client falls back to - so there is one copy of every
      * number, and it is the one players play.
      */
@@ -168,15 +169,14 @@ public record SimConfig(
     }
 
     /**
-     * A config from the text of a {@code game.properties} - a player's own, or the one a host shipped
+     * A config from the text of {@code assets/sim/*.properties} - a player's own, or the one a host shipped
      * (ADR 0012) - with every value it lacks or garbles taken from {@link #defaults()} and named in the
      * result, so the caller can say so. A key no record has is named too.
      *
      * @throws IllegalArgumentException if the values are readable but break a rule a record checks
      */
     public static Parsed parse(String text) {
-        ConfigBinder.Bound<SimConfig> bound =
-                ConfigBinder.bind(SimConfig.class, ROOT, ConfigBinder.parse(text), Shipped.VALUES);
+        ConfigBinder.Bound<SimConfig> bound = ConfigBinder.bind(SimConfig.class, ROOT, text, Shipped.VALUES);
         SimConfig config = bound.value();
         if (config == null) {
             throw new IllegalArgumentException("config: " + String.join("; ", bound.problems()));
@@ -187,12 +187,21 @@ public record SimConfig(
     /** A config read from text, and everything that had to be taken from what ships instead. */
     public record Parsed(SimConfig config, List<String> problems) {}
 
+    /**
+     * The shipped files, by name, in the order their text is read: {@code assets/sim/} holds exactly
+     * these. Generated from that directory with the constants, so whoever reads its own copy of the files
+     * reads the same ones in the same order.
+     */
+    public static List<String> shippedFiles() {
+        return ShippedConfig.FILES;
+    }
+
     /** Bound on first use rather than with the record, so a failure names the key rather than a class. */
     private static final class Shipped {
 
         static final SortedMap<String, String> VALUES = ConfigBinder.parse(ShippedConfig.TEXT);
 
-        static final SimConfig CONFIG = ConfigBinder.bindStrictly(SimConfig.class, ROOT, VALUES);
+        static final SimConfig CONFIG = ConfigBinder.bindStrictly(SimConfig.class, ROOT, ShippedConfig.TEXT);
 
         private Shipped() {}
     }

@@ -9,7 +9,7 @@ package pl.mzebrows.pwt.map;
  * gameplay.</strong> Map generation itself cannot work without it: checking that a level is
  * connected, and finding somewhere to put an object, are questions about shape that have to be
  * answerable inside this module. Anything else terrain might do to a unit - slow it, hurt it, hide
- * it - is a gameplay number and belongs in {@code game.properties}, read by a system.
+ * it - is a gameplay number and belongs in {@code assets/sim/*.properties}, read by a system.
  *
  * <p>{@link #PLAIN} is deliberately first: a grid that has not been written to yet is open ground
  * rather than solid rock, so a half-built map reads as empty instead of as a bug in the generator.

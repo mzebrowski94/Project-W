@@ -1,7 +1,8 @@
 package pl.mzebrows.pwt.client;
 
 /**
- * How much of the dev overlay is on screen. {@code F1} steps through them in this order.
+ * How much of the dev overlay is on screen. A level starts with it {@link #OFF}; {@code F1} steps
+ * through the modes in this order.
  *
  * <p>The panel keeps its place in the top bar reserved whichever mode is on, so the layout never
  * reflows when it is toggled.

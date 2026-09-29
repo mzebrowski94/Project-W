@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.net.NetConfig;
 
 /**
- * {@code network.properties} is the whole of {@link NetConfig}, as {@code game.properties} is of the
+ * {@code network.properties} is the whole of {@link NetConfig}, as {@code assets/sim/*.properties} are of the
  * simulation's: every value the records have and nothing else, so a misspelt key is a failure rather than
  * a number tuned to no effect.
  */

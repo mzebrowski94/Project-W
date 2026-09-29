@@ -9,7 +9,7 @@ import com.badlogic.gdx.utils.Pool;
  * <p>Two sources, one component. {@code remainingTicks} counts down and covers the moments after
  * being hit and after respawning. {@code permanent} is the harness god-mode toggle and never expires
  * - it is a dev tool, not a mechanic, and pillar 2 says the commander can be killed, so nothing in a
- * scenario or in {@code game.properties} may switch it on.
+ * scenario or in {@code assets/sim/*.properties} may switch it on.
  *
  * <p>Carried permanently by anything that can be hit, rather than added and removed. Adding or
  * removing a component mid-tick mutates the families being iterated, which silently skips entities.

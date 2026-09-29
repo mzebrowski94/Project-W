@@ -193,7 +193,7 @@ class TerrainCollisionTest {
     }
 
     /**
-     * Why {@code game.properties} says a brute needs two tiles of clearance. A gap one tile wide is
+     * Why {@code assets/sim/*.properties} says a brute needs two tiles of clearance. A gap one tile wide is
      * five world units, and a body wider than that cannot be squeezed through it by any amount of
      * pushing - which is what makes a corridor a real decision when a fragment is laid out.
      */

@@ -41,7 +41,7 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 | After changing a dependency | `.claude/scripts/verify.sh` then `.claude/scripts/gradle.sh --save-cache` |
 | Repack art from `assets-raw/` | `.claude/scripts/gradle.sh :core:packTextures` |
 | Raw Gradle, any task | `.claude/scripts/gradle.sh <task>` |
-| New sim tunable | A component on the config record and one line in `assets/game.properties` - nothing else. `ShippedConfigTest` fails on either alone. |
+| New sim tunable | A component on the config record and one line in the `assets/sim/*.properties` file its prefix lives in - nothing else. `ShippedConfigTest` fails on either alone, and the build on a key given in two files. A new file in `assets/sim/` is read without further wiring. |
 | New network tunable | A component on `NetConfig` (or one of its records) and one line in `assets/network.properties` - nothing else. `ShippedNetConfigTest` fails on either alone. |
 | Run the game | Windows only: `./gradlew lwjgl3:run` |
 | Windows exe, Java bundled, for friends | Windows only: `./gradlew lwjgl3:packageWinX64` -> `dist/` (`docs/packaging.md`) |
@@ -152,6 +152,7 @@ Only things actually hit. Add what you hit; delete what stops happening.
 | `cannot find symbol: com.badlogic.gdx.utils.ImmutableArray` | It is Ashley's, not libGDX's. | `com.badlogic.ashley.utils.ImmutableArray`. |
 | A dependency's "latest" is a milestone (AssertJ resolved `4.0.0-M1`) | Maven metadata `<latest>` includes pre-releases. | Pin the newest stable in `gradle.properties`. |
 | `ArchitectureTest` reports violations inside itself | Build outputs relocated, no longer matching `.../build/classes/java/test/`; ArchUnit's `DoNotIncludeTests` silently stops excluding test classes. | Keep the `/build/` segment in any relocated output path - `gradle.sh` does. |
+| `cp: ... .pwt/gradle-home ...: No space left on device` while seeding the cache | The device shell's `/sessions` disk, where `$HOME` lives, is shared with every earlier session and full (9.8 GB, 0 free). Hit 2026-09-29. `/tmp` is on another disk with room, and persists between calls. | `HOME=/tmp/pwthome .claude/scripts/verify.sh`. Every call must pass the same `HOME`, or the build starts cold. |
 | Lombok `sun.misc.Unsafe` warning | Unavoidable on JDK 25. | Ignore; `verify.sh` filters it. |
 | `Could not create service of type FileHasher ... java.io.IOException: Input/output error`, and `rm` on `.gradle/**` says `Permission denied` | IntelliJ or a Windows `gradlew` daemon holds `<project>/.gradle`'s lock files, which the sandbox VM may not touch. Reads like a corrupt cache; is not one. | Nothing to do: `gradle.sh` passes `--project-cache-dir`. If it reappears, check that flag is still there before deleting anything. |
 | An input that is "just pressed" is ignored at random | A frame shorter than one tick runs **zero** simulation steps, so a one-frame input reaches no tick. Above 60 Hz that is most frames. | Latch it until a tick spends it, as `ScenarioSession.pendingOrder` does. Anything read with `isKeyJustPressed` and handed to `advance()` has this. |

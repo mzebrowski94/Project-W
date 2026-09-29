@@ -36,7 +36,8 @@ class DamageSystemTest {
 **Component** in `sim/.../component/`: copy `Position.java`. The thing that bites is `reset()` - every
 field, every time. Then regenerate the index: `python3 .claude/scripts/component-index.py`.
 
-**System** in `sim/.../system/`: copy `MovementSystem.java`. It is the smallest one and shows the whole
+**System** in `sim/.../system/` - the one exception is `UpgradeSystem`, which lives in `sim/.../upgrade/`
+with the rules it runs (ADR 0017): copy `MovementSystem.java`. It is the smallest one and shows the whole
 shape, and the file outranks any skeleton written down here - which is why there is not one. Rules:
 `docs/performance.md` for the loop body, `docs/conventions.md` for everything else.
 

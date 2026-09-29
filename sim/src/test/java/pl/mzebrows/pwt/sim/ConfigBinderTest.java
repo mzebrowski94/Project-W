@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import org.jspecify.annotations.Nullable;
@@ -50,6 +51,20 @@ class ConfigBinderTest {
     record Level(@ConfigKey("ai.chance") Chances chances, Strain grunt) {}
 
     record Renamed(@ConfigKey("unit") float units) {}
+
+    /** A sealed family whose records take several arguments, as an upgrade's effects do. */
+    sealed interface Change permits Change.Count, Change.Scale, Change.Reset {
+
+        record Count(Size size, int amount) implements Change {}
+
+        record Scale(Size size, @Nullable Size only, float factor) implements Change {}
+
+        record Reset() implements Change {}
+    }
+
+    record OneChange(Change change) {}
+
+    record Changes(List<Change> changes) {}
 
     @Test
     void fillsEveryComponentByName() {
@@ -117,6 +132,58 @@ class ConfigBinderTest {
         assertThat(strict(Pickup.class, "test.grant=feed 2").grant()).isEqualTo(new Grant.Feed(2));
         assertThat(strict(Pickup.class, "test.grant=none").grant()).isEqualTo(Grant.NOTHING);
         assertThat(strict(Pickup.class, "test.grant=detonate").grant()).isEqualTo(Grant.DETONATE);
+    }
+
+    @Test
+    void readsASealedRecordThatTakesSeveralArgumentsOneWordEach() {
+        assertThat(strict(OneChange.class, "test.change=count large 2").change())
+                .isEqualTo(new Change.Count(Size.LARGE, 2));
+        assertThat(strict(OneChange.class, "test.change=scale small none 1.5").change())
+                .isEqualTo(new Change.Scale(Size.SMALL, null, 1.5f));
+    }
+
+    @Test
+    void refusesASealedRecordGivenTheWrongNumberOfArguments() {
+        assertThatThrownBy(() -> strict(OneChange.class, "test.change=count large"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("test.change");
+        assertThatThrownBy(() -> strict(OneChange.class, "test.change=count large 2 3"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("test.change");
+    }
+
+    @Test
+    void readsAListOfSealedRecordsSeparatedBySemicolons() {
+        Changes changes = strict(Changes.class, "test.changes=count small 1; reset ;scale large small 2");
+
+        assertThat(changes.changes())
+                .containsExactly(
+                        new Change.Count(Size.SMALL, 1),
+                        new Change.Reset(),
+                        new Change.Scale(Size.LARGE, Size.SMALL, 2f));
+    }
+
+    @Test
+    void refusesAListWithOneRecordItCannotRead() {
+        assertThatThrownBy(() -> strict(Changes.class, "test.changes=count small 1; count huge 2"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("test.changes");
+    }
+
+    @Test
+    void reportsAKeyGivenTwiceRatherThanLettingTheLastOneWinQuietly() {
+        ConfigBinder.Bound<Gait> bound =
+                ConfigBinder.bind(Gait.class, "test", "test.enabled=true\ntest.speed=2\ntest.speed=3\n", text(""));
+
+        assertThat(bound.problems()).containsExactly("key given twice: test.speed");
+    }
+
+    @Test
+    void refusesAKeyGivenTwiceWhenBindingStrictly() {
+        assertThatThrownBy(() -> ConfigBinder.bindStrictly(
+                        Gait.class, "test", "test.enabled=true\ntest.enabled=true\ntest.speed=1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("key given twice: test.enabled");
     }
 
     @Test

@@ -30,7 +30,7 @@ numbers.
 4. The CLAUDE.md checklist applies to every task unchanged. This plan adds to it; it never relaxes it.
 5. When the plan and the code disagree, the code wins and you say so. When the plan and a decision
    record disagree, the record wins until Mateusz supersedes it.
-6. Finish every stage by listing the `graphic.properties` / `controls.properties` / `game.properties`
+6. Finish every stage by listing the `graphic.properties` / `controls.properties` / `assets/sim/*.properties`
    keys it added or moved, with values, and a one-line commit message. Mateusz commits.
 
 ---
@@ -517,7 +517,7 @@ layout to fit and test - four panels is the only case; one player is three quart
 ```
 
 **What a panel does not show.** Health: every hostile blow to a commander takes all of his 100 (claws,
-spit, blast, fire, slick - `game.properties`), so he is standing, down or dead and there is nothing in
+spit, blast, fire, slick - `assets/sim/*.properties`), so he is standing, down or dead and there is nothing in
 between to draw; Q22 proposes keeping it that way. Ammunition: guns overheat, and grenades are
 unlimited (alpha-phase row). What it does show:
 
@@ -945,7 +945,7 @@ from what the bars hold), the six per-line HUD colours (now `text` / `textDim` b
 | `controls.ui.nav.repeatDelaySeconds` / `repeatIntervalSeconds` | `0.35` / `0.09` |
 | `controls.ui.nav.pointerWakePixels` | `4` |
 
-`game.properties`: nothing. The tally has no tunables.
+`assets/sim/*.properties`: nothing. The tally has no tunables.
 
 ---
 

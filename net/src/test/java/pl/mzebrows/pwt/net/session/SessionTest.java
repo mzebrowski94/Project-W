@@ -142,7 +142,7 @@ class SessionTest {
     }
 
     /**
-     * The welcome goes by the stream and carries the host's game.properties, so over a real network it
+     * The welcome goes by the stream and carries the host's sim config, so over a real network it
      * can take several round trips while the session's ticks go by datagram and get there first. Both
      * joiners in the first Hamachi playtest were dropped on the spot: "slot 0 in a session of 0".
      */

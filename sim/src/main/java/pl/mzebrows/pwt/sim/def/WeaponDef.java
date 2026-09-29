@@ -35,7 +35,7 @@ import lombok.With;
  *     nothing
  * @param selfSlowSeconds how long that lasts after the last shot
  * @param trailLength how far back along its path one of its shots is drawn, in world units; zero is a
- *     dot. A drawing number, deliberately not in {@code game.properties}; the simulation never reads it
+ *     dot. A drawing number, deliberately not in {@code assets/sim/*.properties}; the simulation never reads it
  * @param bloatPerShot how much of a body's capacity one of its shots fills, as a fraction. Builds on
  *     the living too, but only something already down bursts
  */

@@ -65,7 +65,7 @@ public final class CameraDirector {
      * @param fitMargin slack left around the targets when framing more than one, as a multiplier
      * @param shakeScale how much of a published shake the view actually takes, as a multiplier. One
      *     means the strength the simulation published, in world units. Trim the feel here rather than
-     *     in {@code game.properties} - how violent an event is and how much the camera moves are two
+     *     in {@code assets/sim/*.properties} - how violent an event is and how much the camera moves are two
      *     different questions
      * @param shakeCycles how many times the view swings back and forth over a whole shake
      */

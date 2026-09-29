@@ -54,7 +54,7 @@ Each line is a yes/no you can check yourself. A no is not done.
 - [ ] No wall clock, `Math.random`, `java.util.Random`, `HashMap`/`HashSet` iteration, or
       `Math.sin`/`cos`/`atan2` anywhere in `sim` or `map`.
 - [ ] No O(N²) entity-pair loop - go through `SpatialGrid`.
-- [ ] New tunables in `assets/game.properties`, `assets/graphic.properties` or
+- [ ] New tunables in `assets/sim/*.properties`, `assets/graphic.properties` or
       `assets/network.properties`, never a literal.
 - [ ] New domain words in `docs/glossary.md`, and only that word used afterwards.
 - [ ] A new pooled component's `reset()` clears **every** field.
@@ -63,7 +63,7 @@ Each line is a yes/no you can check yourself. A no is not done.
 - [ ] No system holds a reference to another, and no component holds an `Entity` - pooling makes a kept
       reference come back aimed at something else. It holds the other entity's `Handle` and finds it
       with `Handles.resolve` (ADR 0016; `HandleTest` fails the build).
-- [ ] A new kind of thing is a constant, a definition and a `game.properties` block - never a new
+- [ ] A new kind of thing is a constant, a definition and a block in `assets/sim/` - never a new
       class, marker, `spawn` method or branch (G0008).
 - [ ] Nothing in a dodge is drawn from the `Rng` - not the side, not the timing, not the distance
       (G0012).
@@ -72,7 +72,7 @@ Each line is a yes/no you can check yourself. A no is not done.
 - [ ] Diff contains nothing the task did not need.
 - [ ] A gameplay change wrote down what it settled: invariant row, decision record, or input-map row.
       If none, say so and why.
-- [ ] Your summary lists the `game.properties`, `graphic.properties` and `network.properties` keys the
+- [ ] Your summary lists the `assets/sim/*.properties`, `graphic.properties` and `network.properties` keys the
       change added or moved, with their values.
 
 ## Modules
@@ -115,11 +115,12 @@ What makes it this game. A feature that breaks one is wrong regardless of its de
 it rather than working around it.
 
 1. **Arcade first.** Fights decided by reflexes, levels by tactics. A mechanic that makes the player
-   stop and compute belongs in a different game.
+   stop and compute belongs in a different game. One named exception: choosing an upgrade - he picks
+   the moment, it shows three cards at most with exact numbers, and it pauses only a solo game (G0049).
 2. **The commander is a unit, not a cursor.** You stand on the field, you can be killed, you are the
    squad's biggest weapon. No detached god view, no invulnerability.
 3. **The squad is the resource.** Troopers won and lost during play. No shop, no loadout screen, no
-   economy between levels.
+   economy between levels. Upgrades are earned on the field, never bought, and last the level (G0049).
 4. **One fight, and you can always see it.** No fog of war, no off-screen management, no second front.
    A level may run wider than the view - the camera follows you, one key pulls it back - but the fight
    is the one you are standing in. (Amended by G0008; a minimap is off-screen management with a nicer
@@ -183,7 +184,7 @@ allowlist entry, an access grant, a setting - one line at the moment you hit it,
 silently work around the same obstacle every session. Known ones: `docs/workflow.md`.
 
 **Name the numbers a playtest will want to turn.** A change that touches gameplay ends its summary
-with the keys it added or moved in `assets/game.properties`, `assets/graphic.properties` and
+with the keys it added or moved in `assets/sim/*.properties`, `assets/graphic.properties` and
 `assets/network.properties`, values included - the handful Mateusz would otherwise have to go and find before he can tune what he has
 just played. Keys and values, and a few words on what each one does to the feel where that is not
 obvious from the name. Not every key in the block; the ones the change is about.

@@ -55,7 +55,7 @@ public final class OnlineSession implements ScenarioPlay {
     private final String where;
     private final @Nullable Invitation invitation;
 
-    private OverlayMode overlayMode = OverlayMode.PANEL;
+    private OverlayMode overlayMode = OverlayMode.OFF;
     private boolean cosmeticLead = true;
     private boolean leaving;
     private boolean toldStepIsOffline;
@@ -93,7 +93,7 @@ public final class OnlineSession implements ScenarioPlay {
      * Hosts {@code scenario}: starts a sequencer on the configured port (the next free one if a copy on
      * this PC already has it), joins it, and announces it to the local network under a room code. What
      * is shipped to peers is this copy's {@code
-     * game.properties} as its parser reads it, comments left out, and its seed.
+     * assets/sim/*.properties} as its parser reads it, comments left out, and its seed.
      *
      * @throws RuntimeException if no port could be had; nothing is left open
      */

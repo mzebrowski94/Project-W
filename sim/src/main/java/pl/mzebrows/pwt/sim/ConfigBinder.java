@@ -21,7 +21,7 @@ import pl.mzebrows.pwt.sim.def.Defs;
 
 /**
  * Fills a config record from {@code key=value} text by the names of its components, so a tunable is a
- * record field and a line in {@code game.properties} (or {@code network.properties}) and nothing else -
+ * record field and a line in {@code assets/sim/*.properties} (or {@code network.properties}) and nothing else -
  * no literal default, no loader line to keep in step.
  *
  * <p>A component is read from {@code <prefix>.<name>}, or from its {@link ConfigKey}. What each type
@@ -37,14 +37,19 @@ import pl.mzebrows.pwt.sim.def.Defs;
  *       as that: "zero means off" for whole abilities, so a strain that does not leap needs no leap
  *       block;
  *   <li>a {@link Defs} table as one block per kind, named by the kind in lower case;
- *   <li>a sealed interface of records as the record's name and its one argument, if it has one: {@code
- *       mutate brute}, {@code feed 1}, {@code nothing};
+ *   <li>a sealed interface of records as the record's name and then its arguments, one word each - or,
+ *       for a record of one argument, the rest of the line: {@code mutate brute}, {@code feed 1}, {@code
+ *       nothing}, {@code count men_per_crate side 1};
+ *   <li>a {@code List} of such records separated by {@code ;}: {@code count men_per_crate side 1; count
+ *       squad_headroom side 2};
  *   <li>{@link Chances} as one key per {@link AiChance} plus {@code longestGap}, each taken from the
  *       shared block {@value #SHARED_CHANCES} when a strain's own block does not name it.
  * </ul>
  *
  * <p>Every key is accounted for both ways: a key no record has is reported as unknown, and a value
- * the text does not give is reported as missing. With a fallback text - the shipped file behind a
+ * the text does not give is reported as missing. Bound from text, a key the text gives twice is
+ * reported too, rather than the last one quietly winning - the files are several, and a key moved
+ * into one and not out of the other would otherwise tune nothing. With a fallback text - the shipped file behind a
  * player's own - a missing or unreadable value is taken from the fallback and still reported.
  *
  * <p>Reflection, once, while a world is being set up; never during a tick (ADR 0014).
@@ -76,6 +81,11 @@ public final class ConfigBinder {
      * comments; keys and values are trimmed.
      */
     public static SortedMap<String, String> parse(String text) {
+        return parse(text, new ArrayList<>());
+    }
+
+    /** {@link #parse}, adding to {@code repeated} every key the text gives more than once. */
+    private static SortedMap<String, String> parse(String text, List<String> repeated) {
         SortedMap<String, String> parsed = new TreeMap<>();
         for (String line : text.lines().toList()) {
             String trimmed = line.strip();
@@ -83,20 +93,42 @@ public final class ConfigBinder {
                 continue;
             }
             int equals = trimmed.indexOf('=');
-            if (equals < 0) {
-                parsed.put(trimmed, "");
-            } else {
-                parsed.put(
-                        trimmed.substring(0, equals).strip(),
-                        trimmed.substring(equals + 1).strip());
+            String key = equals < 0 ? trimmed : trimmed.substring(0, equals).strip();
+            String value = equals < 0 ? "" : trimmed.substring(equals + 1).strip();
+            if (parsed.put(key, value) != null) {
+                repeated.add(key);
             }
         }
         return parsed;
     }
 
+    /** {@link #bindStrictly(Class, String, SortedMap)} from text, refusing a key given twice as well. */
+    public static <T extends Record> T bindStrictly(Class<T> type, String root, String text) {
+        return strictly(bind(type, root, text, new TreeMap<>()));
+    }
+
+    /** {@link #bind(Class, String, SortedMap, SortedMap)} from text, naming every key it gives twice. */
+    public static <T extends Record> Bound<T> bind(
+            Class<T> type, String root, String text, SortedMap<String, String> fallback) {
+        List<String> repeated = new ArrayList<>();
+        Bound<T> bound = bind(type, root, parse(text, repeated), fallback);
+        if (repeated.isEmpty()) {
+            return bound;
+        }
+        List<String> problems = new ArrayList<>();
+        for (String key : repeated) {
+            problems.add("key given twice: " + key);
+        }
+        problems.addAll(bound.problems());
+        return new Bound<>(bound.value(), List.copyOf(problems));
+    }
+
     /** Binds with no fallback, and refuses the whole text if anything at all is wrong with it. */
     public static <T extends Record> T bindStrictly(Class<T> type, String root, SortedMap<String, String> values) {
-        Bound<T> bound = bind(type, root, values, new TreeMap<>());
+        return strictly(bind(type, root, values, new TreeMap<>()));
+    }
+
+    private static <T> T strictly(Bound<T> bound) {
         T value = bound.value();
         if (value == null || !bound.problems().isEmpty()) {
             throw new IllegalArgumentException("config: " + String.join("; ", bound.problems()));
@@ -128,11 +160,10 @@ public final class ConfigBinder {
         if (raw == Chances.class) {
             return chances(key);
         }
-        if (raw == List.class
-                && !(type instanceof ParameterizedType list && list.getActualTypeArguments()[0] == Integer.class)) {
+        if (raw == List.class && !isReadableList(type)) {
             throw new IllegalArgumentException("no reading for " + type + " at " + key);
         }
-        return leaf(key, raw, nullable);
+        return leaf(key, type, nullable);
     }
 
     private @Nullable Object record(String key, Class<?> type) {
@@ -200,14 +231,15 @@ public final class ConfigBinder {
         return value == null ? 0f : value;
     }
 
-    private @Nullable Object leaf(String key, Class<?> type, boolean nullable) {
+    private @Nullable Object leaf(String key, Type type, boolean nullable) {
         used.add(key);
         String written = values.get(key);
         if (written != null) {
             try {
                 return convert(written, type, nullable);
             } catch (IllegalArgumentException e) {
-                problems.add("cannot read " + key + "=" + written + " as " + type.getSimpleName());
+                problems.add("cannot read " + key + "=" + written + " as "
+                        + rawClass(type).getSimpleName() + " (" + e.getMessage() + ")");
             }
         } else {
             problems.add("missing " + key);
@@ -216,10 +248,11 @@ public final class ConfigBinder {
         if (shipped != null) {
             return convert(shipped, type, nullable);
         }
-        return placeholder(type);
+        return placeholder(rawClass(type));
     }
 
-    private static @Nullable Object convert(String text, Class<?> type, boolean nullable) {
+    private static @Nullable Object convert(String text, Type generic, boolean nullable) {
+        Class<?> type = rawClass(generic);
         if (type == float.class) {
             return Float.parseFloat(text);
         }
@@ -233,11 +266,18 @@ public final class ConfigBinder {
             return text;
         }
         if (type == List.class) {
-            List<Integer> numbers = new ArrayList<>();
-            for (String part : text.split(",", -1)) {
-                numbers.add(Integer.parseInt(part.strip()));
+            Class<?> element = rawClass(((ParameterizedType) generic).getActualTypeArguments()[0]);
+            List<Object> items = new ArrayList<>();
+            if (element == Integer.class) {
+                for (String part : text.split(",", -1)) {
+                    items.add(Integer.parseInt(part.strip()));
+                }
+            } else {
+                for (String part : text.split(";", -1)) {
+                    items.add(sealed(element, part.strip()));
+                }
             }
-            return List.copyOf(numbers);
+            return List.copyOf(items);
         }
         if (type == boolean.class) {
             if (!text.equals("true") && !text.equals("false")) {
@@ -257,7 +297,10 @@ public final class ConfigBinder {
         throw new IllegalArgumentException("no reading for " + type.getSimpleName());
     }
 
-    /** The permitted record whose name is the first word, built from the rest if it takes an argument. */
+    /**
+     * The permitted record whose name is the first word, built from the words after it - one per
+     * argument, or the whole rest of the line for a record of one argument.
+     */
     private static Object sealed(Class<?> type, String text) {
         int space = text.indexOf(' ');
         String name = space < 0 ? text : text.substring(0, space);
@@ -267,15 +310,25 @@ public final class ConfigBinder {
                 continue;
             }
             RecordComponent[] components = permitted.getRecordComponents();
-            if (components.length > 1 || (components.length == 1) == argument.isEmpty()) {
+            String[] words = argument.isEmpty()
+                    ? new String[0]
+                    : components.length == 1 ? new String[] {argument} : argument.split("\\s+");
+            if (words.length != components.length) {
                 throw new IllegalArgumentException(name + " takes " + components.length + " argument(s)");
             }
+            Class<?>[] types = new Class<?>[components.length];
+            @Nullable Object[] arguments = new Object[components.length];
+            for (int i = 0; i < components.length; i++) {
+                types[i] = components[i].getType();
+                arguments[i] = convert(
+                        words[i],
+                        components[i].getGenericType(),
+                        components[i].getAnnotatedType().isAnnotationPresent(Nullable.class));
+            }
             try {
-                if (components.length == 0) {
-                    return permitted.getDeclaredConstructor().newInstance();
-                }
-                Class<?> parameter = components[0].getType();
-                return permitted.getDeclaredConstructor(parameter).newInstance(convert(argument, parameter, false));
+                Constructor<?> constructor = permitted.getDeclaredConstructor(types);
+                constructor.setAccessible(true);
+                return constructor.newInstance(arguments);
             } catch (ReflectiveOperationException e) {
                 throw new IllegalArgumentException(reason(e), e);
             }
@@ -350,6 +403,15 @@ public final class ConfigBinder {
 
     private static String lower(Enum<?> constant) {
         return constant.name().toLowerCase(Locale.ROOT);
+    }
+
+    /** A list of whole numbers, or of the records of one sealed interface. */
+    private static boolean isReadableList(Type type) {
+        if (!(type instanceof ParameterizedType list)) {
+            return false;
+        }
+        Class<?> element = rawClass(list.getActualTypeArguments()[0]);
+        return element == Integer.class || (element.isInterface() && element.isSealed());
     }
 
     private static Class<?> rawClass(Type type) {

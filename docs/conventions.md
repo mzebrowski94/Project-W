@@ -23,7 +23,7 @@ Banned APIs (below) are the index for the whole project. Per-entity cost rules l
 | `./gradlew` in the sandbox | `.claude/scripts/gradle.sh` - the wrapper cannot reach the network there | sandbox shell | a confusing `UnknownHostException` |
 | `com.badlogic.gdx.Input*`, `gdx.controllers..` - polling a device | Input arrives as a per-tick value object (`CommanderInput`) | `sim` | `simulationDoesNotReadInputDirectly` |
 | `Simulation.setCommanderInvulnerable` from a scenario | Nothing. God mode is a harness switch; pillar 2 says the commander can be killed. | `sim.scenario` | `scenariosCannotSwitchOnGodMode` |
-| A magic number in game logic or rendering | `assets/game.properties` (sim) or `assets/graphic.properties` (render), into a config record | everywhere | nothing |
+| A magic number in game logic or rendering | `assets/sim/*.properties` (sim) or `assets/graphic.properties` (render), into a config record | everywhere | nothing |
 | An invented asset path | A constant in `Assets` | `core` | nothing |
 | Preview or incubator APIs, Structured Concurrency, Vector API | The finalized Java 25 feature, or nothing | everywhere | `--release 25` |
 | Box2D, Spring, any IoC container, a service locator, an event bus | Circle-circle collision (ADR 0007); manual constructor DI; reaction components and spawned entities (G0004) | everywhere | review |
@@ -109,7 +109,7 @@ Framework-initialised fields (created in libGDX's `create()`, not the constructo
   that prompted it and the alternatives turned down belong in the decision record and in git, where
   nobody pays for them on every read. A pillar is named, not re-argued; one sentence of *why* is
   enough when no record carries it. Why a number is tuned where it is belongs beside the number in
-  `game.properties`; the record component says only what it means, its unit and what zero does.
+  `assets/sim/*.properties`; the record component says only what it means, its unit and what zero does.
 - **Inserting a method above another orphans that method's javadoc**, and `-Werror` is on, so it fails
   the build. Check the method below the one you added.
 - Reuse the vocabulary in `docs/glossary.md`. One concept, one word, everywhere.

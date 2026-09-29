@@ -1,0 +1,40 @@
+# G0052: A slot can be away
+
+**Trigger.** Anything that needs to know whether a player is still at the game - the draft rotation,
+the HUD's OFFLINE label, a pause that should end; a dropped link or a returning machine; counting
+"solo".
+
+**Enforced by.** `DraftTest` - an away slot's drafts pass on, and the rotation skips it (S3).
+`SessionTest` - a dropped link passes its drafts on identically on every machine, and a return puts
+the slot back in the rotation (S8). Until then: nothing mechanical - caught by reading.
+
+**Supersedes in part G0038's** "a dropped connection is an unplugged pad; the commanders stay
+standing and read as idle". That stays true, and now the slot is also marked **away** until it
+returns.
+
+**Constraint.**
+
+- **Presence is input.** *Away* and *back* are input events on a slot, applied by `Simulation.step`
+  after joins; `Presence`, on the level entity, holds the slots that are away. Every machine applies
+  them on the same tick, so presence is part of the same game everywhere (pillar 7).
+- **Online, the sequencer seals them**: *away* in the next bundle when a peer's link drops, *back* when
+  a returning machine is re-seated. A peer never sends its own.
+- **Offline, nothing sends them.** Unplugging a pad pauses the game and is not leaving (G0028).
+- **Away changes little.** The commander stays standing and idle, exactly as G0038 says. The draft
+  rotation skips the slot and its pending drafts pass to the next present slot, and the HUD shows
+  OFFLINE - the source the UI spec's "remote disconnection is not published yet" was missing.
+- **"Solo" means one present player**, which is what decides whether opening a draft pauses (G0049).
+
+**Scope.** Slots whose machine's link dropped. It says nothing about a player who stops pressing
+anything - he is present - and nothing about removing a commander, which still never happens.
+
+**DO NOT BUILD** - rejected, and likely to be re-proposed.
+
+**No:** *Each machine deciding for itself who is away.* Presence decides who gets a draft, so a
+machine that guessed differently would deal a different game - a desync.
+
+**No:** *Removing the commander of an away slot.* G0038's reason holds: a machine that comes back is
+put back in the slots it left.
+
+**Revisit when** a slot away for a long time should hand on more than its drafts - its personal ranks,
+its place in the leash.

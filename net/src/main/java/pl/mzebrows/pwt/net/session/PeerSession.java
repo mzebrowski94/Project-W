@@ -631,7 +631,7 @@ public final class PeerSession implements AutoCloseable {
 
     private void bundles() {
         if (setup == null) {
-            // Ticks come by datagram and the welcome by the stream, carrying the host's game.properties, so
+            // Ticks come by datagram and the welcome by the stream, carrying the host's sim config, so
             // over a real network the first ticks can arrive before it - and there is no reading them without
             // the session's size. The sequencer sends a tick again until it is acknowledged, so this loses none.
             return;

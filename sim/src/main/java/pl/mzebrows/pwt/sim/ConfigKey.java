@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 /**
  * The key a config record component is read from when it is not the component's own name - {@code
- * SimConfig.units} is written {@code sim.unit.<kind>} in {@code game.properties}. {@link ConfigBinder}
+ * SimConfig.units} is written {@code sim.unit.<kind>} in {@code assets/sim/*.properties}. {@link ConfigBinder}
  * reads it; nothing else should need it.
  */
 @Retention(RetentionPolicy.RUNTIME)

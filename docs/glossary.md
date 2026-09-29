@@ -51,7 +51,8 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **rabbit** | Alien food that runs away. A pickup in every way that matters - claimed on contact, granted from the same table - but it walks, it dodges, and it can be shot. The commander is offered nothing by one, so his only interest is denying it. |
 | **reinforcement** *(source)* | A pickup that adds troopers to the squad - three of them, as the shipped one is. Taking one lands a count on the level entity, which `ReinforcementSystem` turns into men standing beside the commander, one a tick, up to the squad's maximum and wasted past it. A level lays two or three beside every control point. |
 | **shine** | The slow pulse on a pickup worth crossing the ground for. Declared per kind as `shineSeconds`, zero meaning it does not shine, and published on the charge channel as `Look.GLEAM` so the renderer draws it without being told what the thing is. |
-| **weapons cache** | A crate with a gun in it: the player's alone, and one **kind** per gun so which one it is can be read before he has walked to it. Picking one up replaces what he was carrying; nothing about it survives his death. |
+| **weapons cache** | A crate with a gun in it: the player's alone, and one **kind** per gun so which one it is can be read before he has walked to it - a **sealed** one shows its gun before anybody can reach it (G0050). Picking one up replaces what he was carrying; nothing about it survives his death. |
+| **sealed cache** | A **weapons cache** whose gun is dealt from the level's **armoury deck** the first time a commander comes near, and shown from then on. Nobody can take one while it is sealed (G0050). |
 | **supply drop** | A crate of men lying on the field: three **reinforcements** to whoever on the player's side reaches it, and nothing at all to the other side, which walks over one and leaves it standing. Renamed from *frozen trooper* on 2026-09-18, when it stopped being a mouthful to the aliens - the old name described a body being contested, and it is now kit. |
 
 ### Fighting
@@ -115,7 +116,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **approach** | How wide of whatever it is hunting a creature closes. Each one walks at a point beside the man rather than at the man, on a side taken from where it was spawned rather than rolled (G0012's argument, applied to an approach) - which is what stops a pack converging onto one line and arriving in single file. The offset is spent by the time it is close, so the last of every approach is straight at him; a **spread** that held all the way in would be an orbit. A squad uses the same spread walking to a point and after the commander (G0041). |
 | **rouse** | Sending everything within earshot of a place to go and see who is there. Two things shout: a **control point** somebody has started taking, and a **nest** somebody is hitting. Loud once per event rather than every tick, and a place rather than a target (G0016) - what it fights when it gets there is whatever is standing there. |
 | **avoidance** | Steering around what a unit is about to hit, decided before it hits it. Context steering: a ring of candidate directions scored by how much the unit wanted to go that way against how dangerous that way is. It never avoids the other side, which is what it is trying to reach, and never a pickup it wants - only a **shunned** one gets room. |
-| **chance** | How often a unit does something it only sometimes does, as an average per second of opportunity, dealt from a **due** rather than tossed every tick (G0039). Every one in the game is a constant in `AiChance` and a line in `game.properties`, so the conditional behaviour can be read off one list instead of found by searching the systems. Zero switches one off and draws no number at all. |
+| **chance** | How often a unit does something it only sometimes does, as an average per second of opportunity, dealt from a **due** rather than tossed every tick (G0039). Every one in the game is a constant in `AiChance` and a line in `assets/sim/*.properties`, so the conditional behaviour can be read off one list instead of found by searching the systems. Zero switches one off and draws no number at all. |
 | **clearance** | Whether a body of a given size fits on a tile. Baked into a flow field rather than checked afterwards, which is what makes a one-tile crack a route for a grunt and a wall for a brute without anybody writing a rule about it. |
 | **clear shot** | Whether a round fired from here would arrive there: a clear line through terrain, and nothing an **obstacle** would eat on the way. Not sight - a boulder hides nothing (G0015) - but a man who fires asks it before he picks a target, and so does a man on a gun. |
 | **desired velocity** | Where a unit wants to be going this tick, before anything decides whether it may. Written by whatever is driving it, committed to a velocity by one system, and spent on the tick it was written - a unit nothing spoke for asks for nothing and stops. |
@@ -175,7 +176,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **region** | A contiguous area of a map, decided before its tiles are filled in. What makes a level read as places rather than one flat sheet: regions are shaded subtly apart, and later decide what terrain and what contents belong where. |
 | **shake** | Something violent that happened somewhere, published for the view: how hard at the middle of it, how far it is felt, and how far through it is. The simulation says what happened and stops there - what the view does about it is entirely the client's, exactly as *focus* says who matters and not where the camera goes. |
 | **spawn area** | The patch of tiles a side is put on at the start of a level. A rectangle of tiles with everyone jittered inside them, never at a tile centre (G0009) - the same tile-anchored scatter that places everything else. |
-| **terrain** | The kind of ground on a tile. Names a role, like a `Look` does - what it looks like is the client's decision and what it costs a unit is a number in `game.properties`. Whether it can be stood on is the one exception, because generation needs it. |
+| **terrain** | The kind of ground on a tile. Names a role, like a `Look` does - what it looks like is the client's decision and what it costs a unit is a number in `assets/sim/*.properties`. Whether it can be stood on is the one exception, because generation needs it. |
 | **thicket** | Dense undergrowth. Passable, and the only ground in the game worth going round: what standing on it costs is a **pace** rather than a route, so every flow field, reachability check and spawn treats it as the open ground it is. It **costs his side far more than theirs**, which is the whole of the mechanic and a declaration rather than a property of the ground - a thicket both sides waded equally would change how long the walk took and nothing else. Drawn as a hatch over the floor, because a thing that is going to cost you must not read as another colour of floor. |
 | **tile** | One cell of the grid a level is laid out on. A unit of *construction*, not of play: nothing moves tile by tile and nothing is centred in one (G0009). |
 | **variant** | Which of a look's several appearances an entity wears. Zero is the ordinary one. It exists for the commander: four identical circles is not a field anybody can read (pillar 5), so each player wears his own colour - and it is a number on `Appearance` rather than four looks in the enum, because the renderer decides what to draw from that component and asks nothing else about an entity (G0003). |
@@ -198,6 +199,31 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **proving ground** | The menu's training mode: pick a strain and a gun and fight it. A placeholder page for now. Not *arena*, which is the rectangle a level is played inside. |
 | **scenario** | One arena the alpha-phase menu can launch, built to make a system visible. Content, never design. |
 | **the level entity** | One entity, spawned with the world and never removed, carrying state that belongs to the level rather than to anything standing in it (G0007). |
+
+### Upgrades
+
+What the player's side earns on the field and holds for the rest of the level, and what the aliens
+take in answer (ADR 0017, G0049). The words `docs/design/upgrades-scope.md` settled; the code arrives
+from S2.
+
+| Term | Meaning |
+|---|---|
+| **adaptation** | An **upgrade** the aliens take, on a schedule and with no **chooser**. Not *evolve*, which stays one alien changing strain by feeding. |
+| **armoury deck** | The weighted cards a **sealed cache** is dealt from, one deck per level, drawn so no gun comes up twice before every card has (G0050). An upgrade may add cards. |
+| **away** | A slot whose machine's link has dropped. Its commander stands idle, the **rotation** skips it, and its **drafts** pass on (G0052). Only the host's sequencer says so; offline nobody is ever away. |
+| **capability** | Behaviour written once and carried from spawn by every unit that could use it, off at zero until an upgrade turns it up - a trooper's grenade throw (G0051). How an upgrade unlocks something without adding a component. |
+| **card** | One **upgrade** on a **draft**, dealt when the draft is earned. |
+| **chooser** | The slot a **draft** belongs to. |
+| **draft** | One offer of up to three **upgrades** to one player, earned by an objective: a point taken, a hold wave cleared, a boss killed. He takes one card, when he likes; nothing expires. |
+| **effect** | One change an upgrade makes: scale a **stat**, add to a count, raise a chance, scale one gun, or add cards to the **armoury deck**. Each names its **target**. |
+| **ledger** | What each side holds, with **ranks** - level state on the level entity (G0007). Numbers are folded from it where they are read, never written back. |
+| **pick** | Taking a **card**: an input event naming the draft and the upgrade, never the card's position. |
+| **rank** | How many times one upgrade has been taken (I, II, III). Each rank applies its effects once more. |
+| **rotation** | The order **drafts** go round the present players: ascending slot order, starting after the last **chooser**, skipping anyone **away**. |
+| **shared** / **personal** | Whether an upgrade's **ranks** belong to the side or to the slot that took it. It is personal when every effect targets the **chooser**. |
+| **stat** | A number an **effect** may move. Read in exactly one place; a stat nobody reads is a config key that lies. |
+| **target** | Whom an **effect** reaches: the squad, the commanders, the chooser's commander, the team (squad and commanders), the side (numbers no entity reads - men per crate, headroom, the deck), or the aliens. A turret is never a target (G0024). |
+| **upgrade** | A permanent improvement the player's side holds for the rest of the level, earned from a **draft**. Kinds are `UpgradeKind`; numbers are `sim.upgrade.<kind>.*`. |
 
 ### Online play
 
@@ -271,6 +297,9 @@ What the player is shown around the fight and how he moves through it. Decided i
   (`UnitKind`, `PickupKind`), but prose says strain.
 - *item*, *collectable*, *powerup* - say pickup.
 - *mutation*, *transformation* - say evolve.
+- *evolve* for the aliens' side-wide change - say adaptation. Evolve is one alien changing strain.
+- *buff*, *perk*, *skill*, *talent* - say upgrade. *Power-up* already means a pickup here.
+- *offer*, *choice*, *level-up* for what an objective earns - say draft; for one option on it, card.
 - *object*, *actor*, *thing* - say entity.
 - *barrel* for the end of a gun - say muzzle. A barrel is the explosive.
 - *ammo*, *ammunition*, *reload* for what heat does - say heat and overheat. Heat is a rate limit and

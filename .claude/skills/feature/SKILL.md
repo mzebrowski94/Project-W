@@ -40,7 +40,7 @@ Whatever the feature settles becomes part of the design surface, in the same cha
 - A new input -> a row in the input map. Check nothing else claims it.
 - A new domain word -> `docs/glossary.md`, and then use only that word.
 - A question you deliberately left open -> the open questions list.
-- Every tunable number -> `assets/game.properties`, never a literal in a system.
+- Every tunable number -> `assets/sim/*.properties`, never a literal in a system.
 
 If the feature produced none of these, that is a signal worth noticing: either it was smaller than
 it looked, or something went undocumented.

@@ -38,7 +38,7 @@ A scenario is one arena, built to make a system visible. Everything needed to ad
 3. `name()` is what the menu shows. `description()` is one line saying *which system this exercises
    and what to look at* - "sixty enemies spawned overlapping, watch them untangle", not "a fight".
 4. Override `configure(SimConfig)` to vary tunables - a crowd, an empty arena, a faster weapon -
-   using the `with(...)` overloads on `SimConfig`. Do not edit `game.properties` for a scenario.
+   using the `with(...)` overloads on `SimConfig`. Do not edit `assets/sim/*.properties` for a scenario.
 5. Override `map(SimConfig, Randomness)` if the scenario needs particular ground. The default is open
    ground the size `sim.map.*` asks for, partitioned into regions. **The map is built before the
    simulation**, because its extent is the arena.
@@ -67,7 +67,7 @@ Dev controls, available in any scenario. **These are not game bindings** - the r
 | `.` | Advance exactly one tick, while paused |
 | `R` | Restart the scenario from its first tick |
 | `G` | Make the commander invulnerable, or stop. A dev tool - pillar 2 says he can be killed |
-| `F1` | Step the stats overlay: its panel in the top bar's right corner, then every line over the view's corner, then off |
+| `F1` | Step the stats overlay, which starts off: its panel in the top bar's right corner, then every line over the view's corner, then off again |
 | `F2` | Online: draw your own commanders facing your aim at once, or as the world has them (the cosmetic lead, on by default) |
 | `F3` | Online, a joining copy: step the simulated lag through `net.conditions.latencySteps` |
 | `Esc` | Not the harness's any more: in a level it opens the pause menu, whose LEAVE TO MENU asks first |

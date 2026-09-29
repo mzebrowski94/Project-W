@@ -31,7 +31,7 @@ public final class ScenarioSession implements ScenarioPlay {
     private Simulation simulation;
     private FixedStepClock clock;
     private boolean paused;
-    private OverlayMode overlayMode = OverlayMode.PANEL;
+    private OverlayMode overlayMode = OverlayMode.OFF;
     private boolean leaving;
     private boolean godMode;
     private boolean cosmeticLead = true;

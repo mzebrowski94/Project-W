@@ -17,7 +17,7 @@ description at all.
 | What must always be true? | Invariants, below |
 | How does a phase session go, and what is still scaffolding? | [`alpha-phase.md`](alpha-phase.md) |
 | What does this system do? | `sim/src/main/java/.../system/` |
-| What is this number? | `assets/game.properties` |
+| What is this number? | `assets/sim/*.properties` |
 | Why did we reject the obvious alternative? | `docs/design/decisions/` |
 | What does this word mean? | `docs/glossary.md` |
 
@@ -64,7 +64,7 @@ rows become enforceable once the named feature exists - promote them then.
 | What a unit is doing is a field on a component, never a component added or removed (G0010). | enforced - `ArchitectureTest.onlyTheSpawnerChangesWhatAnEntityIsMadeOf` |
 | Same seed and same input sequence produce the same run. | enforced - `SimulationDeterminismTest` |
 | No gameplay effect depends on frame rate. | enforced - fixed timestep + `SimulationDeterminismTest` |
-| Every gameplay number comes from `game.properties`; no tuning literals in systems. | judgement |
+| Every gameplay number comes from `assets/sim/*.properties`; no tuning literals in systems. | judgement |
 | Nothing is bought, equipped or configured between levels. | judgement |
 | Aim is independent of movement; no system assumes facing follows heading (G0002). | enforced - `CommanderControlSystemTest.firesWhereItAimsNoMatterWhereItIsWalking` |
 | Rendering reads an appearance component and never branches on what an entity is (G0003). | judgement |
@@ -86,7 +86,7 @@ rows become enforceable once the named feature exists - promote them then.
 | Damage only ever crosses faction lines, never stays inside one - and a source on **nobody's** side crosses every one of them, which is how a blast reaches the commander who caused it. | enforced - `CombatTest.neverLetsEnemiesHurtEachOther`, `BarrelTest.putsDownTheCommanderWhoShootsOneFromTooCloseUp` |
 | Invulnerability is reachable from the harness only, never from a scenario or config. | enforced - `ArchitectureTest.scenariosCannotSwitchOnGodMode` |
 | Troopers lost during a level stay lost for that level. **A reinforcement is a new man won from the field, never the one you lost** - nothing revives a casualty who bled out, and the crate that replaces him had to be walked to and could have been eaten first. | enforced - `SquadTest.keepsATrooperLostDuringALevelLost` |
-| Squad size never exceeds its configured maximum: the squad the level started with plus its configured headroom. A reinforcement past it is **wasted, not banked** - a reserve that paid out later would be a number the player tracks and the game does not show (pillar 5). | enforced - `SquadTest.neverPutsMoreTroopersOnTheFieldThanTheSquadAllows`, `ReinforcementSystemTest.neverPutsMoreMenOnTheFieldThanTheSquadAllows`, `.takesAsManyAsTheSquadHasRoomForAndNoMore`; a scenario sets both numbers, not the build |
+| Squad size never exceeds its configured maximum: the squad the level started with plus its configured headroom, plus what upgrades add to it (G0049). A reinforcement past it is **wasted, not banked** - a reserve that paid out later would be a number the player tracks and the game does not show (pillar 5). | enforced - `SquadTest.neverPutsMoreTroopersOnTheFieldThanTheSquadAllows`, `ReinforcementSystemTest.neverPutsMoreMenOnTheFieldThanTheSquadAllows`, `.takesAsManyAsTheSquadHasRoomForAndNoMore`; a scenario sets both numbers, not the build |
 | A reinforcement becomes men beside the commander and nowhere else (G0030), **one a tick** - a crate is worth several and they arrive in a queue rather than in a heap. With nobody standing it is owed rather than lost, and it pays out on the tick somebody is back on his feet. | enforced - `ReinforcementSystemTest.putsHimDownBesideTheCommander`, `.putsOneManDownPerTickRatherThanTheWholeCrateAtOnce`, `.keepsAReinforcementOwedWhileNobodyIsStandingToFormUpOn`, `.deliversWhatItOwedOnceSomebodyIsStandingAgain` |
 | Every control point a level names has a handful of reinforcements lying just outside it, how many drawn per point. Men are where the ground you have to take is (G0030). | enforced - `ReinforcementDeployTest.laysAHandfulOfReinforcementsBesideEveryControlPoint`, `.keepsItOffThePointItself`, `.keepsItWithinReachOfThePointItBelongsTo` |
 | **A trooper taking or holding a point still watches and still shoots.** A fight outranks the ground it is standing on, so the squad is never caught watching a bar fill while something walks into it. | enforced - `TrooperAdvanceTest.goesOnLookingAroundWhileItTakesAPoint`, `.firesFromAPointItIsStandingOnWhenSomethingComesAtIt`, `.goesBackToHoldingThePointOnceTheFightIsOver` |
@@ -245,8 +245,8 @@ rows become enforceable once the named feature exists - promote them then.
 | **A trooper never fires through rock, including at something it is already fighting.** Staying in a fight forgives the arc, because where a man is looking is his own doing and changes twice a second; it never forgives the wall, because rock is not his doing and does not move. | enforced - `TrooperCombatTest.doesNotShootThroughRock`, `.stopsFightingSomethingThatStepsBehindRock`, `.keepsFightingSomethingThatSlipsOutOfItsArc` |
 | **An alien routes to whoever on the player's side is nearest by route**, not to the commander alone: one field per strain, flooded from every one of them at once, which costs what flooding from one costs (G0026, amended). | enforced - `NavigationSystemTest.walksAnEnemyRoundAWallToATrooperJustAsReadily`, `FlowFieldTest.leadsToWhicheverGoalIsNearestByRoute` |
 | A cone is applied by turning the shot, so every shot is the same length and the cone the same width at every distance. | enforced - `SpitterTest.sendsEveryShotOutAtTheSameSpeedHoweverFarOffTrueItIs` |
-| Every gameplay speed is one block in `game.properties` and is retuned together, so the ratios between units survive a pace change. | judgement - the PACE block |
-| Everything the AI does only *sometimes* is a named constant in `AiChance` with a number in `game.properties`, stated per second of opportunity. There is no conditional behaviour that is not on that list. | judgement - `AiChance` is the index; `Odds` is the only caller of the dice |
+| Every gameplay speed is retuned together, so the ratios between units survive a pace change. | judgement - the PACE block in `assets/sim/commander.properties` |
+| Everything the AI does only *sometimes* is a named constant in `AiChance` with a number in `assets/sim/*.properties`, stated per second of opportunity. There is no conditional behaviour that is not on that list. | judgement - `AiChance` is the index; `Odds` is the only caller of the dice |
 | A behaviour switched off draws no random number at all, so turning one off cannot reshuffle what every other behaviour rolls. | enforced - `OddsTest.drawsNothingAtAllForABehaviourThatIsSwitchedOff` |
 | **A chance is dealt, not tossed** (G0039). The number a behaviour states per second of opportunity is its average exactly, and no unit waits longer than `sim.ai.chance.longestGap` times that average for something it has the opportunity to do. | enforced - `OddsTest.keepsToTheStatedRateHoweverItIsDealt`, `.neverLetsMoreThanTheLongestGapGoBy`, `.banksNothingFromASpellAtAChanceFarAboveOnePerTick` |
 | What a unit is still **due** is hidden, and stays that way only because it trims runs of luck and holds nothing to learn. A behaviour the player is meant to read as a pattern is not dealt this way (G0012). | judgement - pillar 5 |
@@ -263,7 +263,7 @@ rows become enforceable once the named feature exists - promote them then.
 | A creature carrying a gun that goes off where its shots land is drawn as carrying one. The shots alone are a tell you learn by being caught in one. | enforced - `SpitterTest.showsThatItIsCarryingABarrel` |
 | A shooter fires only into the field of view it declares, and its aim swings onto a target at a rate rather than snapping. | enforced - `SpitterTest.willNotFireAtSomethingOutsideItsFieldOfView`, `.swingsOntoItAndThenFires` |
 | A shooter's cone narrows with every shot it lands on the same target and goes back to its widest the moment it loses one. | enforced - `RangedTest.narrowsTheConeWithEveryShotItLands`, `.stopsNarrowingOnceItsAimIsWalkedIn`, `.goesBackToTheWildConeWhenItLosesWhatItWasShootingAt` |
-| **What one pull of a trigger puts in the air is a property of the gun, not of who is holding it.** A gun that names several pellets sends that many from every shooter there is, each turned inside the gun's own cone - which is a different cone from the one a creature's bad aim makes, and composes with it rather than replacing it. One place decides it, and the four things that fire all go through it. | enforced - `VolleyTest.sendsAsManyShotsAsTheGunNamesFromOnePull`, `.sendsOneFromAGunThatNamesOne`, `.throwsEveryPelletStraightForAGunWithNoConeOfItsOwn`, `.scattersThemInsideTheConeForAGunThatNamesOne`, `.sendsEveryPelletOutAtTheSameSpeed`; one writer - `Guns.volley` |
+| **What one pull of a trigger puts in the air is a property of the gun, not of who is holding it.** A gun that names several pellets sends that many from every shooter there is, each turned inside the gun's own cone - which is a different cone from the one a creature's bad aim makes, and composes with it rather than replacing it. One place decides it, and the four things that fire all go through it. **How often** and **how hard** it fires may be scaled by the holder's side's upgrades (ADR 0017); pellets, cone and reach stay the gun's. | enforced - `VolleyTest.sendsAsManyShotsAsTheGunNamesFromOnePull`, `.sendsOneFromAGunThatNamesOne`, `.throwsEveryPelletStraightForAGunWithNoConeOfItsOwn`, `.scattersThemInsideTheConeForAGunThatNamesOne`, `.sendsEveryPelletOutAtTheSameSpeed`; one writer - `Guns.volley` |
 | **A gun may have a reach; an aim may not.** How far a shot flies before it goes out is a number on the weapon, exactly as a grenade's throw has been since G0019 - so a short-ranged gun is possible without the aim ever becoming a distance. Zero means until it hits something, which is what almost every gun declares. | enforced - `VolleyTest.dropsAShotOnceItHasFlownAsFarAsItsGunAllows`, `.leavesAShotFromAGunWithNoReachFlying`, `.carriesItTheWholeOfTheReachBeforeItGoesOut`, and `CommanderControlSystemTest.firesInTheSameDirectionHoweverFarAwayTheAimPointIs` still holds the aim half |
 | **A nest sleeps until somebody comes near, and never sleeps again.** A level larger than the view cannot have a producer working from the first tick - the player would meet the accumulation rather than the nest - and a producer that stopped when he backed off would be one he could wait out from just outside its radius. | enforced - `NestTest.sendsOutNothingAtAllUntilSomebodyComesNear`, `.startsWorkingOnceSomebodyComesNear`, `.goesOnWorkingAfterWhoeverWokeItHasGone` |
 | **A nest is at its worst the moment you kill it**: destroying one empties a last brood out of it and rouses everything within earshot. That is what makes taking one away a decision about *when* rather than a chore, and it is the same death-reaction window a blast and a respawn run in. | enforced - `NestTest.emptiesTheLastOfItselfWhenItIsDestroyed`, `.sendsOutWhateverStrainItWasBuiltFor`, `.sendsEverythingWithinEarshotToSeeWhoIsHittingIt` |
@@ -290,6 +290,20 @@ rows become enforceable once the named feature exists - promote them then.
 | **Only the other side's dead are kills.** Friendly fire is neither counted nor subtracted. | enforced - `TallyTest.countsNothingForKillingSomebodyOnHisOwnSide` |
 | **A goal is a control point taken while he stood inside it**; a stabilise is any man he put back on his feet, another player's commander included. | enforced - `TallyTest.countsAPointTakenWhileHeStoodOnIt`, `.countsAStabiliseForTheManWhoFinishedIt`, `.countsPuttingAnotherPlayerBackOnHisFeet` |
 | **A tally is shown, never spent** (pillar 3): nothing buys, unlocks or scales with it. | judgement |
+| **An upgrade changes numbers, never what an entity is made of** (ADR 0017). Behaviour an upgrade unlocks is carried from spawn by every unit that could use it and is off at zero. | deferred - S3: `onlyTheSpawnerChangesWhatAnEntityIsMadeOf`, `CompositionTest` |
+| **Every number an upgrade may move has exactly one reader**, and a stat nobody reads fails the build. | deferred - S2: fence 3 in `ArchitectureTest` |
+| **A unit spawned after an upgrade is identical to one that was on the field when it landed.** Numbers are folded where they are read, never written back. | deferred - S3: `UpgradeTest` |
+| The same seed and the same inputs deal the same drafts; a pick is an input event. | deferred - S3: `SimulationDeterminismTest`, `DeterminismFuzzTest` with picks |
+| **A draft belongs to one chooser, in slot rotation.** A pick from anyone else, or for a draft that is gone, changes nothing (G0049). | deferred - S3: `DraftTest` |
+| An away slot is skipped by the rotation, and its drafts pass on (G0052). | deferred - S3, S8: `DraftTest`, `SessionTest` |
+| **An upgrade belongs to the slot or the side, never to a life** - a commander who respawns keeps what his slot chose, the opposite of the tally. | deferred - S3: `DraftTest` |
+| Drafts come from objectives only - a point taken, a hold wave cleared, a boss killed - at their configured rate. | deferred - S3: `DraftTest` |
+| The relational guarantees `SimConfigTest` holds hold at every upgrade's and adaptation's highest rank, through the same fold the game uses. Body size is never a stat. | deferred - S4, S10: `SimConfigTest` through `Modifiers` |
+| Every upgrade and adaptation in force is on screen with its rank, and so is who holds a draft (pillar 5). A card's text is generated from its effects, so tuning a number cannot leave a card lying. | deferred - S5: readout tests, and judgement |
+| A machine's top bar shows at most one draft, and never over the view. | deferred - S5: bar test |
+| A sealed cache shows its gun before any commander can reach it (G0050). | deferred - S6: `SimConfigTest`, `PickupSystemTest` |
+| A trooper's grenade never lands where its blast reaches the player's side (G0051). | deferred - S7: `TrooperGrenadeTest` |
+| A crewed turret fires the place's gun (G0024), and no upgrade covers it. | deferred - S2: judgement |
 
 The no-hitscan rows are load-bearing in three directions at once: they keep collision uniform, keep
 the simulation deterministic, and keep every threat visible to the player. They are the rows most
@@ -383,7 +397,10 @@ do not treat one as taken when adding a game binding. None of them is on the pad
 | `Tab` | `LB` / `L1` | Pull the view back for a look, and put it back. **One camera, so anybody's press moves everybody's view** | built |
 | `` ` `` | - | Swap the bottom bar between the players' panels and the roll call. This machine's bar, so it swaps for everybody on it | built - the roll call is a placeholder |
 | `Esc` | `Start` / `Options` | Open the pause menu, which asks for the pause. **The pause is everybody's; the menu is this machine's** - another machine sees the paused banner. Offline, losing the window or a seated pad opens it too | built |
-| - | - | Unbound on the pad: `Y`/`Triangle`, `Back`/`Share`, both stick clicks. Left free on purpose | - |
+| `C` | `Y` / `Triangle` | Open the oldest upgrade draft of this seat's slot in the top bar; with it open, take the highlighted card (G0049). This machine's top bar, one draft at a time | proposed - settles in S5 |
+| `1`-`3`, while a draft is open | D-pad left / right | Choose a card. The chooser's order inputs give no order while his draft is open; his move, aim, fire, strike, grenade and action stay live | proposed - settles in S5 |
+| `4`, while a draft is open | D-pad down | Close the draft and keep it | proposed - settles in S5 |
+| - | - | Unbound on the pad: `Back`/`Share`, both stick clicks. Left free on purpose | - |
 
 **In pages and modals** (the pause menu, and the menus to come): arrows or `W`/`S` and the d-pad or
 left stick move the selection, repeating while held; `Enter`/`Space` and `A`/`Cross` confirm;
@@ -416,6 +433,16 @@ contradiction three features later.
   fills it: the camera giving up at far zoom and a marker at the edge pointing at whoever is missing;
   splitting the view; or a soft pull that only starts once somebody is actually out of shot. None is
   chosen, and a marker is the cheapest thing to try first.
+- **Do upgrades carry between levels?** They last the level (G0049). Carrying them on is blocked on
+  what happens when a level's objectives are met, and asks: does a slot's personal ledger follow the
+  slot or the man, does an unspent draft carry over, and do the aliens' adaptations reset?
+- **Should the aliens adapt to what the players take?** Adaptations are dealt on a schedule, at
+  random; a hook for weighting them against the players' upgrades exists and is off.
+- **Rerolls.** None in v1. If one is ever wanted it is an input event limited by a count, never by a
+  currency (pillar 3).
+- **Health upgrades need health stored as damage taken.** Changing a maximum breaks "a unit spawned
+  later is identical to one already on the field" unless the maximum is folded at the read. Named so
+  nobody discovers it mid-session.
 - **How is a chance per attempt dealt, when there first is one?** Every chance today is per second of
   opportunity and is dealt from a due (G0039). A critical hit, a drop or anything else rolled once per
   attempt would want the same even deal counted in attempts - Dota's P = C x N or a hard pity - and
@@ -477,7 +504,8 @@ mistaken for a decision.
   **Are the four the same man in four colours, or four commanders with distinct kits?** Today they are
   identical but for colour. Distinct kits would give a reason to pick one and a reason to want a
   second player, and it is the question standing between "co-op works" and "co-op is worth doing".
-  In single-player it is the same question asked once.
+  In single-player it is the same question asked once. **A first answer (G0049):** personal upgrades
+  give each slot a kit of its own over a level; whether commanders *start* distinct is still open.
 - Does the squad persist between levels, or does each level grant a fresh one?
 - On failure, do you retry the level, or is the run over?
 - Given "no between-level management", what does progression across the nine levels actually consist

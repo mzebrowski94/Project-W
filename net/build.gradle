@@ -20,7 +20,7 @@ tasks.named('test') {
 
 // The build id two peers must share to play together (ADR 0012): a hash of every source that decides
 // what a tick does - map, sim, and the session protocol in net. Tuning is not in it, because the host
-// ships its own game.properties. Line endings are dropped before hashing, so a Windows checkout and a
+// ships its own assets/sim/*.properties. Line endings are dropped before hashing, so a Windows checkout and a
 // Linux one of the same commit agree.
 def buildIdSources = [
   map: rootProject.file('map/src/main/java'),
@@ -52,7 +52,7 @@ def generateBuildId = tasks.register('generateBuildId') {
 }
 sourceSets.main.resources.srcDir(generateBuildId)
 
-// The shipped network tunables, compiled in as sim's game.properties is (:sim:generateShippedConfig):
+// The shipped network tunables, compiled in as sim's assets/sim/*.properties are (:sim:generateShippedConfig):
 // every key=value line of assets/network.properties as one constant, which NetConfig.defaults() binds.
 // So the tests and a missing or broken file all fall back to exactly what ships.
 def shippedNetConfigFile = rootProject.file('assets/network.properties')

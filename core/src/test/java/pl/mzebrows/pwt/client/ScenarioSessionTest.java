@@ -108,16 +108,16 @@ class ScenarioSessionTest {
     }
 
     @Test
-    void stepsTheOverlayFromItsPanelToExpandedToOffAndBack() {
+    void startsWithTheOverlayOffAndStepsItToItsPanelToExpandedAndBackToOff() {
         ScenarioSession session = session();
 
+        assertThat(session.overlayMode()).isEqualTo(OverlayMode.OFF);
+        session.apply(HarnessCommand.TOGGLE_OVERLAY, NOBODY);
         assertThat(session.overlayMode()).isEqualTo(OverlayMode.PANEL);
         session.apply(HarnessCommand.TOGGLE_OVERLAY, NOBODY);
         assertThat(session.overlayMode()).isEqualTo(OverlayMode.EXPANDED);
         session.apply(HarnessCommand.TOGGLE_OVERLAY, NOBODY);
         assertThat(session.overlayMode()).isEqualTo(OverlayMode.OFF);
-        session.apply(HarnessCommand.TOGGLE_OVERLAY, NOBODY);
-        assertThat(session.overlayMode()).isEqualTo(OverlayMode.PANEL);
     }
 
     @Test

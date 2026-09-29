@@ -110,7 +110,7 @@ whole registry"); a level-select map; progression or unlocks (open questions on 
 Title `ui.provingGround.title = PROVING GROUND`. Body `ui.provingGround.body = Not built yet. Pick a
 strain and a gun, and fight it.` One entry, `back`. Future shape (not a decision): choices written as
 `SimConfig.with(...)` overrides on a scenario, the same way a scenario varies tunables - never edits
-to `game.properties`.
+to `assets/sim/*.properties`.
 
 Do not build now: any gameplay behind it; a strain or gun picker before its own design pass
 (`feature` skill).
@@ -288,7 +288,7 @@ the look of the selection.
 | `UI:hud/top/goal` | `HudSlot.GOAL` | top bar, left, line 2, bright | `ui.hud.goal = CURRENT GOAL:` `{goal}` - first unmet required objective, or `ui.hud.goal.complete = MISSION COMPLETED`, pulsing twice when it becomes true | built |
 | `UI:hud/top/terminal` | `HudSlot.TERMINAL` | top bar, left, lines 3-4 | the last two dispatches - the battlefield's voice, narrative only, nothing the goal line or a panel shows (plan 8.3) - older dimmed, newest typing with a cursor (a high one appears at once) | built (`Terminal`, the reporters, `TopBarPainter`) |
 | `UI:hud/top/aside` | `HudSlot.ASIDE` | top bar, right: the block beside the goal, `graphic.hud.overlay.widthShare` of the view's span | reserved; what a player sees here is open (plan Q30). In the alpha the dev overlay's panel sits in it | reserved |
-| `UI:hud/top/overlay` | `HudSlot.OVERLAY` | top bar, right, inside `UI:hud/top/aside` | the F1 dev overlay (`DebugOverlay`), clipped to its panel | built (F1 steps panel / expanded / off) |
+| `UI:hud/top/overlay` | `HudSlot.OVERLAY` | top bar, right, inside `UI:hud/top/aside` | the F1 dev overlay (`DebugOverlay`), clipped to its panel; off when a level starts | built (F1 steps off / panel / expanded) |
 | `UI:hud/bottom/panel` | `HudSlot.PLAYER_PANEL` | bottom bar: four fixed quarters of the view's span. With four players or fewer in the game, local and online, everybody has one - this machine's seats first, then the rest by slot; with more, this machine's seats only, each in its seat's quarter (`PanelAssignment`). A player keeps his quarter while he is in the game; a quarter nobody holds stays black | frame in that player's commander colour, with `ui.hud.player = P{n}` in it; grey with `ui.hud.offline = OFFLINE` while his pad is unplugged or his link is gone (remote disconnection is not published yet) | built |
 | `UI:hud/bottom/portrait` | `HudSlot.PORTRAIT` | inside each player panel, left; dropped in a quarter under 160 UI px (4:3) | animated portrait (plan section 10.5), 32 x 32; a block in his colour until stage 8 | built as a block in his colour; frames planned (stage 8) |
 | `UI:hud/bottom/status` | `HudSlot.STATUS` | inside each player panel, row 1, after the label | empty while he stands; `ui.hud.down = DOWN` with his bleed-out as a draining bar; `ui.hud.kia = KIA {seconds}`; `ui.hud.aboard = ABOARD`. `DOWN` and `KIA` in alert. No health bar: an outcome is non-lethal (DOWN) or lethal (KIA) (plan D11) | built |

@@ -20,7 +20,7 @@ public final class Players {
     /**
      * The ceiling: at most eight players in one game, of whom any one machine seats four (G0038).
      *
-     * <p>A ceiling, not a size: everything is sized from a capacity. Not a {@code game.properties} key -
+     * <p>A ceiling, not a size: everything is sized from a capacity. Not a {@code assets/sim/*.properties} key -
      * every peer must hold it identically (G0038).
      */
     public static final int MAX = 8;

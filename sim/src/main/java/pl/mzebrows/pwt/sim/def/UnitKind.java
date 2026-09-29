@@ -9,7 +9,7 @@ package pl.mzebrows.pwt.sim.def;
  * silently skips entities; swapping this enum is a field write that nothing can miss.
  *
  * <p>Adding a strain is one constant here, one {@link UnitDef} in {@code SimConfig.defaults()} and
- * one block under {@code sim.unit.<name>} in {@code game.properties}. Nothing else - the loader and
+ * one block under {@code sim.unit.<name>} in {@code assets/sim/*.properties}. Nothing else - the loader and
  * the registry both iterate this enum, and both fail loudly if a definition is missing.
  */
 public enum UnitKind {
