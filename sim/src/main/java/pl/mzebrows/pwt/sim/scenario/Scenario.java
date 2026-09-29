@@ -14,6 +14,7 @@ import pl.mzebrows.pwt.sim.RngStream;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 
@@ -86,6 +87,60 @@ public interface Scenario {
             simulation.spawnCommander(area.centreX(map), area.centreY(map));
         }
         scatter.scatter(area, config.trooper().squadSize(), trooperRadius, simulation::spawnTrooper);
+    }
+
+    /**
+     * How many medkits this level scatters beside its control points (G0053). None unless the level asks:
+     * the Adventures do.
+     */
+    default int medkits(SimConfig config) {
+        return 0;
+    }
+
+    /**
+     * Scatters this level's medkits, each beside a control point spread along the level's own order of
+     * them - so they fall along the march rather than in a heap - and clear of the points themselves and
+     * of every pickup already lying there. Never hand-placed: where the rock is decided by a seed, so is
+     * where there is room. Called by {@code Scenarios.world} after the reinforcements.
+     */
+    default void deployMedkits(Simulation simulation) {
+        SimConfig config = simulation.config();
+        int count = medkits(config);
+        ImmutableArray<Entity> points = simulation
+                .engine()
+                .getEntitiesFor(Family.all(ControlPoint.class, Position.class).get());
+        if (count <= 0 || points.size() == 0) {
+            return;
+        }
+        TileMap map = simulation.map();
+        float radius = config.pickup(PickupKind.MEDKIT).radius();
+        float reach = config.controlPoint().reinforcementRadius();
+        Scatter scatter = new Scatter(map, simulation.stream(RngStream.MEDKIT), radius, radius);
+        for (int i = 0; i < points.size(); i++) {
+            Position at = points.get(i).getComponent(Position.class);
+            scatter.reserve(at.x, at.y, config.controlPoint().radius());
+        }
+        ImmutableArray<Entity> lying = simulation
+                .engine()
+                .getEntitiesFor(Family.all(Pickup.class, Position.class).get());
+        for (int i = 0; i < lying.size(); i++) {
+            Position at = lying.get(i).getComponent(Position.class);
+            scatter.reserve(
+                    at.x,
+                    at.y,
+                    config.pickup(lying.get(i).getComponent(Pickup.class).kind).radius());
+        }
+        for (int i = 0; i < count; i++) {
+            // Evenly along the points, the middle of each share: three medkits on nine points go by the
+            // second, the fifth and the eighth.
+            Position at =
+                    points.get(((2 * i + 1) * points.size()) / (2 * count)).getComponent(Position.class);
+            scatter.scatter(
+                    TileRect.around(map, at.x, at.y, reach),
+                    1,
+                    radius,
+                    (x, y) -> simulation.spawnPickup(PickupKind.MEDKIT, x, y));
+        }
     }
 
     /**

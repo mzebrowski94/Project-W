@@ -1,17 +1,19 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_ATTACK_COOLDOWN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.TURRET_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.WEAPON_DAMAGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.clawingForwardOnly;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.killed;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,7 @@ import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -33,7 +36,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 class CombatTest {
 
     /** Enough that the commander survives a few hits, so a cooldown is something a test can watch. */
-    private static final float SURVIVABLE_HIT = 40f;
+    private static final int SURVIVABLE_HIT = 40;
 
     /** Where the enemy stands. The commander is put far to its right, so it walks that way. */
     private static final float ENEMY_X = 50f;
@@ -75,7 +78,7 @@ class CombatTest {
 
         simulation.step();
 
-        assertThat(behind.getComponent(Health.class).current).isEqualTo(AlphaWorlds.TROOPER_HEALTH);
+        assertThat(unhurt(behind)).isTrue();
     }
 
     @Test
@@ -88,7 +91,7 @@ class CombatTest {
 
         simulation.step();
 
-        assertThat(ahead.getComponent(Health.class).current).isLessThan(AlphaWorlds.TROOPER_HEALTH);
+        assertThat(killed(ahead)).isTrue();
     }
 
     /** Standing perfectly still, it can turn on the spot, so a blind spot is not a place to live. */
@@ -101,7 +104,7 @@ class CombatTest {
         enemy.getComponent(Perception.class).aggro = false;
         steps(simulation, 1);
 
-        assertThat(behind.getComponent(Health.class).current).isLessThan(AlphaWorlds.TROOPER_HEALTH);
+        assertThat(killed(behind)).isTrue();
     }
 
     @Test
@@ -145,7 +148,7 @@ class CombatTest {
         simulation.step();
 
         assertThat(count(simulation, Projectile.class)).isEqualTo(1);
-        assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH);
+        assertThat(unhurt(commander)).isTrue();
     }
 
     @Test
@@ -156,7 +159,7 @@ class CombatTest {
 
         simulation.step();
 
-        assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH - WEAPON_DAMAGE);
+        assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
     }
 
     /**
@@ -171,7 +174,6 @@ class CombatTest {
 
         simulation.step();
 
-        assertThat(commander.getComponent(Health.class).current).isLessThanOrEqualTo(0f);
         assertThat(commander.getComponent(Dying.class).begun).isTrue();
     }
 
@@ -192,41 +194,44 @@ class CombatTest {
     @Test
     void makesAnEnemyWaitOutItsCooldownBetweenStrikes() {
         Simulation simulation = survivableWorld();
-        Entity commander = simulation.spawnCommander(50f, 50f);
+        Entity gun = simulation.spawnTurret(50f, 50f);
         simulation.spawnEnemy(50f, 50f);
 
         for (int i = 0; i < ticksIn(ENEMY_ATTACK_COOLDOWN) - 2; i++) {
             simulation.step();
         }
 
-        assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH - SURVIVABLE_HIT);
+        assertThat(gun.getComponent(Health.class).current).isEqualTo(TURRET_HEALTH - SURVIVABLE_HIT);
     }
 
     @Test
     void letsAnEnemyStrikeAgainOnceItsCooldownHasPassed() {
         Simulation simulation = survivableWorld();
-        Entity commander = simulation.spawnCommander(50f, 50f);
+        Entity gun = simulation.spawnTurret(50f, 50f);
         simulation.spawnEnemy(50f, 50f);
 
         for (int i = 0; i < ticksIn(ENEMY_ATTACK_COOLDOWN) + 4; i++) {
             simulation.step();
         }
 
-        assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH - SURVIVABLE_HIT * 2f);
+        assertThat(gun.getComponent(Health.class).current).isEqualTo(TURRET_HEALTH - SURVIVABLE_HIT * 2);
     }
 
-    /** A crowd must not delete a unit in a single tick, which is what the victim's recovery window is for. */
+    /**
+     * A crowd must not delete a thing in a single tick: one staggering blow a tick. A man no longer
+     * shows it - claws kill him (G0053) - so a gun on a mount, which has health, stands in.
+     */
     @Test
     void letsOnlyOneOfACrowdLandAHitAtATime() {
         Simulation simulation = survivableWorld();
-        Entity commander = simulation.spawnCommander(50f, 50f);
+        Entity gun = simulation.spawnTurret(50f, 50f);
         simulation.spawnEnemy(50f, 50f);
         simulation.spawnEnemy(50.1f, 50f);
         simulation.spawnEnemy(49.9f, 50f);
 
         simulation.step();
 
-        assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH - SURVIVABLE_HIT);
+        assertThat(gun.getComponent(Health.class).current).isEqualTo(TURRET_HEALTH - SURVIVABLE_HIT);
     }
 
     /** Fires a projectile into whatever is at (50, 50) and lets it land. */

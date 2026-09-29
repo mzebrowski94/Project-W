@@ -28,6 +28,19 @@ public final class PlayerReadout {
     /** How much of his bleed-out is left while he is a casualty, in {@code [0, 1]}. */
     public float bleedOut;
 
+    /**
+     * The wounds he carries on his feet, and how many he can (G0053). Zero wounds while he is down:
+     * his bleed-out says more.
+     */
+    public int wounds;
+
+    public int maxWounds;
+
+    /** Whether a shield is in front of him, and whether something has stunned him (G0053). */
+    public boolean shielded;
+
+    public boolean stunned;
+
     /** Seconds until he is back, while he is respawning. */
     public float respawnSeconds;
 
@@ -68,6 +81,10 @@ public final class PlayerReadout {
         heat = 0f;
         overheated = false;
         bleedOut = 0f;
+        wounds = 0;
+        maxWounds = 0;
+        shielded = false;
+        stunned = false;
         respawnSeconds = 0f;
         variant = 0;
         action = ActionKind.NONE;
@@ -85,6 +102,10 @@ public final class PlayerReadout {
         heat = other.heat;
         overheated = other.overheated;
         bleedOut = other.bleedOut;
+        wounds = other.wounds;
+        maxWounds = other.maxWounds;
+        shielded = other.shielded;
+        stunned = other.stunned;
         respawnSeconds = other.respawnSeconds;
         variant = other.variant;
         action = other.action;

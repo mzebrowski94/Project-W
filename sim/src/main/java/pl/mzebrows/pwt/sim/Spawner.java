@@ -16,7 +16,6 @@ import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
 import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
@@ -60,6 +59,7 @@ import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
 import pl.mzebrows.pwt.sim.component.Shake;
+import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.SlicksOnDeath;
 import pl.mzebrows.pwt.sim.component.Slowed;
@@ -76,11 +76,13 @@ import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.component.Weave;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
@@ -165,8 +167,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Speed.class).set(commander.speed()));
         entity.add(engine.createComponent(Collider.class).set(true, true));
         entity.add(engine.createComponent(Intent.class));
-        entity.add(engine.createComponent(Health.class).set(commander.health()));
+        // No health: a man is hurt in wounds (G0053), and anything may raise a shield in front of them.
         entity.add(engine.createComponent(Damage.class));
+        entity.add(engine.createComponent(Shield.class));
         entity.add(engine.createComponent(Invulnerable.class));
         entity.add(engine.createComponent(Stunned.class));
         entity.add(engine.createComponent(Dying.class).set(ticks(commander.deathThroesSeconds())));
@@ -175,7 +178,7 @@ public final class Spawner {
                         commander.respawnDelaySeconds(),
                         commander.respawnMargin(),
                         map.worldHeight() * 0.5f,
-                        commander.respawnInvulnerableSeconds()));
+                        commander.respawnShieldSeconds()));
         entity.add(engine.createComponent(Weapon.class)
                 .set(STARTING_WEAPON, config.weapon(STARTING_WEAPON), config.tickSeconds()));
         entity.add(engine.createComponent(Melee.class)
@@ -202,11 +205,15 @@ public final class Spawner {
                         grenade.blastRadius()));
         entity.add(engine.createComponent(Taking.class));
         // He can be shot off his feet like his men (G0023); his bleed-out is his own, read only here.
-        entity.add(engine.createComponent(Casualty.class)
+        entity.add(engine.createComponent(Vitality.class)
                 .set(
                         commander.bleedOutSeconds(),
                         config.casualty().stabiliseSeconds(),
-                        config.casualty().hauledStabiliseFactor()));
+                        config.casualty().hauledStabiliseFactor(),
+                        commander.maxWounds(),
+                        ticks(config.wound().graceSeconds()),
+                        config.wound().speedFactor(),
+                        config.wound().cooldownFactor()));
         entity.add(engine.createComponent(Action.class).set(config.action().reach()));
         entity.add(engine.createComponent(Drag.class)
                 .set(
@@ -221,7 +228,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Slowed.class));
         // What a body is made of does not depend on its side.
         entity.add(engine.createComponent(Bloat.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class));
+        entity.add(engine.createComponent(BlastsOnDeath.class)
+                .harming(config.blast().harm()));
         entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER, slot));
         entity.add(engine.createComponent(Facing.class).face(1f, 0f));
         admit(entity);
@@ -255,18 +263,23 @@ public final class Spawner {
         entity.add(engine.createComponent(Slowed.class));
         // Carried by everything that can be killed; inert until a beam fills it (zero means off, G0018).
         entity.add(engine.createComponent(Bloat.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class));
+        entity.add(engine.createComponent(BlastsOnDeath.class)
+                .harming(config.blast().harm()));
         entity.add(engine.createComponent(Collider.class).set(true, true));
-        entity.add(engine.createComponent(Health.class).set(trooper.health()));
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(Invulnerable.class));
         entity.add(engine.createComponent(Stunned.class));
         entity.add(engine.createComponent(Dying.class).set(ticks(trooper.deathThroesSeconds())));
-        entity.add(engine.createComponent(Casualty.class)
+        entity.add(engine.createComponent(Vitality.class)
                 .set(
                         config.casualty().bleedOutSeconds(),
                         config.casualty().stabiliseSeconds(),
-                        config.casualty().hauledStabiliseFactor()));
+                        config.casualty().hauledStabiliseFactor(),
+                        trooper.maxWounds(),
+                        ticks(config.wound().graceSeconds()),
+                        config.wound().speedFactor(),
+                        config.wound().cooldownFactor()));
+        entity.add(engine.createComponent(Shield.class));
         entity.add(engine.createComponent(Dragged.class));
         // The pack's spread (G0033), seeded from where he was put down so nothing is drawn.
         entity.add(engine.createComponent(Approach.class)
@@ -339,7 +352,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Slowed.class));
         // Carried by everything that can be killed; inert until a beam fills it (zero means off, G0018).
         entity.add(engine.createComponent(Bloat.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class));
+        entity.add(engine.createComponent(BlastsOnDeath.class)
+                .harming(config.blast().harm()));
         entity.add(engine.createComponent(Collider.class).set(true, true));
         entity.add(engine.createComponent(Health.class));
         entity.add(engine.createComponent(Damage.class));
@@ -387,7 +401,7 @@ public final class Spawner {
         entity.getComponent(Strain.class).set(kind);
         entity.getComponent(Body.class).set(def.radius());
         entity.getComponent(Speed.class).set(def.speed());
-        entity.getComponent(Health.class).set(def.health());
+        entity.getComponent(Health.class).set(config.healthOf(kind));
         entity.getComponent(Dying.class).set(ticks(def.deathThroesSeconds()));
         entity.getComponent(ContactDamage.class)
                 .set(def.contactDamage(), ticks(def.attackCooldownSeconds()), ticks(def.victimInvulnerableSeconds()))
@@ -453,7 +467,9 @@ public final class Spawner {
                 .set(
                         def.grip().enabled(),
                         def.grip().carrySpeed(),
-                        ticks(def.grip().holdSeconds()));
+                        ticks(def.grip().holdSeconds()),
+                        def.grip().escapeKnockbackSpeed(),
+                        ticks(config.wound().shoveSeconds()));
         entity.getComponent(Armour.class)
                 .set(def.armour().enabled(), def.armour().arcCosine());
         entity.getComponent(Barrage.class)
@@ -599,7 +615,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(true, false));
         entity.add(engine.createComponent(Health.class).set(barrel.health()));
         entity.add(engine.createComponent(Damage.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class).set(barrel.blastRadius(), barrel.bittenBlastRadius()));
+        entity.add(engine.createComponent(BlastsOnDeath.class)
+                .set(barrel.blastRadius(), barrel.bittenBlastRadius())
+                .harming(config.blast().harm()));
         // A velocity only because it can be hauled; nothing drives it.
         entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Appearance.class).set(def.look()));
@@ -631,7 +649,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(true, false).avoided(false));
         entity.add(engine.createComponent(Health.class).set(mine.health()));
         entity.add(engine.createComponent(Damage.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class).set(mine.blastRadius(), mine.blastRadius()));
+        entity.add(engine.createComponent(BlastsOnDeath.class)
+                .set(mine.blastRadius(), mine.blastRadius())
+                .harming(config.blast().harm()));
         // Hauled exactly as a barrel is (G0021).
         entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.MINE));
@@ -666,12 +686,12 @@ public final class Spawner {
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(nest.radius()));
         entity.add(engine.createComponent(Collider.class).set(true, false));
-        entity.add(engine.createComponent(Health.class).set(nest.health()));
+        entity.add(engine.createComponent(Health.class).set(config.nestHealth()));
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.NEST));
         admit(entity);
         // So the system that runs it can tell it is being hit from the bar alone.
-        entity.getComponent(Nest.class).watchedHealth = nest.health();
+        entity.getComponent(Nest.class).watchedHealth = config.nestHealth();
         return entity;
     }
 
@@ -713,7 +733,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(true, false));
         entity.add(engine.createComponent(Health.class).set(turret.health()));
         entity.add(engine.createComponent(Damage.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class).set(turret.blastRadius(), turret.blastRadius()));
+        entity.add(engine.createComponent(BlastsOnDeath.class)
+                .set(turret.blastRadius(), turret.blastRadius())
+                .harming(config.blast().harm()));
         entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Weapon.class)
                 .set(turret.weapon(), config.weapon(turret.weapon()), config.tickSeconds()));
@@ -793,7 +815,7 @@ public final class Spawner {
      * counts for, or {@link Tally#NOBODY}.
      */
     public Entity spawnProjectile(
-            float x, float y, float directionX, float directionY, Weapon weapon, float damage, Side side, int credit) {
+            float x, float y, float directionX, float directionY, Weapon weapon, int damage, Side side, int credit) {
         return projectile(
                 x,
                 y,
@@ -811,6 +833,7 @@ public final class Spawner {
                 weapon.slowTicks,
                 weapon.bloatPerShot,
                 weapon.trailLength,
+                weapon.stunTicks,
                 side,
                 credit);
     }
@@ -838,6 +861,7 @@ public final class Spawner {
                 ticks(gun.slowSeconds()),
                 gun.bloatPerShot(),
                 gun.trailLength(),
+                ticks(gun.stunSeconds()),
                 side,
                 Tally.NOBODY);
     }
@@ -850,7 +874,7 @@ public final class Spawner {
             float speed,
             float radius,
             float range,
-            float damage,
+            int damage,
             Look look,
             float blastRadius,
             SlickDef slicks,
@@ -859,6 +883,7 @@ public final class Spawner {
             int slowTicks,
             float bloatPerShot,
             float trailLength,
+            int stunTicks,
             Side side,
             int credit) {
         Entity entity = engine.createEntity();
@@ -879,14 +904,17 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(false, true).swept(true));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(damage, pierceIntervalTicks, 0)
-                .wounding()
+                // Gunfire wounds a man (G0053).
+                .harming(Harm.WOUND)
                 .slowing(slowFactor, slowTicks)
                 .pumping(bloatPerShot)
+                .stunning(stunTicks)
                 .credited(credit));
         if (blastRadius > 0f) {
             // A shot that goes off where it stops, by dying (G0018) - on a hit or at the arena edge.
             entity.add(engine.createComponent(BlastsOnDeath.class)
                     .set(blastRadius, blastRadius)
+                    .harming(config.blast().harm())
                     .credited(credit));
         }
         if (slicks.leavesAnything()) {
@@ -902,8 +930,8 @@ public final class Spawner {
      * Spawns one circle of ruined ground: an ordinary body carrying an ordinary blow.
      *
      * <p>Non-solid and immovable, like a pickup. <strong>On the side of whatever fired the
-     * shot</strong>, so the collision rule keeps it off its own side. Its blow wounds, and grants a
-     * window so the next circle of the same spatter cannot finish the casualty.
+     * shot</strong>, so the collision rule keeps it off its own side. Its blow wounds a man and throws
+     * him off it; his grace is what keeps the next circle of the same spatter off him (G0053).
      */
     public Entity spawnSlick(
             float x,
@@ -912,9 +940,10 @@ public final class Spawner {
             float seconds,
             float growFraction,
             float fadeFraction,
-            float damage,
+            int damage,
             float victimInvulnerableSeconds,
             Look look,
+            float knockbackSpeed,
             Side side) {
         Entity entity = engine.createEntity();
         Slick slick = engine.createComponent(Slick.class).set(ticks(seconds), radius, growFraction, fadeFraction);
@@ -931,7 +960,9 @@ public final class Spawner {
                 .stopsShots(false));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(damage, 0, ticks(victimInvulnerableSeconds))
-                .wounding());
+                // Ruined ground wounds a man and throws him off itself (G0053).
+                .harming(Harm.WOUND)
+                .shoving(knockbackSpeed, ticks(config.wound().shoveSeconds()), config.tickSeconds()));
         entity.add(engine.createComponent(Appearance.class).set(look));
         admit(entity);
         return entity;
@@ -1042,6 +1073,8 @@ public final class Spawner {
         // Nothing bites a grenade out of the air, so both ways of ending it are the same circle.
         entity.add(engine.createComponent(BlastsOnDeath.class)
                 .set(blastRadius, blastRadius)
+                // A grenade's blast wounds a man where every other puts him down (G0018, G0053).
+                .harming(config.grenade().blastHarm())
                 .credited(credit));
         entity.add(engine.createComponent(Appearance.class).set(Look.GRENADE));
         admit(entity);
@@ -1055,19 +1088,20 @@ public final class Spawner {
      * test. The body is the drawn circle, and the same number as the lethal one.
      */
     public Entity spawnBlast(float x, float y, float radius) {
-        return spawnBlast(x, y, radius, true, Look.BLAST, Tally.NOBODY);
+        return spawnBlast(
+                x, y, radius, true, Look.BLAST, Tally.NOBODY, config.blast().harm());
     }
 
     /**
      * The same, saying whether it leaves the ground burning and what it is drawn as. Everything that
      * explodes leaves fire and is drawn as an explosion, but one. {@code credit} is the slot what it
-     * kills counts for, or {@link Tally#NOBODY}.
+     * kills counts for, or {@link Tally#NOBODY}; {@code harm} is what it does to a man (G0053).
      */
-    public Entity spawnBlast(float x, float y, float radius, boolean leavesFire, Look look, int credit) {
+    public Entity spawnBlast(float x, float y, float radius, boolean leavesFire, Look look, int credit, Harm harm) {
         SimConfig.BlastConfig blast = config.blast();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Blast.class)
-                .set(blast.damage(), ticks(blast.durationSeconds()))
+                .set(blast.damage(), harm, ticks(blast.durationSeconds()))
                 .credited(credit));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
@@ -1087,10 +1121,9 @@ public final class Spawner {
     /**
      * Spawns the pending-respawn ticket for a unit that just died: a countdown and nothing else.
      */
-    public Entity spawnRespawn(float delaySeconds, float x, float y, float invulnerableSeconds, int slot) {
+    public Entity spawnRespawn(float delaySeconds, float x, float y, float shieldSeconds, int slot) {
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Respawning.class)
-                .set(ticks(delaySeconds), x, y, ticks(invulnerableSeconds), slot));
+        entity.add(engine.createComponent(Respawning.class).set(ticks(delaySeconds), x, y, ticks(shieldSeconds), slot));
         admit(entity);
         return entity;
     }

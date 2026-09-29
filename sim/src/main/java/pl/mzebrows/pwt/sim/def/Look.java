@@ -103,6 +103,8 @@ public enum Look {
     FLOWER,
     /** A crate of men, waiting for somebody on the player's side to reach it. */
     SUPPLY_DROP,
+    /** A medkit, waiting for a wounded man (G0053). */
+    MEDKIT,
     /**
      * A weapons cache, one look per gun inside it.
      *

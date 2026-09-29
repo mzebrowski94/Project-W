@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * Damage owed to an entity this tick, waiting to be applied.
@@ -17,7 +18,8 @@ import com.badlogic.gdx.utils.Pool;
  */
 public final class Damage implements Component, Pool.Poolable {
 
-    public float amount;
+    /** Whole hit points owed (G0054). */
+    public int amount;
 
     /** The longest recovery window any of this tick's hits asked for. Applied once the damage is. */
     public int recoveryTicks;
@@ -57,12 +59,28 @@ public final class Damage implements Component, Pool.Poolable {
     public boolean hasSource;
 
     /**
-     * Whether any of this tick's hits was the kind that kills outright rather than leaving a
-     * casualty.
+     * The worst harm any of this tick's hits declared, for a man (G0053).
      *
-     * <p>Fatal wins when hits combine. A property of the <em>source</em>, not of the amount.
+     * <p>The worst wins when hits combine. A property of the <em>source</em>, not of the amount, and
+     * meaningless while {@link #amount} is zero.
      */
-    public boolean fatal;
+    public Harm harm = Harm.WOUND;
+
+    /** How long the shove owed throws him for, where a blow shoved without locking; zero otherwise. */
+    public int shoveTicks;
+
+    /** How fast that shove bleeds off, in world units per second per second. */
+    public float shoveDecay;
+
+    /** The longest stun any of this tick's hits declared, in ticks; zero for none (G0053). */
+    public int stunTicks;
+
+    /** Records a stun, keeping the longest asked for this tick. */
+    public void stun(int ticks) {
+        if (ticks > stunTicks) {
+            stunTicks = ticks;
+        }
+    }
 
     /**
      * The worst slow any of this tick's hits asked for, and how long it wanted to last.
@@ -116,25 +134,38 @@ public final class Damage implements Component, Pool.Poolable {
     }
 
     /**
-     * Adds a blow that kills outright, and to how long the victim recovers afterwards.
+     * Adds a blow that kills a man outright, and to how long the victim recovers afterwards.
      *
-     * <p>A source that leaves a casualty says so with the longer call.
+     * <p>A source that does anything less to a man says so with the longer call.
      */
-    public void add(float extra, int recovery) {
-        add(extra, recovery, true);
+    public void add(int extra, int recovery) {
+        add(extra, recovery, Harm.KILL);
     }
 
     /**
-     * Adds to what is already owed, saying whether this blow kills outright or leaves a casualty.
+     * Adds to what is already owed, saying what this blow does to a man.
      *
-     * <p>{@code kills} is a property of the weapon rather than of the damage.
+     * <p>{@code blowHarm} is a property of the source rather than of the damage (G0020, G0053).
      */
-    public void add(float extra, int recovery, boolean kills) {
+    public void add(int extra, int recovery, Harm blowHarm) {
         amount += extra;
         if (recovery > recoveryTicks) {
             recoveryTicks = recovery;
         }
-        fatal |= kills;
+        harm = Harm.worse(harm, blowHarm);
+    }
+
+    /**
+     * Records a shove that throws without locking, keeping the hardest asked for this tick. Applied only
+     * if the target is left on his feet.
+     */
+    public void shove(float directionX, float directionY, float speed, int ticks, float decay) {
+        if (speed <= knockbackSpeed) {
+            return;
+        }
+        push(directionX, directionY, speed);
+        shoveTicks = ticks;
+        shoveDecay = decay;
     }
 
     /** Records a shove, keeping the hardest asked for this tick. Applied only if the target lives. */
@@ -184,7 +215,7 @@ public final class Damage implements Component, Pool.Poolable {
 
     @Override
     public void reset() {
-        amount = 0f;
+        amount = 0;
         recoveryTicks = 0;
         knockbackX = 0f;
         knockbackY = 0f;
@@ -196,7 +227,10 @@ public final class Damage implements Component, Pool.Poolable {
         sourceX = 0f;
         sourceY = 0f;
         hasSource = false;
-        fatal = false;
+        harm = Harm.WOUND;
+        shoveTicks = 0;
+        shoveDecay = 0f;
+        stunTicks = 0;
         slowFactor = 1f;
         slowTicks = 0;
         bloat = 0f;

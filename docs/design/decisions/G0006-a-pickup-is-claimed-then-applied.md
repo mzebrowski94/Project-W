@@ -45,3 +45,12 @@ mid-tick would take its own grant with it.
 **Revisit when** something must be picked up that is not an entity in the world - an objective
 completed by standing somewhere, a timer that pays out. That is a different mechanic wearing this
 one's clothes, and forcing it through a claim would be the tell.
+
+## Amended 2026-09-29 by G0053
+
+**A pickup worth nothing to this taker is not claimed.** The first pickup whose worth depends on the
+taker's state rather than his side is the medkit, which is worth something only to a man with a
+wound. That is decided where the claim is made - the same place the barrel's bite is already decided
+(G0022) - by asking what the grant would do to *this* taker, through one helper beside the side check.
+Still no flag on the pickup: the grant and the taker's state say it, once. Lands in H4
+(`docs/design/health-scope.md`).

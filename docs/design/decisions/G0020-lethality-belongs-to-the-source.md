@@ -57,3 +57,17 @@ down - and what it leaves behind is a fact about the victim, not about the blast
 **Revisit when** somebody can pick the commander up: that changes the "no" above from a design
 decision into an obsolete restriction. Also revisit if it turns out that troopers spend the whole
 game on the ground, which would mean the bleed-out is doing the work a difficulty setting should.
+
+## Amended 2026-09-29 by G0053
+
+**Three harms instead of a flag, and the rule that costs nothing, narrowed.** A blow now declares
+`WOUND`, `DOWN` or `KILL` for a man instead of `fatal`, and a man has wounds instead of health - so
+"what happens at zero health" becomes "what each harm does", still declared by the source and still
+read in one place. Gunfire wounds rather than puts down; blasts put down, except a grenade's; claws,
+a sweep and a leap still kill.
+
+A man who is down is no longer finished by *anything* that reaches him: a `WOUND` does nothing to him,
+and a `DOWN` or a `KILL` finishes him. The property this record asked to preserve survives in the
+half that matters - a barrel going off beside him, or claws, still end it - and a stray pellet no
+longer does. `CasualtyTest.finishesACasualtyWithTheNextHitThatReachesHimWhateverItIs` is replaced in
+H1 (`docs/design/health-scope.md`).

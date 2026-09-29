@@ -61,3 +61,13 @@ or the tell has stopped being honest.
 **Revisit when** something wants an explosion that is not fatal - a concussion, a door charge, a
 weapon meant to wound - because that is the first thing this shape genuinely cannot express, and the
 answer then is a second kind of blast rather than a curve added to this one.
+
+## Amended 2026-09-29 by G0053
+
+**The revisit this record asked for.** A grenade is now meant to wound a man rather than put him down,
+and the answer is the one given above: a second *kind* of blast, not a curve. Each blast kind declares
+the harm it does to a man - a grenade's `WOUND`, a barrel's, a mine's and a charged corpse's `DOWN`.
+Inside the circle there is still one meaning for a man and outside it none; everything with health is
+still caught by the same decisive amount, so a grenade kills every alien it catches exactly as before.
+It is still not a free button: it costs its thrower a wound, and a second one puts him down. Lands in
+H1 (`docs/design/health-scope.md`).

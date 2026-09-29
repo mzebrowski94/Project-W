@@ -1,10 +1,10 @@
 package pl.mzebrows.pwt.sim.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SQUAD_SIZE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TILE;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -135,7 +135,7 @@ class SquadTest {
         Simulation simulation = deployed(config());
         Entity lost = all(simulation, Trooper.class).get(0);
 
-        lost.getComponent(Damage.class).add(TROOPER_HEALTH * 2f, 0);
+        lost.getComponent(Damage.class).add(A_BLOW, 0);
         steps(simulation, ticksIn(DEATH_THROES) + 30);
 
         assertThat(count(simulation, Trooper.class)).isEqualTo(SQUAD_SIZE - 1);

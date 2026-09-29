@@ -14,6 +14,7 @@ import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.GroundDef;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
@@ -25,6 +26,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.def.Whole;
 import pl.mzebrows.pwt.sim.upgrade.DraftDef;
 import pl.mzebrows.pwt.sim.upgrade.Stat;
 import pl.mzebrows.pwt.sim.upgrade.StatDef;
@@ -64,6 +66,7 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * @param rabbit the neutral creature that wanders the field and is eaten
  * @param barrel the explosive one, which is neither eaten nor picked up
  * @param mine the explosive one that the other side sets off by walking into it
+ * @param wound what a wound costs a man on his feet, and how long it protects him (G0053)
  * @param nest the holes in the ground that keep sending more out
  * @param controlPoint what it takes to hold a point, and how far taking one carries
  * @param turret the gun on a mount that a man gets on
@@ -72,6 +75,9 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * @param draft how drafts are earned and dealt (G0049)
  * @param stats how far each number an upgrade may move can be moved
  * @param upgrades every upgrade and adaptation, by kind (ADR 0017)
+ * @param swarm what every strain and nest is scaled by, read through {@link #healthOf} and
+ *     {@link #nestHealth} and nowhere else
+ * @param medkit how many medkits a level that asks for them scatters (G0053)
  */
 @With
 public record SimConfig(
@@ -96,6 +102,7 @@ public record SimConfig(
         BarrelConfig barrel,
         MineConfig mine,
         CasualtyConfig casualty,
+        WoundConfig wound,
         ActionConfig action,
         NestConfig nest,
         ControlPointConfig controlPoint,
@@ -104,7 +111,9 @@ public record SimConfig(
         CollisionConfig collision,
         @ConfigKey("upgrade.draft") DraftDef draft,
         @ConfigKey("upgrade.stat") Defs<Stat, StatDef> stats,
-        @ConfigKey("upgrade") Defs<UpgradeKind, UpgradeDef> upgrades) {
+        @ConfigKey("upgrade") Defs<UpgradeKind, UpgradeDef> upgrades,
+        SwarmConfig swarm,
+        MedkitConfig medkit) {
 
     /** The prefix every key in {@code assets/sim/*.properties} starts with. */
     private static final String ROOT = "sim";
@@ -125,6 +134,20 @@ public record SimConfig(
     /** The definition of one strain, for a system or a scenario that needs its numbers. */
     public UnitDef unit(UnitKind kind) {
         return units.of(kind);
+    }
+
+    /**
+     * How much health one strain arrives with: its own, scaled by the swarm's factor. <strong>The one
+     * place a strain's health is read</strong> (health-scope H3), so a unit spawned, a unit evolved and
+     * a check on the shipped numbers all see the same number.
+     */
+    public int healthOf(UnitKind kind) {
+        return Whole.percentOf(units.of(kind).health(), swarm.healthPercent());
+    }
+
+    /** How much health a nest arrives with: its own, scaled by the swarm's factor, as a strain's is. */
+    public int nestHealth() {
+        return Whole.percentOf(nest.health(), swarm.healthPercent());
     }
 
     /** The definition of one kind of pickup. */
@@ -286,7 +309,7 @@ public record SimConfig(
     @With
     public record NestConfig(
             float radius,
-            float health,
+            int health,
             float periodSeconds,
             int broodMin,
             int broodMax,
@@ -395,14 +418,15 @@ public record SimConfig(
      *
      * @param radius its circular body, in world units
      * @param speed how fast it moves, in world units per second
-     * @param health damage it absorbs before dying
+     * @param maxWounds how many wounds he carries on his feet; one more puts him down (G0053)
      * @param bleedOutSeconds how long he lies shot off his feet before he is gone. His own, not the
      *     squad's {@link CasualtyConfig#bleedOutSeconds}
      * @param deathThroesSeconds how long its body stays on the field after a killing blow, before the
      *     respawn countdown starts
      * @param respawnDelaySeconds how long after the body is removed before it comes back
      * @param respawnMargin how far in from the left edge of the arena it comes back, in world units
-     * @param respawnInvulnerableSeconds protection on arrival, so it does not die again immediately
+     * @param respawnShieldSeconds how long the shield he comes back behind lasts, so he does not die again
+     *     immediately; it also breaks at the first hit (G0053)
      * @param leashRadius how far a commander may walk from the middle of the commanders, in world
      *     units (pillar 4). Never read from the camera - zoom must not become extra rope. Zero is no
      *     leash
@@ -411,22 +435,22 @@ public record SimConfig(
     public record CommanderConfig(
             float radius,
             float speed,
-            float health,
+            int maxWounds,
             float bleedOutSeconds,
             float deathThroesSeconds,
             float respawnDelaySeconds,
             float respawnMargin,
-            float respawnInvulnerableSeconds,
+            float respawnShieldSeconds,
             float leashRadius) {
         public CommanderConfig {
             Require.positive("commander radius", radius);
             Require.positive("commander speed", speed);
-            Require.positive("commander health", health);
+            Require.notNegative("commander maxWounds", maxWounds);
             Require.positive("commander bleedOutSeconds", bleedOutSeconds);
             Require.notNegative("commander deathThroesSeconds", deathThroesSeconds);
             Require.notNegative("commander respawnDelaySeconds", respawnDelaySeconds);
             Require.notNegative("commander respawnMargin", respawnMargin);
-            Require.notNegative("commander respawnInvulnerableSeconds", respawnInvulnerableSeconds);
+            Require.notNegative("commander respawnShieldSeconds", respawnShieldSeconds);
             Require.notNegative("commander leashRadius", leashRadius);
         }
     }
@@ -442,7 +466,7 @@ public record SimConfig(
      * @param squadGrowth how many men beyond those the field will hold: the squad's maximum is
      *     {@code squadSize + squadGrowth}. Headroom, so raising {@code squadSize} cannot undercut it
      * @param reinforcementRadius how far from the commander a rescued trooper is put down, in world units
-     * @param health damage one absorbs before dying
+     * @param maxWounds how many wounds one carries on his feet; one more puts him down (G0053)
      * @param deathThroesSeconds how long its body stays on the field after a killing blow
      * @param weapon the gun it carries
      * @param avoidance how far ahead it looks for things in its way, and how hard it leans off them
@@ -478,6 +502,8 @@ public record SimConfig(
      * @param threatBonus how much nearer, in world units, something coming for somebody counts as
      * @param sharedTargetPenalty how much further, in world units, something counts as for every man
      *     already shooting at it this tick. Zero is every man for the nearest
+     * @param medkitReach how far a wounded man with nothing to fight will walk for a medkit (G0053), in
+     *     world units. Zero never
      */
     @With
     public record TrooperConfig(
@@ -486,7 +512,7 @@ public record SimConfig(
             int squadSize,
             int squadGrowth,
             float reinforcementRadius,
-            float health,
+            int maxWounds,
             float deathThroesSeconds,
             WeaponKind weapon,
             AvoidanceDef avoidance,
@@ -511,14 +537,15 @@ public record SimConfig(
             float detourSeconds,
             float alertSeconds,
             float threatBonus,
-            float sharedTargetPenalty) {
+            float sharedTargetPenalty,
+            float medkitReach) {
         public TrooperConfig {
             Require.positive("trooper radius", radius);
             Require.positive("trooper speed", speed);
             Require.notNegative("trooper squadSize", squadSize);
             Require.notNegative("trooper squadGrowth", squadGrowth);
             Require.positive("trooper reinforcementRadius", reinforcementRadius);
-            Require.positive("trooper health", health);
+            Require.notNegative("trooper maxWounds", maxWounds);
             Require.notNegative("trooper deathThroesSeconds", deathThroesSeconds);
             Require.notNegative("trooper scanSpread", scanSpread);
             Require.positive("trooper scanMinSeconds", scanMinSeconds);
@@ -604,7 +631,7 @@ public record SimConfig(
             float activeSeconds,
             float reach,
             float radius,
-            float damage,
+            int damage,
             float arcDegrees,
             float lockSeconds,
             boolean locksCommittedOnly,
@@ -659,9 +686,12 @@ public record SimConfig(
      * @param shakeStrength how hard the ground moves at the middle of one, in world units - how violent
      *     the event was, not what a camera does. Zero for none
      * @param shakeRadiusFactor how far that is felt, as a multiple of the blast's own radius
+     * @param harm what one does to a man it catches (G0053), unless the explosive names its own - a
+     *     grenade does
      */
     @With
-    public record BlastConfig(float damage, float durationSeconds, float shakeStrength, float shakeRadiusFactor) {
+    public record BlastConfig(
+            int damage, float durationSeconds, float shakeStrength, float shakeRadiusFactor, Harm harm) {
         public BlastConfig {
             Require.positive("blast damage", damage);
             Require.positive("blast durationSeconds", durationSeconds);
@@ -733,10 +763,12 @@ public record SimConfig(
      *     one, or it is a blast that lingers (G0018)
      * @param minSeconds the shortest a circle burns for
      * @param maxSeconds the longest; drawn per circle between the two
-     * @param damage what walking into one takes off. Wounding: it leaves a casualty
-     * @param victimInvulnerableSeconds how long a man it has put down is protected from the rest of it
+     * @param damage what walking into one takes off anything with health. A man it wounds (G0053)
+     * @param victimInvulnerableSeconds how long an alien it has hurt is protected from the rest of it; a
+     *     man's protection is his own grace
      * @param growFraction how much of its life a circle spends swelling
      * @param fadeFraction how much of it it spends collapsing again
+     * @param knockbackSpeed how hard a man it wounds is thrown off it, in world units per second
      */
     @With
     public record FireConfig(
@@ -745,10 +777,11 @@ public record SimConfig(
             float spreadFactor,
             float minSeconds,
             float maxSeconds,
-            float damage,
+            int damage,
             float victimInvulnerableSeconds,
             float growFraction,
-            float fadeFraction) {
+            float fadeFraction,
+            float knockbackSpeed) {
 
         public FireConfig {
             Require.notNegative("fire blobs", blobs);
@@ -759,6 +792,7 @@ public record SimConfig(
             Require.notNegative("fire victimInvulnerableSeconds", victimInvulnerableSeconds);
             Require.notNegative("fire growFraction", growFraction);
             Require.notNegative("fire fadeFraction", fadeFraction);
+            Require.notNegative("fire knockbackSpeed", knockbackSpeed);
             if (maxSeconds < minSeconds) {
                 throw new IllegalArgumentException("fire cannot burn for less than its own minimum");
             }
@@ -784,7 +818,8 @@ public record SimConfig(
                     victimInvulnerableSeconds,
                     growFraction,
                     fadeFraction,
-                    Look.FIRE);
+                    Look.FIRE,
+                    knockbackSpeed);
         }
     }
 
@@ -801,7 +836,7 @@ public record SimConfig(
      * @param dodge how it answers a shot
      */
     @With
-    public record RabbitConfig(float speed, float health, float deathThroesSeconds, WanderDef wander, DodgeDef dodge) {
+    public record RabbitConfig(float speed, int health, float deathThroesSeconds, WanderDef wander, DodgeDef dodge) {
         public RabbitConfig {
             Require.positive("rabbit speed", speed);
             Require.positive("rabbit health", health);
@@ -820,9 +855,12 @@ public record SimConfig(
      * @param range how far it travels in total, in world units, however it bounces
      * @param radius the grenade's own circular body
      * @param blastRadius how wide the blast it leaves is, in world units
+     * @param blastHarm what that blast does to a man (G0053): a grenade is a weapon meant to wound, the
+     *     second kind of blast G0018 asked for
      */
     @With
-    public record GrenadeConfig(float cooldownSeconds, float speed, float range, float radius, float blastRadius) {
+    public record GrenadeConfig(
+            float cooldownSeconds, float speed, float range, float radius, float blastRadius, Harm blastHarm) {
         public GrenadeConfig {
             Require.notNegative("grenade cooldownSeconds", cooldownSeconds);
             Require.positive("grenade speed", speed);
@@ -843,7 +881,7 @@ public record SimConfig(
      *     world units
      */
     @With
-    public record BarrelConfig(float health, float blastRadius, float bittenBlastRadius) {
+    public record BarrelConfig(int health, float blastRadius, float bittenBlastRadius) {
         public BarrelConfig {
             Require.positive("barrel bittenBlastRadius", bittenBlastRadius);
             Require.positive("barrel health", health);
@@ -870,7 +908,7 @@ public record SimConfig(
             float radius,
             float triggerRadius,
             float fuseSeconds,
-            float health,
+            int health,
             float blastRadius,
             float flashFromSeconds,
             float flashToSeconds) {
@@ -895,7 +933,6 @@ public record SimConfig(
      * @param bleedOutSeconds how long he lies there before he is gone
      * @param stabiliseSeconds how long somebody has to stand over him, unbroken, to put him back on his
      *     feet
-     * @param reviveHealthFraction how much of his health he gets back, in {@code (0, 1]}
      * @param reviveInvulnerableSeconds how long he is protected as he stands up
      * @param draggedBleedFactor how fast his clock runs while he is being hauled, as a multiple of
      *     normal. Zero stops it
@@ -905,7 +942,6 @@ public record SimConfig(
     public record CasualtyConfig(
             float bleedOutSeconds,
             float stabiliseSeconds,
-            float reviveHealthFraction,
             float reviveInvulnerableSeconds,
             float draggedBleedFactor,
             float hauledStabiliseFactor) {
@@ -913,13 +949,68 @@ public record SimConfig(
         public CasualtyConfig {
             Require.positive("casualty bleedOutSeconds", bleedOutSeconds);
             Require.positive("casualty stabiliseSeconds", stabiliseSeconds);
-            Require.positive("casualty reviveHealthFraction", reviveHealthFraction);
             Require.notNegative("casualty reviveInvulnerableSeconds", reviveInvulnerableSeconds);
             Require.notNegative("casualty draggedBleedFactor", draggedBleedFactor);
             Require.positive("casualty hauledStabiliseFactor", hauledStabiliseFactor);
-            if (reviveHealthFraction > 1f) {
-                throw new IllegalArgumentException(
-                        "casualty reviveHealthFraction must be at most 1, was " + reviveHealthFraction);
+        }
+    }
+
+    /**
+     * Medkits a level scatters (G0053). What one is - how big, how it looks, what it grants - is its
+     * {@code PickupDef}.
+     *
+     * @param perLevel how many a level that asks for them scatters beside its control points; a level
+     *     that does not ask gets none
+     */
+    @With
+    public record MedkitConfig(int perLevel) {
+
+        public MedkitConfig {
+            Require.notNegative("medkit perLevel", perLevel);
+        }
+    }
+
+    /**
+     * The swarm as a whole (health-scope H3).
+     *
+     * @param healthPercent what every strain's and the nest's health is scaled by, as a whole
+     *     percentage - one number, so the ratios between strains survive a retune. Not barrels, mines,
+     *     rabbits or turrets. A hundred is the numbers as written; the result is rounded by the one rule
+     *     hit points have ({@link Whole})
+     */
+    @With
+    public record SwarmConfig(int healthPercent) {
+
+        public SwarmConfig {
+            Require.atLeastOne("swarm healthPercent", healthPercent);
+        }
+    }
+
+    /**
+     * What a wound does to a man still on his feet (G0053).
+     *
+     * @param graceSeconds how long one wound protects him from the next - and from nothing heavier
+     * @param shoveSeconds how long ground that wounds him throws him off itself for; the throw bleeds off
+     *     over exactly this long
+     * @param speedFactor how much of his pace a wounded man keeps, in {@code (0, 1]}
+     * @param cooldownFactor what a wound multiplies the time between his gun's shots by, at least one
+     * @param mendSeconds how long after his last wound a man's wounds clear on their own - the base the
+     *     {@code MEND_SECONDS} stat adds to. Zero is never, which is every man until an upgrade says
+     *     otherwise
+     */
+    @With
+    public record WoundConfig(
+            float graceSeconds, float shoveSeconds, float speedFactor, float cooldownFactor, int mendSeconds) {
+
+        public WoundConfig {
+            Require.notNegative("wound graceSeconds", graceSeconds);
+            Require.notNegative("wound shoveSeconds", shoveSeconds);
+            Require.notNegative("wound mendSeconds", mendSeconds);
+            if (speedFactor <= 0f || speedFactor > 1f) {
+                throw new IllegalArgumentException("wound speedFactor must be in (0, 1], was " + speedFactor);
+            }
+            if (cooldownFactor < 1f) {
+                throw new IllegalArgumentException("wound cooldownFactor must be at least one, was " + cooldownFactor);
             }
         }
     }
@@ -961,7 +1052,7 @@ public record SimConfig(
     @With
     public record TurretConfig(
             float radius,
-            float health,
+            int health,
             float blastRadius,
             float turnRate,
             float firingTurnFactor,

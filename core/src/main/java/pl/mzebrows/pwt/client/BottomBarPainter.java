@@ -54,6 +54,8 @@ final class BottomBarPainter {
     private final PanelLayout panels;
     private final String[] labels = new String[Players.MAX];
     private final Map<WeaponKind, String> weapons = new EnumMap<>(WeaponKind.class);
+    private final String shieldText;
+    private final String stunnedText;
     private final String down;
     private final String kiaTemplate;
     private final String aboard;
@@ -93,6 +95,8 @@ final class BottomBarPainter {
             Arrays.fill(tallyText[slot], "");
         }
         this.down = strings.get("ui.hud.down");
+        this.shieldText = strings.get("ui.hud.shield");
+        this.stunnedText = strings.get("ui.hud.stunned");
         this.kiaTemplate = strings.get("ui.hud.kia");
         this.aboard = strings.get("ui.hud.aboard");
         this.overheat = strings.get("ui.hud.overheat");
@@ -183,6 +187,8 @@ final class BottomBarPainter {
             default -> {
                 if (!connected) {
                     hud.text(offline, statusX, row, text);
+                } else if (player.posture == Posture.STANDING) {
+                    standing(player, statusX, row, text, alert);
                 }
             }
         }
@@ -213,8 +219,51 @@ final class BottomBarPainter {
             case DYING -> kiaText(slot, -1f).length();
             case RESPAWNING -> kiaText(slot, player.respawnSeconds).length();
             case ABOARD -> connected ? aboard.length() : offline.length();
-            default -> connected ? 0 : offline.length();
+            default -> connected ? standingColumns(player) : offline.length();
         };
+    }
+
+    /** Row 1 while he stands: his wounds, then a shield in front of him, then a stun he is under (G0053). */
+    private void standing(PlayerReadout player, int x, int row, Color color, Color alert) {
+        wounds(player, x, row, color);
+        int after = x + player.maxWounds * UiFont.ADVANCE;
+        if (player.shielded) {
+            after += UiFont.ADVANCE;
+            hud.text(shieldText, after, row, palette.colorFor(Look.COMMANDER, player.variant));
+            after += shieldText.length() * UiFont.ADVANCE;
+        }
+        if (player.stunned) {
+            after += UiFont.ADVANCE;
+            inverse(stunnedText, after, row, alert);
+        }
+    }
+
+    /** Columns that takes. */
+    private int standingColumns(PlayerReadout player) {
+        int columns = player.maxWounds;
+        if (player.shielded) {
+            columns += 1 + shieldText.length();
+        }
+        if (player.stunned) {
+            columns += 1 + stunnedText.length();
+        }
+        return columns;
+    }
+
+    /**
+     * Row 1 while he stands: a square per wound he can carry, filled for each he is carrying (G0053) -
+     * the count is shown, never guessed (pillar 5). Nothing at all for a man who can carry none.
+     */
+    private void wounds(PlayerReadout player, int x, int row, Color color) {
+        int size = metrics.fontSize() - 2;
+        for (int wound = 0; wound < player.maxWounds; wound++) {
+            int left = x + wound * UiFont.ADVANCE;
+            if (wound < player.wounds) {
+                hud.fill(left, row - size, size, size, color);
+            } else {
+                hud.frame(left, row - size, size, size, style.textDim());
+            }
+        }
     }
 
     /** The tell, formatted only when the count, the key or the room for it changes. */

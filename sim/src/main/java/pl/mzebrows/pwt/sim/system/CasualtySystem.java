@@ -6,9 +6,10 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Runs the clock on a man who is down, and finishes him when it runs out.
@@ -34,23 +35,31 @@ import pl.mzebrows.pwt.sim.component.Dying;
  */
 public final class CasualtySystem extends IteratingSystem {
 
-    private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Dragged> DRAGGED = ComponentMapper.getFor(Dragged.class);
 
     private final Spawner spawner;
+    private final Modifiers modifiers;
     private final float draggedBleedFactor;
+    private final int mendSeconds;
 
-    public CasualtySystem(SimConfig config, Spawner spawner) {
-        super(Family.all(Casualty.class).get());
+    public CasualtySystem(SimConfig config, Spawner spawner, Modifiers modifiers) {
+        super(Family.all(Vitality.class).get());
         this.spawner = spawner;
+        this.modifiers = modifiers;
         this.draggedBleedFactor = config.casualty().draggedBleedFactor();
+        this.mendSeconds = config.wound().mendSeconds();
     }
 
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
-        Casualty casualty = CASUALTY.get(entity);
-        if (!casualty.begun || (DYING.has(entity) && DYING.get(entity).begun)) {
+        Vitality casualty = VITALITY.get(entity);
+        if (DYING.has(entity) && DYING.get(entity).begun) {
+            return;
+        }
+        if (!casualty.begun) {
+            mend(entity, casualty, deltaTime);
             return;
         }
         float rate = DRAGGED.has(entity) && DRAGGED.get(entity).held() ? draggedBleedFactor : 1f;
@@ -58,6 +67,26 @@ public final class CasualtySystem extends IteratingSystem {
         if (casualty.remainingSeconds <= 0f) {
             casualty.remainingSeconds = 0f;
             Deaths.kill(spawner, entity);
+        }
+    }
+
+    /**
+     * A standing man's wounds clear on their own once long enough has passed since the last one - the
+     * one place {@code MEND_SECONDS} is read (G0053). Zero, which is every man without the upgrade, never.
+     * A new wound starts the clock again ({@code Vitality}).
+     */
+    private void mend(Entity entity, Vitality vitality, float deltaTime) {
+        if (vitality.wounds <= 0) {
+            return;
+        }
+        int seconds = modifiers.mendSeconds(entity, mendSeconds);
+        if (seconds <= 0) {
+            vitality.mendTicks = 0;
+            return;
+        }
+        vitality.mendTicks++;
+        if (vitality.mendTicks * deltaTime >= seconds) {
+            vitality.recover();
         }
     }
 }

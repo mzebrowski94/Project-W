@@ -16,11 +16,12 @@ import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * Something small lying in the open that the other side walks into.
@@ -132,7 +133,7 @@ class MineTest {
 
         steps(simulation, UNTIL_IT_GOES, STILL);
 
-        assertThat(commander.getComponent(Casualty.class).begun).isTrue();
+        assertThat(commander.getComponent(Vitality.class).begun).isTrue();
     }
 
     /**
@@ -146,7 +147,7 @@ class MineTest {
         Entity enemy = simulation.spawnEnemy(MIDDLE + INSIDE, MIDDLE);
 
         simulation.step();
-        enemy.getComponent(Damage.class).add(1000f, 0, true);
+        enemy.getComponent(Damage.class).add(1000, 0, Harm.KILL);
         steps(simulation, UNTIL_IT_GOES);
 
         assertThat(count(simulation, Mine.class)).isZero();
@@ -179,6 +180,6 @@ class MineTest {
 
     /** Nothing on the field claws anything, so a test about a mine is only about the mine. */
     private static Simulation harmless() {
-        return new Simulation(everyStrain(config(), strain -> strain.withContactDamage(0f)));
+        return new Simulation(everyStrain(config(), strain -> strain.withContactDamage(0)));
     }
 }

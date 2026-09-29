@@ -28,7 +28,7 @@ class EvolutionSystemTest {
 
     private static final float X = 50f;
     private static final float Y = 50f;
-    private static final float SLIVER = 1f;
+    private static final int SLIVER = 1;
     private static final Offset<Float> TOLERANCE = Offset.offset(1e-5f);
 
     @Test
@@ -87,7 +87,7 @@ class EvolutionSystemTest {
 
         simulation.step();
 
-        assertThat(grunt.getComponent(Health.class).current).isCloseTo(BRUTE_HEALTH, TOLERANCE);
+        assertThat(grunt.getComponent(Health.class).current).isEqualTo(BRUTE_HEALTH);
     }
 
     @Test

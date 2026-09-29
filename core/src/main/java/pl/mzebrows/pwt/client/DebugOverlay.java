@@ -13,10 +13,10 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Enemy;
-import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Order;
 
@@ -69,22 +69,22 @@ public final class DebugOverlay {
     }
 
     /**
-     * Health, or what it is doing instead of having any. Dying and respawning is invisible without
+     * His wounds, or what he is doing instead of standing (G0053). Dying and respawning is invisible without
      * this - the commander simply vanishes for three seconds and reappears somewhere else.
      */
     private static String commanderState(Simulation simulation, int slot) {
         ImmutableArray<Entity> commanders = simulation
                 .engine()
-                .getEntitiesFor(Family.all(Commander.class, Health.class).get());
+                .getEntitiesFor(Family.all(Commander.class, Vitality.class).get());
         Entity commander = Players.inSlot(commanders, slot);
         if (commander == null) {
             return "dead, respawning";
         }
-        Health health = commander.getComponent(Health.class);
+        Vitality vitality = commander.getComponent(Vitality.class);
         Invulnerable protection = commander.getComponent(Invulnerable.class);
         Weapon weapon = commander.getComponent(Weapon.class);
-        String state =
-                Math.round(health.current) + "/" + Math.round(health.max) + (weapon == null ? "" : "   " + weapon.kind);
+        String standing = vitality.begun ? "down" : "wounds " + vitality.wounds + "/" + vitality.carries;
+        String state = standing + (weapon == null ? "" : "   " + weapon.kind);
         if (simulation.commanderInvulnerable()) {
             return state + "   GOD MODE";
         }

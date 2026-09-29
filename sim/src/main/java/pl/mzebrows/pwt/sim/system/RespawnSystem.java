@@ -10,10 +10,10 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Dead;
-import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
+import pl.mzebrows.pwt.sim.component.Shield;
 
 /**
  * A death reaction, and the countdown it starts.
@@ -38,7 +38,7 @@ public final class RespawnSystem extends EntitySystem {
 
     private static final ComponentMapper<RespawnsOnDeath> REACTION = ComponentMapper.getFor(RespawnsOnDeath.class);
     private static final ComponentMapper<Respawning> PENDING = ComponentMapper.getFor(Respawning.class);
-    private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
+    private static final ComponentMapper<Shield> SHIELD = ComponentMapper.getFor(Shield.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
 
     private final Spawner spawner;
@@ -80,7 +80,7 @@ public final class RespawnSystem extends EntitySystem {
             float x = rally == null ? reaction.x : rally.x;
             float y = rally == null ? reaction.y : rally.y;
             int slot = COMMANDER.has(dead) ? COMMANDER.get(dead).slot : 0;
-            spawner.spawnRespawn(reaction.delaySeconds, x, y, reaction.invulnerableSeconds, slot);
+            spawner.spawnRespawn(reaction.delaySeconds, x, y, reaction.shieldSeconds, slot);
         }
     }
 
@@ -93,7 +93,8 @@ public final class RespawnSystem extends EntitySystem {
                 continue;
             }
             Entity commander = spawner.spawnCommander(respawning.x, respawning.y, respawning.slot);
-            INVULNERABLE.get(commander).grant(respawning.invulnerableTicks);
+            // Behind a shield that breaks at the first hit or runs out, whichever is first (G0053).
+            SHIELD.get(commander).raiseFor(respawning.shieldTicks);
             spawner.markDead(ticket);
         }
     }

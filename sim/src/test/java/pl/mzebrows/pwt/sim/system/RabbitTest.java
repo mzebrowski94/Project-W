@@ -71,7 +71,7 @@ class RabbitTest {
 
         steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_EAST);
 
-        assertThat(rabbit.getComponent(Health.class).current).isLessThanOrEqualTo(0f);
+        assertThat(rabbit.getComponent(Health.class).current).isLessThanOrEqualTo(0);
         assertThat(commander.getComponent(Stunned.class).active()).isFalse();
     }
 

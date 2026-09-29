@@ -14,7 +14,6 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Bloat;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Dying;
@@ -30,12 +29,14 @@ import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -67,7 +68,8 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Nest> NEST = ComponentMapper.getFor(Nest.class);
     private static final ComponentMapper<Blast> BLAST = ComponentMapper.getFor(Blast.class);
-    private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
+    private static final ComponentMapper<Shield> SHIELD = ComponentMapper.getFor(Shield.class);
     private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
@@ -137,6 +139,9 @@ public final class AppearanceSystem extends IteratingSystem {
         // How hot its gun is, and whether that has taken it away (pillar 5).
         appearance.heat = HEAT.has(entity) ? HEAT.get(entity).value : 0f;
         appearance.overheated = HEAT.has(entity) && HEAT.get(entity).locked;
+        // How many wounds a man on his feet is carrying, one mark each (G0053, pillar 5).
+        appearance.wounds = VITALITY.has(entity) && VITALITY.get(entity).wounded() ? VITALITY.get(entity).wounds : 0;
+        appearance.shield = SHIELD.has(entity) ? SHIELD.get(entity).fraction() : 0f;
     }
 
     /**
@@ -186,9 +191,9 @@ public final class AppearanceSystem extends IteratingSystem {
             appearance.charge = BLOAT.get(entity).charge;
             return;
         }
-        if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
+        if (VITALITY.has(entity) && VITALITY.get(entity).begun) {
             // How long a man on the ground has left, read backwards (pillar 5).
-            appearance.charge = CASUALTY.get(entity).fraction();
+            appearance.charge = VITALITY.get(entity).fraction();
             return;
         }
         if (GRIPPED.has(entity) && GRIPPED.get(entity).held()) {
@@ -274,13 +279,16 @@ public final class AppearanceSystem extends IteratingSystem {
         if (DYING.has(entity) && DYING.get(entity).begun) {
             return Appearance.State.DYING;
         }
-        if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
+        if (VITALITY.has(entity) && VITALITY.get(entity).begun) {
             // Above staggered, below dying: worst news first.
             return Appearance.State.CASUALTY;
         }
         if (GRIPPED.has(entity) && GRIPPED.get(entity).held()) {
             // Below the states that say he is down; above one that says he was shoved.
             return Appearance.State.GRIPPED;
+        }
+        if (held && STUNNED.get(entity).dazed) {
+            return Appearance.State.STUNNED;
         }
         if (held) {
             return Appearance.State.STAGGERED;

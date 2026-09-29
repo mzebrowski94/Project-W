@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.ActionKind;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
@@ -543,7 +544,7 @@ class ScenarioSessionTest {
                 .getEntitiesFor(Family.all(Trooper.class).get())
                 .get(0)
                 .getComponent(Damage.class)
-                .add(SimConfig.defaults().trooper().health(), 0, false);
+                .add(1, 0, Harm.DOWN);
     }
 
     private static @Nullable Order trooperOrder(ScenarioSession session) {

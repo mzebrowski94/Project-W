@@ -1,13 +1,15 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
@@ -19,7 +21,6 @@ import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
-import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
@@ -49,7 +50,7 @@ class DeathThroesTest {
         commander.getComponent(Invulnerable.class).remainingTicks = 0;
         simulation.step();
 
-        assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH);
+        assertThat(unhurt(commander)).isTrue();
     }
 
     @Test
@@ -143,7 +144,7 @@ class DeathThroesTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
         simulation.step();
 
         assertThat(count(simulation, Enemy.class)).isEqualTo(1);
@@ -155,7 +156,7 @@ class DeathThroesTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
         steps(simulation, ticksIn(ENEMY_THROES) + 2);
 
         assertThat(count(simulation, Enemy.class)).isZero();
@@ -167,7 +168,7 @@ class DeathThroesTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
         simulation.step();
 
         Collider collider = enemy.getComponent(Collider.class);
@@ -183,7 +184,7 @@ class DeathThroesTest {
         simulation.spawnCommander(50f, 50f);
         steps(simulation, 4);
 
-        enemy.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
         simulation.step();
 
         Velocity velocity = enemy.getComponent(Velocity.class);
@@ -200,14 +201,14 @@ class DeathThroesTest {
         kill(commander);
         simulation.step();
         int afterFirst = commander.getComponent(Dying.class).remainingTicks;
-        commander.getComponent(Health.class).current = 0f;
+        commander.getComponent(Damage.class).add(A_BLOW, 0);
         simulation.step();
 
         assertThat(commander.getComponent(Dying.class).remainingTicks).isLessThan(afterFirst);
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        entity.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
         entity.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 }

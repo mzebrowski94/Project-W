@@ -11,12 +11,12 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Turret;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
@@ -53,7 +53,6 @@ public final class ActionSystem extends EntitySystem {
     private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
 
-    private final float reviveHealthFraction;
     private final float reviveInvulnerableSeconds;
     private final Modifiers modifiers;
 
@@ -63,7 +62,6 @@ public final class ActionSystem extends EntitySystem {
 
     public ActionSystem(SimConfig config, Modifiers modifiers) {
         this.modifiers = modifiers;
-        this.reviveHealthFraction = config.casualty().reviveHealthFraction();
         this.reviveInvulnerableSeconds = config.casualty().reviveInvulnerableSeconds();
     }
 
@@ -73,7 +71,7 @@ public final class ActionSystem extends EntitySystem {
                 Family.all(Commander.class, Intent.class, Action.class, Position.class, Body.class)
                         .get());
         casualties = engine.getEntitiesFor(
-                Family.all(Casualty.class, Position.class, Body.class).get());
+                Family.all(Vitality.class, Position.class, Body.class).get());
         stations = engine.getEntitiesFor(
                 Family.all(Turret.class, Position.class, Body.class).get());
     }
@@ -112,7 +110,7 @@ public final class ActionSystem extends EntitySystem {
             }
             action.available = ActionKind.STABILISE;
             if (acting) {
-                if (Aid.work(modifiers, commander, subject, deltaTime, reviveHealthFraction, reviveInvulnerableSeconds)
+                if (Aid.work(modifiers, commander, subject, deltaTime, reviveInvulnerableSeconds)
                         && TALLY.has(commander)) {
                     // A stabilise is a stabilise, whoever he put back on his feet (G0044).
                     TALLY.get(commander).stabilised++;

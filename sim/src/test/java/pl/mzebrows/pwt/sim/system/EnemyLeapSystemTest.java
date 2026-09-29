@@ -258,7 +258,7 @@ class EnemyLeapSystemTest {
         LeapDef varied =
                 AlphaWorlds.leapConfig().withHesitationMinSeconds(0.05f).withHesitationMaxSeconds(0.5f);
         return new Simulation(config.withUnit(
-                UnitKind.GRUNT, grunt -> grunt.withContactDamage(0f).withLeap(varied)));
+                UnitKind.GRUNT, grunt -> grunt.withContactDamage(0).withLeap(varied)));
     }
 
     private static List<Leap.Phase> record(Simulation simulation, Entity enemy, int ticks) {

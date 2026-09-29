@@ -16,10 +16,12 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Shake;
+import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Thrower;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.component.Weapon;
 
@@ -42,6 +44,8 @@ import pl.mzebrows.pwt.sim.component.Weapon;
 public final class CooldownSystem extends EntitySystem {
 
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
+    private static final ComponentMapper<Shield> SHIELD = ComponentMapper.getFor(Shield.class);
     private static final ComponentMapper<ContactDamage> CONTACT_DAMAGE = ComponentMapper.getFor(ContactDamage.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Melee> MELEE = ComponentMapper.getFor(Melee.class);
@@ -58,6 +62,10 @@ public final class CooldownSystem extends EntitySystem {
     private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
 
     private ImmutableArray<Entity> invulnerable = new ImmutableArray<>(new Array<>());
+
+    private ImmutableArray<Entity> vitalities = new ImmutableArray<>(new Array<>());
+
+    private ImmutableArray<Entity> shields = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> attacks = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> weapons = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> melees = new ImmutableArray<>(new Array<>());
@@ -76,6 +84,8 @@ public final class CooldownSystem extends EntitySystem {
     @Override
     public void addedToEngine(Engine engine) {
         invulnerable = engine.getEntitiesFor(Family.all(Invulnerable.class).get());
+        vitalities = engine.getEntitiesFor(Family.all(Vitality.class).get());
+        shields = engine.getEntitiesFor(Family.all(Shield.class).get());
         attacks = engine.getEntitiesFor(Family.all(ContactDamage.class).get());
         weapons = engine.getEntitiesFor(Family.all(Weapon.class).get());
         melees = engine.getEntitiesFor(Family.all(Melee.class).get());
@@ -98,6 +108,10 @@ public final class CooldownSystem extends EntitySystem {
             Invulnerable protection = INVULNERABLE.get(invulnerable.get(i));
             protection.remainingTicks = countDown(protection.remainingTicks);
         }
+        for (int i = 0; i < vitalities.size(); i++) {
+            Vitality vitality = VITALITY.get(vitalities.get(i));
+            vitality.graceRemaining = countDown(vitality.graceRemaining);
+        }
         for (int i = 0; i < attacks.size(); i++) {
             ContactDamage attack = CONTACT_DAMAGE.get(attacks.get(i));
             attack.remainingTicks = countDown(attack.remainingTicks);
@@ -114,6 +128,18 @@ public final class CooldownSystem extends EntitySystem {
         for (int i = 0; i < stunned.size(); i++) {
             Stunned hold = STUNNED.get(stunned.get(i));
             hold.remainingTicks = countDown(hold.remainingTicks);
+            if (hold.remainingTicks <= 0) {
+                hold.dazed = false;
+            }
+        }
+        for (int i = 0; i < shields.size(); i++) {
+            Shield shield = SHIELD.get(shields.get(i));
+            if (shield.up && shield.timed) {
+                shield.remainingTicks = countDown(shield.remainingTicks);
+                if (shield.remainingTicks <= 0) {
+                    shield.shatter();
+                }
+            }
         }
         for (int i = 0; i < dying.size(); i++) {
             Dying throes = DYING.get(dying.get(i));

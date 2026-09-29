@@ -24,6 +24,14 @@ public final class Grip implements Component, Pool.Poolable {
     /** How long it carries a man before it finishes him, in ticks. Configuration. */
     public int holdTicks;
 
+    /**
+     * How hard a man is thrown clear when it dies with him in its jaws, in world units per second, and
+     * for how many ticks (G0053). Configuration.
+     */
+    public float escapeKnockbackSpeed;
+
+    public int escapeShoveTicks;
+
     /** The handle of the man in its jaws, or {@link Handle#NOBODY}. */
     public long load = Handle.NOBODY;
 
@@ -31,10 +39,17 @@ public final class Grip implements Component, Pool.Poolable {
     public int remainingTicks;
 
     /** Sets what its leap does and returns this component, for fluent spawning. Lets go of nobody. */
-    public Grip set(boolean newEnabled, float newCarrySpeed, int newHoldTicks) {
+    public Grip set(
+            boolean newEnabled,
+            float newCarrySpeed,
+            int newHoldTicks,
+            float newEscapeKnockbackSpeed,
+            int newEscapeShoveTicks) {
         this.enabled = newEnabled;
         this.carrySpeed = newCarrySpeed;
         this.holdTicks = newHoldTicks;
+        this.escapeKnockbackSpeed = newEscapeKnockbackSpeed;
+        this.escapeShoveTicks = newEscapeShoveTicks;
         return this;
     }
 
@@ -65,6 +80,8 @@ public final class Grip implements Component, Pool.Poolable {
         enabled = false;
         carrySpeed = 0f;
         holdTicks = 0;
+        escapeKnockbackSpeed = 0f;
+        escapeShoveTicks = 0;
         load = Handle.NOBODY;
         remainingTicks = 0;
     }

@@ -1,18 +1,19 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.shootingStraight;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
-import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
@@ -113,7 +114,7 @@ class AlienTargetingTest {
 
         steps(simulation, ticksIn(1.5f));
 
-        assertThat(trooper.getComponent(Health.class).current).isLessThan(TROOPER_HEALTH);
+        assertThat(unhurt(trooper)).isFalse();
     }
 
     private static Position at(Entity entity) {
@@ -121,6 +122,6 @@ class AlienTargetingTest {
     }
 
     private static void putDown(Entity entity) {
-        entity.getComponent(Damage.class).add(TROOPER_HEALTH, 0, false);
+        entity.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
     }
 }

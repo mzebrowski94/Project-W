@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
@@ -235,6 +236,6 @@ class TrooperCrewTest {
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(BRUTE_HEALTH, 0, true);
+        entity.getComponent(Damage.class).add(BRUTE_HEALTH, 0, Harm.KILL);
     }
 }

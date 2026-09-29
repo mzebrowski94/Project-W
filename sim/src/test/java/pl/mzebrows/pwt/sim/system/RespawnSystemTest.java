@@ -2,14 +2,16 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_MARGIN;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_SHIELD;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
@@ -17,10 +19,10 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Damage;
-import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Respawning;
+import pl.mzebrows.pwt.sim.component.Shield;
 
 /**
  * Dying and coming back. The commander is genuinely removed in between - no half-alive state that
@@ -79,25 +81,40 @@ class RespawnSystemTest {
     }
 
     @Test
-    void bringsItBackAtFullHealth() {
+    void bringsItBackWithNoWounds() {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(50f, 50f));
 
         steps(simulation, ticksIn(RETURN_DELAY) + 2);
 
-        assertThat(commander(simulation).getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH);
+        assertThat(unhurt(commander(simulation))).isTrue();
     }
 
-    /** Otherwise it reappears inside whatever killed it and dies again before the player can move. */
+    /**
+     * Otherwise it reappears inside whatever killed it and dies again before the player can move. Behind
+     * a shield rather than invulnerable (G0053): it takes the first hit, whatever it is, and breaks.
+     */
     @Test
-    void bringsItBackBrieflyInvulnerable() {
+    void bringsItBackBehindAShield() {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(50f, 50f));
 
         steps(simulation, ticksIn(RETURN_DELAY) + 2);
 
+        assertThat(commander(simulation).getComponent(Shield.class).up).isTrue();
         assertThat(commander(simulation).getComponent(Invulnerable.class).active())
-                .isTrue();
+                .isFalse();
+    }
+
+    /** A shield he comes back behind runs out on its own if nothing hits it first. */
+    @Test
+    void letsTheShieldHeCameBackBehindRunOut() {
+        Simulation simulation = simulation();
+        kill(simulation.spawnCommander(50f, 50f));
+
+        steps(simulation, ticksIn(RETURN_DELAY + RESPAWN_SHIELD) + 4);
+
+        assertThat(commander(simulation).getComponent(Shield.class).up).isFalse();
     }
 
     /** The countdown outlives the unit that started it, so it cannot be carried by a dead entity. */
@@ -125,7 +142,7 @@ class RespawnSystemTest {
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        entity.getComponent(Damage.class).add(A_BLOW, 0);
         entity.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 

@@ -17,6 +17,8 @@ import pl.mzebrows.pwt.sim.component.Appearance;
  * @param grappling both parties to a landed blow, for as long as the lock holds them. Winner and
  *     loser share it on purpose - see {@code AppearanceSystem}
  * @param staggered a unit shoved off a blow it survived, briefly unable to act
+ * @param stunned a unit stunned by something that declares a stun (G0053). It lasts, and it is an
+ *     opening, so it must not be mistaken for the flash of a stagger
  * @param slowed a unit robbed of some of its speed and still doing everything else. The one state
  *     here that lasts rather than flashing past, and the one the player has to be able to read
  *     while it is still walking at him - so it is a dulling rather than a flare: it is not off
@@ -38,6 +40,7 @@ public record StateTint(
         float airborne,
         float grappling,
         float staggered,
+        float stunned,
         float slowed,
         float dying,
         float casualty,
@@ -52,6 +55,7 @@ public record StateTint(
             case AIRBORNE -> airborne;
             case GRAPPLING -> grappling;
             case STAGGERED -> staggered;
+            case STUNNED -> stunned;
             case SLOWED -> slowed;
             case DYING -> dying;
             case CASUALTY -> casualty;

@@ -99,10 +99,8 @@ class SimConfigTest {
     void deletesAnOrdinaryEnemyWithOneSwingAndNotABrute() {
         SimConfig config = SimConfig.defaults();
 
-        assertThat(config.melee().damage())
-                .isGreaterThanOrEqualTo(config.unit(UnitKind.GRUNT).health());
-        assertThat(config.melee().damage())
-                .isLessThan(config.unit(UnitKind.BRUTE).health());
+        assertThat(config.melee().damage()).isGreaterThanOrEqualTo(config.healthOf(UnitKind.GRUNT));
+        assertThat(config.melee().damage()).isLessThan(config.healthOf(UnitKind.BRUTE));
     }
 
     /**

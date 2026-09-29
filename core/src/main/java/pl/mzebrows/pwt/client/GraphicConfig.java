@@ -32,6 +32,8 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param nestMark how to draw a hole in the ground
  * @param orderMark how to draw a unit that is acting on an order
  * @param heatMark how to draw how hot the gun a unit is holding has become
+ * @param woundMark how to draw the wounds a man on his feet is carrying
+ * @param shieldMark how to draw a shield in front of a man
  * @param camera how the view follows what it is watching, and how far out it may sit
  * @param terminal how the top bar's terminal paces its lines
  */
@@ -55,6 +57,8 @@ public record GraphicConfig(
         ChargedMark chargedMark,
         OrderMark orderMark,
         HeatMark heatMark,
+        WoundMark woundMark,
+        ShieldMark shieldMark,
         CameraDirector.Settings camera,
         Terminal.Settings terminal) {
 
@@ -101,6 +105,8 @@ public record GraphicConfig(
                 chargedMark(properties),
                 orderMark(properties),
                 heatMark(properties),
+                woundMark(properties),
+                shieldMark(properties),
                 camera(properties),
                 terminal(properties));
     }
@@ -242,6 +248,7 @@ public record GraphicConfig(
             case MUSHROOM -> "8fd97fff";
             case FLOWER -> "e07be0ff";
             case SUPPLY_DROP -> "9fd8f0ff";
+            case MEDKIT -> "f4f4f4ff";
             case ARMOURY_RAILGUN -> "d8a04aff";
             case ARMOURY_FLAMER -> "ff7a2eff";
             case ARMOURY_SHOTGUN -> "4ad8a0ff";
@@ -316,6 +323,7 @@ public record GraphicConfig(
                 properties.getFloat("graphic.state.airborne", 0.5f),
                 properties.getFloat("graphic.state.grappling", -0.3f),
                 properties.getFloat("graphic.state.staggered", 0.35f),
+                properties.getFloat("graphic.state.stunned", -0.55f),
                 properties.getFloat("graphic.state.slowed", -0.18f),
                 properties.getFloat("graphic.state.dying", -0.7f),
                 properties.getFloat("graphic.state.casualty", 0.6f),
@@ -377,6 +385,21 @@ public record GraphicConfig(
     private static OrderMark orderMark(GameProperties properties) {
         return new OrderMark(
                 properties.getFloat("graphic.order.scale", 1.55f), properties.getFloat("graphic.order.tint", 0.75f));
+    }
+
+    private static ShieldMark shieldMark(GameProperties properties) {
+        return new ShieldMark(
+                properties.getFloat("graphic.shield.scale", 1.85f),
+                properties.getInt("graphic.shield.segments", 24),
+                color(properties, "graphic.shield.color", "7fd8ffff"));
+    }
+
+    private static WoundMark woundMark(GameProperties properties) {
+        return new WoundMark(
+                properties.getFloat("graphic.wound.size", 0.24f),
+                properties.getFloat("graphic.wound.drop", 1.5f),
+                properties.getFloat("graphic.wound.gap", 0.6f),
+                color(properties, "graphic.wound.color", "e8453cff"));
     }
 
     private static HeatMark heatMark(GameProperties properties) {

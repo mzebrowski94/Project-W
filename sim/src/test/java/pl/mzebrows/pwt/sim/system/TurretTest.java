@@ -18,14 +18,15 @@ import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Turret;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.ActionKind;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Look;
 
 /**
@@ -224,7 +225,7 @@ class TurretTest {
         shoot(turret);
         steps(simulation, 4, STILL);
 
-        assertThat(commander.getComponent(Casualty.class).begun).isTrue();
+        assertThat(commander.getComponent(Vitality.class).begun).isTrue();
     }
 
     @Test
@@ -279,6 +280,6 @@ class TurretTest {
     }
 
     private static void shoot(Entity entity) {
-        entity.getComponent(Damage.class).add(TURRET_HEALTH, 0, false);
+        entity.getComponent(Damage.class).add(TURRET_HEALTH, 0, Harm.DOWN);
     }
 }

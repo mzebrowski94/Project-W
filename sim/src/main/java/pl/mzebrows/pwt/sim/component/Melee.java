@@ -22,7 +22,7 @@ public final class Melee implements Component, Pool.Poolable {
     public float activeSeconds;
     public float reach;
     public float radius;
-    public float damage;
+    public int damage;
     public float arcDegrees;
     public int lockTicks;
 
@@ -53,7 +53,7 @@ public final class Melee implements Component, Pool.Poolable {
             float newActiveSeconds,
             float newReach,
             float newRadius,
-            float newDamage,
+            int newDamage,
             float newArcDegrees,
             int newLockTicks,
             boolean newLocksCommittedOnly,
@@ -115,7 +115,7 @@ public final class Melee implements Component, Pool.Poolable {
         activeSeconds = 0f;
         reach = 0f;
         radius = 0f;
-        damage = 0f;
+        damage = 0;
         arcDegrees = 0f;
         lockTicks = 0;
         locksCommittedOnly = false;

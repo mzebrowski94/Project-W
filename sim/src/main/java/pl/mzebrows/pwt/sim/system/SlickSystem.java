@@ -132,6 +132,7 @@ public final class SlickSystem extends EntitySystem {
                 reaction.damage,
                 reaction.victimInvulnerableSeconds,
                 reaction.look,
+                reaction.knockbackSpeed,
                 side);
     }
 }

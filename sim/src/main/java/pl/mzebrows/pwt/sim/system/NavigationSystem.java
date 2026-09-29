@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Strain;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
@@ -104,8 +105,9 @@ public final class NavigationSystem extends EntitySystem {
         enemies = engine.getEntitiesFor(
                 Family.all(Enemy.class, Position.class, Steering.class, Speed.class, Perception.class, Strain.class)
                         .get());
-        targets = engine.getEntitiesFor(
-                Family.all(Faction.class, Health.class, Position.class).get());
+        targets = engine.getEntitiesFor(Family.all(Faction.class, Position.class)
+                .one(Health.class, Vitality.class)
+                .get());
     }
 
     @Override

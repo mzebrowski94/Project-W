@@ -1,7 +1,7 @@
 package pl.mzebrows.pwt.sim;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -203,7 +203,7 @@ class DraftTest {
         simulation.step(
                 new PlayerInputs().pick(0, drafts(simulation).pending.first().serial(), UpgradeKind.WEAPON_HANDLING));
 
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        commander.getComponent(Damage.class).add(A_BLOW, 0);
         commander.getComponent(Invulnerable.class).remainingTicks = 0;
         AlphaWorlds.steps(simulation, ticksIn(DEATH_THROES + RESPAWN_DELAY) + 2);
 

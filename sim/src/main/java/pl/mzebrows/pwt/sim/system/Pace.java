@@ -7,6 +7,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Slowed;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -39,6 +40,7 @@ final class Pace {
     private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
 
     private Pace() {}
 
@@ -50,6 +52,10 @@ final class Pace {
      */
     static float of(Entity entity, TileMap map, Defs<Terrain, GroundDef> ground) {
         float pace = SLOWED.has(entity) ? SLOWED.get(entity).factor() : 1f;
+        if (VITALITY.has(entity)) {
+            // A wound is the third way to be slow, and the same answer (G0053).
+            pace *= VITALITY.get(entity).paceFactor();
+        }
         if (!POSITION.has(entity)) {
             return pace;
         }

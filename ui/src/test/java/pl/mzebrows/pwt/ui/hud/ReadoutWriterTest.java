@@ -11,11 +11,11 @@ import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.Tally;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
@@ -75,18 +75,45 @@ class ReadoutWriterTest {
         Simulation world = world();
         world.spawnTrooper(30f, 30f);
         Entity down = world.spawnTrooper(40f, 30f);
-        down.getComponent(Casualty.class).begin();
+        down.getComponent(Vitality.class).begin();
 
         Readout readout = fill(new ReadoutWriter(), world);
 
         assertThat(readout.troopersStanding).isEqualTo(2);
     }
 
+    /** A pip per wound he carries and per one he could, so the count is shown and never guessed (G0053). */
+    @Test
+    void publishesTheWoundsHeIsCarryingAndHowManyHeCould() {
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 0);
+        commander.getComponent(Appearance.class).wounds = 1;
+
+        PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
+
+        assertThat(player.wounds).isEqualTo(1);
+        assertThat(player.maxWounds).isEqualTo(SimConfig.defaults().commander().maxWounds());
+    }
+
+    @Test
+    void publishesAShieldInFrontOfHimAndAStunHeIsUnder() {
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 0);
+        commander.getComponent(Appearance.class).shield = 0.5f;
+        commander.getComponent(Appearance.class).state = Appearance.State.STUNNED;
+
+        PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
+
+        assertThat(player.shielded).isTrue();
+        assertThat(player.stunned).isTrue();
+        assertThat(player.posture).isEqualTo(Posture.STANDING);
+    }
+
     @Test
     void publishesHisBleedOutWhileHeIsDown() {
         Simulation world = world();
         Entity commander = world.spawnCommander(40f, 40f, 0);
-        Casualty casualty = commander.getComponent(Casualty.class);
+        Vitality casualty = commander.getComponent(Vitality.class);
         casualty.bleedOutSeconds = 10f;
         casualty.begin();
         casualty.remainingSeconds = 2.5f;

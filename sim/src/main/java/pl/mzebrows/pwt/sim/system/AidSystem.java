@@ -10,9 +10,9 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
@@ -49,7 +49,6 @@ public final class AidSystem extends EntitySystem {
     private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
     private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
 
-    private final float reviveHealthFraction;
     private final float reviveInvulnerableSeconds;
     private final Modifiers modifiers;
 
@@ -58,7 +57,6 @@ public final class AidSystem extends EntitySystem {
 
     public AidSystem(SimConfig config, Modifiers modifiers) {
         this.modifiers = modifiers;
-        this.reviveHealthFraction = config.casualty().reviveHealthFraction();
         this.reviveInvulnerableSeconds = config.casualty().reviveInvulnerableSeconds();
     }
 
@@ -67,7 +65,7 @@ public final class AidSystem extends EntitySystem {
         helpers = engine.getEntitiesFor(Family.all(Trooper.class, Action.class, Position.class, Body.class)
                 .get());
         casualties = engine.getEntitiesFor(
-                Family.all(Casualty.class, Position.class, Body.class).get());
+                Family.all(Vitality.class, Position.class, Body.class).get());
     }
 
     @Override
@@ -85,7 +83,7 @@ public final class AidSystem extends EntitySystem {
                 continue;
             }
             action.available = ActionKind.STABILISE;
-            Aid.work(modifiers, helper, subject, deltaTime, reviveHealthFraction, reviveInvulnerableSeconds);
+            Aid.work(modifiers, helper, subject, deltaTime, reviveInvulnerableSeconds);
             action.progress = Aid.progress(subject);
         }
     }

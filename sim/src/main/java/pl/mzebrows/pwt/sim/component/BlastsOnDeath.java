@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Look;
 
 /**
@@ -21,6 +22,12 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
      * <p>A field read before the death, not a second path (G0018).
      */
     public float bittenRadius;
+
+    /**
+     * What the blast it leaves does to a man (G0053), declared by the kind of thing that explodes. Set
+     * wherever one is spawned; a grenade's is its own, everything else's the blast's.
+     */
+    public Harm harm = Harm.DOWN;
 
     /**
      * Whether the blast leaves the ground burning behind it.
@@ -58,6 +65,12 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
         return this;
     }
 
+    /** Declares what the blast this leaves does to a man, and returns this component, for fluent spawning. */
+    public BlastsOnDeath harming(Harm newHarm) {
+        this.harm = newHarm;
+        return this;
+    }
+
     /** Makes this a flash rather than a fire, and returns this component, for fluent spawning. */
     public BlastsOnDeath withoutFire() {
         this.leavesFire = false;
@@ -88,6 +101,7 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
     public void reset() {
         radius = 0f;
         bittenRadius = 0f;
+        harm = Harm.DOWN;
         leavesFire = true;
         look = Look.BLAST;
         credit = Tally.NOBODY;

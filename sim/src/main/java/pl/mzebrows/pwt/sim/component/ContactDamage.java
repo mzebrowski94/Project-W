@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * What an entity does to something it touches on the other side.
@@ -11,7 +12,8 @@ import com.badlogic.gdx.utils.Pool;
  */
 public final class ContactDamage implements Component, Pool.Poolable {
 
-    public float amount;
+    /** Whole hit points a landed blow owes (G0054). */
+    public int amount;
 
     /** How long after a hit before this can strike again. Zero for a projectile, which only hits once. */
     public int cooldownTicks;
@@ -54,11 +56,25 @@ public final class ContactDamage implements Component, Pool.Poolable {
     public float knockbackDecay;
 
     /**
-     * Whether this blow kills outright rather than leaving a casualty on the ground.
+     * What this blow does to a man on the player's side (G0053). Anything with health reads
+     * {@link #amount} instead.
      *
-     * <p>False only for gunfire, blasts and ruined ground: those leave a casualty (G0023).
+     * <p>A kill unless the source says otherwise: claws, a sweep and a leap kill; gunfire and ruined
+     * ground wound.
      */
-    public boolean fatal = true;
+    public Harm harm = Harm.KILL;
+
+    /**
+     * How long a man this blow shoves is thrown for, in ticks, where it shoves without locking - ruined
+     * ground pushing him off itself. Zero for every blow that does not.
+     */
+    public int shoveTicks;
+
+    /**
+     * How long a blow leaves what it lands on unable to act, in ticks (G0053). Zero for every blow but
+     * a gun's that declares one.
+     */
+    public int stunTicks;
 
     /**
      * The cosine of half the arc this blow can reach into, measured from the way the attacker is
@@ -93,7 +109,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
     }
 
     /** Sets the attack and leaves it ready to strike, returning this component, for fluent spawning. */
-    public ContactDamage set(float newAmount, int newCooldownTicks, int newVictimInvulnerableTicks) {
+    public ContactDamage set(int newAmount, int newCooldownTicks, int newVictimInvulnerableTicks) {
         this.amount = newAmount;
         this.cooldownTicks = newCooldownTicks;
         this.remainingTicks = 0;
@@ -104,7 +120,9 @@ public final class ContactDamage implements Component, Pool.Poolable {
         this.clinchCarryDecay = 0f;
         this.knockbackSpeed = 0f;
         this.knockbackDecay = 0f;
-        this.fatal = true;
+        this.harm = Harm.KILL;
+        this.shoveTicks = 0;
+        this.stunTicks = 0;
         this.arcCosine = -1f;
         this.slowFactor = 1f;
         this.slowTicks = 0;
@@ -137,12 +155,32 @@ public final class ContactDamage implements Component, Pool.Poolable {
         return this;
     }
 
-    /**
-     * Makes this a blow that puts a man down rather than killing him. Chained after {@link #set}.
-     */
-    public ContactDamage wounding() {
-        this.fatal = false;
+    /** Declares what this blow does to a man. Chained after {@link #set}. */
+    public ContactDamage harming(Harm newHarm) {
+        this.harm = newHarm;
         return this;
+    }
+
+    /**
+     * Makes this a blow that throws a man off it without holding anybody - ruined ground. The throw
+     * bleeds off over exactly the ticks it lasts. Chained after {@link #set}.
+     */
+    public ContactDamage shoving(float speed, int ticks, float tickSeconds) {
+        this.knockbackSpeed = speed;
+        this.shoveTicks = ticks;
+        this.knockbackDecay = ticks > 0 ? speed / (ticks * tickSeconds) : 0f;
+        return this;
+    }
+
+    /** Makes this a blow that leaves what it lands on unable to act for a while. Chained after {@link #set}. */
+    public ContactDamage stunning(int ticks) {
+        this.stunTicks = ticks;
+        return this;
+    }
+
+    /** True if a landed blow throws a man off without locking anybody. */
+    public boolean shoves() {
+        return shoveTicks > 0 && knockbackSpeed > 0f && !locks();
     }
 
     /**
@@ -176,7 +214,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
     @Override
     public void reset() {
         credit = Tally.NOBODY;
-        amount = 0f;
+        amount = 0;
         cooldownTicks = 0;
         remainingTicks = 0;
         victimInvulnerableTicks = 0;
@@ -186,7 +224,9 @@ public final class ContactDamage implements Component, Pool.Poolable {
         clinchCarryDecay = 0f;
         knockbackSpeed = 0f;
         knockbackDecay = 0f;
-        fatal = true;
+        harm = Harm.KILL;
+        shoveTicks = 0;
+        stunTicks = 0;
         arcCosine = -1f;
         slowFactor = 1f;
         slowTicks = 0;

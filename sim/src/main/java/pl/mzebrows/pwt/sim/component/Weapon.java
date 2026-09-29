@@ -27,7 +27,7 @@ public final class Weapon implements Component, Pool.Poolable {
     /** How far one of its shots flies before it expires. Zero is until it hits something. */
     public float projectileRange;
 
-    public float damage;
+    public int damage;
 
     /** How many shots one pull sends. One for every gun that fires a single round. */
     public int pellets = 1;
@@ -74,6 +74,9 @@ public final class Weapon implements Component, Pool.Poolable {
     /** How far back along its path one of its shots is drawn. Zero is a dot, which is almost every gun. */
     public float trailLength;
 
+    /** How long one of its shots leaves what it hits unable to act, in ticks; zero for none (G0053). */
+    public int stunTicks;
+
     /** How much of a body one of its shots pumps up. Zero for every gun that does nothing to one. */
     public float bloatPerShot;
 
@@ -113,6 +116,7 @@ public final class Weapon implements Component, Pool.Poolable {
         this.selfSlowTicks = Ticks.of(def.selfSlowSeconds(), tickSeconds);
         this.trailLength = def.trailLength();
         this.bloatPerShot = def.bloatPerShot();
+        this.stunTicks = Ticks.of(def.stunSeconds(), tickSeconds);
         this.heatPerShot = def.heat().perShot();
         this.heatCoolPerSecond = def.heat().coolPerSecond();
         this.heatResumeBelow = def.heat().resumeBelow();
@@ -132,7 +136,7 @@ public final class Weapon implements Component, Pool.Poolable {
         projectileSpeed = 0f;
         projectileRadius = 0f;
         projectileRange = 0f;
-        damage = 0f;
+        damage = 0;
         pellets = 1;
         halfSpreadRadians = 0f;
         projectileLook = Look.PROJECTILE;
@@ -146,6 +150,7 @@ public final class Weapon implements Component, Pool.Poolable {
         selfSlowTicks = 0;
         trailLength = 0f;
         bloatPerShot = 0f;
+        stunTicks = 0;
         heatPerShot = 0f;
         heatCoolPerSecond = 0f;
         heatResumeBelow = 0f;

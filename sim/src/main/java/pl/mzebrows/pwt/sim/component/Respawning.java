@@ -13,7 +13,8 @@ public final class Respawning implements Component, Pool.Poolable {
     public int remainingTicks;
     public float x;
     public float y;
-    public int invulnerableTicks;
+    /** How long the shield he comes back behind lasts, in ticks (G0053). */
+    public int shieldTicks;
 
     /**
      * The player slot the man who died was sitting in, so he comes back as the same player.
@@ -23,11 +24,11 @@ public final class Respawning implements Component, Pool.Poolable {
     public int slot;
 
     /** Sets the pending respawn and returns this component, for fluent spawning. */
-    public Respawning set(int newRemainingTicks, float newX, float newY, int newInvulnerableTicks, int newSlot) {
+    public Respawning set(int newRemainingTicks, float newX, float newY, int newShieldTicks, int newSlot) {
         this.remainingTicks = newRemainingTicks;
         this.x = newX;
         this.y = newY;
-        this.invulnerableTicks = newInvulnerableTicks;
+        this.shieldTicks = newShieldTicks;
         this.slot = newSlot;
         return this;
     }
@@ -37,7 +38,7 @@ public final class Respawning implements Component, Pool.Poolable {
         remainingTicks = 0;
         x = 0f;
         y = 0f;
-        invulnerableTicks = 0;
+        shieldTicks = 0;
         slot = 0;
     }
 }

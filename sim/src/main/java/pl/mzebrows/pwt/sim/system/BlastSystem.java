@@ -16,6 +16,8 @@ import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * Runs the blasts on the field: each catches what is standing in it, once, and then burns out.
@@ -48,8 +50,9 @@ public final class BlastSystem extends EntitySystem {
     public void addedToEngine(Engine engine) {
         blasts = engine.getEntitiesFor(
                 Family.all(Blast.class, Position.class, Body.class).get());
-        victims = engine.getEntitiesFor(
-                Family.all(Health.class, Damage.class, Position.class).get());
+        victims = engine.getEntitiesFor(Family.all(Damage.class, Position.class)
+                .one(Health.class, Vitality.class)
+                .get());
         detonating = engine.getEntitiesFor(
                 Family.all(BlastsOnDeath.class, Dead.class, Position.class).get());
     }
@@ -65,7 +68,7 @@ public final class BlastSystem extends EntitySystem {
             if (!blast.spent) {
                 blast.spent = true;
                 Position at = POSITION.get(entity);
-                catchEveryoneInside(at.x, at.y, BODY.get(entity).radius, blast.damage, blast.credit);
+                catchEveryoneInside(at.x, at.y, BODY.get(entity).radius, blast.damage, blast.harm, blast.credit);
             }
             if (blast.remainingTicks <= 0) {
                 spawner.markDead(entity);
@@ -88,14 +91,14 @@ public final class BlastSystem extends EntitySystem {
                 continue;
             }
             Position at = POSITION.get(entity);
-            spawner.spawnBlast(at.x, at.y, radius, reaction.leavesFire, reaction.look, reaction.credit);
+            spawner.spawnBlast(at.x, at.y, radius, reaction.leavesFire, reaction.look, reaction.credit, reaction.harm);
         }
     }
 
     /**
      * Centre to centre, deliberately: a rule the player can see applied.
      */
-    private void catchEveryoneInside(float x, float y, float radius, float damage, int credit) {
+    private void catchEveryoneInside(float x, float y, float radius, int damage, Harm harm, int credit) {
         for (int i = 0; i < victims.size(); i++) {
             Entity victim = victims.get(i);
             Position at = POSITION.get(victim);
@@ -103,8 +106,8 @@ public final class BlastSystem extends EntitySystem {
                 continue;
             }
             Damage owed = DAMAGE.get(victim);
-            // Wounding, like gunfire: everything in it goes down (G0018); an alien just dies.
-            owed.add(damage, 0, false);
+            // Decisive for anything with health; a man takes the blast kind's harm (G0018, G0053).
+            owed.add(damage, 0, harm);
             owed.cameFrom(x, y);
             owed.creditTo(credit);
         }

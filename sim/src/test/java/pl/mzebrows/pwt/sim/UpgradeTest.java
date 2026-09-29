@@ -7,15 +7,20 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.GRENADIER_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MARCH_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MARKSMEN_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MEDICINE_PER_SECOND;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.SELF_TREATMENT_SECONDS;
 
 import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Upgrades;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.def.Whole;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
@@ -114,9 +119,9 @@ class UpgradeTest {
 
         hold(simulation, new Upgrades.Held(UpgradeKind.MARKSMEN, Upgrades.SHARED, 2));
 
-        assertThat(modifiers.gunDamage(trooper, WeaponKind.SIDEARM, 10f))
-                .isCloseTo(10f * (100 + 2 * MARKSMEN_PERCENT) / 100f, CLOSE);
-        assertThat(modifiers.gunDamage(commander, WeaponKind.SIDEARM, 10f)).isEqualTo(10f);
+        assertThat(modifiers.gunDamage(trooper, WeaponKind.SIDEARM, 10))
+                .isEqualTo(Whole.percentOf(10, 100 + 2 * MARKSMEN_PERCENT));
+        assertThat(modifiers.gunDamage(commander, WeaponKind.SIDEARM, 10)).isEqualTo(10);
     }
 
     /** Field Medicine makes a trooper readier to fetch a man, the commander above all. */
@@ -176,6 +181,68 @@ class UpgradeTest {
 
         assertThat(modifiers.stabiliseWork(commander, tick)).isCloseTo(tick * 1.25f, CLOSE);
         assertThat(modifiers.stabiliseWork(trooper, tick)).isCloseTo(tick * 1.25f, CLOSE);
+    }
+
+    /** Thick Skin: one more wound on his feet per rank, for his men and every commander (G0053). */
+    @Test
+    void carriesAnotherWoundOnHisFeetWithThickSkin() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        hold(simulation, new Upgrades.Held(UpgradeKind.THICK_SKIN, Upgrades.SHARED, 1));
+
+        wound(simulation, trooper);
+        wound(simulation, trooper);
+
+        assertThat(trooper.getComponent(Vitality.class).wounds).isEqualTo(2);
+        assertThat(trooper.getComponent(Vitality.class).begun).isFalse();
+    }
+
+    /** Self-Treatment: the chooser's wounds clear on their own after a spell with no new one - his alone. */
+    @Test
+    void mendsTheChoosersWoundsOnTheirOwnAndNobodyElses() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        Entity trooper = simulation.spawnTrooper(MIDDLE - 10f, MIDDLE);
+        hold(simulation, new Upgrades.Held(UpgradeKind.SELF_TREATMENT, 0, 1));
+        wound(simulation, commander);
+        wound(simulation, trooper);
+
+        AlphaWorlds.steps(simulation, AlphaWorlds.ticksIn(SELF_TREATMENT_SECONDS) + 2);
+
+        assertThat(commander.getComponent(Vitality.class).wounds).isZero();
+        assertThat(trooper.getComponent(Vitality.class).wounds).isEqualTo(1);
+    }
+
+    /** The clock is from his LAST wound, so it rewards getting out of the fight rather than standing in it. */
+    @Test
+    void startsTheMendAgainWithEveryNewWound() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        hold(simulation, new Upgrades.Held(UpgradeKind.SELF_TREATMENT, 0, 1));
+        hold(simulation, new Upgrades.Held(UpgradeKind.THICK_SKIN, Upgrades.SHARED, 1));
+        wound(simulation, commander);
+        AlphaWorlds.steps(simulation, AlphaWorlds.ticksIn(SELF_TREATMENT_SECONDS * 0.6f));
+
+        wound(simulation, commander);
+        AlphaWorlds.steps(simulation, AlphaWorlds.ticksIn(SELF_TREATMENT_SECONDS * 0.6f));
+
+        assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(2);
+    }
+
+    @Test
+    void mendsNothingWithoutIt() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        wound(simulation, commander);
+
+        AlphaWorlds.steps(simulation, AlphaWorlds.ticksIn(SELF_TREATMENT_SECONDS * 5f));
+
+        assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
+    }
+
+    private static void wound(Simulation simulation, Entity man) {
+        man.getComponent(Damage.class).add(AlphaWorlds.A_BLOW, 0, Harm.WOUND);
+        AlphaWorlds.steps(simulation, AlphaWorlds.ticksIn(AlphaWorlds.WOUND_GRACE) + 2);
     }
 
     /** Takes one rank through the real path: a point taken earns a draft, and a pick takes the card. */

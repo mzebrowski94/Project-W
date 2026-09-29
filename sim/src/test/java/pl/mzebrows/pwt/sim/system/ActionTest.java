@@ -2,25 +2,24 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ACTION_REACH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_STABILISE;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.REVIVE_HEALTH_FRACTION;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.WOUND_GRACE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
-import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
-import pl.mzebrows.pwt.sim.component.Health;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.ActionKind;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Look;
 
 /**
@@ -81,22 +80,24 @@ class ActionTest {
         putDown(trooper);
         steps(simulation, ticksIn(CASUALTY_STABILISE) + 2, STILL.acting(true));
 
-        assertThat(trooper.getComponent(Casualty.class).begun).isFalse();
+        assertThat(trooper.getComponent(Vitality.class).begun).isFalse();
         assertThat(trooper.getComponent(Dying.class).begun).isFalse();
     }
 
-    /** He gets up hurt. Picking a man up is not the same as getting him out. */
+    /** Being put back on his feet clears every wound he was carrying (G0053). */
     @Test
-    void givesHimBackOnlyPartOfWhatHeLost() {
+    void clearsEveryWoundWhenHeIsPutBackOnHisFeet() {
         Simulation simulation = simulation();
         simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
+        trooper.getComponent(Damage.class).add(A_BLOW, 0, Harm.WOUND);
+        steps(simulation, ticksIn(WOUND_GRACE) + 2);
 
         putDown(trooper);
         steps(simulation, ticksIn(CASUALTY_STABILISE) + 2, STILL.acting(true));
 
-        assertThat(trooper.getComponent(Health.class).current)
-                .isCloseTo(TROOPER_HEALTH * REVIVE_HEALTH_FRACTION, Offset.offset(0.01f));
+        assertThat(trooper.getComponent(Vitality.class).wounds).isZero();
+        assertThat(trooper.getComponent(Vitality.class).begun).isFalse();
     }
 
     @Test
@@ -108,7 +109,7 @@ class ActionTest {
         putDown(trooper);
         steps(simulation, ticksIn(CASUALTY_STABILISE) + 2, STILL);
 
-        assertThat(trooper.getComponent(Casualty.class).begun).isTrue();
+        assertThat(trooper.getComponent(Vitality.class).begun).isTrue();
     }
 
     /**
@@ -125,7 +126,7 @@ class ActionTest {
         steps(simulation, ticksIn(CASUALTY_STABILISE) - 4, STILL.acting(true));
         simulation.step(STILL);
 
-        assertThat(trooper.getComponent(Casualty.class).stabilised).isZero();
+        assertThat(trooper.getComponent(Vitality.class).stabilised).isZero();
     }
 
     /** Walking away is letting go: the offer is re-decided from where he is standing, every tick. */
@@ -149,7 +150,7 @@ class ActionTest {
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
 
-        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0);
+        trooper.getComponent(Damage.class).add(A_BLOW, 0);
         simulation.step(STILL);
 
         assertThat(commander.getComponent(Action.class).available).isEqualTo(ActionKind.NONE);
@@ -202,6 +203,6 @@ class ActionTest {
     }
 
     private static void putDown(Entity entity) {
-        entity.getComponent(Damage.class).add(TROOPER_HEALTH, 0, false);
+        entity.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
     }
 }

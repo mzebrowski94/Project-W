@@ -35,6 +35,12 @@ public final class Stunned implements Component, Pool.Poolable {
     /** True when this hold is half of a lethal exchange rather than the recoil from a shove. */
     public boolean grappling;
 
+    /**
+     * True when this hold is a stun a source declared rather than the recoil of a blow - the one the
+     * renderer draws as its own state (G0053). Cleared when the hold runs out.
+     */
+    public boolean dazed;
+
     /** True if this entity may not act right now. */
     public boolean active() {
         return remainingTicks > 0;
@@ -48,6 +54,15 @@ public final class Stunned implements Component, Pool.Poolable {
         if (decay > 0f) {
             knockbackDecay = decay;
         }
+    }
+
+    /** Holds it still for at least this long, as a stun rather than a recoil. */
+    public void daze(int ticks) {
+        if (ticks <= 0) {
+            return;
+        }
+        apply(ticks, 0f);
+        dazed = true;
     }
 
     /**
@@ -76,5 +91,6 @@ public final class Stunned implements Component, Pool.Poolable {
         remainingTicks = 0;
         knockbackDecay = 0f;
         grappling = false;
+        dazed = false;
     }
 }

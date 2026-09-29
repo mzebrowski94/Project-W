@@ -110,6 +110,12 @@ final class AdventureTwoScenario implements Scenario {
 
     private static final float BOULDER_WALL_MARGIN = 7f;
 
+    /** A few medkits along the march (G0053), beside its points. */
+    @Override
+    public int medkits(SimConfig config) {
+        return config.medkit().perLevel();
+    }
+
     @Override
     public String name() {
         return "Adventure 2";

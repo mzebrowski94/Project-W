@@ -1,7 +1,7 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RAILGUN_DAMAGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
@@ -12,7 +12,6 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
-import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
@@ -37,7 +36,6 @@ class WeaponPickupTest {
 
     private static final float X = 50f;
     private static final float Y = 50f;
-    private static final Offset<Float> TOLERANCE = Offset.offset(1e-5f);
 
     @Test
     void putsANewGunInTheCommandersHands() {
@@ -58,7 +56,7 @@ class WeaponPickupTest {
 
         simulation.step();
 
-        assertThat(commander.getComponent(Weapon.class).damage).isCloseTo(RAILGUN_DAMAGE, TOLERANCE);
+        assertThat(commander.getComponent(Weapon.class).damage).isEqualTo(RAILGUN_DAMAGE);
     }
 
     /** A gun the player cannot tell he is holding is a gun he is guessing about (pillar 5). */
@@ -119,7 +117,7 @@ class WeaponPickupTest {
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        entity.getComponent(Damage.class).add(A_BLOW, 0);
         entity.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 

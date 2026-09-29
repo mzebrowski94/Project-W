@@ -11,11 +11,11 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
@@ -25,7 +25,7 @@ final class TrooperAid {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
-    private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
@@ -46,7 +46,7 @@ final class TrooperAid {
     /** Takes the views it reads from the engine, once, as its system is added. */
     void bind(Engine engine) {
         casualties = engine.getEntitiesFor(
-                Family.all(Casualty.class, Position.class, Body.class).get());
+                Family.all(Vitality.class, Position.class, Body.class).get());
     }
 
     /**
@@ -115,7 +115,7 @@ final class TrooperAid {
         float shortest = range * range;
         for (int i = 0; i < casualties.size(); i++) {
             Entity candidate = casualties.get(i);
-            if (Objects.equals(candidate, helper) || !CASUALTY.get(candidate).begun) {
+            if (Objects.equals(candidate, helper) || !VITALITY.get(candidate).begun) {
                 continue;
             }
             if (DYING.has(candidate) && DYING.get(candidate).begun) {

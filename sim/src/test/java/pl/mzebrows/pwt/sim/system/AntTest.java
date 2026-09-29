@@ -3,7 +3,6 @@ package pl.mzebrows.pwt.sim.system;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.BARREL_BLAST_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CERTAIN;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_ACTIVE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
@@ -11,6 +10,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.leapConfig;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
@@ -24,6 +24,8 @@ import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Shield;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.ArmourDef;
 import pl.mzebrows.pwt.sim.def.GripDef;
@@ -52,6 +54,9 @@ class AntTest {
     private static final float HEAD_ARC = 140f;
 
     private static final float CARRY_SPEED = 10f;
+
+    /** How hard a man is thrown clear of an ant that dies holding him. */
+    private static final float ESCAPE_THROW = 20f;
 
     private static final float HOLD_SECONDS = 1f;
 
@@ -144,8 +149,7 @@ class AntTest {
 
         stepUntilTaken(simulation, commander);
 
-        assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH);
-        assertThat(commander.getComponent(Dying.class).begun).isFalse();
+        assertThat(unhurt(commander)).isTrue();
         assertThat(commander.getComponent(Appearance.class).state).isEqualTo(Appearance.State.GRIPPED);
     }
 
@@ -202,11 +206,44 @@ class AntTest {
         Entity ant = simulation.spawnUnit(UnitKind.ANT, MIDDLE + WITHIN_A_LEAP, MIDDLE);
         stepUntilTaken(simulation, commander);
 
-        ant.getComponent(Damage.class).add(ENEMY_HEALTH * 2f, 0);
+        ant.getComponent(Damage.class).add(ENEMY_HEALTH * 2, 0);
         steps(simulation, ticksIn(HOLD_SECONDS) + 2);
 
         assertThat(commander.getComponent(Gripped.class).held()).isFalse();
         assertThat(commander.getComponent(Dying.class).begun).isFalse();
+    }
+
+    /** Getting out costs him a wound, and he is thrown clear of the body (G0053). */
+    @Test
+    void woundsAManItDiesHoldingRatherThanLettingHimGoFree() {
+        Simulation simulation = new Simulation(gripping(config()));
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity ant = simulation.spawnUnit(UnitKind.ANT, MIDDLE + WITHIN_A_LEAP, MIDDLE);
+        stepUntilTaken(simulation, commander);
+
+        ant.getComponent(Damage.class).add(ENEMY_HEALTH * 2, 0);
+        steps(simulation, 3);
+
+        assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
+        assertThat(commander.getComponent(Vitality.class).begun).isFalse();
+        assertThat(commander.getComponent(Gripped.class).held()).isFalse();
+    }
+
+    /** A shield takes a grab as it takes any hit, and breaks: the ant simply lands on him (G0053). */
+    @Test
+    void takesNobodyWhoHasAShieldInFrontOfHim() {
+        Simulation simulation = new Simulation(gripping(config()));
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        commander.getComponent(Shield.class).raise();
+        simulation.spawnUnit(UnitKind.ANT, MIDDLE + WITHIN_A_LEAP, MIDDLE);
+
+        for (int i = 0; i < UNTIL_IT_LANDS && commander.getComponent(Shield.class).up; i++) {
+            simulation.step();
+        }
+
+        assertThat(commander.getComponent(Shield.class).up).isFalse();
+        assertThat(commander.getComponent(Gripped.class).held()).isFalse();
+        assertThat(unhurt(commander)).isTrue();
     }
 
     /** Held, he drives nothing and fires nothing... */
@@ -266,7 +303,7 @@ class AntTest {
     /** An ant with its head armoured and nothing else special, which bites nobody. */
     private static SimConfig armoured() {
         return config().withUnit(
-                        UnitKind.ANT, ant -> ant.withContactDamage(0f).withArmour(new ArmourDef(true, HEAD_ARC)));
+                        UnitKind.ANT, ant -> ant.withContactDamage(0).withArmour(new ArmourDef(true, HEAD_ARC)));
     }
 
     /** The ant as it ships, in shape: an armoured head, and a leap that grips. */
@@ -274,7 +311,7 @@ class AntTest {
         return config.withUnit(
                 UnitKind.ANT,
                 ant -> ant.withLeap(leapConfig())
-                        .withGrip(new GripDef(true, CARRY_SPEED, HOLD_SECONDS))
+                        .withGrip(new GripDef(true, CARRY_SPEED, HOLD_SECONDS, ESCAPE_THROW))
                         .withArmour(new ArmourDef(true, HEAD_ARC)));
     }
 

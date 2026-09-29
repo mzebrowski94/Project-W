@@ -21,6 +21,7 @@ import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -50,7 +51,7 @@ class DefendTest {
     private static final TileRect FAR_CORNER = new TileRect(16, 16, 2, 2);
 
     /** More than anything in the fixture has. A test tidying the field does not need a fair fight. */
-    private static final float LETHAL = 1000f;
+    private static final int LETHAL = 1000;
 
     @Test
     void walksTheAliensAtThePostWhenTheyHaveNoticedNobody() {
@@ -244,7 +245,7 @@ class DefendTest {
                 simulation.engine().getEntitiesFor(Family.all(Enemy.class).get());
         assertThat(aliens.size()).isEqualTo(2);
 
-        aliens.get(0).getComponent(Damage.class).add(LETHAL, 0, true);
+        aliens.get(0).getComponent(Damage.class).add(LETHAL, 0, Harm.KILL);
         steps(simulation, 2);
         long withOneStanding = simulation.waves().cleared;
         killEveryEnemy(simulation);
@@ -258,7 +259,7 @@ class DefendTest {
         ImmutableArray<Entity> standing =
                 simulation.engine().getEntitiesFor(Family.all(Enemy.class).get());
         for (int i = 0; i < standing.size(); i++) {
-            standing.get(i).getComponent(Damage.class).add(LETHAL, 0, true);
+            standing.get(i).getComponent(Damage.class).add(LETHAL, 0, Harm.KILL);
         }
     }
 }

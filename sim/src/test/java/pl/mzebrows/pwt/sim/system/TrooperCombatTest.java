@@ -210,7 +210,7 @@ class TrooperCombatTest {
     @Test
     void doesNotShootThroughRock() {
         Simulation simulation = on(
-                everyStrain(AlphaWorlds.config(), strain -> strain.withContactDamage(0f)),
+                everyStrain(AlphaWorlds.config(), strain -> strain.withContactDamage(0)),
                 ground().rect(11, 0, 1, 20, Terrain.ROCK).build());
         simulation.spawnCommander(CORNER, 5f);
         Entity trooper = simulation.spawnTrooper(52f, MIDDLE);
@@ -267,7 +267,7 @@ class TrooperCombatTest {
     @Test
     void stopsFightingSomethingThatStepsBehindRock() {
         Simulation simulation = on(
-                everyStrain(AlphaWorlds.config(), strain -> strain.withContactDamage(0f)),
+                everyStrain(AlphaWorlds.config(), strain -> strain.withContactDamage(0)),
                 ground().rect(11, 0, 1, 20, Terrain.ROCK).build());
         simulation.spawnCommander(CORNER, 5f);
         Entity trooper = simulation.spawnTrooper(52f, MIDDLE);
@@ -372,7 +372,7 @@ class TrooperCombatTest {
     private static Simulation stillEnemies() {
         return new Simulation(everyStrain(
                 AlphaWorlds.config(),
-                strain -> strain.withContactDamage(0f)
+                strain -> strain.withContactDamage(0)
                         .withPerception(
                                 PerceptionDef.allRound(false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))));
     }
@@ -380,7 +380,7 @@ class TrooperCombatTest {
     /** The dice rigged so a rare thing happens every time it is offered. */
     private static Simulation alwaysSwinging() {
         SimConfig base = everyStrain(
-                AlphaWorlds.config(), strain -> strain.withContactDamage(0f).withLeap(leapConfig()));
+                AlphaWorlds.config(), strain -> strain.withContactDamage(0).withLeap(leapConfig()));
         return new Simulation(base.withChance(AiChance.SWING_AT_A_LEAP, AlphaWorlds.CERTAIN));
     }
 
@@ -388,7 +388,7 @@ class TrooperCombatTest {
     private static Simulation alwaysSwingingAtSomethingThatNeverLeaps() {
         SimConfig base = everyStrain(
                 AlphaWorlds.config(),
-                strain -> strain.withContactDamage(0f).withLeap(leapConfig().withTriggerRange(0f)));
+                strain -> strain.withContactDamage(0).withLeap(leapConfig().withTriggerRange(0f)));
         return new Simulation(base.withChance(AiChance.SWING_AT_A_LEAP, AlphaWorlds.CERTAIN));
     }
 
@@ -400,7 +400,7 @@ class TrooperCombatTest {
     /** A hit landing on him this tick from a place, the way contact resolution records one. */
     private static void shotFrom(Entity trooper, float x, float y) {
         Damage damage = trooper.getComponent(Damage.class);
-        damage.amount = 1f;
+        damage.amount = 1;
         damage.hasSource = true;
         damage.sourceX = x;
         damage.sourceY = y;

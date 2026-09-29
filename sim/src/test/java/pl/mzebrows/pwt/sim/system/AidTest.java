@@ -1,10 +1,9 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_BLEED_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_STABILISE;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -14,11 +13,12 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.willing;
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Order;
 
 /**
@@ -53,10 +53,10 @@ class AidTest {
         Entity down = simulation.spawnTrooper(MIDDLE, MIDDLE);
         simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
 
-        wound(down, TROOPER_HEALTH);
+        wound(down, A_BLOW);
         steps(simulation, LONG_ENOUGH_TO_WORK);
 
-        assertThat(down.getComponent(Casualty.class).begun).isFalse();
+        assertThat(down.getComponent(Vitality.class).begun).isFalse();
         assertThat(down.getComponent(Dying.class).begun).isFalse();
     }
 
@@ -66,10 +66,10 @@ class AidTest {
         Entity down = simulation.spawnTrooper(MIDDLE, MIDDLE);
         simulation.spawnTrooper(MIDDLE + ACROSS_THE_ROOM, MIDDLE);
 
-        wound(down, TROOPER_HEALTH);
+        wound(down, A_BLOW);
         steps(simulation, LONG_ENOUGH_TO_WALK_AND_WORK);
 
-        assertThat(down.getComponent(Casualty.class).begun).isFalse();
+        assertThat(down.getComponent(Vitality.class).begun).isFalse();
     }
 
     /** The whole reason he can be a casualty at all: without this he is promised a rescue nobody makes. */
@@ -79,10 +79,10 @@ class AidTest {
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
 
-        wound(commander, COMMANDER_HEALTH);
+        wound(commander, A_BLOW);
         steps(simulation, LONG_ENOUGH_TO_WORK);
 
-        assertThat(commander.getComponent(Casualty.class).begun).isFalse();
+        assertThat(commander.getComponent(Vitality.class).begun).isFalse();
         assertThat(commander.getComponent(Dying.class).begun).isFalse();
     }
 
@@ -92,7 +92,7 @@ class AidTest {
         Entity down = simulation.spawnTrooper(MIDDLE, MIDDLE);
         simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
 
-        wound(down, TROOPER_HEALTH);
+        wound(down, A_BLOW);
         steps(simulation, ticksIn(CASUALTY_BLEED_OUT) + 2);
 
         assertThat(down.getComponent(Dying.class).begun).isTrue();
@@ -108,7 +108,7 @@ class AidTest {
         // simply wins is not a fight it stayed in.
         simulation.spawnBrute(MIDDLE + BESIDE + 10f, MIDDLE);
 
-        wound(down, TROOPER_HEALTH);
+        wound(down, A_BLOW);
         steps(simulation, WHILE_THE_ENEMY_IS_STILL_UP);
 
         assertThat(mode(helper)).isEqualTo(Trooper.Mode.FIGHT);
@@ -123,15 +123,15 @@ class AidTest {
         Entity helper = simulation.spawnTrooper(MIDDLE + BESIDE * 2f, MIDDLE);
 
         simulation.step(ordering(Order.DEFENCE));
-        wound(down, TROOPER_HEALTH);
+        wound(down, A_BLOW);
         steps(simulation, LONG_ENOUGH_TO_WORK);
 
         assertThat(mode(helper)).isEqualTo(Trooper.Mode.HOLD);
-        assertThat(down.getComponent(Casualty.class).begun).isTrue();
+        assertThat(down.getComponent(Vitality.class).begun).isTrue();
     }
 
-    private static void wound(Entity entity, float amount) {
-        entity.getComponent(Damage.class).add(amount, 0, false);
+    private static void wound(Entity entity, int amount) {
+        entity.getComponent(Damage.class).add(amount, 0, Harm.DOWN);
     }
 
     private static Trooper.Mode mode(Entity trooper) {

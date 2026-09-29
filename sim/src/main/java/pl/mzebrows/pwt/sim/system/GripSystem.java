@@ -22,6 +22,7 @@ import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * Carries off whatever a gripping leap took hold of, and finishes him when his time is up (G0045).
@@ -32,7 +33,8 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  * <ul>
  *   <li><strong>It lets go the moment the pair stops being true</strong> - it is dying, he is down or
  *       dead, either is gone. Killing it is how a man is freed, and nothing else frees him: struggling
- *       is landing blows on it like anybody else does.
+ *       is landing blows on it like anybody else does. <strong>Getting out costs a wound</strong>
+ *       (G0053): a man it dies holding is thrown clear, wounded.
  *   <li><strong>His clock runs</strong>, and at the end of it the creature lands its own blow, with the
  *       lethality its claws declare (G0020). The clock is published on him for the renderer.
  *   <li><strong>It walks away from whoever is nearest him</strong> - the man most likely to come for
@@ -87,6 +89,9 @@ public final class GripSystem extends EntitySystem {
             }
             Entity man = heldBy(gripper, grip);
             if (man == null || dying(gripper) || Drivers.down(man)) {
+                if (man != null && dying(gripper) && !Drivers.down(man)) {
+                    escape(gripper, grip, man, deltaTime);
+                }
                 letGo(grip, man);
                 continue;
             }
@@ -136,9 +141,38 @@ public final class GripSystem extends EntitySystem {
         }
         ContactDamage bite = CONTACT_DAMAGE.get(gripper);
         Damage owed = DAMAGE.get(man);
-        owed.add(bite.amount, bite.victimInvulnerableTicks, bite.fatal);
+        owed.add(bite.amount, bite.victimInvulnerableTicks, bite.harm);
         Position at = POSITION.get(gripper);
         owed.cameFrom(at.x, at.y);
+    }
+
+    /**
+     * What getting out of its jaws costs him (G0053): a wound, and a throw clear of the body. Owed like
+     * any blow, so his grace, and whatever else lands this tick, are weighed with it. The amount is its
+     * bite's; only the harm matters to a man.
+     */
+    private static void escape(Entity gripper, Grip grip, Entity man, float tickSeconds) {
+        if (!DAMAGE.has(man) || !CONTACT_DAMAGE.has(gripper)) {
+            return;
+        }
+        Damage owed = DAMAGE.get(man);
+        owed.add(CONTACT_DAMAGE.get(gripper).amount, 0, Harm.WOUND);
+        Position at = POSITION.get(gripper);
+        Position where = POSITION.get(man);
+        owed.cameFrom(at.x, at.y);
+        float awayX = where.x - at.x;
+        float awayY = where.y - at.y;
+        float apart = (float) Math.sqrt(awayX * awayX + awayY * awayY);
+        if (apart <= EPSILON || grip.escapeKnockbackSpeed <= 0f || grip.escapeShoveTicks <= 0) {
+            return;
+        }
+        float seconds = grip.escapeShoveTicks * tickSeconds;
+        owed.shove(
+                awayX / apart,
+                awayY / apart,
+                grip.escapeKnockbackSpeed,
+                grip.escapeShoveTicks,
+                grip.escapeKnockbackSpeed / seconds);
     }
 
     /**

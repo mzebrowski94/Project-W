@@ -11,7 +11,6 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Drag;
@@ -23,6 +22,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.component.Vitality;
 
 /**
  * Hauling something along behind you.
@@ -40,7 +40,7 @@ public final class DragSystem extends EntitySystem {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
-    private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Speed> SPEED = ComponentMapper.getFor(Speed.class);
@@ -221,6 +221,6 @@ public final class DragSystem extends EntitySystem {
         if (TURRET.has(entity) && TURRET.get(entity).crewed) {
             return false;
         }
-        return !CASUALTY.has(entity) || CASUALTY.get(entity).begun;
+        return !VITALITY.has(entity) || VITALITY.get(entity).begun;
     }
 }

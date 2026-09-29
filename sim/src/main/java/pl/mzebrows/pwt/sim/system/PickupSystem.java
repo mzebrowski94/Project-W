@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Taking;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.PickupDef;
@@ -34,6 +35,7 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
  */
 public final class PickupSystem extends EntitySystem {
 
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
@@ -103,6 +105,7 @@ public final class PickupSystem extends EntitySystem {
             case Grant.Feed(int amount) -> feed(taker, amount);
             case Grant.Mutate(UnitKind into) -> mutate(taker, into);
             case Grant.Reinforce(int troopers) -> reinforce(troopers);
+            case Grant.Mend _ -> mend(taker);
         }
     }
 
@@ -121,6 +124,13 @@ public final class PickupSystem extends EntitySystem {
             return;
         }
         spawner.applyWeapon(taker, ranged.chargedGun);
+    }
+
+    /** Every wound cleared, through the one method that heals a man (G0053). */
+    private static void mend(Entity taker) {
+        if (VITALITY.has(taker)) {
+            VITALITY.get(taker).recover();
+        }
     }
 
     /** Counts towards whatever the taker's strain evolves into. {@code EvolutionSystem} decides when. */

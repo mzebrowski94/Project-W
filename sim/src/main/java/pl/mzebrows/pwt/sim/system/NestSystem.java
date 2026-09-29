@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Vitality;
 
 /**
  * Runs the nests: wakes them, hatches what they owe, and empties the last of one into the fight that
@@ -64,8 +65,9 @@ public final class NestSystem extends EntitySystem {
     public void addedToEngine(Engine engine) {
         nests = engine.getEntitiesFor(
                 Family.all(Nest.class, Position.class, Health.class).get());
-        quarry = engine.getEntitiesFor(
-                Family.all(Faction.class, Position.class, Health.class).get());
+        quarry = engine.getEntitiesFor(Family.all(Faction.class, Position.class)
+                .one(Health.class, Vitality.class)
+                .get());
         watchers = engine.getEntitiesFor(
                 Family.all(Perception.class, Position.class).get());
     }

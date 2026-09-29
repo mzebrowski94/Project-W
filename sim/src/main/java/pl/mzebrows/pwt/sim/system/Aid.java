@@ -6,12 +6,11 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
-import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
@@ -23,12 +22,11 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
  */
 final class Aid {
 
-    private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Dragged> DRAGGED = ComponentMapper.getFor(Dragged.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
-    private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
 
     private Aid() {}
@@ -47,7 +45,7 @@ final class Aid {
         float nearestGap = Float.MAX_VALUE;
         for (int i = 0; i < casualties.size(); i++) {
             Entity candidate = casualties.get(i);
-            if (Objects.equals(candidate, helper) || !CASUALTY.get(candidate).begun) {
+            if (Objects.equals(candidate, helper) || !VITALITY.get(candidate).begun) {
                 continue;
             }
             if (DYING.has(candidate) && DYING.get(candidate).begun) {
@@ -73,24 +71,19 @@ final class Aid {
     /**
      * A tick's worth of work on him, and puts him back on his feet once there has been enough of it.
      *
-     * <p>He comes up hurt and briefly protected. Returns whether this was the tick he came up - the
+     * <p>He comes up with every wound cleared and briefly protected (G0053). Returns whether this was the tick he came up - the
      * stabilise a commander's tally counts (G0044). How much a tick of work is worth is the one place
      * the {@code STABILISE_SPEED} stat is read, for whoever is doing it.
      */
     static boolean work(
-            Modifiers modifiers,
-            Entity helper,
-            Entity subject,
-            float deltaTime,
-            float healthFraction,
-            float invulnerableSeconds) {
-        Casualty casualty = CASUALTY.get(subject);
+            Modifiers modifiers, Entity helper, Entity subject, float deltaTime, float invulnerableSeconds) {
+        Vitality casualty = VITALITY.get(subject);
         casualty.stabilised += modifiers.stabiliseWork(helper, deltaTime);
         if (!casualty.stabilisedEnough(hauled(subject))) {
             return false;
         }
+        // Up with every wound cleared: the one way anything heals a man (G0053).
         casualty.recover();
-        HEALTH.get(subject).current = HEALTH.get(subject).max * healthFraction;
         if (INVULNERABLE.has(subject)) {
             INVULNERABLE.get(subject).grant(Ticks.of(invulnerableSeconds, deltaTime));
         }
@@ -103,12 +96,12 @@ final class Aid {
      * <p>A commitment, not an accumulation.
      */
     static void letGo(Entity subject) {
-        CASUALTY.get(subject).stabilised = 0f;
+        VITALITY.get(subject).stabilised = 0f;
     }
 
     /** How far through being put back on his feet he is, in {@code [0, 1]}, for the interface. */
     static float progress(Entity subject) {
-        return CASUALTY.get(subject).stabiliseProgress(hauled(subject));
+        return VITALITY.get(subject).stabiliseProgress(hauled(subject));
     }
 
     /** Whether he was carried here, which is what makes the work at this end so much longer. */

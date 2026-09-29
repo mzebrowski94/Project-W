@@ -18,10 +18,10 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Blast;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Health;
+import pl.mzebrows.pwt.sim.component.Vitality;
 
 /**
  * One circle, uniformly fatal inside it, harmless outside it, and on nobody's side. Those three
@@ -94,7 +94,7 @@ class BlastTest {
         simulation.spawnBlast(MIDDLE, MIDDLE, BLAST_RADIUS);
         steps(simulation, SETTLE);
 
-        assertThat(commander.getComponent(Casualty.class).begun).isTrue();
+        assertThat(commander.getComponent(Vitality.class).begun).isTrue();
     }
 
     @Test

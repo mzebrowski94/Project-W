@@ -36,7 +36,7 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
     public float secondsMax;
 
     /** What touching one takes off. */
-    public float damage;
+    public int damage;
 
     /** How long a man one of them puts down is protected from the rest of the spatter. */
     public float victimInvulnerableSeconds;
@@ -50,6 +50,9 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
     /** What the renderer draws each circle as. */
     public Look look = Look.NONE;
 
+    /** How hard a man one wounds is thrown off it, in world units per second (G0053). */
+    public float knockbackSpeed;
+
     /** Sets the reaction from the definition of what this leaves, for fluent spawning. */
     public SlicksOnDeath set(SlickDef def) {
         this.blobs = def.blobs();
@@ -62,6 +65,7 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
         this.growFraction = def.growFraction();
         this.fadeFraction = def.fadeFraction();
         this.look = def.look();
+        this.knockbackSpeed = def.knockbackSpeed();
         return this;
     }
 
@@ -72,10 +76,11 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
         spread = 0f;
         seconds = 0f;
         secondsMax = 0f;
-        damage = 0f;
+        damage = 0;
         victimInvulnerableSeconds = 0f;
         growFraction = 0f;
         fadeFraction = 0f;
         look = Look.NONE;
+        knockbackSpeed = 0f;
     }
 }

@@ -6,11 +6,13 @@ import com.badlogic.gdx.utils.Pool;
 /** How much damage an entity can take before it dies. Anything with this can be killed. */
 public final class Health implements Component, Pool.Poolable {
 
-    public float max;
-    public float current;
+    /** Whole hit points (G0054): no fraction is ever stored here. */
+    public int max;
+
+    public int current;
 
     /** Sets the maximum and starts at full, returning this component, for fluent spawning. */
-    public Health set(float newMax) {
+    public Health set(int newMax) {
         this.max = newMax;
         this.current = newMax;
         return this;
@@ -18,12 +20,12 @@ public final class Health implements Component, Pool.Poolable {
 
     /** Fraction remaining, in {@code [0, 1]}. For anything that displays a health bar. */
     public float fraction() {
-        return max <= 0f ? 0f : Math.max(0f, current) / max;
+        return max <= 0 ? 0f : Math.max(0, current) / (float) max;
     }
 
     @Override
     public void reset() {
-        max = 0f;
-        current = 0f;
+        max = 0;
+        current = 0;
     }
 }

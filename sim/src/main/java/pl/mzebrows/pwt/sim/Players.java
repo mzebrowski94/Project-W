@@ -4,10 +4,10 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Tally;
+import pl.mzebrows.pwt.sim.component.Vitality;
 
 /**
  * How many commanders there can be, and which one is in a given slot.
@@ -26,7 +26,7 @@ public final class Players {
     public static final int MAX = 8;
 
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
-    private static final ComponentMapper<Casualty> CASUALTY = ComponentMapper.getFor(Casualty.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     private Players() {}
@@ -76,7 +76,7 @@ public final class Players {
 
     /** Off his feet: on the ground bleeding, or on it for good. Neither drives, and neither is a target. */
     public static boolean down(Entity entity) {
-        if (CASUALTY.has(entity) && CASUALTY.get(entity).begun) {
+        if (VITALITY.has(entity) && VITALITY.get(entity).begun) {
             return true;
         }
         return DYING.has(entity) && DYING.get(entity).begun;

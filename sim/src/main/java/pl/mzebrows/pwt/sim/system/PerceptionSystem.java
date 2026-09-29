@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.component.Taking;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
@@ -63,7 +64,8 @@ public final class PerceptionSystem extends EntitySystem {
         watchers = engine.getEntitiesFor(
                 Family.all(Perception.class, Position.class).get());
         // Aliens excluded by family: an enemy is never on the player's side.
-        sides = engine.getEntitiesFor(Family.all(Faction.class, Health.class, Position.class)
+        sides = engine.getEntitiesFor(Family.all(Faction.class, Position.class)
+                .one(Health.class, Vitality.class)
                 .exclude(Enemy.class)
                 .get());
         posts = engine.getEntitiesFor(Family.all(Post.class, Position.class).get());

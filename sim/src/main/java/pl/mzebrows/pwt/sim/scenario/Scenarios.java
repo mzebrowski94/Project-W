@@ -66,6 +66,8 @@ public final class Scenarios {
         scenario.populate(simulation);
         // After the scenario, because it is the scenario that says where the control points are.
         scenario.deployReinforcements(simulation);
+        // After the crates, so a medkit is laid clear of them.
+        scenario.deployMedkits(simulation);
         return simulation;
     }
 

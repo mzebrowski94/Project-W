@@ -89,6 +89,8 @@ public final class WorldRenderer implements Disposable {
     private final ChargedMark chargedMark;
     private final OrderMark orderMark;
     private final HeatMark heatMark;
+    private final WoundMark woundMark;
+    private final ShieldMark shieldMark;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
 
@@ -194,6 +196,9 @@ public final class WorldRenderer implements Disposable {
             if (appearance.heat > 0f) {
                 drawHeat(x, y, body.radius, appearance);
             }
+            if (appearance.wounds > 0) {
+                drawWounds(x, y, body.radius, appearance.wounds);
+            }
         }
         shapes.end();
         drawRings();
@@ -255,7 +260,7 @@ public final class WorldRenderer implements Disposable {
         boolean any = false;
         for (int i = 0; i < drawable.size(); i++) {
             Appearance appearance = APPEARANCE.get(drawable.get(i));
-            if (appearance.ordered || appearance.charged) {
+            if (appearance.ordered || appearance.charged || appearance.shield > 0f) {
                 any = true;
                 break;
             }
@@ -278,6 +283,9 @@ public final class WorldRenderer implements Disposable {
             if (appearance.ordered) {
                 shapes.setColor(brightened(tint(appearance), orderMark.tint()));
                 shapes.circle(position.x, position.y, orderMark.radiusFor(radius), CIRCLE_SEGMENTS);
+            }
+            if (appearance.shield > 0f) {
+                drawShield(position.x, position.y, radius, appearance.shield);
             }
         }
         shapes.end();
@@ -305,6 +313,35 @@ public final class WorldRenderer implements Disposable {
             shapes.rectLine(fromX, fromY, toX, toY, width);
             fromX = toX;
             fromY = toY;
+        }
+    }
+
+    /**
+     * A shield: as much of a ring as it has left, clockwise from straight up (G0053). Straight pieces
+     * in the outline pass, because the renderer's own arc is a pie slice.
+     */
+    private void drawShield(float x, float y, float radius, float fraction) {
+        shapes.setColor(shieldMark.color());
+        float ring = shieldMark.radiusFor(radius);
+        int steps = shieldMark.segmentsFor(fraction);
+        float fromX = x + MathUtils.cosDeg(shieldMark.angleAt(0)) * ring;
+        float fromY = y + MathUtils.sinDeg(shieldMark.angleAt(0)) * ring;
+        for (int step = 1; step <= steps; step++) {
+            float toX = x + MathUtils.cosDeg(shieldMark.angleAt(step)) * ring;
+            float toY = y + MathUtils.sinDeg(shieldMark.angleAt(step)) * ring;
+            shapes.line(fromX, fromY, toX, toY);
+            fromX = toX;
+            fromY = toY;
+        }
+    }
+
+    /** A dot per wound under his feet (G0053); only ever reached by a man carrying one. */
+    private void drawWounds(float x, float y, float radius, int wounds) {
+        shapes.setColor(woundMark.color());
+        float dot = woundMark.radiusFor(radius);
+        float below = y - woundMark.dropFor(radius);
+        for (int wound = 0; wound < wounds; wound++) {
+            shapes.circle(x + woundMark.offsetFor(radius, wound, wounds), below, dot, CIRCLE_SEGMENTS);
         }
     }
 

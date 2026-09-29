@@ -65,3 +65,9 @@ bleed-out already is the second chance. Two clocks doing the same job is one clo
 **Revisit when** local co-op lands. A second player changes who is nearest, whether the squad should
 bother at all, and whether a man can be hauled by somebody who is not the commander - and all three
 are decisions this record deliberately did not take.
+
+## Amended 2026-09-29 by G0053
+
+**What he gets back is every wound cleared**, rather than a fraction of his health: a man has no health
+now. Still one revive path, `Aid`, with one set of numbers, and still the same protection afterwards.
+`sim.casualty.reviveHealthFraction` goes in H1 (`docs/design/health-scope.md`).

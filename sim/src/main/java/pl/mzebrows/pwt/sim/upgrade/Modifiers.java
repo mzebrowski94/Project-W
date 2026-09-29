@@ -49,9 +49,9 @@ public final class Modifiers {
 
     /** What each shot of one pull of this gun does. */
     @Reads(Stat.GUN_DAMAGE)
-    public float gunDamage(Entity who, WeaponKind gun, float base) {
+    public int gunDamage(Entity who, WeaponKind gun, int base) {
         StatDef stat = stats.of(Stat.GUN_DAMAGE);
-        return Fold.scale(base, percent(Stat.GUN_DAMAGE, who, gun), stat.minPercent(), stat.maxPercent());
+        return Fold.scaleWhole(base, percent(Stat.GUN_DAMAGE, who, gun), stat.minPercent(), stat.maxPercent());
     }
 
     /** How many men a crate of reinforcements lands. The side's number: no one entity reads it. */
@@ -88,6 +88,29 @@ public final class Modifiers {
     public float stabiliseWork(Entity who, float base) {
         StatDef stat = stats.of(Stat.STABILISE_SPEED);
         return Fold.scale(base, percent(Stat.STABILISE_SPEED, who, null), stat.minPercent(), stat.maxPercent());
+    }
+
+    /** How long a stun a source declared leaves {@code who} unable to act, in ticks (G0053). */
+    @Reads(Stat.STUN_DURATION)
+    public int stunTicks(Entity who, int baseTicks) {
+        StatDef stat = stats.of(Stat.STUN_DURATION);
+        return Fold.scaleTicks(baseTicks, percent(Stat.STUN_DURATION, who, null), stat.minPercent(), stat.maxPercent());
+    }
+
+    /** How many wounds {@code who} carries on his feet (G0053). */
+    @Reads(Stat.MAX_WOUNDS)
+    public int maxWounds(Entity who, int base) {
+        return Fold.count(
+                base, amount(Stat.MAX_WOUNDS, who), stats.of(Stat.MAX_WOUNDS).min());
+    }
+
+    /** How long after his last wound {@code who}'s wounds clear on their own, in seconds; zero never. */
+    @Reads(Stat.MEND_SECONDS)
+    public int mendSeconds(Entity who, int base) {
+        return Fold.count(
+                base,
+                amount(Stat.MEND_SECONDS, who),
+                stats.of(Stat.MEND_SECONDS).min());
     }
 
     /** How often {@code who} does this occasional thing, per second of opportunity. */
@@ -130,6 +153,26 @@ public final class Modifiers {
                             && only.stat() == stat
                             && Scope.reaches(only.target(), who, entry.slot())) {
                         sum += only.percent() * entry.ranks();
+                    }
+                }
+            }
+        }
+        return sum;
+    }
+
+    /** The sum of every held amount on this count that reaches {@code who} - a unit's own count. */
+    private int amount(Stat stat, Entity who) {
+        int sum = 0;
+        for (int l = 0; l < ledgers.size(); l++) {
+            Upgrades upgrades = UPGRADES.get(ledgers.get(l));
+            for (int h = 0; h < upgrades.held.size; h++) {
+                Upgrades.Held entry = upgrades.held.get(h);
+                List<Effect> effects = catalogue.of(entry.kind()).effects();
+                for (int e = 0; e < effects.size(); e++) {
+                    if (effects.get(e) instanceof Effect.Count count
+                            && count.stat() == stat
+                            && Scope.reaches(count.target(), who, entry.slot())) {
+                        sum += count.amount() * entry.ranks();
                     }
                 }
             }

@@ -21,7 +21,7 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
  * <p>Deciding is here and driving is {@code TrooperMoveSystem} (G0010); downstream reads
  * {@link Trooper#mode} and the target and asks again for nobody.
  *
- * <p><strong>The cascade is fight, order, errands (aid, crew), objective, roam</strong>, each half in
+ * <p><strong>The cascade is fight, order, errands (aid, mend, crew), objective, roam</strong>, each half in
  * its own class; this one owns only the order. A standing order beats fetching somebody (G0017). An
  * errand is rolled only while not already going, so men do not set off and think better of it.
  * Nothing is remembered across the cascade: the objective is re-derived the moment a fight ends.
@@ -36,6 +36,7 @@ public final class TrooperMindSystem extends EntitySystem {
     private final TrooperFight fight;
     private final TrooperOrders orders;
     private final TrooperAid aid;
+    private final TrooperMend mend;
     private final TrooperCrew crew;
     private final TrooperObjective objective;
     private final TrooperRoam roam;
@@ -46,6 +47,7 @@ public final class TrooperMindSystem extends EntitySystem {
         this.fight = new TrooperFight(config, map);
         this.orders = new TrooperOrders(config, map);
         this.aid = new TrooperAid(config, modifiers, nerve);
+        this.mend = new TrooperMend(config);
         this.crew = new TrooperCrew(config, modifiers, nerve);
         this.objective = new TrooperObjective(config, map, rng);
         this.roam = new TrooperRoam(config, map, rng);
@@ -58,6 +60,7 @@ public final class TrooperMindSystem extends EntitySystem {
         fight.bind(engine);
         orders.bind(engine);
         aid.bind(engine);
+        mend.bind(engine);
         crew.bind(engine);
         objective.bind(engine);
         roam.bind(engine);
@@ -87,6 +90,7 @@ public final class TrooperMindSystem extends EntitySystem {
             if (fight.engages(trooper, at, shotWidth(entity))
                     || orders.obeys(trooper, at)
                     || aid.aids(entity, trooper, at, deltaTime)
+                    || mend.mends(entity, trooper, at)
                     || crew.crews(entity, trooper, at, deltaTime)
                     || objective.holdsWhatItHasTaken(trooper, at, deltaTime)
                     || objective.advances(trooper, at)) {

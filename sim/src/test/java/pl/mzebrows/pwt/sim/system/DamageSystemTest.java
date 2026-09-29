@@ -7,6 +7,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
@@ -28,10 +29,10 @@ class DamageSystemTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        owe(enemy, 30f);
+        owe(enemy, 30);
         simulation.step();
 
-        assertThat(enemy.getComponent(Health.class).current).isEqualTo(ENEMY_HEALTH - 30f);
+        assertThat(enemy.getComponent(Health.class).current).isEqualTo(ENEMY_HEALTH - 30);
     }
 
     /** Two hits landing in one tick must both count, whatever order the collision grid found them in. */
@@ -40,11 +41,11 @@ class DamageSystemTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        owe(enemy, 30f);
-        owe(enemy, 45f);
+        owe(enemy, 30);
+        owe(enemy, 45);
         simulation.step();
 
-        assertThat(enemy.getComponent(Health.class).current).isEqualTo(ENEMY_HEALTH - 75f);
+        assertThat(enemy.getComponent(Health.class).current).isEqualTo(ENEMY_HEALTH - 75);
     }
 
     @Test
@@ -52,11 +53,11 @@ class DamageSystemTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        owe(enemy, 30f);
+        owe(enemy, 30);
         simulation.step();
         simulation.step();
 
-        assertThat(enemy.getComponent(Health.class).current).isEqualTo(ENEMY_HEALTH - 30f);
+        assertThat(enemy.getComponent(Health.class).current).isEqualTo(ENEMY_HEALTH - 30);
     }
 
     @Test
@@ -75,7 +76,7 @@ class DamageSystemTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        owe(enemy, ENEMY_HEALTH - 1f);
+        owe(enemy, ENEMY_HEALTH - 1);
         simulation.step();
 
         assertThat(count(simulation, Enemy.class)).isEqualTo(1);
@@ -118,13 +119,13 @@ class DamageSystemTest {
         godMode(simulation);
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        owe(commander, 10_000f);
+        owe(commander, 10_000);
         simulation.step();
 
-        assertThat(commander.getComponent(Health.class).current).isPositive();
+        assertThat(unhurt(commander)).isTrue();
     }
 
-    private static void owe(Entity entity, float amount) {
+    private static void owe(Entity entity, int amount) {
         entity.getComponent(Damage.class).add(amount, 0);
     }
 }

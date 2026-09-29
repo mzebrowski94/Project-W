@@ -18,5 +18,9 @@ public enum UpgradeKind {
     /** A faster squad. The commander's own pace is his, and not this. */
     FORCED_MARCH,
     /** Quicker work putting a man back on his feet, for the squad and every commander. */
-    FIRST_AID
+    FIRST_AID,
+    /** One more wound on his feet per rank, for the squad and every commander (G0053). */
+    THICK_SKIN,
+    /** The chooser's wounds clear on their own some seconds after his last one (G0053). Personal. */
+    SELF_TREATMENT
 }

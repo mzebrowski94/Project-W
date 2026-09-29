@@ -13,10 +13,10 @@ import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Blast;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Taking;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
 
 /**
@@ -184,7 +184,7 @@ class BarrelTest {
         simulation.spawnProjectile(MIDDLE + 2f, MIDDLE, -1f, 0f);
         steps(simulation, ARRIVES + 2);
 
-        assertThat(commander.getComponent(Casualty.class).begun).isTrue();
+        assertThat(commander.getComponent(Vitality.class).begun).isTrue();
     }
 
     @Test

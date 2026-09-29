@@ -1,12 +1,11 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_BLEED_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_BLEED_OUT;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COOLDOWN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
@@ -19,17 +18,19 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
- * What a blow costs now depends on what kind of blow it was. Gunfire and explosions put a man on the
- * ground with a clock running; claws, a sweep and a leap kill him.
+ * A man put off his feet lies there with a clock running, and a blow that kills him kills him. What
+ * puts him down - one wound too many, or a blow that puts a man down - is {@link VitalityTest}'s
+ * (G0053); this is about the time he spends on the ground.
  *
  * <p>These tests write straight to the {@link Damage} component, which is exactly what contact
  * resolution and a blast both do - the whole point of the split is that neither of them knows
@@ -52,10 +53,10 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity trooper = simulation.spawnTrooper(50f, 50f);
 
-        wound(trooper, TROOPER_HEALTH);
+        putDown(trooper, A_BLOW);
         simulation.step();
 
-        assertThat(trooper.getComponent(Casualty.class).begun).isTrue();
+        assertThat(trooper.getComponent(Vitality.class).begun).isTrue();
         assertThat(trooper.getComponent(Dying.class).begun).isFalse();
     }
 
@@ -64,28 +65,10 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity trooper = simulation.spawnTrooper(50f, 50f);
 
-        kill(trooper, TROOPER_HEALTH);
+        kill(trooper, A_BLOW);
         simulation.step();
 
-        assertThat(trooper.getComponent(Casualty.class).begun).isFalse();
-        assertThat(trooper.getComponent(Dying.class).begun).isTrue();
-    }
-
-    /**
-     * He is at zero health, so anything that reaches him takes him below it again and the ordinary
-     * death path runs. Being shot while down and being eaten while down are the same rule, and
-     * neither is a special case anybody had to write.
-     */
-    @Test
-    void finishesACasualtyWithTheNextHitThatReachesHimWhateverItIs() {
-        Simulation simulation = simulation();
-        Entity trooper = simulation.spawnTrooper(50f, 50f);
-
-        wound(trooper, TROOPER_HEALTH);
-        simulation.step();
-        wound(trooper, 1f);
-        simulation.step();
-
+        assertThat(trooper.getComponent(Vitality.class).begun).isFalse();
         assertThat(trooper.getComponent(Dying.class).begun).isTrue();
     }
 
@@ -94,7 +77,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity trooper = simulation.spawnTrooper(50f, 50f);
 
-        wound(trooper, TROOPER_HEALTH);
+        putDown(trooper, A_BLOW);
         steps(simulation, ticksIn(CASUALTY_BLEED_OUT) + 2);
 
         assertThat(trooper.getComponent(Dying.class).begun).isTrue();
@@ -105,11 +88,11 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity trooper = simulation.spawnTrooper(50f, 50f);
 
-        wound(trooper, TROOPER_HEALTH);
+        putDown(trooper, A_BLOW);
         steps(simulation, ticksIn(CASUALTY_BLEED_OUT) - 2);
 
         assertThat(trooper.getComponent(Dying.class).begun).isFalse();
-        assertThat(trooper.getComponent(Casualty.class).active()).isTrue();
+        assertThat(trooper.getComponent(Vitality.class).active()).isTrue();
     }
 
     /** Nothing on the alien side can be rescued, so nothing on the alien side goes down instead of dying. */
@@ -118,10 +101,10 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        wound(enemy, ENEMY_HEALTH);
+        putDown(enemy, ENEMY_HEALTH);
         simulation.step();
 
-        assertThat(enemy.getComponent(Casualty.class)).isNull();
+        assertThat(enemy.getComponent(Vitality.class)).isNull();
         assertThat(countLiving(simulation, Enemy.class)).isZero();
     }
 
@@ -130,7 +113,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity trooper = simulation.spawnTrooper(50f, 50f);
 
-        wound(trooper, TROOPER_HEALTH);
+        putDown(trooper, A_BLOW);
         simulation.step();
 
         Appearance appearance = trooper.getComponent(Appearance.class);
@@ -153,14 +136,14 @@ class CasualtyTest {
         Entity trooper = simulation.spawnTrooper(50f, 50f);
         simulation.spawnEnemy(60f, 50f);
 
-        wound(trooper, TROOPER_HEALTH);
+        putDown(trooper, A_BLOW);
         steps(simulation, ticksIn(COOLDOWN) + 2);
 
         for (int i = 0; i < ticksIn(COOLDOWN); i++) {
             simulation.step();
             assertThat(trooper.getComponent(Weapon.class).remainingTicks).isZero();
         }
-        assertThat(trooper.getComponent(Casualty.class).active()).isTrue();
+        assertThat(trooper.getComponent(Vitality.class).active()).isTrue();
     }
 
     /**
@@ -173,10 +156,10 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        wound(commander, COMMANDER_HEALTH);
+        putDown(commander, A_BLOW);
         simulation.step();
 
-        assertThat(commander.getComponent(Casualty.class).begun).isTrue();
+        assertThat(commander.getComponent(Vitality.class).begun).isTrue();
         assertThat(commander.getComponent(Dying.class).begun).isFalse();
     }
 
@@ -193,8 +176,8 @@ class CasualtyTest {
         Entity commander = simulation.spawnCommander(50f, 50f);
         Entity trooper = simulation.spawnTrooper(60f, 50f);
 
-        wound(commander, COMMANDER_HEALTH);
-        wound(trooper, TROOPER_HEALTH);
+        putDown(commander, A_BLOW);
+        putDown(trooper, A_BLOW);
         steps(simulation, ticksIn(COMMANDER_BLEED_OUT) + 2);
 
         assertThat(commander.getComponent(Dying.class).begun).isTrue();
@@ -207,10 +190,10 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        kill(commander, COMMANDER_HEALTH);
+        kill(commander, A_BLOW);
         simulation.step();
 
-        assertThat(commander.getComponent(Casualty.class).begun).isFalse();
+        assertThat(commander.getComponent(Vitality.class).begun).isFalse();
         assertThat(commander.getComponent(Dying.class).begun).isTrue();
     }
 
@@ -225,7 +208,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        wound(commander, COMMANDER_HEALTH);
+        putDown(commander, A_BLOW);
         simulation.step();
         steps(simulation, WHILE_HE_ASKS, WALKING_AND_SHOOTING);
 
@@ -238,18 +221,18 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        wound(commander, COMMANDER_HEALTH);
+        putDown(commander, A_BLOW);
         simulation.step();
         steps(simulation, WHILE_HE_ASKS, WALKING_AND_SHOOTING);
 
         assertThat(count(simulation, Projectile.class)).isZero();
     }
 
-    private static void wound(Entity entity, float amount) {
-        entity.getComponent(Damage.class).add(amount, 0, false);
+    private static void putDown(Entity entity, int amount) {
+        entity.getComponent(Damage.class).add(amount, 0, Harm.DOWN);
     }
 
-    private static void kill(Entity entity, float amount) {
+    private static void kill(Entity entity, int amount) {
         entity.getComponent(Damage.class).add(amount, 0);
     }
 }

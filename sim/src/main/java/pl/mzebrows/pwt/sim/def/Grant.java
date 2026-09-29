@@ -58,6 +58,12 @@ public sealed interface Grant {
      */
     record Detonate() implements Grant {}
 
+    /**
+     * Clears every wound the taker is carrying (G0053). Worth something only to a man who has one, so a
+     * man without one walks over it and leaves it for somebody who needs it.
+     */
+    record Mend() implements Grant {}
+
     /** Adds troopers to the level rather than changing whoever picked it up. */
     record Reinforce(int troopers) implements Grant {
         public Reinforce {

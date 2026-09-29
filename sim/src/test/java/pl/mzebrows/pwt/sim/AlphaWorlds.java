@@ -11,12 +11,14 @@ import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.ApproachDef;
 import pl.mzebrows.pwt.sim.def.ArmourDef;
@@ -28,6 +30,7 @@ import pl.mzebrows.pwt.sim.def.DodgeDef;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.GripDef;
 import pl.mzebrows.pwt.sim.def.GroundDef;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.HeatDef;
 import pl.mzebrows.pwt.sim.def.HopDef;
 import pl.mzebrows.pwt.sim.def.LeapDef;
@@ -88,7 +91,7 @@ public final class AlphaWorlds {
     public static final float BOSS_RADIUS = 4f;
 
     /** Deep enough that nothing a test fires by accident takes it down. */
-    public static final float BOSS_HEALTH = 5000f;
+    public static final int BOSS_HEALTH = 5000;
 
     public static final float COOLDOWN = 0.5f;
 
@@ -101,10 +104,15 @@ public final class AlphaWorlds {
     public static final float PROJECTILE_RADIUS = 0.5f;
     public static final float OBSTACLE_RADIUS = 2f;
 
-    public static final float COMMANDER_HEALTH = 100f;
-    public static final float ENEMY_HEALTH = 100f;
-    public static final float WEAPON_DAMAGE = 50f;
-    public static final float ENEMY_CONTACT_DAMAGE = 100f;
+    /** As the game ships it: one wound on his feet, and the next puts him down (G0053). */
+    public static final int COMMANDER_MAX_WOUNDS = 1;
+
+    /** Any blow at all, for a man: he reads its harm and never its amount (G0053). */
+    public static final int A_BLOW = 1;
+
+    public static final int ENEMY_HEALTH = 100;
+    public static final int WEAPON_DAMAGE = 50;
+    public static final int ENEMY_CONTACT_DAMAGE = 100;
 
     /**
      * All round in the base fixture. Most combat tests are about what a blow costs rather than about
@@ -129,7 +137,8 @@ public final class AlphaWorlds {
     public static final float RESPAWN_DELAY = 1f;
 
     public static final float RESPAWN_MARGIN = 5f;
-    public static final float RESPAWN_INVULNERABLE = 0.5f;
+    /** How long the shield a commander comes back behind lasts (G0053). */
+    public static final float RESPAWN_SHIELD = 0.5f;
 
     /**
      * How far a commander may get from the middle of the commanders, in the fixtures. A tenth of the
@@ -145,7 +154,7 @@ public final class AlphaWorlds {
     public static final float MELEE_RADIUS = 1.2f;
 
     /** Enough to kill an enemy outright and leave a brute standing. That contrast is the mechanic. */
-    public static final float MELEE_DAMAGE = 100f;
+    public static final int MELEE_DAMAGE = 100;
 
     public static final float MELEE_ARC = 180f;
     public static final float MELEE_LOCK = 0.25f;
@@ -180,7 +189,7 @@ public final class AlphaWorlds {
     public static final float GRENADE_COOLDOWN = 0.2f;
 
     /** One of anything sets it off. A barrel is a trigger, not something to grind down. */
-    public static final float BARREL_HEALTH = 1f;
+    public static final int BARREL_HEALTH = 1;
 
     /** Wider than the barrel by a long way: what a barrel is for is what happens around it. */
     public static final float BARREL_BLAST_RADIUS = 8f;
@@ -197,7 +206,7 @@ public final class AlphaWorlds {
     /** Half a second, not the shipped one: a test that waits out a real fuse is a slow test. */
     public static final float MINE_FUSE = 0.5f;
 
-    public static final float MINE_HEALTH = 1f;
+    public static final int MINE_HEALTH = 1;
 
     /** Off the blast fixture's own radius, so a test cannot confuse the two. */
     public static final float MINE_BLAST_RADIUS = 5f;
@@ -209,8 +218,17 @@ public final class AlphaWorlds {
     /** Half a second: long enough to be interrupted in a test, short enough not to slow one down. */
     public static final float CASUALTY_STABILISE = 0.5f;
 
-    /** Half a bar back. Enough that a revived man is visibly not a whole one. */
-    public static final float REVIVE_HEALTH_FRACTION = 0.5f;
+    /** A handful of ticks: long enough to see a second wound turned away, short enough to wait out. */
+    public static final float WOUND_GRACE = 0.25f;
+
+    /** How long ground that wounds a man throws him off itself for. */
+    public static final float WOUND_SHOVE = 0.2f;
+
+    /** Half his pace while wounded: round, so a test reads the cost straight off. */
+    public static final float WOUND_PACE = 0.5f;
+
+    /** Twice the time between his shots while wounded. */
+    public static final float WOUND_COOLDOWN = 2f;
 
     public static final float REVIVE_INVULNERABLE = 0.25f;
 
@@ -255,7 +273,7 @@ public final class AlphaWorlds {
     /** Round numbers for a nest, so a test can count ticks to a brood rather than guess at one. */
     public static final float NEST_RADIUS = 2f;
 
-    public static final float NEST_HEALTH = 100f;
+    public static final int NEST_HEALTH = 100;
 
     /** Short, because a test that waits out a thirty-second period is a test nobody runs. */
     public static final float NEST_PERIOD = 1f;
@@ -274,7 +292,7 @@ public final class AlphaWorlds {
     public static final float BLAST_RADIUS = 6f;
 
     /** Enough to kill anything in the fixture, which is the rule: a blast is fatal or it is nothing. */
-    public static final float BLAST_DAMAGE = 1000f;
+    public static final int BLAST_DAMAGE = 1000;
 
     /** Long enough that a test can put something into the tail of a blast and watch it walk away. */
     public static final float BLAST_SECONDS = 0.2f;
@@ -290,7 +308,7 @@ public final class AlphaWorlds {
 
     public static final float BRUTE_RADIUS = 1f;
     public static final float BRUTE_SPEED = 30f;
-    public static final float BRUTE_HEALTH = 300f;
+    public static final int BRUTE_HEALTH = 300;
 
     /** How close the commander must come before a watching strain notices him, in {@link #watching()}. */
     public static final float DETECTION_RANGE = 20f;
@@ -326,7 +344,7 @@ public final class AlphaWorlds {
     public static final float RABBIT_SPEED = 30f;
 
     /** One hit, whatever hit it. Denying a meal should not be a marksmanship exercise twice over. */
-    public static final float RABBIT_HEALTH = 1f;
+    public static final int RABBIT_HEALTH = 1;
 
     public static final float RABBIT_THROES = 0.2f;
 
@@ -359,10 +377,13 @@ public final class AlphaWorlds {
     public static final float SLICK_SECONDS = 1f;
 
     /** Far above any health in the fixture: standing in one is a decision, not a graze. */
-    public static final float SLICK_DAMAGE = 1000f;
+    public static final int SLICK_DAMAGE = 1000;
 
     /** How long a man one circle has put down is protected from the rest of the same spatter. */
     public static final float SLICK_INVULNERABLE = 0.5f;
+
+    /** How hard a slick throws a man it wounds off itself, in world units per second. */
+    public static final float SLICK_SHOVE_SPEED = 20f;
 
     /** How much of its speed a thicket leaves each side. He wades; they barely notice. */
     public static final float THICKET_PLAYER_FACTOR = 0.25f;
@@ -450,7 +471,7 @@ public final class AlphaWorlds {
     /** The same number twice, so a test knows exactly which tick the ground goes out on. */
     public static final float FIRE_SECONDS = 1f;
 
-    public static final float FIRE_DAMAGE = 1000f;
+    public static final int FIRE_DAMAGE = 1000;
 
     public static final float FIRE_INVULNERABLE = 0.5f;
 
@@ -459,11 +480,14 @@ public final class AlphaWorlds {
 
     public static final float FIRE_FADE = 0f;
 
+    /** How hard fire throws a man it wounds off itself, in world units per second. */
+    public static final float FIRE_SHOVE_SPEED = 20f;
+
     public static final float SPITTER_RADIUS = 1f;
 
     public static final float SPITTER_SPEED = 30f;
 
-    public static final float SPITTER_HEALTH = 100f;
+    public static final int SPITTER_HEALTH = 100;
 
     /** Shorter than the detection range, so a spitter notices well before it may shoot. */
     public static final float SPIT_RANGE = 15f;
@@ -475,7 +499,7 @@ public final class AlphaWorlds {
     public static final float SPIT_SPEED = 60f;
 
     /** Two of them put a man of any kind down, which is what the shipped numbers do too. */
-    public static final float SPIT_DAMAGE = 50f;
+    public static final int SPIT_DAMAGE = 50;
 
     /** Wide enough that a test can tell a spread shot from a straight one without a microscope. */
     public static final float SPIT_SPREAD_DEGREES = 40f;
@@ -520,7 +544,7 @@ public final class AlphaWorlds {
     /** Slower and far harder-hitting than the sidearm, so a swap is visible in one shot. */
     public static final float RAILGUN_COOLDOWN = 1f;
 
-    public static final float RAILGUN_DAMAGE = 400f;
+    public static final int RAILGUN_DAMAGE = 400;
 
     /**
      * How long a slug waits between the blows it lands. Above zero is a shot that goes through
@@ -553,7 +577,7 @@ public final class AlphaWorlds {
     public static final float TURRET_RADIUS = 2f;
 
     /** Three times a trooper's, as the shipped one is: a gun is worth working for. */
-    public static final float TURRET_HEALTH = 300f;
+    public static final int TURRET_HEALTH = 300;
 
     /** Wide enough to catch whoever was on it, narrow enough not to reach the next thing along. */
     public static final float TURRET_BLAST_RADIUS = 5f;
@@ -571,13 +595,13 @@ public final class AlphaWorlds {
     public static final float TURRET_COOLDOWN = 0.1f;
 
     /** Less than a sidearm's, which is the trade: a turret buys rate and speed with damage. */
-    public static final float TURRET_DAMAGE = 25f;
+    public static final int TURRET_DAMAGE = 25;
 
     public static final float TROOPER_RADIUS = 1f;
 
     public static final float TROOPER_SPEED = 20f;
 
-    public static final float TROOPER_HEALTH = 100f;
+    public static final int TROOPER_MAX_WOUNDS = 1;
 
     /** Small on purpose: a test that spawns a squad should be able to name every member of it. */
     public static final int SQUAD_SIZE = 3;
@@ -693,6 +717,9 @@ public final class AlphaWorlds {
     /** How much further something counts as being for every man already shooting at it. */
     public static final float SHARED_TARGET_PENALTY = 8f;
 
+    /** How far a wounded trooper walks for a medkit. */
+    public static final float MEDKIT_REACH = 20f;
+
     /** How far from the post the squad roams in the fixtures. Round, and well inside the test arena. */
     public static final float TROOPER_PATCH = 20f;
 
@@ -735,12 +762,12 @@ public final class AlphaWorlds {
                 new SimConfig.CommanderConfig(
                         COMMANDER_RADIUS,
                         COMMANDER_SPEED,
-                        COMMANDER_HEALTH,
+                        COMMANDER_MAX_WOUNDS,
                         COMMANDER_BLEED_OUT,
                         DEATH_THROES,
                         RESPAWN_DELAY,
                         RESPAWN_MARGIN,
-                        RESPAWN_INVULNERABLE,
+                        RESPAWN_SHIELD,
                         LEASH_RADIUS),
                 new SimConfig.TrooperConfig(
                         TROOPER_RADIUS,
@@ -748,7 +775,7 @@ public final class AlphaWorlds {
                         SQUAD_SIZE,
                         SQUAD_GROWTH,
                         TROOPER_REINFORCEMENT_RADIUS,
-                        TROOPER_HEALTH,
+                        TROOPER_MAX_WOUNDS,
                         DEATH_THROES,
                         WeaponKind.SIDEARM,
                         AvoidanceDef.off(),
@@ -773,7 +800,8 @@ public final class AlphaWorlds {
                         DETOUR_SECONDS,
                         ALERT_SECONDS,
                         THREAT_BONUS,
-                        SHARED_TARGET_PENALTY),
+                        SHARED_TARGET_PENALTY,
+                        MEDKIT_REACH),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 Defs.<UnitKind, UnitDef>builder(UnitKind.class)
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
@@ -841,6 +869,9 @@ public final class AlphaWorlds {
                         .put(
                                 PickupKind.BARREL,
                                 new PickupDef(PICKUP_RADIUS, Look.BARREL, Grant.NOTHING, Grant.DETONATE, 0f))
+                        .put(
+                                PickupKind.MEDKIT,
+                                new PickupDef(PICKUP_RADIUS, Look.MEDKIT, new Grant.Mend(), Grant.NOTHING, 0f))
                         .build(),
                 Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
                         .put(
@@ -862,6 +893,7 @@ public final class AlphaWorlds {
                                         1f,
                                         0f,
                                         1f,
+                                        0f,
                                         0f,
                                         0f,
                                         0f))
@@ -886,6 +918,7 @@ public final class AlphaWorlds {
                                         1f,
                                         0f,
                                         0f,
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.SPEW,
@@ -906,6 +939,7 @@ public final class AlphaWorlds {
                                         1f,
                                         0f,
                                         1f,
+                                        0f,
                                         0f,
                                         0f,
                                         0f))
@@ -930,6 +964,7 @@ public final class AlphaWorlds {
                                         1f,
                                         0f,
                                         0f,
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.RAILGUN,
@@ -952,6 +987,7 @@ public final class AlphaWorlds {
                                         1f,
                                         0f,
                                         0f,
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.FLAMER,
@@ -972,6 +1008,7 @@ public final class AlphaWorlds {
                                         1f,
                                         0f,
                                         1f,
+                                        0f,
                                         0f,
                                         0f,
                                         0f))
@@ -998,7 +1035,8 @@ public final class AlphaWorlds {
                                         LASER_SELF_SLOW_FACTOR,
                                         LASER_SELF_SLOW_SECONDS,
                                         LASER_TRAIL,
-                                        LASER_BLOAT_PER_SHOT))
+                                        LASER_BLOAT_PER_SHOT,
+                                        0f))
                         .put(
                                 WeaponKind.SHOTGUN,
                                 new WeaponDef(
@@ -1020,6 +1058,7 @@ public final class AlphaWorlds {
                                         1f,
                                         0f,
                                         0f,
+                                        0f,
                                         0f))
                         .put(
                                 WeaponKind.VENOM,
@@ -1028,7 +1067,7 @@ public final class AlphaWorlds {
                                         PROJECTILE_SPEED,
                                         PROJECTILE_RADIUS,
                                         VENOM_REACH,
-                                        0f,
+                                        0,
                                         1,
                                         0f,
                                         Look.VENOM,
@@ -1043,13 +1082,15 @@ public final class AlphaWorlds {
                                                 SLICK_INVULNERABLE,
                                                 0f,
                                                 0f,
-                                                Look.SLICK),
+                                                Look.SLICK,
+                                                SLICK_SHOVE_SPEED),
                                         HeatDef.none(),
                                         0f,
                                         0f,
                                         1f,
                                         0f,
                                         1f,
+                                        0f,
                                         0f,
                                         0f,
                                         0f))
@@ -1074,6 +1115,7 @@ public final class AlphaWorlds {
                                         1f,
                                         0f,
                                         0f,
+                                        0f,
                                         0f))
                         .build(),
                 thickets(),
@@ -1092,8 +1134,8 @@ public final class AlphaWorlds {
                         CLINCH_CARRY_DECAY,
                         KNOCKBACK_SPEED,
                         KNOCKBACK_DECAY),
-                new SimConfig.BlastConfig(BLAST_DAMAGE, BLAST_SECONDS, BLAST_SHAKE, BLAST_SHAKE_REACH),
-                new SimConfig.FireConfig(0, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f),
+                new SimConfig.BlastConfig(BLAST_DAMAGE, BLAST_SECONDS, BLAST_SHAKE, BLAST_SHAKE_REACH, Harm.DOWN),
+                new SimConfig.FireConfig(0, 0f, 0f, 0f, 0f, 0, 0f, 0f, 0f, 0f),
                 new SimConfig.BloatConfig(
                         BLOAT_REFERENCE_RADIUS,
                         BLOAT_LIVING_FACTOR,
@@ -1101,7 +1143,12 @@ public final class AlphaWorlds {
                         BLOAT_BLAST_FACTOR,
                         BLOAT_HOLD),
                 new SimConfig.GrenadeConfig(
-                        GRENADE_COOLDOWN, GRENADE_SPEED, GRENADE_RANGE, GRENADE_RADIUS, GRENADE_BLAST_RADIUS),
+                        GRENADE_COOLDOWN,
+                        GRENADE_SPEED,
+                        GRENADE_RANGE,
+                        GRENADE_RADIUS,
+                        GRENADE_BLAST_RADIUS,
+                        Harm.WOUND),
                 new SimConfig.RabbitConfig(RABBIT_SPEED, RABBIT_HEALTH, RABBIT_THROES, WanderDef.off(), DodgeDef.off()),
                 new SimConfig.BarrelConfig(BARREL_HEALTH, BARREL_BLAST_RADIUS, BARREL_BITTEN_BLAST_RADIUS),
                 new SimConfig.MineConfig(
@@ -1115,10 +1162,10 @@ public final class AlphaWorlds {
                 new SimConfig.CasualtyConfig(
                         CASUALTY_BLEED_OUT,
                         CASUALTY_STABILISE,
-                        REVIVE_HEALTH_FRACTION,
                         REVIVE_INVULNERABLE,
                         DRAGGED_BLEED_FACTOR,
                         HAULED_STABILISE_FACTOR),
+                new SimConfig.WoundConfig(WOUND_GRACE, WOUND_SHOVE, WOUND_PACE, WOUND_COOLDOWN, 0),
                 new SimConfig.ActionConfig(ACTION_REACH, DRAG_SPEED_FACTOR, DRAG_LATERAL_FACTOR, DRAG_GAP),
                 new SimConfig.NestConfig(
                         NEST_RADIUS,
@@ -1152,7 +1199,9 @@ public final class AlphaWorlds {
                 new SimConfig.CollisionConfig(3),
                 new DraftDef(DRAFT_OPTIONS, 1, 1, 1, List.of(0, TIER_TWO_FROM)),
                 stats(),
-                upgrades());
+                upgrades(),
+                new SimConfig.SwarmConfig(100),
+                new SimConfig.MedkitConfig(0));
     }
 
     /** Cards a draft deals here - more than the catalogue has, so every draft offers all it can. */
@@ -1219,6 +1268,10 @@ public final class AlphaWorlds {
                 .put(
                         UpgradeKind.FIRST_AID,
                         off(2, new Effect.Scale(Stat.STABILISE_SPEED, Target.TEAM, FIRST_AID_PERCENT)))
+                .put(UpgradeKind.THICK_SKIN, off(2, new Effect.Count(Stat.MAX_WOUNDS, Target.TEAM, 1)))
+                .put(
+                        UpgradeKind.SELF_TREATMENT,
+                        off(1, new Effect.Count(Stat.MEND_SECONDS, Target.CHOOSER, SELF_TREATMENT_SECONDS)))
                 .build();
     }
 
@@ -1227,6 +1280,7 @@ public final class AlphaWorlds {
     public static final int GRENADIER_PERCENT = -20;
     public static final int MARCH_PERCENT = 10;
     public static final int FIRST_AID_PERCENT = 25;
+    public static final int SELF_TREATMENT_SECONDS = 1;
 
     /** An upgrade no draft here deals, for a test to hold directly. */
     private static UpgradeDef off(int ranks, Effect... effects) {
@@ -1237,7 +1291,7 @@ public final class AlphaWorlds {
      * A strain that differs from the other only in the three numbers a test ever cares about. Nothing
      * evolves and nothing leaps here; both are switched on by the fixtures that are about them.
      */
-    private static UnitDef strain(float radius, float speed, float health, Look look) {
+    private static UnitDef strain(float radius, float speed, int health, Look look) {
         return new UnitDef(
                 radius,
                 speed,
@@ -1468,7 +1522,8 @@ public final class AlphaWorlds {
                 FIRE_DAMAGE,
                 FIRE_INVULNERABLE,
                 FIRE_GROW,
-                FIRE_FADE));
+                FIRE_FADE,
+                FIRE_SHOVE_SPEED));
     }
 
     /** A world where every strain throws venom, so a test about ruined ground has somebody to ruin it. */
@@ -1615,7 +1670,19 @@ public final class AlphaWorlds {
      */
     public static Simulation harmlessLeaping() {
         return new Simulation(
-                everyStrain(config(), strain -> strain.withContactDamage(0f).withLeap(leapConfig())));
+                everyStrain(config(), strain -> strain.withContactDamage(0).withLeap(leapConfig())));
+    }
+
+    /** Whether a man has come to no harm at all: no wound, not down, not in his throes (G0053). */
+    public static boolean unhurt(Entity man) {
+        Vitality vitality = man.getComponent(Vitality.class);
+        return vitality.wounds == 0 && !vitality.begun && !killed(man);
+    }
+
+    /** Whether anything has been killed: in its throes, or marked dead already. */
+    public static boolean killed(Entity entity) {
+        Dying throes = entity.getComponent(Dying.class);
+        return (throes != null && throes.begun) || entity.getComponent(Dead.class) != null;
     }
 
     /**
@@ -1629,7 +1696,7 @@ public final class AlphaWorlds {
 
     /** Enemies that walk but cannot hurt anything, for tests about a swing rather than about a fight. */
     public static Simulation harmless() {
-        return new Simulation(everyStrain(config(), strain -> strain.withContactDamage(0f)));
+        return new Simulation(everyStrain(config(), strain -> strain.withContactDamage(0)));
     }
 
     /** How many ticks make up this many seconds, for tests that wait out a cooldown or a respawn. */

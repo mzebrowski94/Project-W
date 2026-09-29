@@ -31,14 +31,17 @@ import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -76,6 +79,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<Armour> ARMOUR = ComponentMapper.getFor(Armour.class);
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
     private static final ComponentMapper<Grip> GRIP = ComponentMapper.getFor(Grip.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
+    private static final ComponentMapper<Shield> SHIELD = ComponentMapper.getFor(Shield.class);
     private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
 
     /** Below this two bodies are on top of each other and give no direction to be thrown along. */
@@ -222,7 +227,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (pickup.claimed || inert(pickupEntity) || !TAKING.has(taker) || !FACTION.has(taker) || inert(taker)) {
             return;
         }
-        if (!pickups.of(pickup.kind).offersSomethingTo(FACTION.get(taker).side)) {
+        PickupDef def = pickups.of(pickup.kind);
+        if (!def.offersSomethingTo(FACTION.get(taker).side) || !worthTo(def.grantFor(FACTION.get(taker).side), taker)) {
             return;
         }
         if (pickup.shunned) {
@@ -300,6 +306,18 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     }
 
     /**
+     * Whether what a pickup grants would do anything for <em>this</em> taker (G0006 as amended by G0053).
+     * A medkit is worth something only to a man with a wound; everything else is worth taking by anybody
+     * its side is offered it. Asked of the grant and the taker, never of a flag on the pickup.
+     */
+    private static boolean worthTo(Grant grant, Entity taker) {
+        return switch (grant) {
+            case Grant.Mend _ -> VITALITY.has(taker) && VITALITY.get(taker).wounded();
+            case Grant.None _, Grant.Detonate _, Grant.Arm _, Grant.Feed _, Grant.Mutate _, Grant.Reinforce _ -> true;
+        };
+    }
+
+    /**
      * Whether a shot arrives at an armoured head and glances off it (G0045): coming at the thing from
      * inside the arc round the way it faces, judged by the way the shot is flying rather than where on
      * the body it touched. The shot is still spent; it lands nothing.
@@ -355,13 +373,37 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (INVULNERABLE.has(target) && INVULNERABLE.get(target).active()) {
             return;
         }
-        owed.add(attack.amount, attack.victimInvulnerableTicks, attack.fatal);
+        owed.add(attack.amount, attack.victimInvulnerableTicks, attack.harm);
+        owed.stun(attack.stunTicks);
         // Recorded, not applied, as the shove is.
         owed.slow(attack.slowFactor, attack.slowTicks);
         owed.pump(attack.bloat);
         owed.creditTo(attack.credit);
         recordSource(attacker, owed);
         lock(attacker, target, attack, owed);
+        shove(attacker, target, attack, owed);
+    }
+
+    /**
+     * Throws a man off ground that wounds him, holding nobody (G0053): away from the circle's middle,
+     * recorded rather than applied, as every throw is - only a man left on his feet is thrown.
+     */
+    private static void shove(Entity attacker, Entity target, ContactDamage attack, Damage owed) {
+        if (!attack.shoves() || !VELOCITY.has(target) || !POSITION.has(attacker) || !POSITION.has(target)) {
+            return;
+        }
+        if (COLLIDER.has(target) && !COLLIDER.get(target).movable) {
+            return;
+        }
+        Position from = POSITION.get(attacker);
+        Position to = POSITION.get(target);
+        float awayX = to.x - from.x;
+        float awayY = to.y - from.y;
+        float distance = (float) Math.sqrt(awayX * awayX + awayY * awayY);
+        if (distance <= EPSILON) {
+            return;
+        }
+        owed.shove(awayX / distance, awayY / distance, attack.knockbackSpeed, attack.shoveTicks, attack.knockbackDecay);
     }
 
     /**
@@ -385,6 +427,12 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
                 && !Drivers.down(target)
                 && !Drivers.aboard(target)
                 && !(INVULNERABLE.has(target) && INVULNERABLE.get(target).active())) {
+            if (shielded(target)) {
+                // A shield takes a grab as it takes any hit, and breaks: the creature simply lands (G0053).
+                SHIELD.get(target).shatter();
+                LEAP.get(attacker).finish();
+                return true;
+            }
             grip.take(Handles.of(target));
             GRIPPED.get(target).by = Handles.of(attacker);
             GRIPPED.get(target).fraction = 1f;
@@ -409,7 +457,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         }
         Entity owner = owner(attacker);
         Entity source = owner == null ? attacker : owner;
-        hold(target, attack);
+        if (!shielded(target)) {
+            // A shield takes the hit and whatever holds him with it (G0053); DamageSystem breaks it.
+            hold(target, attack);
+        }
         if (!attack.locksCommittedOnly || committed(target)) {
             owed.lockOnDeath(Handles.of(source), attack.lockTicks, attack.clinchCarrySpeed, attack.clinchCarryDecay);
         }
@@ -423,6 +474,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      */
     private static boolean committed(Entity target) {
         return LEAP.has(target) && LEAP.get(target).committed();
+    }
+
+    private static boolean shielded(Entity entity) {
+        return SHIELD.has(entity) && SHIELD.get(entity).up;
     }
 
     private static void hold(@Nullable Entity entity, ContactDamage attack) {

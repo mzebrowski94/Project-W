@@ -38,6 +38,8 @@ import lombok.With;
  *     dot. A drawing number, deliberately not in {@code assets/sim/*.properties}; the simulation never reads it
  * @param bloatPerShot how much of a body's capacity one of its shots fills, as a fraction. Builds on
  *     the living too, but only something already down bursts
+ * @param stunSeconds how long one of its shots leaves whatever it hits unable to act (G0053); zero on
+ *     every gun that does not stun. Taken whatever else the shot did, unless a shield took the shot
  */
 @With
 public record WeaponDef(
@@ -45,7 +47,7 @@ public record WeaponDef(
         float projectileSpeed,
         float projectileRadius,
         float projectileRange,
-        float damage,
+        int damage,
         int pellets,
         float spreadDegrees,
         Look projectileLook,
@@ -59,7 +61,8 @@ public record WeaponDef(
         float selfSlowFactor,
         float selfSlowSeconds,
         float trailLength,
-        float bloatPerShot) {
+        float bloatPerShot,
+        float stunSeconds) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;
@@ -84,6 +87,7 @@ public record WeaponDef(
         Require.notNegative("weapon selfSlowSeconds", selfSlowSeconds);
         Require.notNegative("weapon trailLength", trailLength);
         Require.notNegative("weapon bloatPerShot", bloatPerShot);
+        Require.notNegative("weapon stunSeconds", stunSeconds);
         if (selfSlowFactor > 1f) {
             throw new IllegalArgumentException("a gun may slow its own shooter and may not speed him up");
         }

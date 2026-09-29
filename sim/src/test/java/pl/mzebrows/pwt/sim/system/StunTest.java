@@ -1,11 +1,14 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.BRUTE_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_LOCK;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_ACTIVE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_LOCK;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
@@ -14,12 +17,15 @@ import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
  * What a landed blow costs both people involved in it.
@@ -36,7 +42,14 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 class StunTest {
 
     /** Low enough that the commander survives the blow and can be watched being held by it. */
-    private static final float SURVIVABLE_HIT = 30f;
+    private static final int SURVIVABLE_HIT = 30;
+
+    /** Where the sweep passes halfway through its arc when the commander stands at (50, 50) aiming east. */
+    private static final float IN_THE_ARC_X = 53f;
+
+    private static final float STUN = 0.5f;
+
+    private static final CommanderInput SWING_EAST = new CommanderInput(0f, 0f, 60f, 50f, false, true);
 
     private static final float TOLERANCE = 1e-4f;
 
@@ -78,26 +91,27 @@ class StunTest {
      */
     @Test
     void holdsOnlyTheVictimWhenTheBlowIsSurvived() {
-        Simulation simulation = survivableWorld();
+        Simulation simulation = AlphaWorlds.harmless();
         Entity commander = simulation.spawnCommander(50f, 50f);
-        Entity enemy = simulation.spawnEnemy(50f, 50f);
+        Entity brute = simulation.spawnBrute(IN_THE_ARC_X, 50f);
 
-        simulation.step();
+        stepUntilStruck(simulation, brute);
 
-        assertThat(commander.getComponent(Stunned.class).active()).isTrue();
-        assertThat(commander.getComponent(Stunned.class).grappling).isFalse();
-        assertThat(enemy.getComponent(Stunned.class).active()).isFalse();
+        assertThat(brute.getComponent(Stunned.class).active()).isTrue();
+        assertThat(brute.getComponent(Stunned.class).grappling).isFalse();
+        assertThat(commander.getComponent(Stunned.class).active()).isFalse();
     }
 
     @Test
     void letsTheVictimGoOnceTheLockHasPassed() {
-        Simulation simulation = survivableWorld();
-        Entity commander = simulation.spawnCommander(50f, 50f);
-        simulation.spawnEnemy(50f, 50f);
+        Simulation simulation = AlphaWorlds.harmless();
+        simulation.spawnCommander(50f, 50f);
+        Entity brute = simulation.spawnBrute(IN_THE_ARC_X, 50f);
 
-        steps(simulation, ticksIn(ENEMY_LOCK) + 2);
+        stepUntilStruck(simulation, brute);
+        steps(simulation, ticksIn(MELEE_LOCK) + 2);
 
-        assertThat(commander.getComponent(Stunned.class).active()).isFalse();
+        assertThat(brute.getComponent(Stunned.class).active()).isFalse();
     }
 
     /**
@@ -110,31 +124,26 @@ class StunTest {
     void ignoresTheMoveInputOfAHeldCommander() {
         Simulation simulation = survivableWorld();
         Entity commander = simulation.spawnCommander(50f, 50f);
-        simulation.spawnEnemy(50f, 50f);
+        hold(commander);
 
-        simulation.step();
-        float afterHit = commander.getComponent(Position.class).x;
         steps(simulation, ticksIn(ENEMY_LOCK) - 4, new CommanderInput(1f, 0f, 0f, 0f, false, false));
 
-        assertThat(commander.getComponent(Position.class).x).isLessThanOrEqualTo(afterHit);
+        assertThat(commander.getComponent(Position.class).x).isLessThanOrEqualTo(50f);
     }
 
     /**
-     * The blow lands after the commander has already acted this tick, so one shot still leaves on the
-     * tick he is hit. The lock is about every tick after that one.
+     * A man is held by a clinch, by ground throwing him off itself, or by jaws - never by a blow he
+     * survived, since claws kill him (G0053). The hold is put on him directly, as those do.
      */
     @Test
-    void firesNothingMoreWhileTheCommanderIsHeld() {
+    void firesNothingWhileTheCommanderIsHeld() {
         Simulation simulation = survivableWorld();
         CommanderInput shooting = new CommanderInput(0f, 0f, 90f, 50f, true, false);
-        simulation.spawnCommander(50f, 50f);
-        simulation.spawnEnemy(50f, 50f);
-        simulation.step(shooting);
-        int firedBeforeLock = count(simulation, Projectile.class);
+        hold(simulation.spawnCommander(50f, 50f));
 
         steps(simulation, ticksIn(ENEMY_LOCK) - 4, shooting);
 
-        assertThat(count(simulation, Projectile.class)).isEqualTo(firedBeforeLock);
+        assertThat(count(simulation, Projectile.class)).isZero();
     }
 
     /**
@@ -154,14 +163,15 @@ class StunTest {
 
         simulation.step();
 
-        assertThat(commander.getComponent(Health.class).current).isEqualTo(COMMANDER_HEALTH);
+        assertThat(unhurt(commander)).isTrue();
     }
 
     /** The solver still owns where a held unit ends up, so a crowd is not stopped by one stunned body. */
     @Test
     void stillLetsAHeldUnitBeShovedOutOfTheWay() {
-        Simulation simulation = survivableWorld();
+        Simulation simulation = AlphaWorlds.harmless();
         Entity commander = simulation.spawnCommander(50f, 50f);
+        hold(commander);
         simulation.spawnEnemy(50f, 50f);
 
         simulation.step();
@@ -193,6 +203,64 @@ class StunTest {
         simulation.step();
 
         assertThat(enemy.getComponent(Stunned.class).active()).isFalse();
+    }
+
+    /** A gun that declares a stun leaves a man it hits unable to act for as long as it says (G0053). */
+    @Test
+    void stunsAManAShotFromAStunningGunHits() {
+        Simulation simulation = new Simulation(stunningSpit());
+        Entity commander = simulation.spawnCommander(50f, 50f);
+        simulation.spawnProjectile(48f, 50f, 1f, 0f, WeaponKind.SPIT, Side.ALIEN);
+
+        simulation.step();
+
+        assertThat(commander.getComponent(Stunned.class).active()).isTrue();
+        assertThat(commander.getComponent(Appearance.class).state).isEqualTo(Appearance.State.STUNNED);
+    }
+
+    @Test
+    void letsHimGoOnceTheStunHasRunOut() {
+        Simulation simulation = new Simulation(stunningSpit());
+        Entity commander = simulation.spawnCommander(50f, 50f);
+        simulation.spawnProjectile(48f, 50f, 1f, 0f, WeaponKind.SPIT, Side.ALIEN);
+
+        steps(simulation, ticksIn(STUN) + 3);
+
+        assertThat(commander.getComponent(Stunned.class).active()).isFalse();
+        assertThat(commander.getComponent(Appearance.class).state).isNotEqualTo(Appearance.State.STUNNED);
+    }
+
+    /** A stagger is a flash and a stun an opening: they must not read alike. */
+    @Test
+    void drawsAStaggerAsSomethingElse() {
+        Simulation simulation = AlphaWorlds.harmless();
+        simulation.spawnCommander(50f, 50f);
+        Entity brute = simulation.spawnBrute(IN_THE_ARC_X, 50f);
+
+        stepUntilStruck(simulation, brute);
+        simulation.step();
+
+        assertThat(brute.getComponent(Appearance.class).state).isEqualTo(Appearance.State.STAGGERED);
+    }
+
+    private static SimConfig stunningSpit() {
+        SimConfig config = AlphaWorlds.config();
+        return config.withWeapons(config.weapons().map(WeaponKind.SPIT, gun -> gun.withStunSeconds(STUN)));
+    }
+
+    private static void hold(Entity entity) {
+        entity.getComponent(Stunned.class).apply(ticksIn(ENEMY_LOCK), 0f);
+    }
+
+    /** Swings east until the sweep has landed on the brute, and stops on that tick. */
+    private static void stepUntilStruck(Simulation simulation, Entity brute) {
+        for (int i = 0; i < ticksIn(MELEE_ACTIVE) + 4; i++) {
+            simulation.step(SWING_EAST);
+            if (brute.getComponent(Health.class).current < BRUTE_HEALTH) {
+                return;
+            }
+        }
+        throw new IllegalStateException("the sweep never reached the brute");
     }
 
     private static Simulation survivableWorld() {

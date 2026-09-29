@@ -44,5 +44,11 @@ public enum PickupKind {
      * shot it sees coming. The commander is offered nothing by it, so his only interest in one is
      * denying it.
      */
-    RABBIT
+    RABBIT,
+    /**
+     * A medkit (G0053): every wound cleared, to a man who has one - and to nobody else. A man without a
+     * wound walks over it and leaves it standing; the aliens have nothing to gain from it and no weapon
+     * can touch it.
+     */
+    MEDKIT
 }

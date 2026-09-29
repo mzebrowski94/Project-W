@@ -69,7 +69,7 @@ final class Crews {
      * Puts a man on a gun: at it rather than beside it, stopped, and out of the pairwise path
      * entirely, so that while he is on it the gun is the only thing anything can hit.
      *
-     * <p>He is left carrying {@code Health} and a {@code Damage} tally, which is deliberate: a blast
+     * <p>He is left carrying his {@code Vitality} and a {@code Damage} tally, which is deliberate: a blast
      * is a radius test over everything that can be hurt rather than a contact, so the gun going up
      * under him catches him exactly as standing on it should.
      */

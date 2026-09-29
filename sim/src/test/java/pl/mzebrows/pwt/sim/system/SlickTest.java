@@ -24,12 +24,12 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Slick;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
@@ -102,15 +102,20 @@ class SlickTest {
         assertThat(count(simulation, Slick.class)).isEqualTo(SLICK_BLOBS);
     }
 
+    /**
+     * Venom wounds a man rather than putting him down, and his grace keeps the rest of the spatter off
+     * him on the same tick (G0053).
+     */
     @Test
-    void putsAManStandingInItOnTheGroundRatherThanKillingHim() {
+    void woundsAManStandingInItRatherThanPuttingHimDown() {
         Simulation simulation = harmless();
         Entity commander = simulation.spawnCommander(VICTIM_X, Y);
         venomAt(simulation);
 
         steps(simulation, UNTIL_IT_BURSTS);
 
-        assertThat(commander.getComponent(Casualty.class).begun).isTrue();
+        assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
+        assertThat(commander.getComponent(Vitality.class).begun).isFalse();
         assertThat(commander.getComponent(Dying.class).begun).isFalse();
     }
 
@@ -227,7 +232,7 @@ class SlickTest {
         boolean wentDown = false;
         for (int tick = 0; tick < WALK_PAST_IT; tick++) {
             simulation.step();
-            wentDown |= trooper.getComponent(Casualty.class).begun;
+            wentDown |= trooper.getComponent(Vitality.class).begun;
         }
 
         assertThat(wentDown).isFalse();
@@ -261,13 +266,13 @@ class SlickTest {
     private static SimConfig steering(SimConfig config) {
         AvoidanceDef avoiding = new AvoidanceDef(true, AVOID_RANGE, AVOID_LOOKAHEAD, AVOID_WEIGHT);
         SimConfig everyone =
-                everyStrain(config, strain -> strain.withContactDamage(0f).withAvoidance(avoiding));
+                everyStrain(config, strain -> strain.withContactDamage(0).withAvoidance(avoiding));
         return everyone.withTrooper(everyone.trooper().withAvoidance(avoiding));
     }
 
     /** Nothing on the field hits back, so a test about ruined ground is only about ruined ground. */
     private static Simulation harmless() {
-        return new Simulation(everyStrain(config(), strain -> strain.withContactDamage(0f)));
+        return new Simulation(everyStrain(config(), strain -> strain.withContactDamage(0)));
     }
 
     /** One shot of venom on the alien side, thrown east along the lane. */

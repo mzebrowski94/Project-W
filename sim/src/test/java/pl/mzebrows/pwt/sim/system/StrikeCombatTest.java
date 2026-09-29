@@ -11,8 +11,10 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmless;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmlessLeaping;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.killed;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
@@ -246,7 +248,7 @@ class StrikeCombatTest {
 
         steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_EAST);
 
-        assertThat(commander.getComponent(Health.class).current).isEqualTo(commander.getComponent(Health.class).max);
+        assertThat(unhurt(commander)).isTrue();
     }
 
     /**
@@ -281,7 +283,7 @@ class StrikeCombatTest {
 
         steps(simulation, 40, SWING_EAST);
 
-        assertThat(commander.getComponent(Health.class).current).isLessThanOrEqualTo(0f);
+        assertThat(killed(commander)).isTrue();
     }
 
     /** Steps until the enemy has left the ground, so a test can act on the window the player gets. */
@@ -304,7 +306,7 @@ class StrikeCombatTest {
 
         steps(simulation, 40);
 
-        assertThat(commander.getComponent(Health.class).current).isLessThanOrEqualTo(0f);
+        assertThat(killed(commander)).isTrue();
     }
 
     private static float distanceBetween(Entity first, Entity second) {
@@ -317,6 +319,6 @@ class StrikeCombatTest {
 
     private static Simulation lethalLeaping() {
         Simulation harmlessWorld = harmlessLeaping();
-        return new Simulation(harmlessWorld.config().withUnit(UnitKind.GRUNT, grunt -> grunt.withContactDamage(1000f)));
+        return new Simulation(harmlessWorld.config().withUnit(UnitKind.GRUNT, grunt -> grunt.withContactDamage(1000)));
     }
 }

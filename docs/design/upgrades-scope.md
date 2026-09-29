@@ -1,6 +1,6 @@
 # Upgrades and adaptations — scoped work
 
-**Status: planned 2026-09-28; S0-S5 done 2026-09-29, next is S6. D18 amended 2026-09-29: the
+**Status: planned 2026-09-28; S0-S5 done 2026-09-29, next is S6; the wounds work in `health-scope.md` (H0-H4) that went ahead of it is done 2026-09-29. D18 amended 2026-09-29: the
 draft is shown in the top bar, not the bottom bar.** Read this first in every session of the upgrade work,
 and tick the session in §0 when it lands. **This doc expires when adaptations ship (S10).** As each
 session lands, what it settles moves where it belongs - invariants and the input map into

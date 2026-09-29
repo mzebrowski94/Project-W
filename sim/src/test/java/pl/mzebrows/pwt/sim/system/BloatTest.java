@@ -72,7 +72,7 @@ class BloatTest {
     private static final int ENOUGH_TO_FILL_ONE = 4;
 
     /** Enough health to outlive every shot a test about a full body has to fire into it. */
-    private static final float TOUGH = 10_000f;
+    private static final int TOUGH = 10_000;
 
     @Test
     void chargesUpAThingTheBeamHasBeenHeldOn() {

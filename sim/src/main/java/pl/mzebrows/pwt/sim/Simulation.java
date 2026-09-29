@@ -199,10 +199,10 @@ public final class Simulation {
         engine.addSystem(new GrenadeSystem(map, spawner, modifiers));
         engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));
-        engine.addSystem(new DamageSystem(config, spawner));
+        engine.addSystem(new DamageSystem(config, spawner, modifiers));
         engine.addSystem(new ActionSystem(config, modifiers));
         engine.addSystem(new AidSystem(config, modifiers));
-        engine.addSystem(new CasualtySystem(config, spawner));
+        engine.addSystem(new CasualtySystem(config, spawner, modifiers));
         engine.addSystem(new DyingSystem(spawner));
         engine.addSystem(new RespawnSystem(spawner));
         // Before the death reactions: a shot that misses ends by dying too (G0018), and must leave

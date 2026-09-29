@@ -18,6 +18,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
@@ -29,10 +30,10 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Slick;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.Order;
@@ -131,19 +132,22 @@ class FireTest {
         Entity enemy = simulation.spawnEnemy(MIDDLE, MIDDLE);
         steps(simulation, SETTLE);
 
-        assertThat(commander.getComponent(Casualty.class).begun).isTrue();
+        assertThat(unhurt(commander)).isFalse();
         assertThat(enemy.getComponent(Dying.class).begun).isTrue();
     }
 
+    /** Fire wounds a man and throws him off itself rather than putting him down (G0053). */
     @Test
-    void putsAManStandingInItOnTheGroundRatherThanKillingHim() {
+    void woundsAManStandingInItRatherThanPuttingHimDown() {
         Simulation simulation = burningWorld();
         simulation.spawnBlast(MIDDLE, MIDDLE, BARREL_BLAST_RADIUS);
         steps(simulation, UNTIL_IT_BURNS);
 
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
-        steps(simulation, SETTLE);
+        simulation.step();
 
+        assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
+        assertThat(commander.getComponent(Vitality.class).begun).isFalse();
         assertThat(commander.getComponent(Dying.class).begun).isFalse();
     }
 
@@ -224,7 +228,7 @@ class FireTest {
         boolean wentDown = false;
         for (int tick = 0; tick < ticksIn(FIRE_SECONDS); tick++) {
             simulation.step();
-            wentDown |= trooper.getComponent(Casualty.class).begun;
+            wentDown |= trooper.getComponent(Vitality.class).begun;
         }
 
         assertThat(wentDown).isFalse();
@@ -232,19 +236,19 @@ class FireTest {
 
     /** Fire on, and nothing on the field hits back, so a test about burning ground is only about that. */
     private static Simulation burningWorld() {
-        return new Simulation(burning(everyStrain(config(), strain -> strain.withContactDamage(0f))));
+        return new Simulation(burning(everyStrain(config(), strain -> strain.withContactDamage(0))));
     }
 
     private static Simulation avoidingFire() {
         return new Simulation(burning(everyStrain(
                 config(),
-                strain -> strain.withContactDamage(0f)
+                strain -> strain.withContactDamage(0)
                         .withAvoidance(new AvoidanceDef(true, AVOID_RANGE, AVOID_LOOKAHEAD, AVOID_WEIGHT)))));
     }
 
     /** A squad that steers, so a test about what it gives room to has somebody to give it. */
     private static SimConfig avoidingSquad() {
-        SimConfig config = everyStrain(config(), strain -> strain.withContactDamage(0f));
+        SimConfig config = everyStrain(config(), strain -> strain.withContactDamage(0));
         return config.withTrooper(
                 config.trooper().withAvoidance(new AvoidanceDef(true, AVOID_RANGE, AVOID_LOOKAHEAD, AVOID_WEIGHT)));
     }
@@ -265,7 +269,7 @@ class FireTest {
 
     /** Fire that spends a quarter of its life swelling and another quarter collapsing again. */
     private static SimConfig ramped() {
-        SimConfig base = burning(everyStrain(config(), strain -> strain.withContactDamage(0f)));
+        SimConfig base = burning(everyStrain(config(), strain -> strain.withContactDamage(0)));
         return base.withFire(base.fire().withGrowFraction(0.25f).withFadeFraction(0.25f));
     }
 

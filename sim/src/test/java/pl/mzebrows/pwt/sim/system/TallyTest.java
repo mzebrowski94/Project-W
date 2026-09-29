@@ -1,13 +1,12 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_STABILISE;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.GRENADE_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_CAPTURE_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.everyStrain;
@@ -26,6 +25,7 @@ import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Tally;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * A tally belongs to a life (G0044): what a commander killed, took and stabilised, counted on him by the
@@ -55,7 +55,7 @@ class TallyTest {
     /** Creatures that stand where they are put and hurt nobody: a test about credit, not about a fight. */
     private static Simulation stillWorld() {
         return new Simulation(
-                everyStrain(config(), strain -> strain.withSpeed(CRAWL).withContactDamage(0f)));
+                everyStrain(config(), strain -> strain.withSpeed(CRAWL).withContactDamage(0)));
     }
 
     @Test
@@ -135,7 +135,7 @@ class TallyTest {
         Entity shooter = simulation.spawnCommander(SHOOTER, LANE, 1);
         simulation.spawnBarrel(TARGET, LANE);
         Entity trooper = simulation.spawnTrooper(TARGET + BESIDE, LANE + BESIDE * 2f);
-        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0, false);
+        trooper.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
 
         for (int tick = 0; tick < A_WHILE && !trooper.getComponent(Dying.class).begun; tick++) {
             simulation.step(as(1, firingAt(TARGET)));
@@ -167,7 +167,7 @@ class TallyTest {
         tally(commander).goals = 2;
 
         commander.getComponent(Invulnerable.class).remainingTicks = 0;
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        commander.getComponent(Damage.class).add(A_BLOW, 0);
         for (int tick = 0; tick < ticksIn(DEATH_THROES + RESPAWN_DELAY) + 2; tick++) {
             simulation.step();
         }
@@ -183,7 +183,7 @@ class TallyTest {
         Entity medic = simulation.spawnCommander(LANE, LANE, 0);
         Entity bystander = simulation.spawnCommander(SHOOTER, ASIDE, 1);
         Entity trooper = simulation.spawnTrooper(LANE + BESIDE, LANE);
-        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0, false);
+        trooper.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
 
         for (int tick = 0; tick < ticksIn(CASUALTY_STABILISE) + 2; tick++) {
             simulation.step(as(0, STILL.acting(true)));
@@ -200,7 +200,7 @@ class TallyTest {
         Entity medic = simulation.spawnCommander(LANE, LANE, 0);
         Entity patient = simulation.spawnCommander(LANE + BESIDE, LANE, 1);
         patient.getComponent(Invulnerable.class).remainingTicks = 0;
-        patient.getComponent(Damage.class).add(COMMANDER_HEALTH, 0, false);
+        patient.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
 
         for (int tick = 0; tick < ticksIn(CASUALTY_STABILISE) + 4; tick++) {
             simulation.step(as(0, STILL.acting(true)));

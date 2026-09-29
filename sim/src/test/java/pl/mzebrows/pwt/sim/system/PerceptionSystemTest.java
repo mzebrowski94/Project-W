@@ -1,7 +1,7 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DETECTION_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.KNOCKBACK_DECAY;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LOSE_RANGE;
@@ -99,7 +99,7 @@ class PerceptionSystemTest {
         Entity enemy = simulation.spawnEnemy(MIDDLE + DETECTION_RANGE - 1f, MIDDLE);
         simulation.step();
 
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        commander.getComponent(Damage.class).add(A_BLOW, 0);
         commander.getComponent(Invulnerable.class).remainingTicks = 0;
         steps(simulation, 2);
 
@@ -196,7 +196,7 @@ class PerceptionSystemTest {
         Entity enemy = simulation.spawnEnemy(MIDDLE + DETECTION_RANGE, MIDDLE);
         simulation.step();
 
-        commander.getComponent(Damage.class).add(COMMANDER_HEALTH, 0);
+        commander.getComponent(Damage.class).add(A_BLOW, 0);
         commander.getComponent(Invulnerable.class).remainingTicks = 0;
         steps(simulation, 2);
 

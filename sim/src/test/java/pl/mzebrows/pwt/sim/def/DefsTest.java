@@ -14,7 +14,7 @@ class DefsTest {
 
     private static final float RADIUS = 2f;
     private static final float SPEED = 10f;
-    private static final float HEALTH = 100f;
+    private static final int HEALTH = 100;
 
     @Test
     void refusesToBuildATableThatIsMissingAKind() {
@@ -30,9 +30,9 @@ class DefsTest {
     void changesOneKindAndLeavesEveryOtherAlone() {
         Defs<UnitKind, UnitDef> defs = complete();
 
-        Defs<UnitKind, UnitDef> changed = defs.map(UnitKind.GRUNT, grunt -> grunt.withHealth(1f));
+        Defs<UnitKind, UnitDef> changed = defs.map(UnitKind.GRUNT, grunt -> grunt.withHealth(1));
 
-        assertThat(changed.of(UnitKind.GRUNT).health()).isEqualTo(1f);
+        assertThat(changed.of(UnitKind.GRUNT).health()).isEqualTo(1);
         assertThat(changed.of(UnitKind.BRUTE)).isEqualTo(defs.of(UnitKind.BRUTE));
     }
 
@@ -40,7 +40,7 @@ class DefsTest {
     void leavesTheTableItChangedUntouched() {
         Defs<UnitKind, UnitDef> defs = complete();
 
-        defs.map(UnitKind.GRUNT, grunt -> grunt.withHealth(1f));
+        defs.map(UnitKind.GRUNT, grunt -> grunt.withHealth(1));
 
         assertThat(defs.of(UnitKind.GRUNT).health()).isEqualTo(HEALTH);
     }
@@ -81,7 +81,7 @@ class DefsTest {
                 SPEED,
                 1,
                 HEALTH,
-                0f,
+                0,
                 PerceptionDef.ALL_ROUND,
                 0f,
                 0f,

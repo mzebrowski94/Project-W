@@ -6,6 +6,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.LEAP_HESITATION;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LOSE_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_LOCK;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmlessLeaping;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.killed;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -16,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Damage;
-import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Stunned;
 
 /**
@@ -111,7 +111,7 @@ class AppearanceSystemTest {
 
         simulation.step();
 
-        assertThat(commander.getComponent(Health.class).current).isLessThanOrEqualTo(0f);
+        assertThat(killed(commander)).isTrue();
         assertThat(state(commander)).isEqualTo(Appearance.State.GRAPPLING);
         assertThat(state(enemy)).isEqualTo(Appearance.State.GRAPPLING);
     }

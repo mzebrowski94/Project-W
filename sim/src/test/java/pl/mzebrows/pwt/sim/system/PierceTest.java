@@ -11,7 +11,6 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 
 import com.badlogic.ashley.core.Entity;
-import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
@@ -55,7 +54,7 @@ class PierceTest {
     private static final int UNTIL_PAST = 40;
 
     /** Health nothing on the field can spend, so what a body lost can be read rather than inferred. */
-    private static final float UNKILLABLE = 5000f;
+    private static final int UNKILLABLE = 5000;
 
     @Test
     void killsBothOfTwoStandingInOneLine() {
@@ -122,18 +121,17 @@ class PierceTest {
     @Test
     void landsOneBlowOnOneBodyRatherThanOneEveryTick() {
         Simulation simulation = withRailgun(new Simulation(
-                everyStrain(config(), strain -> strain.withHealth(UNKILLABLE).withContactDamage(0f))));
+                everyStrain(config(), strain -> strain.withHealth(UNKILLABLE).withContactDamage(0))));
         Entity enemy = simulation.spawnUnit(UnitKind.GRUNT, NEAR, Y);
 
         fireOnce(simulation);
 
-        assertThat(enemy.getComponent(Health.class).current)
-                .isCloseTo(UNKILLABLE - RAILGUN_DAMAGE, Offset.offset(0.01f));
+        assertThat(enemy.getComponent(Health.class).current).isEqualTo(UNKILLABLE - RAILGUN_DAMAGE);
     }
 
     /** Nothing on the field hits back, so a test about a shot is only about the shot. */
     private static Simulation harmlessWorld() {
-        return new Simulation(everyStrain(config(), strain -> strain.withContactDamage(0f)));
+        return new Simulation(everyStrain(config(), strain -> strain.withContactDamage(0)));
     }
 
     private static Simulation withRailgun(Simulation simulation) {

@@ -44,7 +44,13 @@ public final class Trooper implements Component, Pool.Poolable {
          *
          * <p>Ranks below {@link #AID} and above the level's objectives.
          */
-        CREW
+        CREW,
+        /**
+         * Wounded, and walking to a medkit (G0053).
+         *
+         * <p>Ranks below {@link #AID} and above {@link #CREW}.
+         */
+        MEND
     }
 
     public Mode mode = Mode.ADVANCE;

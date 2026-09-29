@@ -44,7 +44,7 @@ public final class Nest implements Component, Pool.Poolable {
     public boolean awake;
 
     /** What its health was last tick, so a system can tell it has been hit without reading damage. */
-    public float watchedHealth;
+    public int watchedHealth;
 
     /**
      * Which brood sizes have already come out of the current bag, one bit per size above
@@ -111,7 +111,7 @@ public final class Nest implements Component, Pool.Poolable {
         wakeRadius = 0f;
         rouseRadius = 0f;
         awake = false;
-        watchedHealth = 0f;
+        watchedHealth = 0;
         broodsDealt = 0L;
     }
 }

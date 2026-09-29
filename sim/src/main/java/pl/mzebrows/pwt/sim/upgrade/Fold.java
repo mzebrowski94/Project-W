@@ -1,5 +1,7 @@
 package pl.mzebrows.pwt.sim.upgrade;
 
+import pl.mzebrows.pwt.sim.def.Whole;
+
 /**
  * How a number is worked out from its base and what is held against it (ADR 0017). Always from the
  * base, on every read, and nothing is written back, so nothing can drift and nothing needs undoing.
@@ -20,6 +22,17 @@ final class Fold {
             return base;
         }
         return base * (WHOLE + clamp(percent, minPercent, maxPercent)) / WHOLE;
+    }
+
+    /**
+     * The same for hit points or damage, which are whole numbers (G0054): rounded by the one rule they
+     * have ({@link Whole}) - to the nearest, halves up, and never a blow that did something down to none.
+     */
+    static int scaleWhole(int base, int percent, int minPercent, int maxPercent) {
+        if (percent == 0) {
+            return base;
+        }
+        return Whole.percentOf(base, WHOLE + clamp(percent, minPercent, maxPercent));
     }
 
     /**

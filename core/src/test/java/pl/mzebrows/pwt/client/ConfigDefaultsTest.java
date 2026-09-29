@@ -161,6 +161,8 @@ class ConfigDefaultsTest {
                         charged(),
                         ordered(),
                         heat(),
+                        GraphicConfig.load().woundMark(),
+                        GraphicConfig.load().shieldMark(),
                         camera(),
                         GraphicConfig.load().terminal()))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -224,7 +226,7 @@ class ConfigDefaultsTest {
     }
 
     private static StateTint tint() {
-        return new StateTint(-0.4f, 0.85f, 0.5f, -0.3f, 0.35f, -0.18f, -0.7f, 0.6f, 0.45f, 0.3f);
+        return new StateTint(-0.4f, 0.85f, 0.5f, -0.3f, 0.35f, -0.55f, -0.18f, -0.7f, 0.6f, 0.45f, 0.3f);
     }
 
     private static NestMark nest() {

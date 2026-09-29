@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * A circle of ground that is lethal for a moment.
@@ -26,7 +27,13 @@ public final class Blast implements Component, Pool.Poolable {
      * What it takes off whatever it catches. Enough to kill anything on the field: a blast is fatal
      * or it is nothing, which is the whole of what makes it readable at a glance.
      */
-    public float damage;
+    public int damage;
+
+    /**
+     * What it does to a man it catches (G0053): declared by the kind of blast - a grenade's wounds,
+     * everything else's puts him down. Anything with health reads {@link #damage} instead.
+     */
+    public Harm harm = Harm.DOWN;
 
     /** How long the flash lasts. Nothing to do with how long it is dangerous, which is one tick. */
     public int durationTicks;
@@ -49,8 +56,9 @@ public final class Blast implements Component, Pool.Poolable {
     }
 
     /** Sets the blast and starts its flash, returning this component, for fluent spawning. */
-    public Blast set(float newDamage, int newDurationTicks) {
+    public Blast set(int newDamage, Harm newHarm, int newDurationTicks) {
         this.damage = newDamage;
+        this.harm = newHarm;
         this.durationTicks = newDurationTicks;
         this.remainingTicks = newDurationTicks;
         this.spent = false;
@@ -64,7 +72,8 @@ public final class Blast implements Component, Pool.Poolable {
 
     @Override
     public void reset() {
-        damage = 0f;
+        damage = 0;
+        harm = Harm.DOWN;
         durationTicks = 0;
         remainingTicks = 0;
         spent = false;

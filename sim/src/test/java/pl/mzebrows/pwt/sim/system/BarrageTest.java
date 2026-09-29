@@ -25,6 +25,7 @@ import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.BarrageDef;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PatternDef;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -217,7 +218,7 @@ class BarrageTest {
         Simulation simulation = new Simulation(barraging(ring(RING_SHOTS, 1)));
         simulation.spawnCommander(MIDDLE - OFF_THE_LINES, MIDDLE + OFF_THE_LINES);
         Entity boss = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
-        boss.getComponent(Health.class).current = BOSS_HEALTH * ENRAGED_BELOW * 0.5f;
+        boss.getComponent(Health.class).current = (int) (BOSS_HEALTH * ENRAGED_BELOW * 0.5f);
 
         steps(simulation, 1 + Math.round(ticksIn(WIND_UP) * ENRAGED_FACTOR));
 
@@ -244,7 +245,7 @@ class BarrageTest {
     void showsHowMuchOfItIsLeftOnItsCharge() {
         Simulation simulation = new Simulation(barraging(ring(RING_SHOTS, 1)));
         Entity boss = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
-        boss.getComponent(Health.class).current = BOSS_HEALTH * 0.25f;
+        boss.getComponent(Health.class).current = BOSS_HEALTH / 4;
 
         simulation.step();
 
@@ -260,7 +261,7 @@ class BarrageTest {
         steps(simulation, 2);
         int before = simulation.level().bossesDown;
 
-        boss.getComponent(Damage.class).add(BOSS_HEALTH * 10f, 0, true);
+        boss.getComponent(Damage.class).add(BOSS_HEALTH * 10, 0, Harm.KILL);
         steps(simulation, 10);
 
         assertThat(before).isZero();
@@ -275,7 +276,7 @@ class BarrageTest {
         BarrageDef barrage = new BarrageDef(
                 true, WIND_UP, REST, ENRAGED_BELOW, ENRAGED_FACTOR, first, second, PatternDef.off(), PatternDef.off());
         return config().withUnit(
-                        UnitKind.BOSS_GRUNT, boss -> boss.withContactDamage(0f).withBarrage(barrage));
+                        UnitKind.BOSS_GRUNT, boss -> boss.withContactDamage(0).withBarrage(barrage));
     }
 
     private static PatternDef ring(int shots, int salvos) {

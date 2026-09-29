@@ -15,15 +15,18 @@ public final class RespawnsOnDeath implements Component, Pool.Poolable {
     public float x;
     public float y;
 
-    /** How long it is invulnerable on arrival, so it does not die again inside the crowd that killed it. */
-    public float invulnerableSeconds;
+    /**
+     * How long the shield it comes back behind lasts, so it does not die again inside the crowd that
+     * killed it (G0053). The shield also breaks at the first hit.
+     */
+    public float shieldSeconds;
 
     /** Sets the reaction and returns this component, for fluent spawning. */
-    public RespawnsOnDeath set(float newDelaySeconds, float newX, float newY, float newInvulnerableSeconds) {
+    public RespawnsOnDeath set(float newDelaySeconds, float newX, float newY, float newShieldSeconds) {
         this.delaySeconds = newDelaySeconds;
         this.x = newX;
         this.y = newY;
-        this.invulnerableSeconds = newInvulnerableSeconds;
+        this.shieldSeconds = newShieldSeconds;
         return this;
     }
 
@@ -32,6 +35,6 @@ public final class RespawnsOnDeath implements Component, Pool.Poolable {
         delaySeconds = 0f;
         x = 0f;
         y = 0f;
-        invulnerableSeconds = 0f;
+        shieldSeconds = 0f;
     }
 }

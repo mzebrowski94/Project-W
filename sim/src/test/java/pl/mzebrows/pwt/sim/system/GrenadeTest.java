@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.component.Vitality;
 
 /**
  * A grenade is thrown along the aim <em>direction</em> for a fixed distance, bounces off whatever it
@@ -68,6 +69,19 @@ class GrenadeTest {
 
     /** Touching him, so the first tick of the throw is a tick he spends being killed. */
     private static final float ON_TOP_OF_HIM = 1.9f;
+
+    /** A grenade is the weapon meant to wound: its blast costs a man a wound, not his feet (G0018, G0053). */
+    @Test
+    void woundsAManCaughtInItsBlastRatherThanPuttingHimDown() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(THROW_X + GRENADE_RANGE, THROW_Y);
+        simulation.spawnGrenade(THROW_X, THROW_Y, 1f, 0f);
+
+        steps(simulation, WHOLE_FLIGHT + SETTLE);
+
+        assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
+        assertThat(commander.getComponent(Vitality.class).begun).isFalse();
+    }
 
     @Test
     void travelsItsFullRangeWhenNothingIsInTheWay() {

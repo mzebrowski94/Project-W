@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import com.badlogic.ashley.core.Component;
@@ -284,6 +285,74 @@ final class ArchitectureTest {
             "Drafts.passed",
             "Drafts.submitted",
             "Presence.away");
+
+    /**
+     * Hit points and damage are whole numbers (G0054). A fraction arises only inside a percentage and is
+     * rounded there, once, by {@code Whole}; a float anywhere a hit point is held or handed on would let
+     * one back in - and with it a breakpoint that moves by an ulp. Held by name, because that is how the
+     * codebase names them: every field and every method result whose name says health or damage, the
+     * amount a blow owes, and the whole of {@code Health}.
+     */
+    @ArchTest
+    static final ArchRule hitPointsAndDamageAreWholeNumbers = fields().that(holdHitPoints())
+            .should(notBeAFraction())
+            .because("hit points and damage are whole numbers, rounded once where a percentage is applied"
+                    + " (G0054, Whole.percentOf) - never a float that a breakpoint can slip an ulp against");
+
+    @ArchTest
+    static final ArchRule hitPointsAndDamageAreHandedOnWhole = methods()
+            .that(returnHitPoints())
+            .should(notReturnAFraction())
+            .because("a method that answers with hit points or damage answers with a whole number (G0054)");
+
+    private static final String HIT_POINTS = "(?i).*(health|damage).*|amount";
+
+    private static DescribedPredicate<JavaField> holdHitPoints() {
+        return DescribedPredicate.describe(
+                "hold hit points or damage",
+                field -> !field.getModifiers().contains(JavaModifier.STATIC)
+                        && (field.getName().matches(HIT_POINTS)
+                                || field.getOwner().isEquivalentTo(pl.mzebrows.pwt.sim.component.Health.class)));
+    }
+
+    private static DescribedPredicate<JavaMethod> returnHitPoints() {
+        return DescribedPredicate.describe(
+                "answer with hit points or damage", method -> method.getName().matches(HIT_POINTS));
+    }
+
+    private static ArchCondition<JavaField> notBeAFraction() {
+        return new ArchCondition<>("not be a float or a double") {
+            @Override
+            public void check(JavaField field, ConditionEvents events) {
+                if (fraction(field.getRawType())) {
+                    events.add(SimpleConditionEvent.violated(
+                            field,
+                            field.getFullName() + " is a " + field.getRawType().getName()));
+                }
+            }
+        };
+    }
+
+    private static ArchCondition<JavaMethod> notReturnAFraction() {
+        return new ArchCondition<>("not return a float or a double") {
+            @Override
+            public void check(JavaMethod method, ConditionEvents events) {
+                if (fraction(method.getRawReturnType())) {
+                    events.add(SimpleConditionEvent.violated(
+                            method,
+                            method.getFullName() + " returns a "
+                                    + method.getRawReturnType().getName()));
+                }
+            }
+        };
+    }
+
+    private static boolean fraction(JavaClass type) {
+        return type.isEquivalentTo(float.class)
+                || type.isEquivalentTo(double.class)
+                || type.isEquivalentTo(Float.class)
+                || type.isEquivalentTo(Double.class);
+    }
 
     @ArchTest
     static final ArchRule componentFieldsAreWhatASnapshotCanWrite = fields().that()

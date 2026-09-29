@@ -7,6 +7,7 @@ import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Tally;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
@@ -21,6 +22,7 @@ final class Guns {
 
     private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
     private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
 
     private Guns() {}
 
@@ -40,7 +42,11 @@ final class Guns {
      * one place {@code FIRE_COOLDOWN} is read, for every shooter there is.
      */
     static void spend(Modifiers modifiers, Entity firer, Weapon weapon, int cooldownTicks) {
-        weapon.remainingTicks = modifiers.fireCooldownTicks(firer, weapon.kind, cooldownTicks);
+        // A wounded man is slower on the trigger; his hand strike and his throw are not (G0053).
+        int base = VITALITY.has(firer)
+                ? Math.round(cooldownTicks * VITALITY.get(firer).cooldownFactor())
+                : cooldownTicks;
+        weapon.remainingTicks = modifiers.fireCooldownTicks(firer, weapon.kind, base);
         if (HEAT.has(firer)) {
             HEAT.get(firer).spend(weapon.heatPerShot);
         }
@@ -73,7 +79,7 @@ final class Guns {
             int credit,
             float[] muzzle) {
         int pellets = weapon.pellets < 1 ? 1 : weapon.pellets;
-        float damage = modifiers.gunDamage(firer, weapon.kind, weapon.damage);
+        int damage = modifiers.gunDamage(firer, weapon.kind, weapon.damage);
         for (int pellet = 0; pellet < pellets; pellet++) {
             float directionX = aimX;
             float directionY = aimY;

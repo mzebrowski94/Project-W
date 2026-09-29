@@ -1,13 +1,13 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_BLEED_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_STABILISE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_SPEED;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.HAULED_STABILISE_FACTOR;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.REVIVE_INVULNERABLE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TICK;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -17,13 +17,14 @@ import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Casualty;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * Hauling a man out. The grip itself is barely the mechanic - what makes it a decision is everything
@@ -151,7 +152,7 @@ class DragTest {
 
         steps(simulation, ticksIn(CASUALTY_BLEED_OUT) + 30, STILL.dragging(true));
 
-        assertThat(trooper.getComponent(Casualty.class).active()).isTrue();
+        assertThat(trooper.getComponent(Vitality.class).active()).isTrue();
     }
 
     @Test
@@ -164,11 +165,11 @@ class DragTest {
         simulation.step(STILL);
         steps(simulation, ticksIn(CASUALTY_STABILISE) + 2, STILL.acting(true));
 
-        assertThat(trooper.getComponent(Casualty.class).begun).isTrue();
+        assertThat(trooper.getComponent(Vitality.class).begun).isTrue();
 
         steps(simulation, ticksIn(CASUALTY_STABILISE * HAULED_STABILISE_FACTOR) + 4, STILL.acting(true));
 
-        assertThat(trooper.getComponent(Casualty.class).begun).isFalse();
+        assertThat(trooper.getComponent(Vitality.class).begun).isFalse();
     }
 
     /** A man who has been hauled stays expensive. Putting him down a moment early undoes nothing. */
@@ -196,13 +197,13 @@ class DragTest {
         steps(simulation, 5, STILL.dragging(true));
         simulation.step(STILL);
         steps(simulation, ticksIn(CASUALTY_STABILISE * HAULED_STABILISE_FACTOR) + 4, STILL.acting(true));
-        assertThat(trooper.getComponent(Casualty.class).begun).isFalse();
+        assertThat(trooper.getComponent(Vitality.class).begun).isFalse();
 
         steps(simulation, ticksIn(REVIVE_INVULNERABLE) + 2, STILL);
-        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0, false);
+        trooper.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
         simulation.step(STILL);
 
-        assertThat(trooper.getComponent(Casualty.class).begun).isTrue();
+        assertThat(trooper.getComponent(Vitality.class).begun).isTrue();
         assertThat(trooper.getComponent(Dragged.class).hauled).isFalse();
     }
 
@@ -258,7 +259,7 @@ class DragTest {
 
     private static Entity downedTrooper(Simulation simulation) {
         Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
-        trooper.getComponent(Damage.class).add(TROOPER_HEALTH, 0, false);
+        trooper.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
         simulation.step(STILL);
         return trooper;
     }

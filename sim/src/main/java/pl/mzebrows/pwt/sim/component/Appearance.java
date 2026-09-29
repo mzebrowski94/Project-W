@@ -31,6 +31,11 @@ public final class Appearance implements Component, Pool.Poolable {
         /** Shoved and briefly unable to act, with nothing holding the other party. */
         STAGGERED,
         /**
+         * Stunned by something that declares a stun (G0053): unable to act for as long as it said. Must
+         * read unlike {@link #STAGGERED}, which flashes past; this is a window to punish or to cover.
+         */
+        STUNNED,
+        /**
          * Wading: robbed of some of its speed and still doing everything else.
          *
          * <p>Below {@link #STAGGERED}. Only what was <em>done</em> to it reports this, not slowing
@@ -122,6 +127,21 @@ public final class Appearance implements Component, Pool.Poolable {
      */
     public int variant;
 
+    /**
+     * How many wounds a man on his feet is carrying (G0053). Zero for everything else, and for a man
+     * who is down - his bleed-out says more.
+     *
+     * <p>A count, so the renderer can draw one mark per wound and the player never has to guess one
+     * (pillar 5).
+     */
+    public int wounds;
+
+    /**
+     * How much of a shield is left in front of him, in {@code [0, 1]} (G0053): one for a shield that
+     * lasts until it is hit, running down for one that runs out on its own, zero for none.
+     */
+    public float shield;
+
     /** Sets the look and returns this component, for fluent spawning. */
     public Appearance set(Look newLook) {
         return set(newLook, 0);
@@ -162,5 +182,7 @@ public final class Appearance implements Component, Pool.Poolable {
         charged = false;
         heat = 0f;
         overheated = false;
+        wounds = 0;
+        shield = 0f;
     }
 }

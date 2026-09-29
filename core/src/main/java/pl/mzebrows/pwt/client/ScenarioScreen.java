@@ -184,7 +184,9 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().segmentMark(),
                 context.graphicConfig().chargedMark(),
                 context.graphicConfig().orderMark(),
-                context.graphicConfig().heatMark());
+                context.graphicConfig().heatMark(),
+                context.graphicConfig().woundMark(),
+                context.graphicConfig().shieldMark());
         terrain = new TerrainRenderer(
                 viewport,
                 context.graphicConfig().terrainPalette(),

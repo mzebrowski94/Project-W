@@ -21,7 +21,16 @@ public enum Stat {
     /** How fast a driven unit goes, as a share of its pace. Read where a course is committed. */
     SPEED(Form.SCALE, Reader.DRIVEN),
     /** How fast a man's work on a casualty goes. Read where the work is done, for whoever is doing it. */
-    STABILISE_SPEED(Form.SCALE, Reader.UNIT);
+    STABILISE_SPEED(Form.SCALE, Reader.UNIT),
+    /** How long a stun leaves the unit it lands on unable to act. Read where a stun is taken, for whoever takes it. */
+    STUN_DURATION(Form.SCALE, Reader.UNIT),
+    /**
+     * How many wounds a man carries on his feet (G0053). Read where a hit is weighed, for the man it lands
+     * on - every tick, so the pips he is drawn with are the number the next hit will be weighed against.
+     */
+    MAX_WOUNDS(Form.COUNT, Reader.UNIT),
+    /** How long after his last wound a man's wounds clear on their own, in seconds; zero never. Read where it runs. */
+    MEND_SECONDS(Form.COUNT, Reader.UNIT);
 
     /** How an effect moves the number. */
     public enum Form {

@@ -63,7 +63,9 @@ public enum RngStream {
      *
      * <p>Its own, so earning a draft never moves where a wave lands or how a man aims.
      */
-    DRAFT(0xC2B2_AE3D_27D4_EB4FL);
+    DRAFT(0xC2B2_AE3D_27D4_EB4FL),
+
+    MEDKIT(0x94D0_49BB_1331_11EBL);
 
     private final long salt;
 
