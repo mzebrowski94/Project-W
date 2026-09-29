@@ -30,7 +30,8 @@ final class CrowdScenario implements Scenario {
 
     @Override
     public SimConfig configure(SimConfig base) {
-        return base.withUnit(UnitKind.GRUNT, grunt -> grunt.withCount(ENEMIES))
+        return Scenario.withoutMuster(base)
+                .withUnit(UnitKind.GRUNT, grunt -> grunt.withCount(ENEMIES))
                 .withObstacle(base.obstacle().withCount(0));
     }
 

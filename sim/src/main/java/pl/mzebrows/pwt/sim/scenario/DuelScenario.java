@@ -42,7 +42,8 @@ final class DuelScenario implements Scenario {
 
     @Override
     public SimConfig configure(SimConfig config) {
-        return config.withUnit(UnitKind.GRUNT, grunt -> grunt.withCount(ENEMIES))
+        return Scenario.withoutMuster(config)
+                .withUnit(UnitKind.GRUNT, grunt -> grunt.withCount(ENEMIES))
                 .withUnit(UnitKind.BRUTE, brute -> brute.withCount(BRUTES))
                 .withObstacle(config.obstacle().withCount(OBSTACLES));
     }

@@ -53,6 +53,7 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * @param commander the player-controlled unit
  * @param trooper the AI-controlled members of his squad
  * @param spawn where a level puts the player's side to start with
+ * @param reserve the men a side has off the field, and how the field is filled from them (G0055)
  * @param units every strain of chasing unit, by kind
  * @param pickups every kind of thing that can be lying on the field, by kind
  * @param weapons every gun the commander can be carrying, by kind
@@ -89,6 +90,7 @@ public record SimConfig(
         CommanderConfig commander,
         TrooperConfig trooper,
         SpawnConfig spawn,
+        ReserveConfig reserve,
         @ConfigKey("unit") Defs<UnitKind, UnitDef> units,
         @ConfigKey("pickup") Defs<PickupKind, PickupDef> pickups,
         @ConfigKey("weapon") Defs<WeaponKind, WeaponDef> weapons,
@@ -303,6 +305,8 @@ public record SimConfig(
      * @param deathBroodMin how few come out when it is destroyed
      * @param deathBroodMax how many
      * @param hatchRadius how far around it a brood is put down, in world units; outside its own body
+     * @param hatchKeepOff how far off every man on the player's side a hatched creature is put down, in
+     *     world units, so a brood comes out of the hole rather than out of the man standing over it
      * @param wakeRadius how close somebody on the player's side must come before it starts working, in
      *     world units. Not a detection range
      * @param rouseRadius how far its cry carries when it is attacked, in world units
@@ -317,6 +321,7 @@ public record SimConfig(
             int deathBroodMin,
             int deathBroodMax,
             float hatchRadius,
+            float hatchKeepOff,
             float wakeRadius,
             float rouseRadius) {
 
@@ -334,6 +339,7 @@ public record SimConfig(
                     deathBroodMin,
                     "a nest cannot have a smaller most than fewest");
             Require.positive("nest hatchRadius", hatchRadius);
+            Require.notNegative("nest hatchKeepOff", hatchKeepOff);
             Require.notNegative("nest wakeRadius", wakeRadius);
             Require.notNegative("nest rouseRadius", rouseRadius);
         }
@@ -425,7 +431,6 @@ public record SimConfig(
      * @param deathThroesSeconds how long its body stays on the field after a killing blow, before the
      *     respawn countdown starts
      * @param respawnDelaySeconds how long after the body is removed before it comes back
-     * @param respawnMargin how far in from the left edge of the arena it comes back, in world units
      * @param respawnShieldSeconds how long the shield he comes back behind lasts, so he does not die again
      *     immediately; it also breaks at the first hit (G0053)
      * @param leashRadius how far a commander may walk from the middle of the commanders, in world
@@ -440,7 +445,6 @@ public record SimConfig(
             float bleedOutSeconds,
             float deathThroesSeconds,
             float respawnDelaySeconds,
-            float respawnMargin,
             float respawnShieldSeconds,
             float leashRadius) {
         public CommanderConfig {
@@ -450,7 +454,6 @@ public record SimConfig(
             Require.positive("commander bleedOutSeconds", bleedOutSeconds);
             Require.notNegative("commander deathThroesSeconds", deathThroesSeconds);
             Require.notNegative("commander respawnDelaySeconds", respawnDelaySeconds);
-            Require.notNegative("commander respawnMargin", respawnMargin);
             Require.notNegative("commander respawnShieldSeconds", respawnShieldSeconds);
             Require.notNegative("commander leashRadius", leashRadius);
         }
@@ -604,6 +607,32 @@ public record SimConfig(
             int rows = Math.min(height, map.rows());
             int row = Math.max(0, (map.rows() - rows) / 2);
             return new TileRect(col, row, Math.min(width, map.cols()), rows);
+        }
+    }
+
+    /**
+     * The reserve: the men a side has off the field (G0055). The field starts with the squad
+     * ({@link TrooperConfig#squadSize}) and holds it plus its headroom; the reserve is everybody else,
+     * and every man who comes onto the field after the first tick - a muster's trooper, a returning
+     * commander - is one of them. A scenario may set every number.
+     *
+     * @param start how many the reserve holds when the level starts
+     * @param max the most it ever holds; a crate's men past it are wasted
+     * @param musterSeconds how long between musters, which call men from the reserve onto the field
+     *     while it has room. Zero never musters
+     * @param musterMin how few a muster calls up
+     * @param musterMax how many, dealt from a bag. At most {@code Bag.MOST} sizes
+     */
+    @With
+    public record ReserveConfig(int start, int max, float musterSeconds, int musterMin, int musterMax) {
+        public ReserveConfig {
+            Require.notNegative("reserve start", start);
+            Require.atLeast("reserve max", max, start, "a reserve cannot start fuller than it can hold");
+            Require.notNegative("reserve musterSeconds", musterSeconds);
+            Require.notNegative("reserve musterMin", musterMin);
+            Require.atLeast(
+                    "reserve musterMax", musterMax, musterMin, "a muster cannot have a smaller most than fewest");
+            Require.fitsABag("reserve muster", musterMin, musterMax);
         }
     }
 

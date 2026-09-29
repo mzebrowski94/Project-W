@@ -58,6 +58,7 @@ final class BottomBarPainter {
     private final String stunnedText;
     private final String down;
     private final String kiaTemplate;
+    private final String kiaWaiting;
     private final String aboard;
     private final String overheat;
     private final String offline;
@@ -73,6 +74,11 @@ final class BottomBarPainter {
     private final int[] tellDrafts = new int[Players.MAX];
     private final int[] tellColumns = new int[Players.MAX];
     private final String[] tellKey = new String[Players.MAX];
+
+    /** Scratch for the tell's glow and text, so drawing it allocates nothing per frame. */
+    private final Color tellBacking = new Color();
+
+    private final Color tellLit = new Color();
 
     BottomBarPainter(Hud hud, UiStrings strings, HudStyle style, HudMetrics metrics, Palette palette) {
         this.hud = hud;
@@ -98,6 +104,7 @@ final class BottomBarPainter {
         this.shieldText = strings.get("ui.hud.shield");
         this.stunnedText = strings.get("ui.hud.stunned");
         this.kiaTemplate = strings.get("ui.hud.kia");
+        this.kiaWaiting = strings.get("ui.hud.kiaNoReserve");
         this.aboard = strings.get("ui.hud.aboard");
         this.overheat = strings.get("ui.hud.overheat");
         this.offline = strings.get("ui.hud.offline");
@@ -172,7 +179,7 @@ final class BottomBarPainter {
                 panels.textColumns(width) - labels[slot].length() - 1 - statusColumns(slot, player, connected) - 1);
         int tellX = textRight - upgrade.length() * UiFont.ADVANCE;
         if (!upgrade.isEmpty()) {
-            hud.text(upgrade, tellX, row, own);
+            lit(upgrade, tellX, row, own, connected ? alarms.swell(style.tellPulseHz()) : 0f);
         }
         switch (player.posture) {
             case CASUALTY -> {
@@ -182,13 +189,13 @@ final class BottomBarPainter {
                 bar(barX, row, barRight - barX, player.bleedOut, style.alert());
             }
             case DYING -> inverse(kiaText(slot, -1f), statusX, row, alert);
-            case RESPAWNING -> inverse(kiaText(slot, player.respawnSeconds), statusX, row, alert);
+            case RESPAWNING -> inverse(respawnText(slot, player), statusX, row, alert);
             case ABOARD -> hud.text(connected ? aboard : offline, statusX, row, text);
             default -> {
                 if (!connected) {
                     hud.text(offline, statusX, row, text);
                 } else if (player.posture == Posture.STANDING) {
-                    standing(player, statusX, row, text, alert);
+                    standing(player, statusX, row, alert);
                 }
             }
         }
@@ -217,15 +224,15 @@ final class BottomBarPainter {
         return switch (player.posture) {
             case CASUALTY -> down.length() + 1 + MIN_BLEED_COLUMNS;
             case DYING -> kiaText(slot, -1f).length();
-            case RESPAWNING -> kiaText(slot, player.respawnSeconds).length();
+            case RESPAWNING -> respawnText(slot, player).length();
             case ABOARD -> connected ? aboard.length() : offline.length();
             default -> connected ? standingColumns(player) : offline.length();
         };
     }
 
     /** Row 1 while he stands: his wounds, then a shield in front of him, then a stun he is under (G0053). */
-    private void standing(PlayerReadout player, int x, int row, Color color, Color alert) {
-        wounds(player, x, row, color);
+    private void standing(PlayerReadout player, int x, int row, Color alert) {
+        wounds(player, x, row);
         int after = x + player.maxWounds * UiFont.ADVANCE;
         if (player.shielded) {
             after += UiFont.ADVANCE;
@@ -251,19 +258,37 @@ final class BottomBarPainter {
     }
 
     /**
-     * Row 1 while he stands: a square per wound he can carry, filled for each he is carrying (G0053) -
-     * the count is shown, never guessed (pillar 5). Nothing at all for a man who can carry none.
+     * Row 1 while he stands: a narrow diamond per wound he can carry, filled in the wound colour for each
+     * he is carrying and hollow for the rest (G0053) - the count is shown, never guessed (pillar 5).
+     * Nothing at all for a man who can carry none.
      */
-    private void wounds(PlayerReadout player, int x, int row, Color color) {
-        int size = metrics.fontSize() - 2;
+    private void wounds(PlayerReadout player, int x, int row) {
         for (int wound = 0; wound < player.maxWounds; wound++) {
             int left = x + wound * UiFont.ADVANCE;
             if (wound < player.wounds) {
-                hud.fill(left, row - size, size, size, color);
+                hud.icon(TallyIcon.WOUND, left, row, style.wound());
             } else {
-                hud.frame(left, row - size, size, size, style.textDim());
+                hud.icon(TallyIcon.WOUND_SPARE, left, row, style.textDim());
             }
         }
+    }
+
+    /**
+     * The tell, lit so it is not overlooked: a dim backing in his colour, and his colour breathing
+     * towards white over it. {@code swell} is where the pulse is, 0 to 1.
+     */
+    private void lit(String text, int x, int top, Color own, float swell) {
+        float glow = style.tellGlow();
+        tellBacking.set(own).mul(glow, glow, glow, 1f);
+        hud.fill(
+                x - 1,
+                top - metrics.fontSize(),
+                text.length() * UiFont.ADVANCE + 1,
+                metrics.fontSize() + 1,
+                tellBacking);
+        tellLit.set(own).lerp(Color.WHITE, style.tellLift() * swell);
+        tellLit.a = 1f;
+        hud.text(text, x, top, tellLit);
     }
 
     /** The tell, formatted only when the count, the key or the room for it changes. */
@@ -326,6 +351,11 @@ final class BottomBarPainter {
                 style.textDim());
         hud.text(rollCall, layout.contentLeft() + padding, bottom.top() - padding, style.textDim());
         hud.endCanvas();
+    }
+
+    /** KIA and the seconds to his return - or that there is nobody in reserve to return as (G0055). */
+    private String respawnText(int slot, PlayerReadout player) {
+        return player.respawnWaiting ? kiaWaiting : kiaText(slot, player.respawnSeconds);
     }
 
     /** {@code KIA} and the seconds to his return, formatted only when the tenth changes. */

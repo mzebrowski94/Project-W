@@ -171,7 +171,11 @@ public record GraphicConfig(
                 properties.getFloat("graphic.ui.motion.scrimSeconds", 0.08f),
                 properties.getFloat("graphic.ui.motion.pageSeconds", 0.12f),
                 properties.getInt("graphic.ui.motion.pageSlide", 6),
-                properties.getInt("graphic.ui.page.columns", 60));
+                properties.getInt("graphic.ui.page.columns", 60),
+                color(properties, "graphic.hud.color.wound", "f0788aff"),
+                properties.getFloat("graphic.hud.upgrade.glow", 0.3f),
+                properties.getFloat("graphic.hud.upgrade.lift", 0.5f),
+                properties.getFloat("graphic.hud.upgrade.pulseHz", 0.8f));
     }
 
     /**
@@ -397,9 +401,9 @@ public record GraphicConfig(
 
     private static WoundMark woundMark(GameProperties properties) {
         return new WoundMark(
-                properties.getFloat("graphic.wound.size", 0.24f),
-                properties.getFloat("graphic.wound.drop", 1.5f),
-                properties.getFloat("graphic.wound.gap", 0.6f),
+                properties.getFloat("graphic.wound.size", 0.35f),
+                properties.getFloat("graphic.wound.growth", 0.12f),
+                properties.getFloat("graphic.wound.maxSize", 0.7f),
                 color(properties, "graphic.wound.color", "e8453cff"));
     }
 

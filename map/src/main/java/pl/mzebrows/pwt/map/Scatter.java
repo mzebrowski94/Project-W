@@ -101,6 +101,40 @@ public final class Scatter {
     }
 
     /**
+     * The same, filling the tiles nearest one point first - a brood out of a hole, which should come
+     * out of the hole rather than anywhere in the square around it. Still jittered inside each tile,
+     * and tiles the same distance away are still taken in a shuffled order, so nothing lines up.
+     *
+     * @return how many it actually placed
+     */
+    public int scatterNearest(TileRect area, float x, float y, int count, float radius, Place place) {
+        int[] candidates = shuffledTilesIn(area, ANY_GROUND);
+        float[] distance = new float[candidates.length];
+        for (int i = 0; i < candidates.length; i++) {
+            int col = candidates[i] % map.cols();
+            int row = candidates[i] / map.cols();
+            float toX = (col + 0.5f) * map.tileSize() - x;
+            float toY = (row + 0.5f) * map.tileSize() - y;
+            distance[i] = toX * toX + toY * toY;
+        }
+        // Insertion sort: stable, so the shuffle still decides between equals, and a hatch area is a
+        // few dozen tiles at most.
+        for (int i = 1; i < candidates.length; i++) {
+            int tile = candidates[i];
+            float key = distance[i];
+            int j = i - 1;
+            while (j >= 0 && distance[j] > key) {
+                candidates[j + 1] = candidates[j];
+                distance[j + 1] = distance[j];
+                j--;
+            }
+            candidates[j + 1] = tile;
+            distance[j + 1] = key;
+        }
+        return place(candidates, count, radius, place);
+    }
+
+    /**
      * Places up to {@code count} circles of this radius on tiles whose terrain is one of {@code on}.
      *
      * @return how many it actually placed, which is the caller's cue that the ground was full

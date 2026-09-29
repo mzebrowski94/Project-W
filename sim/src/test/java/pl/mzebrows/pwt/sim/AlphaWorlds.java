@@ -138,7 +138,6 @@ public final class AlphaWorlds {
     /** A second, not the shipped three - a test that waits three seconds of ticks is a slow test. */
     public static final float RESPAWN_DELAY = 1f;
 
-    public static final float RESPAWN_MARGIN = 5f;
     /** How long the shield a commander comes back behind lasts (G0053). */
     public static final float RESPAWN_SHIELD = 0.5f;
 
@@ -284,6 +283,9 @@ public final class AlphaWorlds {
     public static final int BROOD = 2;
 
     public static final float NEST_HATCH_RADIUS = 6f;
+
+    /** How far off every man on our side a hatched creature is put down - a body and a half of room. */
+    public static final float NEST_HATCH_KEEP_OFF = 4f;
 
     /** Short enough that a test can stand something just outside it and have it stay asleep. */
     public static final float NEST_WAKE_RADIUS = 20f;
@@ -749,6 +751,14 @@ public final class AlphaWorlds {
 
     public static final int SPAWN_HEIGHT = 5;
 
+    /**
+     * Men off the field when a level starts. Plenty, so a test about something else never runs a
+     * commander out of lives; a test about the reserve names its own.
+     */
+    public static final int RESERVE_START = 50;
+
+    public static final int RESERVE_MAX = 60;
+
     /** What the two guns that run hot in the fixtures declare. Both, so one test covers either. */
     private static final HeatDef HOT = new HeatDef(TURRET_HEAT_PER_SHOT, HEAT_COOL_PER_SECOND, HEAT_RESUME_BELOW);
 
@@ -786,7 +796,6 @@ public final class AlphaWorlds {
                         COMMANDER_BLEED_OUT,
                         DEATH_THROES,
                         RESPAWN_DELAY,
-                        RESPAWN_MARGIN,
                         RESPAWN_SHIELD,
                         LEASH_RADIUS),
                 new SimConfig.TrooperConfig(
@@ -824,6 +833,8 @@ public final class AlphaWorlds {
                         MEDKIT_REACH,
                         new TrooperGrenadeDef(TROOPER_GRENADE_COOLDOWN, MIN_CLUSTER, SAFETY_MARGIN, SQUAD_GAP_SECONDS)),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
+                // Never musters: men turning up every so often would move every count in every test.
+                new SimConfig.ReserveConfig(RESERVE_START, RESERVE_MAX, 0f, 2, 3),
                 Defs.<UnitKind, UnitDef>builder(UnitKind.class)
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
                         .put(UnitKind.BRUTE, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.BRUTE))
@@ -1210,6 +1221,7 @@ public final class AlphaWorlds {
                         BROOD,
                         BROOD,
                         NEST_HATCH_RADIUS,
+                        NEST_HATCH_KEEP_OFF,
                         NEST_WAKE_RADIUS,
                         NEST_ROUSE_RADIUS),
                 new SimConfig.ControlPointConfig(

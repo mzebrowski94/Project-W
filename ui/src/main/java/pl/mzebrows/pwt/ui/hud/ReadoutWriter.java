@@ -14,6 +14,7 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
+import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Nest;
@@ -48,6 +49,7 @@ public final class ReadoutWriter {
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
+    private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
     private static final ComponentMapper<Respawning> RESPAWNING = ComponentMapper.getFor(Respawning.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
@@ -115,6 +117,7 @@ public final class ReadoutWriter {
         }
         out.nestsStanding = standing(nests);
         out.troopersStanding = standing(troopers);
+        army(world, level, out);
 
         for (int i = 0; i < commanders.size(); i++) {
             commander(commanders.get(i), out);
@@ -130,6 +133,7 @@ public final class ReadoutWriter {
                 player.posture = Posture.RESPAWNING;
                 player.respawnSeconds =
                         Math.max(0, respawning.remainingTicks) * world.config().tickSeconds();
+                player.respawnWaiting = !respawning.paid;
                 player.variant = respawning.slot;
                 int[] last = lastLife[respawning.slot];
                 player.kills = last[0];
@@ -137,6 +141,20 @@ public final class ReadoutWriter {
                 player.stabilised = last[2];
             }
         }
+    }
+
+    /** The men on the field against its most, and the reserve (G0055). */
+    private void army(Simulation world, Level level, Readout out) {
+        int onField = 0;
+        for (int i = 0; i < troopers.size(); i++) {
+            if (!DEAD.has(troopers.get(i))) {
+                onField++;
+            }
+        }
+        out.squadOnField = onField;
+        out.squadMost = world.squadMost();
+        out.reserve = level.reserve;
+        out.failed = level.failed;
     }
 
     private void commander(Entity entity, Readout out) {

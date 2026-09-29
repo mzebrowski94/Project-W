@@ -39,6 +39,18 @@ public final class Readout {
     /** Troopers on the field who are not dying. A man shot down is still standing in this count. */
     public int troopersStanding;
 
+    /**
+     * The army (G0055): troopers on the field - down or not, the count the field's most is held against
+     * - that most, and the men in reserve.
+     */
+    public int squadOnField;
+
+    public int squadMost;
+    public int reserve;
+
+    /** The level is lost - every commander out, nobody left in reserve (G0055). Latched in the world. */
+    public boolean failed;
+
     /** Entries the ledger can hold at most: every kind, once for the side and once per slot. */
     public static final int HELD = UpgradeKind.values().length * (Players.MAX + 1);
 
@@ -100,6 +112,10 @@ public final class Readout {
         wavesArmed = other.wavesArmed;
         nestsStanding = other.nestsStanding;
         troopersStanding = other.troopersStanding;
+        squadOnField = other.squadOnField;
+        squadMost = other.squadMost;
+        reserve = other.reserve;
+        failed = other.failed;
         heldCount = other.heldCount;
         System.arraycopy(other.heldKind, 0, heldKind, 0, other.heldCount);
         System.arraycopy(other.heldSlot, 0, heldSlot, 0, other.heldCount);
@@ -122,6 +138,10 @@ public final class Readout {
         wavesArmed = false;
         nestsStanding = 0;
         troopersStanding = 0;
+        squadOnField = 0;
+        squadMost = 0;
+        reserve = 0;
+        failed = false;
         heldCount = 0;
         upgradeRevision = 0L;
         draftsDry = 0;

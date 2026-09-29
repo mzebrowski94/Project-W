@@ -61,6 +61,15 @@ public interface Scenario {
         return Maps.regions(shape.cols(), shape.rows(), shape.tileSize(), shape.regions(), randomness);
     }
 
+    /**
+     * This config with the reserve's muster switched off - for an arena built round the commander alone,
+     * where a squad turning up every half minute would be a different scenario (G0055). The reserve
+     * itself stays: a commander coming back still costs a man.
+     */
+    static SimConfig withoutMuster(SimConfig config) {
+        return config.withReserve(config.reserve().withMusterSeconds(0f));
+    }
+
     /** Fills an empty simulation. Spawn the commander first, so it is always present. */
     void populate(Simulation simulation);
 

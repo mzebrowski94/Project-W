@@ -67,7 +67,11 @@ class ConfigDefaultsTest {
                         hud.scrimSeconds(),
                         hud.pageSeconds(),
                         hud.pageSlide(),
-                        hud.pageColumns()))
+                        hud.pageColumns(),
+                        hud.wound(),
+                        hud.tellGlow(),
+                        hud.tellLift(),
+                        hud.tellPulseHz()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

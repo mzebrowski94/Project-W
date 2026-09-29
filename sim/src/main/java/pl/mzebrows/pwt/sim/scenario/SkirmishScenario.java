@@ -68,6 +68,11 @@ final class SkirmishScenario implements Scenario {
     }
 
     @Override
+    public SimConfig configure(SimConfig base) {
+        return Scenario.withoutMuster(base);
+    }
+
+    @Override
     public String description() {
         return "Everything at once: move, aim, fire, get chased, bump into things.";
     }

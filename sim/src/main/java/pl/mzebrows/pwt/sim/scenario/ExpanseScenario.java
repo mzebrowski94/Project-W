@@ -82,7 +82,8 @@ final class ExpanseScenario implements Scenario {
 
     @Override
     public SimConfig configure(SimConfig base) {
-        return base.withMap(new SimConfig.MapConfig(COLS, ROWS, TILE, REGIONS))
+        return Scenario.withoutMuster(base)
+                .withMap(new SimConfig.MapConfig(COLS, ROWS, TILE, REGIONS))
                 .withUnit(UnitKind.GRUNT, grunt -> grunt.withCount(GRUNTS))
                 .withUnit(UnitKind.BRUTE, brute -> brute.withCount(BRUTES))
                 .withObstacle(base.obstacle().withCount(OBSTACLES));

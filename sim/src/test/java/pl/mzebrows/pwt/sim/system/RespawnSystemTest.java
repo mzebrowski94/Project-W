@@ -1,11 +1,9 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_MARGIN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_SHIELD;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
@@ -16,6 +14,8 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Damage;
@@ -68,16 +68,18 @@ class RespawnSystemTest {
         assertThat(count(simulation, Commander.class)).isEqualTo(1);
     }
 
+    /** At the rally point (G0055): with no point taken, where the level started him. */
     @Test
-    void bringsItBackAtTheLeftOfTheArena() {
+    void bringsItBackInTheSpawnAreaWhileNoPointIsTaken() {
         Simulation simulation = simulation();
         kill(simulation.spawnCommander(90f, 90f));
 
         steps(simulation, ticksIn(RETURN_DELAY) + 2);
 
+        TileMap map = simulation.map();
         Position position = commander(simulation).getComponent(Position.class);
-        assertThat(position.x).isEqualTo(RESPAWN_MARGIN);
-        assertThat(position.y).isEqualTo(ARENA * 0.5f);
+        TileRect spawn = simulation.config().spawn().on(map);
+        assertThat(spawn.contains(map.colAt(position.x), map.rowAt(position.y))).isTrue();
     }
 
     @Test

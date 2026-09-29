@@ -13,6 +13,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
@@ -209,11 +210,11 @@ class CoopTest {
     }
 
     /**
-     * Coming back at the edge of the arena is a long walk in single player and a dead player watching
-     * his friends fight in co-op. He comes back on whoever is still standing instead.
+     * A player comes back at the rally point like every man from the reserve, even with a friend still
+     * on his feet across the map (G0055, amending G0023): ground the side holds, not the middle of a fight.
      */
     @Test
-    void bringsHimBackBesideACommanderWhoIsStillOnHisFeet() {
+    void bringsHimBackAtTheRallyPointEvenWithAFriendStillOnHisFeet() {
         Simulation simulation = simulation();
         simulation.spawnCommander(MIDDLE - 5f, MIDDLE, 0);
         Entity second = simulation.spawnCommander(MIDDLE + 5f, MIDDLE, 1);
@@ -221,7 +222,10 @@ class CoopTest {
         kill(second);
         steps(simulation, ticksIn(DEATH_THROES + RESPAWN_DELAY) + 2, inputs(CommanderInput.IDLE));
 
-        assertThat(at(inSlot(simulation, 1)).x).isCloseTo(MIDDLE - 5f, Offset.offset(3f));
+        TileMap map = simulation.map();
+        Position back = at(inSlot(simulation, 1));
+        assertThat(simulation.config().spawn().on(map).contains(map.colAt(back.x), map.rowAt(back.y)))
+                .isTrue();
     }
 
     @Test

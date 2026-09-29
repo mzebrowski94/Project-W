@@ -5,7 +5,6 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Approach;
@@ -115,14 +114,12 @@ public final class Spawner {
 
     private final PooledEngine engine;
     private final SimConfig config;
-    private final TileMap map;
 
     private final ImmutableArray<Entity> levels;
 
-    Spawner(PooledEngine engine, SimConfig config, TileMap map) {
+    Spawner(PooledEngine engine, SimConfig config) {
         this.engine = engine;
         this.config = config;
-        this.map = map;
         this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
     }
 
@@ -175,11 +172,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Stunned.class));
         entity.add(engine.createComponent(Dying.class).set(ticks(commander.deathThroesSeconds())));
         entity.add(engine.createComponent(RespawnsOnDeath.class)
-                .set(
-                        commander.respawnDelaySeconds(),
-                        commander.respawnMargin(),
-                        map.worldHeight() * 0.5f,
-                        commander.respawnShieldSeconds()));
+                .set(commander.respawnDelaySeconds(), commander.respawnShieldSeconds()));
         entity.add(engine.createComponent(Weapon.class)
                 .set(STARTING_WEAPON, config.weapon(STARTING_WEAPON), config.tickSeconds()));
         entity.add(engine.createComponent(Melee.class)
@@ -777,7 +770,9 @@ public final class Spawner {
      */
     public Entity spawnLevel() {
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Level.class));
+        Level level = engine.createComponent(Level.class);
+        level.reserve = config.reserve().start();
+        entity.add(level);
         // What is still to arrive; empty means everything is on the field from the first tick.
         entity.add(engine.createComponent(Waves.class));
         // What is kept off the field until the players are all in one place; empty keeps nothing (G0048).
@@ -1145,9 +1140,9 @@ public final class Spawner {
     /**
      * Spawns the pending-respawn ticket for a unit that just died: a countdown and nothing else.
      */
-    public Entity spawnRespawn(float delaySeconds, float x, float y, float shieldSeconds, int slot) {
+    public Entity spawnRespawn(float delaySeconds, float shieldSeconds, int slot) {
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Respawning.class).set(ticks(delaySeconds), x, y, ticks(shieldSeconds), slot));
+        entity.add(engine.createComponent(Respawning.class).set(ticks(delaySeconds), ticks(shieldSeconds), slot));
         admit(entity);
         return entity;
     }

@@ -80,7 +80,8 @@ final class FeedingGroundScenario implements Scenario {
 
     @Override
     public SimConfig configure(SimConfig base) {
-        return base.withUnit(UnitKind.GRUNT, grunt -> grunt.withCount(GRUNTS))
+        return Scenario.withoutMuster(base)
+                .withUnit(UnitKind.GRUNT, grunt -> grunt.withCount(GRUNTS))
                 .withUnit(UnitKind.BRUTE, brute -> brute.withCount(0))
                 .withObstacle(base.obstacle().withCount(0));
     }

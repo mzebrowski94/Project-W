@@ -46,6 +46,9 @@ public final class GoalLine {
 
     /** The goal the level asks for right now, with no memory and no hold. */
     public static Goal resolve(Readout readout) {
+        if (readout.failed) {
+            return Goal.FAILED;
+        }
         if (readout.objectivesRequired == 0) {
             return Goal.NONE;
         }

@@ -4,10 +4,14 @@
 level offers for taking ground.
 
 **Enforced by.** `ReinforcementSystemTest.turnsARescuedTrooperIntoAManOnTheField`,
-`.putsHimDownBesideTheCommander`, `.neverPutsMoreMenOnTheFieldThanTheSquadAllows`,
+`.putsHimDownAtTheRallyPoint` (G0055), `.neverPutsMoreMenOnTheFieldThanTheSquadAllows`,
 `.takesAsManyAsTheSquadHasRoomForAndNoMore`, `.fillsAGapLeftByAManTheLevelLost`,
-`.keepsAReinforcementOwedWhileNobodyIsStandingToFormUpOn`,
 `ReinforcementDeployTest.laysOneReinforcementBesideEveryControlPoint`, `.keepsItOffThePointItself`.
+
+**Superseded in part by G0055 (2026-09-29).** Mateusz overruled *nothing is banked*, and the DO NOT
+BUILD entries for a reserve and for a timed arrival: a crate's men go onto the field while it has room,
+then into a reserve shown on the HUD, and the reserve musters men onto the field on a clock. They now
+arrive at the rally point, not beside the commander. Where crates lie, and what one is worth, stand.
 
 **Amended 2026-09-18**, the same day it was written and before anything was built on it: a point is
 worth two or three crates rather than one, a crate is worth three men rather than one, and the men

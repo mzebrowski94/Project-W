@@ -8,5 +8,7 @@ public enum Goal {
     HOLD_POINT,
     CLEAR_ENEMIES,
     /** Every objective the level named is met, right now. */
-    COMPLETE
+    COMPLETE,
+    /** Every commander out and nobody left in reserve: the level is lost, and says so above all else (G0055). */
+    FAILED
 }

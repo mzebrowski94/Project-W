@@ -41,6 +41,24 @@ class GoalLineTest {
         assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.COMPLETE);
     }
 
+    /** A lost level says so over everything else, objectives met or not (G0055). */
+    @Test
+    void saysFailedOverEverythingOnceTheLevelIsLost() {
+        Readout readout = requiring(Objective.CLEAR_ENEMIES);
+        readout.objectivesMet = readout.objectivesRequired;
+        readout.failed = true;
+
+        assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.FAILED);
+    }
+
+    @Test
+    void saysFailedEvenOnALevelWithoutObjectives() {
+        Readout readout = new Readout();
+        readout.failed = true;
+
+        assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.FAILED);
+    }
+
     @Test
     void showsNothingForALevelWithoutObjectives() {
         assertThat(GoalLine.resolve(new Readout())).isEqualTo(Goal.NONE);

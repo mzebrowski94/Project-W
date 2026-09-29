@@ -76,6 +76,7 @@ public final class ControlPointSystem extends EntitySystem {
             point.heldSeconds += deltaTime;
             if (point.heldSeconds >= point.captureSeconds) {
                 point.captured = true;
+                point.takenOrder = lastTaken() + 1;
                 point.heldSeconds = point.captureSeconds;
                 creditTheTaking(at, point.radius);
                 if (point.holdsAfterwards) {
@@ -131,6 +132,15 @@ public final class ControlPointSystem extends EntitySystem {
             }
         }
         return false;
+    }
+
+    /** The order the last point taken was taken in; zero while none has been (G0055). */
+    private int lastTaken() {
+        int last = 0;
+        for (int i = 0; i < points.size(); i++) {
+            last = Math.max(last, POINT.get(points.get(i)).takenOrder);
+        }
+        return last;
     }
 
     private static boolean within(Position a, Position b, float range) {

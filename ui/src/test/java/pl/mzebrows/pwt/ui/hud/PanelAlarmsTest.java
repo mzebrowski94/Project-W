@@ -105,6 +105,32 @@ class PanelAlarmsTest {
         }
     }
 
+    @Test
+    void swellsFromDarkToLitAndBackOncePerCycle() {
+        Readout readout = standing();
+        PanelAlarms alarms = alarms(1f, 1f);
+
+        float start = alarms.swell(1f);
+        alarms.update(readout, 0.5f);
+        float peak = alarms.swell(1f);
+        alarms.update(readout, 0.5f);
+        float end = alarms.swell(1f);
+
+        assertThat(start).isZero();
+        assertThat(peak).isEqualTo(1f);
+        assertThat(end).isZero();
+    }
+
+    @Test
+    void holdsTheSwellLitWithFlashesOff() {
+        Readout readout = standing();
+        PanelAlarms alarms = alarms(1f, 0f);
+
+        alarms.update(readout, 0.3f);
+
+        assertThat(alarms.swell(1f)).isEqualTo(1f);
+    }
+
     private static PanelAlarms alarms(float motionScale, float flashScale) {
         return new PanelAlarms(ALARM, 1, 2f, motionScale, flashScale);
     }

@@ -4,7 +4,8 @@ import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
 
 /**
- * A death reaction: this entity comes back, after a delay, somewhere specific.
+ * A death reaction: this entity comes back, after a delay, at the rally point and for a man from the
+ * reserve (G0055).
  *
  * <p>Data on the entity rather than a rule in a system, so a unit that does not respawn simply does
  * not carry this - no flag, no special case in whatever kills it (G0004).
@@ -12,8 +13,6 @@ import com.badlogic.gdx.utils.Pool;
 public final class RespawnsOnDeath implements Component, Pool.Poolable {
 
     public float delaySeconds;
-    public float x;
-    public float y;
 
     /**
      * How long the shield it comes back behind lasts, so it does not die again inside the crowd that
@@ -22,10 +21,8 @@ public final class RespawnsOnDeath implements Component, Pool.Poolable {
     public float shieldSeconds;
 
     /** Sets the reaction and returns this component, for fluent spawning. */
-    public RespawnsOnDeath set(float newDelaySeconds, float newX, float newY, float newShieldSeconds) {
+    public RespawnsOnDeath set(float newDelaySeconds, float newShieldSeconds) {
         this.delaySeconds = newDelaySeconds;
-        this.x = newX;
-        this.y = newY;
         this.shieldSeconds = newShieldSeconds;
         return this;
     }
@@ -33,8 +30,6 @@ public final class RespawnsOnDeath implements Component, Pool.Poolable {
     @Override
     public void reset() {
         delaySeconds = 0f;
-        x = 0f;
-        y = 0f;
         shieldSeconds = 0f;
     }
 }

@@ -29,6 +29,17 @@ class TallyIconTest {
         assertThat(TallyIcon.STABILISED.lit(0, TallyIcon.SIZE / 2)).isTrue();
     }
 
+    /** A row of wounds is laid a font advance apart, so nothing lit may reach the icon's outer columns. */
+    @Test
+    void keepsAWoundInsideOneAdvanceSoARowOfThemNeverTouches() {
+        for (TallyIcon icon : new TallyIcon[] {TallyIcon.WOUND, TallyIcon.WOUND_SPARE}) {
+            for (int y = 0; y < TallyIcon.SIZE; y++) {
+                assertThat(icon.lit(0, y)).as(icon.name()).isFalse();
+                assertThat(icon.lit(TallyIcon.SIZE - 1, y)).as(icon.name()).isFalse();
+            }
+        }
+    }
+
     @Test
     void capsACountAtFourCharacters() {
         assertThat(TallyIcon.count(0)).isEqualTo("0");

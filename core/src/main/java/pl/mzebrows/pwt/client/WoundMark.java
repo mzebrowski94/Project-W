@@ -5,39 +5,34 @@ import com.badlogic.gdx.graphics.Color;
 /**
  * How to draw the wounds a man on his feet is carrying (G0053).
  *
- * <p>One dot per wound in a row under his feet, so the count is read rather than guessed - the player
- * never tracks a number the game does not show (pillar 5). The simulation publishes the count and says
- * nothing about how it should look (G0003). Filled circles in the same pass as the body, in a colour of
- * their own: a wound asks for a reaction nothing else on a man does.
+ * <p>One red disc in the middle of his body, larger for every wound he carries, so a wounded man reads
+ * as wounded at a glance and a badly wounded one as worse - the count itself is on his panel (pillar
+ * 5). The simulation publishes the count and says nothing about how it should look (G0003). Filled, in
+ * the same pass as the body and on top of it, in a colour of its own: a wound asks for a reaction
+ * nothing else on a man does.
  *
- * @param size how big one dot is, as a multiple of the body's radius
- * @param drop how far below his middle the row sits, as a multiple of the body's radius
- * @param gap how far apart two dots are, centre to centre, as a multiple of the body's radius
+ * @param size how big the disc is at one wound, as a multiple of the body's radius
+ * @param growth how much bigger each further wound makes it, as a multiple of the body's radius
+ * @param maxSize the most it grows to, as a multiple of the body's radius - it never covers the man
  * @param color what a wound is drawn in
  */
-public record WoundMark(float size, float drop, float gap, Color color) {
+public record WoundMark(float size, float growth, float maxSize, Color color) {
 
     public WoundMark {
         if (size <= 0f) {
             throw new IllegalArgumentException("wound mark size must be positive, was " + size);
         }
-        if (gap <= 0f) {
-            throw new IllegalArgumentException("wound mark gap must be positive, was " + gap);
+        if (growth < 0f) {
+            throw new IllegalArgumentException("wound mark growth must not be negative, was " + growth);
+        }
+        if (maxSize < size) {
+            throw new IllegalArgumentException("wound mark maxSize must be at least its size, was " + maxSize);
         }
     }
 
-    /** The radius of one dot for a body of the given radius. */
-    public float radiusFor(float bodyRadius) {
-        return bodyRadius * size;
-    }
-
-    /** Where the row sits below his middle for a body of the given radius. */
-    public float dropFor(float bodyRadius) {
-        return bodyRadius * drop;
-    }
-
-    /** Where the dot at {@code index} of {@code count} sits across from his middle, centring the row. */
-    public float offsetFor(float bodyRadius, int index, int count) {
-        return (index - (count - 1) * 0.5f) * gap * bodyRadius;
+    /** The radius of the disc for a body of the given radius carrying {@code wounds}, at least one. */
+    public float radiusFor(float bodyRadius, int wounds) {
+        float grown = size + growth * Math.max(0, wounds - 1);
+        return bodyRadius * Math.min(maxSize, grown);
     }
 }

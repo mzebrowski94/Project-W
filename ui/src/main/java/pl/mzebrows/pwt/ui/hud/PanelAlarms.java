@@ -91,6 +91,20 @@ public final class PanelAlarms {
         return ((int) (since[slot] * SHAKE_FRAMES_PER_SECOND) & 1) == 0 ? shake : -shake;
     }
 
+    /**
+     * Where a slow, smooth pulse at {@code hz} is this frame, from 0 to 1 and back - an offer breathing
+     * rather than an alert blinking. A triangle, so it needs no trigonometry. Always 1, held, with
+     * flashes off or no rate.
+     */
+    public float swell(float hz) {
+        if (!flashes || hz <= 0f) {
+            return 1f;
+        }
+        float cycles = clock * hz;
+        float phase = cycles - (int) cycles;
+        return phase < 0.5f ? phase * 2f : (1f - phase) * 2f;
+    }
+
     /** Whether alerts are in the bright half of their pulse; always, with flashes off. */
     public boolean alertBright() {
         if (!flashes || pulseHz <= 0f) {

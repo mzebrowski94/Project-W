@@ -147,7 +147,7 @@ class ReadoutWriterTest {
     void countsDownToHisReturnWhileHeIsDead() {
         Simulation world = world();
         Entity pending = world.engine().createEntity();
-        pending.add(world.engine().createComponent(Respawning.class).set(90, 0f, 0f, 0, 3));
+        pending.add(world.engine().createComponent(Respawning.class).set(90, 0, 3));
         world.engine().addEntity(pending);
 
         PlayerReadout player = fill(new ReadoutWriter(), world).player(3);
@@ -155,6 +155,48 @@ class ReadoutWriterTest {
         assertThat(player.posture).isEqualTo(Posture.RESPAWNING);
         assertThat(player.respawnSeconds).isCloseTo(1.5f, TOLERANCE);
         assertThat(player.variant).isEqualTo(3);
+    }
+
+    /** Nobody in reserve to come back as: no countdown to show, and the panel says why (G0055). */
+    @Test
+    void saysHeIsWaitingOnTheReserveWhileHisReturnIsUnpaid() {
+        Simulation world = world();
+        Entity pending = world.engine().createEntity();
+        pending.add(world.engine().createComponent(Respawning.class).set(90, 0, 3));
+        world.engine().addEntity(pending);
+
+        PlayerReadout waiting = fill(new ReadoutWriter(), world).player(3);
+        pending.getComponent(Respawning.class).paid = true;
+        PlayerReadout paid = fill(new ReadoutWriter(), world).player(3);
+
+        assertThat(waiting.respawnWaiting).isTrue();
+        assertThat(paid.respawnWaiting).isFalse();
+    }
+
+    /** The army the top bar shows: men on the field against its most, and the reserve. */
+    @Test
+    void copiesTheArmyTheFieldAndTheReserve() {
+        Simulation world = world();
+        world.spawnTrooper(40f, 40f);
+        world.spawnTrooper(44f, 40f);
+        world.step();
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        SimConfig config = world.config();
+        assertThat(readout.squadOnField).isEqualTo(2);
+        assertThat(readout.squadMost)
+                .isEqualTo(config.trooper().squadSize() + config.trooper().squadGrowth());
+        assertThat(readout.reserve).isEqualTo(config.reserve().start());
+        assertThat(readout.failed).isFalse();
+    }
+
+    @Test
+    void copiesALostLevel() {
+        Simulation world = world();
+        world.level().failed = true;
+
+        assertThat(fill(new ReadoutWriter(), world).failed).isTrue();
     }
 
     @Test
@@ -182,7 +224,7 @@ class ReadoutWriterTest {
         fill(writer, world);
         world.engine().removeEntity(commander);
         Entity pending = world.engine().createEntity();
-        pending.add(world.engine().createComponent(Respawning.class).set(90, 0f, 0f, 0, 1));
+        pending.add(world.engine().createComponent(Respawning.class).set(90, 0, 1));
         world.engine().addEntity(pending);
 
         PlayerReadout waiting = fill(writer, world).player(1);

@@ -64,7 +64,7 @@ final class ThicketScenario implements Scenario {
      */
     @Override
     public SimConfig configure(SimConfig base) {
-        SimConfig config = base.withMap(new SimConfig.MapConfig(COLS, ROWS, TILE, REGIONS));
+        SimConfig config = Scenario.withoutMuster(base).withMap(new SimConfig.MapConfig(COLS, ROWS, TILE, REGIONS));
         for (UnitKind kind : UnitKind.values()) {
             config = config.withUnit(
                     kind, strain -> strain.withPerception(strain.perception().withAlwaysAggressive(false)));

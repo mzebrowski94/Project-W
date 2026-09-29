@@ -139,7 +139,7 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 
 | Scaffolding | Replaced by |
 |---|---|
-| The commander always respawns | The source game's rule - respawn only while a trooper lives. Needs the squad. |
+| A lost level (G0055) says MISSION FAILED on the goal line and the world runs on, as a completed one says MISSION COMPLETED | An end-of-level screen for both, once it is designed. `Level.failed` is latched, so a screen has one fact to read. |
 | Rabbits are spawned by a scenario and never replaced | Whatever a level does about them - breeding, a population, or nothing at all. The creature is designed; where they come from is an open question in `README.md`. |
 | A body in its death throes is a frozen circle in a darker colour | The dying animation. The window is real and configured per unit kind (`*.deathThroesSeconds`); only what plays in it is missing. |
 | Two units in a clinch are two circles touching, both drawn the same | The grapple animation, which resolves into one of them dying. `Appearance.State.GRAPPLING` is the hook and is already published for both parties for the whole lock. |

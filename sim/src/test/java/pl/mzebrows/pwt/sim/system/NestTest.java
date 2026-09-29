@@ -2,10 +2,13 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.BROOD;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_HATCH_KEEP_OFF;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_HATCH_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_PERIOD;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_ROUSE_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_WAKE_RADIUS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.TILE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
@@ -22,6 +25,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Perception;
+import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -134,6 +138,48 @@ class NestTest {
         assertThat(creatures(simulation)).isEqualTo(BROOD);
     }
 
+    /**
+     * The last brood comes out of the hole, not out of the man standing over it: nothing hatched lands
+     * within the keep-off of anybody on our side, however close he was when it died.
+     */
+    @Test
+    void putsItsLastBroodDownOffTheManWhoKilledIt() {
+        for (long seed = 1; seed <= 20; seed++) {
+            Simulation simulation = new Simulation(config().withSeed(seed));
+            Entity nest = simulation.spawnNest(UnitKind.GRUNT, X, Y);
+            Entity commander = simulation.spawnCommander(X + 4f, Y + 1f);
+            Position him = commander.getComponent(Position.class);
+
+            nest.getComponent(Damage.class).add(NEST_HEALTH, 0);
+            simulation.step();
+
+            for (Position at : broodPositions(simulation)) {
+                float gap = (float) Math.hypot(at.x - him.x, at.y - him.y);
+                assertThat(gap).as("seed %d", seed).isGreaterThanOrEqualTo(NEST_HATCH_KEEP_OFF);
+            }
+        }
+    }
+
+    /**
+     * And it comes out beside the hole: the nearest ground first, never the far corner of the square
+     * of tiles round it - so within the hatch radius, give or take a tile's jitter.
+     */
+    @Test
+    void putsItsBroodDownHardAgainstTheHole() {
+        for (long seed = 1; seed <= 20; seed++) {
+            Simulation simulation = new Simulation(config().withSeed(seed));
+            Entity nest = simulation.spawnNest(UnitKind.GRUNT, X, Y);
+
+            nest.getComponent(Damage.class).add(NEST_HEALTH, 0);
+            simulation.step();
+
+            for (Position at : broodPositions(simulation)) {
+                float gap = (float) Math.hypot(at.x - X, at.y - Y);
+                assertThat(gap).as("seed %d", seed).isLessThanOrEqualTo(NEST_HATCH_RADIUS + TILE);
+            }
+        }
+    }
+
     /** What comes out of it is the whole of what makes one nest different from another. */
     @Test
     void sendsOutWhateverStrainItWasBuiltFor() {
@@ -215,6 +261,18 @@ class NestTest {
     /** Everything alive that came out of a nest. The nest itself carries no strain, so it is not one. */
     private static int creatures(Simulation simulation) {
         return countLiving(simulation, Strain.class);
+    }
+
+    private static List<Position> broodPositions(Simulation simulation) {
+        List<Position> found = new ArrayList<>();
+        for (Entity entity : simulation
+                .engine()
+                .getEntitiesFor(com.badlogic.ashley.core.Family.all(Enemy.class, Strain.class)
+                        .get())) {
+            found.add(entity.getComponent(Position.class));
+        }
+        assertThat(found).isNotEmpty();
+        return found;
     }
 
     private static java.util.List<UnitKind> strains(Simulation simulation) {

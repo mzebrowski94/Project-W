@@ -13,12 +13,34 @@ import pl.mzebrows.pwt.sim.def.Objective;
 public final class Level implements Component, Pool.Poolable {
 
     /**
-     * Troopers a pickup has granted the level and that are not yet standing on it.
+     * Troopers a crate has granted the level and that are not yet standing on it.
      *
-     * <p>From {@code PickupSystem} to {@code ReinforcementSystem}, which puts one down per tick while
-     * there is somebody to form up on.
+     * <p>From {@code PickupSystem} to {@code ReinforcementSystem}, which puts one down per tick at the
+     * rally point while the field has room, and sends the rest to the reserve (G0055).
      */
     public int pendingReinforcements;
+
+    /**
+     * The men the side has off the field (G0055): everybody a muster or a returning commander can be.
+     * Set from the config when the level is spawned; never above {@code sim.reserve.max}.
+     */
+    public int reserve;
+
+    /** The tick the next muster falls on. Zero until {@code ReinforcementSystem} first schedules one. */
+    public long musterTick;
+
+    /** How many the next muster calls up, dealt when the one before it falls. Zero until it is dealt. */
+    public int musterNext;
+
+    /** The muster's bag: which sizes have come out this round ({@code Bag}). */
+    public long musterDealt;
+
+    /**
+     * Whether the level is lost: every commander was out with nobody left in reserve to bring one back
+     * (G0055). <strong>Latched</strong>, unlike the objectives - a crate a trooper reaches afterwards does
+     * not bring a lost level back.
+     */
+    public boolean failed;
 
     /**
      * Which objectives this level names, and which of them are currently met, as bit sets.
@@ -99,6 +121,11 @@ public final class Level implements Component, Pool.Poolable {
     @Override
     public void reset() {
         pendingReinforcements = 0;
+        reserve = 0;
+        musterTick = 0L;
+        musterNext = 0;
+        musterDealt = 0L;
+        failed = false;
         required = 0;
         met = 0;
         tick = 0L;

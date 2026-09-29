@@ -44,6 +44,9 @@ public final class PlayerReadout {
     /** Seconds until he is back, while he is respawning. */
     public float respawnSeconds;
 
+    /** Waiting on the reserve to come back: nobody in it, so his countdown has not started (G0055). */
+    public boolean respawnWaiting;
+
     /** Which of the commander's colours he wears. */
     public int variant;
 
@@ -92,6 +95,7 @@ public final class PlayerReadout {
         shielded = false;
         stunned = false;
         respawnSeconds = 0f;
+        respawnWaiting = false;
         variant = 0;
         action = ActionKind.NONE;
         kills = 0;
@@ -114,6 +118,7 @@ public final class PlayerReadout {
         shielded = other.shielded;
         stunned = other.stunned;
         respawnSeconds = other.respawnSeconds;
+        respawnWaiting = other.respawnWaiting;
         variant = other.variant;
         action = other.action;
         kills = other.kills;

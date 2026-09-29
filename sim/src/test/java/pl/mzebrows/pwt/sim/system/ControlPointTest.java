@@ -59,6 +59,22 @@ class ControlPointTest {
         assertThat(point.getComponent(ControlPoint.class).captured).isTrue();
     }
 
+    /** The rally point is the point taken last (G0055), so each remembers when in the level it fell. */
+    @Test
+    void numbersThePointsInTheOrderTheyAreTaken() {
+        Simulation simulation = harmless();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity first = simulation.spawnControlPoint(MIDDLE, MIDDLE);
+        Entity second = simulation.spawnControlPoint(ELSEWHERE, ELSEWHERE);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        commander.getComponent(Position.class).set(ELSEWHERE, ELSEWHERE);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        assertThat(first.getComponent(ControlPoint.class).takenOrder).isEqualTo(1);
+        assertThat(second.getComponent(ControlPoint.class).takenOrder).isEqualTo(2);
+    }
+
     @Test
     void leavesAPointNobodyIsStandingOnAlone() {
         Simulation simulation = harmless();

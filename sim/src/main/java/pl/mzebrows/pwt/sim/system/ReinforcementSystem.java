@@ -7,27 +7,34 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.map.Scatter;
 import pl.mzebrows.pwt.map.TileMap;
-import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
-import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
- * Turns the men a level owes into men standing on it.
+ * Fills the field from what the side has (G0055): a crate's men, and the reserve's muster.
  *
- * <p>Reads the count {@code PickupSystem} left on the level (G0004). <strong>How many is capped, and
- * the cap is the point</strong> (pillar 3, G0030): a full squad wastes a crate. <strong>Where is
- * beside the commander</strong>, as a respawn, jittered through {@code Scatter} (G0009).
+ * <p><strong>How many is capped, and the cap is the point</strong> (pillar 3): the field holds the
+ * squad plus its headroom and upgrades. A crate's men go onto it <strong>one a tick</strong> while it
+ * has room, and into the reserve after that - past the reserve's own most they are wasted. Every
+ * {@code sim.reserve.musterSeconds} a muster calls a few men out of the reserve, as many as the field
+ * has room for; a full field leaves them where they are.
  *
- * <p><strong>One man a tick</strong>; with nobody standing, the debt waits.
+ * <p><strong>Where is the rally point</strong> ({@link RallyPoint}), jittered through {@code Scatter}
+ * (G0009) - the spawn area until a point is taken, the point taken last after that. A man who will
+ * not fit there is not placed: a crate's goes to the reserve, a muster's stays in it.
+ *
+ * <p>A lost level fills nothing.
  */
 public final class ReinforcementSystem extends EntitySystem {
 
@@ -38,10 +45,11 @@ public final class ReinforcementSystem extends EntitySystem {
     private final Spawner spawner;
     private final Modifiers modifiers;
     private final Rng rng;
+    private final int musterTicks;
 
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
-    private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> squad = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
 
     public ReinforcementSystem(SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng rng) {
         this.config = config;
@@ -49,52 +57,106 @@ public final class ReinforcementSystem extends EntitySystem {
         this.spawner = spawner;
         this.modifiers = modifiers;
         this.rng = rng;
+        this.musterTicks = Ticks.of(config.reserve().musterSeconds(), config.tickSeconds());
     }
 
     @Override
     public void addedToEngine(Engine engine) {
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
-        commanders = engine.getEntitiesFor(
-                Family.all(Commander.class, Position.class).get());
-        // A body already marked dead is not a man the squad still has.
+        // A body already marked dead is not a man the squad still has; a man down still is.
         squad = engine.getEntitiesFor(
                 Family.all(Trooper.class).exclude(Dead.class).get());
+        points = engine.getEntitiesFor(
+                Family.all(ControlPoint.class, Position.class).get());
     }
 
     @Override
     public void update(float deltaTime) {
         for (int i = 0; i < levels.size(); i++) {
             Level level = LEVEL.get(levels.get(i));
-            if (level.pendingReinforcements <= 0) {
-                continue;
-            }
-            Position rally = Drivers.livingTarget(commanders);
-            if (rally == null) {
-                continue;
-            }
-            int headroom = modifiers.squadHeadroom(config.trooper().squadGrowth());
-            if (config.trooper().squadSize() + headroom - squad.size() <= 0) {
-                // A full squad wastes what it was owed, all of it (G0030).
+            if (level.failed) {
                 level.pendingReinforcements = 0;
                 continue;
             }
-            level.pendingReinforcements--;
-            land(rally);
+            int room = squadMost(config, modifiers) - squad.size();
+            room -= deliver(level, room);
+            muster(level, room);
         }
     }
 
     /**
-     * Puts one man down around one place.
-     *
-     * <p>Allocates, as {@code WaveSystem} does. The commander's body is reserved first; a man who will
-     * not fit is not placed.
+     * The most troopers the field holds: the squad the level started with, its headroom, and what the
+     * upgrades held add to that. The one place it is worked out.
      */
-    private void land(Position rally) {
+    public static int squadMost(SimConfig config, Modifiers modifiers) {
+        return config.trooper().squadSize()
+                + modifiers.squadHeadroom(config.trooper().squadGrowth());
+    }
+
+    /** One of a crate's men onto the field while it has room; the rest of the crate into the reserve. */
+    private int deliver(Level level, int room) {
+        if (level.pendingReinforcements <= 0) {
+            return 0;
+        }
+        if (room <= 0) {
+            bank(level, level.pendingReinforcements);
+            level.pendingReinforcements = 0;
+            return 0;
+        }
+        level.pendingReinforcements--;
+        if (land(1) == 1) {
+            return 1;
+        }
+        bank(level, 1);
+        return 0;
+    }
+
+    /** Into the reserve, up to its most; past that a crate's men are wasted (G0055). */
+    private void bank(Level level, int men) {
+        level.reserve = Math.min(config.reserve().max(), level.reserve + men);
+    }
+
+    /**
+     * Every period, as many of the reserve as the muster calls up and the field has room for. The next
+     * muster's size is dealt as this one goes.
+     */
+    private void muster(Level level, int room) {
+        if (musterTicks <= 0) {
+            return;
+        }
+        if (level.musterTick == 0L) {
+            level.musterTick = level.tick + musterTicks;
+            level.musterNext = deal(level);
+            return;
+        }
+        if (level.tick < level.musterTick) {
+            return;
+        }
+        level.musterTick = level.tick + musterTicks;
+        int called = Math.min(level.musterNext, Math.min(room, level.reserve));
+        level.musterNext = deal(level);
+        if (called > 0) {
+            level.reserve -= land(called);
+        }
+    }
+
+    /** How many the next muster calls up, from the level's bag: every size once before any again. */
+    private int deal(Level level) {
+        int fewest = config.reserve().musterMin();
+        int sizes = config.reserve().musterMax() - fewest + 1;
+        int size = Bag.draw(rng, level.musterDealt, sizes);
+        level.musterDealt = Bag.take(level.musterDealt, size, sizes);
+        return fewest + size;
+    }
+
+    /**
+     * Puts men down at the rally point, and says how many fitted.
+     *
+     * <p>Allocates, as {@code WaveSystem} does: once per arrival, not in a per-entity loop.
+     */
+    private int land(int count) {
         float radius = config.trooper().radius();
         Scatter scatter = new Scatter(map, rng, radius, radius);
-        scatter.reserve(rally.x, rally.y, config.commander().radius());
-        TileRect around =
-                TileRect.around(map, rally.x, rally.y, config.trooper().reinforcementRadius());
-        scatter.scatter(around, 1, radius, spawner::spawnTrooper);
+        return scatter.scatter(RallyPoint.area(points, config, map), count, radius, spawner::spawnTrooper);
     }
 }

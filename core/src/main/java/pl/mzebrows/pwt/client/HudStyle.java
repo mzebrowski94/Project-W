@@ -34,6 +34,11 @@ import com.badlogic.gdx.graphics.Color;
  * @param pageSeconds how long a page takes to arrive, before the motion scale
  * @param pageSlide how far an arriving page slides, in UI pixels
  * @param pageColumns how many characters wide every page's panel is, whatever it holds
+ * @param wound what a wound he carries is filled with on his panel - soft red-pink, the one hue on the
+ *     panel besides his own and the alert, because a wound is the one thing there asking for a reaction
+ * @param tellGlow how bright the backing behind the upgrade tell is, as a share of his colour
+ * @param tellLift how far towards white the tell's text rises at the top of its pulse
+ * @param tellPulseHz how fast the tell pulses; refused above three a second (WCAG 2.3.1)
  */
 public record HudStyle(
         Color text,
@@ -58,7 +63,11 @@ public record HudStyle(
         float scrimSeconds,
         float pageSeconds,
         int pageSlide,
-        int pageColumns) {
+        int pageColumns,
+        Color wound,
+        float tellGlow,
+        float tellLift,
+        float tellPulseHz) {
 
     /** Nothing may flash more often than this a second - the photosensitive-seizure threshold. */
     public static final float MAX_PULSE_HZ = 3f;
@@ -66,6 +75,14 @@ public record HudStyle(
     public HudStyle {
         if (!(overlayWidthShare >= 0f && overlayWidthShare < 1f)) {
             throw new IllegalArgumentException("overlay width share is a fraction below one: " + overlayWidthShare);
+        }
+        if (!(tellPulseHz >= 0f && tellPulseHz <= MAX_PULSE_HZ)) {
+            throw new IllegalArgumentException(
+                    "the upgrade tell may pulse at most " + MAX_PULSE_HZ + " times a second, not " + tellPulseHz);
+        }
+        if (!(tellGlow >= 0f && tellGlow <= 1f && tellLift >= 0f && tellLift <= 1f)) {
+            throw new IllegalArgumentException(
+                    "the upgrade tell's glow and lift are shares: " + tellGlow + ", " + tellLift);
         }
         if (!(pulseHz >= 0f && pulseHz <= MAX_PULSE_HZ)) {
             throw new IllegalArgumentException(

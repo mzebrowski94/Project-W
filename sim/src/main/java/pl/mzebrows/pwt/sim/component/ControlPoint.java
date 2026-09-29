@@ -27,6 +27,12 @@ public final class ControlPoint implements Component, Pool.Poolable {
     public boolean captured;
 
     /**
+     * Which of the level's points this was to be taken - one for the first - so the rally point can be
+     * the point taken last (G0055). Zero while it is untaken.
+     */
+    public int takenOrder;
+
+    /**
      * Whether taking this one turns it into ground the level then tells you to hold.
      *
      * <p>A post is put down where it stands and what the level held back is let go (G0027).
@@ -74,6 +80,7 @@ public final class ControlPoint implements Component, Pool.Poolable {
         aggroRadius = 0f;
         heldSeconds = 0f;
         captured = false;
+        takenOrder = 0;
         holdsAfterwards = false;
         watchRadius = 0f;
     }

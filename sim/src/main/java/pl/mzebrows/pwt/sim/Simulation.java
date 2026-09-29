@@ -112,6 +112,9 @@ public final class Simulation {
     /** What the interface may read of the upgrades. */
     private final UpgradeView upgradeView;
 
+    /** What the upgrades held have made of the numbers; read here only for {@link #squadMost}. */
+    private final Modifiers modifiers;
+
     /**
      * Reused by {@link #step(CommanderInput)}, so driving one player costs no allocation per tick.
      * Never handed out; the multi-player path takes the caller's own holder instead.
@@ -150,8 +153,8 @@ public final class Simulation {
         this.map = map;
         this.streams = new Streams(config.seed());
         this.engine = new PooledEngine();
-        this.spawner = new Spawner(engine, config, map);
-        Modifiers modifiers = new Modifiers(engine, config);
+        this.spawner = new Spawner(engine, config);
+        this.modifiers = new Modifiers(engine, config);
         this.picks = new Picks(engine);
         this.upgradeView = new UpgradeView(engine, config);
         this.commanders = engine.getEntitiesFor(
@@ -204,7 +207,10 @@ public final class Simulation {
         engine.addSystem(new AidSystem(config, modifiers));
         engine.addSystem(new CasualtySystem(config, spawner, modifiers));
         engine.addSystem(new DyingSystem(spawner));
-        engine.addSystem(new RespawnSystem(spawner));
+        // Where a man from the reserve is put down, whether he is a returning commander or a muster's
+        // trooper: one concern (G0055), so one stream for both systems.
+        Rng reinforcement = streams.of(RngStream.REINFORCEMENT);
+        engine.addSystem(new RespawnSystem(config, map, spawner, reinforcement));
         // Before the death reactions: a shot that misses ends by dying too (G0018), and must leave
         // its blast or spatter.
         engine.addSystem(new ProjectileBoundsSystem(map, spawner));
@@ -217,7 +223,7 @@ public final class Simulation {
         // Beside the blast: in the window between marked dead and reaped (G0018).
         engine.addSystem(new SlickSystem(map, spawner, streams.of(RngStream.SLICK)));
         // Level systems from here, after the solver and the death chain.
-        engine.addSystem(new ReinforcementSystem(config, map, spawner, modifiers, streams.of(RngStream.REINFORCEMENT)));
+        engine.addSystem(new ReinforcementSystem(config, map, spawner, modifiers, reinforcement));
         // Before the objectives.
         engine.addSystem(new WaveSystem(config, map, spawner, streams.of(RngStream.WAVE)));
         // After the death chain, before the reaper and the objectives.
@@ -357,6 +363,11 @@ public final class Simulation {
      */
     public Level level() {
         return LEVEL.get(levels.first());
+    }
+
+    /** The most troopers the field holds right now, upgrades included (G0055) - for the interface. */
+    public int squadMost() {
+        return ReinforcementSystem.squadMost(config, modifiers);
     }
 
     /**

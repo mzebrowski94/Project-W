@@ -335,14 +335,10 @@ public final class WorldRenderer implements Disposable {
         }
     }
 
-    /** A dot per wound under his feet (G0053); only ever reached by a man carrying one. */
+    /** One disc in his middle, larger per wound (G0053); only ever reached by a man carrying one. */
     private void drawWounds(float x, float y, float radius, int wounds) {
         shapes.setColor(woundMark.color());
-        float dot = woundMark.radiusFor(radius);
-        float below = y - woundMark.dropFor(radius);
-        for (int wound = 0; wound < wounds; wound++) {
-            shapes.circle(x + woundMark.offsetFor(radius, wound, wounds), below, dot, CIRCLE_SEGMENTS);
-        }
+        shapes.circle(x, y, woundMark.radiusFor(radius, wounds), CIRCLE_SEGMENTS);
     }
 
     /**

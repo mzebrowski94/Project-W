@@ -63,6 +63,17 @@ final class TopBarPainter {
     /** The aside's rows: whose, and the upgrade's name. Rebuilt when what is held changes. */
     private final String[] aside;
 
+    /**
+     * The army (G0055), centred on the top bar's first line: the field against its most and the reserve.
+     * Rebuilt only when a number on it changes; the mission is fitted to end before the widest it can be.
+     */
+    private String army = "";
+
+    private int builtOnField = -1;
+    private int builtMost = -1;
+    private int builtReserve = -1;
+    private final int armyColumns;
+
     private int asideRows;
     private long builtAside = -1L;
     private ScreenLayout asideFor = ScreenLayout.NONE;
@@ -89,6 +100,7 @@ final class TopBarPainter {
         this.draftLayout = new DraftLayout(metrics.padding(), metrics.portraitSize(), UiFont.ADVANCE);
         this.said = new String[Math.max(1, metrics.topLines() - LINES_ABOVE_TERMINAL)];
         this.aside = new String[metrics.topLines()];
+        this.armyColumns = strings.format("ui.hud.army", 999, 999, 999).length();
         Arrays.fill(said, "");
         Arrays.fill(aside, "");
         for (String[] card : cards) {
@@ -126,6 +138,12 @@ final class TopBarPainter {
             draft(layout, readout, draft, upgrades, hints, left, span, top.y(), blockTop, line);
         } else if (!top.isEmpty()) {
             hud.text(mission, left + padding, blockTop, style.textDim());
+            army(readout);
+            hud.text(
+                    army,
+                    armyLeft(left, span) + (armyColumns - army.length()) * UiFont.ADVANCE / 2,
+                    blockTop,
+                    style.text());
             hud.text(goal, left + padding, blockTop - line, goalLine.bright() ? style.text() : style.textDim());
             terminal(terminal, left + padding, blockTop - LINES_ABOVE_TERMINAL * line, line);
             int asideX = left + span - bar.overlayWidth(span);
@@ -260,6 +278,22 @@ final class TopBarPainter {
         }
     }
 
+    /** {@code ARMY 12/16 RES 20}, formatted only when a number on it changes. */
+    private void army(Readout readout) {
+        if (readout.squadOnField == builtOnField && readout.squadMost == builtMost && readout.reserve == builtReserve) {
+            return;
+        }
+        builtOnField = readout.squadOnField;
+        builtMost = readout.squadMost;
+        builtReserve = readout.reserve;
+        army = strings.format("ui.hud.army", readout.squadOnField, readout.squadMost, readout.reserve);
+    }
+
+    /** Where the army's slot starts: its widest, centred on the bar. */
+    private int armyLeft(int left, int span) {
+        return left + (span - armyColumns * UiFont.ADVANCE) / 2;
+    }
+
     private void buildAside(Readout readout, int columns) {
         asideRows = Math.min(readout.heldCount, aside.length);
         for (int row = 0; row < asideRows; row++) {
@@ -349,10 +383,13 @@ final class TopBarPainter {
         boolean resized = !layout.equals(builtFor);
         int columns = TextFit.columns(bar.textWidth(span), UiFont.ADVANCE);
         if (resized || !readout.mission.equals(builtMission) || !readout.planet.equals(builtPlanet)) {
+            // The mission shares its line with the army, centred on the bar: it ends a column short of it.
+            int missionColumns =
+                    Math.max(0, Math.min(columns, (armyLeft(0, span) - metrics.padding()) / UiFont.ADVANCE - 1));
             String named = strings.format("ui.hud.mission", readout.mission);
             mission = readout.planet.isEmpty()
-                    ? TextFit.fit(strings.get("ui.hud.mission"), readout.mission, columns)
-                    : TextFit.fit(strings.format("ui.hud.planet", readout.planet) + "  " + named, columns);
+                    ? TextFit.fit(strings.get("ui.hud.mission"), readout.mission, missionColumns)
+                    : TextFit.fit(strings.format("ui.hud.planet", readout.planet) + "  " + named, missionColumns);
             builtMission = readout.mission;
             builtPlanet = readout.planet;
         }
@@ -368,9 +405,12 @@ final class TopBarPainter {
         if (shown == Goal.NONE) {
             return "";
         }
-        String what = shown == Goal.COMPLETE
-                ? strings.get("ui.hud.goal.complete")
-                : strings.format("ui.goal." + shown.name(), goalLine.first(), goalLine.second());
+        String what =
+                switch (shown) {
+                    case COMPLETE -> strings.get("ui.hud.goal.complete");
+                    case FAILED -> strings.get("ui.hud.goal.failed");
+                    default -> strings.format("ui.goal." + shown.name(), goalLine.first(), goalLine.second());
+                };
         return TextFit.fit(strings.get("ui.hud.goal"), what, columns);
     }
 }

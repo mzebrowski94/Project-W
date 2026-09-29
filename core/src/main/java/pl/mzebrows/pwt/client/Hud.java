@@ -36,6 +36,8 @@ public final class Hud implements Disposable {
     private final Texture skull = icon(TallyIcon.KILLS);
     private final Texture flag = icon(TallyIcon.GOALS);
     private final Texture plus = icon(TallyIcon.STABILISED);
+    private final Texture wound = icon(TallyIcon.WOUND);
+    private final Texture woundSpare = icon(TallyIcon.WOUND_SPARE);
     private final SystemPointer pointer;
     private ScreenLayout layout = ScreenLayout.NONE;
     private boolean warnedSmall;
@@ -154,6 +156,8 @@ public final class Hud implements Disposable {
         skull.dispose();
         flag.dispose();
         plus.dispose();
+        wound.dispose();
+        woundSpare.dispose();
     }
 
     /**
@@ -197,6 +201,8 @@ public final class Hud implements Disposable {
             case KILLS -> skull;
             case GOALS -> flag;
             case STABILISED -> plus;
+            case WOUND -> wound;
+            case WOUND_SPARE -> woundSpare;
         };
     }
 
