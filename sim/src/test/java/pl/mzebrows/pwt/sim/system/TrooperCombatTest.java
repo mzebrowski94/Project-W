@@ -26,12 +26,15 @@ import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
  * What a trooper does about something in front of it.
@@ -63,6 +66,33 @@ class TrooperCombatTest {
         steps(simulation, 40);
 
         assertThat(enemy.getComponent(Health.class).current).isLessThan(ENEMY_HEALTH);
+    }
+
+    /**
+     * <strong>A gun that costs its holder his pace costs a trooper his too.</strong> What one pull of a
+     * trigger does is the gun's, not the holder's, so a trooper who picked up the beam is charged for
+     * it in the one place every other shooter is.
+     */
+    @Test
+    void slowsHimselfWhenHeFiresAGunThatSlowsWhoeverHoldsIt() {
+        Simulation simulation = stillEnemies();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnEnemy(MIDDLE + 15f, MIDDLE);
+        trooper.getComponent(Weapon.class)
+                .set(
+                        WeaponKind.LASER,
+                        simulation.config().weapon(WeaponKind.LASER),
+                        simulation.config().tickSeconds());
+        facing(trooper, 1f, 0f);
+        boolean slowed = false;
+
+        for (int tick = 0; tick < 40 && !slowed; tick++) {
+            simulation.step();
+            slowed = trooper.getComponent(Slowed.class).factor() < 1f;
+        }
+
+        assertThat(slowed).isTrue();
     }
 
     /** 1.d. A trooper plants itself to shoot; it does not walk and fire. */

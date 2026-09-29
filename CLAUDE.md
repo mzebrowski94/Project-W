@@ -33,7 +33,7 @@ belongs on the definition every kind already has rather than on the one kind tha
 `GameProperties` (config), `ConfigBinder` (config records from text), `AlphaWorlds` (test fixtures), `Transport` (links between machines),
 `LoopbackNetwork` and `ConditionedTransport` (networks for tests and lag on demand), `NetLog` (the
 connection log), `WorldCodec` (a world as bytes, a hash, a diff), `SessionHarness` (a whole online
-session in one test) - plus a component or system for most
+session in one test), `Modifiers` (any number an upgrade may move) - plus a component or system for most
 behaviour. `docs/glossary.md` is the cheap check: if the word exists, the thing usually does too.
 
 **Read narrow.** The target module, the classes the task names, their nearest tests. Widen only when a
@@ -167,8 +167,8 @@ session's summary, one line each, so he can review it with the rest of the diff.
   stage the work could stop after. Never main, never a force-push, no pull request unless asked;
   Mateusz reviews the branch and merges it himself. Procedure: `docs/workflow.md`, *Cloud sessions*.
 
-Either way the message is past tense, one line, imperative, what changed rather than how - `Add enemy
-leap and player hand strike`. No body unless something cannot be inferred from the diff.
+Either way the message is past tense, one line, what changed rather than how - `Added enemy leap and
+player hand strike`. No body unless something cannot be inferred from the diff.
 
 Reading git state is fine, but **always `git --no-optional-locks status --porcelain`** - a bare
 `git status` takes `.git/index.lock`, and if delete permission has lapsed it cannot give it back,

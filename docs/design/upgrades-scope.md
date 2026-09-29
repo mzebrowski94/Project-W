@@ -1,6 +1,6 @@
 # Upgrades and adaptations — scoped work
 
-**Status: planned 2026-09-28; S0 and S1 done 2026-09-29, next is S2. D18 amended 2026-09-29: the
+**Status: planned 2026-09-28; S0-S2 done 2026-09-29, next is S3. D18 amended 2026-09-29: the
 draft is shown in the top bar, not the bottom bar.** Read this first in every session of the upgrade work,
 and tick the session in §0 when it lands. **This doc expires when adaptations ship (S10).** As each
 session lands, what it settles moves where it belongs - invariants and the input map into
@@ -18,7 +18,7 @@ claims against `main` at `e7cf245`, and five rounds of questions Mateusz answere
 |---|---|---|---|---|
 | S0 | Records and words | S | docs only | done 2026-09-29 |
 | S1 | Config split and the binder | M | the same game, an identical bound config | done 2026-09-29 |
-| S2 | Seams, nothing held | M | the same game, the same hashes | planned |
+| S2 | Seams, nothing held | M | the same game, the same hashes | done 2026-09-29 |
 | S3 | The draft core | L | drafts earned, dealt, rotated, picked and passed on - headless | planned |
 | S4 | The cheap upgrades and dev keys | M | playable offline with dev keys | planned |
 | S5 | The interface | L | playable offline for real, solo and local co-op | planned |
@@ -288,7 +288,7 @@ chance/second  = max(0, base + Σ perSecond)          base 0: the behaviour is o
 | Stat or effect | The one reader | Change needed | Session |
 |---|---|---|---|
 | `FIRE_COOLDOWN` (scale, floor -50 %) | `Guns.spend`, for all four shooters | `TrooperCombatSystem.fire` asks `weapon.ready()` and writes `weapon.remainingTicks` itself (line 198). Route it through `Guns.ready` and `Guns.spend` like the other three. **This is a deliberate behaviour change, not an identity.** A trooper can take a weapons cache: `CollisionSystem.claim` asks only for `Taking`, which troopers carry. A trooper holding the laser (self-slow 0.72 for 0.16 s) will now slow himself when he fires, as the commander does. That is what "a property of the gun, not of who is holding it" already says. Heat still never applies to him, because troopers carry no `Heat`. | S2 |
-| `GUN_DAMAGE` (scale) | `Guns.volley` | Fold once per volley and hand the number to a `spawnProjectile` overload, instead of letting the projectile copy `weapon.damage`. | S2 |
+| `GUN_DAMAGE` (scale) | `Guns.volley` | Fold once per volley and hand the number to `spawnProjectile`, which takes it as a parameter instead of copying `weapon.damage` (it has no other caller). | S2 |
 | a chance, per `AiChance` | `Odds` | `Odds` asks `Modifiers.chance(unit, kind, base)` and is its only caller, so every `AiChance` becomes an upgradeable number for free. Neither `spend` overload takes an entity today, so both signatures change - the in-hand one, which takes a strain's own override, gains the kind too - and so do their five callers: `TrooperCombatSystem` (two), `TrooperCrew`, `TrooperAid` and `CollisionSystem`. | S2 |
 | `MEN_PER_CRATE` (count) | `PickupSystem.reinforce` | none | S2 |
 | `SQUAD_HEADROOM` (count) | `ReinforcementSystem`'s cap (line 72) | none | S2 |
@@ -757,6 +757,22 @@ deliberate, named change (stage 1), the game is byte-identical.
 unchanged. A throwaway check - not a golden kept in the repo - compares every scenario's hash after N
 ticks before and after stages 2-5, and finds them equal.
 
+**As built (2026-09-29).**
+
+- `Target` and `Scope` moved to S3, stage 3: with nothing held nothing resolves a target, and a
+  `Scope` with no caller would be untested code. So did `Fold`'s "sums that do not depend on order":
+  the sum is the ledger's, and arrives with it.
+- `Stat` has a sixth constant, `CHANCE`, read by `Odds` through `Modifiers.chance(who, kind, base)`.
+  Both `Odds.spend` overloads now start `(modifiers, unit, kind, rng, due, chances, ...)`.
+- `Guns.spend` and `Guns.volley` take `Modifiers`; `spawnProjectile(..., Weapon, float damage, ...)`
+  lost its copy of `weapon.damage` rather than gaining an overload.
+- `Modifiers` has a no-argument constructor; S3 gives it the level entity's ledger.
+- Fences: `upgradesAreCalledAndDoNotCall` (2), `everyStatIsReadInExactlyOnePlace` (3), and
+  `systemsHoldNoStateAcrossTicks` extended to `..sim.upgrade..` (4). Each was watched failing
+  against a probe.
+- The hash check ran 12 scenarios x 2 seeds x 1200 ticks, recorded after stage 1: equal after
+  stages 2-5.
+
 ### S3 - The draft core
 
 **Goal.** Drafts are earned, dealt, rotated, picked, re-dealt and passed on - headless, deterministic
@@ -781,7 +797,9 @@ end.
    `NAMED_COLLECTIONS` lines; `spawnLevel`. Regenerate `docs/components.md` with
    `.claude/scripts/component-index.py`.
 3. **The pure parts, with unit tests only.** `Dealer`: weighted, distinct, in deal order,
-   anti-streak, small pool. `Rotation`: present slots, wrapping, nobody present.
+   anti-streak, small pool. `Rotation`: present slots, wrapping, nobody present. `Target` and
+   `Scope` (moved from S2): which held entries reach a reader, a turret reached by none. The sum
+   over held entries, and that it does not depend on their order.
 4. **The published facts.** `Strain.wave`, stamped through a `spawnUnit` overload; `Waves.cleared`;
    `Level.bossesDown` with `Barrage.fallen`. Tests: a wave counts as cleared when its last alien's
    throes begin and not before; a boss counts once.

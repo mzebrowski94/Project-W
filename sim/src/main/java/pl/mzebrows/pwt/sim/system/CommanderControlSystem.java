@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.GroundDef;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Turns a commander's intent into movement and gunfire.
@@ -55,6 +56,7 @@ public final class CommanderControlSystem extends IteratingSystem {
     private static final float MUZZLE_GAP = 0.05f;
 
     private final Spawner spawner;
+    private final Modifiers modifiers;
 
     /** A gun's own pattern, for the one he may be holding that throws more than one thing at once. */
     private final Rng scatter;
@@ -79,7 +81,8 @@ public final class CommanderControlSystem extends IteratingSystem {
     @NotState("scratch: recomputed at the start of every update")
     private int watched;
 
-    public CommanderControlSystem(SimConfig config, TileMap map, Spawner spawner, Rng scatter) {
+    public CommanderControlSystem(SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng scatter) {
+        this.modifiers = modifiers;
         this.scatter = scatter;
         super(Family.all(
                         Commander.class,
@@ -240,6 +243,7 @@ public final class CommanderControlSystem extends IteratingSystem {
         float directionY = toAimY / distance;
         Guns.volley(
                 spawner,
+                modifiers,
                 scatter,
                 entity,
                 weapon,
@@ -252,6 +256,6 @@ public final class CommanderControlSystem extends IteratingSystem {
                 FACTION.get(entity).side,
                 Players.credit(entity),
                 muzzle);
-        Guns.spend(entity, weapon, weapon.cooldownTicks);
+        Guns.spend(modifiers, entity, weapon, weapon.cooldownTicks);
     }
 }

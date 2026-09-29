@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.badlogic.ashley.core.Entity;
 import java.util.stream.Stream;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * The shared chance every occasional behaviour goes through. Two tests here are load-bearing.
@@ -19,6 +21,11 @@ import pl.mzebrows.pwt.sim.def.Chances;
  * is the whole of what dealing a chance evenly buys over a coin tossed every tick.
  */
 class OddsTest {
+
+    /** The dealing is under test, not an upgrade: nothing is held, so every chance is its base. */
+    private static final Modifiers NOTHING_HELD = new Modifiers();
+
+    private static final Entity UNIT = new Entity();
 
     private static final float TICK = 1f / 60f;
 
@@ -39,8 +46,11 @@ class OddsTest {
     void takesAChanceThatIsCertainAndNeverTakesOneOfZero(Chances chances) {
         Rng rng = new Rng(1L);
 
-        assertThat(Odds.spent(Odds.spend(rng, 0f, chances, CERTAIN, TICK))).isTrue();
-        assertThat(Odds.spent(Odds.spend(rng, 0f, chances, 0f, TICK))).isFalse();
+        assertThat(Odds.spent(
+                        Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, 0f, chances, CERTAIN, TICK)))
+                .isTrue();
+        assertThat(Odds.spent(Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, 0f, chances, 0f, TICK)))
+                .isFalse();
     }
 
     @ParameterizedTest(name = "{0}")
@@ -79,12 +89,12 @@ class OddsTest {
         Rng rng = new Rng(7L);
         float due = 0f;
         for (int i = 0; i < 100; i++) {
-            due = Odds.spend(rng, due, EVEN, CERTAIN, TICK);
+            due = Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, due, EVEN, CERTAIN, TICK);
         }
         int taken = 0;
 
         for (int i = 0; i < 10; i++) {
-            due = Odds.spend(rng, due, EVEN, ONCE_A_SECOND, TICK);
+            due = Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, due, EVEN, ONCE_A_SECOND, TICK);
             if (Odds.spent(due)) {
                 taken++;
             }
@@ -99,7 +109,7 @@ class OddsTest {
         Rng rng = new Rng(1L);
         long before = rng.state();
 
-        Odds.spend(rng, 0f, chances, 0f, TICK);
+        Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, 0f, chances, 0f, TICK);
 
         assertThat(rng.state()).isEqualTo(before);
     }
@@ -108,7 +118,7 @@ class OddsTest {
     void asksTheTableForTheNumberWhenItIsGivenOne() {
         Chances chances = Chances.none().with(AiChance.SWING_AT_A_LEAP, CERTAIN);
 
-        assertThat(Odds.spent(Odds.spend(new Rng(1L), 0f, chances, AiChance.SWING_AT_A_LEAP, TICK)))
+        assertThat(Odds.spent(Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, new Rng(1L), 0f, chances, TICK)))
                 .isTrue();
     }
 
@@ -122,7 +132,7 @@ class OddsTest {
         float due = 0f;
         int taken = 0;
         for (int i = 0; i < TICKS; i++) {
-            due = Odds.spend(rng, due, chances, ONCE_A_SECOND, deltaTime);
+            due = Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, due, chances, ONCE_A_SECOND, deltaTime);
             if (Odds.spent(due)) {
                 taken++;
             }
@@ -138,7 +148,7 @@ class OddsTest {
         int longest = 0;
         for (int i = 0; i < TICKS; i++) {
             since++;
-            due = Odds.spend(rng, due, chances, ONCE_A_SECOND, TICK);
+            due = Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, due, chances, ONCE_A_SECOND, TICK);
             if (Odds.spent(due)) {
                 longest = Math.max(longest, since);
                 since = 0;

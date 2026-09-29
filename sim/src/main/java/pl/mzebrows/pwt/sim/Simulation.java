@@ -69,6 +69,7 @@ import pl.mzebrows.pwt.sim.system.TurretSystem;
 import pl.mzebrows.pwt.sim.system.WanderSystem;
 import pl.mzebrows.pwt.sim.system.WaveSystem;
 import pl.mzebrows.pwt.sim.system.WeaveSystem;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * The whole game world and everything that happens in it.
@@ -139,6 +140,7 @@ public final class Simulation {
         this.streams = new Streams(config.seed());
         this.engine = new PooledEngine();
         this.spawner = new Spawner(engine, config, map);
+        Modifiers modifiers = new Modifiers();
         this.commanders = engine.getEntitiesFor(
                 Family.all(Commander.class, Intent.class, Position.class).get());
         this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
@@ -149,10 +151,10 @@ public final class Simulation {
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new DragSystem());
-        engine.addSystem(new CommanderControlSystem(config, map, spawner, scatter));
+        engine.addSystem(new CommanderControlSystem(config, map, spawner, modifiers, scatter));
         engine.addSystem(new MeleeSystem(spawner));
         // After the commander's hands, before anything looks around.
-        engine.addSystem(new TurretSystem(map, spawner, scatter));
+        engine.addSystem(new TurretSystem(map, spawner, modifiers, scatter));
         engine.addSystem(new PerceptionSystem(config, map));
         engine.addSystem(new NavigationSystem(config, map));
         // After the course it bends, before avoidance.
@@ -166,12 +168,12 @@ public final class Simulation {
         // Everything the AI leaves to the dice (AiChance), apart from where the squad roams.
         Rng nerve = streams.of(RngStream.NERVE);
         engine.addSystem(new SquadOrderSystem(config, capacity));
-        engine.addSystem(new TrooperMindSystem(config, map, squad, nerve));
+        engine.addSystem(new TrooperMindSystem(config, map, modifiers, squad, nerve));
         engine.addSystem(new TrooperMoveSystem(config, map, squad));
-        engine.addSystem(new TrooperCombatSystem(config, spawner, nerve, scatter));
+        engine.addSystem(new TrooperCombatSystem(config, spawner, modifiers, nerve, scatter));
         engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds()));
         engine.addSystem(new AvoidanceSystem(config, map));
-        engine.addSystem(new EnemyRangedSystem(map, spawner, streams.of(RngStream.SPIT), scatter));
+        engine.addSystem(new EnemyRangedSystem(map, spawner, modifiers, streams.of(RngStream.SPIT), scatter));
         // After everything that chooses a course; before the dodge, which overwrites it.
         engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
@@ -180,9 +182,9 @@ public final class Simulation {
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));
-        engine.addSystem(new CollisionSystem(config, map, spawner, nerve));
-        engine.addSystem(new GrenadeSystem(map, spawner));
-        engine.addSystem(new PickupSystem(config, spawner));
+        engine.addSystem(new CollisionSystem(config, map, spawner, modifiers, nerve));
+        engine.addSystem(new GrenadeSystem(map, spawner, modifiers));
+        engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(config, spawner));
         engine.addSystem(new ActionSystem(config));
@@ -202,7 +204,7 @@ public final class Simulation {
         // Beside the blast: in the window between marked dead and reaped (G0018).
         engine.addSystem(new SlickSystem(map, spawner, streams.of(RngStream.SLICK)));
         // Level systems from here, after the solver and the death chain.
-        engine.addSystem(new ReinforcementSystem(config, map, spawner, streams.of(RngStream.REINFORCEMENT)));
+        engine.addSystem(new ReinforcementSystem(config, map, spawner, modifiers, streams.of(RngStream.REINFORCEMENT)));
         // Before the objectives.
         engine.addSystem(new WaveSystem(config, map, spawner, streams.of(RngStream.WAVE)));
         // After the death chain, before the reaper and the objectives.

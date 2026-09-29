@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /** Getting on a free gun with something in its reach: the half of the cascade below aid. */
 final class TrooperCrew {
@@ -26,6 +27,7 @@ final class TrooperCrew {
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
 
     private final Rng nerve;
+    private final Modifiers modifiers;
     private final Chances chances;
     private final float reach;
     private final float crewRadius;
@@ -33,8 +35,9 @@ final class TrooperCrew {
     private ImmutableArray<Entity> stations = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> enemies = new ImmutableArray<>(new Array<>());
 
-    TrooperCrew(SimConfig config, Rng nerve) {
+    TrooperCrew(SimConfig config, Modifiers modifiers, Rng nerve) {
         this.nerve = nerve;
+        this.modifiers = modifiers;
         this.chances = config.chances();
         this.reach = config.action().reach();
         this.crewRadius = config.turret().crewRadius();
@@ -77,7 +80,8 @@ final class TrooperCrew {
             return false;
         }
         if (trooper.mode != Trooper.Mode.CREW) {
-            trooper.turretDue = Odds.spend(nerve, trooper.turretDue, chances, AiChance.MAN_A_TURRET, deltaTime);
+            trooper.turretDue =
+                    Odds.spend(modifiers, entity, AiChance.MAN_A_TURRET, nerve, trooper.turretDue, chances, deltaTime);
             if (!Odds.spent(trooper.turretDue)) {
                 return false;
             }

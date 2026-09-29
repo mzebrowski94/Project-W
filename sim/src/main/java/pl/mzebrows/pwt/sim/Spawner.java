@@ -771,11 +771,12 @@ public final class Spawner {
     /**
      * Spawns a projectile travelling along the given unit direction, on the firer's side so it cannot
      * hit them or anything else friendly. The direction must already be normalised. Everything about
-     * the shot, its look included, comes from the gun's definition. {@code credit} is the slot of the
-     * player a kill by it counts for, or {@link Tally#NOBODY}.
+     * the shot, its look included, comes from the gun's definition, except what it does: {@code damage},
+     * which the shooter read for the whole pull. {@code credit} is the slot of the player a kill by it
+     * counts for, or {@link Tally#NOBODY}.
      */
     public Entity spawnProjectile(
-            float x, float y, float directionX, float directionY, Weapon weapon, Side side, int credit) {
+            float x, float y, float directionX, float directionY, Weapon weapon, float damage, Side side, int credit) {
         return projectile(
                 x,
                 y,
@@ -784,7 +785,7 @@ public final class Spawner {
                 weapon.projectileSpeed,
                 weapon.projectileRadius,
                 weapon.projectileRange,
-                weapon.damage,
+                damage,
                 weapon.projectileLook,
                 weapon.blastRadius,
                 weapon.slicks,

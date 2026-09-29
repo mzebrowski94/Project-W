@@ -1,8 +1,10 @@
 package pl.mzebrows.pwt.sim.system;
 
+import com.badlogic.ashley.core.Entity;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * The one way anything in the simulation asks the dice a question.
@@ -16,6 +18,9 @@ import pl.mzebrows.pwt.sim.def.Chances;
  * a coin. The due lives on the unit's component; zero means not yet dealt.
  *
  * <p><strong>Zero draws nothing</strong>, so switching a behaviour off reshuffles nothing (pillar 6).
+ *
+ * <p>The number spent is always the one {@link Modifiers#chance} gives for the unit rolling: this is
+ * where the {@code CHANCE} stat is read, so every {@code AiChance} is a number an upgrade can move.
  */
 final class Odds {
 
@@ -28,8 +33,9 @@ final class Odds {
      * Spends a tick of opportunity on this behaviour, at the number the table gives it. Returns the
      * new due, to be stored back where it came from; {@link #spent} says whether it happened.
      */
-    static float spend(Rng rng, float due, Chances chances, AiChance kind, float deltaTime) {
-        return spend(rng, due, chances, chances.of(kind), deltaTime);
+    static float spend(
+            Modifiers modifiers, Entity unit, AiChance kind, Rng rng, float due, Chances chances, float deltaTime) {
+        return spend(modifiers, unit, kind, rng, due, chances, chances.of(kind), deltaTime);
     }
 
     /**
@@ -39,11 +45,20 @@ final class Odds {
      *
      * <p>Overshoot carries into the next due, capped at one tick's worth.
      */
-    static float spend(Rng rng, float due, Chances chances, float chancePerSecond, float deltaTime) {
-        if (chancePerSecond <= 0f) {
+    static float spend(
+            Modifiers modifiers,
+            Entity unit,
+            AiChance kind,
+            Rng rng,
+            float due,
+            Chances chances,
+            float chancePerSecond,
+            float deltaTime) {
+        float chance = modifiers.chance(unit, kind, chancePerSecond);
+        if (chance <= 0f) {
             return due < 0f ? 0f : due;
         }
-        float owed = chancePerSecond * deltaTime;
+        float owed = chance * deltaTime;
         float longestGap = chances.longestGap();
         if (longestGap <= 0f) {
             return rng.nextFloat() < owed ? JUST_SPENT : 0f;

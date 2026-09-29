@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Turns the men a level owes into men standing on it.
@@ -35,16 +36,18 @@ public final class ReinforcementSystem extends EntitySystem {
     private final SimConfig config;
     private final TileMap map;
     private final Spawner spawner;
+    private final Modifiers modifiers;
     private final Rng rng;
 
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> squad = new ImmutableArray<>(new Array<>());
 
-    public ReinforcementSystem(SimConfig config, TileMap map, Spawner spawner, Rng rng) {
+    public ReinforcementSystem(SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng rng) {
         this.config = config;
         this.map = map;
         this.spawner = spawner;
+        this.modifiers = modifiers;
         this.rng = rng;
     }
 
@@ -69,7 +72,8 @@ public final class ReinforcementSystem extends EntitySystem {
             if (rally == null) {
                 continue;
             }
-            if (config.trooper().squadSize() + config.trooper().squadGrowth() - squad.size() <= 0) {
+            int headroom = modifiers.squadHeadroom(config.trooper().squadGrowth());
+            if (config.trooper().squadSize() + headroom - squad.size() <= 0) {
                 // A full squad wastes what it was owed, all of it (G0030).
                 level.pendingReinforcements = 0;
                 continue;

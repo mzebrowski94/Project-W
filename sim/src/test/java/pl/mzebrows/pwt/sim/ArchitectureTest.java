@@ -9,7 +9,9 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaField;
+import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -18,7 +20,13 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import pl.mzebrows.pwt.sim.upgrade.Reads;
+import pl.mzebrows.pwt.sim.upgrade.Stat;
 
 /**
  * Guards the one boundary the whole architecture rests on: the simulation stays headless and
@@ -192,6 +200,10 @@ final class ArchitectureTest {
             .or()
             .areDeclaredInClassesThat()
             .resideInAPackage("..sim.system..")
+            // And the upgrade package, whose read port is called by systems on every tick (ADR 0017).
+            .or()
+            .areDeclaredInClassesThat()
+            .resideInAPackage("..sim.upgrade..")
             .and()
             .doNotHaveModifier(JavaModifier.STATIC)
             .and()
@@ -203,6 +215,52 @@ final class ArchitectureTest {
             .because("what must survive a tick lives on a component, where a snapshot carries it (ADR 0014);"
                     + " a system may keep scratch it overwrites before reading, or a pure cache, and says"
                     + " which with @NotState");
+
+    @ArchTest
+    static final ArchRule upgradesAreCalledAndDoNotCall = noClasses()
+            .that()
+            .resideInAPackage("..sim.upgrade..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage("..sim.system..", "..sim.scenario..")
+            .because("the upgrade package is called and does not call (ADR 0017): a rule asks Modifiers for a"
+                    + " number, and Modifiers asks nothing of the rules");
+
+    /**
+     * Every number an upgrade may move is read in exactly one place (ADR 0017): one {@code @Reads} method
+     * per {@link Stat}, with one call to it outside the upgrade package. Two readers are two places that
+     * must agree about one number; none is a number somebody tunes to no effect.
+     */
+    @ArchTest
+    static void everyStatIsReadInExactlyOnePlace(JavaClasses classes) {
+        Map<Stat, List<JavaMethod>> readers = new EnumMap<>(Stat.class);
+        for (JavaClass type : classes) {
+            for (JavaMethod method : type.getMethods()) {
+                method.tryGetAnnotationOfType(Reads.class)
+                        .ifPresent(reads -> readers.computeIfAbsent(reads.value(), stat -> new ArrayList<>())
+                                .add(method));
+            }
+        }
+        List<String> problems = new ArrayList<>();
+        for (Stat stat : Stat.values()) {
+            List<JavaMethod> methods = readers.getOrDefault(stat, List.of());
+            if (methods.size() != 1) {
+                problems.add(stat + " is on " + methods.size() + " @Reads methods, not one");
+                continue;
+            }
+            JavaMethod method = methods.get(0);
+            long calls = method.getCallsOfSelf().stream()
+                    .filter(call -> !call.getOriginOwner().getPackageName().startsWith(UPGRADE))
+                    .count();
+            if (calls != 1) {
+                problems.add(stat + " is read through " + method.getFullName() + " from " + calls
+                        + " places outside the upgrade package, not one");
+            }
+        }
+        org.assertj.core.api.Assertions.assertThat(problems).isEmpty();
+    }
+
+    private static final String UPGRADE = "pl.mzebrows.pwt.sim.upgrade";
 
     /** The collections the snapshot codec knows how to write, by the field that holds each. */
     private static final Set<String> NAMED_COLLECTIONS = Set.of("Waves.pending", "Lair.pending");

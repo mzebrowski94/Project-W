@@ -8,7 +8,6 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
-import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Intent;
@@ -17,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Throws what was asked for, and flies what is already in the air.
@@ -40,10 +40,8 @@ public final class GrenadeSystem extends EntitySystem {
     /** Below this the aim point is on top of the thrower and gives no direction to throw along. */
     private static final float EPSILON = 1e-4f;
 
-    /** Gap between the thrower's body and what leaves it, so a throw never starts inside him. */
-    private static final float MUZZLE_GAP = 0.05f;
-
     private final Spawner spawner;
+    private final Modifiers modifiers;
     private final TileMap map;
     private final float width;
     private final float height;
@@ -51,9 +49,10 @@ public final class GrenadeSystem extends EntitySystem {
     private ImmutableArray<Entity> flying = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> throwers = new ImmutableArray<>(new Array<>());
 
-    public GrenadeSystem(TileMap map, Spawner spawner) {
+    public GrenadeSystem(TileMap map, Spawner spawner, Modifiers modifiers) {
         this.map = map;
         this.spawner = spawner;
+        this.modifiers = modifiers;
         this.width = map.worldWidth();
         this.height = map.worldHeight();
     }
@@ -171,17 +170,7 @@ public final class GrenadeSystem extends EntitySystem {
             if (distance <= EPSILON) {
                 continue;
             }
-            float directionX = towardsX / distance;
-            float directionY = towardsY / distance;
-            float muzzle = BODY.get(entity).radius + thrower.radius + MUZZLE_GAP;
-            spawner.spawnGrenade(
-                    at.x + directionX * muzzle,
-                    at.y + directionY * muzzle,
-                    directionX,
-                    directionY,
-                    thrower,
-                    Players.credit(entity));
-            thrower.remainingTicks = thrower.cooldownTicks;
+            Throws.release(spawner, modifiers, entity, thrower, towardsX / distance, towardsY / distance);
         }
     }
 

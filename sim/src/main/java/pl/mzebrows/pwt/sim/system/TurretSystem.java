@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Works every gun that somebody is on: brings it round, fires it, and holds whoever is aboard.
@@ -60,6 +61,7 @@ public final class TurretSystem extends EntitySystem {
 
     private final TileMap map;
     private final Spawner spawner;
+    private final Modifiers modifiers;
 
     /** A gun's own pattern. Zero-width for the gun a mount carries, and asked for all the same. */
     private final Rng scatter;
@@ -74,7 +76,8 @@ public final class TurretSystem extends EntitySystem {
     private ImmutableArray<Entity> quarry = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> obstacles = new ImmutableArray<>(new Array<>());
 
-    public TurretSystem(TileMap map, Spawner spawner, Rng scatter) {
+    public TurretSystem(TileMap map, Spawner spawner, Modifiers modifiers, Rng scatter) {
+        this.modifiers = modifiers;
         this.scatter = scatter;
         this.map = map;
         this.spawner = spawner;
@@ -234,6 +237,7 @@ public final class TurretSystem extends EntitySystem {
         Position at = POSITION.get(station);
         Guns.volley(
                 spawner,
+                modifiers,
                 scatter,
                 station,
                 weapon,
@@ -246,6 +250,6 @@ public final class TurretSystem extends EntitySystem {
                 FACTION.get(station).side,
                 credit,
                 muzzle);
-        Guns.spend(station, weapon, weapon.cooldownTicks);
+        Guns.spend(modifiers, station, weapon, weapon.cooldownTicks);
     }
 }

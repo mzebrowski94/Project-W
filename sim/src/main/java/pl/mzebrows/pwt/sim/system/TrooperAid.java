@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /** Going to pick up somebody who is down: the half of {@link TrooperMindSystem}'s cascade below orders. */
 final class TrooperAid {
@@ -29,13 +30,15 @@ final class TrooperAid {
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
     private final Rng nerve;
+    private final Modifiers modifiers;
     private final Chances chances;
     private final float reach;
 
     private ImmutableArray<Entity> casualties = new ImmutableArray<>(new Array<>());
 
-    TrooperAid(SimConfig config, Rng nerve) {
+    TrooperAid(SimConfig config, Modifiers modifiers, Rng nerve) {
         this.nerve = nerve;
+        this.modifiers = modifiers;
         this.chances = config.chances();
         this.reach = config.action().reach();
     }
@@ -71,7 +74,8 @@ final class TrooperAid {
         }
         if (trooper.mode != Trooper.Mode.AID) {
             // One due for both kinds of rescue: it is one willingness, spent faster for the commander.
-            trooper.aidDue = Odds.spend(nerve, trooper.aidDue, chances, willingness(subject), deltaTime);
+            trooper.aidDue =
+                    Odds.spend(modifiers, entity, willingness(subject), nerve, trooper.aidDue, chances, deltaTime);
             if (!Odds.spent(trooper.aidDue)) {
                 return false;
             }

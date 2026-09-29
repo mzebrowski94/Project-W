@@ -36,11 +36,13 @@ import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Runs the constraint solver, then decides what this tick's contacts mean.
@@ -83,6 +85,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private final Spawner spawner;
     private final Defs<PickupKind, PickupDef> pickups;
     private final Rng rng;
+    private final Modifiers modifiers;
     private final Chances chances;
 
     /**
@@ -99,9 +102,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /** Every entity with a handle, for finding who swung a strike. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
-    public CollisionSystem(SimConfig config, TileMap map, Spawner spawner, Rng rng) {
+    public CollisionSystem(SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng rng) {
         this.solver = new ConstraintSolver(config, map, this);
         this.spawner = spawner;
+        this.modifiers = modifiers;
         this.pickups = config.pickups();
         this.chances = config.chances();
         this.rng = rng;
@@ -223,7 +227,15 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         }
         if (pickup.shunned) {
             Taking taking = TAKING.get(taker);
-            taking.biteDue = Odds.spend(rng, taking.biteDue, chances, taking.biteChance, deltaTime);
+            taking.biteDue = Odds.spend(
+                    modifiers,
+                    taker,
+                    AiChance.BITE_A_BARREL,
+                    rng,
+                    taking.biteDue,
+                    chances,
+                    taking.biteChance,
+                    deltaTime);
             if (!Odds.spent(taking.biteDue)) {
                 return;
             }

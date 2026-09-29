@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Shoots, and very occasionally swings.
@@ -51,6 +52,7 @@ public final class TrooperCombatSystem extends EntitySystem {
     private static final float EPSILON = 1e-4f;
 
     private final Spawner spawner;
+    private final Modifiers modifiers;
     private final Rng rng;
 
     /** A gun's own pattern, which is a different concern from a man's nerve and draws separately. */
@@ -67,7 +69,8 @@ public final class TrooperCombatSystem extends EntitySystem {
     /** Every entity with a handle, for finding what has a man in its jaws. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
-    public TrooperCombatSystem(SimConfig config, Spawner spawner, Rng rng, Rng scatter) {
+    public TrooperCombatSystem(SimConfig config, Spawner spawner, Modifiers modifiers, Rng rng, Rng scatter) {
+        this.modifiers = modifiers;
         this.scatter = scatter;
         this.spawner = spawner;
         this.rng = rng;
@@ -127,7 +130,8 @@ public final class TrooperCombatSystem extends EntitySystem {
                 continue;
             }
             Trooper trooper = TROOPER.get(entity);
-            trooper.swingDue = Odds.spend(rng, trooper.swingDue, chances, AiChance.SWING_AT_A_LEAP, deltaTime);
+            trooper.swingDue =
+                    Odds.spend(modifiers, entity, AiChance.SWING_AT_A_LEAP, rng, trooper.swingDue, chances, deltaTime);
             if (!Odds.spent(trooper.swingDue)) {
                 return false;
             }
@@ -154,7 +158,8 @@ public final class TrooperCombatSystem extends EntitySystem {
             return;
         }
         Trooper trooper = TROOPER.get(entity);
-        trooper.struggleDue = Odds.spend(rng, trooper.struggleDue, chances, AiChance.STRUGGLE, deltaTime);
+        trooper.struggleDue =
+                Odds.spend(modifiers, entity, AiChance.STRUGGLE, rng, trooper.struggleDue, chances, deltaTime);
         if (!Odds.spent(trooper.struggleDue)) {
             return;
         }
@@ -169,7 +174,7 @@ public final class TrooperCombatSystem extends EntitySystem {
      */
     private void fire(Entity entity, Trooper trooper) {
         Weapon weapon = WEAPON.get(entity);
-        if (!weapon.ready()) {
+        if (!Guns.ready(entity, weapon)) {
             return;
         }
         Position at = POSITION.get(entity);
@@ -183,6 +188,7 @@ public final class TrooperCombatSystem extends EntitySystem {
         float directionY = toY / distance;
         Guns.volley(
                 spawner,
+                modifiers,
                 scatter,
                 entity,
                 weapon,
@@ -195,6 +201,6 @@ public final class TrooperCombatSystem extends EntitySystem {
                 FACTION.get(entity).side,
                 Tally.NOBODY,
                 muzzle);
-        weapon.remainingTicks = weapon.cooldownTicks;
+        Guns.spend(modifiers, entity, weapon, weapon.cooldownTicks);
     }
 }

@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Decides, once a tick, what each trooper is doing and where it is headed.
@@ -41,11 +42,11 @@ public final class TrooperMindSystem extends EntitySystem {
 
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
 
-    public TrooperMindSystem(SimConfig config, TileMap map, Rng rng, Rng nerve) {
+    public TrooperMindSystem(SimConfig config, TileMap map, Modifiers modifiers, Rng rng, Rng nerve) {
         this.fight = new TrooperFight(config, map);
         this.orders = new TrooperOrders(config, map);
-        this.aid = new TrooperAid(config, nerve);
-        this.crew = new TrooperCrew(config, nerve);
+        this.aid = new TrooperAid(config, modifiers, nerve);
+        this.crew = new TrooperCrew(config, modifiers, nerve);
         this.objective = new TrooperObjective(config, map, rng);
         this.roam = new TrooperRoam(config, map, rng);
     }

@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Turns the pickups claimed this tick into whatever they grant, and spends the ones that were taken.
@@ -42,14 +43,16 @@ public final class PickupSystem extends EntitySystem {
     private static final ComponentMapper<BlastsOnDeath> REACTION = ComponentMapper.getFor(BlastsOnDeath.class);
 
     private final Spawner spawner;
+    private final Modifiers modifiers;
     private final Defs<PickupKind, PickupDef> pickups;
 
     private ImmutableArray<Entity> takers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> lying = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
-    public PickupSystem(SimConfig config, Spawner spawner) {
+    public PickupSystem(SimConfig config, Spawner spawner, Modifiers modifiers) {
         this.spawner = spawner;
+        this.modifiers = modifiers;
         this.pickups = config.pickups();
     }
 
@@ -137,11 +140,13 @@ public final class PickupSystem extends EntitySystem {
     /**
      * A grant that belongs to the level rather than to whoever picked it up.
      *
-     * <p>The level is an ordinary entity, so no message queue (G0004).
+     * <p>The level is an ordinary entity, so no message queue (G0004). What a crate is worth is read
+     * here, where it is spent.
      */
     private void reinforce(int troopers) {
+        int men = modifiers.menPerCrate(troopers);
         for (int i = 0; i < levels.size(); i++) {
-            LEVEL.get(levels.get(i)).pendingReinforcements += troopers;
+            LEVEL.get(levels.get(i)).pendingReinforcements += men;
         }
     }
 }

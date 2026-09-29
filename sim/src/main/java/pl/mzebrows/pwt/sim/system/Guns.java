@@ -9,6 +9,7 @@ import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * What it costs to pull a trigger, in one place, for everything that pulls one.
@@ -35,10 +36,11 @@ final class Guns {
      * Charges a shot to the cooldown, to the heat, and to the shooter's own pace - whichever of the
      * three this gun actually asks for.
      *
-     * <p>A shooter with no {@code Slowed} - a turret - is unaffected by a self-slow.
+     * <p>A shooter with no {@code Slowed} - a turret - is unaffected by a self-slow. The cooldown is the
+     * one place {@code FIRE_COOLDOWN} is read, for every shooter there is.
      */
-    static void spend(Entity firer, Weapon weapon, int cooldownTicks) {
-        weapon.remainingTicks = cooldownTicks;
+    static void spend(Modifiers modifiers, Entity firer, Weapon weapon, int cooldownTicks) {
+        weapon.remainingTicks = modifiers.fireCooldownTicks(firer, weapon.kind, cooldownTicks);
         if (HEAT.has(firer)) {
             HEAT.get(firer).spend(weapon.heatPerShot);
         }
@@ -53,10 +55,11 @@ final class Guns {
      * <p>The aim must be a unit vector already carrying the shooter's cone; the gun's scatter is applied
      * here per pellet, by rotation. Cost is {@link #spend}'s. {@code muzzle} is the caller's scratch.
      * {@code credit} is the slot of the player whose tally a kill by these shots counts for, or {@link
-     * Tally#NOBODY} (G0044).
+     * Tally#NOBODY} (G0044). What each shot does is read once, for the whole pull.
      */
     static void volley(
             Spawner spawner,
+            Modifiers modifiers,
             Rng rng,
             Entity firer,
             Weapon weapon,
@@ -70,6 +73,7 @@ final class Guns {
             int credit,
             float[] muzzle) {
         int pellets = weapon.pellets < 1 ? 1 : weapon.pellets;
+        float damage = modifiers.gunDamage(firer, weapon.kind, weapon.damage);
         for (int pellet = 0; pellet < pellets; pellet++) {
             float directionX = aimX;
             float directionY = aimY;
@@ -81,7 +85,7 @@ final class Guns {
                 directionY = aimX * sin + aimY * cos;
             }
             Muzzle.next(x, y, bodyRadius, weapon, gap, directionX, directionY, muzzle);
-            spawner.spawnProjectile(muzzle[0], muzzle[1], directionX, directionY, weapon, side, credit);
+            spawner.spawnProjectile(muzzle[0], muzzle[1], directionX, directionY, weapon, damage, side, credit);
         }
     }
 }

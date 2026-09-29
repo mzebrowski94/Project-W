@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * An alien that shoots: it holds its ground at a distance and spits, roughly, at what it is hunting.
@@ -50,6 +51,7 @@ public final class EnemyRangedSystem extends EntitySystem {
 
     private final TileMap map;
     private final Spawner spawner;
+    private final Modifiers modifiers;
     private final Rng rng;
 
     /** The gun's own pattern, which is a different thing from how badly the creature aims. */
@@ -65,7 +67,8 @@ public final class EnemyRangedSystem extends EntitySystem {
 
     private ImmutableArray<Entity> shooters = new ImmutableArray<>(new Array<>());
 
-    public EnemyRangedSystem(TileMap map, Spawner spawner, Rng rng, Rng scatter) {
+    public EnemyRangedSystem(TileMap map, Spawner spawner, Modifiers modifiers, Rng rng, Rng scatter) {
+        this.modifiers = modifiers;
         this.scatter = scatter;
         this.map = map;
         this.spawner = spawner;
@@ -201,6 +204,7 @@ public final class EnemyRangedSystem extends EntitySystem {
         // The creature's cone is spent once per volley; each pellet's scatter is the gun's.
         Guns.volley(
                 spawner,
+                modifiers,
                 scatter,
                 entity,
                 weapon,
@@ -213,7 +217,7 @@ public final class EnemyRangedSystem extends EntitySystem {
                 FACTION.get(entity).side,
                 Tally.NOBODY,
                 muzzle);
-        Guns.spend(entity, weapon, ranged.cooldownFor(weapon.cooldownTicks, distance));
+        Guns.spend(modifiers, entity, weapon, ranged.cooldownFor(weapon.cooldownTicks, distance));
         ranged.shotsOnTarget++;
     }
 }
