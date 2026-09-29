@@ -248,6 +248,20 @@ class ReadoutWriterTest {
         assertThat(readout.upgradeRevision).isNotZero();
     }
 
+    /** A slot whose link dropped reads as away, so the solo pause does not count him (G0052, D2). */
+    @Test
+    void marksAPlayerWhoseLinkDroppedAsAway() {
+        Simulation world = world();
+        world.spawnCommander(40f, 40f, 0);
+        world.spawnCommander(60f, 40f, 1);
+        world.step(new PlayerInputs().away(1));
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        assertThat(readout.player(1).away).isTrue();
+        assertThat(readout.player(0).away).isFalse();
+    }
+
     @Test
     void listsWhatIsHeldWithItsRanksAndTheMostItCanHave() {
         Simulation world = world();

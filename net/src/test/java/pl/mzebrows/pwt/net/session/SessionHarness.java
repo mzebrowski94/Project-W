@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.WorldCodec;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * A whole session in one thread: a sequencer on machine "host", the host's own peer beside it, and
@@ -137,6 +138,12 @@ final class SessionHarness implements AutoCloseable {
         return sequencer.paused();
     }
 
+    /** This machine's link drops: it closes, and plays no further part. */
+    void leave(Machine machine) {
+        machine.session.close();
+        machines.remove(machine);
+    }
+
     static Simulation world(Machine machine) {
         Simulation world = machine.session.simulation();
         assertThat(world).as("%s has a world", machine.name).isNotNull();
@@ -165,6 +172,17 @@ final class SessionHarness implements AutoCloseable {
         /** Frames this machine's game will not run at all - a window being dragged, a pause for GC. */
         int frozenFrames;
 
+        /** A card this machine's player takes on its next frame, then forgets. */
+        private @Nullable UpgradeKind pickKind;
+
+        private int pickSerial;
+
+        /** Takes this card from the draft with this serial, on the next frame. */
+        void pick(int serial, UpgradeKind kind) {
+            pickSerial = serial;
+            pickKind = kind;
+        }
+
         Machine(String name, PeerSession session, int phase) {
             this.name = name;
             this.session = session;
@@ -188,6 +206,11 @@ final class SessionHarness implements AutoCloseable {
             if (step % 90 == 0) {
                 Order[] orders = Order.values();
                 local.order(0, orders[(step / 90) % orders.length]);
+            }
+            UpgradeKind taking = pickKind;
+            if (taking != null) {
+                local.pick(0, pickSerial, taking);
+                pickKind = null;
             }
         }
     }

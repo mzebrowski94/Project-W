@@ -9,6 +9,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Drafts;
+import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.Defs;
 
@@ -21,6 +22,7 @@ public final class UpgradeView {
 
     private static final ComponentMapper<Upgrades> UPGRADES = ComponentMapper.getFor(Upgrades.class);
     private static final ComponentMapper<Drafts> DRAFTS = ComponentMapper.getFor(Drafts.class);
+    private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
 
     /** The slot a shared upgrade is held by: the side's, not any one player's. */
     public static final int SHARED = Upgrades.SHARED;
@@ -41,6 +43,18 @@ public final class UpgradeView {
         }
         Entity level = levels.first();
         return ((long) DRAFTS.get(level).revision << 32) | (UPGRADES.get(level).revision & 0xFFFF_FFFFL);
+    }
+
+    /**
+     * Whether this slot's link has dropped and nobody has taken it since (G0052): its commander stands idle
+     * and the draft rotation passes it by. Offline never.
+     */
+    public boolean away(int slot) {
+        if (levels.size() == 0) {
+            return false;
+        }
+        Entity level = levels.first();
+        return PRESENCE.has(level) && PRESENCE.get(level).isAway(slot);
     }
 
     /** How many drafts this slot is holding. */

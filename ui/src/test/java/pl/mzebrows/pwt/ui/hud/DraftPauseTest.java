@@ -27,6 +27,19 @@ class DraftPauseTest {
         assertThat(pause.next(false, false, false, false)).isEqualTo(DraftPause.Action.NONE);
     }
 
+    /** A friend back from a dropped link makes it co-op, which never pauses: it resumes, the draft still open. */
+    @Test
+    void resumesWhenTheGameStopsBeingSoloWithTheDraftStillOpen() {
+        pause.next(true, true, false, false);
+
+        DraftPause.Action joined = pause.next(true, false, true, false);
+        DraftPause.Action after = pause.next(true, false, false, false);
+
+        assertThat(joined).isEqualTo(DraftPause.Action.RESUME);
+        assertThat(after).isEqualTo(DraftPause.Action.NONE);
+        assertThat(pause.ours()).isFalse();
+    }
+
     @Test
     void leavesAPauseSomebodyElseMadeAlone() {
         DraftPause.Action opened = pause.next(true, true, true, false);

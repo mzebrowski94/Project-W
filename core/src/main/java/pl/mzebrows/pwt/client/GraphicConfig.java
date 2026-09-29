@@ -253,6 +253,7 @@ public record GraphicConfig(
             case ARMOURY_FLAMER -> "ff7a2eff";
             case ARMOURY_SHOTGUN -> "4ad8a0ff";
             case ARMOURY_LASER -> "46c8e6ff";
+            case ARMOURY_SEALED -> "a89c84ff";
             case BARREL -> "ff3a10ff";
             case RABBIT -> "f0f0f0ff";
             case MENDING -> "4ce88aff";

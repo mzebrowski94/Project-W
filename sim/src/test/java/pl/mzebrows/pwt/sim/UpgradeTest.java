@@ -10,15 +10,19 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.MEDICINE_PER_SECOND;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SELF_TREATMENT_SECONDS;
 
 import com.badlogic.ashley.core.Entity;
+import java.util.ArrayList;
+import java.util.List;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Harm;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.Whole;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
@@ -243,6 +247,69 @@ class UpgradeTest {
     private static void wound(Simulation simulation, Entity man) {
         man.getComponent(Damage.class).add(AlphaWorlds.A_BLOW, 0, Harm.WOUND);
         AlphaWorlds.steps(simulation, AlphaWorlds.ticksIn(AlphaWorlds.WOUND_GRACE) + 2);
+    }
+
+    /**
+     * Firepower stacks the armoury deck (G0050): with one rank the fixture's deck is one of each gun
+     * and three flamers, so six caches revealed together are three flamers - read through the one port.
+     */
+    @Test
+    void dealsMoreFlamersToSealedCachesWithFirepower() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        hold(simulation, new Upgrades.Held(UpgradeKind.FIREPOWER, Upgrades.SHARED, 1));
+
+        List<PickupKind> dealt = reveal(simulation, 6);
+
+        assertThat(dealt)
+                .filteredOn(kind -> kind == PickupKind.ARMOURY_FLAMER)
+                .hasSize(AlphaWorlds.ARMOURY_CARDS + AlphaWorlds.FIREPOWER_FLAMERS);
+    }
+
+    /**
+     * A deck that grows mid-shuffle is shuffled afresh: two cards out of the plain deck, then Firepower
+     * lands, and the next six are the whole stacked deck - three flamers, whatever the first two were.
+     */
+    @Test
+    void shufflesTheArmouryDeckAfreshWhenFirepowerLands() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        reveal(simulation, 2);
+        hold(simulation, new Upgrades.Held(UpgradeKind.FIREPOWER, Upgrades.SHARED, 1));
+
+        List<PickupKind> dealt = reveal(simulation, 6);
+
+        assertThat(dealt)
+                .filteredOn(kind -> kind == PickupKind.ARMOURY_FLAMER)
+                .hasSize(AlphaWorlds.ARMOURY_CARDS + AlphaWorlds.FIREPOWER_FLAMERS);
+    }
+
+    /** Its damage is the flamer's alone, and reaches whoever holds one - a trooper who took a crate too. */
+    @Test
+    void hitsHarderWithAFlamerAndWithNoOtherGunUnderFirepower() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE - 10f, MIDDLE);
+        hold(simulation, new Upgrades.Held(UpgradeKind.FIREPOWER, Upgrades.SHARED, 2));
+        Modifiers modifiers = new Modifiers(simulation.engine(), simulation.config());
+
+        assertThat(modifiers.gunDamage(trooper, WeaponKind.FLAMER, 100))
+                .isEqualTo(100 + 2 * AlphaWorlds.FIREPOWER_PERCENT);
+        assertThat(modifiers.gunDamage(trooper, WeaponKind.RAILGUN, 100)).isEqualTo(100);
+    }
+
+    /** Lays this many sealed caches beside the commander, steps once, and says what each was dealt. */
+    private static List<PickupKind> reveal(Simulation simulation, int caches) {
+        List<Entity> laid = new ArrayList<>();
+        for (int i = 0; i < caches; i++) {
+            laid.add(simulation.spawnPickup(PickupKind.ARMOURY_SEALED, MIDDLE + i - caches / 2f, MIDDLE + 3f));
+        }
+        simulation.step();
+        List<PickupKind> dealt = new ArrayList<>();
+        for (Entity cache : laid) {
+            dealt.add(cache.getComponent(Pickup.class).kind);
+        }
+        return dealt;
     }
 
     /** Takes one rank through the real path: a point taken earns a draft, and a pick takes the card. */

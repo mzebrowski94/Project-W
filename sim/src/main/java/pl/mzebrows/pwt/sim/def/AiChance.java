@@ -51,5 +51,14 @@ public enum AiChance {
      * <p><strong>Slow on purpose</strong>: a man who freed himself every time would make being taken a
      * formality, and the commander coming for him is the point. Rolled only while he is held.
      */
-    STRUGGLE
+    STRUGGLE,
+
+    /**
+     * How often a trooper throws a grenade into a pack, per second of opportunity (G0051).
+     *
+     * <p><strong>Zero until an upgrade turns it up</strong>, and rolled only while a throw is safe and
+     * worth it: a pack where it would land, nobody on the player's side near it, a clear path, and the
+     * squad's gap run out.
+     */
+    THROW_A_GRENADE
 }

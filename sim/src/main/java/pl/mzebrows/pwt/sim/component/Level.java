@@ -52,6 +52,12 @@ public final class Level implements Component, Pool.Poolable {
      */
     public int bossesDown;
 
+    /**
+     * The first tick any trooper may throw a grenade again: at most one per squad gap (G0051). Written
+     * by {@code TrooperCombatSystem} when a man throws; zero lets the first throw go at once.
+     */
+    public long squadThrowReadyTick;
+
     /** Adds an objective this level requires. */
     public void require(Objective objective) {
         required |= bit(objective);
@@ -99,5 +105,6 @@ public final class Level implements Component, Pool.Poolable {
         nextHandle = 1L;
         commandersInvulnerable = false;
         bossesDown = 0;
+        squadThrowReadyTick = 0L;
     }
 }

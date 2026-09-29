@@ -3,12 +3,11 @@
 **Trigger.** Letting a trooper throw a grenade; changing when one does; anything that would put a
 blast of the squad's making near the player's side.
 
-**Enforced by.** `TrooperGrenadeTest` (S7) - with the chance at zero no trooper ever throws and
-nothing is drawn; a trooper throws only with a cluster at the landing point; no throw ever lands a
-blast within the safety radius of anyone on the player's side, a casualty or a man on a turret
-included; no throw follows a line that meets rock or scenery; at most one throw per squad gap; a
-trooper spawned after Explosives throws like one already on the field. Until then: nothing
-mechanical - caught by reading.
+**Enforced by.** `TrooperGrenadeTest` - with the chance at zero no trooper ever throws and nothing
+is dealt; a trooper throws only with a cluster at the landing point; no throw when the commander or a
+casualty stands within the blast plus the margin; no throw with scenery across the path; at most one
+throw per squad gap; a trooper spawned after Explosives throws like one already on the field. Rock
+across the path is the same check routing uses (`TileMap.isClearPath`).
 
 **Constraint.** Every trooper carries the throw from spawn, off at zero: the chance
 (`AiChance.THROW_A_GRENADE`) has a base of 0 and only an upgrade turns it up. The throw is the

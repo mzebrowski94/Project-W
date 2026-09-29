@@ -1,6 +1,6 @@
 # Upgrades and adaptations — scoped work
 
-**Status: planned 2026-09-28; S0-S5 done 2026-09-29, next is S6; the wounds work in `health-scope.md` (H0-H4) that went ahead of it is done 2026-09-29. D18 amended 2026-09-29: the
+**Status: planned 2026-09-28; S0-S8 done 2026-09-29 (S8 awaits its two-copy check), next is S9; the wounds work in `health-scope.md` (H0-H4) that went ahead of it is done 2026-09-29. D18 amended 2026-09-29: the
 draft is shown in the top bar, not the bottom bar.** Read this first in every session of the upgrade work,
 and tick the session in §0 when it lands. **This doc expires when adaptations ship (S10).** As each
 session lands, what it settles moves where it belongs - invariants and the input map into
@@ -22,9 +22,9 @@ claims against `main` at `e7cf245`, and five rounds of questions Mateusz answere
 | S3 | The draft core | L | drafts earned, dealt, rotated, picked and passed on - headless | done 2026-09-29 |
 | S4 | The cheap upgrades and dev keys | M | playable offline with dev keys | done 2026-09-29 |
 | S5 | The interface | L | playable offline for real, solo and local co-op | done 2026-09-29 |
-| S6 | Firepower: sealed caches and the armoury deck | M | Adventure's caches dealt on reveal | planned |
-| S7 | Explosives: troopers throw | M | troopers grenade packs, never the squad | planned |
-| S8 | Online | L | playable online, drop-in and dropped links included | planned |
+| S6 | Firepower: sealed caches and the armoury deck | M | Adventure's caches dealt on reveal | done 2026-09-29 |
+| S7 | Explosives: troopers throw | M | troopers grenade packs, never the squad | done 2026-09-29 |
+| S8 | Online | L | playable online, drop-in and dropped links included | built 2026-09-29; the two-copy check is Mateusz's |
 | S9 | Playtest gate and tuning | S-M | numbers Mateusz has felt | planned |
 | S10 | Adaptations, groundwork | M | the swarm adapts in a test | planned |
 | S11 | Carrying upgrades between levels | - | - | blocked on the level lifecycle |
@@ -1003,6 +1003,40 @@ the aside strip, the dispatches and the solo pause.
 - The reveal radius exceeds the cache's reach (`SimConfigTest`).
 - `ScenariosTest` still holds.
 
+**As built (2026-09-29).**
+
+- **Definitions.** `ArmouryDef(cards, revealRadius)` on `PickupDef`, `off()` for everything but a
+  weapons cache; a cache is a card or sealed, never both, and a sealed cache must offer nobody anything
+  (both refused at bind time). A five-argument `PickupDef` constructor means "no armoury part", so the
+  fixture's other pickups did not change. `PickupKind.ARMOURY_SEALED`, `Look.ARMOURY_SEALED`
+  (`graphic.color.armoury_sealed=a89c84ff`, drab khaki: the colour of no gun).
+- **The reveal** is the tail of `PickupSystem.update`, after the claims: a sealed cache with a commander
+  on his feet (`Players.down`) within its radius is dealt a cache kind and recast in place by
+  `Spawner.applyPickup` (kind, body radius, look). No new system, so `simulation-order.md` is unchanged
+  apart from a note.
+- **The deck.** Every kind whose `armoury.cards` is above zero, in kind order, each count folded
+  through `Modifiers.armouryCards` (the `ARMOURY_CARDS` stat's one reader) on every reveal. A `Bag`
+  over the total, drawn from `RngStream.ARMOURY`. `Armoury` (level entity) holds `drawn` and
+  **`shuffledAt`, the deck's size at the last shuffle - not the packed counts §5.2 proposed**: a
+  `Deal` only ever adds (its constructor refuses less than one), so any change to the deck changes its
+  size, and an int needs no limit on how many caches the deck holds.
+- **`Effect.Deal(card, amount)`**, written `deal armoury_flamer 2`; its target is always `SIDE`.
+  Catalogue checks (`UpgradeDef.checkDeck`): a deal names a card the deck already holds; a level
+  that can seal a cache has a card to deal it; the deck with every deal at its highest rank fits a bag
+  (64). Card text `ui.effect.deal.<cache>` ("+2 SEALED FLAMERS").
+- **Firepower**: ranks 2, weight 10, tier 1, `deal armoury_flamer 2; gun flamer gun_damage team 25`.
+  At two ranks the deck is 7 flamers in 15 cards.
+- **Levels.** Adventure: 6 of 15 caches sealed - none in the growth, where the colours are learnt,
+  and never the first beam. Adventure 2: 4 of 10 - one of every pair past the anthill; the lair's four
+  stay as laid. `AdventureScenarioTest.CACHES` gained the laser (it had been missed) and the sealed
+  cache.
+- **Tests.** `PickupSystemTest`: nobody takes a sealed cache; revealed on the tick a commander comes
+  within the radius and not before; not by a commander who is down; a revealed cache arms whoever
+  takes it; eight caches from the fixture's four-card deck are every gun twice. `UpgradeTest`:
+  Firepower's cards are dealt, a deck that grows mid-shuffle is shuffled afresh, the damage is the
+  flamer's alone. `SimConfigTest`: the reveal radius exceeds the widest cache plus the commander; a
+  deal of a card not in the deck and a deck too big for a bag are refused.
+
 ### S7 - Explosives: troopers throw
 
 **Stages:**
@@ -1023,6 +1057,34 @@ the aside strip, the dispatches and the solo pause.
 - No throw follows a line that meets rock or scenery.
 - At most one throw per squad gap.
 - A trooper spawned after Explosives throws like one already on the field.
+
+**As built (2026-09-29).**
+
+- **Config.** `TrooperGrenadeDef(cooldownSeconds, minCluster, safetyMargin, squadGapSeconds)` as
+  `TrooperConfig.grenade`, keys `sim.trooper.grenade.*` in `squad.properties` (10 s, 3, 4, 6 s).
+  `AiChance.THROW_A_GRENADE`, `sim.ai.chance.throw_a_grenade=0`.
+- **State.** Every trooper spawns with a `Thrower`: the commander's flight (`sim.grenade.*`) with the
+  trooper's cooldown. `Trooper.throwDue`, `Level.squadThrowReadyTick`. A trooper has no `Intent`, so
+  `GrenadeSystem` never throws for him.
+- **The throw** is `TrooperCombatSystem.throwAGrenade`, between the swing at a leap and the shot; a
+  throw replaces that tick's shot. Order: `Odds.possible` first (new: the chance above zero, drawing
+  nothing - so with Explosives not held nothing below it runs); hands free, own throw ready, squad gap
+  run out; the path inside the arena and clear of rock (`TileMap.isClearPath`); `minCluster` aliens on
+  their feet within the blast of the landing point; nobody of ours (commanders and troopers, down or
+  not, crew included) within blast plus `safetyMargin`; no scenery (solid and immovable - what a
+  grenade comes off, G0019) across the path. Then `Odds.spend`, then `Throws.release`, and the gap is
+  set. The landing point is `Throws.reach` (new: muzzle plus range) along the bearing to his target;
+  the checks run to one tick's flight past it, because a grenade goes off on the tick its distance
+  runs out.
+- `Sight.nearLine` extracted from `clearShot` - the distance of a point from a segment - and used by
+  both. `Odds` reads the `CHANCE` stat through one private method, so `possible` and `spend` share it.
+- **Explosives**: squad, ranks 1, tier 2, weight 10, `chance throw_a_grenade squad 0.3`.
+- **Tests** (`TrooperGrenadeTest`, 8): nothing thrown and nothing dealt at zero; throws with
+  Explosives, and the same for a man who arrives after it; not without a cluster; not with the
+  commander or a casualty inside the margin; not with scenery across the path; one grenade per squad
+  gap between two men. Mutations checked: switching off the friendly, scenery and cluster rules each
+  fails its test. **Rock across the path has no test of its own**: rock on the line also blocks his
+  sight, so he is not fighting; the check is `TileMap.isClearPath`, tested where it lives.
 
 ### S8 - Online
 
@@ -1049,6 +1111,46 @@ the aside strip, the dispatches and the solo pause.
 
 **Done when.** Verify is green, and drafts work both ways in a two-copy session on one PC (the
 latency playtest's method).
+
+**As built (2026-09-29).**
+
+- **Typed input events.** On the wire an event is its number (int), slot (byte), type (byte), a value
+  (int) and an extra (byte), `Msg.EVENT_BYTES` = 11 whatever the type: `EVENT_ORDER` (the order's code)
+  and `EVENT_PICK` (the draft's serial; the kind's code). `PeerSession.queueEvents` numbers orders and
+  picks alike; the sequencer checks the whole event before holding it, and `Peer.applyEvents` seals one
+  of each type per slot per tick, holding back everything after an event that has to wait, so events
+  land in the order given. `Msg.PROTOCOL` 3.
+- **`Bundle`** gains picks `(slot, serial, kind)` and presence `(slot, away 1 | back 0)`, in `write`,
+  `read`, `skip` and `applyTo`; `Sequencer.maxBundleBytes` grows by both (a test holds a full tick to
+  it).
+- **Presence, sealed by the sequencer.** A peer leaving marks each slot it held away - unless that
+  slot's join was never sealed, in which case there is no commander to be away. Seating anybody in an
+  away slot seals *back*, or, if the away was not sealed yet, seals nothing. A restart forgets who was
+  away: a new world has nobody in it who is. A returning machine takes the lowest free slot, as any
+  joiner does, so it is *back* in its old slot only if that is the lowest free.
+- **The pause carries a reason.** `PAUSE | on | reason` and `PAUSED | on | tick | by | reason`, the
+  reason `PAUSE_BY_PLAYER` or `PAUSE_FOR_DRAFT`. **`PAUSED` echoes the asking peer's id, not a slot** -
+  a peer can hold several slots, and nothing reads which. **The sequencer lifts a draft pause itself
+  when it seats anybody**: nothing is sealed while paused, so a returning friend's *back* could never
+  reach the world and end the solo. A player's own pause stays on.
+- **Client.** `OnlineSession.pick` holds the card per seat until the next frame hands it to the session
+  as an event; `F5`-`F7` work online through `ScenarioPlay.takeCard`, which `ScenarioSession` now uses
+  too. `ScenarioPlay.setDraftPaused` / `pausedForDraft`; the screen counts "solo" online as offline, a
+  player whose link dropped not counted (`PlayerReadout.away`, from the new `UpgradeView.away`), and
+  keeps the paused banner off a draft's pause on every machine. `DraftPause` resumes the moment the game
+  stops being solo, the draft still open. The panel's OFFLINE now also shows a dropped remote link.
+- **Tests.** `BundleTest`: picks and presence round trip; a full tick fits the history; an unknown
+  upgrade code is refused. `SequencerTest`: a pick sealed once however often resent; an order and a pick
+  on one tick; one pick per slot per tick; an event of no type refused. `SessionTest` (on a test world
+  whose map-wide points take themselves on a timer, `TestWorlds.DRAFTING`, in Thicket - alone in
+  Skirmish the host was knocked off his feet too often to take a point): a card taken on a joining
+  machine lands everywhere; a drop-in after three cards holds all three; a dropped link is away and
+  passed by, and a machine seated in its slot is back; a card from a draft that is gone changes nothing;
+  a pause for a draft says so on every machine; a draft pause lifts when a second player sits down, a
+  hand's does not. `DraftPauseTest`, `ReadoutWriterTest` for the rest. **`OnlineSessionTest` was not
+  written**: the reason is carried and read in `PeerSession`, and `SessionTest` covers it end to end.
+- **Not done:** the two-copy check on one PC (Mateusz's); the HUD does not name who is away beyond the
+  grey OFFLINE panel.
 
 ### S9 - Playtest gate and tuning
 

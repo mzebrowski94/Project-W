@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Approach;
 import pl.mzebrows.pwt.sim.component.Armour;
+import pl.mzebrows.pwt.sim.component.Armoury;
 import pl.mzebrows.pwt.sim.component.Avoidance;
 import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Blast;
@@ -311,6 +312,15 @@ public final class Spawner {
                         melee.clinchCarryDecay(),
                         melee.knockbackSpeed(),
                         melee.knockbackDecay()));
+        // The commander's throw with a trooper's own how-often, carried from spawn and off until an
+        // upgrade turns the chance up (G0051): a man who arrives after Explosives throws like the rest.
+        entity.add(engine.createComponent(Thrower.class)
+                .set(
+                        ticks(trooper.grenade().cooldownSeconds()),
+                        config.grenade().speed(),
+                        config.grenade().range(),
+                        config.grenade().radius(),
+                        config.grenade().blastRadius()));
         entity.add(engine.createComponent(Taking.class));
         // Hands, as the commander's, so work on a casualty is published the same way.
         entity.add(engine.createComponent(Action.class).set(config.action().reach()));
@@ -548,6 +558,18 @@ public final class Spawner {
     }
 
     /**
+     * Recasts a pickup as another kind in place (G0050): its kind, size and look change, and so does
+     * what it offers, which is read from the kind; its components stay. The single writer for a pickup
+     * that becomes something else - a sealed cache dealt its gun - as {@link #applyWeapon} is for guns.
+     */
+    public void applyPickup(Entity entity, PickupKind kind) {
+        PickupDef def = config.pickup(kind);
+        entity.getComponent(Pickup.class).set(kind, def.shunned());
+        entity.getComponent(Body.class).set(def.radius());
+        entity.getComponent(Appearance.class).set(def.look());
+    }
+
+    /**
      * Spawns a rabbit: alien food that walks, wanders, and steps aside from a shot it sees coming.
      *
      * <p>A pickup, but solid and movable, so the solver keeps it out of rock. Avoidance ignores
@@ -764,6 +786,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Upgrades.class));
         entity.add(engine.createComponent(Drafts.class));
         entity.add(engine.createComponent(Presence.class));
+        // Which of the armoury deck's cards the sealed caches have been dealt (G0050).
+        entity.add(engine.createComponent(Armoury.class));
         admit(entity);
         return entity;
     }

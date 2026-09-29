@@ -115,26 +115,9 @@ public final class ScenarioSession implements ScenarioPlay {
                 // Offline there is no link to lag.
             }
             case LEAVE -> leaving = true;
-            case TAKE_FIRST_CARD -> take(0);
-            case TAKE_SECOND_CARD -> take(1);
-            case TAKE_THIRD_CARD -> take(2);
-        }
-    }
-
-    /**
-     * Takes the card at this place on the keyboard seat's oldest draft, from the next tick. The card is
-     * read now, as it is shown, and handed on as its kind (G0049).
-     */
-    private void take(int position) {
-        int slot = slotOf(0);
-        if (slot < 0) {
-            return;
-        }
-        int serial = simulation.upgradeView().oldestDraftOf(slot);
-        @Nullable
-        UpgradeKind kind = serial == 0 ? null : simulation.upgradeView().card(serial, position);
-        if (kind != null) {
-            pick(0, serial, kind);
+            case TAKE_FIRST_CARD -> takeCard(0);
+            case TAKE_SECOND_CARD -> takeCard(1);
+            case TAKE_THIRD_CARD -> takeCard(2);
         }
     }
 

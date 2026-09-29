@@ -60,7 +60,11 @@ public final class OnlineSession implements ScenarioPlay {
     private boolean cosmeticLead = true;
     private boolean leaving;
     private boolean toldStepIsOffline;
-    private boolean toldPickIsOffline;
+
+    /** A card taken on this machine, by seat, until the next frame hands it to the session as an event. */
+    private final @Nullable UpgradeKind[] pendingPick = new UpgradeKind[PlayerSeats.SEATS];
+
+    private final int[] pendingPickSerial = new int[PlayerSeats.SEATS];
     private int lagStep = -1;
     private @Nullable Order lastOrder;
 
@@ -199,21 +203,24 @@ public final class OnlineSession implements ScenarioPlay {
             case TOGGLE_COSMETIC_LEAD -> cosmeticLead = !cosmeticLead;
             case NEXT_LAG -> nextLag();
             case LEAVE -> leaving = true;
-            case TAKE_FIRST_CARD, TAKE_SECOND_CARD, TAKE_THIRD_CARD -> pickIsOffline();
+            case TAKE_FIRST_CARD -> takeCard(0);
+            case TAKE_SECOND_CARD -> takeCard(1);
+            case TAKE_THIRD_CARD -> takeCard(2);
         }
     }
 
-    /** Not yet: picks cross the wire in upgrades S8. */
+    /**
+     * Held until the next frame, which hands it to the session as an input event: numbered, sent until the
+     * sequencer seals it, and applied on the same tick on every machine (upgrades S8). Kept while paused,
+     * as a solo draft is taken paused (D2); sealed once the game runs again.
+     */
     @Override
     public void pick(int seat, int serial, UpgradeKind kind) {
-        pickIsOffline();
-    }
-
-    private void pickIsOffline() {
-        if (!toldPickIsOffline) {
-            Log.info("taking a card is offline only until drafts cross the wire (upgrades S8)");
-            toldPickIsOffline = true;
+        if (seat < 0 || seat >= pendingPick.length) {
+            return;
         }
+        pendingPick[seat] = kind;
+        pendingPickSerial[seat] = serial;
     }
 
     @Override
@@ -222,6 +229,13 @@ public final class OnlineSession implements ScenarioPlay {
             Order given = local.orderOf(seat);
             if (given != null && peer.slotOf(seat) >= 0) {
                 lastOrder = given;
+            }
+        }
+        for (int seat = 0; seat < pendingPick.length && seat < local.capacity(); seat++) {
+            UpgradeKind picked = pendingPick[seat];
+            if (picked != null) {
+                local.pick(seat, pendingPickSerial[seat], picked);
+                pendingPick[seat] = null;
             }
         }
         peer.pump(clock.nanos(), local);
@@ -266,6 +280,16 @@ public final class OnlineSession implements ScenarioPlay {
     @Override
     public void setPaused(boolean on) {
         peer.pause(on);
+    }
+
+    @Override
+    public void setDraftPaused(boolean on) {
+        peer.pauseForDraft(on);
+    }
+
+    @Override
+    public boolean pausedForDraft() {
+        return peer.paused() && peer.pausedForDraft();
     }
 
     @Override

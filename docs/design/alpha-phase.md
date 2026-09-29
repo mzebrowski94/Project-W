@@ -70,7 +70,7 @@ Dev controls, available in any scenario. **These are not game bindings** - the r
 | `F1` | Step the stats overlay, which starts off: its panel in the top bar's right corner, then every line over the view's corner, then off again |
 | `F2` | Online: draw your own commanders facing your aim at once, or as the world has them (the cosmetic lead, on by default) |
 | `F3` | Online, a joining copy: step the simulated lag through `net.conditions.latencySteps` |
-| `F5` `F6` `F7` | Take the first, second or third card of the keyboard player's oldest upgrade draft, from the next tick, without opening the draft bar. Offline only until drafts cross the wire (upgrades S8) |
+| `F5` `F6` `F7` | Take the first, second or third card of the keyboard player's oldest upgrade draft, from the next tick, without opening the draft bar. Online too: the pick is an input event like any other (upgrades S8) |
 | `Esc` | Not the harness's any more: in a level it opens the pause menu, whose LEAVE TO MENU asks first |
 
 Online, pause is anybody's and pauses every machine; restart and `G` are the host's, and do nothing

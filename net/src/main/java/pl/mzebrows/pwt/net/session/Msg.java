@@ -12,7 +12,7 @@ package pl.mzebrows.pwt.net.session;
 final class Msg {
 
     /** Bumped whenever a message changes shape. The build id catches that too; this names it in the log. */
-    static final int PROTOCOL = 2;
+    static final int PROTOCOL = 3;
 
     // Peer to sequencer.
     static final int HELLO = 1;
@@ -34,6 +34,25 @@ final class Msg {
     static final int DESYNC = 26;
     static final int SNAPSHOT_WANTED = 27;
     static final int DUMP_WANTED = 28;
+
+    /**
+     * An input event's type (upgrades S8): what the rest of it means. An event on the wire is its number
+     * (int), its slot (byte), its type (byte), a value (int) and an extra (byte) - {@link #EVENT_BYTES} in
+     * all, whatever the type, so a message's room is one sum.
+     */
+    static final int EVENT_ORDER = 1;
+
+    /** A card taken: the value is the draft's serial, the extra the kind's code. */
+    static final int EVENT_PICK = 2;
+
+    /** The bytes one input event takes on the wire. */
+    static final int EVENT_BYTES = 4 + 1 + 1 + 4 + 1;
+
+    /** Why a pause was asked for, carried by {@link #PAUSE} and echoed by {@link #PAUSED}: a player's own. */
+    static final int PAUSE_BY_PLAYER = 0;
+
+    /** A solo player's draft (D2), which the paused banner does not cover the view for. */
+    static final int PAUSE_FOR_DRAFT = 1;
 
     /** No slot: the session is full. */
     static final int NO_SLOT = 255;

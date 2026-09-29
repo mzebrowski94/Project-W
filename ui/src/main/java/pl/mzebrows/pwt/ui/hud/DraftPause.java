@@ -3,7 +3,8 @@ package pl.mzebrows.pwt.ui.hud;
 /**
  * Opening a draft pauses a solo game and closing it resumes (D2); with two or more players present the
  * game runs on (G0049). It resumes only a pause it made itself, so a game somebody else paused stays
- * paused.
+ * paused - and it resumes the moment the game stops being solo, a friend back from a dropped link (S8),
+ * with the draft still open: co-op never pauses.
  */
 public final class DraftPause {
 
@@ -33,7 +34,7 @@ public final class DraftPause {
             ours = true;
             return Action.PAUSE;
         }
-        if (!open && ours) {
+        if ((!open || !solo) && ours) {
             ours = false;
             return paused ? Action.RESUME : Action.NONE;
         }

@@ -12,7 +12,8 @@ import pl.mzebrows.pwt.ui.hud.RankText;
 
 /**
  * An upgrade's words: its name ({@code ui.upgrade.<KIND>}), and each effect's line generated from its
- * definition ({@code ui.effect.<form>.<stat>}, {@code ui.effect.chance.<chance>}), so tuning a number
+ * definition ({@code ui.effect.<form>.<stat>}, {@code ui.effect.chance.<chance>}, {@code
+ * ui.effect.deal.<cache>}), so tuning a number
  * cannot leave a card lying (pillar 5). Built when a draft changes, never per frame.
  *
  * <p>Every effect template may use {@code {0}} its signed number, {@code {1}} who it reaches ({@code
@@ -73,6 +74,8 @@ final class CardText {
                         signed(gun.percent()),
                         who(gun.target()),
                         strings.get("ui.weapon." + gun.gun().name()));
+            case Effect.Deal deal ->
+                strings.format("ui.effect.deal." + deal.card().name(), signed(deal.amount()), "", "");
         };
     }
 

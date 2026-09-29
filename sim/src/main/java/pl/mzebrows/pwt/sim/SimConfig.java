@@ -21,6 +21,7 @@ import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Require;
 import pl.mzebrows.pwt.sim.def.SlickDef;
+import pl.mzebrows.pwt.sim.def.TrooperGrenadeDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
@@ -128,7 +129,7 @@ public record SimConfig(
                     melee.longestReachableGap(commander.radius()),
                     "a clinch that stops short of the commander leaves the freeze playing across a gap");
         }
-        UpgradeDef.checkCatalogue(draft, stats, upgrades);
+        UpgradeDef.checkCatalogue(draft, stats, upgrades, pickups);
     }
 
     /** The definition of one strain, for a system or a scenario that needs its numbers. */
@@ -504,6 +505,8 @@ public record SimConfig(
      *     already shooting at it this tick. Zero is every man for the nearest
      * @param medkitReach how far a wounded man with nothing to fight will walk for a medkit (G0053), in
      *     world units. Zero never
+     * @param grenade how often a trooper throws a grenade, and the rules that keep its blast off his own
+     *     side (G0051); whether he ever does is {@code AiChance.THROW_A_GRENADE}
      */
     @With
     public record TrooperConfig(
@@ -538,7 +541,8 @@ public record SimConfig(
             float alertSeconds,
             float threatBonus,
             float sharedTargetPenalty,
-            float medkitReach) {
+            float medkitReach,
+            TrooperGrenadeDef grenade) {
         public TrooperConfig {
             Require.positive("trooper radius", radius);
             Require.positive("trooper speed", speed);

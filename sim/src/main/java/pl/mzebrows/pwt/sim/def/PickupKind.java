@@ -30,6 +30,13 @@ public enum PickupKind {
     ARMOURY_SHOTGUN,
     ARMOURY_LASER,
     /**
+     * A <em>sealed</em> weapons cache (G0050): a crate that shows no gun and offers nobody anything, until
+     * a commander comes near enough - then it is dealt one of the caches above from the armoury deck and
+     * becomes it in place, showing its gun before anybody can reach it. Which gun is the only thing about
+     * a level that is dealt rather than laid, and an upgrade can stack the deck (Firepower).
+     */
+    ARMOURY_SEALED,
+    /**
      * An explosive barrel. A pickup with nothing on offer to anybody: the commander is offered
      * nothing and leaves it standing, and what an alien gets for biting into one is the explosion.
      *

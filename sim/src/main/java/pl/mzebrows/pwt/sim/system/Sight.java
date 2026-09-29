@@ -83,19 +83,23 @@ final class Sight {
      */
     static boolean clearShot(
             ImmutableArray<Entity> obstacles, float fromX, float fromY, float toX, float toY, float clearance) {
-        float spanX = toX - fromX;
-        float spanY = toY - fromY;
-        float lengthSquared = spanX * spanX + spanY * spanY;
         for (int i = 0; i < obstacles.size(); i++) {
             Entity obstacle = obstacles.get(i);
             Position at = POSITION.get(obstacle);
-            float reach = BODY.get(obstacle).radius + clearance;
-            float along = lengthSquared <= 0f ? 0f : ((at.x - fromX) * spanX + (at.y - fromY) * spanY) / lengthSquared;
-            along = Math.max(0f, Math.min(1f, along));
-            if (withinRange(fromX + spanX * along, fromY + spanY * along, at.x, at.y, reach)) {
+            if (nearLine(fromX, fromY, toX, toY, at.x, at.y, BODY.get(obstacle).radius + clearance)) {
                 return false;
             }
         }
         return true;
+    }
+
+    /** Whether a point lies within this distance of any part of the line between two others. */
+    static boolean nearLine(float fromX, float fromY, float toX, float toY, float x, float y, float reach) {
+        float spanX = toX - fromX;
+        float spanY = toY - fromY;
+        float lengthSquared = spanX * spanX + spanY * spanY;
+        float along = lengthSquared <= 0f ? 0f : ((x - fromX) * spanX + (y - fromY) * spanY) / lengthSquared;
+        along = Math.max(0f, Math.min(1f, along));
+        return withinRange(fromX + spanX * along, fromY + spanY * along, x, y, reach);
     }
 }

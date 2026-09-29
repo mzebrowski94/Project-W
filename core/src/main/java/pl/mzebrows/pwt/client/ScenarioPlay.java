@@ -26,6 +26,23 @@ public interface ScenarioPlay extends AutoCloseable {
      */
     void pick(int seat, int serial, UpgradeKind kind);
 
+    /**
+     * Takes the card at this place on the keyboard seat's oldest draft, from the next tick - the harness's
+     * {@code F5}-{@code F7}. The card is read now, as it is shown, and handed on as its kind (G0049).
+     */
+    default void takeCard(int position) {
+        Simulation world = simulation();
+        int slot = slotOf(0);
+        if (world == null || slot < 0) {
+            return;
+        }
+        int serial = world.upgradeView().oldestDraftOf(slot);
+        @Nullable UpgradeKind kind = serial == 0 ? null : world.upgradeView().card(serial, position);
+        if (kind != null) {
+            pick(0, serial, kind);
+        }
+    }
+
     /** Carries out one harness command. {@code local} is what the players are holding, for a single step. */
     void apply(HarnessCommand command, PlayerInputs local);
 
@@ -53,6 +70,19 @@ public interface ScenarioPlay extends AutoCloseable {
      * may not have landed yet, and toggling on top of it would undo it. Offline it happens at once.
      */
     void setPaused(boolean on);
+
+    /**
+     * The same, for a solo player's draft (D2): online the pause carries that reason to every machine, so
+     * none covers the view with the paused banner. Offline it is simply a pause.
+     */
+    default void setDraftPaused(boolean on) {
+        setPaused(on);
+    }
+
+    /** Whether the pause in force is for a solo player's draft, asked for on whichever machine. */
+    default boolean pausedForDraft() {
+        return false;
+    }
 
     /** Whether RESTART is this machine's to give: offline, or while it hosts. */
     default boolean canRestart() {

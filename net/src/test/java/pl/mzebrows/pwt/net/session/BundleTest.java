@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 class BundleTest {
 
@@ -103,6 +104,61 @@ class BundleTest {
         assertThat(inputs.joins(0)).isFalse();
         assertThat(inputs.switchesInvulnerability()).isTrue();
         assertThat(inputs.invulnerable()).isTrue();
+    }
+
+    /** A card taken and a link dropped or come back cross whole, and reach the world as their events (S8). */
+    @Test
+    void carriesPicksAndPresenceAndHandsThemToAWorld() {
+        Bundle sent = new Bundle(8)
+                .clear(9)
+                .pick(2, 17, UpgradeKind.FIREPOWER)
+                .away(3)
+                .back(6);
+        sent.write(out.reset());
+        int length = out.size();
+
+        assertThat(Bundle.skip(in.wrap(out.array(), 0, length), 8)).isEqualTo(9);
+        assertThat(in.remaining()).isZero();
+        PlayerInputs inputs = new PlayerInputs(8);
+        new Bundle(8).read(in.wrap(out.array(), 0, length)).applyTo(inputs);
+
+        assertThat(inputs.pickOf(2)).isEqualTo(UpgradeKind.FIREPOWER);
+        assertThat(inputs.pickSerialOf(2)).isEqualTo(17);
+        assertThat(inputs.pickOf(3)).isNull();
+        assertThat(inputs.goesAway(3)).isTrue();
+        assertThat(inputs.comesBack(3)).isFalse();
+        assertThat(inputs.comesBack(6)).isTrue();
+        assertThat(inputs.goesAway(6)).isFalse();
+    }
+
+    /** The history a sequencer keeps is sized by this: a tick with everything in it must fit. */
+    @Test
+    void fitsATickWithEverythingInItInTheRoomTheSequencerKeeps() {
+        Bundle full = new Bundle(8).clear(1).restarting();
+        full.switchInvulnerability(true);
+        for (int slot = 0; slot < 8; slot++) {
+            full.hold(slot, new CommanderInput(1f, 1f, 1f, 1f, true, true))
+                    .order(slot, Order.FORWARD)
+                    .join(slot)
+                    .pick(slot, Integer.MAX_VALUE, UpgradeKind.EXPLOSIVES);
+            if (slot % 2 == 0) {
+                full.away(slot);
+            } else {
+                full.back(slot);
+            }
+        }
+        WireWriter big = new WireWriter(1024);
+
+        full.write(big);
+
+        assertThat(big.size()).isLessThanOrEqualTo(Sequencer.maxBundleBytes(8));
+    }
+
+    @Test
+    void refusesAnUpgradeNobodyCanTake() {
+        assertThatThrownBy(() -> Bundle.pickFromCode(0)).isInstanceOf(WireException.class);
+        assertThatThrownBy(() -> Bundle.pickFromCode(UpgradeKind.values().length + 1))
+                .isInstanceOf(WireException.class);
     }
 
     @Test

@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.WorldCodec;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * One machine's place in a session (ADR 0012): it sends what its players hold and order, steps its
@@ -81,7 +82,7 @@ public final class PeerSession implements AutoCloseable {
      */
     private static final int PAUSED_INPUT_TICKS = 15;
 
-    /** The most unacknowledged orders sent in one message. */
+    /** The most unacknowledged input events - orders and picks - sent in one message. */
     private static final int EVENTS_PER_MESSAGE = 16;
 
     private final Transport transport;
@@ -112,6 +113,9 @@ public final class PeerSession implements AutoCloseable {
     private PlayerInputs inputs = new PlayerInputs(1);
     private int generation;
     private boolean paused;
+
+    /** Whether the pause in force was asked for by a solo player's draft (D2). */
+    private boolean pausedForDraft;
 
     /** The last tick this world stepped. */
     private int tick = -1;
@@ -151,7 +155,9 @@ public final class PeerSession implements AutoCloseable {
     private int eventsAcked;
     private final int[] eventSeq = new int[64];
     private final int[] eventSlot = new int[64];
-    private final int[] eventCode = new int[64];
+    private final int[] eventType = new int[64];
+    private final int[] eventValue = new int[64];
+    private final int[] eventExtra = new int[64];
     private int eventCount;
 
     private final int[] keyTick = new int[KEYFRAMES];
@@ -211,7 +217,7 @@ public final class PeerSession implements AutoCloseable {
         if (state != State.PLAYING || current == null) {
             return;
         }
-        queueOrders(local);
+        queueEvents(local);
         accumulator += elapsed;
         int available = contiguous - tick;
         // On time: the ticks this frame's time is worth, as far as there are any. Only these spend time.
@@ -258,7 +264,15 @@ public final class PeerSession implements AutoCloseable {
 
     /** Pauses or resumes the whole session. Anybody may (G0038). */
     public void pause(boolean on) {
-        sendControl(out.reset().putByte(Msg.PAUSE).putByte(on ? 1 : 0));
+        sendControl(out.reset().putByte(Msg.PAUSE).putByte(on ? 1 : 0).putByte(Msg.PAUSE_BY_PLAYER));
+    }
+
+    /**
+     * Pauses or resumes the session for a solo player's draft (D2): a pause like any other, carrying its
+     * reason, so every machine can leave the view clear of the paused banner.
+     */
+    public void pauseForDraft(boolean on) {
+        sendControl(out.reset().putByte(Msg.PAUSE).putByte(on ? 1 : 0).putByte(Msg.PAUSE_FOR_DRAFT));
     }
 
     /** Restarts the scenario on every machine. The host's to ask for; the sequencer ignores anyone else. */
@@ -312,6 +326,11 @@ public final class PeerSession implements AutoCloseable {
 
     public boolean paused() {
         return paused;
+    }
+
+    /** Whether the session is paused for a solo player's draft rather than by somebody's hand (D2). */
+    public boolean pausedForDraft() {
+        return pausedForDraft;
     }
 
     /**
@@ -393,16 +412,33 @@ public final class PeerSession implements AutoCloseable {
         newestTag = Math.max(newestTag, tag);
     }
 
-    private void queueOrders(PlayerInputs local) {
+    /** Numbers every order and every card taken this frame, to be sent until the sequencer has sealed it. */
+    private void queueEvents(PlayerInputs local) {
         for (int seat = 0; seat < slotOfSeat.length && seat < local.capacity(); seat++) {
+            if (slotOfSeat[seat] < 0) {
+                continue;
+            }
             Order order = local.orderOf(seat);
-            if (order != null && slotOfSeat[seat] >= 0 && eventCount < eventSeq.length) {
-                eventSeq[eventCount] = nextEventSeq++;
-                eventSlot[eventCount] = slotOfSeat[seat];
-                eventCode[eventCount] = Bundle.orderCode(order);
-                eventCount++;
+            if (order != null) {
+                queue(slotOfSeat[seat], Msg.EVENT_ORDER, Bundle.orderCode(order), 0);
+            }
+            UpgradeKind picked = local.pickOf(seat);
+            if (picked != null) {
+                queue(slotOfSeat[seat], Msg.EVENT_PICK, local.pickSerialOf(seat), Bundle.pickCode(picked));
             }
         }
+    }
+
+    private void queue(int slot, int type, int value, int extra) {
+        if (eventCount == eventSeq.length) {
+            return;
+        }
+        eventSeq[eventCount] = nextEventSeq++;
+        eventSlot[eventCount] = slot;
+        eventType[eventCount] = type;
+        eventValue[eventCount] = value;
+        eventExtra[eventCount] = extra;
+        eventCount++;
     }
 
     private void sendInput(long nowNanos, boolean stepped) {
@@ -430,7 +466,7 @@ public final class PeerSession implements AutoCloseable {
             }
         }
         int events = Math.min(eventCount, EVENTS_PER_MESSAGE);
-        int room = maxDatagramBytes - out.size() - 4 - 1 - 1 - events * 6;
+        int room = maxDatagramBytes - out.size() - 4 - 1 - 1 - events * Msg.EVENT_BYTES;
         int fit = seated == 0 ? 0 : Math.min(Math.min(room / (seated * Bundle.HELD_BYTES), 255), OWN / 2);
         int first = Math.max(contiguous + 1, newestTag - fit + 1);
         int count = seated == 0 || newestTag < first ? 0 : newestTag - first + 1;
@@ -445,7 +481,11 @@ public final class PeerSession implements AutoCloseable {
         }
         out.putByte(events);
         for (int i = 0; i < events; i++) {
-            out.putInt(eventSeq[i]).putByte(eventSlot[i]).putByte(eventCode[i]);
+            out.putInt(eventSeq[i])
+                    .putByte(eventSlot[i])
+                    .putByte(eventType[i])
+                    .putInt(eventValue[i])
+                    .putByte(eventExtra[i]);
         }
         transport.send(link, Delivery.UNRELIABLE, out.array(), 0, out.size());
     }
@@ -543,8 +583,13 @@ public final class PeerSession implements AutoCloseable {
                 paused = in.getByte() != 0;
                 int at = in.getInt();
                 int by = in.getInt();
+                int reason = in.getByte();
                 in.expectEnd();
-                log.info("peer", "event=" + (paused ? "paused" : "resumed") + " tick=" + at + " by=" + by);
+                pausedForDraft = paused && reason == Msg.PAUSE_FOR_DRAFT;
+                log.info(
+                        "peer",
+                        "event=" + (paused ? "paused" : "resumed") + " tick=" + at + " by=" + by
+                                + (pausedForDraft ? " reason=draft" : ""));
             }
             case Msg.DESYNC -> {
                 int at = in.getInt();
@@ -699,7 +744,9 @@ public final class PeerSession implements AutoCloseable {
             if (eventSeq[i] > eventsAcked) {
                 eventSeq[kept] = eventSeq[i];
                 eventSlot[kept] = eventSlot[i];
-                eventCode[kept] = eventCode[i];
+                eventType[kept] = eventType[i];
+                eventValue[kept] = eventValue[i];
+                eventExtra[kept] = eventExtra[i];
                 kept++;
             }
         }

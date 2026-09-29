@@ -11,7 +11,6 @@ import pl.mzebrows.pwt.net.transport.Delivery;
 import pl.mzebrows.pwt.net.transport.Transport;
 import pl.mzebrows.pwt.net.transport.TransportListener;
 import pl.mzebrows.pwt.sim.CommanderInput;
-import pl.mzebrows.pwt.sim.def.Order;
 
 /**
  * The session's clock and nothing else (ADR 0012): every tick it seals what each slot is holding, and
@@ -74,6 +73,16 @@ public final class Sequencer implements AutoCloseable {
     private final int[][] aheadTick;
     private final boolean[] joinWanted;
 
+    /**
+     * By slot, whether its link dropped and nobody has been seated in it since (G0052): its commander
+     * stands idle, and the draft rotation passes it by. Sealed as <em>away</em> the tick after the drop and
+     * as <em>back</em> the tick after somebody is seated in it again.
+     */
+    private final boolean[] away;
+
+    private final boolean[] awayWanted;
+    private final boolean[] backWanted;
+
     private final byte[][] history;
     private final int[] historyLength;
     private final int[] historyTick;
@@ -89,6 +98,10 @@ public final class Sequencer implements AutoCloseable {
     private int sealed = -1;
     private boolean started;
     private boolean paused;
+
+    /** Why the pause in force was asked for: a player's hand, or a solo player's draft (D2). */
+    private int pauseReason = Msg.PAUSE_BY_PLAYER;
+
     private long now;
     private long nextSealNanos;
     private long nextStatsNanos;
@@ -141,6 +154,9 @@ public final class Sequencer implements AutoCloseable {
             Arrays.fill(ticks, -1);
         }
         joinWanted = new boolean[capacity];
+        away = new boolean[capacity];
+        awayWanted = new boolean[capacity];
+        backWanted = new boolean[capacity];
         int historySize = pacing.historyTicks();
         history = new byte[historySize][maxBundleBytes(capacity)];
         historyLength = new int[historySize];
@@ -153,7 +169,19 @@ public final class Sequencer implements AutoCloseable {
 
     /** The most bytes one sealed tick can take for a session this size. */
     static int maxBundleBytes(int capacity) {
-        return 4 + 1 + 1 + capacity * (1 + Bundle.HELD_BYTES) + 1 + capacity * 2 + 1 + capacity;
+        return 4
+                + 1
+                + 1
+                + capacity * (1 + Bundle.HELD_BYTES)
+                + 1
+                + capacity * 2
+                + 1
+                + capacity
+                // A card taken per slot, then a presence change per slot.
+                + 1
+                + capacity * (1 + 4 + 1)
+                + 1
+                + capacity * 2;
     }
 
     /** Starts listening for peers; returns the port it got. */
@@ -243,11 +271,23 @@ public final class Sequencer implements AutoCloseable {
             if (invulnerable) {
                 invulnerabilityChanged = true;
             }
+            // A new world has nobody in it who is away: a slot nobody holds is simply empty there.
+            Arrays.fill(away, false);
+            Arrays.fill(awayWanted, false);
+            Arrays.fill(backWanted, false);
             restartWanted = false;
             log.info("sequencer", "event=restart tick=" + tick);
         }
         int index = tick & (AHEAD - 1);
         for (int slot = 0; slot < capacity; slot++) {
+            if (awayWanted[slot]) {
+                sealing.away(slot);
+                awayWanted[slot] = false;
+            }
+            if (backWanted[slot]) {
+                sealing.back(slot);
+                backWanted[slot] = false;
+            }
             if (owner[slot] < 0) {
                 continue;
             }
@@ -590,11 +630,19 @@ public final class Sequencer implements AutoCloseable {
         for (int i = 0; i < eventCount; i++) {
             int seq = in.getInt();
             int slot = in.getByte();
-            int code = in.getByte();
+            int type = in.getByte();
+            int value = in.getInt();
+            int extra = in.getByte();
             if (slot >= capacity) {
                 throw new WireException("slot " + slot + " in a session of " + capacity);
             }
-            peer.hold(seq, slot, Bundle.orderFromCode(code));
+            // Read whole before anything is held, so a malformed event is refused rather than sealed.
+            switch (type) {
+                case Msg.EVENT_ORDER -> Bundle.orderFromCode(value);
+                case Msg.EVENT_PICK -> Bundle.pickFromCode(extra);
+                default -> throw new WireException("no input event of type " + type);
+            }
+            peer.hold(seq, slot, type, value, extra);
         }
         in.expectEnd();
     }
@@ -701,6 +749,20 @@ public final class Sequencer implements AutoCloseable {
                 Arrays.fill(aheadTick[slot], -1);
                 joinWanted[slot] = true;
                 peer.slotOfSeat[seat] = slot;
+                if (away[slot]) {
+                    // Somebody is at this commander again. If the drop has not been sealed yet, nothing was.
+                    away[slot] = false;
+                    if (awayWanted[slot]) {
+                        awayWanted[slot] = false;
+                    } else {
+                        backWanted[slot] = true;
+                    }
+                }
+                if (paused && pauseReason == Msg.PAUSE_FOR_DRAFT) {
+                    // A second player makes the game co-op, and co-op never pauses (D2). Nothing is sealed
+                    // while paused, so the world would never hear he had come - the pause lifts here.
+                    setPaused(false, Msg.PAUSE_FOR_DRAFT, peer.id);
+                }
             }
             log.info("sequencer", "event=seated peer=" + peer.id + " seat=" + seat + " slot=" + slot);
         }
@@ -710,16 +772,34 @@ public final class Sequencer implements AutoCloseable {
 
     private void pause(Peer peer) {
         boolean want = in.getByte() != 0;
+        int reason = in.getByte();
         in.expectEnd();
+        if (reason != Msg.PAUSE_BY_PLAYER && reason != Msg.PAUSE_FOR_DRAFT) {
+            throw new WireException("no pause reason " + reason);
+        }
         if (want == paused || !started) {
             return;
         }
-        paused = want;
+        setPaused(want, reason, peer.id);
+    }
+
+    /** Pauses or resumes, and tells every machine who asked and why. */
+    private void setPaused(boolean on, int reason, int by) {
+        paused = on;
+        pauseReason = reason;
         if (!paused) {
             nextSealNanos = now + tickNanos;
         }
-        log.info("sequencer", "event=" + (paused ? "paused" : "resumed") + " by=" + peer.id + " tick=" + sealed);
-        out.reset().putByte(Msg.PAUSED).putByte(paused ? 1 : 0).putInt(sealed).putInt(peer.id);
+        log.info(
+                "sequencer",
+                "event=" + (paused ? "paused" : "resumed") + " by=" + by + " tick=" + sealed
+                        + (reason == Msg.PAUSE_FOR_DRAFT ? " reason=draft" : ""));
+        out.reset()
+                .putByte(Msg.PAUSED)
+                .putByte(paused ? 1 : 0)
+                .putInt(sealed)
+                .putInt(by)
+                .putByte(reason);
         for (int i = 0; i < peers.size(); i++) {
             Peer each = peers.get(i);
             if (each.id >= 0) {
@@ -754,6 +834,13 @@ public final class Sequencer implements AutoCloseable {
             if (owner[slot] == peer.id && peer.id >= 0) {
                 owner[slot] = -1;
                 lastHeld[slot] = CommanderInput.IDLE;
+                // The unplugged pad of G0038: the commander stays, and the draft rotation passes him by.
+                if (!joinWanted[slot]) {
+                    away[slot] = true;
+                    awayWanted[slot] = true;
+                    backWanted[slot] = false;
+                }
+                joinWanted[slot] = false;
             }
         }
         log.info("sequencer", "event=left peer=" + peer.id + " link=" + peer.link + " reason=\"" + reason + "\"");
@@ -826,12 +913,14 @@ public final class Sequencer implements AutoCloseable {
         /** The tick sealed when it loaded: it has caught up once it acknowledges that, -1 once it has. */
         int catchUpTo = -1;
 
-        /** Orders heard but not yet sealed: numbered, applied in number order, once each. */
+        /** Input events heard but not yet sealed: numbered, applied in number order, once each. */
         int eventsApplied;
 
         final int[] eventSeq = new int[32];
         final int[] eventSlot = new int[32];
-        final Order[] eventOrder = new Order[32];
+        final int[] eventType = new int[32];
+        final int[] eventValue = new int[32];
+        final int[] eventExtra = new int[32];
         int eventCount;
 
         /** Per history slot: which tick was last sent there, when first and when last. */
@@ -868,7 +957,7 @@ public final class Sequencer implements AutoCloseable {
             roundTripNanos = roundTripNanos == 0L ? sample : (3 * roundTripNanos + sample) / 4;
         }
 
-        void hold(int seq, int slot, Order order) {
+        void hold(int seq, int slot, int type, int value, int extra) {
             if (seq <= eventsApplied || eventCount == eventSeq.length) {
                 return;
             }
@@ -879,11 +968,16 @@ public final class Sequencer implements AutoCloseable {
             }
             eventSeq[eventCount] = seq;
             eventSlot[eventCount] = slot;
-            eventOrder[eventCount] = order;
+            eventType[eventCount] = type;
+            eventValue[eventCount] = value;
+            eventExtra[eventCount] = extra;
             eventCount++;
         }
 
-        /** Seals every order that is next in line, one per slot per tick; a second waits for the next tick. */
+        /**
+         * Seals every event that is next in line, one of each type per slot per tick; a second waits for the
+         * next tick, and so does everything after it, so they land in the order they were given.
+         */
         void applyEvents(Bundle bundle, int[] owners) {
             while (true) {
                 int next = -1;
@@ -897,16 +991,25 @@ public final class Sequencer implements AutoCloseable {
                 }
                 int slot = eventSlot[next];
                 if (owners[slot] == id) {
-                    if (bundle.orderOf(slot) != null) {
-                        return;
+                    if (eventType[next] == Msg.EVENT_PICK) {
+                        if (bundle.pickOf(slot) != null) {
+                            return;
+                        }
+                        bundle.pick(slot, eventValue[next], Bundle.pickFromCode(eventExtra[next]));
+                    } else {
+                        if (bundle.orderOf(slot) != null) {
+                            return;
+                        }
+                        bundle.order(slot, Bundle.orderFromCode(eventValue[next]));
                     }
-                    bundle.order(slot, eventOrder[next]);
                 }
                 eventsApplied++;
                 eventCount--;
                 eventSeq[next] = eventSeq[eventCount];
                 eventSlot[next] = eventSlot[eventCount];
-                eventOrder[next] = eventOrder[eventCount];
+                eventType[next] = eventType[eventCount];
+                eventValue[next] = eventValue[eventCount];
+                eventExtra[next] = eventExtra[eventCount];
             }
         }
 

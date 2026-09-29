@@ -226,6 +226,9 @@ public final class Trooper implements Component, Pool.Poolable {
      */
     public float aidDue;
 
+    /** What it is still due before it next throws a grenade, for {@code AiChance.THROW_A_GRENADE} (G0051). */
+    public float throwDue;
+
     /** Sets what this trooper can notice, and returns this component, for fluent spawning. */
     public Trooper sees(float newSightRange, float newHoldRange, float newArcCosine, boolean newRequiresClearLine) {
         this.sightRange = newSightRange;
@@ -285,6 +288,7 @@ public final class Trooper implements Component, Pool.Poolable {
         struggleDue = 0f;
         turretDue = 0f;
         aidDue = 0f;
+        throwDue = 0f;
         order = null;
         orderedBy = 0;
         sentOn = false;

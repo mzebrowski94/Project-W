@@ -30,7 +30,12 @@ public enum Stat {
      */
     MAX_WOUNDS(Form.COUNT, Reader.UNIT),
     /** How long after his last wound a man's wounds clear on their own, in seconds; zero never. Read where it runs. */
-    MEND_SECONDS(Form.COUNT, Reader.UNIT);
+    MEND_SECONDS(Form.COUNT, Reader.UNIT),
+    /**
+     * How many cards of one cache the armoury deck holds (G0050). Read where a sealed cache is dealt its
+     * gun; the side's number, moved only by a {@code Deal}.
+     */
+    ARMOURY_CARDS(Form.COUNT, Reader.SIDE);
 
     /** How an effect moves the number. */
     public enum Form {

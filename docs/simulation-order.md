@@ -128,6 +128,13 @@ Worth naming, because a reasonable guess puts each of these somewhere else.
 - **`ProjectileBoundsSystem` (35) runs in the death chain**, not with collision (25) where it looks
   like it belongs and not after the reactions, where it used to be. It is the system that ends a
   shot nothing stopped, and ending is dying.
+- **A trooper's grenade leaves his hand in `TrooperCombatSystem` (14)**, before the solver and before
+  `GrenadeSystem`, where the commander's does (G0051). It is simply in the air a little sooner in the
+  tick than his: `MovementSystem` moves it this tick and `GrenadeSystem` spends its distance, as for
+  any grenade already flying. Nothing reads which system threw it.
+- **`PickupSystem` (27) reveals sealed caches after it has granted this tick's claims** (G0050), so a
+  cache dealt its gun this tick can be taken on the next at the earliest. Nothing depends on that tick:
+  the reveal radius is far past the reach (`SimConfigTest`), so nobody is touching it when it turns.
 - **`ReinforcementSystem` (40) is nowhere near `PickupSystem` (27)**, though a crate is what
   starts it. The pickup writes a count on the level entity and this reads it at the end of the
   tick, which is the point of a level-scope grant: the two halves do not have to be adjacent,

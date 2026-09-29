@@ -24,6 +24,15 @@ final class Throws {
 
     private Throws() {}
 
+    /**
+     * How far from this thrower's centre what he throws comes down, if nothing turns it: where it leaves
+     * the hand, plus the distance it spends (G0019). The throw's reach, for anyone deciding whether to
+     * make it.
+     */
+    static float reach(Entity entity, Thrower thrower) {
+        return BODY.get(entity).radius + thrower.radius + MUZZLE_GAP + thrower.range;
+    }
+
     /** Throws one grenade from this thrower along this direction, and starts his wait for the next. */
     static void release(
             Spawner spawner, Modifiers modifiers, Entity entity, Thrower thrower, float directionX, float directionY) {

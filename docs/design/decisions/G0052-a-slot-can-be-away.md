@@ -5,8 +5,10 @@ the HUD's OFFLINE label, a pause that should end; a dropped link or a returning 
 "solo".
 
 **Enforced by.** `DraftTest` - an away slot's drafts pass on, and the rotation skips it (S3).
-`SessionTest` - a dropped link passes its drafts on identically on every machine, and a return puts
-the slot back in the rotation (S8). Until then: nothing mechanical - caught by reading.
+`SessionTest.passesADroppedPlayersTurnOnAndTakesHimBackWhenSomebodySitsInHisSlot` - a dropped link is
+sealed as away on every machine and the drafts come round past it; somebody seated in the slot again is
+sealed as back (S8). `SessionTest.liftsADraftPauseWhenASecondPlayerSitsDown` - a solo draft's pause
+ends when a second player sits down.
 
 **Supersedes in part G0038's** "a dropped connection is an unplugged pad; the commanders stay
 standing and read as idle". That stays true, and now the slot is also marked **away** until it

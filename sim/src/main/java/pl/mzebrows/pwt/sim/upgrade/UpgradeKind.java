@@ -22,5 +22,9 @@ public enum UpgradeKind {
     /** One more wound on his feet per rank, for the squad and every commander (G0053). */
     THICK_SKIN,
     /** The chooser's wounds clear on their own some seconds after his last one (G0053). Personal. */
-    SELF_TREATMENT
+    SELF_TREATMENT,
+    /** More flamers dealt to sealed caches, and harder-hitting flames for whoever holds one (G0050). */
+    FIREPOWER,
+    /** Troopers who throw grenades into packs - only where the blast is the enemy's (G0051). */
+    EXPLOSIVES
 }

@@ -21,6 +21,7 @@ public final class Components {
                     Appearance.class,
                     Armour.class,
                     Approach.class,
+                    Armoury.class,
                     Avoidance.class,
                     Barrage.class,
                     Blast.class,

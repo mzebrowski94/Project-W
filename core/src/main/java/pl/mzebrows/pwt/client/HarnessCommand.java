@@ -28,8 +28,8 @@ public enum HarnessCommand {
     /** Leave for the menu - what the pause menu's LEAVE carries out, once confirmed. */
     LEAVE,
     /**
-     * Take the first, second or third card of the keyboard seat's oldest draft. Scaffolding until the
-     * draft bar (upgrades S5); offline only until online drafts (S8).
+     * Take the first, second or third card of the keyboard seat's oldest draft. Scaffolding kept beside the
+     * draft bar (upgrades S5); online the pick crosses the wire like any other (S8).
      */
     TAKE_FIRST_CARD,
     TAKE_SECOND_CARD,

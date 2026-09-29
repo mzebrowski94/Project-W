@@ -2,7 +2,10 @@ package pl.mzebrows.pwt.sim.upgrade;
 
 import java.util.List;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.PickupDef;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Require;
 import pl.mzebrows.pwt.sim.def.Side;
 
@@ -59,12 +62,16 @@ public record UpgradeDef(
 
     /**
      * What can only be checked of the whole catalogue: a requirement that goes round in a circle or
-     * crosses sides, a group of one, a tier nobody unlocks, and a stat block whose unused keys are set.
+     * crosses sides, a group of one, a tier nobody unlocks, a stat block whose unused keys are set, and
+     * an armoury deck a deal cannot add to or a bag cannot hold.
      *
      * @throws IllegalArgumentException naming the first of those it finds
      */
     public static void checkCatalogue(
-            DraftDef draft, Defs<Stat, StatDef> stats, Defs<UpgradeKind, UpgradeDef> upgrades) {
+            DraftDef draft,
+            Defs<Stat, StatDef> stats,
+            Defs<UpgradeKind, UpgradeDef> upgrades,
+            Defs<PickupKind, PickupDef> pickups) {
         UpgradeKind[] kinds = UpgradeKind.values();
         for (UpgradeKind kind : kinds) {
             UpgradeDef def = upgrades.of(kind);
@@ -95,6 +102,7 @@ public record UpgradeDef(
                 }
             }
         }
+        checkDeck(upgrades, pickups);
         for (Stat stat : Stat.values()) {
             StatDef def = stats.of(stat);
             boolean scale = stat.form() == Stat.Form.SCALE;
@@ -103,6 +111,38 @@ public record UpgradeDef(
                 throw new IllegalArgumentException(
                         stat + " is moved by " + stat.form() + ", so its other keys must be zero, or they lie");
             }
+        }
+    }
+
+    /**
+     * The armoury deck (G0050): a deal adds to a cache the deck already holds, a level that seals a cache
+     * has a deck to deal it from, and the deck with every deal at its highest rank still fits a bag.
+     */
+    private static void checkDeck(Defs<UpgradeKind, UpgradeDef> upgrades, Defs<PickupKind, PickupDef> pickups) {
+        int cards = 0;
+        boolean sealed = false;
+        for (PickupDef pickup : pickups.values()) {
+            cards += pickup.armoury().cards();
+            sealed |= pickup.armoury().sealed();
+        }
+        if (sealed && cards == 0) {
+            throw new IllegalArgumentException("a cache can be sealed, but the armoury deck has no card to deal it");
+        }
+        for (UpgradeKind kind : UpgradeKind.values()) {
+            UpgradeDef def = upgrades.of(kind);
+            for (Effect effect : def.effects()) {
+                if (effect instanceof Effect.Deal deal) {
+                    if (!pickups.of(deal.card()).armoury().inDeck()) {
+                        throw new IllegalArgumentException(
+                                kind + " deals " + deal.card() + ", which is not a card in the armoury deck");
+                    }
+                    cards += deal.amount() * def.ranks();
+                }
+            }
+        }
+        if (cards > Bag.MOST) {
+            throw new IllegalArgumentException("the armoury deck holds " + cards
+                    + " cards with every deal at its highest rank, and a bag deals at most " + Bag.MOST);
         }
     }
 }

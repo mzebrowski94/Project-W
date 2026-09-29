@@ -46,9 +46,13 @@ class AdventureScenarioTest {
     /** The last biome: the one that is held rather than marched through. */
     private static final int REDOUBT = BIOME_END.length - 1;
 
-    /** Every kind of weapons cache there is. One per gun, and this list must grow with that enum. */
-    private static final EnumSet<PickupKind> CACHES =
-            EnumSet.of(PickupKind.ARMOURY_RAILGUN, PickupKind.ARMOURY_FLAMER, PickupKind.ARMOURY_SHOTGUN);
+    /** Every kind of weapons cache there is: one per gun, and the sealed one. This list must grow with that enum. */
+    private static final EnumSet<PickupKind> CACHES = EnumSet.of(
+            PickupKind.ARMOURY_RAILGUN,
+            PickupKind.ARMOURY_FLAMER,
+            PickupKind.ARMOURY_SHOTGUN,
+            PickupKind.ARMOURY_LASER,
+            PickupKind.ARMOURY_SEALED);
 
     @Test
     void laysOutTwoPointsInEveryBiomeItMarchesThrough() {

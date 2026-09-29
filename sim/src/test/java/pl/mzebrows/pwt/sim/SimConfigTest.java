@@ -5,9 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.component.Upgrades;
+import pl.mzebrows.pwt.sim.def.ArmouryDef;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
@@ -17,6 +20,7 @@ import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.upgrade.Effect;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
@@ -149,6 +153,69 @@ class SimConfigTest {
                         .isLessThan(secondsOfHolding(config, crate.weapon(), modifiers, commander));
             }
         }
+    }
+
+    /**
+     * <strong>A sealed cache shows its gun before anybody can touch it</strong> (G0050). A commander
+     * reaches a cache at its radius plus his own; the reveal must fire further out than that, for the
+     * sealed crate and for every cache it can become, or he could walk onto a gun he never saw.
+     */
+    @Test
+    void revealsASealedCacheBeforeACommanderCanReachIt() {
+        SimConfig config = SimConfig.defaults();
+        float widestCache = 0f;
+        for (PickupKind kind : PickupKind.values()) {
+            ArmouryDef armoury = config.pickup(kind).armoury();
+            if (armoury.sealed() || armoury.inDeck()) {
+                widestCache = Math.max(widestCache, config.pickup(kind).radius());
+            }
+        }
+
+        for (PickupKind kind : PickupKind.values()) {
+            if (config.pickup(kind).armoury().sealed()) {
+                assertThat(config.pickup(kind).armoury().revealRadius())
+                        .as("%s must show its gun before a commander can touch it", kind)
+                        .isGreaterThan(widestCache + config.commander().radius());
+            }
+        }
+    }
+
+    /** A deal adds to a card the deck already holds; dealing sealed caches would deal them forever. */
+    @Test
+    void refusesADealOfACacheTheArmouryDeckDoesNotHold() {
+        SimConfig config = AlphaWorlds.config();
+
+        assertThatThrownBy(() -> config.withUpgrades(config.upgrades()
+                        .map(
+                                UpgradeKind.FIREPOWER,
+                                firepower -> new UpgradeDef(
+                                        Side.PLAYER,
+                                        0,
+                                        2,
+                                        1,
+                                        null,
+                                        0,
+                                        List.of(new Effect.Deal(PickupKind.ARMOURY_SEALED, 1))))))
+                .hasMessageContaining("not a card in the armoury deck");
+    }
+
+    /** The deck with every deal at its highest rank still fits the bag it is dealt from. */
+    @Test
+    void refusesAnArmouryDeckTooBigForABag() {
+        SimConfig config = AlphaWorlds.config();
+
+        assertThatThrownBy(() -> config.withUpgrades(config.upgrades()
+                        .map(
+                                UpgradeKind.FIREPOWER,
+                                firepower -> new UpgradeDef(
+                                        Side.PLAYER,
+                                        0,
+                                        2,
+                                        1,
+                                        null,
+                                        0,
+                                        List.of(new Effect.Deal(PickupKind.ARMOURY_FLAMER, Bag.MOST))))))
+                .hasMessageContaining("a bag deals at most");
     }
 
     /**

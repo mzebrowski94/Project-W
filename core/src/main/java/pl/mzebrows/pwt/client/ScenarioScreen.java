@@ -321,21 +321,21 @@ public final class ScenarioScreen extends ScreenAdapter {
                 }
             }
         }
-        boolean solo = !play.online() && playersIn() <= 1;
+        boolean solo = playersIn() <= 1;
         switch (draftPause.next(draftBar.open(), solo, play.paused(), menus.menuOpen())) {
-            case PAUSE -> play.setPaused(true);
-            case RESUME -> play.setPaused(false);
+            case PAUSE -> play.setDraftPaused(true);
+            case RESUME -> play.setDraftPaused(false);
             case NONE -> {
                 // Nothing to change.
             }
         }
-        menus.quietPause(draftPause.ours());
+        menus.quietPause(draftPause.ours() || play.pausedForDraft());
     }
 
     private int playersIn() {
         int count = 0;
         for (int slot = 0; slot < Players.MAX; slot++) {
-            if (readout.player(slot).posture != Posture.ABSENT) {
+            if (readout.player(slot).posture != Posture.ABSENT && !readout.player(slot).away) {
                 count++;
             }
         }
@@ -391,12 +391,14 @@ public final class ScenarioScreen extends ScreenAdapter {
     }
 
     /**
-     * Who has a panel, and whose is grey. A local seat whose pad is unplugged is offline; his commander
-     * stays on the field. Whether a player on another machine is still connected is not published to
-     * this one yet, so remote players read as connected.
+     * Who has a panel, and whose is grey. A local seat whose pad is unplugged is offline, and so is a slot
+     * whose link dropped (G0052, published by the host since upgrades S8); either way his commander stays
+     * on the field.
      */
     private void seatPanels() {
-        Arrays.fill(connected, true);
+        for (int slot = 0; slot < Players.MAX; slot++) {
+            connected[slot] = !readout.player(slot).away;
+        }
         Arrays.fill(draftKeys, "");
         for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
             int slot = play.slotOf(seat);

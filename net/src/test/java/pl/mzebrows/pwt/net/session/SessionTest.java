@@ -18,6 +18,8 @@ import pl.mzebrows.pwt.net.session.SessionHarness.Machine;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
 
 /**
  * Whole sessions, host and peers in one test: every machine ends on the same world, whatever the
@@ -376,5 +378,229 @@ class SessionTest {
             most = Math.max(most, machine.session.lead());
         }
         return most;
+    }
+
+    /** A card taken on a joining machine is sealed like an order and lands in every world (upgrades S8). */
+    @Test
+    void carriesACardTakenOnAJoiningMachineToEveryMachine() {
+        try (SessionHarness session = new SessionHarness("Thicket" + TestWorlds.DRAFTING, 23L, ACROSS_A_CITY)) {
+            session.host();
+            Machine friend = session.join("friend", ACROSS_A_CITY);
+            int serial = runUntilDraftFor(session, friend, 1);
+            UpgradeKind kind = view(friend).cardOf(serial, 0);
+            assertThat(kind).isNotNull();
+
+            friend.pick(serial, kind);
+            session.run(120);
+            session.agreedHash();
+
+            for (Machine machine : session.machines) {
+                assertThat(ranks(machine, kind))
+                        .as("%s holds %s", machine.name, kind)
+                        .isPositive();
+            }
+            assertThat(session.sequencer.desyncs()).isZero();
+        }
+    }
+
+    /** What is held crosses in the snapshot: a machine that drops in after three cards holds all three. */
+    @Test
+    void dropsAPlayerInWithEveryCardTakenBeforeHeCame() {
+        try (SessionHarness session = new SessionHarness("Thicket" + TestWorlds.DRAFTING, 29L, PERFECT)) {
+            Machine host = session.host();
+            int taken = 0;
+            for (int frame = 0; frame < 2400 && taken < 3; frame++) {
+                session.run(1);
+                if (host.session.simulation() == null) {
+                    continue;
+                }
+                int serial = view(host).oldestDraftOf(0);
+                if (serial != 0 && view(host).cardOf(serial, 0) != null) {
+                    host.pick(serial, view(host).cardOf(serial, 0));
+                    session.run(10);
+                    taken++;
+                }
+            }
+            assertThat(taken).isEqualTo(3);
+
+            Machine late = session.join("late", ACROSS_A_CITY);
+            session.run(600);
+            long agreed = session.agreedHash();
+
+            assertThat(agreed).isEqualTo(pl.mzebrows.pwt.sim.WorldCodec.hash(SessionHarness.world(late)));
+            assertThat(view(late).heldCount()).isEqualTo(view(host).heldCount()).isPositive();
+            assertThat(session.sequencer.desyncs()).isZero();
+        }
+    }
+
+    /**
+     * A dropped link is sealed as away on every machine, and the drafts come round past it; a machine
+     * seated in the slot again is sealed as back (G0052).
+     */
+    @Test
+    void passesADroppedPlayersTurnOnAndTakesHimBackWhenSomebodySitsInHisSlot() {
+        try (SessionHarness session = new SessionHarness("Thicket" + TestWorlds.DRAFTING, 31L, PERFECT)) {
+            Machine host = session.host();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(300);
+
+            session.leave(friend);
+            session.run(60);
+            assertThat(view(host).away(1))
+                    .as("slot 1 away once his link dropped")
+                    .isTrue();
+            runUntilDraftCount(session, host, 0, 3);
+            assertThat(view(host).draftsOf(1))
+                    .as("no draft goes to an away slot")
+                    .isZero();
+
+            Machine back = session.join("back", PERFECT);
+            session.run(300);
+            session.agreedHash();
+
+            assertThat(back.session.slotOf(0)).isEqualTo(1);
+            for (Machine machine : session.machines) {
+                assertThat(view(machine).away(1))
+                        .as("%s sees slot 1 back", machine.name)
+                        .isFalse();
+            }
+            assertThat(session.sequencer.desyncs()).isZero();
+        }
+    }
+
+    /** Whether a pick counts is the simulation's to say, on every machine alike: one for no draft changes nothing. */
+    @Test
+    void changesNothingAnywhereForACardFromADraftThatIsGone() {
+        try (SessionHarness session = new SessionHarness("Thicket" + TestWorlds.DRAFTING, 37L, PERFECT)) {
+            Machine host = session.host();
+            Machine friend = session.join("friend", PERFECT);
+            runUntilDraftFor(session, host, 0);
+
+            friend.pick(9_999, UpgradeKind.MARKSMEN);
+            host.pick(9_998, UpgradeKind.FIRST_AID);
+            session.run(60);
+            session.agreedHash();
+
+            for (Machine machine : session.machines) {
+                assertThat(view(machine).heldCount())
+                        .as("%s holds nothing", machine.name)
+                        .isZero();
+            }
+            assertThat(session.sequencer.desyncs()).isZero();
+        }
+    }
+
+    /** A solo player's draft pauses the session with its reason, so no machine covers the view (D2). */
+    @Test
+    void tellsEveryMachineAPauseIsForADraft() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 41L, PERFECT)) {
+            Machine host = session.host();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(120);
+
+            host.session.pauseForDraft(true);
+            session.run(10);
+            assertThat(friend.session.paused()).isTrue();
+            assertThat(friend.session.pausedForDraft()).isTrue();
+
+            host.session.pauseForDraft(false);
+            session.run(10);
+            friend.session.pause(true);
+            session.run(10);
+            assertThat(host.session.paused()).isTrue();
+            assertThat(host.session.pausedForDraft()).isFalse();
+        }
+    }
+
+    /**
+     * A friend coming back while the one player left is paused for his draft ends the pause: the game is
+     * co-op again, and co-op never pauses (D2). Nothing is sealed while paused, so the host lifts it.
+     */
+    @Test
+    void liftsADraftPauseWhenASecondPlayerSitsDown() {
+        try (SessionHarness session = new SessionHarness("Thicket" + TestWorlds.DRAFTING, 43L, PERFECT)) {
+            Machine host = session.host();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(120);
+            session.leave(friend);
+            session.run(60);
+
+            host.session.pauseForDraft(true);
+            session.run(10);
+            assertThat(host.session.paused()).isTrue();
+            Machine back = session.join("back", PERFECT);
+            session.run(300);
+
+            assertThat(host.session.paused()).isFalse();
+            assertThat(back.session.slotOf(0)).isEqualTo(1);
+            assertThat(view(host).away(1)).isFalse();
+            session.agreedHash();
+        }
+    }
+
+    /** A hand's pause is nobody's to lift but a hand's: somebody sitting down leaves it on. */
+    @Test
+    void keepsAPlayersPauseWhenSomebodySitsDown() {
+        try (SessionHarness session = new SessionHarness("Thicket", 47L, PERFECT)) {
+            Machine host = session.host();
+            session.run(120);
+
+            host.session.pause(true);
+            session.run(10);
+            session.join("friend", PERFECT);
+            session.run(120);
+
+            assertThat(host.session.paused()).isTrue();
+        }
+    }
+
+    /** Runs until this machine's world shows a draft for this slot, and returns its serial. */
+    private static int runUntilDraftFor(SessionHarness session, Machine machine, int slot) {
+        for (int frame = 0; frame < 2400; frame++) {
+            session.run(1);
+            Simulation world = machine.session.simulation();
+            if (world != null && world.upgradeView().oldestDraftOf(slot) != 0) {
+                return world.upgradeView().oldestDraftOf(slot);
+            }
+        }
+        throw new AssertionError(machine.name + " never saw a draft for slot " + slot);
+    }
+
+    private static void runUntilDraftCount(SessionHarness session, Machine machine, int slot, int drafts) {
+        for (int frame = 0; frame < 2400; frame++) {
+            session.run(1);
+            Simulation world = machine.session.simulation();
+            if (world != null && world.upgradeView().draftsOf(slot) >= drafts) {
+                return;
+            }
+        }
+        Simulation world = SessionHarness.world(machine);
+        int captured = 0;
+        for (com.badlogic.ashley.core.Entity point : world.engine()
+                .getEntitiesFor(com.badlogic.ashley.core.Family.all(pl.mzebrows.pwt.sim.component.ControlPoint.class)
+                        .get())) {
+            captured += point.getComponent(pl.mzebrows.pwt.sim.component.ControlPoint.class).captured ? 1 : 0;
+        }
+        throw new AssertionError(machine.name + " never saw " + drafts + " drafts for slot " + slot + ": slot 0 "
+                + world.upgradeView().draftsOf(0) + ", slot 1 "
+                + world.upgradeView().draftsOf(1) + ", captured "
+                + captured + ", tick " + machine.session.tick() + ", held "
+                + world.upgradeView().heldCount());
+    }
+
+    private static UpgradeView view(Machine machine) {
+        return SessionHarness.world(machine).upgradeView();
+    }
+
+    /** The ranks of this upgrade held, whoever holds them. */
+    private static int ranks(Machine machine, UpgradeKind kind) {
+        UpgradeView view = view(machine);
+        int ranks = 0;
+        for (int i = 0; i < view.heldCount(); i++) {
+            if (view.heldKind(i) == kind) {
+                ranks += view.heldRanks(i);
+            }
+        }
+        return ranks;
     }
 }

@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.upgrade;
 
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
@@ -9,7 +10,7 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  *
  * <p>Written in config as its name and its arguments: {@code scale fire_cooldown team -12},
  * {@code count men_per_crate side 1}, {@code chance aid_a_trooper squad 0.2},
- * {@code gun flamer gun_damage team 25}.
+ * {@code gun flamer gun_damage team 25}, {@code deal armoury_flamer 2}.
  */
 public sealed interface Effect {
 
@@ -53,6 +54,27 @@ public sealed interface Effect {
             requireForm(stat, Stat.Form.SCALE);
             requireReach(stat, target);
             requireSome(percent);
+        }
+    }
+
+    /**
+     * More of one cache in the armoury deck the sealed caches are dealt from (G0050). The side's own
+     * number, so it names no target: nobody in particular reads it.
+     *
+     * @param card the cache the deck deals more of; one the deck already holds, which the catalogue
+     *     check holds to
+     * @param amount how many more cards of it; a deal only ever adds
+     */
+    record Deal(PickupKind card, int amount) implements Effect {
+        public Deal {
+            if (amount <= 0) {
+                throw new IllegalArgumentException("a deal adds cards to the deck, so it adds at least one: " + amount);
+            }
+        }
+
+        @Override
+        public Target target() {
+            return Target.SIDE;
         }
     }
 

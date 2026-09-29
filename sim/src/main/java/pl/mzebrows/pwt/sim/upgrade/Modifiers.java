@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
@@ -113,6 +114,12 @@ public final class Modifiers {
                 stats.of(Stat.MEND_SECONDS).min());
     }
 
+    /** How many cards of this cache the armoury deck holds (G0050). The side's number. */
+    @Reads(Stat.ARMOURY_CARDS)
+    public int armouryCards(PickupKind card, int base) {
+        return Fold.count(base, dealt(card), stats.of(Stat.ARMOURY_CARDS).min());
+    }
+
     /** How often {@code who} does this occasional thing, per second of opportunity. */
     @Reads(Stat.CHANCE)
     public float chance(Entity who, AiChance kind, float base) {
@@ -132,6 +139,24 @@ public final class Modifiers {
             }
         }
         return Fold.chance(base, perSecond);
+    }
+
+    /** The sum of every held deal of this cache, rank by rank. */
+    private int dealt(PickupKind card) {
+        int sum = 0;
+        for (int l = 0; l < ledgers.size(); l++) {
+            Upgrades upgrades = UPGRADES.get(ledgers.get(l));
+            for (int h = 0; h < upgrades.held.size; h++) {
+                Upgrades.Held entry = upgrades.held.get(h);
+                List<Effect> effects = catalogue.of(entry.kind()).effects();
+                for (int e = 0; e < effects.size(); e++) {
+                    if (effects.get(e) instanceof Effect.Deal deal && deal.card() == card) {
+                        sum += deal.amount() * entry.ranks();
+                    }
+                }
+            }
+        }
+        return sum;
     }
 
     /** The sum of every held percentage on this stat that reaches {@code who}, for {@code gun} if it is a gun's. */

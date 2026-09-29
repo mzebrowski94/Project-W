@@ -22,6 +22,7 @@ import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.ApproachDef;
 import pl.mzebrows.pwt.sim.def.ArmourDef;
+import pl.mzebrows.pwt.sim.def.ArmouryDef;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.BarrageDef;
 import pl.mzebrows.pwt.sim.def.Chances;
@@ -42,6 +43,7 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.RangedDef;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.SlickDef;
+import pl.mzebrows.pwt.sim.def.TrooperGrenadeDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
@@ -535,6 +537,12 @@ public final class AlphaWorlds {
     /** Big enough that a unit spawned on a pickup is touching it on the first tick. */
     public static final float PICKUP_RADIUS = 1f;
 
+    /** How many of each gun the armoury deck holds: one, so a full shuffle deals every gun once. */
+    public static final int ARMOURY_CARDS = 1;
+
+    /** How near a commander must come for a sealed cache to be dealt its gun: well past its reach. */
+    public static final float REVEAL_RADIUS = 10f;
+
     /** What one mouthful is worth here, so a test can count them. */
     public static final Grant MOUTHFUL = new Grant.Feed(1);
 
@@ -720,6 +728,18 @@ public final class AlphaWorlds {
     /** How far a wounded trooper walks for a medkit. */
     public static final float MEDKIT_REACH = 20f;
 
+    /** A trooper's wait between grenades: long, so a test sees one man throw once. */
+    public static final float TROOPER_GRENADE_COOLDOWN = 10f;
+
+    /** Aliens that must stand within the blast where a trooper's grenade lands. */
+    public static final int MIN_CLUSTER = 3;
+
+    /** How far past the blast the nearest man of ours must stand for a trooper to throw. */
+    public static final float SAFETY_MARGIN = 4f;
+
+    /** At most one trooper grenade per this many seconds, across the squad. */
+    public static final float SQUAD_GAP_SECONDS = 6f;
+
     /** How far from the post the squad roams in the fixtures. Round, and well inside the test arena. */
     public static final float TROOPER_PATCH = 20f;
 
@@ -801,7 +821,8 @@ public final class AlphaWorlds {
                         ALERT_SECONDS,
                         THREAT_BONUS,
                         SHARED_TARGET_PENALTY,
-                        MEDKIT_REACH),
+                        MEDKIT_REACH,
+                        new TrooperGrenadeDef(TROOPER_GRENADE_COOLDOWN, MIN_CLUSTER, SAFETY_MARGIN, SQUAD_GAP_SECONDS)),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 Defs.<UnitKind, UnitDef>builder(UnitKind.class)
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
@@ -840,7 +861,8 @@ public final class AlphaWorlds {
                                         Look.ARMOURY_RAILGUN,
                                         new Grant.Arm(WeaponKind.RAILGUN),
                                         Grant.NOTHING,
-                                        SHINE_SECONDS))
+                                        SHINE_SECONDS,
+                                        new ArmouryDef(ARMOURY_CARDS, 0f)))
                         .put(
                                 PickupKind.ARMOURY_FLAMER,
                                 new PickupDef(
@@ -848,7 +870,8 @@ public final class AlphaWorlds {
                                         Look.ARMOURY_FLAMER,
                                         new Grant.Arm(WeaponKind.FLAMER),
                                         Grant.NOTHING,
-                                        SHINE_SECONDS))
+                                        SHINE_SECONDS,
+                                        new ArmouryDef(ARMOURY_CARDS, 0f)))
                         .put(
                                 PickupKind.ARMOURY_SHOTGUN,
                                 new PickupDef(
@@ -856,7 +879,8 @@ public final class AlphaWorlds {
                                         Look.ARMOURY_SHOTGUN,
                                         new Grant.Arm(WeaponKind.SHOTGUN),
                                         Grant.NOTHING,
-                                        SHINE_SECONDS))
+                                        SHINE_SECONDS,
+                                        new ArmouryDef(ARMOURY_CARDS, 0f)))
                         .put(
                                 PickupKind.ARMOURY_LASER,
                                 new PickupDef(
@@ -864,7 +888,17 @@ public final class AlphaWorlds {
                                         Look.ARMOURY_LASER,
                                         new Grant.Arm(WeaponKind.LASER),
                                         Grant.NOTHING,
-                                        SHINE_SECONDS))
+                                        SHINE_SECONDS,
+                                        new ArmouryDef(ARMOURY_CARDS, 0f)))
+                        .put(
+                                PickupKind.ARMOURY_SEALED,
+                                new PickupDef(
+                                        PICKUP_RADIUS,
+                                        Look.ARMOURY_SEALED,
+                                        Grant.NOTHING,
+                                        Grant.NOTHING,
+                                        SHINE_SECONDS,
+                                        new ArmouryDef(0, REVEAL_RADIUS)))
                         .put(PickupKind.RABBIT, new PickupDef(RABBIT_RADIUS, Look.RABBIT, Grant.NOTHING, MOUTHFUL, 0f))
                         .put(
                                 PickupKind.BARREL,
@@ -1272,6 +1306,15 @@ public final class AlphaWorlds {
                 .put(
                         UpgradeKind.SELF_TREATMENT,
                         off(1, new Effect.Count(Stat.MEND_SECONDS, Target.CHOOSER, SELF_TREATMENT_SECONDS)))
+                .put(
+                        UpgradeKind.FIREPOWER,
+                        off(
+                                2,
+                                new Effect.Deal(PickupKind.ARMOURY_FLAMER, FIREPOWER_FLAMERS),
+                                new Effect.Gun(WeaponKind.FLAMER, Stat.GUN_DAMAGE, Target.TEAM, FIREPOWER_PERCENT)))
+                .put(
+                        UpgradeKind.EXPLOSIVES,
+                        off(1, new Effect.Chance(AiChance.THROW_A_GRENADE, Target.SQUAD, EXPLOSIVES_PER_SECOND)))
                 .build();
     }
 
@@ -1281,6 +1324,11 @@ public final class AlphaWorlds {
     public static final int MARCH_PERCENT = 10;
     public static final int FIRST_AID_PERCENT = 25;
     public static final int SELF_TREATMENT_SECONDS = 1;
+    public static final int FIREPOWER_FLAMERS = 2;
+    public static final int FIREPOWER_PERCENT = 25;
+
+    /** Explosives' chance a second: high, so a test sees a man throw at his first opportunity. */
+    public static final float EXPLOSIVES_PER_SECOND = 1000f;
 
     /** An upgrade no draft here deals, for a test to hold directly. */
     private static UpgradeDef off(int ranks, Effect... effects) {

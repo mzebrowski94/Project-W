@@ -54,7 +54,7 @@ final class Odds {
             Chances chances,
             float chancePerSecond,
             float deltaTime) {
-        float chance = modifiers.chance(unit, kind, chancePerSecond);
+        float chance = chanceOf(modifiers, unit, kind, chancePerSecond);
         if (chance <= 0f) {
             return due < 0f ? 0f : due;
         }
@@ -68,9 +68,23 @@ final class Odds {
         return left > 0f ? left : Math.min(left, JUST_SPENT);
     }
 
+    /**
+     * Whether this behaviour can happen at all for this unit - its chance, as the table gives it and the
+     * upgrades move it, is above zero. For a caller whose opportunity is costly to work out: it asks this
+     * first and does not look for an opportunity that nothing could be spent on. Draws nothing.
+     */
+    static boolean possible(Modifiers modifiers, Entity unit, AiChance kind, Chances chances) {
+        return chanceOf(modifiers, unit, kind, chances.of(kind)) > 0f;
+    }
+
     /** Whether the spend that returned this due was the one that ran it out. */
     static boolean spent(float due) {
         return due < 0f;
+    }
+
+    /** The one place the {@code CHANCE} stat is read (ADR 0017). */
+    private static float chanceOf(Modifiers modifiers, Entity unit, AiChance kind, float chancePerSecond) {
+        return modifiers.chance(unit, kind, chancePerSecond);
     }
 
     /**

@@ -114,6 +114,8 @@ public enum Look {
     ARMOURY_FLAMER,
     ARMOURY_SHOTGUN,
     ARMOURY_LASER,
+    /** A sealed weapons cache: no gun's colour yet, because nobody knows which gun it holds (G0050). */
+    ARMOURY_SEALED,
     /** Something on the field that goes off when it is killed. */
     BARREL,
     /**

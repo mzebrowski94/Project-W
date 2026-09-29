@@ -191,6 +191,7 @@ public final class ReadoutWriter {
         out.draftsDry = view.dry();
         for (int slot = 0; slot < Players.MAX; slot++) {
             PlayerReadout player = out.player(slot);
+            player.away = view.away(slot);
             player.drafts = view.draftsOf(slot);
             int serial = view.oldestDraftOf(slot);
             player.draftSerial = serial;

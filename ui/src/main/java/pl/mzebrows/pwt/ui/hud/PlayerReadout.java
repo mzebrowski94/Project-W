@@ -59,6 +59,12 @@ public final class PlayerReadout {
     public int goals;
     public int stabilised;
 
+    /**
+     * Whether his link has dropped and nobody has taken his slot since (G0052): his commander stands idle,
+     * and he does not count as in the game for the solo pause (D2).
+     */
+    public boolean away;
+
     /** How many drafts his slot holds (G0049). */
     public int drafts;
 
@@ -91,6 +97,7 @@ public final class PlayerReadout {
         kills = 0;
         goals = 0;
         stabilised = 0;
+        away = false;
         drafts = 0;
         draftSerial = 0;
         cardCount = 0;

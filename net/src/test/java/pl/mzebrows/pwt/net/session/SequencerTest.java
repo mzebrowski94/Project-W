@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * The sequencer against a peer written byte by byte: what it seals, not merely that every machine
@@ -61,7 +62,9 @@ class SequencerTest {
                             .putByte(1)
                             .putInt(1)
                             .putByte(0)
-                            .putByte(Bundle.orderCode(Order.FORWARD)));
+                            .putByte(Msg.EVENT_ORDER)
+                            .putInt(Bundle.orderCode(Order.FORWARD))
+                            .putByte(0));
             frame(host);
         }
 
@@ -80,7 +83,9 @@ class SequencerTest {
                             .putByte(1)
                             .putInt(2)
                             .putByte(0)
-                            .putByte(Bundle.orderCode(Order.DEFENCE)));
+                            .putByte(Msg.EVENT_ORDER)
+                            .putInt(Bundle.orderCode(Order.DEFENCE))
+                            .putByte(0));
             frame(host);
         }
         assertThat(ticksWithOrder(Order.DEFENCE)).isEmpty();
@@ -90,10 +95,14 @@ class SequencerTest {
                         .putByte(2)
                         .putInt(1)
                         .putByte(0)
-                        .putByte(Bundle.orderCode(Order.FORWARD))
+                        .putByte(Msg.EVENT_ORDER)
+                        .putInt(Bundle.orderCode(Order.FORWARD))
+                        .putByte(0)
                         .putInt(2)
                         .putByte(0)
-                        .putByte(Bundle.orderCode(Order.DEFENCE)));
+                        .putByte(Msg.EVENT_ORDER)
+                        .putInt(Bundle.orderCode(Order.DEFENCE))
+                        .putByte(0));
         for (int frame = 0; frame < 5; frame++) {
             frame(host);
         }
@@ -102,6 +111,78 @@ class SequencerTest {
         List<Integer> defence = ticksWithOrder(Order.DEFENCE);
         assertThat(forward).hasSize(1);
         assertThat(defence).containsExactly(forward.get(0) + 1);
+    }
+
+    @Test
+    void sealsAPickOnceHoweverOftenItIsSentAgain() {
+        RawPeer host = startedHost();
+
+        for (int frame = 0; frame < 30; frame++) {
+            host.send(Delivery.UNRELIABLE, pick(input(0, CommanderInput.IDLE).putByte(1), 1, 5, UpgradeKind.MARKSMEN));
+            frame(host);
+        }
+
+        assertThat(ticksWithPick(UpgradeKind.MARKSMEN)).hasSize(1);
+        assertThat(sealed.get(ticksWithPick(UpgradeKind.MARKSMEN).get(0)).pickOf(0))
+                .isEqualTo(UpgradeKind.MARKSMEN);
+    }
+
+    /** One of each type per slot per tick: an order and a pick given together both land on the same tick. */
+    @Test
+    void sealsAnOrderAndAPickFromOneSlotOnTheSameTick() {
+        RawPeer host = startedHost();
+
+        host.send(
+                Delivery.UNRELIABLE,
+                pick(order(input(0, CommanderInput.IDLE).putByte(2), 1, Order.FORWARD), 2, 5, UpgradeKind.MARKSMEN));
+        for (int frame = 0; frame < 5; frame++) {
+            frame(host);
+        }
+
+        assertThat(ticksWithPick(UpgradeKind.MARKSMEN)).hasSize(1).isEqualTo(ticksWithOrder(Order.FORWARD));
+    }
+
+    /** Two picks from one slot: the second waits a tick, as a second order does. */
+    @Test
+    void sealsOnePickPerSlotPerTick() {
+        RawPeer host = startedHost();
+
+        host.send(
+                Delivery.UNRELIABLE,
+                pick(
+                        pick(input(0, CommanderInput.IDLE).putByte(2), 1, 5, UpgradeKind.MARKSMEN),
+                        2,
+                        6,
+                        UpgradeKind.FIRST_AID));
+        for (int frame = 0; frame < 5; frame++) {
+            frame(host);
+        }
+
+        List<Integer> first = ticksWithPick(UpgradeKind.MARKSMEN);
+        assertThat(first).hasSize(1);
+        assertThat(ticksWithPick(UpgradeKind.FIRST_AID)).containsExactly(first.get(0) + 1);
+    }
+
+    @Test
+    void refusesAnInputEventOfNoType() {
+        RawPeer host = startedHost();
+
+        host.send(
+                Delivery.UNRELIABLE,
+                input(0, CommanderInput.IDLE)
+                        .putByte(1)
+                        .putInt(1)
+                        .putByte(0)
+                        .putByte(9)
+                        .putInt(0)
+                        .putByte(0));
+        for (int frame = 0; frame < 5; frame++) {
+            frame(host);
+        }
+
+        assertThat(sealed.values())
+                .allSatisfy(bundle -> assertThat(bundle.pickOf(0)).isNull());
+        assertThat(ticksWithOrder(Order.FORWARD)).isEmpty();
     }
 
     @Test
@@ -418,6 +499,32 @@ class SequencerTest {
             }
         }
         return slots;
+    }
+
+    private static WireWriter order(WireWriter message, int seq, Order order) {
+        return message.putInt(seq)
+                .putByte(0)
+                .putByte(Msg.EVENT_ORDER)
+                .putInt(Bundle.orderCode(order))
+                .putByte(0);
+    }
+
+    private static WireWriter pick(WireWriter message, int seq, int serial, UpgradeKind kind) {
+        return message.putInt(seq)
+                .putByte(0)
+                .putByte(Msg.EVENT_PICK)
+                .putInt(serial)
+                .putByte(Bundle.pickCode(kind));
+    }
+
+    private List<Integer> ticksWithPick(UpgradeKind kind) {
+        List<Integer> ticks = new ArrayList<>();
+        for (Map.Entry<Integer, Bundle> entry : sealed.entrySet()) {
+            if (entry.getValue().pickOf(0) == kind) {
+                ticks.add(entry.getKey());
+            }
+        }
+        return ticks;
     }
 
     private List<Integer> ticksWithOrder(Order order) {

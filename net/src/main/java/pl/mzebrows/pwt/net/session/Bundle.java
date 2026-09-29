@@ -4,6 +4,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
  * One sealed tick (ADR 0012, "tick bundle"): what every seated slot is holding, the input events the
@@ -20,7 +21,9 @@ import pl.mzebrows.pwt.sim.def.Order;
  *
  * <p>Layout: tick (int); flags (byte: 1 restart, 2 switches invulnerability, 4 invulnerable); held
  * count, then per slot its number and 17 bytes (four floats, then a byte of buttons); order count,
- * then per order a slot and an order; join count, then the slots.
+ * then per order a slot and an order; join count, then the slots; pick count, then per pick a slot, the
+ * draft's serial (int) and the kind taken; presence count, then per change a slot and whether it goes
+ * away (1) or comes back (0).
  */
 final class Bundle {
 
@@ -28,6 +31,8 @@ final class Bundle {
     static final int HELD_BYTES = 17;
 
     private static final Order[] ORDERS = Order.values();
+
+    private static final UpgradeKind[] KINDS = UpgradeKind.values();
 
     private static final int RESTART = 1;
     private static final int SWITCHES_INVULNERABILITY = 2;
@@ -37,6 +42,10 @@ final class Bundle {
     private final boolean[] present;
     private final @Nullable Order[] orders;
     private final boolean[] joins;
+    private final @Nullable UpgradeKind[] picks;
+    private final int[] pickSerials;
+    private final boolean[] goesAway;
+    private final boolean[] comesBack;
 
     private int tick;
     private boolean restart;
@@ -48,6 +57,10 @@ final class Bundle {
         present = new boolean[capacity];
         orders = new Order[capacity];
         joins = new boolean[capacity];
+        picks = new UpgradeKind[capacity];
+        pickSerials = new int[capacity];
+        goesAway = new boolean[capacity];
+        comesBack = new boolean[capacity];
         clear(-1);
     }
 
@@ -76,6 +89,10 @@ final class Bundle {
             present[slot] = false;
             orders[slot] = null;
             joins[slot] = false;
+            picks[slot] = null;
+            pickSerials[slot] = 0;
+            goesAway[slot] = false;
+            comesBack[slot] = false;
         }
         return this;
     }
@@ -101,6 +118,30 @@ final class Bundle {
         return this;
     }
 
+    /** This slot takes the card of this kind from the draft with this serial (G0049). */
+    Bundle pick(int slot, int serial, UpgradeKind kind) {
+        picks[slot] = kind;
+        pickSerials[slot] = serial;
+        return this;
+    }
+
+    @Nullable
+    UpgradeKind pickOf(int slot) {
+        return picks[slot];
+    }
+
+    /** This slot's link dropped: it is away from this tick (G0052). */
+    Bundle away(int slot) {
+        goesAway[slot] = true;
+        return this;
+    }
+
+    /** This slot's machine is back and re-seated: present again from this tick (G0052). */
+    Bundle back(int slot) {
+        comesBack[slot] = true;
+        return this;
+    }
+
     Bundle restarting() {
         restart = true;
         return this;
@@ -122,6 +163,16 @@ final class Bundle {
             inputs.order(slot, orders[slot]);
             if (joins[slot]) {
                 inputs.join(slot);
+            }
+            UpgradeKind picked = picks[slot];
+            if (picked != null) {
+                inputs.pick(slot, pickSerials[slot], picked);
+            }
+            if (goesAway[slot]) {
+                inputs.away(slot);
+            }
+            if (comesBack[slot]) {
+                inputs.back(slot);
             }
         }
         if (switchesInvulnerability) {
@@ -158,6 +209,26 @@ final class Bundle {
                 out.putByte(slot);
             }
         }
+        int pickCount = 0;
+        for (UpgradeKind picked : picks) {
+            pickCount += picked == null ? 0 : 1;
+        }
+        out.putByte(pickCount);
+        for (int slot = 0; slot < picks.length; slot++) {
+            UpgradeKind picked = picks[slot];
+            if (picked != null) {
+                out.putByte(slot).putInt(pickSerials[slot]).putByte(pickCode(picked));
+            }
+        }
+        out.putByte(count(goesAway) + count(comesBack));
+        for (int slot = 0; slot < goesAway.length; slot++) {
+            if (goesAway[slot]) {
+                out.putByte(slot).putByte(1);
+            }
+            if (comesBack[slot]) {
+                out.putByte(slot).putByte(0);
+            }
+        }
     }
 
     /** Reads one bundle where the reader stands, leaving it at the next. */
@@ -180,6 +251,21 @@ final class Bundle {
         int joinCount = in.getByte();
         for (int i = 0; i < joinCount; i++) {
             joins[slot(in.getByte())] = true;
+        }
+        int pickCount = in.getByte();
+        for (int i = 0; i < pickCount; i++) {
+            int slot = slot(in.getByte());
+            pickSerials[slot] = in.getInt();
+            picks[slot] = pickFromCode(in.getByte());
+        }
+        int presenceCount = in.getByte();
+        for (int i = 0; i < presenceCount; i++) {
+            int slot = slot(in.getByte());
+            if (awayFromCode(in.getByte())) {
+                goesAway[slot] = true;
+            } else {
+                comesBack[slot] = true;
+            }
         }
         return this;
     }
@@ -205,6 +291,17 @@ final class Bundle {
         int joinCount = in.getByte();
         for (int i = 0; i < joinCount; i++) {
             checkSlot(in.getByte(), capacity);
+        }
+        int pickCount = in.getByte();
+        for (int i = 0; i < pickCount; i++) {
+            checkSlot(in.getByte(), capacity);
+            in.getInt();
+            pickFromCode(in.getByte());
+        }
+        int presenceCount = in.getByte();
+        for (int i = 0; i < presenceCount; i++) {
+            checkSlot(in.getByte(), capacity);
+            awayFromCode(in.getByte());
         }
         return tick;
     }
@@ -257,6 +354,26 @@ final class Bundle {
             throw new WireException("no order " + code);
         }
         return ORDERS[code - 1];
+    }
+
+    @SuppressWarnings("EnumOrdinal") // both ends run the same build - the handshake refuses anything else
+    static int pickCode(UpgradeKind kind) {
+        return kind.ordinal() + 1;
+    }
+
+    static UpgradeKind pickFromCode(int code) {
+        if (code < 1 || code > KINDS.length) {
+            throw new WireException("no upgrade " + code);
+        }
+        return KINDS[code - 1];
+    }
+
+    /** Whether a presence change is a slot going away rather than coming back. */
+    private static boolean awayFromCode(int code) {
+        if (code > 1) {
+            throw new WireException("presence " + code + " is neither away nor back");
+        }
+        return code == 1;
     }
 
     private int slot(int slot) {

@@ -3,11 +3,12 @@
 **Trigger.** Deciding which gun a weapons cache holds at any time other than when the level is laid;
 the armoury deck; an upgrade that changes which guns turn up; proposing a mystery crate.
 
-**Enforced by.** `SimConfigTest` - the reveal radius exceeds the cache's reach plus the widest
-commander, so no commander can touch a sealed cache before it has shown its gun (S6).
-`PickupSystemTest` - a sealed cache cannot be taken; it is revealed on the tick a commander comes
-within the radius and not before; the deck deals no card twice before every card has come up (S6).
-Until then: nothing mechanical - caught by reading.
+**Enforced by.** `SimConfigTest.revealsASealedCacheBeforeACommanderCanReachIt` - the reveal radius
+exceeds the widest cache's reach plus the commander, so no commander can touch a sealed cache before
+it has shown its gun. `PickupSystemTest` - a sealed cache cannot be taken; it is revealed on the tick a
+commander comes within the radius and not before; the deck deals no card twice before every card has
+come up. `UpgradeTest` - Firepower's cards are dealt, and a deck that grows is shuffled afresh. The
+catalogue check refuses a deal of a card the deck does not hold.
 
 **Amends** the rationale on `PickupKind` and the glossary's *weapons cache*: "one kind per gun, so
 which gun is in a crate is legible before he has walked to it" is still true of every cache anyone

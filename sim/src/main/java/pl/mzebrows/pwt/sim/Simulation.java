@@ -183,7 +183,7 @@ public final class Simulation {
         engine.addSystem(new SquadOrderSystem(config, capacity));
         engine.addSystem(new TrooperMindSystem(config, map, modifiers, squad, nerve));
         engine.addSystem(new TrooperMoveSystem(config, map, squad));
-        engine.addSystem(new TrooperCombatSystem(config, spawner, modifiers, nerve, scatter));
+        engine.addSystem(new TrooperCombatSystem(config, map, spawner, modifiers, nerve, scatter));
         engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds()));
         engine.addSystem(new AvoidanceSystem(config, map));
         engine.addSystem(new EnemyRangedSystem(map, spawner, modifiers, streams.of(RngStream.SPIT), scatter));
@@ -197,7 +197,7 @@ public final class Simulation {
         engine.addSystem(new StrikeSystem(spawner));
         engine.addSystem(new CollisionSystem(config, map, spawner, modifiers, nerve));
         engine.addSystem(new GrenadeSystem(map, spawner, modifiers));
-        engine.addSystem(new PickupSystem(config, spawner, modifiers));
+        engine.addSystem(new PickupSystem(config, spawner, modifiers, streams.of(RngStream.ARMOURY)));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(config, spawner, modifiers));
         engine.addSystem(new ActionSystem(config, modifiers));
