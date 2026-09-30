@@ -119,9 +119,9 @@ class ReadoutWriterTest {
         Simulation world = world();
         Entity commander = world.spawnCommander(40f, 40f, 0);
         Vitality casualty = commander.getComponent(Vitality.class);
-        casualty.bleedOutSeconds = 10f;
+        casualty.bleedOutTicks = 600;
         casualty.begin();
-        casualty.remainingSeconds = 2.5f;
+        casualty.remaining = 150 * Vitality.TICK;
         commander.getComponent(Appearance.class).state = Appearance.State.CASUALTY;
 
         PlayerReadout player = fill(new ReadoutWriter(), world).player(0);

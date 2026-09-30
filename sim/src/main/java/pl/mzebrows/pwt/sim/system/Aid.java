@@ -78,7 +78,7 @@ final class Aid {
     static boolean work(
             Modifiers modifiers, Entity helper, Entity subject, float deltaTime, float invulnerableSeconds) {
         Vitality casualty = VITALITY.get(subject);
-        casualty.stabilised += modifiers.stabiliseWork(helper, deltaTime);
+        casualty.stabilised += modifiers.stabiliseWork(helper, Vitality.TICK);
         if (!casualty.stabilisedEnough(hauled(subject))) {
             return false;
         }
@@ -96,7 +96,7 @@ final class Aid {
      * <p>A commitment, not an accumulation.
      */
     static void letGo(Entity subject) {
-        VITALITY.get(subject).stabilised = 0f;
+        VITALITY.get(subject).stabilised = 0;
     }
 
     /** How far through being put back on his feet he is, in {@code [0, 1]}, for the interface. */

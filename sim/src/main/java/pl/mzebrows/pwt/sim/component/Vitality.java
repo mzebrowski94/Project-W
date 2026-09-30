@@ -18,6 +18,10 @@ import pl.mzebrows.pwt.sim.def.Harm;
  * not {@code CooldownSystem}, because its rate varies while he is dragged; the grace is an ordinary
  * countdown and is {@code CooldownSystem}'s. Carried permanently by every man, read through {@link
  * #begun}; no alien carries it.
+ *
+ * <p><strong>Both clocks count whole ticks</strong>, converted once where the seconds enter, in
+ * hundredths of a tick ({@link #TICK}) so a rate other than one - a drag that slows the bleed, First Aid
+ * that speeds the work - is a whole number too. Each takes exactly as many ticks as its number says.
  */
 public final class Vitality implements Component, Pool.Poolable {
 
@@ -33,18 +37,21 @@ public final class Vitality implements Component, Pool.Poolable {
         KILLED
     }
 
-    /** How long he has before he bleeds out, once he goes down. Configuration, not state. */
-    public float bleedOutSeconds;
+    /** One tick of either clock at the ordinary rate, in the hundredths both are counted in. */
+    public static final int TICK = 100;
 
-    /** How long somebody has to stand over him to put him back on his feet. Configuration. */
-    public float stabiliseSeconds;
+    /** How long he has before he bleeds out, once he goes down, in ticks. Configuration, not state. */
+    public int bleedOutTicks;
+
+    /** How long somebody has to stand over him to put him back on his feet, in ticks. Configuration. */
+    public int stabiliseTicks;
 
     /**
-     * What being hauled multiplies that by. Configuration.
+     * The same, once he has been hauled, in ticks. Configuration.
      *
      * <p>Hauling stops his clock; this is what it costs instead.
      */
-    public float hauledStabiliseFactor = 1f;
+    public int hauledStabiliseTicks;
 
     /** How many wounds he carries on his feet before any upgrade; one more puts him down. Configuration. */
     public int maxWounds;
@@ -67,12 +74,13 @@ public final class Vitality implements Component, Pool.Poolable {
 
     public boolean begun;
 
-    public float remainingSeconds;
+    /** What is left of his bleed-out, in hundredths of a tick. */
+    public int remaining;
 
     /**
-     * Seconds of work done on him so far. Back to nothing the moment the work stops.
+     * The work done on him so far, in hundredths of a tick. Back to nothing the moment the work stops.
      */
-    public float stabilised;
+    public int stabilised;
 
     /** The wounds he is carrying. */
     public int wounds;
@@ -85,24 +93,24 @@ public final class Vitality implements Component, Pool.Poolable {
 
     /** Sets how he is hurt and patched up, for fluent spawning. */
     public Vitality set(
-            float newBleedOutSeconds,
-            float newStabiliseSeconds,
-            float newHauledStabiliseFactor,
+            int newBleedOutTicks,
+            int newStabiliseTicks,
+            int newHauledStabiliseTicks,
             int newMaxWounds,
             int newGraceTicks,
             float newWoundedPace,
             float newWoundedCooldown) {
-        this.bleedOutSeconds = newBleedOutSeconds;
-        this.stabiliseSeconds = newStabiliseSeconds;
-        this.hauledStabiliseFactor = newHauledStabiliseFactor;
+        this.bleedOutTicks = newBleedOutTicks;
+        this.stabiliseTicks = newStabiliseTicks;
+        this.hauledStabiliseTicks = newHauledStabiliseTicks;
         this.maxWounds = newMaxWounds;
         this.carries = newMaxWounds;
         this.graceTicks = newGraceTicks;
         this.woundedPace = newWoundedPace;
         this.woundedCooldown = newWoundedCooldown;
         this.begun = false;
-        this.remainingSeconds = 0f;
-        this.stabilised = 0f;
+        this.remaining = 0;
+        this.stabilised = 0;
         this.wounds = 0;
         this.graceRemaining = 0;
         this.mendTicks = 0;
@@ -160,18 +168,21 @@ public final class Vitality implements Component, Pool.Poolable {
         return wounded() ? woundedCooldown : 1f;
     }
 
-    /** How long the work takes on this man, which depends on whether he has been hauled anywhere. */
-    public float stabiliseNeeded(boolean hauled) {
-        return hauled ? stabiliseSeconds * hauledStabiliseFactor : stabiliseSeconds;
+    /**
+     * How much work this man takes, in hundredths of a tick, which depends on whether he has been hauled
+     * anywhere.
+     */
+    public int stabiliseNeeded(boolean hauled) {
+        return (hauled ? hauledStabiliseTicks : stabiliseTicks) * TICK;
     }
 
     /** How far through being patched up he is, in {@code [0, 1]}. */
     public float stabiliseProgress(boolean hauled) {
-        float needed = stabiliseNeeded(hauled);
-        if (needed <= 0f) {
+        int needed = stabiliseNeeded(hauled);
+        if (needed <= 0) {
             return 0f;
         }
-        float done = stabilised / needed;
+        float done = (float) stabilised / needed;
         return done < 1f ? done : 1f;
     }
 
@@ -185,8 +196,8 @@ public final class Vitality implements Component, Pool.Poolable {
      */
     public void recover() {
         begun = false;
-        remainingSeconds = 0f;
-        stabilised = 0f;
+        remaining = 0;
+        stabilised = 0;
         wounds = 0;
         graceRemaining = 0;
         mendTicks = 0;
@@ -201,19 +212,28 @@ public final class Vitality implements Component, Pool.Poolable {
             return;
         }
         begun = true;
-        remainingSeconds = bleedOutSeconds;
-        stabilised = 0f;
+        remaining = bleedOutTicks * TICK;
+        stabilised = 0;
         graceRemaining = 0;
+    }
+
+    /**
+     * One tick of his bleed-out, at this rate in hundredths of a tick: {@link #TICK} as a rule, less while
+     * he is dragged. Returns whether that was the last of it.
+     */
+    public boolean bleed(int rate) {
+        remaining = Math.max(0, remaining - rate);
+        return remaining == 0;
     }
 
     /** True while he is down and still has time left. */
     public boolean active() {
-        return begun && remainingSeconds > 0f;
+        return begun && remaining > 0;
     }
 
     /** True once he has lain there too long. */
     public boolean spent() {
-        return begun && remainingSeconds <= 0f;
+        return begun && remaining <= 0;
     }
 
     /**
@@ -222,26 +242,25 @@ public final class Vitality implements Component, Pool.Poolable {
      * <p>Pillar 5.
      */
     public float fraction() {
-        if (!begun || bleedOutSeconds <= 0f) {
+        if (!begun || bleedOutTicks <= 0) {
             return 0f;
         }
-        float left = remainingSeconds / bleedOutSeconds;
-        return left > 0f ? left : 0f;
+        return (float) remaining / (bleedOutTicks * TICK);
     }
 
     @Override
     public void reset() {
-        bleedOutSeconds = 0f;
-        stabiliseSeconds = 0f;
-        hauledStabiliseFactor = 1f;
+        bleedOutTicks = 0;
+        stabiliseTicks = 0;
+        hauledStabiliseTicks = 0;
         maxWounds = 0;
         carries = 0;
         graceTicks = 0;
         woundedPace = 1f;
         woundedCooldown = 1f;
         begun = false;
-        remainingSeconds = 0f;
-        stabilised = 0f;
+        remaining = 0;
+        stabilised = 0;
         wounds = 0;
         graceRemaining = 0;
         mendTicks = 0;

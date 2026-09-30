@@ -9,6 +9,7 @@ import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
@@ -41,15 +42,19 @@ public final class CasualtySystem extends IteratingSystem {
 
     private final Spawner spawner;
     private final Modifiers modifiers;
-    private final float draggedBleedFactor;
+    /** How fast his clock runs while he is hauled, in hundredths of a tick a tick. */
+    private final int draggedBleedRate;
+
     private final int mendSeconds;
+    private final float tickSeconds;
 
     public CasualtySystem(SimConfig config, Spawner spawner, Modifiers modifiers) {
         super(Family.all(Vitality.class).get());
         this.spawner = spawner;
         this.modifiers = modifiers;
-        this.draggedBleedFactor = config.casualty().draggedBleedFactor();
+        this.draggedBleedRate = Math.round(config.casualty().draggedBleedFactor() * Vitality.TICK);
         this.mendSeconds = config.wound().mendSeconds();
+        this.tickSeconds = config.tickSeconds();
     }
 
     @Override
@@ -59,13 +64,11 @@ public final class CasualtySystem extends IteratingSystem {
             return;
         }
         if (!casualty.begun) {
-            mend(entity, casualty, deltaTime);
+            mend(entity, casualty);
             return;
         }
-        float rate = DRAGGED.has(entity) && DRAGGED.get(entity).held() ? draggedBleedFactor : 1f;
-        casualty.remainingSeconds -= deltaTime * rate;
-        if (casualty.remainingSeconds <= 0f) {
-            casualty.remainingSeconds = 0f;
+        int rate = DRAGGED.has(entity) && DRAGGED.get(entity).held() ? draggedBleedRate : Vitality.TICK;
+        if (casualty.bleed(rate)) {
             Deaths.kill(spawner, entity);
         }
     }
@@ -75,7 +78,7 @@ public final class CasualtySystem extends IteratingSystem {
      * one place {@code MEND_SECONDS} is read (G0053). Zero, which is every man without the upgrade, never.
      * A new wound starts the clock again ({@code Vitality}).
      */
-    private void mend(Entity entity, Vitality vitality, float deltaTime) {
+    private void mend(Entity entity, Vitality vitality) {
         if (vitality.wounds <= 0) {
             return;
         }
@@ -85,7 +88,7 @@ public final class CasualtySystem extends IteratingSystem {
             return;
         }
         vitality.mendTicks++;
-        if (vitality.mendTicks * deltaTime >= seconds) {
+        if (vitality.mendTicks >= Ticks.of(seconds, tickSeconds)) {
             vitality.recover();
         }
     }

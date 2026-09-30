@@ -143,6 +143,11 @@ public final class Spawner {
         return Ticks.of(seconds, config.tickSeconds());
     }
 
+    /** How long the work takes on a man who was hauled: the stabilise and its factor, as one duration. */
+    private int hauledStabiliseTicks() {
+        return ticks(config.casualty().stabiliseSeconds() * config.casualty().hauledStabiliseFactor());
+    }
+
     /** Spawns the player-controlled unit, armed, at full health, and ready to fire. */
     public Entity spawnCommander(float x, float y) {
         return spawnCommander(x, y, 0);
@@ -202,9 +207,9 @@ public final class Spawner {
         // He can be shot off his feet like his men (G0023); his bleed-out is his own, read only here.
         entity.add(engine.createComponent(Vitality.class)
                 .set(
-                        commander.bleedOutSeconds(),
-                        config.casualty().stabiliseSeconds(),
-                        config.casualty().hauledStabiliseFactor(),
+                        ticks(commander.bleedOutSeconds()),
+                        ticks(config.casualty().stabiliseSeconds()),
+                        hauledStabiliseTicks(),
                         commander.maxWounds(),
                         ticks(config.wound().graceSeconds()),
                         config.wound().speedFactor(),
@@ -267,9 +272,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Dying.class).set(ticks(trooper.deathThroesSeconds())));
         entity.add(engine.createComponent(Vitality.class)
                 .set(
-                        config.casualty().bleedOutSeconds(),
-                        config.casualty().stabiliseSeconds(),
-                        config.casualty().hauledStabiliseFactor(),
+                        ticks(config.casualty().bleedOutSeconds()),
+                        ticks(config.casualty().stabiliseSeconds()),
+                        hauledStabiliseTicks(),
                         trooper.maxWounds(),
                         ticks(config.wound().graceSeconds()),
                         config.wound().speedFactor(),

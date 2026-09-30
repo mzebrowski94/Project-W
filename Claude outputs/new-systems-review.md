@@ -28,6 +28,15 @@ Mateusz, so nothing about them goes into `alpha-phase.md`.
 | V9 | `Dealer.requireFits`, called by `UpgradeDef.checkCatalogue`: a 65th upgrade kind fails the catalogue at load. `TopBarPainter.crateKey` writes its key in base 2 × pickup kinds instead of 64, so the 32-kind limit is gone rather than guarded | `DealerTest.refusesMoreKindsThanAPassOverCanName`; `TopBarPainterTest.givesEveryCrateItCanShowAKeyOfItsOwn` (245,411 crates, 245,411 keys). Both seen red on a deliberate break (limit doubled; base 16: 97,865 keys), then restored |
 | - | Behaviour unchanged | Fingerprint (12 scenarios × 1200 ticks of `ScriptedPlay` + a 300 crowd, world hash and bodies hash) **identical** to `4a0f60d`; `PWT_FUZZ=1 DeterminismFuzzTest` 12/12 green (182 s) |
 
+### Stage 4 (wound clocks)
+
+Decision: all three clocks in whole ticks (asked 2026-09-30).
+
+| Item | Done | Evidence |
+|---|---|---|
+| V1 / A2 | `Vitality` counts both clocks in hundredths of a tick (`Vitality.TICK`): `bleedOutTicks`, `stabiliseTicks`, `hauledStabiliseTicks` converted once at spawn through `Ticks.of`; `remaining` and `stabilised` are ints. A tick of work is `STABILISE_SPEED` folded onto 100 (`Modifiers.stabiliseWork` is now whole); a dragged bleed is `draggedBleedFactor` × 100, converted once in `CasualtySystem`. The mend compares its tick count with `Ticks.of(seconds)` instead of multiplying by `deltaTime` | New `WoundClockTest`, on the shipped config: stabilise **48 ticks (was 49)**, First Aid II **32 (was 33)** - both red first; hauled 77, bleed-out 480 / 300, mend 600 - green before and after, kept as guards. `conventions.md`'s timer row names the rule and the test |
+| - | **Behaviour change**: a stabilise ends one tick sooner wherever the float sum used to fall short (the shipped base, First Aid II); every other clock is unchanged | Bodies hash (positions, health, wounds, down) **identical in all 12 scenarios and the crowd**: no scripted run finishes a stabilise on the boundary tick. World hash differs in every world with a man in it, from the snapshot layout (five `Vitality` fields changed type or name) - `Crowd` has none and is identical. `PWT_FUZZ=1 DeterminismFuzzTest` 12/12 green (197 s) |
+
 Scope: `cebbac5..8bb389c` (8 commits, ~19k lines added). Baseline on this branch: `verify.sh` green, 1881
 tests; `PWT_BENCH=1` 800 crowd **5.24 ms/step**, growth ×7.8 (100→800), 6 B/step (cloud container; the
 2026-09-27 figure of 3.89 ms was Mateusz's machine). Every probe below was a `Zz*ProbeTest`, run and

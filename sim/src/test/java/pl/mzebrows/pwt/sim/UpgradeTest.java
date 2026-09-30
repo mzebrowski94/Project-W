@@ -183,12 +183,11 @@ class UpgradeTest {
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE - 10f, MIDDLE);
         Modifiers modifiers = new Modifiers(simulation.engine(), simulation.config());
-        float tick = simulation.config().tickSeconds();
 
         hold(simulation, new Upgrades.Held(UpgradeKind.FIRST_AID, Upgrades.SHARED, 1));
 
-        assertThat(modifiers.stabiliseWork(commander, tick)).isCloseTo(tick * 1.25f, CLOSE);
-        assertThat(modifiers.stabiliseWork(trooper, tick)).isCloseTo(tick * 1.25f, CLOSE);
+        assertThat(modifiers.stabiliseWork(commander, Vitality.TICK)).isEqualTo(125);
+        assertThat(modifiers.stabiliseWork(trooper, Vitality.TICK)).isEqualTo(125);
     }
 
     /** Thick Skin: one more wound on his feet per rank, for his men and every commander (G0053). */

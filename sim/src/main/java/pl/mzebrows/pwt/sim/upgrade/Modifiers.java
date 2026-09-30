@@ -84,11 +84,14 @@ public final class Modifiers {
         return Fold.scale(base, percent(Stat.SPEED, who, null), stat.minPercent(), stat.maxPercent());
     }
 
-    /** How much of a casualty's stabilise one tick of {@code who}'s work does, in seconds of it. */
+    /**
+     * How much of a casualty's stabilise one tick of {@code who}'s work does, in the hundredths of a tick
+     * the stabilise is counted in: whole, so the work adds up exactly.
+     */
     @Reads(Stat.STABILISE_SPEED)
-    public float stabiliseWork(Entity who, float base) {
+    public int stabiliseWork(Entity who, int base) {
         StatDef stat = stats.of(Stat.STABILISE_SPEED);
-        return Fold.scale(base, percent(Stat.STABILISE_SPEED, who, null), stat.minPercent(), stat.maxPercent());
+        return Fold.scaleWhole(base, percent(Stat.STABILISE_SPEED, who, null), stat.minPercent(), stat.maxPercent());
     }
 
     /** How long a stun a source declared leaves {@code who} unable to act, in ticks (G0053). */
