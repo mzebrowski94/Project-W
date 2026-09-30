@@ -11,23 +11,6 @@ Two rules separate it from the POC:
   and the UI skin are the first atlas (G0043). Any other look gets art only with a record of its own;
   a missing puppet falls back to the circle.
 
-## How a session goes
-
-The system is the deliverable; a scenario is optional and comes second. A session may carry as many
-systems as the change genuinely needs - mechanics that only make sense against each other, like a
-leap and the strike that answers it, are worth building together, because half of that pair cannot be
-judged by feel on its own. Split the work into stages that each stand up on their own and can be
-stopped after, rather than splitting it across sessions by count.
-
-1. **Design it** - the `feature` skill. Check it against the invariants `README.md` indexes, ask rather
-   than invent, and write down whatever it settles.
-2. **Build it** - the `new-system` skill. Tests first, in the order `CLAUDE.md` sets out.
-3. **Demonstrate it** - *if Mateusz asks*, add a scenario that shows the system working, so he can
-   run it and judge it by feel rather than by test names.
-
-Step 3 is not automatic. Ask before building one; a system that is fully visible in an existing
-scenario does not need its own.
-
 ## Adding a scenario
 
 A scenario is one arena, built to make a system visible. Everything needed to add one:
@@ -235,5 +218,5 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 
 ## What this phase does not decide
 
-All seven open questions in `README.md` are still open. If a system needs one of them answered,
-that is a question for Mateusz, not a decision to make in passing.
+The open questions in `README.md` stay open here. If a system needs one of them answered, that is a
+question for Mateusz, not a decision to make in passing.

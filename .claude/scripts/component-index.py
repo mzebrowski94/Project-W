@@ -25,11 +25,16 @@ def strip_comments(src):
 
 def main():
     comps = sorted(p.stem for p in (SIM / "component").glob("*.java") if p.stem != "package-info")
+    # By name as a string: a Windows path compares case-insensitively and a Linux one does not, and the
+    # index must come out the same wherever it is run.
+    def by_name(paths):
+        return sorted(paths, key=lambda p: p.name)
+
     buckets = {
-        "system": sorted((SIM / "system").glob("*.java")),
-        "collision": sorted((SIM / "collision").glob("*.java")),
-        "sim": sorted(p for p in SIM.glob("*.java") if p.stem != "package-info"),
-        "client": sorted(CORE.glob("*.java")),
+        "system": by_name((SIM / "system").glob("*.java")),
+        "collision": by_name((SIM / "collision").glob("*.java")),
+        "sim": by_name(p for p in SIM.glob("*.java") if p.stem != "package-info"),
+        "client": by_name(CORE.glob("*.java")),
     }
     bodies = {
         k: [(p.stem, strip_comments(p.read_text(encoding="utf-8"))) for p in v] for k, v in buckets.items()
@@ -93,7 +98,7 @@ and a component touched by many is where to check. Read the code before concludi
         " entity. The `Touched by` column says which.",
         "",
     ]
-    pathlib.Path("docs/components.md").write_text("\n".join(out), encoding="utf-8")
+    pathlib.Path("docs/components.md").write_text("\n".join(out), encoding="utf-8", newline="\n")
     print(f"docs/components.md: {len(rows)} components")
 
 

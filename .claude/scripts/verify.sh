@@ -40,9 +40,12 @@ fi
 if [[ $STATUS -eq 0 ]]; then
   echo "VERIFY: PASS"
   shopt -s nullglob
-  for f in "$HOME"/.pwt/out/*/build/test-results/test/TEST-*.xml; do
-    sed -n 's/.*name="\([^"]*\)".*tests="\([0-9]*\)".*failures="\([0-9]*\)".*errors="\([0-9]*\)".*/  \1: \2 tests, \3 failures, \4 errors/p' "$f" | head -1
-  done
+  RESULTS=("$HOME"/.pwt/out/*/build/test-results/test/TEST-*.xml)
+  if [[ ${#RESULTS[@]} -gt 0 ]]; then
+    # One line, not one per class: a green run is a fact, not a list.
+    sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="\([0-9]*\)".*errors="\([0-9]*\)".*/\1 \2 \3/p' "${RESULTS[@]}" \
+      | awk -v n="${#RESULTS[@]}" '{t+=$1; f+=$2; e+=$3} END {printf "  %d tests in %d classes, %d failures, %d errors\n", t, n, f, e}'
+  fi
   grep -E "warning: \[" "$LOG" | grep -vE "$NOISE" | sed 's/^/  /' | head -20
   if [[ $CAN_DELETE -eq 0 ]]; then
     if bash "$GRADLE" spotlessCheck >> "$LOG" 2>&1; then

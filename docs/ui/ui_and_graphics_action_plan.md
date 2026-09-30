@@ -1,37 +1,13 @@
 # UI and graphics - action plan
 
-**This doc expires.** It covers one run of work - the letterboxed screen, the menus, the HUD, the
+**This doc expires.** It covered one run of work - the letterboxed screen, the menus, the HUD, the
 event pipeline into the terminal, per-life tallies and the commander's first animation - and is
-deleted when the last stage lands. The permanent parts go to the records listed in section 16, to
-`docs/architecture.md` and to `menu_layout_agent.md`, which does not expire.
+deleted when the last stage lands. **Stages 0-7 have landed**; what is left is stages 8-11 (section 12)
+and the open questions (section 15). Sections 1-11 and 13 stay because built code cites them as
+`plan N.N`; the permanent rules are in ADR 0015, G0043, G0044 and `menu_layout_agent.md`.
 
-Written 2026-09-25 by Claude for Mateusz; the four decisions in section 1 were agreed in that session.
-Everything else is a proposal: a future session reads it, checks it against the code as it then is,
-and asks where the code has moved on.
-
-Reviewed the same day in a second pass (UI/UX, engine and technical-art eyes): the HUD's hierarchy
-fixed, the stages reordered around two playtest gates, the UX checklist answered in section 17. What
-changed from the first draft and why is section 18 - read it if you knew the old stage or question
-numbers.
-
----
-
-## 0. How an agent uses this document
-
-1. Read sections 1-3 and 17 whole. Read the section for your stage. Do not read the tree wholesale
-   (CLAUDE.md "Read narrow").
-2. Work **one stage at a time**, in the order of section 12. Every stage ends at a stop point where
-   the game builds, runs and looks no worse than before. A session may take several stages.
-   A stage that ends in a **gate** stops there for Mateusz at the Windows machine: the questions it
-   names are answered before the next stage starts, because everything after it is built on those
-   numbers.
-3. Each task names its skill. Gameplay or `sim` work runs `feature`, then `new-system`. Tests follow
-   `unit-tests`. Anything in a per-entity loop gets `perf-audit` before you call it done.
-4. The CLAUDE.md checklist applies to every task unchanged. This plan adds to it; it never relaxes it.
-5. When the plan and the code disagree, the code wins and you say so. When the plan and a decision
-   record disagree, the record wins until Mateusz supersedes it.
-6. Finish every stage by listing the `graphic.properties` / `controls.properties` / `assets/sim/*.properties`
-   keys it added or moved, with values, and a one-line commit message. Mateusz commits.
+When the plan and the code disagree, the code wins and you say so. When the plan and a decision
+record disagree, the record wins until Mateusz supersedes it.
 
 ---
 
@@ -41,7 +17,7 @@ numbers.
 |---|---|---|---|
 | D1 | What resets the bottom-bar stats? | **Per life.** | The tally is a component on the commander entity. Dying reaps it; the respawned commander is a new entity with a zeroed tally. No reset code exists anywhere, because none is needed. Restart and a new level start from nothing for the same reason. |
 | D2 | The menu's ARENA collides with the glossary's *arena*. | **PROVING GROUND.** | Glossary gets *proving ground*; code says `PROVING_GROUND`. |
-| D3 | Commander sprites contradict G0003's temporary half. | **Supersede it for the commander.** | New record G0043 (section 16). The first atlas is the commander's puppet, the portrait and the UI skin. Every other look stays a shape until its own decision; a puppet with missing art falls back to the circle. |
+| D3 | Commander sprites contradict G0003's temporary half. | **Supersede it for the commander.** | Record G0043. The first atlas is the commander's puppet, the portrait and the UI skin. Every other look stays a shape until its own decision; a puppet with missing art falls back to the circle. |
 | D4 | Where does Gdx-free UI logic live? | **A new Gradle module `ui`.** | `lwjgl3 -> core -> {ui, net} -> sim -> map`. New ADR 0015. Same reasoning ADR 0003 gave for `sim`: a compile-time wall, not a remembered convention. |
 | D5 | The UI's "focus" collides with the glossary's *focus* (who the camera keeps in shot). (2026-09-26) | **selection.** | Glossary and `menu_layout_agent.md` say *selection*; code says `SelectionMemory`, `ui/selection` for the ring. Where this plan still says focus in the UI sense, read selection. |
 | D6 | The greybox needs text at the planned metrics before Q3 is answered. (2026-09-26) | **A hand-authored 5 x 8 ASCII pixel font, drawn in code, 6 px advance.** | It is the permanent fallback instead of libGDX's built-in font (E11 changes accordingly: the fallback has the real metrics, so `TextFit` never switches to measured widths). Glyphs outside it draw as `?`. Q3 still picks the real font. |
@@ -967,102 +943,8 @@ hard dependencies   2 needs 1 · 3 and 4 need 2 · 5 needs 4 · 6 and 8 need 3 �
                     9 needs only 1-2 · 10 needs 5 and Q4 · 11 needs the rest
 ```
 
-### Stage 0 - Records and words (no code)
-
-| Task | Do | Done when |
-|---|---|---|
-| T0.1 | Write ADR 0015 "The interface logic is its own module" (section 16) and add its row to `docs/adr/README.md`. | Record has the six fields; Do-not-build names in the table. |
-| T0.2 | Write G0043 "The first atlas is the commander's", superseding G0003's temporary half for looks with a puppet. Update G0003's status cell. Edit the "Visuals stay minimal" rule in `alpha-phase.md` to point at it. | Records agree; nothing else in docs still says "no placeholder sprites" unqualified. |
-| T0.3 | Glossary, **only the words stages 1-5 use**: page, modal, entry, focus, modality, letterbox, UI canvas, top bar, bottom bar, view (as the rect between the bars - extend the existing sense), scrim, paused banner, reticle, player panel, status (the panel's), readout, proving ground. Read each section end to end first. Terminal, dispatch, reporter (stage 6), tally (7), portrait (8), puppet and pose (9) and planet (Q9) land with their stage, so a stage that is dropped leaves no orphan word. | Every term defined once; *arena* untouched. |
-| T0.4 | Input map in `docs/design/README.md`: a "pages and modals" context; `Esc` in a level → pause menu. Harness table in `alpha-phase.md`: `Esc`, `F1`, `P` (pauses without a menu). | Same change as the code in T4.5 if done later - say which. |
-| T0.5 | Propose (do not apply) a CLAUDE.md edit: `ui` in the Modules table and the dependency line; a "Where to look" row for `docs/ui/`. | Mateusz has the diff to accept. |
-
-G0044 (the tally) moved to T7.1: it cannot be written before its questions are answered.
-
-### Stage 1 - The `ui` module
-
-| Task | Skill | Do | Tests | Done when |
-|---|---|---|---|---|
-| T1.1 | - | `ui/build.gradle` (`api project(':sim')`, ArchUnit for tests), `settings.gradle` include, `core` depends on `ui`. One placeholder class so the module compiles. | - | `verify.sh` green. |
-| T1.2 | `unit-tests` | `UiArchitectureTest`: the "must not" column of 3.1. Watch every rule fail against a probe class, then delete the probes. | the rules themselves | Each rule seen failing once. |
-
-**Stop point:** the build has a new empty module and a wall around it.
-
-### Stage 2 - Letterbox, UI canvas and a greybox HUD
-
-| Task | Skill | Do | Tests | Done when |
-|---|---|---|---|---|
-| T2.1 | `unit-tests` | `ScreenLayout`, `LayoutSpec`, `Rect`, `HudMetrics` (ui.layout). | `ScreenLayoutTest`: every row of 5.2, plus `.neverScalesTheCanvasByAFraction`, `.keepsTheViewInsideItsAspectRangeOnEveryScreen`, `.givesHeightBeyondTheRangeToTheBars`, `.honoursAUiScaleSmallerThanTheLargestThatFits`, `.survivesAZeroSizedWindow`; `HudMetricsTest.sizesEachBarFromWhatItHolds`. | Table rows pass. |
-| T2.2 | - | `GraphicConfig`: `graphic.view.*` and the `graphic.ui.*` layout keys, fallbacks logged; remove `graphic.virtualWidth` (derived). `ConfigDefaultsTest`: refuses `aspectMin > aspectMax`. | config tests | Keys listed in summary. |
-| T2.3 | - | `PixelViewport` (core): applies a `ScreenLayout` result - canvas camera at `s`, offsets. `Hud` grows into the canvas owner: its viewport becomes `PixelViewport`, its font the pixel font with the built-in font as fallback. Its existing `line()` API keeps working for `MenuScreen` and `DebugOverlay`. (Retired in stage 5, D17.) | - (GL) | Menu and overlay text still draw; crisp at 1080p and 1440p. |
-| T2.4 | - | `ScenarioScreen`: world viewport set to the view rect, world size per 5.3; bars cleared to `graphic.hud.color.bar`; `DebugOverlay` still full screen for now. Resize recomputes the layout. The pointer still aims from over a bar. | `CameraDirectorTest` unchanged and green | Playable, letterboxed. |
-| T2.5 | - | **Greybox**: a throwaway painter fills every slot of 7.1 and 7.2 with its longest English text and draws four player panels, so the layout is judged full rather than empty. Stage 3 deletes it. | - (GL) | Every slot visible at 1080p and in a 1280 x 800 window. |
-
-**Stop point and GATE A** - Mateusz on Windows at 1080p, 1440p, a 1280 x 800 window (the Deck's shape)
-and an ultrawide if one is at hand. Answers **Q1** (aspect range), **Q2** (maps narrower than the view)
-and **Q3** (the font - its metrics feed every fit from here on), and one check: *is every slot readable
-at arm's length?* Changing any of these after stage 3 means refitting every slot.
-
-### Stage 3 - Readout, top bar and player panel
-
-| Task | Skill | Do | Tests | Done when |
-|---|---|---|---|---|
-| T3.1 | `unit-tests` | `Readout`, `PlayerReadout`, `ReadoutWriter` - every fact of 7.2 but the tally. `Scenario.planet()` default method returning `""`. | `ReadoutWriterTest` on `AlphaWorlds`: `.copiesEachLocalCommanderIntoHisOwnSlot`, `.countsPointsTakenAndWavesSent`, `.leavesAnEmptySlotAbsent`, `.keepsNothingFromAPreviousWorld`, `.publishesHisBleedOutWhileHeIsDown` | `perf-audit`: no allocation per frame. |
-| T3.2 | `unit-tests` | `GoalLine`, `TextFit`, `PanelLayout`. | `GoalLineTest.namesTheFirstUnmetObjective`, `.saysCompletedWhenEveryRequiredObjectiveIsMet`, `.goesBackToTheGoalWhenAnObjectiveIsLostAgain`, `.holdsATextForItsMinimumTime`; `TextFitTest` (four panels at 640, degradation at 512, pseudo-locale); `PanelLayoutTest.fitsFourPlayersInQuartersOf160`, `.dropsOnlyThePortraitOnANarrowCanvas`, `.keepsEveryPanelWhereItWasWhenAPlayerJoins` | - |
-| T3.3 | - | `TopBarPainter`: mission (dim), goal (bright), terminal area empty; `DebugOverlay.render` into the overlay rect with ranked lines; `F1` cycles panel / expanded / off. | `HarnessControlsTest`/`ScenarioSessionTest` for the cycle | Matches the mock-up layout. |
-| T3.4 | - | `BottomBarPainter`: four seat quarters - frame and label, status, weapon and heat, portrait as a block in his colour, tally row reserved; alarm flash and shake on the UI clock. Deletes the greybox painter. Rewrites the alpha-phase row "the commander's gun is named only in the F1 overlay". | - (GL) | Four pads on one PC show four panels; the keyboard player's `P1` is cyan. |
-| T3.5 | - | `ReticlePainter` and the system cursor hidden in `UI:play` (7.5). | - (GL) | Reticle readable on every biome of `Adventure`. |
-
-**Stop point and GATE B** - Mateusz plays `Adventure` with one and with four players. Two checks:
-*can you tell you are down, and how hot your gun is, without looking at the bar?*, *can each of four
-players find his panel at once?* and *does anything in the bars pull
-your eye mid-fight?* Answers **Q10** (confirm), **Q15**, **Q22**, **Q24**, **Q30**.
-
-### Stage 4 - Flow, navigation and the pause menu
-
-| Task | Skill | Do | Tests | Done when |
-|---|---|---|---|---|
-| T4.1 | `unit-tests` | `UiPage`, `HudSlot` enums with `id()` = the `UI:` ids of `menu_layout_agent.md`. `UiFlow`, `UiIntent`, `UiEffect`: the whole transition table (spec section 5), derived states via `observe(...)`. | `UiFlowTest.goesBackOnePageAtATime`, `.neverQuitsOnBackFromTheMainPage`, `.opensTheMenuOnlyOnTheMachineThatAskedForIt`, `.closesTheMenuWhenAnybodyResumes`, `.showsTheBannerAndTakesNoFocusWhenSomebodyElsePauses`, `.hidesRestartFromAPeerThatDoesNotHost`, `.cannotReachGameOver` | Table covered row by row. |
-| T4.2 | `unit-tests` | `NavInput`, `NavRepeat`, `InputModality`, `FocusMemory`, `ReleaseLatch`. | `NavRepeatTest`, `InputModalityTest.switchesToThePointerWhenTheMouseMovesFarEnough`, `.ignoresATwitchUnderTheWakeDistance`, `.restoresTheLastFocusedEntryWhenAKeyIsPressed`; `ReleaseLatchTest.ignoresAPressHeldAcrossAContextChangeUntilItIsReleased`, `.letsAFreshPressThroughAtOnce` | - |
-| T4.3 | - | `NavInputReader` (core): keys via `KeyPresses`, mouse, every seated `Gamepad` through the port; `controls.ui.*` in `ControlsConfig`. `InputReader` applies the latch and sends neutral input for his slot while a menu is open. | `ControlsConfig` tests for the new keys | - |
-| T4.4 | - | `UiStrings` (I18NBundle with the `#key` fallback), `UiSkin` (skin file, else a programmatic skin from a generated 1 x 1 pixel), `MenuStage` - enough for modals. | - (GL) | - |
-| T4.5 | - | `UI:play/pause`, `UI:play/leave`, scrim, paused banner, docked (6.5); room code and addresses on the pause menu while hosting (`Invitation`). `Esc` / `START` → menu; `HarnessControls` loses `LEAVE` on `Esc`; `P` stays a menu-less pause. Focus loss and pad unplug per Q7 and Q27. Docs of T0.4 in the same change. | `HarnessControlsTest` updated | Pausing on one machine shows the banner on the other and the menu only where it was asked for; resuming from either clears both; clicking RESUME fires nothing (two copies, `docs/workflow.md`). |
-| T4.6 | - | `UI:connecting` restyled from `DebugOverlay.renderWaiting`. | - | - |
-| T4.7 | `unit-tests` | `UiSpecTest`: reads `docs/ui/menu_layout_agent.md`, compares its `UI:` ids with `UiPage` and `HudSlot`. | itself (probe: delete a row, watch it fail) | Doc and enums locked together. |
-
-**Stop point:** the game has a pause menu; leaving asks first; no press leaks into the game.
-
-### Stage 5 - The main menu
-
-| Task | Skill | Do | Tests | Done when |
-|---|---|---|---|---|
-| T5.1 | `unit-tests` | `MenuTree`, `MenuEntry` built from the spec's tables. | `MenuTreeTest` | Every page's entries match the spec. |
-| T5.2 | - | `MenuScreen` becomes the page stack: MAIN, CAMPAIGN (today's list, `MenuSelection` reused, focus on the last scenario played), PROVING_GROUND and OPTIONS placeholders, ONLINE → JOIN (today's `JoinScreen`, pad entry per Q6) / HOST (list, confirm hosts), EXIT confirm. `H`/`J` on the list retire; the harness table says so. | - (GL) | Every page reachable by keyboard, mouse and pad; two confirms from launch to a level. |
-| T5.3 | `unit-tests` | Page motion (6.4): push and pop within `pageSeconds`, finished at once by any input. | `PageMotionTest.finishesAtOnceWhenThePlayerActsDuringIt`, `.doesNotMoveAtAllWithMotionOff` | - |
-
-**Stop point:** a real main menu; everything that worked from the scenario list still works.
-
-### Stage 6 - Reporters and the terminal
-
-| Task | Skill | Do | Tests | Done when |
-|---|---|---|---|---|
-| T6.1 | `unit-tests` | `Dispatch`, `DispatchKind`, `Terminal`. Glossary: terminal, dispatch, reporter. | `TerminalTest.showsTheTwoLatestDispatches`, `.typesTheNewestAtItsRate`, `.showsAHighDispatchAtOnce`, `.stopsBlinkingOnceTheLineIsTyped`, `.holdsANewLineBeforeTheNextPushesItUp`, `.mergesRepeatsInsideTheWindow`, `.dropsANormalDispatchThatWaitedTooLong`, `.evictsTheOldestOfTheLowestPriorityWhenFull`, `.neverEvictsAHighDispatchForALowerOne`, `.startsEmptyOnANewWorld` | No allocation per offer. |
-| T6.2 | `unit-tests` | The reporters of 8.3; silent bind. | `ReportersTest.reportsNothingOnTheFrameAWorldArrives`, `.prefixesThePlayerOnlyWhenThereIsMoreThanOne`, `.saysADownedCommanderLostOnceAsHeDies`, `.reportsReinforcementsAndAFewLeftButNotEachLoss` (after D20) | - |
-| T6.3 | - | Fold `Announcements`: the wave half becomes `WaveReporter`; the action-prompt half stays a console line (G0021 wants it beside the commander, not in the terminal) but is computed by a reporter writing to `Log` rather than by a second edge-detector. `ScenarioPlay` loses `newlyArrivedWave`/`totalWaves` if nothing else calls them. | existing `OnlineSessionTest`, `ScenarioSessionTest` adjusted | One edge-detection mechanism in the client. |
-| T6.4 | - | Terminal lines painted in the top bar: dim older, bright newer with cursor. `HOSTING` dispatch. | - | The alpha-phase rows for the wave line and the room code are rewritten. |
-
-**Stop point:** the terminal narrates the level.
-
-### Stage 7 - Tally (`sim`)
-
-| Task | Skill | Do | Tests | Done when |
-|---|---|---|---|---|
-| T7.1 | `feature` | Answer the *tally* questions of section 15 with Mateusz; write G0044; invariant rows; glossary: tally. | - | Decisions written. |
-| T7.2 | `new-system` | `Tally` component; `creditSlot` on the sources; credit through `Damage` and `Deaths.kill`; stabilise and goal credit where those complete. No new system unless the design pass needs one; if it does, register it per `docs/simulation-order.md` and say why. | section 9's list | `verify.sh` green; determinism tests green. |
-| T7.3 | - | `ReadoutWriter` copies the tally; keeps the last life's numbers while a respawn is pending. | `ReadoutWriterTest.keepsTheLastLifeUntilHeComesBack` | - |
-| T7.4 | - | The tally in the panel's reserved slot, full and compact (icon) forms. | `PanelLayoutTest` cases already cover it | - |
-
-**Stop point:** the numbers exist, replay identically and show.
+Stages 0-7 landed between 2026-09-25 and 2026-09-29 (`git log -- docs/ui`). Their task tables are gone;
+the hard dependencies above still say what stages 8-11 wait on.
 
 ### Stage 8 - Portrait
 
@@ -1146,36 +1028,10 @@ your eye mid-fight?* Answers **Q10** (confirm), **Q15**, **Q22**, **Q24**, **Q30
 
 ---
 
-## 14. Refined structure of `menu_layout_agent.md`
-
-The file exists beside this one. Its structure, which any edit keeps:
-
-1. **How to use this file** - the `UI:` id scheme, the grep recipe, `UiSpecTest`, labels as i18n
-   keys, Do-not-build cells are binding, glossary words and banned words.
-2. **Traceability** - every line of the original outline mapped to an id.
-3. **Page and modal table** - id, kind, parent, code anchor (`UiPage` constant), implementing class,
-   status (built / planned / placeholder / blocked, with the blocking question named).
-4. **Pages in detail** - per id: title key, entries (`entry id | label key = default copy | intent |
-   enabled when`), default focus, back behaviour, Do not build.
-5. **Transition table** - `(from, intent) → (to, effect)`, derived transitions marked.
-6. **Input per context** - semantic action × keyboard / mouse / pad, and the modality rules.
-7. **HUD slots** - `UI:hud/...` ids, `HudSlot` anchors, position, content, status.
-8. **Text rules** - font, truncation, wrap, numbers, missing glyph and key.
-9. **Placeholder assets** - source path, region, user, size; the non-atlas files and their fallbacks.
-10. **Motion, feedback and accessibility** - the rules every page and slot shares: motion budgets,
-   the alert treatment, the legibility floor, never colour alone.
-
-Id grammar: `UI:` + lowercase path segments joined by `/`, kebab-case within a segment
-(`UI:main/proving-ground`). Enum constant: upper snake of the last segment unless ambiguous
-(`UiPage.PROVING_GROUND`, `UiPage.ONLINE_JOIN`). Each implementing class carries the id on a javadoc
-line of its own, so grep finds the page from either end.
-
----
-
 ## 15. Open questions for follow-up sessions
 
 Ask rather than invent (CLAUDE.md). Grouped by the stage that needs the answer; a **gate** stage
-means Mateusz answers it at that gate. Q22 onwards were added by the review (section 18).
+means Mateusz answers it at that gate. Q22 onwards were added by the review.
 
 | # | Stage | Question | Proposed default until answered |
 |---|---|---|---|
@@ -1215,21 +1071,7 @@ means Mateusz answers it at that gate. Q22 onwards were added by the review (sec
 
 ---
 
-## 16. Records to write and docs to touch
-
-| Record | Trigger line | Constraint | Do not build |
-|---|---|---|---|
-| **ADR 0015** - The interface logic is its own module | Adding UI logic, or a class that decides what the player sees | Decisions about what is shown and how the player moves through it live in `ui`, which has no drawing, no devices and reads `sim` without writing it; `core` draws. Enforced by the module graph plus `UiArchitectureTest`. | UI decisions in `Screen`s or painters; `ui` importing `Gdx`, graphics, scene2d or `net`; widgets reading `sim` directly; an event bus in `sim` for the HUD (G0004) |
-| **G0043** - The first atlas is the commander's | Adding art for any look; changing a renderer | Supersedes G0003's temporary half for looks with a complete puppet; every other look stays a shape until a record says otherwise. The permanent half of G0003 is unchanged: drawing reads `Appearance`, chooses by `Look`, and a missing puppet falls back to the shape. | sprites for other looks without their own decision; choosing a puppet by class or by component; gameplay reading anything about a sprite (hitboxes stay circles, ADR 0007); animation driven by the wall clock |
-| **G0044** - A tally belongs to a life | Counting anything per player | Per-life counts live on the commander and die with him; credit is a slot carried by the source; shown, never spent. | a score or currency; a tally on the level entity; credit by `Entity`; reset code |
-| (optional) **G0045** - The interface lives in the letterbox | Putting anything on screen during a level | Bars hold the HUD; the view holds the fight; only modals, the scrim and paused banner, the reticle and world-space marks draw over the view. Feedback about one player stays in his panel and on his man. | HUD over the view; a minimap (G0008); a second view; a full-screen effect for one player's state on a shared screen |
-| (optional) **G0046** - The pause is everybody's; the menu is yours | Changing pause, resume, or anything shown while paused | The pause is shared session state and every machine shows it (the banner); the menu that asks for it opens only where it was asked for, at once; resuming anywhere closes every menu. | a menu opened on a machine that did not ask; a local pause flag; waiting for the round trip before showing the menu |
-
-Docs touched across the stages: `docs/glossary.md` (T0.3, then each stage's own words),
-`docs/design/README.md` input map and invariant rows (T0.4, T7.1), `docs/design/alpha-phase.md`
-harness table and scaffolding rows (T0.2, T0.4, T3.4, T5.2, T6.4, T11.3), `docs/adr/README.md` and
-`docs/design/decisions/README.md` tables, `docs/architecture.md` (T11.3), `docs/components.md`
-regenerated for `Tally` (T7.2), and CLAUDE.md (T0.5 applied 2026-09-26; edits allowed when needed and named in the summary).
+## 16. Out of scope, and the scaffolding this plan introduced
 
 ### Not in scope, with the reason
 
@@ -1324,30 +1166,6 @@ questions the first checklist did not have. An answer that needs Mateusz points 
 | C35 | *(added)* Remapping; hold or toggle? | `controls.properties` today, in-game later (Q4). The view pull-back is already a toggle. | 7.4 |
 | C36 | *(added)* Contrast? | ≥ 4.5:1 for all HUD text; lowest is 6.1:1. | 7.4 |
 | C37 | *(added)* Will a translation fit? | Pseudo-locale tests (+30 %, diacritics) and a font with Latin Extended-A. | 7.3, Q3 |
-
----
-
-## 18. Changes from the first draft (review, 2026-09-25)
-
-| Change | Why |
-|---|---|
-| Player panel re-ranked: status (DOWN + bleed-out / KIA + seconds / ABOARD) and weapon with heat first, tally as dim icons last; `P1`-`P8` labels | The first draft gave the panel to the least urgent numbers, showed none of his state, and left the "gun named only in F1" row unretired. |
-| Bottom bar is four fixed seat quarters, with a pixel budget; no health bar; alarm on transitions rather than hurt | Mateusz, second round: up to four players must fit, and a commander has no health worth a bar - every blow is decisive, and guns overheat rather than run out. |
-| Solver: bars sized by content, view aspect a range, `uiScale`, content inside the view's span | A pinned 2.39 spent a third of the Deck's height and 44 % of a 4:3 screen on bars; the range gives them an 18 % and a 50 % taller view, and 16:9 barely moves. A 40 px portrait did not fit a 46 px bar with padding. Ultrawide text drifted to the screen's corners. |
-| Portrait 40 → 32 | It must fit the smallest bottom bar: 40 UI px less 8 of padding. |
-| Colour policy; `goalDone` and mission green gone | `goalDone` was exactly commander 6; greens sat beside commander 2; every hue is a world meaning. |
-| Pause split: shared pause (banner), local menu, `P` menu-less, docked menu over a scrim | A friend's pause stole focus on every machine; `P` + `.` single-stepping would have stepped a covered world; online the menu waited for a round trip. |
-| `ReleaseLatch` | The press that closes a menu or starts a level was reaching the first tick: clicking RESUME fired, `SOUTH` acted. |
-| Motion budgets; input never waits; no idle HUD motion; high dispatches instant; stale ones dropped | The first draft had no transition timings, a cursor blinking forever in the periphery, alarms typed at reading speed and a ten-second backlog after a big fight. |
-| Reticle | Mouse aim had only the OS arrow at the point the eyes spend most time on. |
-| Puppet: *heroes* layer instead of y-sort among circles; shadow at the radius; flash at the shot's origin; two-texel rule | Y-sorting sprites among `ShapeRenderer` circles flushes a batch per interleave and can hide his man; a sprite must not lie about the hitbox or the muzzle; far zoom is 0.7 px per texel. |
-| Accessibility built in: legibility floor, colour-blind check, option keys, flash limit, pseudo-locale | The first draft had none of these; retrofitting keys across every effect costs more than adding each with its effect. |
-| Stages reordered around gates A and B; menus proved on the pause menu first; tally after the panel; options as a stage blocked on Q4; glossary words per stage; G0044 moved into the tally stage | Risk and playtest value first; the tally needs four design answers and should not hold up the panel; a dropped stage should leave no orphan word or record. |
-| Q3, Q6, Q7, Q10 defaults changed; Q22-Q33 added; edge cases E32-E41 added | Each is cited where it changed. |
-
-Stage numbers, old → new: 0 → 0 · 1 → 1 · 2 → 2 (+ greybox, gate A) · 5 → 3 (+ panel, reticle, gate B)
-· 3 and 4 → 4 (flow and pause) and 5 (main menu) · 6 → 6 · 7 → 7 · 8 → 3 (panel) and 8 (portrait)
-· 9 → 9 · new 10 (options) · 10 → 11.
 
 ---
 

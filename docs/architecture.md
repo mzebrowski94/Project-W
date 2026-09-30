@@ -3,12 +3,13 @@
 ## The one line that matters
 
 ```
-lwjgl3  ->  core (client)  ->  net  ->  sim  ->  map
+lwjgl3  ->  core (client)  ->  { ui, net }  ->  sim  ->  map
 ```
 
 Dependencies point one way. The simulation does not know that rendering, input, files, a window or a
 network exist. Everything else follows from that. `net` depends on `sim` because a session steps a
-`Simulation` and writes its snapshots (ADR 0012) - never the other way.
+`Simulation` and writes its snapshots (ADR 0012) - never the other way; `ui` depends on `sim` because
+it reads the world to decide what is shown (ADR 0015). `ui` and `net` never see each other.
 
 ## map
 
@@ -200,6 +201,20 @@ Networking, and nothing the game's rules depend on (ADR 0012). No libGDX, and Ne
   `ScenarioWorlds`. `BuildId` reads the id `:net:generateBuildId` writes. `DesyncDump` and
   `DesyncReport` are what a desync leaves behind and how it is read. Messages are bytes written and read
   by `WireWriter` and `WireReader` against `Msg`'s numbers - nothing on the wire names a class.
+
+## ui
+
+What the player is shown and how he moves through it, decided as data (ADR 0015). It reads `sim` and
+never writes it, and has no drawing, no devices and no `net`: `core` hands it input as values and turns
+its answers into draw calls. `UiArchitectureTest` holds the wall.
+
+- `layout` - the letterbox: `ScreenLayout` solves the view rect and the two bars from the window size.
+- `page` and `nav` - pages, modals and how a selection moves: `UiPage`, `UiFlow`, `MenuTree`, `NavInput`.
+  Every page's ids, entries and transitions are in `docs/ui/menu_layout_agent.md`, and `UiSpecTest`
+  keeps that file and `UiPage`/`HudSlot` in step.
+- `hud` - `ReadoutWriter` is the one class that reads `sim` for the interface, once a frame, into a
+  `Readout`; the goal line, the player panels, the draft and crate bars and the terminal are drawn from
+  it. Reporters turn what changed into dispatches for the terminal.
 
 ## core (client)
 

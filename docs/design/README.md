@@ -1,8 +1,5 @@
 # Game design
 
-**Everything below the pillars is a first draft written by Claude and not yet reviewed by Mateusz.**
-Treat it as a proposal to correct, not as settled design.
-
 The **pillars** live in `CLAUDE.md` because they apply to every change, including ones nobody
 planned as gameplay work. They are not repeated here.
 
@@ -15,7 +12,7 @@ description at all.
 | Question | Where the answer lives |
 |---|---|
 | What must always be true? | Invariants, indexed below |
-| How does a phase session go, and what is still scaffolding? | [`alpha-phase.md`](alpha-phase.md) |
+| What is still scaffolding, and how is a scenario added? | [`alpha-phase.md`](alpha-phase.md) |
 | What does this system do? | `sim/src/main/java/.../system/` |
 | What is this number? | `assets/sim/*.properties` |
 | Why did we reject the obvious alternative? | `docs/design/decisions/` |
@@ -133,10 +130,9 @@ contradiction three features later.
   random; a hook for weighting them against the players' upgrades exists and is off.
 - **Rerolls.** None in v1. If one is ever wanted it is an input event limited by a count, never by a
   currency (pillar 3).
-- ~~Health upgrades need health stored as damage taken.~~ **Answered for men 2026-09-29 (G0053):** a
-  man's wounds are damage taken and his maximum is folded at the read. Still open for the aliens,
-  where it is a question about adaptations; the swarm's health factor (`sim.swarm.healthPercent`) is config,
-  not a stat, and does not raise it.
+- **Can an adaptation raise an alien's health?** For men it can (G0053: wounds are damage taken, the
+  maximum folded at the read). For the aliens it is a question about adaptations; the swarm's health
+  factor (`sim.swarm.healthPercent`) is config, not a stat, and does not raise it.
 - **Should anything hurt a man more than one step at once?** A heavy shot worth two wounds is the
   first thing three harms cannot say (G0053's revisit). If it comes, it is a count on the harm, never
   an amount.
@@ -148,32 +144,17 @@ contradiction three features later.
   attempt would want the same even deal counted in attempts - Dota's P = C x N or a hard pity - and
   whether it is kept per unit or per slot (pillar 7) is a real choice. Nothing needs it yet.
 
-The alpha phase answers none of these. Where a system needs one of them to have an answer it uses
-scaffolding instead, listed in [`alpha-phase.md`](alpha-phase.md) so the scaffolding is not later
-mistaken for a decision.
-
-- ~~How does the player command the squad?~~ **Answered 2026-09-10 (G0017):** an order reaches the
-  troopers near the commander, names a verb and never a target, outranks the level's objectives and
-  never an ongoing fight. Four verbs: follow me, forward, defence, cancel - the middle two renamed
-  from *move out* and *stop* on 2026-09-13, because what a squad does when it stops is hold a place. The **input is still open** -
-  keys `1`-`4` are scaffolding and the intended binding is a button plus a radial menu.
+- **What is the input for a squad order?** The model is settled (G0017): an order reaches the troopers
+  near the commander and names one of four verbs, never a target. Keys `1`-`4` are scaffolding; the
+  intended binding is a button plus a radial menu.
 - A body is scenery for its throes - solid, immovable, and it stops bullets. That is realistic and it
   is what makes the clinch settle at touching distance, but it also means shooting into a crowd now
   leaves obstacles for a second at a time. Whether that reads as good feedback or as clutter is a
   question for play, not for a test.
-- ~~Should an alien ever aim at a trooper?~~ **Answered 2026-09-18 (G0026):** yes - it comes for
-  whoever on the player's side is nearest and still on his feet, the commander included, and a gun a
-  level put down is on that list too. It is not a second targeting concern but the same one asked
-  about a longer list, in the one place that already answered it. What it costs is that his death no
-  longer empties the field.
-- ~~Who picks the commander up?~~ **Answered 2026-09-13 (G0023):** his troopers do, sometimes. He is
-  a casualty like his men, gunfire and blasts put him on the ground, and a trooper with nothing more
-  urgent in front of it rolls for whether to come - far more readily for him than for one of its own.
-  The co-op half is now live and **still unanswered**: a second player can reach a downed commander
-  with the same action key his troopers use, which works today because a commander is a casualty like
-  any other. What nobody has decided is whether a trooper should still bother when another *player* is
-  closer - a squad and a friend racing for the same body is either the best moment in the game or a
-  waste of a trooper, and only play will say which.
+- **Should a trooper still go for a downed commander when another player is closer?** His troopers
+  pick him up (G0023), and a second player can reach him with the same action key. A squad and a friend
+  racing for the same body is either the best moment in the game or a waste of a trooper, and only play
+  will say which.
 - **Should noise pull aggro?** Detection is a radius around each unit and nothing the player does
   changes it, so firing a gun in a corridor wakes nobody who could not already have noticed you. A
   shot that wakes things beyond the detection radius is a big arcade lever and it is cheap to add now
@@ -186,11 +167,8 @@ mistaken for a decision.
   a level breeds them, whether running out matters, and whether the aliens are meant to clear them
   before you can get to them are all still open - and they decide whether the rabbit is a resource or
   a set piece.
-- ~~What ends a level - an objective, an extraction point, elimination, or a timer?~~ **Answered
-  2026-09-10:** an objective, and a level may name more than one. Two exist - clear the map of
-  enemies, and capture every control point - and a level requires **all** of the set it names.
-- **What happens when a level's objectives are met?** The alpha deliberately does nothing: the level
-  entity knows, and nothing reads it. Extraction, an immediate cut, a lull before the next wave and a
+- **What happens when a level's objectives are met?** The alpha only says MISSION COMPLETED on the goal
+  line and the world runs on. Extraction, an immediate cut, a lull before the next wave and a
   score screen are all still open, and this is now the question standing between the alpha and a
   playable level.
 - **Should a trooper ever break off a fight?** It stands still and shoots until whatever it noticed
@@ -222,8 +200,7 @@ mistaken for a decision.
 - Can a pickup be destroyed? Shooting a mushroom would make denial something the player can do at
   range rather than only by standing on it, and would change how a feeding ground reads. Nothing
   supports it today.
-- ~~What happens to a reinforcement?~~ **Answered 2026-09-18:** it becomes a trooper, put down beside
-  the commander, up to a ceiling of the starting squad plus its configured headroom. Crates are laid
-  beside the control points, so the squad you fight with is the reward for taking ground. Still open
-  underneath it: whether the ceiling should be per level or carried between them, which is the same
-  question as whether the squad persists between levels.
+
+The alpha phase answers none of these. Where a system needs one of them to have an answer it uses
+scaffolding instead, listed in [`alpha-phase.md`](alpha-phase.md) so the scaffolding is not later
+mistaken for a decision. An answered question leaves this list for the record that answers it.

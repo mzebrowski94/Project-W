@@ -14,15 +14,18 @@ reached until an open question is answered - the question is named).
   code as the javadoc line of the class that implements it and as the `id()` of its constant in
   `UiPage` or `HudSlot` (module `ui`). To find the code for a page:
   `grep -rn "UI:main/campaign" ui/src core/src`.
-- `UiSpecTest` (module `ui`, planned, task T4.7 of the plan) reads this file, collects every
+- Id grammar: `UI:` + lowercase path segments joined by `/`, kebab-case within a segment
+  (`UI:main/proving-ground`). The enum constant is the last segment in upper snake case unless that is
+  ambiguous (`UiPage.PROVING_GROUND`, `UiPage.ONLINE_JOIN`).
+- `UiSpecTest` (module `ui`) reads this file, collects every
   `UI:` id in the tables of section 3 and section 7, and fails if one is missing from
   `UiPage`/`HudSlot` or if an enum constant has no row here. The doc and the enum cannot drift.
 - Labels are never literals. Each label column is an i18n key in `assets/i18n/ui.properties`; the
   English copy after the key is the default text for that file.
 - A **Do not build** cell is binding. It names the decision record that already rejected it.
 
-Glossary words this file relies on (in `docs/glossary.md` once stage 0 lands, except where a stage
-is named): **page**, **modal**, **entry**, **selection**, **modality**, **letterbox**, **UI canvas**,
+Glossary words this file relies on (all in `docs/glossary.md`; the portrait arrives with stage 8 of
+the plan): **page**, **modal**, **entry**, **selection**, **modality**, **letterbox**, **UI canvas**,
 **top bar**, **bottom bar**, **scrim**, **paused banner**, **reticle**, **player panel**, **status**,
 **proving ground**; **terminal** and **dispatch** (stage 6), **tally** (7), **portrait** (8).
 Words not used: *item* (say entry), *screen* for a page (a libGDX `Screen` is a class), *lobby* or

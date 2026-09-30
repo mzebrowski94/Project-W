@@ -10,6 +10,7 @@ description: How tests are written in Project-W - naming, shape, assertions, whe
 - `sim/src/test/java/pl/mzebrows/pwt/sim/system/MovementSystemTest.java` - testing a system.
 - `core/src/test/java/pl/mzebrows/pwt/client/ScenarioSessionTest.java` - testing client logic.
 - `core/src/test/java/pl/mzebrows/pwt/client/GamePropertiesTest.java` - plain logic and fallback paths.
+- `sim/src/test/java/pl/mzebrows/pwt/sim/def/WholeTest.java` - a parameterized test.
 
 Rules here cover only what those files cannot show.
 
@@ -101,7 +102,8 @@ Check this once before finalising a class.
 Data feeder methods stay flat - arrays of plain values, no wrapper records or nested classes unless
 the data genuinely needs them. No inline comments annotating `null`, `""` or an empty collection.
 
-There is no parameterized test in the repository yet either.
+`WholeTest` is the model: one `@CsvSource` of plain values, beside the edge cases that read better as
+tests of their own.
 
 ## Coverage
 

@@ -11,23 +11,14 @@ component, never simulation logic in `core`.
 Gameplay change rather than plumbing? Run the `feature` skill first - it checks the idea against the
 design before any code exists.
 
-Check `CLAUDE.md`'s reuse list before starting, and `docs/components.md` for the 39 components that
+Check `CLAUDE.md`'s reuse list before starting, and `docs/components.md` for the components that
 already exist. Most mechanics need a field on an existing component, not a new one.
 
 ## 1. General-level tests first
 
 Before any implementation, one or a few tests stating what the mechanic should do in broad strokes. Not
-edge cases. The question they answer is "what is this for".
-
-```java
-class DamageSystemTest {
-    @Test
-    void reducesHealthByTheDamageDealt() { ... }
-
-    @Test
-    void removesAnEntityWhoseHealthReachesZero() { ... }
-}
-```
+edge cases. The question they answer is "what is this for". Name each for the behaviour it pins
+(`movesAnEntityByItsVelocityEachStep`); the `unit-tests` skill has the rest.
 
 `.claude/scripts/verify.sh :sim:test`, and watch them fail for the right reason.
 

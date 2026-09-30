@@ -3,6 +3,23 @@
 Defaults, not procedure. Better path for a specific task? Take it. Entries that stop earning their
 place get deleted - this file is meant to be pruned.
 
+## Environments
+
+A session runs in one of three places. The commands are the same in all of them - `gradle.sh` and
+`verify.sh` work out where they are - but a handful of rules only exist because of one of them.
+
+| | **Desktop** | **Cowork** | **Cloud** |
+|---|---|---|---|
+| What it is | Claude Code desktop on Mateusz's Windows machine | A Linux VM with `D:` mounted, reached through `device_bash` | Claude Code on the web: a fresh Linux clone |
+| How to tell | `uname -s` starts `MINGW` (Git Bash) | the device shell; the repo is under a mount | `CLAUDE_CODE_REMOTE=true` |
+| Gradle | `gradle.sh` hands over to `./gradlew` with the machine's JDK 25 | `gradle.sh` bootstraps JDK and Gradle into `ai/toolchain`, through the proxy | as Cowork, provisioned by the session-start hook |
+| Build output | `~/.pwt/out/<module>/build/` | same | same |
+| Delete permission | nothing to ask for | resets every session - ask in your first message | always |
+| Commits | Mateusz | Mateusz | Claude, through `cloud-commit.sh` (*Cloud sessions*) |
+| The game | runs (`./gradlew lwjgl3:run`); Mateusz judges the feel | cannot run | cannot run |
+
+Sections below marked **(Cowork)** apply only there.
+
 ## When something fails
 
 A failed build is information, not a cue to try something else.
@@ -24,7 +41,7 @@ either.
 
 ## Recipes
 
-Run in the shell with the repo mounted. On Windows use `./gradlew` instead of the script.
+The same commands in every environment.
 
 | Task | Command |
 |---|---|
@@ -38,17 +55,17 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 | One test class | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest'` |
 | One test method | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest.movesAnEntityByItsVelocityEachStep'` |
 | Format only | `.claude/scripts/gradle.sh spotlessApply` |
-| After changing a dependency | `.claude/scripts/verify.sh` then `.claude/scripts/gradle.sh --save-cache` |
+| After changing a dependency | `.claude/scripts/verify.sh` then `.claude/scripts/gradle.sh --save-cache` (Cowork; a no-op elsewhere) |
 | Repack art from `assets-raw/` | `.claude/scripts/gradle.sh :core:packTextures` |
 | Raw Gradle, any task | `.claude/scripts/gradle.sh <task>` |
 | New sim tunable | A component on the config record and one line in the `assets/sim/*.properties` file its prefix lives in - nothing else. `ShippedConfigTest` fails on either alone, and the build on a key given in two files. A new file in `assets/sim/` is read without further wiring. |
 | New network tunable | A component on `NetConfig` (or one of its records) and one line in `assets/network.properties` - nothing else. `ShippedNetConfigTest` fails on either alone. |
-| Run the game | Windows only: `./gradlew lwjgl3:run` |
-| Windows exe, Java bundled, for friends | Windows only: `./gradlew lwjgl3:packageWinX64` -> `dist/` (`docs/packaging.md`) |
-| Run it as copy 1, say, of several | Windows only: `./gradlew lwjgl3:run --args="--instance=1"` |
+| Run the game | Desktop only: `./gradlew lwjgl3:run` |
+| Windows exe, Java bundled, for friends | Desktop only: `./gradlew lwjgl3:packageWinX64` -> `dist/` (`docs/packaging.md`) |
+| Run it as copy 1, say, of several | Desktop only: `./gradlew lwjgl3:run --args="--instance=1"` |
 
-Build outputs land in `~/.pwt/build/`, not `<project>/build` - see *Speed*. Test result XML under
-`~/.pwt/build/<module>/test-results/`. Verify log: `ai/logs/verify.log`.
+Claude's build output lands in `~/.pwt/out/<module>/build/`, apart from IntelliJ's `<project>/build`;
+test result XML under `.../test-results/test/`. Verify log: `ai/logs/verify.log`.
 
 **Connection logs** are in `ai/logs/net/` when the game runs from Gradle, one file per instance,
 `<instance>-<yyyyMMdd-HHmmss>.log`; a build run any other way writes `logs/net/` beside itself, which is
@@ -87,30 +104,29 @@ that diverged (`desynced`) and one from the host (`reference`), each with a `.tx
 replay lands on, and where a replay through snapshots parts from a straight one. The `PWT_DESYNC` recipe
 above runs it on a directory, with the host's shipped config. Ask a friend for their `.bin` along with their log.
 
-**Batch Gradle calls.** The daemon does not survive between shell invocations, so each call pays ~7s of
-JVM startup. Two tasks in one command beat two commands.
+**Batch Gradle calls (Cowork, Cloud).** The daemon does not survive between shell invocations there, so
+each call pays ~7s of JVM startup. Two tasks in one command beat two commands. On the desktop the
+wrapper's daemon stays warm.
 
-**Scope every recursive search.** `grep` or `find` across the whole repo on the Windows mount times out.
-Use `sim/src core/src map/src docs`.
+**Scope every recursive search** to `sim/src core/src map/src ui/src net/src docs`. The tree also holds
+`ai/` (a toolchain and a dependency cache) and build output; across the Cowork mount a whole-repo `grep`
+times out.
 
-**Editing in IntelliJ between sessions is fine.** Source, config and assets are the same files on `D:`;
-only build output differs (`~/.pwt/build` here, `<project>/build` there). Re-read a file before editing
-rather than trusting an earlier read.
+**Editing in IntelliJ between sessions is fine.** Source, config and assets are the same files; only
+build output differs. Re-read a file before editing rather than trusting an earlier read.
 
 ### Reading git state
 
-**`git --no-optional-locks status --porcelain`**, and the same flag for `diff`. Never a bare
-`git status`.
+**`git --no-optional-locks status --porcelain`**, and the same flag for `diff`, in every environment.
 
-The flag tells git not to take `index.lock` for the optional index refresh. Without it, every status
-run from the sandbox takes that lock - and if delete permission has lapsed, git cannot remove it
-again and leaves a zero-byte lock file that makes Mateusz's own `git add` fail with "another git
-process seems to be running". The lock is not doing anything; it is litter that only looks like a
-running process, and clearing it needs the delete grant the sandbox may not have.
+The flag tells git not to take `index.lock` for the optional index refresh. In Cowork that lock is a
+hazard: removing it needs delete rights on `D:`, which reset between sessions, so a status run without
+them strands a zero-byte lock that makes Mateusz's own `git add` fail with "another git process seems
+to be running". Elsewhere the flag costs nothing, and one habit beats three.
 
-Nothing here should ever run `git add`, `commit` or `push` - see `CLAUDE.md`; a cloud session commits
-only through `cloud-commit.sh` (*Cloud sessions*, below). So no command from this
-side has any business writing the index at all, and the flag makes that true rather than hoped for.
+Nothing here runs `git add`, `commit` or `push` - see `CLAUDE.md`; a cloud session commits only through
+`cloud-commit.sh` (*Cloud sessions*, below). So no command from this side has any business writing the
+index at all, and the flag makes that true rather than hoped for.
 
 ## Verification ladder
 
@@ -123,12 +139,12 @@ Start at the cheapest level that can refute the change. Escalate on a trigger, n
 | 3 | `verify.sh :sim:test` | That module's logic is settled. |
 | 4 | `verify.sh` | Before saying anything is done. Also whenever a public API, a module boundary, system registration order, `sim`/`map` logic, or shared infrastructure changed. |
 | 4b | the performance guard above | A system, the solver, `SpatialGrid` or anything else in a per-entity loop changed. `docs/performance.md`. |
-| 5 | `./gradlew lwjgl3:run`, on Windows | Rendering, input or feel changed - the part no test covers. Mateusz runs it. |
+| 5 | `./gradlew lwjgl3:run`, on the desktop | Rendering, input or feel changed - the part no test covers. Mateusz judges it. |
 
 Escalate immediately when the current level fails: a level-2 failure is not evidence about level 4.
 Never claim done below level 4.
 
-## Speed
+## Speed (Cowork)
 
 The Windows mount writes at ~12 MB/s; the sandbox's own disk does ~2 GB/s. `gradle.sh` therefore keeps
 both the dependency cache and all build output on the VM's disk. Warm build 2.7s against 7.2s.
@@ -143,30 +159,30 @@ Only things actually hit. Add what you hit; delete what stops happening.
 
 | Symptom | Cause | Action |
 |---|---|---|
-| `UnknownHostException: services.gradle.org` | Java does not read `HTTPS_PROXY`; the wrapper cannot reach the network. | `.claude/scripts/gradle.sh`, never `./gradlew`, in the sandbox. |
-| `formatting: NEEDS APPLYING` | No delete permission this session; Spotless rewrites a file by unlinking it first. | Everything else still ran. Ask Mateusz to approve deletion, re-run. |
-| `403 Forbidden` fetching a `.pom` | Host not on the egress allowlist. | Report the host. Do not route around it. `jitpack.io` and `central.sonatype.com` blocked; Maven Central, plugin portal and foojay allowed. |
-| `Could not read directory .../build/...` | Stale build output from another toolchain or a killed build. | `rm -rf */build ~/.pwt/build`, retry. |
-| `Failed to run Gradle Worker Daemon`, often with a `java.security` read error | Sandbox memory pressure. | Retry; if it repeats lower `-Xmx` in `gradle.sh`. Do not raise `gradle.properties` - tuned for the desktop. |
+| `JAVA_HOME is set to an invalid directory: .../ai/toolchain/jdk-25` (Desktop) | `gradle.sh` took the Linux bootstrap path on Windows. Hit 2026-09-30, before it learned to hand over to `./gradlew`. | Check the `uname -s` branch at the top of `gradle.sh` still matches `MINGW*`. |
+| `UnknownHostException: services.gradle.org` (Cowork) | Java does not read `HTTPS_PROXY`; the wrapper cannot reach the network. | `.claude/scripts/gradle.sh`, never `./gradlew`, in the sandbox. |
+| `formatting: NEEDS APPLYING` (Cowork) | No delete permission this session; Spotless rewrites a file by unlinking it first. | Everything else still ran. Ask Mateusz to approve deletion, re-run. |
+| `403 Forbidden` fetching a `.pom` (Cowork, Cloud) | Host not on the egress allowlist. | Report the host. Do not route around it. `jitpack.io` and `central.sonatype.com` blocked; Maven Central, plugin portal and foojay allowed. |
+| `Could not read directory .../build/...` | Stale build output from another toolchain or a killed build. | `rm -rf */build ~/.pwt/out`, retry. |
+| `Failed to run Gradle Worker Daemon`, often with a `java.security` read error (Cowork) | Sandbox memory pressure. | Retry; if it repeats lower `-Xmx` in `gradle.sh`. Do not raise `gradle.properties` - tuned for the desktop. |
 | Spotless fails `build` with a diff wall | Files not yet formatted - the gdx-liftoff template used tabs. | `spotlessApply` first; `verify.sh` already does. |
 | `cannot find symbol: com.badlogic.gdx.utils.ImmutableArray` | It is Ashley's, not libGDX's. | `com.badlogic.ashley.utils.ImmutableArray`. |
 | A dependency's "latest" is a milestone (AssertJ resolved `4.0.0-M1`) | Maven metadata `<latest>` includes pre-releases. | Pin the newest stable in `gradle.properties`. |
-| `ArchitectureTest` reports violations inside itself | Build outputs relocated, no longer matching `.../build/classes/java/test/`; ArchUnit's `DoNotIncludeTests` silently stops excluding test classes. | Keep the `/build/` segment in any relocated output path - `gradle.sh` does. |
-| `cp: ... .pwt/gradle-home ...: No space left on device` while seeding the cache | The device shell's `/sessions` disk, where `$HOME` lives, is shared with every earlier session and full (9.8 GB, 0 free). Hit 2026-09-29. `/tmp` is on another disk with room, and persists between calls. | `HOME=/tmp/pwthome .claude/scripts/verify.sh`. Every call must pass the same `HOME`, or the build starts cold. |
+| `ArchitectureTest` reports violations inside itself | Build outputs relocated, no longer matching `.../build/classes/java/test/`; ArchUnit's `DoNotIncludeTests` silently stops excluding test classes. | Keep the `/build/` segment in any relocated output path - `gradle.sh` does, in every branch. |
+| `cp: ... .pwt/gradle-home ...: No space left on device` while seeding the cache (Cowork) | The device shell's `/sessions` disk, where `$HOME` lives, is shared with every earlier session and full (9.8 GB, 0 free). Hit 2026-09-29. `/tmp` is on another disk with room, and persists between calls. | `HOME=/tmp/pwthome .claude/scripts/verify.sh`. Every call must pass the same `HOME`, or the build starts cold. |
 | Lombok `sun.misc.Unsafe` warning | Unavoidable on JDK 25. | Ignore; `verify.sh` filters it. |
-| `Could not create service of type FileHasher ... java.io.IOException: Input/output error`, and `rm` on `.gradle/**` says `Permission denied` | IntelliJ or a Windows `gradlew` daemon holds `<project>/.gradle`'s lock files, which the sandbox VM may not touch. Reads like a corrupt cache; is not one. | Nothing to do: `gradle.sh` passes `--project-cache-dir`. If it reappears, check that flag is still there before deleting anything. |
+| `Could not create service of type FileHasher ... java.io.IOException: Input/output error`, and `rm` on `.gradle/**` says `Permission denied` (Cowork) | IntelliJ or a Windows `gradlew` daemon holds `<project>/.gradle`'s lock files, which the sandbox VM may not touch. Reads like a corrupt cache; is not one. | Nothing to do: `gradle.sh` passes `--project-cache-dir`. If it reappears, check that flag is still there before deleting anything. |
 | An input that is "just pressed" is ignored at random | A frame shorter than one tick runs **zero** simulation steps, so a one-frame input reaches no tick. Above 60 Hz that is most frames. | Latch it until a tick spends it, as `ScenarioSession.pendingOrder` does. Anything read with `isKeyJustPressed` and handed to `advance()` has this. |
 | `error: warnings found and -Werror specified` | A real warning. Most often a javadoc orphaned by inserting a method *above* the one it documented. | Fix it. Do not disable the check - eight warnings accumulated in one session before anyone noticed. |
-| `.claude/scripts/verify.sh: Permission denied` (cloud) | The scripts were committed as `100644` from Windows, so a Linux clone cannot execute them. Hit 2026-09-26; now committed as `100755`, and `verify.sh` calls `gradle.sh` through `bash`. | Run `bash .claude/scripts/verify.sh`. The session-start hook also restores the bit. |
-| `sandbox-helper: no Plan9 drive shares mounted under /mnt/.virtiofs-root/shared` | The device shell cannot mount `D:` at all. Hit 2026-09-11, attributed to a Windows update of 2026-09-08; fixed on Mateusz's side 2026-09-12. | Nothing in the build can run. Say so and fall back to the file tools - see below. |
-| IntelliJ or the command line says `Unable to create '.git/index.lock': File exists. Another git process seems to be running` | **A `git` command run from the sandbox left its lock behind.** Plain `git status` takes `index.lock` to write a refreshed index cache, and removing it again needs delete rights on `D:` - which reset between sessions, so a status run without them strands a zero-byte lock that blocks Mateusz's own git indefinitely. Hit 2026-09-17. | Delete `.git/index.lock` (needs delete permission), then **always** `git --no-optional-locks ...` for anything read-only. See the recipe below. |
-| `too deeply nested to stage: N folders below the connected folder` | `device_stage_files` supports 7 folders; Java sources sit 8-9 deep. | Not workable around from here. Read the file another way or ask Mateusz to connect a deeper folder. |
+| `.claude/scripts/verify.sh: Permission denied` (Cloud) | The scripts were committed as `100644` from Windows, so a Linux clone cannot execute them. Hit 2026-09-26; now committed as `100755`, and `verify.sh` calls `gradle.sh` through `bash`. | Run `bash .claude/scripts/verify.sh`. The session-start hook also restores the bit. |
+| `sandbox-helper: no Plan9 drive shares mounted under /mnt/.virtiofs-root/shared` (Cowork) | The device shell cannot mount `D:` at all. Hit 2026-09-11, attributed to a Windows update of 2026-09-08; fixed on Mateusz's side 2026-09-12. | Nothing in the build can run. Say so and fall back to the file tools - see below. |
+| IntelliJ or the command line says `Unable to create '.git/index.lock': File exists. Another git process seems to be running` (Cowork) | **A `git` command run from the sandbox left its lock behind** - see *Reading git state*. Hit 2026-09-17. | Delete `.git/index.lock` (needs delete permission), then **always** `git --no-optional-locks ...` for anything read-only. |
+| `too deeply nested to stage: N folders below the connected folder` (Cowork) | `device_stage_files` supports 7 folders; Java sources sit 8-9 deep. | Not workable around from here. Read the file another way or ask Mateusz to connect a deeper folder. |
 
 ## Cloud sessions
 
 A Claude Code session on the web runs in a Linux container cloned fresh from GitHub: no Windows mount, no
 IntelliJ, no display, and **thrown away** after a while idle. `CLAUDE_CODE_REMOTE=true` says you are in one.
-What differs from the sandbox on Mateusz's machine:
 
 - **The toolchain is provisioned before you start.** `.claude/hooks/session-start.sh` (SessionStart,
   cloud only) downloads JDK 25 and Gradle into `ai/toolchain` and compiles main and test sources, so the
@@ -179,12 +195,9 @@ What differs from the sandbox on Mateusz's machine:
   session - the script is the one door, and its guards are what make it safe to leave open.
   Commit at each stage a change can stop after, not only at the end. Mateusz merges into main.
 - **Several commits for several concerns**: pass paths after `--` to commit one concern at a time.
-- **No delete-permission ask**, no index-lock hazard, no Windows mount: the local-only rules above
-  (`--no-optional-locks`, scoped greps) are harmless here and stay the habit.
-- **Build output** is in `~/.pwt/out/<module>/build/`, test XML under `.../test-results/test/`.
 - **The game cannot run.** Level 5 of the ladder is still Mateusz's machine.
 
-## When the mount is down
+## When the mount is down (Cowork)
 
 `device_list_dir`, `device_stage_files` and `device_commit_files` still work, but staging caps at
 **7 folders** below the connected root and Java sources are 8-9 deep. Consequence, stated plainly:
@@ -199,18 +212,17 @@ Mateusz as a file.
 
 Named so it is not re-discovered every session. None of it blocks work; each is a cost paid repeatedly.
 
-- **Delete permission resets every session**, and can drop mid-session when the bridge reconnects. Ask
-  in your first message. Not a blocker for everything: `verify.sh` probes for it and without it
-  compiles, lints and tests anyway, reporting formatting instead of applying it. It *is* a hard blocker
-  for renaming or deleting a file. Spotless is the only thing in the whole build that deletes anything
-  on `D:` (verified by syscall trace, 2026-09-07).
+- **Delete permission resets every Cowork session**, and can drop mid-session when the bridge
+  reconnects. `verify.sh` probes for it and without it compiles, lints and tests anyway, reporting
+  formatting instead of applying it. It *is* a hard blocker for renaming or deleting a file. Spotless
+  is the only thing in the whole build that deletes anything on `D:` (verified by syscall trace,
+  2026-09-07).
 - **Computer-use access lapses between sessions.** Re-approve when Claude needs to run or look at the
   game.
-- **Allowlisting `repo.maven.apache.org`** would allow plain `mavenCentral()`; `api.foojay.io` would fix
-  Gradle toolchain provisioning.
-- **The repo lives on `D:`, a Windows mount** - the ~175x write penalty above. Worked around in
-  `gradle.sh`. A faster setup would put it on the Linux filesystem, at the cost of IntelliJ no longer
-  seeing it. Not recommended; the workaround is enough.
+- **Allowlisting `repo.maven.apache.org`** would allow plain `mavenCentral()` in Cowork; `api.foojay.io`
+  would fix Gradle toolchain provisioning there.
+- **In Cowork the repo lives on `D:`, a Windows mount** - the ~175x write penalty above. Worked around in
+  `gradle.sh`.
 
 Checked and closed: nothing in the test suite needs Docker or Testcontainers, and nothing will - the
 simulation has no external collaborators.

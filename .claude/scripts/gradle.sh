@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Runs Gradle inside the Claude sandbox VM. On Windows use ./gradlew instead.
+# Runs Gradle for Claude in every environment: the Cowork sandbox VM, a cloud container, or Git Bash
+# on Windows (Claude Code desktop), where it hands over to ./gradlew.
 #
 #   .claude/scripts/gradle.sh <gradle args...>
 #   .claude/scripts/gradle.sh --save-cache      push downloaded deps back to ai/gradle-home
@@ -15,6 +16,32 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+# Claude Code desktop on Windows (Git Bash) has its own JDK 25, network and Gradle wrapper, so none of
+# the sandbox work below applies: hand over to ./gradlew. Output still goes to ~/.pwt/out, apart from
+# IntelliJ's <project>/build, so Claude's builds and Mateusz's never clobber each other (ADR 0006).
+case "$(uname -s)" in
+  MINGW* | MSYS* | CYGWIN*)
+    if [[ "${1:-}" == "--save-cache" ]]; then
+      echo "[cache] nothing to save on Windows: the wrapper's cache in ~/.gradle is already durable" >&2
+      exit 0
+    fi
+    if [[ -z "${JAVA_HOME:-}" || ! -x "$JAVA_HOME/bin/javac.exe" ]]; then
+      for jdk in "/c/Program Files/Java"/jdk-25* "/c/Program Files/Eclipse Adoptium"/jdk-25*; do
+        if [[ -x "$jdk/bin/javac.exe" ]]; then export JAVA_HOME="$jdk"; fi
+      done
+    fi
+    mkdir -p "$HOME/.pwt"
+    INIT="$HOME/.pwt/local-build-windows.gradle"
+    cat > "$INIT" <<'INIT'
+allprojects {
+  layout.buildDirectory = file("${System.getProperty('user.home')}/.pwt/out/${project.path.replace(':', '_')}/build")
+}
+INIT
+    exec "$ROOT/gradlew" -p "$(cygpath -w "$ROOT")" -I "$(cygpath -w "$INIT")" --console=plain "$@"
+    ;;
+esac
+
 TOOLCHAIN="$ROOT/ai/toolchain"          # on the mount: survives between sessions
 LOCAL="$HOME/.pwt"                      # VM-local: fast, wiped when the sandbox goes away
 SEED="$ROOT/ai/gradle-home"             # durable copy of the dependency cache

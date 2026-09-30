@@ -2,8 +2,8 @@
 description: Format, compile, lint and test Project-W
 ---
 
-Run the project's verify loop in the shell that has this repository mounted (in a Cowork session
-that is the device shell, not the cloud container):
+Run the project's verify loop in the shell that has this repository - the Bash tool on the desktop and
+in the cloud, the device shell in Cowork:
 
 ```
 .claude/scripts/verify.sh $ARGUMENTS
