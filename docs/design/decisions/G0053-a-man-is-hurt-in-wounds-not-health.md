@@ -5,7 +5,7 @@ anything that heals, protects or disables a man, or proposing that a man's fate 
 
 **Enforced by.** `VitalityTest` holds the harm table as one table, `ShieldTest` the shield,
 `WoundCostTest` what a wound costs, `StunTest` a declared stun, `MedkitTest` the medkit. The invariant
-rows in `docs/design/README.md` name the rest.
+rows in `docs/design/invariants/wounds.md` name the rest.
 
 **Supersedes in part G0020's** "a casualty is at zero health, so the next hit of any kind finishes
 him": a man who is down is now finished by a hit that could have put him down or killed him standing,

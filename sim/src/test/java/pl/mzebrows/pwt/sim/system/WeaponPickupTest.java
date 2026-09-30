@@ -29,8 +29,8 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
  * A weapon pickup replaces what the commander is carrying and nothing else - there is no slot, no
- * inventory and nothing kept between lives. That answers the open question in
- * {@code docs/design/README.md}, so these tests are what stops the answer drifting.
+ * inventory and nothing kept between lives. That answers what was an open question, now in
+ * {@code docs/design/invariants/pickups.md}, so these tests are what stops the answer drifting.
  */
 class WeaponPickupTest {
 

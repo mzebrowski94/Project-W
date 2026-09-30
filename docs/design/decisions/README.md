@@ -69,7 +69,7 @@ mechanic you are about to write appears there, it has already been rejected and 
 ## When to write one
 
 Only when an alternative was actually rejected **and is likely to be proposed again**. A decision
-that nobody would argue with is an invariant - put it in `docs/design/README.md` instead. A
+that nobody would argue with is an invariant - put it in `docs/design/invariants/` instead. A
 description of how something works is neither; that is the code's job.
 
 Keep the same six fields `docs/adr/README.md` lists: **Trigger**, **Enforced by**, the

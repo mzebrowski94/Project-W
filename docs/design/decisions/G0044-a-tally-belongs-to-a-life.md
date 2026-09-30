@@ -3,7 +3,7 @@
 **Trigger.** Counting anything per player - kills, goals, heals, a score; giving a blow, a shot, a
 grenade or a turret a notion of who is behind it; showing a player's numbers.
 
-**Enforced by.** `TallyTest` (the invariant rows in `docs/design/README.md`), `ComponentResetTest` for
+**Enforced by.** `TallyTest` (the invariant rows in `docs/design/invariants/progression.md`), `ComponentResetTest` for
 the component.
 
 **Constraint.**

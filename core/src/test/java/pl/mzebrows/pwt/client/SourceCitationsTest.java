@@ -48,6 +48,11 @@ class SourceCitationsTest {
 
     private static final Pattern DOC = Pattern.compile("docs/[A-Za-z0-9_][A-Za-z0-9_/.-]*\\.md");
 
+    /** The invariants, one file per domain, and the design README that indexes them. */
+    private static final String INVARIANTS = "docs/design/invariants";
+
+    private static final Path DESIGN = Path.of("docs/design/README.md");
+
     @Test
     void citesNoScopeDocsNumbersInAComment() {
         List<String> found = new ArrayList<>();
@@ -87,6 +92,21 @@ class SourceCitationsTest {
         }
 
         assertThat(found).isEmpty();
+    }
+
+    /** The invariants are read through their index (the {@code feature} skill), so a file it misses is never read. */
+    @Test
+    void indexesEveryFileOfInvariants() {
+        String index = String.join("\n", lines(ROOT.resolve(DESIGN)));
+        List<String> missed = new ArrayList<>();
+        for (Path file : files(List.of(INVARIANTS))) {
+            String cited = ROOT.relativize(file).toString().replace('\\', '/');
+            if (!index.contains(cited)) {
+                missed.add(cited);
+            }
+        }
+
+        assertThat(missed).as("name each in the index in " + DESIGN).isEmpty();
     }
 
     /** Whether this number is the UI plan's, cited as {@code plan D14} while that plan is still there. */

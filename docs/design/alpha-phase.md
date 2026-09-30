@@ -19,7 +19,7 @@ leap and the strike that answers it, are worth building together, because half o
 judged by feel on its own. Split the work into stages that each stand up on their own and can be
 stopped after, rather than splitting it across sessions by count.
 
-1. **Design it** - the `feature` skill. Check it against the invariants in `README.md`, ask rather
+1. **Design it** - the `feature` skill. Check it against the invariants `README.md` indexes, ask rather
    than invent, and write down whatever it settles.
 2. **Build it** - the `new-system` skill. Tests first, in the order `CLAUDE.md` sets out.
 3. **Demonstrate it** - *if Mateusz asks*, add a scenario that shows the system working, so he can

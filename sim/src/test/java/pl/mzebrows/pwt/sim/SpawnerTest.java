@@ -19,7 +19,7 @@ import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
- * Enforces the composition invariants in {@code docs/design/README.md}: everything that can be hit
+ * Enforces the composition invariants in {@code docs/design/invariants/}: everything that can be hit
  * has a body, every projectile is a real entity rather than a ray, and obstacles are entities like
  * anything else. These are one-line assertions guarding rules that would otherwise be prose.
  */

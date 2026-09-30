@@ -66,7 +66,7 @@ final class ArchitectureTest {
             .dependOnClassesThat()
             .resideInAPackage("com.badlogic.gdx.controllers..")
             .because("input reaches the simulation as a per-tick value object, never by polling a device -"
-                    + " see the input invariant in docs/design/README.md");
+                    + " see the input invariant in docs/design/invariants/players.md");
 
     @ArchTest
     static final ArchRule simulationDoesNotUseUnseededRandomnessOrHashIteration = noClasses()

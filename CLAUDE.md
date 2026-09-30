@@ -136,7 +136,7 @@ it rather than working around it.
    input, lives where a snapshot carries it, and holds no `Entity` across ticks. Anything per player is
    keyed by slot and sized from capacity - never assumed to be one player, or four.
 
-Invariants, input map and open questions: `docs/design/README.md`. Read before any gameplay change -
+Invariants (indexed per domain), input map and open questions: `docs/design/README.md`. Read before any gameplay change -
 the `feature` skill has the procedure.
 
 The seven are inline rather than on-demand by decision: a contradiction usually slips in during a session
@@ -216,7 +216,7 @@ Read the row that matches. On-demand by design - loading all of them costs more 
 | `docs/simulation-order.md` | Registering a system, or debugging a one-tick ordering bug. |
 | `docs/workflow.md` | Builds, the verification ladder, something broke, environment friction. |
 | `docs/glossary.md` | Naming anything in the game domain. Read the whole section, not just the word you had in mind. |
-| `docs/design/README.md` | Any gameplay change - invariants, input map, open questions. |
+| `docs/design/README.md` | Any gameplay change - input map, open questions, and the index of `docs/design/invariants/`: read the files the change touches. |
 | `docs/design/alpha-phase.md` | **Every session right now** - how a phase session goes, how to add a scenario, what is still scaffolding. |
 | `docs/adr/README.md` | Before proposing to change a structural decision. |
 | `docs/backlog.md` | Before proposing a refactor or perf fix - it may already be deferred, with the trigger that brings it back. Add what you defer. |

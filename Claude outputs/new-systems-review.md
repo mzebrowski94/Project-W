@@ -65,6 +65,16 @@ Decision: both files bound through `ConfigBinder` (asked 2026-09-30).
 | - | **The drift, fixed by construction**: with no file on the classpath - every `core` test - the old loaders ran 9 values the game does not ship: `graphic.tile.patch` 3 (ships 5), `graphic.terrain.rockEdge` `7a7a98ff` (ships `8a8aa8ff`), and the seven commander colours for players 2-8 (all the first player's cyan; ship amber, green, pink and four more). Core tests now draw with what ships | Same probe, old fallback path vs `GraphicConfig.defaults()` |
 | - | `docs/architecture.md` (config loading, `Palette`) and `ConfigDefaultsTest`'s doc say so. `GraphicConfig` 455 → 364 lines + `GraphicFile` 190; `ControlsConfig` 326 → 343 + `ControlsFile` 82 | - |
 
+### Stage 8 (invariants per domain)
+
+Decision: split now (asked 2026-09-30).
+
+| Item | Done | Evidence |
+|---|---|---|
+| W2 | The invariants table (292 rows - not the 315 of section E, which counted the input map's too - 96 KB of the 112 KB README) is ten files in `docs/design/invariants/` - players, simulation, movement, aliens, combat, map-and-view, squad-and-objectives, wounds, pickups, progression - each row verbatim, in its old order; the eight paragraphs under the table follow the rows they explain. The README keeps the legend and an index, one line per file (**README 112 → 18 KB**; largest domain file combat, 26 KB). A row that leans on "the row above" stays next to it (4 such pairs, each in one file) | Script, before vs after: **292 rows, multiset equal**; the 8 paragraphs identical but for one word ("the input map ~~below~~", now in another file); README outside the section identical but for the lookup-table cell pointing at the index |
+| - | The `feature` skill reads the index, then the files the feature touches; a new row goes in its domain's file. CLAUDE.md, `alpha-phase.md`, the decisions README, G0044, G0053 and three test docs point at the files | `SourceCitationsTest.namesOnlyDocsThatExist` green over every citation |
+| - | New guard `SourceCitationsTest.indexesEveryFileOfInvariants`: a file the index does not name is never read, so the build fails | Seen biting: an unindexed `zz-probe.md` failed it; an indexed file removed failed `namesOnlyDocsThatExist` (the index cites full paths so that guard covers it). Both restored |
+
 Scope: `cebbac5..8bb389c` (8 commits, ~19k lines added). Baseline on this branch: `verify.sh` green, 1881
 tests; `PWT_BENCH=1` 800 crowd **5.24 ms/step**, growth ×7.8 (100→800), 6 B/step (cloud container; the
 2026-09-27 figure of 3.89 ms was Mateusz's machine). Every probe below was a `Zz*ProbeTest`, run and

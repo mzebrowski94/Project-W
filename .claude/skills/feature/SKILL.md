@@ -10,9 +10,10 @@ game. Work through it before writing anything.
 
 ## 1. Read the constraints
 
-The pillars are in `CLAUDE.md` - already in context. Read `docs/design/README.md` for the invariants,
-the input map and the open questions. That one file is the whole design surface; you do not need to
-read the systems.
+The pillars are in `CLAUDE.md` - already in context. Read `docs/design/README.md` for the input map,
+the open questions and the index of the invariants, then every file in `docs/design/invariants/` whose
+domain the feature touches - a weapon is combat and pickups, a trooper order squad and objectives. Those
+are the whole design surface; you do not need to read the systems.
 
 ## 2. Check the feature against them
 
@@ -33,8 +34,8 @@ the second gets caught.
 
 Whatever the feature settles becomes part of the design surface, in the same change as the code:
 
-- A new rule that must always hold -> a row in the invariants table. Mark it `enforced` with the
-  test name if you can test it, `judgement` if you cannot. Prefer testable.
+- A new rule that must always hold -> a row in its domain's invariants file. Mark it `enforced` with
+  the test name if you can test it, `judgement` if you cannot. Prefer testable.
 - An alternative you rejected that someone will propose again -> a record in
   `docs/design/decisions/`, following the format in its README. Only if it is genuinely re-proposable.
 - A new input -> a row in the input map. Check nothing else claims it.
