@@ -197,7 +197,11 @@ however short - it is the part he cannot read off the diff:
   does to the feel where the name does not say - the handful he would otherwise go and find before
   tuning what he has just played;
 - every `CLAUDE.md` edit, one line each;
-- on the desktop or in Cowork, a suggested commit message.
+- on the desktop or in Cowork, a suggested commit message;
+- at a stage the work could stop after, whether the next step would go better in a fresh session - another
+  subsystem, a new grilling, or a context long with detail the next step does not need - and if so, the
+  prompt to start it: standalone, naming the files to read, what is settled, what is open and the skill to
+  run.
 
 ## Where to look things up
 
