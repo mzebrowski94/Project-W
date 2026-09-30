@@ -25,12 +25,8 @@ final class Crates {
 
     private Crates() {}
 
-    /**
-     * The crate this man would reach first that his slot could open, or null if there is none within arm's
-     * length: a shut one, or one a higher slot opened on this very tick (see {@link #open}).
-     */
-    static @Nullable Entity nearestOpenable(
-            ImmutableArray<Entity> crates, Entity man, float reach, int slot, long tick) {
+    /** The shut crate this man would reach first, or null if there is none within arm's length. */
+    static @Nullable Entity nearestOpenable(ImmutableArray<Entity> crates, Entity man, float reach) {
         Position at = POSITION.get(man);
         float radius = BODY.get(man).radius;
         Entity nearest = null;
@@ -38,7 +34,7 @@ final class Crates {
         for (int i = 0; i < crates.size(); i++) {
             Entity candidate = crates.get(i);
             Crate crate = CRATE.get(candidate);
-            if ((crate.open() && !(crate.openedOn == tick && slot < crate.openedBy)) || DEAD.has(candidate)) {
+            if (crate.open() || DEAD.has(candidate)) {
                 continue;
             }
             float gap = Aid.gapBetween(at, radius, candidate);
@@ -67,13 +63,12 @@ final class Crates {
     }
 
     /**
-     * Opens a crate for a slot, if nobody else has it (G0056) - or if whoever does opened it on this same
-     * tick from a higher slot: two presses on one tick go to the lower slot, so who gets it never depends
-     * on the order the commanders happen to be held in.
+     * Opens a crate for a slot, if nobody has it (G0056). {@code ActionSystem} opens in slot order, so two
+     * presses on one tick go to the lower slot, and the higher one to the next crate in his reach.
      */
     static void open(Entity entity, int slot, long tick) {
         Crate crate = CRATE.get(entity);
-        if (crate.open() && !(crate.openedOn == tick && slot < crate.openedBy)) {
+        if (crate.open()) {
             return;
         }
         crate.openedBy = slot;

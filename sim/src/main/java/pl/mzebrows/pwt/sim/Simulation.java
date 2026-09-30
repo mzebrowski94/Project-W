@@ -204,7 +204,7 @@ public final class Simulation {
         engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(config, spawner, modifiers));
-        engine.addSystem(new ActionSystem(config, modifiers));
+        engine.addSystem(new ActionSystem(config, modifiers, capacity));
         // Straight after the key that opens a crate, so a crate opened this tick is dealt and shown this
         // tick; after damage, so a man hurt this tick has his crate shut on it (G0056).
         engine.addSystem(new CrateSystem(config, spawner, modifiers, streams.of(RngStream.ARMOURY)));
@@ -382,6 +382,11 @@ public final class Simulation {
     /** The most troopers the field holds right now, upgrades included (G0055) - for the interface. */
     public int squadMost() {
         return ReinforcementSystem.squadMost(config, modifiers);
+    }
+
+    /** How many wounds this man carries on his feet right now, upgrades included (G0053) - for the interface. */
+    public int maxWounds(Entity man) {
+        return DamageSystem.carries(modifiers, man);
     }
 
     /**

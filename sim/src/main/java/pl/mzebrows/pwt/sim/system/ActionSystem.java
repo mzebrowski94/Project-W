@@ -8,6 +8,8 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.NotState;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -62,15 +64,24 @@ public final class ActionSystem extends EntitySystem {
     private final float reviveInvulnerableSeconds;
     private final Modifiers modifiers;
 
+    /**
+     * Scratch, by slot: pressed to open a crate this tick. Opened after every commander has been heard, in
+     * slot order, so who gets which crate never depends on the order the commanders are held in (G0056).
+     */
+    @NotState("scratch: every press is spent before the update ends")
+    private final boolean[] opening;
+
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> casualties = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> stations = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> crates = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
-    public ActionSystem(SimConfig config, Modifiers modifiers) {
+    /** @param capacity how many slots the game holds */
+    public ActionSystem(SimConfig config, Modifiers modifiers, int capacity) {
         this.modifiers = modifiers;
         this.reviveInvulnerableSeconds = config.casualty().reviveInvulnerableSeconds();
+        this.opening = new boolean[capacity];
     }
 
     @Override
@@ -89,6 +100,7 @@ public final class ActionSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
+        long tick = levels.size() == 0 ? 0L : LEVEL.get(levels.first()).tick;
         for (int i = 0; i < commanders.size(); i++) {
             Entity commander = commanders.get(i);
             Action action = ACTION.get(commander);
@@ -110,8 +122,7 @@ public final class ActionSystem extends EntitySystem {
             }
             @Nullable Entity station = Crews.nearestFree(stations, commander, action.reach);
             @Nullable Entity subject = Aid.nearest(casualties, commander, action.reach);
-            long tick = levels.size() == 0 ? 0L : LEVEL.get(levels.first()).tick;
-            @Nullable Entity crate = Crates.nearestOpenable(crates, commander, action.reach, slot, tick);
+            @Nullable Entity crate = Crates.nearestOpenable(crates, commander, action.reach);
             if (station != null
                     && nearer(commander, station, subject)
                     && (crate == null || Crews.gapTo(commander, station) <= Crates.gapTo(commander, crate))) {
@@ -124,9 +135,7 @@ public final class ActionSystem extends EntitySystem {
             if (crate != null
                     && (subject == null || Crates.gapTo(commander, crate) <= Crates.gapTo(commander, subject))) {
                 offer(action, ActionKind.OPEN_CRATE);
-                if (pressed) {
-                    Crates.open(crate, slot, tick);
-                }
+                opening[slot] |= pressed;
                 continue;
             }
             if (subject == null) {
@@ -144,6 +153,24 @@ public final class ActionSystem extends EntitySystem {
                 Aid.letGo(subject);
             }
             action.progress = Aid.progress(subject);
+        }
+        openCrates(tick);
+    }
+
+    /** Each slot that pressed opens the shut crate he would reach first, lowest slot first. */
+    private void openCrates(long tick) {
+        for (int slot = 0; slot < opening.length; slot++) {
+            if (!opening[slot]) {
+                continue;
+            }
+            opening[slot] = false;
+            @Nullable Entity commander = Players.inSlot(commanders, slot);
+            @Nullable
+            Entity crate =
+                    commander == null ? null : Crates.nearestOpenable(crates, commander, ACTION.get(commander).reach);
+            if (crate != null) {
+                Crates.open(crate, slot, tick);
+            }
         }
     }
 

@@ -167,6 +167,30 @@ class CrateTest {
         assertThat(crate(crate).openedBy).isEqualTo(1);
     }
 
+    /**
+     * With a second crate in reach, the higher slot is not left with nothing: he opens the one he would
+     * reach next, whichever of the two commanders was spawned first.
+     */
+    @Test
+    void givesTheHigherSlotTheNextCrateWhenTheLowerTakesTheNearestOnTheSameTick() {
+        for (boolean lowerFirst : new boolean[] {true, false}) {
+            Simulation simulation = simulation();
+            spawnPair(simulation, lowerFirst);
+            Entity nearest = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
+            Entity next = simulation.spawnPickup(PickupKind.CRATE, MIDDLE - BESIDE - 0.5f, MIDDLE);
+            simulation.step(new PlayerInputs());
+
+            simulation.step(new PlayerInputs().set(0, ACT).set(1, ACT));
+
+            assertThat(crate(nearest).openedBy)
+                    .as("lower slot spawned first: %s", lowerFirst)
+                    .isZero();
+            assertThat(crate(next).openedBy)
+                    .as("lower slot spawned first: %s", lowerFirst)
+                    .isEqualTo(1);
+        }
+    }
+
     @Test
     void shutsItWhenHeClosesIt() {
         Simulation simulation = simulation();
@@ -357,6 +381,19 @@ class CrateTest {
             kinds[i] = crate.get(i);
         }
         return kinds;
+    }
+
+    /** Two commanders side by side across the crates' line, spawned in either order. */
+    private static void spawnPair(Simulation simulation, boolean lowerFirst) {
+        float lowerY = MIDDLE - 1.2f;
+        float higherY = MIDDLE + 1.2f;
+        if (lowerFirst) {
+            simulation.spawnCommander(MIDDLE, lowerY, 0);
+            simulation.spawnCommander(MIDDLE, higherY, 1);
+        } else {
+            simulation.spawnCommander(MIDDLE, higherY, 1);
+            simulation.spawnCommander(MIDDLE, lowerY, 0);
+        }
     }
 
     /** A gun the crate holds; puts one at the front if the deal happened to hold none. */

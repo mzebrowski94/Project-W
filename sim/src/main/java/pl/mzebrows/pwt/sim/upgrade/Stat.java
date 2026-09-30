@@ -26,7 +26,7 @@ public enum Stat {
     STUN_DURATION(Form.SCALE, Reader.UNIT),
     /**
      * How many wounds a man carries on his feet (G0053). Read where a hit is weighed, for the man it lands
-     * on - every tick, so the pips he is drawn with are the number the next hit will be weighed against.
+     * on, and by his panel through the same method - so the pips are the number the next hit meets.
      */
     MAX_WOUNDS(Form.COUNT, Reader.UNIT),
     /** How long after his last wound a man's wounds clear on their own, in seconds; zero never. Read where it runs. */

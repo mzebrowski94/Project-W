@@ -37,6 +37,14 @@ Decision: all three clocks in whole ticks (asked 2026-09-30).
 | V1 / A2 | `Vitality` counts both clocks in hundredths of a tick (`Vitality.TICK`): `bleedOutTicks`, `stabiliseTicks`, `hauledStabiliseTicks` converted once at spawn through `Ticks.of`; `remaining` and `stabilised` are ints. A tick of work is `STABILISE_SPEED` folded onto 100 (`Modifiers.stabiliseWork` is now whole); a dragged bleed is `draggedBleedFactor` × 100, converted once in `CasualtySystem`. The mend compares its tick count with `Ticks.of(seconds)` instead of multiplying by `deltaTime` | New `WoundClockTest`, on the shipped config: stabilise **48 ticks (was 49)**, First Aid II **32 (was 33)** - both red first; hauled 77, bleed-out 480 / 300, mend 600 - green before and after, kept as guards. `conventions.md`'s timer row names the rule and the test |
 | - | **Behaviour change**: a stabilise ends one tick sooner wherever the float sum used to fall short (the shipped base, First Aid II); every other clock is unchanged | Bodies hash (positions, health, wounds, down) **identical in all 12 scenarios and the crowd**: no scripted run finishes a stabilise on the boundary tick. World hash differs in every world with a man in it, from the snapshot layout (five `Vitality` fields changed type or name) - `Crowd` has none and is identical. `PWT_FUZZ=1 DeterminismFuzzTest` 12/12 green (197 s) |
 
+### Stage 5 (stored fold, crate order)
+
+| Item | Done | Evidence |
+|---|---|---|
+| V5 / A3 | `Vitality.carries` is gone. `DamageSystem.carries(modifiers, man)` - the one caller of `Modifiers.maxWounds` - folds at the hit, and `Simulation.maxWounds(man)` hands the panel and the debug overlay the same method, as `squadMost()` already did. `Vitality.take(harm, carries)` weighs against what it is handed | `ReadoutWriterTest.publishesTheMaximumHisUpgradesGiveHimFromTheFrameHeArrives` red first (**1, expected 2** with Thick Skin), then green; fence 3 still one caller |
+| V4 / A4 | `ActionSystem` hears every commander, then opens crates in slot order (a scratch array sized from capacity); `Crates` lost its same-tick steal, which slot order makes unnecessary | `CrateTest.givesTheHigherSlotTheNextCrateWhenTheLowerTakesTheNearestOnTheSameTick`, both spawn orders: red first on the higher-first order (**slot 1 got nothing**), then green; the existing lower-slot test still green |
+| - | Behaviour unchanged apart from the two fixes | Bodies hash **identical** in all 12 scenarios and the crowd; world hash differs only where a man's `Vitality` lost its field. `PWT_FUZZ=1 DeterminismFuzzTest` 12/12 green |
+
 Scope: `cebbac5..8bb389c` (8 commits, ~19k lines added). Baseline on this branch: `verify.sh` green, 1881
 tests; `PWT_BENCH=1` 800 crowd **5.24 ms/step**, growth ×7.8 (100→800), 6 B/step (cloud container; the
 2026-09-27 figure of 3.89 ms was Mateusz's machine). Every probe below was a `Zz*ProbeTest`, run and

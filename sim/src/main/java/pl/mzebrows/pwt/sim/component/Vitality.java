@@ -53,15 +53,11 @@ public final class Vitality implements Component, Pool.Poolable {
      */
     public int hauledStabiliseTicks;
 
-    /** How many wounds he carries on his feet before any upgrade; one more puts him down. Configuration. */
-    public int maxWounds;
-
     /**
-     * How many he carries right now: {@link #maxWounds} folded through the {@code MAX_WOUNDS} stat, by
-     * {@code DamageSystem} - the one place it is read - on every tick before any hit is weighed. What the
-     * next hit is weighed against, and what he is drawn with; never written anywhere else.
+     * How many wounds he carries on his feet before any upgrade; one more puts him down. Configuration: the
+     * base {@code DamageSystem.carries} folds through the {@code MAX_WOUNDS} stat (ADR 0017).
      */
-    public int carries;
+    public int maxWounds;
 
     /** How long one wound protects him from the next, in ticks. Configuration. */
     public int graceTicks;
@@ -104,7 +100,6 @@ public final class Vitality implements Component, Pool.Poolable {
         this.stabiliseTicks = newStabiliseTicks;
         this.hauledStabiliseTicks = newHauledStabiliseTicks;
         this.maxWounds = newMaxWounds;
-        this.carries = newMaxWounds;
         this.graceTicks = newGraceTicks;
         this.woundedPace = newWoundedPace;
         this.woundedCooldown = newWoundedCooldown;
@@ -124,8 +119,10 @@ public final class Vitality implements Component, Pool.Poolable {
      * one past his maximum puts him down; otherwise it starts his grace. A down blow puts a standing man
      * down whatever his wounds. A down or a killing blow finishes a man who is down, and a killing blow
      * kills a standing one.
+     *
+     * @param carries how many wounds he carries on his feet now, upgrades included
      */
-    public Taken take(Harm harm) {
+    public Taken take(Harm harm, int carries) {
         if (begun) {
             return harm == Harm.WOUND ? Taken.NOTHING : Taken.KILLED;
         }
@@ -135,11 +132,11 @@ public final class Vitality implements Component, Pool.Poolable {
                 begin();
                 yield Taken.DOWNED;
             }
-            case WOUND -> wound();
+            case WOUND -> wound(carries);
         };
     }
 
-    private Taken wound() {
+    private Taken wound(int carries) {
         if (graceRemaining > 0) {
             return Taken.NOTHING;
         }
@@ -254,7 +251,6 @@ public final class Vitality implements Component, Pool.Poolable {
         stabiliseTicks = 0;
         hauledStabiliseTicks = 0;
         maxWounds = 0;
-        carries = 0;
         graceTicks = 0;
         woundedPace = 1f;
         woundedCooldown = 1f;

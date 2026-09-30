@@ -38,7 +38,7 @@ public final class Crate implements Component, Pool.Poolable {
     /** The slot that has it open, or {@link #NOBODY}. */
     public int openedBy = NOBODY;
 
-    /** The tick it was opened on, so a lower slot's press on the same tick can take it over. */
+    /** The tick it was opened on, so a wound on that same tick does not shut it again. */
     public long openedOn;
 
     /** The opener's wounds as of the last tick, so a new one closes it. */

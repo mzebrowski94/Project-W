@@ -83,7 +83,7 @@ public final class DebugOverlay {
         Vitality vitality = commander.getComponent(Vitality.class);
         Invulnerable protection = commander.getComponent(Invulnerable.class);
         Weapon weapon = commander.getComponent(Weapon.class);
-        String standing = vitality.begun ? "down" : "wounds " + vitality.wounds + "/" + vitality.carries;
+        String standing = vitality.begun ? "down" : "wounds " + vitality.wounds + "/" + simulation.maxWounds(commander);
         String state = standing + (weapon == null ? "" : "   " + weapon.kind);
         if (simulation.commanderInvulnerable()) {
             return state + "   GOD MODE";

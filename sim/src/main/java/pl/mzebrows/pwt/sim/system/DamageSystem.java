@@ -96,13 +96,16 @@ public final class DamageSystem extends IteratingSystem {
                 engine.getEntitiesFor(Family.all(Commander.class, Tally.class).get());
     }
 
+    /**
+     * How many wounds a man carries on his feet: his maximum folded through {@code MAX_WOUNDS} - the one
+     * place it is read (ADR 0017, G0053), by the hit weighed against it and by the panel that shows it.
+     */
+    public static int carries(Modifiers modifiers, Entity man) {
+        return modifiers.maxWounds(man, VITALITY.get(man).maxWounds);
+    }
+
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
-        if (VITALITY.has(entity)) {
-            // Folded every tick, before any hit is weighed: the one place MAX_WOUNDS is read (G0053).
-            Vitality vitality = VITALITY.get(entity);
-            vitality.carries = modifiers.maxWounds(entity, vitality.maxWounds);
-        }
         Damage damage = DAMAGE.get(entity);
         if (damage.amount <= 0) {
             return;
@@ -201,7 +204,7 @@ public final class DamageSystem extends IteratingSystem {
         if (DYING.has(entity) && DYING.get(entity).begun) {
             return;
         }
-        switch (VITALITY.get(entity).take(harm)) {
+        switch (VITALITY.get(entity).take(harm, carries(modifiers, entity))) {
             case KILLED -> die(entity, credit, locksOnDeath, deathLock, carrySpeed, carryDecay);
             case DOWNED -> fall(entity);
             case WOUNDED, NOTHING -> {

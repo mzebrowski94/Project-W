@@ -129,7 +129,7 @@ public final class ReadoutWriter {
         army(world, level, out);
 
         for (int i = 0; i < commanders.size(); i++) {
-            commander(commanders.get(i), out);
+            commander(world, commanders.get(i), out);
         }
         crates(world, out);
         upgrades(world.upgradeView(), out);
@@ -170,7 +170,7 @@ public final class ReadoutWriter {
         out.regroupNeeded = lair.waiting() ? lair.needed() : 0;
     }
 
-    private void commander(Entity entity, Readout out) {
+    private void commander(Simulation world, Entity entity, Readout out) {
         int slot = COMMANDER.get(entity).slot;
         if (!inRange(slot)) {
             return;
@@ -204,7 +204,7 @@ public final class ReadoutWriter {
         if (VITALITY.has(entity)) {
             // A pip per wound he carries and per one he could (G0053); the appearance says which count.
             player.wounds = appearance.wounds;
-            player.maxWounds = VITALITY.get(entity).carries;
+            player.maxWounds = world.maxWounds(entity);
         }
         player.shielded = appearance.shield > 0f;
         player.stunned = appearance.state == Appearance.State.STUNNED;

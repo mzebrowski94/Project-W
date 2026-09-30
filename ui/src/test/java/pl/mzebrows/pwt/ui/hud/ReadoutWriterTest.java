@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.ui.hud;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
 import java.util.Objects;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.Tally;
+import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.PickupKind;
@@ -98,6 +100,26 @@ class ReadoutWriterTest {
 
         assertThat(player.wounds).isEqualTo(1);
         assertThat(player.maxWounds).isEqualTo(SimConfig.defaults().commander().maxWounds());
+    }
+
+    /**
+     * His maximum is what his upgrades make it from the frame he arrives - a commander coming back is
+     * spawned after the hits are weighed, and his panel is filled before the next tick weighs any.
+     */
+    @Test
+    void publishesTheMaximumHisUpgradesGiveHimFromTheFrameHeArrives() {
+        Simulation world = world();
+        world.engine()
+                .getEntitiesFor(Family.all(Upgrades.class).get())
+                .first()
+                .getComponent(Upgrades.class)
+                .held
+                .add(new Upgrades.Held(UpgradeKind.THICK_SKIN, Upgrades.SHARED, 1));
+
+        world.spawnCommander(40f, 40f, 0);
+        PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
+
+        assertThat(player.maxWounds).isEqualTo(SimConfig.defaults().commander().maxWounds() + 1);
     }
 
     @Test
