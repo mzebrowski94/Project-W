@@ -1,5 +1,7 @@
 # G0031: A nest is a place that produces, and it sleeps until you arrive
 
+**Status.** accepted
+
 **Trigger.** Anything that puts creatures on the field after the first tick, or that changes what a
 level does while the player is somewhere else.
 

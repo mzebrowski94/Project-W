@@ -1,6 +1,8 @@
 # G0015: Detection is a list of tests a strain declares
 
-**Trigger.** Adding a sense to a strain, or changing `PerceptionSystem`. Narrows G0011.
+**Status.** accepted
+
+**Trigger.** Adding a sense to a strain, or changing `PerceptionSystem`.
 
 **Enforced by.** Nothing mechanical - caught by reading.
 
@@ -15,7 +17,7 @@ facing, then a walk of the tile grid. The expensive test is reached only by cand
 passed the cheap ones, so its cost scales with how many fights are happening rather than with how
 many units exist.
 
-**Scope.** Noticing, and only noticing. This **narrows G0011 rather than contradicting it**, the same
+**Scope.** Noticing, and only noticing. This **Amends G0011** rather than contradicting it, the same
 way G0007 narrowed G0004: G0011's constraint - a unit notices the commander by distance alone, and
 rock does not hide him - stands completely unchanged, because everything that hunts him declares
 range and nothing else. What this record adds is that *a different unit may declare differently*,

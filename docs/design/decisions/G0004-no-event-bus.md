@@ -1,5 +1,7 @@
 # G0004: No event bus - reactions are components
 
+**Status.** amended by G0007: state that belongs to the level is an entity
+
 **Trigger.** Making two systems communicate; proposing an event bus, queue, signal or listener.
 
 **Enforced by.** Nothing mechanical - caught by reading. No system holding a reference to another is the thing to check.

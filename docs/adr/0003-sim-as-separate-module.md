@@ -1,5 +1,7 @@
 # ADR 0003: The simulation is its own Gradle module
 
+**Status.** amended by ADR 0017: a subsystem with nothing to wall off from rendering may be a fenced package instead of a module
+
 **Trigger.** Adding anything to `sim`, or proposing to merge it back into `core`.
 
 **Enforced by.** The module graph, plus `ArchitectureTest` for what the classpath still offers.

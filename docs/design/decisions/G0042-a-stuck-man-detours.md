@@ -1,5 +1,7 @@
 # G0042: A man who has stopped getting anywhere detours; he does not plan again
 
+**Status.** accepted
+
 **Trigger.** A unit stuck against terrain or an entity; proposing re-pathing, a nudge, or putting
 entities into the routes.
 

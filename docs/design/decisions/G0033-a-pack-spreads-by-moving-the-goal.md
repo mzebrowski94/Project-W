@@ -1,5 +1,7 @@
 # G0033: A pack spreads by moving the goal, not by pushing each other apart
 
+**Status.** accepted
+
 **Trigger.** Anything that changes how several creatures close on one man, or that reaches for a
 steering behaviour to fix how a crowd looks.
 

@@ -1,5 +1,7 @@
 # G0012: A dodge is a function of the shot, not a roll
 
+**Status.** accepted
+
 **Trigger.** Writing or changing dodge behaviour.
 
 **Enforced by.** `SimulationDeterminismTest` catches a dodge drawn from the `Rng` only if it changes a replay; otherwise reading.

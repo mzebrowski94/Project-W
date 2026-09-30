@@ -1,5 +1,7 @@
 # G0027: The post is a goal the level gives the aliens, not a point they capture
 
+**Status.** accepted
+
 **Trigger.** Adding anything that tells the alien side where to be, or proposing that the post be
 taken, damaged or defended by a bar.
 

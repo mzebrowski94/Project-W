@@ -1,5 +1,7 @@
 # G0008: A level may be larger than the view
 
+**Status.** accepted
+
 **Trigger.** Level extent, the camera or the zoom; proposing a minimap.
 
 **Enforced by.** Nothing mechanical - caught by reading, against pillar 4.

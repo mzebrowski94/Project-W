@@ -1,5 +1,7 @@
 # G0002: Aim is independent of movement
 
+**Status.** accepted
+
 **Trigger.** Touching facing, aim or input; proposing a gamepad-only or touch build.
 
 **Enforced by.** Nothing mechanical - caught by reading.

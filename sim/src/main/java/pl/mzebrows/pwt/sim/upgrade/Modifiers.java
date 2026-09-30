@@ -125,7 +125,7 @@ public final class Modifiers {
                 stats.of(Stat.MEND_SECONDS).min());
     }
 
-    /** How many cards of this cache the armoury deck holds (G0050). The side's number. */
+    /** How many cards of this cache the armoury deck holds (G0056). The side's number. */
     @Reads(Stat.ARMOURY_CARDS)
     public int armouryCards(PickupKind card, int base) {
         return Fold.count(

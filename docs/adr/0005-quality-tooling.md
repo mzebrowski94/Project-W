@@ -1,5 +1,7 @@
 # ADR 0005: Spotless, Error Prone, NullAway and Lombok
 
+**Status.** accepted
+
 **Trigger.** Changing the build's checkers or formatting, or proposing to drop one.
 
 **Enforced by.** The build itself - Spotless, Error Prone and NullAway all fail it.

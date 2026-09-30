@@ -1,5 +1,7 @@
 # G0056: A crate is opened and chosen from, dealt on its first opening, by one commander at a time
 
+**Status.** accepted
+
 **Trigger.** Anything about what a crate holds or when that is decided; opening one; the crate bar in the
 top bar; an upgrade that changes what crates hold; proposing that a crate show its contents from a
 distance, or that a trooper open one; anything that keeps two crates or a crate and a draft on one screen.
@@ -15,11 +17,11 @@ named for shutting, only its seat works it, nothing re-shown before the world ha
 `BundleTest.carriesCrateEventsAndHandsThemToAWorld`, `SystemOrderTest`.
 
 **Supersedes G0050** - the sealed cache, its reveal radius and its DO NOT BUILD *a gun dealt when the cache
-is taken*: overruled by Mateusz, 2026-09-30, because what G0050 feared - walking over a crate without
+is taken*, because what G0050 feared - walking over a crate without
 knowing whether you want it - cannot happen when nothing is taken by walking over it. **Amends G0021 and
 pillar 1**: the action key still decides what it does from what is in reach, and opening a crate is one
 more thing on that list; what he takes from it is a choice, in the top bar, and is the second named
-exception to pillar 1 beside the upgrade draft (G0049). **Narrows G0038** for the leash: see *Beside it*.
+exception to pillar 1 beside the upgrade draft (G0049). **Amends G0038** for the leash: see *Beside it*.
 
 **Constraint.**
 
@@ -46,7 +48,7 @@ exception to pillar 1 beside the upgrade draft (G0049). **Narrows G0038** for th
   flamer per rank into every crate dealt after the pick, swapped for what the deck dealt from the last
   card back.
 
-**Beside it** (the same session, 2026-09-30). **The leash holds together the commanders at one machine,
+**Beside it.** **The leash holds together the commanders at one machine,
 and nobody else.** A slot's machine arrives with its join event and is carried by the snapshot, and only
 the leash reads it: players sharing a screen share a camera that must frame them, while a player at a
 machine of his own has a camera of his own. G0038's "which device drives it is not the simulation's

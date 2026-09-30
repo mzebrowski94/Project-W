@@ -1,5 +1,7 @@
 # G0013: The clinch is what a parry earns, not what a kill costs
 
+**Status.** amended by G0014: its third rejected alternative, letting the body keep its momentum, is now the rule
+
 **Trigger.** Melee kills, the clinch, or the stun a kill applies.
 
 **Enforced by.** Nothing mechanical - caught by reading.
@@ -34,7 +36,7 @@ anything that is not already in the air, which is the opposite of the weapon rea
 to be pulled.* It works, and it deletes the parry: the sweep would have to land after the leap has
 already connected. Reach and clinch distance are different numbers for a reason.
 
-**No:** *Let the corpse keep its momentum and slide the last stride instead of being placed.* More physical,
+**Reversed by G0014:** *Let the corpse keep its momentum and slide the last stride instead of being placed.* More physical,
 and it needs a corpse that is immovable to nothing except this - a second rule in the solver for one
 frame of one mechanic.
 

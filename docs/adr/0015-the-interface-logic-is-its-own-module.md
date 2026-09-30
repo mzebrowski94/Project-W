@@ -1,5 +1,7 @@
 # 0015: The interface logic is its own module
 
+**Status.** amended by ADR 0017: a subsystem with nothing to wall off from rendering may be a fenced package instead of a module
+
 **Trigger.** Adding UI logic - a layout rule, a page, navigation, a HUD readout, a pose - or any class
 that decides what the player is shown; proposing to fold `ui` back into `core`.
 

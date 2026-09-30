@@ -1,5 +1,7 @@
 # 0009: The terrain field is its own module
 
+**Status.** accepted
+
 **Trigger.** Deciding whether new code belongs in `map` or `sim`; writing map generation.
 
 **Enforced by.** `MapArchitectureTest` - `map` may reach for none of `com.badlogic`, and no entity.

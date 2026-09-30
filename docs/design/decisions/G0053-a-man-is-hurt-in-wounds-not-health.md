@@ -1,5 +1,7 @@
 # G0053: A man is hurt in wounds, not health
 
+**Status.** accepted
+
 **Trigger.** Adding a damage source, changing what a hit does to a commander or a trooper, adding
 anything that heals, protects or disables a man, or proposing that a man's fate depend on an amount.
 
@@ -7,9 +9,9 @@ anything that heals, protects or disables a man, or proposing that a man's fate 
 `WoundCostTest` what a wound costs, `StunTest` a declared stun, `MedkitTest` the medkit. The invariant
 rows in `docs/design/invariants/wounds.md` name the rest.
 
-**Supersedes in part G0020's** "a casualty is at zero health, so the next hit of any kind finishes
+**Amends G0020**: it replaces "a casualty is at zero health, so the next hit of any kind finishes
 him": a man who is down is now finished by a hit that could have put him down or killed him standing,
-and by nothing lighter. **Amends G0006, G0018 and G0023**, each noted in its own record.
+and by nothing lighter. **Amends G0006, G0018, G0023, G0034 and G0035**, each noted in its own record.
 
 **Constraint.**
 
@@ -41,12 +43,6 @@ and by nothing lighter. **Amends G0006, G0018 and G0023**, each noted in its own
 **Scope.** What a hit does to a man on the player's side. It says nothing about how much damage a
 source deals to things with health, about aliens, or about when a source may hit at all.
 
-**What maps where, 2026-09-29.** Gunfire, a boss's barrage, fire, venom and a grenade's blast wound -
-fire and venom with a shove off the circle. A barrel, a mine, a charged corpse, a charged spit and a
-turret going up under its crew put a man down. Claws, a leap and an ant's last bite kill. An ant's
-grab he escapes from wounds him as he is let go. The keys beside each source's `damage=` are the
-record from then on; this paragraph is not kept up to date.
-
 **DO NOT BUILD** - rejected, and likely to be re-proposed.
 
 **No:** *Health kept underneath the wounds* - a man at 100 whose wounds are thresholds on it. Rejected for
@@ -67,7 +63,7 @@ alien. How long a man is protected is a fact about him, as `Aid`'s protection al
 
 **No:** *Grace that turns every harm.* A pellet would buy him half a second of immunity to a leap.
 
-**No:** *A man who is down immune to everything.* Asked for, and narrowed on 2026-09-29: it would make
+**No:** *A man who is down immune to everything.* It would make
 the bleed-out the only way a man on the ground dies, and leaving him in the open a timer rather than
 a risk.
 

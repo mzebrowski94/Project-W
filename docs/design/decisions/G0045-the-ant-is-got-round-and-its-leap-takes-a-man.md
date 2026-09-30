@@ -1,5 +1,7 @@
 # G0045: The ant is got round, and its leap takes a man away
 
+**Status.** accepted
+
 **Trigger.** Adding or changing armour, a creature a shot cannot hurt from one side, a leap that does
 anything but bite, or anything that carries a unit off; or proposing that a held man free himself by
 anything but landing blows.
@@ -51,12 +53,11 @@ shoot is the moment it has taken somebody.
 **No:** *The head as a second entity or a second collider.* See above; one body, and the arc is a
 number on it.
 
-**No:** *A struggle meter - so many presses and he is free, the creature unharmed.* Asked, and decided
-the other way by Mateusz, 2026-09-27: a man gets out by killing it. A meter would be a second health
-bar on the creature that only its victim can see.
+**No:** *A struggle meter - so many presses and he is free, the creature unharmed.* A man gets out by
+killing it; a meter would be a second health bar on the creature that only its victim can see.
 
-**No:** *Troopers who know about the head and hold fire at a face.* Asked, and decided the other way
-by Mateusz, 2026-09-27: they shoot anyway, and getting round it is the player's job.
+**No:** *Troopers who know about the head and hold fire at a face.* They shoot anyway; getting round it
+is the player's job.
 
 **No:** *A grab that kills on landing, or one that ends when the creature is merely hit.* The first is
 a grunt with extra steps; the second makes a single stray round a rescue.

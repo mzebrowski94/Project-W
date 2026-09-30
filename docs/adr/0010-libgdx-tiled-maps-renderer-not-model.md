@@ -1,5 +1,7 @@
 # 0010: libGDX's tiled map API — its renderer, maybe; its model, never
 
+**Status.** accepted
+
 **Trigger.** Rendering terrain, loading a level file, or proposing libGDX's tiled map API.
 
 **Enforced by.** `ArchitectureTest.simulationIsHeadless` and `MapArchitectureTest.mapKnowsNothingOfTheGameAroundIt`.

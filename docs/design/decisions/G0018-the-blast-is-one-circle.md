@@ -1,10 +1,12 @@
 # G0018: The blast is one circle, and things explode by dying
 
+**Status.** amended by G0053: each blast kind declares its harm to a man
+
 **Trigger.** Adding or changing anything explosive - a weapon with an area, a hazard, a death that
 hurts what is near it - or proposing that damage fall off with distance.
 
 **Enforced by.** `BlastTest.killsEverythingStandingInsideIt`,
-`.leavesAnythingStandingOutsideItUntouched`, `.killsTheCommanderAsReadilyAsAnEnemy`,
+`.leavesAnythingStandingOutsideItUntouched`, `.catchesTheCommanderAsReadilyAsAnEnemy`,
 `.killsABruteAsReadilyAsAGrunt`, `.doesNotReachThroughRock`,
 `.catchesWhatWasStandingInItAndNothingThatWalksInAfterwards`.
 
@@ -62,7 +64,7 @@ or the tell has stopped being honest.
 weapon meant to wound - because that is the first thing this shape genuinely cannot express, and the
 answer then is a second kind of blast rather than a curve added to this one.
 
-## Amended 2026-09-29 by G0053
+## Amended by G0053
 
 **The revisit this record asked for.** A grenade is now meant to wound a man rather than put him down,
 and the answer is the one given above: a second *kind* of blast, not a curve. Each blast kind declares

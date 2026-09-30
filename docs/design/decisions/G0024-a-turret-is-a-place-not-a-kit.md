@@ -1,5 +1,7 @@
 # G0024: A turret is a place you get on, not a gun you pick up
 
+**Status.** accepted
+
 **Trigger.** Adding anything a unit gets inside, sits on or is carried by, or proposing that manning
 a turret work like picking a weapon up.
 

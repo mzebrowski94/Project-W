@@ -1,10 +1,12 @@
 # G0048: The boss is a rooted strain with a barrage, and it rises from a lair
 
+**Status.** accepted
+
 **Trigger.** Adding a second boss, a pattern that is not a spread of shots, anything that makes a
 strain stand still, or anything else a level keeps off the field until the players arrive.
 
 **Enforced by.** `BarrageTest`, `LairTest`, `AdventureTwoScenarioTest.keepsTheBossOffTheFieldUntilEveryPlayerIsInTheKeep`
-and `.raisesTheBossAmongANestOfEveryStrainClearOfRockAndOfEachOther`.
+and `.raisesTheBossAmongANestOfEveryStrainAndEveryGunClearOfRockAndOfEachOther`.
 
 **Constraint.**
 

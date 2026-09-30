@@ -1,5 +1,7 @@
 # G0009: The grid builds the map and nothing else
 
+**Status.** accepted
+
 **Trigger.** Placing objects, terrain collision or pathing; proposing anything quantised to a tile.
 
 **Enforced by.** Nothing mechanical - caught by reading.

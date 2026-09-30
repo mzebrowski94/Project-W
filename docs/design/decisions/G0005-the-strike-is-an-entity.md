@@ -1,5 +1,7 @@
 # G0005: A melee strike is an entity, not an overlap query
 
+**Status.** accepted
+
 **Trigger.** Adding a melee weapon, or anything that hurts by being somewhere.
 
 **Enforced by.** Nothing mechanical - caught by reading.

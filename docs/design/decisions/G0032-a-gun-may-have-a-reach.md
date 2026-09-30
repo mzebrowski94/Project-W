@@ -1,5 +1,7 @@
 # G0032: A gun may have a reach; an aim may not
 
+**Status.** accepted
+
 **Trigger.** Adding a weapon, or anything that wants a distance in the firing path.
 
 **Enforced by.** `VolleyTest.sendsAsManyShotsAsTheGunNamesFromOnePull`, `.sendsOneFromAGunThatNamesOne`,
@@ -30,9 +32,8 @@ pellet around the result. `RangedDef`'s own javadoc predicted this move the day 
 this is that day, and the creature's half stayed where it was.
 
 **Why one place puts the shots in the air.** Four things fire: the commander, a trooper, a shooting
-alien and a gun on a mount. Before this each worked out its own muzzle point and spawned its own
-single projectile - and the trooper did not even use `Muzzle`, so a twin mount in its hands would
-have fired from the middle. A gun whose behaviour depends on who is holding it is not a gun, it is
+alien and a gun on a mount. If each worked out its own muzzle point, a twin mount would fire from the
+middle in one pair of hands and from its muzzles in another. A gun whose behaviour depends on who is holding it is not a gun, it is
 three guns with one name.
 
 **Scope.** It says nothing about a gun that reloads, a gun with an ammunition count, or a second

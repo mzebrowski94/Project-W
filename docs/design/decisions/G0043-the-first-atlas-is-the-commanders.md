@@ -1,11 +1,13 @@
 # G0043: The first atlas is the commander's
 
+**Status.** accepted
+
 **Trigger.** Adding art for any look; changing a renderer; drawing a sprite, a portrait or a UI skin.
 
 **Enforced by.** Nothing mechanical yet - caught by reading. When the puppet lands, `PuppetLibrary`
 validates each look's frames at load and falls back to the shape per look.
 
-**Constraint.** Supersedes the *temporary* half of G0003 for looks that have a complete puppet, and for
+**Constraint.** **Amends G0003**: it replaces the *temporary* half of G0003 for looks that have a complete puppet, and for
 nothing else.
 
 - The first atlas holds three things: the commander's **puppet** (the layered sprite he is drawn as),

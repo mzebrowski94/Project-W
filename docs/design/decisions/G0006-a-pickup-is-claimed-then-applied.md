@@ -1,5 +1,7 @@
 # G0006: A pickup is claimed on contact and applied afterwards
 
+**Status.** amended by G0053: a pickup worth nothing to this taker is not claimed
+
 **Trigger.** Adding a pickup or a grant, or anything claimed on contact.
 
 **Enforced by.** `ArchitectureTest.onlyTheReaperRemovesEntities` for the removal half; the rest by reading.
@@ -46,7 +48,7 @@ mid-tick would take its own grant with it.
 completed by standing somewhere, a timer that pays out. That is a different mechanic wearing this
 one's clothes, and forcing it through a claim would be the tell.
 
-## Amended 2026-09-29 by G0053
+## Amended by G0053
 
 **A pickup worth nothing to this taker is not claimed.** The first pickup whose worth depends on the
 taker's state rather than his side is the medkit, which is worth something only to a man with a

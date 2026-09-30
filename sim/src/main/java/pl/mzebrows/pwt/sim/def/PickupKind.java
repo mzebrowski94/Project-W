@@ -34,7 +34,7 @@ public enum PickupKind {
      * action key and chooses what to take from the cards shown in his top bar. What it holds - two to four
      * pickups, guns' caches and medkits - is dealt from the armoury deck the first time anybody opens it,
      * and stays what it is from then on; what is taken is gone from it, and an empty crate is gone from
-     * the field. Replaced the sealed cache of G0050.
+     * the field (G0056).
      */
     CRATE,
     /**

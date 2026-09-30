@@ -1,5 +1,7 @@
 # G0051: A trooper throws only where the blast is the enemy's
 
+**Status.** accepted
+
 **Trigger.** Letting a trooper throw a grenade; changing when one does; anything that would put a
 blast of the squad's making near the player's side.
 

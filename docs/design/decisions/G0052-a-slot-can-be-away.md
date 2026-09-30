@@ -1,5 +1,7 @@
 # G0052: A slot can be away
 
+**Status.** accepted
+
 **Trigger.** Anything that needs to know whether a player is still at the game - the draft rotation,
 the HUD's OFFLINE label, a pause that should end; a dropped link or a returning machine; counting
 "solo".
@@ -10,7 +12,7 @@ sealed as away on every machine and the drafts come round past it; somebody seat
 sealed as back. `SessionTest.liftsADraftPauseWhenASecondPlayerSitsDown` - a solo draft's pause
 ends when a second player sits down.
 
-**Supersedes in part G0038's** "a dropped connection is an unplugged pad; the commanders stay
+**Amends G0038**: it replaces "a dropped connection is an unplugged pad; the commanders stay
 standing and read as idle". That stays true, and now the slot is also marked **away** until it
 returns.
 

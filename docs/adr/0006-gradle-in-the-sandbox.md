@@ -1,5 +1,7 @@
 # ADR 0006: Claude runs the real Gradle build in its sandbox
 
+**Status.** accepted
+
 **Trigger.** A build fails in the sandbox, or somebody proposes a faster compile path.
 
 **Enforced by.** Nothing. `gradle.sh` either works or it does not; `docs/workflow.md` has the symptoms.

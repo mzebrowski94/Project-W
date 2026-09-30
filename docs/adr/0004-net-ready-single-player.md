@@ -1,7 +1,9 @@
 # ADR 0004: Single-player, with a net-ready simulation
 
-**Trigger.** Touching how the simulation advances, randomness or time. Its Scope clause - no networking
-code - is superseded by 0012; networking itself is 0012's trigger. Read that too.
+**Status.** amended by ADR 0012: its scope no longer rules out networking code
+
+**Trigger.** Touching how the simulation advances, randomness or time. Networking itself is
+ADR 0012's trigger.
 
 **Enforced by.** `ArchitectureTest` for the mechanical bans; `SimulationDeterminismTest` for the rest.
 

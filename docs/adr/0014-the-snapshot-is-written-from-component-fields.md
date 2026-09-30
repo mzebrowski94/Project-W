@@ -1,5 +1,7 @@
 # 0014: The snapshot is written from the components' own fields
 
+**Status.** amended by ADR 0016: a component field may no longer be an Entity
+
 **Trigger.** Adding a field to a component or a component to the game; giving a system a field; anything
 that writes or restores a snapshot; a desync that appears only after somebody dropped in.
 

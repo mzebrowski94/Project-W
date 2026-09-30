@@ -1,5 +1,7 @@
 # 0016: An entity is named by its handle
 
+**Status.** accepted
+
 **Trigger.** A component that has to find another entity on a later tick - an owner, a target, a load,
 a station; spawning an entity anywhere but `Spawner`; changing `Handles.resolve` or the order families
 keep.
@@ -16,7 +18,7 @@ and a system finds it with `Handles.resolve(handled, id)` - null if it is not on
 every family keeps (ADR 0013), so the family of handled entities is sorted and the lookup is a binary
 search: no index, no cache, nothing extra for a snapshot to carry.
 
-This supersedes ADR 0014's allowance of an `Entity`-typed component field. `WorldCodec` still knows how
+This **Amends ADR 0012 and ADR 0014**: it removes 0014's allowance of an `Entity`-typed component field, and 0012's snapshot hazards with it. `WorldCodec` still knows how
 to write one - as its place in spawn order - but no component has one to write.
 
 **Why.** `PooledEngine` recycles its `Entity` objects. One kept across a tick comes back aimed at

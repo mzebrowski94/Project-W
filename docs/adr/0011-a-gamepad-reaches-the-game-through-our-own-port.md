@@ -1,5 +1,7 @@
 # 0011: A gamepad reaches the game through a port of our own
 
+**Status.** accepted
+
 **Trigger.** Changing the controller library, adding a device, or proposing to call gdx-controllers
 from anywhere that decides what a button means.
 
@@ -42,13 +44,13 @@ thread callbacks arrive on and whether they fire at all on a given platform, and
 the widest of them is no port. Asking "who is plugged in right now" is something all of them can
 answer, and `PlayerSeats` works out arrivals and departures by comparing frames.
 
-**No:** *input4j, today.* Not rejected, deferred, and the better second implementation if the first one
+Not rejected, deferred: *input4j* - the better second implementation if the first one
 disappoints: pure Foreign Function and Memory API, so no native artifacts at all, XInput and
 DirectInput on Windows, evdev on Linux, IOKit on macOS, and Java 22+ which this project already
 exceeds. Against it: one maintainer, a small user base, no libGDX integration and a polling model of
 its own. It is a bet, and the port is what makes taking it cheap later rather than now.
 
-**No:** *GLFW's own gamepad API, today.* Also deferred, and the cheapest fallback of the three: the
+Not rejected, deferred: *GLFW's own gamepad API* - the cheapest fallback of the three: the
 desktop launcher already ships GLFW, `glfwGetGamepadState` uses the SDL controller database, and the
 canonical layout is fixed by GLFW rather than guessed. The cost is that the implementation has to
 live in `lwjgl3` and be injected, because `core` cannot see the backend - which is desktop-only, and

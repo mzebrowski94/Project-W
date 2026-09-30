@@ -1,8 +1,10 @@
 # G0014: The clinch carries the body in; it never places it
 
-**Trigger.** The clinch, corpse movement or carry speed. Supersedes one G0013 rejection.
+**Status.** accepted
 
-**Enforced by.** `SimConfig` validates `melee carry distance` and refuses a config whose carry stops short (verified 2026-09-12).
+**Trigger.** The clinch, corpse movement or carry speed.
+
+**Enforced by.** `SimConfig` validates `melee carry distance` and refuses a config whose carry stops short.
 
 **Constraint.** When a lethal blow clinches, the body **keeps travelling**. It is given the heading it
 died on - or the line to whoever killed it, if that heading no longer points at him - at a
@@ -11,7 +13,7 @@ end up connected because the constraint solver already handles it: a corpse is i
 commander is not, so a body still moving when it arrives shoves him back, and they travel the last of
 it together until the carry bleeds off.
 
-**Supersedes the third rejected alternative in [G0013](G0013-the-clinch-is-what-a-parry-earns.md)**,
+**Amends G0013**: it reverses its third rejected alternative,
 which placed the body against the commander at the moment of death and dismissed carrying it as
 needing a second rule in the solver. That was wrong on both counts: no second rule was needed, and
 placing it looked like exactly what it was. G0013's actual constraint - that a melee kill clinches

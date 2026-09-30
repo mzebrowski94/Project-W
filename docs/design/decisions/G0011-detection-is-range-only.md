@@ -1,6 +1,8 @@
 # G0011: Detection is range only; rock does not hide you
 
-**Trigger.** Touching perception; proposing line of sight. Narrowed by G0015 - read that too.
+**Status.** amended by G0015: detection is a list of tests each strain declares
+
+**Trigger.** Touching perception; proposing line of sight.
 
 **Enforced by.** Nothing mechanical - caught by reading.
 

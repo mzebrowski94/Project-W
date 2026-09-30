@@ -1,5 +1,7 @@
 # ADR 0001: Ashley is the entity framework
 
+**Status.** accepted
+
 **Trigger.** Creating an entity or component, adding a system, or proposing a different ECS.
 
 **Enforced by.** Nothing mechanical for the caching rules - caught by reading and the `perf-audit` skill.

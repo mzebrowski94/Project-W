@@ -1,5 +1,7 @@
 # G0017: An order reaches the troopers near the commander
 
+**Status.** accepted
+
 **Trigger.** Squad orders, order input, or proposing selection or formations.
 
 **Enforced by.** Nothing mechanical - caught by reading.

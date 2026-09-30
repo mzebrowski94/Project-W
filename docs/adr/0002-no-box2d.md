@@ -1,5 +1,7 @@
 # ADR 0002: No Box2D, no box2dlights
 
+**Status.** amended by ADR 0007: every body is a circle, so there is no AABB and no shape interface
+
 **Trigger.** Writing collision, knockback or movement physics; proposing a physics library.
 
 **Enforced by.** No test. A JitPack dependency simply fails to resolve in the sandbox.

@@ -1,5 +1,7 @@
 # G0044: A tally belongs to a life
 
+**Status.** accepted
+
 **Trigger.** Counting anything per player - kills, goals, heals, a score; giving a blow, a shot, a
 grenade or a turret a notion of who is behind it; showing a player's numbers.
 

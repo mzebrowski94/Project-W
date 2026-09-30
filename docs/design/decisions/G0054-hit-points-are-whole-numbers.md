@@ -1,5 +1,7 @@
 # G0054: Hit points are whole numbers
 
+**Status.** accepted
+
 **Trigger.** Adding a health or a damage anywhere in `sim`, a stat that scales one, or proposing a
 fractional hit point - a regeneration rate, damage over time in fractions, a percentage that should not
 round.

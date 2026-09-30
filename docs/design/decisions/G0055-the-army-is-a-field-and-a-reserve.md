@@ -1,5 +1,7 @@
 # G0055: The army is a field and a reserve, and every man after the first tick comes from the reserve
 
+**Status.** accepted
+
 **Trigger.** Anything that changes how many men a side has, where a man comes onto the field, what a
 commander's return costs, what a crate of men is worth, or how a level is lost.
 
@@ -9,11 +11,10 @@ waste), `RespawnSystemTest.bringsItBackInTheSpawnAreaWhileNoPointIsTaken`,
 `CoopTest.bringsHimBackAtTheRallyPointEvenWithAFriendStillOnHisFeet`,
 `ControlPointTest.numbersThePointsInTheOrderTheyAreTaken`, `GoalLineTest.saysFailedOverEverythingOnceTheLevelIsLost`.
 
-**Supersedes in part G0030**: its *nothing is banked* and two of its DO NOT BUILD entries - *a reserve
-that pays out later* and *a reinforcement that arrives on a timer* - are overruled by Mateusz,
-2026-09-29. What G0030 decided about where crates lie (beside the points) and that a crate is worth
-several men stands. **Changes the respawn place** the invariants recorded (beside a commander still on
-his feet): a commander now comes back at the rally point, even in co-op.
+**Amends G0030**: its *nothing is banked* and two of its DO NOT BUILD entries - *a reserve that pays
+out later* and *a reinforcement that arrives on a timer* - are reversed. Where crates lie (beside the
+points) and that a crate is worth several men stand. **Amends G0028**: a commander comes back at the rally point, not beside a commander still on his feet,
+even in co-op.
 
 **Constraint.** An army is four numbers, each a scenario may set and the first two of which upgrades
 may raise:
@@ -40,8 +41,8 @@ may raise:
   is empty. Latched - a crate a trooper reaches afterwards does not bring it back. The goal line says
   MISSION FAILED; like MISSION COMPLETED, there is no end screen yet.
 - **Both counts are on the HUD** - `ARMY 12/16 RES 20`, centred on the top bar's first line - and a
-  commander waiting on an empty reserve says `KIA NO RESERVE`. The muster's countdown is not shown
-  (Mateusz, 2026-09-29: the aside's room is for upgrades); it is a steady clock, not a number to track.
+  commander waiting on an empty reserve says `KIA NO RESERVE`. The muster's countdown is not shown:
+  the aside's room is for upgrades, and it is a steady clock, not a number to track.
 
 **Why a reserve now, when G0030 refused one.** G0030's objection was pillar 5: a balance the player
 tracks and the game does not show. The reserve is shown, beside the men on the field, and the next
@@ -51,7 +52,7 @@ man lost is one fewer in the pool that brings commanders back.
 
 **Why the rally point, and not beside a commander.** One answer for every man from the reserve, and the
 answer is ground the side holds. In co-op it means a dead player walks back to the fight from the last
-point taken - Mateusz's call (3.a), accepted with that cost in view.
+point taken, a cost accepted with it in view.
 
 **Scope.** Says nothing about the reserve carrying between levels (the same open question as the squad
 persisting at all), nor about upgrades to the reserve's own numbers - none exist yet; the muster and

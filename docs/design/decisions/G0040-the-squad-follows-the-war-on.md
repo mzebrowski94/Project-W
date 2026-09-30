@@ -1,8 +1,6 @@
 # G0040: The squad follows the war on; it never runs ahead of it
 
-**Supersedes G0029** in one respect: a squad holding a taken point may now leave it without an order.
-Everything else G0029 settled stands - a point taken is still a point held, "forward" still sends the
-squad on at once and one press still buys one point.
+**Status.** accepted
 
 **Trigger.** Anything that changes when a trooper leaves a point, what "forward" is for, or how the
 squad paces a level.
@@ -11,6 +9,10 @@ squad paces a level.
 `.goesOnAfterHoldingAWhileWhenHeHasGoneOnAhead`, `.neverLeavesACommanderBehind`,
 `.staysWhileHeIsStandingOnThePointWithThem`, `.peelsOffThePointOneManAtATimeRatherThanInStep`, and
 G0029's own tests, which all still pass.
+
+**Amends G0029** in one respect: a squad holding a taken point may now leave it without an order.
+Everything else G0029 settled stands - a point taken is still a point held, "forward" still sends the
+squad on at once and one press still buys one point.
 
 **Constraint.** A trooper standing on a **captured** point, not sent on, goes on to the next point by
 itself in exactly two cases:
@@ -31,7 +33,7 @@ the "ahead" test: the squad only ever closes on a commander, never opens a gap f
 
 **Why "ahead by route" and not a heading.** Which way a man is walking flickers every time he dodges.
 Whether he is a shorter walk from the next point is a place and a flood the mind already has for every
-point (2.e), so the question costs two table lookups and means the same on every replay.
+point, so the question costs two table lookups and means the same on every replay.
 
 **Why the hold is drawn per man.** A squad that leaves a point on one tick reads as a machine. Drawn
 from the squad's own stream when each man starts holding, so it replays (pillar 6), and a man who leaves

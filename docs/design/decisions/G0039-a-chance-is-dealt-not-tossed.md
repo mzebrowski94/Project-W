@@ -1,5 +1,7 @@
 # G0039: A chance is dealt, not tossed
 
+**Status.** accepted
+
 **Trigger.** Changing how `Odds` decides whether an occasional behaviour happens, adding a new kind of
 chance, or proposing a "pity timer", "bad luck protection" or "pseudo-random distribution".
 

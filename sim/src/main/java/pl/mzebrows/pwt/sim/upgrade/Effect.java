@@ -60,7 +60,7 @@ public sealed interface Effect {
     }
 
     /**
-     * More of one cache in the armoury deck the sealed caches are dealt from (G0050). The side's own
+     * More of one cache in the armoury deck the crates are dealt from (G0056). The side's own
      * number, so it names no target: nobody in particular reads it.
      *
      * @param card the cache the deck deals more of; one the deck already holds, which the catalogue

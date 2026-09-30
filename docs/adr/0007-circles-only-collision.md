@@ -1,12 +1,14 @@
 # ADR 0007: Every body is a circle
 
+**Status.** accepted
+
 **Trigger.** Adding a `Collider`, an obstacle or a hit shape; proposing AABBs or polygons.
 
 **Enforced by.** Nothing mechanical - caught by reading.
 
 **Constraint.** A `Body` is a radius. Collision tests are circle-circle, everywhere, for every kind
 of entity - units, projectiles and obstacles alike. There is no second shape type, no shape
-interface, and no dispatch on shape. This narrows ADR 0002, which anticipated "circle and AABB
+interface, and no dispatch on shape. This **Amends ADR 0002**, which anticipated "circle and AABB
 overlap tests"; the AABB half is not being built.
 
 **Scope.** The simulation's collision. The arena boundary is the one exception and is not a body at

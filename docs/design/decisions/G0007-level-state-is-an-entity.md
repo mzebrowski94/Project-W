@@ -1,5 +1,7 @@
 # G0007: State that belongs to the level is an entity
 
+**Status.** accepted
+
 **Trigger.** Adding state that belongs to the level rather than to anything standing in it.
 
 **Enforced by.** Nothing mechanical - caught by reading.
@@ -9,7 +11,7 @@ in reserve, and whatever comes after - lives on a `Level` component, carried by 
 with the world and never removed. Systems reach it through a family like any other. There is no
 static, no field on `Simulation`, and no message queue.
 
-**Scope.** Level-scope simulation state. This **narrows G0004** rather than contradicting it: G0004
+**Scope.** Level-scope simulation state. This **Amends G0004** rather than contradicting it: G0004
 rejected an event bus and named, as the gap that would one day justify one, "something that must react
 that is not an entity and cannot sensibly be made one: a global score, an achievement, an audio cue".
 The first of those has now arrived, in the form of a pickup that grants troopers instead of changing

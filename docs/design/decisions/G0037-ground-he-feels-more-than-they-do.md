@@ -1,5 +1,7 @@
 # G0037: Ground slows, and it slows his side harder
 
+**Status.** accepted
+
 **Trigger.** Adding a kind of ground that does anything to what stands on it, proposing that a
 terrain's cost be symmetric, or proposing that terrain block, hide or hurt rather than slow. It does
 not touch G0009 - nothing here is quantised to the grid - and it does not touch the routing rules.

@@ -1,5 +1,7 @@
 # G0016: Aggro latches a place, not a unit
 
+**Status.** accepted
+
 **Trigger.** Provocation or aggro, or storing a reference to another entity across ticks.
 
 **Enforced by.** Nothing mechanical - caught by reading. G0010's pooling hazard is the concrete risk.

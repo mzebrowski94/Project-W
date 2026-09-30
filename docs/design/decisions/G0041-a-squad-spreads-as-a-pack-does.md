@@ -1,5 +1,7 @@
 # G0041: A squad spreads as a pack does, and follows where he is going
 
+**Status.** accepted
+
 **Trigger.** Anything that changes how several troopers walk somewhere together, or that reaches for a
 formation, a separation force or a slot to fix how a squad looks on the move.
 

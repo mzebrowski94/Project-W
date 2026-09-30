@@ -1,5 +1,7 @@
 # 0013: Entity order is spawn order
 
+**Status.** accepted
+
 **Trigger.** Iterating entities anywhere the order can change a result; upgrading or replacing Ashley;
 writing or restoring a snapshot; registering a family after the simulation has been built.
 

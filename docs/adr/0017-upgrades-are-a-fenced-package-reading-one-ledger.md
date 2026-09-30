@@ -1,5 +1,7 @@
 # 0017: Upgrades are a fenced package reading one ledger
 
+**Status.** accepted
+
 **Trigger.** Adding an upgrade, an adaptation, a new kind of effect or a new `Stat`; making a number
 something an upgrade can move; reading or writing `Upgrades` or `Drafts` from outside
 `sim.upgrade`; proposing a per-entity stats component, a buff system, or a module for the upgrade
@@ -66,7 +68,7 @@ a fold from the base cannot drift and never needs undoing.
 **No:** *A stat with two readers.* Two readers are two places that must agree about the same number,
 and one of them will be missed. Fence 3 fails the build.
 
-**No:** *A Gradle module for the subsystem now.* ADR 0003 and 0015 chose modules to make rendering
+**No:** *A Gradle module for the subsystem now.* **Amends ADR 0003 and ADR 0015**: they chose modules to make rendering
 unreachable from the simulation; nothing here needs a classpath wall, and the package's fences say
 what a module boundary would. The pure half is kept dependency-free so the move stays cheap.
 

@@ -1,7 +1,9 @@
 # G0046: Ground is given room by whoever it can catch
 
+**Status.** accepted
+
 **Trigger.** Changing what a unit steers around, or proposing that a unit stand still on ground that is
-hurting it. Narrows G0035's avoidance declaration, which named this as its revisit trigger.
+hurting it. **Amends G0035**: its avoidance declaration named this as its revisit trigger.
 
 **Enforced by.** `SlickTest.isGivenRoomByAManItCouldCatch`, `.isWalkedThroughByTheSideThatSpatIt`,
 `FireTest.stepsAManStandingStillOffGroundThatIsCatchingFire`, `.leansOffBurningGroundAsReadilyAsOffARock`.
@@ -17,7 +19,7 @@ collider that is not solid), and stays a declaration for **bodies**:
   own pace. Bodies never move it. A man holding a point, securing one or standing to shoot no longer
   watches fire swell up round his boots.
 
-**Why.** Playtest 2026-09-27: troopers walked straight into frog venom. They could not see it twice
+**Why.** In play, troopers walked straight into frog venom. They could not see it twice
 over - a slick with a side was declared unavoided, and avoidance skipped everything on the other side
 anyway. G0035 predicted the fix: the avoidance flag becoming a pair question the way `shunned` is.
 

@@ -1,5 +1,7 @@
 # ADR 0008: A kind of thing is a definition in a table, not a marker and not a data file
 
+**Status.** accepted
+
 **Trigger.** Adding a strain, weapon, pickup or any other thing that comes in kinds.
 
 **Enforced by.** `ArchitectureTest` bans `HashMap` in `sim`; `Defs` refuses to build with a hole in it.

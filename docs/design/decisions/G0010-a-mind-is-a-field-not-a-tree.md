@@ -1,5 +1,7 @@
 # G0010: A unit's mind is a field on a component, not a behaviour tree
 
+**Status.** accepted
+
 **Trigger.** Adding or changing AI behaviour; proposing a behaviour tree or a state machine.
 
 **Enforced by.** `ArchitectureTest.onlyTheSpawnerChangesWhatAnEntityIsMadeOf`.

@@ -1,5 +1,7 @@
 # G0049: An upgrade is earned on the field and drafted in turn
 
+**Status.** accepted
+
 **Trigger.** Anything that grants the player's side an upgrade, decides what earns one, who chooses
 it, how long it lasts or whether choosing pauses; a reroll, a shop, a timer on a choice; proposing
 that upgrades carry between levels.
@@ -19,7 +21,7 @@ last the level.
 
 - **Objectives earn drafts, and nothing else does.** Capturing a control point, clearing a hold wave
   and killing a boss, each at a configured rate: the first of each source earns at once, then every
-  N-th (`sim.upgrade.draft.pointsPerDraft`, `.wavesPerDraft`, `.bossesPerDraft`; zero switches a
+  N-th (`sim.upgrade.draft.pointsPerDraft`, `sim.upgrade.draft.wavesPerDraft`, `sim.upgrade.draft.bossesPerDraft`; zero switches a
   source off). Destroying a nest does not.
 - **A draft goes round the players.** Each one goes to the next present slot after the last chooser,
   in ascending slot order - keyed by slot and sized from capacity (pillar 7). Its cards are dealt from

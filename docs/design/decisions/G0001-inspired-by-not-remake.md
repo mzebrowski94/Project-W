@@ -1,5 +1,7 @@
 # G0001: Inspired by *Triumph! War 2099*, not a remake of it
 
+**Status.** accepted
+
 **Trigger.** Proposing content from the source game, or naming a unit, weapon or level.
 
 **Enforced by.** Nothing mechanical - caught by reading.

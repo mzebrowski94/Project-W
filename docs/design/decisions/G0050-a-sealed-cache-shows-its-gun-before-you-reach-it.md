@@ -1,7 +1,6 @@
-# G0050: A sealed cache shows its gun before you reach it
+# G0050 (superseded by G0056): A sealed cache shows its gun before you reach it
 
-**Superseded by G0056** (2026-09-30): the sealed cache is now a crate, opened and chosen from, dealt on
-its first opening. Kept for the reasoning; nothing below is built any more.
+**Status.** superseded by G0056: the sealed cache is now a crate, opened and chosen from
 
 **Trigger.** Deciding which gun a weapons cache holds at any time other than when the level is laid;
 the armoury deck; an upgrade that changes which guns turn up; proposing a mystery crate.

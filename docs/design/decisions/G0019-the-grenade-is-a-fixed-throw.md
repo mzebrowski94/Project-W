@@ -1,5 +1,7 @@
 # G0019: The grenade is a fixed throw
 
+**Status.** accepted
+
 **Trigger.** Adding or changing anything thrown, or proposing that a throw land where the player is
 pointing.
 
