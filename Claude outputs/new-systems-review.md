@@ -45,6 +45,15 @@ Decision: all three clocks in whole ticks (asked 2026-09-30).
 | V4 / A4 | `ActionSystem` hears every commander, then opens crates in slot order (a scratch array sized from capacity); `Crates` lost its same-tick steal, which slot order makes unnecessary | `CrateTest.givesTheHigherSlotTheNextCrateWhenTheLowerTakesTheNearestOnTheSameTick`, both spawn orders: red first on the higher-first order (**slot 1 got nothing**), then green; the existing lower-slot test still green |
 | - | Behaviour unchanged apart from the two fixes | Bodies hash **identical** in all 12 scenarios and the crowd; world hash differs only where a man's `Vitality` lost its field. `PWT_FUZZ=1 DeterminismFuzzTest` 12/12 green |
 
+### Stage 6 (one loop; the full ledger measured)
+
+Decision: `Effect.Deal`, `Stat.ARMOURY_CARDS` and the deck reshuffle **stay** - kept for features to come (2026-09-30).
+
+| Item | Done | Evidence |
+|---|---|---|
+| M1 | `Modifiers`' five whole-number loops (`percent`, `amount` ×2, `dealt`, `stocked`) are one `sum` over the ledger and one `share` - a switch over the sealed `Effect` that says what each rank of each kind adds to a stat for a reader. A new kind of effect does not compile until it says. The chance keeps its own loop: a rate per second, not a whole number. 263 → 211 lines | Throwaway probe: the old class kept beside the new one, every public read compared on every entity of three worlds (Adventure, Adventure 2, Casualty, 600 ticks each) at ranks 0-3, personal ranks for two slots: **69,600 reads, all identical**. Fingerprint (world + bodies, 13 worlds) **identical** to stage 5 |
+| P1 | `SimulationBenchmarkTest` measures the fold with every upgrade and adaptation at its top rank, without stepping (so what the upgrades change about the fight is not counted as their cost): ns and bytes per read over the 800 crowd, a tenth of it spitters. Two new guards: the fold under 10% of the 800 step at two reads per entity, and no bytes per read. `performance.md`, `workflow.md`, backlog updated | Before/after, alternating runs: old **105 / 120 / 132 ns** a read, new **204 / 127 / 120** (the 204 a cold first run) - the same within noise; 0 bytes; ~4-5% of a 4.0-5.5 ms step. 800 line: 4.0-5.5 ms, 6 B/step, growth ×6.0 (100→800) |
+
 Scope: `cebbac5..8bb389c` (8 commits, ~19k lines added). Baseline on this branch: `verify.sh` green, 1881
 tests; `PWT_BENCH=1` 800 crowd **5.24 ms/step**, growth ×7.8 (100→800), 6 B/step (cloud container; the
 2026-09-27 figure of 3.89 ms was Mateusz's machine). Every probe below was a `Zz*ProbeTest`, run and

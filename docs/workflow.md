@@ -34,7 +34,7 @@ Run in the shell with the repo mounted. On Windows use `./gradlew` instead of th
 | Whole online sessions in one test: host, peers, lag, drop-in, a desync healed | `.claude/scripts/gradle.sh :net:test --tests '*SessionTest'` |
 | Read a desync: every `reference`/`desynced` dump pair in a directory, report written beside them | `PWT_DESYNC=<dir> .claude/scripts/gradle.sh :core:test --tests '*DesyncReportRunnerTest' -i` |
 | Determinism fuzz, every scenario, about a minute (opt-in) | `PWT_FUZZ=1 .claude/scripts/gradle.sh :sim:test --tests '*DeterminismFuzzTest'` |
-| Performance guard: time and allocation per step, 100 to 800 grunts, about 25 s (opt-in) | `PWT_BENCH=1 .claude/scripts/gradle.sh :sim:test --tests '*SimulationBenchmarkTest' --rerun-tasks -i` |
+| Performance guard: time and allocation per step, 100 to 800 grunts, and the fold's cost with everything held, about 25 s (opt-in) | `PWT_BENCH=1 .claude/scripts/gradle.sh :sim:test --tests '*SimulationBenchmarkTest' --rerun-tasks -i` |
 | One test class | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest'` |
 | One test method | `.claude/scripts/gradle.sh :sim:test --tests '*MovementSystemTest.movesAnEntityByItsVelocityEachStep'` |
 | Format only | `.claude/scripts/gradle.sh spotlessApply` |

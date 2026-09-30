@@ -45,28 +45,33 @@ public final class Modifiers {
     @Reads(Stat.FIRE_COOLDOWN)
     public int fireCooldownTicks(Entity who, WeaponKind gun, int baseTicks) {
         StatDef stat = stats.of(Stat.FIRE_COOLDOWN);
-        return Fold.scaleTicks(baseTicks, percent(Stat.FIRE_COOLDOWN, who, gun), stat.minPercent(), stat.maxPercent());
+        return Fold.scaleTicks(
+                baseTicks, sum(Stat.FIRE_COOLDOWN, who, gun, null), stat.minPercent(), stat.maxPercent());
     }
 
     /** What each shot of one pull of this gun does. */
     @Reads(Stat.GUN_DAMAGE)
     public int gunDamage(Entity who, WeaponKind gun, int base) {
         StatDef stat = stats.of(Stat.GUN_DAMAGE);
-        return Fold.scaleWhole(base, percent(Stat.GUN_DAMAGE, who, gun), stat.minPercent(), stat.maxPercent());
+        return Fold.scaleWhole(base, sum(Stat.GUN_DAMAGE, who, gun, null), stat.minPercent(), stat.maxPercent());
     }
 
     /** How many men a crate of reinforcements lands. The side's number: no one entity reads it. */
     @Reads(Stat.MEN_PER_CRATE)
     public int menPerCrate(int base) {
         return Fold.count(
-                base, amount(Stat.MEN_PER_CRATE), stats.of(Stat.MEN_PER_CRATE).min());
+                base,
+                sum(Stat.MEN_PER_CRATE, null, null, null),
+                stats.of(Stat.MEN_PER_CRATE).min());
     }
 
     /** How many men past its starting size the squad may hold. The side's number. */
     @Reads(Stat.SQUAD_HEADROOM)
     public int squadHeadroom(int base) {
         return Fold.count(
-                base, amount(Stat.SQUAD_HEADROOM), stats.of(Stat.SQUAD_HEADROOM).min());
+                base,
+                sum(Stat.SQUAD_HEADROOM, null, null, null),
+                stats.of(Stat.SQUAD_HEADROOM).min());
     }
 
     /** A thrower's wait between grenades, in ticks. */
@@ -74,14 +79,14 @@ public final class Modifiers {
     public int grenadeCooldownTicks(Entity who, int baseTicks) {
         StatDef stat = stats.of(Stat.GRENADE_COOLDOWN);
         return Fold.scaleTicks(
-                baseTicks, percent(Stat.GRENADE_COOLDOWN, who, null), stat.minPercent(), stat.maxPercent());
+                baseTicks, sum(Stat.GRENADE_COOLDOWN, who, null, null), stat.minPercent(), stat.maxPercent());
     }
 
     /** The share of its pace a driven unit goes at: the pace {@code who} was going to be driven at, folded. */
     @Reads(Stat.SPEED)
     public float pace(Entity who, float base) {
         StatDef stat = stats.of(Stat.SPEED);
-        return Fold.scale(base, percent(Stat.SPEED, who, null), stat.minPercent(), stat.maxPercent());
+        return Fold.scale(base, sum(Stat.SPEED, who, null, null), stat.minPercent(), stat.maxPercent());
     }
 
     /**
@@ -91,21 +96,24 @@ public final class Modifiers {
     @Reads(Stat.STABILISE_SPEED)
     public int stabiliseWork(Entity who, int base) {
         StatDef stat = stats.of(Stat.STABILISE_SPEED);
-        return Fold.scaleWhole(base, percent(Stat.STABILISE_SPEED, who, null), stat.minPercent(), stat.maxPercent());
+        return Fold.scaleWhole(base, sum(Stat.STABILISE_SPEED, who, null, null), stat.minPercent(), stat.maxPercent());
     }
 
     /** How long a stun a source declared leaves {@code who} unable to act, in ticks (G0053). */
     @Reads(Stat.STUN_DURATION)
     public int stunTicks(Entity who, int baseTicks) {
         StatDef stat = stats.of(Stat.STUN_DURATION);
-        return Fold.scaleTicks(baseTicks, percent(Stat.STUN_DURATION, who, null), stat.minPercent(), stat.maxPercent());
+        return Fold.scaleTicks(
+                baseTicks, sum(Stat.STUN_DURATION, who, null, null), stat.minPercent(), stat.maxPercent());
     }
 
     /** How many wounds {@code who} carries on his feet (G0053). */
     @Reads(Stat.MAX_WOUNDS)
     public int maxWounds(Entity who, int base) {
         return Fold.count(
-                base, amount(Stat.MAX_WOUNDS, who), stats.of(Stat.MAX_WOUNDS).min());
+                base,
+                sum(Stat.MAX_WOUNDS, who, null, null),
+                stats.of(Stat.MAX_WOUNDS).min());
     }
 
     /** How long after his last wound {@code who}'s wounds clear on their own, in seconds; zero never. */
@@ -113,27 +121,35 @@ public final class Modifiers {
     public int mendSeconds(Entity who, int base) {
         return Fold.count(
                 base,
-                amount(Stat.MEND_SECONDS, who),
+                sum(Stat.MEND_SECONDS, who, null, null),
                 stats.of(Stat.MEND_SECONDS).min());
     }
 
     /** How many cards of this cache the armoury deck holds (G0050). The side's number. */
     @Reads(Stat.ARMOURY_CARDS)
     public int armouryCards(PickupKind card, int base) {
-        return Fold.count(base, dealt(card), stats.of(Stat.ARMOURY_CARDS).min());
+        return Fold.count(
+                base,
+                sum(Stat.ARMOURY_CARDS, null, null, card),
+                stats.of(Stat.ARMOURY_CARDS).min());
     }
 
     /** The fewest pickups a crate is dealt (G0056). The side's number. */
     @Reads(Stat.CRATE_LEAST)
     public int crateLeast(int base) {
         return Fold.count(
-                base, amount(Stat.CRATE_LEAST), stats.of(Stat.CRATE_LEAST).min());
+                base,
+                sum(Stat.CRATE_LEAST, null, null, null),
+                stats.of(Stat.CRATE_LEAST).min());
     }
 
     /** How many of this card every crate holds at least (G0056). The side's number. */
     @Reads(Stat.CRATE_STOCK)
     public int crateStock(PickupKind card) {
-        return Fold.count(0, stocked(card), stats.of(Stat.CRATE_STOCK).min());
+        return Fold.count(
+                0,
+                sum(Stat.CRATE_STOCK, null, null, card),
+                stats.of(Stat.CRATE_STOCK).min());
     }
 
     /** How often {@code who} does this occasional thing, per second of opportunity. */
@@ -157,8 +173,13 @@ public final class Modifiers {
         return Fold.chance(base, perSecond);
     }
 
-    /** The sum of every held deal of this cache, rank by rank. */
-    private int dealt(PickupKind card) {
+    /**
+     * The sum, rank by rank, of every held effect on this stat that reaches whoever is reading - the side's
+     * upgrades and the aliens' adaptations alike, since each names whom it reaches. {@code who} is null for
+     * the side's own numbers; {@code gun} narrows a gun's stat to one gun, {@code card} a deck's to one card.
+     * Whole numbers, so the sum is exact whatever order it is added in.
+     */
+    private int sum(Stat stat, @Nullable Entity who, @Nullable WeaponKind gun, @Nullable PickupKind card) {
         int sum = 0;
         for (int l = 0; l < ledgers.size(); l++) {
             Upgrades upgrades = UPGRADES.get(ledgers.get(l));
@@ -166,27 +187,7 @@ public final class Modifiers {
                 Upgrades.Held entry = upgrades.held.get(h);
                 List<Effect> effects = catalogue.of(entry.kind()).effects();
                 for (int e = 0; e < effects.size(); e++) {
-                    if (effects.get(e) instanceof Effect.Deal deal && deal.card() == card) {
-                        sum += deal.amount() * entry.ranks();
-                    }
-                }
-            }
-        }
-        return sum;
-    }
-
-    /** The sum of every held stock of this card, rank by rank. */
-    private int stocked(PickupKind card) {
-        int sum = 0;
-        for (int l = 0; l < ledgers.size(); l++) {
-            Upgrades upgrades = UPGRADES.get(ledgers.get(l));
-            for (int h = 0; h < upgrades.held.size; h++) {
-                Upgrades.Held entry = upgrades.held.get(h);
-                List<Effect> effects = catalogue.of(entry.kind()).effects();
-                for (int e = 0; e < effects.size(); e++) {
-                    if (effects.get(e) instanceof Effect.Stock stock && stock.card() == card) {
-                        sum += stock.amount() * entry.ranks();
-                    }
+                    sum += share(effects.get(e), stat, who, gun, card, entry.slot()) * entry.ranks();
                 }
             }
         }
@@ -194,73 +195,33 @@ public final class Modifiers {
     }
 
     /**
-     * The sum of every held percentage on this stat that reaches {@code who}, for {@code gun} if it is a
-     * gun's - the side's upgrades and the aliens' adaptations alike, since each names whom it reaches.
+     * What one rank of one effect adds to this stat for this reader: the one place an effect is matched to
+     * a number, so a new kind of effect does not compile until it says what it adds. A chance is a rate per
+     * second, not a whole number, and has {@link #chance} of its own.
      */
-    private int percent(Stat stat, Entity who, @Nullable WeaponKind gun) {
-        int sum = 0;
-        for (int l = 0; l < ledgers.size(); l++) {
-            Upgrades upgrades = UPGRADES.get(ledgers.get(l));
-            for (int h = 0; h < upgrades.held.size; h++) {
-                Upgrades.Held entry = upgrades.held.get(h);
-                List<Effect> effects = catalogue.of(entry.kind()).effects();
-                for (int e = 0; e < effects.size(); e++) {
-                    Effect effect = effects.get(e);
-                    if (effect instanceof Effect.Scale scale
-                            && scale.stat() == stat
-                            && Scope.reaches(scale.target(), who, entry.slot())) {
-                        sum += scale.percent() * entry.ranks();
-                    } else if (effect instanceof Effect.Gun only
-                            && only.gun() == gun
-                            && only.stat() == stat
-                            && Scope.reaches(only.target(), who, entry.slot())) {
-                        sum += only.percent() * entry.ranks();
-                    } else if (effect instanceof Effect.Breed breed
-                            && breed.stat() == stat
-                            && Scope.reaches(breed.strain(), who)) {
-                        sum += breed.percent() * entry.ranks();
-                    }
-                }
-            }
-        }
-        return sum;
-    }
-
-    /** The sum of every held amount on this count that reaches {@code who} - a unit's own count. */
-    private int amount(Stat stat, Entity who) {
-        int sum = 0;
-        for (int l = 0; l < ledgers.size(); l++) {
-            Upgrades upgrades = UPGRADES.get(ledgers.get(l));
-            for (int h = 0; h < upgrades.held.size; h++) {
-                Upgrades.Held entry = upgrades.held.get(h);
-                List<Effect> effects = catalogue.of(entry.kind()).effects();
-                for (int e = 0; e < effects.size(); e++) {
-                    if (effects.get(e) instanceof Effect.Count count
-                            && count.stat() == stat
-                            && Scope.reaches(count.target(), who, entry.slot())) {
-                        sum += count.amount() * entry.ranks();
-                    }
-                }
-            }
-        }
-        return sum;
-    }
-
-    /** The sum of every held amount on this side-wide count. */
-    private int amount(Stat stat) {
-        int sum = 0;
-        for (int l = 0; l < ledgers.size(); l++) {
-            Upgrades upgrades = UPGRADES.get(ledgers.get(l));
-            for (int h = 0; h < upgrades.held.size; h++) {
-                Upgrades.Held entry = upgrades.held.get(h);
-                List<Effect> effects = catalogue.of(entry.kind()).effects();
-                for (int e = 0; e < effects.size(); e++) {
-                    if (effects.get(e) instanceof Effect.Count count && count.stat() == stat) {
-                        sum += count.amount() * entry.ranks();
-                    }
-                }
-            }
-        }
-        return sum;
+    private static int share(
+            Effect effect,
+            Stat stat,
+            @Nullable Entity who,
+            @Nullable WeaponKind gun,
+            @Nullable PickupKind card,
+            int slot) {
+        return switch (effect) {
+            case Effect.Scale scale ->
+                scale.stat() == stat && who != null && Scope.reaches(scale.target(), who, slot) ? scale.percent() : 0;
+            case Effect.Gun only ->
+                only.stat() == stat && only.gun() == gun && who != null && Scope.reaches(only.target(), who, slot)
+                        ? only.percent()
+                        : 0;
+            case Effect.Breed breed ->
+                breed.stat() == stat && who != null && Scope.reaches(breed.strain(), who) ? breed.percent() : 0;
+            case Effect.Count count ->
+                count.stat() == stat && card == null && (who == null || Scope.reaches(count.target(), who, slot))
+                        ? count.amount()
+                        : 0;
+            case Effect.Deal deal -> stat == Stat.ARMOURY_CARDS && deal.card() == card ? deal.amount() : 0;
+            case Effect.Stock stock -> stat == Stat.CRATE_STOCK && stock.card() == card ? stock.amount() : 0;
+            case Effect.Chance _ -> 0;
+        };
     }
 }
