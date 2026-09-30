@@ -17,7 +17,8 @@ import pl.mzebrows.pwt.ui.hud.RankText;
  * cannot leave a card lying (pillar 5). Built when a draft changes, never per frame.
  *
  * <p>Every effect template may use {@code {0}} its signed number, {@code {1}} who it reaches ({@code
- * ui.target.<TARGET>}, a prefix, empty for everyone) and {@code {2}} a gun's name.
+ * ui.target.<TARGET>}, a prefix, empty for everyone) and {@code {2}} a gun's name, or for an
+ * adaptation narrowed to one strain the strain's ({@code ui.strain.<KIND>}).
  */
 final class CardText {
 
@@ -78,6 +79,12 @@ final class CardText {
                 strings.format("ui.effect.deal." + deal.card().name(), signed(deal.amount()), "", "");
             case Effect.Stock stock ->
                 strings.format("ui.effect.stock." + stock.card().name(), signed(stock.amount()), "", "");
+            case Effect.Breed breed ->
+                strings.format(
+                        "ui.effect.breed." + breed.stat().name(),
+                        signed(breed.percent()),
+                        "",
+                        strings.get("ui.strain." + breed.strain().name()));
         };
     }
 

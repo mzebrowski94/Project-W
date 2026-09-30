@@ -27,7 +27,9 @@ public enum DispatchKind {
     /** A draft went on to another player because its chooser left (D4). */
     DRAFT_PASSED(Priority.NORMAL, Coalesce.NONE),
     /** A draft was owed and the pool had nothing left to deal. */
-    NOTHING_LEFT(Priority.LOW, Coalesce.NEWEST);
+    NOTHING_LEFT(Priority.LOW, Coalesce.NEWEST),
+    /** The swarm took an adaptation (D11): its kind as the first number, its new rank as the second. */
+    SWARM_ADAPTS(Priority.NORMAL, Coalesce.NONE);
 
     /**
      * How much a line matters. A high one is an alarm: it is shown at once, never dropped for being

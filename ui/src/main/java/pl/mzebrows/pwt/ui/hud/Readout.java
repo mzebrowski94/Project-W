@@ -63,8 +63,9 @@ public final class Readout {
     public static final int HELD = UpgradeKind.values().length * (Players.MAX + 1);
 
     /**
-     * What the side holds (the ledger), in the order it was first taken: the kind, whose it is - a slot,
-     * or -1 for the side's - its ranks, and the most it can have.
+     * What each side holds (the ledger), in the order it was first taken: the kind, whose it is - a slot,
+     * or -1 for the side's - its ranks, the most it can have, and whether it is the swarm's adaptation
+     * rather than the players' upgrade.
      */
     public int heldCount;
 
@@ -72,6 +73,7 @@ public final class Readout {
     public final int[] heldSlot = new int[HELD];
     public final int[] heldRanks = new int[HELD];
     public final int[] heldMaxRanks = new int[HELD];
+    public final boolean[] heldAlien = new boolean[HELD];
 
     /** Moves whenever a draft or the ledger changes, so text built from them is rebuilt only then. */
     public long upgradeRevision;
@@ -131,6 +133,7 @@ public final class Readout {
         System.arraycopy(other.heldSlot, 0, heldSlot, 0, other.heldCount);
         System.arraycopy(other.heldRanks, 0, heldRanks, 0, other.heldCount);
         System.arraycopy(other.heldMaxRanks, 0, heldMaxRanks, 0, other.heldCount);
+        System.arraycopy(other.heldAlien, 0, heldAlien, 0, other.heldCount);
         upgradeRevision = other.upgradeRevision;
         draftsDry = other.draftsDry;
         for (int slot = 0; slot < players.length; slot++) {

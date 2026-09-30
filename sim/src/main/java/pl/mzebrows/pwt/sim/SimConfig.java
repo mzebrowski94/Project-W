@@ -28,6 +28,7 @@ import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.Whole;
+import pl.mzebrows.pwt.sim.upgrade.AdaptationDef;
 import pl.mzebrows.pwt.sim.upgrade.DraftDef;
 import pl.mzebrows.pwt.sim.upgrade.Stat;
 import pl.mzebrows.pwt.sim.upgrade.StatDef;
@@ -77,6 +78,7 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * @param draft how drafts are earned and dealt (G0049)
  * @param stats how far each number an upgrade may move can be moved
  * @param upgrades every upgrade and adaptation, by kind (ADR 0017)
+ * @param adaptation when the swarm adapts (D11), both halves off at zero
  * @param swarm what every strain and nest is scaled by, read through {@link #healthOf} and
  *     {@link #nestHealth} and nowhere else
  * @param medkit how many medkits a level that asks for them scatters (G0053)
@@ -116,6 +118,7 @@ public record SimConfig(
         @ConfigKey("upgrade.draft") DraftDef draft,
         @ConfigKey("upgrade.stat") Defs<Stat, StatDef> stats,
         @ConfigKey("upgrade") Defs<UpgradeKind, UpgradeDef> upgrades,
+        AdaptationDef adaptation,
         SwarmConfig swarm,
         MedkitConfig medkit,
         CrateConfig crate) {

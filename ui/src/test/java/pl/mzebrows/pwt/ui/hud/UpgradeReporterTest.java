@@ -85,6 +85,33 @@ class UpgradeReporterTest {
                 .containsExactly("UPGRADE_TAKEN 0 " + UpgradeKind.MARKSMEN.ordinal() + "/1", "DRAFT_EARNED 1 0/0");
     }
 
+    /** Nobody took it: the swarm adapted, with its new rank, and no player is named. */
+    @Test
+    void saysTheSwarmAdaptedAndNamesNoPlayer() {
+        Readout was = players(2);
+        Readout now = players(2);
+        adapted(now, UpgradeKind.RAPID_SPIT, 2);
+
+        reporter.report(was, now, out);
+
+        assertThat(lines).containsExactly("SWARM_ADAPTS -1 " + UpgradeKind.RAPID_SPIT.ordinal() + "/2");
+    }
+
+    /** An adaptation is no card taken, so a draft that moved in the same frame still moved by passing on. */
+    @Test
+    void tellsAPassedDraftFromAnEarnedOneWhenTheSwarmAdaptedInTheSameFrame() {
+        Readout was = players(2);
+        was.player(0).drafts = 1;
+        Readout now = players(2);
+        now.player(1).drafts = 1;
+        adapted(now, UpgradeKind.RAPID_SPIT, 1);
+
+        reporter.report(was, now, out);
+
+        assertThat(lines)
+                .containsExactly("SWARM_ADAPTS -1 " + UpgradeKind.RAPID_SPIT.ordinal() + "/1", "DRAFT_PASSED 1 0/0");
+    }
+
     @Test
     void saysWhenNothingIsLeftToLearn() {
         Readout was = players(1);
@@ -121,5 +148,10 @@ class UpgradeReporterTest {
         readout.heldSlot[i] = slot;
         readout.heldRanks[i] = ranks;
         readout.heldMaxRanks[i] = 3;
+    }
+
+    private static void adapted(Readout readout, UpgradeKind kind, int ranks) {
+        held(readout, kind, -1, ranks);
+        readout.heldAlien[readout.heldCount - 1] = true;
     }
 }

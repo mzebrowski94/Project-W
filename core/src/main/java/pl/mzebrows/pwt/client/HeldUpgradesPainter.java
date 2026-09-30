@@ -176,12 +176,23 @@ final class HeldUpgradesPainter {
         full.clear();
         longest = 0;
         for (int i = 0; i < readout.heldCount; i++) {
-            int slot = readout.heldSlot[i];
-            String name = names.name(readout.heldKind[i]) + " " + RankText.roman(readout.heldRanks[i]);
-            String row = slot < 0 ? name : strings.format("ui.hud.player", slot + 1) + " " + name;
+            String row = whose(
+                    strings, readout, i, names.name(readout.heldKind[i]) + " " + RankText.roman(readout.heldRanks[i]));
             full.add(row);
             longest = Math.max(longest, row.length());
         }
+    }
+
+    /**
+     * A held entry's name with whose it is in front: {@code P2} for a personal upgrade, {@code SWARM} for
+     * an adaptation (D11), nothing for the side's. Shared with the aside, so the two cannot disagree.
+     */
+    static String whose(UiStrings strings, Readout readout, int index, String name) {
+        if (readout.heldAlien[index]) {
+            return strings.get("ui.hud.swarm") + " " + name;
+        }
+        int slot = readout.heldSlot[index];
+        return slot < 0 ? name : strings.format("ui.hud.player", slot + 1) + " " + name;
     }
 
     private int maxPipColumns(Readout readout) {

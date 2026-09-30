@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.upgrade.AdaptationDef;
 
 /**
  * One arena the alpha-phase menu can launch, built to demonstrate and test a system by hand.
@@ -68,6 +69,18 @@ public interface Scenario {
      */
     static SimConfig withoutMuster(SimConfig config) {
         return config.withReserve(config.reserve().withMusterSeconds(0f));
+    }
+
+    /**
+     * This config with the swarm adapting (D11): one adaptation every three minutes of the level, and one
+     * for every third card the players take. What ships leaves both off; the Adventure levels turn them on
+     * so the schedule can be felt, and it runs dry once every adaptation is at its last rank.
+     */
+    static SimConfig adapting(SimConfig config) {
+        float everySeconds = 180f;
+        int perPlayerUpgrades = 3;
+        return config.withAdaptation(new AdaptationDef(
+                everySeconds, perPlayerUpgrades, config.adaptation().answerWeight()));
     }
 
     /** Fills an empty simulation. Spawn the commander first, so it is always present. */

@@ -72,7 +72,13 @@ public enum RngStream {
      * (G0056). Its own, so opening a crate never moves where a wave lands, and stacking the deck moves
      * nothing else.
      */
-    ARMOURY(0x2B99_2DDF_A232_49D5L);
+    ARMOURY(0x2B99_2DDF_A232_49D5L),
+
+    /**
+     * Which adaptation the swarm takes when one is due (D11). Its own, so the swarm adapting never moves
+     * what a draft deals or where a wave lands, and a schedule that is off draws nothing at all.
+     */
+    ADAPTATION(0x1656_67B1_9E37_79F9L);
 
     private final long salt;
 

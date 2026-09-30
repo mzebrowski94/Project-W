@@ -21,6 +21,8 @@ import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.upgrade.Effect;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.upgrade.Stat;
+import pl.mzebrows.pwt.sim.upgrade.Target;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
@@ -186,6 +188,34 @@ class SimConfigTest {
                 .hasMessageContaining("not a card in the armoury deck");
     }
 
+    /** The reactive hook weighs an adaptation by what the players hold, so only an adaptation answers (D11). */
+    @Test
+    void refusesAnUpgradeOfThePlayersThatAnswersSomething() {
+        assertThatThrownBy(() -> new UpgradeDef(
+                        Side.PLAYER,
+                        10,
+                        1,
+                        1,
+                        null,
+                        0,
+                        UpgradeKind.MARKSMEN,
+                        List.of(new Effect.Scale(Stat.GUN_DAMAGE, Target.SQUAD, 10))))
+                .hasMessageContaining("only an adaptation answers");
+    }
+
+    /** ... and what it answers is something the players can hold, or it is weighted by nothing ever. */
+    @Test
+    void refusesAnAdaptationThatAnswersOneOfTheSwarms() {
+        SimConfig config = AlphaWorlds.config();
+
+        assertThatThrownBy(() -> config.withUpgrades(config.upgrades()
+                        .map(
+                                UpgradeKind.RAPID_SPIT,
+                                spit -> new UpgradeDef(
+                                        Side.ALIEN, 10, 3, 1, null, 0, UpgradeKind.RAPID_SPIT, spit.effects()))))
+                .hasMessageContaining("not the players'");
+    }
+
     /** A crate holds no more than the cards a top bar shows (G0056). */
     @Test
     void refusesACrateThatHoldsMoreThanATopBarShows() {
@@ -269,7 +299,10 @@ class SimConfigTest {
         return 1f / Math.max(perSecond - gun.heat().coolPerSecond(), TINY);
     }
 
-    /** A world holding every players' upgrade at its highest rank, personal ones for slot zero. */
+    /**
+     * A world holding every upgrade and every adaptation at its highest rank, personal ones for slot
+     * zero - so each relation above is checked against the aliens' numbers moved as far as they go too.
+     */
     private static Simulation everythingHeld(SimConfig config) {
         Simulation world = new Simulation(config);
         Upgrades ledger = world.engine()
@@ -278,9 +311,7 @@ class SimConfigTest {
                 .getComponent(Upgrades.class);
         for (UpgradeKind kind : UpgradeKind.values()) {
             UpgradeDef def = config.upgrades().of(kind);
-            if (def.side() == Side.PLAYER) {
-                ledger.held.add(new Upgrades.Held(kind, def.personal() ? 0 : Upgrades.SHARED, def.ranks()));
-            }
+            ledger.held.add(new Upgrades.Held(kind, def.personal() ? 0 : Upgrades.SHARED, def.ranks()));
         }
         return world;
     }

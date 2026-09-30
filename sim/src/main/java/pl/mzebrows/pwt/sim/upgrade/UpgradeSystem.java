@@ -19,16 +19,19 @@ import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
- * The only writer of the ledger and the drafts (ADR 0017, G0049). Once per tick, at the end of it:
+ * The only writer of the ledger and the drafts (ADR 0017, G0049, D11). Once per tick, at the end of it:
  *
  * <ol>
  *   <li>applies this tick's picks, each from the next tick on;
  *   <li>passes the drafts of away slots on (G0052);
  *   <li>re-deals any card a pick or a pass made stale, in its place;
  *   <li>earns drafts from what the level published this tick - points taken, hold waves cleared,
- *       bosses killed - at their configured rates, and deals their cards.
+ *       bosses killed - at their configured rates, and deals their cards;
+ *   <li>adapts the swarm, if an adaptation is due by level time or by the players' picks: one card from
+ *       the aliens' pool, on a stream of its own, taken at once - there is nobody to choose.
  * </ol>
  *
  * <p>Nothing here waits: a draft is state, a pick is input, and a draft nobody picks is simply still
@@ -49,8 +52,13 @@ public final class UpgradeSystem extends EntitySystem {
     private static final UpgradeKind[] KINDS = UpgradeKind.values();
 
     private final DraftDef draft;
+    private final AdaptationDef adaptation;
     private final Defs<UpgradeKind, UpgradeDef> catalogue;
     private final Rng rng;
+    private final Rng adapting;
+
+    /** One adaptation per this many ticks of level time; zero is off. */
+    private final int everyTicks;
 
     /** Scratch, overwritten before each read: by slot, whether it has a commander, and whether it is away. */
     private final boolean[] seated;
@@ -67,11 +75,18 @@ public final class UpgradeSystem extends EntitySystem {
     private ImmutableArray<Entity> returning = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
 
-    /** @param capacity how many slots the game holds - what the rotation goes round */
-    public UpgradeSystem(SimConfig config, Rng rng, int capacity) {
+    /**
+     * @param rng what drafts are dealt from
+     * @param adapting what the swarm's adaptations are dealt from
+     * @param capacity how many slots the game holds - what the rotation goes round
+     */
+    public UpgradeSystem(SimConfig config, Rng rng, Rng adapting, int capacity) {
         this.draft = config.draft();
+        this.adaptation = config.adaptation();
         this.catalogue = config.upgrades();
         this.rng = rng;
+        this.adapting = adapting;
+        this.everyTicks = Ticks.of(config.adaptation().everySeconds(), config.tickSeconds());
         this.seated = new boolean[capacity];
         this.away = new boolean[capacity];
     }
@@ -102,6 +117,7 @@ public final class UpgradeSystem extends EntitySystem {
             if (changed) {
                 drafts.revision++;
             }
+            adapt(upgrades, LEVEL.get(level));
         }
     }
 
@@ -138,7 +154,7 @@ public final class UpgradeSystem extends EntitySystem {
             if (index < 0
                     || drafts.pending.get(index).chooser() != pick.slot()
                     || !offers(drafts, pick.serial(), pick.kind())
-                    || !eligible(pick.kind(), pick.slot(), upgrades, drafts.earned)) {
+                    || !eligible(pick.kind(), Side.PLAYER, pick.slot(), upgrades, drafts.earned)) {
                 continue;
             }
             UpgradeDef def = catalogue.of(pick.kind());
@@ -211,7 +227,7 @@ public final class UpgradeSystem extends EntitySystem {
             for (int c = drafts.cards.size - 1; c >= 0; c--) {
                 Drafts.Card card = drafts.cards.get(c);
                 if (card.serial() != pending.serial()
-                        || eligible(card.kind(), pending.chooser(), upgrades, drafts.earned)) {
+                        || eligible(card.kind(), Side.PLAYER, pending.chooser(), upgrades, drafts.earned)) {
                     continue;
                 }
                 redealt = true;
@@ -295,7 +311,7 @@ public final class UpgradeSystem extends EntitySystem {
     private int deal(int chooser, Upgrades upgrades, Drafts drafts, int options, int serial) {
         for (int k = 0; k < KINDS.length; k++) {
             UpgradeKind kind = KINDS[k];
-            weights[k] = !offers(drafts, serial, kind) && eligible(kind, chooser, upgrades, drafts.earned)
+            weights[k] = !offers(drafts, serial, kind) && eligible(kind, Side.PLAYER, chooser, upgrades, drafts.earned)
                     ? catalogue.of(kind).weight()
                     : 0;
         }
@@ -310,12 +326,68 @@ public final class UpgradeSystem extends EntitySystem {
     }
 
     /**
-     * Whether this chooser could take this kind now: the players', below its last rank, its tier
-     * unlocked, what it requires held, nothing else in its group held, and not switched off.
+     * Adapts the swarm once for every adaptation it is owed and has not been credited with: by level
+     * time, counting this tick, and by the players' picks, counting this tick's. Each is one card dealt
+     * from the aliens' pool and taken at once; an empty pool takes nothing, and draws nothing.
      */
-    private boolean eligible(UpgradeKind kind, int chooser, Upgrades upgrades, int earned) {
+    private void adapt(Upgrades upgrades, Level level) {
+        int byTime = everyTicks <= 0 ? 0 : (int) ((level.tick + 1) / everyTicks);
+        while (upgrades.fromTime < byTime) {
+            upgrades.fromTime++;
+            adaptOnce(upgrades);
+        }
+        int per = adaptation.perPlayerUpgrades();
+        int byPicks = per <= 0 ? 0 : upgrades.playerPicks / per;
+        while (upgrades.fromPicks < byPicks) {
+            upgrades.fromPicks++;
+            adaptOnce(upgrades);
+        }
+    }
+
+    /**
+     * Deals the swarm one adaptation, weighted, and takes it. An adaptation that answers an upgrade the
+     * players hold is weighted up by {@code answerWeight} per rank they hold of it.
+     */
+    private void adaptOnce(Upgrades upgrades) {
+        for (int k = 0; k < KINDS.length; k++) {
+            UpgradeKind kind = KINDS[k];
+            if (!eligible(kind, Side.ALIEN, Upgrades.SHARED, upgrades, upgrades.adaptations)) {
+                weights[k] = 0;
+                continue;
+            }
+            UpgradeDef def = catalogue.of(kind);
+            UpgradeKind answered = def.answers();
+            int held = answered == null ? 0 : playersRanks(upgrades, answered);
+            weights[k] = def.weight() * (1 + adaptation.answerWeight() * held);
+        }
+        if (Dealer.deal(adapting, weights, 0L, 1, dealt) == 0) {
+            return;
+        }
+        grant(upgrades, KINDS[dealt[0]], Upgrades.SHARED);
+        upgrades.adaptations++;
+        upgrades.revision++;
+    }
+
+    /** Every rank the players hold of this upgrade, the side's and each player's own. */
+    private static int playersRanks(Upgrades upgrades, UpgradeKind kind) {
+        int sum = 0;
+        for (int i = 0; i < upgrades.held.size; i++) {
+            Upgrades.Held held = upgrades.held.get(i);
+            if (held.kind() == kind) {
+                sum += held.ranks();
+            }
+        }
+        return sum;
+    }
+
+    /**
+     * Whether this chooser could take this kind now: that side's, below its last rank, its tier
+     * unlocked, what it requires held, nothing else in its group held, and not switched off. The swarm
+     * is a chooser holding only what the side holds, and counts its tiers in adaptations.
+     */
+    private boolean eligible(UpgradeKind kind, Side side, int chooser, Upgrades upgrades, int earned) {
         UpgradeDef def = catalogue.of(kind);
-        if (def.side() != Side.PLAYER || def.weight() <= 0 || earned < draft.unlockedAt(def.tier())) {
+        if (def.side() != side || def.weight() <= 0 || earned < draft.unlockedAt(def.tier())) {
             return false;
         }
         if (ranks(upgrades, kind, def.personal() ? chooser : Upgrades.SHARED) >= def.ranks()) {

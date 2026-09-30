@@ -28,5 +28,7 @@ public enum UpgradeKind {
     /** Troopers who throw grenades into packs - only where the blast is the enemy's (G0051). */
     EXPLOSIVES,
     /** Every crate opened from now on holds as many pickups as a crate can (G0056). */
-    FULL_CRATES
+    FULL_CRATES,
+    /** An adaptation: spitters spit more often. */
+    RAPID_SPIT
 }

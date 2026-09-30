@@ -2,7 +2,7 @@ package pl.mzebrows.pwt.ui.hud;
 
 /**
  * Files the draft's news (G0049): an upgrade earned, one taken - and by whom - a draft passed on to
- * another player, and nothing left to learn. Counted from the readout's draft counts and held list,
+ * another player, nothing left to learn, and the swarm adapting (D11). Counted from the readout's draft counts and held list,
  * because several ticks can run between two frames.
  *
  * <p>Who took a shared upgrade is the player whose drafts went down as its rank went up; a personal
@@ -23,6 +23,10 @@ public final class UpgradeReporter implements Reporter {
         for (int i = 0; i < now.heldCount; i++) {
             int gained = now.heldRanks[i] - ranksBefore(previous, now, i);
             if (gained <= 0) {
+                continue;
+            }
+            if (now.heldAlien[i]) {
+                out.offer(DispatchKind.SWARM_ADAPTS, -1, now.heldKind[i].ordinal(), now.heldRanks[i]);
                 continue;
             }
             took = true;

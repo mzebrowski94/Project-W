@@ -371,8 +371,9 @@ final class TopBarPainter {
     }
 
     /**
-     * The aside ({@code UI:hud/top/aside}, a first answer to plan Q30): what the side holds, one upgrade a
-     * row with its rank as pips - a personal one named for its holder, in his colour. More than fits ends
+     * The aside ({@code UI:hud/top/aside}, a first answer to plan Q30): what each side holds, one upgrade a
+     * row with its rank as pips - a personal one named for its holder, in his colour, and an adaptation
+     * for the swarm. More than fits ends
      * in a count of the rest.
      */
     private void aside(ScreenLayout layout, Readout readout, int x, int width, int blockTop, int line) {
@@ -429,9 +430,8 @@ final class TopBarPainter {
                 aside[row] = TextFit.fit(strings.format("ui.hud.aside.more", readout.heldCount - row), columns);
                 continue;
             }
-            String name = cardText.name(readout.heldKind[row]);
-            int slot = readout.heldSlot[row];
-            aside[row] = TextFit.fit(slot < 0 ? name : strings.format("ui.hud.player", slot + 1) + " " + name, columns);
+            aside[row] = TextFit.fit(
+                    HeldUpgradesPainter.whose(strings, readout, row, cardText.name(readout.heldKind[row])), columns);
         }
     }
 

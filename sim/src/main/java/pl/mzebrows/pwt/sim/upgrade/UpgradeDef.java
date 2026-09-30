@@ -19,6 +19,8 @@ import pl.mzebrows.pwt.sim.def.Side;
  * @param tier which tier it belongs to, from one; a tier is dealt once enough drafts have been earned
  * @param requires an upgrade that must be held before this one is dealt, or none
  * @param group upgrades sharing a group above zero exclude one another; zero is no group
+ * @param answers for an adaptation, the players' upgrade it is an answer to, or none: dealt likelier
+ *     while they hold it, by {@code sim.adaptation.answerWeight} (off at zero). An upgrade answers nothing.
  * @param effects what one rank does
  */
 public record UpgradeDef(
@@ -28,6 +30,7 @@ public record UpgradeDef(
         int tier,
         @Nullable UpgradeKind requires,
         int group,
+        @Nullable UpgradeKind answers,
         List<Effect> effects) {
 
     public UpgradeDef {
@@ -38,6 +41,9 @@ public record UpgradeDef(
         Require.atLeastOne("upgrade ranks", ranks);
         Require.atLeastOne("upgrade tier", tier);
         Require.notNegative("upgrade group", group);
+        if (answers != null && side != Side.ALIEN) {
+            throw new IllegalArgumentException("only an adaptation answers an upgrade, not a " + side + " upgrade");
+        }
         if (effects.isEmpty()) {
             throw new IllegalArgumentException("an upgrade with no effects is a card that lies");
         }
@@ -55,6 +61,18 @@ public record UpgradeDef(
         effects = List.copyOf(effects);
     }
 
+    /** One that answers nothing: every players' upgrade, and an adaptation that is not an answer. */
+    public UpgradeDef(
+            Side side,
+            int weight,
+            int ranks,
+            int tier,
+            @Nullable UpgradeKind requires,
+            int group,
+            List<Effect> effects) {
+        this(side, weight, ranks, tier, requires, group, null, effects);
+    }
+
     /** Whether its ranks belong to the slot that took it rather than to the side (D1). */
     public boolean personal() {
         return effects.getFirst().target() == Target.CHOOSER;
@@ -62,7 +80,7 @@ public record UpgradeDef(
 
     /**
      * What can only be checked of the whole catalogue: a requirement that goes round in a circle or
-     * crosses sides, a group of one, a tier nobody unlocks, a stat block whose unused keys are set, and
+     * crosses sides, an answer to something the players cannot hold, a group of one, a tier nobody unlocks, a stat block whose unused keys are set, and
      * an armoury deck a deal cannot add to or a bag cannot hold.
      *
      * @throws IllegalArgumentException naming the first of those it finds
@@ -88,6 +106,10 @@ public record UpgradeDef(
                     throw new IllegalArgumentException(kind + " requires " + needed + ", which is the other side's");
                 }
                 needed = upgrades.of(needed).requires();
+            }
+            UpgradeKind answered = def.answers();
+            if (answered != null && upgrades.of(answered).side() != Side.PLAYER) {
+                throw new IllegalArgumentException(kind + " answers " + answered + ", which is not the players'");
             }
             if (def.group() > 0) {
                 int members = 0;

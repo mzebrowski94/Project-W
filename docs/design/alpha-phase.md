@@ -139,6 +139,7 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 
 | Scaffolding | Replaced by |
 |---|---|
+| Both Adventure levels turn the swarm's adaptations on (`Scenario.adapting`: one every 180 s, one per 3 cards taken); what ships in `upgrades.properties` leaves both off | A level's own numbers once levels are generated, or a shipped default once a playtest has settled one. The schedule, the pool and the fold are real (upgrades S10) |
 | A lost level (G0055) says MISSION FAILED on the goal line and the world runs on, as a completed one says MISSION COMPLETED | An end-of-level screen for both, once it is designed. `Level.failed` is latched, so a screen has one fact to read. |
 | Rabbits are spawned by a scenario and never replaced | Whatever a level does about them - breeding, a population, or nothing at all. The creature is designed; where they come from is an open question in `README.md`. |
 | A body in its death throes is a frozen circle in a darker colour | The dying animation. The window is real and configured per unit kind (`*.deathThroesSeconds`); only what plays in it is missing. |

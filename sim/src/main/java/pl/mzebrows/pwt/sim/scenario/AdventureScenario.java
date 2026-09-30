@@ -180,8 +180,8 @@ final class AdventureScenario implements Scenario {
             config = config.withUnit(
                     kind, strain -> strain.withPerception(strain.perception().withAlwaysAggressive(false)));
         }
-        return config.withTrooper(config.trooper().withSquadSize(SQUAD_SIZE))
-                .withSpawn(new SimConfig.SpawnConfig(2, 4, 8));
+        return Scenario.adapting(config.withTrooper(config.trooper().withSquadSize(SQUAD_SIZE))
+                .withSpawn(new SimConfig.SpawnConfig(2, 4, 8)));
     }
 
     @Override

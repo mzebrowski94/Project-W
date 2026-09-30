@@ -243,6 +243,7 @@ public final class ReadoutWriter {
             out.heldSlot[i] = view.heldSlot(i);
             out.heldRanks[i] = view.heldRanks(i);
             out.heldMaxRanks[i] = view.ranksOf(kind);
+            out.heldAlien[i] = view.heldAlien(i);
         }
         out.heldCount = held;
     }

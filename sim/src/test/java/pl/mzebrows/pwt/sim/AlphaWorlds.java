@@ -50,6 +50,7 @@ import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.WeaveDef;
+import pl.mzebrows.pwt.sim.upgrade.AdaptationDef;
 import pl.mzebrows.pwt.sim.upgrade.DraftDef;
 import pl.mzebrows.pwt.sim.upgrade.Effect;
 import pl.mzebrows.pwt.sim.upgrade.Stat;
@@ -1257,6 +1258,7 @@ public final class AlphaWorlds {
                 new DraftDef(DRAFT_OPTIONS, 1, 1, 1, List.of(0, TIER_TWO_FROM)),
                 stats(),
                 upgrades(),
+                new AdaptationDef(0f, 0, 0),
                 new SimConfig.SwarmConfig(100),
                 new SimConfig.MedkitConfig(0),
                 new SimConfig.CrateConfig(CRATE_FEWEST, CRATE_MOST));
@@ -1285,7 +1287,7 @@ public final class AlphaWorlds {
         return stats.build();
     }
 
-    /** The shipped two, with numbers a test can see move. */
+    /** The shipped two, with numbers a test can see move, and the swarm's one adaptation. */
     public static Defs<UpgradeKind, UpgradeDef> upgrades() {
         return Defs.<UpgradeKind, UpgradeDef>builder(UpgradeKind.class)
                 .put(
@@ -1340,6 +1342,17 @@ public final class AlphaWorlds {
                         UpgradeKind.EXPLOSIVES,
                         off(1, new Effect.Chance(AiChance.THROW_A_GRENADE, Target.SQUAD, EXPLOSIVES_PER_SECOND)))
                 .put(UpgradeKind.FULL_CRATES, off(1, new Effect.Count(Stat.CRATE_LEAST, Target.SIDE, FULL_CRATES_MORE)))
+                // The swarm's one: dealt whenever an adaptation is due, since nothing else on its side is.
+                .put(
+                        UpgradeKind.RAPID_SPIT,
+                        new UpgradeDef(
+                                Side.ALIEN,
+                                10,
+                                3,
+                                1,
+                                null,
+                                0,
+                                List.of(new Effect.Breed(UnitKind.SPITTER, Stat.FIRE_COOLDOWN, SPIT_PERCENT))))
                 .build();
     }
 
@@ -1351,6 +1364,9 @@ public final class AlphaWorlds {
     public static final int SELF_TREATMENT_SECONDS = 1;
     public static final int FIREPOWER_STOCK = 1;
     public static final int FIREPOWER_PERCENT = 25;
+
+    /** What one rank of Rapid Spit takes off a spitter's cooldown, in percent. */
+    public static final int SPIT_PERCENT = -25;
 
     /** Explosives' chance a second: high, so a test sees a man throw at his first opportunity. */
     public static final float EXPLOSIVES_PER_SECOND = 1000f;

@@ -1,6 +1,6 @@
 # Upgrades and adaptations — scoped work
 
-**Status: planned 2026-09-28; S0-S8 done 2026-09-29 (S8 awaits its two-copy check), next is S9; the wounds work in `health-scope.md` (H0-H4) that went ahead of it is done 2026-09-29. D18 amended 2026-09-29: the
+**Status: planned 2026-09-28; S0-S8 done 2026-09-29 (S8 awaits its two-copy check); S9 played and passed by Mateusz and S10 built 2026-09-30, so adaptations have shipped and only S11 (blocked) is left; the wounds work in `health-scope.md` (H0-H4) that went ahead of it is done 2026-09-29. D18 amended 2026-09-29: the
 draft is shown in the top bar, not the bottom bar.** Read this first in every session of the upgrade work,
 and tick the session in §0 when it lands. **This doc expires when adaptations ship (S10).** As each
 session lands, what it settles moves where it belongs - invariants and the input map into
@@ -25,8 +25,8 @@ claims against `main` at `e7cf245`, and five rounds of questions Mateusz answere
 | S6 | Firepower: sealed caches and the armoury deck | M | Adventure's caches dealt on reveal | done 2026-09-29; the sealed cache replaced by the crate 2026-09-30 (G0056) - Firepower now stocks every crate with a flamer, and Full Crates joined the catalogue |
 | S7 | Explosives: troopers throw | M | troopers grenade packs, never the squad | done 2026-09-29 |
 | S8 | Online | L | playable online, drop-in and dropped links included | built 2026-09-29; the two-copy check is Mateusz's |
-| S9 | Playtest gate and tuning | S-M | numbers Mateusz has felt | planned |
-| S10 | Adaptations, groundwork | M | the swarm adapts in a test | planned |
+| S9 | Playtest gate and tuning | S-M | numbers Mateusz has felt | done 2026-09-30: the numbers stand for now |
+| S10 | Adaptations, groundwork | M | the swarm adapts in a test | done 2026-09-30; on in both Adventure levels at Mateusz's ask |
 | S11 | Carrying upgrades between levels | - | - | blocked on the level lifecycle |
 
 **Order rules.** S1 before S3: the catalogue needs its file. S2 before S3: every stat has its reader
@@ -1189,6 +1189,46 @@ latency playtest's method).
 - A spitter spawned after it is identical to one already on the field.
 
 **Not in it:** content in any scenario until Mateusz asks.
+
+**As built (2026-09-30).** Mateusz chose -15 % a rank, three ranks, and asked for the schedule on in
+the Adventure levels.
+
+- **`Effect.Breed(strain, stat, percent)`**, written `breed spitter fire_cooldown -15`: always the
+  aliens', a scale only, and never a side's number. `Scope.reaches(strain, who)` is the alien side and
+  `Strain.kind` *now* - an alien that evolves into the strain is reached, one that evolves out of it is
+  not. One branch in `Modifiers.percent`; no new stat and no new seam, since the spit is charged in
+  `Guns.spend`.
+- **`UpgradeKind.RAPID_SPIT`**, `side=alien`, weight 10, 3 ranks, tier 1. Spit 1.1 s -> about 0.94,
+  0.77, 0.61 s; the -50 floor is never reached by it alone.
+- **`UpgradeDef.answers`** (`answers=none` in every block). Only an adaptation may answer, and only a
+  players' upgrade (the constructor and the catalogue check). A second constructor without it keeps
+  every players' definition as it was. **Weight** of an answer = `weight * (1 + answerWeight * ranks
+  the players hold of it)`, whole numbers, off at zero.
+- **`AdaptationDef(everySeconds, perPlayerUpgrades, answerWeight)`**, `sim.adaptation.*`, all zero in
+  what ships.
+- **The schedule is two credit counters on `Upgrades`**, `fromTime` and `fromPicks`, beside
+  `adaptations` - the drafts' `fromPoints` shape - **instead of the `nextAdaptationTick` §5.2
+  named**: nothing to initialise, and a level that changes the interval cannot strand a tick. Level time
+  counts the tick being run, so the first adaptation lands at `everySeconds`, not at once; picks count
+  this tick's.
+- **`UpgradeSystem` step 4**, after picks and drafts: one card per credit, dealt from
+  `RngStream.ADAPTATION` over the aliens' pool and granted at once, shared. `eligible` takes the side;
+  **an adaptation's tier counts adaptations taken** against the same `tierFrom`. A dry pool takes the
+  credit and draws nothing.
+- **Shown.** `UpgradeView.heldAlien` -> `Readout.heldAlien`; `UpgradeReporter` files
+  `SWARM_ADAPTS` (`THE SWARM ADAPTS - SPITTERS SPIT FASTER`, from `ui.adapted.<KIND>`) instead of a
+  player taking it, and an adaptation in the same frame no longer counts as a card taken. The aside and
+  the pause list prefix `SWARM` (`HeldUpgradesPainter.whose`, shared by both). Card text has a `breed`
+  template with the strain's name (`ui.strain.<KIND>`). **No tint per strain yet.**
+- **`Scenario.adapting`**: both Adventure levels, one every 180 s and one per 3 cards. With one
+  adaptation of three ranks the swarm is done after three.
+- **Tests.** `AdaptationTest` (7): off draws nothing; one per interval; one per N picks; dry pool
+  draws nothing; the answer weight; only its strain; spawned later is identical. `SimConfigTest`:
+  `everythingHeld` holds both sides; refusals for an answering upgrade and an answer to the swarm's
+  own. `ReadoutWriterTest`, `UpgradeReporterTest` (+2).
+- **The relational checks at the highest rank.** No relation `SimConfigTest` holds reads a spitter's
+  cooldown, so holding the adaptation there proves nothing new today; it is there so the next
+  adaptation is checked the day it lands.
 
 ### S11 - Carrying upgrades between levels (blocked)
 

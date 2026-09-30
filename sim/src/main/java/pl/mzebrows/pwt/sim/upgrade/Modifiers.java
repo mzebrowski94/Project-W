@@ -190,7 +190,10 @@ public final class Modifiers {
         return sum;
     }
 
-    /** The sum of every held percentage on this stat that reaches {@code who}, for {@code gun} if it is a gun's. */
+    /**
+     * The sum of every held percentage on this stat that reaches {@code who}, for {@code gun} if it is a
+     * gun's - the side's upgrades and the aliens' adaptations alike, since each names whom it reaches.
+     */
     private int percent(Stat stat, Entity who, @Nullable WeaponKind gun) {
         int sum = 0;
         for (int l = 0; l < ledgers.size(); l++) {
@@ -209,6 +212,10 @@ public final class Modifiers {
                             && only.stat() == stat
                             && Scope.reaches(only.target(), who, entry.slot())) {
                         sum += only.percent() * entry.ranks();
+                    } else if (effect instanceof Effect.Breed breed
+                            && breed.stat() == stat
+                            && Scope.reaches(breed.strain(), who)) {
+                        sum += breed.percent() * entry.ranks();
                     }
                 }
             }

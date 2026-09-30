@@ -35,6 +35,8 @@ final class DispatchText implements DispatchWords {
                     case UPGRADE_TAKEN ->
                         strings.get("ui.upgrade." + UPGRADES[clamp(dispatch.a(), UPGRADES.length)].name()) + " "
                                 + RankText.roman(dispatch.b());
+                    case SWARM_ADAPTS ->
+                        strings.get("ui.adapted." + UPGRADES[clamp(dispatch.a(), UPGRADES.length)].name());
                     default -> "";
                 };
         return strings.format(dispatch.kind().key(), player, dispatch.a(), dispatch.b(), name);

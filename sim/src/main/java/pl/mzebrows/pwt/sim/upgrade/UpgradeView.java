@@ -12,10 +12,11 @@ import pl.mzebrows.pwt.sim.component.Drafts;
 import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.Side;
 
 /**
  * What the interface may read of the upgrades (ADR 0017): the drafts waiting for each slot and their
- * cards, and what is held. Read-only, and allocation-free, so it can be asked every frame; the ledger
+ * cards, and what each side holds. Read-only, and allocation-free, so it can be asked every frame; the ledger
  * and the drafts themselves stay the package's.
  */
 public final class UpgradeView {
@@ -174,6 +175,11 @@ public final class UpgradeView {
     /** How many times it has been taken. */
     public int heldRanks(int index) {
         return held(index).ranks();
+    }
+
+    /** Whether it is the swarm's adaptation (D11) rather than the players' upgrade. */
+    public boolean heldAlien(int index) {
+        return catalogue.of(held(index).kind()).side() == Side.ALIEN;
     }
 
     private Upgrades.Held held(int index) {

@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.upgrade;
 
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
@@ -10,7 +11,8 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  *
  * <p>Written in config as its name and its arguments: {@code scale fire_cooldown team -12},
  * {@code count men_per_crate side 1}, {@code chance aid_a_trooper squad 0.2},
- * {@code gun flamer gun_damage team 25}, {@code deal armoury_flamer 2}, {@code stock armoury_flamer 1}.
+ * {@code gun flamer gun_damage team 25}, {@code deal armoury_flamer 2}, {@code stock armoury_flamer 1},
+ * {@code breed spitter fire_cooldown -15}.
  */
 public sealed interface Effect {
 
@@ -96,6 +98,28 @@ public sealed interface Effect {
         @Override
         public Target target() {
             return Target.SIDE;
+        }
+    }
+
+    /**
+     * A stat moved by a whole percentage for one strain of alien only - an adaptation narrowed to the
+     * strain it changes, as {@link Gun} narrows an upgrade to one gun. Always the aliens'; not named
+     * {@code Strain}, which is the component it is read from.
+     *
+     * @param strain the only strain it reaches, whatever gun that strain is holding
+     * @param stat a unit's number, never the side's
+     * @param percent whole percent of the base, per rank
+     */
+    record Breed(UnitKind strain, Stat stat, int percent) implements Effect {
+        public Breed {
+            requireForm(stat, Stat.Form.SCALE);
+            requireReach(stat, Target.ALIENS);
+            requireSome(percent);
+        }
+
+        @Override
+        public Target target() {
+            return Target.ALIENS;
         }
     }
 

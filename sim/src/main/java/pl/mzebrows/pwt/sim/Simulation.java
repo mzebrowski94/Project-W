@@ -239,7 +239,8 @@ public final class Simulation {
         engine.addSystem(new ControlPointSystem(spawner));
         // After every source of a draft (41, 44, 45), so what was earned this tick is dealt this tick; and
         // after every reader of Modifiers, so the ledger changes once, at the end, for every reader alike.
-        engine.addSystem(new UpgradeSystem(config, streams.of(RngStream.DRAFT), capacity));
+        engine.addSystem(
+                new UpgradeSystem(config, streams.of(RngStream.DRAFT), streams.of(RngStream.ADAPTATION), capacity));
         engine.addSystem(new ObjectiveSystem());
         engine.addSystem(new FacingSystem());
         engine.addSystem(new AppearanceSystem(config));

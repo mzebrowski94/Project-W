@@ -21,7 +21,9 @@ import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.upgrade.AdaptationDef;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
 
 class ReadoutWriterTest {
 
@@ -325,6 +327,22 @@ class ReadoutWriterTest {
         assertThat(readout.heldMaxRanks[0])
                 .isEqualTo(world.config().upgrades().of(taken).ranks());
         assertThat(readout.player(0).drafts).isZero();
+    }
+
+    /** The swarm's adaptation is in the same list, told apart from the side's upgrades (D11). */
+    @Test
+    void marksWhatTheSwarmHoldsApartFromWhatTheSideHolds() {
+        SimConfig config = SimConfig.defaults();
+        Simulation world = new Simulation(config.withAdaptation(new AdaptationDef(config.tickSeconds(), 0, 0)));
+        world.spawnCommander(40f, 40f, 0);
+        world.step();
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        assertThat(readout.heldCount).isEqualTo(1);
+        assertThat(readout.heldKind[0]).isEqualTo(UpgradeKind.RAPID_SPIT);
+        assertThat(readout.heldAlien[0]).isTrue();
+        assertThat(readout.heldSlot[0]).isEqualTo(UpgradeView.SHARED);
     }
 
     @Test

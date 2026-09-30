@@ -222,7 +222,7 @@ from S2.
 
 | Term | Meaning |
 |---|---|
-| **adaptation** | An **upgrade** the aliens take, on a schedule and with no **chooser**. Not *evolve*, which stays one alien changing strain by feeding. |
+| **adaptation** | An **upgrade** the aliens take, on a schedule and with no **chooser**: one every so much level time and one every so many cards the players take, both off at zero (D11). Held in the same **ledger**, shown as `SWARM` in the aside. Not *evolve*, which stays one alien changing strain by feeding. |
 | **armoury deck** | The weighted cards a **crate** is dealt from, one deck per level - every gun's **weapons cache** and the **medkit** - drawn so no card comes up twice before every card has (G0056). An upgrade may add cards (**deal**) or put one into every crate (**stock**). |
 | **away** | A slot whose machine's link has dropped. Its commander stands idle, the **rotation** skips it, and its **drafts** pass on (G0052). Only the host's sequencer says so; offline nobody is ever away. |
 | **capability** | Behaviour written once and carried from spawn by every unit that could use it, off at zero until an upgrade turns it up - a trooper's grenade throw (G0051). How an upgrade unlocks something without adding a component. |
@@ -231,7 +231,7 @@ from S2.
 | **draft** | One offer of up to three **upgrades** to one player, earned by an objective: a point taken, a hold wave cleared, a boss killed. He takes one card, when he likes; nothing expires. |
 | **draft bar** | The top bar while a **draft** is open: the **chooser** on the left, his **cards** across the rest. One per machine, driven by the seat that opened it; it pauses a solo game. |
 | **crate bar** | The top bar while a **crate** is open: the opener on the left, its cards across the rest, a card he would be turned down for dimmed. Shares the top bar with the **draft bar** - one or the other per machine - and follows the world: it shows the first local seat's open crate (G0056). |
-| **effect** | One change an upgrade makes: scale a **stat**, add to a count, raise a chance, scale one gun, add cards to the **armoury deck**, or put a card into every **crate** (a *stock*). Each names its **target**. |
+| **effect** | One change an upgrade makes: scale a **stat**, add to a count, raise a chance, scale one gun, add cards to the **armoury deck**, put a card into every **crate** (a *stock*), or - for an **adaptation** - scale one strain's stat (a *breed*). Each names its **target**. |
 | **ledger** | What each side holds, with **ranks** - level state on the level entity (G0007). Numbers are folded from it where they are read, never written back. |
 | **pending tell** | `UPGRADE x2 C` at the end of a player's panel's first row: his slot holds **drafts**, and the key that opens them. |
 | **pick** | Taking a **card**: an input event naming the draft and the upgrade, never the card's position. |

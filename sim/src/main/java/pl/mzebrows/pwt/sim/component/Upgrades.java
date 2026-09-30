@@ -6,7 +6,7 @@ import com.badlogic.gdx.utils.Pool;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
- * The ledger: what each side holds, with ranks (ADR 0017). Level state on the level entity (G0007),
+ * The ledger: what each side holds, with ranks - the players' upgrades and the aliens' adaptations (ADR 0017). Level state on the level entity (G0007),
  * so a snapshot, a drop-in and a heal carry it with no code of their own. Written only by the upgrade
  * package and read only through {@code Modifiers}; {@code ArchitectureTest} fences it.
  */
@@ -27,10 +27,22 @@ public final class Upgrades implements Component, Pool.Poolable {
     /** How many cards the players have taken this level. */
     public int playerPicks;
 
+    /** How many adaptations the swarm has taken this level (D11) - what unlocks an adaptation's tier. */
+    public int adaptations;
+
+    /** How many adaptations level time has been credited with so far, dealt or not. */
+    public int fromTime;
+
+    /** How many adaptations the players' picks have been credited with so far, dealt or not. */
+    public int fromPicks;
+
     @Override
     public void reset() {
         held.clear();
         revision = 0;
         playerPicks = 0;
+        adaptations = 0;
+        fromTime = 0;
+        fromPicks = 0;
     }
 }
