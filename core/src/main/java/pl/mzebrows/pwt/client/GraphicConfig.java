@@ -1,8 +1,13 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.graphics.Color;
-import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.regex.Pattern;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.sim.ConfigBinder;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -66,6 +71,11 @@ public record GraphicConfig(
 
     private static final String FILE = "graphic.properties";
 
+    private static final String ROOT = "graphic";
+
+    /** How a colour is written: red, green and blue in hex, and alpha after them if it is not opaque. */
+    private static final Pattern HEX = Pattern.compile("#?([0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
+
     /**
      * Rows of text beside the portrait in a player panel: label and status, gun and heat, tally. The
      * panel's shape rather than a setting - a fourth row is a design change, not a number to turn.
@@ -84,372 +94,271 @@ public record GraphicConfig(
         }
     }
 
-    /** Loads rendering config, falling back to defaults for anything missing or malformed. */
+    /**
+     * Rendering config from {@code graphic.properties}, with every value it lacks or garbles taken from
+     * what ships and said out loud ({@link #parse}).
+     */
     public static GraphicConfig load() {
-        GameProperties properties = GameProperties.load(FILE);
+        return parse(GameProperties.text(FILE));
+    }
+
+    /** What ships: {@code assets/graphic.properties}, compiled in. What every test draws with. */
+    public static GraphicConfig defaults() {
+        return Shipped.CONFIG;
+    }
+
+    /**
+     * Rendering config from the text of a {@code graphic.properties}. Empty text - no file at all - is what
+     * ships. A key no record has, a value missing or unreadable, and a colour that is not one are each
+     * logged, and the shipped value stands for it; {@code ShippedGraphicConfigTest} holds the shipped file
+     * to stricter terms.
+     */
+    public static GraphicConfig parse(String text) {
+        Parsed parsed = read(text);
+        for (String problem : parsed.problems()) {
+            Log.error(FILE + ": " + problem + "; the shipped value stands", null);
+        }
+        return parsed.config();
+    }
+
+    /** The same, with everything that was wrong with the text rather than logging it. */
+    static Parsed read(String text) {
+        if (text.isBlank()) {
+            return new Parsed(defaults(), List.of());
+        }
+        List<String> problems = new ArrayList<>();
+        SortedMap<String, String> values = colours(ConfigBinder.parse(text), problems);
+        ConfigBinder.Bound<GraphicFile> bound = ConfigBinder.bind(GraphicFile.class, ROOT, values, Shipped.VALUES);
+        problems.addAll(bound.problems());
+        GraphicFile file = bound.value();
+        return new Parsed(file == null ? defaults() : of(file), List.copyOf(problems));
+    }
+
+    /** A config read from text, and everything that had to be taken from what ships instead. */
+    public record Parsed(GraphicConfig config, List<String> problems) {}
+
+    /** The same text with every colour that does not read as one replaced by the shipped colour, and named. */
+    static SortedMap<String, String> colours(SortedMap<String, String> values, List<String> problems) {
+        SortedMap<String, String> checked = new TreeMap<>(values);
+        for (var entry : values.entrySet()) {
+            String shipped = Shipped.VALUES.get(entry.getKey());
+            if (shipped != null && isColour(shipped) && !isColour(entry.getValue())) {
+                problems.add(entry.getKey() + "=" + entry.getValue() + " is not a colour");
+                checked.put(entry.getKey(), shipped);
+            }
+        }
+        return checked;
+    }
+
+    private static boolean isColour(String text) {
+        return HEX.matcher(text).matches();
+    }
+
+    /** What the renderer reads, built from the file as written. */
+    static GraphicConfig of(GraphicFile file) {
         return new GraphicConfig(
-                properties.getFloat("graphic.virtualHeight", 90f),
-                layout(properties),
-                hud(properties),
-                properties.getInt("graphic.windowWidth", 1280),
-                properties.getInt("graphic.windowHeight", 720),
-                properties.getBoolean("graphic.vsync", true),
-                color(properties, "graphic.backgroundColor", "101018ff"),
-                palette(properties),
-                terrainPalette(properties),
-                groundDetail(properties),
-                stateTint(properties),
-                chargeMark(properties),
-                bloatMark(properties),
-                nestMark(properties),
-                facingMark(properties),
-                segmentMark(properties),
-                chargedMark(properties),
-                orderMark(properties),
-                heatMark(properties),
-                woundMark(properties),
-                shieldMark(properties),
-                crateMark(properties),
-                camera(properties),
-                terminal(properties));
+                file.virtualHeight(),
+                layout(file),
+                hud(file.hud(), file.ui()),
+                file.windowWidth(),
+                file.windowHeight(),
+                file.vsync(),
+                Color.valueOf(file.backgroundColor()),
+                palette(file),
+                terrainPalette(file),
+                new GroundDetail(
+                        file.thicket().cells(),
+                        file.thicket().dot(),
+                        Color.valueOf(file.thicket().tint()),
+                        file.thicket().alpha(),
+                        Color.valueOf(file.rockEdge()),
+                        file.rockEdgeWidth(),
+                        file.rockEdgeAlpha()),
+                stateTint(file.state()),
+                new ChargeMark(file.charge().scale(), file.charge().tint()),
+                new BloatMark(file.bloat().scale(), file.bloat().alpha()),
+                new NestMark(file.nest().shells(), file.nest().darken()),
+                new FacingMark(
+                        file.facing().length(),
+                        file.facing().width(),
+                        file.facing().tint()),
+                new SegmentMark(
+                        file.segments().bodyOffset(),
+                        file.segments().bodyScale(),
+                        file.segments().headOffset(),
+                        file.segments().headScale(),
+                        file.segments().headShade()),
+                new ChargedMark(
+                        file.charged().scale(), Color.valueOf(file.charged().color())),
+                new OrderMark(file.order().scale(), file.order().tint()),
+                new HeatMark(
+                        file.heat().scale(),
+                        file.heat().width(),
+                        file.heat().spreadDegrees(),
+                        file.heat().segments()),
+                new WoundMark(
+                        file.wound().size(),
+                        file.wound().growth(),
+                        file.wound().maxSize(),
+                        Color.valueOf(file.wound().color())),
+                new ShieldMark(
+                        file.shield().scale(),
+                        file.shield().segments(),
+                        Color.valueOf(file.shield().color())),
+                new CrateMark(file.crate().dot(), Color.valueOf(file.crate().dotColor())),
+                camera(file.camera()),
+                terminal(file.hud().terminal()));
     }
 
     /**
      * The letterbox, under {@code graphic.view} and {@code graphic.ui}. The bars' heights are not here:
      * they are derived from the font, the lines and the portrait they hold ({@link HudMetrics}).
      */
-    private static LayoutSpec layout(GameProperties properties) {
+    private static LayoutSpec layout(GraphicFile file) {
+        GraphicFile.Ui ui = file.ui();
         HudMetrics metrics = new HudMetrics(
-                properties.getInt("graphic.ui.padding", 4),
-                properties.getInt("graphic.ui.fontSize", 9),
-                properties.getInt("graphic.ui.leading", 3),
-                TOP_LINES_BESIDES_TERMINAL + properties.getInt("graphic.hud.terminal.lines", 2),
+                ui.padding(),
+                ui.fontSize(),
+                ui.leading(),
+                TOP_LINES_BESIDES_TERMINAL + file.hud().terminal().lines(),
                 PANEL_ROWS,
-                properties.getInt("graphic.hud.portrait.size", 32));
+                file.hud().portrait().size());
         return new LayoutSpec(
-                properties.getInt("graphic.ui.canvasHeight", 360),
-                properties.getInt("graphic.ui.scale", 0),
-                properties.getFloat("graphic.view.aspectMin", 1.6f),
-                properties.getFloat("graphic.view.aspectMax", 2.39f),
-                properties.getFloat("graphic.view.topShare", 0.5f),
+                ui.canvasHeight(),
+                ui.scale(),
+                file.view().aspectMin(),
+                file.view().aspectMax(),
+                file.view().topShare(),
                 metrics);
     }
 
     /** The terminal (plan 8.4), under {@code graphic.hud.terminal}. Its line count also sizes the top bar. */
-    private static Terminal.Settings terminal(GameProperties properties) {
+    private static Terminal.Settings terminal(GraphicFile.Terminal terminal) {
         return new Terminal.Settings(
-                properties.getInt("graphic.hud.terminal.lines", 2),
-                properties.getFloat("graphic.hud.terminal.charsPerSecond", 45f),
-                properties.getFloat("graphic.hud.terminal.highCharsPerSecond", 0f),
-                properties.getFloat("graphic.hud.terminal.minHoldSeconds", 1.2f),
-                properties.getFloat("graphic.hud.terminal.maxAgeSeconds", 4f),
-                properties.getInt("graphic.hud.terminal.queue", 8),
-                properties.getFloat("graphic.hud.terminal.coalesceSeconds", 2f),
-                properties.getFloat("graphic.hud.terminal.blinkSeconds", 0.5f),
-                properties.getFloat("graphic.hud.terminal.cursorLingerSeconds", 1f),
-                properties.getInt("graphic.hud.terminal.fewTroopers", 5));
+                terminal.lines(),
+                terminal.charsPerSecond(),
+                terminal.highCharsPerSecond(),
+                terminal.minHoldSeconds(),
+                terminal.maxAgeSeconds(),
+                terminal.queue(),
+                terminal.coalesceSeconds(),
+                terminal.blinkSeconds(),
+                terminal.cursorLingerSeconds(),
+                terminal.fewTroopers());
     }
 
-    private static HudStyle hud(GameProperties properties) {
+    private static HudStyle hud(GraphicFile.Hud hud, GraphicFile.Ui ui) {
+        GraphicFile.HudColor color = hud.color();
         return new HudStyle(
-                color(properties, "graphic.hud.color.text", "e8e8e8ff"),
-                color(properties, "graphic.hud.color.textDim", "8a8a8aff"),
-                color(properties, "graphic.hud.color.alert", "ff3030ff"),
-                color(properties, "graphic.hud.color.overlayFrame", "e02020ff"),
-                color(properties, "graphic.hud.color.bar", "000000ff"),
-                properties.getFloat("graphic.hud.overlay.widthShare", 0.34f),
-                properties.getFloat("graphic.ui.motionScale", 1f),
-                properties.getFloat("graphic.ui.flashScale", 1f),
-                properties.getFloat("graphic.hud.panel.alarmSeconds", 0.15f),
-                properties.getInt("graphic.hud.panel.alarmShake", 1),
-                properties.getFloat("graphic.hud.alert.pulseHz", 2f),
-                properties.getFloat("graphic.hud.goal.minHoldSeconds", 1f),
-                properties.getInt("graphic.hud.reticle.size", 9),
-                properties.getBoolean("graphic.hud.reticle.keyboard", false),
-                properties.getBoolean("graphic.hud.reticle.pads", false),
-                properties.getFloat("graphic.hud.reticle.padDistance", 24f),
-                properties.getBoolean("graphic.hud.rollCall", false),
-                properties.getFloat("graphic.ui.scrimAlpha", 0.55f),
-                properties.getFloat("graphic.ui.bannerScrimAlpha", 0.25f),
-                properties.getFloat("graphic.ui.motion.scrimSeconds", 0.08f),
-                properties.getFloat("graphic.ui.motion.pageSeconds", 0.12f),
-                properties.getInt("graphic.ui.motion.pageSlide", 6),
-                properties.getInt("graphic.ui.page.columns", 60),
-                color(properties, "graphic.hud.color.wound", "f0788aff"),
-                properties.getFloat("graphic.hud.upgrade.glow", 0.3f),
-                properties.getFloat("graphic.hud.upgrade.lift", 0.5f),
-                properties.getFloat("graphic.hud.upgrade.pulseHz", 0.8f));
+                Color.valueOf(color.text()),
+                Color.valueOf(color.textDim()),
+                Color.valueOf(color.alert()),
+                Color.valueOf(color.overlayFrame()),
+                Color.valueOf(color.bar()),
+                hud.overlay().widthShare(),
+                ui.motionScale(),
+                ui.flashScale(),
+                hud.panel().alarmSeconds(),
+                hud.panel().alarmShake(),
+                hud.alert().pulseHz(),
+                hud.goal().minHoldSeconds(),
+                hud.reticle().size(),
+                hud.reticle().keyboard(),
+                hud.reticle().pads(),
+                hud.reticle().padDistance(),
+                hud.rollCall(),
+                ui.scrimAlpha(),
+                ui.bannerScrimAlpha(),
+                ui.motion().scrimSeconds(),
+                ui.motion().pageSeconds(),
+                ui.motion().pageSlide(),
+                ui.page().columns(),
+                Color.valueOf(color.wound()),
+                hud.upgrade().glow(),
+                hud.upgrade().lift(),
+                hud.upgrade().pulseHz());
     }
 
     /**
-     * One colour per look, read from {@code graphic.color.<look>} and keyed by the enum's own name,
-     * plus any variants at {@code graphic.color.<look>.<n>}.
-     *
-     * <p>A variant is a second appearance for the same role - the commander has one per player, so
-     * four of them on a field are four colours rather than four identical circles (pillar 5). A look
-     * with no variant keys is one colour, which is all but one of them.
+     * One colour per look, keyed by the enum's own name, plus a colour per player for a look that has
+     * them - the commander, so four of them on a field are four colours rather than four identical
+     * circles (pillar 5). A look with none is one colour for everybody.
      */
     @SuppressWarnings("EnumOrdinal")
-    private static Palette palette(GameProperties properties) {
+    private static Palette palette(GraphicFile file) {
         Look[] looks = Look.values();
         Color[][] colors = new Color[looks.length][];
         for (Look look : looks) {
-            String key = "graphic.color." + look.name().toLowerCase(Locale.ROOT);
-            Color ordinary = color(properties, key, fallbackFor(look));
-            Color[] variants = new Color[Players.MAX];
-            variants[0] = ordinary;
+            Color ordinary = Color.valueOf(file.color().of(look));
+            GraphicFile.Variants variants = file.variants().of(look);
+            Color[] byPlayer = new Color[Players.MAX];
+            byPlayer[0] = ordinary;
             for (int variant = 1; variant < Players.MAX; variant++) {
-                variants[variant] = color(properties, key + "." + variant, hex(ordinary));
+                String written = variants.of(variant);
+                byPlayer[variant] = written.isEmpty() ? new Color(ordinary) : Color.valueOf(written);
             }
-            colors[look.ordinal()] = variants;
+            colors[look.ordinal()] = byPlayer;
         }
         return new Palette(colors);
     }
 
-    /** A colour back as the eight hex digits {@link #color} expects, so a fallback can be a colour. */
-    private static String hex(Color color) {
-        return color.toString();
-    }
-
-    /**
-     * The colour a look falls back to with no properties file at all.
-     *
-     * <p>Deliberately an exhaustive switch rather than a lookup with a default: adding a look fails
-     * this compile until somebody decides what it should look like, which is the cheapest possible
-     * reminder that a new kind of thing needs to be visible (pillar 5).
-     */
-    private static String fallbackFor(Look look) {
-        return switch (look) {
-            case COMMANDER -> "6ee7ffff";
-            case TROOPER -> "4fb8d8ff";
-            case GRUNT -> "ff5d5dff";
-            case BRUTE -> "b53a5aff";
-            case SPITTER -> "a05cf0ff";
-            case RUNNER -> "ff9a4aff";
-            case FROG -> "4f9e3cff";
-            case ANT -> "c9a227ff";
-            case BOSS_GRUNT -> "c8242eff";
-            case CONTROL_POINT -> "2b3a52ff";
-            case POST -> "3a5230ff";
-            case NEST -> "6b4a2aff";
-            case TURRET -> "3f7fa8ff";
-            case PROJECTILE -> "ffe066ff";
-            case SLUG -> "fff3c4ff";
-            case FLAME -> "ff7a2eff";
-            case PELLET -> "ffd24dff";
-            case LASER -> "b4f6ffff";
-            case TURRET_SHOT -> "7fd8ffff";
-            case SPIT -> "d08cffff";
-            case CHARGED_SPIT -> "ff8ce0ff";
-            case VENOM -> "aef23cff";
-            case SPEW -> "ff3d7aff";
-            case SLICK -> "5c7a1eff";
-            case FIRE -> "c4521cff";
-            case MINE -> "2f5d3aff";
-            case FUSE -> "0a0a0aff";
-            case STRIKE -> "ffffffff";
-            case GRENADE -> "c07820ff";
-            case BLAST -> "ffb03aff";
-            case BLOAT -> "ff8a46ff";
-            case OBSTACLE -> "4a4a5eff";
-            case MUSHROOM -> "8fd97fff";
-            case FLOWER -> "e07be0ff";
-            case SUPPLY_DROP -> "9fd8f0ff";
-            case MEDKIT -> "f4f4f4ff";
-            case ARMOURY_RAILGUN -> "d8a04aff";
-            case ARMOURY_FLAMER -> "ff7a2eff";
-            case ARMOURY_SHOTGUN -> "4ad8a0ff";
-            case ARMOURY_LASER -> "46c8e6ff";
-            case CRATE -> "a89c84ff";
-            case BARREL -> "ff3a10ff";
-            case RABBIT -> "f0f0f0ff";
-            case MENDING -> "4ce88aff";
-            case HEAT -> "ffc24aff";
-            case OVERHEAT -> "ff4a2aff";
-            case GLEAM -> "ffffffff";
-            case NONE -> "ff00ffff";
-        };
-    }
-
-    /**
-     * One colour per kind of ground, read from {@code graphic.terrain.<name>}, plus how far apart two
-     * regions of the same ground may be shaded.
-     */
+    /** One colour per kind of ground, plus how far apart two regions of the same ground may be shaded. */
     @SuppressWarnings("EnumOrdinal")
-    private static TerrainPalette terrainPalette(GameProperties properties) {
+    private static TerrainPalette terrainPalette(GraphicFile file) {
         Terrain[] terrains = Terrain.values();
         Color[] colors = new Color[terrains.length];
         for (Terrain terrain : terrains) {
-            colors[terrain.ordinal()] = color(
-                    properties, "graphic.terrain." + terrain.name().toLowerCase(Locale.ROOT), fallbackFor(terrain));
+            colors[terrain.ordinal()] = Color.valueOf(file.ground().of(terrain));
         }
         return new TerrainPalette(
                 colors,
-                properties.getFloat("graphic.region.variance", 0.06f),
-                properties.getFloat("graphic.tile.variance", 0.022f),
-                properties.getInt("graphic.tile.shades", 4),
-                properties.getInt("graphic.tile.patch", 3));
+                file.region().variance(),
+                file.tile().variance(),
+                file.tile().shades(),
+                file.tile().patch());
     }
 
-    /**
-     * The colour a kind of ground falls back to with no properties file at all. Exhaustive for the
-     * same reason {@link #fallbackFor(Look)} is: a new terrain fails this compile until somebody has
-     * decided what it looks like.
-     */
-    private static String fallbackFor(Terrain terrain) {
-        return switch (terrain) {
-            case PLAIN -> "1c2130ff";
-            case DUST -> "2a2620ff";
-            case ORGANIC -> "16241cff";
-            case MIRE -> "14222aff";
-            case ASH -> "231f22ff";
-            case THICKET -> "15291bff";
-            case ROCK -> "3f3f52ff";
-        };
-    }
-
-    /**
-     * What is drawn on top of the flat ground, under {@code graphic.thicket} and
-     * {@code graphic.terrain.rockEdge}. See {@link GroundDetail} for why the transparency is a mix
-     * rather than a blend.
-     */
-    private static GroundDetail groundDetail(GameProperties properties) {
-        return new GroundDetail(
-                properties.getInt("graphic.thicket.cells", 3),
-                properties.getFloat("graphic.thicket.dot", 0.42f),
-                color(properties, "graphic.thicket.tint", "7fc46aff"),
-                properties.getFloat("graphic.thicket.alpha", 0.5f),
-                color(properties, "graphic.terrain.rockEdge", "7a7a98ff"),
-                properties.getFloat("graphic.terrain.rockEdgeWidth", 0.17f),
-                properties.getFloat("graphic.terrain.rockEdgeAlpha", 1f));
-    }
-
-    private static StateTint stateTint(GameProperties properties) {
+    private static StateTint stateTint(GraphicFile.State state) {
         return new StateTint(
-                properties.getFloat("graphic.state.unaware", -0.4f),
-                properties.getFloat("graphic.state.windingUp", 0.85f),
-                properties.getFloat("graphic.state.airborne", 0.5f),
-                properties.getFloat("graphic.state.grappling", -0.3f),
-                properties.getFloat("graphic.state.staggered", 0.35f),
-                properties.getFloat("graphic.state.stunned", -0.55f),
-                properties.getFloat("graphic.state.slowed", -0.18f),
-                properties.getFloat("graphic.state.dying", -0.7f),
-                properties.getFloat("graphic.state.casualty", 0.6f),
-                properties.getFloat("graphic.state.crewed", 0.45f),
-                properties.getFloat("graphic.state.gripped", 0.3f));
-    }
-
-    /** How a creature in two segments is drawn, under {@code graphic.segments}. */
-    private static SegmentMark segmentMark(GameProperties properties) {
-        return new SegmentMark(
-                properties.getFloat("graphic.segments.bodyOffset", 0.35f),
-                properties.getFloat("graphic.segments.bodyScale", 0.65f),
-                properties.getFloat("graphic.segments.headOffset", 0.5f),
-                properties.getFloat("graphic.segments.headScale", 0.5f),
-                properties.getFloat("graphic.segments.headShade", 0.35f));
-    }
-
-    /**
-     * How a thing being pumped up is drawn, under {@code graphic.bloat}. The one mark in the game
-     * that is bigger than the body it is drawn on, and the one that is see-through.
-     */
-    private static BloatMark bloatMark(GameProperties properties) {
-        return new BloatMark(
-                properties.getFloat("graphic.bloat.scale", 1.5f), properties.getFloat("graphic.bloat.alpha", 0.5f));
-    }
-
-    private static ChargeMark chargeMark(GameProperties properties) {
-        return new ChargeMark(
-                properties.getFloat("graphic.charge.scale", 0.55f), properties.getFloat("graphic.charge.tint", 0.8f));
-    }
-
-    /**
-     * How to draw a hole in the ground, under {@code graphic.nest}. Rings rather than one circle,
-     * because dug ground drawn as a body reads as an enormous slow creature.
-     */
-    private static NestMark nestMark(GameProperties properties) {
-        return new NestMark(
-                properties.getInt("graphic.nest.shells", 4), properties.getFloat("graphic.nest.darken", 0.55f));
-    }
-
-    private static FacingMark facingMark(GameProperties properties) {
-        return new FacingMark(
-                properties.getFloat("graphic.facing.length", 1.35f),
-                properties.getFloat("graphic.facing.width", 0.34f),
-                properties.getFloat("graphic.facing.tint", 0.55f));
-    }
-
-    /**
-     * How to draw a creature carrying an explosive, under {@code graphic.charged}. Its own colour
-     * rather than a shift of the body's: it has to be findable at a glance in a line of otherwise
-     * identical creatures.
-     */
-    private static ChargedMark chargedMark(GameProperties properties) {
-        return new ChargedMark(
-                properties.getFloat("graphic.charged.scale", 1.35f),
-                color(properties, "graphic.charged.color", "ff3a10ff"));
-    }
-
-    private static OrderMark orderMark(GameProperties properties) {
-        return new OrderMark(
-                properties.getFloat("graphic.order.scale", 1.55f), properties.getFloat("graphic.order.tint", 0.75f));
-    }
-
-    private static ShieldMark shieldMark(GameProperties properties) {
-        return new ShieldMark(
-                properties.getFloat("graphic.shield.scale", 1.85f),
-                properties.getInt("graphic.shield.segments", 24),
-                color(properties, "graphic.shield.color", "7fd8ffff"));
-    }
-
-    private static CrateMark crateMark(GameProperties properties) {
-        return new CrateMark(
-                properties.getFloat("graphic.crate.dot", 0.35f),
-                color(properties, "graphic.crate.dotColor", "ffffffff"));
-    }
-
-    private static WoundMark woundMark(GameProperties properties) {
-        return new WoundMark(
-                properties.getFloat("graphic.wound.size", 0.35f),
-                properties.getFloat("graphic.wound.growth", 0.12f),
-                properties.getFloat("graphic.wound.maxSize", 0.7f),
-                color(properties, "graphic.wound.color", "e8453cff"));
-    }
-
-    private static HeatMark heatMark(GameProperties properties) {
-        return new HeatMark(
-                properties.getFloat("graphic.heat.scale", 1.7f),
-                properties.getFloat("graphic.heat.width", 0.28f),
-                properties.getFloat("graphic.heat.spreadDegrees", 150f),
-                properties.getInt("graphic.heat.segments", 14));
+                state.unaware(),
+                state.windingUp(),
+                state.airborne(),
+                state.grappling(),
+                state.staggered(),
+                state.stunned(),
+                state.slowed(),
+                state.dying(),
+                state.casualty(),
+                state.crewed(),
+                state.gripped());
     }
 
     /**
      * How the view behaves. Rendering only - none of it can reach the simulation, and a camera setting
      * that changed what the game does would be a bug rather than a feature.
      */
-    private static CameraDirector.Settings camera(GameProperties properties) {
+    private static CameraDirector.Settings camera(GraphicFile.Camera camera) {
         return new CameraDirector.Settings(
-                properties.getFloat("graphic.camera.deadZone", 6f),
-                properties.getFloat("graphic.camera.smoothing", 8f),
-                properties.getFloat("graphic.camera.lookAhead", 14f),
-                properties.getFloat("graphic.camera.leadSmoothing", 2f),
-                properties.getFloat("graphic.camera.nearZoom", 1f),
-                properties.getFloat("graphic.camera.farZoom", 2.2f),
-                properties.getFloat("graphic.camera.zoomSmoothing", 7f),
-                properties.getFloat("graphic.camera.fitMargin", 1.25f),
-                properties.getFloat("graphic.camera.shakeScale", 1f),
-                properties.getFloat("graphic.camera.shakeCycles", 3f));
+                camera.deadZone(),
+                camera.smoothing(),
+                camera.lookAhead(),
+                camera.leadSmoothing(),
+                camera.nearZoom(),
+                camera.farZoom(),
+                camera.zoomSmoothing(),
+                camera.fitMargin(),
+                camera.shakeScale(),
+                camera.shakeCycles());
     }
 
-    /** Falls back to the given hex when the configured value is missing or not a colour. */
-    private static Color color(GameProperties properties, String key, String fallback) {
-        String raw = properties.getString(key, fallback);
-        try {
-            return Color.valueOf(raw);
-        } catch (RuntimeException e) {
-            Log.error("graphic.properties: " + key + "='" + raw + "' is not a colour; using " + fallback, e);
-            return Color.valueOf(fallback);
-        }
+    /** Bound on first use, so a failure names the key rather than a class. */
+    private static final class Shipped {
+
+        static final SortedMap<String, String> VALUES = ConfigBinder.parse(ShippedGraphicConfig.TEXT);
+
+        static final GraphicConfig CONFIG =
+                of(ConfigBinder.bindStrictly(GraphicFile.class, ROOT, ShippedGraphicConfig.TEXT));
+
+        private Shipped() {}
     }
 }

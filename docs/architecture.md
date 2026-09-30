@@ -208,8 +208,11 @@ loop.
 
 - `PwtGame` - `ApplicationAdapter`. Per frame: ask `FixedStepClock` how many steps to run, run them,
   clear, render with `alpha`.
-- `GameProperties` / `SimConfigLoader` / `GraphicConfig` - config loading. Every value has a
-  fallback and logs when it is used. `SimConfigLoader` only finds `sim/*.properties` - the files `SimConfig.shippedFiles()` names - and logs what
+- `GameProperties` / `SimConfigLoader` / `GraphicConfig` / `ControlsConfig` - config loading. Every value
+  has a fallback and logs when it is used. `graphic.properties` and `controls.properties` are bound by
+  `ConfigBinder` as `sim` and `net` config is (`GraphicFile`, `ControlsFile`), the shipped files compiled in
+  by `:core:generateShippedClientConfig` and held to every key by `ShippedGraphicConfigTest` and
+  `ShippedControlsConfigTest` - no literal default in the client either. `SimConfigLoader` only finds `sim/*.properties` - the files `SimConfig.shippedFiles()` names - and logs what
   `SimConfig.parse` says was wrong with it; the shipped value stands for each.
 - `Assets` - every asset path as a constant, an `AssetManager` behind them. Missing files log and
   are skipped, never thrown.
@@ -259,9 +262,9 @@ loop.
   renderer culls to the visible rectangle and merges runs of identical tiles into one quad, which is
   what makes a map larger than the view cost the same as one that fits.
 - `Palette` - the one place that turns a `Look` into a colour. A table indexed by the enum rather
-  than a field per look, so a new kind of thing is a constant and a properties line; `GraphicConfig`
-  holds the fallback per look in an exhaustive switch, which means a new look fails the client's
-  compile until somebody decides what it looks like.
+  than a field per look, so a new kind of thing is a constant and a properties line; a look with no
+  `graphic.color.<look>` fails `ShippedGraphicConfigTest`, and every client test with it, until somebody
+  decides what it looks like.
 - `StateTint` - the other axis: how far to shift that colour for what the entity is currently
   *doing* (`Appearance.State`), so the same tell reads the same way on every kind of unit.
 - `ChargeMark` - the third: how to draw something that is filling up. The simulation publishes one

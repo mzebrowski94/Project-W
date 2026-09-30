@@ -1,7 +1,12 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.Input;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import pl.mzebrows.pwt.sim.ConfigBinder;
 
 /**
  * Every binding and every feel number, read from {@code controls.properties}.
@@ -23,6 +28,8 @@ import java.util.Locale;
 public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware hardware, Ui ui) {
 
     private static final String FILE = "controls.properties";
+
+    private static final String ROOT = "controls";
 
     /** Two keys that push an axis one way and two that push it the other. */
     public record KeyAxis(int positive, int positiveAlias, int negative, int negativeAlias) {}
@@ -178,149 +185,159 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
             int pointerWakePixels,
             float scrollLinesPerSecond) {}
 
-    /** Loads the bindings, falling back to the defaults below for anything missing or malformed. */
+    /**
+     * The bindings from {@code controls.properties}, with every value it lacks or garbles taken from what
+     * ships and said out loud ({@link #parse}).
+     */
     public static ControlsConfig load() {
-        GameProperties properties = GameProperties.load(FILE);
+        return parse(GameProperties.text(FILE));
+    }
+
+    /** What ships: {@code assets/controls.properties}, compiled in. What every test presses. */
+    public static ControlsConfig defaults() {
+        return Shipped.CONFIG;
+    }
+
+    /**
+     * The bindings from the text of a {@code controls.properties}. Empty text - no file at all - is what
+     * ships. A key no record has, a value missing or unreadable, and a key or mouse button with no such
+     * name are each logged, and the shipped binding stands for it; {@code ShippedControlsConfigTest} holds
+     * the shipped file to stricter terms.
+     */
+    public static ControlsConfig parse(String text) {
+        Parsed parsed = read(text);
+        for (String problem : parsed.problems()) {
+            Log.error(FILE + ": " + problem + "; the shipped binding stands", null);
+        }
+        return parsed.config();
+    }
+
+    /** The same, with everything that was wrong with the text rather than logging it. */
+    static Parsed read(String text) {
+        if (text.isBlank()) {
+            return new Parsed(defaults(), List.of());
+        }
+        List<String> problems = new ArrayList<>();
+        SortedMap<String, String> values = names(ConfigBinder.parse(text), problems);
+        ConfigBinder.Bound<ControlsFile> bound = ConfigBinder.bind(ControlsFile.class, ROOT, values, Shipped.VALUES);
+        problems.addAll(bound.problems());
+        ControlsFile file = bound.value();
+        return new Parsed(file == null ? defaults() : of(file), List.copyOf(problems));
+    }
+
+    /** A config read from text, and everything that had to be taken from what ships instead. */
+    public record Parsed(ControlsConfig config, List<String> problems) {}
+
+    /**
+     * The same text with every key and mouse button that names nothing replaced by the shipped one, and
+     * named. Enums the binder reads itself.
+     */
+    static SortedMap<String, String> names(SortedMap<String, String> values, List<String> problems) {
+        SortedMap<String, String> checked = new TreeMap<>(values);
+        for (var entry : values.entrySet()) {
+            String key = entry.getKey();
+            boolean keyName = key.startsWith(ROOT + ".key.") || key.startsWith(ROOT + ".ui.key.");
+            boolean mouseName = key.startsWith(ROOT + ".mouse.");
+            if ((keyName && Input.Keys.valueOf(entry.getValue()) == -1)
+                    || (mouseName && mouseButton(entry.getValue()) < 0)) {
+                problems.add(key + "='" + entry.getValue() + "' names no " + (keyName ? "key" : "mouse button"));
+                String shipped = Shipped.VALUES.get(key);
+                if (shipped == null) {
+                    checked.remove(key);
+                } else {
+                    checked.put(key, shipped);
+                }
+            }
+        }
+        return checked;
+    }
+
+    /** What the input reads, built from the file as written. */
+    static ControlsConfig of(ControlsFile file) {
+        ControlsFile.Key key = file.key();
+        ControlsFile.Pad pad = file.pad();
+        ControlsFile.Ui ui = file.ui();
         return new ControlsConfig(
-                keyboard(properties), pad(properties), feel(properties), hardware(properties), ui(properties));
+                new Keyboard(
+                        new KeyAxis(
+                                key(key.moveRight()),
+                                key(key.moveRightAlias()),
+                                key(key.moveLeft()),
+                                key(key.moveLeftAlias())),
+                        new KeyAxis(
+                                key(key.moveUp()),
+                                key(key.moveUpAlias()),
+                                key(key.moveDown()),
+                                key(key.moveDownAlias())),
+                        mouseButton(file.mouse().fire()),
+                        mouseButton(file.mouse().strike()),
+                        key(key.grenade()),
+                        key(key.action()),
+                        key(key.drag()),
+                        key(key.zoom()),
+                        key(key.rollCall()),
+                        key(key.orderFollowMe()),
+                        key(key.orderForward()),
+                        key(key.orderDefence()),
+                        key(key.orderCancel()),
+                        key(key.draft()),
+                        key(key.crateClose())),
+                new Pad(
+                        pad.moveX(),
+                        pad.moveY(),
+                        pad.aimX(),
+                        pad.aimY(),
+                        new PadBinding(pad.fire(), pad.fireTrigger()),
+                        new PadBinding(pad.strike(), pad.strikeTrigger()),
+                        new PadBinding(pad.grenade(), pad.grenadeTrigger()),
+                        new PadBinding(pad.action(), pad.actionTrigger()),
+                        new PadBinding(pad.drag(), pad.dragTrigger()),
+                        new PadBinding(pad.zoom(), pad.zoomTrigger()),
+                        new PadBinding(pad.pause(), pad.pauseTrigger()),
+                        new PadBinding(pad.orderFollowMe(), pad.orderFollowMeTrigger()),
+                        new PadBinding(pad.orderForward(), pad.orderForwardTrigger()),
+                        new PadBinding(pad.orderDefence(), pad.orderDefenceTrigger()),
+                        new PadBinding(pad.orderCancel(), pad.orderCancelTrigger()),
+                        new PadBinding(pad.draft(), pad.draftTrigger())),
+                new Feel(pad.moveDeadZone(), pad.aimDeadZone(), pad.triggerThreshold()),
+                new Hardware(pad.leftTriggerAxis(), pad.rightTriggerAxis(), pad.triggerRestsAtMinusOne()),
+                new Ui(
+                        key(ui.key().confirm()),
+                        key(ui.key().confirmAlias()),
+                        key(ui.key().back()),
+                        key(ui.key().backAlias()),
+                        ui.pad().confirm(),
+                        ui.pad().back(),
+                        ui.nav().stickThreshold(),
+                        ui.nav().repeatDelaySeconds(),
+                        ui.nav().repeatIntervalSeconds(),
+                        ui.nav().pointerWakePixels(),
+                        ui.nav().scrollLinesPerSecond()));
     }
 
-    private static Ui ui(GameProperties properties) {
-        return new Ui(
-                key(properties, "controls.ui.key.confirm", Input.Keys.ENTER),
-                key(properties, "controls.ui.key.confirmAlias", Input.Keys.SPACE),
-                key(properties, "controls.ui.key.back", Input.Keys.ESCAPE),
-                key(properties, "controls.ui.key.backAlias", Input.Keys.BACKSPACE),
-                button(properties, "controls.ui.pad.confirm", GamepadButton.SOUTH),
-                button(properties, "controls.ui.pad.back", GamepadButton.EAST),
-                properties.getFloat("controls.ui.nav.stickThreshold", 0.5f),
-                properties.getFloat("controls.ui.nav.repeatDelaySeconds", 0.35f),
-                properties.getFloat("controls.ui.nav.repeatIntervalSeconds", 0.09f),
-                properties.getInt("controls.ui.nav.pointerWakePixels", 4),
-                properties.getFloat("controls.ui.nav.scrollLinesPerSecond", 12f));
+    /** A key by the name libGDX gives it; {@link #names} has already refused a name that is none. */
+    private static int key(String name) {
+        return Input.Keys.valueOf(name);
     }
 
-    private static Keyboard keyboard(GameProperties properties) {
-        return new Keyboard(
-                new KeyAxis(
-                        key(properties, "controls.key.moveRight", Input.Keys.D),
-                        key(properties, "controls.key.moveRightAlias", Input.Keys.RIGHT),
-                        key(properties, "controls.key.moveLeft", Input.Keys.A),
-                        key(properties, "controls.key.moveLeftAlias", Input.Keys.LEFT)),
-                new KeyAxis(
-                        key(properties, "controls.key.moveUp", Input.Keys.W),
-                        key(properties, "controls.key.moveUpAlias", Input.Keys.UP),
-                        key(properties, "controls.key.moveDown", Input.Keys.S),
-                        key(properties, "controls.key.moveDownAlias", Input.Keys.DOWN)),
-                mouseButton(properties, "controls.mouse.fire", Input.Buttons.LEFT),
-                mouseButton(properties, "controls.mouse.strike", Input.Buttons.RIGHT),
-                key(properties, "controls.key.grenade", Input.Keys.Q),
-                key(properties, "controls.key.action", Input.Keys.E),
-                key(properties, "controls.key.drag", Input.Keys.F),
-                key(properties, "controls.key.zoom", Input.Keys.TAB),
-                key(properties, "controls.key.rollCall", Input.Keys.GRAVE),
-                key(properties, "controls.key.orderFollowMe", Input.Keys.NUM_1),
-                key(properties, "controls.key.orderForward", Input.Keys.NUM_2),
-                key(properties, "controls.key.orderDefence", Input.Keys.NUM_3),
-                key(properties, "controls.key.orderCancel", Input.Keys.NUM_4),
-                key(properties, "controls.key.draft", Input.Keys.C),
-                key(properties, "controls.key.crateClose", Input.Keys.X));
-    }
-
-    private static Pad pad(GameProperties properties) {
-        return new Pad(
-                axis(properties, "controls.pad.moveX", GamepadAxis.LEFT_X),
-                axis(properties, "controls.pad.moveY", GamepadAxis.LEFT_Y),
-                axis(properties, "controls.pad.aimX", GamepadAxis.RIGHT_X),
-                axis(properties, "controls.pad.aimY", GamepadAxis.RIGHT_Y),
-                binding(properties, "controls.pad.fire", GamepadButton.WEST, GamepadAxis.RIGHT_TRIGGER),
-                binding(properties, "controls.pad.strike", GamepadButton.NONE, GamepadAxis.LEFT_TRIGGER),
-                binding(properties, "controls.pad.grenade", GamepadButton.EAST, GamepadAxis.NONE),
-                binding(properties, "controls.pad.action", GamepadButton.SOUTH, GamepadAxis.NONE),
-                binding(properties, "controls.pad.drag", GamepadButton.R1, GamepadAxis.NONE),
-                binding(properties, "controls.pad.zoom", GamepadButton.L1, GamepadAxis.NONE),
-                binding(properties, "controls.pad.pause", GamepadButton.START, GamepadAxis.NONE),
-                binding(properties, "controls.pad.orderFollowMe", GamepadButton.DPAD_UP, GamepadAxis.NONE),
-                binding(properties, "controls.pad.orderForward", GamepadButton.DPAD_RIGHT, GamepadAxis.NONE),
-                binding(properties, "controls.pad.orderDefence", GamepadButton.DPAD_DOWN, GamepadAxis.NONE),
-                binding(properties, "controls.pad.orderCancel", GamepadButton.DPAD_LEFT, GamepadAxis.NONE),
-                binding(properties, "controls.pad.draft", GamepadButton.NORTH, GamepadAxis.NONE));
-    }
-
-    private static Hardware hardware(GameProperties properties) {
-        return new Hardware(
-                properties.getInt("controls.pad.leftTriggerAxis", 4),
-                properties.getInt("controls.pad.rightTriggerAxis", 5),
-                properties.getBoolean("controls.pad.triggerRestsAtMinusOne", false));
-    }
-
-    private static PadBinding binding(
-            GameProperties properties, String property, GamepadButton button, GamepadAxis trigger) {
-        return new PadBinding(button(properties, property, button), axis(properties, property + "Trigger", trigger));
-    }
-
-    private static Feel feel(GameProperties properties) {
-        return new Feel(
-                properties.getFloat("controls.pad.moveDeadZone", 0.2f),
-                properties.getFloat("controls.pad.aimDeadZone", 0.3f),
-                properties.getFloat("controls.pad.triggerThreshold", 0.4f));
-    }
-
-    private static int key(GameProperties properties, String property, int fallback) {
-        String name = properties.getString(property, "");
-        if (name.isEmpty()) {
-            return fallback;
-        }
-        int keycode = Input.Keys.valueOf(name);
-        if (keycode == -1) {
-            Log.error(
-                    FILE + ": " + property + "='" + name + "' is not a key name; using "
-                            + Input.Keys.toString(fallback),
-                    null);
-            return fallback;
-        }
-        return keycode;
-    }
-
-    private static int mouseButton(GameProperties properties, String property, int fallback) {
-        String name = properties.getString(property, "").toUpperCase(Locale.ROOT);
-        return switch (name) {
-            case "" -> fallback;
+    /** A mouse button by name, or -1 for a name that is none. */
+    private static int mouseButton(String name) {
+        return switch (name.toUpperCase(Locale.ROOT)) {
             case "LEFT" -> Input.Buttons.LEFT;
             case "RIGHT" -> Input.Buttons.RIGHT;
             case "MIDDLE" -> Input.Buttons.MIDDLE;
-            default -> {
-                Log.error(FILE + ": " + property + "='" + name + "' is not LEFT, RIGHT or MIDDLE", null);
-                yield fallback;
-            }
+            default -> -1;
         };
     }
 
-    private static GamepadButton button(GameProperties properties, String property, GamepadButton fallback) {
-        String name = properties.getString(property, "").toUpperCase(Locale.ROOT);
-        if (name.isEmpty()) {
-            return fallback;
-        }
-        for (GamepadButton candidate : GamepadButton.values()) {
-            if (candidate.name().equals(name)) {
-                return candidate;
-            }
-        }
-        Log.error(FILE + ": " + property + "='" + name + "' is not a pad button; using " + fallback, null);
-        return fallback;
-    }
+    /** Bound on first use, so a failure names the key rather than a class. */
+    private static final class Shipped {
 
-    private static GamepadAxis axis(GameProperties properties, String property, GamepadAxis fallback) {
-        String name = properties.getString(property, "").toUpperCase(Locale.ROOT);
-        if (name.isEmpty()) {
-            return fallback;
-        }
-        for (GamepadAxis candidate : GamepadAxis.values()) {
-            if (candidate.name().equals(name)) {
-                return candidate;
-            }
-        }
-        Log.error(FILE + ": " + property + "='" + name + "' is not a pad axis; using " + fallback, null);
-        return fallback;
+        static final SortedMap<String, String> VALUES = ConfigBinder.parse(ShippedControlsConfig.TEXT);
+
+        static final ControlsConfig CONFIG =
+                of(ConfigBinder.bindStrictly(ControlsFile.class, ROOT, ShippedControlsConfig.TEXT));
+
+        private Shipped() {}
     }
 }

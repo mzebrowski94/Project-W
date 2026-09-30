@@ -16,8 +16,8 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
 
 /**
  * The config files live in assets/, which is only on the launcher's classpath - so here both loaders
- * take the fallback path. That is exactly the path worth testing: a shipped build with a missing or
- * corrupt config must still start.
+ * take the fallback path, the shipped files compiled in. That is exactly the path worth testing: a
+ * shipped build with a missing or corrupt config must still start.
  */
 class ConfigDefaultsTest {
 
