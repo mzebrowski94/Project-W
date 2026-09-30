@@ -31,7 +31,7 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
  * the older ones dim above it; and on the right the aside - what the side holds, with rank pips - or the
  * dev overlay's panel when that is stepped on.
  *
- * <p>While a draft is open ({@code UI:hud/top/draft}, D18) the whole bar is the draft's: the chooser's
+ * <p>While a draft is open ({@code UI:hud/top/draft}, G0049) the whole bar is the draft's: the chooser's
  * portrait and label on the left, his cards across the rest, the highlighted one framed in his colour.
  * While a crate is open ({@code UI:hud/top/crate}, G0056) it is the crate's, laid out the same way with up
  * to four cards - what each is and does, and one he would be turned down for dimmed and saying why.

@@ -5,15 +5,14 @@ something an upgrade can move; reading or writing `Upgrades` or `Drafts` from ou
 `sim.upgrade`; proposing a per-entity stats component, a buff system, or a module for the upgrade
 code.
 
-**Enforced by.** `ArchitectureTest`, as each fence lands (`docs/design/upgrades-scope.md` §5.1):
-nothing outside `..sim.upgrade..` reads or writes `Upgrades` or `Drafts` but `WorldCodec`,
-`Components` and the `Spawner` that creates them (S3), with the interface's half in
-`UiArchitectureTest` and `ClientArchitectureTest` (S5); `..sim.upgrade..` depends on nothing in
-`..sim.system..` or `..sim.scenario..` (S2); every `Stat` sits on exactly one `@Reads` method of
-`Modifiers`, and that method has exactly one caller outside the package (S2);
-`systemsHoldNoStateAcrossTicks` covers the package (S2). `UpgradeTest` - a unit spawned after an
-upgrade is identical to one on the field when it landed (S3). Until those land: nothing mechanical -
-caught by reading.
+**Enforced by.** `ArchitectureTest`: nothing outside `..sim.upgrade..` reads or writes `Upgrades` or
+`Drafts` but `WorldCodec`, `Components` and the `Spawner` that creates them
+(`onlyTheUpgradePackageTouchesTheLedgerAndTheDrafts`), with the interface's half in `UiArchitectureTest`
+and `ClientArchitectureTest`; `..sim.upgrade..` depends on nothing in `..sim.system..` or
+`..sim.scenario..` (`upgradesAreCalledAndDoNotCall`); every `Stat` sits on exactly one `@Reads` method
+of `Modifiers`, and that method has exactly one caller outside the package
+(`everyStatIsReadInExactlyOnePlace`); `systemsHoldNoStateAcrossTicks` covers the package. `UpgradeTest` -
+a unit spawned after an upgrade is identical to one on the field when it landed.
 
 **Constraint.**
 

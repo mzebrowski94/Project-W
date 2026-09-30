@@ -110,6 +110,10 @@ Framework-initialised fields (created in libGDX's `create()`, not the constructo
   nobody pays for them on every read. A pillar is named, not re-argued; one sentence of *why* is
   enough when no record carries it. Why a number is tuned where it is belongs beside the number in
   `assets/sim/*.properties`; the record component says only what it means, its unit and what zero does.
+- **A citation outlives the comment**: a G record, an ADR, or a doc that does not expire. Never a scope
+  doc's numbering - `(D11)`, `upgrades S5`, `H3`, `(B)` - which is deleted when its work lands and leaves
+  the comment pointing at nothing; the UI plan's `plan 7.2` only while that plan exists.
+  `SourceCitationsTest` fails the build on one, and on any `docs/...md` path that does not exist.
 - **Inserting a method above another orphans that method's javadoc**, and `-Werror` is on, so it fails
   the build. Check the method below the one you added.
 - Reuse the vocabulary in `docs/glossary.md`. One concept, one word, everywhere.

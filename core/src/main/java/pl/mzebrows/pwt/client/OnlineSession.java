@@ -217,8 +217,8 @@ public final class OnlineSession implements ScenarioPlay {
 
     /**
      * Held until the next frame, which hands it to the session as an input event: numbered, sent until the
-     * sequencer seals it, and applied on the same tick on every machine (upgrades S8). Kept while paused,
-     * as a solo draft is taken paused (D2); sealed once the game runs again.
+     * sequencer seals it, and applied on the same tick on every machine (ADR 0012). Kept while paused,
+     * as a solo draft is taken paused (G0049); sealed once the game runs again.
      */
     @Override
     public void pick(int seat, int serial, UpgradeKind kind) {

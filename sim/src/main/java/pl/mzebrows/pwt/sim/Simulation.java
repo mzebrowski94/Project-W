@@ -279,7 +279,7 @@ public final class Simulation {
         spawnOrder.keep();
         // Joins first, so a player who takes his slot on this tick is driven by this tick's input - and
         // seated at his machine whether or not the slot already has a commander, since a slot re-seated
-        // from another machine keeps its man (B).
+        // from another machine keeps its man (G0056).
         Presence presence = PRESENCE.get(levels.first());
         for (int slot = 0; slot < inputs.capacity(); slot++) {
             if (!inputs.joins(slot)) {

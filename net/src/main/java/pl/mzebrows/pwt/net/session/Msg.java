@@ -36,7 +36,7 @@ final class Msg {
     static final int DUMP_WANTED = 28;
 
     /**
-     * An input event's type (upgrades S8): what the rest of it means. An event on the wire is its number
+     * An input event's type: what the rest of it means. An event on the wire is its number
      * (int), its slot (byte), its type (byte), a value (int) and an extra (byte) - {@link #EVENT_BYTES} in
      * all, whatever the type, so a message's room is one sum.
      */
@@ -57,7 +57,7 @@ final class Msg {
     /** Why a pause was asked for, carried by {@link #PAUSE} and echoed by {@link #PAUSED}: a player's own. */
     static final int PAUSE_BY_PLAYER = 0;
 
-    /** A solo player's draft (D2), which the paused banner does not cover the view for. */
+    /** A solo player's draft (G0049), which the paused banner does not cover the view for. */
     static final int PAUSE_FOR_DRAFT = 1;
 
     /** No slot: the session is full. */

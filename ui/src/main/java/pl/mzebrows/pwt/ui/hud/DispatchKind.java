@@ -24,11 +24,11 @@ public enum DispatchKind {
     DRAFT_EARNED(Priority.NORMAL, Coalesce.NONE),
     /** Somebody took an upgrade: its kind as the first number, its new rank as the second. */
     UPGRADE_TAKEN(Priority.NORMAL, Coalesce.NONE),
-    /** A draft went on to another player because its chooser left (D4). */
+    /** A draft went on to another player because its chooser left (G0052). */
     DRAFT_PASSED(Priority.NORMAL, Coalesce.NONE),
     /** A draft was owed and the pool had nothing left to deal. */
     NOTHING_LEFT(Priority.LOW, Coalesce.NEWEST),
-    /** The swarm took an adaptation (D11): its kind as the first number, its new rank as the second. */
+    /** The swarm took an adaptation (ADR 0017): its kind as the first number, its new rank as the second. */
     SWARM_ADAPTS(Priority.NORMAL, Coalesce.NONE);
 
     /**

@@ -111,7 +111,7 @@ The gate before the relay (ADR 0012; it was to come before the join screen, whic
 decision): does the input delay lockstep costs still feel like
 pillar 1? Run it with two copies on one PC and play the **joining** one - it is the one with a round
 trip to cross. `net.conditions.latencySteps` are one-way, so the steps `0, 25, 50, 100` are round trips
-of 0, 50, 100 and 200 ms; 25 is about what the same region costs over the internet (D4), 50 is a bad
+of 0, 50, 100 and 200 ms; 25 is about what the same region costs over the internet, 50 is a bad
 evening.
 
 1. Host `Skirmish` in copy 0; join from copy 1 and play it, with the keyboard in its window or a pad

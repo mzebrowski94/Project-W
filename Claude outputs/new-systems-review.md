@@ -4,7 +4,20 @@
 
 Wound clocks: all three in whole ticks · `graphic.properties` and `controls.properties` bound through
 `ConfigBinder` · invariants split per domain now · optional items all in: delete `Effect.Deal` (V7), the
-plan-ID scan test (W3), one-loop `Modifiers` (M1). Next: stage 2.
+plan-ID scan test (W3), one-loop `Modifiers` (M1). S8's two-copy check and S9 were already played by
+Mateusz, so nothing about them goes into `alpha-phase.md`.
+
+### Stage 2 (docs)
+
+| Item | Done | Evidence |
+|---|---|---|
+| W1 | The four scope docs deleted (2,119 lines, ~37k tokens); CLAUDE.md's two rows for them removed | `SourceCitationsTest.namesOnlyDocsThatExist` green; seen failing on a deliberate `docs/design/upgrades-scope.md` in the glossary, then restored |
+| V8 / W3 | Every plan ID in a comment rewritten to the record that holds the decision: D1, D2, D12, D18 → G0049; D4, S8 → G0052; `(B)` → G0056; D11 → ADR 0017; the wire (S8) → ADR 0012; H3 and D6/D7 dropped (the reason is already beside the number). **Changed from the plan:** the D1-D19 table is not moved into G0049 - with every citation pointing at a record, nobody would read it, and each of D1-D19 is already in G0049, G0052, G0056, ADR 0017, the glossary or `upgrades.properties`. W3's rule and test moved here from stage 8, since they guard exactly this change | `SourceCitationsTest.citesNoScopeDocsNumbersInAComment` failed first on 57 citations, then green; rule in `conventions.md` |
+| - | Comment-only | Stripped-code compare against `bf9af72`: **38 of 38 `.java` / `.properties` files identical** (stripper checked to catch a real code change, `8bb389c`'s `UpgradeSystem`) |
+| - | Doc pointers into the deleted docs fixed: ADR 0017 (enforced-by names its rules; "until those land" gone), G0006, G0018, G0020, G0023, G0049, G0052, G0053, G0056, glossary, README (3), `menu_layout_agent.md` (3), `alpha-phase.md`; `Spawner`'s sealed-cache comment | same test |
+| - | Backlog: `Modifiers` cache (P1), `Msg.PROTOCOL` (V10), power budget per upgrade (from the deleted plan's §10), file sizes updated | - |
+| - | **Withdrawn**: V8's "G0050's index row not marked superseded" - it is, in its last column | - |
+| - | `Stat`/`Effect` sealed-cache docs left for stage 6, which deletes both | - |
 
 Scope: `cebbac5..8bb389c` (8 commits, ~19k lines added). Baseline on this branch: `verify.sh` green, 1881
 tests; `PWT_BENCH=1` 800 crowd **5.24 ms/step**, growth ×7.8 (100→800), 6 B/step (cloud container; the
@@ -103,7 +116,7 @@ changes; `PWT_FUZZ=1 DeterminismFuzzTest` after any sim change; stripped-code co
 | 5 - Stored fold, crate order | V5 via A3; V4 via A4. Tests first: the panel on the tick of return shows the folded pips; two crates, both spawn orders, same owners | Positions + health fingerprint identical (snapshot loses `carries`) |
 | 6 - Dead code, one loop | V7 via A5; M1; P1's full-ledger bench crowd | Positions + health fingerprint identical; bench before/after |
 | 7 - Config | V6 via A6: `GraphicConfig`, `ControlsConfig` bound; drift fixed to the file's values (what ships). Throwaway guard: old loader output = bound record, field by field | `ScreenLayout.solve` output identical; keys listed |
-| 8 - Invariants split | W2, and W3's rule and scan test | Row multiset identical (script); `feature` skill reads the index |
+| 8 - Invariants split | W2 (W3 done in stage 2) | Row multiset identical (script); `feature` skill reads the index |
 
 Deferred to `docs/backlog.md` in stage 2: V10 (bring back when builds from different commits must play
 together); a compiled `Modifiers` cache (bring back when the full-ledger crowd shows the fold above 10 % of a

@@ -774,7 +774,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Upgrades.class));
         entity.add(engine.createComponent(Drafts.class));
         entity.add(engine.createComponent(Presence.class));
-        // Which of the armoury deck's cards the sealed caches have been dealt (G0050).
+        // Which of the armoury deck's cards crates have been dealt, and the crate-size bag (G0056).
         entity.add(engine.createComponent(Armoury.class));
         admit(entity);
         return entity;

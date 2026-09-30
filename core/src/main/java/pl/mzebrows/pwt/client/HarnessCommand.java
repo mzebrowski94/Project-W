@@ -29,7 +29,7 @@ public enum HarnessCommand {
     LEAVE,
     /**
      * Take the first, second or third card of the keyboard seat's oldest draft. Scaffolding kept beside the
-     * draft bar (upgrades S5); online the pick crosses the wire like any other (S8).
+     * draft bar; online the pick crosses the wire like any other (G0049).
      */
     TAKE_FIRST_CARD,
     TAKE_SECOND_CARD,

@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.ui.hud;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
- * The draft in the top bar (D18, {@code UI:hud/top/draft}): whose it is, which draft, and which card is
+ * The draft in the top bar (G0049, {@code UI:hud/top/draft}): whose it is, which draft, and which card is
  * highlighted. One per machine - a machine's top bar shows one draft at a time - and a pure decision, so
  * it is tested without a window; the client draws what it says and sends the pick it hands back.
  *

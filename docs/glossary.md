@@ -217,8 +217,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 ### Upgrades
 
 What the player's side earns on the field and holds for the rest of the level, and what the aliens
-take in answer (ADR 0017, G0049). The words `docs/design/upgrades-scope.md` settled; the code arrives
-from S2.
+take in answer (ADR 0017, G0049).
 
 | Term | Meaning |
 |---|---|

@@ -4,9 +4,8 @@
 anything that heals, protects or disables a man, or proposing that a man's fate depend on an amount.
 
 **Enforced by.** `VitalityTest` holds the harm table as one table, `ShieldTest` the shield,
-`WoundCostTest` what a wound costs, `StunTest` a declared stun; `MedkitTest` arrives with the medkit
-(H4). The invariant rows in `docs/design/README.md` name the rest.
-The build order is in `docs/design/health-scope.md`.
+`WoundCostTest` what a wound costs, `StunTest` a declared stun, `MedkitTest` the medkit. The invariant
+rows in `docs/design/README.md` name the rest.
 
 **Supersedes in part G0020's** "a casualty is at zero health, so the next hit of any kind finishes
 him": a man who is down is now finished by a hit that could have put him down or killed him standing,

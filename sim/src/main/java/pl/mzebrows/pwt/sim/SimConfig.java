@@ -78,7 +78,7 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * @param draft how drafts are earned and dealt (G0049)
  * @param stats how far each number an upgrade may move can be moved
  * @param upgrades every upgrade and adaptation, by kind (ADR 0017)
- * @param adaptation when the swarm adapts (D11), both halves off at zero
+ * @param adaptation when the swarm adapts (ADR 0017), both halves off at zero
  * @param swarm what every strain and nest is scaled by, read through {@link #healthOf} and
  *     {@link #nestHealth} and nowhere else
  * @param medkit how many medkits a level that asks for them scatters (G0053)
@@ -146,7 +146,7 @@ public record SimConfig(
 
     /**
      * How much health one strain arrives with: its own, scaled by the swarm's factor. <strong>The one
-     * place a strain's health is read</strong> (health-scope H3), so a unit spawned, a unit evolved and
+     * place a strain's health is read</strong>, so a unit spawned, a unit evolved and
      * a check on the shipped numbers all see the same number.
      */
     public int healthOf(UnitKind kind) {
@@ -1033,7 +1033,7 @@ public record SimConfig(
     }
 
     /**
-     * The swarm as a whole (health-scope H3).
+     * The swarm as a whole.
      *
      * @param healthPercent what every strain's and the nest's health is scaled by, as a whole
      *     percentage - one number, so the ratios between strains survive a retune. Not barrels, mines,

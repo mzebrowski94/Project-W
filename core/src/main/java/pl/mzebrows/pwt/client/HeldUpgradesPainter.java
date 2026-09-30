@@ -185,7 +185,7 @@ final class HeldUpgradesPainter {
 
     /**
      * A held entry's name with whose it is in front: {@code P2} for a personal upgrade, {@code SWARM} for
-     * an adaptation (D11), nothing for the side's. Shared with the aside, so the two cannot disagree.
+     * an adaptation (ADR 0017), nothing for the side's. Shared with the aside, so the two cannot disagree.
      */
     static String whose(UiStrings strings, Readout readout, int index, String name) {
         if (readout.heldAlien[index]) {

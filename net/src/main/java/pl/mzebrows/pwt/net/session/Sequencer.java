@@ -99,7 +99,7 @@ public final class Sequencer implements AutoCloseable {
     private boolean started;
     private boolean paused;
 
-    /** Why the pause in force was asked for: a player's hand, or a solo player's draft (D2). */
+    /** Why the pause in force was asked for: a player's hand, or a solo player's draft (G0049). */
     private int pauseReason = Msg.PAUSE_BY_PLAYER;
 
     private long now;
@@ -176,7 +176,7 @@ public final class Sequencer implements AutoCloseable {
                 + 1
                 + capacity * 2
                 + 1
-                // A join per slot: its number and the machine it sits at (B).
+                // A join per slot: its number and the machine it sits at (G0056).
                 + capacity * (1 + 4)
                 // A card taken per slot, then a presence change per slot.
                 + 1
@@ -768,7 +768,7 @@ public final class Sequencer implements AutoCloseable {
                     }
                 }
                 if (paused && pauseReason == Msg.PAUSE_FOR_DRAFT) {
-                    // A second player makes the game co-op, and co-op never pauses (D2). Nothing is sealed
+                    // A second player makes the game co-op, and co-op never pauses (G0049). Nothing is sealed
                     // while paused, so the world would never hear he had come - the pause lifts here.
                     setPaused(false, Msg.PAUSE_FOR_DRAFT, peer.id);
                 }

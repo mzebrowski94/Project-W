@@ -16,10 +16,16 @@ dependencies {
   testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
 }
 
-// UiFontTest reads the shipped font and words; a change to either must rerun it.
+// UiFontTest reads the shipped font and words, and SourceCitationsTest every module's sources, the shipped
+// files and the docs - a comment-only change compiles to the same classes, so each must rerun the tests.
 tasks.named('test') {
-  inputs.dir(rootProject.file('assets/ui')).withPathSensitivity(PathSensitivity.RELATIVE)
-  inputs.dir(rootProject.file('assets/i18n')).withPathSensitivity(PathSensitivity.RELATIVE)
+  inputs.dir(rootProject.file('assets')).withPathSensitivity(PathSensitivity.RELATIVE)
+  ['map', 'sim', 'core', 'ui', 'net', 'lwjgl3'].each { module ->
+    inputs.dir(rootProject.file("${module}/src/main")).withPathSensitivity(PathSensitivity.RELATIVE)
+  }
+  inputs.dir(rootProject.file('docs')).withPathSensitivity(PathSensitivity.RELATIVE)
+  inputs.dir(rootProject.file('.claude/skills')).withPathSensitivity(PathSensitivity.RELATIVE)
+  inputs.files(rootProject.file('CLAUDE.md'), rootProject.file('README.md')).withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 // Packs assets-raw/ into a single atlas under assets/atlas/. Run manually after

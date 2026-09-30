@@ -79,7 +79,7 @@ public interface ScenarioPlay extends AutoCloseable {
     void setPaused(boolean on);
 
     /**
-     * The same, for a solo player's draft (D2): online the pause carries that reason to every machine, so
+     * The same, for a solo player's draft (G0049): online the pause carries that reason to every machine, so
      * none covers the view with the paused banner. Offline it is simply a pause.
      */
     default void setDraftPaused(boolean on) {

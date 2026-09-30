@@ -137,7 +137,7 @@ public final class ScenarioScreen extends ScreenAdapter {
     /** Everything violent enough for the view to notice. Almost always empty. */
     private ImmutableArray<Entity> shaken = new ImmutableArray<>(new Array<>());
 
-    /** The draft in the top bar - one per machine (D18) - and the pause it makes in a solo game (D2). */
+    /** The draft in the top bar - one per machine - and the pause it makes in a solo game (G0049). */
     private final DraftBar draftBar = new DraftBar();
 
     /** The crate in the top bar (G0056): one per machine, sharing the bar with the draft. */
@@ -365,9 +365,9 @@ public final class ScenarioScreen extends ScreenAdapter {
     }
 
     /**
-     * The draft bar's frame (upgrades S5): a menu opening closes it; otherwise each local seat's draft key
+     * The draft bar's frame (G0049): a menu opening closes it; otherwise each local seat's draft key
      * and - for the seat driving it - its order inputs work it, and a card taken is a pick for that seat's
-     * slot. Then the solo pause (D2): opening pauses a game with one player in it, closing resumes, and
+     * slot. Then the solo pause: opening pauses a game with one player in it, closing resumes, and
      * the paused banner stays off a pause the draft made.
      */
     private void draft() {
@@ -509,7 +509,7 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     /**
      * Who has a panel, and whose is grey. A local seat whose pad is unplugged is offline, and so is a slot
-     * whose link dropped (G0052, published by the host since upgrades S8); either way his commander stays
+     * whose link dropped (G0052, published by the host); either way his commander stays
      * on the field.
      */
     private void seatPanels() {

@@ -127,7 +127,7 @@ public final class ScenarioSession implements ScenarioPlay {
         }
     }
 
-    /** Held until the next tick runs, and remembered while paused - a solo draft is taken paused (D2). */
+    /** Held until the next tick runs, and remembered while paused - a solo draft is taken paused (G0049). */
     @Override
     public void pick(int seat, int serial, UpgradeKind kind) {
         int slot = slotOf(seat);

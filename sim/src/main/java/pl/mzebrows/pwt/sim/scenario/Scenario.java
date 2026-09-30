@@ -72,7 +72,7 @@ public interface Scenario {
     }
 
     /**
-     * This config with the swarm adapting (D11): one adaptation every three minutes of the level, and one
+     * This config with the swarm adapting (ADR 0017): one adaptation every three minutes of the level, and one
      * for every third card the players take. What ships leaves both off; the Adventure levels turn them on
      * so the schedule can be felt, and it runs dry once every adaptation is at its last rank.
      */

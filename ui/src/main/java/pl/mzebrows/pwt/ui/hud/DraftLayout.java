@@ -1,7 +1,7 @@
 package pl.mzebrows.pwt.ui.hud;
 
 /**
- * Where the draft goes in the top bar (D18): the chooser - his portrait and his label - on the left,
+ * Where the draft goes in the top bar (G0049): the chooser - his portrait and his label - on the left,
  * then the cards side by side across the rest of the view's span. Pure arithmetic, in UI pixels.
  *
  * @param padding between the bar's edge and its content, and between cards

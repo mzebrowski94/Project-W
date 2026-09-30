@@ -69,7 +69,7 @@ public final class PlayerReadout {
 
     /**
      * Whether his link has dropped and nobody has taken his slot since (G0052): his commander stands idle,
-     * and he does not count as in the game for the solo pause (D2).
+     * and he does not count as in the game for the solo pause (G0049).
      */
     public boolean away;
 

@@ -115,7 +115,7 @@ public final class PeerSession implements AutoCloseable {
     private int generation;
     private boolean paused;
 
-    /** Whether the pause in force was asked for by a solo player's draft (D2). */
+    /** Whether the pause in force was asked for by a solo player's draft (G0049). */
     private boolean pausedForDraft;
 
     /** The last tick this world stepped. */
@@ -269,7 +269,7 @@ public final class PeerSession implements AutoCloseable {
     }
 
     /**
-     * Pauses or resumes the session for a solo player's draft (D2): a pause like any other, carrying its
+     * Pauses or resumes the session for a solo player's draft (G0049): a pause like any other, carrying its
      * reason, so every machine can leave the view clear of the paused banner.
      */
     public void pauseForDraft(boolean on) {
@@ -329,7 +329,7 @@ public final class PeerSession implements AutoCloseable {
         return paused;
     }
 
-    /** Whether the session is paused for a solo player's draft rather than by somebody's hand (D2). */
+    /** Whether the session is paused for a solo player's draft rather than by somebody's hand (G0049). */
     public boolean pausedForDraft() {
         return pausedForDraft;
     }

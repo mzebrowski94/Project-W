@@ -69,5 +69,4 @@ and the answer is the one given above: a second *kind* of blast, not a curve. Ea
 the harm it does to a man - a grenade's `WOUND`, a barrel's, a mine's and a charged corpse's `DOWN`.
 Inside the circle there is still one meaning for a man and outside it none; everything with health is
 still caught by the same decisive amount, so a grenade kills every alien it catches exactly as before.
-It is still not a free button: it costs its thrower a wound, and a second one puts him down. Lands in
-H1 (`docs/design/health-scope.md`).
+It is still not a free button: it costs its thrower a wound, and a second one puts him down.

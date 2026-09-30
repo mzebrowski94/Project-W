@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.sim.upgrade;
 import pl.mzebrows.pwt.sim.def.Require;
 
 /**
- * When the swarm adapts (D11): on a schedule, at random from the aliens' pool, with nobody choosing.
+ * When the swarm adapts (ADR 0017): on a schedule, at random from the aliens' pool, with nobody choosing.
  * Both halves of the schedule are off at zero, and a level may turn either on.
  *
  * @param everySeconds one adaptation each time this much level time has passed - the first after it,

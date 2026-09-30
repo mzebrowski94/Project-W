@@ -4,12 +4,11 @@
 it, how long it lasts or whether choosing pauses; a reroll, a shop, a timer on a choice; proposing
 that upgrades carry between levels.
 
-**Enforced by.** `DraftTest` (S3) - a point taken earns a draft for slot 0 in single-player; drafts go
+**Enforced by.** `DraftTest` - a point taken earns a draft for slot 0 in single-player; drafts go
 round the present slots in order; a pick applies one rank from the next tick; a pick for a draft that
 is gone, from the wrong slot or of a kind not offered changes nothing; drafts arrive at the configured
-rate per source; a commander who respawns keeps his slot's personal ranks. `ScenarioSessionTest` for
-the solo pause (S5). A bar test for one draft per machine's top bar (S5). Until then: nothing
-mechanical - caught by reading.
+rate per source; a commander who respawns keeps his slot's personal ranks. `DraftPauseTest` for the
+solo pause, `DraftBarTest` for one draft per machine's top bar.
 
 **Amends pillar 1** with one named exception: choosing an upgrade makes the player stop and weigh. He
 picks the moment, it shows three cards at most with exact numbers, and it pauses only a solo game.

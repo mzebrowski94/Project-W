@@ -6,8 +6,8 @@ import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.ui.hud.DraftBar;
 
 /**
- * The input context of a seat whose draft is open (upgrades S5): his order inputs work the draft and
- * give no order, while his move, aim, fire, strike, grenade and action stay live (D12) and every other
+ * The input context of a seat whose draft is open (G0049): his order inputs work the draft and
+ * give no order, while his move, aim, fire, strike, grenade and action stay live (G0049) and every other
  * seat plays on untouched.
  *
  * <p>Which order input means what goes by the order's place, not by the key: on the keyboard the first

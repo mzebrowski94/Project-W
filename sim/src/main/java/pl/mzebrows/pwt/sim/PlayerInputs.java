@@ -100,7 +100,7 @@ public final class PlayerInputs {
 
     /**
      * A player takes this slot on this tick, sitting at this machine. The machine is what the leash is
-     * reckoned by (B): commanders sharing one screen are held together, commanders at different machines
+     * reckoned by (G0056): commanders sharing one screen are held together, commanders at different machines
      * are not. Offline every slot sits at machine 0; online it is the peer that holds the slot.
      */
     public PlayerInputs join(int slot, int machine) {

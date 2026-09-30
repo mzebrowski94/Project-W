@@ -193,7 +193,7 @@ public record NetConfig(
      * @param leadMinTicks the fewest ticks ahead a peer tags its input - the host's own peer, with no
      *     network in the way, sits here
      * @param leadMaxTicks the most; a peer that would need more is further away than a session is built
-     *     for (same region, D4), and plays with this much delay rather than more
+     *     for (same region), and plays with this much delay rather than more
      * @param marginTicks how long before its tick is sealed a peer's input should reach the sequencer; each
      *     peer's lead is adapted to keep it there
      * @param bufferTicks how many sealed ticks a peer may hold unplayed before it plays faster to catch up

@@ -22,7 +22,7 @@ import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
- * The only writer of the ledger and the drafts (ADR 0017, G0049, D11). Once per tick, at the end of it:
+ * The only writer of the ledger and the drafts (ADR 0017, G0049). Once per tick, at the end of it:
  *
  * <ol>
  *   <li>applies this tick's picks, each from the next tick on;

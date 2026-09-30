@@ -177,7 +177,7 @@ public final class UpgradeView {
         return held(index).ranks();
     }
 
-    /** Whether it is the swarm's adaptation (D11) rather than the players' upgrade. */
+    /** Whether it is the swarm's adaptation (ADR 0017) rather than the players' upgrade. */
     public boolean heldAlien(int index) {
         return catalogue.of(held(index).kind()).side() == Side.ALIEN;
     }

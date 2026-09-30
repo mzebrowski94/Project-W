@@ -7,7 +7,7 @@ import com.badlogic.gdx.utils.Pool;
 /**
  * The slots that are away (G0052): their link has dropped, so their commanders stand idle and the
  * draft rotation passes them by - and which machine each slot sits at, which the leash is reckoned by
- * (B). Level state on the level entity, written by {@code Simulation.step} from the tick's input and
+ * (G0056). Level state on the level entity, written by {@code Simulation.step} from the tick's input and
  * nothing else. Offline nothing is ever away, and every slot sits at machine 0.
  */
 public final class Presence implements Component, Pool.Poolable {
@@ -17,7 +17,7 @@ public final class Presence implements Component, Pool.Poolable {
 
     public final Array<Away> away = new Array<>();
 
-    /** Which machine one slot's player sits at (B). */
+    /** Which machine one slot's player sits at (G0056). */
     public record Seat(int slot, int machine) {}
 
     /**

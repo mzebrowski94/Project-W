@@ -41,7 +41,7 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
  * 4): the outward part of a step past {@code leashRadius} from the middle of the commanders is refused
  * exactly. <strong>It never pushes</strong> (pillar 2) - one past the line walks home himself.
  *
- * <p><strong>It holds together the commanders at one machine, and nobody else</strong> (B). Players
+ * <p><strong>It holds together the commanders at one machine, and nobody else</strong> (G0056). Players
  * sharing a screen share a camera that has to frame them all; a player at a machine of his own has a
  * camera of his own, and a rope tied to somebody else's screen would only be an invisible wall.
  */
@@ -178,7 +178,7 @@ public final class CommanderControlSystem extends IteratingSystem {
         }
     }
 
-    /** The machine this commander's player sits at (B); 0 for all of them offline. */
+    /** The machine this commander's player sits at (G0056); 0 for all of them offline. */
     private int machineOf(Entity commander) {
         return levels.size() == 0 ? 0 : PRESENCE.get(levels.first()).machineOf(COMMANDER.get(commander).slot);
     }

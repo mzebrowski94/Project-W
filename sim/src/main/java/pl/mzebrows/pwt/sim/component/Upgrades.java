@@ -27,7 +27,7 @@ public final class Upgrades implements Component, Pool.Poolable {
     /** How many cards the players have taken this level. */
     public int playerPicks;
 
-    /** How many adaptations the swarm has taken this level (D11) - what unlocks an adaptation's tier. */
+    /** How many adaptations the swarm has taken this level (ADR 0017) - what unlocks an adaptation's tier. */
     public int adaptations;
 
     /** How many adaptations level time has been credited with so far, dealt or not. */

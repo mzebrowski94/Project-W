@@ -2,7 +2,7 @@ package pl.mzebrows.pwt.ui.hud;
 
 /**
  * Files the draft's news (G0049): an upgrade earned, one taken - and by whom - a draft passed on to
- * another player, nothing left to learn, and the swarm adapting (D11). Counted from the readout's draft counts and held list,
+ * another player, nothing left to learn, and the swarm adapting (ADR 0017). Counted from the readout's draft counts and held list,
  * because several ticks can run between two frames.
  *
  * <p>Who took a shared upgrade is the player whose drafts went down as its rank went up; a personal

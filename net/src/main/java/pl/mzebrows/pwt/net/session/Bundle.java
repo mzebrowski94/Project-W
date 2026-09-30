@@ -130,7 +130,7 @@ final class Bundle {
         return orders[slot];
     }
 
-    /** A player takes this slot, sitting at this machine - the peer that holds it (B). */
+    /** A player takes this slot, sitting at this machine - the peer that holds it (G0056). */
     Bundle join(int slot, int machine) {
         joins[slot] = true;
         joinMachines[slot] = machine;

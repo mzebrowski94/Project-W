@@ -73,7 +73,7 @@ public record UpgradeDef(
         this(side, weight, ranks, tier, requires, group, null, effects);
     }
 
-    /** Whether its ranks belong to the slot that took it rather than to the side (D1). */
+    /** Whether its ranks belong to the slot that took it rather than to the side (G0049). */
     public boolean personal() {
         return effects.getFirst().target() == Target.CHOOSER;
     }

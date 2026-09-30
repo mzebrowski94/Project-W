@@ -57,7 +57,7 @@ final class PlayMenus {
     private boolean focusLost;
     private @Nullable String footFor;
 
-    /** The pause in force is a solo draft's (D2): no banner and no scrim over the game being chosen for. */
+    /** The pause in force is a solo draft's (G0049): no banner and no scrim over the game being chosen for. */
     private boolean quiet;
 
     PlayMenus(

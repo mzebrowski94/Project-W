@@ -305,7 +305,7 @@ rows become enforceable once the named feature exists - promote them then.
 | **The swarm adapts on its schedule only** - one adaptation per `sim.adaptation.everySeconds` of level time and one per `sim.adaptation.perPlayerUpgrades` cards the players take, both off at zero - dealt from a stream of its own, with nobody choosing (D11). An adaptation narrowed to a strain moves that strain's numbers alone. | enforced - `AdaptationTest` |
 | A machine's top bar shows at most one draft **or one crate** (G0056), and never over the view. Only the seat that opened it drives it. A second local seat's crate is not opened while the bar is taken, and one that opens anyway is shut. | enforced - `DraftBarTest.belongsToTheSeatThatOpenedIt`, `CrateBarTest.belongsToTheSeatWhoseCrateItIs`, `.leavesTheBarToADraftAndNamesTheCrateToShut`, `.namesASecondLocalSeatWithACrateOpenForShutting`; drawn in the bar only (`TopBarPainter`) |
 | Opening a draft **or a crate** pauses the game only while one player is in it - offline or online, a player whose link dropped not counted - and closing resumes only that pause, as does a second player sitting down (D2). | enforced - `DraftPauseTest`, `SessionTest.tellsEveryMachineAPauseIsForADraft`, `SessionTest.liftsADraftPauseWhenASecondPlayerSitsDown` |
-| While a draft is open its seat's order inputs work it and give no order; every other seat plays on (D12). | enforced - `DraftKeysTest.takesTheChoosersOrderAndLeavesEveryOtherSeatsAlone` |
+| While a draft is open its seat's order inputs work it and give no order; every other seat plays on (G0049). | enforced - `DraftKeysTest.takesTheChoosersOrderAndLeavesEveryOtherSeatsAlone` |
 | **A crate is dealt what it holds the first time it is opened, and never before**; from then on it holds what it was dealt less what was taken, whoever opens it, and it is gone once empty (G0056). | enforced - `CrateTest.dealsWhatItHoldsOnItsFirstOpeningAndNotBefore`, `.keepsWhatItWasDealtLessWhatWasTakenWhenOpenedAgain`, `.takesAnEmptiedCrateOffTheField`, `.dealsNoCardTwiceBeforeEveryCardHasComeUp`, `.dealsEverySizeOnceBeforeRepeatingOne` |
 | **One commander has a crate open at a time**, decided in the simulation from the tick's input - two presses on one tick go to the lower slot - so every machine agrees without asking one (G0056, pillar 7). | enforced - `CrateTest.letsOnlyOneCommanderHaveItOpenAtATime`, `.givesItToTheLowerSlotWhenTwoPressOnTheSameTick`, `.changesNothingForATakeFromAnybodyButItsOpener` |
 | **An open crate shuts on its opener** the tick he takes a wound or goes down, steps out of arm's length, drops his link, takes something or shuts it; a medkit he would be turned down for is not taken and leaves it open (G0053, G0056). | enforced - `CrateTest.shutsItTheTickHeTakesAWound`, `.shutsItWhenHeGoesDown`, `.shutsItWhenHeStepsOutOfArmsLength`, `.shutsItWhenHisLinkDrops`, `.shutsItWhenHeClosesIt`, `.handsTheOpenerWhatHeTakesAndShutsTheCrate`, `.turnsDownAMedkitForAManWithNoWoundAndLeavesTheCrateOpen` |
@@ -468,14 +468,14 @@ contradiction three features later.
   currency (pillar 3).
 - ~~Health upgrades need health stored as damage taken.~~ **Answered for men 2026-09-29 (G0053):** a
   man's wounds are damage taken and his maximum is folded at the read. Still open for the aliens,
-  where it is a question about adaptations; the swarm's health factor (health-scope H3) is config,
+  where it is a question about adaptations; the swarm's health factor (`sim.swarm.healthPercent`) is config,
   not a stat, and does not raise it.
 - **Should anything hurt a man more than one step at once?** A heavy shot worth two wounds is the
   first thing three harms cannot say (G0053's revisit). If it comes, it is a count on the harm, never
   an amount.
-- **Is a shield ever found rather than earned?** The respawn shield is the only one (health-scope
-  H2). A pickup, an upgrade that restores one, or one that holds more than a hit are all open, and
-  each changes how often pillar 2's "no invulnerability" is tested.
+- **Is a shield ever found rather than earned?** The respawn shield is the only one (G0053). A pickup, an
+  upgrade that restores one, or one that holds more than a hit are all open, and each changes how
+  often pillar 2's "no invulnerability" is tested.
 - **How is a chance per attempt dealt, when there first is one?** Every chance today is per second of
   opportunity and is dealt from a due (G0039). A critical hit, a drop or anything else rolled once per
   attempt would want the same even deal counted in attempts - Dota's P = C x N or a hard pity - and

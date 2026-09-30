@@ -69,5 +69,5 @@ a sweep and a leap still kill.
 A man who is down is no longer finished by *anything* that reaches him: a `WOUND` does nothing to him,
 and a `DOWN` or a `KILL` finishes him. The property this record asked to preserve survives in the
 half that matters - a barrel going off beside him, or claws, still end it - and a stray pellet no
-longer does. `CasualtyTest.finishesACasualtyWithTheNextHitThatReachesHimWhateverItIs` is replaced in
-H1 (`docs/design/health-scope.md`).
+longer does. `CasualtyTest.finishesACasualtyWithTheNextHitThatReachesHimWhateverItIs` is replaced by
+`VitalityTest.finishesAManWhoIsDownWithABlowThatWouldHavePutHimDownStanding`.

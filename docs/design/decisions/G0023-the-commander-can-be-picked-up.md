@@ -70,4 +70,4 @@ are decisions this record deliberately did not take.
 
 **What he gets back is every wound cleared**, rather than a fraction of his health: a man has no health
 now. Still one revive path, `Aid`, with one set of numbers, and still the same protection afterwards.
-`sim.casualty.reviveHealthFraction` goes in H1 (`docs/design/health-scope.md`).
+`sim.casualty.reviveHealthFraction` is gone.

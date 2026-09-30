@@ -41,7 +41,7 @@ exception to pillar 1 beside the upgrade draft (G0049). **Narrows G0038** for th
   shuts it himself. While he has one open the action key offers him nothing else.
 - **One crate or one draft in a machine's top bar at a time.** A second local seat's press on a crate is not
   sent while the bar is taken, and a crate that opens anyway - two presses in one frame - is shut. Seats
-  on other machines open their own crates freely. Opening one pauses a solo game as a draft does (D2).
+  on other machines open their own crates freely. Opening one pauses a solo game as a draft does (G0049).
 - **Upgrades**: Full Crates raises the fewest a crate is dealt to the four it can hold; Firepower puts a
   flamer per rank into every crate dealt after the pick, swapped for what the deck dealt from the last
   card back.

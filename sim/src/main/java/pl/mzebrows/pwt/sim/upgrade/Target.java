@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.sim.upgrade;
 import pl.mzebrows.pwt.sim.def.Side;
 
 /**
- * Whom an effect reaches (D1). Declared per effect, so one upgrade may reach the squad with one
+ * Whom an effect reaches (G0049). Declared per effect, so one upgrade may reach the squad with one
  * number and the side with another. A turret is never reached: its gun belongs to the place (G0024).
  */
 public enum Target {
