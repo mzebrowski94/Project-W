@@ -184,6 +184,32 @@ class CoopTest {
         assertThat(at(second).x - at(first).x).isCloseTo(2f * LEASH_RADIUS, TOLERANCE);
     }
 
+    /**
+     * Past the ceiling too: a game of more machines than {@link Players#MAX} still holds the two commanders
+     * sharing its last machine together, so no per-machine table is sized by eight (G0038, G0056).
+     */
+    @Test
+    void holdsTogetherTheCommandersAtOneMachineInAGameOfMoreMachinesThanTheCeiling() {
+        int capacity = Players.MAX + 4;
+        int shared = Players.MAX;
+        Simulation simulation = new Simulation(AlphaWorlds.config(), capacity);
+        PlayerInputs joining = new PlayerInputs(capacity);
+        for (int slot = 0; slot < Players.MAX; slot++) {
+            simulation.spawnCommander(MIDDLE, 20f + slot, slot);
+            joining.join(slot, slot);
+        }
+        Entity first = simulation.spawnCommander(MIDDLE - 5f, 60f, shared);
+        Entity second = simulation.spawnCommander(MIDDLE + 5f, 60f, shared + 1);
+        simulation.step(joining.join(shared, shared).join(shared + 1, shared));
+
+        steps(
+                simulation,
+                A_WHILE,
+                new PlayerInputs(capacity).set(shared, walking(-1f, 0f)).set(shared + 1, walking(1f, 0f)));
+
+        assertThat(at(second).x - at(first).x).isCloseTo(2f * LEASH_RADIUS, TOLERANCE);
+    }
+
     /** It refuses the step out and never takes one in: a man at the edge walks home unaided. */
     @Test
     void letsHimWalkBackTowardsTheGroupFromTheEndOfTheLeash() {

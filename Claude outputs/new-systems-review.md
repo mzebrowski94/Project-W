@@ -19,6 +19,15 @@ Mateusz, so nothing about them goes into `alpha-phase.md`.
 | - | **Withdrawn**: V8's "G0050's index row not marked superseded" - it is, in its last column | - |
 | - | `Stat`/`Effect` sealed-cache docs left for stage 6, which deletes both | - |
 
+### Stage 3 (guards)
+
+| Item | Done | Evidence |
+|---|---|---|
+| V2 | `SystemOrderTest` finds the ledger's readers - every registered system whose constructor takes `Modifiers` - instead of a list: 15 rows, was 12 (`DamageSystem`, `CrateSystem`, `CasualtySystem` added); `simulation-order.md` says so | With `CrateSystem` moved after `UpgradeSystem`: the old list's 72 constraints **green**, the derived 75 **red** on "CrateSystem before UpgradeSystem"; restored |
+| V3 | `CommanderControlSystem` sizes its per-machine groups from the capacity it is handed, and throws instead of skipping a group it has no room for (unreachable now: one commander per slot) | `CoopTest.holdsTogetherTheCommandersAtOneMachineInAGameOfMoreMachinesThanTheCeiling` red first (**98 apart, leash 20**), then green. New `CeilingTest`: `Players.MAX` read in code only where a capacity is chosen (`Players`, `PlayerInputs`, `Simulation`) - a source scan, because javac inlines the constant and ArchUnit cannot see it; red first on `CommanderControlSystem.java:88-97` |
+| V9 | `Dealer.requireFits`, called by `UpgradeDef.checkCatalogue`: a 65th upgrade kind fails the catalogue at load. `TopBarPainter.crateKey` writes its key in base 2 × pickup kinds instead of 64, so the 32-kind limit is gone rather than guarded | `DealerTest.refusesMoreKindsThanAPassOverCanName`; `TopBarPainterTest.givesEveryCrateItCanShowAKeyOfItsOwn` (245,411 crates, 245,411 keys). Both seen red on a deliberate break (limit doubled; base 16: 97,865 keys), then restored |
+| - | Behaviour unchanged | Fingerprint (12 scenarios × 1200 ticks of `ScriptedPlay` + a 300 crowd, world hash and bodies hash) **identical** to `4a0f60d`; `PWT_FUZZ=1 DeterminismFuzzTest` 12/12 green (182 s) |
+
 Scope: `cebbac5..8bb389c` (8 commits, ~19k lines added). Baseline on this branch: `verify.sh` green, 1881
 tests; `PWT_BENCH=1` 800 crowd **5.24 ms/step**, growth ×7.8 (100→800), 6 B/step (cloud container; the
 2026-09-27 figure of 3.89 ms was Mateusz's machine). Every probe below was a `Zz*ProbeTest`, run and

@@ -44,6 +44,9 @@ final class TopBarPainter {
     /** The mission and the goal. */
     private static final int LINES_ABOVE_TERMINAL = 2;
 
+    /** The base a crate's key is written in: every pickup, taken or refused. */
+    private static final long CARD_DIGITS = 2L * PickupKind.values().length;
+
     private final Hud hud;
     private final UiStrings strings;
     private final HudStyle style;
@@ -318,12 +321,15 @@ final class TopBarPainter {
         };
     }
 
-    /** What the crate's cards are, packed, so they are rebuilt only when that changes. */
+    /**
+     * What the crate's cards are, packed, so they are rebuilt only when that changes: one digit per card,
+     * in a base with room for every pickup twice over (taken or refused), however many pickups there are.
+     */
     @SuppressWarnings("EnumOrdinal") // a cache key held for a frame, never stored or sent
-    private static long crateKey(PlayerReadout player, int shown) {
+    static long crateKey(PlayerReadout player, int shown) {
         long key = shown;
         for (int i = 0; i < shown; i++) {
-            key = key * 64 + player.crate[i].ordinal() * 2L + (player.crateRefused[i] ? 1 : 0);
+            key = key * CARD_DIGITS + player.crate[i].ordinal() * 2L + (player.crateRefused[i] ? 1 : 0);
         }
         return key;
     }

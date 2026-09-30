@@ -82,26 +82,28 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     /**
      * The middle of the commanders at each machine, worked out once a tick before any of them is driven:
-     * one group per machine, at most one per player.
+     * one group per machine, at most one per player, so sized from the capacity (pillar 7).
      */
     @NotState("scratch: recomputed at the start of every update")
-    private final int[] groupMachine = new int[Players.MAX];
+    private final int[] groupMachine;
 
     @NotState("scratch: recomputed at the start of every update")
-    private final float[] groupX = new float[Players.MAX];
+    private final float[] groupX;
 
     @NotState("scratch: recomputed at the start of every update")
-    private final float[] groupY = new float[Players.MAX];
+    private final float[] groupY;
 
     @NotState("scratch: recomputed at the start of every update")
-    private final int[] groupSize = new int[Players.MAX];
+    private final int[] groupSize;
 
     @NotState("scratch: recomputed at the start of every update")
     private int groups;
 
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
-    public CommanderControlSystem(SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng scatter) {
+    /** @param capacity how many slots the game holds - the most machines its commanders can sit at */
+    public CommanderControlSystem(
+            SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng scatter, int capacity) {
         this.modifiers = modifiers;
         this.scatter = scatter;
         super(Family.all(
@@ -118,6 +120,10 @@ public final class CommanderControlSystem extends IteratingSystem {
         this.map = map;
         this.ground = config.ground();
         this.leashRadius = config.commander().leashRadius();
+        this.groupMachine = new int[capacity];
+        this.groupX = new float[capacity];
+        this.groupY = new float[capacity];
+        this.groupSize = new int[capacity];
     }
 
     @Override
@@ -159,7 +165,8 @@ public final class CommanderControlSystem extends IteratingSystem {
             int group = groupOf(machineOf(commander));
             if (group < 0) {
                 if (groups == groupMachine.length) {
-                    continue;
+                    throw new IllegalStateException(
+                            "commanders at more machines than the game has slots: " + groupMachine.length);
                 }
                 group = groups++;
                 groupMachine[group] = machineOf(commander);

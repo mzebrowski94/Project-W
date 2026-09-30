@@ -168,7 +168,7 @@ public final class Simulation {
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new DragSystem());
-        engine.addSystem(new CommanderControlSystem(config, map, spawner, modifiers, scatter));
+        engine.addSystem(new CommanderControlSystem(config, map, spawner, modifiers, scatter, capacity));
         engine.addSystem(new MeleeSystem(spawner));
         // After the commander's hands, before anything looks around.
         engine.addSystem(new TurretSystem(map, spawner, modifiers, scatter));

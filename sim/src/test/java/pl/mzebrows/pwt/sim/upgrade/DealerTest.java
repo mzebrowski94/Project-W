@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.upgrade;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,17 @@ import pl.mzebrows.pwt.sim.Rng;
 class DealerTest {
 
     private static final int OPTIONS = 3;
+
+    /**
+     * A pass-over is one bit of a {@code long} per kind, so a sixty-fifth kind would share the first one's
+     * bit: refused when the catalogue is checked, not found as a card that never comes up.
+     */
+    @Test
+    void refusesMoreKindsThanAPassOverCanName() {
+        Dealer.requireFits(Long.SIZE);
+
+        assertThatThrownBy(() -> Dealer.requireFits(Long.SIZE + 1)).isInstanceOf(IllegalArgumentException.class);
+    }
 
     @Test
     void dealsDistinctKindsAndNoMoreThanAsked() {

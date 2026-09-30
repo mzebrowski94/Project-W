@@ -5,9 +5,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.utils.ImmutableArray;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -66,6 +68,7 @@ import pl.mzebrows.pwt.sim.system.TurretSystem;
 import pl.mzebrows.pwt.sim.system.WanderSystem;
 import pl.mzebrows.pwt.sim.system.WaveSystem;
 import pl.mzebrows.pwt.sim.system.WeaveSystem;
+import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeSystem;
 
 /**
@@ -238,19 +241,7 @@ class SystemOrderTest {
                 BarrageSystem.class, UpgradeSystem.class, "a boss felled this tick earns its draft this tick"));
         rows.add(new Before(
                 ControlPointSystem.class, UpgradeSystem.class, "a point taken this tick earns its draft this tick"));
-        for (Class<? extends EntitySystem> reader : List.of(
-                CommanderControlSystem.class,
-                TurretSystem.class,
-                TrooperMindSystem.class,
-                TrooperCombatSystem.class,
-                EnemyRangedSystem.class,
-                CollisionSystem.class,
-                GrenadeSystem.class,
-                PickupSystem.class,
-                ReinforcementSystem.class,
-                DriveSystem.class,
-                ActionSystem.class,
-                AidSystem.class)) {
+        for (Class<? extends EntitySystem> reader : readersOfTheLedger()) {
             rows.add(new Before(reader, UpgradeSystem.class, "every reader in a tick sees the same ledger"));
         }
         return rows.stream().map(Arguments::of);
@@ -260,6 +251,23 @@ class SystemOrderTest {
         List<Class<?>> order = registered();
 
         assertThat(order.indexOf(later)).isEqualTo(order.indexOf(earlier) + 1);
+    }
+
+    /**
+     * Every registered system that is handed the read port, found rather than listed, so a new reader is
+     * held to the ledger's one position without anybody remembering to add it (ADR 0017).
+     */
+    private static List<Class<? extends EntitySystem>> readersOfTheLedger() {
+        List<Class<? extends EntitySystem>> readers = new ArrayList<>();
+        for (EntitySystem system : new Simulation(SimConfig.defaults()).engine().getSystems()) {
+            for (Constructor<?> constructor : system.getClass().getDeclaredConstructors()) {
+                if (Arrays.asList(constructor.getParameterTypes()).contains(Modifiers.class)) {
+                    readers.add(system.getClass());
+                    break;
+                }
+            }
+        }
+        return readers;
     }
 
     private static List<Class<?>> registered() {

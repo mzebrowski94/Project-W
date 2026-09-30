@@ -80,8 +80,8 @@ public record UpgradeDef(
 
     /**
      * What can only be checked of the whole catalogue: a requirement that goes round in a circle or
-     * crosses sides, an answer to something the players cannot hold, a group of one, a tier nobody unlocks, a stat block whose unused keys are set, and
-     * an armoury deck a deal cannot add to or a bag cannot hold.
+     * crosses sides, an answer to something the players cannot hold, a group of one, a tier nobody unlocks, a stat block whose unused keys are set,
+     * an armoury deck a deal cannot add to or a bag cannot hold, and more kinds than a draft can pass over.
      *
      * @throws IllegalArgumentException naming the first of those it finds
      */
@@ -91,6 +91,7 @@ public record UpgradeDef(
             Defs<UpgradeKind, UpgradeDef> upgrades,
             Defs<PickupKind, PickupDef> pickups) {
         UpgradeKind[] kinds = UpgradeKind.values();
+        Dealer.requireFits(kinds.length);
         for (UpgradeKind kind : kinds) {
             UpgradeDef def = upgrades.of(kind);
             if (def.tier() > draft.tierFrom().size()) {
