@@ -40,7 +40,7 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * With none to play it waits, and banks no time while it waits - so a stall ends in a short catch-up, not
  * a burst.
  *
- * <p>Every {@code checksumTicks} it snapshots its world, keeps the snapshot as a keyframe and sends the
+ * <p>Every {@code checksumTicks} - the host's, from the welcome, never this machine's file (ADR 0018) - it snapshots its world, keeps the snapshot as a keyframe and sends the
  * sequencer its hash. Told it has desynced, it writes a dump - its keyframes and the bundles between
  * them - and is healed with a snapshot of the host's world.
  *
@@ -62,7 +62,7 @@ public final class PeerSession implements AutoCloseable {
     }
 
     /** How many of this machine's own ticks of input are kept to send: more than any lead. A power of two. */
-    private static final int OWN = Integer.highestOneBit(NetConfig.Session.MOST_LEAD_TICKS) * 2;
+    private static final int OWN = Integer.highestOneBit(NetConfig.Pacing.MOST_LEAD_TICKS) * 2;
 
     /** How many keyframes are kept: the one a desync is reported on, and the agreed ones before it. */
     private static final int KEYFRAMES = 3;
@@ -87,7 +87,7 @@ public final class PeerSession implements AutoCloseable {
     private static final int EVENTS_PER_MESSAGE = 16;
 
     private final Transport transport;
-    private final NetConfig.Session pacing;
+    private final NetConfig.Pacing pacing;
     private final int maxDatagramBytes;
     private final int maxMessageBytes;
     private final NetLog log;
@@ -166,6 +166,9 @@ public final class PeerSession implements AutoCloseable {
     private final long[] keyHash = new long[KEYFRAMES];
     private int keyNext;
 
+    /** How often worlds are compared, as the host's session config says; known from the welcome on. */
+    private int checksumTicks;
+
     /**
      * @param dumpDir where desync dumps are written, or null to write none
      * @param build this build's id, sent in the hello
@@ -177,10 +180,22 @@ public final class PeerSession implements AutoCloseable {
             WorldFactory worlds,
             @Nullable Path dumpDir,
             String build) {
+        this(transport, config, log, worlds, dumpDir, build, Transport.MAX_MESSAGE_BYTES);
+    }
+
+    /** @param maxMessageBytes the largest snapshot this peer sends - lower only in a test of a world too big */
+    PeerSession(
+            Transport transport,
+            NetConfig config,
+            NetLog log,
+            WorldFactory worlds,
+            @Nullable Path dumpDir,
+            String build,
+            int maxMessageBytes) {
         this.transport = transport;
-        this.pacing = config.session();
+        this.pacing = config.pacing();
         this.maxDatagramBytes = config.maxDatagramBytes();
-        this.maxMessageBytes = config.maxMessageBytes();
+        this.maxMessageBytes = maxMessageBytes;
         this.log = log;
         this.worlds = worlds;
         this.dumpDir = dumpDir;
@@ -388,7 +403,7 @@ public final class PeerSession implements AutoCloseable {
         current.step(inputs);
         tick = next;
         produce(local);
-        if (tick % pacing.checksumTicks() == 0) {
+        if (tick % checksumTicks == 0) {
             checksum(current);
         }
     }
@@ -647,6 +662,7 @@ public final class PeerSession implements AutoCloseable {
         capacity = in.getByte();
         boolean fresh = in.getByte() != 0;
         tickNanos = in.getLong();
+        checksumTicks = Msg.getSession(in).checksumTicks();
         String scenario = in.getString(Msg.MAX_TEXT);
         long seed = in.getLong();
         String config = new String(in.getPacked(Msg.MAX_CONFIG), StandardCharsets.UTF_8);
@@ -658,8 +674,7 @@ public final class PeerSession implements AutoCloseable {
         setup = built;
         bundle = new Bundle(capacity);
         inputs = new PlayerInputs(capacity);
-        int size = Integer.highestOneBit(
-                Math.max(2 * pacing.checksumTicks() + 2 * pacing.leadMaxTicks() + 64, 64) * 2 - 1);
+        int size = Integer.highestOneBit(Math.max(2 * checksumTicks + 2 * pacing.leadMaxTicks() + 64, 64) * 2 - 1);
         ringMask = size - 1;
         ring = new byte[size][Sequencer.maxBundleBytes(capacity)];
         ringLength = new int[size];
@@ -789,7 +804,7 @@ public final class PeerSession implements AutoCloseable {
             log.warn("peer", "event=no-keyframe tick=" + at);
             return;
         }
-        int agreed = keyframeAt(at - pacing.checksumTicks());
+        int agreed = keyframeAt(at - checksumTicks);
         List<byte[]> between = new ArrayList<>();
         if (agreed >= 0) {
             for (int t = keyTick[agreed] + 1; t <= at; t++) {

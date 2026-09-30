@@ -267,7 +267,12 @@ public final class MenuScreen extends ScreenAdapter {
         try {
             context.queueScreen(new ScenarioScreen(
                     context,
-                    OnlineSession.host(scenario, context.simConfig(), context.netConfig(), context.launchOptions())));
+                    OnlineSession.host(
+                            scenario,
+                            context.simConfig(),
+                            context.worldConfigText(),
+                            context.netConfig(),
+                            context.launchOptions())));
             return true;
         } catch (RuntimeException e) {
             Log.error("Could not host " + scenario.name(), e);

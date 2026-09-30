@@ -110,7 +110,7 @@ public final class LoopbackNetwork {
 
         @Override
         public void send(int link, Delivery delivery, byte[] data, int offset, int length) {
-            int limit = delivery == Delivery.UNRELIABLE ? config.maxDatagramBytes() : config.maxMessageBytes();
+            int limit = delivery == Delivery.UNRELIABLE ? config.maxDatagramBytes() : Transport.MAX_MESSAGE_BYTES;
             if (length > limit) {
                 throw new IllegalArgumentException(
                         delivery + " message of " + length + " bytes is over the " + limit + "-byte limit");

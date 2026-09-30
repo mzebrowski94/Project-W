@@ -320,7 +320,7 @@ class SequencerTest {
         RawPeer host = startedHost();
         RawPeer joiner = joined("joiner", host);
 
-        for (int frame = 0; frame < config.session().historyTicks() + 60; frame++) {
+        for (int frame = 0; frame < config.pacing().historyTicks() + 60; frame++) {
             frame(host, joiner);
             answerSnapshots(host);
         }

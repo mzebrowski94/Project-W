@@ -104,12 +104,15 @@ public final class OnlineSession implements ScenarioPlay {
     /**
      * Hosts {@code scenario}: starts a sequencer on the configured port (the next free one if a copy on
      * this PC already has it), joins it, and announces it to the local network under a room code. What
-     * is shipped to peers is this copy's {@code
-     * assets/sim/*.properties} as its parser reads it, comments left out, and its seed.
+     * is shipped to peers is the world config {@code config} was bound from and its seed; the sequencer
+     * paces by the same config's tick.
      *
+     * @param worldConfig the text {@code config} was bound from, comments left out ({@link
+     *     SimConfigLoader#loaded()}) - never a later read of the files
      * @throws RuntimeException if no port could be had; nothing is left open
      */
-    public static OnlineSession host(Scenario scenario, SimConfig config, NetConfig net, LaunchOptions options) {
+    public static OnlineSession host(
+            Scenario scenario, SimConfig config, String worldConfig, NetConfig net, LaunchOptions options) {
         Clock clock = SystemClock.INSTANCE;
         NetLog log = NetLog.open(net.log(), options.logName() + "-host");
         long key = new SecureRandom().nextLong() | 1L;
@@ -117,7 +120,7 @@ public final class OnlineSession implements ScenarioPlay {
                 new NettyTransport(net, clock, log, "sequencer"),
                 net,
                 log,
-                new SessionSetup(SimConfigLoader.shipped(), scenario.name(), config.seed()),
+                new SessionSetup(worldConfig, scenario.name(), config.seed()),
                 Players.MAX,
                 config.tickSeconds(),
                 key,

@@ -17,13 +17,14 @@ import pl.mzebrows.pwt.sim.ConfigKey;
  * @param connectTimeoutMillis how long a link may take to open, handshake included, before it is given up
  * @param linkTimeoutMillis how long an open link may go without hearing anything before it is dropped
  * @param heartbeatMillis how often a quiet link says it is still there; also how often round trip is measured
- * @param maxDatagramBytes the largest unreliable message, kept under a typical path MTU so nothing fragments
- * @param maxMessageBytes the largest reliable message - a snapshot has to fit
+ * @param maxDatagramBytes the largest unreliable message, kept under a typical path MTU so nothing fragments;
+ *     the largest reliable one is {@code Transport.MAX_MESSAGE_BYTES}, not tuning
  * @param conditions network conditions to simulate on top of the real ones, all zero for none
  * @param latencySteps the one-way latencies, in milliseconds, a joining copy steps through during a
  *     latency playtest; the rest of the conditions stay as set
  * @param log where the connection log goes and how much it keeps
- * @param session how a lockstep session paces itself
+ * @param pacing how this machine paces its part of a session - local config
+ * @param session what every peer of a session agrees on, the host's holding for all - session config
  * @param lan how sessions on the local network are found
  */
 public record NetConfig(
@@ -33,10 +34,10 @@ public record NetConfig(
         int linkTimeoutMillis,
         int heartbeatMillis,
         int maxDatagramBytes,
-        int maxMessageBytes,
         Conditions conditions,
         @ConfigKey("conditions.latencySteps") List<Integer> latencySteps,
         LogConfig log,
+        Pacing pacing,
         Session session,
         Lan lan) {
 
@@ -49,11 +50,14 @@ public record NetConfig(
         require(heartbeatMillis > 0, "heartbeatMillis", heartbeatMillis);
         require(linkTimeoutMillis > heartbeatMillis, "linkTimeoutMillis", linkTimeoutMillis);
         require(maxDatagramBytes >= 64 && maxDatagramBytes <= 65_000, "maxDatagramBytes", maxDatagramBytes);
-        require(maxMessageBytes >= maxDatagramBytes, "maxMessageBytes", maxMessageBytes);
         require(
                 !latencySteps.isEmpty() && latencySteps.stream().allMatch(step -> step >= 0),
                 "latencySteps",
                 latencySteps);
+        require(
+                pacing.historyTicks() > pacing.leadMaxTicks() + session.checksumTicks(),
+                "pacing.historyTicks",
+                pacing.historyTicks());
         latencySteps = List.copyOf(latencySteps);
     }
 
@@ -99,10 +103,10 @@ public record NetConfig(
                 linkTimeoutMillis,
                 heartbeatMillis,
                 maxDatagramBytes,
-                maxMessageBytes,
                 newConditions,
                 latencySteps,
                 log,
+                pacing,
                 session,
                 lan);
     }
@@ -116,10 +120,10 @@ public record NetConfig(
                 linkTimeoutMillis,
                 heartbeatMillis,
                 maxDatagramBytes,
-                maxMessageBytes,
                 conditions,
                 latencySteps,
                 newLog,
+                pacing,
                 session,
                 lan);
     }
@@ -171,6 +175,7 @@ public record NetConfig(
         }
     }
 
+    /** The same config with another session config - a joiner's, once the host has sent its own. */
     public NetConfig with(Session newSession) {
         return new NetConfig(
                 port,
@@ -179,16 +184,34 @@ public record NetConfig(
                 linkTimeoutMillis,
                 heartbeatMillis,
                 maxDatagramBytes,
-                maxMessageBytes,
                 conditions,
                 latencySteps,
                 log,
+                pacing,
                 newSession,
                 lan);
     }
 
+    /** The same config with other pacing. */
+    public NetConfig with(Pacing newPacing) {
+        return new NetConfig(
+                port,
+                portSearch,
+                connectTimeoutMillis,
+                linkTimeoutMillis,
+                heartbeatMillis,
+                maxDatagramBytes,
+                conditions,
+                latencySteps,
+                log,
+                newPacing,
+                session,
+                lan);
+    }
+
     /**
-     * How a lockstep session paces itself (ADR 0012). Every value is in ticks.
+     * How this machine paces its part of a lockstep session (ADR 0012) - local config: two peers may
+     * differ in it and play the same game. Every value is in ticks.
      *
      * @param leadMinTicks the fewest ticks ahead a peer tags its input - the host's own peer, with no
      *     network in the way, sits here
@@ -198,19 +221,18 @@ public record NetConfig(
      *     peer's lead is adapted to keep it there
      * @param bufferTicks how many sealed ticks a peer may hold unplayed before it plays faster to catch up
      * @param catchUpTicks the most ticks a peer plays in one frame, however far behind it is
-     * @param checksumTicks how often peers compare worlds, and how often each keeps a keyframe for a dump
      * @param historyTicks how many sealed ticks the sequencer keeps, so a peer dropping in or being healed
-     *     can be brought forward from a snapshot
+     *     can be brought forward from a snapshot; read only where the sequencer runs
      * @param redundantTicks how many of the newest unacknowledged ticks every bundle datagram repeats;
-     *     older ones are sent again only when a round trip has passed without their acknowledgement
+     *     older ones are sent again only when a round trip has passed without their acknowledgement; read
+     *     only where the sequencer runs
      */
-    public record Session(
+    public record Pacing(
             int leadMinTicks,
             int leadMaxTicks,
             int marginTicks,
             int bufferTicks,
             int catchUpTicks,
-            int checksumTicks,
             int historyTicks,
             int redundantTicks) {
 
@@ -220,15 +242,33 @@ public record NetConfig(
          */
         public static final int MOST_LEAD_TICKS = 120;
 
-        public Session {
+        public Pacing {
             require(leadMinTicks >= 1, "leadMinTicks", leadMinTicks);
             require(leadMaxTicks >= leadMinTicks && leadMaxTicks <= MOST_LEAD_TICKS, "leadMaxTicks", leadMaxTicks);
             require(marginTicks >= 0, "marginTicks", marginTicks);
             require(bufferTicks >= 0, "bufferTicks", bufferTicks);
             require(catchUpTicks >= 1, "catchUpTicks", catchUpTicks);
-            require(checksumTicks >= 1, "checksumTicks", checksumTicks);
-            require(historyTicks > leadMaxTicks + checksumTicks, "historyTicks", historyTicks);
             require(redundantTicks >= 1 && redundantTicks <= 8, "redundantTicks", redundantTicks);
+        }
+    }
+
+    /**
+     * The session config: what every peer of a session must agree on (ADR 0018). The host's holds for
+     * everyone - the sequencer sends it in each welcome, and a joiner plays by that, never by its own file.
+     * A component added here is one the welcome carries; {@code WireTest} holds the two together.
+     *
+     * @param checksumTicks how often peers compare worlds, and how often each keeps a keyframe for a dump
+     */
+    public record Session(int checksumTicks) {
+
+        /**
+         * The ceiling on {@code checksumTicks}, a minute at 60 Hz. A joiner sizes its tick ring from the
+         * host's value, so this bounds what a welcome can make it allocate.
+         */
+        public static final int MOST_CHECKSUM_TICKS = 3_600;
+
+        public Session {
+            require(checksumTicks >= 1 && checksumTicks <= MOST_CHECKSUM_TICKS, "checksumTicks", checksumTicks);
         }
     }
 

@@ -28,7 +28,8 @@ import pl.mzebrows.pwt.sim.CommanderInput;
  * which its own game handed it in process.
  *
  * <p>It is also where desyncs are noticed: every peer reports a hash of its world every {@code
- * checksumTicks}, the host's is the reference, and a peer that disagrees is told to write a dump and is
+ * checksumTicks} - the host's, which each welcome carries as the session config (ADR 0018) - the host's
+ * hash is the reference, and a peer that disagrees is told to write a dump and is
  * given a fresh snapshot of the host's world - the drop-in path, used to heal.
  *
  * <p>Driven by {@link #pump(long)} with the time passed in, so a test runs a whole session on a manual
@@ -40,15 +41,15 @@ public final class Sequencer implements AutoCloseable {
      * How many ticks ahead of the last sealed one a slot's input can be held: more than any lead. A power
      * of two.
      */
-    private static final int AHEAD = Integer.highestOneBit(NetConfig.Session.MOST_LEAD_TICKS) * 2;
+    private static final int AHEAD = Integer.highestOneBit(NetConfig.Pacing.MOST_LEAD_TICKS) * 2;
 
     /** How many checksum ticks back the host's hashes are remembered, waiting for slower peers'. */
     private static final int HASHES = 16;
 
     private final Transport transport;
-    private final NetConfig.Session pacing;
+    private final NetConfig.Pacing pacing;
+    private final NetConfig.Session session;
     private final int maxDatagramBytes;
-    private final int maxMessageBytes;
     private final NetLog log;
     private final SessionSetup setup;
     private final String build;
@@ -118,7 +119,7 @@ public final class Sequencer implements AutoCloseable {
     private long lateMostNanos;
 
     /**
-     * @param setup what every peer builds its world from - the host's config, scenario and seed
+     * @param setup what every peer builds its world from - the host's world config, scenario and seed
      * @param capacity how many slots the session has; the ceiling is {@code Players.MAX}
      * @param tickSeconds the world's tick, from the host's config - bundles are sealed at this rate
      * @param hostKey what the host's own peer says in its hello, to be known as the host
@@ -134,9 +135,9 @@ public final class Sequencer implements AutoCloseable {
             long hostKey,
             String build) {
         this.transport = transport;
-        this.pacing = config.session();
+        this.pacing = config.pacing();
+        this.session = config.session();
         this.maxDatagramBytes = config.maxDatagramBytes();
-        this.maxMessageBytes = config.maxMessageBytes();
         this.log = log;
         this.setup = setup;
         this.build = build;
@@ -547,10 +548,9 @@ public final class Sequencer implements AutoCloseable {
                 .putInt(peer.id)
                 .putByte(capacity)
                 .putByte(fresh ? 1 : 0)
-                .putLong(tickNanos)
-                .putString(setup.scenario())
-                .putLong(setup.seed())
-                .putPacked(config, 0, config.length);
+                .putLong(tickNanos);
+        Msg.putSession(out, session);
+        out.putString(setup.scenario()).putLong(setup.seed()).putPacked(config, 0, config.length);
         transport.send(peer.link, Delivery.RELIABLE, out.array(), 0, out.size());
         int welcomeBytes = out.size();
         if (fresh) {
@@ -662,7 +662,7 @@ public final class Sequencer implements AutoCloseable {
         long hash = in.getLong();
         in.expectEnd();
         if (peer.host) {
-            int at = (tick / pacing.checksumTicks()) % HASHES;
+            int at = (tick / session.checksumTicks()) % HASHES;
             hostHash[at] = hash;
             hostHashTick[at] = tick;
             for (int i = 0; i < peers.size(); i++) {
@@ -676,7 +676,7 @@ public final class Sequencer implements AutoCloseable {
         if (generation != peer.generation || peer.state != PeerState.PLAYING) {
             return;
         }
-        int at = (tick / pacing.checksumTicks()) % HASHES;
+        int at = (tick / session.checksumTicks()) % HASHES;
         if (hostHashTick[at] == tick) {
             compare(peer, tick, hostHash[at], hash);
         } else {
@@ -708,7 +708,7 @@ public final class Sequencer implements AutoCloseable {
         int forPeer = in.getInt();
         int tick = in.getInt();
         int length = in.getInt();
-        if (length < 0 || length > in.remaining() || length > maxMessageBytes - Msg.SNAPSHOT_HEADER) {
+        if (length < 0 || length > in.remaining() || length > Transport.MAX_MESSAGE_BYTES - Msg.SNAPSHOT_HEADER) {
             throw new WireException("a snapshot of " + length + " bytes");
         }
         int start = in.position();
@@ -1028,13 +1028,13 @@ public final class Sequencer implements AutoCloseable {
         }
 
         void waitFor(int tick, long hash) {
-            int at = (tick / pacing.checksumTicks()) % HASHES;
+            int at = (tick / session.checksumTicks()) % HASHES;
             waitingTick[at] = tick;
             waitingHash[at] = hash;
         }
 
         void compareWaiting(int tick, long reference) {
-            int at = (tick / pacing.checksumTicks()) % HASHES;
+            int at = (tick / session.checksumTicks()) % HASHES;
             if (waitingTick[at] == tick) {
                 waitingTick[at] = -1;
                 compare(this, tick, reference, waitingHash[at]);

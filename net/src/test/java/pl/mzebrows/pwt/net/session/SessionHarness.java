@@ -38,6 +38,10 @@ final class SessionHarness implements AutoCloseable {
     final Sequencer sequencer;
     final int port;
     final List<Machine> machines = new ArrayList<>();
+
+    /** The largest snapshot a machine joining from now on sends - lowered for a world too big to send. */
+    int snapshotLimit = Transport.MAX_MESSAGE_BYTES;
+
     private int frame;
 
     SessionHarness(String scenario, long seed, Conditions atTheHost) {
@@ -74,9 +78,26 @@ final class SessionHarness implements AutoCloseable {
         return join(name, conditions, 0L, null, BuildId.current(), machines.size() * 37);
     }
 
+    /** A machine whose own {@code network.properties} says {@code own} - its local config, not the host's. */
+    Machine join(String name, Conditions conditions, NetConfig own) {
+        return join(name, conditions, 0L, null, BuildId.current(), machines.size() * 37, own);
+    }
+
     Machine join(String name, Conditions conditions, long key, @Nullable Path dumpDir, String build, int phase) {
+        return join(name, conditions, key, dumpDir, build, phase, config);
+    }
+
+    private Machine join(
+            String name,
+            Conditions conditions,
+            long key,
+            @Nullable Path dumpDir,
+            String build,
+            int phase,
+            NetConfig own) {
         Transport end = conditioned(network.endpoint(name), conditions);
-        PeerSession session = new PeerSession(end, config, NetLog.silent(64), new TestWorlds(), dumpDir, build);
+        PeerSession session =
+                new PeerSession(end, own, NetLog.silent(64), new TestWorlds(), dumpDir, build, snapshotLimit);
         session.connect("host", port, key);
         session.seat(0);
         Machine machine = new Machine(name, session, phase);

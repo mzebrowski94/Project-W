@@ -107,10 +107,10 @@ class NettySessionTest {
                 5_000,
                 100,
                 shipped.maxDatagramBytes(),
-                shipped.maxMessageBytes(),
                 NetConfig.Conditions.NONE,
                 shipped.latencySteps(),
                 new NetConfig.LogConfig("unused", "INFO", 1024, 0),
+                shipped.pacing(),
                 shipped.session(),
                 shipped.lan());
     }

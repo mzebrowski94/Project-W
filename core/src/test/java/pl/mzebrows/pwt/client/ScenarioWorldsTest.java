@@ -16,6 +16,13 @@ class ScenarioWorldsTest {
     }
 
     @Test
+    void shipsTheTextTheLoadedConfigWasBoundFrom() {
+        SimConfigLoader.Loaded loaded = SimConfigLoader.loaded();
+
+        assertThat(SimConfigLoader.parseFromHost(loaded.shipped())).isEqualTo(loaded.config());
+    }
+
+    @Test
     void buildsTheHostsScenarioWithTheHostsSeed() {
         SessionSetup setup = new SessionSetup(SimConfigLoader.text(), "Skirmish", 42L);
 

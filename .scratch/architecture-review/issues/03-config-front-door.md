@@ -38,3 +38,21 @@ it. The four `Shipped*Test` suites become one.
 skill; both change if it goes.
 
 ## Comments
+
+**Online contract (grilling, with 11).** A config has one of three scopes - **world config**, **session
+config**, **local config** (glossary). What the front door owes the network:
+
+- **It keeps the text it bound**, beside the record. The host ships that text, never a fresh read:
+  `OnlineSession.host:120` ships `SimConfigLoader.shipped()`, which reads the files again, while the seed and
+  `tickSeconds` it pairs with it come from the `SimConfig` loaded at start (`PwtGame:48`). A file edited
+  between the two makes the sequencer pace by one `tickSeconds` and every world count by another. Same
+  defect as `JoinScreen:174`'s re-read. Shipped comment-stripped, as now.
+- **It names its source when it logs problems.** A joiner parsing the host's world config logs one line -
+  `host's world config: N problem(s), the shipped value stands` - not each problem against its own
+  `sim/*.properties`. The host logged each already, and the build id says the joiner's parse finds the same.
+- **Session config is not its job** - 11 carries it in `WELCOME` as values, not text.
+
+**Done ahead of the front door** (with 11): `SimConfigLoader.loaded()` keeps the text beside the config, the
+host ships it through `GameContext.worldConfigText()`, and `SimConfigLoader.shipped()` is gone;
+`ScenarioWorlds` parses the host's text with `parseFromHost`, one line for its problems. The front door
+inherits both.

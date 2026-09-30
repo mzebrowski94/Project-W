@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import pl.mzebrows.pwt.net.NetConfig;
 
 class WireTest {
 
@@ -30,6 +32,28 @@ class WireTest {
         assertThat(in.getByte()).isEqualTo(9);
         in.expectEnd();
         assertThat(out.size()).isLessThan(WORLD.length / 4);
+    }
+
+    @Test
+    void readsBackTheSessionConfigAWelcomeCarries() {
+        NetConfig.Session session = new NetConfig.Session(37);
+        WireWriter out = new WireWriter(64);
+        Msg.putSession(out, session);
+
+        WireReader in = new WireReader().wrap(out.array(), 0, out.size());
+
+        assertThat(Msg.getSession(in)).isEqualTo(session);
+        in.expectEnd();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, NetConfig.Session.MOST_CHECKSUM_TICKS + 1})
+    void refusesASessionConfigNoSessionCouldRunBy(int checksumTicks) {
+        WireWriter out = new WireWriter(64).putInt(checksumTicks);
+
+        WireReader in = new WireReader().wrap(out.array(), 0, out.size());
+
+        assertThatThrownBy(() -> Msg.getSession(in)).isInstanceOf(WireException.class);
     }
 
     @Test

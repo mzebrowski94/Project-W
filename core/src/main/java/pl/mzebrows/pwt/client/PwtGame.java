@@ -23,6 +23,7 @@ public final class PwtGame extends Game implements GameContext {
     private final SystemPointer pointer;
 
     private SimConfig simConfig;
+    private String worldConfigText;
     private NetConfig netConfig;
     private ControlsConfig controlsConfig;
     private GamepadSource gamepads;
@@ -45,7 +46,9 @@ public final class PwtGame extends Game implements GameContext {
         for (String problem : launchOptions.problems()) {
             Log.error("Command line: " + problem, null);
         }
-        simConfig = SimConfigLoader.load();
+        SimConfigLoader.Loaded loaded = SimConfigLoader.loaded();
+        simConfig = loaded.config();
+        worldConfigText = loaded.shipped();
         Log.debug("Simulation config: " + simConfig);
         netConfig = NetConfigLoader.load();
         controlsConfig = ControlsConfig.load();
@@ -110,6 +113,11 @@ public final class PwtGame extends Game implements GameContext {
     @Override
     public SimConfig simConfig() {
         return simConfig;
+    }
+
+    @Override
+    public String worldConfigText() {
+        return worldConfigText;
     }
 
     @Override

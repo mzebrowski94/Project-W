@@ -31,7 +31,7 @@ public final class ScenarioWorlds implements WorldFactory {
     private SimConfig config(SessionSetup setup) {
         SimConfig config = parsed;
         if (config == null || !setup.configText().equals(parsedText)) {
-            config = SimConfigLoader.parse(setup.configText());
+            config = SimConfigLoader.parseFromHost(setup.configText());
             parsed = config;
             parsedText = setup.configText();
         }

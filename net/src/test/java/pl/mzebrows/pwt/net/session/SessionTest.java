@@ -54,7 +54,7 @@ class SessionTest {
             assertThat(friend.session.slotOf(0)).isEqualTo(1);
             assertThat(other.session.slotOf(0)).isEqualTo(2);
             assertThat(session.sequencer.desyncs()).isZero();
-            assertThat(host.session.lead()).isEqualTo(session.config.session().leadMinTicks());
+            assertThat(host.session.lead()).isEqualTo(session.config.pacing().leadMinTicks());
         }
     }
 
@@ -90,7 +90,7 @@ class SessionTest {
             assertThat(far.session.lead())
                     .as("a peer 40 ms away plays further ahead than the host")
                     .isGreaterThan(host.session.lead())
-                    .isLessThanOrEqualTo(session.config.session().leadMaxTicks());
+                    .isLessThanOrEqualTo(session.config.pacing().leadMaxTicks());
         }
     }
 
@@ -158,7 +158,7 @@ class SessionTest {
                     .isLessThanOrEqualTo(24);
             assertThat(far.session.lead())
                     .as("the far machine's input delay")
-                    .isLessThan(session.config.session().leadMaxTicks());
+                    .isLessThan(session.config.pacing().leadMaxTicks());
             session.agreedHash();
             assertThat(session.sequencer.desyncs()).isZero();
         }
@@ -203,7 +203,7 @@ class SessionTest {
 
             assertThat(session.sequencer.sealedTick() - stalled.session.tick())
                     .as("ticks behind three seconds after a stall of nearly seven")
-                    .isLessThanOrEqualTo(session.config.session().bufferTicks() + 2);
+                    .isLessThanOrEqualTo(session.config.pacing().bufferTicks() + 2);
         }
     }
 
@@ -234,21 +234,8 @@ class SessionTest {
 
     @Test
     void leavesAJoinerWaitingRatherThanFailWhenTheWorldIsTooBigToSend() {
-        NetConfig d = NetConfig.defaults();
-        NetConfig small = new NetConfig(
-                d.port(),
-                d.portSearch(),
-                d.connectTimeoutMillis(),
-                d.linkTimeoutMillis(),
-                d.heartbeatMillis(),
-                d.maxDatagramBytes(),
-                20_000,
-                d.conditions(),
-                d.latencySteps(),
-                d.log(),
-                d.session(),
-                d.lan());
-        try (SessionHarness session = new SessionHarness(small, "Advance", 3L, PERFECT)) {
+        try (SessionHarness session = new SessionHarness("Advance", 3L, PERFECT)) {
+            session.snapshotLimit = 20_000;
             Machine host = session.host();
             session.run(120);
             Machine late = session.join("late", PERFECT);
@@ -315,6 +302,22 @@ class SessionTest {
                     .contains("fields that differ")
                     .contains("the reference's world - the desynced peer computed differently")
                     .contains("no hidden state");
+        }
+    }
+
+    @Test
+    void comparesAJoinerAtTheHostsChecksumTicksWhateverItsOwnFileSays() {
+        NetConfig own = NetConfig.defaults().with(new NetConfig.Session(37));
+        try (SessionHarness session = new SessionHarness("Skirmish", 13L, PERFECT)) {
+            session.host();
+            Machine knocked = session.join("knocked", PERFECT, own);
+            session.run(200);
+
+            Simulation world = SessionHarness.world(knocked);
+            world.step(new PlayerInputs(world.capacity()));
+            session.run(200);
+
+            assertThat(session.sequencer.desyncs()).isEqualTo(1);
         }
     }
 

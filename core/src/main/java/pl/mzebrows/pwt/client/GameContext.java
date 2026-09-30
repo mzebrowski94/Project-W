@@ -23,6 +23,9 @@ public interface GameContext {
     /** The simulation config a scenario starts from, before its own overrides. */
     SimConfig simConfig();
 
+    /** The text {@link #simConfig()} was bound from, comments left out: the world config a host ships. */
+    String worldConfigText();
+
     /** Every binding and feel number, read once at startup from {@code controls.properties}. */
     ControlsConfig controlsConfig();
 

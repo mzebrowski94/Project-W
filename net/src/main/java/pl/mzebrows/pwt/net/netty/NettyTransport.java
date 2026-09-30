@@ -178,7 +178,7 @@ public final class NettyTransport implements Transport {
 
     @Override
     public void send(int id, Delivery delivery, byte[] data, int offset, int length) {
-        int limit = delivery == Delivery.UNRELIABLE ? config.maxDatagramBytes() : config.maxMessageBytes();
+        int limit = delivery == Delivery.UNRELIABLE ? config.maxDatagramBytes() : Transport.MAX_MESSAGE_BYTES;
         if (length > limit) {
             throw new IllegalArgumentException(
                     delivery + " message of " + length + " bytes is over the " + limit + "-byte limit");
@@ -513,7 +513,7 @@ public final class NettyTransport implements Transport {
 
     private void framed(SocketChannel channel, boolean accepted) {
         channel.pipeline()
-                .addLast(new LengthFieldBasedFrameDecoder(config.maxMessageBytes() + 1, 0, 4, 0, 4))
+                .addLast(new LengthFieldBasedFrameDecoder(Transport.MAX_MESSAGE_BYTES + 1, 0, 4, 0, 4))
                 .addLast(new LengthFieldPrepender(4))
                 .addLast(new FrameHandler(accepted));
     }

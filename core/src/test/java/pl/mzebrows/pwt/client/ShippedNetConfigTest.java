@@ -36,13 +36,13 @@ class ShippedNetConfigTest {
     @Test
     void namesAMisspeltKeyAndKeepsTheShippedValue() throws IOException {
         String misspelt = Files.readString(SHIPPED, StandardCharsets.ISO_8859_1)
-                .replace("net.session.leadMaxTicks=", "net.session.leadMaxTick=");
+                .replace("net.pacing.leadMaxTicks=", "net.pacing.leadMaxTick=");
 
         NetConfig.Parsed parsed = NetConfig.parse(misspelt);
 
         assertThat(parsed.config()).isEqualTo(NetConfig.defaults());
         assertThat(parsed.problems())
-                .containsExactlyInAnyOrder("missing net.session.leadMaxTicks", "unknown key net.session.leadMaxTick");
+                .containsExactlyInAnyOrder("missing net.pacing.leadMaxTicks", "unknown key net.pacing.leadMaxTick");
     }
 
     @Test

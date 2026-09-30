@@ -19,6 +19,12 @@ package pl.mzebrows.pwt.net.transport;
 public interface Transport extends AutoCloseable {
 
     /**
+     * The largest reliable message - a snapshot of the whole world has to fit. A constant of the wire
+     * format rather than a tunable: a joiner's decoder needs it before anything from the host has arrived.
+     */
+    int MAX_MESSAGE_BYTES = 8 * 1024 * 1024;
+
+    /**
      * Starts accepting links. Tries {@code firstPort}, then each of the next {@code search} ports, and
      * returns the one it got - so a second instance on the same machine finds one of its own.
      *

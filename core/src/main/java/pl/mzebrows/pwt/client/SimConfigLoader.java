@@ -26,8 +26,24 @@ public final class SimConfigLoader {
 
     /** Loads simulation config, falling back to {@link SimConfig#defaults()} per missing value. */
     public static SimConfig load() {
-        return parse(text());
+        return loaded().config();
     }
+
+    /**
+     * Loads simulation config and keeps the text it was bound from, from one read of the files - so a host
+     * ships the world config it plays, never a later read of a file edited since (ADR 0012).
+     */
+    public static Loaded loaded() {
+        String text = text();
+        return new Loaded(parse(text), withoutComments(text));
+    }
+
+    /**
+     * A config and the text it was bound from.
+     *
+     * @param shipped the text as the parser reads it, comments left out - what a host ships
+     */
+    public record Loaded(SimConfig config, String shipped) {}
 
     /**
      * Every file in {@link SimConfig#shippedFiles()}, as written and in that order, as one text - what a
@@ -42,14 +58,10 @@ public final class SimConfigLoader {
     }
 
     /**
-     * What a host ships to its peers (ADR 0012): {@link #text()} as the parser reads it - every key with
-     * its value, one a line - and none of the comments, which are seven tenths of the file, mean nothing
-     * to a peer, and are what a join over a slow link waits for.
+     * {@link #text()} as the parser reads it - every key with its value, one a line - and none of the
+     * comments, which are seven tenths of the file, mean nothing to a peer, and are what a join over a slow
+     * link waits for.
      */
-    public static String shipped() {
-        return withoutComments(text());
-    }
-
     static String withoutComments(String text) {
         StringBuilder kept = new StringBuilder(text.length() / 3);
         for (Map.Entry<String, String> entry : ConfigBinder.parse(text).entrySet()) {
@@ -72,6 +84,22 @@ public final class SimConfigLoader {
         }
         for (String problem : parsed.problems()) {
             Log.error(FILES + ": " + problem, null);
+        }
+        return parsed.config();
+    }
+
+    /**
+     * Simulation config from the world config a host shipped. Its problems get one line, naming whose they
+     * are: the host logged each against its own files, and the build id says this parse finds the same.
+     */
+    public static SimConfig parseFromHost(String text) {
+        if (text.isBlank()) {
+            return SimConfig.defaults();
+        }
+        SimConfig.Parsed parsed = SimConfig.parse(text);
+        if (!parsed.problems().isEmpty()) {
+            Log.info("The host's world config: " + parsed.problems().size()
+                    + " problem(s), the shipped value stands for each");
         }
         return parsed.config();
     }

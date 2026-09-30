@@ -1,5 +1,7 @@
 package pl.mzebrows.pwt.net.session;
 
+import pl.mzebrows.pwt.net.NetConfig;
+
 /**
  * The session protocol's message types, the first byte of every message (ADR 0012). Numbers, never
  * class names, so nothing on the wire decides what gets built.
@@ -12,7 +14,7 @@ package pl.mzebrows.pwt.net.session;
 final class Msg {
 
     /** Bumped whenever a message changes shape. The build id catches that too; this names it in the log. */
-    static final int PROTOCOL = 3;
+    static final int PROTOCOL = 4;
 
     // Peer to sequencer.
     static final int HELLO = 1;
@@ -72,12 +74,26 @@ final class Msg {
     /**
      * What a snapshot message carries besides the world: its type, then three ints - a peer and a tick,
      * or a generation and a tick - then the world's length. The world may be this much less than {@code
-     * maxMessageBytes}.
+     * Transport.MAX_MESSAGE_BYTES}, or than the limit a test gives.
      */
     static final int SNAPSHOT_HEADER = 1 + 4 + 4 + 4;
 
     /** The longest config a host ships, unpacked. {@code assets/sim/*.properties} without their comments are about 26 KB. */
     static final int MAX_CONFIG = 1024 * 1024;
+
+    /** Writes the session config into a welcome: every component, in order (ADR 0018). */
+    static void putSession(WireWriter out, NetConfig.Session session) {
+        out.putInt(session.checksumTicks());
+    }
+
+    /** Reads what {@link #putSession} wrote. */
+    static NetConfig.Session getSession(WireReader in) {
+        int checksumTicks = in.getInt();
+        if (checksumTicks < 1 || checksumTicks > NetConfig.Session.MOST_CHECKSUM_TICKS) {
+            throw new WireException("a session comparing worlds every " + checksumTicks + " ticks");
+        }
+        return new NetConfig.Session(checksumTicks);
+    }
 
     private Msg() {}
 }
