@@ -10,7 +10,7 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  *
  * <p>Written in config as its name and its arguments: {@code scale fire_cooldown team -12},
  * {@code count men_per_crate side 1}, {@code chance aid_a_trooper squad 0.2},
- * {@code gun flamer gun_damage team 25}, {@code deal armoury_flamer 2}.
+ * {@code gun flamer gun_damage team 25}, {@code deal armoury_flamer 2}, {@code stock armoury_flamer 1}.
  */
 public sealed interface Effect {
 
@@ -69,6 +69,27 @@ public sealed interface Effect {
         public Deal {
             if (amount <= 0) {
                 throw new IllegalArgumentException("a deal adds cards to the deck, so it adds at least one: " + amount);
+            }
+        }
+
+        @Override
+        public Target target() {
+            return Target.SIDE;
+        }
+    }
+
+    /**
+     * Every crate dealt from now on holds at least this many of one card, per rank (G0056): what the deck
+     * dealt is swapped for it from the last card back until there are enough. The side's own number, so it
+     * names no target; a crate dealt before the pick keeps what it holds.
+     *
+     * @param card what every crate holds more of; one the deck holds, which the catalogue check holds to
+     * @param amount how many of it, at least, per rank
+     */
+    record Stock(PickupKind card, int amount) implements Effect {
+        public Stock {
+            if (amount <= 0) {
+                throw new IllegalArgumentException("a stock puts something in every crate, so at least one: " + amount);
             }
         }
 

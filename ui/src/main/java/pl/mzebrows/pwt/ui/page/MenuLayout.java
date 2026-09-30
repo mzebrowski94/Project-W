@@ -20,7 +20,7 @@ public record MenuLayout(int padding, int pitch, int advance, int fontSize) {
 
     public enum Anchor {
         DOCKED_LEFT,
-        /** Beside a page docked left: what it shows alongside, like the pause menu's list of upgrades. */
+        /** Docked to the right of the view. What sits beside a page docked left goes through {@link #beside} instead. */
         DOCKED_RIGHT,
         CENTRED
     }
@@ -45,6 +45,37 @@ public record MenuLayout(int padding, int pitch, int advance, int fontSize) {
         }
         int width = Math.min(view.width() - 4 * padding, wanted);
         return new Rect(view.x() + (view.width() - width) / 2, view.y() + (view.height() - height) / 2, width, height);
+    }
+
+    /**
+     * A panel shown beside a page docked left - the pause menu's list of upgrades: docked right, as wide
+     * as its own lines ask and never wider than the room right of {@code page}, so the two never overlap.
+     * Where that room is narrower than {@code leastColumns} it goes under the page instead. Either way its
+     * height is what its lines ask, cut to the room there is; what does not fit is the caller's to scroll.
+     *
+     * @param page where the page it sits beside rests - not where its arrival has it this frame
+     * @param lines how many lines it would like
+     * @param columns how many characters its widest line is
+     * @param leastColumns the narrowest it may be beside the page
+     */
+    public Rect beside(Rect view, Rect page, int lines, int columns, int leastColumns) {
+        int wantedHeight = lines * pitch + 3 * padding;
+        int room = view.right() - 2 * padding - (page.right() + 2 * padding);
+        if (room >= width(leastColumns)) {
+            int width = Math.min(room, width(columns));
+            int top = view.top() - 2 * padding;
+            int height = Math.min(wantedHeight, view.height() - 4 * padding);
+            return new Rect(view.right() - 2 * padding - width, top - height, width, height);
+        }
+        int width = Math.min(view.width() - 4 * padding, width(columns));
+        int top = page.y() - 2 * padding;
+        int height = Math.max(0, Math.min(wantedHeight, top - (view.y() + 2 * padding)));
+        return new Rect(page.x(), top - height, width, height);
+    }
+
+    /** How many whole lines a panel this tall has room for - the inverse of the height {@link #panel} gives. */
+    public int linesIn(Rect panel) {
+        return Math.max(0, (panel.height() - 3 * padding) / pitch);
     }
 
     /** How wide a panel of this many columns is: its text, and twice the padding each side. */

@@ -68,9 +68,9 @@ public enum RngStream {
     MEDKIT(0x94D0_49BB_1331_11EBL),
 
     /**
-     * Which gun a sealed cache is dealt from the armoury deck when a commander comes near it (G0050).
-     *
-     * <p>Its own, so a reveal never moves where a wave lands, and stacking the deck moves nothing else.
+     * What a crate holds - how many, and which - dealt from the armoury deck the first time it is opened
+     * (G0056). Its own, so opening a crate never moves where a wave lands, and stacking the deck moves
+     * nothing else.
      */
     ARMOURY(0x2B99_2DDF_A232_49D5L);
 

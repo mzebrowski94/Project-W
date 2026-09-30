@@ -53,6 +53,9 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
      *     scaffolding, as the input map says - the intended binding is one button and a radial menu
      * @param draft key that opens his oldest upgrade draft in the top bar, and takes the highlighted card
      *     while it is open (G0049). With it open the order keys choose a card instead
+     * @param crateClose key that shuts the crate he has open (G0056). With one open the order keys choose
+     *     among its cards and the action key takes the highlighted one; the fourth order key is a card there,
+     *     so shutting it needs a key of its own
      */
     public record Keyboard(
             KeyAxis moveX,
@@ -68,7 +71,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
             int orderForward,
             int orderDefence,
             int orderCancel,
-            int draft) {}
+            int draft,
+            int crateClose) {}
 
     /**
      * What a gamepad does. Every player but the first, in the alpha.
@@ -158,6 +162,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
      * @param repeatDelaySeconds how long a held direction waits before it repeats
      * @param repeatIntervalSeconds how often it repeats after that
      * @param pointerWakePixels how far the mouse must move, in screen pixels, to take the selection
+     * @param scrollLinesPerSecond how fast a pad's right stick, pushed all the way, scrolls a list too long
+     *     for its panel - the pause menu's upgrades (A.1)
      */
     public record Ui(
             int confirm,
@@ -169,7 +175,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
             float stickThreshold,
             float repeatDelaySeconds,
             float repeatIntervalSeconds,
-            int pointerWakePixels) {}
+            int pointerWakePixels,
+            float scrollLinesPerSecond) {}
 
     /** Loads the bindings, falling back to the defaults below for anything missing or malformed. */
     public static ControlsConfig load() {
@@ -189,7 +196,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
                 properties.getFloat("controls.ui.nav.stickThreshold", 0.5f),
                 properties.getFloat("controls.ui.nav.repeatDelaySeconds", 0.35f),
                 properties.getFloat("controls.ui.nav.repeatIntervalSeconds", 0.09f),
-                properties.getInt("controls.ui.nav.pointerWakePixels", 4));
+                properties.getInt("controls.ui.nav.pointerWakePixels", 4),
+                properties.getFloat("controls.ui.nav.scrollLinesPerSecond", 12f));
     }
 
     private static Keyboard keyboard(GameProperties properties) {
@@ -215,7 +223,8 @@ public record ControlsConfig(Keyboard keyboard, Pad pad, Feel feel, Hardware har
                 key(properties, "controls.key.orderForward", Input.Keys.NUM_2),
                 key(properties, "controls.key.orderDefence", Input.Keys.NUM_3),
                 key(properties, "controls.key.orderCancel", Input.Keys.NUM_4),
-                key(properties, "controls.key.draft", Input.Keys.C));
+                key(properties, "controls.key.draft", Input.Keys.C),
+                key(properties, "controls.key.crateClose", Input.Keys.X));
     }
 
     private static Pad pad(GameProperties properties) {

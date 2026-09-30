@@ -542,8 +542,13 @@ public final class AlphaWorlds {
     /** How many of each gun the armoury deck holds: one, so a full shuffle deals every gun once. */
     public static final int ARMOURY_CARDS = 1;
 
-    /** How near a commander must come for a sealed cache to be dealt its gun: well past its reach. */
-    public static final float REVEAL_RADIUS = 10f;
+    /** The fewest and the most a crate is dealt (G0056): two or three, as shipped. */
+    public static final int CRATE_FEWEST = 2;
+
+    public static final int CRATE_MOST = 3;
+
+    /** What Full Crates adds to the fewest: enough to fill every crate. */
+    public static final int FULL_CRATES_MORE = 2;
 
     /** What one mouthful is worth here, so a test can count them. */
     public static final Grant MOUTHFUL = new Grant.Feed(1);
@@ -873,7 +878,7 @@ public final class AlphaWorlds {
                                         new Grant.Arm(WeaponKind.RAILGUN),
                                         Grant.NOTHING,
                                         SHINE_SECONDS,
-                                        new ArmouryDef(ARMOURY_CARDS, 0f)))
+                                        new ArmouryDef(ARMOURY_CARDS, false)))
                         .put(
                                 PickupKind.ARMOURY_FLAMER,
                                 new PickupDef(
@@ -882,7 +887,7 @@ public final class AlphaWorlds {
                                         new Grant.Arm(WeaponKind.FLAMER),
                                         Grant.NOTHING,
                                         SHINE_SECONDS,
-                                        new ArmouryDef(ARMOURY_CARDS, 0f)))
+                                        new ArmouryDef(ARMOURY_CARDS, false)))
                         .put(
                                 PickupKind.ARMOURY_SHOTGUN,
                                 new PickupDef(
@@ -891,7 +896,7 @@ public final class AlphaWorlds {
                                         new Grant.Arm(WeaponKind.SHOTGUN),
                                         Grant.NOTHING,
                                         SHINE_SECONDS,
-                                        new ArmouryDef(ARMOURY_CARDS, 0f)))
+                                        new ArmouryDef(ARMOURY_CARDS, false)))
                         .put(
                                 PickupKind.ARMOURY_LASER,
                                 new PickupDef(
@@ -900,23 +905,29 @@ public final class AlphaWorlds {
                                         new Grant.Arm(WeaponKind.LASER),
                                         Grant.NOTHING,
                                         SHINE_SECONDS,
-                                        new ArmouryDef(ARMOURY_CARDS, 0f)))
+                                        new ArmouryDef(ARMOURY_CARDS, false)))
                         .put(
-                                PickupKind.ARMOURY_SEALED,
+                                PickupKind.CRATE,
                                 new PickupDef(
                                         PICKUP_RADIUS,
-                                        Look.ARMOURY_SEALED,
+                                        Look.CRATE,
                                         Grant.NOTHING,
                                         Grant.NOTHING,
                                         SHINE_SECONDS,
-                                        new ArmouryDef(0, REVEAL_RADIUS)))
+                                        new ArmouryDef(0, true)))
                         .put(PickupKind.RABBIT, new PickupDef(RABBIT_RADIUS, Look.RABBIT, Grant.NOTHING, MOUTHFUL, 0f))
                         .put(
                                 PickupKind.BARREL,
                                 new PickupDef(PICKUP_RADIUS, Look.BARREL, Grant.NOTHING, Grant.DETONATE, 0f))
                         .put(
                                 PickupKind.MEDKIT,
-                                new PickupDef(PICKUP_RADIUS, Look.MEDKIT, new Grant.Mend(), Grant.NOTHING, 0f))
+                                new PickupDef(
+                                        PICKUP_RADIUS,
+                                        Look.MEDKIT,
+                                        new Grant.Mend(),
+                                        Grant.NOTHING,
+                                        0f,
+                                        new ArmouryDef(ARMOURY_CARDS, false)))
                         .build(),
                 Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
                         .put(
@@ -1247,7 +1258,8 @@ public final class AlphaWorlds {
                 stats(),
                 upgrades(),
                 new SimConfig.SwarmConfig(100),
-                new SimConfig.MedkitConfig(0));
+                new SimConfig.MedkitConfig(0),
+                new SimConfig.CrateConfig(CRATE_FEWEST, CRATE_MOST));
     }
 
     /** Cards a draft deals here - more than the catalogue has, so every draft offers all it can. */
@@ -1322,11 +1334,12 @@ public final class AlphaWorlds {
                         UpgradeKind.FIREPOWER,
                         off(
                                 2,
-                                new Effect.Deal(PickupKind.ARMOURY_FLAMER, FIREPOWER_FLAMERS),
+                                new Effect.Stock(PickupKind.ARMOURY_FLAMER, FIREPOWER_STOCK),
                                 new Effect.Gun(WeaponKind.FLAMER, Stat.GUN_DAMAGE, Target.TEAM, FIREPOWER_PERCENT)))
                 .put(
                         UpgradeKind.EXPLOSIVES,
                         off(1, new Effect.Chance(AiChance.THROW_A_GRENADE, Target.SQUAD, EXPLOSIVES_PER_SECOND)))
+                .put(UpgradeKind.FULL_CRATES, off(1, new Effect.Count(Stat.CRATE_LEAST, Target.SIDE, FULL_CRATES_MORE)))
                 .build();
     }
 
@@ -1336,7 +1349,7 @@ public final class AlphaWorlds {
     public static final int MARCH_PERCENT = 10;
     public static final int FIRST_AID_PERCENT = 25;
     public static final int SELF_TREATMENT_SECONDS = 1;
-    public static final int FIREPOWER_FLAMERS = 2;
+    public static final int FIREPOWER_STOCK = 1;
     public static final int FIREPOWER_PERCENT = 25;
 
     /** Explosives' chance a second: high, so a test sees a man throw at his first opportunity. */

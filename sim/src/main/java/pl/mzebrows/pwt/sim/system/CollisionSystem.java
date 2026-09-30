@@ -37,11 +37,9 @@ import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Velocity;
-import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
-import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -79,7 +77,6 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<Armour> ARMOUR = ComponentMapper.getFor(Armour.class);
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
     private static final ComponentMapper<Grip> GRIP = ComponentMapper.getFor(Grip.class);
-    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Shield> SHIELD = ComponentMapper.getFor(Shield.class);
     private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
 
@@ -228,7 +225,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         PickupDef def = pickups.of(pickup.kind);
-        if (!def.offersSomethingTo(FACTION.get(taker).side) || !worthTo(def.grantFor(FACTION.get(taker).side), taker)) {
+        if (!def.offersSomethingTo(FACTION.get(taker).side)
+                || !Grants.worthTo(def.grantFor(FACTION.get(taker).side), taker)) {
             return;
         }
         if (pickup.shunned) {
@@ -303,18 +301,6 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (!PROJECTILE.get(projectile).piercing || prop(target)) {
             spawner.markDead(projectile);
         }
-    }
-
-    /**
-     * Whether what a pickup grants would do anything for <em>this</em> taker (G0006 as amended by G0053).
-     * A medkit is worth something only to a man with a wound; everything else is worth taking by anybody
-     * its side is offered it. Asked of the grant and the taker, never of a flag on the pickup.
-     */
-    private static boolean worthTo(Grant grant, Entity taker) {
-        return switch (grant) {
-            case Grant.Mend _ -> VITALITY.has(taker) && VITALITY.get(taker).wounded();
-            case Grant.None _, Grant.Detonate _, Grant.Arm _, Grant.Feed _, Grant.Mutate _, Grant.Reinforce _ -> true;
-        };
     }
 
     /**

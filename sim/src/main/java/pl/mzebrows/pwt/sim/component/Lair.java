@@ -30,6 +30,15 @@ public final class Lair implements Component, Pool.Poolable {
     /** Whether it has woken. */
     private boolean woken;
 
+    /**
+     * While it waits: how many commanders on their feet stand on its ground, and how many it is waiting
+     * for (B.1). Published for the interface - a boss held back by a player the others cannot see is a
+     * number the game must show (pillar 5). Written by {@code LairSystem} every tick it waits.
+     */
+    private int present;
+
+    private int needed;
+
     /** Says where the players have to be for it to wake, and returns this, for a scenario. */
     public Lair at(TileRect where) {
         this.ground = where;
@@ -78,6 +87,22 @@ public final class Lair implements Component, Pool.Poolable {
         return pending.get(index);
     }
 
+    /** Commanders on their feet standing on its ground, as of the last tick it waited. */
+    public int present() {
+        return present;
+    }
+
+    /** Commanders on their feet it is waiting for, as of the last tick it waited. */
+    public int needed() {
+        return needed;
+    }
+
+    /** Says how many are on its ground of how many it waits for. */
+    public void count(int newPresent, int newNeeded) {
+        this.present = newPresent;
+        this.needed = newNeeded;
+    }
+
     /** Marks it woken; it never wakes again. */
     public void wake() {
         woken = true;
@@ -88,5 +113,7 @@ public final class Lair implements Component, Pool.Poolable {
         pending.clear();
         ground = TileRect.ofTile(0, 0);
         woken = false;
+        present = 0;
+        needed = 0;
     }
 }

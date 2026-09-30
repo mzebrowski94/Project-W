@@ -15,17 +15,21 @@ import java.util.List;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Damage;
-import pl.mzebrows.pwt.sim.component.Pickup;
+import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.Whole;
+import pl.mzebrows.pwt.sim.upgrade.Effect;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
@@ -250,38 +254,64 @@ class UpgradeTest {
     }
 
     /**
-     * Firepower stacks the armoury deck (G0050): with one rank the fixture's deck is one of each gun
-     * and three flamers, so six caches revealed together are three flamers - read through the one port.
+     * Firepower stocks every crate (G0056): with one rank every crate opened after the pick holds a flamer,
+     * whatever the deck dealt - read through the one port.
      */
     @Test
-    void dealsMoreFlamersToSealedCachesWithFirepower() {
+    void stocksEveryCrateWithAFlamerUnderFirepower() {
         Simulation simulation = new Simulation(AlphaWorlds.config());
         simulation.spawnCommander(MIDDLE, MIDDLE);
         hold(simulation, new Upgrades.Held(UpgradeKind.FIREPOWER, Upgrades.SHARED, 1));
 
-        List<PickupKind> dealt = reveal(simulation, 6);
+        for (int crate = 0; crate < 4; crate++) {
+            assertThat(open(simulation, crate)).contains(PickupKind.ARMOURY_FLAMER);
+        }
+    }
 
-        assertThat(dealt)
-                .filteredOn(kind -> kind == PickupKind.ARMOURY_FLAMER)
-                .hasSize(AlphaWorlds.ARMOURY_CARDS + AlphaWorlds.FIREPOWER_FLAMERS);
+    /** Full Crates fills every crate opened after the pick to the most a crate holds (G0056). */
+    @Test
+    void fillsEveryCrateUnderFullCrates() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        hold(simulation, new Upgrades.Held(UpgradeKind.FULL_CRATES, Upgrades.SHARED, 1));
+
+        for (int crate = 0; crate < 3; crate++) {
+            assertThat(open(simulation, crate)).hasSize(SimConfig.CrateConfig.CAPACITY);
+        }
     }
 
     /**
-     * A deck that grows mid-shuffle is shuffled afresh: two cards out of the plain deck, then Firepower
-     * lands, and the next six are the whole stacked deck - three flamers, whatever the first two were.
+     * A deal stacks the deck the crates are dealt from, and a deck that grows mid-shuffle is shuffled
+     * afresh: one crate out of the plain deck, then two more flamers land, and the next seven cards are the
+     * whole stacked deck - three flamers, whatever the first crate held.
      */
     @Test
-    void shufflesTheArmouryDeckAfreshWhenFirepowerLands() {
-        Simulation simulation = new Simulation(AlphaWorlds.config());
+    void shufflesTheArmouryDeckAfreshWhenADealStacksIt() {
+        SimConfig config = AlphaWorlds.config();
+        config = config.withUpgrades(config.upgrades()
+                .map(
+                        UpgradeKind.FIREPOWER,
+                        firepower -> new UpgradeDef(
+                                Side.PLAYER,
+                                0,
+                                2,
+                                1,
+                                null,
+                                0,
+                                List.of(new Effect.Deal(PickupKind.ARMOURY_FLAMER, 2)))));
+        Simulation simulation = new Simulation(config);
         simulation.spawnCommander(MIDDLE, MIDDLE);
-        reveal(simulation, 2);
+        open(simulation, 0);
         hold(simulation, new Upgrades.Held(UpgradeKind.FIREPOWER, Upgrades.SHARED, 1));
 
-        List<PickupKind> dealt = reveal(simulation, 6);
+        List<PickupKind> dealt = new ArrayList<>();
+        for (int crate = 1; dealt.size() < 7; crate++) {
+            dealt.addAll(open(simulation, crate));
+        }
 
-        assertThat(dealt)
+        assertThat(dealt.subList(0, 7))
                 .filteredOn(kind -> kind == PickupKind.ARMOURY_FLAMER)
-                .hasSize(AlphaWorlds.ARMOURY_CARDS + AlphaWorlds.FIREPOWER_FLAMERS);
+                .hasSize(AlphaWorlds.ARMOURY_CARDS + 2);
     }
 
     /** Its damage is the flamer's alone, and reaches whoever holds one - a trooper who took a crate too. */
@@ -298,17 +328,22 @@ class UpgradeTest {
         assertThat(modifiers.gunDamage(trooper, WeaponKind.RAILGUN, 100)).isEqualTo(100);
     }
 
-    /** Lays this many sealed caches beside the commander, steps once, and says what each was dealt. */
-    private static List<PickupKind> reveal(Simulation simulation, int caches) {
-        List<Entity> laid = new ArrayList<>();
-        for (int i = 0; i < caches; i++) {
-            laid.add(simulation.spawnPickup(PickupKind.ARMOURY_SEALED, MIDDLE + i - caches / 2f, MIDDLE + 3f));
-        }
+    /**
+     * Lays a crate beside the commander, opens it, says what it was dealt, and shuts it and puts it out of
+     * reach so the next can be opened. {@code nth} keeps the crates apart.
+     */
+    private static List<PickupKind> open(Simulation simulation, int nth) {
+        Entity crate = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + 2f, MIDDLE);
         simulation.step();
+        simulation.step(CommanderInput.IDLE.acting(true));
+        Crate held = crate.getComponent(Crate.class);
         List<PickupKind> dealt = new ArrayList<>();
-        for (Entity cache : laid) {
-            dealt.add(cache.getComponent(Pickup.class).kind);
+        for (int i = 0; i < held.count; i++) {
+            dealt.add(held.get(i));
         }
+        simulation.step(
+                new PlayerInputs().set(0, CommanderInput.IDLE.acting(true)).closeCrate(0));
+        crate.getComponent(Position.class).set(MIDDLE + 10f * (nth + 1), MIDDLE + 30f);
         return dealt;
     }
 

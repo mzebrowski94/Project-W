@@ -1,5 +1,8 @@
 # G0021: One action key, and the game chooses what it does
 
+**Amended by G0056** (2026-09-30): opening a crate is on the list the key chooses from; what he then
+takes from it is chosen in the top bar - the second named exception to pillar 1, beside the draft.
+
 **Trigger.** Adding an action the commander performs on something near him, or proposing any way for
 the player to pick between two of them.
 

@@ -45,6 +45,12 @@ final class Msg {
     /** A card taken: the value is the draft's serial, the extra the kind's code. */
     static final int EVENT_PICK = 2;
 
+    /**
+     * A crate's event (G0056): the value is the code of the pickup taken from the crate the slot has open,
+     * or {@link Bundle#CRATE_CLOSE} for shutting it.
+     */
+    static final int EVENT_CRATE = 3;
+
     /** The bytes one input event takes on the wire. */
     static final int EVENT_BYTES = 4 + 1 + 1 + 4 + 1;
 

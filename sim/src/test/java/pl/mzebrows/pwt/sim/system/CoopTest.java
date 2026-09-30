@@ -199,6 +199,33 @@ class CoopTest {
         assertThat(at(second).x - at(first).x).isLessThan(stretched);
     }
 
+    /** A player at a machine of his own has a camera of his own: no rope ties him to anybody else's (B). */
+    @Test
+    void letsTwoPlayersAtDifferentMachinesWalkAsFarApartAsTheyLike() {
+        Simulation simulation = simulation();
+        Entity first = simulation.spawnCommander(MIDDLE - 5f, MIDDLE, 0);
+        Entity second = simulation.spawnCommander(MIDDLE + 5f, MIDDLE, 1);
+        simulation.step(new PlayerInputs().join(0, 0).join(1, 3));
+
+        steps(simulation, A_WHILE, inputs(walking(-1f, 0f), walking(1f, 0f)));
+
+        assertThat(at(second).x - at(first).x).isGreaterThan(2f * LEASH_RADIUS + 1f);
+    }
+
+    /** Two on one screen are still held to each other, whoever a third is playing from (B). */
+    @Test
+    void holdsTwoPlayersAtOneMachineTogetherWhileAThirdPlaysFromAnother() {
+        Simulation simulation = simulation();
+        Entity first = simulation.spawnCommander(MIDDLE - 5f, MIDDLE, 0);
+        Entity second = simulation.spawnCommander(MIDDLE + 5f, MIDDLE, 1);
+        simulation.spawnCommander(MIDDLE + 5f, MIDDLE + 20f, 2);
+        simulation.step(new PlayerInputs().join(0, 0).join(1, 0).join(2, 4));
+
+        steps(simulation, A_WHILE, inputs(walking(-1f, 0f), walking(1f, 0f), walking(1f, 0f)));
+
+        assertThat(at(second).x - at(first).x).isCloseTo(2f * LEASH_RADIUS, TOLERANCE);
+    }
+
     @Test
     void leavesASoleCommanderFreeToWalkWhereverHeLikes() {
         Simulation simulation = simulation();

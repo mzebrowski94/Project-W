@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim;
 
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
@@ -20,11 +21,17 @@ public final class PlayerInputs {
 
     private final boolean[] joins;
 
+    private final int[] joinMachines;
+
     private final @Nullable UpgradeKind[] picks;
 
     private final int[] pickSerials;
 
     private final boolean[] leaving;
+
+    private final @Nullable PickupKind[] crateTakes;
+
+    private final boolean[] crateCloses;
 
     private final boolean[] returning;
 
@@ -42,9 +49,12 @@ public final class PlayerInputs {
         this.bySlot = new CommanderInput[capacity];
         this.orders = new Order[capacity];
         this.joins = new boolean[capacity];
+        this.joinMachines = new int[capacity];
         this.picks = new UpgradeKind[capacity];
         this.pickSerials = new int[capacity];
         this.leaving = new boolean[capacity];
+        this.crateTakes = new PickupKind[capacity];
+        this.crateCloses = new boolean[capacity];
         this.returning = new boolean[capacity];
         clear();
     }
@@ -85,9 +95,25 @@ public final class PlayerInputs {
      * him if the slot has none, and does nothing if it already has one (G0028, G0038).
      */
     public PlayerInputs join(int slot) {
+        return join(slot, 0);
+    }
+
+    /**
+     * A player takes this slot on this tick, sitting at this machine. The machine is what the leash is
+     * reckoned by (B): commanders sharing one screen are held together, commanders at different machines
+     * are not. Offline every slot sits at machine 0; online it is the peer that holds the slot.
+     */
+    public PlayerInputs join(int slot, int machine) {
         requireSlot(slot);
         joins[slot] = true;
+        joinMachines[slot] = machine;
         return this;
+    }
+
+    /** The machine a player joining this slot on this tick sits at. Meaningless unless he {@link #joins}. */
+    public int machineOf(int slot) {
+        requireSlot(slot);
+        return joinMachines[slot];
     }
 
     /** Whether a player takes this slot on this tick. */
@@ -118,6 +144,36 @@ public final class PlayerInputs {
     public int pickSerialOf(int slot) {
         requireSlot(slot);
         return pickSerials[slot];
+    }
+
+    /**
+     * This slot's player takes a pickup of this kind from the crate he has open (G0056). An event, by kind
+     * rather than by place. Whether it counts - his crate, still holding one, worth something to him - is
+     * the simulation's to decide.
+     */
+    public PlayerInputs takeFromCrate(int slot, PickupKind kind) {
+        requireSlot(slot);
+        crateTakes[slot] = kind;
+        return this;
+    }
+
+    /** The kind this slot takes from his crate on this tick, or null. */
+    public @Nullable PickupKind crateTakeOf(int slot) {
+        requireSlot(slot);
+        return crateTakes[slot];
+    }
+
+    /** This slot's player closes the crate he has open (G0056). An event. */
+    public PlayerInputs closeCrate(int slot) {
+        requireSlot(slot);
+        crateCloses[slot] = true;
+        return this;
+    }
+
+    /** Whether this slot closes his crate on this tick. */
+    public boolean closesCrate(int slot) {
+        requireSlot(slot);
+        return crateCloses[slot];
     }
 
     /**
@@ -179,9 +235,12 @@ public final class PlayerInputs {
             bySlot[slot] = CommanderInput.IDLE;
             orders[slot] = null;
             joins[slot] = false;
+            joinMachines[slot] = 0;
             picks[slot] = null;
             pickSerials[slot] = 0;
             leaving[slot] = false;
+            crateTakes[slot] = null;
+            crateCloses[slot] = false;
             returning[slot] = false;
         }
         invulnerabilitySwitched = false;

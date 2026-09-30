@@ -23,8 +23,10 @@ public enum UpgradeKind {
     THICK_SKIN,
     /** The chooser's wounds clear on their own some seconds after his last one (G0053). Personal. */
     SELF_TREATMENT,
-    /** More flamers dealt to sealed caches, and harder-hitting flames for whoever holds one (G0050). */
+    /** A flamer in every crate opened from now on, and harder-hitting flames for whoever holds one (G0056). */
     FIREPOWER,
     /** Troopers who throw grenades into packs - only where the blast is the enemy's (G0051). */
-    EXPLOSIVES
+    EXPLOSIVES,
+    /** Every crate opened from now on holds as many pickups as a crate can (G0056). */
+    FULL_CRATES
 }

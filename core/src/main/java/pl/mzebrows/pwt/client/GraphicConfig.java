@@ -34,6 +34,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param heatMark how to draw how hot the gun a unit is holding has become
  * @param woundMark how to draw the wounds a man on his feet is carrying
  * @param shieldMark how to draw a shield in front of a man
+ * @param crateMark how to draw a crate (G0056)
  * @param camera how the view follows what it is watching, and how far out it may sit
  * @param terminal how the top bar's terminal paces its lines
  */
@@ -59,6 +60,7 @@ public record GraphicConfig(
         HeatMark heatMark,
         WoundMark woundMark,
         ShieldMark shieldMark,
+        CrateMark crateMark,
         CameraDirector.Settings camera,
         Terminal.Settings terminal) {
 
@@ -107,6 +109,7 @@ public record GraphicConfig(
                 heatMark(properties),
                 woundMark(properties),
                 shieldMark(properties),
+                crateMark(properties),
                 camera(properties),
                 terminal(properties));
     }
@@ -257,7 +260,7 @@ public record GraphicConfig(
             case ARMOURY_FLAMER -> "ff7a2eff";
             case ARMOURY_SHOTGUN -> "4ad8a0ff";
             case ARMOURY_LASER -> "46c8e6ff";
-            case ARMOURY_SEALED -> "a89c84ff";
+            case CRATE -> "a89c84ff";
             case BARREL -> "ff3a10ff";
             case RABBIT -> "f0f0f0ff";
             case MENDING -> "4ce88aff";
@@ -397,6 +400,12 @@ public record GraphicConfig(
                 properties.getFloat("graphic.shield.scale", 1.85f),
                 properties.getInt("graphic.shield.segments", 24),
                 color(properties, "graphic.shield.color", "7fd8ffff"));
+    }
+
+    private static CrateMark crateMark(GameProperties properties) {
+        return new CrateMark(
+                properties.getFloat("graphic.crate.dot", 0.35f),
+                color(properties, "graphic.crate.dotColor", "ffffffff"));
     }
 
     private static WoundMark woundMark(GameProperties properties) {

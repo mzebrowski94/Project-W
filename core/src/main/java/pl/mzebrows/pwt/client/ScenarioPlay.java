@@ -4,6 +4,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
@@ -25,6 +26,12 @@ public interface ScenarioPlay extends AutoCloseable {
      * kind, as it was shown (G0049). It counts from the next tick, like an order.
      */
     void pick(int seat, int serial, UpgradeKind kind);
+
+    /**
+     * The crate this seat's slot has open, from the next tick (G0056): takes a pickup of this kind from it,
+     * or - for null - shuts it. Kept while paused, as a solo crate is chosen from paused.
+     */
+    void crate(int seat, @Nullable PickupKind take);
 
     /**
      * Takes the card at this place on the keyboard seat's oldest draft, from the next tick - the harness's

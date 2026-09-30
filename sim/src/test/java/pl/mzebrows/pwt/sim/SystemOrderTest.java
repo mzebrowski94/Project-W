@@ -28,6 +28,7 @@ import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
 import pl.mzebrows.pwt.sim.system.ControlPointSystem;
 import pl.mzebrows.pwt.sim.system.CooldownSystem;
+import pl.mzebrows.pwt.sim.system.CrateSystem;
 import pl.mzebrows.pwt.sim.system.DamageSystem;
 import pl.mzebrows.pwt.sim.system.DodgeSystem;
 import pl.mzebrows.pwt.sim.system.DragSystem;
@@ -195,6 +196,9 @@ class SystemOrderTest {
         rows.add(new Before(EvolutionSystem.class, DamageSystem.class, "damage lands on the new strain"));
         rows.add(new Before(DamageSystem.class, ActionSystem.class, "a man down this tick is on offer this tick"));
         rows.add(new Before(DamageSystem.class, AidSystem.class, "a man down this tick is on offer this tick"));
+        rows.add(new Before(
+                ActionSystem.class, CrateSystem.class, "a crate opened this tick is dealt this tick (G0056)"));
+        rows.add(new Before(DamageSystem.class, CrateSystem.class, "a man hurt this tick has his crate shut (G0056)"));
         rows.add(new Before(
                 ActionSystem.class, CasualtySystem.class, "a man picked up as his clock runs out is not buried"));
         rows.add(new Before(

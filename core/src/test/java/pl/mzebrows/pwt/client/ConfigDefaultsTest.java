@@ -167,6 +167,7 @@ class ConfigDefaultsTest {
                         heat(),
                         GraphicConfig.load().woundMark(),
                         GraphicConfig.load().shieldMark(),
+                        GraphicConfig.load().crateMark(),
                         camera(),
                         GraphicConfig.load().terminal()))
                 .isInstanceOf(IllegalArgumentException.class);

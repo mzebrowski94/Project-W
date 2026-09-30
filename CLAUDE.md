@@ -33,7 +33,7 @@ belongs on the definition every kind already has rather than on the one kind tha
 `GameProperties` (config), `ConfigBinder` (config records from text), `AlphaWorlds` (test fixtures), `Transport` (links between machines),
 `LoopbackNetwork` and `ConditionedTransport` (networks for tests and lag on demand), `NetLog` (the
 connection log), `WorldCodec` (a world as bytes, a hash, a diff), `SessionHarness` (a whole online
-session in one test), `Modifiers` (any number an upgrade may move), `Whole` (the one rounding rule for hit points and damage, G0054) - plus a component or system for most
+session in one test), `Modifiers` (any number an upgrade may move), `Grants` (what a pickup's grant does to a taker, and whether it is worth anything to him), `Whole` (the one rounding rule for hit points and damage, G0054) - plus a component or system for most
 behaviour. `docs/glossary.md` is the cheap check: if the word exists, the thing usually does too.
 
 **Read narrow.** The target module, the classes the task names, their nearest tests. Widen only when a
@@ -115,8 +115,9 @@ What makes it this game. A feature that breaks one is wrong regardless of its de
 it rather than working around it.
 
 1. **Arcade first.** Fights decided by reflexes, levels by tactics. A mechanic that makes the player
-   stop and compute belongs in a different game. One named exception: choosing an upgrade - he picks
-   the moment, it shows three cards at most with exact numbers, and it pauses only a solo game (G0049).
+   stop and compute belongs in a different game. Two named exceptions, on the same terms: choosing an
+   upgrade, and choosing what to take from a crate - he picks the moment, it shows a few cards in the top
+   bar (three for a draft, four at most for a crate), and it pauses only a solo game (G0049, G0056).
 2. **The commander is a unit, not a cursor.** You stand on the field, you can be killed, you are the
    squad's biggest weapon. No detached god view, no invulnerability.
 3. **The squad is the resource.** Troopers won and lost during play. No shop, no loadout screen, no

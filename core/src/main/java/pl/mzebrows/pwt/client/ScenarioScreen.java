@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -25,7 +26,9 @@ import pl.mzebrows.pwt.sim.component.Focus;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Shake;
+import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.ui.hud.CrateBar;
 import pl.mzebrows.pwt.ui.hud.DraftBar;
 import pl.mzebrows.pwt.ui.hud.DraftPause;
 import pl.mzebrows.pwt.ui.hud.GoalLine;
@@ -101,6 +104,9 @@ public final class ScenarioScreen extends ScreenAdapter {
     /** Every upgrade held, beside the pause menu: more than the aside has room for. */
     private final HeldUpgradesPainter heldUpgrades;
 
+    /** The wheel's notches since the last frame, down for positive. */
+    private float wheelNotches;
+
     private final KeyPresses keys = keycode -> Gdx.input.isKeyJustPressed(keycode);
     private final KeyHolds held = keycode -> Gdx.input.isKeyPressed(keycode);
 
@@ -134,6 +140,11 @@ public final class ScenarioScreen extends ScreenAdapter {
     /** The draft in the top bar - one per machine (D18) - and the pause it makes in a solo game (D2). */
     private final DraftBar draftBar = new DraftBar();
 
+    /** The crate in the top bar (G0056): one per machine, sharing the bar with the draft. */
+    private final CrateBar crateBar = new CrateBar();
+
+    private final CrateHints crateHints;
+
     private final DraftPause draftPause = new DraftPause();
     private final DraftHints draftHints;
 
@@ -160,6 +171,7 @@ public final class ScenarioScreen extends ScreenAdapter {
                 new UpgradeReporter(),
                 new ActionPrompts(play::local, Log::info)));
         this.draftHints = new DraftHints(context.controlsConfig());
+        this.crateHints = new CrateHints(context.controlsConfig());
         this.alarms = new PanelAlarms(
                 style.alarmSeconds(), style.alarmShake(), style.pulseHz(), style.motionScale(), style.flashScale());
         this.topBar = new TopBarPainter(
@@ -186,7 +198,8 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().orderMark(),
                 context.graphicConfig().heatMark(),
                 context.graphicConfig().woundMark(),
-                context.graphicConfig().shieldMark());
+                context.graphicConfig().shieldMark(),
+                context.graphicConfig().crateMark());
         terrain = new TerrainRenderer(
                 viewport,
                 context.graphicConfig().terrainPalette(),
@@ -203,6 +216,31 @@ public final class ScenarioScreen extends ScreenAdapter {
         // The press that started the level - Enter, Space, a click, SOUTH - is spent, not fired.
         input.spendHeldPresses();
         bound = null;
+        // Only the wheel is an event in libGDX; everything else here is polled.
+        Gdx.input.setInputProcessor(new InputAdapter() {
+            @Override
+            public boolean scrolled(float amountX, float amountY) {
+                wheelNotches += amountY;
+                return true;
+            }
+        });
+    }
+
+    /**
+     * How far down any pad's aiming stick is pushed, past its dead zone - what scrolls the pause menu's
+     * list of upgrades (A.1). The stick that aims in a level is idle in a menu, so it is free for this.
+     */
+    private float rightStickDown() {
+        ControlsConfig controls = context.controlsConfig();
+        float most = 0f;
+        for (int i = 0; i < context.gamepads().count(); i++) {
+            // The aiming axis reads up as positive; a list scrolls down for positive.
+            float down = -context.gamepads().get(i).axis(controls.pad().aimY());
+            if (Math.abs(down) > controls.feel().aimDeadZone() && Math.abs(down) > Math.abs(most)) {
+                most = down;
+            }
+        }
+        return most;
     }
 
     /** The window lost focus: offline, the pause menu opens (plan Q7). */
@@ -215,7 +253,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         // Input is read first, and therefore against the camera as it was when the frame the player
         // reacted to was drawn. Moving the camera before reading would interpret the mouse against a
         // view they have not seen yet.
-        PlayerInputs players = input.read(held, keys, menus.menuOpen(), draftBar.seat());
+        PlayerInputs players = input.read(held, keys, menus.menuOpen(), draftBar.seat(), crateBar.seat());
         for (int joined = input.seats().nextNewlySeated();
                 joined >= 0;
                 joined = input.seats().nextNewlySeated()) {
@@ -228,6 +266,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             input.spendHeldPresses();
         }
         draft();
+        crate(players);
         for (HarnessCommand command : HarnessControls.poll(keys)) {
             play.apply(command, players);
         }
@@ -264,9 +303,10 @@ public final class ScenarioScreen extends ScreenAdapter {
         String name = play.scenarioName();
         readoutWriter.fill(world, name == null ? "" : name, play.planet(), readout);
         draftBar.follow(readout);
+        followCrate();
         goalLine.update(readout, delta);
         reporters.report(readout, terminal);
-        if (!draftBar.open()) {
+        if (!draftBar.open() && !crateBar.open()) {
             // The terminal holds its queue while the draft hides it, so a line said meanwhile types out
             // after it rather than ageing out unseen.
             terminal.advance(delta);
@@ -291,7 +331,22 @@ public final class ScenarioScreen extends ScreenAdapter {
         if (draftBar.open()) {
             draftHints.follow(draftBar.seat(), input.playStation(draftBar.seat()));
         }
-        topBar.render(layout, readout, goalLine, terminal, lines, mode, draftBar, world.upgradeView(), draftHints);
+        if (crateBar.open()) {
+            crateHints.follow(crateBar.seat(), input.playStation(crateBar.seat()));
+        }
+        topBar.render(
+                layout,
+                readout,
+                goalLine,
+                terminal,
+                lines,
+                mode,
+                draftBar,
+                world.upgradeView(),
+                draftHints,
+                crateBar,
+                crateHints,
+                world.config());
         if (rollCall) {
             bottomBar.renderRollCall(layout);
         } else {
@@ -299,8 +354,13 @@ public final class ScenarioScreen extends ScreenAdapter {
         }
         menus.draw(layout, play);
         if (menus.showsPausePage()) {
-            heldUpgrades.draw(layout.view(), readout, menus.pageAlpha());
+            heldUpgrades.draw(layout.view(), menus.pagePanel(), readout, menus.pageAlpha());
+            heldUpgrades.wheel(wheelNotches, menus.pointerX(), menus.pointerY());
+            heldUpgrades.glide(rightStickDown(), context.controlsConfig().ui().scrollLinesPerSecond(), delta);
+        } else {
+            heldUpgrades.home();
         }
+        wheelNotches = 0f;
         drawReticles(play.renderAlpha());
     }
 
@@ -316,13 +376,14 @@ public final class ScenarioScreen extends ScreenAdapter {
         } else {
             for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
                 DraftBar.Key key = input.draftKey(seat);
-                if (key != null && draftBar.press(seat, play.slotOf(seat), key, readout)) {
+                // One bar per machine: while a crate has it, a draft key opens nothing (G0056).
+                if (key != null && !crateBar.open() && draftBar.press(seat, play.slotOf(seat), key, readout)) {
                     play.pick(seat, draftBar.takenSerial(), draftBar.takenKind());
                 }
             }
         }
         boolean solo = playersIn() <= 1;
-        switch (draftPause.next(draftBar.open(), solo, play.paused(), menus.menuOpen())) {
+        switch (draftPause.next(draftBar.open() || crateBar.open(), solo, play.paused(), menus.menuOpen())) {
             case PAUSE -> play.setDraftPaused(true);
             case RESUME -> play.setDraftPaused(false);
             case NONE -> {
@@ -330,6 +391,62 @@ public final class ScenarioScreen extends ScreenAdapter {
             }
         }
         menus.quietPause(draftPause.ours() || play.pausedForDraft());
+    }
+
+    /**
+     * The crate bar's frame (G0056): its seat's keys work it, and a take or a shut goes to the world for
+     * that seat's slot. And the gate that keeps one crate per machine: while the bar is taken - by a crate
+     * or a draft - another local seat's press on a crate within reach is not sent at all.
+     */
+    private void crate(PlayerInputs players) {
+        if (menus.menuOpen()) {
+            // The crate stays open in the world; the bar comes back when the menu goes.
+            crateBar.close();
+            return;
+        }
+        if (crateBar.open()) {
+            int seat = crateBar.seat();
+            CrateBar.Key key = input.crateKey(seat);
+            if (key != null) {
+                switch (crateBar.press(seat, key, readout)) {
+                    case TAKE -> play.crate(seat, crateBar.taken());
+                    case CLOSE -> play.crate(seat, null);
+                    case NONE -> {
+                        // A highlight moved, or nothing he may take.
+                    }
+                }
+            }
+        }
+        boolean taken = crateBar.open() || draftBar.open();
+        for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
+            int slot = play.slotOf(seat);
+            if (taken
+                    && seat != crateBar.seat()
+                    && slot >= 0
+                    && readout.player(slot).action == ActionKind.OPEN_CRATE
+                    && players.get(seat).acting()) {
+                players.set(seat, players.get(seat).acting(false));
+            }
+        }
+    }
+
+    /**
+     * Keeps the crate bar true to the world once the readout is fresh: it shows the crate of the first local
+     * seat with one open, and any other local seat's open crate is shut, so a machine holds one at a time.
+     */
+    private void followCrate() {
+        for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
+            slotOfSeat[seat] = play.slotOf(seat);
+        }
+        if (menus.menuOpen()) {
+            return;
+        }
+        crateBar.follow(readout, slotOfSeat, draftBar.open());
+        int intruder = crateBar.intruder(readout, slotOfSeat, draftBar.open());
+        if (intruder >= 0) {
+            play.crate(intruder, null);
+            crateBar.settle(slotOfSeat[intruder]);
+        }
     }
 
     private int playersIn() {
@@ -471,6 +588,7 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     @Override
     public void hide() {
+        Gdx.input.setInputProcessor(null);
         context.hud().showSystemCursor();
         renderer.dispose();
         terrain.dispose();
@@ -486,6 +604,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             commanders = current.engine().getEntitiesFor(COMMANDERS);
             camera = new CameraDirector(context.graphicConfig().camera());
             draftBar.close();
+            crateBar.forget();
             bound = current;
         }
     }

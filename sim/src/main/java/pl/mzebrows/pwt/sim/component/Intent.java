@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 
 /**
  * What a commander is trying to do this tick. Written from the per-tick input value object before
@@ -47,6 +48,16 @@ public final class Intent implements Component, Pool.Poolable {
      */
     public @Nullable Order order;
 
+    /**
+     * The pickup he takes from the crate he has open this tick, or null (G0056). An event, by kind rather
+     * than by place, so a crate that changed between his press and the tick cannot hand him something he
+     * never saw.
+     */
+    public @Nullable PickupKind crateTake;
+
+    /** Whether he closes the crate he has open this tick (G0056). An event. */
+    public boolean crateClose;
+
     /** Copies a tick's worth of intent in, and returns this component, for fluent spawning. */
     public Intent set(
             float newMoveX,
@@ -69,6 +80,15 @@ public final class Intent implements Component, Pool.Poolable {
         this.acting = newActing;
         this.dragging = newDragging;
         this.order = newOrder;
+        this.crateTake = null;
+        this.crateClose = false;
+        return this;
+    }
+
+    /** Copies a tick's crate events in, after {@link #set}, and returns this. */
+    public Intent crate(@Nullable PickupKind take, boolean close) {
+        this.crateTake = take;
+        this.crateClose = close;
         return this;
     }
 
@@ -84,5 +104,7 @@ public final class Intent implements Component, Pool.Poolable {
         acting = false;
         dragging = false;
         order = null;
+        crateTake = null;
+        crateClose = false;
     }
 }

@@ -4,9 +4,14 @@ import com.badlogic.gdx.graphics.Color;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
+import pl.mzebrows.pwt.ui.hud.CrateBar;
 import pl.mzebrows.pwt.ui.hud.DraftBar;
 import pl.mzebrows.pwt.ui.hud.DraftLayout;
 import pl.mzebrows.pwt.ui.hud.Goal;
@@ -28,6 +33,8 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
  *
  * <p>While a draft is open ({@code UI:hud/top/draft}, D18) the whole bar is the draft's: the chooser's
  * portrait and label on the left, his cards across the rest, the highlighted one framed in his colour.
+ * While a crate is open ({@code UI:hud/top/crate}, G0056) it is the crate's, laid out the same way with up
+ * to four cards - what each is and does, and one he would be turned down for dimmed and saying why.
  *
  * <p>Content sits inside the view's span and hangs from the bar's bottom edge, the one touching the
  * view, so a taller bar grows empty space outwards. Text is rebuilt only when what it says changes.
@@ -89,6 +96,15 @@ final class TopBarPainter {
     private int builtSeat = -1;
     private ScreenLayout draftFor = ScreenLayout.NONE;
 
+    /** The crate on show, as text: each card's name, what it does, and the hint. */
+    private final String[][] crateCards = new String[PlayerReadout.CRATE_CARDS][3];
+
+    private String opener = "";
+    private int builtCrateSeat = -1;
+    private int builtCrateHighlight = -1;
+    private long builtCrateKey = -1L;
+    private ScreenLayout crateFor = ScreenLayout.NONE;
+
     TopBarPainter(Hud hud, UiStrings strings, HudStyle style, HudMetrics metrics, Palette palette) {
         this.hud = hud;
         this.strings = strings;
@@ -104,6 +120,9 @@ final class TopBarPainter {
         Arrays.fill(said, "");
         Arrays.fill(aside, "");
         for (String[] card : cards) {
+            Arrays.fill(card, "");
+        }
+        for (String[] card : crateCards) {
             Arrays.fill(card, "");
         }
     }
@@ -122,7 +141,10 @@ final class TopBarPainter {
             OverlayMode mode,
             DraftBar draft,
             UpgradeView upgrades,
-            DraftHints hints) {
+            DraftHints hints,
+            CrateBar crate,
+            CrateHints crateHints,
+            SimConfig config) {
         Rect top = layout.topBar();
         int span = layout.contentRight() - layout.contentLeft();
         boolean resized = !layout.equals(builtFor);
@@ -134,7 +156,9 @@ final class TopBarPainter {
         int blockTop = top.y() + Math.min(top.height(), metrics.topMin()) - padding;
 
         hud.beginCanvas();
-        if (!top.isEmpty() && draft.open()) {
+        if (!top.isEmpty() && crate.open()) {
+            crate(layout, readout, crate, crateHints, config, left, span, top.y(), blockTop, line);
+        } else if (!top.isEmpty() && draft.open()) {
             draft(layout, readout, draft, upgrades, hints, left, span, top.y(), blockTop, line);
         } else if (!top.isEmpty()) {
             hud.text(mission, left + padding, blockTop, style.textDim());
@@ -198,6 +222,110 @@ final class TopBarPainter {
                 hud.text(card[row], x + padding, blockTop - row * line, color);
             }
         }
+    }
+
+    /**
+     * The crate ({@code UI:hud/top/crate}, G0056): the opener's portrait and {@code P{n}}, then the crate's
+     * cards, each what it is, what it does and a hint, the highlighted one framed in his colour. A card he
+     * would be turned down for is dim, and says why.
+     */
+    private void crate(
+            ScreenLayout layout,
+            Readout readout,
+            CrateBar crate,
+            CrateHints hints,
+            SimConfig config,
+            int left,
+            int span,
+            int bottom,
+            int blockTop,
+            int line) {
+        PlayerReadout player = readout.player(crate.slot());
+        int shown = player.crateCount;
+        rebuildCrate(layout, player, crate, hints, config, span, shown);
+        Color own = palette.colorFor(Look.COMMANDER, crate.slot());
+        int padding = metrics.padding();
+        int portrait = metrics.portraitSize();
+        hud.fill(left + padding, blockTop - portrait, portrait, portrait, own);
+        hud.text(opener, left + padding + portrait + padding, blockTop, own);
+
+        int width = draftLayout.cardWidth(span, shown);
+        int height = metrics.topMin() - 2;
+        for (int i = 0; i < shown; i++) {
+            int x = left + draftLayout.cardX(span, shown, i);
+            boolean lit = i == crate.highlighted();
+            boolean refused = player.crateRefused[i];
+            hud.frame(x, bottom + 1, width - padding, height, lit ? own : style.overlayFrame());
+            String[] card = crateCards[i];
+            for (int row = 0; row < card.length; row++) {
+                Color color = !lit || refused ? style.textDim() : row == card.length - 1 ? own : style.text();
+                hud.text(card[row], x + padding, blockTop - row * line, color);
+            }
+        }
+    }
+
+    private void rebuildCrate(
+            ScreenLayout layout,
+            PlayerReadout player,
+            CrateBar crate,
+            CrateHints hints,
+            SimConfig config,
+            int span,
+            int shown) {
+        long key = crateKey(player, shown);
+        if (layout.equals(crateFor)
+                && key == builtCrateKey
+                && crate.highlighted() == builtCrateHighlight
+                && crate.seat() == builtCrateSeat) {
+            return;
+        }
+        crateFor = layout;
+        builtCrateKey = key;
+        builtCrateHighlight = crate.highlighted();
+        builtCrateSeat = crate.seat();
+        opener = strings.format("ui.hud.player", crate.slot() + 1);
+        int columns = draftLayout.cardColumns(span, Math.max(1, shown));
+        for (int i = 0; i < PlayerReadout.CRATE_CARDS; i++) {
+            String[] card = crateCards[i];
+            Arrays.fill(card, "");
+            if (i >= shown) {
+                continue;
+            }
+            Grant grant = config.pickup(player.crate[i]).playerGrant();
+            card[0] = TextFit.fit(crateName(grant, player.crate[i]), columns);
+            card[1] =
+                    TextFit.fit(player.crateRefused[i] ? strings.get("ui.crate.refused") : crateEffect(grant), columns);
+            String hint = i == crate.highlighted()
+                    ? strings.format("ui.crate.take", hints.take(), hints.close())
+                    : hints.card(i).isEmpty() ? "" : strings.format("ui.draft.choose", hints.card(i));
+            card[2] = TextFit.fit(hint.toUpperCase(Locale.ROOT), columns);
+        }
+    }
+
+    /** What a crate's card is called: the gun it arms you with, or the pickup's own name. */
+    private String crateName(Grant grant, PickupKind kind) {
+        return grant instanceof Grant.Arm(WeaponKind gun)
+                ? strings.get("ui.weapon." + gun.name())
+                : strings.get("ui.crate." + kind.name());
+    }
+
+    /** What taking it does, in a line. */
+    private String crateEffect(Grant grant) {
+        return switch (grant) {
+            case Grant.Arm _ -> strings.get("ui.crate.effect.arm");
+            case Grant.Mend _ -> strings.get("ui.crate.effect.mend");
+            case Grant.None _, Grant.Detonate _, Grant.Feed _, Grant.Mutate _, Grant.Reinforce _ -> "";
+        };
+    }
+
+    /** What the crate's cards are, packed, so they are rebuilt only when that changes. */
+    @SuppressWarnings("EnumOrdinal") // a cache key held for a frame, never stored or sent
+    private static long crateKey(PlayerReadout player, int shown) {
+        long key = shown;
+        for (int i = 0; i < shown; i++) {
+            key = key * 64 + player.crate[i].ordinal() * 2L + (player.crateRefused[i] ? 1 : 0);
+        }
+        return key;
     }
 
     private void rebuildDraft(

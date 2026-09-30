@@ -6,20 +6,12 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 
 import com.badlogic.ashley.core.Entity;
-import java.util.EnumMap;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Pickup;
-import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
-import pl.mzebrows.pwt.sim.component.Vitality;
-import pl.mzebrows.pwt.sim.component.Weapon;
-import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -190,112 +182,18 @@ class PickupSystemTest {
     }
 
     /**
-     * A sealed cache offers nobody anything (G0050): a trooper standing on it with no commander near
-     * leaves it standing, sealed, and so does an alien. Otherwise it could be taken before it had shown
-     * which gun it was.
+     * A crate offers nobody anything by walking onto it (G0056): a trooper and an alien standing on one
+     * leave it standing. It is opened, not taken.
      */
     @Test
-    void leavesASealedCacheStandingForAnybodyWhoTouchesIt() {
+    void leavesACrateStandingForAnybodyWhoTouchesIt() {
         Simulation simulation = simulation();
-        simulation.spawnCommander(X + FAR_OUTSIDE_THE_REVEAL, Y);
         simulation.spawnTrooper(X, Y);
         simulation.spawnUnit(UnitKind.GRUNT, X, Y + NEIGHBOUR_GAP);
-        Entity cache = simulation.spawnPickup(PickupKind.ARMOURY_SEALED, X, Y);
+        simulation.spawnPickup(PickupKind.CRATE, X, Y);
 
         simulation.step();
 
-        assertThat(cache.getComponent(Pickup.class).kind).isEqualTo(PickupKind.ARMOURY_SEALED);
         assertThat(count(simulation, Pickup.class)).isEqualTo(1);
     }
-
-    /**
-     * Revealed on the tick a commander comes within the radius, and not the tick before (G0050): it
-     * becomes a gun's cache in place, the same entity, looking like the cache it now is.
-     */
-    @Test
-    void dealsASealedCacheItsGunOnTheTickACommanderComesNear() {
-        Simulation simulation = simulation();
-        Entity commander = simulation.spawnCommander(X - AlphaWorlds.REVEAL_RADIUS - JUST, Y);
-        Entity cache = simulation.spawnPickup(PickupKind.ARMOURY_SEALED, X, Y);
-
-        simulation.step();
-        PickupKind before = cache.getComponent(Pickup.class).kind;
-        commander.getComponent(Position.class).set(X - AlphaWorlds.REVEAL_RADIUS + JUST, Y);
-        simulation.step();
-
-        assertThat(before).isEqualTo(PickupKind.ARMOURY_SEALED);
-        PickupKind dealt = cache.getComponent(Pickup.class).kind;
-        assertThat(simulation.config().pickup(dealt).armoury().inDeck()).isTrue();
-        assertThat(cache.getComponent(Appearance.class).look)
-                .isEqualTo(simulation.config().pickup(dealt).look());
-    }
-
-    /** A commander off his feet sees nothing to reveal: it is the man walking up to it who finds out. */
-    @Test
-    void keepsACacheSealedWhileTheOnlyCommanderNearIsDown() {
-        Simulation simulation = simulation();
-        Entity commander = simulation.spawnCommander(X, Y + AlphaWorlds.REVEAL_RADIUS - JUST);
-        commander.getComponent(Vitality.class).begun = true;
-        Entity cache = simulation.spawnPickup(PickupKind.ARMOURY_SEALED, X, Y);
-
-        simulation.step();
-
-        assertThat(cache.getComponent(Pickup.class).kind).isEqualTo(PickupKind.ARMOURY_SEALED);
-    }
-
-    /** Once dealt it is an ordinary weapons cache: the commander who walks onto it comes away armed. */
-    @Test
-    void armsTheCommanderWhoTakesARevealedCache() {
-        Simulation simulation = simulation();
-        Entity commander = simulation.spawnCommander(X, Y);
-        Entity cache = simulation.spawnPickup(PickupKind.ARMOURY_SEALED, X, Y);
-
-        simulation.step();
-        PickupKind dealt = cache.getComponent(Pickup.class).kind;
-        simulation.step();
-
-        Grant.Arm arm = (Grant.Arm) simulation.config().pickup(dealt).playerGrant();
-        assertThat(commander.getComponent(Weapon.class).kind).isEqualTo(arm.weapon());
-    }
-
-    /**
-     * The deck is a bag (G0050, G0039): the fixture holds one card of each gun, so eight caches revealed
-     * together are every gun twice - never three of one and one of another, which independent draws
-     * would often be.
-     */
-    @Test
-    void dealsNoCardTwiceBeforeEveryCardHasComeUp() {
-        Simulation simulation = simulation();
-        simulation.spawnCommander(X, Y);
-        Entity[] caches = new Entity[EIGHT];
-        for (int i = 0; i < EIGHT; i++) {
-            caches[i] = simulation.spawnPickup(PickupKind.ARMOURY_SEALED, X + RING * (i - EIGHT / 2), Y + RING);
-        }
-
-        simulation.step();
-
-        Map<PickupKind, Integer> dealt = new EnumMap<>(PickupKind.class);
-        for (Entity cache : caches) {
-            dealt.merge(cache.getComponent(Pickup.class).kind, 1, Integer::sum);
-        }
-        assertThat(dealt)
-                .containsOnlyKeys(
-                        PickupKind.ARMOURY_RAILGUN,
-                        PickupKind.ARMOURY_FLAMER,
-                        PickupKind.ARMOURY_SHOTGUN,
-                        PickupKind.ARMOURY_LASER)
-                .allSatisfy((kind, times) -> assertThat(times).isEqualTo(2));
-    }
-
-    /** Well outside a sealed cache's reveal radius. */
-    private static final float FAR_OUTSIDE_THE_REVEAL = AlphaWorlds.REVEAL_RADIUS * 3f;
-
-    /** Less than a tick's walk: either side of an edge. */
-    private static final float JUST = 0.25f;
-
-    /** Two full shuffles of the fixture's four-card deck. */
-    private static final int EIGHT = 8;
-
-    /** How far apart the caches in a row stand: past a commander's reach, inside the reveal. */
-    private static final float RING = 1f;
 }

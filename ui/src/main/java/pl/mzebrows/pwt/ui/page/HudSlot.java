@@ -8,6 +8,7 @@ public enum HudSlot {
     ASIDE("UI:hud/top/aside"),
     OVERLAY("UI:hud/top/overlay"),
     DRAFT("UI:hud/top/draft"),
+    CRATE("UI:hud/top/crate"),
     PLAYER_PANEL("UI:hud/bottom/panel"),
     PORTRAIT("UI:hud/bottom/portrait"),
     STATUS("UI:hud/bottom/status"),

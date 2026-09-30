@@ -10,12 +10,17 @@ import pl.mzebrows.pwt.ui.hud.TextFit;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.page.MenuLayout;
+import pl.mzebrows.pwt.ui.page.ScrollList;
 
 /**
  * Every upgrade the side holds, beside the pause menu ({@code UI:play/pause}): the aside in the
  * top bar has room for a few, and a paused player has time to read them all. One row each - a personal
  * one named for its holder and in his colour - with its rank in words and as pips, docked to the right of
- * the view over the same scrim. More than the view has lines for ends in a count of the rest.
+ * the view over the same scrim.
+ *
+ * <p>As wide as its longest row and never wider than the room right of the pause menu, so the two never
+ * overlap; under the menu where there is no room beside it (A). More rows than the panel has lines for
+ * scroll - a wheel over the list, a pad's right stick - with a bar on its right edge (A.1).
  */
 final class HeldUpgradesPainter {
 
@@ -28,16 +33,31 @@ final class HeldUpgradesPainter {
     private final CardText names;
     private final String title;
     private final String none;
-    private final String more;
+    private final ScrollList scroll = new ScrollList();
+
+    /** The narrowest the panel may be beside the menu: its title and its empty line, whole. */
+    private final int leastColumns;
+
+    /** Every row in full, built when what is held changes. */
+    private final List<String> full = new ArrayList<>();
+
+    /** The same rows cut to the panel's width. */
     private final List<String> rows = new ArrayList<>();
+
     private final Color text = new Color();
     private final Color dim = new Color();
     private final Color own = new Color();
     private final Color bar = new Color();
 
     private long built = -1L;
-    private int builtFor = -1;
-    private int shown;
+    private int fittedFor = -1;
+    private int longest;
+
+    /** How many rows the panel had room for when it was last drawn: what a scroll is measured against. */
+    private int room;
+
+    /** The panel as last drawn, so a wheel is read only over it. */
+    private Rect panel = Rect.EMPTY;
 
     HeldUpgradesPainter(Hud hud, UiStrings strings, HudStyle style, HudMetrics metrics, Palette palette) {
         this.hud = hud;
@@ -49,22 +69,39 @@ final class HeldUpgradesPainter {
         this.names = new CardText(strings);
         this.title = strings.get("ui.pause.upgrades");
         this.none = strings.get("ui.pause.upgradesNone");
-        this.more = strings.get("ui.hud.aside.more");
+        this.leastColumns = Math.max(title.length(), none.length());
     }
 
-    /** Draws the list, as opaque as the pause page's arrival has it. */
-    void draw(Rect view, Readout readout, float alpha) {
-        int pitch = metrics.fontSize() + metrics.leading();
-        int room = Math.max(1, (view.height() - 7 * metrics.padding()) / pitch - 2);
-        if (readout.upgradeRevision != built || room != builtFor) {
-            build(readout, room);
+    /**
+     * Draws the list, as opaque as the pause page's arrival has it.
+     *
+     * @param page where the pause menu's panel rests, which the list keeps clear of
+     */
+    void draw(Rect view, Rect page, Readout readout, float alpha) {
+        if (readout.upgradeRevision != built) {
+            build(readout);
             built = readout.upgradeRevision;
-            builtFor = room;
+            fittedFor = -1;
         }
-        int lines = 2 + Math.max(1, rows.size());
-        Rect panel = layout.panel(view, MenuLayout.Anchor.DOCKED_RIGHT, lines, style.pageColumns());
-        int x = layout.lineX(panel);
+        int pips = maxPipColumns(readout);
+        int widest = Math.max(leastColumns, full.isEmpty() ? 0 : longest + 1 + pips);
+        int lines = 2 + Math.max(1, full.size());
+        panel = layout.beside(view, page, lines, widest, leastColumns);
+        if (panel.isEmpty()) {
+            return;
+        }
+        room = Math.max(1, layout.linesIn(panel) - 2);
+        scroll.keep(full.size(), room);
         int columns = TextFit.columns(panel.width() - 4 * metrics.padding(), UiFont.ADVANCE);
+        int textColumns = Math.max(1, columns - 1 - pips);
+        if (textColumns != fittedFor) {
+            rows.clear();
+            for (String row : full) {
+                rows.add(TextFit.fit(row, textColumns));
+            }
+            fittedFor = textColumns;
+        }
+        int x = layout.lineX(panel);
         faded(text, style.text(), alpha);
         faded(dim, style.textDim(), alpha);
 
@@ -76,40 +113,74 @@ final class HeldUpgradesPainter {
             hud.text(TextFit.fit(none, columns), x, layout.lineTop(panel, 2), dim);
         }
         int pipsRight = panel.right() - 2 * metrics.padding();
-        for (int row = 0; row < rows.size(); row++) {
-            int top = layout.lineTop(panel, 2 + row);
-            boolean rest = row == shown;
-            int slot = rest ? -1 : readout.heldSlot[row];
-            Color color = slot < 0 ? (rest ? dim : text) : faded(own, palette.colorFor(Look.COMMANDER, slot), alpha);
+        int last = Math.min(rows.size(), scroll.first() + room);
+        for (int row = scroll.first(); row < last; row++) {
+            int top = layout.lineTop(panel, 2 + row - scroll.first());
+            int slot = readout.heldSlot[row];
+            Color color = slot < 0 ? text : faded(own, palette.colorFor(Look.COMMANDER, slot), alpha);
             hud.text(rows.get(row), x, top, color);
-            if (!rest) {
-                int max = readout.heldMaxRanks[row];
-                RankPips.draw(
-                        hud,
-                        metrics,
-                        pipsRight - RankPips.width(metrics, max),
-                        top,
-                        readout.heldRanks[row],
-                        max,
-                        color,
-                        dim);
-            }
+            int max = readout.heldMaxRanks[row];
+            RankPips.draw(
+                    hud,
+                    metrics,
+                    pipsRight - RankPips.width(metrics, max),
+                    top,
+                    readout.heldRanks[row],
+                    max,
+                    color,
+                    dim);
+        }
+        if (ScrollList.scrolls(rows.size(), room)) {
+            drawBar(rows.size());
         }
         hud.endCanvas();
     }
 
-    /** Built when what is held changes; the pips' room comes off the text's. */
-    private void build(Readout readout, int room) {
-        rows.clear();
-        int columns = style.pageColumns() - 1 - maxPipColumns(readout);
-        shown = readout.heldCount <= room ? readout.heldCount : room - 1;
-        for (int i = 0; i < shown; i++) {
+    /** Moves the list by a wheel's notches, when the pointer is over it. */
+    void wheel(float notches, int pointerX, int pointerY) {
+        if (notches == 0f
+                || pointerX < panel.x()
+                || pointerX >= panel.right()
+                || pointerY < panel.y()
+                || pointerY >= panel.top()) {
+            return;
+        }
+        scroll.step(notches > 0f ? 1 : -1, full.size(), room);
+    }
+
+    /** Moves the list by a stick's push, down for positive. */
+    void glide(float push, float linesPerSecond, float seconds) {
+        scroll.glide(push, linesPerSecond, seconds, full.size(), room);
+    }
+
+    /** Back to the top, for the next time the pause menu opens. */
+    void home() {
+        scroll.home();
+    }
+
+    /** The scrollbar: a thin track down the right padding, the thumb as long as the share on show. */
+    private void drawBar(int count) {
+        int pad = metrics.padding();
+        int x = panel.right() - pad - pad / 2 - 1;
+        int trackTop = layout.lineTop(panel, 2);
+        int trackBottom = panel.y() + pad;
+        int track = Math.max(1, trackTop - trackBottom);
+        int thumb = ScrollList.thumb(track, count, room);
+        int offset = ScrollList.thumbOffset(track, scroll.first(), count, room);
+        hud.fill(x, trackBottom, 2, track, dim);
+        hud.fill(x, trackTop - offset - thumb, 2, thumb, text);
+    }
+
+    /** Built when what is held changes: every row whole, and how long the longest is. */
+    private void build(Readout readout) {
+        full.clear();
+        longest = 0;
+        for (int i = 0; i < readout.heldCount; i++) {
             int slot = readout.heldSlot[i];
             String name = names.name(readout.heldKind[i]) + " " + RankText.roman(readout.heldRanks[i]);
-            rows.add(TextFit.fit(slot < 0 ? name : strings.format("ui.hud.player", slot + 1) + " " + name, columns));
-        }
-        if (shown < readout.heldCount) {
-            rows.add(TextFit.fit(more.replace("{0}", Integer.toString(readout.heldCount - shown)), columns));
+            String row = slot < 0 ? name : strings.format("ui.hud.player", slot + 1) + " " + name;
+            full.add(row);
+            longest = Math.max(longest, row.length());
         }
     }
 
@@ -118,7 +189,7 @@ final class HeldUpgradesPainter {
         for (int i = 0; i < readout.heldCount; i++) {
             most = Math.max(most, readout.heldMaxRanks[i]);
         }
-        return (RankPips.width(metrics, most) + UiFont.ADVANCE - 1) / UiFont.ADVANCE;
+        return most == 0 ? 0 : (RankPips.width(metrics, most) + UiFont.ADVANCE - 1) / UiFont.ADVANCE;
     }
 
     private static Color faded(Color into, Color from, float alpha) {

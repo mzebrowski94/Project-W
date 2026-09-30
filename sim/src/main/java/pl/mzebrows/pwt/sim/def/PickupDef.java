@@ -20,8 +20,8 @@ import lombok.With;
  *     for me", so a kind opts in by naming a number rather than by a flag somewhere else. A small
  *     thing on a large map has to be findable, and a pulse is the cheapest way of saying "worth
  *     walking to" without drawing a marker the player then has to learn
- * @param armoury its part in the armoury deck (G0050): a card for a gun's cache, a reveal radius for a
- *     sealed one, and {@link ArmouryDef#off()} - no block at all - for everything else
+ * @param armoury its part in the armoury deck (G0056): a card for a gun's cache or a medkit, a crate for
+ *     a crate, and {@link ArmouryDef#off()} - no block at all - for everything else
  */
 @With
 public record PickupDef(
@@ -30,14 +30,13 @@ public record PickupDef(
     public PickupDef {
         Require.positive("pickup radius", radius);
         Require.notNegative("pickup shineSeconds", shineSeconds);
-        if (armoury.sealed() && (Grant.isSomething(playerGrant) || Grant.isSomething(alienGrant))) {
+        if (armoury.crate() && (Grant.isSomething(playerGrant) || Grant.isSomething(alienGrant))) {
             throw new IllegalArgumentException(
-                    "a sealed cache offers nobody anything until it is dealt its gun (G0050), or it could be"
-                            + " taken before it has shown what it is");
+                    "a crate offers nothing to whoever walks onto it (G0056): it is opened, not taken");
         }
     }
 
-    /** Anything that is not a weapons cache: no part in the armoury deck. */
+    /** Anything that is not in the armoury deck and is no crate. */
     public PickupDef(float radius, Look look, Grant playerGrant, Grant alienGrant, float shineSeconds) {
         this(radius, look, playerGrant, alienGrant, shineSeconds, ArmouryDef.off());
     }

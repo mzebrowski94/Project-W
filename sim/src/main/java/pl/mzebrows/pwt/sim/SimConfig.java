@@ -80,6 +80,7 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * @param swarm what every strain and nest is scaled by, read through {@link #healthOf} and
  *     {@link #nestHealth} and nowhere else
  * @param medkit how many medkits a level that asks for them scatters (G0053)
+ * @param crate how many pickups a crate is dealt (G0056)
  */
 @With
 public record SimConfig(
@@ -116,7 +117,8 @@ public record SimConfig(
         @ConfigKey("upgrade.stat") Defs<Stat, StatDef> stats,
         @ConfigKey("upgrade") Defs<UpgradeKind, UpgradeDef> upgrades,
         SwarmConfig swarm,
-        MedkitConfig medkit) {
+        MedkitConfig medkit,
+        CrateConfig crate) {
 
     /** The prefix every key in {@code assets/sim/*.properties} starts with. */
     private static final String ROOT = "sim";
@@ -985,6 +987,30 @@ public record SimConfig(
             Require.notNegative("casualty reviveInvulnerableSeconds", reviveInvulnerableSeconds);
             Require.notNegative("casualty draggedBleedFactor", draggedBleedFactor);
             Require.positive("casualty hauledStabiliseFactor", hauledStabiliseFactor);
+        }
+    }
+
+    /**
+     * A crate (G0056): how many pickups one is dealt on its first opening, from a bag, so the fewest three
+     * times running is not a streak. An upgrade may raise the fewest ({@code Modifiers.crateLeast}); the
+     * most rises with it, and neither passes {@link #CAPACITY}.
+     *
+     * @param fewest the fewest pickups a crate is dealt
+     * @param most the most, before any upgrade
+     */
+    @With
+    public record CrateConfig(int fewest, int most) {
+
+        /** The most any crate holds, whatever an upgrade says: the cards a top bar has room for. */
+        public static final int CAPACITY = 4;
+
+        public CrateConfig {
+            Require.atLeastOne("crate fewest", fewest);
+            Require.atLeast("crate most", most, fewest, "a crate cannot hold a smaller most than fewest");
+            if (most > CAPACITY) {
+                throw new IllegalArgumentException(
+                        "a crate holds at most " + CAPACITY + " pickups - the cards a top bar shows - not " + most);
+            }
         }
     }
 

@@ -35,7 +35,17 @@ public enum Stat {
      * How many cards of one cache the armoury deck holds (G0050). Read where a sealed cache is dealt its
      * gun; the side's number, moved only by a {@code Deal}.
      */
-    ARMOURY_CARDS(Form.COUNT, Reader.SIDE);
+    ARMOURY_CARDS(Form.COUNT, Reader.SIDE),
+    /**
+     * The fewest pickups a crate is dealt (G0056). Read where a crate is dealt, on its first opening; the
+     * side's number. The most is the crate's own, and never less than this.
+     */
+    CRATE_LEAST(Form.COUNT, Reader.SIDE),
+    /**
+     * How many of one card every crate holds at least (G0056). Read where a crate is dealt; the side's
+     * number, moved only by a {@code Stock}.
+     */
+    CRATE_STOCK(Form.COUNT, Reader.SIDE);
 
     /** How an effect moves the number. */
     public enum Form {

@@ -316,10 +316,10 @@ final class AdventureTwoScenario implements Scenario {
         // THE FEN: frogs and ants, in the reeds.
         units(simulation, map, UnitKind.FROG, 93, 6, 98, 13, 103, 20, 106, 11, 111, 26, 114, 18, 117, 8, 116, 11);
         units(simulation, map, UnitKind.ANT, 94, 10, 102, 25, 107, 4, 112, 15, 118, 26);
-        // SEALED from here on, one of every pair past the first (G0050): the anthill's two show their
-        // colours, and the rest of the march has some found out by walking towards them. The lair's
-        // cache of every gun stays as laid.
-        pickups(simulation, map, PickupKind.ARMOURY_SEALED, 99, 23);
+        // CRATES from here on, one of every pair past the first (G0056): the anthill's two show their
+        // colours, and the rest of the march has some opened and chosen from. The lair's cache of every
+        // gun stays as laid.
+        pickups(simulation, map, PickupKind.CRATE, 99, 23);
         pickups(simulation, map, PickupKind.ARMOURY_LASER, 115, 23);
 
         // THE CUT: brutes, spitters and ants among heavy rock, and barrels - the answer to an ant in a
@@ -330,7 +330,7 @@ final class AdventureTwoScenario implements Scenario {
         units(simulation, map, UnitKind.GRUNT, 128, 12);
         barrels(simulation, map, 125, 21, 132, 7, 138, 17, 148, 22, 144, 13);
         pickups(simulation, map, PickupKind.ARMOURY_SHOTGUN, 126, 24);
-        pickups(simulation, map, PickupKind.ARMOURY_SEALED, 137, 6);
+        pickups(simulation, map, PickupKind.CRATE, 137, 6);
 
         // THE BRAKE: runners and ants in the undergrowth, and a brute.
         units(
@@ -359,7 +359,7 @@ final class AdventureTwoScenario implements Scenario {
         units(simulation, map, UnitKind.BRUTE, 174, 22);
         barrels(simulation, map, 158, 15, 167, 21);
         mines(simulation, map, 152, 19, 166, 4, 175, 12);
-        pickups(simulation, map, PickupKind.ARMOURY_SEALED, 165, 9);
+        pickups(simulation, map, PickupKind.CRATE, 165, 9);
         pickups(simulation, map, PickupKind.ARMOURY_LASER, 171, 26);
 
         keep(simulation, map);
@@ -382,7 +382,7 @@ final class AdventureTwoScenario implements Scenario {
         // No east barrel: that is where the boss rises, and his first ring would set it off in his own face.
         barrels(simulation, map, 192, 12, 202, 12, 192, 18, 202, 18, 185, 15);
         units(simulation, map, UnitKind.ANT, 184, 14, 212, 14);
-        pickups(simulation, map, PickupKind.ARMOURY_SEALED, 194, 15);
+        pickups(simulation, map, PickupKind.CRATE, 194, 15);
         pickups(simulation, map, PickupKind.ARMOURY_LASER, 200, 15);
 
         // Ants among every other kind, from alternating corners. An ant in a wave is an ant that takes

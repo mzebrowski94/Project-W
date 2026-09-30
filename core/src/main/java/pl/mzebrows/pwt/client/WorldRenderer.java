@@ -91,6 +91,7 @@ public final class WorldRenderer implements Disposable {
     private final HeatMark heatMark;
     private final WoundMark woundMark;
     private final ShieldMark shieldMark;
+    private final CrateMark crateMark;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
 
@@ -195,6 +196,10 @@ public final class WorldRenderer implements Disposable {
             }
             if (appearance.heat > 0f) {
                 drawHeat(x, y, body.radius, appearance);
+            }
+            if (dotted(appearance.look)) {
+                shapes.setColor(crateMark.color());
+                shapes.circle(x, y, crateMark.dotFor(body.radius), CIRCLE_SEGMENTS);
             }
             if (appearance.wounds > 0) {
                 drawWounds(x, y, body.radius, appearance.wounds);
@@ -404,7 +409,12 @@ public final class WorldRenderer implements Disposable {
      * a circle either way (ADR 0007), so this changes what is seen and nothing about what is hit.
      */
     private static boolean square(Look look) {
-        return look == Look.TURRET;
+        return look == Look.TURRET || look == Look.CRATE;
+    }
+
+    /** Looks drawn with a dot in the middle, over everything else on them (G0056). */
+    private static boolean dotted(Look look) {
+        return look == Look.CRATE;
     }
 
     /**

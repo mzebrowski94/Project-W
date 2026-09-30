@@ -114,8 +114,11 @@ public enum Look {
     ARMOURY_FLAMER,
     ARMOURY_SHOTGUN,
     ARMOURY_LASER,
-    /** A sealed weapons cache: no gun's colour yet, because nobody knows which gun it holds (G0050). */
-    ARMOURY_SEALED,
+    /**
+     * A crate (G0056): a small square with a dot, because what it holds is nobody's to see until it is
+     * opened - one look for every crate, whatever is inside.
+     */
+    CRATE,
     /** Something on the field that goes off when it is killed. */
     BARREL,
     /**

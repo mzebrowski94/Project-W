@@ -8,6 +8,7 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
@@ -66,6 +67,11 @@ public final class ScenarioSession implements ScenarioPlay {
     private final @Nullable UpgradeKind[] pendingPick = new UpgradeKind[Players.MAX];
 
     private final int[] pendingPickSerial = new int[Players.MAX];
+
+    /** A pickup a slot takes from his crate, or a shut, waiting for the next tick (G0056). */
+    private final @Nullable PickupKind[] pendingCrateTake = new PickupKind[Players.MAX];
+
+    private final boolean[] pendingCrateClose = new boolean[Players.MAX];
 
     /** Reused, so handing a tick its waiting events costs no allocation per tick. */
     private final PlayerInputs forThisTick = new PlayerInputs();
@@ -130,6 +136,17 @@ public final class ScenarioSession implements ScenarioPlay {
         }
         pendingPick[slot] = kind;
         pendingPickSerial[slot] = serial;
+    }
+
+    /** Held until the next tick runs, and remembered while paused, as a pick is (G0056). */
+    @Override
+    public void crate(int seat, @Nullable PickupKind take) {
+        int slot = slotOf(seat);
+        if (slot < 0 || slot >= pendingCrateTake.length) {
+            return;
+        }
+        pendingCrateTake[slot] = take;
+        pendingCrateClose[slot] = take == null;
     }
 
     /** The last squad order the player gave, for the overlay to show. Null until one is given. */
@@ -279,6 +296,15 @@ public final class ScenarioSession implements ScenarioPlay {
                 forThisTick.join(slot);
                 pendingJoin[slot] = false;
             }
+            PickupKind taken = pendingCrateTake[slot];
+            if (taken != null) {
+                forThisTick.takeFromCrate(slot, taken);
+                pendingCrateTake[slot] = null;
+            }
+            if (pendingCrateClose[slot]) {
+                forThisTick.closeCrate(slot);
+                pendingCrateClose[slot] = false;
+            }
         }
         if (pendingGodModeSwitch) {
             forThisTick.switchInvulnerability(godMode);
@@ -299,6 +325,8 @@ public final class ScenarioSession implements ScenarioPlay {
         lastOrder = null;
         Arrays.fill(pendingOrder, null);
         Arrays.fill(pendingPick, null);
+        Arrays.fill(pendingCrateTake, null);
+        Arrays.fill(pendingCrateClose, false);
         simulation = newWorld();
         clock = new FixedStepClock(simulation.config());
         paused = false;

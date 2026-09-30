@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.net.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.badlogic.ashley.core.Family;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -18,6 +19,7 @@ import pl.mzebrows.pwt.net.session.SessionHarness.Machine;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
 
@@ -53,6 +55,25 @@ class SessionTest {
             assertThat(other.session.slotOf(0)).isEqualTo(2);
             assertThat(session.sequencer.desyncs()).isZero();
             assertThat(host.session.lead()).isEqualTo(session.config.session().leadMinTicks());
+        }
+    }
+
+    /** Every machine's slots sit at that machine in every world, so the leash holds a screen together (B). */
+    @Test
+    void seatsEachPlayerAtTheMachineHePlaysFrom() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 3L, PERFECT)) {
+            Machine host = session.host();
+            Machine friend = session.join("friend", PERFECT);
+
+            session.run(120);
+
+            Presence presence = SessionHarness.world(friend)
+                    .engine()
+                    .getEntitiesFor(Family.all(Presence.class).get())
+                    .first()
+                    .getComponent(Presence.class);
+            assertThat(presence.machineOf(host.session.slotOf(0)))
+                    .isNotEqualTo(presence.machineOf(friend.session.slotOf(0)));
         }
     }
 

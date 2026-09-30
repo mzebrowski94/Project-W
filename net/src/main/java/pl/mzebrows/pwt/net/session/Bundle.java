@@ -4,6 +4,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
@@ -21,9 +22,11 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  *
  * <p>Layout: tick (int); flags (byte: 1 restart, 2 switches invulnerability, 4 invulnerable); held
  * count, then per slot its number and 17 bytes (four floats, then a byte of buttons); order count,
- * then per order a slot and an order; join count, then the slots; pick count, then per pick a slot, the
+ * then per order a slot and an order; join count, then per join a slot and the machine it sits at (int);
+ * pick count, then per pick a slot, the
  * draft's serial (int) and the kind taken; presence count, then per change a slot and whether it goes
- * away (1) or comes back (0).
+ * away (1) or comes back (0); crate count, then per event a slot and the pickup taken (its code) or
+ * {@link #CRATE_CLOSE}.
  */
 final class Bundle {
 
@@ -34,6 +37,11 @@ final class Bundle {
 
     private static final UpgradeKind[] KINDS = UpgradeKind.values();
 
+    private static final PickupKind[] PICKUPS = PickupKind.values();
+
+    /** A crate's event that takes nothing and shuts it (G0056). */
+    static final int CRATE_CLOSE = 0;
+
     private static final int RESTART = 1;
     private static final int SWITCHES_INVULNERABILITY = 2;
     private static final int INVULNERABLE = 4;
@@ -42,10 +50,13 @@ final class Bundle {
     private final boolean[] present;
     private final @Nullable Order[] orders;
     private final boolean[] joins;
+    private final int[] joinMachines;
     private final @Nullable UpgradeKind[] picks;
     private final int[] pickSerials;
     private final boolean[] goesAway;
     private final boolean[] comesBack;
+    private final @Nullable PickupKind[] crateTakes;
+    private final boolean[] crateCloses;
 
     private int tick;
     private boolean restart;
@@ -57,10 +68,13 @@ final class Bundle {
         present = new boolean[capacity];
         orders = new Order[capacity];
         joins = new boolean[capacity];
+        joinMachines = new int[capacity];
         picks = new UpgradeKind[capacity];
         pickSerials = new int[capacity];
         goesAway = new boolean[capacity];
         comesBack = new boolean[capacity];
+        crateTakes = new PickupKind[capacity];
+        crateCloses = new boolean[capacity];
         clear(-1);
     }
 
@@ -89,10 +103,13 @@ final class Bundle {
             present[slot] = false;
             orders[slot] = null;
             joins[slot] = false;
+            joinMachines[slot] = 0;
             picks[slot] = null;
             pickSerials[slot] = 0;
             goesAway[slot] = false;
             comesBack[slot] = false;
+            crateTakes[slot] = null;
+            crateCloses[slot] = false;
         }
         return this;
     }
@@ -113,8 +130,10 @@ final class Bundle {
         return orders[slot];
     }
 
-    Bundle join(int slot) {
+    /** A player takes this slot, sitting at this machine - the peer that holds it (B). */
+    Bundle join(int slot, int machine) {
         joins[slot] = true;
+        joinMachines[slot] = machine;
         return this;
     }
 
@@ -142,6 +161,21 @@ final class Bundle {
         return this;
     }
 
+    /** This slot's crate event (G0056): a pickup taken from the crate he has open, or {@link #CRATE_CLOSE}. */
+    Bundle crate(int slot, int code) {
+        if (code == CRATE_CLOSE) {
+            crateCloses[slot] = true;
+        } else {
+            crateTakes[slot] = crateFromCode(code);
+        }
+        return this;
+    }
+
+    /** Whether this slot has a crate event this tick already: one a tick, as every other event. */
+    boolean hasCrateEvent(int slot) {
+        return crateTakes[slot] != null || crateCloses[slot];
+    }
+
     Bundle restarting() {
         restart = true;
         return this;
@@ -162,7 +196,7 @@ final class Bundle {
             }
             inputs.order(slot, orders[slot]);
             if (joins[slot]) {
-                inputs.join(slot);
+                inputs.join(slot, joinMachines[slot]);
             }
             UpgradeKind picked = picks[slot];
             if (picked != null) {
@@ -173,6 +207,13 @@ final class Bundle {
             }
             if (comesBack[slot]) {
                 inputs.back(slot);
+            }
+            PickupKind taken = crateTakes[slot];
+            if (taken != null) {
+                inputs.takeFromCrate(slot, taken);
+            }
+            if (crateCloses[slot]) {
+                inputs.closeCrate(slot);
             }
         }
         if (switchesInvulnerability) {
@@ -206,7 +247,7 @@ final class Bundle {
         out.putByte(count(joins));
         for (int slot = 0; slot < joins.length; slot++) {
             if (joins[slot]) {
-                out.putByte(slot);
+                out.putByte(slot).putInt(joinMachines[slot]);
             }
         }
         int pickCount = 0;
@@ -227,6 +268,19 @@ final class Bundle {
             }
             if (comesBack[slot]) {
                 out.putByte(slot).putByte(0);
+            }
+        }
+        int crateCount = 0;
+        for (int slot = 0; slot < crateTakes.length; slot++) {
+            crateCount += hasCrateEvent(slot) ? 1 : 0;
+        }
+        out.putByte(crateCount);
+        for (int slot = 0; slot < crateTakes.length; slot++) {
+            PickupKind taken = crateTakes[slot];
+            if (taken != null) {
+                out.putByte(slot).putByte(crateCode(taken));
+            } else if (crateCloses[slot]) {
+                out.putByte(slot).putByte(CRATE_CLOSE);
             }
         }
     }
@@ -250,7 +304,9 @@ final class Bundle {
         }
         int joinCount = in.getByte();
         for (int i = 0; i < joinCount; i++) {
-            joins[slot(in.getByte())] = true;
+            int slot = slot(in.getByte());
+            joins[slot] = true;
+            joinMachines[slot] = in.getInt();
         }
         int pickCount = in.getByte();
         for (int i = 0; i < pickCount; i++) {
@@ -266,6 +322,11 @@ final class Bundle {
             } else {
                 comesBack[slot] = true;
             }
+        }
+        int crateCount = in.getByte();
+        for (int i = 0; i < crateCount; i++) {
+            int slot = slot(in.getByte());
+            crate(slot, in.getByte());
         }
         return this;
     }
@@ -291,6 +352,7 @@ final class Bundle {
         int joinCount = in.getByte();
         for (int i = 0; i < joinCount; i++) {
             checkSlot(in.getByte(), capacity);
+            in.getInt();
         }
         int pickCount = in.getByte();
         for (int i = 0; i < pickCount; i++) {
@@ -302,6 +364,14 @@ final class Bundle {
         for (int i = 0; i < presenceCount; i++) {
             checkSlot(in.getByte(), capacity);
             awayFromCode(in.getByte());
+        }
+        int crateCount = in.getByte();
+        for (int i = 0; i < crateCount; i++) {
+            checkSlot(in.getByte(), capacity);
+            int code = in.getByte();
+            if (code != CRATE_CLOSE) {
+                crateFromCode(code);
+            }
         }
         return tick;
     }
@@ -366,6 +436,18 @@ final class Bundle {
             throw new WireException("no upgrade " + code);
         }
         return KINDS[code - 1];
+    }
+
+    @SuppressWarnings("EnumOrdinal") // both ends run the same build - the handshake refuses anything else
+    static int crateCode(PickupKind kind) {
+        return kind.ordinal() + 1;
+    }
+
+    static PickupKind crateFromCode(int code) {
+        if (code < 1 || code > PICKUPS.length) {
+            throw new WireException("no pickup " + code);
+        }
+        return PICKUPS[code - 1];
     }
 
     /** Whether a presence change is a slot going away rather than coming back. */

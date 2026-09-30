@@ -25,6 +25,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
@@ -63,6 +64,11 @@ public final class OnlineSession implements ScenarioPlay {
 
     /** A card taken on this machine, by seat, until the next frame hands it to the session as an event. */
     private final @Nullable UpgradeKind[] pendingPick = new UpgradeKind[PlayerSeats.SEATS];
+
+    /** A pickup a seat takes from his crate, or a shut, waiting for the next frame (G0056). */
+    private final @Nullable PickupKind[] pendingCrateTake = new PickupKind[PlayerSeats.SEATS];
+
+    private final boolean[] pendingCrateClose = new boolean[PlayerSeats.SEATS];
 
     private final int[] pendingPickSerial = new int[PlayerSeats.SEATS];
     private int lagStep = -1;
@@ -223,6 +229,16 @@ public final class OnlineSession implements ScenarioPlay {
         pendingPickSerial[seat] = serial;
     }
 
+    /** Held until the next frame, which hands it to the session as an input event, as a pick is (G0056). */
+    @Override
+    public void crate(int seat, @Nullable PickupKind take) {
+        if (seat < 0 || seat >= pendingCrateTake.length) {
+            return;
+        }
+        pendingCrateTake[seat] = take;
+        pendingCrateClose[seat] = take == null;
+    }
+
     @Override
     public void advance(float deltaSeconds, PlayerInputs local) {
         for (int seat = 0; seat < PlayerSeats.SEATS && seat < local.capacity(); seat++) {
@@ -236,6 +252,16 @@ public final class OnlineSession implements ScenarioPlay {
             if (picked != null) {
                 local.pick(seat, pendingPickSerial[seat], picked);
                 pendingPick[seat] = null;
+            }
+        }
+        for (int seat = 0; seat < pendingCrateTake.length && seat < local.capacity(); seat++) {
+            PickupKind taken = pendingCrateTake[seat];
+            if (taken != null) {
+                local.takeFromCrate(seat, taken);
+                pendingCrateTake[seat] = null;
+            } else if (pendingCrateClose[seat]) {
+                local.closeCrate(seat);
+                pendingCrateClose[seat] = false;
             }
         }
         peer.pump(clock.nanos(), local);

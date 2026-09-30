@@ -8,6 +8,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
@@ -28,6 +29,7 @@ class DeterminismFuzzTest {
     private static final int SLOTS = 4;
     private static final Order[] ORDERS = Order.values();
     private static final UpgradeKind[] KINDS = UpgradeKind.values();
+    private static final PickupKind[] PICKUPS = PickupKind.values();
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("registeredScenarios")
@@ -48,11 +50,21 @@ class DeterminismFuzzTest {
                 }
             }
             if (tick == 1 || tick == 2_000 + (int) (seed & 1023)) {
-                inputs.join(tick == 1 ? 1 : 2 + dice.nextInt(SLOTS - 2));
+                // A second machine as often as not, so the leash is reckoned both ways (G0056).
+                inputs.join(tick == 1 ? 1 : 2 + dice.nextInt(SLOTS - 2), dice.nextInt(2));
             }
             if (dice.nextFloat() < 0.002f) {
                 // A pick is an input event: most name a draft that is gone or a card not offered, and change nothing.
                 inputs.pick(dice.nextInt(SLOTS), 1 + dice.nextInt(8), KINDS[dice.nextInt(KINDS.length)]);
+            }
+            if (dice.nextFloat() < 0.003f) {
+                // A crate's events: most name a crate the slot does not have open, or a pickup it does not hold.
+                int slot = dice.nextInt(SLOTS);
+                if (dice.nextFloat() < 0.5f) {
+                    inputs.closeCrate(slot);
+                } else {
+                    inputs.takeFromCrate(slot, PICKUPS[dice.nextInt(PICKUPS.length)]);
+                }
             }
             if (dice.nextFloat() < 0.0005f) {
                 int slot = 1 + dice.nextInt(SLOTS - 1);

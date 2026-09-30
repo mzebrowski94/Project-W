@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.WorldCodec;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 /**
@@ -412,7 +413,10 @@ public final class PeerSession implements AutoCloseable {
         newestTag = Math.max(newestTag, tag);
     }
 
-    /** Numbers every order and every card taken this frame, to be sent until the sequencer has sealed it. */
+    /**
+     * Numbers every order, every card taken and every crate event this frame, to be sent until the sequencer
+     * has sealed it.
+     */
     private void queueEvents(PlayerInputs local) {
         for (int seat = 0; seat < slotOfSeat.length && seat < local.capacity(); seat++) {
             if (slotOfSeat[seat] < 0) {
@@ -425,6 +429,12 @@ public final class PeerSession implements AutoCloseable {
             UpgradeKind picked = local.pickOf(seat);
             if (picked != null) {
                 queue(slotOfSeat[seat], Msg.EVENT_PICK, local.pickSerialOf(seat), Bundle.pickCode(picked));
+            }
+            PickupKind taken = local.crateTakeOf(seat);
+            if (taken != null) {
+                queue(slotOfSeat[seat], Msg.EVENT_CRATE, Bundle.crateCode(taken), 0);
+            } else if (local.closesCrate(seat)) {
+                queue(slotOfSeat[seat], Msg.EVENT_CRATE, Bundle.CRATE_CLOSE, 0);
             }
         }
     }

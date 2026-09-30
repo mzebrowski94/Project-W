@@ -284,7 +284,8 @@ final class ArchitectureTest {
             "Drafts.cards",
             "Drafts.passed",
             "Drafts.submitted",
-            "Presence.away");
+            "Presence.away",
+            "Presence.seats");
 
     /**
      * Hit points and damage are whole numbers (G0054). A fraction arises only inside a percentage and is

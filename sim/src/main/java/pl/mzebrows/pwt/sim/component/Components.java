@@ -32,6 +32,7 @@ public final class Components {
                     Commander.class,
                     ContactDamage.class,
                     ControlPoint.class,
+                    Crate.class,
                     Crew.class,
                     Damage.class,
                     Dead.class,

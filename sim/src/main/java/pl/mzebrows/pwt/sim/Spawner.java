@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
@@ -546,20 +547,12 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(def.radius()));
         entity.add(engine.createComponent(Collider.class).set(false, false));
         entity.add(engine.createComponent(Appearance.class).set(def.look()));
+        if (def.armoury().crate()) {
+            // Empty and shut: what it holds is dealt the first time it is opened (G0056).
+            entity.add(engine.createComponent(Crate.class));
+        }
         admit(entity);
         return entity;
-    }
-
-    /**
-     * Recasts a pickup as another kind in place (G0050): its kind, size and look change, and so does
-     * what it offers, which is read from the kind; its components stay. The single writer for a pickup
-     * that becomes something else - a sealed cache dealt its gun - as {@link #applyWeapon} is for guns.
-     */
-    public void applyPickup(Entity entity, PickupKind kind) {
-        PickupDef def = config.pickup(kind);
-        entity.getComponent(Pickup.class).set(kind, def.shunned());
-        entity.getComponent(Body.class).set(def.radius());
-        entity.getComponent(Appearance.class).set(def.look());
     }
 
     /**

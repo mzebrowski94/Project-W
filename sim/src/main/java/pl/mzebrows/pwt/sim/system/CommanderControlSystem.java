@@ -1,10 +1,12 @@
 package pl.mzebrows.pwt.sim.system;
 
 import com.badlogic.ashley.core.ComponentMapper;
+import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.ashley.utils.ImmutableArray;
+import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.NotState;
@@ -18,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
@@ -37,6 +40,10 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
  * <p><strong>The leash lives here because this system owns a commander's velocity</strong> (pillar
  * 4): the outward part of a step past {@code leashRadius} from the middle of the commanders is refused
  * exactly. <strong>It never pushes</strong> (pillar 2) - one past the line walks home himself.
+ *
+ * <p><strong>It holds together the commanders at one machine, and nobody else</strong> (B). Players
+ * sharing a screen share a camera that has to frame them all; a player at a machine of his own has a
+ * camera of his own, and a rope tied to somebody else's screen would only be an invisible wall.
  */
 public final class CommanderControlSystem extends IteratingSystem {
 
@@ -48,6 +55,8 @@ public final class CommanderControlSystem extends IteratingSystem {
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Drag> DRAG = ComponentMapper.getFor(Drag.class);
+    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+    private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
 
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
     private static final float EPSILON = 1e-4f;
@@ -71,15 +80,26 @@ public final class CommanderControlSystem extends IteratingSystem {
     /** Scratch, so working out where a shot leaves from costs no allocation per shot. */
     private final float[] muzzle = new float[2];
 
-    /** The middle of the commanders, worked out once a tick before any of them is driven. */
+    /**
+     * The middle of the commanders at each machine, worked out once a tick before any of them is driven:
+     * one group per machine, at most one per player.
+     */
     @NotState("scratch: recomputed at the start of every update")
-    private float centreX;
+    private final int[] groupMachine = new int[Players.MAX];
 
     @NotState("scratch: recomputed at the start of every update")
-    private float centreY;
+    private final float[] groupX = new float[Players.MAX];
 
     @NotState("scratch: recomputed at the start of every update")
-    private int watched;
+    private final float[] groupY = new float[Players.MAX];
+
+    @NotState("scratch: recomputed at the start of every update")
+    private final int[] groupSize = new int[Players.MAX];
+
+    @NotState("scratch: recomputed at the start of every update")
+    private int groups;
+
+    private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
     public CommanderControlSystem(SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng scatter) {
         this.modifiers = modifiers;
@@ -100,14 +120,20 @@ public final class CommanderControlSystem extends IteratingSystem {
         this.leashRadius = config.commander().leashRadius();
     }
 
+    @Override
+    public void addedToEngine(Engine engine) {
+        super.addedToEngine(engine);
+        levels = engine.getEntitiesFor(Family.all(Presence.class).get());
+    }
+
     /**
      * Where the commanders are, before any of them has been driven.
      *
-     * <p>Once a tick, so every commander is leashed to the same place.
+     * <p>Once a tick, so every commander at one machine is leashed to the same place.
      */
     @Override
     public void update(float deltaTime) {
-        findCentre();
+        findCentres();
         super.update(deltaTime);
     }
 
@@ -125,21 +151,46 @@ public final class CommanderControlSystem extends IteratingSystem {
         fire(entity, intent);
     }
 
-    private void findCentre() {
+    private void findCentres() {
+        groups = 0;
         ImmutableArray<Entity> commanders = getEntities();
-        watched = commanders.size();
-        centreX = 0f;
-        centreY = 0f;
-        if (watched == 0) {
-            return;
+        for (int i = 0; i < commanders.size(); i++) {
+            Entity commander = commanders.get(i);
+            int group = groupOf(machineOf(commander));
+            if (group < 0) {
+                if (groups == groupMachine.length) {
+                    continue;
+                }
+                group = groups++;
+                groupMachine[group] = machineOf(commander);
+                groupX[group] = 0f;
+                groupY[group] = 0f;
+                groupSize[group] = 0;
+            }
+            Position at = POSITION.get(commander);
+            groupX[group] += at.x;
+            groupY[group] += at.y;
+            groupSize[group]++;
         }
-        for (int i = 0; i < watched; i++) {
-            Position at = POSITION.get(commanders.get(i));
-            centreX += at.x;
-            centreY += at.y;
+        for (int group = 0; group < groups; group++) {
+            groupX[group] /= groupSize[group];
+            groupY[group] /= groupSize[group];
         }
-        centreX /= watched;
-        centreY /= watched;
+    }
+
+    /** The machine this commander's player sits at (B); 0 for all of them offline. */
+    private int machineOf(Entity commander) {
+        return levels.size() == 0 ? 0 : PRESENCE.get(levels.first()).machineOf(COMMANDER.get(commander).slot);
+    }
+
+    /** Which of this tick's groups gathers this machine's commanders, or -1. */
+    private int groupOf(int machine) {
+        for (int group = 0; group < groups; group++) {
+            if (groupMachine[group] == machine) {
+                return group;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -148,12 +199,16 @@ public final class CommanderControlSystem extends IteratingSystem {
      * <p>What survives lands him exactly on the line; the position is never clamped.
      */
     private void leash(Entity entity, float deltaTime) {
-        if (leashRadius <= 0f || watched < 2 || deltaTime <= 0f) {
+        if (leashRadius <= 0f || deltaTime <= 0f) {
+            return;
+        }
+        int group = groupOf(machineOf(entity));
+        if (group < 0 || groupSize[group] < 2) {
             return;
         }
         Position at = POSITION.get(entity);
-        float outX = at.x - centreX;
-        float outY = at.y - centreY;
+        float outX = at.x - groupX[group];
+        float outY = at.y - groupY[group];
         float distance = (float) Math.sqrt(outX * outX + outY * outY);
         if (distance <= EPSILON) {
             return;

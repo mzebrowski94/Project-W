@@ -12,7 +12,9 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Intent;
+import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Turret;
@@ -24,7 +26,9 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
  * Decides what the commander could do with his hands right now, and does it while he asks.
  *
  * <p><strong>One key, and the game chooses what it means.</strong> Whatever is within arm's length
- * is what is on offer, nearest first; there is no menu and nothing to select. That is pillar 1 -
+ * is what is on offer, nearest first; there is nothing to select. A tie goes to the gun, then the crate,
+ * then the casualty. A crate is the one thing the key opens a choice on - what to take from it, in the
+ * top bar - and that choice is {@code CrateSystem}'s (G0056). That is pillar 1 -
  * anything that makes the player stop and pick belongs in a different game - and it is why the
  * available action is published on {@link Action} for the interface to show rather than assembled by
  * the interface from what it can see.
@@ -52,6 +56,8 @@ public final class ActionSystem extends EntitySystem {
     private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
     private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
+    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+    private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
 
     private final float reviveInvulnerableSeconds;
     private final Modifiers modifiers;
@@ -59,6 +65,8 @@ public final class ActionSystem extends EntitySystem {
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> casualties = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> stations = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> crates = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
     public ActionSystem(SimConfig config, Modifiers modifiers) {
         this.modifiers = modifiers;
@@ -74,6 +82,9 @@ public final class ActionSystem extends EntitySystem {
                 Family.all(Vitality.class, Position.class, Body.class).get());
         stations = engine.getEntitiesFor(
                 Family.all(Turret.class, Position.class, Body.class).get());
+        crates = engine.getEntitiesFor(
+                Family.all(Crate.class, Position.class, Body.class).get());
+        levels = engine.getEntitiesFor(Family.all(Level.class).get());
     }
 
     @Override
@@ -91,16 +102,30 @@ public final class ActionSystem extends EntitySystem {
                 }
                 continue;
             }
-            if (Drivers.held(commander)) {
+            int slot = COMMANDER.get(commander).slot;
+            if (Drivers.held(commander) || Crates.openBy(crates, slot) != null) {
+                // A crate he has open has the key's next press (G0056): the cards in his top bar do.
                 action.idle();
                 continue;
             }
             @Nullable Entity station = Crews.nearestFree(stations, commander, action.reach);
             @Nullable Entity subject = Aid.nearest(casualties, commander, action.reach);
-            if (station != null && nearer(commander, station, subject)) {
+            long tick = levels.size() == 0 ? 0L : LEVEL.get(levels.first()).tick;
+            @Nullable Entity crate = Crates.nearestOpenable(crates, commander, action.reach, slot, tick);
+            if (station != null
+                    && nearer(commander, station, subject)
+                    && (crate == null || Crews.gapTo(commander, station) <= Crates.gapTo(commander, crate))) {
                 offer(action, ActionKind.MAN_TURRET);
                 if (pressed) {
                     Crews.board(commander, station);
+                }
+                continue;
+            }
+            if (crate != null
+                    && (subject == null || Crates.gapTo(commander, crate) <= Crates.gapTo(commander, subject))) {
+                offer(action, ActionKind.OPEN_CRATE);
+                if (pressed) {
+                    Crates.open(crate, slot, tick);
                 }
                 continue;
             }

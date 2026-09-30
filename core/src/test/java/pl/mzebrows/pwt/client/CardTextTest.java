@@ -42,7 +42,8 @@ class CardTextTest {
                 .isEqualTo("SQUAD HELPS MEN +0.2/S");
         assertThat(TEXT.effect(new Effect.Gun(WeaponKind.FLAMER, Stat.GUN_DAMAGE, Target.TEAM, 25)))
                 .isEqualTo("FLAMER DAMAGE +25%");
-        assertThat(TEXT.effect(new Effect.Deal(PickupKind.ARMOURY_FLAMER, 2))).isEqualTo("+2 SEALED FLAMERS");
+        assertThat(TEXT.effect(new Effect.Deal(PickupKind.ARMOURY_FLAMER, 2))).isEqualTo("+2 FLAMERS IN CRATES");
+        assertThat(TEXT.effect(new Effect.Stock(PickupKind.ARMOURY_FLAMER, 1))).isEqualTo("+1 FLAMER PER CRATE");
     }
 
     @Test

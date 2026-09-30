@@ -120,6 +120,19 @@ public final class Modifiers {
         return Fold.count(base, dealt(card), stats.of(Stat.ARMOURY_CARDS).min());
     }
 
+    /** The fewest pickups a crate is dealt (G0056). The side's number. */
+    @Reads(Stat.CRATE_LEAST)
+    public int crateLeast(int base) {
+        return Fold.count(
+                base, amount(Stat.CRATE_LEAST), stats.of(Stat.CRATE_LEAST).min());
+    }
+
+    /** How many of this card every crate holds at least (G0056). The side's number. */
+    @Reads(Stat.CRATE_STOCK)
+    public int crateStock(PickupKind card) {
+        return Fold.count(0, stocked(card), stats.of(Stat.CRATE_STOCK).min());
+    }
+
     /** How often {@code who} does this occasional thing, per second of opportunity. */
     @Reads(Stat.CHANCE)
     public float chance(Entity who, AiChance kind, float base) {
@@ -152,6 +165,24 @@ public final class Modifiers {
                 for (int e = 0; e < effects.size(); e++) {
                     if (effects.get(e) instanceof Effect.Deal deal && deal.card() == card) {
                         sum += deal.amount() * entry.ranks();
+                    }
+                }
+            }
+        }
+        return sum;
+    }
+
+    /** The sum of every held stock of this card, rank by rank. */
+    private int stocked(PickupKind card) {
+        int sum = 0;
+        for (int l = 0; l < ledgers.size(); l++) {
+            Upgrades upgrades = UPGRADES.get(ledgers.get(l));
+            for (int h = 0; h < upgrades.held.size; h++) {
+                Upgrades.Held entry = upgrades.held.get(h);
+                List<Effect> effects = catalogue.of(entry.kind()).effects();
+                for (int e = 0; e < effects.size(); e++) {
+                    if (effects.get(e) instanceof Effect.Stock stock && stock.card() == card) {
+                        sum += stock.amount() * entry.ranks();
                     }
                 }
             }

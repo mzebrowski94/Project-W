@@ -51,6 +51,14 @@ public final class Readout {
     /** The level is lost - every commander out, nobody left in reserve (G0055). Latched in the world. */
     public boolean failed;
 
+    /**
+     * The lair waiting on players (B.1): how many commanders on their feet stand on its ground, and how many
+     * it is waiting for. Both zero while nothing waits.
+     */
+    public int regroupPresent;
+
+    public int regroupNeeded;
+
     /** Entries the ledger can hold at most: every kind, once for the side and once per slot. */
     public static final int HELD = UpgradeKind.values().length * (Players.MAX + 1);
 
@@ -116,6 +124,8 @@ public final class Readout {
         squadMost = other.squadMost;
         reserve = other.reserve;
         failed = other.failed;
+        regroupPresent = other.regroupPresent;
+        regroupNeeded = other.regroupNeeded;
         heldCount = other.heldCount;
         System.arraycopy(other.heldKind, 0, heldKind, 0, other.heldCount);
         System.arraycopy(other.heldSlot, 0, heldSlot, 0, other.heldCount);
@@ -142,6 +152,8 @@ public final class Readout {
         squadMost = 0;
         reserve = 0;
         failed = false;
+        regroupPresent = 0;
+        regroupNeeded = 0;
         heldCount = 0;
         upgradeRevision = 0L;
         draftsDry = 0;

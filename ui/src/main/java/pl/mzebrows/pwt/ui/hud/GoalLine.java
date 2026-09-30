@@ -49,6 +49,9 @@ public final class GoalLine {
         if (readout.failed) {
             return Goal.FAILED;
         }
+        if (readout.regroupPresent > 0 && readout.regroupPresent < readout.regroupNeeded) {
+            return Goal.REGROUP;
+        }
         if (readout.objectivesRequired == 0) {
             return Goal.NONE;
         }
@@ -79,9 +82,19 @@ public final class GoalLine {
             revision++;
         }
         int wantedFirst =
-                shown == Goal.CAPTURE_POINTS ? readout.pointsTaken : shown == Goal.HOLD_POINT ? readout.wavesSent : 0;
+                switch (shown) {
+                    case CAPTURE_POINTS -> readout.pointsTaken;
+                    case HOLD_POINT -> readout.wavesSent;
+                    case REGROUP -> readout.regroupPresent;
+                    default -> 0;
+                };
         int wantedSecond =
-                shown == Goal.CAPTURE_POINTS ? readout.pointsTotal : shown == Goal.HOLD_POINT ? readout.wavesTotal : 0;
+                switch (shown) {
+                    case CAPTURE_POINTS -> readout.pointsTotal;
+                    case HOLD_POINT -> readout.wavesTotal;
+                    case REGROUP -> readout.regroupNeeded;
+                    default -> 0;
+                };
         if (wantedFirst != first || wantedSecond != second) {
             first = wantedFirst;
             second = wantedSecond;
@@ -93,7 +106,7 @@ public final class GoalLine {
         return shown;
     }
 
-    /** Points taken, or waves sent - whichever the goal counts. */
+    /** Points taken, waves sent, or players in place - whichever the goal counts. */
     public int first() {
         return first;
     }

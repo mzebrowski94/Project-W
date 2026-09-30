@@ -115,18 +115,18 @@ public record UpgradeDef(
     }
 
     /**
-     * The armoury deck (G0050): a deal adds to a cache the deck already holds, a level that seals a cache
-     * has a deck to deal it from, and the deck with every deal at its highest rank still fits a bag.
+     * The armoury deck (G0056): a deal or a stock names a card the deck already holds, a level with crates
+     * has a deck to deal them from, and the deck with every deal at its highest rank still fits a bag.
      */
     private static void checkDeck(Defs<UpgradeKind, UpgradeDef> upgrades, Defs<PickupKind, PickupDef> pickups) {
         int cards = 0;
-        boolean sealed = false;
+        boolean crates = false;
         for (PickupDef pickup : pickups.values()) {
             cards += pickup.armoury().cards();
-            sealed |= pickup.armoury().sealed();
+            crates |= pickup.armoury().crate();
         }
-        if (sealed && cards == 0) {
-            throw new IllegalArgumentException("a cache can be sealed, but the armoury deck has no card to deal it");
+        if (crates && cards == 0) {
+            throw new IllegalArgumentException("there are crates, but the armoury deck has no card to fill them");
         }
         for (UpgradeKind kind : UpgradeKind.values()) {
             UpgradeDef def = upgrades.of(kind);
@@ -137,6 +137,11 @@ public record UpgradeDef(
                                 kind + " deals " + deal.card() + ", which is not a card in the armoury deck");
                     }
                     cards += deal.amount() * def.ranks();
+                }
+                if (effect instanceof Effect.Stock stock
+                        && !pickups.of(stock.card()).armoury().inDeck()) {
+                    throw new IllegalArgumentException(
+                            kind + " stocks crates with " + stock.card() + ", which is not a card in the armoury deck");
                 }
             }
         }

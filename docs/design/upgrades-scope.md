@@ -22,7 +22,7 @@ claims against `main` at `e7cf245`, and five rounds of questions Mateusz answere
 | S3 | The draft core | L | drafts earned, dealt, rotated, picked and passed on - headless | done 2026-09-29 |
 | S4 | The cheap upgrades and dev keys | M | playable offline with dev keys | done 2026-09-29 |
 | S5 | The interface | L | playable offline for real, solo and local co-op | done 2026-09-29 |
-| S6 | Firepower: sealed caches and the armoury deck | M | Adventure's caches dealt on reveal | done 2026-09-29 |
+| S6 | Firepower: sealed caches and the armoury deck | M | Adventure's caches dealt on reveal | done 2026-09-29; the sealed cache replaced by the crate 2026-09-30 (G0056) - Firepower now stocks every crate with a flamer, and Full Crates joined the catalogue |
 | S7 | Explosives: troopers throw | M | troopers grenade packs, never the squad | done 2026-09-29 |
 | S8 | Online | L | playable online, drop-in and dropped links included | built 2026-09-29; the two-copy check is Mateusz's |
 | S9 | Playtest gate and tuning | S-M | numbers Mateusz has felt | planned |

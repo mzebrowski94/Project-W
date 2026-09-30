@@ -1,7 +1,9 @@
 package pl.mzebrows.pwt.ui.hud;
 
 import java.util.Arrays;
+import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.ActionKind;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
@@ -14,6 +16,9 @@ public final class PlayerReadout {
 
     /** Most cards a draft shows. */
     public static final int CARDS = 3;
+
+    /** Most cards a crate shows (G0056): everything it can hold. */
+    public static final int CRATE_CARDS = SimConfig.CrateConfig.CAPACITY;
 
     public Posture posture = Posture.ABSENT;
 
@@ -80,8 +85,18 @@ public final class PlayerReadout {
     public final UpgradeKind[] cards = new UpgradeKind[CARDS];
     public final int[] cardRanks = new int[CARDS];
 
+    /**
+     * The crate he has open (G0056): how many it holds - zero while he has none open - what, in order, and
+     * which of them he would be turned down for, a medkit to a man with no wound (G0053).
+     */
+    public int crateCount;
+
+    public final PickupKind[] crate = new PickupKind[CRATE_CARDS];
+    public final boolean[] crateRefused = new boolean[CRATE_CARDS];
+
     public PlayerReadout() {
         Arrays.fill(cards, UpgradeKind.LARGER_ARMY);
+        Arrays.fill(crate, PickupKind.MEDKIT);
     }
 
     void clear() {
@@ -105,6 +120,7 @@ public final class PlayerReadout {
         drafts = 0;
         draftSerial = 0;
         cardCount = 0;
+        crateCount = 0;
     }
 
     void copyFrom(PlayerReadout other) {
@@ -129,5 +145,8 @@ public final class PlayerReadout {
         cardCount = other.cardCount;
         System.arraycopy(other.cards, 0, cards, 0, CARDS);
         System.arraycopy(other.cardRanks, 0, cardRanks, 0, CARDS);
+        crateCount = other.crateCount;
+        System.arraycopy(other.crate, 0, crate, 0, CRATE_CARDS);
+        System.arraycopy(other.crateRefused, 0, crateRefused, 0, CRATE_CARDS);
     }
 }

@@ -9,6 +9,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Pickup;
@@ -81,6 +82,32 @@ class LairTest {
         steps(simulation, 10);
 
         assertThat(bosses(simulation)).isZero();
+    }
+
+    /** A dropped link leaves his commander standing idle wherever he was; that must not hold it up for ever (B.1). */
+    @Test
+    void doesNotWaitForAPlayerWhoseLinkHasDropped() {
+        Simulation simulation = withALair();
+        simulation.spawnCommander(INSIDE, MIDDLE, 0);
+        simulation.spawnCommander(OUTSIDE, MIDDLE, 1);
+
+        simulation.step(new PlayerInputs().away(1));
+
+        assertThat(bosses(simulation)).isEqualTo(1);
+    }
+
+    /** While it waits it says how many are on its ground of how many it wants, for the goal line (B.1). */
+    @Test
+    void saysHowManyPlayersAreOnItsGroundOfHowManyItIsWaitingFor() {
+        Simulation simulation = withALair();
+        simulation.spawnCommander(INSIDE, MIDDLE, 0);
+        simulation.spawnCommander(OUTSIDE, MIDDLE, 1);
+        simulation.spawnCommander(INSIDE, MIDDLE + 5f, 2);
+
+        simulation.step();
+
+        assertThat(simulation.lair().present()).isEqualTo(2);
+        assertThat(simulation.lair().needed()).isEqualTo(3);
     }
 
     @Test

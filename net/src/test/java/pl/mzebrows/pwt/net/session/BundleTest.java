@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
 class BundleTest {
@@ -83,7 +84,7 @@ class BundleTest {
         sent.hold(0, moving)
                 .hold(5, CommanderInput.IDLE)
                 .order(5, Order.DEFENCE)
-                .join(7)
+                .join(7, 3)
                 .restarting();
         sent.switchInvulnerability(true);
         sent.write(out.reset());
@@ -101,6 +102,7 @@ class BundleTest {
         assertThat(inputs.get(3)).isSameAs(CommanderInput.IDLE);
         assertThat(inputs.orderOf(5)).isEqualTo(Order.DEFENCE);
         assertThat(inputs.joins(7)).isTrue();
+        assertThat(inputs.machineOf(7)).isEqualTo(3);
         assertThat(inputs.joins(0)).isFalse();
         assertThat(inputs.switchesInvulnerability()).isTrue();
         assertThat(inputs.invulnerable()).isTrue();
@@ -131,6 +133,33 @@ class BundleTest {
         assertThat(inputs.goesAway(6)).isFalse();
     }
 
+    /** A take from a crate and a crate shut cross whole, and reach the world as their events (G0056). */
+    @Test
+    void carriesCrateEventsAndHandsThemToAWorld() {
+        Bundle sent = new Bundle(8)
+                .clear(4)
+                .crate(1, Bundle.crateCode(PickupKind.ARMOURY_FLAMER))
+                .crate(5, Bundle.CRATE_CLOSE);
+        sent.write(out.reset());
+        int length = out.size();
+
+        assertThat(Bundle.skip(in.wrap(out.array(), 0, length), 8)).isEqualTo(4);
+        assertThat(in.remaining()).isZero();
+        PlayerInputs inputs = new PlayerInputs(8);
+        new Bundle(8).read(in.wrap(out.array(), 0, length)).applyTo(inputs);
+
+        assertThat(inputs.crateTakeOf(1)).isEqualTo(PickupKind.ARMOURY_FLAMER);
+        assertThat(inputs.closesCrate(1)).isFalse();
+        assertThat(inputs.closesCrate(5)).isTrue();
+        assertThat(inputs.crateTakeOf(5)).isNull();
+    }
+
+    @Test
+    void refusesAPickupNobodyCanTakeFromACrate() {
+        assertThatThrownBy(() -> Bundle.crateFromCode(PickupKind.values().length + 1))
+                .isInstanceOf(WireException.class);
+    }
+
     /** The history a sequencer keeps is sized by this: a tick with everything in it must fit. */
     @Test
     void fitsATickWithEverythingInItInTheRoomTheSequencerKeeps() {
@@ -139,8 +168,9 @@ class BundleTest {
         for (int slot = 0; slot < 8; slot++) {
             full.hold(slot, new CommanderInput(1f, 1f, 1f, 1f, true, true))
                     .order(slot, Order.FORWARD)
-                    .join(slot)
-                    .pick(slot, Integer.MAX_VALUE, UpgradeKind.EXPLOSIVES);
+                    .join(slot, Integer.MAX_VALUE)
+                    .pick(slot, Integer.MAX_VALUE, UpgradeKind.EXPLOSIVES)
+                    .crate(slot, Bundle.crateCode(PickupKind.MEDKIT));
             if (slot % 2 == 0) {
                 full.away(slot);
             } else {

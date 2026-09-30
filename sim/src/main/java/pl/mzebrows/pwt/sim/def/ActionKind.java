@@ -19,5 +19,10 @@ public enum ActionKind {
     /** Get on the gun he is standing next to. */
     MAN_TURRET,
     /** Get off the gun he is on. The only thing on offer while he is on one. */
-    LEAVE_TURRET
+    LEAVE_TURRET,
+    /**
+     * Open the crate he is standing next to (G0056). What he takes from it he chooses from the cards in
+     * his top bar - the one place the key leads to a choice, and the second named exception to pillar 1.
+     */
+    OPEN_CRATE
 }

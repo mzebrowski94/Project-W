@@ -176,10 +176,14 @@ public final class Sequencer implements AutoCloseable {
                 + 1
                 + capacity * 2
                 + 1
-                + capacity
+                // A join per slot: its number and the machine it sits at (B).
+                + capacity * (1 + 4)
                 // A card taken per slot, then a presence change per slot.
                 + 1
                 + capacity * (1 + 4 + 1)
+                + 1
+                + capacity * 2
+                // A crate's event per slot (G0056): its number and what it takes, or a close.
                 + 1
                 + capacity * 2;
     }
@@ -304,7 +308,7 @@ public final class Sequencer implements AutoCloseable {
             lastHeld[slot] = held;
             sealing.hold(slot, held);
             if (joinWanted[slot]) {
-                sealing.join(slot);
+                sealing.join(slot, owner[slot]);
                 joinWanted[slot] = false;
             }
         }
@@ -640,6 +644,11 @@ public final class Sequencer implements AutoCloseable {
             switch (type) {
                 case Msg.EVENT_ORDER -> Bundle.orderFromCode(value);
                 case Msg.EVENT_PICK -> Bundle.pickFromCode(extra);
+                case Msg.EVENT_CRATE -> {
+                    if (value != Bundle.CRATE_CLOSE) {
+                        Bundle.crateFromCode(value);
+                    }
+                }
                 default -> throw new WireException("no input event of type " + type);
             }
             peer.hold(seq, slot, type, value, extra);
@@ -996,6 +1005,11 @@ public final class Sequencer implements AutoCloseable {
                             return;
                         }
                         bundle.pick(slot, eventValue[next], Bundle.pickFromCode(eventExtra[next]));
+                    } else if (eventType[next] == Msg.EVENT_CRATE) {
+                        if (bundle.hasCrateEvent(slot)) {
+                            return;
+                        }
+                        bundle.crate(slot, eventValue[next]);
                     } else {
                         if (bundle.orderOf(slot) != null) {
                             return;

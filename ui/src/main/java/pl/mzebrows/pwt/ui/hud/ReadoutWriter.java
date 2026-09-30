@@ -13,9 +13,11 @@ import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Respawning;
@@ -26,8 +28,12 @@ import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.ActionKind;
+import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.Objective;
+import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.system.Grants;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
 
@@ -53,6 +59,7 @@ public final class ReadoutWriter {
     private static final ComponentMapper<Respawning> RESPAWNING = ComponentMapper.getFor(Respawning.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
+    private static final ComponentMapper<Crate> CRATE = ComponentMapper.getFor(Crate.class);
 
     /** Once: {@code values()} hands out a new array on every call, and this runs every frame. */
     private static final Objective[] OBJECTIVES = Objective.values();
@@ -63,6 +70,7 @@ public final class ReadoutWriter {
     private static final Family POINTS = Family.all(ControlPoint.class).get();
     private static final Family NESTS = Family.all(Nest.class).get();
     private static final Family TROOPERS = Family.all(Trooper.class).get();
+    private static final Family CRATES = Family.all(Crate.class).get();
     private static final Family TURRETS =
             Family.all(Turret.class, Appearance.class).get();
 
@@ -80,6 +88,7 @@ public final class ReadoutWriter {
     private ImmutableArray<Entity> nests = empty();
     private ImmutableArray<Entity> troopers = empty();
     private ImmutableArray<Entity> turrets = empty();
+    private ImmutableArray<Entity> crates = empty();
 
     /**
      * Copies what the world says now into {@code out}.
@@ -122,6 +131,7 @@ public final class ReadoutWriter {
         for (int i = 0; i < commanders.size(); i++) {
             commander(commanders.get(i), out);
         }
+        crates(world, out);
         upgrades(world.upgradeView(), out);
         for (int i = 0; i < respawns.size(); i++) {
             Respawning respawning = RESPAWNING.get(respawns.get(i));
@@ -155,6 +165,9 @@ public final class ReadoutWriter {
         out.squadMost = world.squadMost();
         out.reserve = level.reserve;
         out.failed = level.failed;
+        Lair lair = world.lair();
+        out.regroupPresent = lair.waiting() ? lair.present() : 0;
+        out.regroupNeeded = lair.waiting() ? lair.needed() : 0;
     }
 
     private void commander(Entity entity, Readout out) {
@@ -248,6 +261,28 @@ public final class ReadoutWriter {
         }
     }
 
+    /**
+     * Every open crate's cards, on its opener (G0056), and which of them he would be turned down for -
+     * asked of the grant and of him in the one place the simulation asks it.
+     */
+    private void crates(Simulation world, Readout out) {
+        for (int i = 0; i < crates.size(); i++) {
+            Crate crate = CRATE.get(crates.get(i));
+            if (!crate.open() || !crate.dealt || !inRange(crate.openedBy)) {
+                continue;
+            }
+            @Nullable Entity opener = Players.inSlot(commanders, crate.openedBy);
+            PlayerReadout player = out.player(crate.openedBy);
+            player.crateCount = Math.min(crate.count, PlayerReadout.CRATE_CARDS);
+            for (int c = 0; c < player.crateCount; c++) {
+                PickupKind kind = crate.get(c);
+                player.crate[c] = kind;
+                Grant grant = world.config().pickup(kind).grantFor(Side.PLAYER);
+                player.crateRefused[c] = opener == null || !Grant.isSomething(grant) || !Grants.worthTo(grant, opener);
+            }
+        }
+    }
+
     private void bind(Simulation world) {
         bound = world;
         for (int[] last : lastLife) {
@@ -260,6 +295,7 @@ public final class ReadoutWriter {
         nests = world.engine().getEntitiesFor(NESTS);
         troopers = world.engine().getEntitiesFor(TROOPERS);
         turrets = world.engine().getEntitiesFor(TURRETS);
+        crates = world.engine().getEntitiesFor(CRATES);
     }
 
     private static int standing(ImmutableArray<Entity> entities) {

@@ -51,6 +51,30 @@ class GoalLineTest {
         assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.FAILED);
     }
 
+    /** Some players on the lair's ground and not all: the line says how many of how many (B.1). */
+    @Test
+    void asksThePlayersToRegroupWhileTheLairWaitsForSomeOfThem() {
+        Readout readout = requiring(Objective.CLEAR_ENEMIES);
+        readout.regroupPresent = 1;
+        readout.regroupNeeded = 2;
+        GoalLine line = line();
+
+        line.update(readout, FRAME);
+
+        assertThat(line.shown()).isEqualTo(Goal.REGROUP);
+        assertThat(line.first()).isEqualTo(1);
+        assertThat(line.second()).isEqualTo(2);
+    }
+
+    /** Nobody there yet is the level's ordinary goal; the count starts with the first to arrive. */
+    @Test
+    void saysNothingOfRegroupingBeforeAnybodyIsThere() {
+        Readout readout = requiring(Objective.CLEAR_ENEMIES);
+        readout.regroupNeeded = 2;
+
+        assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.CLEAR_ENEMIES);
+    }
+
     @Test
     void saysFailedEvenOnALevelWithoutObjectives() {
         Readout readout = new Readout();

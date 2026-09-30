@@ -64,4 +64,41 @@ class MenuLayoutTest {
         assertThat(LAYOUT.entryAt(panel, 2, 3, panel.x() + 20, LAYOUT.lineTop(panel, 6) - 3))
                 .isEqualTo(-1);
     }
+
+    @Test
+    void fitsTheUpgradeListToItsLinesAndClearOfAWidePauseMenu() {
+        Rect menu = LAYOUT.panel(VIEW, MenuLayout.Anchor.DOCKED_LEFT, 6, 60);
+        Rect list = LAYOUT.beside(VIEW, menu, 5, 200, 12);
+
+        assertThat(list.right()).isEqualTo(VIEW.right() - 8);
+        assertThat(list.x()).isGreaterThanOrEqualTo(menu.right() + 8);
+    }
+
+    @Test
+    void isNoWiderThanItsWidestLine() {
+        Rect menu = LAYOUT.panel(VIEW, MenuLayout.Anchor.DOCKED_LEFT, 6, 34);
+        Rect list = LAYOUT.beside(VIEW, menu, 5, 20, 12);
+
+        assertThat(list.width()).isEqualTo(LAYOUT.width(20));
+    }
+
+    @Test
+    void goesUnderThePauseMenuWhenThereIsNoRoomBesideIt() {
+        Rect narrow = new Rect(0, 41, 300, 266);
+        Rect menu = LAYOUT.panel(narrow, MenuLayout.Anchor.DOCKED_LEFT, 6, 60);
+        Rect list = LAYOUT.beside(narrow, menu, 5, 20, 12);
+
+        assertThat(list.x()).isEqualTo(menu.x());
+        assertThat(list.top()).isLessThanOrEqualTo(menu.y() - 8);
+        assertThat(list.y()).isGreaterThanOrEqualTo(narrow.y() + 8);
+    }
+
+    @Test
+    void cutsAListTallerThanTheViewToTheViewAndSaysHowManyLinesThatHolds() {
+        Rect menu = LAYOUT.panel(VIEW, MenuLayout.Anchor.DOCKED_LEFT, 6, 34);
+        Rect list = LAYOUT.beside(VIEW, menu, 100, 20, 12);
+
+        assertThat(list.y()).isGreaterThanOrEqualTo(VIEW.y() + 8);
+        assertThat(LAYOUT.linesIn(list)).isLessThan(100).isEqualTo((266 - 16 - 12) / 12);
+    }
 }

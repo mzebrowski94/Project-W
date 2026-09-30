@@ -197,6 +197,20 @@ final class PlayMenus {
         return flow.menuOpen() && flow.top() == UiPage.PAUSE;
     }
 
+    /** Where the page's panel rests - not where its arrival has it this frame - for what keeps clear of it. */
+    Rect pagePanel() {
+        return new Rect(panel.x() - motion.offsetX(), panel.y(), panel.width(), panel.height());
+    }
+
+    /** Where the pointer is on the UI canvas, as this frame's navigation read it. */
+    int pointerX() {
+        return nav.pointerX;
+    }
+
+    int pointerY() {
+        return nav.pointerY;
+    }
+
     /** How opaque the page's arrival has it, for what is drawn beside it. */
     float pageAlpha() {
         return motion.alpha();

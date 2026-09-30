@@ -6,17 +6,20 @@ import com.badlogic.ashley.core.Entity;
 import java.util.Objects;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Objective;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 
@@ -343,6 +346,31 @@ class ReadoutWriterTest {
         assertThat(to.heldRanks[0]).isEqualTo(2);
         assertThat(to.player(2).drafts).isEqualTo(3);
         assertThat(to.player(2).cards[0]).isEqualTo(UpgradeKind.GRENADIER);
+    }
+
+    /**
+     * The crate a commander has open is on his readout (G0056): its cards in order, and which of them he
+     * would be turned down for - a medkit, to a man with no wound.
+     */
+    @Test
+    void listsTheCardsOfTheCrateHeHasOpenAndWhichHeWouldBeTurnedDownFor() {
+        Simulation world = world();
+        world.spawnCommander(40f, 40f, 0);
+        Entity crate = world.spawnPickup(PickupKind.CRATE, 42f, 40f);
+        world.step(CommanderInput.IDLE.acting(true));
+        Crate held = crate.getComponent(Crate.class);
+        held.put(0, PickupKind.MEDKIT);
+        held.put(1, PickupKind.ARMOURY_FLAMER);
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        PlayerReadout player = readout.player(0);
+        assertThat(player.crateCount).isEqualTo(held.count);
+        assertThat(player.crate[0]).isEqualTo(PickupKind.MEDKIT);
+        assertThat(player.crate[1]).isEqualTo(PickupKind.ARMOURY_FLAMER);
+        assertThat(player.crateRefused[0]).isTrue();
+        assertThat(player.crateRefused[1]).isFalse();
+        assertThat(readout.player(1).crateCount).isZero();
     }
 
     private static Readout fill(ReadoutWriter writer, Simulation world) {

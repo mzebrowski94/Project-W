@@ -76,6 +76,8 @@ final class CardText {
                         strings.get("ui.weapon." + gun.gun().name()));
             case Effect.Deal deal ->
                 strings.format("ui.effect.deal." + deal.card().name(), signed(deal.amount()), "", "");
+            case Effect.Stock stock ->
+                strings.format("ui.effect.stock." + stock.card().name(), signed(stock.amount()), "", "");
         };
     }
 

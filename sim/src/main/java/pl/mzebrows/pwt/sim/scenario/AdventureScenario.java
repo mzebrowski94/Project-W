@@ -545,10 +545,10 @@ final class AdventureScenario implements Scenario {
         // a death has to be findable again.
         pickups(simulation, map, PickupKind.ARMOURY_FLAMER, 96, 16);
         pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 104, 6);
-        // SEALED from here on, about half of every biome's caches (G0050): the growth taught which colour
-        // is which gun, and now some of what is lying about is found out by walking towards it. The deck
-        // is a bag, so what these turn out to be is spread over every gun, and Firepower stacks it.
-        pickups(simulation, map, PickupKind.ARMOURY_SEALED, 108, 12, 99, 24, 115, 24);
+        // CRATES from here on, about half of every biome's caches (G0056): the growth taught which colour
+        // is which gun, and now some of what is lying about is opened and chosen from. The deck is a bag,
+        // so what these hold is spread over every gun and the medkits, and Firepower stocks each one.
+        pickups(simulation, map, PickupKind.CRATE, 108, 12, 99, 24, 115, 24);
         // THE FIRST BEAM, and the quarry is where it is first worth having. Everything here outlives
         // a sidearm, and the beam is the gun that answers a thing rather than a crowd: it holds one
         // brute at half pace while the squad works on it, and what it leaves behind is worth more
@@ -585,7 +585,7 @@ final class AdventureScenario implements Scenario {
         grunts(simulation, map, 127, 24, 135, 15, 144, 3, 149, 12);
         rabbits(simulation, map, 130, 4, 141, 27);
         // A gun in the mire, because the ashes are past it and a sidearm is not an answer to them.
-        pickups(simulation, map, PickupKind.ARMOURY_SEALED, 132, 21);
+        pickups(simulation, map, PickupKind.CRATE, 132, 21);
         // And a beam, because the mire is where the ground stops being safe: what it buys here is a
         // frog dropped before it has closed, and a body left where it fell turned into something the
         // rest of them have to walk round.
@@ -610,7 +610,7 @@ final class AdventureScenario implements Scenario {
         // his side sets one off, so they are his to lay across whatever he is backing away from.
         mines(simulation, map, 159, 22, 164, 11, 166, 19, 173, 12);
         pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 162, 15);
-        pickups(simulation, map, PickupKind.ARMOURY_SEALED, 171, 4);
+        pickups(simulation, map, PickupKind.CRATE, 171, 4);
 
         redoubt(simulation, map);
 
@@ -699,7 +699,7 @@ final class AdventureScenario implements Scenario {
 
         // A gun worth having for the last fight, behind the post rather than in front of it - it is
         // for the man who loses his in the first wave, not a reward for arriving.
-        pickups(simulation, map, PickupKind.ARMOURY_SEALED, 194, 15);
+        pickups(simulation, map, PickupKind.CRATE, 194, 15);
         pickups(simulation, map, PickupKind.ARMOURY_FLAMER, 200, 15);
 
         // What comes in, and from where. Every lot arrives at a corner, and the corners alternate, so

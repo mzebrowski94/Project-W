@@ -33,6 +33,7 @@ import pl.mzebrows.pwt.sim.system.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.CommanderControlSystem;
 import pl.mzebrows.pwt.sim.system.ControlPointSystem;
 import pl.mzebrows.pwt.sim.system.CooldownSystem;
+import pl.mzebrows.pwt.sim.system.CrateSystem;
 import pl.mzebrows.pwt.sim.system.DamageSystem;
 import pl.mzebrows.pwt.sim.system.DodgeSystem;
 import pl.mzebrows.pwt.sim.system.DragSystem;
@@ -200,10 +201,13 @@ public final class Simulation {
         engine.addSystem(new StrikeSystem(spawner));
         engine.addSystem(new CollisionSystem(config, map, spawner, modifiers, nerve));
         engine.addSystem(new GrenadeSystem(map, spawner, modifiers));
-        engine.addSystem(new PickupSystem(config, spawner, modifiers, streams.of(RngStream.ARMOURY)));
+        engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(config, spawner, modifiers));
         engine.addSystem(new ActionSystem(config, modifiers));
+        // Straight after the key that opens a crate, so a crate opened this tick is dealt and shown this
+        // tick; after damage, so a man hurt this tick has his crate shut on it (G0056).
+        engine.addSystem(new CrateSystem(config, spawner, modifiers, streams.of(RngStream.ARMOURY)));
         engine.addSystem(new AidSystem(config, modifiers));
         engine.addSystem(new CasualtySystem(config, spawner, modifiers));
         engine.addSystem(new DyingSystem(spawner));
@@ -272,14 +276,20 @@ public final class Simulation {
      */
     public void step(PlayerInputs inputs) {
         spawnOrder.keep();
-        // Joins first, so a player who takes his slot on this tick is driven by this tick's input.
+        // Joins first, so a player who takes his slot on this tick is driven by this tick's input - and
+        // seated at his machine whether or not the slot already has a commander, since a slot re-seated
+        // from another machine keeps its man (B).
+        Presence presence = PRESENCE.get(levels.first());
         for (int slot = 0; slot < inputs.capacity(); slot++) {
-            if (inputs.joins(slot) && Players.inSlot(commanders, slot) == null) {
+            if (!inputs.joins(slot)) {
+                continue;
+            }
+            presence.seat(slot, inputs.machineOf(slot));
+            if (Players.inSlot(commanders, slot) == null) {
                 joinCommander(slot);
             }
         }
         // Then presence, before anything reads it (G0052), and the tick's picks, applied at its end (G0049).
-        Presence presence = PRESENCE.get(levels.first());
         for (int slot = 0; slot < inputs.capacity(); slot++) {
             if (inputs.goesAway(slot)) {
                 presence.leave(slot);
@@ -310,7 +320,10 @@ public final class Simulation {
                             input.throwing(),
                             input.acting(),
                             input.dragging(),
-                            inputs.orderOf(COMMANDER.get(commander).slot));
+                            inputs.orderOf(COMMANDER.get(commander).slot))
+                    .crate(
+                            inputs.crateTakeOf(COMMANDER.get(commander).slot),
+                            inputs.closesCrate(COMMANDER.get(commander).slot));
             if (INVULNERABLE.has(commander)) {
                 INVULNERABLE.get(commander).permanent = level.commandersInvulnerable;
             }
