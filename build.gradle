@@ -84,6 +84,13 @@ subprojects {
       events 'failed'
       exceptionFormat 'full'
       showStackTraces = true
+      // gradle.properties runs the build quiet, and the settings above are only the lifecycle level's:
+      // without these a failed test says "1 failed" and nothing about what it asserted.
+      quiet {
+        events 'failed'
+        exceptionFormat 'full'
+        showStackTraces = true
+      }
     }
   }
 

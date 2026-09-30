@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESERVE_START;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
@@ -26,6 +25,7 @@ import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * The reserve: the men a side has off the field, and the one pool every man who comes onto it is
@@ -270,7 +270,7 @@ class ReserveTest {
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(A_BLOW, 0);
+        entity.getComponent(Damage.class).land(0, Harm.KILL);
         entity.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 

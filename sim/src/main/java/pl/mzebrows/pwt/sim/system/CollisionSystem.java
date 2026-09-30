@@ -40,6 +40,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -342,6 +343,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         ContactDamage attack = CONTACT_DAMAGE.get(attacker);
+        if (!attack.enabled) {
+            // No claws. A grip is its own ability, and was asked about above.
+            return;
+        }
         if (!attack.ready()) {
             return;
         }
@@ -356,15 +361,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         attack.remainingTicks = attack.cooldownTicks;
-        if (INVULNERABLE.has(target) && INVULNERABLE.get(target).active()) {
-            return;
-        }
-        owed.add(attack.amount, attack.victimInvulnerableTicks, attack.harm);
-        owed.stun(attack.stunTicks);
-        // Recorded, not applied, as the shove is.
-        owed.slow(attack.slowFactor, attack.slowTicks);
-        owed.pump(attack.bloat);
-        owed.creditTo(attack.credit);
+        // Recorded, not applied, protected target or not: whether it costs anything is DamageSystem's.
+        owed.land(attack);
         recordSource(attacker, owed);
         lock(attacker, target, attack, owed);
         shove(attacker, target, attack, owed);
@@ -412,10 +410,15 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
                 && !GRIPPED.get(target).held()
                 && !Drivers.down(target)
                 && !Drivers.aboard(target)
-                && !(INVULNERABLE.has(target) && INVULNERABLE.get(target).active())) {
+                && !protectedNow(target)) {
             if (shielded(target)) {
-                // A shield takes a grab as it takes any hit, and breaks: the creature simply lands (G0053).
-                SHIELD.get(target).shatter();
+                // A shield takes a grab as it takes any hit, and breaks: the grab lands as a harmless blow,
+                // and the creature simply lands (G0053, G0057).
+                if (DAMAGE.has(target)) {
+                    Damage owed = DAMAGE.get(target);
+                    owed.land(0, Harm.NONE);
+                    recordSource(attacker, owed);
+                }
                 LEAP.get(attacker).finish();
                 return true;
             }
@@ -443,8 +446,9 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         }
         Entity owner = owner(attacker);
         Entity source = owner == null ? attacker : owner;
-        if (!shielded(target)) {
-            // A shield takes the hit and whatever holds him with it (G0053); DamageSystem breaks it.
+        if (!shielded(target) && !protectedNow(target)) {
+            // A shield takes the hit and whatever holds him with it (G0053); DamageSystem breaks it. A
+            // protected target is not held either: the hold is the one thing a blow does on the spot.
             hold(target, attack);
         }
         if (!attack.locksCommittedOnly || committed(target)) {
@@ -460,6 +464,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      */
     private static boolean committed(Entity target) {
         return LEAP.has(target) && LEAP.get(target).committed();
+    }
+
+    private static boolean protectedNow(Entity entity) {
+        return INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active();
     }
 
     private static boolean shielded(Entity entity) {

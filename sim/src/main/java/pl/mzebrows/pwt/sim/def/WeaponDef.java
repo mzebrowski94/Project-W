@@ -40,6 +40,8 @@ import lombok.With;
  *     the living too, but only something already down bursts
  * @param stunSeconds how long one of its shots leaves whatever it hits unable to act (G0053); zero on
  *     every gun that does not stun. Taken whatever else the shot did, unless a shield took the shot
+ * @param harm what one of its shots does to a man (G0053): a wound for gunfire, and {@link Harm#NONE}
+ *     for a shot that is not itself the weapon - venom's, whose spatter is (G0057)
  */
 @With
 public record WeaponDef(
@@ -62,7 +64,8 @@ public record WeaponDef(
         float selfSlowSeconds,
         float trailLength,
         float bloatPerShot,
-        float stunSeconds) {
+        float stunSeconds,
+        Harm harm) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;

@@ -32,8 +32,9 @@ belongs on the definition every kind already has rather than on the one kind tha
 `Transport` (links between machines), `LoopbackNetwork` and `ConditionedTransport` (networks for tests
 and lag on demand), `NetLog` (the connection log), `WorldCodec` (a world as bytes, a hash, a diff),
 `SessionHarness` (a whole online session in one test), `Modifiers` (any number an upgrade may move),
-`Grants` (what a pickup's grant does to a taker, and whether it is worth anything to him), `Whole` (the
-one rounding rule for hit points and damage, G0054), `Ticks` (a duration as whole ticks) - plus a
+`Grants` (what a pickup's grant does to a taker, and whether it is worth anything to him), `Damage.land`
+(the one way a blow is recorded, G0057), `Whole` (the one rounding rule for hit points and damage,
+G0054), `Ticks` (a duration as whole ticks) - plus a
 component or system for most behaviour. `docs/glossary.md` is the cheap check: if the word exists, the
 thing usually does too.
 

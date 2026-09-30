@@ -27,6 +27,7 @@ import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Strain;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -132,7 +133,7 @@ class NestTest {
         Simulation simulation = simulation();
         Entity nest = simulation.spawnNest(UnitKind.GRUNT, X, Y);
 
-        nest.getComponent(Damage.class).add(NEST_HEALTH, 0);
+        nest.getComponent(Damage.class).land(NEST_HEALTH, Harm.KILL);
         simulation.step();
 
         assertThat(creatures(simulation)).isEqualTo(BROOD);
@@ -150,7 +151,7 @@ class NestTest {
             Entity commander = simulation.spawnCommander(X + 4f, Y + 1f);
             Position him = commander.getComponent(Position.class);
 
-            nest.getComponent(Damage.class).add(NEST_HEALTH, 0);
+            nest.getComponent(Damage.class).land(NEST_HEALTH, Harm.KILL);
             simulation.step();
 
             for (Position at : broodPositions(simulation)) {
@@ -170,7 +171,7 @@ class NestTest {
             Simulation simulation = new Simulation(config().withSeed(seed));
             Entity nest = simulation.spawnNest(UnitKind.GRUNT, X, Y);
 
-            nest.getComponent(Damage.class).add(NEST_HEALTH, 0);
+            nest.getComponent(Damage.class).land(NEST_HEALTH, Harm.KILL);
             simulation.step();
 
             for (Position at : broodPositions(simulation)) {
@@ -186,7 +187,7 @@ class NestTest {
         Simulation simulation = simulation();
         Entity nest = simulation.spawnNest(UnitKind.SPITTER, X, Y);
 
-        nest.getComponent(Damage.class).add(NEST_HEALTH, 0);
+        nest.getComponent(Damage.class).land(NEST_HEALTH, Harm.KILL);
         simulation.step();
 
         assertThat(strains(simulation)).containsOnly(UnitKind.SPITTER);
@@ -203,7 +204,7 @@ class NestTest {
         Entity nest = simulation.spawnNest(UnitKind.GRUNT, X, Y);
         Entity neighbour = simulation.spawnUnit(UnitKind.GRUNT, X + NEST_ROUSE_RADIUS - 5f, Y);
 
-        nest.getComponent(Damage.class).add(1, 0);
+        nest.getComponent(Damage.class).land(1, Harm.KILL);
         simulation.step();
 
         assertThat(neighbour.getComponent(Perception.class).provoked).isTrue();
@@ -226,7 +227,7 @@ class NestTest {
         Entity nest = simulation.spawnNest(UnitKind.GRUNT, X, Y);
         Entity distant = simulation.spawnUnit(UnitKind.GRUNT, X + NEST_ROUSE_RADIUS + 10f, Y);
 
-        nest.getComponent(Damage.class).add(1, 0);
+        nest.getComponent(Damage.class).land(1, Harm.KILL);
         simulation.step();
 
         assertThat(distant.getComponent(Perception.class).provoked).isFalse();

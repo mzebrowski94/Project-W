@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.shootingStraight;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -122,6 +121,6 @@ class AlienTargetingTest {
     }
 
     private static void putDown(Entity entity) {
-        entity.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
+        entity.getComponent(Damage.class).land(0, Harm.DOWN);
     }
 }

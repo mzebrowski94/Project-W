@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -14,6 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Stunned;
@@ -79,8 +79,8 @@ class ShieldTest {
         Entity trooper = simulation.spawnTrooper(50f, 50f);
         shield(trooper).raise();
 
-        hit(trooper, Harm.WOUND);
-        trooper.getComponent(Damage.class).stun(A_WHILE);
+        trooper.getComponent(Damage.class)
+                .land(new ContactDamage().set(0, 0, 0).harming(Harm.WOUND).stunning(A_WHILE));
         simulation.step();
 
         assertThat(trooper.getComponent(Stunned.class).active()).isFalse();
@@ -126,7 +126,7 @@ class ShieldTest {
     }
 
     private static void hit(Entity entity, Harm harm) {
-        entity.getComponent(Damage.class).add(A_BLOW, 0, harm);
+        entity.getComponent(Damage.class).land(0, harm);
     }
 
     private static Shield shield(Entity entity) {

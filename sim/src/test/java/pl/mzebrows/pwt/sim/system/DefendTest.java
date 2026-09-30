@@ -245,7 +245,7 @@ class DefendTest {
                 simulation.engine().getEntitiesFor(Family.all(Enemy.class).get());
         assertThat(aliens.size()).isEqualTo(2);
 
-        aliens.get(0).getComponent(Damage.class).add(LETHAL, 0, Harm.KILL);
+        aliens.get(0).getComponent(Damage.class).land(LETHAL, Harm.KILL);
         steps(simulation, 2);
         long withOneStanding = simulation.waves().cleared;
         killEveryEnemy(simulation);
@@ -259,7 +259,7 @@ class DefendTest {
         ImmutableArray<Entity> standing =
                 simulation.engine().getEntitiesFor(Family.all(Enemy.class).get());
         for (int i = 0; i < standing.size(); i++) {
-            standing.get(i).getComponent(Damage.class).add(LETHAL, 0, Harm.KILL);
+            standing.get(i).getComponent(Damage.class).land(LETHAL, Harm.KILL);
         }
     }
 }

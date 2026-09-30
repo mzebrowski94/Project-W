@@ -31,6 +31,7 @@ import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -314,7 +315,7 @@ class TrooperCombatTest {
         simulation.step();
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
 
-        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
+        enemy.getComponent(Damage.class).land(ENEMY_HEALTH, Harm.KILL);
         steps(simulation, 3);
 
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.ADVANCE);
@@ -400,10 +401,8 @@ class TrooperCombatTest {
     /** A hit landing on him this tick from a place, the way contact resolution records one. */
     private static void shotFrom(Entity trooper, float x, float y) {
         Damage damage = trooper.getComponent(Damage.class);
-        damage.amount = 1;
-        damage.hasSource = true;
-        damage.sourceX = x;
-        damage.sourceY = y;
+        damage.land(0, Harm.WOUND);
+        damage.cameFrom(x, y);
     }
 
     private static void facing(Entity trooper, float x, float y) {

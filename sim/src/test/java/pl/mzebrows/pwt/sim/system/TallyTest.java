@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_STABILISE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.GRENADE_RANGE;
@@ -135,7 +134,7 @@ class TallyTest {
         Entity shooter = simulation.spawnCommander(SHOOTER, LANE, 1);
         simulation.spawnBarrel(TARGET, LANE);
         Entity trooper = simulation.spawnTrooper(TARGET + BESIDE, LANE + BESIDE * 2f);
-        trooper.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
+        trooper.getComponent(Damage.class).land(0, Harm.DOWN);
 
         for (int tick = 0; tick < A_WHILE && !trooper.getComponent(Dying.class).begun; tick++) {
             simulation.step(as(1, firingAt(TARGET)));
@@ -150,10 +149,10 @@ class TallyTest {
         Damage forwards = new Damage();
         Damage backwards = new Damage();
 
-        forwards.creditTo(1);
-        forwards.creditTo(3);
-        backwards.creditTo(3);
-        backwards.creditTo(1);
+        forwards.land(0, Harm.KILL, 1);
+        forwards.land(0, Harm.KILL, 3);
+        backwards.land(0, Harm.KILL, 3);
+        backwards.land(0, Harm.KILL, 1);
 
         assertThat(forwards.credit).isEqualTo(3);
         assertThat(backwards.credit).isEqualTo(3);
@@ -167,7 +166,7 @@ class TallyTest {
         tally(commander).goals = 2;
 
         commander.getComponent(Invulnerable.class).remainingTicks = 0;
-        commander.getComponent(Damage.class).add(A_BLOW, 0);
+        commander.getComponent(Damage.class).land(0, Harm.KILL);
         for (int tick = 0; tick < ticksIn(DEATH_THROES + RESPAWN_DELAY) + 2; tick++) {
             simulation.step();
         }
@@ -183,7 +182,7 @@ class TallyTest {
         Entity medic = simulation.spawnCommander(LANE, LANE, 0);
         Entity bystander = simulation.spawnCommander(SHOOTER, ASIDE, 1);
         Entity trooper = simulation.spawnTrooper(LANE + BESIDE, LANE);
-        trooper.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
+        trooper.getComponent(Damage.class).land(0, Harm.DOWN);
 
         for (int tick = 0; tick < ticksIn(CASUALTY_STABILISE) + 2; tick++) {
             simulation.step(as(0, STILL.acting(true)));
@@ -200,7 +199,7 @@ class TallyTest {
         Entity medic = simulation.spawnCommander(LANE, LANE, 0);
         Entity patient = simulation.spawnCommander(LANE + BESIDE, LANE, 1);
         patient.getComponent(Invulnerable.class).remainingTicks = 0;
-        patient.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
+        patient.getComponent(Damage.class).land(0, Harm.DOWN);
 
         for (int tick = 0; tick < ticksIn(CASUALTY_STABILISE) + 4; tick++) {
             simulation.step(as(0, STILL.acting(true)));

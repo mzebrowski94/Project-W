@@ -34,6 +34,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -486,7 +487,7 @@ class TrooperAdvanceTest {
         steps(simulation, 2);
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
 
-        enemy.getComponent(Damage.class).add(ENEMY_HEALTH * 2, 0);
+        enemy.getComponent(Damage.class).land(ENEMY_HEALTH * 2, Harm.KILL);
         steps(simulation, ticksIn(DEATH_THROES) + 4);
 
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);

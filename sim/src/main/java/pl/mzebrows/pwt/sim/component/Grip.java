@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * What this creature's leap does to a man it lands on, and who it has in its jaws (G0045).
@@ -32,6 +33,9 @@ public final class Grip implements Component, Pool.Poolable {
 
     public int escapeShoveTicks;
 
+    /** What getting out of its jaws costs him (G0053, G0057). Configuration; {@link Harm#NONE} when off. */
+    public Harm escapeHarm = Harm.NONE;
+
     /** The handle of the man in its jaws, or {@link Handle#NOBODY}. */
     public long load = Handle.NOBODY;
 
@@ -44,12 +48,14 @@ public final class Grip implements Component, Pool.Poolable {
             float newCarrySpeed,
             int newHoldTicks,
             float newEscapeKnockbackSpeed,
-            int newEscapeShoveTicks) {
+            int newEscapeShoveTicks,
+            Harm newEscapeHarm) {
         this.enabled = newEnabled;
         this.carrySpeed = newCarrySpeed;
         this.holdTicks = newHoldTicks;
         this.escapeKnockbackSpeed = newEscapeKnockbackSpeed;
         this.escapeShoveTicks = newEscapeShoveTicks;
+        this.escapeHarm = newEscapeHarm;
         return this;
     }
 
@@ -82,6 +88,7 @@ public final class Grip implements Component, Pool.Poolable {
         holdTicks = 0;
         escapeKnockbackSpeed = 0f;
         escapeShoveTicks = 0;
+        escapeHarm = Harm.NONE;
         load = Handle.NOBODY;
         remainingTicks = 0;
     }

@@ -261,7 +261,7 @@ class BarrageTest {
         steps(simulation, 2);
         int before = simulation.level().bossesDown;
 
-        boss.getComponent(Damage.class).add(BOSS_HEALTH * 10, 0, Harm.KILL);
+        boss.getComponent(Damage.class).land(BOSS_HEALTH * 10, Harm.KILL);
         steps(simulation, 10);
 
         assertThat(before).isZero();

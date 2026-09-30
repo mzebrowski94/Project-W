@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_THROES;
@@ -25,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * A death that takes time. The commander's body stays where it fell for its throes and only then is
@@ -144,7 +144,7 @@ class DeathThroesTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
+        enemy.getComponent(Damage.class).land(ENEMY_HEALTH, Harm.KILL);
         simulation.step();
 
         assertThat(count(simulation, Enemy.class)).isEqualTo(1);
@@ -156,7 +156,7 @@ class DeathThroesTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
+        enemy.getComponent(Damage.class).land(ENEMY_HEALTH, Harm.KILL);
         steps(simulation, ticksIn(ENEMY_THROES) + 2);
 
         assertThat(count(simulation, Enemy.class)).isZero();
@@ -168,7 +168,7 @@ class DeathThroesTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
+        enemy.getComponent(Damage.class).land(ENEMY_HEALTH, Harm.KILL);
         simulation.step();
 
         Collider collider = enemy.getComponent(Collider.class);
@@ -184,7 +184,7 @@ class DeathThroesTest {
         simulation.spawnCommander(50f, 50f);
         steps(simulation, 4);
 
-        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
+        enemy.getComponent(Damage.class).land(ENEMY_HEALTH, Harm.KILL);
         simulation.step();
 
         Velocity velocity = enemy.getComponent(Velocity.class);
@@ -201,14 +201,14 @@ class DeathThroesTest {
         kill(commander);
         simulation.step();
         int afterFirst = commander.getComponent(Dying.class).remainingTicks;
-        commander.getComponent(Damage.class).add(A_BLOW, 0);
+        commander.getComponent(Damage.class).land(0, Harm.KILL);
         simulation.step();
 
         assertThat(commander.getComponent(Dying.class).remainingTicks).isLessThan(afterFirst);
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
+        entity.getComponent(Damage.class).land(ENEMY_HEALTH, Harm.KILL);
         entity.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 }

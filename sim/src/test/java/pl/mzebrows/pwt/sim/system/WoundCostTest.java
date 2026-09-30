@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.WOUND_COOLDOWN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.WOUND_GRACE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.WOUND_PACE;
@@ -87,7 +86,7 @@ class WoundCostTest {
     }
 
     private static void wound(Simulation simulation, Entity man) {
-        man.getComponent(Damage.class).add(A_BLOW, 0, Harm.WOUND);
+        man.getComponent(Damage.class).land(0, Harm.WOUND);
         steps(simulation, ticksIn(WOUND_GRACE) + 2);
     }
 }

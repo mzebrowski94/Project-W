@@ -1,6 +1,6 @@
 # G0053: A man is hurt in wounds, not health
 
-**Status.** accepted
+**Status.** amended by G0057: a fourth harm, none, that costs no wound and still lands
 
 **Trigger.** Adding a damage source, changing what a hit does to a commander or a trooper, adding
 anything that heals, protects or disables a man, or proposing that a man's fate depend on an amount.
@@ -33,7 +33,8 @@ and by nothing lighter. **Amends G0006, G0018, G0023, G0034 and G0035**, each no
   standing man does, slower and firing slower. Protections and disablements - grace, a **shield**, a
   stun, a slow - are timers on permanent components that compose on top, never states of the
   machine.
-- **A shield takes one hit of any harm**, a grab and a stun included, and breaks. The shove still
+- **A shield takes one hit of any harm**, a grab and a stun included - and, since G0057, a harmless one -
+  and breaks. The shove still
   lands. Shields do not stack.
 - **Everything that heals clears every wound**: being revived, a **medkit**, and *mending* after a
   spell out of trouble. A medkit is worth something only to a man who has a wound.

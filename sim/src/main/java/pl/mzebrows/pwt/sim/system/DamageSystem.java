@@ -32,7 +32,6 @@ import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Vitality;
-import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
@@ -42,7 +41,8 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
  * for a man - who has none - whatever the tick's worst harm does to him (G0053).
  *
  * <p>The only system that reduces health, wounds a man, puts him down or decides something has died.
- * Damage owed is always cleared, invulnerable or not. <strong>Only a survivor is thrown</strong>; a
+ * What it settles is whatever <em>landed</em>, owing anything or not (G0057), and the tick's blows are
+ * always cleared, invulnerable or not. <strong>Only a survivor is thrown</strong>; a
  * killing blow stops the body where it was struck. What a death does is {@link Deaths}, shared with
  * the bleed-out.
  */
@@ -107,75 +107,63 @@ public final class DamageSystem extends IteratingSystem {
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
         Damage damage = DAMAGE.get(entity);
-        if (damage.amount <= 0) {
-            return;
+        if (damage.landed) {
+            settle(entity, damage);
         }
-        int owed = damage.amount;
-        int recovery = damage.recoveryTicks;
-        float shoveX = damage.knockbackX;
-        float shoveY = damage.knockbackY;
-        float shove = damage.knockbackSpeed;
-        int shoveTicks = damage.shoveTicks;
-        float shoveDecay = damage.shoveDecay;
-        long locksOnDeath = damage.locksOnDeath;
-        int deathLock = damage.deathLockTicks;
-        float carrySpeed = damage.clinchCarrySpeed;
-        float carryDecay = damage.clinchCarryDecay;
-        boolean hasSource = damage.hasSource;
-        Harm harm = damage.harm;
-        float sourceX = damage.sourceX;
-        float sourceY = damage.sourceY;
-        boolean slowed = damage.slowed();
-        float slowFactor = damage.slowFactor;
-        int slowTicks = damage.slowTicks;
-        float bloat = damage.bloat;
-        int credit = damage.credit;
-        int stunTicks = damage.stunTicks;
+        // The one place a tick's blows are cleared - landed or not, protected or not, so nothing a blow
+        // recorded outlives the tick it landed on.
         damage.reset();
+    }
+
+    /** What this tick's blows cost the entity they landed on. */
+    private void settle(Entity entity, Damage damage) {
         if (INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active()) {
             return;
         }
-        if (hasSource && PERCEPTION.has(entity)) {
-            // Being hurt provokes it towards where the hit came from (G0016) - only a hit that landed.
-            PERCEPTION.get(entity).provokeAt(sourceX, sourceY);
+        if (damage.hasSource && PERCEPTION.has(entity)) {
+            // Being hurt provokes it towards where the hit came from (G0016) - only a hit that landed, and
+            // any hit that landed, harmless or not (G0057).
+            PERCEPTION.get(entity).provokeAt(damage.sourceX, damage.sourceY);
         }
-        if (hasSource && TROOPER.has(entity)) {
+        if (damage.hasSource && TROOPER.has(entity)) {
             // The same place, for a man: he turns round to look for what did it.
-            TROOPER.get(entity).hitFrom(sourceX, sourceY, alertTicks);
+            TROOPER.get(entity).hitFrom(damage.sourceX, damage.sourceY, alertTicks);
         }
-        if (bloat > 0f && BLOAT.has(entity)) {
+        if (damage.bloat > 0f && BLOAT.has(entity)) {
             // Builds on the living too, scaled by body size and livingFactor. BloatSystem owns the rest.
             boolean down = DYING.has(entity) && DYING.get(entity).begun;
-            BLOAT.get(entity).feed(bloatConfig.perShotAgainst(BODY.get(entity).radius, bloat, down));
+            BLOAT.get(entity).feed(bloatConfig.perShotAgainst(BODY.get(entity).radius, damage.bloat, down));
         }
         if (SHIELD.has(entity) && SHIELD.get(entity).up) {
-            // It takes the hit - the harm, the stun and the slow - and breaks; the shove still lands (G0053).
+            // It takes the hit - the harm, the stun and the slow - and breaks, whatever the harm, a harmless
+            // one and a grab included; the shove still lands (G0053, G0057).
             SHIELD.get(entity).shatter();
-            throwClear(entity, shoveX, shoveY, shove, shoveTicks, shoveDecay);
+            throwClear(entity, damage);
             return;
         }
         if (VITALITY.has(entity)) {
-            hurt(entity, harm, credit, locksOnDeath, deathLock, carrySpeed, carryDecay);
+            hurt(entity, damage);
             if (standing(entity)) {
-                // A man left on his feet - wounded, or spared by his grace - is still slowed, thrown and stunned.
-                slow(entity, slowed, slowFactor, slowTicks);
-                throwClear(entity, shoveX, shoveY, shove, shoveTicks, shoveDecay);
-                daze(entity, stunTicks);
+                // A man left on his feet - wounded, spared by his grace, or hit by something harmless - is
+                // still slowed, thrown and stunned.
+                slow(entity, damage);
+                throwClear(entity, damage);
+                daze(entity, damage.stunTicks);
             }
             return;
         }
-        slow(entity, slowed, slowFactor, slowTicks);
+        slow(entity, damage);
         Health health = HEALTH.get(entity);
-        health.current -= owed;
+        health.current -= damage.amount;
         if (INVULNERABLE.has(entity)) {
-            INVULNERABLE.get(entity).grant(recovery);
+            INVULNERABLE.get(entity).grant(damage.recoveryTicks);
         }
         if (health.current <= 0) {
-            die(entity, credit, locksOnDeath, deathLock, carrySpeed, carryDecay);
+            die(entity, damage);
             return;
         }
-        throwClear(entity, shoveX, shoveY, shove, shoveTicks, shoveDecay);
-        daze(entity, stunTicks);
+        throwClear(entity, damage);
+        daze(entity, damage.stunTicks);
     }
 
     /**
@@ -193,19 +181,12 @@ public final class DamageSystem extends IteratingSystem {
      * G0053). His amount is never read: he has no health. Nothing grants him the source's recovery
      * window either - his protection after a wound is his own grace.
      */
-    private void hurt(
-            Entity entity,
-            Harm harm,
-            int credit,
-            long locksOnDeath,
-            int deathLock,
-            float carrySpeed,
-            float carryDecay) {
+    private void hurt(Entity entity, Damage damage) {
         if (DYING.has(entity) && DYING.get(entity).begun) {
             return;
         }
-        switch (VITALITY.get(entity).take(harm, carries(modifiers, entity))) {
-            case KILLED -> die(entity, credit, locksOnDeath, deathLock, carrySpeed, carryDecay);
+        switch (VITALITY.get(entity).take(damage.harm, carries(modifiers, entity))) {
+            case KILLED -> die(entity, damage);
             case DOWNED -> fall(entity);
             case WOUNDED, NOTHING -> {
                 // Still where he was: on his feet, or on the ground and spared a wound.
@@ -214,19 +195,26 @@ public final class DamageSystem extends IteratingSystem {
     }
 
     /** One death path for anything, man or alien, and the clinch a killing blow may carry. */
-    private void die(Entity entity, int credit, long locksOnDeath, int deathLock, float carrySpeed, float carryDecay) {
+    private void die(Entity entity, Damage damage) {
         float travelX = VELOCITY.has(entity) ? VELOCITY.get(entity).x : 0f;
         float travelY = VELOCITY.has(entity) ? VELOCITY.get(entity).y : 0f;
         if (Deaths.kill(spawner, entity)) {
-            credit(entity, credit);
+            credit(entity, damage.credit);
         }
-        clinch(entity, Handles.resolve(handled, locksOnDeath), deathLock, travelX, travelY, carrySpeed, carryDecay);
+        clinch(
+                entity,
+                Handles.resolve(handled, damage.locksOnDeath),
+                damage.deathLockTicks,
+                travelX,
+                travelY,
+                damage.clinchCarrySpeed,
+                damage.clinchCarryDecay);
     }
 
     /** Only a hit that landed slows; recorded whether or not the hit did anything else. */
-    private static void slow(Entity entity, boolean slowed, float slowFactor, int slowTicks) {
-        if (slowed && SLOWED.has(entity)) {
-            SLOWED.get(entity).apply(slowFactor, slowTicks);
+    private static void slow(Entity entity, Damage damage) {
+        if (damage.slowed() && SLOWED.has(entity)) {
+            SLOWED.get(entity).apply(damage.slowFactor, damage.slowTicks);
         }
     }
 
@@ -234,14 +222,14 @@ public final class DamageSystem extends IteratingSystem {
      * Throws a survivor away from the blow. A throw that held nobody - ground pushing a man off itself -
      * also takes his control for as long as it lasts, or his own control would spend it on the next tick.
      */
-    private static void throwClear(
-            Entity entity, float shoveX, float shoveY, float shove, int shoveTicks, float shoveDecay) {
-        if (shove <= 0f || !VELOCITY.has(entity)) {
+    private static void throwClear(Entity entity, Damage damage) {
+        if (!damage.pushed() || !VELOCITY.has(entity)) {
             return;
         }
-        VELOCITY.get(entity).set(shoveX * shove, shoveY * shove);
-        if (shoveTicks > 0 && STUNNED.has(entity)) {
-            STUNNED.get(entity).apply(shoveTicks, shoveDecay);
+        float shove = damage.knockbackSpeed;
+        VELOCITY.get(entity).set(damage.knockbackX * shove, damage.knockbackY * shove);
+        if (damage.shoveTicks > 0 && STUNNED.has(entity)) {
+            STUNNED.get(entity).apply(damage.shoveTicks, damage.shoveDecay);
         }
     }
 

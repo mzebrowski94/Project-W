@@ -95,7 +95,7 @@ class WoundClockTest {
         int seconds = new Modifiers(simulation.engine(), config)
                 .mendSeconds(commander, config.wound().mendSeconds());
 
-        commander.getComponent(Damage.class).add(1, 0, Harm.WOUND);
+        commander.getComponent(Damage.class).land(0, Harm.WOUND);
 
         int ticks = 0;
         do {

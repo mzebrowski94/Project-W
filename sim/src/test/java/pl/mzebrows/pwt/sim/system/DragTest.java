@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_BLEED_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_STABILISE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_SPEED;
@@ -200,7 +199,7 @@ class DragTest {
         assertThat(trooper.getComponent(Vitality.class).begun).isFalse();
 
         steps(simulation, ticksIn(REVIVE_INVULNERABLE) + 2, STILL);
-        trooper.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
+        trooper.getComponent(Damage.class).land(0, Harm.DOWN);
         simulation.step(STILL);
 
         assertThat(trooper.getComponent(Vitality.class).begun).isTrue();
@@ -259,7 +258,7 @@ class DragTest {
 
     private static Entity downedTrooper(Simulation simulation) {
         Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
-        trooper.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
+        trooper.getComponent(Damage.class).land(0, Harm.DOWN);
         simulation.step(STILL);
         return trooper;
     }

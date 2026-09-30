@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.OBSTACLE_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.harmless;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
@@ -14,8 +17,30 @@ import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Shield;
 
 class CollisionSystemTest {
+
+    /** Long enough for claws that could land a blow to have landed several. */
+    private static final int A_WHILE = 60;
+
+    /**
+     * <strong>Claws with nothing in them are no claws.</strong> A blow that owes nothing still lands
+     * (G0057) - it would take a shield - so a strain whose contact damage is zero has to land nothing at
+     * all: zero is off.
+     */
+    @Test
+    void landsNothingFromClawsWithNothingInThem() {
+        Simulation simulation = harmless();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+        commander.getComponent(Shield.class).raise();
+        simulation.spawnEnemy(51f, 50f);
+
+        steps(simulation, A_WHILE);
+
+        assertThat(commander.getComponent(Shield.class).up).isTrue();
+        assertThat(unhurt(commander)).isTrue();
+    }
 
     @Test
     void pushesTwoOverlappingUnitsApart() {

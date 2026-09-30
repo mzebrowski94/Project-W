@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -17,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Drafts;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Upgrades;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.upgrade.DraftDef;
 import pl.mzebrows.pwt.sim.upgrade.Effect;
@@ -203,7 +203,7 @@ class DraftTest {
         simulation.step(
                 new PlayerInputs().pick(0, drafts(simulation).pending.first().serial(), UpgradeKind.WEAPON_HANDLING));
 
-        commander.getComponent(Damage.class).add(A_BLOW, 0);
+        commander.getComponent(Damage.class).land(0, Harm.KILL);
         commander.getComponent(Invulnerable.class).remainingTicks = 0;
         AlphaWorlds.steps(simulation, ticksIn(DEATH_THROES + RESPAWN_DELAY) + 2);
 

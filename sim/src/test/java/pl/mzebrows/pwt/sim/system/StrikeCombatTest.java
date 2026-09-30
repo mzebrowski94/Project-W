@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Health;
+import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Stunned;
@@ -76,6 +77,23 @@ class StrikeCombatTest {
         steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_EAST);
 
         assertThat(brute.getComponent(Stunned.class).active()).isTrue();
+    }
+
+    /**
+     * A protected target is not held. Its blow is recorded and settled to nothing like any other, but the
+     * hold lands on the spot rather than being settled, so it is the one thing the sweep itself refuses.
+     */
+    @Test
+    void leavesAProtectedBruteFreeWhenTheSweepConnects() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(50f, 50f);
+        Entity brute = simulation.spawnBrute(IN_THE_ARC_X, 50f);
+        brute.getComponent(Invulnerable.class).grant(ticksIn(MELEE_ACTIVE) * 4);
+
+        steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_EAST);
+
+        assertThat(brute.getComponent(Stunned.class).active()).isFalse();
+        assertThat(brute.getComponent(Health.class).current).isEqualTo(BRUTE_HEALTH);
     }
 
     /** Away from the commander, not away from the sweep - the sweep can be on the brute's far side. */

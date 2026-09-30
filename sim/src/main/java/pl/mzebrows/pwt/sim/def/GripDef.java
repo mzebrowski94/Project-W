@@ -17,11 +17,14 @@ import lombok.With;
  * @param carrySpeed how fast it goes with a man in its jaws, in world units per second. Slower than a
  *     man on his feet, or nobody could catch up with one
  * @param holdSeconds how long it carries him before it finishes him
- * @param escapeKnockbackSpeed how hard a man is thrown clear when it dies with him still in its jaws -
- *     the wound that escape costs him (G0053), in world units per second
+ * @param escapeKnockbackSpeed how hard a man is thrown clear when it dies with him still in its jaws, in
+ *     world units per second (G0053)
+ * @param escapeHarm what getting out of its jaws that way costs him: a wound for every gripper there is
+ *     (G0053, G0057)
  */
 @With
-public record GripDef(boolean enabled, float carrySpeed, float holdSeconds, float escapeKnockbackSpeed) {
+public record GripDef(
+        boolean enabled, float carrySpeed, float holdSeconds, float escapeKnockbackSpeed, Harm escapeHarm) {
 
     public GripDef {
         Require.notNegative("grip carrySpeed", carrySpeed);
@@ -34,6 +37,6 @@ public record GripDef(boolean enabled, float carrySpeed, float holdSeconds, floa
 
     /** A leap that bites. What every strain but one declares. */
     public static GripDef off() {
-        return new GripDef(false, 0f, 0f, 0f);
+        return new GripDef(false, 0f, 0f, 0f, Harm.NONE);
     }
 }

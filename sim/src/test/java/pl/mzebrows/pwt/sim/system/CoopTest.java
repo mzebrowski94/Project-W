@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LEASH_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
@@ -25,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Order;
 
 /**
@@ -348,7 +348,7 @@ class CoopTest {
     }
 
     private static void kill(Entity commander) {
-        commander.getComponent(Damage.class).add(A_BLOW, 0);
+        commander.getComponent(Damage.class).land(0, Harm.KILL);
         commander.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 }

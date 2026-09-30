@@ -107,9 +107,8 @@ public final class BlastSystem extends EntitySystem {
             }
             Damage owed = DAMAGE.get(victim);
             // Decisive for anything with health; a man takes the blast kind's harm (G0018, G0053).
-            owed.add(damage, 0, harm);
+            owed.land(damage, harm, credit);
             owed.cameFrom(x, y);
-            owed.creditTo(credit);
         }
     }
 }

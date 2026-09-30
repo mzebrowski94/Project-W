@@ -115,18 +115,19 @@ public final class Vitality implements Component, Pool.Poolable {
     /**
      * What one tick's worst blow does to him - the whole of G0053's table.
      *
-     * <p>A wound in grace, or on a man who is down, is nothing. A wound on a standing man adds one, and
-     * one past his maximum puts him down; otherwise it starts his grace. A down blow puts a standing man
-     * down whatever his wounds. A down or a killing blow finishes a man who is down, and a killing blow
-     * kills a standing one.
+     * <p>A harmless blow is nothing (G0057). A wound in grace, or on a man who is down, is nothing. A
+     * wound on a standing man adds one, and one past his maximum puts him down; otherwise it starts his
+     * grace. A down blow puts a standing man down whatever his wounds. A down or a killing blow finishes
+     * a man who is down, and a killing blow kills a standing one.
      *
      * @param carries how many wounds he carries on his feet now, upgrades included
      */
     public Taken take(Harm harm, int carries) {
         if (begun) {
-            return harm == Harm.WOUND ? Taken.NOTHING : Taken.KILLED;
+            return harm == Harm.NONE || harm == Harm.WOUND ? Taken.NOTHING : Taken.KILLED;
         }
         return switch (harm) {
+            case NONE -> Taken.NOTHING;
             case KILL -> Taken.KILLED;
             case DOWN -> {
                 begin();

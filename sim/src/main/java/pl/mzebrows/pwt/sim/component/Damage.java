@@ -5,18 +5,27 @@ import com.badlogic.gdx.utils.Pool;
 import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
- * Damage owed to an entity this tick, waiting to be applied.
+ * The blows that landed on an entity this tick, waiting to be applied: the one place a blow is
+ * recorded, and the rules for how the tick's blows combine.
  *
- * <p><strong>Contact only adds here; {@code DamageSystem} applies.</strong> So two hits in one tick
- * both count, independent of grid order, and the recovery window a hit asks for is granted after it
- * lands, not before. <strong>Only a target that survives is thrown</strong>: the knockback is recorded
- * and applied only if it lives, so a killing blow leaves the body where it was struck.
+ * <p><strong>Whatever lands a blow says so here, through {@link #land}; {@code DamageSystem}
+ * applies.</strong> So two hits in one tick both count, independent of grid order, and the recovery
+ * window a hit asks for is granted after it lands, not before. <strong>Only a target that survives is
+ * thrown</strong>: the knockback is recorded and applied only if it lives, so a killing blow leaves the
+ * body where it was struck.
+ *
+ * <p><strong>A blow counts because it landed, not because it owes anything</strong> (G0057): one that
+ * owes no hit points and harms a man not at all still breaks his shield, still provokes, and still
+ * throws. What it owes is {@link #amount} for anything with health and {@link #harm} for a man.
  *
  * <p>The window doubles as "already staggered this tick": a hit that grants recovery is exclusive;
- * hits that grant none - projectiles - are not. Carried permanently by everything with {@link Health},
- * zeroed after each application.
+ * hits that grant none - projectiles - are not. Carried permanently by everything with {@link Health}
+ * or {@link Vitality}, cleared after every tick whether or not anything landed.
  */
 public final class Damage implements Component, Pool.Poolable {
+
+    /** Whether any blow landed this tick. Nothing else here means anything while it is false. */
+    public boolean landed;
 
     /** Whole hit points owed (G0054). */
     public int amount;
@@ -61,10 +70,9 @@ public final class Damage implements Component, Pool.Poolable {
     /**
      * The worst harm any of this tick's hits declared, for a man (G0053).
      *
-     * <p>The worst wins when hits combine. A property of the <em>source</em>, not of the amount, and
-     * meaningless while {@link #amount} is zero.
+     * <p>The worst wins when hits combine. A property of the <em>source</em>, not of the amount.
      */
-    public Harm harm = Harm.WOUND;
+    public Harm harm = Harm.NONE;
 
     /** How long the shove owed throws him for, where a blow shoved without locking; zero otherwise. */
     public int shoveTicks;
@@ -76,7 +84,7 @@ public final class Damage implements Component, Pool.Poolable {
     public int stunTicks;
 
     /** Records a stun, keeping the longest asked for this tick. */
-    public void stun(int ticks) {
+    private void stun(int ticks) {
         if (ticks > stunTicks) {
             stunTicks = ticks;
         }
@@ -92,7 +100,7 @@ public final class Damage implements Component, Pool.Poolable {
     public int slowTicks;
 
     /** Records a slow, keeping the worst asked for this tick. Nothing at all for a blow that has none. */
-    public void slow(float factor, int ticks) {
+    private void slow(float factor, int ticks) {
         if (factor >= 1f || ticks <= 0 || factor >= slowFactor) {
             return;
         }
@@ -113,7 +121,7 @@ public final class Damage implements Component, Pool.Poolable {
     public float bloat;
 
     /** Records a shot's worth of pumping. Nothing at all for a blow that does none. */
-    public void pump(float extra) {
+    private void pump(float extra) {
         if (extra > 0f) {
             bloat += extra;
         }
@@ -134,25 +142,39 @@ public final class Damage implements Component, Pool.Poolable {
     }
 
     /**
-     * Adds a blow that kills a man outright, and to how long the victim recovers afterwards.
-     *
-     * <p>A source that does anything less to a man says so with the longer call.
+     * Records a blow a {@link ContactDamage} describes landing: what it owes, what it does to a man, and
+     * the stun, slow, pumping and credit it carries. Where it came from, and what it does to the two
+     * bodies, depend on where they stand, and are said with {@link #cameFrom}, {@link #push},
+     * {@link #shove} and {@link #lockOnDeath}.
      */
-    public void add(int extra, int recovery) {
-        add(extra, recovery, Harm.KILL);
+    public void land(ContactDamage blow) {
+        land(blow.amount, blow.victimInvulnerableTicks, blow.harm, blow.credit);
+        stun(blow.stunTicks);
+        slow(blow.slowFactor, blow.slowTicks);
+        pump(blow.bloat);
     }
 
     /**
-     * Adds to what is already owed, saying what this blow does to a man.
-     *
-     * <p>{@code blowHarm} is a property of the source rather than of the damage (G0020, G0053).
+     * Records a blow no {@link ContactDamage} describes - a blast, getting out of a grip: hit points for
+     * anything with health, a harm for a man (G0020, G0053), and the slot a kill by it counts for.
      */
-    public void add(int extra, int recovery, Harm blowHarm) {
+    public void land(int extra, Harm blowHarm, int slot) {
+        land(extra, 0, blowHarm, slot);
+    }
+
+    /** The same, counting for nobody. */
+    public void land(int extra, Harm blowHarm) {
+        land(extra, blowHarm, Tally.NOBODY);
+    }
+
+    private void land(int extra, int recovery, Harm blowHarm, int slot) {
+        landed = true;
         amount += extra;
         if (recovery > recoveryTicks) {
             recoveryTicks = recovery;
         }
         harm = Harm.worse(harm, blowHarm);
+        creditTo(slot);
     }
 
     /**
@@ -196,7 +218,7 @@ public final class Damage implements Component, Pool.Poolable {
     public int credit = Tally.NOBODY;
 
     /** Records the player behind a blow, keeping the higher slot of the tick. */
-    public void creditTo(int slot) {
+    private void creditTo(int slot) {
         if (slot > credit) {
             credit = slot;
         }
@@ -215,6 +237,7 @@ public final class Damage implements Component, Pool.Poolable {
 
     @Override
     public void reset() {
+        landed = false;
         amount = 0;
         recoveryTicks = 0;
         knockbackX = 0f;
@@ -227,7 +250,7 @@ public final class Damage implements Component, Pool.Poolable {
         sourceX = 0f;
         sourceY = 0f;
         hasSource = false;
-        harm = Harm.WOUND;
+        harm = Harm.NONE;
         shoveTicks = 0;
         shoveDecay = 0f;
         stunTicks = 0;

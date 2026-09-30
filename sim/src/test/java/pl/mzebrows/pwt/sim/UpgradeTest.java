@@ -248,7 +248,7 @@ class UpgradeTest {
     }
 
     private static void wound(Simulation simulation, Entity man) {
-        man.getComponent(Damage.class).add(AlphaWorlds.A_BLOW, 0, Harm.WOUND);
+        man.getComponent(Damage.class).land(0, Harm.WOUND);
         AlphaWorlds.steps(simulation, AlphaWorlds.ticksIn(AlphaWorlds.WOUND_GRACE) + 2);
     }
 

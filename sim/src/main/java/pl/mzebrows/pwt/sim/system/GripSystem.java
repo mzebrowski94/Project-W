@@ -22,7 +22,6 @@ import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
-import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * Carries off whatever a gripping leap took hold of, and finishes him when his time is up (G0045).
@@ -136,27 +135,26 @@ public final class GripSystem extends EntitySystem {
 
     /** Its own blow, with its own lethality, at the end of the carry (G0020). */
     private static void finish(Entity gripper, Entity man) {
-        if (!DAMAGE.has(man) || !CONTACT_DAMAGE.has(gripper)) {
+        if (!DAMAGE.has(man) || !CONTACT_DAMAGE.has(gripper) || !CONTACT_DAMAGE.get(gripper).enabled) {
             return;
         }
-        ContactDamage bite = CONTACT_DAMAGE.get(gripper);
         Damage owed = DAMAGE.get(man);
-        owed.add(bite.amount, bite.victimInvulnerableTicks, bite.harm);
+        owed.land(CONTACT_DAMAGE.get(gripper));
         Position at = POSITION.get(gripper);
         owed.cameFrom(at.x, at.y);
     }
 
     /**
-     * What getting out of its jaws costs him (G0053): a wound, and a throw clear of the body. Owed like
-     * any blow, so his grace, and whatever else lands this tick, are weighed with it. The amount is its
-     * bite's; only the harm matters to a man.
+     * What getting out of its jaws costs him (G0053): the harm its grip declares - a wound for every
+     * gripper there is (G0057) - and a throw clear of the body. Owed like any blow, so his grace, and
+     * whatever else lands this tick, are weighed with it. A man has no health, so it owes none.
      */
     private static void escape(Entity gripper, Grip grip, Entity man, float tickSeconds) {
-        if (!DAMAGE.has(man) || !CONTACT_DAMAGE.has(gripper)) {
+        if (!DAMAGE.has(man)) {
             return;
         }
         Damage owed = DAMAGE.get(man);
-        owed.add(CONTACT_DAMAGE.get(gripper).amount, 0, Harm.WOUND);
+        owed.land(0, grip.escapeHarm);
         Position at = POSITION.get(gripper);
         Position where = POSITION.get(man);
         owed.cameFrom(at.x, at.y);

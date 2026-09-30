@@ -544,7 +544,7 @@ class ScenarioSessionTest {
                 .getEntitiesFor(Family.all(Trooper.class).get())
                 .get(0)
                 .getComponent(Damage.class)
-                .add(1, 0, Harm.DOWN);
+                .land(0, Harm.DOWN);
     }
 
     private static @Nullable Order trooperOrder(ScenarioSession session) {

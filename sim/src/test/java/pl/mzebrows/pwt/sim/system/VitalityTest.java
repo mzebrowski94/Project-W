@@ -234,7 +234,7 @@ class VitalityTest {
     }
 
     private static void hit(Entity entity, int amount, Harm harm) {
-        entity.getComponent(Damage.class).add(amount, 0, harm);
+        entity.getComponent(Damage.class).land(amount, harm);
     }
 
     private static Vitality vitality(Entity entity) {

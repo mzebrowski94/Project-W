@@ -414,6 +414,8 @@ public final class Spawner {
         entity.getComponent(Dying.class).set(ticks(def.deathThroesSeconds()));
         entity.getComponent(ContactDamage.class)
                 .set(def.contactDamage(), ticks(def.attackCooldownSeconds()), ticks(def.victimInvulnerableSeconds()))
+                // Claws with nothing in them are no claws: zero is off (G0057).
+                .enabledIf(def.contactDamage() > 0)
                 .reachingWithin(def.attackArcCosine())
                 .setLock(ticks(def.lockSeconds()), false, 0f, 0f, 0f, 0f);
         entity.getComponent(Perception.class)
@@ -478,7 +480,8 @@ public final class Spawner {
                         def.grip().carrySpeed(),
                         ticks(def.grip().holdSeconds()),
                         def.grip().escapeKnockbackSpeed(),
-                        ticks(config.wound().shoveSeconds()));
+                        ticks(config.wound().shoveSeconds()),
+                        def.grip().escapeHarm());
         entity.getComponent(Armour.class)
                 .set(def.armour().enabled(), def.armour().arcCosine());
         entity.getComponent(Barrage.class)
@@ -851,6 +854,7 @@ public final class Spawner {
                 weapon.bloatPerShot,
                 weapon.trailLength,
                 weapon.stunTicks,
+                weapon.harm,
                 side,
                 credit);
     }
@@ -879,6 +883,7 @@ public final class Spawner {
                 gun.bloatPerShot(),
                 gun.trailLength(),
                 ticks(gun.stunSeconds()),
+                gun.harm(),
                 side,
                 Tally.NOBODY);
     }
@@ -901,6 +906,7 @@ public final class Spawner {
             float bloatPerShot,
             float trailLength,
             int stunTicks,
+            Harm harm,
             Side side,
             int credit) {
         Entity entity = engine.createEntity();
@@ -921,8 +927,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(false, true).swept(true));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(damage, pierceIntervalTicks, 0)
-                // Gunfire wounds a man (G0053).
-                .harming(Harm.WOUND)
+                // What the gun says it does to a man: gunfire wounds, venom's shot costs nothing (G0053, G0057).
+                .harming(harm)
                 .slowing(slowFactor, slowTicks)
                 .pumping(bloatPerShot)
                 .stunning(stunTicks)

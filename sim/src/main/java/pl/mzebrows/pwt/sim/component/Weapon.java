@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.Ticks;
@@ -77,6 +78,9 @@ public final class Weapon implements Component, Pool.Poolable {
     /** How long one of its shots leaves what it hits unable to act, in ticks; zero for none (G0053). */
     public int stunTicks;
 
+    /** What one of its shots does to a man (G0053, G0057). */
+    public Harm harm = Harm.WOUND;
+
     /** How much of a body one of its shots pumps up. Zero for every gun that does nothing to one. */
     public float bloatPerShot;
 
@@ -117,6 +121,7 @@ public final class Weapon implements Component, Pool.Poolable {
         this.trailLength = def.trailLength();
         this.bloatPerShot = def.bloatPerShot();
         this.stunTicks = Ticks.of(def.stunSeconds(), tickSeconds);
+        this.harm = def.harm();
         this.heatPerShot = def.heat().perShot();
         this.heatCoolPerSecond = def.heat().coolPerSecond();
         this.heatResumeBelow = def.heat().resumeBelow();
@@ -151,6 +156,7 @@ public final class Weapon implements Component, Pool.Poolable {
         trailLength = 0f;
         bloatPerShot = 0f;
         stunTicks = 0;
+        harm = Harm.WOUND;
         heatPerShot = 0f;
         heatCoolPerSecond = 0f;
         heatResumeBelow = 0f;

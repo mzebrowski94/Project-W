@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SQUAD_SIZE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TILE;
@@ -26,6 +25,7 @@ import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * Where the player's side starts, and that it starts together.
@@ -135,7 +135,7 @@ class SquadTest {
         Simulation simulation = deployed(config());
         Entity lost = all(simulation, Trooper.class).get(0);
 
-        lost.getComponent(Damage.class).add(A_BLOW, 0);
+        lost.getComponent(Damage.class).land(0, Harm.KILL);
         steps(simulation, ticksIn(DEATH_THROES) + 30);
 
         assertThat(count(simulation, Trooper.class)).isEqualTo(SQUAD_SIZE - 1);

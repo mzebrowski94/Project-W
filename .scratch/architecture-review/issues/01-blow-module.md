@@ -1,6 +1,6 @@
 # 01 - One blow module owning Damage
 
-Status: needs-triage
+Status: ready-for-human
 
 Strength: Strong. Dependency: in-process. Report candidate 1.
 
@@ -46,3 +46,8 @@ Deleting `Damage`'s helpers would spread the keep-the-worst rules across four wr
 concentrates in a blow module rather than moving.
 
 ## Comments
+
+- 2026-09-30: Suspected bug confirmed (`DamageSystemTest.forgetsWhereAHitThatOwedNothingCameFrom`)
+  and fixed. Built as G0057: `Damage.land` is the one recorder, a blow counts because it landed,
+  `Harm.NONE`, `sim.weapon.*.harm`, `sim.unit.*.grip.escapeHarm`, a grab on a shield is a harmless
+  blow, zero contact damage turns a strain's claws off. Awaiting review and a feel check.

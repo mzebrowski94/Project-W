@@ -9,7 +9,8 @@
 **Constraint.** A unit that is provoked - shot, struck, or standing near a control point being taken -
 latches the **position** the provocation came from and goes there. It does not latch what provoked it.
 No entity reference and no entity id survives a tick. What it fights when it arrives is whatever
-ordinary perception finds for it once it is there.
+ordinary perception finds for it once it is there. A hit provokes because it landed, whatever it owed
+(G0057).
 
 **Scope.** Provocation: being hurt, and the aggro a capture generates. It does not touch noticing the
 commander, which is a range test on a def (G0011, G0015) and is latched as a boolean exactly as

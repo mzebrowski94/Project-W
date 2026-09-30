@@ -2,7 +2,6 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ACTION_REACH;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_STABILISE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.WOUND_GRACE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
@@ -90,7 +89,7 @@ class ActionTest {
         Simulation simulation = simulation();
         simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
-        trooper.getComponent(Damage.class).add(A_BLOW, 0, Harm.WOUND);
+        trooper.getComponent(Damage.class).land(0, Harm.WOUND);
         steps(simulation, ticksIn(WOUND_GRACE) + 2);
 
         putDown(trooper);
@@ -150,7 +149,7 @@ class ActionTest {
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
 
-        trooper.getComponent(Damage.class).add(A_BLOW, 0);
+        trooper.getComponent(Damage.class).land(0, Harm.KILL);
         simulation.step(STILL);
 
         assertThat(commander.getComponent(Action.class).available).isEqualTo(ActionKind.NONE);
@@ -203,6 +202,6 @@ class ActionTest {
     }
 
     private static void putDown(Entity entity) {
-        entity.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
+        entity.getComponent(Damage.class).land(0, Harm.DOWN);
     }
 }

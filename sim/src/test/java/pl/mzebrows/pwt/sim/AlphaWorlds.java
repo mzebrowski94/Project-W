@@ -110,9 +110,6 @@ public final class AlphaWorlds {
     /** As the game ships it: one wound on his feet, and the next puts him down (G0053). */
     public static final int COMMANDER_MAX_WOUNDS = 1;
 
-    /** Any blow at all, for a man: he reads its harm and never its amount (G0053). */
-    public static final int A_BLOW = 1;
-
     public static final int ENEMY_HEALTH = 100;
     public static final int WEAPON_DAMAGE = 50;
     public static final int ENEMY_CONTACT_DAMAGE = 100;
@@ -953,7 +950,8 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        0f))
+                                        0f,
+                                        Harm.WOUND))
                         .put(
                                 WeaponKind.SPIT,
                                 new WeaponDef(
@@ -976,7 +974,8 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        0f))
+                                        0f,
+                                        Harm.WOUND))
                         .put(
                                 WeaponKind.SPEW,
                                 new WeaponDef(
@@ -999,7 +998,8 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        0f))
+                                        0f,
+                                        Harm.WOUND))
                         .put(
                                 WeaponKind.CHARGED_SPIT,
                                 new WeaponDef(
@@ -1022,7 +1022,8 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        0f))
+                                        0f,
+                                        Harm.WOUND))
                         .put(
                                 WeaponKind.RAILGUN,
                                 new WeaponDef(
@@ -1045,7 +1046,8 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        0f))
+                                        0f,
+                                        Harm.WOUND))
                         .put(
                                 WeaponKind.FLAMER,
                                 new WeaponDef(
@@ -1068,7 +1070,8 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        0f))
+                                        0f,
+                                        Harm.WOUND))
                         // The beam: it stops at the first thing it touches, and it runs hot. The
                         // fixture keeps both, because both are what every test about it is about.
                         .put(
@@ -1093,7 +1096,8 @@ public final class AlphaWorlds {
                                         LASER_SELF_SLOW_SECONDS,
                                         LASER_TRAIL,
                                         LASER_BLOAT_PER_SHOT,
-                                        0f))
+                                        0f,
+                                        Harm.WOUND))
                         .put(
                                 WeaponKind.SHOTGUN,
                                 new WeaponDef(
@@ -1116,7 +1120,8 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        0f))
+                                        0f,
+                                        Harm.WOUND))
                         .put(
                                 WeaponKind.VENOM,
                                 new WeaponDef(
@@ -1150,7 +1155,8 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        0f))
+                                        0f,
+                                        Harm.NONE))
                         .put(
                                 WeaponKind.TURRET_GUN,
                                 new WeaponDef(
@@ -1173,7 +1179,8 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        0f))
+                                        0f,
+                                        Harm.WOUND))
                         .build(),
                 thickets(),
                 noChances(),

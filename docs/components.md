@@ -32,7 +32,7 @@ and a component touched by many is where to check. Read the code before concludi
 | **ControlPoint** | A place a squad takes by standing near it. | `Appearance`, `ControlPoint`, `Objective`, `RallyPoint`, `Reinforcement`, `Respawn`, `TrooperObjective` · `Spawner` |
 | **Crate** | A crate (G0056): what it holds, once it has been dealt, and who has it open. | `Action`, `Crate`, `Crates` · `Spawner` · client: `GraphicFile` |
 | **Crew** | Whether this man is aboard something, and which thing. | `Appearance`, `Crews`, `Drivers`, `Turret` · `Spawner` |
-| **Damage** | Damage owed to an entity this tick, waiting to be applied. | `Blast`, `Collision`, `Damage`, `Grip` · `Spawner` |
+| **Damage** | The blows that landed on an entity this tick, waiting to be applied: the one place a blow is recorded, and the rules for how the tick's blows combine. | `Blast`, `Collision`, `Damage`, `Grip` · `Spawner` |
 | **Dead** | Marker: This entity is finished and will be removed at the end of the tick. | `Blast`, `Crate`, `Crates`, `Deaths`, `Nest`, `Reaper`, `Reinforcement`, `Respawn`, `Slick` · `Spawner` |
 | **Dodge** | A sidestep away from an incoming shot, and how long it is committed to it. | `Cooldown`, `Dodge` · `Spawner` |
 | **Drafts** | The drafts waiting to be picked, their cards, and what has earned them (G0049). | `Spawner` |

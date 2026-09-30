@@ -29,6 +29,7 @@ import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.ArmourDef;
 import pl.mzebrows.pwt.sim.def.GripDef;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
@@ -206,7 +207,7 @@ class AntTest {
         Entity ant = simulation.spawnUnit(UnitKind.ANT, MIDDLE + WITHIN_A_LEAP, MIDDLE);
         stepUntilTaken(simulation, commander);
 
-        ant.getComponent(Damage.class).add(ENEMY_HEALTH * 2, 0);
+        ant.getComponent(Damage.class).land(ENEMY_HEALTH * 2, Harm.KILL);
         steps(simulation, ticksIn(HOLD_SECONDS) + 2);
 
         assertThat(commander.getComponent(Gripped.class).held()).isFalse();
@@ -221,7 +222,7 @@ class AntTest {
         Entity ant = simulation.spawnUnit(UnitKind.ANT, MIDDLE + WITHIN_A_LEAP, MIDDLE);
         stepUntilTaken(simulation, commander);
 
-        ant.getComponent(Damage.class).add(ENEMY_HEALTH * 2, 0);
+        ant.getComponent(Damage.class).land(ENEMY_HEALTH * 2, Harm.KILL);
         steps(simulation, 3);
 
         assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
@@ -311,7 +312,7 @@ class AntTest {
         return config.withUnit(
                 UnitKind.ANT,
                 ant -> ant.withLeap(leapConfig())
-                        .withGrip(new GripDef(true, CARRY_SPEED, HOLD_SECONDS, ESCAPE_THROW))
+                        .withGrip(new GripDef(true, CARRY_SPEED, HOLD_SECONDS, ESCAPE_THROW, Harm.WOUND))
                         .withArmour(new ArmourDef(true, HEAD_ARC)));
     }
 

@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RAILGUN_DAMAGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
@@ -22,6 +21,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -117,7 +117,7 @@ class WeaponPickupTest {
     }
 
     private static void kill(Entity entity) {
-        entity.getComponent(Damage.class).add(A_BLOW, 0);
+        entity.getComponent(Damage.class).land(0, Harm.KILL);
         entity.getComponent(Invulnerable.class).remainingTicks = 0;
     }
 

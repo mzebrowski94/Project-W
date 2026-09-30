@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_BLEED_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_STABILISE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
@@ -53,7 +52,7 @@ class AidTest {
         Entity down = simulation.spawnTrooper(MIDDLE, MIDDLE);
         simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
 
-        wound(down, A_BLOW);
+        wound(down);
         steps(simulation, LONG_ENOUGH_TO_WORK);
 
         assertThat(down.getComponent(Vitality.class).begun).isFalse();
@@ -66,7 +65,7 @@ class AidTest {
         Entity down = simulation.spawnTrooper(MIDDLE, MIDDLE);
         simulation.spawnTrooper(MIDDLE + ACROSS_THE_ROOM, MIDDLE);
 
-        wound(down, A_BLOW);
+        wound(down);
         steps(simulation, LONG_ENOUGH_TO_WALK_AND_WORK);
 
         assertThat(down.getComponent(Vitality.class).begun).isFalse();
@@ -79,7 +78,7 @@ class AidTest {
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
 
-        wound(commander, A_BLOW);
+        wound(commander);
         steps(simulation, LONG_ENOUGH_TO_WORK);
 
         assertThat(commander.getComponent(Vitality.class).begun).isFalse();
@@ -92,7 +91,7 @@ class AidTest {
         Entity down = simulation.spawnTrooper(MIDDLE, MIDDLE);
         simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
 
-        wound(down, A_BLOW);
+        wound(down);
         steps(simulation, ticksIn(CASUALTY_BLEED_OUT) + 2);
 
         assertThat(down.getComponent(Dying.class).begun).isTrue();
@@ -108,7 +107,7 @@ class AidTest {
         // simply wins is not a fight it stayed in.
         simulation.spawnBrute(MIDDLE + BESIDE + 10f, MIDDLE);
 
-        wound(down, A_BLOW);
+        wound(down);
         steps(simulation, WHILE_THE_ENEMY_IS_STILL_UP);
 
         assertThat(mode(helper)).isEqualTo(Trooper.Mode.FIGHT);
@@ -123,15 +122,15 @@ class AidTest {
         Entity helper = simulation.spawnTrooper(MIDDLE + BESIDE * 2f, MIDDLE);
 
         simulation.step(ordering(Order.DEFENCE));
-        wound(down, A_BLOW);
+        wound(down);
         steps(simulation, LONG_ENOUGH_TO_WORK);
 
         assertThat(mode(helper)).isEqualTo(Trooper.Mode.HOLD);
         assertThat(down.getComponent(Vitality.class).begun).isTrue();
     }
 
-    private static void wound(Entity entity, int amount) {
-        entity.getComponent(Damage.class).add(amount, 0, Harm.DOWN);
+    private static void wound(Entity entity) {
+        entity.getComponent(Damage.class).land(0, Harm.DOWN);
     }
 
     private static Trooper.Mode mode(Entity trooper) {

@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CASUALTY_BLEED_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_BLEED_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COOLDOWN;
@@ -53,7 +52,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity trooper = simulation.spawnTrooper(50f, 50f);
 
-        putDown(trooper, A_BLOW);
+        putDown(trooper);
         simulation.step();
 
         assertThat(trooper.getComponent(Vitality.class).begun).isTrue();
@@ -65,7 +64,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity trooper = simulation.spawnTrooper(50f, 50f);
 
-        kill(trooper, A_BLOW);
+        kill(trooper);
         simulation.step();
 
         assertThat(trooper.getComponent(Vitality.class).begun).isFalse();
@@ -77,7 +76,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity trooper = simulation.spawnTrooper(50f, 50f);
 
-        putDown(trooper, A_BLOW);
+        putDown(trooper);
         steps(simulation, ticksIn(CASUALTY_BLEED_OUT) + 2);
 
         assertThat(trooper.getComponent(Dying.class).begun).isTrue();
@@ -88,7 +87,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity trooper = simulation.spawnTrooper(50f, 50f);
 
-        putDown(trooper, A_BLOW);
+        putDown(trooper);
         steps(simulation, ticksIn(CASUALTY_BLEED_OUT) - 2);
 
         assertThat(trooper.getComponent(Dying.class).begun).isFalse();
@@ -101,7 +100,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity enemy = simulation.spawnEnemy(50f, 50f);
 
-        putDown(enemy, ENEMY_HEALTH);
+        enemy.getComponent(Damage.class).land(ENEMY_HEALTH, Harm.DOWN);
         simulation.step();
 
         assertThat(enemy.getComponent(Vitality.class)).isNull();
@@ -113,7 +112,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity trooper = simulation.spawnTrooper(50f, 50f);
 
-        putDown(trooper, A_BLOW);
+        putDown(trooper);
         simulation.step();
 
         Appearance appearance = trooper.getComponent(Appearance.class);
@@ -136,7 +135,7 @@ class CasualtyTest {
         Entity trooper = simulation.spawnTrooper(50f, 50f);
         simulation.spawnEnemy(60f, 50f);
 
-        putDown(trooper, A_BLOW);
+        putDown(trooper);
         steps(simulation, ticksIn(COOLDOWN) + 2);
 
         for (int i = 0; i < ticksIn(COOLDOWN); i++) {
@@ -156,7 +155,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        putDown(commander, A_BLOW);
+        putDown(commander);
         simulation.step();
 
         assertThat(commander.getComponent(Vitality.class).begun).isTrue();
@@ -176,8 +175,8 @@ class CasualtyTest {
         Entity commander = simulation.spawnCommander(50f, 50f);
         Entity trooper = simulation.spawnTrooper(60f, 50f);
 
-        putDown(commander, A_BLOW);
-        putDown(trooper, A_BLOW);
+        putDown(commander);
+        putDown(trooper);
         steps(simulation, ticksIn(COMMANDER_BLEED_OUT) + 2);
 
         assertThat(commander.getComponent(Dying.class).begun).isTrue();
@@ -190,7 +189,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        kill(commander, A_BLOW);
+        kill(commander);
         simulation.step();
 
         assertThat(commander.getComponent(Vitality.class).begun).isFalse();
@@ -208,7 +207,7 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        putDown(commander, A_BLOW);
+        putDown(commander);
         simulation.step();
         steps(simulation, WHILE_HE_ASKS, WALKING_AND_SHOOTING);
 
@@ -221,18 +220,18 @@ class CasualtyTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
 
-        putDown(commander, A_BLOW);
+        putDown(commander);
         simulation.step();
         steps(simulation, WHILE_HE_ASKS, WALKING_AND_SHOOTING);
 
         assertThat(count(simulation, Projectile.class)).isZero();
     }
 
-    private static void putDown(Entity entity, int amount) {
-        entity.getComponent(Damage.class).add(amount, 0, Harm.DOWN);
+    private static void putDown(Entity entity) {
+        entity.getComponent(Damage.class).land(0, Harm.DOWN);
     }
 
-    private static void kill(Entity entity, int amount) {
-        entity.getComponent(Damage.class).add(amount, 0);
+    private static void kill(Entity entity) {
+        entity.getComponent(Damage.class).land(0, Harm.KILL);
     }
 }

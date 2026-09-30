@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.FORWARD_FACTOR;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ORDER_RADIUS;
@@ -25,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Order;
 
 /**
@@ -163,7 +163,7 @@ class SquadOrderTest {
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
 
         enemy.getComponent(pl.mzebrows.pwt.sim.component.Damage.class)
-                .add(pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH, 0);
+                .land(pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH, pl.mzebrows.pwt.sim.def.Harm.KILL);
         steps(simulation, 3);
 
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.HOLD);
@@ -233,7 +233,7 @@ class SquadOrderTest {
         simulation.step(order(Order.FOLLOW_ME));
         assertThat(orderOf(trooper)).isEqualTo(Order.FOLLOW_ME);
 
-        commander.getComponent(Damage.class).add(A_BLOW, 0);
+        commander.getComponent(Damage.class).land(0, Harm.KILL);
         steps(simulation, 3);
 
         assertThat(orderOf(trooper)).isNull();
@@ -249,7 +249,7 @@ class SquadOrderTest {
         simulation.step(order(Order.DEFENCE));
         assertThat(trooper.getComponent(Appearance.class).ordered).isTrue();
 
-        commander.getComponent(Damage.class).add(A_BLOW, 0);
+        commander.getComponent(Damage.class).land(0, Harm.KILL);
         steps(simulation, 3);
 
         assertThat(trooper.getComponent(Appearance.class).ordered).isFalse();
@@ -268,7 +268,7 @@ class SquadOrderTest {
         Entity trooper = simulation.spawnTrooper(MIDDLE + 4f, MIDDLE);
         simulation.step(order(Order.FOLLOW_ME));
 
-        commander.getComponent(Damage.class).add(A_BLOW, 0);
+        commander.getComponent(Damage.class).land(0, Harm.KILL);
         steps(simulation, ticksIn(DEATH_THROES + RESPAWN_DELAY) + 30);
 
         assertThat(countLiving(simulation, Commander.class)).isEqualTo(1);
@@ -317,7 +317,7 @@ class SquadOrderTest {
         simulation.step(order(Order.FORWARD));
         assertThat(trooper.getComponent(Trooper.class).pushingForward()).isTrue();
 
-        commander.getComponent(Damage.class).add(A_BLOW, 0);
+        commander.getComponent(Damage.class).land(0, Harm.KILL);
         steps(simulation, 3);
 
         assertThat(trooper.getComponent(Trooper.class).pushingForward()).isFalse();

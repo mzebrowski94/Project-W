@@ -15,6 +15,12 @@ public final class ContactDamage implements Component, Pool.Poolable {
     /** Whole hit points a landed blow owes (G0054). */
     public int amount;
 
+    /**
+     * Whether it lands blows at all. Off for a strain whose contact damage is zero: zero is off, and a
+     * blow that owes nothing still lands (G0057), so claws with nothing in them have to be no claws.
+     */
+    public boolean enabled = true;
+
     /** How long after a hit before this can strike again. Zero for a projectile, which only hits once. */
     public int cooldownTicks;
 
@@ -111,6 +117,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
     /** Sets the attack and leaves it ready to strike, returning this component, for fluent spawning. */
     public ContactDamage set(int newAmount, int newCooldownTicks, int newVictimInvulnerableTicks) {
         this.amount = newAmount;
+        this.enabled = true;
         this.cooldownTicks = newCooldownTicks;
         this.remainingTicks = 0;
         this.victimInvulnerableTicks = newVictimInvulnerableTicks;
@@ -152,6 +159,12 @@ public final class ContactDamage implements Component, Pool.Poolable {
      */
     public ContactDamage reachingWithin(float newArcCosine) {
         this.arcCosine = newArcCosine;
+        return this;
+    }
+
+    /** Switches the blow off altogether, or leaves it on. Chained after {@link #set}. */
+    public ContactDamage enabledIf(boolean on) {
+        this.enabled = on;
         return this;
     }
 
@@ -215,6 +228,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
     public void reset() {
         credit = Tally.NOBODY;
         amount = 0;
+        enabled = true;
         cooldownTicks = 0;
         remainingTicks = 0;
         victimInvulnerableTicks = 0;

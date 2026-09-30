@@ -2,7 +2,6 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ACTION_REACH;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.A_BLOW;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CRATE_FEWEST;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CRATE_MOST;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
@@ -211,7 +210,7 @@ class CrateTest {
         Entity crate = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
         simulation.step(ACT);
 
-        commander.getComponent(Damage.class).add(A_BLOW, 0, Harm.WOUND);
+        commander.getComponent(Damage.class).land(0, Harm.WOUND);
         simulation.step(ACT);
 
         assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
@@ -225,7 +224,7 @@ class CrateTest {
         Entity crate = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
         simulation.step(ACT);
 
-        commander.getComponent(Damage.class).add(A_BLOW, 0, Harm.DOWN);
+        commander.getComponent(Damage.class).land(0, Harm.DOWN);
         simulation.step(ACT);
 
         assertThat(crate(crate).open()).isFalse();
@@ -277,7 +276,7 @@ class CrateTest {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity crate = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
-        commander.getComponent(Damage.class).add(A_BLOW, 0, Harm.WOUND);
+        commander.getComponent(Damage.class).land(0, Harm.WOUND);
         simulation.step(STILL);
         simulation.step(ACT);
         crate(crate).put(0, PickupKind.MEDKIT);

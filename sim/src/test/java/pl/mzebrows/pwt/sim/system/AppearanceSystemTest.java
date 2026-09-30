@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * Pillar 5, made checkable. Every situation the player has to react to has to be legible from the
@@ -123,7 +124,7 @@ class AppearanceSystemTest {
         simulation.spawnCommander(50f, 50f);
         Entity enemy = simulation.spawnEnemy(70f, 50f);
 
-        enemy.getComponent(Damage.class).add(ENEMY_HEALTH, 0);
+        enemy.getComponent(Damage.class).land(ENEMY_HEALTH, Harm.KILL);
         simulation.step();
 
         assertThat(enemy.getComponent(Stunned.class).active()).isFalse();
