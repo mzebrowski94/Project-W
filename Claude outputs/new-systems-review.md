@@ -1,5 +1,11 @@
 # New systems (upgrades, wounds, army reserve, crates) - critical review and staged plan
 
+## Decisions (2026-09-30)
+
+Wound clocks: all three in whole ticks · `graphic.properties` and `controls.properties` bound through
+`ConfigBinder` · invariants split per domain now · optional items all in: delete `Effect.Deal` (V7), the
+plan-ID scan test (W3), one-loop `Modifiers` (M1). Next: stage 2.
+
 Scope: `cebbac5..8bb389c` (8 commits, ~19k lines added). Baseline on this branch: `verify.sh` green, 1881
 tests; `PWT_BENCH=1` 800 crowd **5.24 ms/step**, growth ×7.8 (100→800), 6 B/step (cloud container; the
 2026-09-27 figure of 3.89 ms was Mateusz's machine). Every probe below was a `Zz*ProbeTest`, run and
