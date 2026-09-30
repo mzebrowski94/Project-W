@@ -28,8 +28,10 @@ public final class Strike implements Component, Pool.Poolable {
     /** How far around it travels, in radians. Signed, so a weapon could sweep either way. */
     public float sweepRadians;
 
-    public float elapsedSeconds;
-    public float durationSeconds;
+    /** Ticks since it was swung, and how many the sweep lasts. */
+    public int elapsedTicks;
+
+    public int durationTicks;
 
     /** Sets the sweep and returns this component, for fluent spawning. */
     public Strike set(
@@ -39,24 +41,24 @@ public final class Strike implements Component, Pool.Poolable {
             float newReach,
             float newStartAngle,
             float newSweepRadians,
-            float newDurationSeconds) {
+            int newDurationTicks) {
         this.owner = newOwner;
         this.originX = newOriginX;
         this.originY = newOriginY;
         this.reach = newReach;
         this.startAngle = newStartAngle;
         this.sweepRadians = newSweepRadians;
-        this.elapsedSeconds = 0f;
-        this.durationSeconds = newDurationSeconds;
+        this.elapsedTicks = 0;
+        this.durationTicks = newDurationTicks;
         return this;
     }
 
     /** How far through the sweep it is, in {@code [0, 1]}. */
     public float progress() {
-        if (durationSeconds <= 0f) {
+        if (durationTicks <= 0) {
             return 1f;
         }
-        float fraction = elapsedSeconds / durationSeconds;
+        float fraction = (float) elapsedTicks / durationTicks;
         return fraction > 1f ? 1f : fraction;
     }
 
@@ -67,7 +69,7 @@ public final class Strike implements Component, Pool.Poolable {
 
     /** True once the sweep has travelled its whole arc. */
     public boolean spent() {
-        return elapsedSeconds >= durationSeconds;
+        return elapsedTicks >= durationTicks;
     }
 
     @Override
@@ -78,7 +80,7 @@ public final class Strike implements Component, Pool.Poolable {
         reach = 0f;
         startAngle = 0f;
         sweepRadians = 0f;
-        elapsedSeconds = 0f;
-        durationSeconds = 0f;
+        elapsedTicks = 0;
+        durationTicks = 0;
     }
 }

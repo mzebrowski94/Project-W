@@ -32,12 +32,12 @@ public final class Crew implements Component, Pool.Poolable {
     public long station = ON_FOOT;
 
     /**
-     * How long he has sat on it with nothing in its reach, in seconds.
+     * How long he has sat on it with nothing in its reach, in ticks.
      *
      * <p>His patience rather than the gun's, which is why it lives here: two men on two guns run
      * their own clocks, and getting off resets it because what it measures is this sitting.
      */
-    public float quietSeconds;
+    public int quietTicks;
 
     /** True while he is on something rather than standing on the ground. */
     public boolean aboard() {
@@ -47,6 +47,6 @@ public final class Crew implements Component, Pool.Poolable {
     @Override
     public void reset() {
         station = ON_FOOT;
-        quietSeconds = 0f;
+        quietTicks = 0;
     }
 }

@@ -14,14 +14,14 @@ public final class ControlPoint implements Component, Pool.Poolable {
     /** How far from the middle counts as standing on it, in world units. */
     public float radius;
 
-    /** How long somebody has to stay inside it, in seconds. */
-    public float captureSeconds;
+    /** How long somebody has to stay inside it, in whole ticks. */
+    public int captureTicks;
 
     /** How far the noise of it being taken carries, in world units. */
     public float aggroRadius;
 
-    /** How long it has been held so far this attempt, in seconds. Back to zero the moment it is empty. */
-    public float heldSeconds;
+    /** How long it has been held so far this attempt, in ticks. Back to zero the moment it is empty. */
+    public int heldTicks;
 
     /** Whether it has been taken. One way, for now. */
     public boolean captured;
@@ -43,9 +43,9 @@ public final class ControlPoint implements Component, Pool.Poolable {
     public float watchRadius;
 
     /** Sets what it takes to hold this one, and returns this component, for fluent spawning. */
-    public ControlPoint set(float newRadius, float newCaptureSeconds, float newAggroRadius) {
+    public ControlPoint set(float newRadius, int newCaptureTicks, float newAggroRadius) {
         this.radius = newRadius;
-        this.captureSeconds = newCaptureSeconds;
+        this.captureTicks = newCaptureTicks;
         this.aggroRadius = newAggroRadius;
         return this;
     }
@@ -66,19 +66,19 @@ public final class ControlPoint implements Component, Pool.Poolable {
         if (captured) {
             return 1f;
         }
-        if (captureSeconds <= 0f) {
+        if (captureTicks <= 0) {
             return 0f;
         }
-        float fraction = heldSeconds / captureSeconds;
+        float fraction = (float) heldTicks / captureTicks;
         return fraction < 1f ? fraction : 1f;
     }
 
     @Override
     public void reset() {
         radius = 0f;
-        captureSeconds = 0f;
+        captureTicks = 0;
         aggroRadius = 0f;
-        heldSeconds = 0f;
+        heldTicks = 0;
         captured = false;
         takenOrder = 0;
         holdsAfterwards = false;

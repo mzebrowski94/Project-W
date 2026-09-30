@@ -59,6 +59,20 @@ class ControlPointTest {
         assertThat(point.getComponent(ControlPoint.class).captured).isTrue();
     }
 
+    @Test
+    void takesAPointOnTheTickItsDwellRunsOutAndNotBefore() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity point = simulation.spawnControlPoint(MIDDLE, MIDDLE);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) - 1);
+        boolean takenEarly = point.getComponent(ControlPoint.class).captured;
+        simulation.step();
+
+        assertThat(takenEarly).isFalse();
+        assertThat(point.getComponent(ControlPoint.class).captured).isTrue();
+    }
+
     /** The rally point is the point taken last (G0055), so each remembers when in the level it fell. */
     @Test
     void numbersThePointsInTheOrderTheyAreTaken() {
@@ -84,7 +98,7 @@ class ControlPointTest {
         steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
 
         assertThat(point.getComponent(ControlPoint.class).captured).isFalse();
-        assertThat(point.getComponent(ControlPoint.class).heldSeconds).isZero();
+        assertThat(point.getComponent(ControlPoint.class).heldTicks).isZero();
     }
 
     /** 2.d, and the whole reason holding one is a fight rather than an errand. */
@@ -94,12 +108,12 @@ class ControlPointTest {
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity point = simulation.spawnControlPoint(MIDDLE, MIDDLE);
         steps(simulation, ticksIn(POINT_CAPTURE_SECONDS * 0.5f));
-        assertThat(point.getComponent(ControlPoint.class).heldSeconds).isGreaterThan(0f);
+        assertThat(point.getComponent(ControlPoint.class).heldTicks).isPositive();
 
         commander.getComponent(Position.class).set(ELSEWHERE, ELSEWHERE);
         simulation.step();
 
-        assertThat(point.getComponent(ControlPoint.class).heldSeconds).isZero();
+        assertThat(point.getComponent(ControlPoint.class).heldTicks).isZero();
         assertThat(point.getComponent(ControlPoint.class).captured).isFalse();
     }
 

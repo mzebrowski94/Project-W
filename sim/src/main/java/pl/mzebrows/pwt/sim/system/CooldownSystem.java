@@ -40,6 +40,10 @@ import pl.mzebrows.pwt.sim.component.Weapon;
  * <p>The phase machines - {@link Leap}, {@link Wander}, {@link Dodge} and the wind-up half of {@link
  * Melee} - keep their clocks here
  * for the same reason, and read them where the phases are decided. Counting down is not deciding.
+ *
+ * <p>A clock that runs only while a condition holds - a barrage between salvos, a paid respawn, a grip, a
+ * trooper waiting on a taken point - is counted by the system that decides the condition, in whole ticks
+ * all the same. Moving the condition here would make counting deciding.
  */
 public final class CooldownSystem extends EntitySystem {
 

@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.net.session;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
@@ -31,14 +32,15 @@ final class TestWorlds implements WorldFactory {
 
     @Override
     public Simulation fresh(SessionSetup setup) {
-        Simulation world = Scenarios.world(scenario(setup), SimConfig.defaults().withSeed(setup.seed()));
+        SimConfig config = SimConfig.defaults().withSeed(setup.seed());
+        Simulation world = Scenarios.world(scenario(setup), config);
         if (setup.scenario().endsWith(DRAFTING)) {
             float middleX = world.map().worldWidth() / 2f;
             float middleY = world.map().worldHeight() / 2f;
             for (int i = 0; i < POINTS; i++) {
                 world.spawnControlPoint(middleX, middleY)
                         .getComponent(ControlPoint.class)
-                        .set(EVERYWHERE, FIRST_TAKEN + i * APART, 0f);
+                        .set(EVERYWHERE, Ticks.of(FIRST_TAKEN + i * APART, config.tickSeconds()), 0f);
             }
         }
         return world;

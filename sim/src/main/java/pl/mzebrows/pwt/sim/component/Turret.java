@@ -47,15 +47,15 @@ public final class Turret implements Component, Pool.Poolable {
      */
     public float range;
 
-    /** How long with nothing in that range before a crew of its own judgement gets off it. */
-    public float quietSeconds;
+    /** How long with nothing in that range before a crew of its own judgement gets off it, in ticks. */
+    public int quietTicks;
 
     /** Sets what this gun is and returns this component, for fluent spawning. */
-    public Turret set(float newTurnRate, float newFiringTurnFactor, float newRange, float newQuiet) {
+    public Turret set(float newTurnRate, float newFiringTurnFactor, float newRange, int newQuietTicks) {
         this.turnRate = newTurnRate;
         this.firingTurnFactor = newFiringTurnFactor;
         this.range = newRange;
-        this.quietSeconds = newQuiet;
+        this.quietTicks = newQuietTicks;
         this.crewed = false;
         this.aimX = 1f;
         this.aimY = 0f;
@@ -81,6 +81,6 @@ public final class Turret implements Component, Pool.Poolable {
         turnRate = 0f;
         firingTurnFactor = 0f;
         range = 0f;
-        quietSeconds = 0f;
+        quietTicks = 0;
     }
 }

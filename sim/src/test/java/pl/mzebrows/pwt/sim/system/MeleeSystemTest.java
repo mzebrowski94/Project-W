@@ -161,6 +161,17 @@ class MeleeSystemTest {
     }
 
     @Test
+    void keepsTheSweepInTheWorldForExactlyItsActiveTicks() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(50f, 50f);
+        simulation.step(EAST);
+
+        int lifetime = ticksUntilTheSweepIsGone(simulation);
+
+        assertThat(lifetime).isEqualTo(ticksIn(MELEE_ACTIVE));
+    }
+
+    @Test
     void releasesTheSweepOnceTheWindUpIsOver() {
         SimConfig config = AlphaWorlds.config();
         Simulation simulation = new Simulation(config.withMelee(config.melee().withWindupSeconds(0.2f)));
@@ -184,6 +195,16 @@ class MeleeSystemTest {
             swinging = present;
         }
         return swings;
+    }
+
+    /** Ticks from the swing until no sweep is left, counting the one it was put in the world on. */
+    private static int ticksUntilTheSweepIsGone(Simulation simulation) {
+        int ticks = 1;
+        while (count(simulation, Strike.class) > 0) {
+            simulation.step(IDLE_AIMED);
+            ticks++;
+        }
+        return ticks;
     }
 
     private static Entity sweep(Simulation simulation) {

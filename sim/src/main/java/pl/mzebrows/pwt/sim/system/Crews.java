@@ -77,7 +77,7 @@ final class Crews {
         Turret turret = TURRET.get(station);
         Crew crew = CREW.get(man);
         crew.station = Handles.of(station);
-        crew.quietSeconds = 0f;
+        crew.quietTicks = 0;
         turret.crewed = true;
         Position at = POSITION.get(station);
         POSITION.get(man).set(at.x, at.y);
@@ -109,7 +109,7 @@ final class Crews {
             }
         }
         crew.station = Crew.ON_FOOT;
-        crew.quietSeconds = 0f;
+        crew.quietTicks = 0;
         if (COLLIDER.has(man)) {
             COLLIDER.get(man).present = true;
         }

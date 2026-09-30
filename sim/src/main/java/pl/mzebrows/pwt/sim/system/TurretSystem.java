@@ -168,13 +168,13 @@ public final class TurretSystem extends EntitySystem {
         Weapon weapon = WEAPON.get(station);
         @Nullable Position target = nearestQuarry(at, turret.range, weapon.projectileRadius + weapon.muzzleOffset);
         if (target == null) {
-            crew.quietSeconds += deltaTime;
-            if (crew.quietSeconds >= turret.quietSeconds) {
+            crew.quietTicks++;
+            if (crew.quietTicks >= turret.quietTicks) {
                 Crews.leave(stations, rider);
             }
             return;
         }
-        crew.quietSeconds = 0f;
+        crew.quietTicks = 0;
         float toX = target.x - at.x;
         float toY = target.y - at.y;
         float distance = (float) Math.sqrt(toX * toX + toY * toY);

@@ -12,6 +12,7 @@ import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaField;
+import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -353,6 +354,42 @@ final class ArchitectureTest {
                 || type.isEquivalentTo(double.class)
                 || type.isEquivalentTo(Float.class)
                 || type.isEquivalentTo(Double.class);
+    }
+
+    /**
+     * A timer counts whole ticks ({@code Ticks}). A duration may sit on a component in seconds, as the config
+     * writes it, but only as a copy its own setter makes: a system writing one is counting time by adding a
+     * float tick, and 1/60 is not exact in a float, so it runs a tick long. Held by name, as hit points are:
+     * a float field whose name ends in {@code Seconds}.
+     */
+    @ArchTest
+    static final ArchRule timeIsCountedInWholeTicks = fields().that(holdSeconds())
+            .should(beWrittenOnlyByTheirOwnComponent())
+            .because("a timer is a count of whole ticks set once from a duration (Ticks); adding float seconds"
+                    + " tick by tick runs a tick long");
+
+    private static DescribedPredicate<JavaField> holdSeconds() {
+        return DescribedPredicate.describe(
+                "hold a duration in seconds on a component",
+                field -> !field.getModifiers().contains(JavaModifier.STATIC)
+                        && field.getOwner().isAssignableTo(Component.class)
+                        && field.getName().endsWith("Seconds")
+                        && fraction(field.getRawType()));
+    }
+
+    private static ArchCondition<JavaField> beWrittenOnlyByTheirOwnComponent() {
+        return new ArchCondition<>("be written only by their own component") {
+            @Override
+            public void check(JavaField field, ConditionEvents events) {
+                for (JavaFieldAccess access : field.getAccessesToSelf()) {
+                    if (access.getAccessType() == JavaFieldAccess.AccessType.SET
+                            && !access.getOriginOwner().equals(field.getOwner())) {
+                        events.add(SimpleConditionEvent.violated(
+                                access, access.getOriginOwner().getSimpleName() + " writes " + field.getFullName()));
+                    }
+                }
+            }
+        };
     }
 
     @ArchTest

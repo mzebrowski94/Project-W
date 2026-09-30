@@ -69,15 +69,15 @@ public final class ControlPointSystem extends EntitySystem {
             Position at = POSITION.get(entity);
             boolean held = anyoneHolding(at, point.radius);
             if (!held) {
-                point.heldSeconds = 0f;
+                point.heldTicks = 0;
                 continue;
             }
-            boolean starting = point.heldSeconds <= 0f;
-            point.heldSeconds += deltaTime;
-            if (point.heldSeconds >= point.captureSeconds) {
+            boolean starting = point.heldTicks == 0;
+            point.heldTicks++;
+            if (point.heldTicks >= point.captureTicks) {
                 point.captured = true;
                 point.takenOrder = lastTaken() + 1;
-                point.heldSeconds = point.captureSeconds;
+                point.heldTicks = point.captureTicks;
                 creditTheTaking(at, point.radius);
                 if (point.holdsAfterwards) {
                     standTo(point, at);

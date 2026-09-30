@@ -56,7 +56,7 @@ public final class StrikeSystem extends IteratingSystem {
             strike.originX = at.x;
             strike.originY = at.y;
         }
-        strike.elapsedSeconds += deltaTime;
+        strike.elapsedTicks++;
         if (strike.spent()) {
             spawner.markDead(entity);
             return;

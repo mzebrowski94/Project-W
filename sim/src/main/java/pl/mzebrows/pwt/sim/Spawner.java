@@ -718,7 +718,7 @@ public final class Spawner {
         SimConfig.ControlPointConfig point = config.controlPoint();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(ControlPoint.class)
-                .set(point.radius(), point.captureSeconds(), point.aggroRadius()));
+                .set(point.radius(), ticks(point.captureSeconds()), point.aggroRadius()));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(point.radius()));
@@ -737,7 +737,7 @@ public final class Spawner {
         SimConfig.TurretConfig turret = config.turret();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Turret.class)
-                .set(turret.turnRate(), turret.firingTurnFactor(), turret.range(), turret.quietSeconds()));
+                .set(turret.turnRate(), turret.firingTurnFactor(), turret.range(), ticks(turret.quietSeconds())));
         entity.add(engine.createComponent(Faction.class).set(Side.PLAYER));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
@@ -1011,7 +1011,7 @@ public final class Spawner {
                         melee.reach,
                         startAngle,
                         sweepRadians,
-                        melee.activeSeconds));
+                        ticks(melee.activeSeconds)));
         entity.add(engine.createComponent(Faction.class).set(side));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
