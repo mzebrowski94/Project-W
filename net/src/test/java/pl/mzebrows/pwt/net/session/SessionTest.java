@@ -142,8 +142,8 @@ class SessionTest {
             assertThat(session.sequencer.repeatedFor(slow.session.peerId()) - before)
                     .as("its ticks sealed with a repeated input, of 600")
                     .isZero();
-            assertThat(session.sequencer.sealedTick() - slow.session.tick())
-                    .as("ticks it is behind")
+            assertThat(session.sequencer.sealedTick() - slow.session.tick() - slow.session.cushion())
+                    .as("ticks it is behind, beyond those it keeps in hand")
                     .isLessThanOrEqualTo(12);
         }
     }
@@ -159,9 +159,10 @@ class SessionTest {
         double steady = meanLead(STEADY_40_MS);
         double spiky = meanLead(new Conditions(40, 0, 0f, 0f, 1000, 120, 13L));
 
+        // What it keeps in hand against the spikes the lead covers too, and follows a moment late.
         assertThat(spiky)
-                .as("mean lead under spikes, against %.1f without", steady)
-                .isLessThanOrEqualTo(steady + 1);
+                .as("mean lead beyond what it keeps in hand, under spikes, against %.1f without", steady)
+                .isLessThanOrEqualTo(steady + 2);
     }
 
     /**
@@ -213,6 +214,49 @@ class SessionTest {
         }
     }
 
+    /**
+     * A machine whose link delivers ticks unevenly keeps a few of them in hand, so a late one is covered
+     * rather than frozen on. The 2026-10-01 playtest's Hamachi joiner at 145 frames a second held none,
+     * and its world stood still a tenth to a quarter of the time over a link that swung 80 to 175 ms.
+     */
+    @Test
+    void keepsTicksInHandOnALinkThatDeliversThemUnevenly() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 97L, PERFECT)) {
+            session.frameNanos = 1_000_000_000L / 145;
+            session.host();
+            Machine far = session.join("far", new Conditions(45, 40, 0f, 0f, 1000, 120, 7L));
+            session.run(145 * 15);
+
+            int frozen = 0;
+            int frames = 145 * 30;
+            for (int frame = 0; frame < frames; frame++) {
+                session.run(1);
+                frozen += far.session.starvedFrames() > 0 ? 1 : 0;
+            }
+
+            assertThat(100.0 * frozen / frames)
+                    .as("percent of frames with nothing to play")
+                    .isLessThan(2.5);
+        }
+    }
+
+    /** A link that delivers evenly needs nothing in hand, and is given nothing: no delay for nothing. */
+    @Test
+    void keepsNothingInHandOnALinkThatDeliversEvenly() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 101L, PERFECT)) {
+            session.host();
+            Machine far = session.join("far", STEADY_40_MS);
+
+            int most = 0;
+            for (int frame = 0; frame < 1800; frame++) {
+                session.run(1);
+                most = Math.max(most, far.session.cushion());
+            }
+
+            assertThat(most).as("most ticks it ever kept in hand").isZero();
+        }
+    }
+
     private static double meanLead(Conditions link) {
         try (SessionHarness session = new SessionHarness("Skirmish", 83L, PERFECT)) {
             session.host();
@@ -221,7 +265,7 @@ class SessionTest {
             long sum = 0;
             for (int frame = 0; frame < 1800; frame++) {
                 session.run(1);
-                sum += far.session.lead();
+                sum += far.session.lead() - far.session.cushion();
             }
             return sum / 1800.0;
         }
@@ -254,7 +298,7 @@ class SessionTest {
                     .isGreaterThan(200);
 
             int frames = 0;
-            while (session.sequencer.sealedTick() - late.session.tick() > 8 && frames < 1000) {
+            while (session.sequencer.sealedTick() - late.session.tick() > 8 + late.session.cushion() && frames < 1000) {
                 session.run(1);
                 frames++;
             }

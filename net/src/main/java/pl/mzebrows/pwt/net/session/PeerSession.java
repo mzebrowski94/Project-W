@@ -173,6 +173,26 @@ public final class PeerSession implements AutoCloseable {
     private int cushioned;
 
     /**
+     * How many ticks this machine keeps in hand against a link that delivers them unevenly: as many as the
+     * last time it ran dry cost, up to cushionMaxTicks, given back one at a time after cushionCalmTicks
+     * without running dry. Held, it is not being behind - not caught up, not a reason to hold back a lead
+     * report. The 2026-10-01 playtest's Hamachi joiner kept none, and its world stood still a tenth to a
+     * quarter of the time.
+     */
+    private int cushion;
+
+    /** How long this machine has had nothing to play, running; and how long since it last ran dry. */
+    private long dryNanos;
+
+    private long calmNanos;
+
+    /**
+     * The tick its world was built at. Until ticks after it come, waiting for them is the round trip of
+     * asking, not a link delivering unevenly, and keeps nothing in hand.
+     */
+    private int builtAt = -1;
+
+    /**
      * How many ticks one of this machine's frames is worth while they run steadily: the second longest of
      * the last second's, so that one hitch does not count and a frame rate below the tick rate does. Its
      * input goes once a frame, so this many ticks are sealed between two of its inputs, and this many
@@ -313,13 +333,14 @@ public final class PeerSession implements AutoCloseable {
         // than any round trip could make it, a world that came late or a game that stopped: then as many as
         // the frame may hold, since none of this machine's input counts until it is back. One a frame took
         // the 2026-10-01 playtest's Hamachi joiner seven seconds over a late world.
+        // What is kept in hand is not a backlog.
         int extra = 0;
-        int backlog = available - onTime - pacing.bufferTicks();
+        int backlog = available - onTime - pacing.bufferTicks() - cushion;
         if (backlog > pacing.leadMaxTicks()) {
             extra = Math.max(1, Math.min(backlog, most - onTime));
         } else if (backlog > 0) {
             extra = 1;
-        } else if (available - onTime == 0) {
+        } else if (available - onTime <= cushion) {
             cushioned = 0;
         } else if (++cushioned >= DRAIN_FRAMES) {
             // A second without once running dry: the ticks held back are not absorbing anything, only
@@ -338,12 +359,32 @@ public final class PeerSession implements AutoCloseable {
             accumulator = tickNanos;
             if (!paused) {
                 stalls++;
+                if (contiguous > builtAt) {
+                    dryNanos += elapsed;
+                }
             }
             starved++;
         } else if (steps > 0) {
             starved = 0;
+            keepInHand(elapsed);
         }
         sendInput(nowNanos, steps > 0);
+    }
+
+    /**
+     * After running dry, keeps as many ticks in hand as that cost - up to cushionMaxTicks - so the next late
+     * delivery is covered; after cushionCalmTicks without running dry, gives one back.
+     */
+    private void keepInHand(long elapsed) {
+        if (dryNanos > 0L) {
+            int cost = (int) ((dryNanos + tickNanos - 1) / tickNanos);
+            cushion = Math.min(pacing.cushionMaxTicks(), Math.max(cushion, cost));
+            dryNanos = 0L;
+            calmNanos = 0L;
+        } else if (cushion > 0 && (calmNanos += elapsed) >= pacing.cushionCalmTicks() * tickNanos) {
+            cushion--;
+            calmNanos = 0L;
+        }
     }
 
     /** Keeps the longest two frames of the current second, and judges {@link #frameTicks} once it is up. */
@@ -464,6 +505,11 @@ public final class PeerSession implements AutoCloseable {
         return tickNanos;
     }
 
+    /** How many ticks this machine keeps in hand against a link that delivers them unevenly. */
+    int cushion() {
+        return cushion;
+    }
+
     /** The input delay this machine currently runs with, in ticks. */
     public int lead() {
         return lead;
@@ -574,7 +620,7 @@ public final class PeerSession implements AutoCloseable {
         // holds - catching up after a drop-in, a heal or a stall: what it tags then is late because it is,
         // and a report of it comes back a round trip later, when adaptLead can no longer tell. The third
         // playtest: a lead of 17 and 18 for the first seconds after every join.
-        boolean catchingUp = contiguous - tick > pacing.bufferTicks();
+        boolean catchingUp = contiguous - tick > pacing.bufferTicks() + cushion;
         out.reset().putByte(Msg.INPUT).putInt(generation).putInt(contiguous).putInt(catchingUp ? -1 : newestTag);
         int seated = 0;
         for (int seat = 0; seat < slotOfSeat.length; seat++) {
@@ -649,7 +695,7 @@ public final class PeerSession implements AutoCloseable {
         if (margin < pacing.marginTicks()) {
             calm = 0;
             calmLeast = Integer.MAX_VALUE;
-            if (contiguous - tick > pacing.bufferTicks() + frameTicks - 1) {
+            if (contiguous - tick > pacing.bufferTicks() + frameTicks - 1 + cushion) {
                 return;
             }
             int was = lead;
@@ -688,7 +734,8 @@ public final class PeerSession implements AutoCloseable {
             log.info(
                     "stats",
                     "peer=" + peerId + " tick=" + tick + " held=" + (contiguous - tick) + " lead=" + lead + " stalls="
-                            + stalls + " paused=" + paused + " frames=" + framesDrawn + " frameMostMs="
+                            + stalls + " cushion=" + cushion + " paused=" + paused + " frames=" + framesDrawn
+                            + " frameMostMs="
                             + frameMostNanos / 1_000_000L + " workMs=" + workNanos / 1_000_000L + " workMostMs="
                             + workMostNanos / 1_000_000L);
         }
@@ -805,6 +852,7 @@ public final class PeerSession implements AutoCloseable {
             world = first;
             tick = -1;
             contiguous = -1;
+            builtAt = -1;
             state = State.PLAYING;
         } else {
             state = State.JOINING;
@@ -885,6 +933,9 @@ public final class PeerSession implements AutoCloseable {
         contiguous = at;
         generation = newGeneration;
         accumulator = 0L;
+        builtAt = at;
+        cushion = 0;
+        dryNanos = 0L;
         Arrays.fill(keyTick, -1);
         advanceContiguous();
         state = State.PLAYING;

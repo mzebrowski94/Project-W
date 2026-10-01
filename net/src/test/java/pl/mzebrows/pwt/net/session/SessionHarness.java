@@ -49,6 +49,9 @@ final class SessionHarness implements AutoCloseable {
 
     private int frame;
 
+    /** How long one frame is - every machine's, and the sequencer's pump. 60 Hz unless a test says. */
+    long frameNanos = FRAME_NANOS;
+
     /** Every byte the host has sent unreliably - ticks, nearly all of it - on every link. */
     long unreliableBytesSent;
 
@@ -115,7 +118,7 @@ final class SessionHarness implements AutoCloseable {
     /** Runs this many frames. */
     void run(int frames) {
         for (int i = 0; i < frames; i++) {
-            clock.advanceNanos(FRAME_NANOS);
+            clock.advanceNanos(frameNanos);
             long now = clock.nanos();
             sequencer.pump(now);
             for (Machine machine : machines) {

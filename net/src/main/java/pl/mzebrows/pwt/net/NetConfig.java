@@ -253,6 +253,9 @@ public record NetConfig(
      * @param redundantTicks how many of the newest unacknowledged ticks every bundle datagram repeats;
      *     older ones are sent again only when a round trip has passed without their acknowledgement; read
      *     only where the sequencer runs
+     * @param cushionMaxTicks the most ticks a peer keeps in hand against a link that delivers them
+     *     unevenly - a delay on its screen and its input while it does; zero keeps none
+     * @param cushionCalmTicks how long a peer must not run dry before it gives one of those back
      * @param spikeTicks how much longer than its usual gap a peer may go silent before what it sends next
      *     counts as a spike - held by its link and let go at once - whose lateness its lead does not rise
      *     to cover; zero covers every one; read only where the sequencer runs
@@ -265,6 +268,8 @@ public record NetConfig(
             int catchUpTicks,
             int historyTicks,
             int redundantTicks,
+            int cushionMaxTicks,
+            int cushionCalmTicks,
             int spikeTicks) {
 
         /**
@@ -280,6 +285,8 @@ public record NetConfig(
             require(bufferTicks >= 0, "bufferTicks", bufferTicks);
             require(catchUpTicks >= 1, "catchUpTicks", catchUpTicks);
             require(redundantTicks >= 1 && redundantTicks <= 8, "redundantTicks", redundantTicks);
+            require(cushionMaxTicks >= 0, "cushionMaxTicks", cushionMaxTicks);
+            require(cushionCalmTicks >= 1, "cushionCalmTicks", cushionCalmTicks);
             require(spikeTicks >= 0, "spikeTicks", spikeTicks);
         }
     }
