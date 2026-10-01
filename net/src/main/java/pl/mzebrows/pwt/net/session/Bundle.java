@@ -1,5 +1,6 @@
 package pl.mzebrows.pwt.net.session;
 
+import java.util.Arrays;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
@@ -12,16 +13,18 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * sequencer stamped on it, and the session's own - a restart, a switch of invulnerability. Every peer
  * steps its world with exactly this, which is the whole of lockstep.
  *
- * <p><strong>Held input crosses the wire losslessly</strong> - a float goes as its raw bits - so the
- * host's own input, which goes through the same encoding, can never round differently from anybody
- * else's. The one change made to it is that a value that is not a finite number becomes zero: a stick
- * reporting NaN would otherwise put NaN into a position on every peer at once.
+ * <p><strong>Held input crosses the wire the same for everyone</strong> - aim as a float's raw bits,
+ * movement as a whole number of sixteen-thousandths of a push - so the host's own input, which goes
+ * through the same encoding, can never round differently from anybody else's. A value that is not a
+ * finite number becomes zero: a stick reporting NaN would otherwise put NaN into a position on every peer
+ * at once.
  *
  * <p>Mutable and reused, for the reason {@link PlayerInputs} is: one is decoded per tick. A slot's held
  * input is only rebuilt when its bits have changed, so an idle or steady player allocates nothing.
  *
  * <p>Layout: tick (int); flags (byte: 1 restart, 2 switches invulnerability, 4 invulnerable); held
- * count, then per slot its number and 17 bytes (four floats, then a byte of buttons); order count,
+ * count, then per slot its number and 13 bytes (two pushes as shorts, two aims as floats, then a byte of
+ * buttons); order count,
  * then per order a slot and an order; join count, then per join a slot and the machine it sits at (int);
  * pick count, then per pick a slot, the
  * draft's serial (int) and the kind taken; presence count, then per change a slot and whether it goes
@@ -31,7 +34,30 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 final class Bundle {
 
     /** The bytes one slot's held input takes, its slot number not included. */
-    static final int HELD_BYTES = 17;
+    static final int HELD_BYTES = 13;
+
+    /**
+     * Movement goes as a whole number of sixteen-thousandths of a push: two bytes rather than four, and a
+     * full push, its halves and its quarters stay exact.
+     */
+    private static final float PUSH_STEPS = 16_384f;
+
+    /** Ahead of the seats in a bundle: its tick, its flags, and how many seats hold input. */
+    private static final int HEADER_BYTES = 6;
+
+    private static final int SEAT_BYTES = 1 + HELD_BYTES;
+
+    /** Where each field of a seat's held input starts, and how long it is: two pushes, two aims, buttons. */
+    private static final int[] FIELD_AT = {0, 2, 4, 8, 12};
+
+    private static final int[] FIELD_BYTES = {2, 2, 4, 4, 1};
+
+    private static final int ALL_FIELDS = (1 << FIELD_AT.length) - 1;
+
+    /** A changed seat's slot and which of its fields follow share a byte: the slot is the low three bits. */
+    private static final int SLOT_BITS = 3;
+
+    private static final int SLOT_MASK = (1 << SLOT_BITS) - 1;
 
     private static final Order[] ORDERS = Order.values();
 
@@ -344,6 +370,98 @@ final class Bundle {
             checkSlot(in.getByte(), capacity);
             in.skip(HELD_BYTES);
         }
+        skipEvents(in, capacity);
+        return tick;
+    }
+
+    /**
+     * Writes {@code bundle} as the next one in a datagram after {@code previous}: every seat with only the
+     * fields of its held input that changed from {@code previous} - its slot and which fields follow in one
+     * byte - and everything else as it is. Never longer than the bundle itself. Held input changes little
+     * from one tick to the next, and a datagram carries several ticks running: the 2026-10-01 playtest sent
+     * every seat's whole input three times a tick, 87% of what a session sent.
+     *
+     * @param bundle a whole bundle, as {@link #write} wrote it
+     * @param previous the whole bundle sent just before it in the same datagram
+     */
+    static void writeChanged(WireWriter out, byte[] bundle, int length, byte[] previous) {
+        out.putRaw(bundle, 0, HEADER_BYTES);
+        int seats = bundle[HEADER_BYTES - 1] & 0xFF;
+        for (int i = 0; i < seats; i++) {
+            int at = HEADER_BYTES + i * SEAT_BYTES;
+            int slot = bundle[at] & 0xFF;
+            int was = seatAt(previous, 0, slot);
+            int changed = 0;
+            for (int f = 0; f < FIELD_AT.length; f++) {
+                int from = at + 1 + FIELD_AT[f];
+                int then = was + 1 + FIELD_AT[f];
+                if (was < 0
+                        || !Arrays.equals(bundle, from, from + FIELD_BYTES[f], previous, then, then + FIELD_BYTES[f])) {
+                    changed |= 1 << f;
+                }
+            }
+            out.putByte(slot | changed << SLOT_BITS);
+            for (int f = 0; f < FIELD_AT.length; f++) {
+                if ((changed & 1 << f) != 0) {
+                    out.putRaw(bundle, at + 1 + FIELD_AT[f], FIELD_BYTES[f]);
+                }
+            }
+        }
+        int rest = HEADER_BYTES + seats * SEAT_BYTES;
+        out.putRaw(bundle, rest, length - rest);
+    }
+
+    /**
+     * Reads a bundle {@link #writeChanged} wrote and writes it whole into {@code whole}, taking every field
+     * it left out from {@code previous}; returns its tick. A peer files bundles away whole, so nothing after
+     * this - the ring, a desync dump - knows a datagram carried less.
+     *
+     * @param previous the whole bundle before it in the same datagram, starting at {@code previousAt}
+     */
+    static int rebuild(WireReader in, byte[] previous, int previousAt, int capacity, WireWriter whole) {
+        int tick = in.getInt();
+        int flags = in.getByte();
+        int seats = in.getByte();
+        whole.putInt(tick).putByte(flags).putByte(seats);
+        for (int i = 0; i < seats; i++) {
+            int seat = in.getByte();
+            int slot = checkSlot(seat & SLOT_MASK, capacity);
+            int changed = seat >>> SLOT_BITS;
+            int was = seatAt(previous, previousAt, slot);
+            if (was < 0 && changed != ALL_FIELDS) {
+                throw new WireException("slot " + slot + " unchanged from a tick that did not hold it");
+            }
+            whole.putByte(slot);
+            for (int f = 0; f < FIELD_AT.length; f++) {
+                if ((changed & 1 << f) != 0) {
+                    int at = in.position();
+                    in.skip(FIELD_BYTES[f]);
+                    whole.putRaw(in.array(), at, FIELD_BYTES[f]);
+                } else {
+                    whole.putRaw(previous, was + 1 + FIELD_AT[f], FIELD_BYTES[f]);
+                }
+            }
+        }
+        int rest = in.position();
+        skipEvents(in, capacity);
+        whole.putRaw(in.array(), rest, in.position() - rest);
+        return tick;
+    }
+
+    /** Where in the whole bundle starting at {@code at} the seat of {@code slot} starts, or -1. */
+    private static int seatAt(byte[] bundle, int at, int slot) {
+        int seats = bundle[at + HEADER_BYTES - 1] & 0xFF;
+        for (int i = 0; i < seats; i++) {
+            int seat = at + HEADER_BYTES + i * SEAT_BYTES;
+            if ((bundle[seat] & 0xFF) == slot) {
+                return seat;
+            }
+        }
+        return -1;
+    }
+
+    /** Steps over a bundle's orders, joins, picks, presence and crates, checking each. */
+    private static void skipEvents(WireReader in, int capacity) {
         int orderCount = in.getByte();
         for (int i = 0; i < orderCount; i++) {
             checkSlot(in.getByte(), capacity);
@@ -373,13 +491,12 @@ final class Bundle {
                 crateFromCode(code);
             }
         }
-        return tick;
     }
 
-    /** Writes one slot's held input: four floats as raw bits, then its buttons. */
+    /** Writes one slot's held input: its pushes in sixteen-thousandths, its aim as raw bits, its buttons. */
     static void writeHeld(WireWriter out, CommanderInput input) {
-        out.putInt(Float.floatToRawIntBits(input.moveX()))
-                .putInt(Float.floatToRawIntBits(input.moveY()))
+        out.putShort(push(input.moveX()))
+                .putShort(push(input.moveY()))
                 .putInt(Float.floatToRawIntBits(input.aimX()))
                 .putInt(Float.floatToRawIntBits(input.aimY()))
                 .putByte(buttons(input));
@@ -387,8 +504,8 @@ final class Bundle {
 
     /** Reads one slot's held input, handing back {@code previous} itself when nothing has changed. */
     static CommanderInput readHeld(WireReader in, CommanderInput previous) {
-        float moveX = finite(Float.intBitsToFloat(in.getInt()));
-        float moveY = finite(Float.intBitsToFloat(in.getInt()));
+        float moveX = pushFrom(in.getShort());
+        float moveY = pushFrom(in.getShort());
         float aimX = finite(Float.intBitsToFloat(in.getInt()));
         float aimY = finite(Float.intBitsToFloat(in.getInt()));
         int buttons = in.getByte();
@@ -484,6 +601,18 @@ final class Bundle {
                 | (input.acting() ? 8 : 0)
                 | (input.dragging() ? 16 : 0)
                 | (input.aimRelative() ? 32 : 0);
+    }
+
+    private static int push(float move) {
+        float within = Float.isFinite(move) ? Math.max(-1f, Math.min(1f, move)) : 0f;
+        return Math.round(within * PUSH_STEPS);
+    }
+
+    private static float pushFrom(int steps) {
+        if (steps < -PUSH_STEPS || steps > PUSH_STEPS) {
+            throw new WireException("a push of " + steps + " steps, past a whole one");
+        }
+        return steps / PUSH_STEPS;
     }
 
     private static float finite(float value) {

@@ -8,13 +8,14 @@ import pl.mzebrows.pwt.net.NetConfig;
  *
  * <p>Two go unreliable and are sent every tick. {@link #INPUT} carries everything the sequencer has not
  * yet acknowledged; {@link #BUNDLES} carries the newest unacknowledged ticks and any older one a round
- * trip has passed without, so a lost one costs nothing but its own copy.
+ * trip has passed without, so a lost one costs nothing but its own copy - the first whole, each after it
+ * with only the held input that changed from the one before ({@code Bundle.writeChanged}).
  * Everything else is rare, goes reliable, and is sent once.
  */
 final class Msg {
 
     /** Bumped whenever a message changes shape. The build id catches that too; this names it in the log. */
-    static final int PROTOCOL = 5;
+    static final int PROTOCOL = 6;
 
     // Peer to sequencer.
     static final int HELLO = 1;

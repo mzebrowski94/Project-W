@@ -30,6 +30,14 @@ final class WireWriter {
         return this;
     }
 
+    /** Two bytes, big-endian: a value from -32768 to 32767. */
+    WireWriter putShort(int value) {
+        ensure(2);
+        bytes[size++] = (byte) (value >>> 8);
+        bytes[size++] = (byte) value;
+        return this;
+    }
+
     WireWriter putInt(int value) {
         ensure(4);
         bytes[size++] = (byte) (value >>> 24);

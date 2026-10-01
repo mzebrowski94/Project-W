@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.net.Clock;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.transport.Delivery;
@@ -34,9 +35,9 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * input delay this machine's players feel - two ticks on the host, about a round trip more elsewhere.
  *
  * <p><strong>A world steps only on sealed ticks, and never skips one.</strong> Ticks are played at the
- * world's own rate as they arrive; a machine holding more than {@code bufferTicks} unplayed plays one
- * extra a frame until it is back, never more than {@code catchUpTicks} in a frame - or one more than a
- * frame is worth, on a machine whose frames are longer than that. One that has held some
+ * world's own rate as they arrive; a machine holding more than {@code bufferTicks} unplayed plays as many
+ * extra as a frame may until it is back - {@code catchUpTicks} in a frame, or one more than a frame is
+ * worth on a machine whose frames are longer than that. One that has held some
  * back for a whole second without once running dry plays one early, so a steady link drains to no delay.
  * With none to play it waits, and banks no time while it waits - so a stall ends in a short catch-up, not
  * a burst.
@@ -45,7 +46,7 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * sequencer its hash. Told it has desynced, it writes a dump - its keyframes and the bundles between
  * them - and is healed with a snapshot of the host's world.
  *
- * <p>Driven by {@link #pump(long, PlayerInputs)} once a frame from the game's thread, with the local
+ * <p>Driven by {@link #pump(Clock, PlayerInputs)} once a frame from the game's thread, with the local
  * players' input indexed by seat. Single-threaded.
  */
 public final class PeerSession implements AutoCloseable {
@@ -78,6 +79,14 @@ public final class PeerSession implements AutoCloseable {
     /** How many reports in a row must come early before the lead comes down: a second's worth. */
     private static final int CALM_REPORTS = 60;
 
+    /**
+     * How many snapshots are taken, and thrown away, when this session's first world is built. The
+     * codec reads every field by reflection, and until the JIT has compiled it a checksum's snapshot took
+     * 24, 19, 7, 6 ms for the first seconds of play instead of half a millisecond - a hitch every second
+     * on a slow machine. Eight bring the next one to about 1.5 ms, for 85 ms of loading (2026-10-01).
+     */
+    private static final int WARM_UP_SNAPSHOTS = 8;
+
     /** How long this machine's frames are watched for before {@link #frameTicks} is judged again. */
     private static final long FRAME_WINDOW_NANOS = 1_000_000_000L;
 
@@ -103,6 +112,11 @@ public final class PeerSession implements AutoCloseable {
 
     private final WireWriter out;
     private final WireReader in = new WireReader();
+
+    /** Where bundles that came as they changed are rebuilt whole, in turn. */
+    private final WireWriter rebuiltOdd = new WireWriter(256);
+
+    private final WireWriter rebuiltEven = new WireWriter(256);
     private final Listener listener = new Listener();
 
     private State state = State.CLOSED;
@@ -148,6 +162,13 @@ public final class PeerSession implements AutoCloseable {
     private long lastInputNanos;
     private long nextStatsNanos;
     private int stalls;
+
+    /** Since the last stats line: frames drawn, the longest, and the time this session's work took of them. */
+    private int framesDrawn;
+
+    private long frameMostNanos;
+    private long workNanos;
+    private long workMostNanos;
     private int starved;
     private int cushioned;
 
@@ -182,6 +203,9 @@ public final class PeerSession implements AutoCloseable {
     private final byte[][] keyBytes = new byte[KEYFRAMES][];
     private final long[] keyHash = new long[KEYFRAMES];
     private int keyNext;
+
+    /** Whether the snapshot codec has been warmed up yet, this session. */
+    private boolean codecWarm;
 
     /** How often worlds are compared, as the host's session config says; known from the welcome on. */
     private int checksumTicks;
@@ -246,12 +270,24 @@ public final class PeerSession implements AutoCloseable {
      * One frame: hears the sequencer, queues any order a local player gave, plays whatever ticks are due,
      * and sends what the local players are holding.
      *
+     * @param clock read when the frame starts, and again when its work is done, for the stats line
      * @param local this frame's input, indexed by local seat
      */
-    public void pump(long nowNanos, PlayerInputs local) {
+    public void pump(Clock clock, PlayerInputs local) {
+        long nowNanos = clock.nanos();
+        play(nowNanos, local);
+        long work = clock.nanos() - nowNanos;
+        workNanos += work;
+        workMostNanos = Math.max(workMostNanos, work);
+        stats(nowNanos);
+    }
+
+    private void play(long nowNanos, PlayerInputs local) {
         long elapsed = pumped ? nowNanos - lastPumpNanos : 0L;
         lastPumpNanos = nowNanos;
         pumped = true;
+        framesDrawn++;
+        frameMostNanos = Math.max(frameMostNanos, elapsed);
         if (statsNanos > 0 && elapsed >= statsNanos) {
             // This machine's game stopped running - its window held by its title bar, a console clicked into
             // - while its link went on answering: a hole in this log, and to every other machine the same as
@@ -273,8 +309,15 @@ public final class PeerSession implements AutoCloseable {
         // On time: the ticks this frame's time is worth, as far as there are any. Only these spend time.
         int onTime = (int) Math.min(Math.min(accumulator / tickNanos, available), most);
         // Catching up is free: it makes up for time already spent waiting, so it is not taken from the bank.
+        // One extra a frame, a short speed-up after a spike rather than a jump - unless it is further behind
+        // than any round trip could make it, a world that came late or a game that stopped: then as many as
+        // the frame may hold, since none of this machine's input counts until it is back. One a frame took
+        // the 2026-10-01 playtest's Hamachi joiner seven seconds over a late world.
         int extra = 0;
-        if (available - onTime > pacing.bufferTicks()) {
+        int backlog = available - onTime - pacing.bufferTicks();
+        if (backlog > pacing.leadMaxTicks()) {
+            extra = Math.max(1, Math.min(backlog, most - onTime));
+        } else if (backlog > 0) {
             extra = 1;
         } else if (available - onTime == 0) {
             cushioned = 0;
@@ -301,7 +344,6 @@ public final class PeerSession implements AutoCloseable {
             starved = 0;
         }
         sendInput(nowNanos, steps > 0);
-        stats(nowNanos);
     }
 
     /** Keeps the longest two frames of the current second, and judges {@link #frameTicks} once it is up. */
@@ -632,16 +674,29 @@ public final class PeerSession implements AutoCloseable {
         }
     }
 
+    /**
+     * Every statsSeconds while playing: where this machine stands, and its frames - how many it drew, the
+     * longest, and how much of them the session's own work took (hearing, stepping, checking, sending), so
+     * a machine too slow to draw can be told from one too slow to simulate and from a slow network.
+     */
     private void stats(long nowNanos) {
-        if (statsNanos <= 0 || nowNanos - nextStatsNanos < 0 || paused) {
+        if (statsNanos <= 0 || nowNanos - nextStatsNanos < 0) {
             return;
         }
         nextStatsNanos = nowNanos + statsNanos;
-        log.info(
-                "stats",
-                "peer=" + peerId + " tick=" + tick + " held=" + (contiguous - tick) + " lead=" + lead + " stalls="
-                        + stalls + " paused=" + paused);
+        if (state == State.PLAYING && !paused) {
+            log.info(
+                    "stats",
+                    "peer=" + peerId + " tick=" + tick + " held=" + (contiguous - tick) + " lead=" + lead + " stalls="
+                            + stalls + " paused=" + paused + " frames=" + framesDrawn + " frameMostMs="
+                            + frameMostNanos / 1_000_000L + " workMs=" + workNanos / 1_000_000L + " workMostMs="
+                            + workMostNanos / 1_000_000L);
+        }
         stalls = 0;
+        framesDrawn = 0;
+        frameMostNanos = 0L;
+        workNanos = 0L;
+        workMostNanos = 0L;
     }
 
     private void received(int type) {
@@ -745,7 +800,9 @@ public final class PeerSession implements AutoCloseable {
                 "event=welcome peer=" + peerId + " fresh=" + fresh + " scenario=\"" + scenario + "\" seed=" + seed
                         + " capacity=" + capacity + " configBytes=" + config.length());
         if (fresh) {
-            world = worlds.fresh(built);
+            Simulation first = worlds.fresh(built);
+            warmCodec(first);
+            world = first;
             tick = -1;
             contiguous = -1;
             state = State.PLAYING;
@@ -774,15 +831,34 @@ public final class PeerSession implements AutoCloseable {
             dropAckedEvents();
         }
         adaptLead(margin);
+        // The first comes whole; each after it only as it changed from the one before, and is rebuilt whole
+        // from that one before it is filed away - into two buffers in turn, so the one before stays readable.
+        byte[] previous = in.array();
+        int previousAt = in.position();
         for (int i = 0; i < count; i++) {
-            int start = in.position();
-            int at = Bundle.skip(in, capacity);
-            int length = in.position() - start;
+            byte[] source;
+            int start;
+            int length;
+            int at;
+            if (i == 0) {
+                source = in.array();
+                start = in.position();
+                at = Bundle.skip(in, capacity);
+                length = in.position() - start;
+            } else {
+                WireWriter whole = (i & 1) == 1 ? rebuiltOdd : rebuiltEven;
+                at = Bundle.rebuild(in, previous, previousAt, capacity, whole.reset());
+                source = whole.array();
+                start = 0;
+                length = whole.size();
+            }
             if (at > tick && at - tick <= ringMask && ringTick[at & ringMask] != at) {
-                System.arraycopy(in.array(), start, ring[at & ringMask], 0, length);
+                System.arraycopy(source, start, ring[at & ringMask], 0, length);
                 ringLength[at & ringMask] = length;
                 ringTick[at & ringMask] = at;
             }
+            previous = source;
+            previousAt = start;
         }
         in.expectEnd();
         advanceContiguous();
@@ -803,6 +879,7 @@ public final class PeerSession implements AutoCloseable {
                 "event=snapshot-received tick=" + at + " bytes=" + snapshot.length + " generation=" + newGeneration);
         Simulation restored = worlds.blank(built);
         WorldCodec.restore(restored, snapshot);
+        warmCodec(restored);
         world = restored;
         tick = at;
         contiguous = at;
@@ -812,6 +889,17 @@ public final class PeerSession implements AutoCloseable {
         advanceContiguous();
         state = State.PLAYING;
         log.info("peer", "event=restored tick=" + at + " bytes=" + snapshot.length + " generation=" + generation);
+    }
+
+    /** Takes {@link #WARM_UP_SNAPSHOTS} snapshots of a world just built, once a session, while it loads. */
+    private void warmCodec(Simulation built) {
+        if (codecWarm) {
+            return;
+        }
+        codecWarm = true;
+        for (int i = 0; i < WARM_UP_SNAPSHOTS; i++) {
+            WorldCodec.hash(WorldCodec.snapshot(built));
+        }
     }
 
     private void advanceContiguous() {

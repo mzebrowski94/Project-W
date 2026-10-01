@@ -289,10 +289,17 @@ public final class Sequencer implements AutoCloseable {
             if (invulnerable) {
                 invulnerabilityChanged = true;
             }
-            // A new world has nobody in it who is away: a slot nobody holds is simply empty there.
+            // A new world has nobody in it who is away: a slot nobody holds is simply empty there - but a
+            // dormant machine's commanders join it away, as they left the old one.
             Arrays.fill(away, false);
             Arrays.fill(awayWanted, false);
             Arrays.fill(backWanted, false);
+            for (int slot = 0; slot < capacity; slot++) {
+                Peer holder = owner[slot] < 0 ? null : peerWithId(owner[slot]);
+                if (holder != null && holder.state == PeerState.DORMANT) {
+                    goAway(slot);
+                }
+            }
             restartWanted = false;
             log.info("sequencer", "event=restart tick=" + tick);
         }
@@ -315,7 +322,7 @@ public final class Sequencer implements AutoCloseable {
             } else {
                 held = lastHeld[slot];
                 Peer peer = peerWithId(owner[slot]);
-                if (peer != null) {
+                if (peer != null && peer.state != PeerState.DORMANT) {
                     peer.repeats++;
                     peer.repeated++;
                 }
@@ -348,8 +355,7 @@ public final class Sequencer implements AutoCloseable {
         for (int i = 0; i < peers.size(); i++) {
             Peer peer = peers.get(i);
             if (peer.state == PeerState.LOADING && sealed - peer.acked >= history.length) {
-                neverLoaded(peer);
-                i--;
+                dormant(peer);
                 continue;
             }
             if (peer.state != PeerState.PLAYING) {
@@ -403,6 +409,8 @@ public final class Sequencer implements AutoCloseable {
         long resendAfter = peer.roundTripNanos == 0L ? 0L : peer.roundTripNanos + 2 * tickNanos;
         int count = 0;
         boolean answering = now - peer.lastHeardNanos <= longestRoundTripNanos;
+        // Room is reckoned on whole bundles: one written as it changed from the one before is never longer.
+        int previous = -1;
         for (int tick = peer.acked + 1; answering && tick < newestFrom && count < 255; tick++) {
             int at = tick % history.length;
             if (peer.sentTick[at] == tick && now - peer.sentNanos[at] < resendAfter) {
@@ -411,27 +419,33 @@ public final class Sequencer implements AutoCloseable {
             if (out.size() + historyLength[at] + newestBytes > maxDatagramBytes) {
                 break;
             }
-            writeBundle(peer, tick);
+            previous = writeBundle(peer, tick, previous);
             count++;
         }
         for (int tick = newestFrom; tick <= sealed && count < 255; tick++) {
             if (out.size() + historyLength[tick % history.length] > maxDatagramBytes) {
                 break;
             }
-            writeBundle(peer, tick);
+            previous = writeBundle(peer, tick, previous);
             count++;
         }
         return count;
     }
 
-    private void writeBundle(Peer peer, int tick) {
+    /** Writes one tick, whole if it is the first in the datagram; returns where it is in the history. */
+    private int writeBundle(Peer peer, int tick, int previous) {
         int at = tick % history.length;
-        out.putRaw(history[at], 0, historyLength[at]);
+        if (previous < 0) {
+            out.putRaw(history[at], 0, historyLength[at]);
+        } else {
+            Bundle.writeChanged(out, history[at], historyLength[at], history[previous]);
+        }
         if (peer.sentTick[at] != tick) {
             peer.sentTick[at] = tick;
             peer.firstSentNanos[at] = now;
         }
         peer.sentNanos[at] = now;
+        return at;
     }
 
     private void askForSnapshots() {
@@ -462,6 +476,14 @@ public final class Sequencer implements AutoCloseable {
      * would only have been thrown away, and waited for again (the second Hamachi playtest).
      */
     private void loaded(Peer peer) {
+        if (peer.state == PeerState.DORMANT) {
+            for (int slot = 0; slot < capacity; slot++) {
+                if (owner[slot] == peer.id) {
+                    comeBack(slot);
+                }
+            }
+            log.info("sequencer", "event=awake peer=" + peer.id + " machine=" + peer.machine);
+        }
         peer.state = PeerState.PLAYING;
         peer.catchUpTo = sealed;
         peer.newestHeard = -1;
@@ -473,32 +495,49 @@ public final class Sequencer implements AutoCloseable {
 
     /**
      * A peer that has not built the world it was sent before the ticks since it fell out of the history
-     * can never be brought up to date from it, and another snapshot would take as long again. It is let
-     * go, and told why, rather than healed every ten seconds for as long as it stays.
-     *
-     * <p>Why is told honestly. A peer being healed goes on sending input about the world it plays until
-     * the new one comes, so one that has said nothing at all since it was sent was not slow: its game
-     * stopped - a window held by its title bar, a console clicked into - while its link went on answering.
-     * The 2026-10-01 playtest blamed a 3 ms link for that. A drop-in says nothing until its world comes, so
-     * for it silence tells nothing.
+     * can never be brought up to date from it, and another snapshot would take as long again. It is kept,
+     * and left alone: sent nothing, its commanders standing idle and shown away as for a dropped link
+     * (G0052), so it costs nobody else anything. Its game has stopped - a window held by its title bar, a
+     * console clicked into - or its link is too slow to carry a world; when it builds the one it was sent
+     * and says so, it is back, falls behind, and is sent a fresh one. The 2026-10-01 playtest let such a
+     * machine go after 20 s, blaming a 3 ms link.
      */
-    private void neverLoaded(Peer peer) {
-        long seconds = (now - peer.snapshotSentNanos) / 1_000_000_000L;
-        long silentNanos = now - peer.lastHeardNanos;
-        boolean stopped = peer.generation > 1 && peer.lastHeardNanos - peer.snapshotSentNanos < 0;
+    private void dormant(Peer peer) {
+        peer.state = PeerState.DORMANT;
+        for (int slot = 0; slot < capacity; slot++) {
+            if (owner[slot] == peer.id) {
+                lastHeld[slot] = CommanderInput.IDLE;
+                Arrays.fill(aheadTick[slot], -1);
+                if (!joinWanted[slot]) {
+                    goAway(slot);
+                }
+            }
+        }
         log.warn(
                 "sequencer",
-                "event=never-loaded peer=" + peer.id + " generation=" + peer.generation + " ms="
-                        + millis(now - peer.snapshotSentNanos) + " silentMs=" + millis(silentNanos));
-        peers.remove(peer);
-        left(peer, stopped ? "stopped" : "never loaded");
-        transport.disconnect(
-                peer.link,
-                stopped
-                        ? "the game on this machine stopped for " + silentNanos / 1_000_000_000L
-                                + " s - too long for the others to wait"
-                        : "could not load the world in " + seconds
-                                + " s - the connection to the host is too slow to catch up");
+                "event=dormant peer=" + peer.id + " machine=" + peer.machine + " generation=" + peer.generation
+                        + " ms=" + millis(now - peer.snapshotSentNanos) + " silentMs="
+                        + millis(now - peer.lastHeardNanos));
+    }
+
+    /** The slot's commander stands idle and the draft rotation passes him by (G0052), from the next tick. */
+    private void goAway(int slot) {
+        away[slot] = true;
+        awayWanted[slot] = true;
+        backWanted[slot] = false;
+    }
+
+    /** Somebody is at this commander again. If his going away has not been sealed yet, nothing was. */
+    private void comeBack(int slot) {
+        if (!away[slot]) {
+            return;
+        }
+        away[slot] = false;
+        if (awayWanted[slot]) {
+            awayWanted[slot] = false;
+        } else {
+            backWanted[slot] = true;
+        }
     }
 
     private static long millis(long nanos) {
@@ -618,7 +657,8 @@ public final class Sequencer implements AutoCloseable {
         int acked = in.getInt();
         int newestTag = in.getInt();
         boolean current = generation == peer.generation;
-        if (current && peer.state == PeerState.LOADING) {
+        boolean spike = heardAfterSpike(peer);
+        if (current && (peer.state == PeerState.LOADING || peer.state == PeerState.DORMANT)) {
             loaded(peer);
         }
         if (current && acked > peer.acked && acked <= sealed) {
@@ -639,9 +679,12 @@ public final class Sequencer implements AutoCloseable {
         // sent was late (the third playtest: a 180 ms gap raised a lead from 8 to 18).
         if (current && newestTag > peer.newestHeard) {
             peer.newestHeard = newestTag;
-            // How many ticks before its seal the newest input arrived: what the peer's lead is steered by.
+            // How many ticks before its seal the newest input arrived: what the peer's lead is steered by -
+            // unless a spike held it, which the lead does not chase (heardAfterSpike).
             int margin = newestTag - sealed;
-            peer.margin = peer.margin == Msg.NO_MARGIN ? margin : Math.min(peer.margin, margin);
+            if (!spike) {
+                peer.margin = peer.margin == Msg.NO_MARGIN ? margin : Math.min(peer.margin, margin);
+            }
         }
         int slotCount = in.getByte();
         if (slotCount > capacity) {
@@ -693,6 +736,33 @@ public final class Sequencer implements AutoCloseable {
             peer.hold(seq, slot, type, value, extra);
         }
         in.expectEnd();
+    }
+
+    /**
+     * Whether this input came in a burst after the peer had been silent for spikeTicks longer than its
+     * usual gap: held by a link that stopped for a moment - a relay, a busy radio - and let go at once.
+     * Late, and its ticks are sealed with the peer's input repeated, but a lead raised to cover every spike
+     * is that much input delay all the time: on 2026-10-01, 120 ms once a second took a lead from 8 ticks
+     * to 14. Everything heard in the pump the burst began in belongs to it.
+     */
+    private boolean heardAfterSpike(Peer peer) {
+        long gap = now - peer.lastInputNanos;
+        boolean first = peer.lastInputNanos == 0L;
+        peer.lastInputNanos = now;
+        if (first || pacing.spikeTicks() == 0) {
+            return false;
+        }
+        if (now == peer.spikeHeardNanos) {
+            return true;
+        }
+        long allowed = peer.inputGapNanos + pacing.spikeTicks() * tickNanos;
+        // The usual gap follows the peer's frames, a long one counting no further than a spike's edge.
+        peer.inputGapNanos = (7 * peer.inputGapNanos + Math.min(gap, allowed)) / 8;
+        if (gap > allowed) {
+            peer.spikeHeardNanos = now;
+            return true;
+        }
+        return false;
     }
 
     private void checksum(Peer peer) {
@@ -797,15 +867,7 @@ public final class Sequencer implements AutoCloseable {
                 Arrays.fill(aheadTick[slot], -1);
                 joinWanted[slot] = true;
                 peer.slotOfSeat[seat] = slot;
-                if (away[slot]) {
-                    // Somebody is at this commander again. If the drop has not been sealed yet, nothing was.
-                    away[slot] = false;
-                    if (awayWanted[slot]) {
-                        awayWanted[slot] = false;
-                    } else {
-                        backWanted[slot] = true;
-                    }
-                }
+                comeBack(slot);
                 if (paused && pauseReason == Msg.PAUSE_FOR_DRAFT) {
                     // A second player makes the game co-op, and co-op never pauses (G0049). Nothing is sealed
                     // while paused, so the world would never hear he had come - the pause lifts here.
@@ -884,9 +946,7 @@ public final class Sequencer implements AutoCloseable {
                 lastHeld[slot] = CommanderInput.IDLE;
                 // The unplugged pad of G0038: the commander stays, and the draft rotation passes him by.
                 if (!joinWanted[slot]) {
-                    away[slot] = true;
-                    awayWanted[slot] = true;
-                    backWanted[slot] = false;
+                    goAway(slot);
                 }
                 joinWanted[slot] = false;
             }
@@ -933,6 +993,8 @@ public final class Sequencer implements AutoCloseable {
         JOINING,
         /** Sent a snapshot and building it; sent no ticks until its first input about that world. */
         LOADING,
+        /** Did not build its snapshot before the history moved past it: left alone until it does. */
+        DORMANT,
         PLAYING
     }
 
@@ -968,6 +1030,12 @@ public final class Sequencer implements AutoCloseable {
 
         /** When it last said anything: input, a checksum, anything. Its link's heartbeats do not count. */
         long lastHeardNanos;
+
+        /** When its last input came, its usual gap between two, and when a spike's burst of them came. */
+        long lastInputNanos;
+
+        long inputGapNanos = tickNanos;
+        long spikeHeardNanos = -1L;
 
         /** The newest tag it has said, in the world it plays: a tag is judged when first heard. */
         int newestHeard = -1;

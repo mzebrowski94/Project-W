@@ -270,7 +270,7 @@ public final class OnlineSession implements ScenarioPlay {
                 pendingCrateClose[seat] = false;
             }
         }
-        peer.pump(clock.nanos(), local);
+        peer.pump(clock, local);
         Invitation hosting = invitation;
         Simulation world = peer.simulation();
         if (hosting != null) {
@@ -429,8 +429,7 @@ public final class OnlineSession implements ScenarioPlay {
         }
         lagStep = (lagStep + 1) % lagSteps.size();
         Conditions was = lagged.conditions();
-        lagged.conditions(
-                new Conditions(lagSteps.get(lagStep), was.jitterMillis(), was.loss(), was.duplicate(), was.seed()));
+        lagged.conditions(was.withLatency(lagSteps.get(lagStep)));
         log.info("peer", "event=lag latencyMillis=" + lagSteps.get(lagStep));
         Log.info("simulated lag: " + lagSteps.get(lagStep) + " ms each way");
     }

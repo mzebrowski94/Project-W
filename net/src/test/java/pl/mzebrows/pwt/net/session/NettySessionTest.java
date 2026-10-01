@@ -77,9 +77,8 @@ class NettySessionTest {
                     0,
                     new CommanderInput(
                             (float) StrictMath.cos(angle), (float) StrictMath.sin(angle), 80f, 45f, true, false));
-            long now = SystemClock.INSTANCE.nanos();
-            host.pump(now, local);
-            joiner.pump(now, local);
+            host.pump(SystemClock.INSTANCE, local);
+            joiner.pump(SystemClock.INSTANCE, local);
             LockSupport.parkNanos(FRAME_NANOS / 4);
         }
     }

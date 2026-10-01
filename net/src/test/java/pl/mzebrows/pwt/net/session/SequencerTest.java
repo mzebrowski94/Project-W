@@ -363,17 +363,23 @@ class SequencerTest {
         assertThat(ticksSentTo(joiner)).first().isEqualTo(snapshotTick + 1);
     }
 
+    /**
+     * A joiner that has not built the world it was sent - its game stopped, its link too slow - is kept,
+     * but not sent the world again and again: once it is past the history it is left alone until it says
+     * something, and it costs the others nothing until then.
+     */
     @Test
-    void letsGoAJoinerThatNeverBuildsItsWorldRatherThanSendingItAgainAndAgain() {
+    void keepsAJoinerThatHasNotBuiltItsWorldWithoutSendingItTheWorldAgain() {
         RawPeer host = startedHost();
         RawPeer joiner = joined("joiner", host);
 
-        for (int frame = 0; frame < config.pacing().historyTicks() + 60; frame++) {
+        for (int frame = 0; frame < 2 * config.pacing().historyTicks() + 60; frame++) {
             frame(host, joiner);
             answerSnapshots(host);
         }
 
-        assertThat(joiner.closedBecause).contains("could not load the world");
+        assertThat(joiner.closedBecause).isNull();
+        assertThat(ticksSentTo(joiner)).isEmpty();
         assertThat(messagesOfType(joiner, Msg.SNAPSHOT)).hasSize(1);
         assertThat(host.closedBecause).isNull();
     }
@@ -462,15 +468,38 @@ class SequencerTest {
     private static List<Integer> ticksSentTo(RawPeer peer) {
         List<Integer> ticks = new ArrayList<>();
         for (byte[] message : messagesOfType(peer, Msg.BUNDLES)) {
-            WireReader in = new WireReader().wrap(message, 1, message.length - 1);
-            in.getInt();
-            in.getInt();
-            int count = in.getByte();
-            for (int i = 0; i < count; i++) {
-                ticks.add(new Bundle(Players.MAX).read(in).tick());
+            for (Bundle bundle : bundlesIn(message)) {
+                ticks.add(bundle.tick());
             }
         }
         return ticks;
+    }
+
+    /** Every bundle in a BUNDLES message, rebuilt whole as a peer rebuilds them. */
+    private static List<Bundle> bundlesIn(byte[] message) {
+        WireReader in = new WireReader().wrap(message, 1, message.length - 1);
+        in.getInt();
+        in.getInt();
+        int count = in.getByte();
+        List<Bundle> bundles = new ArrayList<>();
+        byte[] previous = message;
+        int previousAt = in.position();
+        for (int i = 0; i < count; i++) {
+            byte[] whole;
+            if (i == 0) {
+                int start = in.position();
+                Bundle.skip(in, Players.MAX);
+                whole = Arrays.copyOfRange(message, start, in.position());
+            } else {
+                WireWriter rebuilt = new WireWriter(256);
+                Bundle.rebuild(in, previous, previousAt, Players.MAX, rebuilt);
+                whole = rebuilt.toBytes();
+            }
+            bundles.add(new Bundle(Players.MAX).read(new WireReader().wrap(whole, 0, whole.length)));
+            previous = whole;
+            previousAt = 0;
+        }
+        return bundles;
     }
 
     /** Every margin the sequencer has reported to a peer, leaving out the reports that had none. */
@@ -518,13 +547,7 @@ class SequencerTest {
             peer.poll();
             for (byte[] message : peer.drain()) {
                 if ((message[0] & 0xFF) == Msg.BUNDLES) {
-                    WireReader in = new WireReader().wrap(message, 0, message.length);
-                    in.getByte();
-                    in.getInt();
-                    in.getInt();
-                    int count = in.getByte();
-                    for (int i = 0; i < count; i++) {
-                        Bundle bundle = new Bundle(Players.MAX).read(in);
+                    for (Bundle bundle : bundlesIn(message)) {
                         sealed.putIfAbsent(bundle.tick(), bundle);
                     }
                 }

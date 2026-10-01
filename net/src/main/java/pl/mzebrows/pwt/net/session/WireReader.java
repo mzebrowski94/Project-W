@@ -28,6 +28,13 @@ final class WireReader {
         return bytes[at++] & 0xFF;
     }
 
+    /** Two bytes, big-endian, as written by {@code putShort}: -32768 to 32767. */
+    int getShort() {
+        need(2);
+        int high = bytes[at++];
+        return high << 8 | (bytes[at++] & 0xFF);
+    }
+
     int getInt() {
         need(4);
         int value = ((bytes[at] & 0xFF) << 24)

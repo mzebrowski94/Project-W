@@ -83,6 +83,33 @@ class ConditionedTransportTest {
         assertThat(arrivals(bad)).isEqualTo(arrivals(bad));
     }
 
+    /**
+     * A relay or a radio that stops for a moment holds everything and then lets it all go at once - the
+     * 2026-10-01 playtest's Hamachi link - which independent jitter per message never does.
+     */
+    @Test
+    void holdsEverythingSentDuringASpikeAndLetsItGoAtOnce() {
+        Rig rig = Rig.with(new Conditions(0, 0, 0f, 0f, 1000, 200, 9L));
+        int longestGap = 0;
+        int gap = 0;
+        int biggestBurst = 0;
+        int bursts = 0;
+
+        for (int ms = 0; ms < 5000; ms++) {
+            rig.send(Delivery.UNRELIABLE, ms & 0x7F);
+            rig.clock.advanceMillis(1);
+            int heard = rig.pollReceived().size();
+            gap = heard == 0 ? gap + 1 : 0;
+            longestGap = Math.max(longestGap, gap);
+            biggestBurst = Math.max(biggestBurst, heard);
+            bursts += heard > 100 ? 1 : 0;
+        }
+
+        assertThat(longestGap).as("longest silence, ms").isBetween(199, 201);
+        assertThat(biggestBurst).as("most heard at once").isBetween(199, 201);
+        assertThat(bursts).as("spikes in five seconds at one a second").isBetween(3, 7);
+    }
+
     @Test
     void passesEverythingStraightThroughUnderNoConditions() {
         Rig rig = Rig.with(Conditions.NONE);

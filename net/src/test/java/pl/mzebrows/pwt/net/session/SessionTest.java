@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.NetConfig.Conditions;
@@ -145,6 +146,144 @@ class SessionTest {
                     .as("ticks it is behind")
                     .isLessThanOrEqualTo(12);
         }
+    }
+
+    /**
+     * A link that stops now and then - a relay, a busy radio - holds a machine's input and lets it all go at
+     * once. That input is late, and repeated for the spike; but a lead raised to cover every spike is that
+     * much input delay all the time, and arcade play is judged by it (pillar 1). Measured on 2026-10-01: 120 ms
+     * once a second took the lead from 8 ticks to 14.
+     */
+    @Test
+    void keepsTheInputDelayOfAMachineOnASpikyLinkWhereItsRoundTripPutsIt() {
+        double steady = meanLead(STEADY_40_MS);
+        double spiky = meanLead(new Conditions(40, 0, 0f, 0f, 1000, 120, 13L));
+
+        assertThat(spiky)
+                .as("mean lead under spikes, against %.1f without", steady)
+                .isLessThanOrEqualTo(steady + 1);
+    }
+
+    /**
+     * After a spike a machine holds a few ticks it could not play, and catching up on them one extra a
+     * frame is a short speed-up; played as fast as a frame may it is a jump. Only a backlog no round trip
+     * could have made - a world that came late, a game that stopped - is played that fast.
+     */
+    @Test
+    void catchesUpAfterASpikeWithoutJumping() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 79L, PERFECT)) {
+            session.host();
+            Machine spiky = session.join("spiky", new Conditions(40, 0, 0f, 0f, 1000, 200, 13L));
+            session.run(600);
+
+            int most = 0;
+            for (int frame = 0; frame < 1800; frame++) {
+                int before = spiky.session.tick();
+                session.run(1);
+                most = Math.max(most, spiky.session.tick() - before);
+            }
+
+            assertThat(most).as("most ticks played in one frame").isLessThanOrEqualTo(2);
+        }
+    }
+
+    /**
+     * What a host sends a far machine, eight seats between them, every one moving all the time: each tick
+     * goes in redundantTicks datagrams, the first copy of a tick whole and the rest as they changed, and
+     * movement in two bytes rather than four. Measured on 2026-10-01: 28.5 kB a second per machine with
+     * every seat's whole input in every copy, 8.8 kB after.
+     */
+    @Test
+    void sendsAFarMachineOfEightSeatsLittleMoreThanItsChanges() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 89L, PERFECT)) {
+            Machine host = session.host();
+            Machine far = session.join("far", new Conditions(40, 5, 0.01f, 0f, 17L));
+            for (int seat = 1; seat < 4; seat++) {
+                host.session.seat(seat);
+                far.session.seat(seat);
+            }
+            session.run(600);
+            long before = session.unreliableBytesSent;
+
+            session.run(600);
+
+            assertThat((session.unreliableBytesSent - before) / 2 / 10)
+                    .as("bytes a second to each machine")
+                    .isLessThanOrEqualTo(9_500);
+        }
+    }
+
+    private static double meanLead(Conditions link) {
+        try (SessionHarness session = new SessionHarness("Skirmish", 83L, PERFECT)) {
+            session.host();
+            Machine far = session.join("far", link);
+            session.run(900);
+            long sum = 0;
+            for (int frame = 0; frame < 1800; frame++) {
+                session.run(1);
+                sum += far.session.lead();
+            }
+            return sum / 1800.0;
+        }
+    }
+
+    /**
+     * A drop-in whose world reached it late starts hundreds of ticks behind, and none of its input counts
+     * until it has played them. Playing one extra a frame, the 2026-10-01 playtest's Hamachi joiner at 31
+     * frames a second took seven seconds over 214. Further behind than any round trip, a frame plays as many
+     * as it may; the last leadMaxTicks it plays one extra a frame, as after a spike.
+     */
+    @ParameterizedTest
+    @CsvSource({"x, 110", "x., 270"})
+    void catchesUpADropInWhoseWorldCameLate(String cadence, int mostFrames) {
+        try (SessionHarness session = new SessionHarness("Skirmish", 67L, PERFECT)) {
+            session.host();
+            session.run(300);
+            Machine late = session.join("late", STEADY_40_MS);
+            late.cadence = cadence;
+            while (late.session.peerId() < 0) {
+                session.run(1);
+            }
+            late.frozenFrames = 210;
+            session.run(210);
+            while (late.session.state() != PeerSession.State.PLAYING) {
+                session.run(1);
+            }
+            assertThat(session.sequencer.sealedTick() - late.session.tick())
+                    .as("ticks behind once it has built its world")
+                    .isGreaterThan(200);
+
+            int frames = 0;
+            while (session.sequencer.sealedTick() - late.session.tick() > 8 && frames < 1000) {
+                session.run(1);
+                frames++;
+            }
+
+            assertThat(frames).as("60 Hz frames until it is in step").isLessThanOrEqualTo(mostFrames);
+        }
+    }
+
+    /**
+     * What a machine's own log says of its frames, so a slow one can be told from a slow network: how many
+     * it drew, the longest, and the time the session's own work took of them. The 2026-10-01 playtest could
+     * tell a joiner drew 31 frames a second only from how many inputs it sent.
+     */
+    @Test
+    void logsHowManyFramesAMachineDrewAndHowLongItsLongestWas(@TempDir Path dir) throws IOException {
+        NetConfig logged = NetConfig.defaults().with(new NetConfig.LogConfig(dir.toString(), "INFO", 64, 1));
+        NetLog log = NetLog.open(logged.log(), "slow");
+        try (SessionHarness session = new SessionHarness(logged, "Skirmish", 71L, PERFECT, NetLog.silent(64))) {
+            session.host();
+            session.peerLog = log;
+            Machine slow = session.join("slow", PERFECT);
+            slow.cadence = "x.";
+
+            session.run(300);
+        }
+        log.close();
+
+        assertThat(Files.readString(Objects.requireNonNull(log.file()), StandardCharsets.UTF_8))
+                .containsPattern("cat=stats peer=1 .* frames=30 frameMostMs=33 workMs=\\d+ workMostMs=\\d+");
     }
 
     /**
@@ -285,28 +424,56 @@ class SessionTest {
 
     /**
      * A machine whose game stops - its window held by its title bar, its console clicked into - goes on
-     * answering its link, so the host hears nothing from it and sees no drop, and lets it go once it has
-     * been sent the world and not built it. The 2026-10-01 playtest: a joiner stopped for 26 s was told the
-     * connection to the host was too slow, and its own log said nothing of the stop.
+     * answering its link, and once it has fallen behind and not built the world it was sent it costs the
+     * others nothing: it is sent nothing more. It is kept rather than let go, its commander standing idle
+     * and shown away the while, and it comes back by itself when its game runs again. The 2026-10-01
+     * playtest let such a joiner go after 20 s as "too slow", and its own log said nothing of the stop.
      */
     @Test
-    void tellsAMachineWhoseGameStoppedThatItStoppedRatherThanBlameTheNetwork(@TempDir Path dir) throws IOException {
+    void keepsAMachineWhoseGameStoppedAndTakesItBackWhenItRunsAgain(@TempDir Path dir) throws IOException {
         NetConfig logged = NetConfig.defaults().with(new NetConfig.LogConfig(dir.toString(), "INFO", 64, 1));
         NetLog log = NetLog.open(logged.log(), "stopping");
         try (SessionHarness session = new SessionHarness(logged, "Skirmish", 59L, PERFECT, NetLog.silent(64))) {
-            session.host();
+            Machine host = session.host();
             session.peerLog = log;
             Machine stopping = session.join("stopping", PERFECT);
             session.run(300);
+            int slot = stopping.session.slotOf(0);
 
             stopping.frozenFrames = 26 * 60;
-            session.run(26 * 60 + 2);
+            session.run(24 * 60);
+            boolean awayWhileStopped = presence(host).isAway(slot);
+            session.run(2 * 60 + 600);
 
-            assertThat(stopping.session.closedBecause()).contains("stopped for").doesNotContain("connection");
+            assertThat(awayWhileStopped).as("away while its game is stopped").isTrue();
+            assertThat(stopping.session.closedBecause()).as("let go because").isNull();
+            assertThat(stopping.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(session.sequencer.sealedTick() - stopping.session.tick())
+                    .as("ticks behind ten seconds after its game ran again")
+                    .isLessThanOrEqualTo(8);
+            assertThat(presence(host).isAway(slot)).as("away once back").isFalse();
         }
         log.close();
         assertThat(Files.readString(Objects.requireNonNull(log.file()), StandardCharsets.UTF_8))
                 .containsPattern("event=frame-stall ms=26\\d{3}");
+    }
+
+    /** A restart makes a new world with nobody away in it - except a machine whose game is still stopped. */
+    @Test
+    void restartsWithAStoppedMachinesCommanderAway() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 73L, PERFECT)) {
+            Machine host = session.host();
+            Machine stopping = session.join("stopping", PERFECT);
+            session.run(300);
+            int slot = stopping.session.slotOf(0);
+            stopping.frozenFrames = 60 * 60;
+            session.run(24 * 60);
+
+            host.session.restart();
+            session.run(60);
+
+            assertThat(presence(host).isAway(slot)).as("away in the new world").isTrue();
+        }
     }
 
     @Test
@@ -470,6 +637,14 @@ class SessionTest {
                     .as("nobody's slot left for a ninth player")
                     .isEqualTo(-1);
         }
+    }
+
+    private static Presence presence(Machine machine) {
+        return SessionHarness.world(machine)
+                .engine()
+                .getEntitiesFor(Family.all(Presence.class).get())
+                .first()
+                .getComponent(Presence.class);
     }
 
     private static int mostLeadOver(SessionHarness session, Machine machine, int frames) {

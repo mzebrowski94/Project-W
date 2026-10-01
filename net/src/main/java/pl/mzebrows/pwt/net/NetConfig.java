@@ -140,9 +140,19 @@ public record NetConfig(
      * @param jitterMillis a further delay drawn between zero and this, per message
      * @param loss the fraction of unreliable messages dropped, in {@code [0, 1)}
      * @param duplicate the fraction of unreliable messages sent twice, in {@code [0, 1)}
+     * @param spikeEveryMillis how far apart, on average, the link stops for a moment - a relay or a radio
+     *     holding everything, then letting it all go at once, as the 2026-10-01 playtest's Hamachi link did
+     * @param spikeMillis how long each of those moments holds every message, both ways and both kinds
      * @param seed what the draws come from, so a run under the same conditions misbehaves the same way
      */
-    public record Conditions(int latencyMillis, int jitterMillis, float loss, float duplicate, long seed) {
+    public record Conditions(
+            int latencyMillis,
+            int jitterMillis,
+            float loss,
+            float duplicate,
+            int spikeEveryMillis,
+            int spikeMillis,
+            long seed) {
 
         public static final Conditions NONE = new Conditions(0, 0, 0f, 0f, 1L);
 
@@ -151,11 +161,28 @@ public record NetConfig(
             require(jitterMillis >= 0, "jitterMillis", jitterMillis);
             require(loss >= 0f && loss < 1f, "loss", loss);
             require(duplicate >= 0f && duplicate < 1f, "duplicate", duplicate);
+            require(spikeEveryMillis >= 0, "spikeEveryMillis", spikeEveryMillis);
+            require(spikeMillis >= 0, "spikeMillis", spikeMillis);
+        }
+
+        /** Conditions without spikes. */
+        public Conditions(int latencyMillis, int jitterMillis, float loss, float duplicate, long seed) {
+            this(latencyMillis, jitterMillis, loss, duplicate, 0, 0, seed);
+        }
+
+        /** The same conditions at another latency: what a latency playtest steps. */
+        public Conditions withLatency(int millis) {
+            return new Conditions(millis, jitterMillis, loss, duplicate, spikeEveryMillis, spikeMillis, seed);
+        }
+
+        /** Whether the link stops now and then. */
+        public boolean spikes() {
+            return spikeEveryMillis > 0 && spikeMillis > 0;
         }
 
         /** Whether these conditions change anything at all. */
         public boolean any() {
-            return latencyMillis > 0 || jitterMillis > 0 || loss > 0f || duplicate > 0f;
+            return latencyMillis > 0 || jitterMillis > 0 || loss > 0f || duplicate > 0f || spikes();
         }
     }
 
@@ -226,6 +253,9 @@ public record NetConfig(
      * @param redundantTicks how many of the newest unacknowledged ticks every bundle datagram repeats;
      *     older ones are sent again only when a round trip has passed without their acknowledgement; read
      *     only where the sequencer runs
+     * @param spikeTicks how much longer than its usual gap a peer may go silent before what it sends next
+     *     counts as a spike - held by its link and let go at once - whose lateness its lead does not rise
+     *     to cover; zero covers every one; read only where the sequencer runs
      */
     public record Pacing(
             int leadMinTicks,
@@ -234,7 +264,8 @@ public record NetConfig(
             int bufferTicks,
             int catchUpTicks,
             int historyTicks,
-            int redundantTicks) {
+            int redundantTicks,
+            int spikeTicks) {
 
         /**
          * The ceiling on {@code leadMaxTicks}. The rings that hold input ahead of its tick are sized from
@@ -249,6 +280,7 @@ public record NetConfig(
             require(bufferTicks >= 0, "bufferTicks", bufferTicks);
             require(catchUpTicks >= 1, "catchUpTicks", catchUpTicks);
             require(redundantTicks >= 1 && redundantTicks <= 8, "redundantTicks", redundantTicks);
+            require(spikeTicks >= 0, "spikeTicks", spikeTicks);
         }
     }
 

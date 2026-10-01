@@ -225,7 +225,8 @@ take in answer (ADR 0017, G0049).
 |---|---|
 | **adaptation** | An **upgrade** the aliens take, on a schedule and with no **chooser**: one every so much level time and one every so many cards the players take, both off at zero (D11). Held in the same **ledger**, shown as `SWARM` in the aside. Not *evolve*, which stays one alien changing strain by feeding. |
 | **armoury deck** | The weighted cards a **crate** is dealt from, one deck per level - every gun's **weapons cache** and the **medkit** - drawn so no card comes up twice before every card has (G0056). An upgrade may add cards (**deal**) or put one into every crate (**stock**). |
-| **away** | A slot whose machine's link has dropped. Its commander stands idle, the **rotation** skips it, and its **drafts** pass on (G0052). Only the host's sequencer says so; offline nobody is ever away. |
+| **away** | A slot whose machine's link has dropped, or whose machine has gone **dormant**. Its commander stands idle, the **rotation** skips it, and its **drafts** pass on (G0052). Only the host's sequencer says so; offline nobody is ever away. |
+| **dormant** | A **peer** that was sent a **snapshot** and did not build it before the session's history moved past it: its game stopped - a window held by its title bar, a console clicked into - or its link is too slow to carry a world. It is kept, not let go: sent nothing, its slots **away**, costing nobody anything; when it builds the world it was sent it wakes, is back, and is sent a fresh one (G0052). |
 | **capability** | Behaviour written once and carried from spawn by every unit that could use it, off at zero until an upgrade turns it up - a trooper's grenade throw (G0051). How an upgrade unlocks something without adding a component. |
 | **card** | One **upgrade** on a **draft**, dealt when the draft is earned. |
 | **chooser** | The slot a **draft** belongs to. |

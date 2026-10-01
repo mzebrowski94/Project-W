@@ -12,7 +12,9 @@ import pl.mzebrows.pwt.net.NetConfig.Conditions;
 import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.loopback.LoopbackNetwork;
 import pl.mzebrows.pwt.net.transport.ConditionedTransport;
+import pl.mzebrows.pwt.net.transport.Delivery;
 import pl.mzebrows.pwt.net.transport.Transport;
+import pl.mzebrows.pwt.net.transport.TransportListener;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
@@ -47,6 +49,9 @@ final class SessionHarness implements AutoCloseable {
 
     private int frame;
 
+    /** Every byte the host has sent unreliably - ticks, nearly all of it - on every link. */
+    long unreliableBytesSent;
+
     SessionHarness(String scenario, long seed, Conditions atTheHost) {
         this(NetConfig.defaults(), scenario, seed, atTheHost);
     }
@@ -59,7 +64,7 @@ final class SessionHarness implements AutoCloseable {
     SessionHarness(NetConfig config, String scenario, long seed, Conditions atTheHost, NetLog sequencerLog) {
         this.config = config;
         network = new LoopbackNetwork(config);
-        Transport hostEnd = conditioned(network.endpoint("host"), atTheHost);
+        Transport hostEnd = new Counted(conditioned(network.endpoint("host"), atTheHost));
         sequencer = new Sequencer(
                 hostEnd,
                 config,
@@ -122,7 +127,7 @@ final class SessionHarness implements AutoCloseable {
                     continue;
                 }
                 machine.script(frame);
-                machine.session.pump(now, machine.local);
+                machine.session.pump(clock, machine.local);
             }
             frame++;
         }
@@ -186,6 +191,48 @@ final class SessionHarness implements AutoCloseable {
             machine.session.close();
         }
         sequencer.close();
+    }
+
+    /** The host's end of the network, counting what it sends. */
+    private final class Counted implements Transport {
+        private final Transport inner;
+
+        Counted(Transport inner) {
+            this.inner = inner;
+        }
+
+        @Override
+        public int listen(int firstPort, int search) {
+            return inner.listen(firstPort, search);
+        }
+
+        @Override
+        public int connect(String host, int port) {
+            return inner.connect(host, port);
+        }
+
+        @Override
+        public void send(int link, Delivery delivery, byte[] data, int offset, int length) {
+            if (delivery == Delivery.UNRELIABLE) {
+                unreliableBytesSent += length;
+            }
+            inner.send(link, delivery, data, offset, length);
+        }
+
+        @Override
+        public void disconnect(int link, String reason) {
+            inner.disconnect(link, reason);
+        }
+
+        @Override
+        public void poll(TransportListener listener) {
+            inner.poll(listener);
+        }
+
+        @Override
+        public void close() {
+            inner.close();
+        }
     }
 
     /** One computer in the session, with one player on its keyboard walking a circle and giving orders. */

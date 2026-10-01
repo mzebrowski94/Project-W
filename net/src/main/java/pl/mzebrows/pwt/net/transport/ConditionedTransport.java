@@ -40,11 +40,20 @@ public final class ConditionedTransport implements Transport {
     private SplittableRandom rng;
     private long sequence;
 
+    /** When spikes come is drawn apart from everything else, so adding them changes no other draw. */
+    private SplittableRandom spikeRng;
+
+    /** The spike now running or next to come; both zero before the first is drawn. */
+    private long spikeStart;
+
+    private long spikeEnd;
+
     public ConditionedTransport(Transport inner, Conditions conditions, Clock clock) {
         this.inner = inner;
         this.conditions = conditions;
         this.clock = clock;
         this.rng = new SplittableRandom(conditions.seed());
+        this.spikeRng = new SplittableRandom(~conditions.seed());
     }
 
     /** The conditions now in force. */
@@ -59,8 +68,11 @@ public final class ConditionedTransport implements Transport {
     public void conditions(Conditions next) {
         if (next.seed() != conditions.seed()) {
             rng = new SplittableRandom(next.seed());
+            spikeRng = new SplittableRandom(~next.seed());
         }
         conditions = next;
+        spikeStart = 0L;
+        spikeEnd = 0L;
     }
 
     @Override
@@ -144,7 +156,27 @@ public final class ConditionedTransport implements Transport {
     private long dueFromNow() {
         long delayMillis = (long) conditions.latencyMillis()
                 + (conditions.jitterMillis() == 0 ? 0 : rng.nextInt(conditions.jitterMillis() + 1));
-        return clock.nanos() + delayMillis * 1_000_000L;
+        long now = clock.nanos();
+        long due = now + delayMillis * 1_000_000L;
+        if (!conditions.spikes()) {
+            return due;
+        }
+        if (spikeEnd == 0L) {
+            spikeStart = now + spikeGap();
+            spikeEnd = spikeStart + conditions.spikeMillis() * 1_000_000L;
+        }
+        while (now >= spikeEnd) {
+            spikeStart = spikeEnd + spikeGap();
+            spikeEnd = spikeStart + conditions.spikeMillis() * 1_000_000L;
+        }
+        // Whatever would arrive while the link is stopped arrives the moment it starts again.
+        return due >= spikeStart && due < spikeEnd ? spikeEnd : due;
+    }
+
+    /** From one spike's end to the next one's start: half to one and a half times spikeEveryMillis. */
+    private long spikeGap() {
+        int every = conditions.spikeEveryMillis();
+        return (every / 2 + (long) spikeRng.nextInt(every + 1)) * 1_000_000L;
     }
 
     /** What the wrapped transport hears, held back as the conditions say before the real listener does. */

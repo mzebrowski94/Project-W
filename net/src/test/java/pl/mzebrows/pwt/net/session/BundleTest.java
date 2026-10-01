@@ -2,12 +2,15 @@ package pl.mzebrows.pwt.net.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.RecordComponent;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
@@ -18,17 +21,101 @@ class BundleTest {
     private final WireReader in = new WireReader();
 
     @Test
-    void carriesHeldInputToTheBit() {
-        CommanderInput odd = new CommanderInput(-0f, Float.MIN_VALUE, Float.MAX_VALUE, 0.1f + 0.2f, true, false)
+    void carriesAimToTheBitAndMovementToASixteenThousandthOfAPush() {
+        CommanderInput odd = new CommanderInput(0.70710677f, -1f, Float.MAX_VALUE, 0.1f + 0.2f, true, false)
                 .acting(true)
                 .aimingRelatively();
 
         Bundle.writeHeld(out.reset(), odd);
         CommanderInput read = Bundle.readHeld(in.wrap(out.array(), 0, out.size()), CommanderInput.IDLE);
 
-        assertThat(read).isEqualTo(odd);
-        assertThat(Float.floatToRawIntBits(read.moveX())).isEqualTo(Float.floatToRawIntBits(-0f));
+        assertThat(read.moveX()).isCloseTo(0.70710677f, within(1f / 16384));
+        assertThat(read.moveY()).isEqualTo(-1f);
+        assertThat(Float.floatToRawIntBits(read.aimX())).isEqualTo(Float.floatToRawIntBits(Float.MAX_VALUE));
+        assertThat(Float.floatToRawIntBits(read.aimY())).isEqualTo(Float.floatToRawIntBits(0.1f + 0.2f));
+        assertThat(read.acting()).isTrue();
+        assertThat(read.aimRelative()).isTrue();
         assertThat(out.size()).isEqualTo(Bundle.HELD_BYTES);
+    }
+
+    /** Movement goes as a sixteen-thousandth of a push, so a full push and every half and quarter stay whole. */
+    @Test
+    void carriesAFullPushAndItsHalvesExactly() {
+        for (float push : new float[] {1f, -1f, 0.5f, -0.75f, 0.25f, 0f}) {
+            Bundle.writeHeld(out.reset(), new CommanderInput(push, push, 0f, 0f, false, false));
+
+            assertThat(Bundle.readHeld(in.wrap(out.array(), 0, out.size()), CommanderInput.IDLE)
+                            .moveX())
+                    .isEqualTo(push);
+        }
+    }
+
+    /**
+     * Every tick in a bundle datagram after the first carries only the held input that changed from the
+     * one before it, and a peer rebuilds the whole tick from the two: the 2026-10-01 playtest sent every
+     * seat's whole input three times a tick, 87% of what a session sends.
+     */
+    @Test
+    void sendsOnlyTheHeldInputThatChangedFromTheTickBefore() {
+        CommanderInput standing = new CommanderInput(0f, 0f, 40f, 30f, false, false);
+        CommanderInput walking = new CommanderInput(0.5f, 0f, 40f, 30f, true, false);
+        byte[] before = bundle(7, standing, standing);
+        byte[] after = bundle(8, standing, walking);
+
+        WireWriter changed = new WireWriter(64);
+        Bundle.writeChanged(changed, after, after.length, before);
+        WireWriter rebuilt = new WireWriter(64);
+        int tick = Bundle.rebuild(in.wrap(changed.array(), 0, changed.size()), before, 0, Players.MAX, rebuilt);
+
+        assertThat(tick).isEqualTo(8);
+        assertThat(rebuilt.toBytes()).isEqualTo(after);
+        assertThat(changed.size()).isLessThan(after.length - Bundle.HELD_BYTES);
+    }
+
+    @Test
+    void sendsAWholeSeatThatTheTickBeforeDidNotHave() {
+        CommanderInput walking = new CommanderInput(0.5f, 0f, 40f, 30f, true, false);
+        byte[] before = bundle(7, null, walking);
+        byte[] after = bundle(8, walking, walking);
+
+        WireWriter changed = new WireWriter(64);
+        Bundle.writeChanged(changed, after, after.length, before);
+        WireWriter rebuilt = new WireWriter(64);
+        Bundle.rebuild(in.wrap(changed.array(), 0, changed.size()), before, 0, Players.MAX, rebuilt);
+
+        assertThat(rebuilt.toBytes()).isEqualTo(after);
+    }
+
+    @Test
+    void refusesASeatSaidUnchangedFromATickThatDidNotHaveIt() {
+        CommanderInput walking = new CommanderInput(0.5f, 0f, 40f, 30f, true, false);
+        byte[] before = bundle(7, null, walking);
+        byte[] after = bundle(8, walking, walking);
+        WireWriter changed = new WireWriter(64);
+        Bundle.writeChanged(changed, after, after.length, after);
+
+        assertThatThrownBy(() -> Bundle.rebuild(
+                        in.wrap(changed.array(), 0, changed.size()), before, 0, Players.MAX, new WireWriter(64)))
+                .isInstanceOf(WireException.class);
+    }
+
+    /** A seat's slot and which of its fields changed share a byte: three bits of slot. */
+    @Test
+    void fitsEverySlotInThreeBits() {
+        assertThat(Players.MAX).isLessThanOrEqualTo(8);
+    }
+
+    private static byte[] bundle(int tick, @Nullable CommanderInput slot0, CommanderInput slot1) {
+        Bundle bundle = new Bundle(Players.MAX);
+        bundle.clear(tick);
+        if (slot0 != null) {
+            bundle.hold(0, slot0);
+        }
+        bundle.hold(1, slot1);
+        bundle.join(2, 1);
+        WireWriter written = new WireWriter(64);
+        bundle.write(written);
+        return written.toBytes();
     }
 
     /**
