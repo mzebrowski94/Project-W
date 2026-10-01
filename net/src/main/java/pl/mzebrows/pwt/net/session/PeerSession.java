@@ -35,7 +35,8 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  *
  * <p><strong>A world steps only on sealed ticks, and never skips one.</strong> Ticks are played at the
  * world's own rate as they arrive; a machine holding more than {@code bufferTicks} unplayed plays one
- * extra a frame until it is back, never more than {@code catchUpTicks} in a frame. One that has held some
+ * extra a frame until it is back, never more than {@code catchUpTicks} in a frame - or one more than a
+ * frame is worth, on a machine whose frames are longer than that. One that has held some
  * back for a whole second without once running dry plays one early, so a steady link drains to no delay.
  * With none to play it waits, and banks no time while it waits - so a stall ends in a short catch-up, not
  * a burst.
@@ -77,6 +78,9 @@ public final class PeerSession implements AutoCloseable {
     /** How many reports in a row must come early before the lead comes down: a second's worth. */
     private static final int CALM_REPORTS = 60;
 
+    /** How long this machine's frames are watched for before {@link #frameTicks} is judged again. */
+    private static final long FRAME_WINDOW_NANOS = 1_000_000_000L;
+
     /**
      * While paused, how many ticks apart this machine sends input with nothing new in it: enough to keep
      * acknowledging, not sixty messages a second of nothing.
@@ -94,6 +98,7 @@ public final class PeerSession implements AutoCloseable {
     private final WorldFactory worlds;
     private final @Nullable Path dumpDir;
     private final String build;
+    private final String machineId;
     private final long statsNanos;
 
     private final WireWriter out;
@@ -146,6 +151,18 @@ public final class PeerSession implements AutoCloseable {
     private int starved;
     private int cushioned;
 
+    /**
+     * How many ticks one of this machine's frames is worth while they run steadily: the second longest of
+     * the last second's, so that one hitch does not count and a frame rate below the tick rate does. Its
+     * input goes once a frame, so this many ticks are sealed between two of its inputs, and this many
+     * fall due at the start of every frame.
+     */
+    private int frameTicks = 1;
+
+    private long frameLongest;
+    private long frameSecondLongest;
+    private long frameWindowNanos;
+
     private final int[] slotOfSeat = new int[Players.MAX];
     private final boolean[] seatWanted = new boolean[Players.MAX];
     private final CommanderInput[][] own = new CommanderInput[Players.MAX][OWN];
@@ -172,6 +189,7 @@ public final class PeerSession implements AutoCloseable {
     /**
      * @param dumpDir where desync dumps are written, or null to write none
      * @param build this build's id, sent in the hello
+     * @param machineId this computer's {@link MachineId}, sent in the hello
      */
     public PeerSession(
             Transport transport,
@@ -179,8 +197,9 @@ public final class PeerSession implements AutoCloseable {
             NetLog log,
             WorldFactory worlds,
             @Nullable Path dumpDir,
-            String build) {
-        this(transport, config, log, worlds, dumpDir, build, Transport.MAX_MESSAGE_BYTES);
+            String build,
+            String machineId) {
+        this(transport, config, log, worlds, dumpDir, build, machineId, Transport.MAX_MESSAGE_BYTES);
     }
 
     /** @param maxMessageBytes the largest snapshot this peer sends - lower only in a test of a world too big */
@@ -191,7 +210,11 @@ public final class PeerSession implements AutoCloseable {
             WorldFactory worlds,
             @Nullable Path dumpDir,
             String build,
+            String machineId,
             int maxMessageBytes) {
+        if (!MachineId.valid(machineId)) {
+            throw new IllegalArgumentException("not a machine id: \"" + machineId + "\"");
+        }
         this.transport = transport;
         this.pacing = config.pacing();
         this.maxDatagramBytes = config.maxDatagramBytes();
@@ -200,6 +223,7 @@ public final class PeerSession implements AutoCloseable {
         this.worlds = worlds;
         this.dumpDir = dumpDir;
         this.build = build;
+        this.machineId = machineId;
         this.statsNanos = config.log().statsSeconds() * 1_000_000_000L;
         this.out = new WireWriter(Math.max(2048, config.maxDatagramBytes()));
         this.lead = pacing.leadMinTicks();
@@ -228,6 +252,13 @@ public final class PeerSession implements AutoCloseable {
         long elapsed = pumped ? nowNanos - lastPumpNanos : 0L;
         lastPumpNanos = nowNanos;
         pumped = true;
+        if (statsNanos > 0 && elapsed >= statsNanos) {
+            // This machine's game stopped running - its window held by its title bar, a console clicked into
+            // - while its link went on answering: a hole in this log, and to every other machine the same as
+            // a slow network, unless it is said here (the 2026-10-01 playtest).
+            log.warn("peer", "event=frame-stall ms=" + elapsed / 1_000_000L + " tick=" + tick);
+        }
+        timeFrame(elapsed);
         transport.poll(listener);
         Simulation current = world;
         if (state != State.PLAYING || current == null) {
@@ -236,8 +267,11 @@ public final class PeerSession implements AutoCloseable {
         queueEvents(local);
         accumulator += elapsed;
         int available = contiguous - tick;
+        // A frame plays at least one tick more than its steady length is worth, or a machine drawing fewer
+        // frames than catchUpTicks a tick could never catch up, nor even keep up.
+        int most = Math.max(pacing.catchUpTicks(), frameTicks + 1);
         // On time: the ticks this frame's time is worth, as far as there are any. Only these spend time.
-        int onTime = (int) Math.min(Math.min(accumulator / tickNanos, available), pacing.catchUpTicks());
+        int onTime = (int) Math.min(Math.min(accumulator / tickNanos, available), most);
         // Catching up is free: it makes up for time already spent waiting, so it is not taken from the bank.
         int extra = 0;
         if (available - onTime > pacing.bufferTicks()) {
@@ -250,7 +284,7 @@ public final class PeerSession implements AutoCloseable {
             extra = 1;
             cushioned = 0;
         }
-        int steps = Math.min(onTime + extra, pacing.catchUpTicks());
+        int steps = Math.min(onTime + extra, most);
         for (int i = 0; i < steps; i++) {
             step(local);
         }
@@ -268,6 +302,26 @@ public final class PeerSession implements AutoCloseable {
         }
         sendInput(nowNanos, steps > 0);
         stats(nowNanos);
+    }
+
+    /** Keeps the longest two frames of the current second, and judges {@link #frameTicks} once it is up. */
+    private void timeFrame(long elapsed) {
+        if (tickNanos <= 0) {
+            return;
+        }
+        if (elapsed > frameLongest) {
+            frameSecondLongest = frameLongest;
+            frameLongest = elapsed;
+        } else if (elapsed > frameSecondLongest) {
+            frameSecondLongest = elapsed;
+        }
+        frameWindowNanos += elapsed;
+        if (frameWindowNanos >= FRAME_WINDOW_NANOS) {
+            frameTicks = (int) Math.max(1L, (frameSecondLongest + tickNanos / 2) / tickNanos);
+            frameLongest = 0L;
+            frameSecondLongest = 0L;
+            frameWindowNanos = 0L;
+        }
     }
 
     /** Asks for a slot for a local seat - a player who has just picked up a pad. Idempotent. */
@@ -535,19 +589,25 @@ public final class PeerSession implements AutoCloseable {
      * of reports all came early, by as much as the least early of them allows, so a lead raised by a
      * passing spike is back where the round trip puts it within a second or two rather than a tick a
      * second - which is what a 0.4 s hitch cost in the first playtest: 25 seconds at 27 ticks.
+     *
+     * <p>Both judged by this machine's frame, not the world's tick. The sequencer measures how early an
+     * input was when it came, but this machine's next comes a frame later, after {@link #frameTicks} more
+     * ticks are sealed; and a frame starts holding that many ticks it is simply due, which is not being
+     * behind. The 2026-10-01 playtest: at 24 frames a second the lead never rose and every input was late.
      */
-    private void adaptLead(int margin) {
-        if (margin == Msg.NO_MARGIN) {
+    private void adaptLead(int reported) {
+        if (reported == Msg.NO_MARGIN) {
             return;
         }
         if (settle > 0) {
             settle--;
             return;
         }
+        int margin = reported - (frameTicks - 1);
         if (margin < pacing.marginTicks()) {
             calm = 0;
             calmLeast = Integer.MAX_VALUE;
-            if (contiguous - tick > pacing.bufferTicks()) {
+            if (contiguous - tick > pacing.bufferTicks() + frameTicks - 1) {
                 return;
             }
             int was = lead;
@@ -851,9 +911,14 @@ public final class PeerSession implements AutoCloseable {
             if (opened != link) {
                 return;
             }
-            out.reset().putByte(Msg.HELLO).putInt(Msg.PROTOCOL).putString(build).putLong(hostKey);
+            out.reset()
+                    .putByte(Msg.HELLO)
+                    .putInt(Msg.PROTOCOL)
+                    .putString(build)
+                    .putLong(hostKey)
+                    .putString(machineId);
             transport.send(link, Delivery.RELIABLE, out.array(), 0, out.size());
-            log.info("peer", "event=hello remote=" + remote + " build=" + build);
+            log.info("peer", "event=hello remote=" + remote + " build=" + build + " machine=" + machineId);
         }
 
         @Override

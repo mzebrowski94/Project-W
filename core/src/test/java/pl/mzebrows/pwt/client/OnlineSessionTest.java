@@ -153,7 +153,7 @@ class OnlineSessionTest {
     @Test
     void endsSayingWhyWhenTheHostWillNotHaveIt() {
         PeerSession old = new PeerSession(
-                network.endpoint("stranger"), config, NetLog.silent(64), new ScenarioWorlds(), null, "old");
+                network.endpoint("stranger"), config, NetLog.silent(64), new ScenarioWorlds(), null, "old", "old");
         old.connect("host", port, 0L);
         try (OnlineSession stranger =
                 new OnlineSession(old, null, null, List.of(), NetLog.silent(64), clock, "host:" + port, null)) {
@@ -193,8 +193,8 @@ class OnlineSessionTest {
     }
 
     private PeerSession peer(pl.mzebrows.pwt.net.transport.Transport transport, long key) {
-        PeerSession peer =
-                new PeerSession(transport, config, NetLog.silent(64), new ScenarioWorlds(), null, BuildId.current());
+        PeerSession peer = new PeerSession(
+                transport, config, NetLog.silent(64), new ScenarioWorlds(), null, BuildId.current(), "test");
         peer.connect("host", port, key);
         return peer;
     }

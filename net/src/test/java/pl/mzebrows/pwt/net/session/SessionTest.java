@@ -12,6 +12,8 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.NetConfig.Conditions;
 import pl.mzebrows.pwt.net.log.NetLog;
@@ -114,6 +116,34 @@ class SessionTest {
             assertThat(hitching.session.lead())
                     .as("lead two seconds after a hitch")
                     .isLessThanOrEqualTo(before + 1);
+        }
+    }
+
+    /**
+     * A machine drawing fewer frames than the world has ticks sends its input once a frame, so the
+     * sequencer seals a frame's worth of ticks between two of its inputs, and its lead has to cover that
+     * as well as the round trip. At 12 frames a second it also holds more ticks every frame than a
+     * catch-up of {@code catchUpTicks} plays. The 2026-10-01 playtest: a Hamachi joiner drawing 31 frames had
+     * 17 inputs a second repeated, and at 24 the lead never left its least and every input was.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {"x..", "x.x..", "xx...", "x....", "xxx...."})
+    void sealsTheInputOfAMachineDrawingFewerFramesThanTicks(String cadence) {
+        try (SessionHarness session = new SessionHarness("Skirmish", 29L, PERFECT)) {
+            session.host();
+            Machine slow = session.join("slow", STEADY_40_MS);
+            slow.cadence = cadence;
+            session.run(600);
+            int before = session.sequencer.repeatedFor(slow.session.peerId());
+
+            session.run(600);
+
+            assertThat(session.sequencer.repeatedFor(slow.session.peerId()) - before)
+                    .as("its ticks sealed with a repeated input, of 600")
+                    .isZero();
+            assertThat(session.sequencer.sealedTick() - slow.session.tick())
+                    .as("ticks it is behind")
+                    .isLessThanOrEqualTo(12);
         }
     }
 
@@ -230,6 +260,53 @@ class SessionTest {
                 .containsPattern("event=snapshot-sent peer=1 tick=\\d+ bytes=\\d+ wireBytes=\\d+ generation=1")
                 .containsPattern("event=loaded peer=1 generation=1 ms=\\d+ behind=\\d+")
                 .containsPattern("event=caught-up peer=1 generation=1 ms=\\d+");
+    }
+
+    /**
+     * Every machine's log starts with its machine id, and the host's log says which machine each peer is:
+     * the 2026-10-01 playtest's three computers each wrote logs called instance0, lined up only by addresses.
+     */
+    @Test
+    void namesTheMachineBehindEachPeerInTheHostsLog(@TempDir Path dir) throws IOException {
+        NetConfig logged = NetConfig.defaults().with(new NetConfig.LogConfig(dir.toString(), "INFO", 64, 0));
+        NetLog log = NetLog.open(logged.log(), "host");
+        try (SessionHarness session = new SessionHarness(logged, "Skirmish", 61L, PERFECT, log)) {
+            session.host();
+            session.join("friend", PERFECT);
+
+            session.run(60);
+        }
+        log.close();
+
+        assertThat(Files.readString(Objects.requireNonNull(log.file()), StandardCharsets.UTF_8))
+                .containsPattern("event=welcome peer=0 machine=host ")
+                .containsPattern("event=welcome peer=1 machine=friend ");
+    }
+
+    /**
+     * A machine whose game stops - its window held by its title bar, its console clicked into - goes on
+     * answering its link, so the host hears nothing from it and sees no drop, and lets it go once it has
+     * been sent the world and not built it. The 2026-10-01 playtest: a joiner stopped for 26 s was told the
+     * connection to the host was too slow, and its own log said nothing of the stop.
+     */
+    @Test
+    void tellsAMachineWhoseGameStoppedThatItStoppedRatherThanBlameTheNetwork(@TempDir Path dir) throws IOException {
+        NetConfig logged = NetConfig.defaults().with(new NetConfig.LogConfig(dir.toString(), "INFO", 64, 1));
+        NetLog log = NetLog.open(logged.log(), "stopping");
+        try (SessionHarness session = new SessionHarness(logged, "Skirmish", 59L, PERFECT, NetLog.silent(64))) {
+            session.host();
+            session.peerLog = log;
+            Machine stopping = session.join("stopping", PERFECT);
+            session.run(300);
+
+            stopping.frozenFrames = 26 * 60;
+            session.run(26 * 60 + 2);
+
+            assertThat(stopping.session.closedBecause()).contains("stopped for").doesNotContain("connection");
+        }
+        log.close();
+        assertThat(Files.readString(Objects.requireNonNull(log.file()), StandardCharsets.UTF_8))
+                .containsPattern("event=frame-stall ms=26\\d{3}");
     }
 
     @Test

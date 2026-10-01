@@ -42,6 +42,9 @@ final class SessionHarness implements AutoCloseable {
     /** The largest snapshot a machine joining from now on sends - lowered for a world too big to send. */
     int snapshotLimit = Transport.MAX_MESSAGE_BYTES;
 
+    /** Where a machine joining from now on writes - nowhere, unless a test is about what it writes. */
+    NetLog peerLog = NetLog.silent(64);
+
     private int frame;
 
     SessionHarness(String scenario, long seed, Conditions atTheHost) {
@@ -96,8 +99,7 @@ final class SessionHarness implements AutoCloseable {
             int phase,
             NetConfig own) {
         Transport end = conditioned(network.endpoint(name), conditions);
-        PeerSession session =
-                new PeerSession(end, own, NetLog.silent(64), new TestWorlds(), dumpDir, build, snapshotLimit);
+        PeerSession session = new PeerSession(end, own, peerLog, new TestWorlds(), dumpDir, build, name, snapshotLimit);
         session.connect("host", port, key);
         session.seat(0);
         Machine machine = new Machine(name, session, phase);
@@ -114,6 +116,9 @@ final class SessionHarness implements AutoCloseable {
             for (Machine machine : machines) {
                 if (machine.frozenFrames > 0) {
                     machine.frozenFrames--;
+                    continue;
+                }
+                if (machine.cadence.charAt(frame % machine.cadence.length()) != 'x') {
                     continue;
                 }
                 machine.script(frame);
@@ -192,6 +197,12 @@ final class SessionHarness implements AutoCloseable {
 
         /** Frames this machine's game will not run at all - a window being dragged, a pause for GC. */
         int frozenFrames;
+
+        /**
+         * Which of the 60 Hz frames this machine's game draws, over and over: {@code x} draws one, {@code .}
+         * lets it pass - {@code "x.."} is a machine drawing 20 frames a second.
+         */
+        String cadence = "x";
 
         /** A card this machine's player takes on its next frame, then forgets. */
         private @Nullable UpgradeKind pickKind;

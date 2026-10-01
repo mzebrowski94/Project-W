@@ -91,7 +91,7 @@ class NettySessionTest {
     }
 
     private PeerSession peer() {
-        return new PeerSession(transport(), config, log, new TestWorlds(), null, BuildId.current());
+        return new PeerSession(transport(), config, log, new TestWorlds(), null, BuildId.current(), "netty");
     }
 
     private NettyTransport transport() {

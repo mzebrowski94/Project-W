@@ -231,6 +231,31 @@ class SequencerTest {
                 .containsAll(ticksUpTo(sequencer.sealedTick() - 1));
     }
 
+    /**
+     * A peer that has stopped answering - its game stopped, its link gone quiet - cannot say what it is
+     * missing, and resending everything it has not acknowledged only fills every datagram: 72 kB a second
+     * to a machine that read none of it in the 2026-10-01 playtest, where 8 is usual. Until it is heard again
+     * it is sent the newest ticks and no more.
+     */
+    @Test
+    void sendsOnlyTheNewestTicksToAPeerThatHasStoppedAnswering() {
+        RawPeer host = startedHost();
+        RawPeer joiner = joined("joiner", host);
+        joiner.send(Delivery.UNRELIABLE, loadedInput(1, snapshotTickSentTo(joiner)));
+        for (int frame = 0; frame < 120; frame++) {
+            frame(host, joiner);
+        }
+        int before = ticksSentTo(joiner).size();
+
+        for (int frame = 0; frame < 60; frame++) {
+            frame(host, joiner);
+        }
+
+        assertThat(ticksSentTo(joiner).size() - before)
+                .as("ticks sent in its second second of silence")
+                .isLessThanOrEqualTo(60 * config.pacing().redundantTicks());
+    }
+
     @Test
     void dropsALinkThatSendsSomethingThatIsNotAMessage() {
         RawPeer host = startedHost();
@@ -277,6 +302,28 @@ class SequencerTest {
         assertThat(old.closedBecause).contains("protocol");
     }
 
+    /** A machine id goes into the host's log as it came, so one that could forge a line there is refused. */
+    @Test
+    void dropsAPeerWhoseMachineIdCouldNotBeLoggedAsItCame() {
+        RawPeer host = startedHost();
+        RawPeer forger = new RawPeer(network.endpoint("forger"), port);
+        frame(host, forger);
+        forger.send(
+                Delivery.RELIABLE,
+                new WireWriter(64)
+                        .putByte(Msg.HELLO)
+                        .putInt(Msg.PROTOCOL)
+                        .putString(BuildId.current())
+                        .putLong(0L)
+                        .putString("k7qd\nevent=left"));
+
+        frame(host, forger);
+        frame(host, forger);
+
+        assertThat(forger.closedBecause).contains("malformed");
+        assertThat(messagesOfType(forger, Msg.WELCOME)).isEmpty();
+    }
+
     @Test
     void keepsSlotZeroForTheHostsKeyboardWhoeverConnectsFirst() {
         RawPeer early = new RawPeer(network.endpoint("early"), port);
@@ -287,7 +334,8 @@ class SequencerTest {
                         .putByte(Msg.HELLO)
                         .putInt(Msg.PROTOCOL)
                         .putString(BuildId.current())
-                        .putLong(0L));
+                        .putLong(0L)
+                        .putString("raw"));
         early.send(Delivery.RELIABLE, new WireWriter(8).putByte(Msg.SEAT).putByte(0));
         frame(early);
         frame(early);
@@ -340,7 +388,8 @@ class SequencerTest {
                         .putByte(Msg.HELLO)
                         .putInt(Msg.PROTOCOL)
                         .putString(BuildId.current())
-                        .putLong(SessionHarness.HOST_KEY));
+                        .putLong(SessionHarness.HOST_KEY)
+                        .putString("raw"));
         host.send(Delivery.RELIABLE, new WireWriter(8).putByte(Msg.SEAT).putByte(0));
         for (int frame = 0; frame < 3; frame++) {
             frame(host);
@@ -362,7 +411,8 @@ class SequencerTest {
                         .putByte(Msg.HELLO)
                         .putInt(Msg.PROTOCOL)
                         .putString(BuildId.current())
-                        .putLong(0L));
+                        .putLong(0L)
+                        .putString("raw"));
         joiner.send(Delivery.RELIABLE, new WireWriter(8).putByte(Msg.SEAT).putByte(0));
         for (int frame = 0; frame < 3; frame++) {
             frame(host, joiner);

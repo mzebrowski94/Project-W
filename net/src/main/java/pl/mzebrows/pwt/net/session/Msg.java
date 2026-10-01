@@ -14,7 +14,7 @@ import pl.mzebrows.pwt.net.NetConfig;
 final class Msg {
 
     /** Bumped whenever a message changes shape. The build id catches that too; this names it in the log. */
-    static final int PROTOCOL = 4;
+    static final int PROTOCOL = 5;
 
     // Peer to sequencer.
     static final int HELLO = 1;
