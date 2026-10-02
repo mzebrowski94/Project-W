@@ -81,6 +81,19 @@ public final class Weapon implements Component, Pool.Poolable {
     /** What one of its shots does to a man (G0053, G0057). */
     public Harm harm = Harm.WOUND;
 
+    /** What a man caught in the blast one of its shots leaves takes (G0053). */
+    public Harm blastHarm = Harm.DOWN;
+
+    /**
+     * How hard one pull throws whoever is holding it back along his aim, how long the throw lasts and
+     * how fast it bleeds off. Zero speed for every gun that kicks nothing.
+     */
+    public float recoilSpeed;
+
+    public int recoilTicks;
+
+    public float recoilDecay;
+
     /** How much of a body one of its shots pumps up. Zero for every gun that does nothing to one. */
     public float bloatPerShot;
 
@@ -122,6 +135,10 @@ public final class Weapon implements Component, Pool.Poolable {
         this.bloatPerShot = def.bloatPerShot();
         this.stunTicks = Ticks.of(def.stunSeconds(), tickSeconds);
         this.harm = def.harm();
+        this.blastHarm = def.blastHarm();
+        this.recoilSpeed = def.recoilSpeed();
+        this.recoilTicks = Ticks.of(def.recoilSeconds(), tickSeconds);
+        this.recoilDecay = recoilTicks > 0 ? recoilSpeed / (recoilTicks * tickSeconds) : 0f;
         this.heatPerShot = def.heat().perShot();
         this.heatCoolPerSecond = def.heat().coolPerSecond();
         this.heatResumeBelow = def.heat().resumeBelow();
@@ -157,6 +174,10 @@ public final class Weapon implements Component, Pool.Poolable {
         bloatPerShot = 0f;
         stunTicks = 0;
         harm = Harm.WOUND;
+        blastHarm = Harm.DOWN;
+        recoilSpeed = 0f;
+        recoilTicks = 0;
+        recoilDecay = 0f;
         heatPerShot = 0f;
         heatCoolPerSecond = 0f;
         heatResumeBelow = 0f;

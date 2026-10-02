@@ -601,6 +601,19 @@ public final class AlphaWorlds {
     /** A quarter of that while the trigger is down, so the difference is visible in a second. */
     public static final float TURRET_FIRING_TURN_FACTOR = 0.25f;
 
+    /** Long enough to tell from where it was fired, short enough to finish inside the arena. */
+    public static final float BAZOOKA_RANGE = 20f;
+
+    /** The grenade's circle: a rocket's blast is a grenade's, at range. */
+    public static final float BAZOOKA_BLAST_RADIUS = 4f;
+
+    /** One rocket fills the bar; this is two seconds to the next. */
+    public static final float BAZOOKA_COOL_PER_SECOND = 0.5f;
+
+    public static final float BAZOOKA_RECOIL_SPEED = 20f;
+
+    public static final float BAZOOKA_RECOIL_SECONDS = 0.2f;
+
     /** How far clear of its holder's body every shot and throw leaves. */
     public static final float MUZZLE_GAP = 0.1f;
 
@@ -908,6 +921,17 @@ public final class AlphaWorlds {
                                         SHINE_SECONDS,
                                         new ArmouryDef(ARMOURY_CARDS, false)))
                         .put(
+                                PickupKind.ARMOURY_BAZOOKA,
+                                new PickupDef(
+                                        PICKUP_RADIUS,
+                                        Look.ARMOURY_BAZOOKA,
+                                        new Grant.Arm(WeaponKind.BAZOOKA),
+                                        Grant.NOTHING,
+                                        SHINE_SECONDS,
+                                        // Out of the fixture's deck, so the deck the crate tests count is the one they
+                                        // were written for.
+                                        ArmouryDef.off()))
+                        .put(
                                 PickupKind.CRATE,
                                 new PickupDef(
                                         PICKUP_RADIUS,
@@ -954,7 +978,10 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        Harm.WOUND))
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f))
                         .put(
                                 WeaponKind.SPIT,
                                 new WeaponDef(
@@ -978,7 +1005,10 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        Harm.WOUND))
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f))
                         .put(
                                 WeaponKind.SPEW,
                                 new WeaponDef(
@@ -1002,7 +1032,10 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        Harm.WOUND))
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f))
                         .put(
                                 WeaponKind.CHARGED_SPIT,
                                 new WeaponDef(
@@ -1026,7 +1059,10 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        Harm.WOUND))
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f))
                         .put(
                                 WeaponKind.RAILGUN,
                                 new WeaponDef(
@@ -1050,7 +1086,10 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        Harm.WOUND))
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f))
                         .put(
                                 WeaponKind.FLAMER,
                                 new WeaponDef(
@@ -1074,7 +1113,10 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        Harm.WOUND))
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f))
                         // The beam: it stops at the first thing it touches, and it runs hot. The
                         // fixture keeps both, because both are what every test about it is about.
                         .put(
@@ -1100,7 +1142,37 @@ public final class AlphaWorlds {
                                         LASER_TRAIL,
                                         LASER_BLOAT_PER_SHOT,
                                         0f,
-                                        Harm.WOUND))
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f))
+                        .put(
+                                WeaponKind.BAZOOKA,
+                                new WeaponDef(
+                                        COOLDOWN,
+                                        PROJECTILE_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        BAZOOKA_RANGE,
+                                        WEAPON_DAMAGE,
+                                        1,
+                                        0f,
+                                        Look.ROCKET,
+                                        BAZOOKA_BLAST_RADIUS,
+                                        SlickDef.off(),
+                                        new HeatDef(1f, BAZOOKA_COOL_PER_SECOND, 0f),
+                                        0f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
+                                        0f,
+                                        0f,
+                                        Harm.WOUND,
+                                        Harm.WOUND,
+                                        BAZOOKA_RECOIL_SPEED,
+                                        BAZOOKA_RECOIL_SECONDS))
                         .put(
                                 WeaponKind.SHOTGUN,
                                 new WeaponDef(
@@ -1124,7 +1196,10 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        Harm.WOUND))
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f))
                         .put(
                                 WeaponKind.VENOM,
                                 new WeaponDef(
@@ -1159,7 +1234,10 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        Harm.NONE))
+                                        Harm.NONE,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f))
                         .put(
                                 WeaponKind.TURRET_GUN,
                                 new WeaponDef(
@@ -1183,7 +1261,10 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0f,
-                                        Harm.WOUND))
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f))
                         .build(),
                 MUZZLE_GAP,
                 thickets(),

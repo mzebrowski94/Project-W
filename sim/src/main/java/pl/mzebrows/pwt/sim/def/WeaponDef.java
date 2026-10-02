@@ -42,6 +42,11 @@ import lombok.With;
  *     every gun that does not stun. Taken whatever else the shot did, unless a shield took the shot
  * @param harm what one of its shots does to a man (G0053): a wound for gunfire, and {@link Harm#NONE}
  *     for a shot that is not itself the weapon - venom's, whose spatter is (G0057)
+ * @param blastHarm what a man caught in one of its shots' blasts takes (G0053): a rocket's wounds him,
+ *     as a grenade's does; meaningless on a gun with no {@code blastRadius}
+ * @param recoilSpeed how hard one pull throws its own shooter back along the way he aimed, in world
+ *     units per second; zero on every gun that kicks nothing. Not a blow: it breaks no shield
+ * @param recoilSeconds how long that throw lasts, bleeding off to nothing - and how long he cannot act
  */
 @With
 public record WeaponDef(
@@ -65,7 +70,10 @@ public record WeaponDef(
         float trailLength,
         float bloatPerShot,
         float stunSeconds,
-        Harm harm) {
+        Harm harm,
+        Harm blastHarm,
+        float recoilSpeed,
+        float recoilSeconds) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;
@@ -91,6 +99,8 @@ public record WeaponDef(
         Require.notNegative("weapon trailLength", trailLength);
         Require.notNegative("weapon bloatPerShot", bloatPerShot);
         Require.notNegative("weapon stunSeconds", stunSeconds);
+        Require.notNegative("weapon recoilSpeed", recoilSpeed);
+        Require.notNegative("weapon recoilSeconds", recoilSeconds);
         if (selfSlowFactor > 1f) {
             throw new IllegalArgumentException("a gun may slow its own shooter and may not speed him up");
         }
@@ -107,6 +117,11 @@ public record WeaponDef(
     /** True if holding this down costs the shooter some of his own pace. */
     public boolean slowsItsShooter() {
         return selfSlowFactor < 1f && selfSlowSeconds > 0f;
+    }
+
+    /** True if pulling its trigger throws the man pulling it. */
+    public boolean kicks() {
+        return recoilSpeed > 0f && recoilSeconds > 0f;
     }
 
     /** True if its shots are drawn as a line rather than as a dot. */

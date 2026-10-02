@@ -116,7 +116,9 @@ class SimConfigTest {
      * definition and no system anywhere would notice it being tuned away.
      *
      * <p>Asked of the guns a <em>crate</em> grants, which is the honest definition of a gun a man
-     * can carry: a turret's gun runs hot too and nobody carries one away.
+     * can carry: a turret's gun runs hot too and nobody carries one away. And of the guns that fire more
+     * than once before they stop: one that a single pull runs to the stop - the bazooka - is reloading,
+     * not being held down, and is never the gun anybody holds instead of the beam.
      */
     @Test
     void runsHotterThanAnyOtherGunAManCanCarry() {
@@ -125,7 +127,9 @@ class SimConfigTest {
         float beam = secondsOfHolding(config, WeaponKind.LASER);
 
         for (PickupKind kind : PickupKind.values()) {
-            if (config.pickup(kind).playerGrant() instanceof Grant.Arm crate && crate.weapon() != WeaponKind.LASER) {
+            if (config.pickup(kind).playerGrant() instanceof Grant.Arm crate
+                    && crate.weapon() != WeaponKind.LASER
+                    && !stopsAfterOnePull(config, crate.weapon())) {
                 assertThat(beam)
                         .as("the beam must stop itself sooner than the %s does", crate.weapon())
                         .isLessThan(secondsOfHolding(config, crate.weapon()));
@@ -148,7 +152,9 @@ class SimConfigTest {
         float beam = secondsOfHolding(config, WeaponKind.LASER, modifiers, commander);
 
         for (PickupKind kind : PickupKind.values()) {
-            if (config.pickup(kind).playerGrant() instanceof Grant.Arm crate && crate.weapon() != WeaponKind.LASER) {
+            if (config.pickup(kind).playerGrant() instanceof Grant.Arm crate
+                    && crate.weapon() != WeaponKind.LASER
+                    && !stopsAfterOnePull(config, crate.weapon())) {
                 assertThat(beam)
                         .as("the beam must stop itself sooner than the %s does", crate.weapon())
                         .isLessThan(secondsOfHolding(config, crate.weapon(), modifiers, commander));
@@ -272,6 +278,11 @@ class SimConfigTest {
 
         assertThat(thicket.playerFactor()).isLessThan(thicket.alienFactor());
         assertThat(thicket.matters()).isTrue();
+    }
+
+    /** True for a gun one pull runs to the stop: its heat bar is its reload rather than a burst. */
+    private static boolean stopsAfterOnePull(SimConfig config, WeaponKind kind) {
+        return config.weapon(kind).heat().perShot() >= 1f;
     }
 
     /**

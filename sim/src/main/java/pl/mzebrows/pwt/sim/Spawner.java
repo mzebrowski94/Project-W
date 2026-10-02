@@ -854,6 +854,7 @@ public final class Spawner {
                 weapon.trailLength,
                 weapon.stunTicks,
                 weapon.harm,
+                weapon.blastHarm,
                 side,
                 credit);
     }
@@ -877,6 +878,7 @@ public final class Spawner {
             float trailLength,
             int stunTicks,
             Harm harm,
+            Harm blastHarm,
             Side side,
             int credit) {
         Entity entity = engine.createEntity();
@@ -907,7 +909,7 @@ public final class Spawner {
             // A shot that goes off where it stops, by dying (G0018) - on a hit or at the arena edge.
             entity.add(engine.createComponent(BlastsOnDeath.class)
                     .set(blastRadius, blastRadius)
-                    .harming(config.blast().harm())
+                    .harming(blastHarm)
                     .credited(credit));
         }
         if (slicks.leavesAnything()) {

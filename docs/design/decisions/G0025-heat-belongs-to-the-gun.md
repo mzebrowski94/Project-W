@@ -1,6 +1,6 @@
 # G0025: Heat belongs to the gun, and coming back costs more than stopping
 
-**Status.** amended by G0047: a gun from a crate arrives cold
+**Status.** amended by G0047: a gun from a crate arrives cold; amended by G0058: a bar one pull fills is a reload
 
 **Trigger.** Adding a weapon that limits its own rate of fire, or proposing that heat live on the man,
 reset when he lets go, or share the channel everything else that fills up is drawn on.

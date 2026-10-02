@@ -5,11 +5,14 @@ import com.badlogic.ashley.core.Entity;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Slowed;
+import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Tally;
+import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
@@ -37,6 +40,9 @@ public final class Guns {
     private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
     private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
+    private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
+    private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
+    private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
 
     private final Spawner spawner;
     private final Modifiers modifiers;
@@ -77,7 +83,7 @@ public final class Guns {
      */
     void pull(Entity firer, float aimX, float aimY, int credit, int cooldownTicks) {
         volley(firer, aimX, aimY, credit);
-        spend(firer, cooldownTicks);
+        spend(firer, aimX, aimY, cooldownTicks);
     }
 
     /**
@@ -112,13 +118,14 @@ public final class Guns {
     }
 
     /**
-     * Charges a shot to the cooldown, to the heat, and to the shooter's own pace - whichever of the
-     * three this gun actually asks for.
+     * Charges a shot to the cooldown, to the heat, to the shooter's own pace and to his footing -
+     * whichever of the four this gun actually asks for.
      *
-     * <p>A shooter with no {@code Slowed} - a turret - is unaffected by a self-slow. The cooldown is the
-     * one place {@code FIRE_COOLDOWN} is read, for every shooter there is.
+     * <p>A shooter with no {@code Slowed} - a turret - is unaffected by a self-slow, and one that cannot
+     * be moved by a kick. The cooldown is the one place {@code FIRE_COOLDOWN} is read, for every shooter
+     * there is.
      */
-    private void spend(Entity firer, int cooldownTicks) {
+    private void spend(Entity firer, float aimX, float aimY, int cooldownTicks) {
         Weapon weapon = WEAPON.get(firer);
         // A wounded man is slower on the trigger; his hand strike and his throw are not (G0053).
         int base = VITALITY.has(firer)
@@ -131,5 +138,23 @@ public final class Guns {
         if (SLOWED.has(firer)) {
             SLOWED.get(firer).apply(weapon.selfSlowFactor, weapon.selfSlowTicks);
         }
+        kick(firer, weapon, aimX, aimY);
+    }
+
+    /**
+     * Throws the shooter back along his aim, as a blow throws what it lands on - his velocity for now,
+     * his control for as long as it lasts, bleeding off as it goes - but it is not a blow: nothing lands,
+     * so no shield breaks and nothing is provoked. Something that is not moved by a throw - a mount, the
+     * boss - is not moved by this one.
+     */
+    private static void kick(Entity firer, Weapon weapon, float aimX, float aimY) {
+        if (weapon.recoilSpeed <= 0f || weapon.recoilTicks <= 0 || !VELOCITY.has(firer) || !STUNNED.has(firer)) {
+            return;
+        }
+        if (COLLIDER.has(firer) && !COLLIDER.get(firer).movable) {
+            return;
+        }
+        VELOCITY.get(firer).set(-aimX * weapon.recoilSpeed, -aimY * weapon.recoilSpeed);
+        STUNNED.get(firer).apply(weapon.recoilTicks, weapon.recoilDecay);
     }
 }

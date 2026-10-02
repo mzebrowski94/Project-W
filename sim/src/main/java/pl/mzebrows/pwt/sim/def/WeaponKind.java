@@ -29,6 +29,14 @@ public enum WeaponKind {
      */
     LASER,
     /**
+     * One fast rocket that goes off where it stops - on the first thing it touches or at its reach - in
+     * a blast on nobody's side, which wounds a man caught in it as a grenade's does.
+     *
+     * <p>Every pull runs it to the stop, so the wait for the next rocket is its heat bar, drawn over him.
+     * Every pull also kicks him back along his aim.
+     */
+    BAZOOKA,
+    /**
      * What a turret fires: light, very fast and quick to repeat. No pickup grants it.
      */
     TURRET_GUN,

@@ -47,6 +47,8 @@ public enum Look {
     PROJECTILE,
     /** A heavy shot, so a gun is visible in what it fires. */
     SLUG,
+    /** A bazooka's rocket: the one shot on the field that is about to be an explosion. */
+    ROCKET,
     /**
      * One pellet of flame, read as the cloud rather than any one of them.
      */
@@ -114,6 +116,7 @@ public enum Look {
     ARMOURY_FLAMER,
     ARMOURY_SHOTGUN,
     ARMOURY_LASER,
+    ARMOURY_BAZOOKA,
     /**
      * A crate (G0056): a small square with a dot, because what it holds is nobody's to see until it is
      * opened - one look for every crate, whatever is inside.
