@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.BOSS_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.TURRET_MUZZLE_OFFSET;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -266,6 +267,26 @@ class BarrageTest {
 
         assertThat(before).isZero();
         assertThat(simulation.level().bossesDown).isEqualTo(1);
+    }
+
+    // ---- through the one trigger ----
+
+    /**
+     * A boss fires through the same muzzle as every other shooter: a pattern whose gun names an
+     * offset leaves from beside the bearing rather than on it, which a barrage that worked out its own
+     * clearance never did.
+     */
+    @Test
+    void firesOutOfTheMuzzleItsGunNamesLikeEveryOtherShooter() {
+        PatternDef aimedTwin = new PatternDef(true, WeaponKind.TURRET_GUN, 1, 0f, true, 0f, 1, INTERVAL);
+        Simulation simulation = new Simulation(barraging(aimedTwin));
+        simulation.spawnCommander(MIDDLE + NEAR, MIDDLE);
+        simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+
+        steps(simulation, UNTIL_THE_FIRST_SALVO);
+
+        assertThat(alienShots(simulation)).hasSize(1);
+        assertThat(newest(simulation).getComponent(Position.class).y).isCloseTo(MIDDLE - TURRET_MUZZLE_OFFSET, CLOSE);
     }
 
     private static SimConfig barraging(PatternDef first) {

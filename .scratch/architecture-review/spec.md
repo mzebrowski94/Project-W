@@ -14,7 +14,8 @@ files, one shared neighbour index, a cache in front of `Modifiers`, the `net` cl
 contradicts an ADR's *Do not build* column; where a ticket runs close to one, it says which.
 
 **Done.** The tick clock (report candidate 2): three float-second timers became whole ticks, and
-`ArchitectureTest.timeIsCountedInWholeTicks` refuses a new one.
+`ArchitectureTest.timeIsCountedInWholeTicks` refuses a new one. The trigger pull (02): one `Guns` per simulation, one muzzle gap in config, and the boss's barrage
+through both.
 
 **Evidence** was gathered on 2026-09-30; file and line numbers drift, so re-read before acting. Every
 ticket is `needs-triage`: each needs a design conversation (`/mattpocock-skills:grilling`) before it is

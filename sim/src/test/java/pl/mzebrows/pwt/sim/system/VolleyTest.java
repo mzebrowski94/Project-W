@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.system;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.FLAME_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.PELLETS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -15,6 +16,8 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
@@ -137,6 +140,28 @@ class VolleyTest {
         steps(simulation, ticksIn(FLAME_RANGE / speed(simulation) * 0.5f));
 
         assertThat(count(simulation, Projectile.class)).isEqualTo(PELLETS);
+    }
+
+    /**
+     * Clear of his own body by one gap, and the gap is the game's rather than the shooter's: there is
+     * one number for every gun and every throw, read from config.
+     */
+    @Test
+    void putsTheShotOutOneConfiguredGapClearOfHisBody() {
+        float gap = 0.5f;
+        Simulation simulation = new Simulation(config().withMuzzleGap(gap));
+        Entity commander = simulation.spawnCommander(X, Y);
+
+        simulation.step(FIRING);
+
+        float clear = commander.getComponent(Body.class).radius
+                + simulation.config().weapon(WeaponKind.SIDEARM).projectileRadius()
+                + gap;
+        Entity shot = projectiles(simulation).first();
+        float travelled =
+                shot.getComponent(Velocity.class).x * simulation.config().tickSeconds();
+        assertThat(shot.getComponent(Position.class).x - travelled)
+                .isCloseTo(X + clear, org.assertj.core.data.Offset.offset(0.01f));
     }
 
     private static Simulation holding(WeaponKind gun) {

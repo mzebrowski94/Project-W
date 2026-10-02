@@ -58,6 +58,8 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * @param units every strain of chasing unit, by kind
  * @param pickups every kind of thing that can be lying on the field, by kind
  * @param weapons every gun the commander can be carrying, by kind
+ * @param muzzleGap how far clear of its holder's body a shot or a throw leaves, for every gun and every
+ *     hand there is - one number, so nothing fires from inside itself and no shooter is special
  * @param chances how often each occasional AI behaviour happens, one number per {@code AiChance} -
  *     the index of everything the AI leaves to the dice. A strain carries its own copy, resolved
  *     against this one when the config is built, so retune a behaviour with {@link #withChance}
@@ -97,6 +99,7 @@ public record SimConfig(
         @ConfigKey("unit") Defs<UnitKind, UnitDef> units,
         @ConfigKey("pickup") Defs<PickupKind, PickupDef> pickups,
         @ConfigKey("weapon") Defs<WeaponKind, WeaponDef> weapons,
+        float muzzleGap,
         Defs<Terrain, GroundDef> ground,
         @ConfigKey("ai.chance") Chances chances,
         MeleeConfig melee,
@@ -129,6 +132,7 @@ public record SimConfig(
     public SimConfig {
         Require.positive("tickSeconds", tickSeconds);
         Require.atLeastOne("maxTicksPerFrame", maxTicksPerFrame);
+        Require.notNegative("muzzleGap", muzzleGap);
         if (melee.clinchCarrySpeed() > 0f) {
             Require.atLeast(
                     "melee carry distance",

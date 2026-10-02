@@ -92,7 +92,6 @@ import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
-import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
@@ -857,35 +856,6 @@ public final class Spawner {
                 weapon.harm,
                 side,
                 credit);
-    }
-
-    /**
-     * The same, from a gun's definition rather than from a gun somebody is holding. For a barrage, whose
-     * patterns name their guns rather than hold them (G0048), for the harness, and for tests that want a
-     * shot in the world without a shooter behind it.
-     */
-    public Entity spawnProjectile(float x, float y, float directionX, float directionY, WeaponDef gun, Side side) {
-        return projectile(
-                x,
-                y,
-                directionX,
-                directionY,
-                gun.projectileSpeed(),
-                gun.projectileRadius(),
-                gun.projectileRange(),
-                gun.damage(),
-                gun.projectileLook(),
-                gun.blastRadius(),
-                gun.slicks(),
-                ticks(gun.pierceIntervalSeconds()),
-                gun.slowFactor(),
-                ticks(gun.slowSeconds()),
-                gun.bloatPerShot(),
-                gun.trailLength(),
-                ticks(gun.stunSeconds()),
-                gun.harm(),
-                side,
-                Tally.NOBODY);
     }
 
     private Entity projectile(

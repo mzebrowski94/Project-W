@@ -11,9 +11,7 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Players;
-import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
-import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Drag;
@@ -26,7 +24,6 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.GroundDef;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Turns a commander's intent into movement and gunfire.
@@ -51,9 +48,6 @@ public final class CommanderControlSystem extends IteratingSystem {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Speed> SPEED = ComponentMapper.getFor(Speed.class);
-    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
-    private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
-    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Drag> DRAG = ComponentMapper.getFor(Drag.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
@@ -61,14 +55,7 @@ public final class CommanderControlSystem extends IteratingSystem {
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
     private static final float EPSILON = 1e-4f;
 
-    /** Gap between the commander's body and the projectile it fires, so a shot never starts inside it. */
-    private static final float MUZZLE_GAP = 0.05f;
-
-    private final Spawner spawner;
-    private final Modifiers modifiers;
-
-    /** A gun's own pattern, for the one he may be holding that throws more than one thing at once. */
-    private final Rng scatter;
+    private final Guns guns;
 
     private final float leashRadius;
 
@@ -76,9 +63,6 @@ public final class CommanderControlSystem extends IteratingSystem {
     private final TileMap map;
 
     private final Defs<Terrain, GroundDef> ground;
-
-    /** Scratch, so working out where a shot leaves from costs no allocation per shot. */
-    private final float[] muzzle = new float[2];
 
     /**
      * The middle of the commanders at each machine, worked out once a tick before any of them is driven:
@@ -102,10 +86,8 @@ public final class CommanderControlSystem extends IteratingSystem {
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
     /** @param capacity how many slots the game holds - the most machines its commanders can sit at */
-    public CommanderControlSystem(
-            SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng scatter, int capacity) {
-        this.modifiers = modifiers;
-        this.scatter = scatter;
+    public CommanderControlSystem(SimConfig config, TileMap map, Guns guns, int capacity) {
+        this.guns = guns;
         super(Family.all(
                         Commander.class,
                         Intent.class,
@@ -116,7 +98,6 @@ public final class CommanderControlSystem extends IteratingSystem {
                         Weapon.class,
                         Faction.class)
                 .get());
-        this.spawner = spawner;
         this.map = map;
         this.ground = config.ground();
         this.leashRadius = config.commander().leashRadius();
@@ -290,8 +271,7 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     /** The cooldown itself is counted down by {@code CooldownSystem}, before this runs. */
     private void fire(Entity entity, Intent intent) {
-        Weapon weapon = WEAPON.get(entity);
-        if (!intent.firing || !Guns.ready(entity, weapon)) {
+        if (!intent.firing || !guns.ready(entity)) {
             return;
         }
         Position position = POSITION.get(entity);
@@ -301,23 +281,6 @@ public final class CommanderControlSystem extends IteratingSystem {
         if (distance <= EPSILON) {
             return;
         }
-        float directionX = toAimX / distance;
-        float directionY = toAimY / distance;
-        Guns.volley(
-                spawner,
-                modifiers,
-                scatter,
-                entity,
-                weapon,
-                position.x,
-                position.y,
-                BODY.get(entity).radius,
-                MUZZLE_GAP,
-                directionX,
-                directionY,
-                FACTION.get(entity).side,
-                Players.credit(entity),
-                muzzle);
-        Guns.spend(modifiers, entity, weapon, weapon.cooldownTicks);
+        guns.pull(entity, toAimX / distance, toAimY / distance, Players.credit(entity));
     }
 }

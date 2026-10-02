@@ -82,6 +82,11 @@ public record UnitDef(
         Require.notNegative("unit lockSeconds", lockSeconds);
         Require.notNegative("unit deathThroesSeconds", deathThroesSeconds);
         Require.notNegative("unit feedToEvolve", feedToEvolve);
+        if (ranged.enabled() && barrage.enabled()) {
+            // A barrage puts each pattern's gun in the one pair of hands a unit has.
+            throw new IllegalArgumentException(
+                    "a strain with a barrage does not also shoot: the two would share one gun");
+        }
     }
 
     /**

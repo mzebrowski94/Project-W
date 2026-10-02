@@ -11,8 +11,6 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Players;
-import pl.mzebrows.pwt.sim.Rng;
-import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Dying;
@@ -24,7 +22,6 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Works every gun that somebody is on: brings it round, fires it, and holds whoever is aboard.
@@ -43,12 +40,7 @@ public final class TurretSystem extends EntitySystem {
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
-    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
-    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
-
-    /** Clear of the mount's own body, so a shot never starts inside the thing that fired it. */
-    private static final float MUZZLE_GAP = 0.1f;
 
     private static final float EPSILON = 1e-4f;
 
@@ -60,27 +52,19 @@ public final class TurretSystem extends EntitySystem {
     private static final float ON_TARGET = 0.985f;
 
     private final TileMap map;
-    private final Spawner spawner;
-    private final Modifiers modifiers;
-
-    /** A gun's own pattern. Zero-width for the gun a mount carries, and asked for all the same. */
-    private final Rng scatter;
+    private final Guns guns;
 
     /** Scratch, so swinging a gun and firing it cost no allocation per tick. */
     private final float[] swung = new float[2];
-
-    private final float[] muzzle = new float[2];
 
     private ImmutableArray<Entity> stations = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> riders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> quarry = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> obstacles = new ImmutableArray<>(new Array<>());
 
-    public TurretSystem(TileMap map, Spawner spawner, Modifiers modifiers, Rng scatter) {
-        this.modifiers = modifiers;
-        this.scatter = scatter;
+    public TurretSystem(TileMap map, Guns guns) {
         this.map = map;
-        this.spawner = spawner;
+        this.guns = guns;
     }
 
     @Override
@@ -230,26 +214,9 @@ public final class TurretSystem extends EntitySystem {
      * slot, nobody's for a trooper (G0044). The cooldown is counted down by {@code CooldownSystem}.
      */
     private void fire(Entity station, Turret turret, int credit) {
-        Weapon weapon = WEAPON.get(station);
-        if (!Guns.ready(station, weapon)) {
+        if (!guns.ready(station)) {
             return;
         }
-        Position at = POSITION.get(station);
-        Guns.volley(
-                spawner,
-                modifiers,
-                scatter,
-                station,
-                weapon,
-                at.x,
-                at.y,
-                BODY.get(station).radius,
-                MUZZLE_GAP,
-                turret.aimX,
-                turret.aimY,
-                FACTION.get(station).side,
-                credit,
-                muzzle);
-        Guns.spend(modifiers, station, weapon, weapon.cooldownTicks);
+        guns.pull(station, turret.aimX, turret.aimY, credit);
     }
 }

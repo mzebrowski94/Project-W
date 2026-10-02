@@ -601,6 +601,9 @@ public final class AlphaWorlds {
     /** A quarter of that while the trigger is down, so the difference is visible in a second. */
     public static final float TURRET_FIRING_TURN_FACTOR = 0.25f;
 
+    /** How far clear of its holder's body every shot and throw leaves. */
+    public static final float MUZZLE_GAP = 0.1f;
+
     /** Round, so which muzzle a shot came out of can be read straight off where it is. */
     public static final float TURRET_MUZZLE_OFFSET = 1f;
 
@@ -1182,6 +1185,7 @@ public final class AlphaWorlds {
                                         0f,
                                         Harm.WOUND))
                         .build(),
+                MUZZLE_GAP,
                 thickets(),
                 noChances(),
                 new SimConfig.MeleeConfig(

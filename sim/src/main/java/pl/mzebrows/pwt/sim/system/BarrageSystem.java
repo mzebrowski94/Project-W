@@ -7,20 +7,20 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
-import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Tally;
+import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.BarrageDef;
 import pl.mzebrows.pwt.sim.def.PatternDef;
-import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.Ticks;
-import pl.mzebrows.pwt.sim.def.WeaponDef;
 
 /**
  * Runs a boss's barrage: winds up, fires a pattern salvo by salvo, rests, and goes on to the next
@@ -37,40 +37,45 @@ import pl.mzebrows.pwt.sim.def.WeaponDef;
  *       barrage can be learnt and replays exactly (pillar 6).
  * </ul>
  *
- * <p>Its guns are named by the pattern, not held: nothing about a salvo depends on a {@code Weapon}
- * component, so there is no muzzle to alternate and no cooldown to share with anything else.
+ * <p>Its guns are named by the pattern and put in its hands for the salvo, so every shot leaves
+ * through the one trigger every other shooter pulls ({@link Guns}) - the same muzzle, the same gap and
+ * the same upgrades - while the pattern, not the gun, keeps the time: nothing here waits on a cooldown
+ * or runs hot.
  */
 public final class BarrageSystem extends EntitySystem {
 
     private static final ComponentMapper<Barrage> BARRAGE = ComponentMapper.getFor(Barrage.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
-    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
+    private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
 
-    /** Clear of its own body, so nothing shoots itself in the foot. */
-    private static final float MUZZLE_GAP = 0.1f;
-
     private static final float EPSILON = 1e-4f;
 
-    private final SimConfig config;
     private final Spawner spawner;
+    private final Guns guns;
 
     private ImmutableArray<Entity> bosses = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
-    public BarrageSystem(SimConfig config, Spawner spawner) {
-        this.config = config;
+    public BarrageSystem(Spawner spawner, Guns guns) {
         this.spawner = spawner;
+        this.guns = guns;
     }
 
     @Override
     public void addedToEngine(Engine engine) {
-        bosses = engine.getEntitiesFor(
-                Family.all(Barrage.class, Position.class, Body.class, Health.class, Perception.class)
-                        .get());
+        bosses = engine.getEntitiesFor(Family.all(
+                        Barrage.class,
+                        Position.class,
+                        Body.class,
+                        Weapon.class,
+                        Faction.class,
+                        Health.class,
+                        Perception.class)
+                .get());
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
     }
 
@@ -196,16 +201,16 @@ public final class BarrageSystem extends EntitySystem {
         double first = pattern.ring() || shots == 1 ? 0.0 : -arc * 0.5;
         int fired = pattern.salvos() - barrage.salvo;
         double turn = StrictMath.toRadians(pattern.turnDegrees()) * fired * barrage.spin();
-        WeaponDef gun = config.weapon(pattern.gun());
-        float clear = BODY.get(entity).radius + gun.projectileRadius() + MUZZLE_GAP;
+        if (WEAPON.get(entity).kind != pattern.gun()) {
+            spawner.applyWeapon(entity, pattern.gun());
+        }
         for (int shot = 0; shot < shots; shot++) {
             double angle = turn + first + step * shot;
             float cos = (float) StrictMath.cos(angle);
             float sin = (float) StrictMath.sin(angle);
             float directionX = bearingX * cos - bearingY * sin;
             float directionY = bearingX * sin + bearingY * cos;
-            spawner.spawnProjectile(
-                    at.x + directionX * clear, at.y + directionY * clear, directionX, directionY, gun, Side.ALIEN);
+            guns.volley(entity, directionX, directionY, Tally.NOBODY);
         }
     }
 

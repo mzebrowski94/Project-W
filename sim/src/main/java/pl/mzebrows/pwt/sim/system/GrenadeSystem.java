@@ -16,7 +16,6 @@ import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Velocity;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Throws what was asked for, and flies what is already in the air.
@@ -41,7 +40,7 @@ public final class GrenadeSystem extends EntitySystem {
     private static final float EPSILON = 1e-4f;
 
     private final Spawner spawner;
-    private final Modifiers modifiers;
+    private final Throws throwing;
     private final TileMap map;
     private final float width;
     private final float height;
@@ -49,10 +48,10 @@ public final class GrenadeSystem extends EntitySystem {
     private ImmutableArray<Entity> flying = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> throwers = new ImmutableArray<>(new Array<>());
 
-    public GrenadeSystem(TileMap map, Spawner spawner, Modifiers modifiers) {
+    public GrenadeSystem(TileMap map, Spawner spawner, Throws throwing) {
         this.map = map;
         this.spawner = spawner;
-        this.modifiers = modifiers;
+        this.throwing = throwing;
         this.width = map.worldWidth();
         this.height = map.worldHeight();
     }
@@ -170,7 +169,7 @@ public final class GrenadeSystem extends EntitySystem {
             if (distance <= EPSILON) {
                 continue;
             }
-            Throws.release(spawner, modifiers, entity, thrower, towardsX / distance, towardsY / distance);
+            throwing.release(entity, thrower, towardsX / distance, towardsY / distance);
         }
     }
 

@@ -16,7 +16,9 @@ import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Presence;
+import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Waves;
+import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -45,6 +47,7 @@ import pl.mzebrows.pwt.sim.system.EvolutionSystem;
 import pl.mzebrows.pwt.sim.system.FacingSystem;
 import pl.mzebrows.pwt.sim.system.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.GripSystem;
+import pl.mzebrows.pwt.sim.system.Guns;
 import pl.mzebrows.pwt.sim.system.HopSystem;
 import pl.mzebrows.pwt.sim.system.LairSystem;
 import pl.mzebrows.pwt.sim.system.MeleeSystem;
@@ -64,6 +67,7 @@ import pl.mzebrows.pwt.sim.system.SlickSystem;
 import pl.mzebrows.pwt.sim.system.SquadOrderSystem;
 import pl.mzebrows.pwt.sim.system.StrikeSystem;
 import pl.mzebrows.pwt.sim.system.StunSystem;
+import pl.mzebrows.pwt.sim.system.Throws;
 import pl.mzebrows.pwt.sim.system.TrooperCombatSystem;
 import pl.mzebrows.pwt.sim.system.TrooperMindSystem;
 import pl.mzebrows.pwt.sim.system.TrooperMoveSystem;
@@ -164,14 +168,17 @@ public final class Simulation {
 
         // How loosely a gun throws, for every shooter; not how badly a creature aims (SPIT).
         Rng scatter = streams.of(RngStream.SCATTER);
+        // The one trigger and the one hand: every shooter and every thrower goes through these.
+        Guns guns = new Guns(spawner, modifiers, scatter, config.muzzleGap());
+        Throws throwing = new Throws(spawner, modifiers, config.muzzleGap());
 
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new DragSystem());
-        engine.addSystem(new CommanderControlSystem(config, map, spawner, modifiers, scatter, capacity));
+        engine.addSystem(new CommanderControlSystem(config, map, guns, capacity));
         engine.addSystem(new MeleeSystem(spawner));
         // After the commander's hands, before anything looks around.
-        engine.addSystem(new TurretSystem(map, spawner, modifiers, scatter));
+        engine.addSystem(new TurretSystem(map, guns));
         engine.addSystem(new PerceptionSystem(config, map));
         engine.addSystem(new NavigationSystem(config, map));
         // After the course it bends, before avoidance.
@@ -187,10 +194,10 @@ public final class Simulation {
         engine.addSystem(new SquadOrderSystem(config, capacity));
         engine.addSystem(new TrooperMindSystem(config, map, modifiers, squad, nerve));
         engine.addSystem(new TrooperMoveSystem(config, map, squad));
-        engine.addSystem(new TrooperCombatSystem(config, map, spawner, modifiers, nerve, scatter));
+        engine.addSystem(new TrooperCombatSystem(config, map, guns, throwing, modifiers, nerve));
         engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds()));
         engine.addSystem(new AvoidanceSystem(config, map));
-        engine.addSystem(new EnemyRangedSystem(map, spawner, modifiers, streams.of(RngStream.SPIT), scatter));
+        engine.addSystem(new EnemyRangedSystem(map, guns, streams.of(RngStream.SPIT)));
         // After everything that chooses a course; before the dodge, which overwrites it.
         engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
@@ -200,7 +207,7 @@ public final class Simulation {
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));
         engine.addSystem(new CollisionSystem(config, map, spawner, modifiers, nerve));
-        engine.addSystem(new GrenadeSystem(map, spawner, modifiers));
+        engine.addSystem(new GrenadeSystem(map, spawner, throwing));
         engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(config, spawner, modifiers));
@@ -235,7 +242,7 @@ public final class Simulation {
         // Beside the waves and the nests, for their reason: what rises this tick counts this tick (G0048).
         engine.addSystem(new LairSystem(map, spawner));
         // After everything that could have put a boss down or killed one, reading this tick's perception.
-        engine.addSystem(new BarrageSystem(config, spawner));
+        engine.addSystem(new BarrageSystem(spawner, guns));
         engine.addSystem(new ControlPointSystem(spawner));
         // After every source of a draft (41, 44, 45), so what was earned this tick is dealt this tick; and
         // after every reader of Modifiers, so the ledger changes once, at the end, for every reader alike.
@@ -510,7 +517,9 @@ public final class Simulation {
      * without a shooter behind it.
      */
     public Entity spawnProjectile(float x, float y, float directionX, float directionY, WeaponKind gun, Side side) {
-        return spawner.spawnProjectile(x, y, directionX, directionY, config.weapon(gun), side);
+        // Through the one spawn path a shooter's shot takes; the gun is nobody's, so it is a fresh one.
+        Weapon weapon = new Weapon().set(gun, config.weapon(gun), config.tickSeconds());
+        return spawner.spawnProjectile(x, y, directionX, directionY, weapon, weapon.damage, side, Tally.NOBODY);
     }
 
     /** Whether god mode is currently on, for the harness overlay. */

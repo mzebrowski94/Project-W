@@ -12,7 +12,6 @@ import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
-import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -51,10 +50,8 @@ public final class TrooperCombatSystem extends EntitySystem {
 
     private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
-    private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Melee> MELEE = ComponentMapper.getFor(Melee.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
-    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
@@ -62,20 +59,12 @@ public final class TrooperCombatSystem extends EntitySystem {
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
 
-    /** Clear of its own body, so a trooper never shoots itself in the foot. */
-    private static final float MUZZLE_GAP = 0.1f;
-
     private static final float EPSILON = 1e-4f;
 
-    private final Spawner spawner;
+    private final Guns guns;
+    private final Throws throwing;
     private final Modifiers modifiers;
     private final Rng rng;
-
-    /** A gun's own pattern, which is a different concern from a man's nerve and draws separately. */
-    private final Rng scatter;
-
-    /** Scratch, so working out a muzzle costs no allocation per trooper per shot. */
-    private final float[] muzzle = new float[2];
 
     private final Chances chances;
     private final TileMap map;
@@ -99,10 +88,10 @@ public final class TrooperCombatSystem extends EntitySystem {
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
     public TrooperCombatSystem(
-            SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng rng, Rng scatter) {
+            SimConfig config, TileMap map, Guns guns, Throws throwing, Modifiers modifiers, Rng rng) {
+        this.guns = guns;
+        this.throwing = throwing;
         this.modifiers = modifiers;
-        this.scatter = scatter;
-        this.spawner = spawner;
         this.rng = rng;
         this.chances = config.chances();
         this.map = map;
@@ -242,7 +231,7 @@ public final class TrooperCombatSystem extends EntitySystem {
         }
         float directionX = toX / distance;
         float directionY = toY / distance;
-        float reach = Throws.reach(entity, thrower);
+        float reach = throwing.reach(entity, thrower);
         float landX = at.x + directionX * reach;
         float landY = at.y + directionY * reach;
         // It goes off on the tick its distance runs out, so up to one tick's flight past the mark.
@@ -261,7 +250,7 @@ public final class TrooperCombatSystem extends EntitySystem {
         if (!Odds.spent(trooper.throwDue)) {
             return false;
         }
-        Throws.release(spawner, modifiers, entity, thrower, directionX, directionY);
+        throwing.release(entity, thrower, directionX, directionY);
         level.squadThrowReadyTick = level.tick + squadGapTicks;
         return true;
     }
@@ -329,8 +318,7 @@ public final class TrooperCombatSystem extends EntitySystem {
      * <p>Through {@link Guns} and {@link Muzzle}, as every other shooter.
      */
     private void fire(Entity entity, Trooper trooper) {
-        Weapon weapon = WEAPON.get(entity);
-        if (!Guns.ready(entity, weapon)) {
+        if (!guns.ready(entity)) {
             return;
         }
         Position at = POSITION.get(entity);
@@ -340,23 +328,6 @@ public final class TrooperCombatSystem extends EntitySystem {
         if (distance <= EPSILON) {
             return;
         }
-        float directionX = toX / distance;
-        float directionY = toY / distance;
-        Guns.volley(
-                spawner,
-                modifiers,
-                scatter,
-                entity,
-                weapon,
-                at.x,
-                at.y,
-                BODY.get(entity).radius,
-                MUZZLE_GAP,
-                directionX,
-                directionY,
-                FACTION.get(entity).side,
-                Tally.NOBODY,
-                muzzle);
-        Guns.spend(modifiers, entity, weapon, weapon.cooldownTicks);
+        guns.pull(entity, toX / distance, toY / distance, Tally.NOBODY);
     }
 }

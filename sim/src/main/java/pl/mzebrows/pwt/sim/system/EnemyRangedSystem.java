@@ -10,7 +10,6 @@ import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
-import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -20,7 +19,6 @@ import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Weapon;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * An alien that shoots: it holds its ground at a distance and spits, roughly, at what it is hunting.
@@ -40,38 +38,27 @@ public final class EnemyRangedSystem extends EntitySystem {
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
-    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
-    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Steering> STEERING = ComponentMapper.getFor(Steering.class);
-
-    /** Clear of its own body, so nothing shoots itself in the foot. */
-    private static final float MUZZLE_GAP = 0.1f;
 
     private static final float EPSILON = 1e-4f;
 
     private final TileMap map;
-    private final Spawner spawner;
-    private final Modifiers modifiers;
+    private final Guns guns;
+
+    /** How badly the creature aims, which is a different thing from the gun's own pattern. */
     private final Rng rng;
 
-    /** The gun's own pattern, which is a different thing from how badly the creature aims. */
-    private final Rng scatter;
-
-    /** Scratch, so swinging an aim and working out a muzzle cost no allocation per shooter per tick. */
+    /** Scratch, so swinging an aim costs no allocation per shooter per tick. */
     private final float[] swung = new float[2];
 
     /** Scratch for the place it is hunting, so reading it costs no allocation per shooter per tick. */
     private final Position hunting = new Position();
 
-    private final float[] muzzle = new float[2];
-
     private ImmutableArray<Entity> shooters = new ImmutableArray<>(new Array<>());
 
-    public EnemyRangedSystem(TileMap map, Spawner spawner, Modifiers modifiers, Rng rng, Rng scatter) {
-        this.modifiers = modifiers;
-        this.scatter = scatter;
+    public EnemyRangedSystem(TileMap map, Guns guns, Rng rng) {
         this.map = map;
-        this.spawner = spawner;
+        this.guns = guns;
         this.rng = rng;
     }
 
@@ -123,7 +110,7 @@ public final class EnemyRangedSystem extends EntitySystem {
                 // In range, still coming round.
                 continue;
             }
-            fire(entity, ranged, at, aimX, aimY, distance);
+            fire(entity, ranged, aimX, aimY, distance);
         }
     }
 
@@ -191,9 +178,9 @@ public final class EnemyRangedSystem extends EntitySystem {
     }
 
     /** One shot, roughly at him, whenever the gun is ready - and less roughly than the last one. */
-    private void fire(Entity entity, Ranged ranged, Position at, float aimX, float aimY, float distance) {
+    private void fire(Entity entity, Ranged ranged, float aimX, float aimY, float distance) {
         Weapon weapon = WEAPON.get(entity);
-        if (!Guns.ready(entity, weapon)) {
+        if (!guns.ready(entity)) {
             return;
         }
         float turn = (rng.nextFloat() * 2f - 1f) * ranged.halfSpreadFor(distance);
@@ -202,22 +189,7 @@ public final class EnemyRangedSystem extends EntitySystem {
         float directionX = aimX * cos - aimY * sin;
         float directionY = aimX * sin + aimY * cos;
         // The creature's cone is spent once per volley; each pellet's scatter is the gun's.
-        Guns.volley(
-                spawner,
-                modifiers,
-                scatter,
-                entity,
-                weapon,
-                at.x,
-                at.y,
-                BODY.get(entity).radius,
-                MUZZLE_GAP,
-                directionX,
-                directionY,
-                FACTION.get(entity).side,
-                Tally.NOBODY,
-                muzzle);
-        Guns.spend(modifiers, entity, weapon, ranged.cooldownFor(weapon.cooldownTicks, distance));
+        guns.pull(entity, directionX, directionY, Tally.NOBODY, ranged.cooldownFor(weapon.cooldownTicks, distance));
         ranged.shotsOnTarget++;
     }
 }
