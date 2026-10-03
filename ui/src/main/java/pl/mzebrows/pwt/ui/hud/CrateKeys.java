@@ -1,9 +1,8 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.ui.hud;
 
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.def.Order;
-import pl.mzebrows.pwt.ui.hud.CrateBar;
 
 /**
  * The input context of a seat whose crate is open (G0056): his order inputs work the crate and give no
@@ -24,7 +23,7 @@ final class CrateKeys {
     static CrateBar.@Nullable Key route(PlayerInputs inputs, int seat) {
         Order order = inputs.orderOf(seat);
         inputs.order(seat, null);
-        return seat == PlayerSeats.KEYBOARD_SLOT ? keyboard(order) : pad(order);
+        return seat == TopBarSeats.KEYBOARD ? keyboard(order) : pad(order);
     }
 
     static CrateBar.@Nullable Key keyboard(@Nullable Order order) {

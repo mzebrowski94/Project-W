@@ -34,4 +34,34 @@ class ControlsConfigTest {
         assertThat(parsed.config().mouse().strike())
                 .isEqualTo(ControlsConfig.defaults().mouse().strike());
     }
+
+    /** The pad's order buttons are where the draft expects them: right, left and down on the d-pad. */
+    @Test
+    void findsTheDraftsDirectionsWhereThePadsOrdersAre() {
+        ControlsConfig.Pad pad = ControlsConfig.load().pad();
+
+        assertThat(pad.orderForward()).isEqualTo(GamepadButton.DPAD_RIGHT);
+        assertThat(pad.orderCancel()).isEqualTo(GamepadButton.DPAD_LEFT);
+        assertThat(pad.orderDefence()).isEqualTo(GamepadButton.DPAD_DOWN);
+        assertThat(pad.draft()).isEqualTo(GamepadButton.NORTH);
+    }
+
+    /** Shutting a crate on the keyboard is a key nothing else in a level claims. */
+    @Test
+    void shutsACrateOnAKeyOfItsOwn() {
+        ControlsConfig.Keys keys = ControlsConfig.load().key();
+
+        assertThat(keys.crateClose()).isEqualTo(new KeyCode(Input.Keys.X));
+        assertThat(keys.crateClose())
+                .isNotIn(
+                        keys.action(),
+                        keys.grenade(),
+                        keys.drag(),
+                        keys.zoom(),
+                        keys.draft(),
+                        keys.orderFollowMe(),
+                        keys.orderForward(),
+                        keys.orderDefence(),
+                        keys.orderCancel());
+    }
 }

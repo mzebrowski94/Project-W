@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.ui.hud.TopBarSeats;
 
 /**
  * Who is sitting where on this machine: the keyboard in seat zero and a gamepad in each of the others.
@@ -35,7 +36,7 @@ import org.jspecify.annotations.Nullable;
 public final class PlayerSeats {
 
     /** Player one, always the keyboard and mouse in the alpha phase. */
-    public static final int KEYBOARD_SLOT = 0;
+    public static final int KEYBOARD_SLOT = TopBarSeats.KEYBOARD;
 
     /**
      * How many players one machine seats: one keyboard and three pads (G0038). Fewer than a game

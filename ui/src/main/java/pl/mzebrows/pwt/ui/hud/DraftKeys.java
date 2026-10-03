@@ -1,9 +1,8 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.ui.hud;
 
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.def.Order;
-import pl.mzebrows.pwt.ui.hud.DraftBar;
 
 /**
  * The input context of a seat whose draft is open (G0049): his order inputs work the draft and
@@ -26,7 +25,7 @@ final class DraftKeys {
     static DraftBar.@Nullable Key route(PlayerInputs inputs, int seat) {
         Order order = inputs.orderOf(seat);
         inputs.order(seat, null);
-        return seat == PlayerSeats.KEYBOARD_SLOT ? keyboard(order) : pad(order);
+        return seat == TopBarSeats.KEYBOARD ? keyboard(order) : pad(order);
     }
 
     static DraftBar.@Nullable Key keyboard(@Nullable Order order) {

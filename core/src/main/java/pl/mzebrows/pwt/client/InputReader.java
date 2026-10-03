@@ -5,11 +5,8 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import java.util.Arrays;
 import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
-import pl.mzebrows.pwt.ui.hud.CrateBar;
-import pl.mzebrows.pwt.ui.hud.DraftBar;
 import pl.mzebrows.pwt.ui.nav.ReleaseLatch;
 
 /**
@@ -26,9 +23,8 @@ import pl.mzebrows.pwt.ui.nav.ReleaseLatch;
  *
  * <p><b>A press that changes context is spent</b> (plan 6.2): everything read here for the game goes
  * through a {@link ReleaseLatch}, armed by {@link #spendHeldPresses()} whenever a menu opens or closes
- * or a level starts, so the click on RESUME does not fire and the {@code SOUTH} on it does not act. And
- * while a menu is open on this machine its commanders stand still: {@code neutral} keeps where each is
- * aiming and releases everything else.
+ * or a level starts, so the click on RESUME does not fire and the {@code SOUTH} on it does not act. What the
+ * input means for the top bar, and holding everybody still under a menu, is {@code TopBarSeats}'s.
  */
 public final class InputReader {
 
@@ -47,14 +43,11 @@ public final class InputReader {
 
     private final Vector3 pointer = new Vector3();
 
-    /** What each seat asked of the draft this frame, or null. */
-    private final DraftBar.@Nullable Key[] draftKeys = new DraftBar.Key[PlayerSeats.SEATS];
+    /** Which seats pressed their draft key this frame: the keyboard's, or a pad's. */
+    private final boolean[] draftPressed = new boolean[PlayerSeats.SEATS];
 
-    /** What each seat asked of its open crate this frame (G0056). */
-    private final CrateBar.@Nullable Key[] crateKeys = new CrateBar.Key[PlayerSeats.SEATS];
-
-    /** Whether each seat held the action key last frame, so a crate is taken from on the press. */
-    private final boolean[] wasActing = new boolean[PlayerSeats.SEATS];
+    /** Whether the keyboard's crate key went down this frame; a pad shuts its crate with an order. */
+    private boolean crateClosePressed;
 
     private boolean zoomToggled;
     private boolean rollCallToggled;
@@ -104,29 +97,16 @@ public final class InputReader {
         return false;
     }
 
-    /** Samples the devices as they are right now, one slot at a time. */
-    public PlayerInputs read(KeyHolds held, KeyPresses pressed) {
-        return read(held, pressed, false, -1, -1);
-    }
-
-    /**
-     * Samples the devices, spent presses masked.
-     *
-     * @param neutral a menu is open on this machine: its commanders keep their aim and hold nothing
-     * @param drafting the seat whose draft is open in the top bar, or -1: its order inputs work the
-     *     draft and give no order ({@link DraftKeys}), and everybody else plays on
-     * @param crating the seat whose crate is open in the top bar, or -1: its order inputs and its action
-     *     press work the crate ({@link CrateKeys}), and everybody else plays on (G0056)
-     */
-    public PlayerInputs read(KeyHolds rawHeld, KeyPresses pressed, boolean neutral, int drafting, int crating) {
+    /** Samples the devices, spent presses masked: each seat's input, by seat, as the devices gave it. */
+    public PlayerInputs read(KeyHolds rawHeld, KeyPresses pressed) {
         KeyHolds held = keycode -> latch.filter(keycode, rawHeld.held(keycode));
         seats.refresh(gamepads);
         inputs.clear();
         zoomToggled = ViewControls.zoomToggled(pressed, controls.key());
         rollCallToggled = ViewControls.rollCallToggled(pressed, controls.key());
         pauseRequested = false;
-        Arrays.fill(draftKeys, null);
-        Arrays.fill(crateKeys, null);
+        Arrays.fill(draftPressed, false);
+        crateClosePressed = pressed.justPressed(controls.key().crateClose());
 
         pointer.set(Gdx.input.getX(), Gdx.input.getY(), 0f);
         viewport.unproject(pointer);
@@ -140,9 +120,8 @@ public final class InputReader {
                                 pointer.x,
                                 pointer.y))
                 .order(PlayerSeats.KEYBOARD_SLOT, OrderKeys.poll(pressed, controls.key()));
-        if (pressed.justPressed(controls.key().draft())) {
-            draftKeys[PlayerSeats.KEYBOARD_SLOT] = DraftBar.Key.DRAFT;
-        }
+        draftPressed[PlayerSeats.KEYBOARD_SLOT] =
+                pressed.justPressed(controls.key().draft());
 
         for (int slot = PlayerSeats.KEYBOARD_SLOT + 1; slot < PlayerSeats.SEATS; slot++) {
             Gamepad pad = seats.padIn(slot);
@@ -157,52 +136,9 @@ public final class InputReader {
                         + PadLabels.briefing(controls.pad(), PadLabels.isPlayStation(pad.name())));
             }
             inputs.set(slot, pads.read(latchedPads[slot].over(pad))).order(slot, pads.ordered());
-            if (pads.drafted()) {
-                draftKeys[slot] = DraftBar.Key.DRAFT;
-            }
+            draftPressed[slot] = pads.drafted();
             zoomToggled |= pads.zoomToggled();
             pauseRequested |= pads.pauseRequested();
-        }
-        if (drafting >= 0 && drafting < PlayerSeats.SEATS) {
-            DraftBar.Key key = DraftKeys.route(inputs, drafting);
-            if (draftKeys[drafting] == null) {
-                draftKeys[drafting] = key;
-            }
-        }
-        if (crating >= 0 && crating < PlayerSeats.SEATS) {
-            crateKeys[crating] = CrateKeys.route(inputs, crating);
-            if (crating == PlayerSeats.KEYBOARD_SLOT
-                    && pressed.justPressed(controls.key().crateClose())) {
-                crateKeys[crating] = CrateBar.Key.CLOSE;
-            }
-            if (inputs.get(crating).acting() && !wasActing[crating]) {
-                crateKeys[crating] = CrateBar.Key.TAKE;
-            }
-        }
-        for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
-            wasActing[seat] = inputs.get(seat).acting();
-        }
-        if (neutral) {
-            Arrays.fill(draftKeys, null);
-            Arrays.fill(crateKeys, null);
-            for (int slot = 0; slot < PlayerSeats.SEATS; slot++) {
-                CommanderInput was = inputs.get(slot);
-                inputs.set(
-                                slot,
-                                new CommanderInput(
-                                        0f,
-                                        0f,
-                                        was.aimX(),
-                                        was.aimY(),
-                                        false,
-                                        false,
-                                        false,
-                                        false,
-                                        false,
-                                        was.aimRelative()))
-                        .order(slot, null);
-            }
-            zoomToggled = false;
         }
         return inputs;
     }
@@ -211,14 +147,14 @@ public final class InputReader {
         return latch.filter(LatchedGamepad.MOUSE + button, Gdx.input.isButtonPressed(button));
     }
 
-    /** What this seat asked of the crate this frame, or null (G0056). */
-    public CrateBar.@Nullable Key crateKey(int seat) {
-        return crateKeys[seat];
+    /** Which seats pressed their draft key this frame, by seat. Read it before the next {@link #read}. */
+    public boolean[] draftPressed() {
+        return draftPressed;
     }
 
-    /** What this seat asked of the draft this frame, or null. */
-    public DraftBar.@Nullable Key draftKey(int seat) {
-        return draftKeys[seat];
+    /** Whether the keyboard's crate key went down this frame. */
+    public boolean crateClosePressed() {
+        return crateClosePressed;
     }
 
     /**

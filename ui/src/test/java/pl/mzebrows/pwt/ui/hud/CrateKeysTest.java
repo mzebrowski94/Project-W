@@ -1,12 +1,10 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.ui.hud;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.badlogic.gdx.Input;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.def.Order;
-import pl.mzebrows.pwt.ui.hud.CrateBar;
 
 /**
  * The opener's order inputs work his crate and give no order; every other seat's orders still work
@@ -40,24 +38,5 @@ class CrateKeysTest {
         assertThat(CrateKeys.pad(Order.CANCEL)).isEqualTo(CrateBar.Key.PREVIOUS);
         assertThat(CrateKeys.pad(Order.DEFENCE)).isEqualTo(CrateBar.Key.CLOSE);
         assertThat(CrateKeys.pad(Order.FOLLOW_ME)).isNull();
-    }
-
-    /** Shutting a crate on the keyboard is a key nothing else in a level claims. */
-    @Test
-    void shutsACrateOnAKeyOfItsOwn() {
-        ControlsConfig.Keys keys = ControlsConfig.load().key();
-
-        assertThat(keys.crateClose()).isEqualTo(new KeyCode(Input.Keys.X));
-        assertThat(keys.crateClose())
-                .isNotIn(
-                        keys.action(),
-                        keys.grenade(),
-                        keys.drag(),
-                        keys.zoom(),
-                        keys.draft(),
-                        keys.orderFollowMe(),
-                        keys.orderForward(),
-                        keys.orderDefence(),
-                        keys.orderCancel());
     }
 }

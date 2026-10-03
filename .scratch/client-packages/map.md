@@ -53,6 +53,8 @@ client/config/     GameProperties and what 03 + 04 leave of the loaders
 5. **Reviews 03 + 04 done** (2026-10-03): `GraphicFile`, `ControlsFile` and `HudStyle` are gone; new are
    `ConfigLoader` (the `config` layer's) and `KeyCode`, `MouseButton` (the `input` layer's). `ConfigFile` lives
    in `sim`.
+6. **Review 06 done** (2026-10-03): `DraftKeys` and `CrateKeys` left `client` for `ui.hud`, beside the new
+   `TopBarSeats`; `InputReader` is the `input` layer's device reader and decides nothing about the bar.
 
 ## Fog
 

@@ -1,11 +1,10 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.ui.hud;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.def.Order;
-import pl.mzebrows.pwt.ui.hud.DraftBar;
 
 /**
  * The chooser's order inputs work his draft and give no order; every other seat's orders still work
@@ -39,16 +38,5 @@ class DraftKeysTest {
         assertThat(DraftKeys.pad(Order.CANCEL)).isEqualTo(DraftBar.Key.PREVIOUS);
         assertThat(DraftKeys.pad(Order.DEFENCE)).isEqualTo(DraftBar.Key.CLOSE);
         assertThat(DraftKeys.pad(Order.FOLLOW_ME)).isNull();
-    }
-
-    /** The pad's order buttons are where the draft expects them: right, left and down on the d-pad. */
-    @Test
-    void findsTheDraftsDirectionsWhereThePadsOrdersAre() {
-        ControlsConfig.Pad pad = ControlsConfig.load().pad();
-
-        assertThat(pad.orderForward()).isEqualTo(GamepadButton.DPAD_RIGHT);
-        assertThat(pad.orderCancel()).isEqualTo(GamepadButton.DPAD_LEFT);
-        assertThat(pad.orderDefence()).isEqualTo(GamepadButton.DPAD_DOWN);
-        assertThat(pad.draft()).isEqualTo(GamepadButton.NORTH);
     }
 }

@@ -242,6 +242,10 @@ its answers into draw calls. `UiArchitectureTest` holds the wall.
 - `hud` - `ReadoutWriter` is the one class that reads `sim` for the interface, once a frame, into a
   `Readout`; the goal line, the player panels, the draft and crate bars and the terminal are drawn from
   it. Reporters turn what changed into dispatches for the terminal.
+  `TopBarSeats` owns the top bar and the local seats that share it: which seat drives the draft or crate
+  bar, what its keys mean meanwhile, whose input the bar takes, everybody held still under a menu, and the
+  solo draft pause. The client hands it each frame's input as values and the play behind the `SeatedPlay`
+  port; it hands back picks, crate choices and the pause.
 
 ## core (client)
 
@@ -289,7 +293,8 @@ loop.
 - `Hud` / `DebugOverlay` - text in screen space, on their own pixel-unit viewport. The font is
   libGDX's built-in one, so the harness needs no art at all.
 - `InputReader` - the only class that touches a keyboard or mouse for the *simulation*. Produces a
-  `CommanderInput` per frame.
+  `CommanderInput` per seat per frame, and which seats pressed their draft key; what that means for the top
+  bar is `TopBarSeats`'s.
 - `CameraDirector` / `ViewControls` - where the view is and how far out it sits, and the binding that
   swaps it. The simulation marks entities with `Focus` and stops there; everything about how the view
   behaves is here, unit-tested with no GL context. Centre and zoom are decided together, because

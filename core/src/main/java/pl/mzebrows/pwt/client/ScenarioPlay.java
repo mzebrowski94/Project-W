@@ -6,6 +6,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.ui.hud.SeatedPlay;
 
 /**
  * What the scenario screen plays through: offline, a world stepped on this machine ({@link
@@ -16,7 +17,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * <p>Input arrives indexed by local <strong>seat</strong> - keyboard first, then pads (G0038). Offline a
  * seat is its slot; online the session hands each seat a slot, and {@link #slotOf(int)} says which.
  */
-public interface ScenarioPlay extends AutoCloseable {
+public interface ScenarioPlay extends SeatedPlay, AutoCloseable {
 
     /** A local seat has a player in it now - a pad just picked up. */
     void seat(int seat);
@@ -25,12 +26,14 @@ public interface ScenarioPlay extends AutoCloseable {
      * Takes a card from the draft bar for the slot this seat plays: the draft, by serial, and the card's
      * kind, as it was shown (G0049). It counts from the next tick, like an order.
      */
+    @Override
     void pick(int seat, int serial, UpgradeKind kind);
 
     /**
      * The crate this seat's slot has open, from the next tick (G0056): takes a pickup of this kind from it,
      * or - for null - shuts it. Kept while paused, as a solo crate is chosen from paused.
      */
+    @Override
     void crate(int seat, @Nullable PickupKind take);
 
     /**
@@ -70,6 +73,7 @@ public interface ScenarioPlay extends AutoCloseable {
     /** How far towards the next tick to draw, in {@code [0, 1]}. */
     float renderAlpha();
 
+    @Override
     boolean paused();
 
     /**
@@ -82,11 +86,13 @@ public interface ScenarioPlay extends AutoCloseable {
      * The same, for a solo player's draft (G0049): online the pause carries that reason to every machine, so
      * none covers the view with the paused banner. Offline it is simply a pause.
      */
+    @Override
     default void setDraftPaused(boolean on) {
         setPaused(on);
     }
 
     /** Whether the pause in force is for a solo player's draft, asked for on whichever machine. */
+    @Override
     default boolean pausedForDraft() {
         return false;
     }
@@ -123,6 +129,7 @@ public interface ScenarioPlay extends AutoCloseable {
     Order lastOrder();
 
     /** The slot a local seat plays in, or -1 if it has none. */
+    @Override
     int slotOf(int seat);
 
     /** Whether a slot is played on this machine. The camera frames only these (G0038). */

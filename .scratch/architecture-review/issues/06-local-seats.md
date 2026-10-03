@@ -1,6 +1,6 @@
 # 06 - Local seats and top bar out of ScenarioScreen
 
-Status: ready-for-agent
+Status: done
 
 Strength: Strong. Dependency: in-process; devices through ports and adapters. Report candidate 7.
 
@@ -37,3 +37,16 @@ shown live in `ui`, so the module probably does too.
 ## Comments
 - 2026-10-03: Taken (system-modules 06). Gates `.scratch/client-packages/`, which splits `core/client` by layer
   once these are in; order 3rd. Open at its start: whether the seat and top-bar module lives in `ui` or `core` - ask first.
+- 2026-10-03: Done. Grilled first: the module lives in `ui` (ADR 0015), named `TopBarSeats`, and takes the
+  bar and the masking but not the other seat loops. It owns the `DraftBar`, the `CrateBar` and the
+  `DraftPause`; `route` turns the drafting or crating seat's input into card keys (the take on the act press's
+  rising edge, the keyboard's crate key) and holds every seat still under a menu, `work` works the bars and
+  drops another seat's act on a crate in reach while the bar is taken, `follow` keeps them true to the world
+  and shuts a second local crate. `SeatedPlay` is its port; `ScenarioPlay` extends it. `DraftKeys` and
+  `CrateKeys` moved to `ui` with their tests; the two that read `controls.properties` went to
+  `ControlsConfigTest`. `InputReader` reads devices and says which seats pressed their draft key and whether
+  the keyboard's crate key went down; `ScenarioScreen` lost `draft()`, `crate()`, `followCrate()` and
+  `playersIn()`, and ignores zoom under a menu as `InputReader` did. The keyboard's seat is
+  `TopBarSeats.KEYBOARD`, which `PlayerSeats.KEYBOARD_SLOT` names. Left as they were, by choice: the slot-of-
+  seat loops in `seatPanels`, `aimAhead` and `onALocalPad`, and `PlayMenus.update` taking the concrete
+  `InputReader`.
