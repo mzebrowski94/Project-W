@@ -6,14 +6,14 @@ planned as gameplay work. They are not repeated here.
 ## What belongs here, and what does not
 
 This file carries **constraints and intent**. It does not describe how systems behave - that is what
-the code is for, and a description that disagrees with `sim/system/*.java` is worse than no
+the code is for, and a description that disagrees with `sim/system/**/*.java` is worse than no
 description at all.
 
 | Question | Where the answer lives |
 |---|---|
 | What must always be true? | Invariants, indexed below |
 | What is still scaffolding, and how is a scenario added? | [`alpha-phase.md`](alpha-phase.md) |
-| What does this system do? | `sim/src/main/java/.../system/` |
+| What does this system do? | `sim/src/main/java/.../system/<package>/` |
 | What is this number? | `assets/sim/*.properties` |
 | Why did we reject the obvious alternative? | `docs/design/decisions/` |
 | What does this word mean? | `docs/glossary.md` |

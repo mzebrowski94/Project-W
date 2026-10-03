@@ -102,8 +102,8 @@ system that changes world state.
   are allowed to be - separating overlapping pairs, pushing bodies out of impassable terrain, and
   clamping them inside the arena, in that order, a few passes per tick. Terrain is a clamp and never
   a body, so circles-only collision is untouched by it. Both are purely geometric and read `Collider` flags rather than asking what an
-  entity is. Systems live in `system/` - all but `UpgradeSystem`, which lives with the rules it runs in
-  the fenced `upgrade/` package (ADR 0017); this package is the machinery they call.
+  entity is. Systems live in the fenced packages under `system/` (below); this package is the machinery
+  they call.
 - `scenario/` - the arenas the menu can launch. `Scenarios` is the registry, and the list in it is
   the menu. `Scenarios.world` is the **only** place a playable world is assembled - config, then map,
   then simulation, then contents, in that order, because the map's extent is the arena and everything
@@ -147,12 +147,39 @@ several. `StunSystem` runs after every driver and before movement, so it owns th
 held still - a driver that zeroed a stunned unit's velocity itself would silently delete knockback,
 which is why `DriveSystem` leaves a held unit entirely alone rather than writing a zero over it.
 - `component/` - pooled data. Public mutable fields, `reset()`, no behaviour.
-- `system/` - all behaviour. One system, one responsibility.
-- `upgrade/` - the upgrade subsystem, fenced (ADR 0017): the catalogue (`UpgradeKind`, `UpgradeDef`,
-  `Effect`), the read port every upgradeable number is asked through (`Modifiers`, one `@Reads` method
-  per `Stat`), how a number is folded from its base (`Fold`), and `UpgradeSystem`, the only writer of
-  the ledger and the drafts on the level entity - the one system that lives outside `system/`. `Picks`
-  is where a tick's picks enter it.
+- `system/` - all behaviour, one system per responsibility, in **fenced packages by domain** (ADR 0020).
+
+### Fenced packages
+
+Each is a Java package under `sim.system` whose `package-info.java` says what it is, its systems and
+ports, and what does not belong in it. **Package-private by default**: public are only its systems
+(`Simulation` builds them) and its **ports**, the classes another package may use, listed in
+`ArchitectureTest.PORTS`. A package uses only `query`, `component`, `def`, `collision`, the `sim` root and
+the ports of others - never another package's system or helper. Packages say nothing about order; the
+constructor of `Simulation` is still the one source of it.
+
+| Package | What it is | Systems | Ports |
+|---|---|---|---|
+| `query` | Public, stateless questions about components; writes nothing (`ArchitectureTest.queryWritesNothing`) | - | all: `Drivers`, `Sight`, `Compass`, `Reach`, `Pace`, `Aim`, `RallyPoint` |
+| `motion` | The steering pipeline, `Steering` to `Position` | Drive, Movement, Avoidance, Navigation, Weave, Hop, Dodge, Wander, Stun, Facing, PositionHistory, TrooperMove | - |
+| `squad` | What a trooper decides and how it fights | SquadOrder, TrooperMind, TrooperCombat | - |
+| `commander` | His controls, his hands, the action key | CommanderControl, Melee, Strike, Drag, Action, Aid, Crate, Turret | `Crews` |
+| `creature` | The aliens' noticing, attacks and growth | Perception, Grip, EnemyRanged, EnemyLeap, Evolution, Barrage | - |
+| `combat` | Contact, blows, guns and throws | Collision, Damage, Shock, Grenade, ProjectileBounds, Cooldown, Pickup | `Guns`, `Throws`, `Grants` |
+| `death` | Casualties, throes, the reaper and what a death leaves | Casualty, Dying, Respawn, Bloat, Mine, Blast, Slick, Reaper | `Deaths` |
+| `level` | Waves, nests, the lair, points, reinforcements, winning | Reinforcement, Wave, Nest, Lair, ControlPoint, Objective | - |
+| `appearance` | What the renderer is shown (G0003) | Appearance | - |
+| `upgrade` | Upgrades and adaptations (ADR 0017) | Upgrade | `Modifiers` |
+
+`Life` (a unit's life stage) and `Odds` (the dice) are questions every package asks too; they live in
+the `sim` root, `Life` because `Players` and `ui` ask it, `Odds` because it advances a stream.
+
+**Where a new system goes**: with the non-`query` helpers it uses; failing that, with the component it
+alone writes; failing that, to the package whose glossary section names what it does. Not by the
+components it mostly writes - shared state such as `Velocity` and `Position` swamps that. A new package
+needs two or more systems, or a system with a helper of its own, and a glossary word; `appearance` is the
+one founding exception. `.claude/scripts/system-graph.py --split` checks a proposed split;
+`.claude/scripts/move-classes.py` moves classes between packages.
 
 ### Adding to the simulation
 

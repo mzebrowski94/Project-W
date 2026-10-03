@@ -212,7 +212,7 @@ Read the row that matches. On-demand by design - loading all of them costs more 
 | `docs/conventions.md` | Writing Java here - banned APIs, style, architecture, nullability, logging. |
 | `docs/performance.md` | Writing or reviewing anything in a per-entity loop. |
 | `docs/determinism.md` | Touching `sim` or `map` logic, randomness, time or iteration order. |
-| `docs/architecture.md` | Adding a system or component, or crossing the sim/client line. |
+| `docs/architecture.md` | Adding a system or component - which fenced package it goes in - or crossing the sim/client line. |
 | `docs/components.md` | Before adding a component - what the existing ones hold and what touches each. |
 | `docs/simulation-order.md` | Registering a system, or debugging a one-tick ordering bug. |
 | `docs/workflow.md` | Builds, the verification ladder, something broke, which environment you are in, environment friction. |

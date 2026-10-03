@@ -30,8 +30,12 @@ field, every time. Then regenerate the index: `python3 .claude/scripts/component
 system changes - from the message `ArchitectureTest.everyComponentIsWrittenByExactlyItsDeclaredWriters`
 fails with (ADR 0019). A new writer of a component that already has one is the change to think twice about.
 
-**System** in `sim/.../system/` - the one exception is `UpgradeSystem`, which lives in `sim/.../upgrade/`
-with the rules it runs (ADR 0017): copy `MovementSystem.java`. It is the smallest one and shows the whole
+**System** in a fenced package under `sim/.../system/` (ADR 0020): with the non-`query` helpers it uses;
+failing that, with the component it alone writes; failing that, the package whose glossary section names
+it - `docs/architecture.md`, *Fenced packages*, has the table. A helper it shares with another package is a
+port: public, in `ArchitectureTest.PORTS` and in that package's `package-info.java`. A new package needs
+two or more systems, or a system with a helper of its own, and a glossary word - add it to
+`ArchitectureTest.FENCED`. Copy `motion/MovementSystem.java`. It is the smallest one and shows the whole
 shape, and the file outranks any skeleton written down here - which is why there is not one. Rules:
 `docs/performance.md` for the loop body, `docs/conventions.md` for everything else.
 

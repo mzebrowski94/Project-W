@@ -7,7 +7,7 @@ description: How tests are written in Project-W - naming, shape, assertions, whe
 
 **Read the exemplar first. It outranks everything below.**
 
-- `sim/src/test/java/pl/mzebrows/pwt/sim/system/MovementSystemTest.java` - testing a system.
+- `sim/src/test/java/pl/mzebrows/pwt/sim/system/motion/MovementSystemTest.java` - testing a system.
 - `core/src/test/java/pl/mzebrows/pwt/client/ScenarioSessionTest.java` - testing client logic.
 - `core/src/test/java/pl/mzebrows/pwt/client/GamePropertiesTest.java` - plain logic and fallback paths.
 - `sim/src/test/java/pl/mzebrows/pwt/sim/def/WholeTest.java` - a parameterized test.

@@ -107,6 +107,11 @@ sim/Odds                                       (out of sim.system: it advances t
     then compile - it lists every member that must become public - then `PORTS`, `FENCED` and the
     `package-info.java`. The graph sees classes, not members; compile is the check for those.
 
+15. **Split done** (ticket 05): every system is in its fenced package, `sim.upgrade` is
+    `sim.system.upgrade`, and nothing may live straight in `sim.system`. `docs/architecture.md`, *Fenced
+    packages*, is the reference from here on; this map and its tickets are history. Left: ticket 06,
+    `core/client`, its own effort.
+
 ## Fog
 
 - Whether ADR 0019 stands against its own *Revisit when*: "most components have several writers" is

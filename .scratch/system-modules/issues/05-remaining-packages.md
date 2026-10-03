@@ -35,3 +35,24 @@ Move every other system into its fenced package, one package per stage, and make
 ## Done when
 
 `verify.sh` green, no class directly in `sim.system`, `sim.upgrade` gone, the docs above updated.
+
+## Answer
+
+Done 2026-10-03, one commit per package: motion, commander, creature, combat, death, level, appearance,
+then upgrade (which emptied the flat package), then the docs. `sim.system` holds no class of its own and
+`sim.upgrade` is gone; ten fenced packages are in `ArchitectureTest.FENCED`, six ports in `PORTS`
+(`Crews`, `Deaths`, `Grants`, `Guns`, `Throws`, `Modifiers`).
+
+- **What compile asked for, beyond 04:** `Grants`' constructor and `apply` (`CrateSystem` builds its own),
+  and `Deaths`/`Deaths.kill`. Motion, creature, level, appearance and upgrade needed nothing.
+- **The transitional allowances are gone:** classes straight in `sim.system` and `sim.upgrade` fail the
+  build. The upgrade rules point at `sim.system.upgrade`; `upgradesAreCalledAndDoNotCall` now refuses any
+  other package under `sim.system` and any scenario.
+- **Tests:** `CoopTest` went to the `sim` root, `ArenaBoundsTest` and `TerrainCollisionTest` to
+  `sim.collision`; every other one sits with its package (03's answer, section 7).
+- **Scripts:** `component-index.py` globs only `system/`; `system-graph.py` reads real subpackages and no
+  longer counts an import a javadoc link brought in (`Rouse` -> `Guns`) as a use.
+- **Docs:** `docs/architecture.md` has the package table and the placement rule in place of the `system/`
+  and `upgrade/` paragraphs; the `new-system` and `unit-tests` skills, `docs/design/README.md`,
+  `docs/conventions.md` and one `CLAUDE.md` row follow. ADR 0017's text is left as written - its status
+  says it is amended.
