@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Shake;
+import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -85,6 +86,29 @@ class BazookaTest {
 
         assertThat(commander.getComponent(Heat.class).locked).isTrue();
         assertThat(count(simulation, Projectile.class)).isOne();
+    }
+
+    /** The wait is the gun's, so a trooper who picked one up reloads as his commander does. */
+    @Test
+    void stopsItselfInATroopersHandsToo() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(X, Y + 40f);
+        Entity trooper = simulation.spawnTrooper(X, Y);
+        trooper.getComponent(Weapon.class)
+                .set(
+                        WeaponKind.BAZOOKA,
+                        simulation.config().weapon(WeaponKind.BAZOOKA),
+                        simulation.config().tickSeconds());
+        trooper.getComponent(Trooper.class).look(1f, 0f);
+        simulation.spawnEnemy(X + 20f, Y);
+
+        int ticks = 0;
+        while (count(simulation, Projectile.class) == 0 && ticks++ < ticksIn(2f)) {
+            simulation.step();
+        }
+
+        assertThat(count(simulation, Projectile.class)).isOne();
+        assertThat(trooper.getComponent(Heat.class).locked).isTrue();
     }
 
     // ---- the blast ----
