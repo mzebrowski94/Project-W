@@ -379,7 +379,7 @@ final class TopBarPainter {
     /**
      * The aside ({@code UI:hud/top/aside}, a first answer to plan Q30): what each side holds, one upgrade a
      * row with its rank as pips - a personal one named for its holder, in his colour, and an adaptation
-     * for the swarm. More than fits ends
+     * for the swarm, in the swarm's. More than fits ends
      * in a count of the rest.
      */
     private void aside(ScreenLayout layout, Readout readout, int x, int width, int blockTop, int line) {
@@ -396,7 +396,8 @@ final class TopBarPainter {
             int top = blockTop - row * line;
             boolean more = row == aside.length - 1 && readout.heldCount > aside.length;
             int slot = more ? -1 : readout.heldSlot[row];
-            Color color = slot < 0 ? style.textDim() : palette.colorFor(Look.COMMANDER, slot);
+            boolean swarm = !more && readout.heldAlien[row];
+            Color color = swarm ? style.swarm() : slot < 0 ? style.textDim() : palette.colorFor(Look.COMMANDER, slot);
             hud.text(aside[row], x + padding, top, color);
             if (more) {
                 continue;
@@ -408,7 +409,7 @@ final class TopBarPainter {
                     top,
                     readout.heldRanks[row],
                     readout.heldMaxRanks[row],
-                    slot < 0 ? style.text() : color,
+                    swarm || slot >= 0 ? color : style.text(),
                     style.textDim());
         }
     }

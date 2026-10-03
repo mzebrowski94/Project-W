@@ -36,6 +36,8 @@ import com.badlogic.gdx.graphics.Color;
  * @param pageColumns how many characters wide every page's panel is, whatever it holds
  * @param wound what a wound he carries is filled with on his panel - soft red-pink, the one hue on the
  *     panel besides his own and the alert, because a wound is the one thing there asking for a reaction
+ * @param swarm what the swarm's adaptations are written in, in the aside, the pause menu's list and
+ *     their toast - its own hue, so what the aliens took never reads as something the side holds
  * @param tellGlow how bright the backing behind the upgrade tell is, as a share of his colour
  * @param tellLift how far towards white the tell's text rises at the top of its pulse
  * @param tellPulseHz how fast the tell pulses; refused above three a second (WCAG 2.3.1)
@@ -65,6 +67,7 @@ public record HudStyle(
         int pageSlide,
         int pageColumns,
         Color wound,
+        Color swarm,
         float tellGlow,
         float tellLift,
         float tellPulseHz) {

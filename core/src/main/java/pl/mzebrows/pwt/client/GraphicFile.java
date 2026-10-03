@@ -72,11 +72,13 @@ record GraphicFile(
             Reticle reticle,
             boolean rollCall,
             Upgrade upgrade,
-            Terminal terminal) {}
+            Terminal terminal,
+            Toast toast) {}
 
     record Portrait(int size) {}
 
-    record HudColor(String text, String textDim, String alert, String overlayFrame, String bar, String wound) {}
+    record HudColor(
+            String text, String textDim, String alert, String overlayFrame, String bar, String wound, String swarm) {}
 
     record Overlay(float widthShare) {}
 
@@ -101,6 +103,8 @@ record GraphicFile(
             float blinkSeconds,
             float cursorLingerSeconds,
             int fewTroopers) {}
+
+    record Toast(float charsPerSecond, float holdSeconds, int queue) {}
 
     /**
      * A look's colours for the second player onward, at {@code graphic.color.<look>.<n>} - the commander's,

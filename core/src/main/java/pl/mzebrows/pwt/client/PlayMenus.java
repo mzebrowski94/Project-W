@@ -192,6 +192,11 @@ final class PlayMenus {
                 1f);
     }
 
+    /** Whether a page or the paused banner is over the view here: what a toast waits behind. */
+    boolean coversView() {
+        return flow.menuOpen() || (flow.showsPausedBanner() && !quiet);
+    }
+
     /** Whether the pause menu itself is the page on show - not the leave confirm over it. */
     boolean showsPausePage() {
         return flow.menuOpen() && flow.top() == UiPage.PAUSE;

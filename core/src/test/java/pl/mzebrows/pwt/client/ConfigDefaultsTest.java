@@ -69,6 +69,7 @@ class ConfigDefaultsTest {
                         hud.pageSlide(),
                         hud.pageColumns(),
                         hud.wound(),
+                        hud.swarm(),
                         hud.tellGlow(),
                         hud.tellLift(),
                         hud.tellPulseHz()))
@@ -169,7 +170,8 @@ class ConfigDefaultsTest {
                         GraphicConfig.load().shieldMark(),
                         GraphicConfig.load().crateMark(),
                         camera(),
-                        GraphicConfig.load().terminal()))
+                        GraphicConfig.load().terminal(),
+                        GraphicConfig.load().toast()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

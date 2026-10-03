@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.ui.hud.Terminal;
+import pl.mzebrows.pwt.ui.hud.Toast;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.LayoutSpec;
 
@@ -42,6 +43,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param crateMark how to draw a crate (G0056)
  * @param camera how the view follows what it is watching, and how far out it may sit
  * @param terminal how the top bar's terminal paces its lines
+ * @param toast how an upgrade taken or an adaptation is typed over the view, and how long it stays
  */
 public record GraphicConfig(
         float virtualHeight,
@@ -67,7 +69,8 @@ public record GraphicConfig(
         ShieldMark shieldMark,
         CrateMark crateMark,
         CameraDirector.Settings camera,
-        Terminal.Settings terminal) {
+        Terminal.Settings terminal,
+        Toast.Settings toast) {
 
     private static final String FILE = "graphic.properties";
 
@@ -207,7 +210,8 @@ public record GraphicConfig(
                         Color.valueOf(file.shield().color())),
                 new CrateMark(file.crate().dot(), Color.valueOf(file.crate().dotColor())),
                 camera(file.camera()),
-                terminal(file.hud().terminal()));
+                terminal(file.hud().terminal()),
+                toast(file.hud().toast(), file.hud().terminal()));
     }
 
     /**
@@ -247,6 +251,11 @@ public record GraphicConfig(
                 terminal.fewTroopers());
     }
 
+    /** The toast ({@code UI:hud/view/toast}), under {@code graphic.hud.toast}; its cursor blinks as the terminal's does. */
+    private static Toast.Settings toast(GraphicFile.Toast toast, GraphicFile.Terminal terminal) {
+        return new Toast.Settings(toast.charsPerSecond(), toast.holdSeconds(), toast.queue(), terminal.blinkSeconds());
+    }
+
     private static HudStyle hud(GraphicFile.Hud hud, GraphicFile.Ui ui) {
         GraphicFile.HudColor color = hud.color();
         return new HudStyle(
@@ -274,6 +283,7 @@ public record GraphicConfig(
                 ui.motion().pageSlide(),
                 ui.page().columns(),
                 Color.valueOf(color.wound()),
+                Color.valueOf(color.swarm()),
                 hud.upgrade().glow(),
                 hud.upgrade().lift(),
                 hud.upgrade().pulseHz());
