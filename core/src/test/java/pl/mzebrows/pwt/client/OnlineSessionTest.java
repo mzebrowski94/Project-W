@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.client.config.SimConfigLoader;
 import pl.mzebrows.pwt.net.ManualClock;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.log.NetLog;

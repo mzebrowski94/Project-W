@@ -4,6 +4,8 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.config.NetConfigLoader;
+import pl.mzebrows.pwt.client.config.SimConfigLoader;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.ui.nav.SelectionMemory;

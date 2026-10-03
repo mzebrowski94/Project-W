@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedMap;
+import pl.mzebrows.pwt.client.config.GameProperties;
 import pl.mzebrows.pwt.sim.ConfigBinder;
 
 /**

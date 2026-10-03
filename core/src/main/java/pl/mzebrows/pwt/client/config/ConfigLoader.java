@@ -1,5 +1,6 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.config;
 
+import pl.mzebrows.pwt.client.Log;
 import pl.mzebrows.pwt.sim.ConfigFile;
 
 /**

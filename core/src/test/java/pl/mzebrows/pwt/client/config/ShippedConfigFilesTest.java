@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,6 +10,8 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import pl.mzebrows.pwt.client.ControlsConfig;
+import pl.mzebrows.pwt.client.GraphicConfig;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.ConfigBinder;
 import pl.mzebrows.pwt.sim.ConfigFile;

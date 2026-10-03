@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.config;
 
 import pl.mzebrows.pwt.net.NetConfig;
 

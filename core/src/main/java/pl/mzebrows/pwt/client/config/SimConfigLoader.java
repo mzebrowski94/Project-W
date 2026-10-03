@@ -1,6 +1,7 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.config;
 
 import java.util.Map;
+import pl.mzebrows.pwt.client.Log;
 import pl.mzebrows.pwt.sim.ConfigBinder;
 import pl.mzebrows.pwt.sim.ConfigFile;
 import pl.mzebrows.pwt.sim.SimConfig;

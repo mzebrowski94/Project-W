@@ -1,9 +1,10 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.config;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import pl.mzebrows.pwt.client.Log;
 
 /**
  * Reads a file off the classpath (the {@code assets/} folder is on it), as it is written.

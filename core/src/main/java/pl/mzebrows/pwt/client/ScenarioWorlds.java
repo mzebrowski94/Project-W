@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.config.SimConfigLoader;
 import pl.mzebrows.pwt.net.session.SessionSetup;
 import pl.mzebrows.pwt.net.session.WorldFactory;
 import pl.mzebrows.pwt.sim.SimConfig;

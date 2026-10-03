@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.client.config.SimConfigLoader;
 import pl.mzebrows.pwt.net.session.SessionSetup;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.WorldCodec;
