@@ -35,7 +35,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.Ticks;
-import pl.mzebrows.pwt.sim.system.Deaths;
+import pl.mzebrows.pwt.sim.system.death.Deaths;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**

@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.death;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.BARREL_BITTEN_BLAST_RADIUS;

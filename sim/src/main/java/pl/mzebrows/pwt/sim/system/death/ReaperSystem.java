@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.death;
 
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;

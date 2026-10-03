@@ -274,7 +274,8 @@ final class ArchitectureTest {
             SYSTEM + ".motion",
             SYSTEM + ".commander",
             SYSTEM + ".creature",
-            SYSTEM + ".combat");
+            SYSTEM + ".combat",
+            SYSTEM + ".death");
 
     /**
      * Where a class under {@code sim.system} may live: a fenced package, or straight in {@code sim.system}
@@ -290,7 +291,7 @@ final class ArchitectureTest {
             // Getting on a gun and off it, the commander's and a trooper's alike (G0024).
             SYSTEM + ".commander.Crews",
             // The one death path, for whatever kills (G0004).
-            SYSTEM + ".Deaths",
+            SYSTEM + ".death.Deaths",
             // What a pickup's grant does to whoever takes it, from the ground or from a crate.
             SYSTEM + ".combat.Grants",
             // The trigger pull, for everything that fires.
