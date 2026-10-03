@@ -30,6 +30,7 @@ import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Shield;
+import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Strain;
@@ -62,6 +63,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
     private static final ComponentMapper<Bloat> BLOAT = ComponentMapper.getFor(Bloat.class);
+    private static final ComponentMapper<Shock> SHOCK = ComponentMapper.getFor(Shock.class);
     private static final ComponentMapper<Projectile> PROJECTILE = ComponentMapper.getFor(Projectile.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
@@ -189,6 +191,13 @@ public final class AppearanceSystem extends IteratingSystem {
             // too; the ring grows over the body and the body is untouched.
             appearance.chargeLook = Look.BLOAT;
             appearance.charge = BLOAT.get(entity).charge;
+            return;
+        }
+        if (SHOCK.has(entity) && SHOCK.get(entity).charged()) {
+            // How close a bolt-held trigger is to stunning it (G0059), in the bolts' own colour. Below a
+            // bloat: what is about to go off matters more than what is about to be held still.
+            appearance.chargeLook = Look.SHOCK;
+            appearance.charge = SHOCK.get(entity).charge;
             return;
         }
         if (VITALITY.has(entity) && VITALITY.get(entity).begun) {

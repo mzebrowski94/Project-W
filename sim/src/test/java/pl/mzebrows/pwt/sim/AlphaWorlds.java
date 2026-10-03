@@ -614,6 +614,18 @@ public final class AlphaWorlds {
 
     public static final float BAZOOKA_RECOIL_SECONDS = 0.2f;
 
+    /** Four bolts stun an ordinary body: few enough to fire in a test, more than one so there is a build. */
+    public static final int PULSE_STUN_AFTER_HITS = 4;
+
+    /** Long enough to fire bolts into while it runs, short enough to wait out. */
+    public static final float PULSE_STUN_SECONDS = 0.5f;
+
+    /** An ordinary body is the one the pulse rifle's hits are quoted against. */
+    public static final float SHOCK_REFERENCE_RADIUS = ENEMY_RADIUS;
+
+    /** From full, two seconds to nothing. */
+    public static final float SHOCK_DRAIN_PER_SECOND = 0.5f;
+
     /** How far clear of its holder's body every shot and throw leaves. */
     public static final float MUZZLE_GAP = 0.1f;
 
@@ -861,8 +873,13 @@ public final class AlphaWorlds {
                         .put(UnitKind.RUNNER, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.RUNNER))
                         .put(UnitKind.FROG, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.FROG))
                         .put(UnitKind.ANT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.ANT))
-                        // Rooted, big and deep, with no barrage: the fixtures about one switch it on.
-                        .put(UnitKind.BOSS_GRUNT, strain(BOSS_RADIUS, 0f, BOSS_HEALTH, Look.BOSS_GRUNT))
+                        // Rooted, big and deep, with no barrage: the fixtures about one switch it on. Shock never
+                        // builds on
+                        // it, as in the game (G0059).
+                        .put(
+                                UnitKind.BOSS_GRUNT,
+                                strain(BOSS_RADIUS, 0f, BOSS_HEALTH, Look.BOSS_GRUNT)
+                                        .withShockable(false))
                         .build(),
                 Defs.<PickupKind, PickupDef>builder(PickupKind.class)
                         .put(
@@ -932,6 +949,16 @@ public final class AlphaWorlds {
                                         // were written for.
                                         ArmouryDef.off()))
                         .put(
+                                PickupKind.ARMOURY_PULSE,
+                                new PickupDef(
+                                        PICKUP_RADIUS,
+                                        Look.ARMOURY_PULSE,
+                                        new Grant.Arm(WeaponKind.PULSE),
+                                        Grant.NOTHING,
+                                        SHINE_SECONDS,
+                                        // Out of the deck, as the bazooka is.
+                                        ArmouryDef.off()))
+                        .put(
                                 PickupKind.CRATE,
                                 new PickupDef(
                                         PICKUP_RADIUS,
@@ -981,7 +1008,8 @@ public final class AlphaWorlds {
                                         Harm.WOUND,
                                         Harm.DOWN,
                                         0f,
-                                        0f))
+                                        0f,
+                                        0))
                         .put(
                                 WeaponKind.SPIT,
                                 new WeaponDef(
@@ -1008,7 +1036,8 @@ public final class AlphaWorlds {
                                         Harm.WOUND,
                                         Harm.DOWN,
                                         0f,
-                                        0f))
+                                        0f,
+                                        0))
                         .put(
                                 WeaponKind.SPEW,
                                 new WeaponDef(
@@ -1035,7 +1064,8 @@ public final class AlphaWorlds {
                                         Harm.WOUND,
                                         Harm.DOWN,
                                         0f,
-                                        0f))
+                                        0f,
+                                        0))
                         .put(
                                 WeaponKind.CHARGED_SPIT,
                                 new WeaponDef(
@@ -1062,7 +1092,8 @@ public final class AlphaWorlds {
                                         Harm.WOUND,
                                         Harm.DOWN,
                                         0f,
-                                        0f))
+                                        0f,
+                                        0))
                         .put(
                                 WeaponKind.RAILGUN,
                                 new WeaponDef(
@@ -1089,7 +1120,8 @@ public final class AlphaWorlds {
                                         Harm.WOUND,
                                         Harm.DOWN,
                                         0f,
-                                        0f))
+                                        0f,
+                                        0))
                         .put(
                                 WeaponKind.FLAMER,
                                 new WeaponDef(
@@ -1116,7 +1148,8 @@ public final class AlphaWorlds {
                                         Harm.WOUND,
                                         Harm.DOWN,
                                         0f,
-                                        0f))
+                                        0f,
+                                        0))
                         // The beam: it stops at the first thing it touches, and it runs hot. The
                         // fixture keeps both, because both are what every test about it is about.
                         .put(
@@ -1145,7 +1178,8 @@ public final class AlphaWorlds {
                                         Harm.WOUND,
                                         Harm.DOWN,
                                         0f,
-                                        0f))
+                                        0f,
+                                        0))
                         .put(
                                 WeaponKind.BAZOOKA,
                                 new WeaponDef(
@@ -1172,7 +1206,37 @@ public final class AlphaWorlds {
                                         Harm.WOUND,
                                         Harm.WOUND,
                                         BAZOOKA_RECOIL_SPEED,
-                                        BAZOOKA_RECOIL_SECONDS))
+                                        BAZOOKA_RECOIL_SECONDS,
+                                        0))
+                        // The pulse rifle: an ordinary shot whose stun is built by several of them.
+                        .put(
+                                WeaponKind.PULSE,
+                                new WeaponDef(
+                                        COOLDOWN,
+                                        PROJECTILE_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        0f,
+                                        WEAPON_DAMAGE,
+                                        1,
+                                        0f,
+                                        Look.BOLT,
+                                        0f,
+                                        SlickDef.off(),
+                                        HeatDef.none(),
+                                        0f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
+                                        0f,
+                                        PULSE_STUN_SECONDS,
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f,
+                                        PULSE_STUN_AFTER_HITS))
                         .put(
                                 WeaponKind.SHOTGUN,
                                 new WeaponDef(
@@ -1199,7 +1263,8 @@ public final class AlphaWorlds {
                                         Harm.WOUND,
                                         Harm.DOWN,
                                         0f,
-                                        0f))
+                                        0f,
+                                        0))
                         .put(
                                 WeaponKind.VENOM,
                                 new WeaponDef(
@@ -1237,7 +1302,8 @@ public final class AlphaWorlds {
                                         Harm.NONE,
                                         Harm.DOWN,
                                         0f,
-                                        0f))
+                                        0f,
+                                        0))
                         .put(
                                 WeaponKind.TURRET_GUN,
                                 new WeaponDef(
@@ -1264,7 +1330,8 @@ public final class AlphaWorlds {
                                         Harm.WOUND,
                                         Harm.DOWN,
                                         0f,
-                                        0f))
+                                        0f,
+                                        0))
                         .build(),
                 MUZZLE_GAP,
                 thickets(),
@@ -1291,6 +1358,7 @@ public final class AlphaWorlds {
                         BLOAT_SETTLE_PER_SECOND,
                         BLOAT_BLAST_FACTOR,
                         BLOAT_HOLD),
+                new SimConfig.ShockConfig(SHOCK_REFERENCE_RADIUS, SHOCK_DRAIN_PER_SECOND),
                 new SimConfig.GrenadeConfig(
                         GRENADE_COOLDOWN,
                         GRENADE_SPEED,
@@ -1498,6 +1566,7 @@ public final class AlphaWorlds {
                 GripDef.off(),
                 ArmourDef.off(),
                 BarrageDef.off(),
+                true,
                 noChances(),
                 look);
     }

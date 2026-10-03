@@ -37,6 +37,13 @@ public enum WeaponKind {
      */
     BAZOOKA,
     /**
+     * Fast, small, quick bolts - a turret's kind of fire, less of it - that run hot, slower than the beam.
+     *
+     * <p>Each bolt that lands builds <em>shock</em> on what it hits ({@code Shock}); full shock stuns it,
+     * and a bigger body takes more.
+     */
+    PULSE,
+    /**
      * What a turret fires: light, very fast and quick to repeat. No pickup grants it.
      */
     TURRET_GUN,

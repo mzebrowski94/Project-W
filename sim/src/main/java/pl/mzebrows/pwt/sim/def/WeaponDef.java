@@ -47,6 +47,9 @@ import lombok.With;
  * @param recoilSpeed how hard one pull throws its own shooter back along the way he aimed, in world
  *     units per second; zero on every gun that kicks nothing. Not a blow: it breaks no shield
  * @param recoilSeconds how long that throw lasts, bleeding off to nothing - and how long he cannot act
+ * @param stunAfterHits how many of its shots it takes to stun a body of the reference size: each one
+ *     builds shock and a full shock is a stun of {@code stunSeconds}, a bigger body taking more. Zero or
+ *     one is a stun on every hit, which is what every gun but the pulse rifle declares
  */
 @With
 public record WeaponDef(
@@ -73,7 +76,8 @@ public record WeaponDef(
         Harm harm,
         Harm blastHarm,
         float recoilSpeed,
-        float recoilSeconds) {
+        float recoilSeconds,
+        int stunAfterHits) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;
@@ -101,6 +105,7 @@ public record WeaponDef(
         Require.notNegative("weapon stunSeconds", stunSeconds);
         Require.notNegative("weapon recoilSpeed", recoilSpeed);
         Require.notNegative("weapon recoilSeconds", recoilSeconds);
+        Require.notNegative("weapon stunAfterHits", stunAfterHits);
         if (selfSlowFactor > 1f) {
             throw new IllegalArgumentException("a gun may slow its own shooter and may not speed him up");
         }
@@ -122,6 +127,14 @@ public record WeaponDef(
     /** True if pulling its trigger throws the man pulling it. */
     public boolean kicks() {
         return recoilSpeed > 0f && recoilSeconds > 0f;
+    }
+
+    /**
+     * How much shock one of its shots builds on a body of the reference size, as a fraction of full; zero
+     * for a gun whose stun - if it has one - lands on every hit. The one place {@code stunAfterHits} is read.
+     */
+    public float shockPerHit() {
+        return stunSeconds > 0f && stunAfterHits > 1 ? 1f / stunAfterHits : 0f;
     }
 
     /** True if its shots are drawn as a line rather than as a dot. */

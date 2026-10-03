@@ -1,6 +1,6 @@
 # 01 - The bazooka and the pulse rifle
 
-Status: ready-for-agent (bazooka done; pulse rifle open)
+Status: done (bazooka; pulse rifle - G0059)
 
 Two found guns, both dealt into crates. Grilled with Mateusz on 2026-10-02.
 
@@ -31,9 +31,8 @@ Two found guns, both dealt into crates. Grilled with Mateusz on 2026-10-02.
 - **It drains** at a rate while nothing hits it. It empties when the stun lands and does not build while
   the stun runs, so a held trigger is not a stun-lock (decided by Claude, not asked).
 - Drawn on the target's charge ring (pillar 5).
-- **The boss:** G0048 rules out a barrage that pauses when stunned. A full shock on the boss stuns it, but
-  its barrage goes on, so the stun does little to it. Ask Mateusz whether the boss should take shock at
-  all before building it.
+- **The boss:** G0048 rules out a barrage that pauses when stunned. Mateusz: the boss takes no shock at all -
+  a strain's `shockable`, false only for it (G0059).
 - **Crates:** an `armoury_pulse` cache, 3 cards.
 
 ## Order

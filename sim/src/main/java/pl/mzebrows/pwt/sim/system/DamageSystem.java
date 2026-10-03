@@ -26,6 +26,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Shield;
+import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Tally;
@@ -62,6 +63,7 @@ public final class DamageSystem extends IteratingSystem {
     private static final ComponentMapper<Dragged> DRAGGED = ComponentMapper.getFor(Dragged.class);
     private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
     private static final ComponentMapper<Bloat> BLOAT = ComponentMapper.getFor(Bloat.class);
+    private static final ComponentMapper<Shock> SHOCK = ComponentMapper.getFor(Shock.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<BlastsOnDeath> REACTION = ComponentMapper.getFor(BlastsOnDeath.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
@@ -72,6 +74,7 @@ public final class DamageSystem extends IteratingSystem {
     private final Spawner spawner;
     private final Modifiers modifiers;
     private final SimConfig.BloatConfig bloatConfig;
+    private final SimConfig.ShockConfig shockConfig;
     private final int alertTicks;
 
     /** Every entity with a handle, for finding one named by it. */
@@ -85,6 +88,7 @@ public final class DamageSystem extends IteratingSystem {
         this.spawner = spawner;
         this.modifiers = modifiers;
         this.bloatConfig = config.bloat();
+        this.shockConfig = config.shock();
         this.alertTicks = Ticks.of(config.trooper().alertSeconds(), config.tickSeconds());
     }
 
@@ -149,6 +153,7 @@ public final class DamageSystem extends IteratingSystem {
                 slow(entity, damage);
                 throwClear(entity, damage);
                 daze(entity, damage.stunTicks);
+                shock(entity, damage);
             }
             return;
         }
@@ -164,6 +169,7 @@ public final class DamageSystem extends IteratingSystem {
         }
         throwClear(entity, damage);
         daze(entity, damage.stunTicks);
+        shock(entity, damage);
     }
 
     /**
@@ -173,6 +179,26 @@ public final class DamageSystem extends IteratingSystem {
     private void daze(Entity entity, int stunTicks) {
         if (stunTicks > 0 && STUNNED.has(entity)) {
             STUNNED.get(entity).daze(modifiers.stunTicks(entity, stunTicks));
+        }
+    }
+
+    /**
+     * Builds the shock this tick's hits carried on whatever they left standing, scaled by its body, and
+     * stuns it once that fills (G0059). Nothing builds while a declared stun runs - the one it filled to
+     * included - so a held trigger is not a stun-lock.
+     */
+    private void shock(Entity entity, Damage damage) {
+        if (damage.shock <= 0f || !SHOCK.has(entity)) {
+            return;
+        }
+        if (STUNNED.has(entity)
+                && STUNNED.get(entity).dazed
+                && STUNNED.get(entity).active()) {
+            return;
+        }
+        float worth = shockConfig.perHitAgainst(BODY.get(entity).radius, damage.shock);
+        if (SHOCK.get(entity).build(worth)) {
+            daze(entity, damage.shockStunTicks);
         }
     }
 

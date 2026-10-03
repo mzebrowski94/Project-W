@@ -67,6 +67,7 @@ import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
  * @param melee the commander's hand strike
  * @param blast what an explosion does, wherever it came from
  * @param fire what an explosion leaves burning behind it, wherever it came from
+ * @param shock what a gun's shocks build to, and how fast that comes off again (G0059)
  * @param grenade what the commander throws
  * @param rabbit the neutral creature that wanders the field and is eaten
  * @param barrel the explosive one, which is neither eaten nor picked up
@@ -106,6 +107,7 @@ public record SimConfig(
         BlastConfig blast,
         FireConfig fire,
         BloatConfig bloat,
+        ShockConfig shock,
         GrenadeConfig grenade,
         RabbitConfig rabbit,
         BarrelConfig barrel,
@@ -790,6 +792,30 @@ public record SimConfig(
         /** How wide the circle a body of this size leaves when it bursts. */
         public float blastFor(float bodyRadius) {
             return bodyRadius * blastFactor;
+        }
+    }
+
+    /**
+     * What a gun's shots build on a body until it is stunned (G0059), and what comes off it again.
+     *
+     * <p>One block for every unit: what differs between strains is already the body's radius, as with
+     * {@link BloatConfig}.
+     *
+     * @param referenceRadius the body a gun's {@code stunAfterHits} is quoted against, in world units; a
+     *     bigger body takes proportionally more hits
+     * @param drainPerSecond how much of a full shock comes off per second on a tick nothing builds it
+     */
+    @With
+    public record ShockConfig(float referenceRadius, float drainPerSecond) {
+
+        public ShockConfig {
+            Require.positive("shock referenceRadius", referenceRadius);
+            Require.notNegative("shock drainPerSecond", drainPerSecond);
+        }
+
+        /** What one shot is worth against a body of this size: in proportion to the radius, not the area. */
+        public float perHitAgainst(float bodyRadius, float perHit) {
+            return bodyRadius <= 0f ? perHit : perHit * referenceRadius / bodyRadius;
         }
     }
 

@@ -78,6 +78,12 @@ public final class Weapon implements Component, Pool.Poolable {
     /** How long one of its shots leaves what it hits unable to act, in ticks; zero for none (G0053). */
     public int stunTicks;
 
+    /**
+     * How much shock one of its shots builds on an ordinary body (G0059); zero for a gun whose stun lands on
+     * every hit, which is all of them but the pulse rifle.
+     */
+    public float shockPerHit;
+
     /** What one of its shots does to a man (G0053, G0057). */
     public Harm harm = Harm.WOUND;
 
@@ -134,6 +140,7 @@ public final class Weapon implements Component, Pool.Poolable {
         this.trailLength = def.trailLength();
         this.bloatPerShot = def.bloatPerShot();
         this.stunTicks = Ticks.of(def.stunSeconds(), tickSeconds);
+        this.shockPerHit = def.shockPerHit();
         this.harm = def.harm();
         this.blastHarm = def.blastHarm();
         this.recoilSpeed = def.recoilSpeed();
@@ -173,6 +180,7 @@ public final class Weapon implements Component, Pool.Poolable {
         trailLength = 0f;
         bloatPerShot = 0f;
         stunTicks = 0;
+        shockPerHit = 0f;
         harm = Harm.WOUND;
         blastHarm = Harm.DOWN;
         recoilSpeed = 0f;

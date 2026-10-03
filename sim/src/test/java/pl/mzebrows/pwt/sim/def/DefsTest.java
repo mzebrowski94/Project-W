@@ -101,6 +101,7 @@ class DefsTest {
                 GripDef.off(),
                 ArmourDef.off(),
                 BarrageDef.off(),
+                true,
                 Chances.none(),
                 look);
     }

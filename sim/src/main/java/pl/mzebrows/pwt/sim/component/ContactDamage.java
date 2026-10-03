@@ -103,6 +103,12 @@ public final class ContactDamage implements Component, Pool.Poolable {
     public float bloat;
 
     /**
+     * How much shock this blow builds on an ordinary body (G0059), as a fraction of full. Above zero, its
+     * {@link #stunTicks} land only once that fills; zero for every blow whose stun, if any, lands on every hit.
+     */
+    public float shock;
+
+    /**
      * The slot of the player behind this blow, whose tally a kill it lands counts for, or {@link
      * Tally#NOBODY}. Set where the blow is spawned, from whoever fired, swung or crewed it.
      */
@@ -134,6 +140,7 @@ public final class ContactDamage implements Component, Pool.Poolable {
         this.slowFactor = 1f;
         this.slowTicks = 0;
         this.bloat = 0f;
+        this.shock = 0f;
         return this;
     }
 
@@ -182,6 +189,15 @@ public final class ContactDamage implements Component, Pool.Poolable {
         this.knockbackSpeed = speed;
         this.shoveTicks = ticks;
         this.knockbackDecay = ticks > 0 ? speed / (ticks * tickSeconds) : 0f;
+        return this;
+    }
+
+    /**
+     * Makes its stun one that only enough of these blows land: each builds this much shock (G0059). Chained
+     * after {@link #stunning}.
+     */
+    public ContactDamage shocking(float perHit) {
+        this.shock = perHit;
         return this;
     }
 
@@ -245,5 +261,6 @@ public final class ContactDamage implements Component, Pool.Poolable {
         slowFactor = 1f;
         slowTicks = 0;
         bloat = 0f;
+        shock = 0f;
     }
 }

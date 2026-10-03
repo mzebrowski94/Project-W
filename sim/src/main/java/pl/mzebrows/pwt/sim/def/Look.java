@@ -49,6 +49,8 @@ public enum Look {
     SLUG,
     /** A bazooka's rocket: the one shot on the field that is about to be an explosion. */
     ROCKET,
+    /** A pulse rifle's bolt: small, quick and electric, the colour of the shock it builds. */
+    BOLT,
     /**
      * One pellet of flame, read as the cloud rather than any one of them.
      */
@@ -98,6 +100,12 @@ public enum Look {
      * <p>Kin to the blast it will become: "that one is a bomb now".
      */
     BLOAT,
+    /**
+     * Shock building on a body the pulse rifle is held on, on the charge channel: full is a stun.
+     *
+     * <p>The colour of the bolts that build it.
+     */
+    SHOCK,
     OBSTACLE,
     /** Alien food growing on the field. */
     MUSHROOM,
@@ -117,6 +125,7 @@ public enum Look {
     ARMOURY_SHOTGUN,
     ARMOURY_LASER,
     ARMOURY_BAZOOKA,
+    ARMOURY_PULSE,
     /**
      * A crate (G0056): a small square with a dot, because what it holds is nobody's to see until it is
      * opened - one look for every crate, whatever is inside.

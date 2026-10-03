@@ -61,6 +61,7 @@ import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Shield;
+import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.SlicksOnDeath;
 import pl.mzebrows.pwt.sim.component.Slowed;
@@ -227,6 +228,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Slowed.class));
         // What a body is made of does not depend on its side.
         entity.add(engine.createComponent(Bloat.class));
+        entity.add(engine.createComponent(Shock.class));
         entity.add(engine.createComponent(BlastsOnDeath.class)
                 .harming(config.blast().harm()));
         entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER, slot));
@@ -262,6 +264,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Slowed.class));
         // Carried by everything that can be killed; inert until a beam fills it (zero means off, G0018).
         entity.add(engine.createComponent(Bloat.class));
+        entity.add(engine.createComponent(Shock.class));
         entity.add(engine.createComponent(BlastsOnDeath.class)
                 .harming(config.blast().harm()));
         entity.add(engine.createComponent(Collider.class).set(true, true));
@@ -360,6 +363,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Slowed.class));
         // Carried by everything that can be killed; inert until a beam fills it (zero means off, G0018).
         entity.add(engine.createComponent(Bloat.class));
+        entity.add(engine.createComponent(Shock.class));
         entity.add(engine.createComponent(BlastsOnDeath.class)
                 .harming(config.blast().harm()));
         entity.add(engine.createComponent(Collider.class).set(true, true));
@@ -409,6 +413,8 @@ public final class Spawner {
         entity.getComponent(Strain.class).set(kind);
         entity.getComponent(Body.class).set(def.radius());
         entity.getComponent(Speed.class).set(def.speed());
+        // The boss takes none: a stun would not pause its barrage (G0048, G0059).
+        entity.getComponent(Shock.class).immuneIf(!def.shockable());
         entity.getComponent(Health.class).set(config.healthOf(kind));
         entity.getComponent(Dying.class).set(ticks(def.deathThroesSeconds()));
         entity.getComponent(ContactDamage.class)
@@ -853,6 +859,7 @@ public final class Spawner {
                 weapon.bloatPerShot,
                 weapon.trailLength,
                 weapon.stunTicks,
+                weapon.shockPerHit,
                 weapon.harm,
                 weapon.blastHarm,
                 side,
@@ -877,6 +884,7 @@ public final class Spawner {
             float bloatPerShot,
             float trailLength,
             int stunTicks,
+            float shockPerHit,
             Harm harm,
             Harm blastHarm,
             Side side,
@@ -904,6 +912,7 @@ public final class Spawner {
                 .slowing(slowFactor, slowTicks)
                 .pumping(bloatPerShot)
                 .stunning(stunTicks)
+                .shocking(shockPerHit)
                 .credited(credit));
         if (blastRadius > 0f) {
             // A shot that goes off where it stops, by dying (G0018) - on a hit or at the arena edge.

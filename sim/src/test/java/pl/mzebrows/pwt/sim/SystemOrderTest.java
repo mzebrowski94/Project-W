@@ -57,6 +57,7 @@ import pl.mzebrows.pwt.sim.system.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.ReaperSystem;
 import pl.mzebrows.pwt.sim.system.ReinforcementSystem;
 import pl.mzebrows.pwt.sim.system.RespawnSystem;
+import pl.mzebrows.pwt.sim.system.ShockSystem;
 import pl.mzebrows.pwt.sim.system.SlickSystem;
 import pl.mzebrows.pwt.sim.system.SquadOrderSystem;
 import pl.mzebrows.pwt.sim.system.StrikeSystem;
@@ -116,6 +117,11 @@ class SystemOrderTest {
     @Test
     void answersABounceTheSystemAfterTheSolverRecordsIt() {
         assertImmediatelyAfter(GrenadeSystem.class, CollisionSystem.class);
+    }
+
+    @Test
+    void drainsShockTheSystemAfterTheHitsThatBuiltIt() {
+        assertImmediatelyAfter(ShockSystem.class, DamageSystem.class);
     }
 
     @Test

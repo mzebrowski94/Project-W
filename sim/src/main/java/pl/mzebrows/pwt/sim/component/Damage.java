@@ -128,6 +128,22 @@ public final class Damage implements Component, Pool.Poolable {
     }
 
     /**
+     * How much shock this tick's hits built (G0059), added rather than kept at the worst, and the longest
+     * stun any of them owes once it fills. A stun that waits on the shock is not {@link #stunTicks}.
+     */
+    public float shock;
+
+    public int shockStunTicks;
+
+    /** Records a hit's worth of shock and the stun it is building towards. */
+    private void charge(float extra, int ticks) {
+        shock += extra;
+        if (ticks > shockStunTicks) {
+            shockStunTicks = ticks;
+        }
+    }
+
+    /**
      * Records where a hit came from, keeping the <strong>first</strong> of the tick.
      *
      * <p>First, so the result does not depend on the order the grid visits pairs.
@@ -149,7 +165,11 @@ public final class Damage implements Component, Pool.Poolable {
      */
     public void land(ContactDamage blow) {
         land(blow.amount, blow.victimInvulnerableTicks, blow.harm, blow.credit);
-        stun(blow.stunTicks);
+        if (blow.shock > 0f) {
+            charge(blow.shock, blow.stunTicks);
+        } else {
+            stun(blow.stunTicks);
+        }
         slow(blow.slowFactor, blow.slowTicks);
         pump(blow.bloat);
     }
@@ -257,6 +277,8 @@ public final class Damage implements Component, Pool.Poolable {
         slowFactor = 1f;
         slowTicks = 0;
         bloat = 0f;
+        shock = 0f;
+        shockStunTicks = 0;
         credit = Tally.NOBODY;
     }
 }

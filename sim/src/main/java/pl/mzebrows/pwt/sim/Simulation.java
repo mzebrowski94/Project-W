@@ -63,6 +63,7 @@ import pl.mzebrows.pwt.sim.system.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.ReaperSystem;
 import pl.mzebrows.pwt.sim.system.ReinforcementSystem;
 import pl.mzebrows.pwt.sim.system.RespawnSystem;
+import pl.mzebrows.pwt.sim.system.ShockSystem;
 import pl.mzebrows.pwt.sim.system.SlickSystem;
 import pl.mzebrows.pwt.sim.system.SquadOrderSystem;
 import pl.mzebrows.pwt.sim.system.StrikeSystem;
@@ -211,6 +212,8 @@ public final class Simulation {
         engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(config, spawner, modifiers));
+        // Straight after the hits it reads: a body a bolt built on this tick does not drain this tick (G0059).
+        engine.addSystem(new ShockSystem(config));
         engine.addSystem(new ActionSystem(config, modifiers, capacity));
         // Straight after the key that opens a crate, so a crate opened this tick is dealt and shown this
         // tick; after damage, so a man hurt this tick has his crate shut on it (G0056).
