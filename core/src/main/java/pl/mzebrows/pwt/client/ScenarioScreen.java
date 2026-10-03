@@ -85,7 +85,7 @@ public final class ScenarioScreen extends ScreenAdapter {
     private final GoalLine goalLine;
     private final Terminal terminal;
 
-    /** An upgrade taken or an adaptation, over the view: the terminal says it too, this is not missed. */
+    /** An upgrade earned or taken, or an adaptation, over the view: the terminal says it too, this is not missed. */
     private final Toast toast;
 
     /** Where the reporters file: the terminal and the toast. */

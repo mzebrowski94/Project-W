@@ -43,7 +43,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param crateMark how to draw a crate (G0056)
  * @param camera how the view follows what it is watching, and how far out it may sit
  * @param terminal how the top bar's terminal paces its lines
- * @param toast how an upgrade taken or an adaptation is typed over the view, and how long it stays
+ * @param toast how an upgrade earned or taken, or an adaptation, is typed over the view, and how long it stays
  */
 public record GraphicConfig(
         float virtualHeight,

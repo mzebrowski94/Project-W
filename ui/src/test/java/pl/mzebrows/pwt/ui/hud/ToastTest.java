@@ -34,6 +34,16 @@ class ToastTest {
     }
 
     @Test
+    void showsAnUpgradeEarned() {
+        Toast toast = toast(SLOW);
+        toast.offer(DispatchKind.DRAFT_EARNED, 1, 0, 0);
+        toast.advance(0f);
+
+        assertThat(toast.kind()).isEqualTo(DispatchKind.DRAFT_EARNED);
+        assertThat(toast.slot()).isEqualTo(1);
+    }
+
+    @Test
     void showsItWholeAtOnceWithTypingOff() {
         Toast toast = toast(new Toast.Settings(0f, 2f, 2, 0.5f));
         toast.offer(DispatchKind.SWARM_ADAPTS, -1, 4, 1);
@@ -59,7 +69,7 @@ class ToastTest {
     void ignoresWhatIsNotAnUpgradeOrAnAdaptation() {
         Toast toast = toast(SLOW);
         toast.offer(DispatchKind.COMMANDER_DOWN, 0, 0, 0);
-        toast.offer(DispatchKind.DRAFT_EARNED, 0, 0, 0);
+        toast.offer(DispatchKind.NOTHING_LEFT, -1, 0, 0);
         toast.advance(0.1f);
 
         assertThat(toast.showing()).isFalse();
