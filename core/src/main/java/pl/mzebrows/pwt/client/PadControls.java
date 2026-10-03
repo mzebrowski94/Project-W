@@ -32,7 +32,6 @@ import pl.mzebrows.pwt.sim.def.Order;
 public final class PadControls {
 
     private final ControlsConfig.Pad bindings;
-    private final ControlsConfig.Feel feel;
 
     /** Where he was last told to point. Starts pointing right, which is where a fresh commander looks. */
     private float aimX = 1f;
@@ -51,29 +50,28 @@ public final class PadControls {
 
     public PadControls(ControlsConfig controls) {
         this.bindings = controls.pad();
-        this.feel = controls.feel();
     }
 
     /** Samples the pad as it is right now, and notes any view or harness press for the caller to collect. */
     public CommanderInput read(Gamepad pad) {
         float rawMoveX = pad.axis(bindings.moveX());
         float rawMoveY = pad.axis(bindings.moveY());
-        float moveScale = scale(rawMoveX, rawMoveY, feel.moveDeadZone());
+        float moveScale = scale(rawMoveX, rawMoveY, bindings.moveDeadZone());
 
         aim(pad);
 
-        boolean firing = held(pad, bindings.fire());
-        boolean striking = held(pad, bindings.strike());
-        boolean throwing = held(pad, bindings.grenade());
-        boolean acting = held(pad, bindings.action());
-        boolean dragging = held(pad, bindings.drag());
+        boolean firing = held(pad, bindings.fire(), bindings.fireTrigger());
+        boolean striking = held(pad, bindings.strike(), bindings.strikeTrigger());
+        boolean throwing = held(pad, bindings.grenade(), bindings.grenadeTrigger());
+        boolean acting = held(pad, bindings.action(), bindings.actionTrigger());
+        boolean dragging = held(pad, bindings.drag(), bindings.dragTrigger());
 
-        zoomToggled = wentDown(pad, bindings.zoom(), zoomWasDown);
-        zoomWasDown = held(pad, bindings.zoom());
-        pauseRequested = wentDown(pad, bindings.pause(), pauseWasDown);
-        pauseWasDown = held(pad, bindings.pause());
-        drafted = wentDown(pad, bindings.draft(), draftWasDown);
-        draftWasDown = held(pad, bindings.draft());
+        zoomToggled = wentDown(pad, bindings.zoom(), bindings.zoomTrigger(), zoomWasDown);
+        zoomWasDown = held(pad, bindings.zoom(), bindings.zoomTrigger());
+        pauseRequested = wentDown(pad, bindings.pause(), bindings.pauseTrigger(), pauseWasDown);
+        pauseWasDown = held(pad, bindings.pause(), bindings.pauseTrigger());
+        drafted = wentDown(pad, bindings.draft(), bindings.draftTrigger(), draftWasDown);
+        draftWasDown = held(pad, bindings.draft(), bindings.draftTrigger());
         ordered = order(pad);
 
         return new CommanderInput(
@@ -117,7 +115,7 @@ public final class PadControls {
         float x = pad.axis(bindings.aimX());
         float y = pad.axis(bindings.aimY());
         float length = (float) Math.sqrt(x * x + y * y);
-        if (length <= feel.aimDeadZone()) {
+        if (length <= bindings.aimDeadZone()) {
             return;
         }
         aimX = x / length;
@@ -125,16 +123,16 @@ public final class PadControls {
     }
 
     private @Nullable Order order(Gamepad pad) {
-        if (wentDown(pad, bindings.orderFollowMe(), orderWasDown[0])) {
+        if (wentDown(pad, bindings.orderFollowMe(), bindings.orderFollowMeTrigger(), orderWasDown[0])) {
             return remember(pad, Order.FOLLOW_ME);
         }
-        if (wentDown(pad, bindings.orderForward(), orderWasDown[1])) {
+        if (wentDown(pad, bindings.orderForward(), bindings.orderForwardTrigger(), orderWasDown[1])) {
             return remember(pad, Order.FORWARD);
         }
-        if (wentDown(pad, bindings.orderDefence(), orderWasDown[2])) {
+        if (wentDown(pad, bindings.orderDefence(), bindings.orderDefenceTrigger(), orderWasDown[2])) {
             return remember(pad, Order.DEFENCE);
         }
-        if (wentDown(pad, bindings.orderCancel(), orderWasDown[3])) {
+        if (wentDown(pad, bindings.orderCancel(), bindings.orderCancelTrigger(), orderWasDown[3])) {
             return remember(pad, Order.CANCEL);
         }
         rememberOrderButtons(pad);
@@ -147,10 +145,10 @@ public final class PadControls {
     }
 
     private void rememberOrderButtons(Gamepad pad) {
-        orderWasDown[0] = held(pad, bindings.orderFollowMe());
-        orderWasDown[1] = held(pad, bindings.orderForward());
-        orderWasDown[2] = held(pad, bindings.orderDefence());
-        orderWasDown[3] = held(pad, bindings.orderCancel());
+        orderWasDown[0] = held(pad, bindings.orderFollowMe(), bindings.orderFollowMeTrigger());
+        orderWasDown[1] = held(pad, bindings.orderForward(), bindings.orderForwardTrigger());
+        orderWasDown[2] = held(pad, bindings.orderDefence(), bindings.orderDefenceTrigger());
+        orderWasDown[3] = held(pad, bindings.orderCancel(), bindings.orderCancelTrigger());
     }
 
     /**
@@ -161,12 +159,12 @@ public final class PadControls {
      * squeezed and released falls is a number in {@code controls.properties} rather than a fact about
      * the hardware.
      */
-    private boolean held(Gamepad pad, ControlsConfig.PadBinding binding) {
-        return pad.pressed(binding.button()) || pad.axis(binding.trigger()) >= feel.triggerThreshold();
+    private boolean held(Gamepad pad, GamepadButton button, GamepadAxis trigger) {
+        return pad.pressed(button) || pad.axis(trigger) >= bindings.triggerThreshold();
     }
 
-    private boolean wentDown(Gamepad pad, ControlsConfig.PadBinding binding, boolean wasDown) {
-        return held(pad, binding) && !wasDown;
+    private boolean wentDown(Gamepad pad, GamepadButton button, GamepadAxis trigger, boolean wasDown) {
+        return held(pad, button, trigger) && !wasDown;
     }
 
     /**

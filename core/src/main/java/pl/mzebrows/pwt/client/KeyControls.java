@@ -26,10 +26,15 @@ public final class KeyControls {
 
     /** Samples the keys, with the mouse state and the world point under the pointer supplied. */
     public static CommanderInput read(
-            ControlsConfig.Keyboard bindings, KeyHolds held, boolean firing, boolean striking, float aimX, float aimY) {
+            ControlsConfig.Keys bindings, KeyHolds held, boolean firing, boolean striking, float aimX, float aimY) {
         return new CommanderInput(
-                axis(held, bindings.moveX()),
-                axis(held, bindings.moveY()),
+                axis(
+                        held,
+                        bindings.moveRight(),
+                        bindings.moveRightAlias(),
+                        bindings.moveLeft(),
+                        bindings.moveLeftAlias()),
+                axis(held, bindings.moveUp(), bindings.moveUpAlias(), bindings.moveDown(), bindings.moveDownAlias()),
                 aimX,
                 aimY,
                 firing,
@@ -40,12 +45,14 @@ public final class KeyControls {
                 false);
     }
 
-    private static float axis(KeyHolds held, ControlsConfig.KeyAxis keys) {
+    /** One way for two keys, the other way for two others; both at once cancel. */
+    private static float axis(
+            KeyHolds held, KeyCode positive, KeyCode positiveAlias, KeyCode negative, KeyCode negativeAlias) {
         float value = 0f;
-        if (held.held(keys.positive()) || held.held(keys.positiveAlias())) {
+        if (held.held(positive) || held.held(positiveAlias)) {
             value += 1f;
         }
-        if (held.held(keys.negative()) || held.held(keys.negativeAlias())) {
+        if (held.held(negative) || held.held(negativeAlias)) {
             value -= 1f;
         }
         return value;

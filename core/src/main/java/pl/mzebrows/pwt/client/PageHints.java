@@ -1,6 +1,5 @@
 package pl.mzebrows.pwt.client;
 
-import com.badlogic.gdx.Input;
 import java.util.Locale;
 import pl.mzebrows.pwt.ui.nav.InputModality;
 
@@ -27,26 +26,26 @@ final class PageHints {
     /** {@code ESCAPE: BACK}. */
     String back(InputModality modality) {
         String button = modality.padHints()
-                ? PadLabels.of(controls.ui().padBack(), modality.playStation())
-                : keyName(controls.ui().back());
+                ? PadLabels.of(controls.ui().pad().back(), modality.playStation())
+                : keyName(controls.ui().key().back());
         return strings.format("ui.hint.back", button);
     }
 
     /** The button that opens the pause menu. */
     String menuButton(InputModality modality) {
         return modality.padHints()
-                ? PadLabels.of(controls.pad().pause(), modality.playStation())
-                : keyName(controls.ui().back());
+                ? PadLabels.of(controls.pad().pause(), controls.pad().pauseTrigger(), modality.playStation())
+                : keyName(controls.ui().key().back());
     }
 
     private String confirm(InputModality modality) {
         return modality.padHints()
-                ? PadLabels.of(controls.ui().padConfirm(), modality.playStation())
-                : keyName(controls.ui().confirm());
+                ? PadLabels.of(controls.ui().pad().confirm(), modality.playStation())
+                : keyName(controls.ui().key().confirm());
     }
 
-    static String keyName(int keycode) {
-        String name = Input.Keys.toString(keycode);
+    static String keyName(KeyCode key) {
+        String name = key.name();
         return name == null ? "?" : name.toUpperCase(Locale.ROOT);
     }
 }

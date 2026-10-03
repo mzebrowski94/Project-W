@@ -217,8 +217,8 @@ public final class JoinScreen extends ScreenAdapter {
     }
 
     private String pickHint() {
-        String confirm = PadLabels.of(context.controlsConfig().ui().padConfirm(), modality.playStation());
-        String back = PadLabels.of(context.controlsConfig().ui().padBack(), modality.playStation());
+        String confirm = PadLabels.of(context.controlsConfig().ui().pad().confirm(), modality.playStation());
+        String back = PadLabels.of(context.controlsConfig().ui().pad().back(), modality.playStation());
         return strings.format("ui.join.pickHint", confirm, back);
     }
 

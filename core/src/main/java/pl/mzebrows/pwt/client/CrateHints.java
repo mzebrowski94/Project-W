@@ -1,6 +1,5 @@
 package pl.mzebrows.pwt.client;
 
-import com.badlogic.gdx.Input;
 import java.util.Arrays;
 import pl.mzebrows.pwt.ui.hud.PlayerReadout;
 
@@ -33,16 +32,16 @@ final class CrateHints {
         this.playStation = playStation;
         Arrays.fill(cards, "");
         if (seat == PlayerSeats.KEYBOARD_SLOT) {
-            ControlsConfig.Keyboard keys = controls.keyboard();
-            take = Input.Keys.toString(keys.action());
-            close = Input.Keys.toString(keys.crateClose());
-            cards[0] = Input.Keys.toString(keys.orderFollowMe());
-            cards[1] = Input.Keys.toString(keys.orderForward());
-            cards[2] = Input.Keys.toString(keys.orderDefence());
-            cards[3] = Input.Keys.toString(keys.orderCancel());
+            ControlsConfig.Keys keys = controls.key();
+            take = keys.action().name();
+            close = keys.crateClose().name();
+            cards[0] = keys.orderFollowMe().name();
+            cards[1] = keys.orderForward().name();
+            cards[2] = keys.orderDefence().name();
+            cards[3] = keys.orderCancel().name();
         } else {
-            take = PadLabels.of(controls.pad().action(), playStation);
-            close = PadLabels.of(controls.pad().orderDefence(), playStation);
+            take = PadLabels.of(controls.pad().action(), controls.pad().actionTrigger(), playStation);
+            close = PadLabels.of(controls.pad().orderDefence(), controls.pad().orderDefenceTrigger(), playStation);
         }
     }
 

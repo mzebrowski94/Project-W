@@ -29,9 +29,9 @@ public final class GdxGamepads implements GamepadSource {
     /** Reused between frames, so asking who is plugged in costs no allocation per frame. */
     private final List<GdxGamepad> pads = new ArrayList<>(4);
 
-    private final ControlsConfig.Hardware hardware;
+    private final ControlsConfig.Pad hardware;
 
-    public GdxGamepads(ControlsConfig.Hardware hardware) {
+    public GdxGamepads(ControlsConfig.Pad hardware) {
         this.hardware = hardware;
     }
 
@@ -102,10 +102,10 @@ public final class GdxGamepads implements GamepadSource {
     private static final class GdxGamepad implements Gamepad {
 
         private final Controller controller;
-        private final ControlsConfig.Hardware hardware;
+        private final ControlsConfig.Pad hardware;
         private final String id;
 
-        private GdxGamepad(Controller controller, ControlsConfig.Hardware hardware) {
+        private GdxGamepad(Controller controller, ControlsConfig.Pad hardware) {
             this.controller = controller;
             this.hardware = hardware;
             this.id = controller.getUniqueId();

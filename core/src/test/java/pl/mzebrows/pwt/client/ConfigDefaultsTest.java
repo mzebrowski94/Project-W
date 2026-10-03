@@ -80,11 +80,11 @@ class ConfigDefaultsTest {
     void drivesPagesWithEnterEscapeAndThePadsSouthAndEast() {
         ControlsConfig.Ui ui = ControlsConfig.load().ui();
 
-        assertThat(ui.confirm()).isEqualTo(Input.Keys.ENTER);
-        assertThat(ui.back()).isEqualTo(Input.Keys.ESCAPE);
-        assertThat(ui.padConfirm()).isEqualTo(GamepadButton.SOUTH);
-        assertThat(ui.padBack()).isEqualTo(GamepadButton.EAST);
-        assertThat(ui.repeatDelaySeconds()).isGreaterThan(ui.repeatIntervalSeconds());
+        assertThat(ui.key().confirm()).isEqualTo(new KeyCode(Input.Keys.ENTER));
+        assertThat(ui.key().back()).isEqualTo(new KeyCode(Input.Keys.ESCAPE));
+        assertThat(ui.pad().confirm()).isEqualTo(GamepadButton.SOUTH);
+        assertThat(ui.pad().back()).isEqualTo(GamepadButton.EAST);
+        assertThat(ui.nav().repeatDelaySeconds()).isGreaterThan(ui.nav().repeatIntervalSeconds());
     }
 
     @Test

@@ -12,4 +12,9 @@ public interface KeyPresses {
 
     /** True if the key went down this frame. Keycodes are libGDX's {@code Input.Keys} values. */
     boolean justPressed(int keycode);
+
+    /** The same, for a key as {@code controls.properties} binds it. */
+    default boolean justPressed(KeyCode key) {
+        return justPressed(key.code());
+    }
 }

@@ -58,26 +58,26 @@ public final class PadLabels {
     public static String briefing(ControlsConfig.Pad pad, boolean playStation) {
         return "move " + of(pad.moveX(), playStation)
                 + ", aim " + of(pad.aimX(), playStation)
-                + ", fire " + of(pad.fire(), playStation)
-                + ", strike " + of(pad.strike(), playStation)
-                + ", grenade " + of(pad.grenade(), playStation)
-                + ", act " + of(pad.action(), playStation)
-                + ", pull " + of(pad.drag(), playStation)
-                + ", zoom " + of(pad.zoom(), playStation)
-                + ", pause " + of(pad.pause(), playStation)
-                + ", upgrades " + of(pad.draft(), playStation)
+                + ", fire " + of(pad.fire(), pad.fireTrigger(), playStation)
+                + ", strike " + of(pad.strike(), pad.strikeTrigger(), playStation)
+                + ", grenade " + of(pad.grenade(), pad.grenadeTrigger(), playStation)
+                + ", act " + of(pad.action(), pad.actionTrigger(), playStation)
+                + ", pull " + of(pad.drag(), pad.dragTrigger(), playStation)
+                + ", zoom " + of(pad.zoom(), pad.zoomTrigger(), playStation)
+                + ", pause " + of(pad.pause(), pad.pauseTrigger(), playStation)
+                + ", upgrades " + of(pad.draft(), pad.draftTrigger(), playStation)
                 + ", orders on the d-pad";
     }
 
     /** What a whole binding is called - a button, a trigger, or both, in that pad's labels. */
-    public static String of(ControlsConfig.PadBinding binding, boolean playStation) {
-        if (binding.button() == GamepadButton.NONE) {
-            return of(binding.trigger(), playStation);
+    public static String of(GamepadButton button, GamepadAxis trigger, boolean playStation) {
+        if (button == GamepadButton.NONE) {
+            return of(trigger, playStation);
         }
-        if (binding.trigger() == GamepadAxis.NONE) {
-            return of(binding.button(), playStation);
+        if (trigger == GamepadAxis.NONE) {
+            return of(button, playStation);
         }
-        return of(binding.button(), playStation) + "/" + of(binding.trigger(), playStation);
+        return of(button, playStation) + "/" + of(trigger, playStation);
     }
 
     /** What this analogue control is called on that pad. */

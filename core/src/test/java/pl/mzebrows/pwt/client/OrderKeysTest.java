@@ -19,8 +19,7 @@ import pl.mzebrows.pwt.sim.def.Order;
  */
 class OrderKeysTest {
 
-    private static final ControlsConfig.Keyboard BINDINGS =
-            ControlsConfig.load().keyboard();
+    private static final ControlsConfig.Keys BINDINGS = ControlsConfig.load().key();
 
     @Test
     void readsEachOrderOffItsOwnKey() {

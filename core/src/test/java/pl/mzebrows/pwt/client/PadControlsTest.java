@@ -26,7 +26,7 @@ class PadControlsTest {
 
     @Test
     void ignoresAStickResting() {
-        float inside = CONTROLS.feel().moveDeadZone() * 0.5f;
+        float inside = CONTROLS.pad().moveDeadZone() * 0.5f;
 
         CommanderInput input = new PadControls(CONTROLS)
                 .read(FakeGamepad.xbox().push(GamepadAxis.LEFT_X, inside).push(GamepadAxis.LEFT_Y, inside));
@@ -41,7 +41,7 @@ class PadControlsTest {
      */
     @Test
     void takesTheDeadZoneOffTheLengthRatherThanOffEachAxis() {
-        float justInside = CONTROLS.feel().moveDeadZone() * 0.8f;
+        float justInside = CONTROLS.pad().moveDeadZone() * 0.8f;
 
         CommanderInput input = new PadControls(CONTROLS)
                 .read(FakeGamepad.xbox().push(GamepadAxis.LEFT_X, justInside).push(GamepadAxis.LEFT_Y, justInside));
@@ -81,8 +81,8 @@ class PadControlsTest {
 
     @Test
     void firesOnTheFaceButtonAndOnTheTrigger() {
-        FakeGamepad button = FakeGamepad.xbox().hold(CONTROLS.pad().fire().button());
-        FakeGamepad trigger = FakeGamepad.xbox().push(CONTROLS.pad().fire().trigger(), 1f);
+        FakeGamepad button = FakeGamepad.xbox().hold(CONTROLS.pad().fire());
+        FakeGamepad trigger = FakeGamepad.xbox().push(CONTROLS.pad().fireTrigger(), 1f);
 
         assertThat(new PadControls(CONTROLS).read(button).firing()).isTrue();
         assertThat(new PadControls(CONTROLS).read(trigger).firing()).isTrue();
@@ -95,17 +95,17 @@ class PadControlsTest {
     @Test
     void swingsOnATriggerAlone() {
         CommanderInput input = new PadControls(CONTROLS)
-                .read(FakeGamepad.xbox().push(CONTROLS.pad().strike().trigger(), 1f));
+                .read(FakeGamepad.xbox().push(CONTROLS.pad().strikeTrigger(), 1f));
 
         assertThat(input.striking()).isTrue();
     }
 
     @Test
     void leavesTheTriggerAloneUntilItIsSqueezedFarEnough() {
-        float light = CONTROLS.feel().triggerThreshold() * 0.5f;
+        float light = CONTROLS.pad().triggerThreshold() * 0.5f;
 
         CommanderInput input = new PadControls(CONTROLS)
-                .read(FakeGamepad.xbox().push(CONTROLS.pad().fire().trigger(), light));
+                .read(FakeGamepad.xbox().push(CONTROLS.pad().fireTrigger(), light));
 
         assertThat(input.firing()).isFalse();
     }
@@ -114,7 +114,7 @@ class PadControlsTest {
     @Test
     void givesAnOrderOnceRatherThanForAsLongAsTheDpadIsHeld() {
         PadControls controls = new PadControls(CONTROLS);
-        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().orderFollowMe().button());
+        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().orderFollowMe());
 
         controls.read(pad);
         Order first = controls.ordered();
@@ -128,11 +128,11 @@ class PadControlsTest {
     @Test
     void givesTheOrderAgainWhenTheDpadIsPressedAgain() {
         PadControls controls = new PadControls(CONTROLS);
-        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().orderDefence().button());
+        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().orderDefence());
         controls.read(pad);
 
-        controls.read(pad.release(CONTROLS.pad().orderDefence().button()));
-        controls.read(pad.hold(CONTROLS.pad().orderDefence().button()));
+        controls.read(pad.release(CONTROLS.pad().orderDefence()));
+        controls.read(pad.hold(CONTROLS.pad().orderDefence()));
         Order again = controls.ordered();
 
         assertThat(again).isEqualTo(Order.DEFENCE);
@@ -141,7 +141,7 @@ class PadControlsTest {
     @Test
     void asksToSwapTheViewOnceForEachPressOfTheZoomButton() {
         PadControls controls = new PadControls(CONTROLS);
-        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().zoom().button());
+        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().zoom());
 
         controls.read(pad);
         boolean first = controls.zoomToggled();
@@ -155,14 +155,14 @@ class PadControlsTest {
     @Test
     void pressesTheDraftButtonOnceForEachPress() {
         PadControls controls = new PadControls(CONTROLS);
-        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().draft().button());
+        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().draft());
 
         controls.read(pad);
         boolean first = controls.drafted();
         controls.read(pad);
         boolean held = controls.drafted();
-        controls.read(pad.release(CONTROLS.pad().draft().button()));
-        controls.read(pad.hold(CONTROLS.pad().draft().button()));
+        controls.read(pad.release(CONTROLS.pad().draft()));
+        controls.read(pad.hold(CONTROLS.pad().draft()));
 
         assertThat(first).isTrue();
         assertThat(held).isFalse();
@@ -172,7 +172,7 @@ class PadControlsTest {
     @Test
     void asksToPauseOnceForEachPressOfTheStartButton() {
         PadControls controls = new PadControls(CONTROLS);
-        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().pause().button());
+        FakeGamepad pad = FakeGamepad.xbox().hold(CONTROLS.pad().pause());
 
         controls.read(pad);
         boolean first = controls.pauseRequested();

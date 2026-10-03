@@ -250,12 +250,14 @@ loop.
 
 - `PwtGame` - `ApplicationAdapter`. Per frame: ask `FixedStepClock` how many steps to run, run them,
   clear, render with `alpha`.
-- `GameProperties` / `SimConfigLoader` / `GraphicConfig` / `ControlsConfig` - config loading. Every value
-  has a fallback and logs when it is used. `graphic.properties` and `controls.properties` are bound by
-  `ConfigBinder` as `sim` and `net` config is (`GraphicFile`, `ControlsFile`), the shipped files compiled in
-  by `:core:generateShippedClientConfig` and held to every key by `ShippedGraphicConfigTest` and
-  `ShippedControlsConfigTest` - no literal default in the client either. `SimConfigLoader` only finds `sim/*.properties` - the files `SimConfig.shippedFiles()` names - and logs what
-  `SimConfig.parse` says was wrong with it; the shipped value stands for each.
+- `ConfigLoader` / `SimConfigLoader` / `GameProperties` - config loading. Every config file is a
+  `ConfigFile` (in `sim`, beside `ConfigBinder`): `SimConfig.FILE`, `NetConfig.FILE`, `GraphicConfig.FILE`,
+  `ControlsConfig.FILE`, each compiled in from `assets/` and bound to its record by the names of the
+  record's components. `ConfigLoader` finds a file, binds it and logs what was wrong with it; the shipped
+  value stands for each. `ShippedConfigFilesTest` holds every shipped file to every key. `ControlsConfig`
+  is shaped as `controls.properties` is, a key and a mouse button read by name (`KeyCode`, `MouseButton`,
+  through the binder's `Conversions`). `SimConfigLoader` reads `sim/*.properties` as one text and keeps
+  what a host ships; `GameProperties` reads a file off the classpath.
 - `Assets` - every asset path as a constant, an `AssetManager` behind them. Missing files log and
   are skipped, never thrown.
 - `GameContext` - what a screen may ask of the application. Screens are given this rather than

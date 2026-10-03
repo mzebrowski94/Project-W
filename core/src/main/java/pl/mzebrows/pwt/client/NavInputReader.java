@@ -51,10 +51,11 @@ final class NavInputReader {
         this.pads = pads;
         this.typing = typing;
         for (int direction = 0; direction < DIRECTIONS; direction++) {
-            keyRepeat[direction] = new NavRepeat(bindings.repeatDelaySeconds(), bindings.repeatIntervalSeconds());
+            keyRepeat[direction] = new NavRepeat(
+                    bindings.nav().repeatDelaySeconds(), bindings.nav().repeatIntervalSeconds());
             for (int seat = 0; seat < PADS; seat++) {
-                padRepeat[seat][direction] =
-                        new NavRepeat(bindings.repeatDelaySeconds(), bindings.repeatIntervalSeconds());
+                padRepeat[seat][direction] = new NavRepeat(
+                        bindings.nav().repeatDelaySeconds(), bindings.nav().repeatIntervalSeconds());
             }
         }
     }
@@ -73,7 +74,7 @@ final class NavInputReader {
             KeyHolds held,
             ScreenLayout layout) {
         nav.clear();
-        if (keys.justPressed(bindings.back())) {
+        if (keys.justPressed(bindings.key().back())) {
             nav.menu = true;
             nav.device = Device.KEYBOARD;
         }
@@ -103,10 +104,11 @@ final class NavInputReader {
                 keyRepeat[2].step(held.held(Input.Keys.LEFT) || (letters && held.held(Input.Keys.A)), frameSeconds);
         boolean right =
                 keyRepeat[3].step(held.held(Input.Keys.RIGHT) || (letters && held.held(Input.Keys.D)), frameSeconds);
-        boolean confirm = keys.justPressed(bindings.confirm())
+        boolean confirm = keys.justPressed(bindings.key().confirm())
                 || keys.justPressed(Input.Keys.NUMPAD_ENTER)
-                || (letters && keys.justPressed(bindings.confirmAlias()));
-        boolean back = keys.justPressed(bindings.back()) || (letters && keys.justPressed(bindings.backAlias()));
+                || (letters && keys.justPressed(bindings.key().confirmAlias()));
+        boolean back = keys.justPressed(bindings.key().back())
+                || (letters && keys.justPressed(bindings.key().backAlias()));
         if (up || down || left || right || confirm || back) {
             nav.up |= up;
             nav.down |= down;
@@ -123,8 +125,8 @@ final class NavInputReader {
      * not read as a confirm the frame the menu opens.
      */
     private void pad(NavInput nav, int seat, Gamepad pad, float frameSeconds, boolean listening) {
-        boolean confirmDown = pad.pressed(bindings.padConfirm());
-        boolean backDown = pad.pressed(bindings.padBack());
+        boolean confirmDown = pad.pressed(bindings.pad().confirm());
+        boolean backDown = pad.pressed(bindings.pad().back());
         boolean confirm = primed[seat] && confirmDown && !confirmWasDown[seat];
         boolean back = primed[seat] && backDown && !backWasDown[seat];
         confirmWasDown[seat] = confirmDown;
@@ -133,7 +135,7 @@ final class NavInputReader {
         if (!listening) {
             return;
         }
-        float threshold = bindings.stickThreshold();
+        float threshold = bindings.nav().stickThreshold();
         float x = pad.axis(GamepadAxis.LEFT_X);
         float y = pad.axis(GamepadAxis.LEFT_Y);
         boolean up = padRepeat[seat][0].step(pad.pressed(GamepadButton.DPAD_UP) || y >= threshold, frameSeconds);
@@ -163,7 +165,8 @@ final class NavInputReader {
         }
         int dx = screenX - anchorX;
         int dy = screenY - anchorY;
-        if (dx * dx + dy * dy >= bindings.pointerWakePixels() * bindings.pointerWakePixels()) {
+        if (dx * dx + dy * dy
+                >= bindings.nav().pointerWakePixels() * bindings.nav().pointerWakePixels()) {
             anchorX = screenX;
             anchorY = screenY;
             nav.pointerMoved = listening;

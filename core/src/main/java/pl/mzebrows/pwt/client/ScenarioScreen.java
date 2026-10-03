@@ -250,7 +250,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         for (int i = 0; i < context.gamepads().count(); i++) {
             // The aiming axis reads up as positive; a list scrolls down for positive.
             float down = -context.gamepads().get(i).axis(controls.pad().aimY());
-            if (Math.abs(down) > controls.feel().aimDeadZone() && Math.abs(down) > Math.abs(most)) {
+            if (Math.abs(down) > controls.pad().aimDeadZone() && Math.abs(down) > Math.abs(most)) {
                 most = down;
             }
         }
@@ -377,7 +377,8 @@ public final class ScenarioScreen extends ScreenAdapter {
         if (menus.showsPausePage()) {
             heldUpgrades.draw(layout.view(), menus.pagePanel(), readout, menus.pageAlpha());
             heldUpgrades.wheel(wheelNotches, menus.pointerX(), menus.pointerY());
-            heldUpgrades.glide(rightStickDown(), context.controlsConfig().ui().scrollLinesPerSecond(), delta);
+            heldUpgrades.glide(
+                    rightStickDown(), context.controlsConfig().ui().nav().scrollLinesPerSecond(), delta);
         } else {
             heldUpgrades.home();
         }

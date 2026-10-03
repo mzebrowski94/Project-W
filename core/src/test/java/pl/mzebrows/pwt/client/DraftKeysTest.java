@@ -46,9 +46,9 @@ class DraftKeysTest {
     void findsTheDraftsDirectionsWhereThePadsOrdersAre() {
         ControlsConfig.Pad pad = ControlsConfig.load().pad();
 
-        assertThat(pad.orderForward().button()).isEqualTo(GamepadButton.DPAD_RIGHT);
-        assertThat(pad.orderCancel().button()).isEqualTo(GamepadButton.DPAD_LEFT);
-        assertThat(pad.orderDefence().button()).isEqualTo(GamepadButton.DPAD_DOWN);
-        assertThat(pad.draft().button()).isEqualTo(GamepadButton.NORTH);
+        assertThat(pad.orderForward()).isEqualTo(GamepadButton.DPAD_RIGHT);
+        assertThat(pad.orderCancel()).isEqualTo(GamepadButton.DPAD_LEFT);
+        assertThat(pad.orderDefence()).isEqualTo(GamepadButton.DPAD_DOWN);
+        assertThat(pad.draft()).isEqualTo(GamepadButton.NORTH);
     }
 }

@@ -13,4 +13,9 @@ public interface KeyHolds {
 
     /** True while the key is down. Keycodes are libGDX's {@code Input.Keys} values. */
     boolean held(int keycode);
+
+    /** The same, for a key as {@code controls.properties} binds it. */
+    default boolean held(KeyCode key) {
+        return held(key.code());
+    }
 }

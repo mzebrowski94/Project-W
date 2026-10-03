@@ -52,7 +52,7 @@ public final class PwtGame extends Game implements GameContext {
         Log.debug("Simulation config: " + simConfig);
         netConfig = NetConfigLoader.load();
         controlsConfig = ControlsConfig.load();
-        gamepads = new ChosenGamepads(new GdxGamepads(controlsConfig.hardware()), launchOptions.pads());
+        gamepads = new ChosenGamepads(new GdxGamepads(controlsConfig.pad()), launchOptions.pads());
 
         assets = new Assets();
         assets.queueAll();

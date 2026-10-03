@@ -7,8 +7,7 @@ import org.junit.jupiter.api.Test;
 
 class ViewControlsTest {
 
-    private static final ControlsConfig.Keyboard BINDINGS =
-            ControlsConfig.load().keyboard();
+    private static final ControlsConfig.Keys BINDINGS = ControlsConfig.load().key();
 
     @Test
     void swapsTheViewOnTab() {

@@ -19,7 +19,7 @@ public final class ViewControls {
     private ViewControls() {}
 
     /** True on the frame the player asked to swap between the normal and pulled-back view. */
-    public static boolean zoomToggled(KeyPresses keys, ControlsConfig.Keyboard bindings) {
+    public static boolean zoomToggled(KeyPresses keys, ControlsConfig.Keys bindings) {
         return keys.justPressed(bindings.zoom());
     }
 
@@ -27,7 +27,7 @@ public final class ViewControls {
      * True on the frame the player asked to swap the bottom bar between the players' panels and the
      * roll call. Keyboard only for now; the bar is this machine's, so it swaps for everybody on it.
      */
-    public static boolean rollCallToggled(KeyPresses keys, ControlsConfig.Keyboard bindings) {
+    public static boolean rollCallToggled(KeyPresses keys, ControlsConfig.Keys bindings) {
         return keys.justPressed(bindings.rollCall());
     }
 }

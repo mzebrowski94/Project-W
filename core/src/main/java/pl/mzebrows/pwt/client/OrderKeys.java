@@ -26,7 +26,7 @@ public final class OrderKeys {
     private OrderKeys() {}
 
     /** The order asked for this frame, or null if none was. */
-    public static @Nullable Order poll(KeyPresses keys, ControlsConfig.Keyboard bindings) {
+    public static @Nullable Order poll(KeyPresses keys, ControlsConfig.Keys bindings) {
         if (keys.justPressed(bindings.orderFollowMe())) {
             return Order.FOLLOW_ME;
         }

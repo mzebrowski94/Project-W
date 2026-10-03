@@ -45,9 +45,9 @@ class CrateKeysTest {
     /** Shutting a crate on the keyboard is a key nothing else in a level claims. */
     @Test
     void shutsACrateOnAKeyOfItsOwn() {
-        ControlsConfig.Keyboard keys = ControlsConfig.load().keyboard();
+        ControlsConfig.Keys keys = ControlsConfig.load().key();
 
-        assertThat(keys.crateClose()).isEqualTo(Input.Keys.X);
+        assertThat(keys.crateClose()).isEqualTo(new KeyCode(Input.Keys.X));
         assertThat(keys.crateClose())
                 .isNotIn(
                         keys.action(),

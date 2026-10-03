@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import java.util.Arrays;
@@ -66,7 +65,7 @@ public final class InputReader {
         this.controls = controls;
         this.gamepads = gamepads;
         for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
-            latchedPads[seat] = new LatchedGamepad(latch, seat, controls.feel().triggerThreshold());
+            latchedPads[seat] = new LatchedGamepad(latch, seat, controls.pad().triggerThreshold());
         }
     }
 
@@ -96,10 +95,10 @@ public final class InputReader {
                 }
             }
             if (LatchedGamepad.triggerInput(seat, GamepadAxis.LEFT_TRIGGER) == input) {
-                return pad.axis(GamepadAxis.LEFT_TRIGGER) >= controls.feel().triggerThreshold();
+                return pad.axis(GamepadAxis.LEFT_TRIGGER) >= controls.pad().triggerThreshold();
             }
             if (LatchedGamepad.triggerInput(seat, GamepadAxis.RIGHT_TRIGGER) == input) {
-                return pad.axis(GamepadAxis.RIGHT_TRIGGER) >= controls.feel().triggerThreshold();
+                return pad.axis(GamepadAxis.RIGHT_TRIGGER) >= controls.pad().triggerThreshold();
             }
         }
         return false;
@@ -123,8 +122,8 @@ public final class InputReader {
         KeyHolds held = keycode -> latch.filter(keycode, rawHeld.held(keycode));
         seats.refresh(gamepads);
         inputs.clear();
-        zoomToggled = ViewControls.zoomToggled(pressed, controls.keyboard());
-        rollCallToggled = ViewControls.rollCallToggled(pressed, controls.keyboard());
+        zoomToggled = ViewControls.zoomToggled(pressed, controls.key());
+        rollCallToggled = ViewControls.rollCallToggled(pressed, controls.key());
         pauseRequested = false;
         Arrays.fill(draftKeys, null);
         Arrays.fill(crateKeys, null);
@@ -134,14 +133,14 @@ public final class InputReader {
         inputs.set(
                         PlayerSeats.KEYBOARD_SLOT,
                         KeyControls.read(
-                                controls.keyboard(),
+                                controls.key(),
                                 held,
-                                mouse(controls.keyboard().fireButton()),
-                                mouse(controls.keyboard().strikeButton()),
+                                mouse(controls.mouse().fire().code()),
+                                mouse(controls.mouse().strike().code()),
                                 pointer.x,
                                 pointer.y))
-                .order(PlayerSeats.KEYBOARD_SLOT, OrderKeys.poll(pressed, controls.keyboard()));
-        if (pressed.justPressed(controls.keyboard().draft())) {
+                .order(PlayerSeats.KEYBOARD_SLOT, OrderKeys.poll(pressed, controls.key()));
+        if (pressed.justPressed(controls.key().draft())) {
             draftKeys[PlayerSeats.KEYBOARD_SLOT] = DraftBar.Key.DRAFT;
         }
 
@@ -173,7 +172,7 @@ public final class InputReader {
         if (crating >= 0 && crating < PlayerSeats.SEATS) {
             crateKeys[crating] = CrateKeys.route(inputs, crating);
             if (crating == PlayerSeats.KEYBOARD_SLOT
-                    && pressed.justPressed(controls.keyboard().crateClose())) {
+                    && pressed.justPressed(controls.key().crateClose())) {
                 crateKeys[crating] = CrateBar.Key.CLOSE;
             }
             if (inputs.get(crating).acting() && !wasActing[crating]) {
@@ -228,10 +227,13 @@ public final class InputReader {
      */
     public String draftKeyLabel(int seat) {
         if (seat == PlayerSeats.KEYBOARD_SLOT) {
-            return Input.Keys.toString(controls.keyboard().draft());
+            return controls.key().draft().name();
         }
         Gamepad pad = seats.padIn(seat);
-        return PadLabels.of(controls.pad().draft(), pad != null && PadLabels.isPlayStation(pad.name()));
+        return PadLabels.of(
+                controls.pad().draft(),
+                controls.pad().draftTrigger(),
+                pad != null && PadLabels.isPlayStation(pad.name()));
     }
 
     /** Whether the pad in this seat names its buttons the PlayStation way; false for the keyboard. */

@@ -39,7 +39,9 @@ class ShippedConfigFilesTest {
             sim.append(read("sim/" + file)).append('\n');
         }
         return Stream.of(
-                new Shipped(SimConfig.FILE, sim.toString()), new Shipped(NetConfig.FILE, read("network.properties")));
+                new Shipped(SimConfig.FILE, sim.toString()),
+                new Shipped(NetConfig.FILE, read("network.properties")),
+                new Shipped(ControlsConfig.FILE, read("controls.properties")));
     }
 
     @ParameterizedTest
