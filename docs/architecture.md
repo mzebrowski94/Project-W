@@ -250,7 +250,23 @@ its answers into draw calls. `UiArchitectureTest` holds the wall.
 ## core (client)
 
 The libGDX application. Reads config, loads assets, owns the viewport, draws the world, drives the
-loop.
+loop. Its classes live in **fenced packages by layer** (ADR 0021): package-private by default, public only
+a package's **entries** (what the root builds and drives) and its **ports** (what another layer may use),
+each named in `package-info.java`; the ports are also `ClientArchitectureTest.PORTS`.
+
+| Package | What it is | Ports | libGDX |
+|---|---|---|---|
+| `client` (root) | `PwtGame`, `GameContext`, the three screens and what only they use (`PlayMenus`, `HarnessControls`), `LocalMachineId` | `Log`, `Assets`, `LaunchOptions` | anything |
+| `input` | Devices read once a frame, the bindings (`ControlsConfig`), the seats, the controls that turn presses into input | `ControlsConfig`, `PlayerSeats`, `PadLabels`, `KeyCode` | no drawing |
+| `draw` | The field: renderers, marks, palettes, the camera, the rendering tunables (`GraphicConfig`) | `GraphicConfig`, `Palette` | no devices |
+| `hud` | Screen space: the canvas, the bars and pages, the fonts, every word the player reads | - | no devices |
+| `play` | What a scenario is played through, offline and online, and the harness state | `OverlayMode` | none |
+| `config` | The one door to a config file, and the sim's and net's loaders | `ConfigLoader`, `GameProperties`, `SimConfigLoader` | none |
+
+A config record lives with its layer, not in `config`: `GraphicConfig` builds every mark, so in `config` all
+of them would be ports. The layers lean one way - `config` <- `input` <- `play` <- `hud`, `draw` <- `hud` -
+and only the root's ports point back up. The split was measured with `.claude/scripts/system-graph.py
+--root core/src/main/java/pl/mzebrows/pwt/client`.
 
 - `PwtGame` - `ApplicationAdapter`. Per frame: ask `FixedStepClock` how many steps to run, run them,
   clear, render with `alpha`.
@@ -273,7 +289,8 @@ loop.
   drawing with, which crashes the JVM with an access violation rather than an exception.
 - `ScenarioSession` / `HarnessControls` / `MenuSelection` - everything the client *decides*, kept out
   of the classes that draw so it can be unit-tested without a GL context. `ClientArchitectureTest`
-  enforces both halves of that split.
+  enforces it by package - `play` and `config` touch no libGDX - and, in the packages that may touch
+  `Gdx`, by name: a `*Controls`, `*Selection` or `*Director` touches none.
 - `ScenarioPlay` - what the scenario screen plays through: `ScenarioSession` offline, `OnlineSession`
   online (ADR 0012). `OnlineSession` is this machine's place in a session: hosting starts a `Sequencer`
   on its own thread and joins it over `127.0.0.1`; joining connects through a `ConditionedTransport`

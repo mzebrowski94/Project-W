@@ -1,6 +1,6 @@
 # 0020: Systems live in fenced packages by domain
 
-**Status.** accepted
+**Status.** amended by ADR 0021: core's client takes the same shape, by layer
 
 **Trigger.** Adding, moving or splitting a system or a helper; one fenced package using another's class;
 adding a fenced package or a port; proposing `@Internal`, an `.internal` package, a facade, or a split of

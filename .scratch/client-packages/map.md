@@ -58,6 +58,9 @@ The sketch that stood here is replaced by decision 8's [`split.txt`](split.txt).
    rule is by package (`play`, `config` no libGDX; `draw`, `hud` no devices; `input` no drawing) plus the
    suffix rule kept for the decision classes outside `play`. `ConfigDefaultsTest` splits three ways.
 
+9. **Ticket 02 done** (2026-10-03): every client class is in its layer or the root, behind the fences, and
+   ADR 0021 is in `docs/adr/` ([02's answer](issues/02-fence-and-move.md#answer)). The effort is complete.
+
 ## Fog
 
 - Where 06's seat and top-bar module lives: `ui` (ADR 0015 says decisions about what the player is shown

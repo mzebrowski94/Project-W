@@ -8,7 +8,7 @@ description: How tests are written in Project-W - naming, shape, assertions, whe
 **Read the exemplar first. It outranks everything below.**
 
 - `sim/src/test/java/pl/mzebrows/pwt/sim/system/motion/MovementSystemTest.java` - testing a system.
-- `core/src/test/java/pl/mzebrows/pwt/client/ScenarioSessionTest.java` - testing client logic.
+- `core/src/test/java/pl/mzebrows/pwt/client/play/ScenarioSessionTest.java` - testing client logic.
 - `sim/src/test/java/pl/mzebrows/pwt/sim/ConfigFileTest.java` - plain logic and fallback paths.
 - `sim/src/test/java/pl/mzebrows/pwt/sim/def/WholeTest.java` - a parameterized test.
 
@@ -75,9 +75,11 @@ The boundary runs between deciding and drawing, in both directions:
   on Mateusz's machine.
 
 `ClientArchitectureTest` enforces this rather than trusting it: no `Screen` may call `setScreen` or
-depend on `Game`, and no class ending in `Session`, `Controls` or `Selection` may depend on `Gdx`.
-All three rules were checked against deliberate violations when they were written; a rule nobody has
-seen fail is not a guard.
+depend on `Game`; `client.play` and `client.config` touch no libGDX at all; and in the packages that may
+touch `Gdx`, no class ending in `Controls`, `Selection` or `Director` does (ADR 0021). Every rule was
+checked against a deliberate violation when it was written; a rule nobody has seen fail is not a guard.
+A test sits in its subject's package - `client.play` for `ScenarioSessionTest` - and reaches only what
+that package and the others' ports offer.
 
 **When a client bug turns out to be untestable, move the decision out of the drawing class - do not
 reach for a headless backend.** The screen-switch crash of 2026-09-07 is the worked example: a
