@@ -123,13 +123,15 @@ public final class TrooperMoveSystem extends EntitySystem {
                 continue;
             }
             Position at = POSITION.get(entity);
-            if (trooper.mode == Trooper.Mode.FIGHT) {
+            if (trooper.mode == Trooper.Mode.FIGHT && !trooper.closing) {
                 // 1.d: stands still to shoot, facing its target; a fresh bearing when the fight ends.
                 trooper.settled = false;
                 trooper.sampling = false;
                 aimAt(trooper, at);
                 continue;
             }
+            // Past here a man in a fight is closing in: straight at it, eyes on it, at his own pace.
+            boolean closingIn = trooper.mode == Trooper.Mode.FIGHT;
             int way = headingTowards(entity, at, trooper);
             if (way == NOWHERE) {
                 trooper.sampling = false;
@@ -147,13 +149,13 @@ public final class TrooperMoveSystem extends EntitySystem {
             if (trooper.detourRemaining > 0) {
                 trooper.detourRemaining--;
                 sidestep(entity, trooper);
-            } else if (way == STRAIGHT) {
+            } else if (way == STRAIGHT && !closingIn) {
                 // Only in the open: on the route a lean is a lean into the walls.
                 lean(trooper);
             }
             trooper.lookX = direction[0];
             trooper.lookY = direction[1];
-            float speed = SPEED.get(entity).value * pace(trooper, deltaTime);
+            float speed = SPEED.get(entity).value * (closingIn ? 1f : pace(trooper, deltaTime));
             STEERING.get(entity).set(direction[0] * speed, direction[1] * speed);
         }
     }

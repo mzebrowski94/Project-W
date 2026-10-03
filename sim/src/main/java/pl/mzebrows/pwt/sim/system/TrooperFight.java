@@ -33,6 +33,7 @@ final class TrooperFight {
     private final TileMap map;
     private final float threatBonus;
     private final float sharedTargetPenalty;
+    private final float closeInFactor;
 
     /** Scratch: how many men are shooting at each enemy this tick, parallel to the family. */
     @NotState("scratch rebuilt every tick before any trooper chooses a target")
@@ -47,6 +48,7 @@ final class TrooperFight {
         this.map = map;
         this.threatBonus = config.trooper().threatBonus();
         this.sharedTargetPenalty = config.trooper().sharedTargetPenalty();
+        this.closeInFactor = config.trooper().closeInFactor();
     }
 
     /** Takes the views it reads from the engine, once, as its system is added. */
@@ -69,18 +71,38 @@ final class TrooperFight {
     /**
      * Picks a target and heads for it, or reports that there is nothing worth shooting.
      *
-     * <p>{@code shotWidth} is how far either side of the line his shot reaches, for {@link Sight#clearShot}.
+     * <p>{@code shotWidth} is how far either side of the line his shot reaches, for {@link Sight#clearShot};
+     * {@code reach} is how far his shot flies before it goes out, zero for until it hits something; and
+     * {@code staysPut} is whether he is standing on ground he was told to hold or has taken.
      */
-    boolean engages(Trooper trooper, Position at, float shotWidth) {
+    boolean engages(Trooper trooper, Position at, float shotWidth, float reach, boolean staysPut) {
+        boolean wasClosing = trooper.mode == Trooper.Mode.FIGHT && trooper.closing;
         int quarry = enemyFor(trooper, at, shotWidth);
         if (quarry < 0) {
+            trooper.closing = false;
             return false;
         }
         Position where = POSITION.get(enemies.get(quarry));
         shooters[quarry]++;
         trooper.mode = Trooper.Mode.FIGHT;
+        trooper.closing = !staysPut && outOfReach(at, where, reach, wasClosing);
         trooper.headFor(where.x, where.y);
         return true;
+    }
+
+    /**
+     * Whether his gun's fire would go out short of the target, so he should walk in on it first.
+     *
+     * <p><strong>Hysteresis</strong>: he sets off once it is past the reach and walks to well inside it,
+     * {@code closeInFactor} of it, so a target that steps back half a pace does not start him again.
+     * Centre to centre, which leaves the two bodies as margin. A gun with no reach is never short.
+     */
+    private boolean outOfReach(Position at, Position target, float reach, boolean wasClosing) {
+        if (reach <= 0f) {
+            return false;
+        }
+        float stopAt = wasClosing ? reach * closeInFactor : reach;
+        return !Sight.withinRange(at.x, at.y, target.x, target.y, stopAt);
     }
 
     /**

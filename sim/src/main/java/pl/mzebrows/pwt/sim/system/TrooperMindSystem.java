@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
@@ -77,7 +78,8 @@ public final class TrooperMindSystem extends EntitySystem {
             }
             Trooper trooper = TROOPER.get(entity);
             Position at = POSITION.get(entity);
-            if (objective.takenPointUnder(at) < 0) {
+            boolean onTakenPoint = objective.takenPointUnder(at) >= 0;
+            if (!onTakenPoint) {
                 // Off every taken point, so the next one it holds is a hold of its own. Asked before
                 // anything else, so a fight or an errand that took it off the point ends the hold too.
                 trooper.holding = false;
@@ -87,7 +89,7 @@ public final class TrooperMindSystem extends EntitySystem {
                 trooper.alertRemaining--;
             }
 
-            if (fight.engages(trooper, at, shotWidth(entity))
+            if (fight.engages(trooper, at, shotWidth(entity), reach(entity), staysPut(trooper, onTakenPoint))
                     || orders.obeys(trooper, at)
                     || aid.aids(entity, trooper, at, deltaTime)
                     || mend.mends(entity, trooper, at)
@@ -99,6 +101,20 @@ public final class TrooperMindSystem extends EntitySystem {
             roam.explores(trooper, at);
         }
         objective.splitIntoSectors();
+    }
+
+    /** How far this man's shot flies before it goes out; zero for a gun whose shot flies until it hits. */
+    private static float reach(Entity entity) {
+        return WEAPON.has(entity) ? WEAPON.get(entity).projectileRange : 0f;
+    }
+
+    /**
+     * Whether he is standing on ground he holds rather than walks off to fight from: told to hold it, or a
+     * point the squad has taken that he has not been sent on from. There he fires from where he stands,
+     * whatever his gun reaches.
+     */
+    private static boolean staysPut(Trooper trooper, boolean onTakenPoint) {
+        return trooper.order == Order.DEFENCE || (onTakenPoint && !trooper.sentOn);
     }
 
     /** How far either side of the line this man's shot reaches: the round itself, and a twin mount's offset. */
