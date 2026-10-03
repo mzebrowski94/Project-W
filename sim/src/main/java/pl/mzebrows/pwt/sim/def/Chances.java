@@ -66,7 +66,7 @@ public final class Chances {
      *
      * <p>Between 1 and 2 otherwise. At 2 an occurrence can come at once and never later than twice
      * the average; at 1 every wait is exactly the average. Whatever it is, the average itself - the
-     * chance per second each behaviour states - is kept to exactly ({@code Odds.spend}).
+     * chance per second each behaviour states - is kept to exactly ({@code Odds.roll}).
      */
     public float longestGap() {
         return longestGap;

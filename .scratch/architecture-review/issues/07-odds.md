@@ -1,6 +1,6 @@
 # 07 - Odds that keep their own due
 
-Status: needs-triage
+Status: resolved
 
 Strength: Worth exploring. Dependency: in-process. Report candidate 8.
 
@@ -33,3 +33,9 @@ the component (ADR 0014).
 `OddsTest` builds `Modifiers` directly; it would get simpler.
 
 ## Comments
+
+**2026-10-03 - done.** `Odds` is one instance per world, built in `Simulation` beside the streams and
+holding `Modifiers`, `Chances` and the `NERVE` stream: `odds.roll(unit, kind, due, deltaTime)`, with an
+overload for a number in hand (`Taking.biteChance`), and `odds.possible(unit, kind)`. The tick length
+stays an argument - every caller already has it, and folding it in would have reshaped three method
+signatures in the mind for no gain. All six callers already rolled on `NERVE`, so no run changes.

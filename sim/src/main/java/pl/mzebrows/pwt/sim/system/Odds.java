@@ -21,21 +21,32 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
  *
  * <p>The number spent is always the one {@link Modifiers#chance} gives for the unit rolling: this is
  * where the {@code CHANCE} stat is read, so every {@code AiChance} is a number an upgrade can move.
+ *
+ * <p><strong>One per world</strong>, built where the streams are: it holds the table, the ledger and
+ * the {@code NERVE} stream, so no caller can roll on the wrong one. What it holds is final; the due
+ * stays on the unit's component (ADR 0014).
  */
-final class Odds {
+public final class Odds {
 
-    /** What a spend hands back when it came off with no overshoot to carry: the smallest spent value. */
+    /** What a roll hands back when it came off with no overshoot to carry: the smallest spent value. */
     private static final float JUST_SPENT = -Float.MIN_VALUE;
 
-    private Odds() {}
+    private final Modifiers modifiers;
+    private final Chances chances;
+    private final Rng nerve;
+
+    public Odds(Modifiers modifiers, Chances chances, Rng nerve) {
+        this.modifiers = modifiers;
+        this.chances = chances;
+        this.nerve = nerve;
+    }
 
     /**
      * Spends a tick of opportunity on this behaviour, at the number the table gives it. Returns the
      * new due, to be stored back where it came from; {@link #spent} says whether it happened.
      */
-    static float spend(
-            Modifiers modifiers, Entity unit, AiChance kind, Rng rng, float due, Chances chances, float deltaTime) {
-        return spend(modifiers, unit, kind, rng, due, chances, chances.of(kind), deltaTime);
+    float roll(Entity unit, AiChance kind, float due, float deltaTime) {
+        return roll(unit, kind, due, chances.of(kind), deltaTime);
     }
 
     /**
@@ -45,25 +56,17 @@ final class Odds {
      *
      * <p>Overshoot carries into the next due, capped at one tick's worth.
      */
-    static float spend(
-            Modifiers modifiers,
-            Entity unit,
-            AiChance kind,
-            Rng rng,
-            float due,
-            Chances chances,
-            float chancePerSecond,
-            float deltaTime) {
-        float chance = chanceOf(modifiers, unit, kind, chancePerSecond);
+    float roll(Entity unit, AiChance kind, float due, float chancePerSecond, float deltaTime) {
+        float chance = chanceOf(unit, kind, chancePerSecond);
         if (chance <= 0f) {
             return due < 0f ? 0f : due;
         }
         float owed = chance * deltaTime;
         float longestGap = chances.longestGap();
         if (longestGap <= 0f) {
-            return rng.nextFloat() < owed ? JUST_SPENT : 0f;
+            return nerve.nextFloat() < owed ? JUST_SPENT : 0f;
         }
-        float left = due > 0f ? due : deal(rng, longestGap) + Math.max(due, -owed);
+        float left = due > 0f ? due : deal(longestGap) + Math.max(due, -owed);
         left -= owed;
         return left > 0f ? left : Math.min(left, JUST_SPENT);
     }
@@ -73,17 +76,17 @@ final class Odds {
      * upgrades move it, is above zero. For a caller whose opportunity is costly to work out: it asks this
      * first and does not look for an opportunity that nothing could be spent on. Draws nothing.
      */
-    static boolean possible(Modifiers modifiers, Entity unit, AiChance kind, Chances chances) {
-        return chanceOf(modifiers, unit, kind, chances.of(kind)) > 0f;
+    boolean possible(Entity unit, AiChance kind) {
+        return chanceOf(unit, kind, chances.of(kind)) > 0f;
     }
 
-    /** Whether the spend that returned this due was the one that ran it out. */
+    /** Whether the roll that returned this due was the one that ran it out. */
     static boolean spent(float due) {
         return due < 0f;
     }
 
     /** The one place the {@code CHANCE} stat is read (ADR 0017). */
-    private static float chanceOf(Modifiers modifiers, Entity unit, AiChance kind, float chancePerSecond) {
+    private float chanceOf(Entity unit, AiChance kind, float chancePerSecond) {
         return modifiers.chance(unit, kind, chancePerSecond);
     }
 
@@ -92,7 +95,7 @@ final class Odds {
      * sum of two draws rather than one, so waits near the average are the likeliest and the extremes
      * rare - a tent rather than a flat line.
      */
-    private static float deal(Rng rng, float longestGap) {
-        return 1f + (longestGap - 1f) * (rng.nextFloat() + rng.nextFloat() - 1f);
+    private float deal(float longestGap) {
+        return 1f + (longestGap - 1f) * (nerve.nextFloat() + nerve.nextFloat() - 1f);
     }
 }

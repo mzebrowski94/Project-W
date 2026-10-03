@@ -8,7 +8,6 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -17,8 +16,6 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
-import pl.mzebrows.pwt.sim.def.Chances;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /** Going to pick up somebody who is down: the half of {@link TrooperMindSystem}'s cascade below orders. */
 final class TrooperAid {
@@ -29,17 +26,13 @@ final class TrooperAid {
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
-    private final Rng nerve;
-    private final Modifiers modifiers;
-    private final Chances chances;
+    private final Odds odds;
     private final float reach;
 
     private ImmutableArray<Entity> casualties = new ImmutableArray<>(new Array<>());
 
-    TrooperAid(SimConfig config, Modifiers modifiers, Rng nerve) {
-        this.nerve = nerve;
-        this.modifiers = modifiers;
-        this.chances = config.chances();
+    TrooperAid(SimConfig config, Odds odds) {
+        this.odds = odds;
         this.reach = config.action().reach();
     }
 
@@ -74,8 +67,7 @@ final class TrooperAid {
         }
         if (trooper.mode != Trooper.Mode.AID) {
             // One due for both kinds of rescue: it is one willingness, spent faster for the commander.
-            trooper.aidDue =
-                    Odds.spend(modifiers, entity, willingness(subject), nerve, trooper.aidDue, chances, deltaTime);
+            trooper.aidDue = odds.roll(entity, willingness(subject), trooper.aidDue, deltaTime);
             if (!Odds.spent(trooper.aidDue)) {
                 return false;
             }

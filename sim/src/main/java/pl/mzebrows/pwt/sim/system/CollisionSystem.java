@@ -11,7 +11,6 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.NotState;
-import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.collision.ConstraintSolver;
@@ -38,13 +37,11 @@ import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.AiChance;
-import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Runs the constraint solver, then decides what this tick's contacts mean.
@@ -87,9 +84,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private final ConstraintSolver solver;
     private final Spawner spawner;
     private final Defs<PickupKind, PickupDef> pickups;
-    private final Rng rng;
-    private final Modifiers modifiers;
-    private final Chances chances;
+    private final Odds odds;
 
     /**
      * The length of the tick being resolved, for the one decision here that is a chance per second.
@@ -105,13 +100,11 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /** Every entity with a handle, for finding who swung a strike. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
-    public CollisionSystem(SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng rng) {
+    public CollisionSystem(SimConfig config, TileMap map, Spawner spawner, Odds odds) {
         this.solver = new ConstraintSolver(config, map, this);
         this.spawner = spawner;
-        this.modifiers = modifiers;
         this.pickups = config.pickups();
-        this.chances = config.chances();
-        this.rng = rng;
+        this.odds = odds;
     }
 
     @Override
@@ -232,15 +225,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         }
         if (pickup.shunned) {
             Taking taking = TAKING.get(taker);
-            taking.biteDue = Odds.spend(
-                    modifiers,
-                    taker,
-                    AiChance.BITE_A_BARREL,
-                    rng,
-                    taking.biteDue,
-                    chances,
-                    taking.biteChance,
-                    deltaTime);
+            taking.biteDue = odds.roll(taker, AiChance.BITE_A_BARREL, taking.biteDue, taking.biteChance, deltaTime);
             if (!Odds.spent(taking.biteDue)) {
                 return;
             }
