@@ -1,6 +1,6 @@
 # 03 - One config front door
 
-Status: ready-for-agent
+Status: done
 
 Strength: Strong. Dependency: in-process. Report candidate 4. Pairs with 04.
 
@@ -58,3 +58,14 @@ host ships it through `GameContext.worldConfigText()`, and `SimConfigLoader.ship
 inherits both.
 - 2026-10-03: Taken (system-modules 06). Gates `.scratch/client-packages/`, which splits `core/client` by layer
   once these are in; order 2nd, with 04.
+- 2026-10-03: Done, with 04, in four commits. `ConfigFile<T>` (sim, beside `ConfigBinder`) is the one way a
+  config file is read: shipped text compiled in and bound strictly once, a player's text bound against it,
+  every problem named. `SimConfig.FILE`, `NetConfig.FILE`, `GraphicConfig.FILE`, `ControlsConfig.FILE`; their
+  own `parse`/`Parsed`/`Shipped` holders are gone. `ConfigLoader` (core) reads a file off the classpath,
+  binds it and logs the problems in one format. The four `Shipped*Test` suites are `ShippedConfigFilesTest`,
+  parameterised over the four files; what is particular to one stays beside it (`ShippedConfigTest` for the
+  sim files' list, keys-once and comment stripping; `ControlsConfigTest`, `GraphicConfigTest`).
+  `JoinScreen` no longer re-reads `network.properties`. `GameProperties` is the file reader only; `UiStrings`
+  reads `ui.properties` through `ConfigBinder.parse`, `UiStringsTest` proving every word reads as
+  `java.util.Properties` read it. The `unit-tests` exemplar is `ConfigFileTest`. The codegen tasks stay three
+  - one per module, which is where each shipped text has to be compiled.

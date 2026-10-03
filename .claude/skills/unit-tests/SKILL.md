@@ -9,7 +9,7 @@ description: How tests are written in Project-W - naming, shape, assertions, whe
 
 - `sim/src/test/java/pl/mzebrows/pwt/sim/system/motion/MovementSystemTest.java` - testing a system.
 - `core/src/test/java/pl/mzebrows/pwt/client/ScenarioSessionTest.java` - testing client logic.
-- `core/src/test/java/pl/mzebrows/pwt/client/GamePropertiesTest.java` - plain logic and fallback paths.
+- `sim/src/test/java/pl/mzebrows/pwt/sim/ConfigFileTest.java` - plain logic and fallback paths.
 - `sim/src/test/java/pl/mzebrows/pwt/sim/def/WholeTest.java` - a parameterized test.
 
 Rules here cover only what those files cannot show.
@@ -108,9 +108,9 @@ tests of their own.
 ## Coverage
 
 Happy path, plus the edge cases a caller could realistically hit: null and empty inputs, boundary
-values, the error paths the code explicitly handles. `GamePropertiesTest` is the model - it covers
-missing key, blank value, unparseable value and missing file, because all four happen in a shipped
-build.
+values, the error paths the code explicitly handles. `ConfigFileTest` is the model - it covers no file
+at all, a missing value, an unreadable one, a key nothing has and a key given twice, because all of them
+happen to a player's config file.
 
 Skip cases that exist only to move a coverage number.
 

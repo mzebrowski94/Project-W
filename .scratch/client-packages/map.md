@@ -50,6 +50,9 @@ client/config/     GameProperties and what 03 + 04 leave of the loaders
 ```
 
 4. **Review 05 done** (2026-10-03): `HeldEvents` is new in `client` - the `play` layer's.
+5. **Reviews 03 + 04 done** (2026-10-03): `GraphicFile`, `ControlsFile` and `HudStyle` are gone; new are
+   `ConfigLoader` (the `config` layer's) and `KeyCode`, `MouseButton` (the `input` layer's). `ConfigFile` lives
+   in `sim`.
 
 ## Fog
 

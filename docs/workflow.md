@@ -60,6 +60,7 @@ The same commands in every environment.
 | Raw Gradle, any task | `.claude/scripts/gradle.sh <task>` |
 | New sim tunable | A component on the config record and one line in the `assets/sim/*.properties` file its prefix lives in - nothing else. `ShippedConfigFilesTest` fails on either alone, and `ShippedConfigTest` on a key given in two files. A new file in `assets/sim/` is read without further wiring. |
 | New network tunable | A component on `NetConfig` (or one of its records) and one line in `assets/network.properties` - nothing else. `ShippedConfigFilesTest` fails on either alone. |
+| New graphic or controls tunable | A component on `GraphicConfig` or `ControlsConfig` (or one of their records) where its key's path says, and one line in `assets/graphic.properties` or `assets/controls.properties` - nothing else. A colour, a key and a mouse button are read by the binder. `ShippedConfigFilesTest` fails on either alone. |
 | Run the game | Desktop only: `./gradlew lwjgl3:run` |
 | Windows exe, Java bundled, for friends | Desktop only: `./gradlew lwjgl3:packageWinX64` -> `dist/` (`docs/packaging.md`) |
 | Run it as copy 1, say, of several | Desktop only: `./gradlew lwjgl3:run --args="--instance=1"` |

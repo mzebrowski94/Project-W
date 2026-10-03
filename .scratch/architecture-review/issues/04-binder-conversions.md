@@ -1,6 +1,6 @@
 # 04 - Let the binder convert; drop the mirror records
 
-Status: ready-for-agent
+Status: done
 
 Strength: Strong. Dependency: in-process. Report candidate 5. Pairs with 03.
 
@@ -32,3 +32,10 @@ Give the binder a conversion for those two types; the `*File` mirrors and their 
 ## Comments
 - 2026-10-03: Taken (system-modules 06). Gates `.scratch/client-packages/`, which splits `core/client` by layer
   once these are in; order 2nd, with 03.
+- 2026-10-03: Done, with 03. The binder takes `Conversions` (type to reading); core passes `Color` (hex),
+  `KeyCode` and `MouseButton` (by name). `GraphicConfig` and `ControlsConfig` are shaped as their files and
+  bound directly: `GraphicFile`, `ControlsFile`, `HudStyle` and the `of()` mappings are gone, and every mark
+  binds as its own block (`CrateMark.color` under `@ConfigKey("dotColor")`). The layout, the palettes, the
+  ground's detail and the toast's pace are methods; `ScenarioScreen` builds its palette once. A pad action is
+  `fire` and `fireTrigger`, as the file has it; `PadBinding`, `KeyAxis`, `Feel` and `Hardware` are gone.
+  `ConfigDefaultsTest` holds no copy of a shipped number. No key in `assets/` changed.
