@@ -58,7 +58,7 @@ public final class PwtGame extends Game implements GameContext {
         assets.queueAll();
         assets.finishLoading();
 
-        hud = new Hud(graphicConfig.layout(), graphicConfig.hud().reticleSize(), pointer);
+        hud = new Hud(graphicConfig.layout(), graphicConfig.hud().reticle().size(), pointer);
         hud.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         setScreen(new MenuScreen(this));
     }

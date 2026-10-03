@@ -255,8 +255,10 @@ loop.
   `ControlsConfig.FILE`, each compiled in from `assets/` and bound to its record by the names of the
   record's components. `ConfigLoader` finds a file, binds it and logs what was wrong with it; the shipped
   value stands for each. `ShippedConfigFilesTest` holds every shipped file to every key. `ControlsConfig`
-  is shaped as `controls.properties` is, a key and a mouse button read by name (`KeyCode`, `MouseButton`,
-  through the binder's `Conversions`). `SimConfigLoader` reads `sim/*.properties` as one text and keeps
+  and `GraphicConfig` are shaped as their files are, so a tunable is a component and a line and nothing
+  else: a key and a mouse button are read by name (`KeyCode`, `MouseButton`) and a colour as hex, through
+  the binder's `Conversions`; a mark is its own block (`graphic.charge.*` is a `ChargeMark`); what is built
+  from several blocks - the layout, the palettes, the ground's detail - is a method on `GraphicConfig`. `SimConfigLoader` reads `sim/*.properties` as one text and keeps
   what a host ships; `GameProperties` reads a file off the classpath.
 - `Assets` - every asset path as a constant, an `AssetManager` behind them. Missing files log and
   are skipped, never thrown.
@@ -309,7 +311,7 @@ loop.
   what makes a map larger than the view cost the same as one that fits.
 - `Palette` - the one place that turns a `Look` into a colour. A table indexed by the enum rather
   than a field per look, so a new kind of thing is a constant and a properties line; a look with no
-  `graphic.color.<look>` fails `ShippedGraphicConfigTest`, and every client test with it, until somebody
+  `graphic.color.<look>` fails `ShippedConfigFilesTest`, and every client test with it, until somebody
   decides what it looks like.
 - `StateTint` - the other axis: how far to shift that colour for what the entity is currently
   *doing* (`Appearance.State`), so the same tell reads the same way on every kind of unit.

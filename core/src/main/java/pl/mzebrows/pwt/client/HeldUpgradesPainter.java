@@ -25,7 +25,7 @@ import pl.mzebrows.pwt.ui.page.ScrollList;
 final class HeldUpgradesPainter {
 
     private final Hud hud;
-    private final HudStyle style;
+    private final GraphicConfig graphic;
     private final HudMetrics metrics;
     private final Palette palette;
     private final UiStrings strings;
@@ -59,9 +59,9 @@ final class HeldUpgradesPainter {
     /** The panel as last drawn, so a wheel is read only over it. */
     private Rect panel = Rect.EMPTY;
 
-    HeldUpgradesPainter(Hud hud, UiStrings strings, HudStyle style, HudMetrics metrics, Palette palette) {
+    HeldUpgradesPainter(Hud hud, UiStrings strings, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
         this.hud = hud;
-        this.style = style;
+        this.graphic = graphic;
         this.metrics = metrics;
         this.palette = palette;
         this.strings = strings;
@@ -102,11 +102,16 @@ final class HeldUpgradesPainter {
             fittedFor = textColumns;
         }
         int x = layout.lineX(panel);
-        faded(text, style.text(), alpha);
-        faded(dim, style.textDim(), alpha);
+        faded(text, graphic.hud().color().text(), alpha);
+        faded(dim, graphic.hud().color().textDim(), alpha);
 
         hud.beginCanvas();
-        hud.fill(panel.x(), panel.y(), panel.width(), panel.height(), faded(bar, style.bar(), alpha));
+        hud.fill(
+                panel.x(),
+                panel.y(),
+                panel.width(),
+                panel.height(),
+                faded(bar, graphic.hud().color().bar(), alpha));
         hud.frame(panel.x(), panel.y(), panel.width(), panel.height(), dim);
         hud.text(TextFit.fit(title, columns), x, layout.lineTop(panel, 0), text);
         if (rows.isEmpty()) {
@@ -118,7 +123,7 @@ final class HeldUpgradesPainter {
             int top = layout.lineTop(panel, 2 + row - scroll.first());
             int slot = readout.heldSlot[row];
             Color color = readout.heldAlien[row]
-                    ? faded(own, style.swarm(), alpha)
+                    ? faded(own, graphic.hud().color().swarm(), alpha)
                     : slot < 0 ? text : faded(own, palette.colorFor(Look.COMMANDER, slot), alpha);
             hud.text(rows.get(row), x, top, color);
             int max = readout.heldMaxRanks[row];

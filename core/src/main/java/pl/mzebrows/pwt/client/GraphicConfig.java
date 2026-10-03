@@ -1,15 +1,16 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.graphics.Color;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.Map;
 import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.ConfigBinder;
+import pl.mzebrows.pwt.sim.ConfigFile;
+import pl.mzebrows.pwt.sim.ConfigKey;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.ui.hud.Terminal;
 import pl.mzebrows.pwt.ui.hud.Toast;
@@ -17,71 +18,91 @@ import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.LayoutSpec;
 
 /**
- * Rendering tunables, read from {@code graphic.properties}. Kept apart from {@link SimConfig} on
- * purpose: changing anything here must never change what the simulation does.
+ * Rendering tunables, read from {@code graphic.properties}. Kept apart from {@link SimConfig} on purpose:
+ * changing anything here must never change what the simulation does.
  *
- * @param virtualHeight the view's height in world units - the camera's distance. Its width is not a
- *     setting: it follows the shape the letterbox gives the view on this screen
- * @param layout how the screen is split into the UI canvas, the bars and the view
- * @param hud how the bars look
+ * <p><strong>Shaped as the file is</strong>, and bound from it directly: a tunable is a component here and a
+ * line there, and nothing else. A mark the renderer draws is its own block - {@code graphic.charge.*} is a
+ * {@link ChargeMark} - and a colour is read by the binder ({@code #rrggbb}, or {@code #rrggbbaa}). What is
+ * built from several blocks - the layout, the palettes, the ground's detail, the toast's pace - is a method.
+ *
+ * @param virtualHeight the view's height in world units - the camera's distance. Its width is not a setting:
+ *     it follows the shape the letterbox gives the view on this screen
  * @param windowWidth initial window width in pixels
  * @param windowHeight initial window height in pixels
  * @param vsync whether to wait for vertical sync
  * @param backgroundColor colour the frame is cleared to
- * @param palette placeholder colour per entity look, until sprites exist
- * @param terrainPalette placeholder colour per kind of ground, and how far apart regions are shaded
- * @param stateTint how far to shift that colour for what the entity is currently doing
- * @param chargeMark how to draw an entity that is filling up towards something
- * @param facingMark how to draw which way an entity is pointing
- * @param segmentMark how to draw a creature in two segments, head and body
- * @param chargedMark how to draw a unit whose gun goes off where its shots land
- * @param nestMark how to draw a hole in the ground
- * @param orderMark how to draw a unit that is acting on an order
- * @param heatMark how to draw how hot the gun a unit is holding has become
- * @param woundMark how to draw the wounds a man on his feet is carrying
- * @param shieldMark how to draw a shield in front of a man
- * @param crateMark how to draw a crate (G0056)
+ * @param ui the UI canvas, its type and its motion
+ * @param view how the screen is split into the bars and the view
+ * @param hud how the bars look
+ * @param color placeholder colour per entity look, until sprites exist
+ * @param variants a look's colours for the second player onward
+ * @param ground placeholder colour per kind of ground
+ * @param region, tile how far apart regions and tiles of the same ground are shaded
+ * @param thicket how a thicket is hatched over its ground
+ * @param state how far to shift a colour for what the entity is currently doing
+ * @param segments how to draw a creature in two segments, head and body
+ * @param bloat how to draw a body being pumped up
+ * @param charge how to draw an entity that is filling up towards something
+ * @param nest how to draw a hole in the ground
+ * @param facing how to draw which way an entity is pointing
+ * @param charged how to draw a unit whose gun goes off where its shots land
+ * @param order how to draw a unit that is acting on an order
+ * @param shield how to draw a shield in front of a man
+ * @param crate how to draw a crate (G0056)
+ * @param wound how to draw the wounds a man on his feet is carrying
+ * @param heat how to draw how hot the gun a unit is holding has become
  * @param camera how the view follows what it is watching, and how far out it may sit
- * @param terminal how the top bar's terminal paces its lines
- * @param toast how an upgrade earned, passed on or taken, or an adaptation, is typed over the view, and how long it stays
  */
 public record GraphicConfig(
         float virtualHeight,
-        LayoutSpec layout,
-        HudStyle hud,
         int windowWidth,
         int windowHeight,
         boolean vsync,
         Color backgroundColor,
-        Palette palette,
-        TerrainPalette terrainPalette,
-        GroundDetail groundDetail,
-        StateTint stateTint,
-        ChargeMark chargeMark,
-        BloatMark bloatMark,
-        NestMark nestMark,
-        FacingMark facingMark,
-        SegmentMark segmentMark,
-        ChargedMark chargedMark,
-        OrderMark orderMark,
-        HeatMark heatMark,
-        WoundMark woundMark,
-        ShieldMark shieldMark,
-        CrateMark crateMark,
-        CameraDirector.Settings camera,
-        Terminal.Settings terminal,
-        Toast.Settings toast) {
-
-    private static final String FILE = "graphic.properties";
-
-    private static final String ROOT = "graphic";
+        Ui ui,
+        View view,
+        Hud hud,
+        Defs<Look, Color> color,
+        @ConfigKey("color") Defs<Look, Variants> variants,
+        @ConfigKey("terrain") Defs<Terrain, Color> ground,
+        @ConfigKey("terrain.rockEdge") Color rockEdge,
+        @ConfigKey("terrain.rockEdgeWidth") float rockEdgeWidth,
+        @ConfigKey("terrain.rockEdgeAlpha") float rockEdgeAlpha,
+        Region region,
+        Tile tile,
+        Thicket thicket,
+        StateTint state,
+        SegmentMark segments,
+        BloatMark bloat,
+        ChargeMark charge,
+        NestMark nest,
+        FacingMark facing,
+        ChargedMark charged,
+        OrderMark order,
+        ShieldMark shield,
+        CrateMark crate,
+        WoundMark wound,
+        HeatMark heat,
+        CameraDirector.Settings camera) {
 
     /** How a colour is written: red, green and blue in hex, and alpha after them if it is not opaque. */
     private static final Pattern HEX = Pattern.compile("#?([0-9a-fA-F]{6}|[0-9a-fA-F]{8})");
 
+    /** How a colour is read - what the binder cannot see from {@code sim}. */
+    private static final ConfigBinder.Conversions COLOURS =
+            new ConfigBinder.Conversions(Map.of(Color.class, GraphicConfig::colour));
+
+    /** {@code assets/graphic.properties}: what ships, compiled in, and how a player's copy is read. */
+    public static final ConfigFile<GraphicConfig> FILE =
+            new ConfigFile<>("graphic.properties", GraphicConfig.class, "graphic", ShippedGraphicConfig.TEXT, COLOURS);
+
+    /** The fastest an alert or the upgrade tell may pulse, a second. */
+    public static final float MAX_PULSE_HZ = 3f;
+
     /**
-     * Rows of text beside the portrait in a player panel: label and status, gun and heat, tally. The
-     * panel's shape rather than a setting - a fourth row is a design change, not a number to turn.
+     * Rows of text beside the portrait in a player panel: label and status, gun and heat, tally. The panel's
+     * shape rather than a setting - a fourth row is a design change, not a number to turn.
      */
     private static final int PANEL_ROWS = 3;
 
@@ -98,277 +119,260 @@ public record GraphicConfig(
     }
 
     /**
-     * Rendering config from {@code graphic.properties}, with every value it lacks or garbles taken from
-     * what ships and said out loud ({@link #parse}).
+     * The UI canvas, under {@code graphic.ui}: its type, how it is scaled, and how it moves.
+     *
+     * @param motionScale how far anything on the canvas moves; zero holds it all still
+     * @param flashScale how bright a flash is; zero turns them off
+     * @param scrimAlpha how dark the scrim behind a page is
+     * @param bannerScrimAlpha how dark the scrim behind the paused banner is
+     */
+    public record Ui(
+            int padding,
+            int fontSize,
+            int leading,
+            int canvasHeight,
+            int scale,
+            float motionScale,
+            float flashScale,
+            float scrimAlpha,
+            float bannerScrimAlpha,
+            Motion motion,
+            Page page) {
+
+        public Ui {
+            if (motionScale < 0f || flashScale < 0f) {
+                throw new IllegalArgumentException("HUD motion out of range");
+            }
+        }
+    }
+
+    /** How long a scrim and a page take to come in, and how far a page slides. */
+    public record Motion(float scrimSeconds, float pageSeconds, int pageSlide) {}
+
+    /** How many columns a page's list is laid out in. */
+    public record Page(int columns) {}
+
+    /** How wide the view may be against its height, and how much of the bars the top one takes. */
+    public record View(float aspectMin, float aspectMax, float topShare) {}
+
+    /** How the bars look, under {@code graphic.hud}. */
+    public record Hud(
+            Portrait portrait,
+            HudColor color,
+            Overlay overlay,
+            Panel panel,
+            Alert alert,
+            Goal goal,
+            Reticle reticle,
+            boolean rollCall,
+            Upgrade upgrade,
+            Terminal.Settings terminal,
+            ToastPace toast) {}
+
+    public record Portrait(int size) {}
+
+    /** The bars' colours. */
+    public record HudColor(
+            Color text, Color textDim, Color alert, Color overlayFrame, Color bar, Color wound, Color swarm) {}
+
+    /** How much of the view's width the dev overlay may take. */
+    public record Overlay(float widthShare) {
+
+        public Overlay {
+            if (!(widthShare >= 0f && widthShare < 1f)) {
+                throw new IllegalArgumentException("overlay width share is a fraction below one: " + widthShare);
+            }
+        }
+    }
+
+    /** How long a player panel's alarm runs, and how far it shakes the panel. */
+    public record Panel(float alarmSeconds, int alarmShake) {
+
+        public Panel {
+            if (alarmSeconds < 0f || alarmShake < 0) {
+                throw new IllegalArgumentException("HUD motion out of range");
+            }
+        }
+    }
+
+    /** How fast an alert pulses. */
+    public record Alert(float pulseHz) {
+
+        public Alert {
+            if (!(pulseHz >= 0f && pulseHz <= MAX_PULSE_HZ)) {
+                throw new IllegalArgumentException(
+                        "an alert may pulse at most " + MAX_PULSE_HZ + " times a second, not " + pulseHz);
+            }
+        }
+    }
+
+    /** How long a goal stays up before the next may replace it. */
+    public record Goal(float minHoldSeconds) {}
+
+    /**
+     * The aim reticles: how big, whether the keyboard player has one and the pad players do, and how far
+     * ahead a pad player's is drawn.
+     */
+    public record Reticle(int size, boolean keyboard, boolean pads, float padDistance) {
+
+        public Reticle {
+            if (size < 1 || padDistance < 0f) {
+                throw new IllegalArgumentException("HUD motion out of range");
+            }
+        }
+    }
+
+    /** The upgrade tell: how much it glows and lifts, both shares, and how fast it pulses. */
+    public record Upgrade(float glow, float lift, float pulseHz) {
+
+        public Upgrade {
+            if (!(pulseHz >= 0f && pulseHz <= MAX_PULSE_HZ)) {
+                throw new IllegalArgumentException(
+                        "the upgrade tell may pulse at most " + MAX_PULSE_HZ + " times a second, not " + pulseHz);
+            }
+            if (!(glow >= 0f && glow <= 1f && lift >= 0f && lift <= 1f)) {
+                throw new IllegalArgumentException(
+                        "the upgrade tell's glow and lift are shares: " + glow + ", " + lift);
+            }
+        }
+    }
+
+    /** How fast the toast types, how long it stays, and how many may wait; its cursor blinks as the terminal's. */
+    public record ToastPace(float charsPerSecond, float holdSeconds, int queue) {}
+
+    /**
+     * A look's colours for the second player onward, at {@code graphic.color.<look>.<n>} - the commander's,
+     * one per player a game can hold (pillar 5). A look the file gives none is one colour: {@link #none()}.
+     */
+    public record Variants(
+            @ConfigKey("1") @Nullable Color second,
+            @ConfigKey("2") @Nullable Color third,
+            @ConfigKey("3") @Nullable Color fourth,
+            @ConfigKey("4") @Nullable Color fifth,
+            @ConfigKey("5") @Nullable Color sixth,
+            @ConfigKey("6") @Nullable Color seventh,
+            @ConfigKey("7") @Nullable Color eighth) {
+
+        /** A look drawn in its one colour, whoever it belongs to. */
+        static Variants none() {
+            return new Variants(null, null, null, null, null, null, null);
+        }
+
+        /** The colour for this player, from the second; null for the look's own. */
+        @Nullable
+        Color of(int variant) {
+            return switch (variant) {
+                case 1 -> second;
+                case 2 -> third;
+                case 3 -> fourth;
+                case 4 -> fifth;
+                case 5 -> sixth;
+                case 6 -> seventh;
+                case 7 -> eighth;
+                default -> throw new IllegalArgumentException("no colour variant " + variant);
+            };
+        }
+    }
+
+    /** How far apart two regions of the same ground may be shaded. */
+    public record Region(float variance) {}
+
+    /** How far apart two tiles of the same ground may be shaded, in how many shades, by patches how big. */
+    public record Tile(float variance, int shades, int patch) {}
+
+    /** How a thicket is hatched: marks a tile, their size, their tint and how strong. */
+    public record Thicket(int cells, float dot, Color tint, float alpha) {}
+
+    /**
+     * Rendering config from {@code graphic.properties}, with every value it lacks or garbles taken from what
+     * ships and said out loud.
      */
     public static GraphicConfig load() {
-        return parse(GameProperties.text(FILE));
+        return ConfigLoader.load(FILE);
     }
 
     /** What ships: {@code assets/graphic.properties}, compiled in. What every test draws with. */
     public static GraphicConfig defaults() {
-        return Shipped.CONFIG;
+        return FILE.defaults();
+    }
+
+    /** A colour as the file writes it; anything else is not a colour. */
+    static Color colour(String text) {
+        if (!HEX.matcher(text).matches()) {
+            throw new IllegalArgumentException("not a colour");
+        }
+        return Color.valueOf(text);
     }
 
     /**
-     * Rendering config from the text of a {@code graphic.properties}. Empty text - no file at all - is what
-     * ships. A key no record has, a value missing or unreadable, and a colour that is not one are each
-     * logged, and the shipped value stands for it; {@code ShippedGraphicConfigTest} holds the shipped file
-     * to stricter terms.
+     * The letterbox, from {@code graphic.view} and {@code graphic.ui}. The bars' heights are not settings:
+     * they follow from the font, the lines and the portrait they hold ({@link HudMetrics}).
      */
-    public static GraphicConfig parse(String text) {
-        Parsed parsed = read(text);
-        for (String problem : parsed.problems()) {
-            Log.error(FILE + ": " + problem + "; the shipped value stands", null);
-        }
-        return parsed.config();
-    }
-
-    /** The same, with everything that was wrong with the text rather than logging it. */
-    static Parsed read(String text) {
-        if (text.isBlank()) {
-            return new Parsed(defaults(), List.of());
-        }
-        List<String> problems = new ArrayList<>();
-        SortedMap<String, String> values = colours(ConfigBinder.parse(text), problems);
-        ConfigBinder.Bound<GraphicFile> bound = ConfigBinder.bind(GraphicFile.class, ROOT, values, Shipped.VALUES);
-        problems.addAll(bound.problems());
-        GraphicFile file = bound.value();
-        return new Parsed(file == null ? defaults() : of(file), List.copyOf(problems));
-    }
-
-    /** A config read from text, and everything that had to be taken from what ships instead. */
-    public record Parsed(GraphicConfig config, List<String> problems) {}
-
-    /** The same text with every colour that does not read as one replaced by the shipped colour, and named. */
-    static SortedMap<String, String> colours(SortedMap<String, String> values, List<String> problems) {
-        SortedMap<String, String> checked = new TreeMap<>(values);
-        for (var entry : values.entrySet()) {
-            String shipped = Shipped.VALUES.get(entry.getKey());
-            if (shipped != null && isColour(shipped) && !isColour(entry.getValue())) {
-                problems.add(entry.getKey() + "=" + entry.getValue() + " is not a colour");
-                checked.put(entry.getKey(), shipped);
-            }
-        }
-        return checked;
-    }
-
-    private static boolean isColour(String text) {
-        return HEX.matcher(text).matches();
-    }
-
-    /** What the renderer reads, built from the file as written. */
-    static GraphicConfig of(GraphicFile file) {
-        return new GraphicConfig(
-                file.virtualHeight(),
-                layout(file),
-                hud(file.hud(), file.ui()),
-                file.windowWidth(),
-                file.windowHeight(),
-                file.vsync(),
-                Color.valueOf(file.backgroundColor()),
-                palette(file),
-                terrainPalette(file),
-                new GroundDetail(
-                        file.thicket().cells(),
-                        file.thicket().dot(),
-                        Color.valueOf(file.thicket().tint()),
-                        file.thicket().alpha(),
-                        Color.valueOf(file.rockEdge()),
-                        file.rockEdgeWidth(),
-                        file.rockEdgeAlpha()),
-                stateTint(file.state()),
-                new ChargeMark(file.charge().scale(), file.charge().tint()),
-                new BloatMark(file.bloat().scale(), file.bloat().alpha()),
-                new NestMark(file.nest().shells(), file.nest().darken()),
-                new FacingMark(
-                        file.facing().length(),
-                        file.facing().width(),
-                        file.facing().tint()),
-                new SegmentMark(
-                        file.segments().bodyOffset(),
-                        file.segments().bodyScale(),
-                        file.segments().headOffset(),
-                        file.segments().headScale(),
-                        file.segments().headShade()),
-                new ChargedMark(
-                        file.charged().scale(), Color.valueOf(file.charged().color())),
-                new OrderMark(file.order().scale(), file.order().tint()),
-                new HeatMark(
-                        file.heat().scale(),
-                        file.heat().width(),
-                        file.heat().spreadDegrees(),
-                        file.heat().segments()),
-                new WoundMark(
-                        file.wound().size(),
-                        file.wound().growth(),
-                        file.wound().maxSize(),
-                        Color.valueOf(file.wound().color())),
-                new ShieldMark(
-                        file.shield().scale(),
-                        file.shield().segments(),
-                        Color.valueOf(file.shield().color())),
-                new CrateMark(file.crate().dot(), Color.valueOf(file.crate().dotColor())),
-                camera(file.camera()),
-                terminal(file.hud().terminal()),
-                toast(file.hud().toast(), file.hud().terminal()));
-    }
-
-    /**
-     * The letterbox, under {@code graphic.view} and {@code graphic.ui}. The bars' heights are not here:
-     * they are derived from the font, the lines and the portrait they hold ({@link HudMetrics}).
-     */
-    private static LayoutSpec layout(GraphicFile file) {
-        GraphicFile.Ui ui = file.ui();
+    public LayoutSpec layout() {
         HudMetrics metrics = new HudMetrics(
                 ui.padding(),
                 ui.fontSize(),
                 ui.leading(),
-                TOP_LINES_BESIDES_TERMINAL + file.hud().terminal().lines(),
+                TOP_LINES_BESIDES_TERMINAL + hud.terminal().lines(),
                 PANEL_ROWS,
-                file.hud().portrait().size());
+                hud.portrait().size());
         return new LayoutSpec(
-                ui.canvasHeight(),
-                ui.scale(),
-                file.view().aspectMin(),
-                file.view().aspectMax(),
-                file.view().topShare(),
-                metrics);
+                ui.canvasHeight(), ui.scale(), view.aspectMin(), view.aspectMax(), view.topShare(), metrics);
     }
 
-    /** The terminal (plan 8.4), under {@code graphic.hud.terminal}. Its line count also sizes the top bar. */
-    private static Terminal.Settings terminal(GraphicFile.Terminal terminal) {
-        return new Terminal.Settings(
-                terminal.lines(),
-                terminal.charsPerSecond(),
-                terminal.highCharsPerSecond(),
-                terminal.minHoldSeconds(),
-                terminal.maxAgeSeconds(),
-                terminal.queue(),
-                terminal.coalesceSeconds(),
-                terminal.blinkSeconds(),
-                terminal.cursorLingerSeconds(),
-                terminal.fewTroopers());
-    }
-
-    /** The toast ({@code UI:hud/view/toast}), under {@code graphic.hud.toast}; its cursor blinks as the terminal's does. */
-    private static Toast.Settings toast(GraphicFile.Toast toast, GraphicFile.Terminal terminal) {
-        return new Toast.Settings(toast.charsPerSecond(), toast.holdSeconds(), toast.queue(), terminal.blinkSeconds());
-    }
-
-    private static HudStyle hud(GraphicFile.Hud hud, GraphicFile.Ui ui) {
-        GraphicFile.HudColor color = hud.color();
-        return new HudStyle(
-                Color.valueOf(color.text()),
-                Color.valueOf(color.textDim()),
-                Color.valueOf(color.alert()),
-                Color.valueOf(color.overlayFrame()),
-                Color.valueOf(color.bar()),
-                hud.overlay().widthShare(),
-                ui.motionScale(),
-                ui.flashScale(),
-                hud.panel().alarmSeconds(),
-                hud.panel().alarmShake(),
-                hud.alert().pulseHz(),
-                hud.goal().minHoldSeconds(),
-                hud.reticle().size(),
-                hud.reticle().keyboard(),
-                hud.reticle().pads(),
-                hud.reticle().padDistance(),
-                hud.rollCall(),
-                ui.scrimAlpha(),
-                ui.bannerScrimAlpha(),
-                ui.motion().scrimSeconds(),
-                ui.motion().pageSeconds(),
-                ui.motion().pageSlide(),
-                ui.page().columns(),
-                Color.valueOf(color.wound()),
-                Color.valueOf(color.swarm()),
-                hud.upgrade().glow(),
-                hud.upgrade().lift(),
-                hud.upgrade().pulseHz());
+    /** The toast ({@code UI:hud/view/toast}): its pace, and the terminal's cursor blink. */
+    public Toast.Settings toast() {
+        ToastPace pace = hud.toast();
+        return new Toast.Settings(
+                pace.charsPerSecond(),
+                pace.holdSeconds(),
+                pace.queue(),
+                hud.terminal().blinkSeconds());
     }
 
     /**
-     * One colour per look, keyed by the enum's own name, plus a colour per player for a look that has
-     * them - the commander, so four of them on a field are four colours rather than four identical
-     * circles (pillar 5). A look with none is one colour for everybody.
+     * One colour per look, plus a colour per player for a look that has them - the commander, so four of
+     * them on a field are four colours rather than four identical circles (pillar 5). A look with none is
+     * one colour for everybody. Built afresh on each call: ask once and keep it.
      */
     @SuppressWarnings("EnumOrdinal")
-    private static Palette palette(GraphicFile file) {
+    public Palette palette() {
         Look[] looks = Look.values();
         Color[][] colors = new Color[looks.length][];
         for (Look look : looks) {
-            Color ordinary = Color.valueOf(file.color().of(look));
-            GraphicFile.Variants variants = file.variants().of(look);
+            Color ordinary = color.of(look);
+            Variants byVariant = variants.of(look);
             Color[] byPlayer = new Color[Players.MAX];
-            byPlayer[0] = ordinary;
+            byPlayer[0] = new Color(ordinary);
             for (int variant = 1; variant < Players.MAX; variant++) {
-                String written = variants.of(variant);
-                byPlayer[variant] = written.isEmpty() ? new Color(ordinary) : Color.valueOf(written);
+                Color written = byVariant.of(variant);
+                byPlayer[variant] = new Color(written == null ? ordinary : written);
             }
             colors[look.ordinal()] = byPlayer;
         }
         return new Palette(colors);
     }
 
-    /** One colour per kind of ground, plus how far apart two regions of the same ground may be shaded. */
+    /** One colour per kind of ground, and how far apart regions and tiles of one ground are shaded. */
     @SuppressWarnings("EnumOrdinal")
-    private static TerrainPalette terrainPalette(GraphicFile file) {
+    public TerrainPalette terrainPalette() {
         Terrain[] terrains = Terrain.values();
         Color[] colors = new Color[terrains.length];
         for (Terrain terrain : terrains) {
-            colors[terrain.ordinal()] = Color.valueOf(file.ground().of(terrain));
+            colors[terrain.ordinal()] = new Color(ground.of(terrain));
         }
-        return new TerrainPalette(
-                colors,
-                file.region().variance(),
-                file.tile().variance(),
-                file.tile().shades(),
-                file.tile().patch());
+        return new TerrainPalette(colors, region.variance(), tile.variance(), tile.shades(), tile.patch());
     }
 
-    private static StateTint stateTint(GraphicFile.State state) {
-        return new StateTint(
-                state.unaware(),
-                state.windingUp(),
-                state.airborne(),
-                state.grappling(),
-                state.staggered(),
-                state.stunned(),
-                state.slowed(),
-                state.dying(),
-                state.casualty(),
-                state.crewed(),
-                state.gripped());
-    }
-
-    /**
-     * How the view behaves. Rendering only - none of it can reach the simulation, and a camera setting
-     * that changed what the game does would be a bug rather than a feature.
-     */
-    private static CameraDirector.Settings camera(GraphicFile.Camera camera) {
-        return new CameraDirector.Settings(
-                camera.deadZone(),
-                camera.smoothing(),
-                camera.lookAhead(),
-                camera.leadSmoothing(),
-                camera.nearZoom(),
-                camera.farZoom(),
-                camera.zoomSmoothing(),
-                camera.fitMargin(),
-                camera.shakeScale(),
-                camera.shakeCycles());
-    }
-
-    /** Bound on first use, so a failure names the key rather than a class. */
-    private static final class Shipped {
-
-        static final SortedMap<String, String> VALUES = ConfigBinder.parse(ShippedGraphicConfig.TEXT);
-
-        static final GraphicConfig CONFIG =
-                of(ConfigBinder.bindStrictly(GraphicFile.class, ROOT, ShippedGraphicConfig.TEXT));
-
-        private Shipped() {}
+    /** What is drawn over the ground: a thicket's hatch, and rock's edge. */
+    public GroundDetail groundDetail() {
+        return new GroundDetail(
+                thicket.cells(),
+                thicket.dot(),
+                thicket.tint(),
+                thicket.alpha(),
+                rockEdge,
+                rockEdgeWidth,
+                rockEdgeAlpha);
     }
 }

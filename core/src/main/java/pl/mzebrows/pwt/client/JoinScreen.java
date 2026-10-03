@@ -58,7 +58,7 @@ public final class JoinScreen extends ScreenAdapter {
         this.hints = new PageHints(context.controlsConfig(), strings);
         this.painter = new MenuPainter(
                 context.hud(),
-                context.graphicConfig().hud(),
+                context.graphicConfig(),
                 context.graphicConfig().layout().metrics());
         this.reader = new NavInputReader(context.controlsConfig().ui(), context.gamepads(), true);
     }
@@ -95,7 +95,7 @@ public final class JoinScreen extends ScreenAdapter {
         } else {
             context.hud().hideSystemCursor();
         }
-        ScreenUtils.clear(context.graphicConfig().hud().bar());
+        ScreenUtils.clear(context.graphicConfig().hud().color().bar());
         Rect view = layout.canvas();
         panel = painter.page(
                 view,

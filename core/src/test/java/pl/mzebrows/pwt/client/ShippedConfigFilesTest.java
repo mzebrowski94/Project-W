@@ -41,7 +41,8 @@ class ShippedConfigFilesTest {
         return Stream.of(
                 new Shipped(SimConfig.FILE, sim.toString()),
                 new Shipped(NetConfig.FILE, read("network.properties")),
-                new Shipped(ControlsConfig.FILE, read("controls.properties")));
+                new Shipped(ControlsConfig.FILE, read("controls.properties")),
+                new Shipped(GraphicConfig.FILE, read("graphic.properties")));
     }
 
     @ParameterizedTest

@@ -75,12 +75,15 @@ public final class MenuScreen extends ScreenAdapter {
     public MenuScreen(GameContext context, String notice, UiPage start) {
         this.context = context;
         this.notice = notice;
-        HudStyle style = context.graphicConfig().hud();
+        GraphicConfig graphic = context.graphicConfig();
         this.hints = new PageHints(context.controlsConfig(), strings);
         this.painter = new MenuPainter(
-                context.hud(), style, context.graphicConfig().layout().metrics());
+                context.hud(), graphic, context.graphicConfig().layout().metrics());
         this.reader = new NavInputReader(context.controlsConfig().ui(), context.gamepads());
-        this.motion = new PageMotion(style.pageSeconds(), style.pageSlide(), style.motionScale());
+        this.motion = new PageMotion(
+                graphic.ui().motion().pageSeconds(),
+                graphic.ui().motion().pageSlide(),
+                graphic.ui().motionScale());
         if (start.parent() == UiPage.MAIN) {
             flow.apply(UiIntent.open(start));
         }
@@ -106,7 +109,7 @@ public final class MenuScreen extends ScreenAdapter {
         } else {
             context.hud().hideSystemCursor();
         }
-        ScreenUtils.clear(context.graphicConfig().hud().bar());
+        ScreenUtils.clear(context.graphicConfig().hud().color().bar());
         Rect view = layout.canvas();
         describe();
         panel = painter.page(

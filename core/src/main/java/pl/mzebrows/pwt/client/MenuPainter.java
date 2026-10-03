@@ -19,7 +19,7 @@ import pl.mzebrows.pwt.ui.page.MenuLayout;
 final class MenuPainter {
 
     private final Hud hud;
-    private final HudStyle style;
+    private final GraphicConfig graphic;
     private final HudMetrics metrics;
     private final MenuLayout layout;
     private final Color scrim = new Color();
@@ -27,9 +27,9 @@ final class MenuPainter {
     private final Color dim = new Color();
     private final Color bar = new Color();
 
-    MenuPainter(Hud hud, HudStyle style, HudMetrics metrics) {
+    MenuPainter(Hud hud, GraphicConfig graphic, HudMetrics metrics) {
         this.hud = hud;
-        this.style = style;
+        this.graphic = graphic;
         this.metrics = metrics;
         this.layout = menuLayout(metrics);
     }
@@ -51,7 +51,13 @@ final class MenuPainter {
 
     /** One line at the top of the view: the game is paused, and which button opens the menu. */
     void banner(Rect view, String text) {
-        line(view, text, text.length(), false, style.textDim(), style.text());
+        line(
+                view,
+                text,
+                text.length(),
+                false,
+                graphic.hud().color().textDim(),
+                graphic.hud().color().text());
     }
 
     /**
@@ -75,7 +81,7 @@ final class MenuPainter {
         int textX = x + 2 * metrics.padding();
         int textTop = y + height - metrics.padding() - metrics.leading();
         hud.beginCanvas();
-        hud.fill(x, y, width, height, style.bar());
+        hud.fill(x, y, width, height, graphic.hud().color().bar());
         hud.frame(x, y, width, height, frame);
         hud.text(text, textX, textTop, ink);
         if (cursor) {
@@ -111,15 +117,20 @@ final class MenuPainter {
             float alpha) {
         int shown = Math.min(visible, entries.size() - scroll);
         int lines = firstEntryLine(head) + shown + foot.size() + 2;
-        Rect placed = layout.panel(view, anchor, lines, style.pageColumns());
+        Rect placed = layout.panel(view, anchor, lines, graphic.ui().page().columns());
         Rect panel = new Rect(placed.x() + offsetX, placed.y(), placed.width(), placed.height());
         int columns = TextFit.columns(panel.width() - 4 * metrics.padding(), UiFont.ADVANCE);
         int x = layout.lineX(panel);
-        Color text = faded(this.text, style.text(), alpha);
-        Color dim = faded(this.dim, style.textDim(), alpha);
+        Color text = faded(this.text, graphic.hud().color().text(), alpha);
+        Color dim = faded(this.dim, graphic.hud().color().textDim(), alpha);
 
         hud.beginCanvas();
-        hud.fill(panel.x(), panel.y(), panel.width(), panel.height(), faded(this.bar, style.bar(), alpha));
+        hud.fill(
+                panel.x(),
+                panel.y(),
+                panel.width(),
+                panel.height(),
+                faded(this.bar, graphic.hud().color().bar(), alpha));
         hud.frame(panel.x(), panel.y(), panel.width(), panel.height(), dim);
         int line = 0;
         for (int i = 0; i < head.size(); i++, line++) {
@@ -183,6 +194,6 @@ final class MenuPainter {
      * sentences; titles, entries and hints are short enough for one line.
      */
     void addWrapped(List<String> lines, String text, int maxLines) {
-        lines.addAll(TextFit.wrap(text, style.pageColumns(), maxLines));
+        lines.addAll(TextFit.wrap(text, graphic.ui().page().columns(), maxLines));
     }
 }

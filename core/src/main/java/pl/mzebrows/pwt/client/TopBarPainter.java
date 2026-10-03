@@ -49,7 +49,7 @@ final class TopBarPainter {
 
     private final Hud hud;
     private final UiStrings strings;
-    private final HudStyle style;
+    private final GraphicConfig graphic;
     private final HudMetrics metrics;
     private final Palette palette;
     private final CardText cardText;
@@ -108,14 +108,14 @@ final class TopBarPainter {
     private long builtCrateKey = -1L;
     private ScreenLayout crateFor = ScreenLayout.NONE;
 
-    TopBarPainter(Hud hud, UiStrings strings, HudStyle style, HudMetrics metrics, Palette palette) {
+    TopBarPainter(Hud hud, UiStrings strings, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
         this.hud = hud;
         this.strings = strings;
-        this.style = style;
+        this.graphic = graphic;
         this.metrics = metrics;
         this.palette = palette;
         this.cardText = new CardText(strings);
-        this.bar = new TopBarLayout(metrics.padding(), style.overlayWidthShare());
+        this.bar = new TopBarLayout(metrics.padding(), graphic.hud().overlay().widthShare());
         this.draftLayout = new DraftLayout(metrics.padding(), metrics.portraitSize(), UiFont.ADVANCE);
         this.said = new String[Math.max(1, metrics.topLines() - LINES_ABOVE_TERMINAL)];
         this.aside = new String[metrics.topLines()];
@@ -164,14 +164,20 @@ final class TopBarPainter {
         } else if (!top.isEmpty() && draft.open()) {
             draft(layout, readout, draft, upgrades, hints, left, span, top.y(), blockTop, line);
         } else if (!top.isEmpty()) {
-            hud.text(mission, left + padding, blockTop, style.textDim());
+            hud.text(mission, left + padding, blockTop, graphic.hud().color().textDim());
             army(readout);
             hud.text(
                     army,
                     armyLeft(left, span) + (armyColumns - army.length()) * UiFont.ADVANCE / 2,
                     blockTop,
-                    style.text());
-            hud.text(goal, left + padding, blockTop - line, goalLine.bright() ? style.text() : style.textDim());
+                    graphic.hud().color().text());
+            hud.text(
+                    goal,
+                    left + padding,
+                    blockTop - line,
+                    goalLine.bright()
+                            ? graphic.hud().color().text()
+                            : graphic.hud().color().textDim());
             terminal(terminal, left + padding, blockTop - LINES_ABOVE_TERMINAL * line, line);
             int asideX = left + span - bar.overlayWidth(span);
             if (mode == OverlayMode.PANEL) {
@@ -211,17 +217,24 @@ final class TopBarPainter {
         hud.fill(left + padding, blockTop - portrait, portrait, portrait, own);
         int labelX = left + padding + portrait + padding;
         hud.text(chooser, labelX, blockTop, own);
-        hud.text(count, labelX, blockTop - line, style.textDim());
+        hud.text(count, labelX, blockTop - line, graphic.hud().color().textDim());
 
         int width = draftLayout.cardWidth(span, cardsShown);
         int height = metrics.topMin() - 2;
         for (int i = 0; i < cardsShown; i++) {
             int x = left + draftLayout.cardX(span, cardsShown, i);
             boolean lit = i == draft.highlighted();
-            hud.frame(x, bottom + 1, width - padding, height, lit ? own : style.overlayFrame());
+            hud.frame(
+                    x,
+                    bottom + 1,
+                    width - padding,
+                    height,
+                    lit ? own : graphic.hud().color().overlayFrame());
             String[] card = cards[i];
             for (int row = 0; row < card.length; row++) {
-                Color color = !lit ? style.textDim() : row == card.length - 1 ? own : style.text();
+                Color color = !lit
+                        ? graphic.hud().color().textDim()
+                        : row == card.length - 1 ? own : graphic.hud().color().text();
                 hud.text(card[row], x + padding, blockTop - row * line, color);
             }
         }
@@ -258,10 +271,17 @@ final class TopBarPainter {
             int x = left + draftLayout.cardX(span, shown, i);
             boolean lit = i == crate.highlighted();
             boolean refused = player.crateRefused[i];
-            hud.frame(x, bottom + 1, width - padding, height, lit ? own : style.overlayFrame());
+            hud.frame(
+                    x,
+                    bottom + 1,
+                    width - padding,
+                    height,
+                    lit ? own : graphic.hud().color().overlayFrame());
             String[] card = crateCards[i];
             for (int row = 0; row < card.length; row++) {
-                Color color = !lit || refused ? style.textDim() : row == card.length - 1 ? own : style.text();
+                Color color = !lit || refused
+                        ? graphic.hud().color().textDim()
+                        : row == card.length - 1 ? own : graphic.hud().color().text();
                 hud.text(card[row], x + padding, blockTop - row * line, color);
             }
         }
@@ -397,7 +417,9 @@ final class TopBarPainter {
             boolean more = row == aside.length - 1 && readout.heldCount > aside.length;
             int slot = more ? -1 : readout.heldSlot[row];
             boolean swarm = !more && readout.heldAlien[row];
-            Color color = swarm ? style.swarm() : slot < 0 ? style.textDim() : palette.colorFor(Look.COMMANDER, slot);
+            Color color = swarm
+                    ? graphic.hud().color().swarm()
+                    : slot < 0 ? graphic.hud().color().textDim() : palette.colorFor(Look.COMMANDER, slot);
             hud.text(aside[row], x + padding, top, color);
             if (more) {
                 continue;
@@ -409,8 +431,8 @@ final class TopBarPainter {
                     top,
                     readout.heldRanks[row],
                     readout.heldMaxRanks[row],
-                    swarm || slot >= 0 ? color : style.text(),
-                    style.textDim());
+                    swarm || slot >= 0 ? color : graphic.hud().color().text(),
+                    graphic.hud().color().textDim());
         }
     }
 
@@ -457,15 +479,23 @@ final class TopBarPainter {
     private void terminal(Terminal terminal, int x, int firstTop, int line) {
         int bottomRow = said.length - 1;
         for (int age = 1; age < terminal.showing(); age++) {
-            hud.text(said[age], x, firstTop - (bottomRow - age) * line, style.textDim());
+            hud.text(
+                    said[age],
+                    x,
+                    firstTop - (bottomRow - age) * line,
+                    graphic.hud().color().textDim());
         }
         if (terminal.showing() == 0) {
             return;
         }
         int top = firstTop - bottomRow * line;
-        hud.text(typed, x, top, style.text());
+        hud.text(typed, x, top, graphic.hud().color().text());
         if (terminal.cursor()) {
-            hud.text("_", x + typed.length() * UiFont.ADVANCE, top, style.text());
+            hud.text(
+                    "_",
+                    x + typed.length() * UiFont.ADVANCE,
+                    top,
+                    graphic.hud().color().text());
         }
     }
 
@@ -487,11 +517,15 @@ final class TopBarPainter {
     private void panel(List<String> lines, int x, int bottom, int width, int blockTop, int line) {
         int padding = metrics.padding();
         int height = metrics.topMin() - 2;
-        hud.frame(x, bottom + 1, width - 1, height, style.overlayFrame());
+        hud.frame(x, bottom + 1, width - 1, height, graphic.hud().color().overlayFrame());
         int columns = TextFit.columns(width - 3 * padding, UiFont.ADVANCE);
         int rows = Math.min(lines.size(), metrics.topLines());
         for (int i = 0; i < rows; i++) {
-            hud.text(TextFit.fit(lines.get(i), columns), x + padding, blockTop - i * line, style.textDim());
+            hud.text(
+                    TextFit.fit(lines.get(i), columns),
+                    x + padding,
+                    blockTop - i * line,
+                    graphic.hud().color().textDim());
         }
     }
 
@@ -506,11 +540,15 @@ final class TopBarPainter {
         int height = Math.min(view.height(), lines.size() * line + 2 * padding);
         int x = view.right() - width;
         int y = view.top() - height;
-        hud.fill(x, y, width, height, style.bar());
-        hud.frame(x, y, width, height, style.overlayFrame());
+        hud.fill(x, y, width, height, graphic.hud().color().bar());
+        hud.frame(x, y, width, height, graphic.hud().color().overlayFrame());
         int columns = TextFit.columns(width - 2 * padding, UiFont.ADVANCE);
         for (int i = 0; i < lines.size() && (i + 1) * line <= height - padding; i++) {
-            hud.text(TextFit.fit(lines.get(i), columns), x + padding, view.top() - padding - i * line, style.text());
+            hud.text(
+                    TextFit.fit(lines.get(i), columns),
+                    x + padding,
+                    view.top() - padding - i * line,
+                    graphic.hud().color().text());
         }
     }
 

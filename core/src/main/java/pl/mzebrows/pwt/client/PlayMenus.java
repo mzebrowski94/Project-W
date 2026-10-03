@@ -35,7 +35,7 @@ import pl.mzebrows.pwt.ui.page.UiPage;
  */
 final class PlayMenus {
 
-    private final HudStyle style;
+    private final GraphicConfig graphic;
     private final UiStrings strings;
     private final PageHints hints;
     private final MenuPainter painter;
@@ -62,17 +62,20 @@ final class PlayMenus {
 
     PlayMenus(
             Hud hud,
-            HudStyle style,
+            GraphicConfig graphic,
             HudMetrics metrics,
             ControlsConfig controls,
             UiStrings strings,
             GamepadSource pads) {
-        this.style = style;
+        this.graphic = graphic;
         this.strings = strings;
         this.hints = new PageHints(controls, strings);
-        this.painter = new MenuPainter(hud, style, metrics);
+        this.painter = new MenuPainter(hud, graphic, metrics);
         this.reader = new NavInputReader(controls.ui(), pads);
-        this.motion = new PageMotion(style.pageSeconds(), style.pageSlide(), style.motionScale());
+        this.motion = new PageMotion(
+                graphic.ui().motion().pageSeconds(),
+                graphic.ui().motion().pageSlide(),
+                graphic.ui().motionScale());
     }
 
     /** Whether a page is open here: this machine's commanders stand still and its presses are the menu's. */
@@ -316,18 +319,18 @@ final class PlayMenus {
 
     private float target() {
         if (flow.menuOpen()) {
-            return style.scrimAlpha();
+            return graphic.ui().scrimAlpha();
         }
-        return flow.showsPausedBanner() && !quiet ? style.bannerScrimAlpha() : 0f;
+        return flow.showsPausedBanner() && !quiet ? graphic.ui().bannerScrimAlpha() : 0f;
     }
 
     /** Moves the scrim towards where it should be; at once with motion off. */
     private float approach(float current, float wanted, float frameSeconds) {
-        float seconds = style.scrimSeconds() * style.motionScale();
+        float seconds = graphic.ui().motion().scrimSeconds() * graphic.ui().motionScale();
         if (seconds <= 0f) {
             return wanted;
         }
-        float step = frameSeconds / seconds * Math.max(style.scrimAlpha(), 1e-3f);
+        float step = frameSeconds / seconds * Math.max(graphic.ui().scrimAlpha(), 1e-3f);
         return current < wanted ? Math.min(wanted, current + step) : Math.max(wanted, current - step);
     }
 }

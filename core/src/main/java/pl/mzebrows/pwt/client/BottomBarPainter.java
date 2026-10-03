@@ -48,7 +48,7 @@ final class BottomBarPainter {
     private static final int TALLY_COLUMNS = 4;
 
     private final Hud hud;
-    private final HudStyle style;
+    private final GraphicConfig graphic;
     private final HudMetrics metrics;
     private final Palette palette;
     private final PanelLayout panels;
@@ -80,9 +80,9 @@ final class BottomBarPainter {
 
     private final Color tellLit = new Color();
 
-    BottomBarPainter(Hud hud, UiStrings strings, HudStyle style, HudMetrics metrics, Palette palette) {
+    BottomBarPainter(Hud hud, UiStrings strings, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
         this.hud = hud;
-        this.style = style;
+        this.graphic = graphic;
         this.metrics = metrics;
         this.palette = palette;
         this.panels = new PanelLayout(metrics.padding(), metrics.portraitSize(), UiFont.ADVANCE);
@@ -109,7 +109,7 @@ final class BottomBarPainter {
         this.overheat = strings.get("ui.hud.overheat");
         this.offline = strings.get("ui.hud.offline");
         this.rollCall = strings.get("ui.hud.rollCall");
-        this.dimAlert = new Color(style.alert()).mul(DIM_ALERT, DIM_ALERT, DIM_ALERT, 1f);
+        this.dimAlert = new Color(graphic.hud().color().alert()).mul(DIM_ALERT, DIM_ALERT, DIM_ALERT, 1f);
         this.tell = new UpgradeTell(
                 strings.get("ui.hud.upgrade"), strings.get("ui.hud.upgrades"), strings.get("ui.hud.upgradeBrief"));
         Arrays.fill(tellText, "");
@@ -155,19 +155,27 @@ final class BottomBarPainter {
             int top,
             PanelAlarms alarms,
             String draftKey) {
-        Color own = connected ? palette.colorFor(Look.COMMANDER, player.variant) : style.textDim();
-        Color text = connected ? style.text() : style.textDim();
+        Color own = connected
+                ? palette.colorFor(Look.COMMANDER, player.variant)
+                : graphic.hud().color().textDim();
+        Color text =
+                connected ? graphic.hud().color().text() : graphic.hud().color().textDim();
         int padding = metrics.padding();
         int height = metrics.bottomMin();
         int line = metrics.fontSize() + metrics.leading();
-        hud.frame(x + 1, top - height + 1, width - 2, height - 2, alarms.flashing(slot) ? style.alert() : own);
+        hud.frame(
+                x + 1,
+                top - height + 1,
+                width - 2,
+                height - 2,
+                alarms.flashing(slot) ? graphic.hud().color().alert() : own);
         if (panels.showsPortrait(width)) {
             int portrait = metrics.portraitSize();
             hud.fill(x + padding, top - padding - portrait, portrait, portrait, own);
         }
         int textX = x + panels.textOffset(width);
         int textRight = x + width - padding;
-        Color alert = alarms.alertBright() ? style.alert() : dimAlert;
+        Color alert = alarms.alertBright() ? graphic.hud().color().alert() : dimAlert;
 
         int row = top - padding;
         hud.text(labels[slot], textX, row, own);
@@ -179,14 +187,24 @@ final class BottomBarPainter {
                 panels.textColumns(width) - labels[slot].length() - 1 - statusColumns(slot, player, connected) - 1);
         int tellX = textRight - upgrade.length() * UiFont.ADVANCE;
         if (!upgrade.isEmpty()) {
-            lit(upgrade, tellX, row, own, connected ? alarms.swell(style.tellPulseHz()) : 0f);
+            lit(
+                    upgrade,
+                    tellX,
+                    row,
+                    own,
+                    connected ? alarms.swell(graphic.hud().upgrade().pulseHz()) : 0f);
         }
         switch (player.posture) {
             case CASUALTY -> {
                 inverse(down, statusX, row, alert);
                 int barX = statusX + (down.length() + 1) * UiFont.ADVANCE;
                 int barRight = upgrade.isEmpty() ? textRight : tellX - UiFont.ADVANCE;
-                bar(barX, row, barRight - barX, player.bleedOut, style.alert());
+                bar(
+                        barX,
+                        row,
+                        barRight - barX,
+                        player.bleedOut,
+                        graphic.hud().color().alert());
             }
             case DYING -> inverse(kiaText(slot, -1f), statusX, row, alert);
             case RESPAWNING -> inverse(respawnText(slot, player), statusX, row, alert);
@@ -210,7 +228,11 @@ final class BottomBarPainter {
                 bar(heatX, row, Math.min(HEAT_BAR_WIDTH, textRight - heatX), player.heat, palette.colorFor(Look.HEAT));
             }
         } else if (player.posture == Posture.CASUALTY) {
-            hud.text(weapons.getOrDefault(player.weapon, ""), textX, row, style.textDim());
+            hud.text(
+                    weapons.getOrDefault(player.weapon, ""),
+                    textX,
+                    row,
+                    graphic.hud().color().textDim());
         }
 
         row -= line;
@@ -266,9 +288,9 @@ final class BottomBarPainter {
         for (int wound = 0; wound < player.maxWounds; wound++) {
             int left = x + wound * UiFont.ADVANCE;
             if (wound < player.wounds) {
-                hud.icon(TallyIcon.WOUND, left, row, style.wound());
+                hud.icon(TallyIcon.WOUND, left, row, graphic.hud().color().wound());
             } else {
-                hud.icon(TallyIcon.WOUND_SPARE, left, row, style.textDim());
+                hud.icon(TallyIcon.WOUND_SPARE, left, row, graphic.hud().color().textDim());
             }
         }
     }
@@ -278,7 +300,7 @@ final class BottomBarPainter {
      * towards white over it. {@code swell} is where the pulse is, 0 to 1.
      */
     private void lit(String text, int x, int top, Color own, float swell) {
-        float glow = style.tellGlow();
+        float glow = graphic.hud().upgrade().glow();
         tellBacking.set(own).mul(glow, glow, glow, 1f);
         hud.fill(
                 x - 1,
@@ -286,7 +308,7 @@ final class BottomBarPainter {
                 text.length() * UiFont.ADVANCE + 1,
                 metrics.fontSize() + 1,
                 tellBacking);
-        tellLit.set(own).lerp(Color.WHITE, style.tellLift() * swell);
+        tellLit.set(own).lerp(Color.WHITE, graphic.hud().upgrade().lift() * swell);
         tellLit.a = 1f;
         hud.text(text, x, top, tellLit);
     }
@@ -326,9 +348,15 @@ final class BottomBarPainter {
                 text[i] = TallyIcon.count(now);
             }
             TallyIcon icon = TALLY_ICONS[i];
-            Color tint = icon == TallyIcon.STABILISED ? palette.colorFor(Look.MENDING) : style.textDim();
+            Color tint = icon == TallyIcon.STABILISED
+                    ? palette.colorFor(Look.MENDING)
+                    : graphic.hud().color().textDim();
             hud.icon(icon, x + i * group, row, tint);
-            hud.text(text[i], x + i * group + TallyIcon.SIZE + 2, row, style.textDim());
+            hud.text(
+                    text[i],
+                    x + i * group + TallyIcon.SIZE + 2,
+                    row,
+                    graphic.hud().color().textDim());
         }
     }
 
@@ -348,8 +376,12 @@ final class BottomBarPainter {
                 bottom.top() - metrics.bottomMin() + 1,
                 layout.view().width() - 2,
                 metrics.bottomMin() - 2,
-                style.textDim());
-        hud.text(rollCall, layout.contentLeft() + padding, bottom.top() - padding, style.textDim());
+                graphic.hud().color().textDim());
+        hud.text(
+                rollCall,
+                layout.contentLeft() + padding,
+                bottom.top() - padding,
+                graphic.hud().color().textDim());
         hud.endCanvas();
     }
 
@@ -373,7 +405,7 @@ final class BottomBarPainter {
     /** Black text on the alert colour: the only way alert red is ever drawn. */
     private void inverse(String text, int x, int top, Color alert) {
         hud.fill(x - 1, top - metrics.fontSize(), text.length() * UiFont.ADVANCE + 1, metrics.fontSize() + 1, alert);
-        hud.text(text, x, top, style.bar());
+        hud.text(text, x, top, graphic.hud().color().bar());
     }
 
     /** A bar the height of a capital, filled from the left: heat, or a bleed-out running down. */
@@ -382,7 +414,7 @@ final class BottomBarPainter {
             return;
         }
         int height = metrics.fontSize() - 2;
-        hud.frame(x, top - height, width, height, style.textDim());
+        hud.frame(x, top - height, width, height, graphic.hud().color().textDim());
         float clamped = Math.max(0f, Math.min(1f, fill));
         hud.fill(x + 1, top - height + 1, Math.round((width - 2) * clamped), height - 2, color);
     }

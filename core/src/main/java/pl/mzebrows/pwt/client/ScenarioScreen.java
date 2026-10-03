@@ -80,6 +80,10 @@ public final class ScenarioScreen extends ScreenAdapter {
     private final LetterboxViewport viewport = new LetterboxViewport();
     private final LocalAim localAim = new LocalAim();
     private final DebugOverlay overlay;
+
+    /** Every look's colours, built once from the config rather than on each frame that asks. */
+    private final Palette palette;
+
     private final Readout readout = new Readout();
     private final ReadoutWriter readoutWriter = new ReadoutWriter();
     private final GoalLine goalLine;
@@ -170,50 +174,57 @@ public final class ScenarioScreen extends ScreenAdapter {
         this.play = play;
         GraphicConfig graphicConfig = context.graphicConfig();
         this.overlay = new DebugOverlay();
-        HudStyle style = graphicConfig.hud();
+        this.palette = graphicConfig.palette();
         this.strings = UiStrings.load();
-        this.rollCall = style.rollCallAtStart();
-        this.goalLine = new GoalLine(style.goalHoldSeconds(), style.pulseHz(), style.flashScale());
-        this.terminal = new Terminal(graphicConfig.terminal(), new DispatchText(strings));
+        this.rollCall = graphicConfig.hud().rollCall();
+        this.goalLine = new GoalLine(
+                graphicConfig.hud().goal().minHoldSeconds(),
+                graphicConfig.hud().alert().pulseHz(),
+                graphicConfig.ui().flashScale());
+        this.terminal = new Terminal(graphicConfig.hud().terminal(), new DispatchText(strings));
         this.toast = new Toast(graphicConfig.toast(), new DispatchText(strings));
         this.dispatches = DispatchSink.both(terminal, toast);
         this.reporters = new Reporters(List.of(
                 new PlayerReporter(),
-                new SquadReporter(graphicConfig.terminal().fewTroopers()),
+                new SquadReporter(graphicConfig.hud().terminal().fewTroopers()),
                 new UpgradeReporter(),
                 new ActionPrompts(play::local, Log::info)));
         this.draftHints = new DraftHints(context.controlsConfig());
         this.crateHints = new CrateHints(context.controlsConfig());
         this.alarms = new PanelAlarms(
-                style.alarmSeconds(), style.alarmShake(), style.pulseHz(), style.motionScale(), style.flashScale());
+                graphicConfig.hud().panel().alarmSeconds(),
+                graphicConfig.hud().panel().alarmShake(),
+                graphicConfig.hud().alert().pulseHz(),
+                graphicConfig.ui().motionScale(),
+                graphicConfig.ui().flashScale());
         this.topBar = new TopBarPainter(
-                context.hud(), strings, style, graphicConfig.layout().metrics(), graphicConfig.palette());
+                context.hud(), strings, graphicConfig, graphicConfig.layout().metrics(), palette);
         Arrays.fill(draftKeys, "");
         this.heldUpgrades = new HeldUpgradesPainter(
-                context.hud(), strings, style, graphicConfig.layout().metrics(), graphicConfig.palette());
+                context.hud(), strings, graphicConfig, graphicConfig.layout().metrics(), palette);
         this.bottomBar = new BottomBarPainter(
-                context.hud(), strings, style, graphicConfig.layout().metrics(), graphicConfig.palette());
-        this.toastPainter =
-                new ToastPainter(context.hud(), style, graphicConfig.layout().metrics(), graphicConfig.palette());
+                context.hud(), strings, graphicConfig, graphicConfig.layout().metrics(), palette);
+        this.toastPainter = new ToastPainter(
+                context.hud(), graphicConfig, graphicConfig.layout().metrics(), palette);
     }
 
     @Override
     public void show() {
         renderer = new WorldRenderer(
                 viewport,
-                context.graphicConfig().palette(),
-                context.graphicConfig().stateTint(),
-                context.graphicConfig().chargeMark(),
-                context.graphicConfig().bloatMark(),
-                context.graphicConfig().nestMark(),
-                context.graphicConfig().facingMark(),
-                context.graphicConfig().segmentMark(),
-                context.graphicConfig().chargedMark(),
-                context.graphicConfig().orderMark(),
-                context.graphicConfig().heatMark(),
-                context.graphicConfig().woundMark(),
-                context.graphicConfig().shieldMark(),
-                context.graphicConfig().crateMark());
+                palette,
+                context.graphicConfig().state(),
+                context.graphicConfig().charge(),
+                context.graphicConfig().bloat(),
+                context.graphicConfig().nest(),
+                context.graphicConfig().facing(),
+                context.graphicConfig().segments(),
+                context.graphicConfig().charged(),
+                context.graphicConfig().order(),
+                context.graphicConfig().heat(),
+                context.graphicConfig().wound(),
+                context.graphicConfig().shield(),
+                context.graphicConfig().crate());
         terrain = new TerrainRenderer(
                 viewport,
                 context.graphicConfig().terrainPalette(),
@@ -222,7 +233,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         camera = new CameraDirector(context.graphicConfig().camera());
         menus = new PlayMenus(
                 context.hud(),
-                context.graphicConfig().hud(),
+                context.graphicConfig(),
                 context.graphicConfig().layout().metrics(),
                 context.controlsConfig(),
                 strings,
@@ -305,7 +316,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         if (world == null) {
             // Online, before the world has arrived: connecting, joining, or turned away.
             context.hud().showSystemCursor();
-            ScreenUtils.clear(context.graphicConfig().hud().bar());
+            ScreenUtils.clear(context.graphicConfig().hud().color().bar());
             String connection = play.connection();
             menus.drawConnecting(layout, connection == null ? "..." : connection);
             return;
@@ -488,7 +499,7 @@ public final class ScenarioScreen extends ScreenAdapter {
      * where he aims (G0002). Pad reticles are drawn only for a commander on his feet.
      */
     private void drawReticles(float alpha) {
-        HudStyle style = context.graphicConfig().hud();
+        GraphicConfig graphic = context.graphicConfig();
         Hud hud = context.hud();
         if (menus.menuOpen()) {
             // In a menu the pointer is the menu's, and nobody is aiming.
@@ -500,13 +511,13 @@ public final class ScenarioScreen extends ScreenAdapter {
             return;
         }
         int keyboard = play.slotOf(PlayerSeats.KEYBOARD_SLOT);
-        if (style.keyboardReticle() && keyboard >= 0) {
+        if (graphic.hud().reticle().keyboard() && keyboard >= 0) {
             hud.hideSystemCursor();
             hud.reticle(Gdx.input.getX(), Gdx.graphics.getHeight() - 1 - Gdx.input.getY(), colourOf(keyboard));
         } else {
             hud.showSystemCursor();
         }
-        if (!style.padReticles()) {
+        if (!graphic.hud().reticle().pads()) {
             return;
         }
         for (int i = 0; i < commanders.size(); i++) {
@@ -523,7 +534,9 @@ public final class ScenarioScreen extends ScreenAdapter {
             PreviousPosition previous = PREVIOUS.get(commander);
             float x = previous.x + (position.x - previous.x) * alpha;
             float y = previous.y + (position.y - previous.y) * alpha;
-            aimPoint.set(x + facing.x * style.padReticleDistance(), y + facing.y * style.padReticleDistance());
+            aimPoint.set(
+                    x + facing.x * graphic.hud().reticle().padDistance(),
+                    y + facing.y * graphic.hud().reticle().padDistance());
             viewport.project(aimPoint);
             hud.reticle(Math.round(aimPoint.x), Math.round(aimPoint.y), colourOf(slot));
         }
@@ -565,7 +578,7 @@ public final class ScenarioScreen extends ScreenAdapter {
     }
 
     private Color colourOf(int slot) {
-        return context.graphicConfig().palette().colorFor(Look.COMMANDER, readout.player(slot).variant);
+        return palette.colorFor(Look.COMMANDER, readout.player(slot).variant);
     }
 
     /**
@@ -594,7 +607,7 @@ public final class ScenarioScreen extends ScreenAdapter {
      * letterbox.
      */
     private void clearLetterbox() {
-        ScreenUtils.clear(context.graphicConfig().hud().bar());
+        ScreenUtils.clear(context.graphicConfig().hud().color().bar());
         ScreenLayout layout = context.hud().layout();
         Rect view = layout.toScreen(layout.view());
         if (view.isEmpty()) {

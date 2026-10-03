@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.graphics.Color;
+import pl.mzebrows.pwt.sim.ConfigKey;
 
 /**
  * How to draw a crate (G0056): a small square in the crate's colour with a dot in the middle, so it reads
@@ -10,7 +11,7 @@ import com.badlogic.gdx.graphics.Color;
  * @param dot the dot's radius, as a share of the crate's
  * @param color what the dot is drawn in
  */
-public record CrateMark(float dot, Color color) {
+public record CrateMark(float dot, @ConfigKey("dotColor") Color color) {
 
     public CrateMark {
         if (dot <= 0f || dot >= 1f) {

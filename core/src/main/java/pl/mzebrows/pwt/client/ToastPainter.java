@@ -17,7 +17,7 @@ import pl.mzebrows.pwt.ui.layout.Rect;
 final class ToastPainter {
 
     private final MenuPainter painter;
-    private final HudStyle style;
+    private final GraphicConfig graphic;
     private final Palette palette;
 
     private String fitted = "";
@@ -26,9 +26,9 @@ final class ToastPainter {
     private int builtWidth = -1;
     private int typedLength = -1;
 
-    ToastPainter(Hud hud, HudStyle style, HudMetrics metrics, Palette palette) {
-        this.painter = new MenuPainter(hud, style, metrics);
-        this.style = style;
+    ToastPainter(Hud hud, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
+        this.painter = new MenuPainter(hud, graphic, metrics);
+        this.graphic = graphic;
         this.palette = palette;
     }
 
@@ -53,8 +53,8 @@ final class ToastPainter {
 
     private Color color(Toast toast) {
         if (toast.kind() == DispatchKind.SWARM_ADAPTS) {
-            return style.swarm();
+            return graphic.hud().color().swarm();
         }
-        return toast.slot() < 0 ? style.text() : palette.colorFor(Look.COMMANDER, toast.slot());
+        return toast.slot() < 0 ? graphic.hud().color().text() : palette.colorFor(Look.COMMANDER, toast.slot());
     }
 }
