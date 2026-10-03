@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -109,6 +110,20 @@ class BazookaTest {
 
         assertThat(count(simulation, Projectile.class)).isOne();
         assertThat(trooper.getComponent(Heat.class).locked).isTrue();
+    }
+
+    /** His gun still stops itself; the bar over every man in the squad was clutter rather than news. */
+    @Test
+    void drawsNoHeatBarOverATrooper() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(X, Y + 40f);
+        Entity trooper = simulation.spawnTrooper(X, Y);
+        trooper.getComponent(Heat.class).spend(1f);
+
+        simulation.step();
+
+        assertThat(trooper.getComponent(Appearance.class).heat).isZero();
+        assertThat(trooper.getComponent(Appearance.class).overheated).isFalse();
     }
 
     // ---- the blast ----

@@ -138,9 +138,11 @@ public final class AppearanceSystem extends IteratingSystem {
         // A fact about the gun, not the creature.
         appearance.charged = WEAPON.has(entity) && WEAPON.get(entity).blastRadius > 0f;
         publishTrail(entity, appearance);
-        // How hot its gun is, and whether that has taken it away (pillar 5).
-        appearance.heat = HEAT.has(entity) ? HEAT.get(entity).value : 0f;
-        appearance.overheated = HEAT.has(entity) && HEAT.get(entity).locked;
+        // How hot its gun is, and whether that has taken it away (pillar 5) - but never a trooper's: his
+        // gun stops itself all the same, and a bar over every man in the squad was clutter, not news.
+        boolean showsHeat = HEAT.has(entity) && !TROOPER.has(entity);
+        appearance.heat = showsHeat ? HEAT.get(entity).value : 0f;
+        appearance.overheated = showsHeat && HEAT.get(entity).locked;
         // How many wounds a man on his feet is carrying, one mark each (G0053, pillar 5).
         appearance.wounds = VITALITY.has(entity) && VITALITY.get(entity).wounded() ? VITALITY.get(entity).wounds : 0;
         appearance.shield = SHIELD.has(entity) ? SHIELD.get(entity).fraction() : 0f;
