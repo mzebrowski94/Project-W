@@ -29,7 +29,7 @@ ready for an agent. Start with 01.
 | 04 | [Let the binder convert; drop the mirror records](issues/04-binder-conversions.md) | Strong |
 | 05 | [One queue for held-back input events](issues/05-held-input-events.md) | Strong - likely live bug |
 | 06 | [Local seats and top bar out of `ScenarioScreen`](issues/06-local-seats.md) | Strong |
-| 07 | [Odds that keep their own due](issues/07-odds.md) | Worth exploring |
+| 07 | [Odds that keep their own due](issues/07-odds.md) | Worth exploring - done |
 | 08 | [One question for a man's life stage](issues/08-life-stage.md) | Worth exploring |
 | 09 | [Dev overlay reads the readout](issues/09-overlay-reads-readout.md) | Worth exploring |
 | 10 | [One nearest-interactable query](issues/10-nearest-interactable.md) | Speculative |

@@ -46,12 +46,11 @@ class OddsTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("dealings")
     void takesAChanceThatIsCertainAndNeverTakesOneOfZero(Chances chances) {
-        Rng rng = new Rng(1L);
+        Odds odds = oddsOf(chances, new Rng(1L));
 
-        assertThat(Odds.spent(
-                        Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, 0f, chances, CERTAIN, TICK)))
+        assertThat(Odds.spent(odds.roll(UNIT, AiChance.SWING_AT_A_LEAP, 0f, CERTAIN, TICK)))
                 .isTrue();
-        assertThat(Odds.spent(Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, 0f, chances, 0f, TICK)))
+        assertThat(Odds.spent(odds.roll(UNIT, AiChance.SWING_AT_A_LEAP, 0f, 0f, TICK)))
                 .isFalse();
     }
 
@@ -88,15 +87,15 @@ class OddsTest {
 
     @Test
     void banksNothingFromASpellAtAChanceFarAboveOnePerTick() {
-        Rng rng = new Rng(7L);
+        Odds odds = oddsOf(EVEN, new Rng(7L));
         float due = 0f;
         for (int i = 0; i < 100; i++) {
-            due = Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, due, EVEN, CERTAIN, TICK);
+            due = odds.roll(UNIT, AiChance.SWING_AT_A_LEAP, due, CERTAIN, TICK);
         }
         int taken = 0;
 
         for (int i = 0; i < 10; i++) {
-            due = Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, due, EVEN, ONCE_A_SECOND, TICK);
+            due = odds.roll(UNIT, AiChance.SWING_AT_A_LEAP, due, ONCE_A_SECOND, TICK);
             if (Odds.spent(due)) {
                 taken++;
             }
@@ -111,7 +110,7 @@ class OddsTest {
         Rng rng = new Rng(1L);
         long before = rng.state();
 
-        Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, 0f, chances, 0f, TICK);
+        oddsOf(chances, rng).roll(UNIT, AiChance.SWING_AT_A_LEAP, 0f, 0f, TICK);
 
         assertThat(rng.state()).isEqualTo(before);
     }
@@ -120,8 +119,12 @@ class OddsTest {
     void asksTheTableForTheNumberWhenItIsGivenOne() {
         Chances chances = Chances.none().with(AiChance.SWING_AT_A_LEAP, CERTAIN);
 
-        assertThat(Odds.spent(Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, new Rng(1L), 0f, chances, TICK)))
+        assertThat(Odds.spent(oddsOf(chances, new Rng(1L)).roll(UNIT, AiChance.SWING_AT_A_LEAP, 0f, TICK)))
                 .isTrue();
+    }
+
+    private static Odds oddsOf(Chances chances, Rng rng) {
+        return new Odds(NOTHING_HELD, chances, rng);
     }
 
     static Stream<Chances> dealings() {
@@ -130,11 +133,11 @@ class OddsTest {
 
     /** How often a once-a-second chance is taken over {@link #TICKS} ticks of the given length. */
     private static int timesTakenIn(Chances chances, float deltaTime) {
-        Rng rng = new Rng(7L);
+        Odds odds = oddsOf(chances, new Rng(7L));
         float due = 0f;
         int taken = 0;
         for (int i = 0; i < TICKS; i++) {
-            due = Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, due, chances, ONCE_A_SECOND, deltaTime);
+            due = odds.roll(UNIT, AiChance.SWING_AT_A_LEAP, due, ONCE_A_SECOND, deltaTime);
             if (Odds.spent(due)) {
                 taken++;
             }
@@ -144,13 +147,13 @@ class OddsTest {
 
     /** The longest stretch, in seconds, between two takings of a once-a-second chance. */
     private static float longestGapIn(Chances chances) {
-        Rng rng = new Rng(7L);
+        Odds odds = oddsOf(chances, new Rng(7L));
         float due = 0f;
         int since = 0;
         int longest = 0;
         for (int i = 0; i < TICKS; i++) {
             since++;
-            due = Odds.spend(NOTHING_HELD, UNIT, AiChance.SWING_AT_A_LEAP, rng, due, chances, ONCE_A_SECOND, TICK);
+            due = odds.roll(UNIT, AiChance.SWING_AT_A_LEAP, due, ONCE_A_SECOND, TICK);
             if (Odds.spent(due)) {
                 longest = Math.max(longest, since);
                 since = 0;

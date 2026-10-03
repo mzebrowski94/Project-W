@@ -56,6 +56,7 @@ import pl.mzebrows.pwt.sim.system.MovementSystem;
 import pl.mzebrows.pwt.sim.system.NavigationSystem;
 import pl.mzebrows.pwt.sim.system.NestSystem;
 import pl.mzebrows.pwt.sim.system.ObjectiveSystem;
+import pl.mzebrows.pwt.sim.system.Odds;
 import pl.mzebrows.pwt.sim.system.PerceptionSystem;
 import pl.mzebrows.pwt.sim.system.PickupSystem;
 import pl.mzebrows.pwt.sim.system.PositionHistorySystem;
@@ -191,11 +192,11 @@ public final class Simulation {
         // One stream for the squad's mind and legs: one concern.
         Rng squad = streams.of(RngStream.TROOPER);
         // Everything the AI leaves to the dice (AiChance), apart from where the squad roams.
-        Rng nerve = streams.of(RngStream.NERVE);
+        Odds odds = new Odds(modifiers, config.chances(), streams.of(RngStream.NERVE));
         engine.addSystem(new SquadOrderSystem(config, capacity));
-        engine.addSystem(new TrooperMindSystem(config, map, modifiers, squad, nerve));
+        engine.addSystem(new TrooperMindSystem(config, map, squad, odds));
         engine.addSystem(new TrooperMoveSystem(config, map, squad));
-        engine.addSystem(new TrooperCombatSystem(config, map, guns, throwing, modifiers, nerve));
+        engine.addSystem(new TrooperCombatSystem(config, map, guns, throwing, odds));
         engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds()));
         engine.addSystem(new AvoidanceSystem(config, map));
         engine.addSystem(new EnemyRangedSystem(map, guns, streams.of(RngStream.SPIT)));
@@ -207,7 +208,7 @@ public final class Simulation {
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));
-        engine.addSystem(new CollisionSystem(config, map, spawner, modifiers, nerve));
+        engine.addSystem(new CollisionSystem(config, map, spawner, odds));
         engine.addSystem(new GrenadeSystem(map, spawner, throwing));
         engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));

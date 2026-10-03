@@ -10,7 +10,6 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Players;
-import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
@@ -29,10 +28,8 @@ import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.AiChance;
-import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.TrooperGrenadeDef;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**
  * Shoots, and very occasionally swings.
@@ -64,10 +61,8 @@ public final class TrooperCombatSystem extends EntitySystem {
 
     private final Guns guns;
     private final Throws throwing;
-    private final Modifiers modifiers;
-    private final Rng rng;
+    private final Odds odds;
 
-    private final Chances chances;
     private final TileMap map;
     private final TrooperGrenadeDef grenade;
     private final int squadGapTicks;
@@ -88,13 +83,10 @@ public final class TrooperCombatSystem extends EntitySystem {
     /** Every entity with a handle, for finding what has a man in its jaws. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
-    public TrooperCombatSystem(
-            SimConfig config, TileMap map, Guns guns, Throws throwing, Modifiers modifiers, Rng rng) {
+    public TrooperCombatSystem(SimConfig config, TileMap map, Guns guns, Throws throwing, Odds odds) {
         this.guns = guns;
         this.throwing = throwing;
-        this.modifiers = modifiers;
-        this.rng = rng;
-        this.chances = config.chances();
+        this.odds = odds;
         this.map = map;
         this.grenade = config.trooper().grenade();
         this.tickSeconds = config.tickSeconds();
@@ -167,8 +159,7 @@ public final class TrooperCombatSystem extends EntitySystem {
                 continue;
             }
             Trooper trooper = TROOPER.get(entity);
-            trooper.swingDue =
-                    Odds.spend(modifiers, entity, AiChance.SWING_AT_A_LEAP, rng, trooper.swingDue, chances, deltaTime);
+            trooper.swingDue = odds.roll(entity, AiChance.SWING_AT_A_LEAP, trooper.swingDue, deltaTime);
             if (!Odds.spent(trooper.swingDue)) {
                 return false;
             }
@@ -195,8 +186,7 @@ public final class TrooperCombatSystem extends EntitySystem {
             return;
         }
         Trooper trooper = TROOPER.get(entity);
-        trooper.struggleDue =
-                Odds.spend(modifiers, entity, AiChance.STRUGGLE, rng, trooper.struggleDue, chances, deltaTime);
+        trooper.struggleDue = odds.roll(entity, AiChance.STRUGGLE, trooper.struggleDue, deltaTime);
         if (!Odds.spent(trooper.struggleDue)) {
             return;
         }
@@ -219,7 +209,7 @@ public final class TrooperCombatSystem extends EntitySystem {
         if (!THROWER.has(entity) || levels.size() == 0) {
             return false;
         }
-        if (!Odds.possible(modifiers, entity, AiChance.THROW_A_GRENADE, chances)) {
+        if (!odds.possible(entity, AiChance.THROW_A_GRENADE)) {
             return false;
         }
         Thrower thrower = THROWER.get(entity);
@@ -250,8 +240,7 @@ public final class TrooperCombatSystem extends EntitySystem {
                 || sceneryAcross(at.x, at.y, endX, endY, thrower.radius)) {
             return false;
         }
-        trooper.throwDue =
-                Odds.spend(modifiers, entity, AiChance.THROW_A_GRENADE, rng, trooper.throwDue, chances, deltaTime);
+        trooper.throwDue = odds.roll(entity, AiChance.THROW_A_GRENADE, trooper.throwDue, deltaTime);
         if (!Odds.spent(trooper.throwDue)) {
             return false;
         }
