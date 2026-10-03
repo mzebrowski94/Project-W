@@ -275,7 +275,8 @@ public final class MenuScreen extends ScreenAdapter {
                             context.simConfig(),
                             context.worldConfigText(),
                             context.netConfig(),
-                            context.launchOptions())));
+                            context.launchOptions(),
+                            LocalMachineId.load())));
             return true;
         } catch (RuntimeException e) {
             Log.error("Could not host " + scenario.name(), e);

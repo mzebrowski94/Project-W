@@ -60,7 +60,7 @@ def main():
         "system": by_name(systems),
         "collision": by_name((SIM / "collision").glob("*.java")),
         "sim": by_name(p for p in SIM.glob("*.java") if p.stem != "package-info"),
-        "client": by_name(CORE.glob("*.java")),
+        "client": by_name(CORE.rglob("*.java")),
     }
     bodies = {
         k: [(p.stem, strip_comments(p.read_text(encoding="utf-8"))) for p in v] for k, v in buckets.items()

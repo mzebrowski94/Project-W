@@ -17,7 +17,7 @@ status means. If a change would break a row here, stop and raise it rather than 
 | A map is a function of its seed: the same seed lays out the same level. | enforced - `MapsTest.buildsTheSameMapTwiceFromTheSameStream`, `SimulationDeterminismTest` |
 | Map generation cannot see an entity, a component or a renderer. | enforced - `MapArchitectureTest.mapKnowsNothingOfTheGameAroundIt` |
 | Anything outside the map reads as impassable, rather than as open ground or an error. | enforced - `TileMapTest.readsAnythingOutsideItselfAsImpassable` |
-| Every kind of terrain has a colour, so a new one cannot be invisible. | enforced - `ConfigDefaultsTest.mapsEveryTerrainToAColour` |
+| Every kind of terrain has a colour, so a new one cannot be invisible. | enforced - `GraphicConfigTest.mapsEveryTerrainToAColour` |
 | A level's size is its map's extent. Nothing holds a second arena size that could disagree. | judgement - there is one type; `SimConfig.MapConfig` only says what to build |
 | Nothing is quantised to the tile grid - no movement, no logic, and no spawn snapped to a tile centre (G0009). | judgement |
 | Only `TileMap` converts a world position into a tile. | judgement |

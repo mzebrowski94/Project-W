@@ -173,7 +173,8 @@ public final class JoinScreen extends ScreenAdapter {
                         context.launchOptions(),
                         context.netConfig().latencySteps(),
                         target.host(),
-                        target.port())));
+                        target.port(),
+                        LocalMachineId.load())));
         return true;
     }
 

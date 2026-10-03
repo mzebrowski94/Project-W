@@ -113,12 +113,17 @@ public final class OnlineSession implements ScenarioPlay {
      *
      * @param worldConfig the text {@code config} was bound from, comments left out ({@link
      *     SimConfigLoader#loaded()}) - never a later read of the files
+     * @param machine this computer's {@code MachineId}, as the application keeps it
      * @throws RuntimeException if no port could be had; nothing is left open
      */
     public static OnlineSession host(
-            Scenario scenario, SimConfig config, String worldConfig, NetConfig net, LaunchOptions options) {
+            Scenario scenario,
+            SimConfig config,
+            String worldConfig,
+            NetConfig net,
+            LaunchOptions options,
+            String machine) {
         Clock clock = SystemClock.INSTANCE;
-        String machine = LocalMachineId.load();
         NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-host");
         long key = new SecureRandom().nextLong() | 1L;
         Sequencer sequencer = new Sequencer(
@@ -165,11 +170,14 @@ public final class OnlineSession implements ScenarioPlay {
         return new OnlineSession(peer, thread, null, List.of(), log, clock, "host, port " + port, invitation);
     }
 
-    /** Joins the session at {@code host:port}, over the configured simulated lag. */
+    /**
+     * Joins the session at {@code host:port}, over the configured simulated lag.
+     *
+     * @param machine this computer's {@code MachineId}, as the application keeps it
+     */
     public static OnlineSession join(
-            NetConfig net, LaunchOptions options, List<Integer> lagSteps, String host, int port) {
+            NetConfig net, LaunchOptions options, List<Integer> lagSteps, String host, int port, String machine) {
         Clock clock = SystemClock.INSTANCE;
-        String machine = LocalMachineId.load();
         NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-join");
         ConditionedTransport lag =
                 new ConditionedTransport(new NettyTransport(net, clock, log, "peer"), net.conditions(), clock);

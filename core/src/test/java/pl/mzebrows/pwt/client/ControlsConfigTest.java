@@ -64,4 +64,15 @@ class ControlsConfigTest {
                         keys.orderDefence(),
                         keys.orderCancel());
     }
+
+    @Test
+    void drivesPagesWithEnterEscapeAndThePadsSouthAndEast() {
+        ControlsConfig.Ui ui = ControlsConfig.load().ui();
+
+        assertThat(ui.key().confirm()).isEqualTo(new KeyCode(Input.Keys.ENTER));
+        assertThat(ui.key().back()).isEqualTo(new KeyCode(Input.Keys.ESCAPE));
+        assertThat(ui.pad().confirm()).isEqualTo(GamepadButton.SOUTH);
+        assertThat(ui.pad().back()).isEqualTo(GamepadButton.EAST);
+        assertThat(ui.nav().repeatDelaySeconds()).isGreaterThan(ui.nav().repeatIntervalSeconds());
+    }
 }
