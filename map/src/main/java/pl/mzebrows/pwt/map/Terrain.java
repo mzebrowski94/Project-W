@@ -22,6 +22,9 @@ public enum Terrain {
     /** Scoured, dusty ground. Passable; where wreckage tends to collect. */
     DUST(true),
 
+    /** Open sand, yellow-bronze. Passable and costs nothing; what the proving ground is laid on (G0060). */
+    SAND(true),
+
     /** Alien growth. Passable; where the things that feed the strains take root. */
     ORGANIC(true),
 

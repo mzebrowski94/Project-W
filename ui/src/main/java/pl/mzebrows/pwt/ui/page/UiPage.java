@@ -7,6 +7,7 @@ public enum UiPage {
     MAIN("UI:main", Kind.PAGE, null),
     CAMPAIGN("UI:main/campaign", Kind.PAGE, MAIN),
     PROVING_GROUND("UI:main/proving-ground", Kind.PAGE, MAIN),
+    PROVING_UPGRADES("UI:main/proving-ground/upgrades", Kind.PAGE, PROVING_GROUND),
     ONLINE("UI:main/online", Kind.PAGE, MAIN),
     ONLINE_JOIN("UI:main/online/join", Kind.PAGE, ONLINE),
     ONLINE_HOST("UI:main/online/host", Kind.PAGE, ONLINE),

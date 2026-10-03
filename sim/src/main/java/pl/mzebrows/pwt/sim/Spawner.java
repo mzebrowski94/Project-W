@@ -107,12 +107,6 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  */
 public final class Spawner {
 
-    /**
-     * What a commander is armed with when it spawns and when it comes back. A better gun is something
-     * found on the field and lost on death, never something owned (pillar 3).
-     */
-    private static final WeaponKind STARTING_WEAPON = WeaponKind.SIDEARM;
-
     private final PooledEngine engine;
     private final SimConfig config;
 
@@ -180,7 +174,7 @@ public final class Spawner {
         entity.add(engine.createComponent(RespawnsOnDeath.class)
                 .set(commander.respawnDelaySeconds(), commander.respawnShieldSeconds()));
         entity.add(engine.createComponent(Weapon.class)
-                .set(STARTING_WEAPON, config.weapon(STARTING_WEAPON), config.tickSeconds()));
+                .set(commander.weapon(), config.weapon(commander.weapon()), config.tickSeconds()));
         entity.add(engine.createComponent(Melee.class)
                 .set(
                         ticks(melee.cooldownSeconds()),

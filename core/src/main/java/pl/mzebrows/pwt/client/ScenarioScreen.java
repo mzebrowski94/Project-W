@@ -72,6 +72,7 @@ import pl.mzebrows.pwt.ui.hud.TopBarSeats;
 import pl.mzebrows.pwt.ui.hud.UpgradeReporter;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
+import pl.mzebrows.pwt.ui.page.UiPage;
 
 /**
  * Draws one running scenario, and does as little thinking as possible.
@@ -103,6 +104,10 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     private final GameContext context;
     private final ScenarioPlay play;
+
+    /** The menu page leaving this level goes back to. */
+    private final UiPage back;
+
     private final LetterboxViewport viewport = new LetterboxViewport();
     private final LocalAim localAim = new LocalAim();
     private final DebugOverlay overlay;
@@ -195,8 +200,17 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     /** Takes {@code play} over: the screen closes it when it is hidden. */
     public ScenarioScreen(GameContext context, ScenarioPlay play) {
+        this(context, play, UiPage.MAIN);
+    }
+
+    /**
+     * A level that goes back to {@code back} when it is left - the proving ground's page for a setup
+     * fought from it, so trying again is one confirm (G0060).
+     */
+    public ScenarioScreen(GameContext context, ScenarioPlay play, UiPage back) {
         this.context = context;
         this.play = play;
+        this.back = back;
         GraphicConfig graphicConfig = context.graphicConfig();
         this.overlay = new DebugOverlay();
         this.palette = graphicConfig.palette();
@@ -329,7 +343,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             rollCall = !rollCall;
         }
         if (play.leaving()) {
-            context.queueScreen(new MenuScreen(context));
+            context.queueScreen(new MenuScreen(context, "", back));
         }
         play.advance(delta, players);
         String ended = play.ended();
@@ -337,7 +351,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             // Online, the game cannot go on: the host has left, the link has dropped, the host said no.
             // Back to the menu, saying why, rather than a world that will never move again.
             Log.info(ended);
-            context.queueScreen(new MenuScreen(context, ended));
+            context.queueScreen(new MenuScreen(context, ended, back));
         }
         Simulation world = play.simulation();
         if (world == null) {

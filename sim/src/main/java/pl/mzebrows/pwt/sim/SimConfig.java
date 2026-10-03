@@ -424,6 +424,8 @@ public record SimConfig(
      * @param leashRadius how far a commander may walk from the middle of the commanders, in world
      *     units (pillar 4). Never read from the camera - zoom must not become extra rope. Zero is no
      *     leash
+     * @param weapon the gun he spawns and comes back with: the sidearm, in every level but the proving
+     *     ground (G0060). A better gun is found on the field and lost on death (pillar 3)
      */
     @With
     public record CommanderConfig(
@@ -434,7 +436,8 @@ public record SimConfig(
             float deathThroesSeconds,
             float respawnDelaySeconds,
             float respawnShieldSeconds,
-            float leashRadius) {
+            float leashRadius,
+            WeaponKind weapon) {
         public CommanderConfig {
             Require.positive("commander radius", radius);
             Require.positive("commander speed", speed);

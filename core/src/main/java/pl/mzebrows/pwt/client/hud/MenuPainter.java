@@ -116,11 +116,42 @@ public final class MenuPainter {
             String hint,
             int offsetX,
             float alpha) {
+        return page(
+                view,
+                anchor,
+                graphic.ui().page().columns(),
+                head,
+                entries,
+                enabled,
+                selected,
+                scroll,
+                visible,
+                foot,
+                hint,
+                offsetX,
+                alpha);
+    }
+
+    /** The same, {@code columns} characters wide rather than a page's width - a panel one of a pair. */
+    public Rect page(
+            Rect view,
+            MenuLayout.Anchor anchor,
+            int columns,
+            List<String> head,
+            List<String> entries,
+            boolean[] enabled,
+            int selected,
+            int scroll,
+            int visible,
+            List<String> foot,
+            String hint,
+            int offsetX,
+            float alpha) {
         int shown = Math.min(visible, entries.size() - scroll);
         int lines = firstEntryLine(head) + shown + foot.size() + 2;
-        Rect placed = layout.panel(view, anchor, lines, graphic.ui().page().columns());
+        Rect placed = layout.panel(view, anchor, lines, columns);
         Rect panel = new Rect(placed.x() + offsetX, placed.y(), placed.width(), placed.height());
-        int columns = TextFit.columns(panel.width() - 4 * metrics.padding(), UiFont.ADVANCE);
+        int fits = TextFit.columns(panel.width() - 4 * metrics.padding(), UiFont.ADVANCE);
         int x = layout.lineX(panel);
         Color text = faded(this.text, graphic.hud().color().text(), alpha);
         Color dim = faded(this.dim, graphic.hud().color().textDim(), alpha);
@@ -135,7 +166,7 @@ public final class MenuPainter {
         hud.frame(panel.x(), panel.y(), panel.width(), panel.height(), dim);
         int line = 0;
         for (int i = 0; i < head.size(); i++, line++) {
-            hud.text(TextFit.fit(head.get(i), columns), x, layout.lineTop(panel, line), i == 0 ? text : dim);
+            hud.text(TextFit.fit(head.get(i), fits), x, layout.lineTop(panel, line), i == 0 ? text : dim);
         }
         line = firstEntryLine(head);
         for (int i = scroll; i < scroll + shown; i++, line++) {
@@ -148,7 +179,7 @@ public final class MenuPainter {
                         metrics.fontSize() + metrics.leading() + 2,
                         text);
             }
-            hud.text(TextFit.fit(entries.get(i), columns), x, top, enabled[i] ? text : dim);
+            hud.text(TextFit.fit(entries.get(i), fits), x, top, enabled[i] ? text : dim);
         }
         if (scroll > 0) {
             hud.text(
@@ -162,9 +193,9 @@ public final class MenuPainter {
         }
         line++;
         for (int i = 0; i < foot.size(); i++, line++) {
-            hud.text(TextFit.fit(foot.get(i), columns), x, layout.lineTop(panel, line), dim);
+            hud.text(TextFit.fit(foot.get(i), fits), x, layout.lineTop(panel, line), dim);
         }
-        hud.text(TextFit.fit(hint, columns), x, layout.lineTop(panel, line), dim);
+        hud.text(TextFit.fit(hint, fits), x, layout.lineTop(panel, line), dim);
         hud.endCanvas();
         return panel;
     }

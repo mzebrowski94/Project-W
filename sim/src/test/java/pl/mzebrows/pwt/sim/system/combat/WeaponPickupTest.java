@@ -12,7 +12,9 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -97,6 +99,26 @@ class WeaponPickupTest {
         steps(simulation, ticksIn(DEATH_THROES + RESPAWN_DELAY) + 4);
 
         assertThat(commander(simulation).getComponent(Weapon.class).kind).isEqualTo(WeaponKind.SIDEARM);
+    }
+
+    /**
+     * What he starts and comes back with is a number every level has - the sidearm everywhere but the
+     * proving ground, which names its own (G0060). A gun found on the field is still lost with him.
+     */
+    @Test
+    void givesHimBackTheGunHisConfigNamesWhenHeComesBack() {
+        SimConfig config = AlphaWorlds.config();
+        Simulation simulation =
+                new Simulation(config.withCommander(config.commander().withWeapon(WeaponKind.SHOTGUN)));
+        Entity commander = simulation.spawnCommander(X, Y);
+        assertThat(commander.getComponent(Weapon.class).kind).isEqualTo(WeaponKind.SHOTGUN);
+        simulation.spawnPickup(PickupKind.ARMOURY_RAILGUN, X, Y);
+        simulation.step();
+
+        kill(commander);
+        steps(simulation, ticksIn(DEATH_THROES + RESPAWN_DELAY) + 4);
+
+        assertThat(commander(simulation).getComponent(Weapon.class).kind).isEqualTo(WeaponKind.SHOTGUN);
     }
 
     /**

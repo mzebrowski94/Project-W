@@ -863,7 +863,8 @@ public final class AlphaWorlds {
                         DEATH_THROES,
                         RESPAWN_DELAY,
                         RESPAWN_SHIELD,
-                        LEASH_RADIUS),
+                        LEASH_RADIUS,
+                        WeaponKind.SIDEARM),
                 new SimConfig.TrooperConfig(
                         TROOPER_RADIUS,
                         TROOPER_SPEED,

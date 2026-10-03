@@ -87,6 +87,11 @@ public final class UiFlow {
             case RESUME -> page == UiPage.PAUSE || page == UiPage.LEAVE_CONFIRM ? resume() : UiEffect.NONE;
             case RESTART -> restart(page);
             case LEAVE -> page == UiPage.LEAVE_CONFIRM || page == UiPage.CONNECTING ? UiEffect.LEAVE : UiEffect.NONE;
+            case CHOOSE ->
+                page == UiPage.PROVING_GROUND || page == UiPage.PROVING_UPGRADES
+                        ? new UiEffect(UiEffect.Kind.CHOOSE, intent.index())
+                        : UiEffect.NONE;
+            case PROVE -> page == UiPage.PROVING_GROUND ? UiEffect.PROVE : UiEffect.NONE;
         };
     }
 

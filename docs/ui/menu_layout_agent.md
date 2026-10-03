@@ -27,7 +27,7 @@ reached until an open question is answered - the question is named).
 Glossary words this file relies on (all in `docs/glossary.md`; the portrait arrives with stage 8 of
 the plan): **page**, **modal**, **entry**, **selection**, **modality**, **letterbox**, **UI canvas**,
 **top bar**, **bottom bar**, **scrim**, **paused banner**, **reticle**, **player panel**, **status**,
-**proving ground**; **terminal** and **dispatch** (stage 6), **tally** (7), **portrait** (8).
+**proving ground**, **setup**; **terminal** and **dispatch** (stage 6), **tally** (7), **portrait** (8).
 Words not used: *item* (say entry), *screen* for a page (a libGDX `Screen` is a class), *lobby* or
 *match* (say session), *mount* (say crew / get on a turret), *arena* for the training mode (arena is
 the rectangle a level is played inside), *focus* for the selected entry (focus is who the camera
@@ -39,7 +39,7 @@ keeps in shot).
 |---|---|---|
 | 1. MAIN MENU | `UI:main` | |
 | 1.1 CAMPAIGN / 1.1.1 current scenarios | `UI:main/campaign` | Lists `Scenarios.ALL`, the whole registry (alpha-phase.md). |
-| 1.2 ARENA / 1.2.1 placeholder | `UI:main/proving-ground` | Renamed 2026-09-25: *arena* is taken by the glossary. |
+| 1.2 ARENA / 1.2.1 placeholder | `UI:main/proving-ground`, `UI:main/proving-ground/upgrades` | Renamed 2026-09-25: *arena* is taken by the glossary. Built 2026-10-03 (G0060). |
 | 1.3 PLAY ONLINE | `UI:main/online` | |
 | 1.3.1 JOIN GAME / 1.3.1.1 | `UI:main/online/join` | The existing `JoinScreen`; restyled later. |
 | 1.3.2 HOST GAME / 1.3.2.1 | `UI:main/online/host` | A scenario list whose confirm hosts. No lobby (G0038). |
@@ -53,7 +53,8 @@ keeps in shot).
 |---|---|---|---|---|---|
 | `UI:main` | page | - | `UiPage.MAIN` | `MenuScreen` | built |
 | `UI:main/campaign` | page | `UI:main` | `UiPage.CAMPAIGN` | `MenuScreen` + scenario list | built |
-| `UI:main/proving-ground` | page | `UI:main` | `UiPage.PROVING_GROUND` | `MenuScreen` | placeholder |
+| `UI:main/proving-ground` | page | `UI:main` | `UiPage.PROVING_GROUND` | `MenuScreen` + `ProvingRows` + preview | built |
+| `UI:main/proving-ground/upgrades` | page | `UI:main/proving-ground` | `UiPage.PROVING_UPGRADES` | `MenuScreen` + `ProvingRows` | built |
 | `UI:main/online` | page | `UI:main` | `UiPage.ONLINE` | `MenuScreen` | built |
 | `UI:main/online/join` | page | `UI:main/online` | `UiPage.ONLINE_JOIN` | `JoinScreen` / `JoinChoices` / `CodePicker` | built (on the canvas; the pad's letter picker) |
 | `UI:main/online/host` | page | `UI:main/online` | `UiPage.ONLINE_HOST` | `MenuScreen` + scenario list | built |
@@ -108,15 +109,48 @@ confirms (MAIN's default selection is `campaign`). A one-confirm CONTINUE is pla
 Do not build: a separate campaign registry beside `Scenarios.ALL` (alpha-phase.md: "that list is the
 whole registry"); a level-select map; progression or unlocks (open questions on progression).
 
-### `UI:main/proving-ground` - placeholder
+### `UI:main/proving-ground`
 
-Title `ui.provingGround.title = PROVING GROUND`. Body `ui.provingGround.body = Not built yet. Pick a
-strain and a gun, and fight it.` One entry, `back`. Future shape (not a decision): choices written as
-`SimConfig.with(...)` overrides on a scenario, the same way a scenario varies tunables - never edits
-to `assets/sim/*.properties`.
+Title `ui.provingGround.title = PROVING GROUND`. The page holds one **setup** (`ProvingSetup`, G0060),
+remembered for the run and never saved; a first visit's is `ProvingSetup.first()` - three grunts, the
+sidearm, no squad, no others, nothing held. Entries, top to bottom:
 
-Do not build now: any gameplay behind it; a strain or gun picker before its own design pass
-(`feature` skill).
+| Entry | Label | Value | Intent |
+|---|---|---|---|
+| `strain` | `ui.provingGround.strain = STRAIN` | `ui.strain.*`, every strain | `CHOOSE(0)` |
+| `count` | `ui.provingGround.count = COUNT` | 1, 3, 5, 10, `ui.provingGround.nest = NEST`; held at 1 and dimmed for a rooted strain | `CHOOSE(1)` |
+| `gun` | `ui.provingGround.gun = GUN` | `ui.weapon.*`, every gun with a weapon type - the ones a man carries | `CHOOSE(2)` |
+| `squad` | `ui.provingGround.squad = SQUAD` | `ui.provingGround.on`/`.off` | `CHOOSE(3)` |
+| `others` | `ui.provingGround.others = OTHERS` | `ui.provingGround.others.*`: none, 3 turrets, 3 mines, 3 barrels | `CHOOSE(4)` |
+| `upgrades` | `ui.provingGround.upgrades = UPGRADES`, with `ui.provingGround.held = {n} TAKEN` as its value | | `OPEN(PROVING_UPGRADES)` |
+| `start` | `ui.provingGround.start = START` | | `PROVE` - default selection |
+| `back` | `ui.common.back = BACK` | | `BACK` |
+
+A **choice row** draws its value as `< VALUE >` after its label; left and right step it
+(`ProvingRows.step`), and so does a click on either arrow; confirm steps it forward. To the right of the
+entries, half a page wide, the **preview** - the panel and the window centred on the canvas as one; where
+the two do not fit side by side the panel docks left and the window goes under it if there is room. It is
+a window onto `Scenarios.preview`,
+one of the chosen strain on sand going about its business, drawn by the world's own renderer and built
+again when the strain changes; under it `ui.strain.*`, and `ui.provingGround.fromNest = FROM A NEST`
+while the count says nest.
+
+Confirm on `start` builds `Scenarios.provingGround(setup)` offline. Leaving it - LEAVE TO MENU, or a
+game that ends - comes back to this page with the setup as it was and `start` selected; RESTART builds
+the same setup again.
+
+Do not build: the proving ground online; saving a setup; anything chosen here reaching a campaign level
+(G0060).
+
+### `UI:main/proving-ground/upgrades`
+
+Two panels side by side, each half a page wide, centred as a pair: `ui.provingUpgrades.title = UPGRADES`
+on the left with one choice row per players' upgrade, `ui.provingUpgrades.swarm = ADAPTATIONS` on the
+right with one per swarm adaptation and then `back` - all built from the catalogue
+(`ProvingRows.upgrades()`, the players' first). One list underneath: up and down run from the bottom of
+the left panel into the right one, and the pointer selects in either. Label `ui.upgrade.*`; value its
+rank in roman, `ui.provingGround.rankNone = -` for none, stepping from none to the upgrade's most and
+round again. Neither panel scrolls - the catalogue fits the canvas.
 
 ### `UI:main/online`
 
@@ -236,6 +270,8 @@ carried out by the screen that owns the page, through `GameContext.queueScreen` 
 | `UI:main` | `BACK` | `UI:main` | the selection moves to `exit` |
 | `UI:main/exit` | `QUIT_APP` | - | `Gdx.app.exit()` |
 | `UI:main/campaign` | `START(i)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(...)))` |
+| `UI:main/proving-ground`, `.../upgrades` | `CHOOSE(r)` | - | the screen steps row `r` of its setup forward |
+| `UI:main/proving-ground` | `PROVE` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(Scenarios.provingGround(setup), ...)))`; leaving comes back to `UI:main/proving-ground` |
 | `UI:main/online/host` | `HOST(i)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, OnlineSession.host(...)))`; on failure stay and show the notice |
 | `UI:main/online/join` | `JOIN(c)` | `UI:connecting` | `OnlineSession.join(...)` |
 | `UI:connecting` | world arrives | `UI:play` | - |
@@ -264,6 +300,7 @@ buttons are named by position (ADR 0011); what the player is told to press comes
 | Confirm | `Enter`, `Space` | left click on an entry | `SOUTH` (A / Cross) | pages, modals |
 | Back | `Esc`, `Backspace` | right click | `EAST` (B / Circle) | pages, modals |
 | Jump to entry | `1`-`9` | - | - | scenario lists |
+| Step a choice row | `A`/`D`, left/right arrows | left click on `<` or `>` | d-pad left/right, left stick | `UI:main/proving-ground`, `.../upgrades` |
 | Page tabs (future Options) | `Q` / `E` | - | `L1` / `R1` | pages with tabs |
 | Swap panels / roll call | `` ` `` | - | - | `UI:play` |
 | Pause | `Esc` | - | `START` | `UI:play` |

@@ -44,4 +44,21 @@ class MenuTreeTest {
 
         assertThat(MenuTree.enabled(restart, peer)).isFalse();
     }
+
+    /** The setup's rows, then the way to its upgrades, then START - selected, so two confirms fight it. */
+    @Test
+    void offersTheProvingGroundsRowsThenItsUpgradesThenStart() {
+        MenuPage page = MenuTree.page(UiPage.PROVING_GROUND);
+
+        assertThat(page.entries())
+                .extracting(MenuEntry::id)
+                .containsExactly("strain", "count", "gun", "squad", "others", "upgrades", "start", "back");
+        assertThat(page.entries().get(page.defaultSelection()).intent()).isEqualTo(UiIntent.PROVE);
+        // A choice row's index is its row's place in ProvingRows.Row, so the screen can find it again.
+        ProvingRows.Row[] rows = ProvingRows.Row.values();
+        for (int i = 0; i < rows.length; i++) {
+            assertThat(page.entries().get(i).intent()).isEqualTo(UiIntent.choose(i));
+            assertThat(page.entries().get(i).id()).isEqualTo(rows[i].name().toLowerCase(java.util.Locale.ROOT));
+        }
+    }
 }

@@ -7,6 +7,7 @@ import pl.mzebrows.pwt.client.input.ControlsConfig;
 import pl.mzebrows.pwt.client.input.GamepadSource;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.scenario.ProvingSetup;
 import pl.mzebrows.pwt.ui.nav.SelectionMemory;
 
 /**
@@ -56,6 +57,11 @@ public interface GameContext {
      * where the player was, and the campaign list opens on the scenario last played.
      */
     SelectionMemory selections();
+
+    /** The proving ground's setup, as the player last left it this run - never saved (G0060). */
+    ProvingSetup provingSetup();
+
+    void provingSetup(ProvingSetup setup);
 
     /** Asks for a screen change. It happens once the current frame has finished drawing. */
     void queueScreen(Screen next);

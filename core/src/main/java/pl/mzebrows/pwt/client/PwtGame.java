@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.client.input.GamepadSource;
 import pl.mzebrows.pwt.client.input.GdxGamepads;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.scenario.ProvingSetup;
 import pl.mzebrows.pwt.ui.nav.SelectionMemory;
 
 /**
@@ -40,6 +41,7 @@ public final class PwtGame extends Game implements GameContext {
     private Hud hud;
 
     private final SelectionMemory selections = new SelectionMemory();
+    private ProvingSetup provingSetup = ProvingSetup.first();
 
     private @Nullable Screen pendingScreen;
 
@@ -157,6 +159,16 @@ public final class PwtGame extends Game implements GameContext {
     @Override
     public SelectionMemory selections() {
         return selections;
+    }
+
+    @Override
+    public ProvingSetup provingSetup() {
+        return provingSetup;
+    }
+
+    @Override
+    public void provingSetup(ProvingSetup setup) {
+        provingSetup = setup;
     }
 
     @Override

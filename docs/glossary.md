@@ -202,6 +202,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **region** | A contiguous area of a map, decided before its tiles are filled in. What makes a level read as places rather than one flat sheet: regions are shaded subtly apart, and later decide what terrain and what contents belong where. |
 | **shake** | Something violent that happened somewhere, published for the view - a blast, or a pull of a gun that names one: how hard at the middle of it, how far it is felt, and how far through it is. The simulation says what happened and stops there - what the view does about it is entirely the client's, exactly as *focus* says who matters and not where the camera goes. |
 | **spawn area** | The patch of tiles a side is put on at the start of a level. A rectangle of tiles with everyone jittered inside them, never at a tile centre (G0009) - the same tile-anchored scatter that places everything else. |
+| **sand** | Open yellow-bronze ground. Passable and costs nothing - a colour and a mood, like dust's; the **proving ground** is laid on it. |
 | **terrain** | The kind of ground on a tile. Names a role, like a `Look` does - what it looks like is the client's decision and what it costs a unit is a number in `assets/sim/*.properties`. Whether it can be stood on is the one exception, because generation needs it. |
 | **thicket** | Dense undergrowth. Passable, and the only ground in the game worth going round: what standing on it costs is a **pace** rather than a route, so every flow field, reachability check and spawn treats it as the open ground it is. It **costs his side far more than theirs**, which is the whole of the mechanic and a declaration rather than a property of the ground - a thicket both sides waded equally would change how long the walk took and nothing else. Drawn as a hatch over the floor, because a thing that is going to cost you must not read as another colour of floor. |
 | **tile** | One cell of the grid a level is laid out on. A unit of *construction*, not of play: nothing moves tile by tile and nothing is centred in one (G0009). |
@@ -223,7 +224,8 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **control point** | Ground a squad takes by standing near it for a while. Captured by dwelling; the dwell goes back to zero the moment the last capturer leaves, rather than pausing, and starting an attempt wakes what is nearby. |
 | **level** *(source)* | One self-contained combat scenario, start to objective. |
 | **objective** | A condition a level requires before it counts as done. A level names a set and requires all of it. Two exist: clear the map of enemies, and capture every control point. What a completed level *does* is still open - in the alpha it does nothing. |
-| **proving ground** | The menu's training mode: pick a strain and a gun and fight it. A placeholder page for now. Not *arena*, which is the rectangle a level is played inside. |
+| **proving ground** | The menu's practice range: choose a **setup** and fight it, on a round patch of **sand** with a few rocks on it, ringed by **thicket**, your side on the left and theirs on the right. Outside the campaign on purpose - nothing is carried in or out of it, and nothing it settles is balance (G0060). Not *arena*, which is the rectangle a level is played inside. |
+| **setup** | One configuration of the **proving ground**: the strain, how many or a **nest** of it, the gun, whether the squad comes, the upgrades and adaptations at their ranks, and the others - turrets, mines or barrels. `ProvingSetup`. Remembered for the run, never saved. Not *loadout*, which pillar 3 rules out for the campaign. |
 | **scenario** | One arena the alpha-phase menu can launch, built to make a system visible. Content, never design. |
 | **the level entity** | One entity, spawned with the world and never removed, carrying state that belongs to the level rather than to anything standing in it (G0007). |
 
@@ -292,6 +294,7 @@ What the player is shown around the fight and how he moves through it. Decided i
 | Term | Meaning |
 |---|---|
 | **bottom bar** | The black band under the **view**: four **player panels**, or the **roll call**. Its height is derived from what it holds, never configured. |
+| **choice row** | An **entry** that holds a value rather than doing something: its label, then the value between `<` and `>`, stepped by left and right, a click on an arrow, or confirm. The **proving ground**'s pages are made of them. |
 | **dispatch** | One line the **terminal** has been told to say: what kind of news, about which player, with up to two numbers. A kind is a constant and a template in `ui.properties`, not a class per event. |
 | **entry** | One thing on a **page** or **modal** that can be selected and confirmed - a scenario in a list, RESUME. Not *item*, which is a pickup's banned word. |
 | **letterbox** | The screen's split into a **top bar**, the **view** and a **bottom bar**, with black pillars beside the view when the screen is wider than the view's aspect range allows. The fight is only ever in the view; the interface is only ever in the bars. |

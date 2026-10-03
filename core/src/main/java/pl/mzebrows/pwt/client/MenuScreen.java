@@ -6,7 +6,9 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.utils.ScreenUtils;
 import java.util.ArrayList;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
+import pl.mzebrows.pwt.client.hud.Hud;
 import pl.mzebrows.pwt.client.hud.MenuPainter;
 import pl.mzebrows.pwt.client.hud.PageHints;
 import pl.mzebrows.pwt.client.hud.UiStrings;
@@ -16,8 +18,10 @@ import pl.mzebrows.pwt.client.input.NavInputReader;
 import pl.mzebrows.pwt.client.input.PageControls;
 import pl.mzebrows.pwt.client.play.OnlineSession;
 import pl.mzebrows.pwt.client.play.ScenarioSession;
+import pl.mzebrows.pwt.sim.scenario.ProvingSetup;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 import pl.mzebrows.pwt.ui.nav.InputModality;
@@ -27,6 +31,7 @@ import pl.mzebrows.pwt.ui.page.MenuLayout;
 import pl.mzebrows.pwt.ui.page.MenuPage;
 import pl.mzebrows.pwt.ui.page.MenuTree;
 import pl.mzebrows.pwt.ui.page.PageMotion;
+import pl.mzebrows.pwt.ui.page.ProvingRows;
 import pl.mzebrows.pwt.ui.page.UiEffect;
 import pl.mzebrows.pwt.ui.page.UiFlow;
 import pl.mzebrows.pwt.ui.page.UiIntent;
@@ -48,6 +53,9 @@ public final class MenuScreen extends ScreenAdapter {
     private static final int DESCRIPTION_LINES = 2;
     private static final int BODY_LINES = 3;
 
+    /** Spaces between a choice row's label and its value. */
+    private static final int CHOICE_GAP = 2;
+
     private final GameContext context;
     private final UiStrings strings = UiStrings.load();
     private final List<Scenario> scenarios = Scenarios.all();
@@ -67,6 +75,22 @@ public final class MenuScreen extends ScreenAdapter {
 
     /** Why the player is back here, if the game he was in ended without him asking; empty otherwise. */
     private String notice;
+
+    private final ProvingRows rows;
+
+    /** The proving ground's window, while one of its pages is open; null otherwise. */
+    private @Nullable ProvingPreview preview;
+
+    /** How wide a choice row's label is padded, in characters, on the page shown. */
+    private int labelWidth;
+
+    /** On the upgrades page: the adaptations' panel, beside the upgrades' in {@link #panel}. */
+    private Rect side = Rect.EMPTY;
+
+    /** On the upgrades page: how many of the entries are the players' upgrades - the rest are the swarm's. */
+    private int split;
+
+    private final List<String> swarmHead = new ArrayList<>(1);
 
     private UiPage shown = UiPage.PLAY;
     private int describedFor = -1;
@@ -94,6 +118,7 @@ public final class MenuScreen extends ScreenAdapter {
                 graphic.ui().motion().pageSeconds(),
                 graphic.ui().motion().pageSlide(),
                 graphic.ui().motionScale());
+        this.rows = new ProvingRows(context.simConfig());
         if (start.parent() == UiPage.MAIN) {
             flow.apply(UiIntent.open(start));
         }
@@ -122,19 +147,137 @@ public final class MenuScreen extends ScreenAdapter {
         ScreenUtils.clear(context.graphicConfig().hud().color().bar());
         Rect view = layout.canvas();
         describe();
+        UiPage top = flow.top();
+        if (top == UiPage.PROVING_UPGRADES) {
+            drawUpgrades(view);
+            return;
+        }
+        int visible = painter.visibleEntries(view, head, labels.size(), foot.size());
+        Rect area = view;
+        MenuLayout.Anchor anchor = MenuLayout.Anchor.CENTRED;
+        if (top == UiPage.PROVING_GROUND) {
+            // The page and its window, side by side, centred together - or the page alone where they do not fit.
+            MenuLayout menu = painter.layout();
+            int columns = pageColumns();
+            int lines = MenuPainter.firstEntryLine(head) + visible + foot.size() + 2;
+            area = centred(view, menu.width(columns) + menu.width(columns / 2) + 6 * menu.padding(), lines);
+            anchor = MenuLayout.Anchor.DOCKED_LEFT;
+        }
         panel = painter.page(
-                view,
-                MenuLayout.Anchor.CENTRED,
+                area,
+                anchor,
                 head,
                 labels,
                 page.enabled(),
                 page.shown(modality),
                 page.scroll(),
-                painter.visibleEntries(view, head, labels.size(), foot.size()),
+                visible,
                 foot,
                 hints.selectAndBack(modality),
                 motion.offsetX(),
                 motion.alpha());
+        if (top == UiPage.PROVING_GROUND) {
+            drawPreview(delta, layout, area);
+        }
+    }
+
+    /**
+     * The upgrades page: the players' upgrades in one panel and the swarm's adaptations in another beside
+     * it, the pair centred. One list underneath - up and down run from the bottom of one into the other.
+     */
+    private void drawUpgrades(Rect view) {
+        MenuLayout menu = painter.layout();
+        int columns = pageColumns() / 2;
+        int lines = MenuPainter.firstEntryLine(head) + Math.max(split, labels.size() - split) + 2;
+        Rect pair = centred(view, 2 * menu.width(columns) + 6 * menu.padding(), lines);
+        int selected = page.index();
+        panel = painter.page(
+                pair,
+                MenuLayout.Anchor.DOCKED_LEFT,
+                columns,
+                head,
+                labels.subList(0, split),
+                page.enabled(),
+                selected < split ? selected : -1,
+                0,
+                split,
+                List.of(),
+                "",
+                motion.offsetX(),
+                motion.alpha());
+        side = painter.page(
+                pair,
+                MenuLayout.Anchor.DOCKED_RIGHT,
+                columns,
+                swarmHead,
+                labels.subList(split, labels.size()),
+                page.enabled(),
+                selected >= split ? selected - split : -1,
+                0,
+                labels.size() - split,
+                List.of(),
+                hints.selectAndBack(modality),
+                motion.offsetX(),
+                motion.alpha());
+    }
+
+    /**
+     * A rect this wide, tall enough for a panel of this many lines with a margin round it, centred in the
+     * view - what a page docked left and what sits beside it are laid out in, so the two are centred as one.
+     */
+    private Rect centred(Rect view, int width, int lines) {
+        MenuLayout menu = painter.layout();
+        int height = Math.min(view.height(), lines * menu.pitch() + 7 * menu.padding());
+        if (width > view.width()) {
+            return view;
+        }
+        return new Rect(view.x() + (view.width() - width) / 2, view.y() + (view.height() - height) / 2, width, height);
+    }
+
+    private int pageColumns() {
+        return context.graphicConfig().ui().page().columns();
+    }
+
+    /**
+     * The window beside the page - under it where the canvas is too narrow - onto the chosen strain, with
+     * its name on the line under it.
+     */
+    private void drawPreview(float delta, ScreenLayout layout, Rect view) {
+        ProvingPreview window = preview;
+        if (window == null || panel.isEmpty()) {
+            return;
+        }
+        MenuLayout menu = painter.layout();
+        int columns = pageColumns() / 2;
+        // Where the page rests, not where its arrival has it this frame, so the window does not jump under it.
+        Rect resting = new Rect(panel.x() - motion.offsetX(), panel.y(), panel.width(), panel.height());
+        Rect box = menu.beside(view, resting, menu.linesIn(panel), columns, columns);
+        int pitch = menu.pitch();
+        if (box.height() <= 2 * pitch) {
+            return;
+        }
+        ProvingSetup setup = context.provingSetup();
+        String caption = strings.get("ui.strain." + setup.strain());
+        if (setup.nest() && !rows.locked(setup, ProvingRows.Row.COUNT)) {
+            caption += "  " + strings.get("ui.provingGround.fromNest");
+        }
+        Rect inside = new Rect(box.x(), box.y() + pitch, box.width(), box.height() - pitch);
+        window.show(setup.strain());
+        window.render(delta, layout.toScreen(inside));
+        Hud hud = context.hud();
+        hud.beginCanvas();
+        hud.frame(
+                inside.x(),
+                inside.y(),
+                inside.width(),
+                inside.height(),
+                context.graphicConfig().hud().color().textDim());
+        hud.text(
+                caption,
+                box.x(),
+                box.y() + pitch - menu.padding(),
+                context.graphicConfig().hud().color().text());
+        hud.endCanvas();
     }
 
     /** Applies this frame's presses. False when the screen is being left and should draw nothing more. */
@@ -147,8 +290,32 @@ public final class MenuScreen extends ScreenAdapter {
                 }
             }
         }
-        int visible = painter.visibleEntries(layout.canvas(), head, labels.size(), foot.size());
-        int chosen = page.handle(nav, painter.layout(), panel, MenuPainter.firstEntryLine(head), visible);
+        if (isProving(top) && (nav.left || nav.right)) {
+            step(top, page.index(), nav.right ? 1 : -1);
+        }
+        int chosen;
+        if (top == UiPage.PROVING_UPGRADES) {
+            // Two panels, one list: the pointer is found here, and the controls see no panel of their own.
+            int under = upgradeUnder(nav.pointerX, nav.pointerY);
+            if (nav.pointerMoved && under >= 0) {
+                page.jump(under);
+            }
+            chosen = page.handle(nav, painter.layout(), Rect.EMPTY, 0, labels.size());
+            if (nav.pointerPressed && under >= 0) {
+                page.jump(under);
+                chosen = under;
+            }
+        } else {
+            int visible = painter.visibleEntries(layout.canvas(), head, labels.size(), foot.size());
+            chosen = page.handle(nav, painter.layout(), panel, MenuPainter.firstEntryLine(head), visible);
+        }
+        if (chosen >= 0
+                && nav.pointerPressed
+                && isChoice(top, chosen)
+                && onBackArrow(nav.pointerX, top == UiPage.PROVING_UPGRADES && chosen >= split ? side : panel)) {
+            step(top, chosen, -1);
+            return true;
+        }
         if (chosen >= 0) {
             return carryOut(flow.apply(intentFor(top, chosen)));
         }
@@ -162,6 +329,7 @@ public final class MenuScreen extends ScreenAdapter {
         return switch (top) {
             case CAMPAIGN -> UiIntent.start(entry);
             case ONLINE_HOST -> UiIntent.host(entry);
+            case PROVING_UPGRADES -> entry < rows.upgrades().size() ? UiIntent.choose(entry) : UiIntent.BACK;
             default -> MenuTree.page(top).entries().get(entry).intent();
         };
     }
@@ -179,6 +347,11 @@ public final class MenuScreen extends ScreenAdapter {
             }
             case HOST -> {
                 return !host(effect.index());
+            }
+            case CHOOSE -> step(flow.top(), effect.index(), 1);
+            case PROVE -> {
+                prove();
+                return false;
             }
             default -> {
                 // Page changes are the flow's own; nothing else arises on the main menu.
@@ -202,9 +375,15 @@ public final class MenuScreen extends ScreenAdapter {
             context.queueScreen(new JoinScreen(context));
             return;
         }
+        if (isProving(top) && preview == null) {
+            preview = new ProvingPreview(context.graphicConfig(), context.simConfig());
+        } else if (!isProving(top)) {
+            closePreview();
+        }
         motion.arrive(shown == UiPage.PLAY || top.parent() == shown ? 1 : -1);
         shown = top;
         panel = Rect.EMPTY;
+        side = Rect.EMPTY;
         describedFor = -1;
         head.clear();
         labels.clear();
@@ -216,6 +395,11 @@ public final class MenuScreen extends ScreenAdapter {
             }
             // Hosting opens where the campaign was: the scenario played last is the likeliest to host.
             defaultSelection = context.selections().get(UiPage.CAMPAIGN, 0, scenarios.size());
+        } else if (top == UiPage.PROVING_UPGRADES) {
+            head.add(strings.get("ui.provingUpgrades.title"));
+            swarmHead.clear();
+            swarmHead.add(strings.get("ui.provingUpgrades.swarm"));
+            relabel(top);
         } else {
             MenuPage content = MenuTree.page(top);
             if (!content.titleKey().isEmpty()) {
@@ -227,8 +411,12 @@ public final class MenuScreen extends ScreenAdapter {
             if (top == UiPage.MAIN && !notice.isEmpty()) {
                 painter.addWrapped(head, notice, BODY_LINES);
             }
-            for (MenuEntry entry : content.entries()) {
-                labels.add(strings.get(entry.labelKey()));
+            if (top == UiPage.PROVING_GROUND) {
+                relabel(top);
+            } else {
+                for (MenuEntry entry : content.entries()) {
+                    labels.add(strings.get(entry.labelKey()));
+                }
             }
             defaultSelection = content.defaultSelection();
         }
@@ -236,6 +424,137 @@ public final class MenuScreen extends ScreenAdapter {
                 ? defaultSelection
                 : context.selections().get(top, defaultSelection, labels.size());
         page.reset(labels.size(), remembered);
+        if (top == UiPage.PROVING_GROUND) {
+            lockRows();
+        }
+    }
+
+    /**
+     * Writes a proving ground page's entries from the setup: a choice row as its label, padded, and its
+     * value between arrows; the rest as their words. Keeps the selection - only the words change.
+     */
+    private void relabel(UiPage top) {
+        ProvingSetup setup = context.provingSetup();
+        labels.clear();
+        labelWidth = 0;
+        if (top == UiPage.PROVING_UPGRADES) {
+            split = 0;
+            for (UpgradeKind kind : rows.upgrades()) {
+                labelWidth = Math.max(labelWidth, upgradeName(kind).length());
+                split += rows.swarm(kind) ? 0 : 1;
+            }
+            for (UpgradeKind kind : rows.upgrades()) {
+                labels.add(choice(upgradeName(kind), words(rows.rank(setup, kind))));
+            }
+            labels.add(strings.get("ui.common.back"));
+            return;
+        }
+        List<MenuEntry> entries = MenuTree.page(top).entries();
+        for (MenuEntry entry : entries) {
+            labelWidth = Math.max(labelWidth, strings.get(entry.labelKey()).length());
+        }
+        for (int i = 0; i < entries.size(); i++) {
+            String label = strings.get(entries.get(i).labelKey());
+            if (i < ProvingRows.ROWS.size()) {
+                labels.add(choice(label, words(rows.value(setup, ProvingRows.ROWS.get(i)))));
+            } else if (entries.get(i).intent().page() == UiPage.PROVING_UPGRADES) {
+                labels.add(pad(label) + strings.format("ui.provingGround.held", rows.held(setup)));
+            } else {
+                labels.add(label);
+            }
+        }
+    }
+
+    /** A count that cannot be chosen - a rooted strain's - is dimmed and passed over. */
+    private void lockRows() {
+        int count = ProvingRows.ROWS.indexOf(ProvingRows.Row.COUNT);
+        page.enabled()[count] = !rows.locked(context.provingSetup(), ProvingRows.Row.COUNT);
+        page.settle();
+    }
+
+    /** Steps one choice row of the page open, if that entry is one, and writes the page again. */
+    private void step(UiPage top, int entry, int direction) {
+        if (!isChoice(top, entry)) {
+            return;
+        }
+        ProvingSetup setup = context.provingSetup();
+        context.provingSetup(
+                top == UiPage.PROVING_UPGRADES
+                        ? rows.stepRank(setup, rows.upgrades().get(entry), direction)
+                        : rows.step(setup, ProvingRows.ROWS.get(entry), direction));
+        relabel(top);
+        if (top == UiPage.PROVING_GROUND) {
+            lockRows();
+        }
+    }
+
+    private boolean isChoice(UiPage top, int entry) {
+        if (top == UiPage.PROVING_GROUND) {
+            return entry >= 0 && entry < ProvingRows.ROWS.size();
+        }
+        return top == UiPage.PROVING_UPGRADES
+                && entry >= 0
+                && entry < rows.upgrades().size();
+    }
+
+    /** The upgrades page's entry under the pointer, in either panel, or -1. */
+    private int upgradeUnder(int x, int y) {
+        MenuLayout menu = painter.layout();
+        int first = MenuPainter.firstEntryLine(head);
+        int left = panel.isEmpty() ? -1 : menu.entryAt(panel, first, split, x, y);
+        if (left >= 0) {
+            return left;
+        }
+        int right = side.isEmpty() ? -1 : menu.entryAt(side, first, labels.size() - split, x, y);
+        return right >= 0 ? split + right : -1;
+    }
+
+    /** Whether the pointer is over a choice row's {@code <}, in the panel it is in: what steps it back. */
+    private boolean onBackArrow(int pointerX, Rect in) {
+        MenuLayout menu = painter.layout();
+        int arrow = menu.lineX(in) + (labelWidth + CHOICE_GAP) * menu.advance();
+        return pointerX >= arrow && pointerX < arrow + 2 * menu.advance();
+    }
+
+    private String choice(String label, String value) {
+        return pad(label) + "< " + value + " >";
+    }
+
+    private String pad(String label) {
+        return label + " ".repeat(Math.max(0, labelWidth + CHOICE_GAP - label.length()));
+    }
+
+    private String words(ProvingRows.Choice choice) {
+        return choice.key().isEmpty() ? choice.text() : strings.get(choice.key());
+    }
+
+    /** An upgrade's name; which side's it is, the panel it is in says. */
+    private String upgradeName(UpgradeKind kind) {
+        return strings.get("ui.upgrade." + kind);
+    }
+
+    private static boolean isProving(UiPage page) {
+        return page == UiPage.PROVING_GROUND || page == UiPage.PROVING_UPGRADES;
+    }
+
+    /** Fights the setup offline; leaving it comes back here (G0060). */
+    private void prove() {
+        ProvingSetup setup = context.provingSetup();
+        // Coming back lands on START, so trying again is one confirm.
+        context.selections().set(UiPage.PROVING_GROUND, page.index());
+        Log.info("Proving " + setup);
+        context.queueScreen(new ScenarioScreen(
+                context,
+                new ScenarioSession(Scenarios.provingGround(setup), context.simConfig()),
+                UiPage.PROVING_GROUND));
+    }
+
+    private void closePreview() {
+        ProvingPreview open = preview;
+        if (open != null) {
+            open.dispose();
+            preview = null;
+        }
     }
 
     /**
@@ -300,5 +619,6 @@ public final class MenuScreen extends ScreenAdapter {
     @Override
     public void hide() {
         context.hud().showSystemCursor();
+        closePreview();
     }
 }

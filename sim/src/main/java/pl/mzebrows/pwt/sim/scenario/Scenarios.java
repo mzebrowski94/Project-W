@@ -6,6 +6,7 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.RngStream;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * Every scenario the menu offers, in the order it offers them.
@@ -34,6 +35,22 @@ public final class Scenarios {
     /** Every registered scenario. Immutable. */
     public static List<Scenario> all() {
         return ALL;
+    }
+
+    /**
+     * The proving ground built from one setup (G0060). Not in the registry: it is reached from its own
+     * page, never from the campaign list, and is built through {@link #world} like everything else.
+     */
+    public static Scenario provingGround(ProvingSetup setup) {
+        return new ProvingGroundScenario(setup);
+    }
+
+    /**
+     * The proving ground page's window onto one strain: it on a patch of sand, nobody else. Not a level -
+     * there is no commander - but a world built through {@link #world} all the same.
+     */
+    public static Scenario preview(UnitKind strain) {
+        return new ProvingPreviewScenario(strain);
     }
 
     /**

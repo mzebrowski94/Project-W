@@ -17,9 +17,11 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
- * Applies to every scenario in the registry, so a new one cannot be added half-built. These are the
+ * Applies to every scenario in the registry, and to the proving ground, so a new one cannot be added
+ * half-built. These are the
  * things the menu and the harness assume without checking at runtime.
  */
 class ScenariosTest {
@@ -36,14 +38,14 @@ class ScenariosTest {
     private static final int SEEDS = 24;
 
     @ParameterizedTest(name = "{0}")
-    @MethodSource("registered")
+    @MethodSource("scenarios")
     void describesItselfForTheMenu(String name, Scenario scenario) {
         assertThat(name).isNotBlank();
         assertThat(scenario.description()).isNotBlank();
     }
 
     @ParameterizedTest(name = "{0}")
-    @MethodSource("registered")
+    @MethodSource("scenarios")
     void spawnsExactlyOneCommander(String name, Scenario scenario) {
         Simulation simulation = simulationFor(scenario);
 
@@ -55,7 +57,7 @@ class ScenariosTest {
     }
 
     @ParameterizedTest(name = "{0}")
-    @MethodSource("registered")
+    @MethodSource("scenarios")
     void runsWithoutLeavingAnythingOutsideTheArena(String name, Scenario scenario) {
         Simulation simulation = simulationFor(scenario);
 
@@ -67,7 +69,7 @@ class ScenariosTest {
     }
 
     @ParameterizedTest(name = "{0}")
-    @MethodSource("registered")
+    @MethodSource("scenarios")
     void spawnsNothingInsideRock(String name, Scenario scenario) {
         SoftAssertions.assertSoftly(soft -> {
             for (long seed = 0; seed < SEEDS; seed++) {
@@ -92,7 +94,7 @@ class ScenariosTest {
      * runs its 300 ticks, and is simply unplayable.
      */
     @ParameterizedTest(name = "{0}")
-    @MethodSource("registered")
+    @MethodSource("scenarios")
     void leavesEverySpawnReachableFromTheCommander(String name, Scenario scenario) {
         SoftAssertions.assertSoftly(soft -> {
             for (long seed = 0; seed < SEEDS; seed++) {
@@ -141,7 +143,30 @@ class ScenariosTest {
         return Scenarios.world(scenario, SimConfig.defaults().withSeed(seed));
     }
 
-    private static Stream<Arguments> registered() {
-        return Scenarios.all().stream().map(scenario -> Arguments.of(scenario.name(), scenario));
+    /**
+     * Every registered scenario, and the proving ground over a spread of setups (G0060): every strain
+     * in numbers and out of a nest, and each of the others with the squad - not in the registry, and
+     * held to the same rules.
+     */
+    private static Stream<Arguments> scenarios() {
+        Stream<Arguments> registered =
+                Scenarios.all().stream().map(scenario -> Arguments.of(scenario.name(), scenario));
+        Stream.Builder<Arguments> proving = Stream.builder();
+        for (UnitKind strain : UnitKind.values()) {
+            proving.add(proving(
+                    strain + " x10", ProvingSetup.first().withStrain(strain).withCount(10)));
+            proving.add(proving(
+                    strain + " nest", ProvingSetup.first().withStrain(strain).withNest(true)));
+        }
+        for (ProvingSetup.Others others : ProvingSetup.Others.values()) {
+            proving.add(proving(
+                    others + " and squad",
+                    ProvingSetup.first().withOthers(others).withSquad(true)));
+        }
+        return Stream.concat(registered, proving.build());
+    }
+
+    private static Arguments proving(String name, ProvingSetup setup) {
+        return Arguments.of("Proving Ground, " + name, Scenarios.provingGround(setup));
     }
 }

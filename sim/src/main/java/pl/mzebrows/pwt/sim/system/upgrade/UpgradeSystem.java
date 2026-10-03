@@ -169,6 +169,27 @@ public final class UpgradeSystem extends EntitySystem {
         return changed;
     }
 
+    /**
+     * Holds this many ranks of one kind from the first tick, never more than it has - the proving
+     * ground's setup (G0060), handed over while its world is built rather than earned. Held exactly as
+     * ranks taken would be: a players' upgrade by the side, or by slot zero if it is personal; an
+     * adaptation by the swarm, counted towards its tiers. Allocates; never called during a tick.
+     */
+    public static void hold(Engine engine, SimConfig config, UpgradeKind kind, int ranks) {
+        UpgradeDef def = config.upgrades().of(kind);
+        int held = Math.min(ranks, def.ranks());
+        ImmutableArray<Entity> levels =
+                engine.getEntitiesFor(Family.all(Upgrades.class).get());
+        for (int i = 0; held > 0 && i < levels.size(); i++) {
+            Upgrades upgrades = UPGRADES.get(levels.get(i));
+            upgrades.held.add(new Upgrades.Held(kind, def.personal() ? 0 : Upgrades.SHARED, held));
+            if (def.side() == Side.ALIEN) {
+                upgrades.adaptations += held;
+            }
+            upgrades.revision++;
+        }
+    }
+
     /** Adds one rank, to the side's entry or to the chooser's. Allocates, once per pick. */
     private static void grant(Upgrades upgrades, UpgradeKind kind, int slot) {
         for (int i = 0; i < upgrades.held.size; i++) {

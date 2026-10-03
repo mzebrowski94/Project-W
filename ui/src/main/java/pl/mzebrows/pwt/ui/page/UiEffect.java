@@ -5,7 +5,8 @@ package pl.mzebrows.pwt.ui.page;
  * page change: swapping screens, asking the session to pause, quitting. {@link UiFlow} decides it; the
  * screen carries it out and decides nothing.
  *
- * @param index the scenario a {@link Kind#START} or {@link Kind#HOST} means, else -1
+ * @param index the scenario a {@link Kind#START} or {@link Kind#HOST} means, the row a {@link Kind#CHOOSE}
+ *     steps, else -1
  */
 public record UiEffect(Kind kind, int index) {
 
@@ -23,7 +24,11 @@ public record UiEffect(Kind kind, int index) {
         REQUEST_RESUME,
         RESTART,
         /** Leave the level, or stop connecting, for the main menu. */
-        LEAVE
+        LEAVE,
+        /** Step one choice row of the proving ground forward. */
+        CHOOSE,
+        /** Fight the proving ground's setup (G0060). */
+        PROVE
     }
 
     public static final UiEffect NONE = of(Kind.NONE);
@@ -34,6 +39,7 @@ public record UiEffect(Kind kind, int index) {
     public static final UiEffect REQUEST_RESUME = of(Kind.REQUEST_RESUME);
     public static final UiEffect RESTART = of(Kind.RESTART);
     public static final UiEffect LEAVE = of(Kind.LEAVE);
+    public static final UiEffect PROVE = of(Kind.PROVE);
 
     private static UiEffect of(Kind kind) {
         return new UiEffect(kind, -1);

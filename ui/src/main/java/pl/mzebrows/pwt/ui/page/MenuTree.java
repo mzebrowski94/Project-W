@@ -6,7 +6,8 @@ import java.util.Map;
 
 /**
  * Every fixed page's entries, as {@code docs/ui/menu_layout_agent.md} section 4 lists them. The scenario
- * lists - the campaign and hosting - are built from the registry instead, and are not here.
+ * lists - the campaign and hosting - are built from the registry instead, and the proving ground's
+ * upgrades from the catalogue ({@link ProvingRows#upgrades()}); neither is here.
  */
 public final class MenuTree {
 
@@ -27,7 +28,19 @@ public final class MenuTree {
                         0));
         PAGES.put(
                 UiPage.PROVING_GROUND,
-                new MenuPage("ui.provingGround.title", "ui.provingGround.body", List.of(back()), 0));
+                new MenuPage(
+                        "ui.provingGround.title",
+                        "",
+                        List.of(
+                                entry("strain", "ui.provingGround.strain", UiIntent.choose(0)),
+                                entry("count", "ui.provingGround.count", UiIntent.choose(1)),
+                                entry("gun", "ui.provingGround.gun", UiIntent.choose(2)),
+                                entry("squad", "ui.provingGround.squad", UiIntent.choose(3)),
+                                entry("others", "ui.provingGround.others", UiIntent.choose(4)),
+                                entry("upgrades", "ui.provingGround.upgrades", UiIntent.open(UiPage.PROVING_UPGRADES)),
+                                entry("start", "ui.provingGround.start", UiIntent.PROVE),
+                                back()),
+                        6));
         PAGES.put(
                 UiPage.ONLINE,
                 new MenuPage(

@@ -48,6 +48,39 @@ class UiFlowTest {
     }
 
     @Test
+    void opensTheUpgradesOfTheProvingGroundAndComesBackToIt() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+        flow.apply(UiIntent.open(UiPage.PROVING_GROUND));
+
+        flow.apply(UiIntent.open(UiPage.PROVING_UPGRADES));
+        assertThat(flow.top()).isEqualTo(UiPage.PROVING_UPGRADES);
+        flow.apply(UiIntent.BACK);
+
+        assertThat(flow.top()).isEqualTo(UiPage.PROVING_GROUND);
+    }
+
+    /** A choice row's confirm steps it; the screen holds the setup, the flow only says which row. */
+    @Test
+    void stepsAChoiceOnlyOnTheProvingGroundsPages() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+
+        assertThat(flow.apply(UiIntent.choose(2))).isEqualTo(UiEffect.NONE);
+        flow.apply(UiIntent.open(UiPage.PROVING_GROUND));
+        assertThat(flow.apply(UiIntent.choose(2))).isEqualTo(new UiEffect(UiEffect.Kind.CHOOSE, 2));
+        flow.apply(UiIntent.open(UiPage.PROVING_UPGRADES));
+        assertThat(flow.apply(UiIntent.choose(5))).isEqualTo(new UiEffect(UiEffect.Kind.CHOOSE, 5));
+    }
+
+    @Test
+    void provesTheSetupOnlyFromTheProvingGround() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+
+        assertThat(flow.apply(UiIntent.PROVE)).isEqualTo(UiEffect.NONE);
+        flow.apply(UiIntent.open(UiPage.PROVING_GROUND));
+        assertThat(flow.apply(UiIntent.PROVE)).isEqualTo(UiEffect.PROVE);
+    }
+
+    @Test
     void startsTheScenarioChosenOnTheCampaignPage() {
         UiFlow flow = new UiFlow(UiPage.MAIN);
         flow.apply(UiIntent.open(UiPage.CAMPAIGN));
