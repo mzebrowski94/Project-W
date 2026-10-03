@@ -292,17 +292,21 @@ public final class PeerSession implements AutoCloseable {
      *
      * @param clock read when the frame starts, and again when its work is done, for the stats line
      * @param local this frame's input, indexed by local seat
+     * @return whether it took {@code local}'s input events - an order, a pick, a crate's take or shut. Only a
+     *     peer that is playing does; until then the caller keeps them and offers them again.
      */
-    public void pump(Clock clock, PlayerInputs local) {
+    public boolean pump(Clock clock, PlayerInputs local) {
         long nowNanos = clock.nanos();
-        play(nowNanos, local);
+        boolean took = play(nowNanos, local);
         long work = clock.nanos() - nowNanos;
         workNanos += work;
         workMostNanos = Math.max(workMostNanos, work);
         stats(nowNanos);
+        return took;
     }
 
-    private void play(long nowNanos, PlayerInputs local) {
+    /** Plays the frame; returns whether it took the local players' input events. */
+    private boolean play(long nowNanos, PlayerInputs local) {
         long elapsed = pumped ? nowNanos - lastPumpNanos : 0L;
         lastPumpNanos = nowNanos;
         pumped = true;
@@ -318,7 +322,7 @@ public final class PeerSession implements AutoCloseable {
         transport.poll(listener);
         Simulation current = world;
         if (state != State.PLAYING || current == null) {
-            return;
+            return false;
         }
         queueEvents(local);
         accumulator += elapsed;
@@ -369,6 +373,7 @@ public final class PeerSession implements AutoCloseable {
             keepInHand(elapsed);
         }
         sendInput(nowNanos, steps > 0);
+        return true;
     }
 
     /**

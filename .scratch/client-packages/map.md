@@ -49,6 +49,8 @@ client/play/       ScenarioPlay, ScenarioSession, OnlineSession, ScenarioWorlds,
 client/config/     GameProperties and what 03 + 04 leave of the loaders
 ```
 
+4. **Review 05 done** (2026-10-03): `HeldEvents` is new in `client` - the `play` layer's.
+
 ## Fog
 
 - Where 06's seat and top-bar module lives: `ui` (ADR 0015 says decisions about what the player is shown

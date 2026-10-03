@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Objects;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.net.ManualClock;
@@ -13,11 +14,15 @@ import pl.mzebrows.pwt.net.session.BuildId;
 import pl.mzebrows.pwt.net.session.PeerSession;
 import pl.mzebrows.pwt.net.session.Sequencer;
 import pl.mzebrows.pwt.net.session.SessionSetup;
+import pl.mzebrows.pwt.net.session.WorldFactory;
 import pl.mzebrows.pwt.net.transport.ConditionedTransport;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
 
 /**
  * Two copies of the game in one test: the host's {@link OnlineSession} and a joining one, over the
@@ -175,6 +180,50 @@ class OnlineSessionTest {
         assertThat(joiner.lastOrder()).isEqualTo(pl.mzebrows.pwt.sim.def.Order.DEFENCE);
     }
 
+    /**
+     * A card taken before this machine is playing is held until it is, not dropped (architecture-review 05).
+     * Two ways it went: the peer takes events only once it plays, and only for a seat the sequencer has given
+     * a slot - which comes a few frames after playing starts - and the session handed them over regardless.
+     */
+    @Test
+    void deliversAPickMadeBeforeTheSessionIsPlaying() {
+        SessionSetup setup = new SessionSetup(SimConfigLoader.text(), "Skirmish", 7L);
+        Simulation shown = TAKEN_POINTS.fresh(setup);
+        shown.step(new PlayerInputs(Players.MAX));
+        int serial = shown.upgradeView().oldestDraftOf(0);
+        UpgradeKind kind = Objects.requireNonNull(shown.upgradeView().cardOf(serial, 0));
+        try (Sequencer solo = new Sequencer(
+                        network.endpoint("solo"),
+                        config,
+                        NetLog.silent(64),
+                        setup,
+                        Players.MAX,
+                        1f / 60f,
+                        KEY,
+                        BuildId.current());
+                OnlineSession alone = new OnlineSession(
+                        peer(network.endpoint("alone"), "solo", solo.listen(config.port(), 0), KEY, TAKEN_POINTS),
+                        null,
+                        null,
+                        List.of(),
+                        NetLog.silent(64),
+                        clock,
+                        "alone",
+                        null)) {
+
+            alone.pick(PlayerSeats.KEYBOARD_SLOT, serial, kind);
+            for (int i = 0; i < 120; i++) {
+                clock.advanceNanos(FRAME);
+                solo.pump(clock.nanos());
+                alone.advance(1f / 60f, new PlayerInputs(Players.MAX));
+            }
+
+            UpgradeView view = world(alone).upgradeView();
+            assertThat(view.heldCount()).as("cards taken").isEqualTo(1);
+            assertThat(view.heldKind(0)).isEqualTo(kind);
+        }
+    }
+
     private void frames(int count) {
         for (int i = 0; i < count; i++) {
             clock.advanceNanos(FRAME);
@@ -193,9 +242,37 @@ class OnlineSessionTest {
     }
 
     private PeerSession peer(pl.mzebrows.pwt.net.transport.Transport transport, long key) {
-        PeerSession peer = new PeerSession(
-                transport, config, NetLog.silent(64), new ScenarioWorlds(), null, BuildId.current(), "test");
-        peer.connect("host", port, key);
+        return peer(transport, "host", port, key, new ScenarioWorlds());
+    }
+
+    private PeerSession peer(
+            pl.mzebrows.pwt.net.transport.Transport transport,
+            String host,
+            int hostPort,
+            long key,
+            WorldFactory worlds) {
+        PeerSession peer =
+                new PeerSession(transport, config, NetLog.silent(64), worlds, null, BuildId.current(), "test");
+        peer.connect(host, hostPort, key);
         return peer;
     }
+
+    /** The scenario with two control points already taken, so slot 0 is dealt a draft on the first tick. */
+    private static final WorldFactory TAKEN_POINTS = new WorldFactory() {
+        private final ScenarioWorlds scenario = new ScenarioWorlds();
+
+        @Override
+        public Simulation fresh(SessionSetup setup) {
+            Simulation world = scenario.fresh(setup);
+            for (int i = 0; i < 2; i++) {
+                world.spawnControlPoint(30f + 10f * i, 30f).getComponent(ControlPoint.class).captured = true;
+            }
+            return world;
+        }
+
+        @Override
+        public Simulation blank(SessionSetup setup) {
+            return scenario.blank(setup);
+        }
+    };
 }

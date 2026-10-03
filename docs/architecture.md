@@ -272,6 +272,8 @@ loop.
   whose lag the playtest steps. Input arrives by local seat and the session says which slot each seat
   plays; `local(slot)` is what the camera frames and whom the console's action prompt is for (G0038).
   `ScenarioWorlds` builds a session's worlds from the host's shipped config.
+  `HeldEvents` holds a local player's picks and crate choices by seat for both, until a tick or the session
+  takes them - `PeerSession.pump` says whether it did.
 - `LaunchOptions` / `PadPolicy` / `ChosenGamepads` - the command line: which copy of the game this is,
   and which pads it reads.
 - `JoinScreen` / `JoinChoices` - the join screen: sessions heard on the network, and a room code or an

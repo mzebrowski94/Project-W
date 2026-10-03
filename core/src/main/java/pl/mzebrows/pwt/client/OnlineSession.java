@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.Family;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.function.IntUnaryOperator;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.Clock;
 import pl.mzebrows.pwt.net.NetConfig;
@@ -62,15 +63,18 @@ public final class OnlineSession implements ScenarioPlay {
     private boolean leaving;
     private boolean toldStepIsOffline;
 
-    /** A card taken on this machine, by seat, until the next frame hands it to the session as an event. */
-    private final @Nullable UpgradeKind[] pendingPick = new UpgradeKind[PlayerSeats.SEATS];
+    /**
+     * Cards taken and crate choices on this machine, by seat, offered to the session every frame until it
+     * takes them - which it does only once it plays.
+     */
+    private final HeldEvents held = new HeldEvents();
 
-    /** A pickup a seat takes from his crate, or a shut, waiting for the next frame (G0056). */
-    private final @Nullable PickupKind[] pendingCrateTake = new PickupKind[PlayerSeats.SEATS];
+    /**
+     * Where {@link #held} offers a seat's events: at the seat itself, which is how the peer reads input - once
+     * the sequencer has given that seat a slot. Before then the peer would drop them, so they stay held.
+     */
+    private final IntUnaryOperator seated = this::seatOnceSeated;
 
-    private final boolean[] pendingCrateClose = new boolean[PlayerSeats.SEATS];
-
-    private final int[] pendingPickSerial = new int[PlayerSeats.SEATS];
     private int lagStep = -1;
     private @Nullable Order lastOrder;
 
@@ -228,21 +232,13 @@ public final class OnlineSession implements ScenarioPlay {
      */
     @Override
     public void pick(int seat, int serial, UpgradeKind kind) {
-        if (seat < 0 || seat >= pendingPick.length) {
-            return;
-        }
-        pendingPick[seat] = kind;
-        pendingPickSerial[seat] = serial;
+        held.pick(seat, serial, kind);
     }
 
     /** Held until the next frame, which hands it to the session as an input event, as a pick is (G0056). */
     @Override
     public void crate(int seat, @Nullable PickupKind take) {
-        if (seat < 0 || seat >= pendingCrateTake.length) {
-            return;
-        }
-        pendingCrateTake[seat] = take;
-        pendingCrateClose[seat] = take == null;
+        held.crate(seat, take);
     }
 
     @Override
@@ -253,24 +249,11 @@ public final class OnlineSession implements ScenarioPlay {
                 lastOrder = given;
             }
         }
-        for (int seat = 0; seat < pendingPick.length && seat < local.capacity(); seat++) {
-            UpgradeKind picked = pendingPick[seat];
-            if (picked != null) {
-                local.pick(seat, pendingPickSerial[seat], picked);
-                pendingPick[seat] = null;
-            }
+        // Taken only once the peer plays and the seat has a slot: until then they stay held.
+        held.offer(local, seated);
+        if (peer.pump(clock, local)) {
+            held.taken();
         }
-        for (int seat = 0; seat < pendingCrateTake.length && seat < local.capacity(); seat++) {
-            PickupKind taken = pendingCrateTake[seat];
-            if (taken != null) {
-                local.takeFromCrate(seat, taken);
-                pendingCrateTake[seat] = null;
-            } else if (pendingCrateClose[seat]) {
-                local.closeCrate(seat);
-                pendingCrateClose[seat] = false;
-            }
-        }
-        peer.pump(clock, local);
         Invitation hosting = invitation;
         Simulation world = peer.simulation();
         if (hosting != null) {
@@ -279,6 +262,11 @@ public final class OnlineSession implements ScenarioPlay {
                             ? 0
                             : world.engine().getEntitiesFor(COMMANDERS).size());
         }
+    }
+
+    /** The seat itself once the sequencer has given it a slot; -1 until then. */
+    private int seatOnceSeated(int seat) {
+        return peer.slotOf(seat) >= 0 ? seat : -1;
     }
 
     /** What a hosting copy tells its players so their friends can join: its room code and addresses. */

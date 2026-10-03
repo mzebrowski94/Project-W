@@ -1,6 +1,6 @@
 # 05 - One queue for held-back input events
 
-Status: ready-for-agent
+Status: done
 
 Strength: Strong - likely live bug. Dependency: in-process; `PeerSession` is local-substitutable
 (`LoopbackNetwork`, `ManualClock`). Report candidate 6.
@@ -37,3 +37,12 @@ A failing test in `OnlineSessionTest`: a pick made before the session is `PLAYIN
 ## Comments
 - 2026-10-03: Taken (system-modules 06). Gates `.scratch/client-packages/`, which splits `core/client` by layer
   once these are in; order 1st.
+- 2026-10-03: Done. The bug was real and had a second half the problem did not name: even once the peer
+  plays, `queueEvents` drops a seat's events until the sequencer has given that seat a slot, which comes a
+  few frames later. `HeldEvents` (client, package-private) holds picks and crate choices by seat for both
+  sessions, one set of rules, and offers them until something confirms it took them; `PeerSession.pump`
+  now returns whether it took this frame's events, and the online session offers a seat's events only once
+  the seat has a slot. Offline a tick always takes them. An event for a session that never plays is dropped
+  with it. Orders are not moved in: offline already holds them, online a lost order before playing has no
+  commander to reach. New invariant row in `progression.md`; `OnlineSessionTest.deliversAPickMadeBefore
+  TheSessionIsPlaying` (a solo host on Skirmish with two points taken), `HeldEventsTest`.

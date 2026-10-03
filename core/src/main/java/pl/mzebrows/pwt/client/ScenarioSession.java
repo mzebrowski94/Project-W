@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import java.util.Arrays;
+import java.util.function.IntUnaryOperator;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.FixedStepClock;
 import pl.mzebrows.pwt.sim.PlayerInputs;
@@ -61,17 +62,13 @@ public final class ScenarioSession implements ScenarioPlay {
     private final @Nullable Order[] pendingOrder = new Order[Players.MAX];
 
     /**
-     * A card taken with a harness key that no tick has taken yet, by slot: the kind and the draft it was
-     * on. Held for the reason {@link #pendingOrder} is, and spent once.
+     * Cards taken and crate choices that no tick has taken yet, by seat - held for the reason {@link
+     * #pendingOrder} is, and spent once.
      */
-    private final @Nullable UpgradeKind[] pendingPick = new UpgradeKind[Players.MAX];
+    private final HeldEvents held = new HeldEvents();
 
-    private final int[] pendingPickSerial = new int[Players.MAX];
-
-    /** A pickup a slot takes from his crate, or a shut, waiting for the next tick (G0056). */
-    private final @Nullable PickupKind[] pendingCrateTake = new PickupKind[Players.MAX];
-
-    private final boolean[] pendingCrateClose = new boolean[Players.MAX];
+    /** Which slot each seat plays, as {@link #held} asks it - made once rather than every tick. */
+    private final IntUnaryOperator slots = this::slotOf;
 
     /** Reused, so handing a tick its waiting events costs no allocation per tick. */
     private final PlayerInputs forThisTick = new PlayerInputs();
@@ -130,23 +127,13 @@ public final class ScenarioSession implements ScenarioPlay {
     /** Held until the next tick runs, and remembered while paused - a solo draft is taken paused (G0049). */
     @Override
     public void pick(int seat, int serial, UpgradeKind kind) {
-        int slot = slotOf(seat);
-        if (slot < 0 || slot >= pendingPick.length) {
-            return;
-        }
-        pendingPick[slot] = kind;
-        pendingPickSerial[slot] = serial;
+        held.pick(seat, serial, kind);
     }
 
     /** Held until the next tick runs, and remembered while paused, as a pick is (G0056). */
     @Override
     public void crate(int seat, @Nullable PickupKind take) {
-        int slot = slotOf(seat);
-        if (slot < 0 || slot >= pendingCrateTake.length) {
-            return;
-        }
-        pendingCrateTake[slot] = take;
-        pendingCrateClose[slot] = take == null;
+        held.crate(seat, take);
     }
 
     /** The last squad order the player gave, for the overlay to show. Null until one is given. */
@@ -287,25 +274,14 @@ public final class ScenarioSession implements ScenarioPlay {
         for (int slot = 0; slot < Players.MAX; slot++) {
             forThisTick.set(slot, input.get(slot)).order(slot, pendingOrder[slot]);
             pendingOrder[slot] = null;
-            UpgradeKind picked = pendingPick[slot];
-            if (picked != null) {
-                forThisTick.pick(slot, pendingPickSerial[slot], picked);
-                pendingPick[slot] = null;
-            }
             if (pendingJoin[slot]) {
                 forThisTick.join(slot);
                 pendingJoin[slot] = false;
             }
-            PickupKind taken = pendingCrateTake[slot];
-            if (taken != null) {
-                forThisTick.takeFromCrate(slot, taken);
-                pendingCrateTake[slot] = null;
-            }
-            if (pendingCrateClose[slot]) {
-                forThisTick.closeCrate(slot);
-                pendingCrateClose[slot] = false;
-            }
         }
+        // A tick always takes what it is offered.
+        held.offer(forThisTick, slots);
+        held.taken();
         if (pendingGodModeSwitch) {
             forThisTick.switchInvulnerability(godMode);
             pendingGodModeSwitch = false;
@@ -324,9 +300,7 @@ public final class ScenarioSession implements ScenarioPlay {
     private void restart() {
         lastOrder = null;
         Arrays.fill(pendingOrder, null);
-        Arrays.fill(pendingPick, null);
-        Arrays.fill(pendingCrateTake, null);
-        Arrays.fill(pendingCrateClose, false);
+        held.clear();
         simulation = newWorld();
         clock = new FixedStepClock(simulation.config());
         paused = false;
