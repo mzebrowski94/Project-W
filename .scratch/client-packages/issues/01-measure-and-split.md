@@ -34,8 +34,8 @@ The split is in `map.md` *Decisions*, approved by Mateusz.
 
 ## Answer
 
-Measured 2026-10-03 on the tree after review tickets 03-06 and 09. **Proposed - waiting on Mateusz** (see
-*Left for Mateusz*).
+Measured 2026-10-03 on the tree after review tickets 03-06 and 09. **Approved by Mateusz 2026-10-03**, all
+four points of *Left for Mateusz* as recommended.
 
 ### 1. The graph
 
@@ -186,7 +186,7 @@ guard on seven decision classes, five of them tested - Mateusz's call (*Left for
   `docs/ui/ui_and_graphics_action_plan.md` ("`client` (existing, flat)" - a plan of its day).
 - The new ADR is **0021**, amending 0020's *Scope* (02, step 3).
 
-### Left for Mateusz
+### Settled with Mateusz
 
 1. The split above, with its moves against the sketch: `GraphicConfig` -> `draw`, `ControlsConfig` ->
    `input`, `LaunchOptions`, `HarnessControls` and `LocalMachineId` -> root, `SystemPointer` -> `hud`.

@@ -33,21 +33,13 @@ stripped, classes only).
    config front door; the `*File` mirrors go), then 06 (seats and top bar out of `ScenarioScreen` and
    `InputReader`), then 09 (the overlay reads the readout). Each its own session.
 2. **By layer**, not by screen and not decides-versus-draws: `core` is adapters, and its adapters are its
-   layers. Sketch below; ticket 01 measures it again once the review tickets are in.
+   layers. Measured and placed in decision 8.
 3. **ADR 0020's shape**: package-private by default, declared ports, rules in `ClientArchitectureTest`
    that fail on zero classes. The `Gdx`-free rule moves from name suffixes to packages. Recorded as a new
    ADR amending 0020's *Scope* ("Not `core`").
 
-Sketch - to be replaced by ticket 01's measurement (decision 8):
+The sketch that stood here is replaced by decision 8's [`split.txt`](split.txt).
 
-```
-client/            PwtGame, GameContext, Assets, Log, the screens, PlayMenus
-client/input/      Gamepad*, Pad*, Key*, *Keys, *Controls, InputReader, NavInputReader, PlayerSeats
-client/draw/       WorldRenderer, *Mark, Palette, StateTint, Terrain*, GroundDetail, LocalAim, CameraDirector
-client/hud/        Hud, HudStyle, *Painter, RankPips, fonts, PixelViewport, LetterboxViewport, text, *Hints
-client/play/       ScenarioPlay, ScenarioSession, OnlineSession, ScenarioWorlds, Invitation, HarnessCommand ...
-client/config/     GameProperties and what 03 + 04 leave of the loaders
-```
 
 4. **Review 05 done** (2026-10-03): `HeldEvents` is new in `client` - the `play` layer's.
 5. **Reviews 03 + 04 done** (2026-10-03): `GraphicFile`, `ControlsFile` and `HudStyle` are gone; new are
@@ -57,17 +49,19 @@ client/config/     GameProperties and what 03 + 04 leave of the loaders
    `TopBarSeats`; `InputReader` is the `input` layer's device reader and decides nothing about the bar.
 7. **Review 09 done** (2026-10-03): `Drawn` is new (the `draw` layer's); `DebugOverlay` reads the readout and
    no longer touches `Gdx`. Every review ticket that gated this effort is in - ticket 01 can run.
-8. **Ticket 01 measured the split** (2026-10-03) - *proposed, waiting on Mateusz*: [`split.txt`](split.txt),
+8. **The split** (ticket 01, approved by Mateusz 2026-10-03, all four points as recommended): [`split.txt`](split.txt),
    checked by `system-graph.py --root core/src/main/java/pl/mzebrows/pwt/client --split`; the reasoning,
    the public list, where every test goes and the libGDX rule by package are in
    [01's answer](issues/01-measure-and-split.md#answer). Against the sketch: a config record lives with its
    layer (`GraphicConfig` in `draw`, `ControlsConfig` in `input`); `LaunchOptions`, `HarnessControls`,
-   `LocalMachineId` in the root; `SystemPointer` in `hud`. 14 ports, 35 entries, layers acyclic.
+   `LocalMachineId` in the root; `SystemPointer` in `hud`. 14 ports, 35 entries, layers acyclic. The `Gdx`
+   rule is by package (`play`, `config` no libGDX; `draw`, `hud` no devices; `input` no drawing) plus the
+   suffix rule kept for the decision classes outside `play`. `ConfigDefaultsTest` splits three ways.
 
 ## Fog
 
 - Where 06's seat and top-bar module lives: `ui` (ADR 0015 says decisions about what the player is shown
   do) or `core`. First question of that ticket.
-- Whether the screens stay in the root or form a package of their own. 01 proposes the root.
-- Whether `Log` and `Assets` are a package's ports or the root's. 01 proposes the root's, with
-  `LaunchOptions`.
+- ~~Whether the screens stay in the root~~ - they do (decision 8).
+- ~~Whether `Log` and `Assets` are a package's ports or the root's~~ - the root's, with `LaunchOptions`
+  (decision 8).
