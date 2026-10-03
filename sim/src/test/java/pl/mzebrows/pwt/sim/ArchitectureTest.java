@@ -276,7 +276,8 @@ final class ArchitectureTest {
             SYSTEM + ".creature",
             SYSTEM + ".combat",
             SYSTEM + ".death",
-            SYSTEM + ".level");
+            SYSTEM + ".level",
+            SYSTEM + ".appearance");
 
     /**
      * Where a class under {@code sim.system} may live: a fenced package, or straight in {@code sim.system}

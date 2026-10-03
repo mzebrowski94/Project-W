@@ -23,7 +23,7 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
-import pl.mzebrows.pwt.sim.system.AppearanceSystem;
+import pl.mzebrows.pwt.sim.system.appearance.AppearanceSystem;
 import pl.mzebrows.pwt.sim.system.combat.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.combat.CooldownSystem;
 import pl.mzebrows.pwt.sim.system.combat.DamageSystem;
