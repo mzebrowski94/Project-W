@@ -769,6 +769,9 @@ public final class AlphaWorlds {
     /** How far a wounded trooper walks for a medkit. */
     public static final float MEDKIT_REACH = 20f;
 
+    /** How far inside his gun's reach a man with a short gun walks before he plants himself. */
+    public static final float CLOSE_IN_FACTOR = 0.8f;
+
     /** A trooper's wait between grenades: long, so a test sees one man throw once. */
     public static final float TROOPER_GRENADE_COOLDOWN = 10f;
 
@@ -870,6 +873,7 @@ public final class AlphaWorlds {
                         THREAT_BONUS,
                         SHARED_TARGET_PENALTY,
                         MEDKIT_REACH,
+                        CLOSE_IN_FACTOR,
                         new TrooperGrenadeDef(TROOPER_GRENADE_COOLDOWN, MIN_CLUSTER, SAFETY_MARGIN, SQUAD_GAP_SECONDS)),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 // Never musters: men turning up every so often would move every count in every test.

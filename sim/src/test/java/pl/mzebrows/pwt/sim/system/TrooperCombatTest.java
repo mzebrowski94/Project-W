@@ -1,9 +1,12 @@
 package pl.mzebrows.pwt.sim.system;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.CLOSE_IN_FACTOR;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DETECTION_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.FLAME_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LOSE_RANGE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_CAPTURE_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SECONDARY_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.everyStrain;
@@ -13,6 +16,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.leapConfig;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.on;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
@@ -20,6 +24,7 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Leap;
@@ -55,6 +60,12 @@ class TrooperCombatTest {
 
     /** Behind him, out of his arc and inside his sight, and far enough off not to wake a nest. */
     private static final float BEHIND = 25f;
+
+    /** Past where a flame goes out and inside what he can see. */
+    private static final float OUT_OF_FLAME_REACH = 15f;
+
+    /** Enough to stand a minute of fire, so a test about the walk is never cut short by a kill. */
+    private static final int TOUGH = 100_000;
 
     @Test
     void shootsWhatItCanSeeInFrontOfIt() {
@@ -115,6 +126,90 @@ class TrooperCombatTest {
 
         assertThat(at(trooper).x).isCloseTo(wasX, org.assertj.core.data.Offset.offset(0.6f));
         assertThat(at(trooper).y).isCloseTo(wasY, org.assertj.core.data.Offset.offset(0.6f));
+    }
+
+    /**
+     * <strong>A short gun is carried to what it is for.</strong> Fire from out of its reach goes out
+     * in the air, so a man holding one walks in until his target is inside it - and pours nothing
+     * into the gap on the way.
+     */
+    @Test
+    void closesInOnSomethingItsGunDoesNotReach() {
+        Simulation simulation = oblivious();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = flamer(simulation.spawnTrooper(MIDDLE, MIDDLE), simulation);
+        Entity enemy = simulation.spawnEnemy(MIDDLE + OUT_OF_FLAME_REACH, MIDDLE);
+        facing(trooper, 1f, 0f);
+        simulation.step();
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+        assertThat(count(simulation, Projectile.class)).isZero();
+
+        steps(simulation, 60);
+
+        assertThat(distance(trooper, enemy)).isLessThanOrEqualTo(FLAME_RANGE);
+        assertThat(enemy.getComponent(Health.class).current).isLessThan(TOUGH);
+    }
+
+    /**
+     * It plants itself <strong>well inside</strong> the reach, not on the edge of it: a man who stopped
+     * at the edge would be walking again the moment his target took half a step back.
+     */
+    @Test
+    void plantsItselfInsideItsReachRatherThanOnTheEdgeOfIt() {
+        Simulation simulation = oblivious();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = flamer(simulation.spawnTrooper(MIDDLE, MIDDLE), simulation);
+        Entity enemy = simulation.spawnEnemy(MIDDLE + OUT_OF_FLAME_REACH, MIDDLE);
+        facing(trooper, 1f, 0f);
+        steps(simulation, 60);
+        float closedTo = distance(trooper, enemy);
+
+        steps(simulation, 20);
+
+        assertThat(closedTo).isLessThanOrEqualTo(FLAME_RANGE * CLOSE_IN_FACTOR + 0.5f);
+        assertThat(distance(trooper, enemy)).isCloseTo(closedTo, org.assertj.core.data.Offset.offset(0.6f));
+    }
+
+    /** Told to hold, he holds: a defence is ground, and he fires from it whatever his gun reaches. */
+    @Test
+    void holdsItsGroundOnADefenceOrderWhateverItsGunReaches() {
+        Simulation simulation = oblivious();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = flamer(simulation.spawnTrooper(MIDDLE, MIDDLE), simulation);
+        trooper.getComponent(Trooper.class).order = Order.DEFENCE;
+        simulation.spawnEnemy(MIDDLE + OUT_OF_FLAME_REACH, MIDDLE);
+        facing(trooper, 1f, 0f);
+        float wasX = at(trooper).x;
+        boolean fired = false;
+
+        for (int tick = 0; tick < 40; tick++) {
+            simulation.step();
+            fired |= count(simulation, Projectile.class) > 0;
+        }
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+        assertThat(at(trooper).x).isCloseTo(wasX, org.assertj.core.data.Offset.offset(0.6f));
+        assertThat(fired).isTrue();
+    }
+
+    /** And a point the squad has taken is ground held the same way (G0029). */
+    @Test
+    void holdsAPointItHasTakenWhateverItsGunReaches() {
+        Simulation simulation = oblivious();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity taken = simulation.spawnControlPoint(MIDDLE, MIDDLE);
+        simulation.spawnControlPoint(CORNER, 10f);
+        Entity trooper = flamer(simulation.spawnTrooper(MIDDLE, MIDDLE), simulation);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 4);
+        assertThat(taken.getComponent(ControlPoint.class).captured).isTrue();
+        simulation.spawnEnemy(MIDDLE + OUT_OF_FLAME_REACH, MIDDLE);
+        facing(trooper, 1f, 0f);
+        float wasX = at(trooper).x;
+
+        steps(simulation, 40);
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+        assertThat(at(trooper).x).isCloseTo(wasX, org.assertj.core.data.Offset.offset(0.6f));
     }
 
     /** 1.c. In front of it, at close range - not everything within a radius of it. */
@@ -376,6 +471,36 @@ class TrooperCombatTest {
                 strain -> strain.withContactDamage(0)
                         .withPerception(
                                 PerceptionDef.allRound(false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))));
+    }
+
+    /**
+     * Enemies that notice nobody and so stand where they were put, and take a long time to burn down:
+     * the trooper does all the moving, and the fight outlasts the walk.
+     */
+    private static Simulation oblivious() {
+        return new Simulation(everyStrain(
+                AlphaWorlds.config(),
+                strain -> strain.withContactDamage(0)
+                        .withHealth(TOUGH)
+                        .withPerception(PerceptionDef.allRound(false, true, 0f, 0f, 0f))));
+    }
+
+    /** Hands this man the flamethrower, whose fire goes out a short way off. */
+    private static Entity flamer(Entity trooper, Simulation simulation) {
+        trooper.getComponent(Weapon.class)
+                .set(
+                        WeaponKind.FLAMER,
+                        simulation.config().weapon(WeaponKind.FLAMER),
+                        simulation.config().tickSeconds());
+        return trooper;
+    }
+
+    private static float distance(Entity from, Entity to) {
+        Position a = at(from);
+        Position b = to.getComponent(Position.class);
+        float dx = b.x - a.x;
+        float dy = b.y - a.y;
+        return (float) Math.sqrt(dx * dx + dy * dy);
     }
 
     /** The dice rigged so a rare thing happens every time it is offered. */

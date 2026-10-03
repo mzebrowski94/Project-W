@@ -63,6 +63,14 @@ public final class Trooper implements Component, Pool.Poolable {
     public boolean hasTarget;
 
     /**
+     * Whether, in a fight, it is walking in on what it is fighting because its gun does not reach it
+     * yet, rather than standing to shoot. Never true outside {@link Mode#FIGHT}.
+     *
+     * <p>Remembered across ticks for the hysteresis: once walking, it walks to well inside the reach.
+     */
+    public boolean closing;
+
+    /**
      * Which way it is looking, as a unit vector.
      *
      * <p>Published as its {@code Facing} by {@code FacingSystem}: a decision, not a side effect of
@@ -277,6 +285,7 @@ public final class Trooper implements Component, Pool.Poolable {
         targetX = 0f;
         targetY = 0f;
         hasTarget = false;
+        closing = false;
         lookX = 1f;
         lookY = 0f;
         scanRemaining = 0;

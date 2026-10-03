@@ -519,6 +519,9 @@ public record SimConfig(
      *     already shooting at it this tick. Zero is every man for the nearest
      * @param medkitReach how far a wounded man with nothing to fight will walk for a medkit (G0053), in
      *     world units. Zero never
+     * @param closeInFactor how far inside his gun's reach a man whose gun has one walks before he plants
+     *     himself to shoot, as a fraction of it, in {@code (0, 1]}. He sets off again only once his target
+     *     is past the reach itself, so below one is the margin that stops him ambling in and out of it
      * @param grenade how often a trooper throws a grenade, and the rules that keep its blast off his own
      *     side (G0051); whether he ever does is {@code AiChance.THROW_A_GRENADE}
      */
@@ -556,6 +559,7 @@ public record SimConfig(
             float threatBonus,
             float sharedTargetPenalty,
             float medkitReach,
+            float closeInFactor,
             TrooperGrenadeDef grenade) {
         public TrooperConfig {
             Require.positive("trooper radius", radius);
@@ -589,6 +593,9 @@ public record SimConfig(
             Require.notNegative("trooper alertSeconds", alertSeconds);
             Require.notNegative("trooper threatBonus", threatBonus);
             Require.notNegative("trooper sharedTargetPenalty", sharedTargetPenalty);
+            if (closeInFactor <= 0f || closeInFactor > 1f) {
+                throw new IllegalArgumentException("trooper closeInFactor must be in (0, 1], was " + closeInFactor);
+            }
             if (holdJitterSeconds > holdSeconds) {
                 throw new IllegalArgumentException("trooper holdJitterSeconds must not be above holdSeconds");
             }

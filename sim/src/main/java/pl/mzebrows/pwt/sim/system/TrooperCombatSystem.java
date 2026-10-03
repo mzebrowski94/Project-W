@@ -37,7 +37,8 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 /**
  * Shoots, and very occasionally swings.
  *
- * <p>Fires at what {@code TrooperMindSystem} settled on, standing still (1.d). <strong>The hand strike
+ * <p>Fires at what {@code TrooperMindSystem} settled on, standing still (1.d), and holds fire while he
+ * is still closing in on something his gun does not reach. <strong>The hand strike
  * is rare on purpose</strong> - answering a leap is the commander's moment (G0013) - rolled through
  * {@code Odds} on {@code AiChance.SWING_AT_A_LEAP}. A man in something's jaws fires nothing and
  * swings at what holds him, now and then ({@code AiChance.STRUGGLE}, G0045).
@@ -134,6 +135,10 @@ public final class TrooperCombatSystem extends EntitySystem {
                 continue;
             }
             if (throwAGrenade(entity, trooper, deltaTime)) {
+                continue;
+            }
+            if (trooper.closing) {
+                // Walking in on it: his fire would go out short, and he does not walk and shoot (1.d).
                 continue;
             }
             fire(entity, trooper);
