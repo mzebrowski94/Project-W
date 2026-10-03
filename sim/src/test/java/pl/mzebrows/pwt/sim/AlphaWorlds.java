@@ -50,6 +50,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.def.WeaponType;
 import pl.mzebrows.pwt.sim.def.WeaveDef;
 import pl.mzebrows.pwt.sim.upgrade.AdaptationDef;
 import pl.mzebrows.pwt.sim.upgrade.DraftDef;
@@ -622,6 +623,12 @@ public final class AlphaWorlds {
 
     public static final float BAZOOKA_SHAKE_SECONDS = 0.2f;
 
+    /** A disc comes off this many things and stops at the next: enough to count, few enough to watch. */
+    public static final int DISC_BOUNCES = 2;
+
+    /** Longer than any of the disc tests fly, so only the one about its reach meets it. */
+    public static final float DISC_RANGE = 60f;
+
     /** Four bolts stun an ordinary body: few enough to fire in a test, more than one so there is a build. */
     public static final int PULSE_STUN_AFTER_HITS = 4;
 
@@ -971,6 +978,16 @@ public final class AlphaWorlds {
                                         // Out of the deck, as the bazooka is.
                                         ArmouryDef.off()))
                         .put(
+                                PickupKind.ARMOURY_DISC,
+                                new PickupDef(
+                                        PICKUP_RADIUS,
+                                        Look.ARMOURY_DISC,
+                                        new Grant.Arm(WeaponKind.DISC_GUN),
+                                        Grant.NOTHING,
+                                        SHINE_SECONDS,
+                                        // Out of the deck, as the bazooka is.
+                                        ArmouryDef.off()))
+                        .put(
                                 PickupKind.CRATE,
                                 new PickupDef(
                                         PICKUP_RADIUS,
@@ -1022,7 +1039,9 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.BALLISTIC))
                         .put(
                                 WeaponKind.SPIT,
                                 new WeaponDef(
@@ -1051,7 +1070,9 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.NONE))
                         .put(
                                 WeaponKind.SPEW,
                                 new WeaponDef(
@@ -1080,7 +1101,9 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.NONE))
                         .put(
                                 WeaponKind.CHARGED_SPIT,
                                 new WeaponDef(
@@ -1109,7 +1132,9 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.NONE))
                         .put(
                                 WeaponKind.RAILGUN,
                                 new WeaponDef(
@@ -1138,7 +1163,9 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.ENERGY))
                         .put(
                                 WeaponKind.FLAMER,
                                 new WeaponDef(
@@ -1167,7 +1194,9 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.HEAVY))
                         // The beam: it stops at the first thing it touches, and it runs hot. The
                         // fixture keeps both, because both are what every test about it is about.
                         .put(
@@ -1198,7 +1227,9 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.ENERGY))
                         .put(
                                 WeaponKind.BAZOOKA,
                                 new WeaponDef(
@@ -1228,7 +1259,9 @@ public final class AlphaWorlds {
                                         BAZOOKA_RECOIL_SECONDS,
                                         0,
                                         new ShakeDef(
-                                                BAZOOKA_SHAKE_STRENGTH, BAZOOKA_SHAKE_RADIUS, BAZOOKA_SHAKE_SECONDS)))
+                                                BAZOOKA_SHAKE_STRENGTH, BAZOOKA_SHAKE_RADIUS, BAZOOKA_SHAKE_SECONDS),
+                                        0,
+                                        WeaponType.HEAVY))
                         // The pulse rifle: an ordinary shot whose stun is built by several of them.
                         .put(
                                 WeaponKind.PULSE,
@@ -1258,7 +1291,41 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         PULSE_STUN_AFTER_HITS,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.ENERGY))
+                        // The disc gun: an ordinary shot that comes off what it hits, with a reach, cold.
+                        .put(
+                                WeaponKind.DISC_GUN,
+                                new WeaponDef(
+                                        COOLDOWN,
+                                        PROJECTILE_SPEED,
+                                        PROJECTILE_RADIUS,
+                                        DISC_RANGE,
+                                        WEAPON_DAMAGE,
+                                        1,
+                                        0f,
+                                        Look.DISC,
+                                        0f,
+                                        SlickDef.off(),
+                                        HeatDef.none(),
+                                        0f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        1f,
+                                        0f,
+                                        0f,
+                                        0f,
+                                        0f,
+                                        Harm.WOUND,
+                                        Harm.DOWN,
+                                        0f,
+                                        0f,
+                                        0,
+                                        ShakeDef.off(),
+                                        DISC_BOUNCES,
+                                        WeaponType.ENERGY))
                         .put(
                                 WeaponKind.SHOTGUN,
                                 new WeaponDef(
@@ -1287,7 +1354,9 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.BALLISTIC))
                         .put(
                                 WeaponKind.VENOM,
                                 new WeaponDef(
@@ -1327,7 +1396,9 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.NONE))
                         .put(
                                 WeaponKind.TURRET_GUN,
                                 new WeaponDef(
@@ -1356,7 +1427,9 @@ public final class AlphaWorlds {
                                         0f,
                                         0f,
                                         0,
-                                        ShakeDef.off()))
+                                        ShakeDef.off(),
+                                        0,
+                                        WeaponType.NONE))
                         .build(),
                 MUZZLE_GAP,
                 thickets(),

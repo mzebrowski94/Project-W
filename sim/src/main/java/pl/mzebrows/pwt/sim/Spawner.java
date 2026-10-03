@@ -868,6 +868,7 @@ public final class Spawner {
                 weapon.shockPerHit,
                 weapon.harm,
                 weapon.blastHarm,
+                weapon.bounces,
                 side,
                 credit);
     }
@@ -893,13 +894,15 @@ public final class Spawner {
             float shockPerHit,
             Harm harm,
             Harm blastHarm,
+            int bounces,
             Side side,
             int credit) {
         Entity entity = engine.createEntity();
         Projectile shot = engine.createComponent(Projectile.class)
                 .from(x, y)
                 .lasting(range)
-                .trailing(trailLength);
+                .trailing(trailLength)
+                .bouncing(bounces);
         if (pierceIntervalTicks > 0) {
             // A shot that goes through things: the contact cooldown makes one crossing one blow.
             shot.piercing();

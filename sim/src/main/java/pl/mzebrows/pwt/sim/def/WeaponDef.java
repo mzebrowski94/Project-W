@@ -52,6 +52,12 @@ import lombok.With;
  *     one is a stun on every hit, which is what every gun but the pulse rifle declares
  * @param shake how hard one pull shakes the ground where it is fired; {@link ShakeDef#off()} for every gun
  *     but the bazooka
+ * @param bounces how many times one of its shots comes off what it hits rather than stopping there - off
+ *     rock, the arena's edge, scenery and anything alive of another side alike, landing its blow on each
+ *     body it comes off. Zero stops at the first thing, which is what every gun but the disc gun declares;
+ *     the shot still goes out at its reach, counted along every leg it flew
+ * @param type its weapon type, for whatever names more than one gun at once;
+ *     {@link WeaponType#NONE} for every gun no man carries
  */
 @With
 public record WeaponDef(
@@ -80,7 +86,9 @@ public record WeaponDef(
         float recoilSpeed,
         float recoilSeconds,
         int stunAfterHits,
-        ShakeDef shake) {
+        ShakeDef shake,
+        int bounces,
+        WeaponType type) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;
@@ -109,6 +117,11 @@ public record WeaponDef(
         Require.notNegative("weapon recoilSpeed", recoilSpeed);
         Require.notNegative("weapon recoilSeconds", recoilSeconds);
         Require.notNegative("weapon stunAfterHits", stunAfterHits);
+        Require.notNegative("weapon bounces", bounces);
+        if (bounces > 0 && pierceIntervalSeconds > 0f) {
+            throw new IllegalArgumentException(
+                    "a shot comes off what it hits or passes through it, never both: bounces with a pierceIntervalSeconds");
+        }
         if (selfSlowFactor > 1f) {
             throw new IllegalArgumentException("a gun may slow its own shooter and may not speed him up");
         }

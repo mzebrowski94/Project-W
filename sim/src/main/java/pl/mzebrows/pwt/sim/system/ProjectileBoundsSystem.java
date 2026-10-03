@@ -38,6 +38,10 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  * spatter - is then on this side of the wall, where a blast's clear line can reach whoever stands beside
  * it; left inside, the line started in rock and the blast caught nobody.
  *
+ * <p><strong>A shot that bounces comes off rock and the arena's edge instead</strong>, the way a grenade
+ * does ({@link Bounce}), for as long as it has bounces left; the last one it has not got ends it here like
+ * any other.
+ *
  * <p>Marks rather than removes: only {@code ReaperSystem} takes an entity out of the world.
  */
 public final class ProjectileBoundsSystem extends EntitySystem {
@@ -80,8 +84,12 @@ public final class ProjectileBoundsSystem extends EntitySystem {
             }
             Position position = POSITION.get(projectile);
             float radius = BODY.get(projectile).radius;
-            if (PROJECTILE.get(projectile).spent(position.x, position.y)) {
+            Projectile shot = PROJECTILE.get(projectile);
+            if (shot.spent(position.x, position.y)) {
                 spawner.markDead(projectile);
+                continue;
+            }
+            if (shot.bounces() && comesOff(projectile, shot, position, radius)) {
                 continue;
             }
             if (position.x + radius < 0f
@@ -94,6 +102,21 @@ public final class ProjectileBoundsSystem extends EntitySystem {
                 spawner.markDead(projectile);
             }
         }
+    }
+
+    /** Turns a shot with a bounce left off rock or the arena's edge, spending it, and says whether it did. */
+    private boolean comesOff(Entity projectile, Projectile shot, Position position, float radius) {
+        if (!PREVIOUS.has(projectile) || !VELOCITY.has(projectile)) {
+            return false;
+        }
+        Velocity velocity = VELOCITY.get(projectile);
+        boolean offRock = Bounce.offRock(map, position, PREVIOUS.get(projectile), velocity);
+        boolean offEdge = Bounce.offEdge(position, radius, width, height, velocity);
+        if (!offRock && !offEdge) {
+            return false;
+        }
+        shot.bounceAt(position.x, position.y);
+        return true;
     }
 
     /**

@@ -32,10 +32,11 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  *       burning ground across the stack that has to go out before anybody can walk through it.
  *   <li><strong>The guns.</strong> Two crates of each on the left, before the wall, so the same
  *       throw and the same stack can be answered with a railgun, a flamethrower, a shotgun, the
- *       beam, a bazooka or a pulse rifle. Two of each because a gun is lost with a death and this arena is one of the easier
+ *       beam, a bazooka, a pulse rifle or a disc gun. Two of each because a gun is lost with a death and this arena is one of the easier
  *       places to die in. The flamethrower is the one gun that leaves no fire, because it leaves no
  *       blast. The bazooka's rocket is a barrel you carry - a blast on nobody's side, so the doorway
- *       is a bad place to fire it from - and the pulse rifle holds a brute still for the throw.
+ *       is a bad place to fire it from - the pulse rifle holds a brute still for the throw, and the
+ *       disc gun's disc comes off the wall and the ranks and back, harming none of his own.
  *   <li><strong>The beam, and what it does to what it has already killed.</strong> It stops at the
  *       first thing it touches, so in ranks like these it is a gun for taking one thing apart while
  *       the rest walk in - and what it leaves lying about can be inflated with the same beam until
@@ -60,14 +61,15 @@ final class DemolitionScenario implements Scenario {
     private static final int FROGS = 2;
     private static final int BARRELS_IN_THE_STACK = 5;
 
-    /** Two of every gun there is, so one throw can be answered six ways and twice each. */
+    /** Two of every gun there is, so one throw can be answered seven ways and twice each. */
     private static final PickupKind[] CACHES = {
         PickupKind.ARMOURY_RAILGUN,
         PickupKind.ARMOURY_FLAMER,
         PickupKind.ARMOURY_SHOTGUN,
         PickupKind.ARMOURY_LASER,
         PickupKind.ARMOURY_BAZOOKA,
-        PickupKind.ARMOURY_PULSE
+        PickupKind.ARMOURY_PULSE,
+        PickupKind.ARMOURY_DISC
     };
 
     /** The two columns the crates stand in, as fractions of the arena's width. Clear of the spawn. */
@@ -176,7 +178,7 @@ final class DemolitionScenario implements Scenario {
      * Two crates of every gun, in two columns on the near side of the wall.
      *
      * <p>Before the wall rather than past it, because the point is to answer the <em>same</em> stack
-     * six ways: walking to a crate must not be a fight in itself, or what is being compared is the
+     * seven ways: walking to a crate must not be a fight in itself, or what is being compared is the
      * walk. Two of each because a gun is lost with a death and standing next to a barrel is how this
      * arena teaches its radius.
      */

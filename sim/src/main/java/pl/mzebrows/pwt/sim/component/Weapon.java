@@ -113,6 +113,9 @@ public final class Weapon implements Component, Pool.Poolable {
     /** How much of a body one of its shots pumps up. Zero for every gun that does nothing to one. */
     public float bloatPerShot;
 
+    /** How many times one of its shots comes off what it hits before it stops; zero on every gun but one. */
+    public int bounces;
+
     /** What one shot adds to whatever is holding this, as a fraction. Zero for a gun that stays cold. */
     public float heatPerShot;
 
@@ -149,6 +152,7 @@ public final class Weapon implements Component, Pool.Poolable {
         this.selfSlowTicks = Ticks.of(def.selfSlowSeconds(), tickSeconds);
         this.trailLength = def.trailLength();
         this.bloatPerShot = def.bloatPerShot();
+        this.bounces = def.bounces();
         this.stunTicks = Ticks.of(def.stunSeconds(), tickSeconds);
         this.shockPerHit = def.shockPerHit();
         this.harm = def.harm();
@@ -192,6 +196,7 @@ public final class Weapon implements Component, Pool.Poolable {
         selfSlowTicks = 0;
         trailLength = 0f;
         bloatPerShot = 0f;
+        bounces = 0;
         stunTicks = 0;
         shockPerHit = 0f;
         harm = Harm.WOUND;

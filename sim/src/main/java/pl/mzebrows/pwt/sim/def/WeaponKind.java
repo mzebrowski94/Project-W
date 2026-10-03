@@ -44,6 +44,14 @@ public enum WeaponKind {
      */
     PULSE,
     /**
+     * A slow-repeating disc that comes off what it hits - rock, the arena's edge, scenery and the enemy
+     * alike - landing a blow on every body it comes off and passing through its own side, until its bounces
+     * or its reach run out.
+     *
+     * <p>Like the bazooka, every pull runs it to the stop and kicks him back, and the ground shakes.
+     */
+    DISC_GUN,
+    /**
      * What a turret fires: light, very fast and quick to repeat. No pickup grants it.
      */
     TURRET_GUN,

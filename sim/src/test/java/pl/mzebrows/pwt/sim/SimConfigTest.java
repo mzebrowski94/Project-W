@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.def.WeaponType;
 import pl.mzebrows.pwt.sim.upgrade.Effect;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 import pl.mzebrows.pwt.sim.upgrade.Stat;
@@ -310,6 +311,44 @@ class SimConfigTest {
 
         assertThat(thicket.playerFactor()).isLessThan(thicket.alienFactor());
         assertThat(thicket.matters()).isTrue();
+    }
+
+    /**
+     * <strong>The disc gun reloads a little sooner than the bazooka.</strong> Both run their bar to the stop
+     * with every pull, so the wait for the next is the bar cooling from full to where it comes back.
+     */
+    @Test
+    void reloadsTheDiscGunSoonerThanTheBazooka() {
+        SimConfig config = SimConfig.defaults();
+
+        assertThat(stopsAfterOnePull(config, WeaponKind.DISC_GUN)).isTrue();
+        assertThat(secondsToReload(config, WeaponKind.DISC_GUN))
+                .isLessThan(secondsToReload(config, WeaponKind.BAZOOKA));
+    }
+
+    /**
+     * Every gun a man can be armed with - the sidearm and whatever a crate holds - has a weapon type, so
+     * whatever names a type reaches every gun he can carry; nothing found falls through it as none.
+     */
+    @Test
+    void givesEveryGunAManCanBeArmedWithAWeaponType() {
+        SimConfig config = SimConfig.defaults();
+
+        assertThat(config.weapon(WeaponKind.SIDEARM).type()).isNotEqualTo(WeaponType.NONE);
+        for (PickupKind kind : PickupKind.values()) {
+            if (config.pickup(kind).playerGrant() instanceof Grant.Arm crate) {
+                assertThat(config.weapon(crate.weapon()).type())
+                        .as("the %s must have a weapon type", crate.weapon())
+                        .isNotEqualTo(WeaponType.NONE);
+            }
+        }
+    }
+
+    private static float secondsToReload(SimConfig config, WeaponKind kind) {
+        WeaponDef gun = config.weapon(kind);
+        return Math.max(
+                gun.cooldownSeconds(),
+                (gun.heat().perShot() - gun.heat().resumeBelow()) / gun.heat().coolPerSecond());
     }
 
     /** True for a gun one pull runs to the stop: its heat bar is its reload rather than a burst. */

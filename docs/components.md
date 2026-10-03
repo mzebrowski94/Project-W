@@ -65,7 +65,7 @@ and a component touched by many is where to check. Read the code before concludi
 | **Post** | Ground the level says you must hold, and the other side is coming for. | `Navigation`, `Objective`, `Perception`, `TrooperRoam` · `Spawner` |
 | **Presence** | The slots that are away (G0052): their link has dropped, so their commanders stand idle and the draft rotation passes them by - and which machine each slot sits at, which the leash is reckoned by (G0056). | `CommanderControl`, `Crate`, `Lair` · `Simulation`, `Spawner` |
 | **PreviousPosition** | Where an entity was at the start of the current tick, so the renderer can draw it partway between ticks instead of snapping once every simulation step. | `Grenade`, `PositionHistory`, `ProjectileBounds` · solver: `ConstraintSolver` · `Spawner` · client: `ScenarioScreen`, `WorldRenderer` |
-| **Projectile** | A fired entity that despawns when it hits something or leaves the arena. | `Appearance`, `Collision`, `Dodge`, `ProjectileBounds` · `Spawner` · client: `DebugOverlay` |
+| **Projectile** | A fired entity that despawns when it hits something or leaves the arena - or, with bounces left, comes off it. | `Appearance`, `Collision`, `Dodge`, `ProjectileBounds` · `Spawner` · client: `DebugOverlay` |
 | **Ranged** | How a unit uses the gun it is carrying: what it can see, how close it lets you get, how loosely it shoots, and where it is currently looking. | `EnemyRanged`, `Facing`, `Grants`, `Navigation`, `Wander` · `Spawner` |
 | **Respawning** | A pending respawn, counting down once it is paid for. | `Respawn` · `Spawner` |
 | **RespawnsOnDeath** | A death reaction: this entity comes back, after a delay, at the rally point and for a man from the reserve (G0055). | `Respawn` · `Spawner` |

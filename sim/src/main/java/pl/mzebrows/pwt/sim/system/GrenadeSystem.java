@@ -100,55 +100,14 @@ public final class GrenadeSystem extends EntitySystem {
         if (length <= EPSILON) {
             return;
         }
-        reflect(velocity, normalX / length, normalY / length);
+        Bounce.reflect(velocity, normalX / length, normalY / length);
     }
 
-    /**
-     * Mirrors a course about a surface, and <strong>only while it is still heading into it</strong>.
-     *
-     * <p>The guard stops the jitter: a non-solid grenade still overlaps next tick.
-     */
-    private static void reflect(Velocity velocity, float normalX, float normalY) {
-        float into = velocity.x * normalX + velocity.y * normalY;
-        if (into >= 0f) {
-            return;
-        }
-        velocity.x -= 2f * into * normalX;
-        velocity.y -= 2f * into * normalY;
-    }
-
-    /**
-     * Comes off rock and off the arena edge, neither of which is a body.
-     *
-     * <p>Which axis to mirror is decided by asking where it could have got to on each one alone: if
-     * only the sideways half of the step was blocked it came off a vertical face, and if neither half
-     * was blocked on its own it went diagonally into an inside corner and comes back the way it came.
-     *
-     * <p>It is put back where it started the tick, so it is not asked again next tick.
-     */
+    /** Comes off rock and off the arena edge, neither of which is a body (G0019). */
     private void comeOffTheGround(Entity entity, Velocity velocity) {
         Position at = POSITION.get(entity);
-        PreviousPosition from = PREVIOUS.get(entity);
-        if (!map.passableAt(at.x, at.y)) {
-            boolean sideways = !map.passableAt(at.x, from.y);
-            boolean along = !map.passableAt(from.x, at.y);
-            if (sideways || !along) {
-                velocity.x = -velocity.x;
-            }
-            if (along || !sideways) {
-                velocity.y = -velocity.y;
-            }
-            at.set(from.x, from.y);
-        }
-        float radius = BODY.get(entity).radius;
-        if (at.x - radius < 0f || at.x + radius > width) {
-            velocity.x = -velocity.x;
-            at.x = clamp(at.x, radius, width - radius);
-        }
-        if (at.y - radius < 0f || at.y + radius > height) {
-            velocity.y = -velocity.y;
-            at.y = clamp(at.y, radius, height - radius);
-        }
+        Bounce.offRock(map, at, PREVIOUS.get(entity), velocity);
+        Bounce.offEdge(at, BODY.get(entity).radius, width, height, velocity);
     }
 
     private void throwWhateverWasAskedFor() {
@@ -171,16 +130,5 @@ public final class GrenadeSystem extends EntitySystem {
             }
             throwing.release(entity, thrower, towardsX / distance, towardsY / distance);
         }
-    }
-
-    /** Guards against an arena narrower than the thing bouncing around inside it. */
-    private static float clamp(float value, float min, float max) {
-        if (min >= max) {
-            return (min + max) * 0.5f;
-        }
-        if (value < min) {
-            return min;
-        }
-        return value > max ? max : value;
     }
 }

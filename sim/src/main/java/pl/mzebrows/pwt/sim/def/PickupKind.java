@@ -31,6 +31,7 @@ public enum PickupKind {
     ARMOURY_LASER,
     ARMOURY_BAZOOKA,
     ARMOURY_PULSE,
+    ARMOURY_DISC,
     /**
      * A <em>crate</em> (G0056): nothing is taken from it by walking onto it - a commander opens it with the
      * action key and chooses what to take from the cards shown in his top bar. What it holds - two to four

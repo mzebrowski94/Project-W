@@ -51,6 +51,8 @@ public enum Look {
     ROCKET,
     /** A pulse rifle's bolt: small, quick and electric, the colour of the shock it builds. */
     BOLT,
+    /** A disc gun's disc: white-gold, and the one shot on the field that comes back off what it hits. */
+    DISC,
     /**
      * One pellet of flame, read as the cloud rather than any one of them.
      */
@@ -126,6 +128,7 @@ public enum Look {
     ARMOURY_LASER,
     ARMOURY_BAZOOKA,
     ARMOURY_PULSE,
+    ARMOURY_DISC,
     /**
      * A crate (G0056): a small square with a dot, because what it holds is nobody's to see until it is
      * opened - one look for every crate, whatever is inside.

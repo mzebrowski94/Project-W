@@ -29,6 +29,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Strike;
@@ -77,9 +78,17 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<Grip> GRIP = ComponentMapper.getFor(Grip.class);
     private static final ComponentMapper<Shield> SHIELD = ComponentMapper.getFor(Shield.class);
     private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
+    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
+    private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
 
     /** Below this two bodies are on top of each other and give no direction to be thrown along. */
     private static final float EPSILON = 1e-4f;
+
+    /**
+     * How far clear of a body a shot that came off it is put, so next tick it is not touching what it just
+     * came off and lands no second blow on it.
+     */
+    private static final float CLEAR_OF_THE_BODY = 1e-3f;
 
     private final ConstraintSolver solver;
     private final Spawner spawner;
@@ -276,6 +285,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      *
      * <p><strong>A piercing shot is stopped by scenery alone</strong> ({@link #prop}, G0019); rock and the
      * arena edge are {@code ProjectileBoundsSystem}'s. Ruined ground stops nothing - a collider flag.
+     *
+     * <p><strong>A shot with a bounce left comes off whatever would have stopped it</strong>, scenery and
+     * the living alike, having landed its blow - so one disc can cut through a crowd one body at a time.
+     * Its own side it never touches: {@link #friendly} let it pass before it got here.
      */
     private void spend(Entity projectile, Entity target) {
         if (!glancesOff(projectile, target)) {
@@ -284,9 +297,68 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (COLLIDER.has(target) && !COLLIDER.get(target).stopsShots) {
             return;
         }
-        if (!PROJECTILE.get(projectile).piercing || prop(target)) {
+        Projectile shot = PROJECTILE.get(projectile);
+        if (shot.bounces()) {
+            comeOff(projectile, shot, target);
+        } else if (!shot.piercing || prop(target)) {
             spawner.markDead(projectile);
         }
+    }
+
+    /**
+     * Turns a shot off a body at the point its path first touched it, spending a bounce: put back on that
+     * point, just clear of the body, and mirrored about the line from the body's centre - so the way it
+     * leaves is decided by where it struck, never by how far through the body the tick carried it.
+     */
+    private static void comeOff(Entity projectile, Projectile shot, Entity target) {
+        Position at = POSITION.get(projectile);
+        Position centre = POSITION.get(target);
+        float fromX = at.x;
+        float fromY = at.y;
+        if (PREVIOUS.has(projectile)) {
+            fromX = PREVIOUS.get(projectile).x;
+            fromY = PREVIOUS.get(projectile).y;
+        }
+        float touching = BODY.get(projectile).radius + BODY.get(target).radius;
+        float pathX = at.x - fromX;
+        float pathY = at.y - fromY;
+        float offX = fromX - centre.x;
+        float offY = fromY - centre.y;
+        float along = 0f;
+        float squared = pathX * pathX + pathY * pathY;
+        float outside = offX * offX + offY * offY - touching * touching;
+        if (outside > 0f && squared > EPSILON) {
+            // The first point of the path at touching distance: the smaller root of |off + t*path| = touching.
+            float half = offX * pathX + offY * pathY;
+            float discriminant = half * half - squared * outside;
+            if (discriminant >= 0f) {
+                along = clampUnit((-half - (float) Math.sqrt(discriminant)) / squared);
+            }
+        }
+        float normalX = fromX + pathX * along - centre.x;
+        float normalY = fromY + pathY * along - centre.y;
+        float length = (float) Math.sqrt(normalX * normalX + normalY * normalY);
+        Velocity velocity = VELOCITY.get(projectile);
+        if (length <= EPSILON) {
+            // Dead centre: back the way it came.
+            float speed = (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+            if (speed <= EPSILON) {
+                return;
+            }
+            normalX = -velocity.x;
+            normalY = -velocity.y;
+            length = speed;
+        }
+        normalX /= length;
+        normalY /= length;
+        float clear = touching + CLEAR_OF_THE_BODY;
+        at.set(centre.x + normalX * clear, centre.y + normalY * clear);
+        Bounce.reflect(velocity, normalX, normalY);
+        shot.bounceAt(at.x, at.y);
+    }
+
+    private static float clampUnit(float value) {
+        return value < 0f ? 0f : (value > 1f ? 1f : value);
     }
 
     /**
