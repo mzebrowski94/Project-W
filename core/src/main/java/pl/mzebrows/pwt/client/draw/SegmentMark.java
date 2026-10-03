@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.draw;
 
 /**
  * How to draw a creature in two segments: a body behind and a head in front, along its facing.

@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.draw;
 
 /**
  * How to draw a hole in the ground.

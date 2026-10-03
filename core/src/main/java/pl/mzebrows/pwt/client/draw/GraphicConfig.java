@@ -1,9 +1,10 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.draw;
 
 import com.badlogic.gdx.graphics.Color;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.Hud;
 import pl.mzebrows.pwt.client.config.ConfigLoader;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.ConfigBinder;

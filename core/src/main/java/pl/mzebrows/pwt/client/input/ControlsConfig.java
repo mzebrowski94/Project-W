@@ -1,8 +1,8 @@
 package pl.mzebrows.pwt.client.input;
 
 import java.util.Map;
-import pl.mzebrows.pwt.client.GraphicConfig;
 import pl.mzebrows.pwt.client.config.ConfigLoader;
+import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.sim.ConfigBinder;
 import pl.mzebrows.pwt.sim.ConfigFile;
 

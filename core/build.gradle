@@ -33,7 +33,7 @@ tasks.named('test') {
 // bind. So the tests and a missing or broken file all fall back to exactly what ships. Each is generated into its
 // record's package, where it stays package-private.
 def shippedClientConfigs = [
-  ShippedGraphicConfig: [file: rootProject.file('assets/graphic.properties'), pkg: 'pl.mzebrows.pwt.client'],
+  ShippedGraphicConfig: [file: rootProject.file('assets/graphic.properties'), pkg: 'pl.mzebrows.pwt.client.draw'],
   ShippedControlsConfig: [file: rootProject.file('assets/controls.properties'), pkg: 'pl.mzebrows.pwt.client.input'],
 ]
 def shippedClientConfigDir = layout.buildDirectory.dir('generated/sources/shippedClientConfig/java')

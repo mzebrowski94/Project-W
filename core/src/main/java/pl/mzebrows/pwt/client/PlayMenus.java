@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client;
 import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.client.input.ControlsConfig;
 import pl.mzebrows.pwt.client.input.GamepadSource;
 import pl.mzebrows.pwt.client.input.InputReader;

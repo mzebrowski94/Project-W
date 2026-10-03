@@ -4,6 +4,8 @@ import com.badlogic.gdx.graphics.Color;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import pl.mzebrows.pwt.client.draw.GraphicConfig;
+import pl.mzebrows.pwt.client.draw.Palette;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.Look;

@@ -10,7 +10,7 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import pl.mzebrows.pwt.client.GraphicConfig;
+import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.client.input.ControlsConfig;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.ConfigBinder;

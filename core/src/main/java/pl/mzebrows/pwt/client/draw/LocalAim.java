@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.draw;
 
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Players;
@@ -15,7 +15,7 @@ import pl.mzebrows.pwt.sim.Players;
  * taken from where the commander is drawn. An aim too short to mean anything leaves the world's facing,
  * as the world itself does.
  */
-final class LocalAim {
+public final class LocalAim {
 
     /** What {@code Facing.face} treats as no direction at all. */
     private static final float SHORTEST = 1e-4f;
@@ -26,12 +26,12 @@ final class LocalAim {
     private final float[] aimY = new float[Players.MAX];
 
     /** Forgets every aim: nothing is drawn ahead until {@link #set} says so again. */
-    void clear() {
+    public void clear() {
         java.util.Arrays.fill(aiming, false);
     }
 
     /** What the player in this slot is aiming with this frame. */
-    void set(int slot, CommanderInput input) {
+    public void set(int slot, CommanderInput input) {
         if (slot < 0 || slot >= aiming.length) {
             return;
         }

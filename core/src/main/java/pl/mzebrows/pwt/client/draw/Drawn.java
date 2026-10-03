@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.draw;
 
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
@@ -8,15 +8,15 @@ import pl.mzebrows.pwt.sim.component.PreviousPosition;
  * far the frame has got towards the next tick. The renderer, the camera and the reticles all ask it, so what
  * is drawn, what is framed and what is aimed at never disagree by a fraction of a tick.
  */
-final class Drawn {
+public final class Drawn {
 
     private Drawn() {}
 
-    static float x(Position at, PreviousPosition was, float alpha) {
+    public static float x(Position at, PreviousPosition was, float alpha) {
         return was.x + (at.x - was.x) * alpha;
     }
 
-    static float y(Position at, PreviousPosition was, float alpha) {
+    public static float y(Position at, PreviousPosition was, float alpha) {
         return was.y + (at.y - was.y) * alpha;
     }
 }

@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.draw;
 
 import pl.mzebrows.pwt.sim.component.Appearance;
 

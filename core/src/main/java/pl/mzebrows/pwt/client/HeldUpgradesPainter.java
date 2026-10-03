@@ -3,6 +3,8 @@ package pl.mzebrows.pwt.client;
 import com.badlogic.gdx.graphics.Color;
 import java.util.ArrayList;
 import java.util.List;
+import pl.mzebrows.pwt.client.draw.GraphicConfig;
+import pl.mzebrows.pwt.client.draw.Palette;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.ui.hud.RankText;
 import pl.mzebrows.pwt.ui.hud.Readout;

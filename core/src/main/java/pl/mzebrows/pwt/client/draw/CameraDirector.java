@@ -1,4 +1,6 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.draw;
+
+import pl.mzebrows.pwt.client.ScenarioScreen;
 
 /**
  * Decides where the view is and how far out it sits. Holds no GL object and never touches {@code

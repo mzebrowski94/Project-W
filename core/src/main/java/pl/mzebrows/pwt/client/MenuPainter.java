@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.graphics.Color;
 import java.util.List;
+import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.ui.hud.TextFit;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.Rect;

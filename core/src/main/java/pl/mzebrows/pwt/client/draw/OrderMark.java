@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.draw;
 
 /**
  * How to draw a unit that is acting on an order rather than on its own judgement (3.f).

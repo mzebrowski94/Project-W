@@ -1,6 +1,8 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.graphics.Color;
+import pl.mzebrows.pwt.client.draw.GraphicConfig;
+import pl.mzebrows.pwt.client.draw.Palette;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.ui.hud.DispatchKind;
 import pl.mzebrows.pwt.ui.hud.TextFit;

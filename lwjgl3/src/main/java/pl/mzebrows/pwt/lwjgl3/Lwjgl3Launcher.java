@@ -4,9 +4,9 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3WindowAdapter;
 import com.badlogic.gdx.graphics.glutils.HdpiMode;
-import pl.mzebrows.pwt.client.GraphicConfig;
 import pl.mzebrows.pwt.client.LaunchOptions;
 import pl.mzebrows.pwt.client.PwtGame;
+import pl.mzebrows.pwt.client.draw.GraphicConfig;
 
 /** Launches the desktop (LWJGL3) application. */
 public final class Lwjgl3Launcher {
