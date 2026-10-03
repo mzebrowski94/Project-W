@@ -38,7 +38,7 @@ stripped, classes only).
    that fail on zero classes. The `Gdx`-free rule moves from name suffixes to packages. Recorded as a new
    ADR amending 0020's *Scope* ("Not `core`").
 
-Sketch - to be replaced by ticket 01's measurement:
+Sketch - to be replaced by ticket 01's measurement (decision 8):
 
 ```
 client/            PwtGame, GameContext, Assets, Log, the screens, PlayMenus
@@ -57,10 +57,17 @@ client/config/     GameProperties and what 03 + 04 leave of the loaders
    `TopBarSeats`; `InputReader` is the `input` layer's device reader and decides nothing about the bar.
 7. **Review 09 done** (2026-10-03): `Drawn` is new (the `draw` layer's); `DebugOverlay` reads the readout and
    no longer touches `Gdx`. Every review ticket that gated this effort is in - ticket 01 can run.
+8. **Ticket 01 measured the split** (2026-10-03) - *proposed, waiting on Mateusz*: [`split.txt`](split.txt),
+   checked by `system-graph.py --root core/src/main/java/pl/mzebrows/pwt/client --split`; the reasoning,
+   the public list, where every test goes and the libGDX rule by package are in
+   [01's answer](issues/01-measure-and-split.md#answer). Against the sketch: a config record lives with its
+   layer (`GraphicConfig` in `draw`, `ControlsConfig` in `input`); `LaunchOptions`, `HarnessControls`,
+   `LocalMachineId` in the root; `SystemPointer` in `hud`. 14 ports, 35 entries, layers acyclic.
 
 ## Fog
 
 - Where 06's seat and top-bar module lives: `ui` (ADR 0015 says decisions about what the player is shown
   do) or `core`. First question of that ticket.
-- Whether the screens stay in the root or form a package of their own.
-- Whether `Log` and `Assets` are a package's ports or the root's.
+- Whether the screens stay in the root or form a package of their own. 01 proposes the root.
+- Whether `Log` and `Assets` are a package's ports or the root's. 01 proposes the root's, with
+  `LaunchOptions`.

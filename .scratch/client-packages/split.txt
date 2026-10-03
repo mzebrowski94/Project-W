@@ -1,0 +1,19 @@
+# The split ticket 01 proposes for core/client. Check it with:
+#   python3 .claude/scripts/system-graph.py --root core/src/main/java/pl/mzebrows/pwt/client --split .scratch/client-packages/split.txt
+# `client` is the root: the application, its screens and what only they use, and the ports every layer uses
+# (Log, Assets, LaunchOptions). LocalMachineId is a port until 02 hands the machine id into OnlineSession.
+
+client: PwtGame GameContext MenuScreen JoinScreen ScenarioScreen PlayMenus HarnessControls \
+        Log Assets LaunchOptions LocalMachineId
+input: Gamepad GamepadAxis GamepadButton GamepadSource GdxGamepads ChosenGamepads LatchedGamepad PadPolicy \
+       PadControls PadLabels KeyCode MouseButton KeyControls KeyHolds KeyPresses OrderKeys ViewControls \
+       PageControls MenuSelection InputReader NavInputReader PlayerSeats ControlsConfig
+draw: WorldRenderer BloatMark ChargeMark ChargedMark CrateMark FacingMark HeatMark NestMark OrderMark SegmentMark \
+      ShieldMark WoundMark Palette StateTint TerrainRenderer TerrainPalette GroundDetail LocalAim CameraDirector \
+      Drawn LetterboxViewport GraphicConfig
+hud: Hud BottomBarPainter HeldUpgradesPainter MenuPainter ToastPainter TopBarPainter RankPips GlyphFont GlyphTable \
+     PixelFont UiFont PixelViewport SystemPointer UiStrings CardText DispatchText ActionPrompts CrateHints \
+     DraftHints PageHints DebugOverlay
+play: ScenarioPlay ScenarioSession OnlineSession ScenarioWorlds Invitation HarnessCommand OverlayMode HeldEvents \
+      JoinChoices
+config: GameProperties ConfigLoader SimConfigLoader NetConfigLoader
