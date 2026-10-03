@@ -21,3 +21,6 @@ One query ranks what the action key could do for this commander; the kinds becom
 `ActionTest`.
 
 ## Comments
+
+- 2026-10-03: Gates `.scratch/system-modules/` - decide this before `sim.system` is split into fenced
+  packages (its ticket 02), so the helpers are deepened once rather than moved and then changed.
