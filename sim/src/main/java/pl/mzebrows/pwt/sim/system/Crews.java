@@ -9,6 +9,7 @@ import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
  * Getting on a gun and getting off it, in one place, for everybody who can.
@@ -22,7 +23,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  * <p>The same argument {@link Aid} makes for putting a man back on his feet, and {@link Drivers} for
  * the questions every driver asks first.
  */
-final class Crews {
+public final class Crews {
 
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
@@ -40,7 +41,7 @@ final class Crews {
      * is a radius test over everything that can be hurt rather than a contact, so the gun going up
      * under him catches him exactly as standing on it should.
      */
-    static void board(Entity man, Entity station) {
+    public static void board(Entity man, Entity station) {
         Turret turret = TURRET.get(station);
         Crew crew = CREW.get(man);
         crew.station = Handles.of(station);
@@ -67,7 +68,7 @@ final class Crews {
      * one. {@code TurretSystem} would put that right anyway, but a tick of a gun drawn with a crew
      * that has walked away is a tick of the picture lying about what is on the field.
      */
-    static void leave(ImmutableArray<Entity> stations, Entity man) {
+    public static void leave(ImmutableArray<Entity> stations, Entity man) {
         Crew crew = CREW.get(man);
         for (int i = 0; i < stations.size(); i++) {
             if (Handles.of(stations.get(i)) == crew.station) {

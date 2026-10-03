@@ -37,12 +37,12 @@ public final class Throws {
      * the hand, plus the distance it spends (G0019). The throw's reach, for anyone deciding whether to
      * make it.
      */
-    float reach(Entity entity, Thrower thrower) {
+    public float reach(Entity entity, Thrower thrower) {
         return BODY.get(entity).radius + thrower.radius + muzzleGap + thrower.range;
     }
 
     /** Throws one grenade from this thrower along this direction, and starts his wait for the next. */
-    void release(Entity entity, Thrower thrower, float directionX, float directionY) {
+    public void release(Entity entity, Thrower thrower, float directionX, float directionY) {
         Position at = POSITION.get(entity);
         float muzzle = BODY.get(entity).radius + thrower.radius + muzzleGap;
         spawner.spawnGrenade(

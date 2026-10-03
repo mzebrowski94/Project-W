@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.query;
 
 /**
  * Bringing a gun round onto a bearing, in one place, for everything that cannot simply point.
@@ -13,7 +13,7 @@ package pl.mzebrows.pwt.sim.system;
  * Rotating by an angle would, and {@code Math.sin} and {@code Math.cos} are banned in this module
  * because they are specified only to within an ulp and may differ between JVMs (pillar 6).
  */
-final class Aim {
+public final class Aim {
 
     private static final float EPSILON = 1e-4f;
 
@@ -29,7 +29,7 @@ final class Aim {
      * <p>A turn rate of zero means it is already looking wherever it was asked to, which is what
      * everything that shot before there were fields of view declares.
      */
-    static void swing(
+    public static void swing(
             float fromX, float fromY, float ontoX, float ontoY, float turnRate, float deltaTime, float[] out) {
         float blend = turnRate * deltaTime;
         if (turnRate <= 0f || blend >= 1f) {

@@ -42,3 +42,38 @@ What broke that 03 did not predict, and whether anything in the split should cha
 ## Done when
 
 `verify.sh` green, ADR 0020 in `docs/adr/`, the answer in `map.md`.
+
+## Answer
+
+Done 2026-10-03. `query` (seven helpers) and `squad` (three systems, seven helpers) are fenced packages;
+`Odds` is in the `sim` root. ADR 0020 is in `docs/adr/`, 0017's status says it is amended, and
+`docs/conventions.md` has the annotations table.
+
+**The fences** (`ArchitectureTest`, each `.because` naming ADR 0020 and failing on zero classes):
+`nothingUnderSystemLivesOutsideADeclaredPackage`, `everySystemLivesUnderSystem`,
+`aFencedPackageUsesOnlyQueryAndPortsOfAnother`, `queryIsPublicAndHoldsNothing`, `queryWritesNothing`. The
+fenced packages are `FENCED`, the ports `PORTS`. `queryWritesNothing` uses a new
+`ComponentWriters.writtenBy(classes, type)`: ADR 0019's analysis asked of one class rather than credited
+to systems. Seen failing on a planted violation (a squad class naming `NavigationSystem`, `RallyPoint`
+writing `ControlPoint`). The three older rules naming `..sim.system..`/`..sim.upgrade..` say
+`allowEmptyShould(false)` - ArchUnit's default already, now written down.
+
+**Transitional, for 05 to remove:** `HOMES` admits classes straight in `sim.system`, and
+`everySystemLivesUnderSystem` admits `sim.upgrade`. `PORTS` holds what crosses today - `Crews`, `Guns`,
+`Throws` - and grows as packages leave the flat one. The flat `package-info.java` names those ports.
+
+**What broke that 03 did not predict:**
+- *A member, not a class.* `Compass.SLOTS` is a constant `TrooperObjective` and `AvoidanceSystem` read; the
+  graph sees classes, so it could not say. Compile is the check for members - constants as well as
+  methods.
+- *Javadoc links.* `Pace` linked `{@link Aid}` and `TrooperCombatSystem` `{@link Muzzle}`. Moved across
+  the line, a link to a package-private class fails Error Prone. `.claude/scripts/move-classes.py` (new,
+  used for every move here) now turns such a link into `{@code}` rather than importing it.
+- Predicted and as predicted: `Crews` public; `Crews.board`/`leave`, `Guns.ready`/`pull`/`volley`,
+  `Throws.reach`/`release`, `Odds.roll`/`possible`/`spent` public; `ReachTest` sets `Crate.openedBy`
+  instead of calling `Crates.open`.
+- Not broken: `SystemOrderTest` (imports only) and the component index (unchanged - it already globbed
+  `system/` recursively). Nothing else in `core`, `ui` or `net` imported a moved class.
+- `Odds` left `systemsHoldNoStateAcrossTicks`'s sight with `sim.system`. Its fields are final; nothing to do.
+
+**Should the split change before 05?** No. `system-graph.py --split split.txt` gives the same ports as 03.

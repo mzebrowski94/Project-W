@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.squad;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Engine;
@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Order;
+import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /** A standing order, carried out: the half of {@link TrooperMindSystem}'s cascade below the fight. */
 final class TrooperOrders {

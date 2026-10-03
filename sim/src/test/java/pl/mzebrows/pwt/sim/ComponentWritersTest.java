@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.Location;
 import com.tngtech.archunit.core.importer.Locations;
@@ -69,12 +70,37 @@ final class ComponentWritersTest {
         assertThat(writers().get("Position")).containsExactly("Circles", "Pushes");
     }
 
+    @Test
+    void findsNothingWrittenByAClassThatOnlyReads() {
+        assertThat(writtenBy("Gauge")).isEmpty();
+    }
+
+    @Test
+    void findsWhatAClassWritesItself() {
+        assertThat(writtenBy("Deflect")).containsExactly("Velocity");
+    }
+
+    @Test
+    void findsWhatAClassWritesThroughWhatItCalls() {
+        assertThat(writtenBy("Relay")).containsExactly("Velocity");
+    }
+
     private static Map<String, Set<String>> writers() {
+        return ComponentWriters.of(fixtures());
+    }
+
+    /** What one fixture writes, measured over the same import it was found in. */
+    private static Set<String> writtenBy(String fixture) {
+        JavaClasses classes = fixtures();
+        return ComponentWriters.writtenBy(classes, classes.get(WriterFixtures.class.getName() + "$" + fixture));
+    }
+
+    private static JavaClasses fixtures() {
         Set<Location> locations = new LinkedHashSet<>(Locations.ofPackage(WriterFixtures.class.getPackageName()));
         for (Class<?> component :
                 List.of(Velocity.class, Damage.class, Position.class, Projectile.class, Drafts.class)) {
             locations.addAll(Locations.ofClass(component));
         }
-        return ComponentWriters.of(new ClassFileImporter().importLocations(locations));
+        return new ClassFileImporter().importLocations(locations);
     }
 }

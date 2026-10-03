@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.squad;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Engine;
@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
+import pl.mzebrows.pwt.sim.Odds;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
@@ -29,6 +30,10 @@ import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.TrooperGrenadeDef;
+import pl.mzebrows.pwt.sim.system.Guns;
+import pl.mzebrows.pwt.sim.system.Throws;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
+import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
  * Shoots, and very occasionally swings.
@@ -307,7 +312,7 @@ public final class TrooperCombatSystem extends EntitySystem {
     /**
      * One pull of the trigger at what it is aiming at, whenever the gun is ready.
      *
-     * <p>Through {@link Guns} and {@link Muzzle}, as every other shooter.
+     * <p>Through {@link Guns} and {@code Muzzle}, as every other shooter.
      */
     private void fire(Entity entity, Trooper trooper) {
         if (!guns.ready(entity)) {

@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.query;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
@@ -18,7 +18,7 @@ import pl.mzebrows.pwt.sim.component.Position;
  * for everybody drawn from the reserve: a muster's troopers, a crate's men, and a returning commander.
  * A pure function of the points and the config, asked on the tick a man arrives rather than kept.
  */
-final class RallyPoint {
+public final class RallyPoint {
 
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
@@ -30,7 +30,7 @@ final class RallyPoint {
      *
      * @param points every control point on the level, each with a {@link Position}
      */
-    static TileRect area(ImmutableArray<Entity> points, SimConfig config, TileMap map) {
+    public static TileRect area(ImmutableArray<Entity> points, SimConfig config, TileMap map) {
         Position taken = lastTaken(points);
         if (taken == null) {
             return config.spawn().on(map);

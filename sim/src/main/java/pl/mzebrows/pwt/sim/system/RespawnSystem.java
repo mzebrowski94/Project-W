@@ -21,6 +21,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
 import pl.mzebrows.pwt.sim.component.Shield;
+import pl.mzebrows.pwt.sim.system.query.RallyPoint;
 
 /**
  * A death reaction, the countdown it starts, and what it costs (G0055).

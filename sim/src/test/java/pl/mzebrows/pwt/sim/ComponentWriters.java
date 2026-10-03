@@ -79,6 +79,26 @@ final class ComponentWriters {
         return new ComponentWriters(classes).measure();
     }
 
+    /**
+     * Every component one class writes, itself or through anything it calls in {@code sim}, by simple name -
+     * what a {@code query} must keep empty (ADR 0020).
+     */
+    static Set<String> writtenBy(JavaClasses classes, JavaClass origin) {
+        ComponentWriters measure = new ComponentWriters(classes);
+        for (JavaClass type : classes) {
+            if (component(type)) {
+                measure.changingMethods(type);
+            }
+        }
+        Set<String> written = new TreeSet<>();
+        for (JavaCodeUnit unit : measure.reachedFrom(origin)) {
+            for (JavaClass type : measure.writes(unit)) {
+                written.add(type.getSimpleName());
+            }
+        }
+        return written;
+    }
+
     private Map<String, Set<String>> measure() {
         Map<String, Set<String>> writers = new TreeMap<>();
         for (JavaClass type : classes) {
@@ -115,7 +135,7 @@ final class ComponentWriters {
         }
     }
 
-    /** Every code unit of a system, of the classes nested in it, and of everything they call in {@code sim}. */
+    /** Every code unit of a class, of the classes nested in it, and of everything they call in {@code sim}. */
     private Set<JavaCodeUnit> reachedFrom(JavaClass system) {
         Set<JavaCodeUnit> seen = new LinkedHashSet<>();
         Deque<JavaCodeUnit> next = new ArrayDeque<>();

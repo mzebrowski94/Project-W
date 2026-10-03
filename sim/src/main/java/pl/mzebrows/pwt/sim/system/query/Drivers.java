@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.query;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
@@ -19,7 +19,7 @@ import pl.mzebrows.pwt.sim.def.Side;
  *
  * <p>One copy, so no driver's gate can drift from the others.
  */
-final class Drivers {
+public final class Drivers {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
@@ -35,7 +35,7 @@ final class Drivers {
      * None of them drives itself, and no driver may zero its velocity - that would delete knockback, a
      * drag or a carry.
      */
-    static boolean held(Entity entity) {
+    public static boolean held(Entity entity) {
         if (aboard(entity) || gripped(entity)) {
             return true;
         }
@@ -49,7 +49,7 @@ final class Drivers {
      * In something's jaws (G0045). Held like any other held unit, with one exception every caller that
      * cares asks for by name: <strong>he may still swing</strong>, because that is how a man gets out.
      */
-    static boolean gripped(Entity entity) {
+    public static boolean gripped(Entity entity) {
         return GRIPPED.has(entity) && GRIPPED.get(entity).held();
     }
 
@@ -58,7 +58,7 @@ final class Drivers {
      *
      * <p>Asked by everything a commander does with his hands.
      */
-    static boolean handsFull(Entity entity) {
+    public static boolean handsFull(Entity entity) {
         return DRAG.has(entity) && DRAG.get(entity).active();
     }
 
@@ -68,7 +68,7 @@ final class Drivers {
      * <p><strong>A man bleeding out is off his feet too</strong> (G0023): this is what "his going down
      * releases everything" is made of.
      */
-    static @Nullable Position livingTarget(ImmutableArray<Entity> commanders) {
+    public static @Nullable Position livingTarget(ImmutableArray<Entity> commanders) {
         Entity standing = Players.standing(commanders);
         return standing == null ? null : POSITION.get(standing);
     }
@@ -77,7 +77,7 @@ final class Drivers {
      * On a gun rather than on the ground: {@code TurretSystem} owns him, and every other driver leaves
      * him alone.
      */
-    static boolean aboard(Entity entity) {
+    public static boolean aboard(Entity entity) {
         return CREW.has(entity) && CREW.get(entity).aboard();
     }
 
@@ -88,7 +88,7 @@ final class Drivers {
      * not on the list. Ties go to the first spawned. A scan, not a grid query: the player's side is a
      * handful of entities.
      */
-    static @Nullable Entity nearestLivingTarget(ImmutableArray<Entity> candidates, Position from) {
+    public static @Nullable Entity nearestLivingTarget(ImmutableArray<Entity> candidates, Position from) {
         @Nullable Entity nearest = null;
         float nearestDistance = Float.MAX_VALUE;
         for (int i = 0; i < candidates.size(); i++) {
@@ -113,7 +113,7 @@ final class Drivers {
      *
      * <p>One question for both who is hunted and how to get there.
      */
-    static boolean huntable(Entity entity) {
+    public static boolean huntable(Entity entity) {
         return !Life.down(entity) && FACTION.get(entity).side == Side.PLAYER;
     }
 }

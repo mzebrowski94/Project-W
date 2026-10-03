@@ -53,6 +53,16 @@ record patterns, unnamed variables (`_`), exhaustive switches, sealed types. Not
 - Manual constructor DI. Lombok's `@RequiredArgsConstructor` for the boilerplate.
 - Small, cohesive types. One class per file. Don't over-engineer a small addition.
 
+### Annotations that make a claim
+
+Three, each beside what enforces it rather than in a package of their own (ADR 0020).
+
+| Annotation | On | Claims | Checked by |
+|---|---|---|---|
+| `@NotState` (`sim`) | a field of a system or a helper under `sim.system` | it is scratch overwritten before it is read, or a cache that is a pure function of its key - not state a snapshot must carry (ADR 0014) | `ArchitectureTest.systemsHoldNoStateAcrossTicks` refuses any other non-final field; `SnapshotRoundTripTest` checks the claim |
+| `@ConfigKey` (`sim`) | a config record component | the key it is read from in `assets/sim/*.properties`, when that is not its own name | `ConfigBinder` reads it; `ConfigBinderTest` |
+| `@Reads` (`sim.upgrade`) | the `Modifiers` method that reads a `Stat` | it is that stat's one reader (ADR 0017) | `ArchitectureTest.everyStatIsReadInExactlyOnePlace`: one method per stat, one caller outside the package |
+
 ### Interfaces only at real boundaries
 
 An interface earns its place where substitution, ownership or an external boundary is real: a seam the

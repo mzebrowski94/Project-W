@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.Ticks;
+import pl.mzebrows.pwt.sim.system.query.RallyPoint;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 
 /**

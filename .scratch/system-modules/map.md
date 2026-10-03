@@ -102,6 +102,11 @@ sim/Odds                                       (out of sim.system: it advances t
     - Nine more public classes than today: the seven `query` helpers, `Crews` (G0024: commander and trooper
       crew alike) and `Deaths`. No system is used from another package.
 
+14. **Pilot done** (ticket 04): `query` and `squad` are fenced, `Odds` is in the root, ADR 0020 is in
+    `docs/adr/` with its five rules. What moves next: `.claude/scripts/move-classes.py <package> Class...`,
+    then compile - it lists every member that must become public - then `PORTS`, `FENCED` and the
+    `package-info.java`. The graph sees classes, not members; compile is the check for those.
+
 ## Fog
 
 - Whether ADR 0019 stands against its own *Revisit when*: "most components have several writers" is

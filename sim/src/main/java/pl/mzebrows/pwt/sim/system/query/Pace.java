@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.query;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
@@ -22,7 +22,7 @@ import pl.mzebrows.pwt.sim.def.Side;
  * fact about the ground and is asked of the map rather than stored. A unit wading through a thicket
  * with a laser on it is slow twice over, and nothing had to say so.
  *
- * <p>It is here rather than inside {@code DriveSystem} for the reason {@link Guns} and {@link Aid}
+ * <p>It is here rather than inside {@code DriveSystem} for the reason {@code Guns} and {@code Aid}
  * are single places: the commander is the one thing on the field that does not go through
  * {@code DriveSystem} - his own control system owns his velocity outright - so a rule that lived
  * there would have been a rule the player was exempt from, which is the exact opposite of what
@@ -35,7 +35,7 @@ import pl.mzebrows.pwt.sim.def.Side;
  * <p>Allocates nothing and reads three component slots and one tile. It is paid once per driven unit
  * per tick, which is the same order as everything else in the movement pipeline.
  */
-final class Pace {
+public final class Pace {
 
     private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
@@ -50,7 +50,7 @@ final class Pace {
      * <p>One for anything carrying neither a slow nor a position, which is what keeps this from
      * being a rule every mover has to opt into.
      */
-    static float of(Entity entity, TileMap map, Defs<Terrain, GroundDef> ground) {
+    public static float of(Entity entity, TileMap map, Defs<Terrain, GroundDef> ground) {
         float pace = SLOWED.has(entity) ? SLOWED.get(entity).factor() : 1f;
         if (VITALITY.has(entity)) {
             // A wound is the third way to be slow, and the same answer (G0053).

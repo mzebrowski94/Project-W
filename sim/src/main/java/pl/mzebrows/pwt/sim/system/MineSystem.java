@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
  * Arms a mine when the other side comes near it, counts its fuse down, and lets it die.

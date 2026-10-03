@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.query;
 
 /**
  * Twelve directions, thirty degrees apart, as unit vectors written out as literals.
@@ -11,10 +11,10 @@ package pl.mzebrows.pwt.sim.system;
  *
  * <p>Slot zero points along positive x and the slots turn anticlockwise.
  */
-final class Compass {
+public final class Compass {
 
     /** How many directions there are. */
-    static final int SLOTS = 12;
+    public static final int SLOTS = 12;
 
     private static final float[] DIRECTIONS = {
         1f,
@@ -46,12 +46,12 @@ final class Compass {
     private Compass() {}
 
     /** The x component of a slot's direction. Any slot, wrapped round the circle. */
-    static float x(int slot) {
+    public static float x(int slot) {
         return DIRECTIONS[Math.floorMod(slot, SLOTS) * 2];
     }
 
     /** The y component of a slot's direction. Any slot, wrapped round the circle. */
-    static float y(int slot) {
+    public static float y(int slot) {
         return DIRECTIONS[Math.floorMod(slot, SLOTS) * 2 + 1];
     }
 }

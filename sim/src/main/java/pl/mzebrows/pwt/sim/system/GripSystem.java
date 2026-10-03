@@ -22,6 +22,7 @@ import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
  * Carries off whatever a gripping leap took hold of, and finishes him when his time is up (G0045).

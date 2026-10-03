@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
  * Turns anything's melee intent into a swing in the world.

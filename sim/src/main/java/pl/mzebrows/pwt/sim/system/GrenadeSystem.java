@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
  * Throws what was asked for, and flies what is already in the air.

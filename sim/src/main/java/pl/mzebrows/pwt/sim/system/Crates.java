@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.component.Crate;
+import pl.mzebrows.pwt.sim.system.query.Reach;
 
 /**
  * Opening a crate and finding the one a slot has open (G0056), for {@code ActionSystem}, which owns the key,

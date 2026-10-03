@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.query;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
@@ -25,7 +25,7 @@ import pl.mzebrows.pwt.sim.component.Position;
  * {@code ArchitectureTest} bans those here because they are specified only to within an ulp and may
  * differ between JVMs, which pillar 6 does not allow.
  */
-final class Sight {
+public final class Sight {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
@@ -33,7 +33,7 @@ final class Sight {
     private Sight() {}
 
     /** Whether the two points are within this distance of one another. */
-    static boolean withinRange(float fromX, float fromY, float toX, float toY, float range) {
+    public static boolean withinRange(float fromX, float fromY, float toX, float toY, float range) {
         float towardsX = toX - fromX;
         float towardsY = toY - fromY;
         return towardsX * towardsX + towardsY * towardsY <= range * range;
@@ -47,7 +47,7 @@ final class Sight {
      * speaking of - it has never moved, or does not steer itself - also notices all round, so an arc
      * cannot accidentally blind something before it has taken a step.
      */
-    static boolean withinArc(
+    public static boolean withinArc(
             float lookX, float lookY, float fromX, float fromY, float toX, float toY, float arcCosine) {
         if (arcCosine <= -1f || (lookX == 0f && lookY == 0f)) {
             return true;
@@ -68,7 +68,7 @@ final class Sight {
      * <p>Only terrain blocks a line. Obstacles, corpses and other units do not - a limit accepted on
      * purpose and listed with the others, and the same asymmetry routing already lives with.
      */
-    static boolean clearLine(TileMap map, float fromX, float fromY, float toX, float toY, boolean required) {
+    public static boolean clearLine(TileMap map, float fromX, float fromY, float toX, float toY, boolean required) {
         return !required || map.clearLine(fromX, fromY, toX, toY);
     }
 
@@ -81,7 +81,7 @@ final class Sight {
      * {@code clearance} is how far either side of the line the shot reaches: its own radius, plus how
      * far off the line a twin mount's muzzles sit.
      */
-    static boolean clearShot(
+    public static boolean clearShot(
             ImmutableArray<Entity> obstacles, float fromX, float fromY, float toX, float toY, float clearance) {
         for (int i = 0; i < obstacles.size(); i++) {
             Entity obstacle = obstacles.get(i);
@@ -94,7 +94,7 @@ final class Sight {
     }
 
     /** Whether a point lies within this distance of any part of the line between two others. */
-    static boolean nearLine(float fromX, float fromY, float toX, float toY, float x, float y, float reach) {
+    public static boolean nearLine(float fromX, float fromY, float toX, float toY, float x, float y, float reach) {
         float spanX = toX - fromX;
         float spanY = toY - fromY;
         float lengthSquared = spanX * spanX + spanY * spanY;

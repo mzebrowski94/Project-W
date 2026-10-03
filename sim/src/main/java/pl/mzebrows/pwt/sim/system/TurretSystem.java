@@ -22,6 +22,8 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.system.query.Aim;
+import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
  * Works every gun that somebody is on: brings it round, fires it, and holds whoever is aboard.

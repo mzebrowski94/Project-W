@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.query;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
@@ -21,7 +21,7 @@ import pl.mzebrows.pwt.sim.def.ActionKind;
  * longest level anybody would build. Which of two offers wins when both are in reach is {@code
  * ActionSystem}'s, not this.
  */
-final class Reach {
+public final class Reach {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
@@ -35,7 +35,8 @@ final class Reach {
      * The candidate offering this action that the man would reach first, or null if none is within reach.
      * Nearest surface to surface; never the man himself.
      */
-    static @Nullable Entity nearest(ImmutableArray<Entity> candidates, Entity man, float reach, ActionKind offer) {
+    public static @Nullable Entity nearest(
+            ImmutableArray<Entity> candidates, Entity man, float reach, ActionKind offer) {
         Entity nearest = null;
         float nearestGap = Float.MAX_VALUE;
         for (int i = 0; i < candidates.size(); i++) {
@@ -53,7 +54,7 @@ final class Reach {
     }
 
     /** How far apart two bodies are, surface to surface, in world units. */
-    static float gap(Entity man, Entity other) {
+    public static float gap(Entity man, Entity other) {
         Position at = POSITION.get(man);
         Position where = POSITION.get(other);
         float toX = where.x - at.x;

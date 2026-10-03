@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.query;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ACTION_REACH;
@@ -86,7 +86,7 @@ class ReachTest {
         Entity man = simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity open = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
         Entity shut = simulation.spawnPickup(PickupKind.CRATE, MIDDLE - NEARBY, MIDDLE);
-        Crates.open(open, 1, 0L);
+        open.getComponent(Crate.class).openedBy = 1;
 
         assertThat(Reach.nearest(all(simulation, Crate.class), man, ACTION_REACH, ActionKind.OPEN_CRATE))
                 .isSameAs(shut);

@@ -64,7 +64,7 @@ public final class Guns {
     }
 
     /** Whether this thing may fire at all this tick: the gun is off cooldown and has not stopped itself. */
-    boolean ready(Entity firer) {
+    public boolean ready(Entity firer) {
         if (!WEAPON.get(firer).ready()) {
             return false;
         }
@@ -72,7 +72,7 @@ public final class Guns {
     }
 
     /** One pull of the firer's gun along this aim, charged at the gun's own cooldown. */
-    void pull(Entity firer, float aimX, float aimY, int credit) {
+    public void pull(Entity firer, float aimX, float aimY, int credit) {
         pull(firer, aimX, aimY, credit, WEAPON.get(firer).cooldownTicks);
     }
 
@@ -83,7 +83,7 @@ public final class Guns {
      * @param cooldownTicks the wait this pull charges before upgrades and wounds are folded in - the
      *     gun's own for everything but a creature that fires faster up close
      */
-    void pull(Entity firer, float aimX, float aimY, int credit, int cooldownTicks) {
+    public void pull(Entity firer, float aimX, float aimY, int credit, int cooldownTicks) {
         volley(firer, aimX, aimY, credit);
         spend(firer, aimX, aimY, cooldownTicks);
     }
@@ -97,7 +97,7 @@ public final class Guns {
      * by these shots counts for, or {@link Tally#NOBODY} (G0044). What each shot does is read once, for
      * the whole pull.
      */
-    void volley(Entity firer, float aimX, float aimY, int credit) {
+    public void volley(Entity firer, float aimX, float aimY, int credit) {
         Weapon weapon = WEAPON.get(firer);
         Position at = POSITION.get(firer);
         float bodyRadius = BODY.get(firer).radius;

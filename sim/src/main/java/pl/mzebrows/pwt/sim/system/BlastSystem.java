@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Harm;
+import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
  * Runs the blasts on the field: each catches what is standing in it, once, and then burns out.

@@ -156,4 +156,24 @@ public final class WriterFixtures {
             velocity.y = -velocity.y;
         }
     }
+
+    /** A helper that only reads, the way a {@code query} does. */
+    static final class Gauge {
+
+        private Gauge() {}
+
+        static boolean moving(Velocity velocity) {
+            return velocity.x != 0f || velocity.y != 0f;
+        }
+    }
+
+    /** A helper that writes nothing itself and calls one that does. */
+    static final class Relay {
+
+        private Relay() {}
+
+        static void pass(Velocity velocity) {
+            Deflect.reflect(velocity);
+        }
+    }
 }

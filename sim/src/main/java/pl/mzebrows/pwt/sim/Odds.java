@@ -1,7 +1,6 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim;
 
 import com.badlogic.ashley.core.Entity;
-import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
@@ -45,7 +44,7 @@ public final class Odds {
      * Spends a tick of opportunity on this behaviour, at the number the table gives it. Returns the
      * new due, to be stored back where it came from; {@link #spent} says whether it happened.
      */
-    float roll(Entity unit, AiChance kind, float due, float deltaTime) {
+    public float roll(Entity unit, AiChance kind, float due, float deltaTime) {
         return roll(unit, kind, due, chances.of(kind), deltaTime);
     }
 
@@ -56,7 +55,7 @@ public final class Odds {
      *
      * <p>Overshoot carries into the next due, capped at one tick's worth.
      */
-    float roll(Entity unit, AiChance kind, float due, float chancePerSecond, float deltaTime) {
+    public float roll(Entity unit, AiChance kind, float due, float chancePerSecond, float deltaTime) {
         float chance = chanceOf(unit, kind, chancePerSecond);
         if (chance <= 0f) {
             return due < 0f ? 0f : due;
@@ -76,12 +75,12 @@ public final class Odds {
      * upgrades move it, is above zero. For a caller whose opportunity is costly to work out: it asks this
      * first and does not look for an opportunity that nothing could be spent on. Draws nothing.
      */
-    boolean possible(Entity unit, AiChance kind) {
+    public boolean possible(Entity unit, AiChance kind) {
         return chanceOf(unit, kind, chances.of(kind)) > 0f;
     }
 
     /** Whether the roll that returned this due was the one that ran it out. */
-    static boolean spent(float due) {
+    public static boolean spent(float due) {
         return due < 0f;
     }
 

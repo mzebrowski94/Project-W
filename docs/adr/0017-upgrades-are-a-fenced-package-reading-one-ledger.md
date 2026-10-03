@@ -1,6 +1,6 @@
 # 0017: Upgrades are a fenced package reading one ledger
 
-**Status.** accepted
+**Status.** amended by ADR 0020: sim.upgrade is sim.system.upgrade, one fenced package among several
 
 **Trigger.** Adding an upgrade, an adaptation, a new kind of effect or a new `Stat`; making a number
 something an upgrade can move; reading or writing `Upgrades` or `Drafts` from outside

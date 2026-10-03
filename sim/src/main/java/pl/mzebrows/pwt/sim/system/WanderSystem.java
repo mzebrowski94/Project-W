@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.def.Ticks;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
  * Walks a unit that has noticed nobody slowly around the patch it was spawned in.

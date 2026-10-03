@@ -6,6 +6,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Weave;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
  * Bends a course it did not choose: whatever a weaving creature was about to walk at, it walks at

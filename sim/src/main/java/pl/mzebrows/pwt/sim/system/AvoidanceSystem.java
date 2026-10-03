@@ -23,6 +23,8 @@ import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.system.query.Compass;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
  * Bends a unit's course around whatever it is about to run into, before it runs into it.

@@ -6,9 +6,12 @@
 adding a fenced package or a port; proposing `@Internal`, an `.internal` package, a facade, or a split of
 `component` or `def`.
 
-**Enforced by.** `ArchitectureTest` - rules named when ticket 04 builds them (packages use only `query`,
-the shared packages and declared ports; `query` writes nothing; every system lives in a fenced package).
-This draft lands in `docs/adr/` with them.
+**Enforced by.** Nothing under `sim.system` sits outside a declared fenced package
+(`ArchitectureTest.nothingUnderSystemLivesOutsideADeclaredPackage`) and every system sits under `sim.system`
+(`.everySystemLivesUnderSystem`); a fenced package uses another only through `query` and the declared
+ports (`.aFencedPackageUsesOnlyQueryAndPortsOfAnother`); `query` is public and holds no state
+(`.queryIsPublicAndHoldsNothing`) and writes no component, measured with ADR 0019's analysis
+(`.queryWritesNothing`). Each fails on zero classes rather than passing.
 
 **Amends ADR 0017.** 0017 made `sim.upgrade` the one fenced package and the one exception to "systems
 live in `system/`". Here every system lives in one, and `upgrade` is one of them: `sim.system.upgrade`,
@@ -22,8 +25,8 @@ already amended it, and this only uses that amendment more widely.
   package with a `package-info.java` saying what it is, its systems and ports, what does not belong in it,
   and the records it answers to.
 - **Package-private by default.** Public are only its systems (`Simulation` constructs them) and its
-  **ports** - classes other packages may use, each named in `package-info.java` and in the rule's
-  allowlist.
+  **ports** - classes other packages may use, each named in `package-info.java` and in
+  `ArchitectureTest.PORTS`.
 - **A fenced package uses only** `sim.system.query`, `component`, `def`, `collision`, the `sim` root, and
   other packages' ports. Never another package's system or helper.
 - **`sim.system.query`** holds public, stateless questions about components, and writes none (ADR 0019's

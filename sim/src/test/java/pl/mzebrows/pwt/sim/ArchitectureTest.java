@@ -1,5 +1,6 @@
 package pl.mzebrows.pwt.sim;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -9,6 +10,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.Dependency;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaField;
@@ -225,7 +227,8 @@ final class ArchitectureTest {
             .beAnnotatedWith(NotState.class)
             .because("what must survive a tick lives on a component, where a snapshot carries it (ADR 0014);"
                     + " a system may keep scratch it overwrites before reading, or a pure cache, and says"
-                    + " which with @NotState");
+                    + " which with @NotState")
+            .allowEmptyShould(false);
 
     @ArchTest
     static final ArchRule onlyTheUpgradePackageTouchesTheLedgerAndTheDrafts = noClasses()
@@ -237,7 +240,8 @@ final class ArchitectureTest {
             .dependOnClassesThat()
             .belongToAnyOf(pl.mzebrows.pwt.sim.component.Upgrades.class, pl.mzebrows.pwt.sim.component.Drafts.class)
             .because("the ledger and the drafts are written by the upgrade package alone and read through"
-                    + " Modifiers (ADR 0017); the codec writes them and the spawner creates them");
+                    + " Modifiers (ADR 0017); the codec writes them and the spawner creates them")
+            .allowEmptyShould(false);
 
     @ArchTest
     static final ArchRule upgradesAreCalledAndDoNotCall = noClasses()
@@ -247,7 +251,8 @@ final class ArchitectureTest {
             .dependOnClassesThat()
             .resideInAnyPackage("..sim.system..", "..sim.scenario..")
             .because("the upgrade package is called and does not call (ADR 0017): a rule asks Modifiers for a"
-                    + " number, and Modifiers asks nothing of the rules");
+                    + " number, and Modifiers asks nothing of the rules")
+            .allowEmptyShould(false);
 
     @ArchTest
     static final ArchRule onlyLifeReadsWhetherAUnitIsDownOrDying = noClasses()
@@ -259,6 +264,130 @@ final class ArchitectureTest {
             .accessField(Dying.class, "begun")
             .because("two flags both named begun answer one question - on his feet, a casualty, or in his"
                     + " throes - and every copy of the answer was a chance to get it wrong; ask Life");
+
+    private static final String SYSTEM = "pl.mzebrows.pwt.sim.system";
+
+    /** The fenced packages under {@code sim.system} (ADR 0020). Ticket 05 adds the rest. */
+    private static final List<String> FENCED = List.of(SYSTEM + ".query", SYSTEM + ".squad");
+
+    /**
+     * Where a class under {@code sim.system} may live: a fenced package, or straight in {@code sim.system}
+     * while ticket 05 moves the rest out of it.
+     */
+    private static final String[] HOMES = homes();
+
+    /**
+     * The classes of a package that another fenced package may use, besides everything in {@code query} (ADR
+     * 0020). Each is named in its own {@code package-info.java} too.
+     */
+    private static final Set<String> PORTS = Set.of(
+            // Getting on a gun and off it, the commander's and a trooper's alike (G0024).
+            SYSTEM + ".Crews",
+            // The trigger pull, for everything that fires.
+            SYSTEM + ".Guns",
+            // A throw, for everything that throws.
+            SYSTEM + ".Throws");
+
+    private static final String BECAUSE_0020 = "ADR 0020: systems live in fenced packages by domain";
+
+    @ArchTest
+    static final ArchRule nothingUnderSystemLivesOutsideADeclaredPackage = classes()
+            .that()
+            .resideInAPackage(SYSTEM + "..")
+            .should()
+            .resideInAnyPackage(HOMES)
+            .because(BECAUSE_0020 + "; a package nobody declared is one no fence covers")
+            .allowEmptyShould(false);
+
+    @ArchTest
+    static final ArchRule everySystemLivesUnderSystem = classes()
+            .that()
+            .areAssignableTo(EntitySystem.class)
+            .should()
+            // sim.upgrade until ticket 05 makes it sim.system.upgrade.
+            .resideInAnyPackage(SYSTEM + "..", "..sim.upgrade..")
+            .because(BECAUSE_0020)
+            .allowEmptyShould(false);
+
+    @ArchTest
+    static final ArchRule aFencedPackageUsesOnlyQueryAndPortsOfAnother = classes()
+            .that()
+            .resideInAPackage(SYSTEM + "..")
+            .should(useOnlyQueryAndPortsOfOtherPackages())
+            .because(BECAUSE_0020 + ": between packages go query, component, def, collision, the sim root and"
+                    + " declared ports - never another package's system or helper")
+            .allowEmptyShould(false);
+
+    @ArchTest
+    static final ArchRule queryIsPublicAndHoldsNothing = classes()
+            .that()
+            .resideInAPackage(SYSTEM + ".query")
+            .and()
+            .doNotHaveSimpleName("package-info")
+            .and()
+            .areTopLevelClasses()
+            .should()
+            .bePublic()
+            .andShould()
+            .haveOnlyFinalFields()
+            .because(BECAUSE_0020 + ": query holds public, stateless questions about components")
+            .allowEmptyShould(false);
+
+    /** Nothing in {@code query} writes a component, itself or through what it calls (ADR 0020, ADR 0019's analysis). */
+    @ArchTest
+    static void queryWritesNothing(JavaClasses classes) {
+        Map<String, Set<String>> writes = new TreeMap<>();
+        for (JavaClass type : classes) {
+            if (type.getPackageName().equals(SYSTEM + ".query")
+                    && !type.getSimpleName().equals("package-info")) {
+                writes.put(
+                        type.getName().substring(SYSTEM.length() + ".query.".length()),
+                        ComponentWriters.writtenBy(classes, type));
+            }
+        }
+        org.assertj.core.api.Assertions.assertThat(writes)
+                .as("classes in query")
+                .isNotEmpty();
+        org.assertj.core.api.Assertions.assertThat(writes)
+                .as(BECAUSE_0020 + ": what writes is a port of the package it belongs to, not a query")
+                .allSatisfy((type, written) -> org.assertj.core.api.Assertions.assertThat(written)
+                        .as(type)
+                        .isEmpty());
+    }
+
+    private static String[] homes() {
+        List<String> homes = new ArrayList<>(FENCED);
+        homes.add(SYSTEM);
+        return homes.toArray(String[]::new);
+    }
+
+    /** Any class under {@code sim.system} it uses from another package there is in {@code query} or a port. */
+    private static ArchCondition<JavaClass> useOnlyQueryAndPortsOfOtherPackages() {
+        return new ArchCondition<>("use only query and the ports of another package under sim.system") {
+            @Override
+            public void check(JavaClass origin, ConditionEvents events) {
+                for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                    JavaClass target = dependency.getTargetClass().getBaseComponentType();
+                    String home = target.getPackageName();
+                    if (!home.startsWith(SYSTEM)
+                            || home.equals(origin.getPackageName())
+                            || home.equals(SYSTEM + ".query")
+                            || PORTS.contains(outermost(target).getName())) {
+                        continue;
+                    }
+                    events.add(SimpleConditionEvent.violated(origin, dependency.getDescription()));
+                }
+            }
+        };
+    }
+
+    private static JavaClass outermost(JavaClass type) {
+        JavaClass at = type;
+        while (at.getEnclosingClass().isPresent()) {
+            at = at.getEnclosingClass().get();
+        }
+        return at;
+    }
 
     /**
      * Every number an upgrade may move is read in exactly one place (ADR 0017): one {@code @Reads} method
