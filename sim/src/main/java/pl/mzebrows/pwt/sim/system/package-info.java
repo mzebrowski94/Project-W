@@ -1,6 +1,6 @@
 /**
  * ECS systems not yet in a fenced package (ADR 0020): ticket 05 moves the rest into theirs, and this package
- * then holds none. {@code query} and {@code squad} are fenced already.
+ * then holds none. {@code query}, {@code squad} and {@code motion} are fenced already.
  *
  * <p>Ports - what a fenced package may use from here, besides {@code query}: {@link
  * pl.mzebrows.pwt.sim.system.Crews} (getting on a gun and off it, the commander's and a trooper's alike,
