@@ -19,11 +19,13 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Shake;
+import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -85,6 +87,43 @@ class BazookaTest {
 
         assertThat(commander.getComponent(Heat.class).locked).isTrue();
         assertThat(count(simulation, Projectile.class)).isOne();
+    }
+
+    /** The wait is the gun's, so a trooper who picked one up reloads as his commander does. */
+    @Test
+    void stopsItselfInATroopersHandsToo() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(X, Y + 40f);
+        Entity trooper = simulation.spawnTrooper(X, Y);
+        trooper.getComponent(Weapon.class)
+                .set(
+                        WeaponKind.BAZOOKA,
+                        simulation.config().weapon(WeaponKind.BAZOOKA),
+                        simulation.config().tickSeconds());
+        trooper.getComponent(Trooper.class).look(1f, 0f);
+        simulation.spawnEnemy(X + 20f, Y);
+
+        int ticks = 0;
+        while (count(simulation, Projectile.class) == 0 && ticks++ < ticksIn(2f)) {
+            simulation.step();
+        }
+
+        assertThat(count(simulation, Projectile.class)).isOne();
+        assertThat(trooper.getComponent(Heat.class).locked).isTrue();
+    }
+
+    /** His gun still stops itself; the bar over every man in the squad was clutter rather than news. */
+    @Test
+    void drawsNoHeatBarOverATrooper() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(X, Y + 40f);
+        Entity trooper = simulation.spawnTrooper(X, Y);
+        trooper.getComponent(Heat.class).spend(1f);
+
+        simulation.step();
+
+        assertThat(trooper.getComponent(Appearance.class).heat).isZero();
+        assertThat(trooper.getComponent(Appearance.class).overheated).isFalse();
     }
 
     // ---- the blast ----

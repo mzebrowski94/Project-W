@@ -264,6 +264,8 @@ public final class Spawner {
         // Carried always by everything that moves itself: adding it on the first hit would mutate a
         // family mid-iteration.
         entity.add(engine.createComponent(Slowed.class));
+        // Carried always, as his commander's: a gun he picks up runs hot in his hands as in anyone's.
+        entity.add(engine.createComponent(Heat.class));
         // Carried by everything that can be killed; inert until a beam fills it (zero means off, G0018).
         entity.add(engine.createComponent(Bloat.class));
         entity.add(engine.createComponent(Shock.class));

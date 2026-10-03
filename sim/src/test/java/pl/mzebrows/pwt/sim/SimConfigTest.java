@@ -9,6 +9,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.GroundDef;
@@ -159,6 +160,37 @@ class SimConfigTest {
                         .as("the beam must stop itself sooner than the %s does", crate.weapon())
                         .isLessThan(secondsOfHolding(config, crate.weapon(), modifiers, commander));
             }
+        }
+    }
+
+    /**
+     * <strong>The pulse rifle stuns before it kills.</strong> What the gun is for is holding something
+     * still for the squad, so a trigger held on any strain shock builds on - every bolt landing, the
+     * shock draining between them as it does in play - fills it before the bolts have emptied its
+     * health. Read through the one {@code Shock} the game builds and drains, at the gun's own cadence.
+     */
+    @Test
+    void stunsWithThePulseRifleBeforeItKills() {
+        SimConfig config = SimConfig.defaults();
+        WeaponDef gun = config.weapon(WeaponKind.PULSE);
+        int ticksBetween = Ticks.of(gun.cooldownSeconds(), config.tickSeconds());
+
+        for (UnitKind kind : UnitKind.values()) {
+            if (!config.unit(kind).shockable()) {
+                continue;
+            }
+            int boltsToKill = (config.healthOf(kind) + gun.damage() - 1) / gun.damage();
+            float worth = config.shock().perHitAgainst(config.unit(kind).radius(), gun.shockPerHit());
+            Shock shock = new Shock();
+            int bolts = 1;
+            while (!shock.build(worth) && bolts < boltsToKill) {
+                shock.drain(config.shock().drainPerSecond(), (ticksBetween - 1) * config.tickSeconds());
+                bolts++;
+            }
+
+            assertThat(bolts)
+                    .as("a held pulse rifle must stun the %s before it kills it", kind)
+                    .isLessThan(boltsToKill);
         }
     }
 
