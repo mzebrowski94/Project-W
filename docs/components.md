@@ -64,12 +64,12 @@ and a component touched by many is where to check. Read the code before concludi
 | **Position** | Where an entity is, in world units. | `Action`, `Aid`, `Aid`, `Appearance`, `Avoidance`, `Barrage`, `Blast`, `Collision`, `CommanderControl`, `ControlPoint`, `Crate`, `Crates`, `Crews`, `Damage`, `Dodge`, `Drag`, `Drivers`, `EnemyLeap`, `EnemyRanged`, `Facing`, `Grenade`, `Grip`, `Guns`, `Lair`, `Melee`, `Mine`, `Movement`, `Navigation`, `Nest`, `Objective`, `Pace`, `Perception`, `PositionHistory`, `ProjectileBounds`, `RallyPoint`, `Reinforcement`, `Respawn`, `Rouse`, `Sight`, `Slick`, `SquadOrder`, `Strike`, `Throws`, `TrooperAid`, `TrooperCombat`, `TrooperCrew`, `TrooperFight`, `TrooperMend`, `TrooperMind`, `TrooperMove`, `TrooperObjective`, `TrooperOrders`, `TrooperRoam`, `Turret`, `Wander` · solver: `ConstraintSolver` · `Simulation`, `Spawner` · client: `ScenarioScreen`, `WorldRenderer` |
 | **Post** | Ground the level says you must hold, and the other side is coming for. | `Navigation`, `Objective`, `Perception`, `TrooperRoam` · `Spawner` |
 | **Presence** | The slots that are away (G0052): their link has dropped, so their commanders stand idle and the draft rotation passes them by - and which machine each slot sits at, which the leash is reckoned by (G0056). | `CommanderControl`, `Crate`, `Lair` · `Simulation`, `Spawner` |
-| **PreviousPosition** | Where an entity was at the start of the current tick, so the renderer can draw it partway between ticks instead of snapping once every simulation step. | `Grenade`, `PositionHistory` · solver: `ConstraintSolver` · `Spawner` · client: `ScenarioScreen`, `WorldRenderer` |
+| **PreviousPosition** | Where an entity was at the start of the current tick, so the renderer can draw it partway between ticks instead of snapping once every simulation step. | `Grenade`, `PositionHistory`, `ProjectileBounds` · solver: `ConstraintSolver` · `Spawner` · client: `ScenarioScreen`, `WorldRenderer` |
 | **Projectile** | A fired entity that despawns when it hits something or leaves the arena. | `Appearance`, `Collision`, `Dodge`, `ProjectileBounds` · `Spawner` · client: `DebugOverlay` |
 | **Ranged** | How a unit uses the gun it is carrying: what it can see, how close it lets you get, how loosely it shoots, and where it is currently looking. | `EnemyRanged`, `Facing`, `Grants`, `Navigation`, `Wander` · `Spawner` |
 | **Respawning** | A pending respawn, counting down once it is paid for. | `Respawn` · `Spawner` |
 | **RespawnsOnDeath** | A death reaction: this entity comes back, after a delay, at the rally point and for a man from the reserve (G0055). | `Respawn` · `Spawner` |
-| **Shake** | Something violent happened here, this hard, and it is this far through. | `Cooldown` · `Spawner` · client: `ScenarioScreen` |
+| **Shake** | Something violent happened here, this hard, and it is this far through. | `Cooldown`, `Guns` · `Spawner` · client: `ScenarioScreen` |
 | **Shield** | Something that takes the next hit of any harm instead of the man carrying it, and breaks (G0053). | `Appearance`, `Collision`, `Cooldown`, `Damage`, `Respawn` · `Spawner` · client: `GraphicFile` |
 | **Shock** | How far along something is towards being stunned by a gun that stuns only once enough of it has landed - the pulse rifle (G0059). | `Appearance`, `Damage`, `Shock` · `Spawner` |
 | **Slick** | One circle of ground that has been ruined, for a while. | `Appearance`, `Cooldown`, `Slick` · `Spawner` |
@@ -87,7 +87,7 @@ and a component touched by many is where to check. Read the code before concludi
 | **Trooper** | One AI-controlled member of the squad, and the whole of what it is thinking. | `Aid`, `Appearance`, `Damage`, `Facing`, `Reinforcement`, `SquadOrder`, `TrooperAid`, `TrooperCombat`, `TrooperCrew`, `TrooperFight`, `TrooperMend`, `TrooperMind`, `TrooperMove`, `TrooperObjective`, `TrooperOrders`, `TrooperRoam` · `Spawner` |
 | **Turret** | A gun on a mount: where it is pointing, how fast it comes round, and whether anybody is on it. | `Action`, `Appearance`, `Crews`, `Drag`, `Facing`, `TrooperCrew`, `Turret` · `Spawner` |
 | **Upgrades** | The ledger: what each side holds, with ranks - the players' upgrades and the aliens' adaptations (ADR 0017). | `Spawner` |
-| **Velocity** | How fast an entity moves, in world units per second. | `Avoidance`, `Collision`, `CommanderControl`, `Crews`, `Damage`, `Deaths`, `Dodge`, `Drag`, `Drive`, `EnemyLeap`, `Facing`, `Grenade`, `Grip`, `Guns`, `Movement`, `Stun`, `TrooperOrders`, `Turret` · `Spawner` |
+| **Velocity** | How fast an entity moves, in world units per second. | `Avoidance`, `Collision`, `CommanderControl`, `Crews`, `Damage`, `Deaths`, `Dodge`, `Drag`, `Drive`, `EnemyLeap`, `Facing`, `Grenade`, `Grip`, `Guns`, `Movement`, `ProjectileBounds`, `Stun`, `TrooperOrders`, `Turret` · `Spawner` |
 | **Vitality** | How hurt a man on the player's side is: a count of wounds against his maximum, and whether he is down (G0053). | `Action`, `Aid`, `Aid`, `Appearance`, `Blast`, `Casualty`, `Cooldown`, `Crate`, `Damage`, `Drag`, `Drivers`, `Grants`, `Guns`, `Navigation`, `Nest`, `Pace`, `Perception`, `Shock`, `TrooperAid`, `TrooperMend` · `Players`, `Spawner` · client: `DebugOverlay` |
 | **Wander** | A unit's patch of ground, and where inside it it is currently headed. | `Cooldown`, `Wander` · `Spawner` |
 | **Waves** | What is still to arrive, and how long until the next of it. | `ControlPoint`, `Objective`, `Wave` · `Simulation`, `Spawner` |
@@ -98,7 +98,7 @@ and a component touched by many is where to check. Read the code before concludi
 
 79 exist. Look for one that already holds what you need: most new mechanics want a field on an existing component, not a new component - G0010 makes that structural, because only `Spawner` may change what an entity is made of, so state cannot be a component that gets added and removed.
 
-**Touched by exactly one system:** `Appearance`, `Armour`, `Armoury`, `Avoidance`, `Hop`, `Lair`, `Respawning`, `RespawnsOnDeath`, `Shake`, `SlicksOnDeath`, `Weave`.
+**Touched by exactly one system:** `Appearance`, `Armour`, `Armoury`, `Avoidance`, `Hop`, `Lair`, `Respawning`, `RespawnsOnDeath`, `SlicksOnDeath`, `Weave`.
 These satisfy the one-writer rule by construction. A second system writing one is the change worth thinking twice about.
 
 **Touched by no system:** `Components`, `Drafts`, `Focus`, `Upgrades`.

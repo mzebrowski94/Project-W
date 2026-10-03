@@ -229,6 +229,8 @@ public final class Spawner {
         // What a body is made of does not depend on its side.
         entity.add(engine.createComponent(Bloat.class));
         entity.add(engine.createComponent(Shock.class));
+        // Inert until a gun that shakes the ground is fired from his hands; read by the view, never the simulation.
+        entity.add(engine.createComponent(Shake.class));
         entity.add(engine.createComponent(BlastsOnDeath.class)
                 .harming(config.blast().harm()));
         entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER, slot));
@@ -265,6 +267,8 @@ public final class Spawner {
         // Carried by everything that can be killed; inert until a beam fills it (zero means off, G0018).
         entity.add(engine.createComponent(Bloat.class));
         entity.add(engine.createComponent(Shock.class));
+        // Inert until a gun that shakes the ground is fired from his hands; read by the view, never the simulation.
+        entity.add(engine.createComponent(Shake.class));
         entity.add(engine.createComponent(BlastsOnDeath.class)
                 .harming(config.blast().harm()));
         entity.add(engine.createComponent(Collider.class).set(true, true));

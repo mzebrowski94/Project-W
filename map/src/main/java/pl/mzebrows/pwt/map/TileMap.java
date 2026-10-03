@@ -193,15 +193,26 @@ public final class TileMap {
      * accepts.
      */
     public boolean clearLine(float fromX, float fromY, float toX, float toY) {
+        return passableFraction(fromX, fromY, toX, toY) >= 1f;
+    }
+
+    /**
+     * How much of the straight line between two world points runs over ground before it first meets
+     * something impassable, as a fraction of the line: one if none of it does, zero if it starts there.
+     *
+     * <p>The same exact tile walk as {@link #clearLine}, which is this asked whether all of it is clear -
+     * so where a shot that flew into rock meets the face is answered by the rule a sight line uses.
+     */
+    public float passableFraction(float fromX, float fromY, float toX, float toY) {
         int col = colAt(fromX);
         int row = rowAt(fromY);
         if (!passableAtTile(col, row)) {
-            return false;
+            return 0f;
         }
         int endCol = colAt(toX);
         int endRow = rowAt(toY);
         if (col == endCol && row == endRow) {
-            return true;
+            return 1f;
         }
 
         float spanX = toX - fromX;
@@ -219,21 +230,25 @@ public final class TileMap {
         // grid's own span. The bound is belt and braces against a denormal ray stalling the loop.
         int limit = cols + rows + 2;
         for (int taken = 0; taken < limit; taken++) {
+            float crossed;
             if (toBoundaryX < toBoundaryY) {
+                crossed = toBoundaryX;
                 col += stepX;
                 toBoundaryX += perTileX;
             } else {
+                crossed = toBoundaryY;
                 row += stepY;
                 toBoundaryY += perTileY;
             }
             if (!passableAtTile(col, row)) {
-                return false;
+                // Strictly short of one, so a line blocked on its last tile is never read as clear.
+                return Math.max(0f, Math.min(Math.nextDown(1f), crossed));
             }
             if (col == endCol && row == endRow) {
-                return true;
+                return 1f;
             }
         }
-        return true;
+        return 1f;
     }
 
     /** The world coordinate of the edge of this tile the ray is heading towards. */

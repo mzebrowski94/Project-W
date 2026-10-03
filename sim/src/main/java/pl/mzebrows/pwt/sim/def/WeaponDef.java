@@ -50,6 +50,8 @@ import lombok.With;
  * @param stunAfterHits how many of its shots it takes to stun a body of the reference size: each one
  *     builds shock and a full shock is a stun of {@code stunSeconds}, a bigger body taking more. Zero or
  *     one is a stun on every hit, which is what every gun but the pulse rifle declares
+ * @param shake how hard one pull shakes the ground where it is fired; {@link ShakeDef#off()} for every gun
+ *     but the bazooka
  */
 @With
 public record WeaponDef(
@@ -77,7 +79,8 @@ public record WeaponDef(
         Harm blastHarm,
         float recoilSpeed,
         float recoilSeconds,
-        int stunAfterHits) {
+        int stunAfterHits,
+        ShakeDef shake) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;

@@ -203,6 +203,35 @@ class TileMapTest {
         assertThat(map.clearLine(27.4f, 27.4f, 32.6f, 32.6f)).isFalse();
     }
 
+    /** Where a line runs into rock, so a shot that flew into a wall can end at its face rather than inside it. */
+    @Test
+    void measuresHowFarALineRunsBeforeItMeetsRock() {
+        TileMap map = TileMap.builder(COLS, ROWS, TILE)
+                .fill(Terrain.PLAIN)
+                .rect(10, 0, 1, ROWS, Terrain.ROCK)
+                .build();
+        float face = 10 * TILE;
+
+        float fraction = map.passableFraction(face - 20f, 42.5f, face + 20f, 42.5f);
+
+        assertThat(fraction).isCloseTo(0.5f, Offset.offset(1e-4f));
+    }
+
+    @Test
+    void measuresAllOfALineThatMeetsNoRock() {
+        assertThat(plain().passableFraction(10f, 42.5f, 140f, 42.5f)).isEqualTo(1f);
+    }
+
+    @Test
+    void measuresNothingOfALineThatStartsInRock() {
+        TileMap map = TileMap.builder(COLS, ROWS, TILE)
+                .fill(Terrain.PLAIN)
+                .rect(10, 0, 1, ROWS, Terrain.ROCK)
+                .build();
+
+        assertThat(map.passableFraction(10 * TILE + 1f, 42.5f, 140f, 42.5f)).isZero();
+    }
+
     @Test
     void seesSomethingStandingInTheSameTile() {
         assertThat(plain().clearLine(12f, 12f, 13f, 13f)).isTrue();

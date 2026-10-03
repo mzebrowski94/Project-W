@@ -100,6 +100,16 @@ public final class Weapon implements Component, Pool.Poolable {
 
     public float recoilDecay;
 
+    /**
+     * How hard one pull shakes the ground where it is fired, how far that is felt and for how long. Zero
+     * strength for every gun but the bazooka.
+     */
+    public float shakeStrength;
+
+    public float shakeRadius;
+
+    public int shakeTicks;
+
     /** How much of a body one of its shots pumps up. Zero for every gun that does nothing to one. */
     public float bloatPerShot;
 
@@ -146,6 +156,9 @@ public final class Weapon implements Component, Pool.Poolable {
         this.recoilSpeed = def.recoilSpeed();
         this.recoilTicks = Ticks.of(def.recoilSeconds(), tickSeconds);
         this.recoilDecay = recoilTicks > 0 ? recoilSpeed / (recoilTicks * tickSeconds) : 0f;
+        this.shakeStrength = def.shake().shakes() ? def.shake().strength() : 0f;
+        this.shakeRadius = def.shake().radius();
+        this.shakeTicks = Ticks.of(def.shake().seconds(), tickSeconds);
         this.heatPerShot = def.heat().perShot();
         this.heatCoolPerSecond = def.heat().coolPerSecond();
         this.heatResumeBelow = def.heat().resumeBelow();
@@ -186,6 +199,9 @@ public final class Weapon implements Component, Pool.Poolable {
         recoilSpeed = 0f;
         recoilTicks = 0;
         recoilDecay = 0f;
+        shakeStrength = 0f;
+        shakeRadius = 0f;
+        shakeTicks = 0;
         heatPerShot = 0f;
         heatCoolPerSecond = 0f;
         heatResumeBelow = 0f;

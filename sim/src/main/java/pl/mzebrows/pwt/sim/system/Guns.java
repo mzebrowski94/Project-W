@@ -9,6 +9,7 @@ import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Tally;
@@ -43,6 +44,7 @@ public final class Guns {
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
+    private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
 
     private final Spawner spawner;
     private final Modifiers modifiers;
@@ -118,11 +120,11 @@ public final class Guns {
     }
 
     /**
-     * Charges a shot to the cooldown, to the heat, to the shooter's own pace and to his footing -
-     * whichever of the four this gun actually asks for.
+     * Charges a shot to the cooldown, to the heat, to the shooter's own pace, to his footing and to the
+     * ground he stands on - whichever of the five this gun actually asks for.
      *
      * <p>A shooter with no {@code Slowed} - a turret - is unaffected by a self-slow, and one that cannot
-     * be moved by a kick. The cooldown is the one place {@code FIRE_COOLDOWN} is read, for every shooter
+     * be moved by a kick; one with no {@code Shake} - anything but a man - shakes nothing. The cooldown is the one place {@code FIRE_COOLDOWN} is read, for every shooter
      * there is.
      */
     private void spend(Entity firer, float aimX, float aimY, int cooldownTicks) {
@@ -139,6 +141,10 @@ public final class Guns {
             SLOWED.get(firer).apply(weapon.selfSlowFactor, weapon.selfSlowTicks);
         }
         kick(firer, weapon, aimX, aimY);
+        if (weapon.shakeStrength > 0f && SHAKE.has(firer)) {
+            // The ground moves where it was fired; what the view does about it is the client's.
+            SHAKE.get(firer).set(weapon.shakeStrength, weapon.shakeRadius, weapon.shakeTicks);
+        }
     }
 
     /**

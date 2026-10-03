@@ -11,7 +11,9 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Velocity;
 
 /**
  * Throws away projectiles that have left the arena, flown into rock, or flown as far as their gun
@@ -31,6 +33,11 @@ import pl.mzebrows.pwt.sim.component.Projectile;
  * everything explodes through (G0018), exactly as a grenade at the end of its throw does. Zero range
  * is "until it hits something", which is what almost every gun in the game declares.
  *
+ * <p><strong>A shot that flies into rock ends at its face</strong>, not inside it: it is put back
+ * along the way it came to where it met the wall before it dies. Whatever it leaves - a blast, fire, a
+ * spatter - is then on this side of the wall, where a blast's clear line can reach whoever stands beside
+ * it; left inside, the line started in rock and the blast caught nobody.
+ *
  * <p>Marks rather than removes: only {@code ReaperSystem} takes an entity out of the world.
  */
 public final class ProjectileBoundsSystem extends EntitySystem {
@@ -38,6 +45,11 @@ public final class ProjectileBoundsSystem extends EntitySystem {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Projectile> PROJECTILE = ComponentMapper.getFor(Projectile.class);
+    private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
+    private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
+
+    /** How far short of the face a shot is put, so the point it ends on is on the open side of it. */
+    private static final float SHORT_OF_THE_FACE = 1e-3f;
 
     private final Spawner spawner;
     private final TileMap map;
@@ -75,10 +87,46 @@ public final class ProjectileBoundsSystem extends EntitySystem {
             if (position.x + radius < 0f
                     || position.x - radius > width
                     || position.y + radius < 0f
-                    || position.y - radius > height
-                    || !map.passableAt(position.x, position.y)) {
+                    || position.y - radius > height) {
+                spawner.markDead(projectile);
+            } else if (!map.passableAt(position.x, position.y)) {
+                backToTheFace(projectile, position);
                 spawner.markDead(projectile);
             }
         }
+    }
+
+    /**
+     * Puts a shot that has flown into rock back where its path met the face. It is walked from where it
+     * stood last tick - or, for one fired with its muzzle already in the wall, from a tile further back
+     * along its line, which is inside whoever fired it. Left where it is when no open ground lies behind.
+     */
+    private void backToTheFace(Entity projectile, Position position) {
+        if (!PREVIOUS.has(projectile) || !VELOCITY.has(projectile)) {
+            return;
+        }
+        Velocity velocity = VELOCITY.get(projectile);
+        float speed = (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+        if (speed <= 0f) {
+            return;
+        }
+        float directionX = velocity.x / speed;
+        float directionY = velocity.y / speed;
+        PreviousPosition previous = PREVIOUS.get(projectile);
+        float fromX = previous.x;
+        float fromY = previous.y;
+        if (!map.passableAt(fromX, fromY)) {
+            fromX -= directionX * map.tileSize();
+            fromY -= directionY * map.tileSize();
+        }
+        float spanX = position.x - fromX;
+        float spanY = position.y - fromY;
+        float open = map.passableFraction(fromX, fromY, position.x, position.y);
+        if (open <= 0f) {
+            return;
+        }
+        position.set(
+                fromX + spanX * open - directionX * SHORT_OF_THE_FACE,
+                fromY + spanY * open - directionY * SHORT_OF_THE_FACE);
     }
 }
