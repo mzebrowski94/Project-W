@@ -812,6 +812,23 @@ public final class AlphaWorlds {
     private static final HeatDef HOT = new HeatDef(TURRET_HEAT_PER_SHOT, HEAT_COOL_PER_SECOND, HEAT_RESUME_BELOW);
 
     /**
+     * A table filled over the shipped one, so a kind the game gains needs nothing here until a test is
+     * about it: whatever the fixture puts replaces the shipped definition, and a kind it leaves out
+     * keeps the shipped numbers, passed through {@code quiet} wherever the game asks every kind at once.
+     *
+     * <p>Not for upgrades: a shipped one would be dealt in every draft and checked against this deck,
+     * so {@link #upgrades()} states every kind.
+     */
+    private static <K extends Enum<K>, V> Defs.Builder<K, V> onShipped(
+            Class<K> type, Defs<K, V> shipped, UnaryOperator<V> quiet) {
+        Defs.Builder<K, V> builder = Defs.builder(type);
+        for (K kind : type.getEnumConstants()) {
+            builder.put(kind, quiet.apply(shipped.of(kind)));
+        }
+        return builder;
+    }
+
+    /**
      * What every kind of ground is worth to walk on in the fixture.
      *
      * <p>A thicket is the one that is worth anything, and it is a harsher number here than the game
@@ -885,7 +902,7 @@ public final class AlphaWorlds {
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 // Never musters: men turning up every so often would move every count in every test.
                 new SimConfig.ReserveConfig(RESERVE_START, RESERVE_MAX, 0f, 2, 3),
-                Defs.<UnitKind, UnitDef>builder(UnitKind.class)
+                onShipped(UnitKind.class, SimConfig.defaults().units(), UnaryOperator.identity())
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
                         .put(UnitKind.BRUTE, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.BRUTE))
                         .put(UnitKind.SPITTER, strain(SPITTER_RADIUS, SPITTER_SPEED, SPITTER_HEALTH, Look.SPITTER))
@@ -900,7 +917,10 @@ public final class AlphaWorlds {
                                 strain(BOSS_RADIUS, 0f, BOSS_HEALTH, Look.BOSS_GRUNT)
                                         .withShockable(false))
                         .build(),
-                Defs.<PickupKind, PickupDef>builder(PickupKind.class)
+                onShipped(
+                                PickupKind.class,
+                                SimConfig.defaults().pickups(),
+                                pickup -> pickup.withArmoury(ArmouryDef.off()))
                         .put(
                                 PickupKind.MUSHROOM,
                                 new PickupDef(PICKUP_RADIUS, Look.MUSHROOM, Grant.NOTHING, MOUTHFUL, 0f))
@@ -1010,7 +1030,7 @@ public final class AlphaWorlds {
                                         0f,
                                         new ArmouryDef(ARMOURY_CARDS, false)))
                         .build(),
-                Defs.<WeaponKind, WeaponDef>builder(WeaponKind.class)
+                onShipped(WeaponKind.class, SimConfig.defaults().weapons(), UnaryOperator.identity())
                         .put(
                                 WeaponKind.SIDEARM,
                                 new WeaponDef(

@@ -65,7 +65,7 @@ component holding an `Entity` - is left to `verify.sh`.
 - [ ] A system holds no reference to another system; another entity is named by its `Handle` and
       found with `Handles.resolve` (ADR 0016).
 - [ ] A new kind of thing is a constant, a definition and a block in `assets/sim/` - never a new
-      class, marker, `spawn` method or branch (G0008).
+      class, marker, `spawn` method or branch (G0008) - the `new-kind` skill has the steps.
 - [ ] A dodge's side, timing and distance come from its inputs, never the `Rng` (G0012).
 - [ ] Nothing you built appears in the **Do not build** column of `docs/adr/README.md` or
       `docs/design/decisions/README.md`.
