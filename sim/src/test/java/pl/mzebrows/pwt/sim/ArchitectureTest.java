@@ -268,8 +268,8 @@ final class ArchitectureTest {
     private static final String SYSTEM = "pl.mzebrows.pwt.sim.system";
 
     /** The fenced packages under {@code sim.system} (ADR 0020). Ticket 05 adds the rest. */
-    private static final List<String> FENCED =
-            List.of(SYSTEM + ".query", SYSTEM + ".squad", SYSTEM + ".motion", SYSTEM + ".commander");
+    private static final List<String> FENCED = List.of(
+            SYSTEM + ".query", SYSTEM + ".squad", SYSTEM + ".motion", SYSTEM + ".commander", SYSTEM + ".creature");
 
     /**
      * Where a class under {@code sim.system} may live: a fenced package, or straight in {@code sim.system}
