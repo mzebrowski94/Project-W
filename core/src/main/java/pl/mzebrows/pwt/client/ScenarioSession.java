@@ -11,7 +11,7 @@ import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * One scenario being played: the world, the clock that drives it, and the harness state around it.

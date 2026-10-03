@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
@@ -13,11 +13,6 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileMap;
-import pl.mzebrows.pwt.sim.AlphaWorlds;
-import pl.mzebrows.pwt.sim.CommanderInput;
-import pl.mzebrows.pwt.sim.PlayerInputs;
-import pl.mzebrows.pwt.sim.Players;
-import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Facing;

@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.upgrade;
+package pl.mzebrows.pwt.sim.system.upgrade;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

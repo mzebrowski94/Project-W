@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.sim.component;
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * The ledger: what each side holds, with ranks - the players' upgrades and the aliens' adaptations (ADR 0017). Level state on the level entity (G0007),

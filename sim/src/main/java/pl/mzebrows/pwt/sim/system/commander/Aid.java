@@ -6,7 +6,7 @@ import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Ticks;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * Putting a man back on his feet, in one place, for everybody who can do it.

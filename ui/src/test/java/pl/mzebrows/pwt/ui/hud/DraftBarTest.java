@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.ui.hud;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * The draft in the top bar (D18): one per machine, driven by the seat that opened it, and true to the

@@ -34,8 +34,8 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.combat.Grants;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
 
 /**
  * The one place the interface reads the simulation. Once a frame, after however many ticks ran, it

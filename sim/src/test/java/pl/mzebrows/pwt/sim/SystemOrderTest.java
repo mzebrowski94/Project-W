@@ -69,8 +69,8 @@ import pl.mzebrows.pwt.sim.system.motion.WeaveSystem;
 import pl.mzebrows.pwt.sim.system.squad.SquadOrderSystem;
 import pl.mzebrows.pwt.sim.system.squad.TrooperCombatSystem;
 import pl.mzebrows.pwt.sim.system.squad.TrooperMindSystem;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeSystem;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeSystem;
 
 /**
  * System order is behaviour, and {@code docs/simulation-order.md} says which orderings are decisions.

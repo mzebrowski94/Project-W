@@ -1,6 +1,6 @@
 package pl.mzebrows.pwt.ui.hud;
 
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * The draft in the top bar (G0049, {@code UI:hud/top/draft}): whose it is, which draft, and which card is

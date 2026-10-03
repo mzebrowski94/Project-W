@@ -12,7 +12,7 @@ import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Pace;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * Turns what a unit wants into what it is doing: commits {@link Steering} to {@link Velocity}, once,

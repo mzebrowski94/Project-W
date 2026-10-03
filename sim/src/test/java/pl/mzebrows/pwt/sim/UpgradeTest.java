@@ -27,10 +27,10 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.Whole;
-import pl.mzebrows.pwt.sim.upgrade.Effect;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.Effect;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeDef;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * A number is folded where it is read and never written back (ADR 0017), so a unit spawned after an

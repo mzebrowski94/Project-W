@@ -14,11 +14,11 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
-import pl.mzebrows.pwt.sim.upgrade.Effect;
-import pl.mzebrows.pwt.sim.upgrade.Stat;
-import pl.mzebrows.pwt.sim.upgrade.Target;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.Effect;
+import pl.mzebrows.pwt.sim.system.upgrade.Stat;
+import pl.mzebrows.pwt.sim.system.upgrade.Target;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeDef;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.ui.hud.DraftLayout;
 
 /**

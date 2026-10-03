@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /** The draft's news (G0049): earned, taken and by whom, passed on, and nothing left to learn. */
 @SuppressWarnings("EnumOrdinal") // a dispatch carries an enum as its number

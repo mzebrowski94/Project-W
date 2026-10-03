@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.upgrade;
+package pl.mzebrows.pwt.sim.system.upgrade;
 
 import java.util.List;
 import pl.mzebrows.pwt.sim.def.Require;

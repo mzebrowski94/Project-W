@@ -16,7 +16,7 @@ import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Reach;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * A trooper standing over a man on the ground, doing the work.

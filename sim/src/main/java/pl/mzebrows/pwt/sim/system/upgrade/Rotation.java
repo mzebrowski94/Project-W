@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.upgrade;
+package pl.mzebrows.pwt.sim.system.upgrade;
 
 /**
  * Whose turn a draft is (G0049): the next present slot after the last chooser, in ascending slot

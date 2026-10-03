@@ -20,7 +20,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.RallyPoint;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * Fills the field from what the side has (G0055): a crate's men, and the reserve's muster.

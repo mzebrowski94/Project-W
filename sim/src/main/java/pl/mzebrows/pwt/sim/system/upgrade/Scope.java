@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.upgrade;
+package pl.mzebrows.pwt.sim.system.upgrade;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;

@@ -16,7 +16,7 @@ import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * What it costs to pull a trigger and what comes out of it, in one place, for everything that pulls

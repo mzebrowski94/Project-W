@@ -17,7 +17,7 @@ import pl.mzebrows.pwt.sim.component.Taking;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * Turns the pickups claimed this tick into whatever they grant, and spends the ones that were taken.

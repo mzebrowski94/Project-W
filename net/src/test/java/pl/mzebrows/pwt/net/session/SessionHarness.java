@@ -21,7 +21,7 @@ import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.WorldCodec;
 import pl.mzebrows.pwt.sim.def.Order;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * A whole session in one thread: a sequencer on machine "host", the host's own peer beside it, and

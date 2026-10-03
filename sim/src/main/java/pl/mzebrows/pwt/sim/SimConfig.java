@@ -28,12 +28,12 @@ import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.Whole;
-import pl.mzebrows.pwt.sim.upgrade.AdaptationDef;
-import pl.mzebrows.pwt.sim.upgrade.DraftDef;
-import pl.mzebrows.pwt.sim.upgrade.Stat;
-import pl.mzebrows.pwt.sim.upgrade.StatDef;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
+import pl.mzebrows.pwt.sim.system.upgrade.DraftDef;
+import pl.mzebrows.pwt.sim.system.upgrade.Stat;
+import pl.mzebrows.pwt.sim.system.upgrade.StatDef;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeDef;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * Tunables the simulation reads at construction time: exactly {@code assets/sim/*.properties}, read in

@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.upgrade;
+package pl.mzebrows.pwt.sim.system.upgrade;
 
 /**
  * How far one stat may be moved, whatever is held: a range for the sum of percentages of a scaled

@@ -11,10 +11,10 @@ import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Ticks;
-import pl.mzebrows.pwt.sim.upgrade.Effect;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
-import pl.mzebrows.pwt.sim.upgrade.Stat;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.Effect;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.Stat;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * A man's clocks - his bleed-out, the stabilise that puts him back on his feet, the mend that clears his

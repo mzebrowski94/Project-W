@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.sim;
 import com.badlogic.ashley.core.Entity;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * The one way anything in the simulation asks the dice a question.

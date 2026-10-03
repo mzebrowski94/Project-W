@@ -9,7 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.ui.hud.DispatchKind;
 import pl.mzebrows.pwt.ui.hud.Terminal;
 

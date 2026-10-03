@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.ui.hud;
 import java.util.Arrays;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.def.Objective;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * Every fact the HUD shows, copied out of the simulation once a frame by {@link ReadoutWriter} - the one

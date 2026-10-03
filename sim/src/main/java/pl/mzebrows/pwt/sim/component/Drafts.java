@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.sim.component;
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * The drafts waiting to be picked, their cards, and what has earned them (G0049). Level state on the

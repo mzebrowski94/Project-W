@@ -14,9 +14,9 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.UnitKind;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeDef;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * How long one step takes as a crowd grows, and how much it allocates - the numbers `docs/performance.md`

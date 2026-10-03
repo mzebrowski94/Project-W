@@ -1,7 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import pl.mzebrows.pwt.sim.def.WeaponKind;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.ui.hud.Dispatch;
 import pl.mzebrows.pwt.ui.hud.DispatchWords;
 import pl.mzebrows.pwt.ui.hud.RankText;

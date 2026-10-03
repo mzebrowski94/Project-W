@@ -23,9 +23,9 @@ import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
-import pl.mzebrows.pwt.sim.upgrade.AdaptationDef;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
+import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
 
 class ReadoutWriterTest {
 

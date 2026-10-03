@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Who uses whom in sim.system and sim.upgrade, from source with comments and strings stripped. Run from the
+"""Who uses whom in sim.system, from source with comments and strings stripped. Run from the
 repository root.
 
     system-graph.py                  every class: what it uses, who uses it, what it writes
     system-graph.py --split FILE     test a split: what must be public, what crosses, where each test goes
 
 A split file has one line per fenced package, `name: Class Class ...`; `#` starts a comment and a line
-ending in `\\` continues. Every class in sim.system and sim.upgrade must be named exactly once.
+ending in `\\` continues. Every class under sim.system must be named exactly once.
 
 Source rather than bytecode on purpose: javac inlines a compile-time constant into its user, so the
 bytecode loses exactly the references a split must keep - `Trooper.Mode`-style nested names and `static
@@ -57,7 +57,9 @@ def code(path):
 
 
 def mentions(text, names):
-    words = set(re.findall(r"\b[A-Z]\w*\b", text))
+    """The names used in code - not in an import, which a javadoc link alone may have brought in."""
+    body = re.sub(r"^(package|import)\s.*$", "", text, flags=re.M)
+    words = set(re.findall(r"\b[A-Z]\w*\b", body))
     return sorted(words & names)
 
 
@@ -74,14 +76,14 @@ def imported(text, classes, home=None):
 
 def load():
     classes = {}
-    for pkg in ("system", "upgrade"):
-        for p in sorted((SIM / pkg).rglob("*.java")):
-            if p.stem == "package-info":
-                continue
-            text = code(p)
-            public = re.search(r"^public\s+(final\s+|abstract\s+)?(class|interface|enum|record|@interface)\s+"
-                               + p.stem + r"\b", text, re.M) is not None
-            classes[p.stem] = {"pkg": "sim." + pkg, "public": public, "text": text}
+    for p in sorted((SIM / "system").rglob("*.java")):
+        if p.stem == "package-info":
+            continue
+        pkg = ".".join(p.relative_to(SIM).parts[:-1])
+        text = code(p)
+        public = re.search(r"^public\s+(final\s+|abstract\s+)?(class|interface|enum|record|@interface)\s+"
+                           + p.stem + r"\b", text, re.M) is not None
+        classes[p.stem] = {"pkg": "sim." + pkg, "public": public, "text": text}
     names = set(classes)
     for name, c in classes.items():
         c["uses"] = [u for u in mentions(c["text"], names) if u != name]
@@ -164,7 +166,7 @@ def evaluate(classes, outside, tests, split, owner):
         for name, users in sorted(ports[pkg].items()):
             kind = "system" if name.endswith("System") else "port"
             print(f"  {pkg}.{name} ({kind}) <- " + ", ".join(f"{u} ({owner[u]})" for u in users))
-    print("\n== Public today only for outside sim.system/sim.upgrade")
+    print("\n== Public today only for outside sim.system")
     for name in sorted(outside):
         if not name.endswith("System") and owner[name] != "query":
             print(f"  {owner[name]}.{name} <- " + "; ".join(
@@ -208,7 +210,7 @@ def evaluate(classes, outside, tests, split, owner):
             f"{p} {n:g}" for p, n in tally.most_common()) + flag)
     print("\n== Tests")
     for test, t in sorted(tests.items()):
-        if not t["pkg"].startswith(("sim.system", "sim.upgrade")):
+        if not t["pkg"].startswith("sim.system"):
             continue
         private = sorted({owner[u] for u in t["uses"]
                           if not classes[u]["public"] and u not in ports[owner[u]]})

@@ -76,10 +76,10 @@ import pl.mzebrows.pwt.sim.system.motion.WeaveSystem;
 import pl.mzebrows.pwt.sim.system.squad.SquadOrderSystem;
 import pl.mzebrows.pwt.sim.system.squad.TrooperCombatSystem;
 import pl.mzebrows.pwt.sim.system.squad.TrooperMindSystem;
-import pl.mzebrows.pwt.sim.upgrade.Modifiers;
-import pl.mzebrows.pwt.sim.upgrade.Picks;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeSystem;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
+import pl.mzebrows.pwt.sim.system.upgrade.Picks;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeSystem;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
 
 /**
  * The whole game world and everything that happens in it.

@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.upgrade;
+package pl.mzebrows.pwt.sim.system.upgrade;
 
 /**
  * Every number an upgrade may move. Each is read in exactly one place: one {@link Reads} method of

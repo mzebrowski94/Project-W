@@ -4,10 +4,10 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import pl.mzebrows.pwt.sim.upgrade.Effect;
-import pl.mzebrows.pwt.sim.upgrade.Target;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
+import pl.mzebrows.pwt.sim.system.upgrade.Effect;
+import pl.mzebrows.pwt.sim.system.upgrade.Target;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
 import pl.mzebrows.pwt.ui.hud.RankText;
 
 /**

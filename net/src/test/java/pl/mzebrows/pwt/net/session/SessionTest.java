@@ -23,8 +23,8 @@ import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Presence;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
 
 /**
  * Whole sessions, host and peers in one test: every machine ends on the same world, whatever the

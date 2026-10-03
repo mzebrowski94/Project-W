@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.upgrade;
+package pl.mzebrows.pwt.sim.system.upgrade;
 
 /**
  * Every upgrade and adaptation there is. A new one is a constant here, a definition and a block in

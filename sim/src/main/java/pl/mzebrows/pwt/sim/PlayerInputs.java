@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.sim;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.PickupKind;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * One tick's worth of what every player is asking for, by slot: what each is holding, and the

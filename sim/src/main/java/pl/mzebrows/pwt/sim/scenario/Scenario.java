@@ -17,7 +17,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.PickupKind;
-import pl.mzebrows.pwt.sim.upgrade.AdaptationDef;
+import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
 
 /**
  * One arena the alpha-phase menu can launch, built to demonstrate and test a system by hand.

@@ -52,14 +52,14 @@ import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.WeaponType;
 import pl.mzebrows.pwt.sim.def.WeaveDef;
-import pl.mzebrows.pwt.sim.upgrade.AdaptationDef;
-import pl.mzebrows.pwt.sim.upgrade.DraftDef;
-import pl.mzebrows.pwt.sim.upgrade.Effect;
-import pl.mzebrows.pwt.sim.upgrade.Stat;
-import pl.mzebrows.pwt.sim.upgrade.StatDef;
-import pl.mzebrows.pwt.sim.upgrade.Target;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeDef;
-import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
+import pl.mzebrows.pwt.sim.system.upgrade.DraftDef;
+import pl.mzebrows.pwt.sim.system.upgrade.Effect;
+import pl.mzebrows.pwt.sim.system.upgrade.Stat;
+import pl.mzebrows.pwt.sim.system.upgrade.StatDef;
+import pl.mzebrows.pwt.sim.system.upgrade.Target;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeDef;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * Shared fixture for the alpha-phase system tests: one simulation config with numbers chosen to make

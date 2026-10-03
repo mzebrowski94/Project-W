@@ -38,8 +38,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Vitality;
-import pl.mzebrows.pwt.sim.upgrade.Reads;
-import pl.mzebrows.pwt.sim.upgrade.Stat;
+import pl.mzebrows.pwt.sim.system.upgrade.Reads;
+import pl.mzebrows.pwt.sim.system.upgrade.Stat;
 
 /**
  * Guards the one boundary the whole architecture rests on: the simulation stays headless and
@@ -212,11 +212,8 @@ final class ArchitectureTest {
             // splitting a system into classes cannot move its state out of this rule's sight.
             .or()
             .areDeclaredInClassesThat()
+            // The upgrade package among them, whose read port is called by systems on every tick (ADR 0017).
             .resideInAPackage("..sim.system..")
-            // And the upgrade package, whose read port is called by systems on every tick (ADR 0017).
-            .or()
-            .areDeclaredInClassesThat()
-            .resideInAPackage("..sim.upgrade..")
             .and()
             .doNotHaveModifier(JavaModifier.STATIC)
             .and()
@@ -233,7 +230,7 @@ final class ArchitectureTest {
     @ArchTest
     static final ArchRule onlyTheUpgradePackageTouchesTheLedgerAndTheDrafts = noClasses()
             .that()
-            .resideOutsideOfPackages("..sim.upgrade..", "..sim.component..")
+            .resideOutsideOfPackages("..sim.system.upgrade..", "..sim.component..")
             .and()
             .doNotBelongToAnyOf(WorldCodec.class, Spawner.class)
             .should()
@@ -246,10 +243,12 @@ final class ArchitectureTest {
     @ArchTest
     static final ArchRule upgradesAreCalledAndDoNotCall = noClasses()
             .that()
-            .resideInAPackage("..sim.upgrade..")
+            .resideInAPackage("..sim.system.upgrade..")
             .should()
-            .dependOnClassesThat()
-            .resideInAnyPackage("..sim.system..", "..sim.scenario..")
+            .dependOnClassesThat(JavaClass.Predicates.resideInAPackage("..sim.scenario..")
+                    .or(JavaClass.Predicates.resideInAPackage("..sim.system..")
+                            .and(JavaClass.Predicates.resideOutsideOfPackage("..sim.system.upgrade..")))
+                    .as("reside in a scenario or another package under sim.system"))
             .because("the upgrade package is called and does not call (ADR 0017): a rule asks Modifiers for a"
                     + " number, and Modifiers asks nothing of the rules")
             .allowEmptyShould(false);
@@ -267,7 +266,7 @@ final class ArchitectureTest {
 
     private static final String SYSTEM = "pl.mzebrows.pwt.sim.system";
 
-    /** The fenced packages under {@code sim.system} (ADR 0020). Ticket 05 adds the rest. */
+    /** The fenced packages under {@code sim.system} (ADR 0020); nothing lives there outside one. */
     private static final List<String> FENCED = List.of(
             SYSTEM + ".query",
             SYSTEM + ".squad",
@@ -277,13 +276,8 @@ final class ArchitectureTest {
             SYSTEM + ".combat",
             SYSTEM + ".death",
             SYSTEM + ".level",
-            SYSTEM + ".appearance");
-
-    /**
-     * Where a class under {@code sim.system} may live: a fenced package, or straight in {@code sim.system}
-     * while ticket 05 moves the rest out of it.
-     */
-    private static final String[] HOMES = homes();
+            SYSTEM + ".appearance",
+            SYSTEM + ".upgrade");
 
     /**
      * The classes of a package that another fenced package may use, besides everything in {@code query} (ADR
@@ -299,7 +293,9 @@ final class ArchitectureTest {
             // The trigger pull, for everything that fires.
             SYSTEM + ".combat.Guns",
             // A throw, for everything that throws.
-            SYSTEM + ".combat.Throws");
+            SYSTEM + ".combat.Throws",
+            // The one way a rule asks for a number an upgrade may move (ADR 0017).
+            SYSTEM + ".upgrade.Modifiers");
 
     private static final String BECAUSE_0020 = "ADR 0020: systems live in fenced packages by domain";
 
@@ -308,7 +304,7 @@ final class ArchitectureTest {
             .that()
             .resideInAPackage(SYSTEM + "..")
             .should()
-            .resideInAnyPackage(HOMES)
+            .resideInAnyPackage(FENCED.toArray(String[]::new))
             .because(BECAUSE_0020 + "; a package nobody declared is one no fence covers")
             .allowEmptyShould(false);
 
@@ -317,8 +313,7 @@ final class ArchitectureTest {
             .that()
             .areAssignableTo(EntitySystem.class)
             .should()
-            // sim.upgrade until ticket 05 makes it sim.system.upgrade.
-            .resideInAnyPackage(SYSTEM + "..", "..sim.upgrade..")
+            .resideInAPackage(SYSTEM + "..")
             .because(BECAUSE_0020)
             .allowEmptyShould(false);
 
@@ -366,12 +361,6 @@ final class ArchitectureTest {
                 .allSatisfy((type, written) -> org.assertj.core.api.Assertions.assertThat(written)
                         .as(type)
                         .isEmpty());
-    }
-
-    private static String[] homes() {
-        List<String> homes = new ArrayList<>(FENCED);
-        homes.add(SYSTEM);
-        return homes.toArray(String[]::new);
     }
 
     /** Any class under {@code sim.system} it uses from another package there is in {@code query} or a port. */
@@ -436,7 +425,7 @@ final class ArchitectureTest {
         org.assertj.core.api.Assertions.assertThat(problems).isEmpty();
     }
 
-    private static final String UPGRADE = "pl.mzebrows.pwt.sim.upgrade";
+    private static final String UPGRADE = "pl.mzebrows.pwt.sim.system.upgrade";
 
     private static final Path COMPONENTS_DOC = Path.of("..", "docs", "components.md");
 

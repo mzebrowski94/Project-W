@@ -53,9 +53,9 @@ def main():
     def by_name(paths):
         return sorted(paths, key=lambda p: p.name)
 
-    # Recursively, and the upgrade package with it: a system moved into a package of its own must not drop
-    # out of the index without anybody noticing.
-    systems = [p for d in ("system", "upgrade") for p in (SIM / d).rglob("*.java") if p.stem != "package-info"]
+    # Recursively: every system lives in a fenced package under system/ (ADR 0020), and one moved or added
+    # must not drop out of the index without anybody noticing.
+    systems = [p for p in (SIM / "system").rglob("*.java") if p.stem != "package-info"]
     buckets = {
         "system": by_name(systems),
         "collision": by_name((SIM / "collision").glob("*.java")),
