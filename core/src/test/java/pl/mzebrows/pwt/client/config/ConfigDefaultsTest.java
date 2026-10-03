@@ -3,8 +3,8 @@ package pl.mzebrows.pwt.client.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.client.ControlsConfig;
 import pl.mzebrows.pwt.client.GraphicConfig;
+import pl.mzebrows.pwt.client.input.ControlsConfig;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
 

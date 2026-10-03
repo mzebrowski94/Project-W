@@ -1,6 +1,9 @@
 package pl.mzebrows.pwt.client;
 
 import java.util.Locale;
+import pl.mzebrows.pwt.client.input.ControlsConfig;
+import pl.mzebrows.pwt.client.input.KeyCode;
+import pl.mzebrows.pwt.client.input.PadLabels;
 import pl.mzebrows.pwt.ui.nav.InputModality;
 
 /**

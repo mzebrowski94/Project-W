@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.input.PlayerSeats;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.def.Order;

@@ -34,7 +34,7 @@ tasks.named('test') {
 // record's package, where it stays package-private.
 def shippedClientConfigs = [
   ShippedGraphicConfig: [file: rootProject.file('assets/graphic.properties'), pkg: 'pl.mzebrows.pwt.client'],
-  ShippedControlsConfig: [file: rootProject.file('assets/controls.properties'), pkg: 'pl.mzebrows.pwt.client'],
+  ShippedControlsConfig: [file: rootProject.file('assets/controls.properties'), pkg: 'pl.mzebrows.pwt.client.input'],
 ]
 def shippedClientConfigDir = layout.buildDirectory.dir('generated/sources/shippedClientConfig/java')
 def generateShippedClientConfig = tasks.register('generateShippedClientConfig') {

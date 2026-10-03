@@ -6,6 +6,7 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.function.IntUnaryOperator;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.input.PlayerSeats;
 import pl.mzebrows.pwt.net.Clock;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.NetConfig.Conditions;

@@ -1,6 +1,8 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.Screen;
+import pl.mzebrows.pwt.client.input.ControlsConfig;
+import pl.mzebrows.pwt.client.input.GamepadSource;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.ui.nav.SelectionMemory;

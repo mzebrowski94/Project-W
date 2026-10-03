@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.function.IntUnaryOperator;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.client.input.PlayerSeats;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.def.PickupKind;

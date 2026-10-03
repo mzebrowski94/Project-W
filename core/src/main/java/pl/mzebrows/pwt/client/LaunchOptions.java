@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import pl.mzebrows.pwt.client.input.PadPolicy;
 
 /**
  * What the game was started with, from the command line.

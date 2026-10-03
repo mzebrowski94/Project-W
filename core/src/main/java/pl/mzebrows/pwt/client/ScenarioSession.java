@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client;
 import java.util.Arrays;
 import java.util.function.IntUnaryOperator;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.input.PlayerSeats;
 import pl.mzebrows.pwt.sim.FixedStepClock;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
