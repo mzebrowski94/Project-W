@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.commander;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Engine;
@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.GroundDef;
+import pl.mzebrows.pwt.sim.system.Guns;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Pace;
 

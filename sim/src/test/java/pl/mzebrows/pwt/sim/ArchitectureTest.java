@@ -268,7 +268,8 @@ final class ArchitectureTest {
     private static final String SYSTEM = "pl.mzebrows.pwt.sim.system";
 
     /** The fenced packages under {@code sim.system} (ADR 0020). Ticket 05 adds the rest. */
-    private static final List<String> FENCED = List.of(SYSTEM + ".query", SYSTEM + ".squad", SYSTEM + ".motion");
+    private static final List<String> FENCED =
+            List.of(SYSTEM + ".query", SYSTEM + ".squad", SYSTEM + ".motion", SYSTEM + ".commander");
 
     /**
      * Where a class under {@code sim.system} may live: a fenced package, or straight in {@code sim.system}
@@ -282,7 +283,9 @@ final class ArchitectureTest {
      */
     private static final Set<String> PORTS = Set.of(
             // Getting on a gun and off it, the commander's and a trooper's alike (G0024).
-            SYSTEM + ".Crews",
+            SYSTEM + ".commander.Crews",
+            // What a pickup's grant does to whoever takes it, from the ground or from a crate.
+            SYSTEM + ".Grants",
             // The trigger pull, for everything that fires.
             SYSTEM + ".Guns",
             // A throw, for everything that throws.

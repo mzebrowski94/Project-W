@@ -16,7 +16,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.AiChance;
-import pl.mzebrows.pwt.sim.system.Crews;
+import pl.mzebrows.pwt.sim.system.commander.Crews;
 import pl.mzebrows.pwt.sim.system.query.Reach;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 

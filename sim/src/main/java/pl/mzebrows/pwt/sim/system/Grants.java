@@ -34,7 +34,7 @@ public final class Grants {
     private final Spawner spawner;
     private final Modifiers modifiers;
 
-    Grants(Spawner spawner, Modifiers modifiers) {
+    public Grants(Spawner spawner, Modifiers modifiers) {
         this.spawner = spawner;
         this.modifiers = modifiers;
     }
@@ -56,7 +56,7 @@ public final class Grants {
      *
      * @param levels the level entity, for a grant that belongs to the level rather than to the taker
      */
-    void apply(Entity taker, Grant grant, ImmutableArray<Entity> levels) {
+    public void apply(Entity taker, Grant grant, ImmutableArray<Entity> levels) {
         switch (grant) {
             case Grant.None _ -> {
                 // Nothing on offer, so nothing to do.
