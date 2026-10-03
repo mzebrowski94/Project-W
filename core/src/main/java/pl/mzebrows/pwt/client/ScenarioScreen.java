@@ -29,6 +29,7 @@ import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.ui.hud.CrateBar;
+import pl.mzebrows.pwt.ui.hud.DispatchSink;
 import pl.mzebrows.pwt.ui.hud.DraftBar;
 import pl.mzebrows.pwt.ui.hud.DraftPause;
 import pl.mzebrows.pwt.ui.hud.GoalLine;
@@ -41,6 +42,7 @@ import pl.mzebrows.pwt.ui.hud.ReadoutWriter;
 import pl.mzebrows.pwt.ui.hud.Reporters;
 import pl.mzebrows.pwt.ui.hud.SquadReporter;
 import pl.mzebrows.pwt.ui.hud.Terminal;
+import pl.mzebrows.pwt.ui.hud.Toast;
 import pl.mzebrows.pwt.ui.hud.UpgradeReporter;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
@@ -83,6 +85,12 @@ public final class ScenarioScreen extends ScreenAdapter {
     private final GoalLine goalLine;
     private final Terminal terminal;
 
+    /** An upgrade taken or an adaptation, over the view: the terminal says it too, this is not missed. */
+    private final Toast toast;
+
+    /** Where the reporters file: the terminal and the toast. */
+    private final DispatchSink dispatches;
+
     /**
      * Everything that narrates the level: the terminal's reporters, one per fact, and the console's
      * action prompt. This list is the whole registry (plan 8.5).
@@ -103,6 +111,8 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     /** Every upgrade held, beside the pause menu: more than the aside has room for. */
     private final HeldUpgradesPainter heldUpgrades;
+
+    private final ToastPainter toastPainter;
 
     /** The wheel's notches since the last frame, down for positive. */
     private float wheelNotches;
@@ -165,6 +175,8 @@ public final class ScenarioScreen extends ScreenAdapter {
         this.rollCall = style.rollCallAtStart();
         this.goalLine = new GoalLine(style.goalHoldSeconds(), style.pulseHz(), style.flashScale());
         this.terminal = new Terminal(graphicConfig.terminal(), new DispatchText(strings));
+        this.toast = new Toast(graphicConfig.toast(), new DispatchText(strings));
+        this.dispatches = DispatchSink.both(terminal, toast);
         this.reporters = new Reporters(List.of(
                 new PlayerReporter(),
                 new SquadReporter(graphicConfig.terminal().fewTroopers()),
@@ -181,6 +193,8 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.hud(), strings, style, graphicConfig.layout().metrics(), graphicConfig.palette());
         this.bottomBar = new BottomBarPainter(
                 context.hud(), strings, style, graphicConfig.layout().metrics(), graphicConfig.palette());
+        this.toastPainter =
+                new ToastPainter(context.hud(), style, graphicConfig.layout().metrics(), graphicConfig.palette());
     }
 
     @Override
@@ -305,11 +319,15 @@ public final class ScenarioScreen extends ScreenAdapter {
         draftBar.follow(readout);
         followCrate();
         goalLine.update(readout, delta);
-        reporters.report(readout, terminal);
+        reporters.report(readout, dispatches);
         if (!draftBar.open() && !crateBar.open()) {
             // The terminal holds its queue while the draft hides it, so a line said meanwhile types out
             // after it rather than ageing out unseen.
             terminal.advance(delta);
+        }
+        if (!menus.coversView()) {
+            // Held, like the terminal under a draft, so a toast said behind a menu shows when it goes.
+            toast.advance(delta);
         }
         alarms.update(readout, delta);
         seatPanels();
@@ -353,6 +371,9 @@ public final class ScenarioScreen extends ScreenAdapter {
             bottomBar.render(layout, readout, seating, connected, alarms, draftKeys);
         }
         menus.draw(layout, play);
+        if (!menus.coversView()) {
+            toastPainter.draw(layout.view(), toast);
+        }
         if (menus.showsPausePage()) {
             heldUpgrades.draw(layout.view(), menus.pagePanel(), readout, menus.pageAlpha());
             heldUpgrades.wheel(wheelNotches, menus.pointerX(), menus.pointerY());

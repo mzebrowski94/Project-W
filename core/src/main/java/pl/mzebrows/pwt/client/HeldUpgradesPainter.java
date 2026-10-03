@@ -15,7 +15,7 @@ import pl.mzebrows.pwt.ui.page.ScrollList;
 /**
  * Every upgrade the side holds, beside the pause menu ({@code UI:play/pause}): the aside in the
  * top bar has room for a few, and a paused player has time to read them all. One row each - a personal
- * one named for its holder and in his colour - with its rank in words and as pips, docked to the right of
+ * one named for its holder and in his colour, an adaptation in the swarm's - with its rank in words and as pips, docked to the right of
  * the view over the same scrim.
  *
  * <p>As wide as its longest row and never wider than the room right of the pause menu, so the two never
@@ -117,7 +117,9 @@ final class HeldUpgradesPainter {
         for (int row = scroll.first(); row < last; row++) {
             int top = layout.lineTop(panel, 2 + row - scroll.first());
             int slot = readout.heldSlot[row];
-            Color color = slot < 0 ? text : faded(own, palette.colorFor(Look.COMMANDER, slot), alpha);
+            Color color = readout.heldAlien[row]
+                    ? faded(own, style.swarm(), alpha)
+                    : slot < 0 ? text : faded(own, palette.colorFor(Look.COMMANDER, slot), alpha);
             hud.text(rows.get(row), x, top, color);
             int max = readout.heldMaxRanks[row];
             RankPips.draw(

@@ -9,7 +9,7 @@ import pl.mzebrows.pwt.ui.page.MenuLayout;
 
 /**
  * Draws a page or a modal on the UI canvas: its panel, head, entries, foot and hint - the selected entry
- * ringed, one it cannot confirm dim - and the scrim and paused banner over the view.
+ * ringed, one it cannot confirm dim - and the scrim, the paused banner and the toast over the view.
  *
  * <p>Painted directly, like the bars, rather than built from scene2d widgets (plan D14): the pages are
  * short columns of text in the interface's own pixel font, which a table of widgets would only wrap, and
@@ -51,14 +51,36 @@ final class MenuPainter {
 
     /** One line at the top of the view: the game is paused, and which button opens the menu. */
     void banner(Rect view, String text) {
-        int width = text.length() * UiFont.ADVANCE + 4 * metrics.padding();
+        line(view, text, text.length(), false, style.textDim(), style.text());
+    }
+
+    /**
+     * A toast where the banner goes ({@code UI:hud/view/toast}): framed and written in {@code color},
+     * {@code columns} wide whatever is typed so far, so the box does not grow as it types.
+     */
+    void toast(Rect view, String typed, int columns, boolean cursor, Color color) {
+        line(view, typed, columns, cursor, color, color);
+    }
+
+    /** The widest a line over the view may be, in characters. */
+    int lineColumns(Rect view) {
+        return TextFit.columns(view.width() - 4 * metrics.padding(), UiFont.ADVANCE);
+    }
+
+    private void line(Rect view, String text, int columns, boolean cursor, Color frame, Color ink) {
+        int width = columns * UiFont.ADVANCE + 4 * metrics.padding();
         int height = metrics.fontSize() + 2 * metrics.padding() + metrics.leading();
         int x = view.x() + (view.width() - width) / 2;
         int y = view.top() - 2 * metrics.padding() - height;
+        int textX = x + 2 * metrics.padding();
+        int textTop = y + height - metrics.padding() - metrics.leading();
         hud.beginCanvas();
         hud.fill(x, y, width, height, style.bar());
-        hud.frame(x, y, width, height, style.textDim());
-        hud.text(text, x + 2 * metrics.padding(), y + height - metrics.padding() - metrics.leading(), style.text());
+        hud.frame(x, y, width, height, frame);
+        hud.text(text, textX, textTop, ink);
+        if (cursor) {
+            hud.text("_", textX + text.length() * UiFont.ADVANCE, textTop, ink);
+        }
         hud.endCanvas();
     }
 

@@ -17,6 +17,7 @@ public enum HudSlot {
     UPGRADE_TELL("UI:hud/bottom/upgrade"),
     ROLL_CALL("UI:hud/bottom/roll-call"),
     PAUSED("UI:hud/view/paused"),
+    TOAST("UI:hud/view/toast"),
     RETICLE("UI:hud/view/reticle");
 
     private final String id;

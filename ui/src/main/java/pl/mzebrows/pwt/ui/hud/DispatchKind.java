@@ -87,4 +87,9 @@ public enum DispatchKind {
     DispatchKind supersedes() {
         return this == COMMANDER_LOST ? COMMANDER_DOWN : null;
     }
+
+    /** Whether it is also shown as a {@link Toast} over the view: an upgrade taken, the swarm adapting. */
+    boolean toasts() {
+        return this == UPGRADE_TAKEN || this == SWARM_ADAPTS;
+    }
 }
