@@ -21,7 +21,7 @@ import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.BarrageDef;
 import pl.mzebrows.pwt.sim.def.PatternDef;
 import pl.mzebrows.pwt.sim.def.Ticks;
-import pl.mzebrows.pwt.sim.system.Guns;
+import pl.mzebrows.pwt.sim.system.combat.Guns;
 
 /**
  * Runs a boss's barrage: winds up, fires a pattern salvo by salvo, rests, and goes on to the next

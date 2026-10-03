@@ -29,7 +29,7 @@ import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
-import pl.mzebrows.pwt.sim.system.Grants;
+import pl.mzebrows.pwt.sim.system.combat.Grants;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Reach;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;

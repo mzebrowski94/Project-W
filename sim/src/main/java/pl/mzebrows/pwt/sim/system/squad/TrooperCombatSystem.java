@@ -30,8 +30,8 @@ import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.TrooperGrenadeDef;
-import pl.mzebrows.pwt.sim.system.Guns;
-import pl.mzebrows.pwt.sim.system.Throws;
+import pl.mzebrows.pwt.sim.system.combat.Guns;
+import pl.mzebrows.pwt.sim.system.combat.Throws;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 

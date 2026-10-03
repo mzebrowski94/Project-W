@@ -33,7 +33,7 @@ import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
-import pl.mzebrows.pwt.sim.system.Grants;
+import pl.mzebrows.pwt.sim.system.combat.Grants;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.sim.upgrade.UpgradeView;
 

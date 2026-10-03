@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.sim.system;
+package pl.mzebrows.pwt.sim.system.combat;
 
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Position;

@@ -269,7 +269,12 @@ final class ArchitectureTest {
 
     /** The fenced packages under {@code sim.system} (ADR 0020). Ticket 05 adds the rest. */
     private static final List<String> FENCED = List.of(
-            SYSTEM + ".query", SYSTEM + ".squad", SYSTEM + ".motion", SYSTEM + ".commander", SYSTEM + ".creature");
+            SYSTEM + ".query",
+            SYSTEM + ".squad",
+            SYSTEM + ".motion",
+            SYSTEM + ".commander",
+            SYSTEM + ".creature",
+            SYSTEM + ".combat");
 
     /**
      * Where a class under {@code sim.system} may live: a fenced package, or straight in {@code sim.system}
@@ -284,12 +289,14 @@ final class ArchitectureTest {
     private static final Set<String> PORTS = Set.of(
             // Getting on a gun and off it, the commander's and a trooper's alike (G0024).
             SYSTEM + ".commander.Crews",
+            // The one death path, for whatever kills (G0004).
+            SYSTEM + ".Deaths",
             // What a pickup's grant does to whoever takes it, from the ground or from a crate.
-            SYSTEM + ".Grants",
+            SYSTEM + ".combat.Grants",
             // The trigger pull, for everything that fires.
-            SYSTEM + ".Guns",
+            SYSTEM + ".combat.Guns",
             // A throw, for everything that throws.
-            SYSTEM + ".Throws");
+            SYSTEM + ".combat.Throws");
 
     private static final String BECAUSE_0020 = "ADR 0020: systems live in fenced packages by domain";
 

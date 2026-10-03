@@ -28,7 +28,7 @@ import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
  * A man put off his feet lies there with a clock running, and a blow that kills him kills him. What
- * puts him down - one wound too many, or a blow that puts a man down - is {@link VitalityTest}'s
+ * puts him down - one wound too many, or a blow that puts a man down - is {@code VitalityTest}'s
  * (G0053); this is about the time he spends on the ground.
  *
  * <p>These tests write straight to the {@link Damage} component, which is exactly what contact

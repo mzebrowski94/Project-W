@@ -22,7 +22,7 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * <p>Nothing here removes an entity. The gap between being marked and being reaped is where the
  * death reactions run (G0004), and this only ever opens it.
  */
-final class Deaths {
+public final class Deaths {
 
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
@@ -49,7 +49,7 @@ final class Deaths {
      * <p>Returns whether this was the blow that killed it - false for a body already dead or already in
      * its throes, so a death is credited once however often the corpse is hit (G0044).
      */
-    static boolean kill(Spawner spawner, Entity entity) {
+    public static boolean kill(Spawner spawner, Entity entity) {
         if (VELOCITY.has(entity)) {
             VELOCITY.get(entity).set(0f, 0f);
         }
