@@ -7,6 +7,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -64,7 +65,7 @@ final class TrooperOrders {
         // The man who said it, not whichever commander happens to be first. With four of them,
         // following anybody else would make "follow me" the one order the player cannot aim.
         Entity giver = Players.inSlot(commanders, trooper.orderedBy);
-        if (giver == null || Drivers.down(giver)) {
+        if (giver == null || Life.down(giver)) {
             // Belt and braces: his death already released the order upstream this tick. Falling
             // through to the objective is still better than standing about waiting for a corpse.
             return false;

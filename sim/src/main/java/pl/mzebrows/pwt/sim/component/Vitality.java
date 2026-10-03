@@ -16,8 +16,8 @@ import pl.mzebrows.pwt.sim.def.Harm;
  * <p>Down is a <strong>casualty</strong>: he lies where he fell, bleeding out, and can be put back on
  * his feet by somebody who reaches him in time. The bleed-out is counted by {@code CasualtySystem},
  * not {@code CooldownSystem}, because its rate varies while he is dragged; the grace is an ordinary
- * countdown and is {@code CooldownSystem}'s. Carried permanently by every man, read through {@link
- * #begun}; no alien carries it.
+ * countdown and is {@code CooldownSystem}'s. Carried permanently by every man; whether he is down is asked
+ * of {@link pl.mzebrows.pwt.sim.Life}, never of {@link #begun}. No alien carries it.
  *
  * <p><strong>Both clocks count whole ticks</strong>, converted once where the seconds enter, in
  * hundredths of a tick ({@link #TICK}) so a rate other than one - a drag that slows the bleed, First Aid

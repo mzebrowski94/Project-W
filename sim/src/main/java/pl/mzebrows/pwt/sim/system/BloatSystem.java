@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
@@ -52,7 +53,7 @@ public final class BloatSystem extends IteratingSystem {
         if (!bloat.charged()) {
             return;
         }
-        boolean dying = DYING.has(entity) && DYING.get(entity).begun;
+        boolean dying = Life.dying(entity);
         if (dying && bloat.full() && config.bursts()) {
             burst(entity);
             return;

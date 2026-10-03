@@ -120,20 +120,19 @@ public final class ActionSystem extends EntitySystem {
                 action.idle();
                 continue;
             }
-            @Nullable Entity station = Crews.nearestFree(stations, commander, action.reach);
-            @Nullable Entity subject = Aid.nearest(casualties, commander, action.reach);
-            @Nullable Entity crate = Crates.nearestOpenable(crates, commander, action.reach);
+            @Nullable Entity station = Reach.nearest(stations, commander, action.reach, ActionKind.MAN_TURRET);
+            @Nullable Entity subject = Reach.nearest(casualties, commander, action.reach, ActionKind.STABILISE);
+            @Nullable Entity crate = Reach.nearest(crates, commander, action.reach, ActionKind.OPEN_CRATE);
             if (station != null
                     && nearer(commander, station, subject)
-                    && (crate == null || Crews.gapTo(commander, station) <= Crates.gapTo(commander, crate))) {
+                    && (crate == null || Reach.gap(commander, station) <= Reach.gap(commander, crate))) {
                 offer(action, ActionKind.MAN_TURRET);
                 if (pressed) {
                     Crews.board(commander, station);
                 }
                 continue;
             }
-            if (crate != null
-                    && (subject == null || Crates.gapTo(commander, crate) <= Crates.gapTo(commander, subject))) {
+            if (crate != null && (subject == null || Reach.gap(commander, crate) <= Reach.gap(commander, subject))) {
                 offer(action, ActionKind.OPEN_CRATE);
                 opening[slot] |= pressed;
                 continue;
@@ -166,8 +165,9 @@ public final class ActionSystem extends EntitySystem {
             opening[slot] = false;
             @Nullable Entity commander = Players.inSlot(commanders, slot);
             @Nullable
-            Entity crate =
-                    commander == null ? null : Crates.nearestOpenable(crates, commander, ACTION.get(commander).reach);
+            Entity crate = commander == null
+                    ? null
+                    : Reach.nearest(crates, commander, ACTION.get(commander).reach, ActionKind.OPEN_CRATE);
             if (crate != null) {
                 Crates.open(crate, slot, tick);
             }
@@ -182,7 +182,7 @@ public final class ActionSystem extends EntitySystem {
      * and getting on the gun is the reversible half of the pair.
      */
     private static boolean nearer(Entity commander, Entity station, @Nullable Entity subject) {
-        return subject == null || Crews.gapTo(commander, station) <= Crews.gapTo(commander, subject);
+        return subject == null || Reach.gap(commander, station) <= Reach.gap(commander, subject);
     }
 
     /** Puts an offer on the table with no work behind it - getting on and off a gun is instant. */

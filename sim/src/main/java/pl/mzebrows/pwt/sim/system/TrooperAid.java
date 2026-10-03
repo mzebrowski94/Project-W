@@ -8,10 +8,10 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Vitality;
@@ -21,10 +21,7 @@ import pl.mzebrows.pwt.sim.def.AiChance;
 final class TrooperAid {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
-    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
-    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
     private final Odds odds;
     private final float reach;
@@ -73,7 +70,7 @@ final class TrooperAid {
             }
         }
         trooper.mode = Trooper.Mode.AID;
-        if (Aid.gapBetween(at, BODY.get(entity).radius, subject) <= reach) {
+        if (Reach.gap(entity, subject) <= reach) {
             // Standing over him. Nothing to head for, so it stops where it is and gets on with it.
             trooper.clearTarget();
         } else {
@@ -107,10 +104,7 @@ final class TrooperAid {
         float shortest = range * range;
         for (int i = 0; i < casualties.size(); i++) {
             Entity candidate = casualties.get(i);
-            if (Objects.equals(candidate, helper) || !VITALITY.get(candidate).begun) {
-                continue;
-            }
-            if (DYING.has(candidate) && DYING.get(candidate).begun) {
+            if (Objects.equals(candidate, helper) || !Life.casualty(candidate)) {
                 continue;
             }
             Position where = POSITION.get(candidate);

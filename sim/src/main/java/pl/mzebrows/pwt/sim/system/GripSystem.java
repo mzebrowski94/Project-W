@@ -10,10 +10,10 @@ import com.badlogic.gdx.utils.Array;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Damage;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Grip;
@@ -56,7 +56,6 @@ public final class GripSystem extends EntitySystem {
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Steering> STEERING = ComponentMapper.getFor(Steering.class);
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Damage> DAMAGE = ComponentMapper.getFor(Damage.class);
     private static final ComponentMapper<ContactDamage> CONTACT_DAMAGE = ComponentMapper.getFor(ContactDamage.class);
 
@@ -87,8 +86,8 @@ public final class GripSystem extends EntitySystem {
                 continue;
             }
             Entity man = heldBy(gripper, grip);
-            if (man == null || dying(gripper) || Drivers.down(man)) {
-                if (man != null && dying(gripper) && !Drivers.down(man)) {
+            if (man == null || Life.dying(gripper) || Life.down(man)) {
+                if (man != null && Life.dying(gripper) && !Life.down(man)) {
                     escape(gripper, grip, man, deltaTime);
                 }
                 letGo(grip, man);
@@ -116,10 +115,6 @@ public final class GripSystem extends EntitySystem {
             return null;
         }
         return man;
-    }
-
-    private static boolean dying(Entity entity) {
-        return DYING.has(entity) && DYING.get(entity).begun;
     }
 
     private static void letGo(Grip grip, @Nullable Entity man) {

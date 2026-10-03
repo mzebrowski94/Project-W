@@ -9,6 +9,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
@@ -18,7 +19,6 @@ import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dragged;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Health;
@@ -64,7 +64,6 @@ public final class DamageSystem extends IteratingSystem {
     private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
     private static final ComponentMapper<Bloat> BLOAT = ComponentMapper.getFor(Bloat.class);
     private static final ComponentMapper<Shock> SHOCK = ComponentMapper.getFor(Shock.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<BlastsOnDeath> REACTION = ComponentMapper.getFor(BlastsOnDeath.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
@@ -135,7 +134,7 @@ public final class DamageSystem extends IteratingSystem {
         }
         if (damage.bloat > 0f && BLOAT.has(entity)) {
             // Builds on the living too, scaled by body size and livingFactor. BloatSystem owns the rest.
-            boolean down = DYING.has(entity) && DYING.get(entity).begun;
+            boolean down = Life.dying(entity);
             BLOAT.get(entity).feed(bloatConfig.perShotAgainst(BODY.get(entity).radius, damage.bloat, down));
         }
         if (SHIELD.has(entity) && SHIELD.get(entity).up) {
@@ -147,7 +146,7 @@ public final class DamageSystem extends IteratingSystem {
         }
         if (VITALITY.has(entity)) {
             hurt(entity, damage);
-            if (standing(entity)) {
+            if (!Life.down(entity)) {
                 // A man left on his feet - wounded, spared by his grace, or hit by something harmless - is
                 // still slowed, thrown and stunned.
                 slow(entity, damage);
@@ -208,7 +207,7 @@ public final class DamageSystem extends IteratingSystem {
      * window either - his protection after a wound is his own grace.
      */
     private void hurt(Entity entity, Damage damage) {
-        if (DYING.has(entity) && DYING.get(entity).begun) {
+        if (Life.dying(entity)) {
             return;
         }
         switch (VITALITY.get(entity).take(damage.harm, carries(modifiers, entity))) {
@@ -257,11 +256,6 @@ public final class DamageSystem extends IteratingSystem {
         if (damage.shoveTicks > 0 && STUNNED.has(entity)) {
             STUNNED.get(entity).apply(damage.shoveTicks, damage.shoveDecay);
         }
-    }
-
-    /** Whether a man is still on his feet and not in his throes. */
-    private static boolean standing(Entity entity) {
-        return !VITALITY.get(entity).begun && !(DYING.has(entity) && DYING.get(entity).begun);
     }
 
     /**

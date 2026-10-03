@@ -4,10 +4,9 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Shock;
-import pl.mzebrows.pwt.sim.component.Vitality;
 
 /**
  * Drains the shock nothing built this tick (G0059), and empties it on anything already down - there is
@@ -18,8 +17,6 @@ import pl.mzebrows.pwt.sim.component.Vitality;
 public final class ShockSystem extends IteratingSystem {
 
     private static final ComponentMapper<Shock> SHOCK = ComponentMapper.getFor(Shock.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
-    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
 
     private final float drainPerSecond;
 
@@ -35,7 +32,7 @@ public final class ShockSystem extends IteratingSystem {
         if (!shock.charged()) {
             return;
         }
-        if ((DYING.has(entity) && DYING.get(entity).begun) || (VITALITY.has(entity) && VITALITY.get(entity).begun)) {
+        if (Life.down(entity)) {
             shock.charge = 0f;
             return;
         }

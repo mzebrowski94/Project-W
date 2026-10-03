@@ -25,3 +25,16 @@ Taken ones are built before 03 runs. 03-06 and 09 of `architecture-review` stay 
 
 Each of 08 and 10 has a status (`ready-for-agent`, `ready-for-human` or `wontfix`), taken ones are built,
 and the outcome is in `map.md`.
+
+## Answer
+
+Done 2026-10-03, asked with the question tool.
+
+- **08 taken, with its ArchUnit rule.** `Life` (`sim` root, public): `down`, `casualty`, `dying`. The 36
+  raw reads of `Vitality.begun` and `Dying.begun` and the four wrappers go through it;
+  `ArchitectureTest.onlyLifeReadsWhetherAUnitIsDownOrDying` refuses a new one. For 03: `Life` is a
+  `query` member already, in the root because `Players` and `ui` need it.
+- **10 taken narrow.** `Reach` (package-private in `sim.system`): one nearest scan with `ActionKind` as the
+  filter, one `gap`. The ranking query is deferred to `docs/backlog.md` (trigger: a fourth interactable).
+  For 03: `Reach` is a `query` candidate, used by `ActionSystem`, `AidSystem`, `CrateSystem`,
+  `TrooperAid` and `TrooperCrew`.

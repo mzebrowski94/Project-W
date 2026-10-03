@@ -9,8 +9,8 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -43,7 +43,6 @@ public final class PerceptionSystem extends EntitySystem {
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
     private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
 
     private final Defs<PickupKind, PickupDef> pickupDefs;
@@ -174,7 +173,7 @@ public final class PerceptionSystem extends EntitySystem {
         for (int i = 0; i < edible.size(); i++) {
             Entity food = edible.get(i);
             Pickup pickup = PICKUP.get(food);
-            if (pickup.claimed || (DYING.has(food) && DYING.get(food).begun)) {
+            if (pickup.claimed || Life.dying(food)) {
                 continue;
             }
             if (pickup.shunned && !swallows(watcher)) {

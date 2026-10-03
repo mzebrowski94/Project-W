@@ -4,15 +4,14 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Drag;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Stunned;
-import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Side;
 
 /**
@@ -24,8 +23,6 @@ final class Drivers {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
-    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Drag> DRAG = ComponentMapper.getFor(Drag.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
@@ -45,10 +42,7 @@ final class Drivers {
         if (STUNNED.has(entity) && STUNNED.get(entity).active()) {
             return true;
         }
-        if (VITALITY.has(entity) && VITALITY.get(entity).begun) {
-            return true;
-        }
-        return DYING.has(entity) && DYING.get(entity).begun;
+        return Life.down(entity);
     }
 
     /**
@@ -120,11 +114,6 @@ final class Drivers {
      * <p>One question for both who is hunted and how to get there.
      */
     static boolean huntable(Entity entity) {
-        return !down(entity) && FACTION.get(entity).side == Side.PLAYER;
-    }
-
-    /** Off his feet: on the ground bleeding, or on it for good. Narrower than {@link #held}. */
-    static boolean down(Entity entity) {
-        return Players.down(entity);
+        return !Life.down(entity) && FACTION.get(entity).side == Side.PLAYER;
     }
 }

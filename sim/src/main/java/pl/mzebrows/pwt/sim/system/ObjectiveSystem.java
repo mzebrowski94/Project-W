@@ -7,8 +7,8 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -25,7 +25,6 @@ import pl.mzebrows.pwt.sim.def.Objective;
 public final class ObjectiveSystem extends EntitySystem {
 
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
     private static final ComponentMapper<Post> POST = ComponentMapper.getFor(Post.class);
@@ -69,7 +68,7 @@ public final class ObjectiveSystem extends EntitySystem {
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
             // Dead, not merely held: a stunned enemy is still a problem.
-            if (!DYING.has(enemy) || !DYING.get(enemy).begun) {
+            if (!Life.dying(enemy)) {
                 return false;
             }
         }
@@ -105,7 +104,7 @@ public final class ObjectiveSystem extends EntitySystem {
     private boolean clearAround(Position at, float watch) {
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
-            if (DYING.has(enemy) && DYING.get(enemy).begun) {
+            if (Life.dying(enemy)) {
                 continue;
             }
             Position where = POSITION.get(enemy);

@@ -77,7 +77,7 @@ public final class AidSystem extends EntitySystem {
                 action.idle();
                 continue;
             }
-            Entity subject = Aid.nearest(casualties, helper, action.reach);
+            Entity subject = Reach.nearest(casualties, helper, action.reach, ActionKind.STABILISE);
             if (subject == null) {
                 action.idle();
                 continue;

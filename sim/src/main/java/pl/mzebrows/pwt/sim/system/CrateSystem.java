@@ -9,6 +9,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.Bag;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
@@ -129,7 +130,7 @@ public final class CrateSystem extends EntitySystem {
             @Nullable Entity man = Players.inSlot(commanders, crate.openedBy);
             if (man == null
                     || DEAD.has(entity)
-                    || Players.down(man)
+                    || Life.down(man)
                     || Drivers.aboard(man)
                     || (presence != null && presence.isAway(crate.openedBy))) {
                 crate.close();
@@ -144,7 +145,7 @@ public final class CrateSystem extends EntitySystem {
                 continue;
             }
             crate.openerWounds = wounds;
-            if (Crates.gapTo(man, entity) > ACTION.get(man).reach) {
+            if (Reach.gap(man, entity) > ACTION.get(man).reach) {
                 crate.close();
                 continue;
             }

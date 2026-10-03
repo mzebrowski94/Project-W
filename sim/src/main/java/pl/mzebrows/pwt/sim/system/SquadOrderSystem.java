@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -85,7 +86,7 @@ public final class SquadOrderSystem extends EntitySystem {
     private void takeStock() {
         for (int slot = 0; slot < standing.length; slot++) {
             Entity commander = Players.inSlot(commanders, slot);
-            standing[slot] = commander != null && !Drivers.down(commander);
+            standing[slot] = commander != null && !Life.down(commander);
         }
     }
 

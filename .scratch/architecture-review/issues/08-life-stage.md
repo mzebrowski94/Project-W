@@ -1,6 +1,6 @@
 # 08 - One question for a man's life stage
 
-Status: needs-triage
+Status: done
 
 Strength: Worth exploring. Dependency: in-process. Report candidate 9.
 
@@ -25,3 +25,10 @@ One query answers the stage; the raw flags stop being read outside it.
 
 - 2026-10-03: Gates `.scratch/system-modules/` - decide this before `sim.system` is split into fenced
   packages (its ticket 02), so the helpers are deepened once rather than moved and then changed.
+- 2026-10-03: Taken and built (system-modules 02). `Life` in the `sim` root answers `down`, `casualty`
+  and `dying`; `Players.down`, `Drivers.down`, `DamageSystem.standing` and `GripSystem.dying` are gone,
+  `CollisionSystem.inert` and `Drivers.held` ask `Life`, and `Aid`'s and `TrooperAid`'s filters are one
+  call to `Life.casualty`. `ArchitectureTest.onlyLifeReadsWhetherAUnitIsDownOrDying` keeps the two
+  `begun` flags behind it; `ui` (`ReadoutWriter`) and `core` (`DebugOverlay`) ask it too. One behaviour
+  change: a man killed while a casualty no longer publishes his bleed-out as `Appearance.charge` during
+  his throes.

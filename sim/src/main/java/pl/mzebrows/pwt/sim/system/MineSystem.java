@@ -7,8 +7,8 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Spawner;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -42,7 +42,6 @@ public final class MineSystem extends EntitySystem {
 
     private static final ComponentMapper<Mine> MINE = ComponentMapper.getFor(Mine.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     private final Spawner spawner;
 
@@ -92,7 +91,7 @@ public final class MineSystem extends EntitySystem {
     private boolean anythingHostileNear(Position at, float radius) {
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
-            if (DYING.has(enemy) && DYING.get(enemy).begun) {
+            if (Life.dying(enemy)) {
                 continue;
             }
             if (Sight.withinRange(at.x, at.y, POSITION.get(enemy).x, POSITION.get(enemy).y, radius)) {

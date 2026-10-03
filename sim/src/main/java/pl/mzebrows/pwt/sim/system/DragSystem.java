@@ -9,13 +9,13 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Dragged;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -41,7 +41,6 @@ public final class DragSystem extends EntitySystem {
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Speed> SPEED = ComponentMapper.getFor(Speed.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
@@ -215,12 +214,12 @@ public final class DragSystem extends EntitySystem {
      * <p>A crewed gun has somebody driving it.
      */
     private static boolean grabbable(Entity entity) {
-        if (DYING.has(entity) && DYING.get(entity).begun) {
+        if (Life.dying(entity)) {
             return false;
         }
         if (TURRET.has(entity) && TURRET.get(entity).crewed) {
             return false;
         }
-        return !VITALITY.has(entity) || VITALITY.get(entity).begun;
+        return !VITALITY.has(entity) || Life.casualty(entity);
     }
 }

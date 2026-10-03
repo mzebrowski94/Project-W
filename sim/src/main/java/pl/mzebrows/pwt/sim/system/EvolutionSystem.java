@@ -5,9 +5,9 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -42,7 +42,6 @@ public final class EvolutionSystem extends IteratingSystem {
 
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
     private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     private final Spawner spawner;
     private final Defs<UnitKind, UnitDef> units;
@@ -55,7 +54,7 @@ public final class EvolutionSystem extends IteratingSystem {
 
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
-        if (DYING.has(entity) && DYING.get(entity).begun) {
+        if (Life.dying(entity)) {
             return;
         }
         Feed feed = FEED.get(entity);

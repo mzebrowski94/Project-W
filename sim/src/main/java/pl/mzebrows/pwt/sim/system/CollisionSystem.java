@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
@@ -19,7 +20,6 @@ import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Damage;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Grip;
@@ -70,7 +70,6 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Thrown> THROWN = ComponentMapper.getFor(Thrown.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
     private static final ComponentMapper<Armour> ARMOUR = ComponentMapper.getFor(Armour.class);
@@ -252,7 +251,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      * <p>A unit shot dead is not stunned, so without this its claws stay live through its throes.
      */
     private static boolean inert(@Nullable Entity entity) {
-        return entity != null && DYING.has(entity) && DYING.get(entity).begun;
+        return entity != null && Life.dying(entity);
     }
 
     /**
@@ -465,7 +464,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         }
         if (GRIPPED.has(target)
                 && !GRIPPED.get(target).held()
-                && !Drivers.down(target)
+                && !Life.down(target)
                 && !Drivers.aboard(target)
                 && !protectedNow(target)) {
             if (shielded(target)) {

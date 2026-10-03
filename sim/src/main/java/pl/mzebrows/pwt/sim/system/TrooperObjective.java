@@ -8,6 +8,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
@@ -224,7 +225,7 @@ final class TrooperObjective {
         Position where = POSITION.get(point);
         for (int i = 0; i < commanders.size(); i++) {
             Entity commander = commanders.get(i);
-            if (Drivers.down(commander)) {
+            if (Life.down(commander)) {
                 continue;
             }
             Position standing = POSITION.get(commander);
@@ -241,7 +242,7 @@ final class TrooperObjective {
         int own = route.stepsTo(map.colAt(at.x), map.rowAt(at.y));
         for (int i = 0; i < commanders.size(); i++) {
             Entity commander = commanders.get(i);
-            if (Drivers.down(commander)) {
+            if (Life.down(commander)) {
                 continue;
             }
             Position standing = POSITION.get(commander);

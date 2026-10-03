@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Dead;
@@ -56,10 +57,10 @@ final class Deaths {
             spawner.markDead(entity);
             return alive;
         }
-        Dying throes = DYING.get(entity);
-        if (throes.begun) {
+        if (Life.dying(entity)) {
             return false;
         }
+        Dying throes = DYING.get(entity);
         throes.begin();
         if (COLLIDER.has(entity)) {
             COLLIDER.get(entity).set(true, false);

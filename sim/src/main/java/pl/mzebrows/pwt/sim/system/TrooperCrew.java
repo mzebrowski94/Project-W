@@ -7,9 +7,9 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
@@ -20,7 +20,6 @@ import pl.mzebrows.pwt.sim.def.AiChance;
 final class TrooperCrew {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
 
     private final Odds odds;
@@ -79,7 +78,7 @@ final class TrooperCrew {
             }
         }
         trooper.mode = Trooper.Mode.CREW;
-        if (Crews.gapTo(entity, station) <= reach) {
+        if (Reach.gap(entity, station) <= reach) {
             Crews.board(entity, station);
             trooper.clearTarget();
             return true;
@@ -118,7 +117,7 @@ final class TrooperCrew {
     private boolean somethingToShootFrom(Position where, float range) {
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
-            if (DYING.has(enemy) && DYING.get(enemy).begun) {
+            if (Life.dying(enemy)) {
                 continue;
             }
             Position standing = POSITION.get(enemy);

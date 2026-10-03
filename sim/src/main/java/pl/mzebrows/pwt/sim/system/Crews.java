@@ -3,9 +3,7 @@ package pl.mzebrows.pwt.sim.system;
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
-import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
-import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -31,39 +29,8 @@ final class Crews {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
-    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
     private Crews() {}
-
-    /**
-     * The empty gun this man would reach first, or null if there is none within arm's length.
-     *
-     * <p>A scan of the stations rather than a neighbour query, for the reason {@link Aid#nearest}
-     * scans the casualties: there are a handful on the worst level anybody would build.
-     */
-    static @Nullable Entity nearestFree(ImmutableArray<Entity> stations, Entity man, float reach) {
-        Position at = POSITION.get(man);
-        float radius = BODY.get(man).radius;
-        Entity nearest = null;
-        float nearestGap = Float.MAX_VALUE;
-        for (int i = 0; i < stations.size(); i++) {
-            Entity candidate = stations.get(i);
-            if (TURRET.get(candidate).crewed) {
-                continue;
-            }
-            float gap = Aid.gapBetween(at, radius, candidate);
-            if (gap <= reach && gap < nearestGap) {
-                nearest = candidate;
-                nearestGap = gap;
-            }
-        }
-        return nearest;
-    }
-
-    /** How far this man is from that gun, surface to surface, so two offers can be ranked. */
-    static float gapTo(Entity man, Entity station) {
-        return Aid.gapBetween(POSITION.get(man), BODY.get(man).radius, station);
-    }
 
     /**
      * Puts a man on a gun: at it rather than beside it, stopped, and out of the pairwise path

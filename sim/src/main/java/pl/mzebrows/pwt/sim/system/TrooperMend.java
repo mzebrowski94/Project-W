@@ -7,8 +7,8 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
@@ -30,7 +30,6 @@ final class TrooperMend {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
 
     private final SimConfig config;
@@ -77,7 +76,7 @@ final class TrooperMend {
         for (int i = 0; i < lying.size(); i++) {
             Entity candidate = lying.get(i);
             Pickup pickup = PICKUP.get(candidate);
-            if (pickup.claimed || (DYING.has(candidate) && DYING.get(candidate).begun)) {
+            if (pickup.claimed || Life.dying(candidate)) {
                 continue;
             }
             if (!(config.pickup(pickup.kind).grantFor(Side.PLAYER) instanceof Grant.Mend)) {

@@ -9,12 +9,11 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
-import pl.mzebrows.pwt.sim.Players;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Gripped;
@@ -51,7 +50,6 @@ public final class TrooperCombatSystem extends EntitySystem {
     private static final ComponentMapper<Melee> MELEE = ComponentMapper.getFor(Melee.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
     private static final ComponentMapper<Thrower> THROWER = ComponentMapper.getFor(Thrower.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
@@ -151,7 +149,7 @@ public final class TrooperCombatSystem extends EntitySystem {
         float reach = melee.reach + melee.radius + BODY.get(entity).radius;
         for (int i = 0; i < leapers.size(); i++) {
             Entity leaper = leapers.get(i);
-            if (!LEAP.get(leaper).committed() || (DYING.has(leaper) && DYING.get(leaper).begun)) {
+            if (!LEAP.get(leaper).committed() || Life.dying(leaper)) {
                 continue;
             }
             Position where = POSITION.get(leaper);
@@ -262,7 +260,7 @@ public final class TrooperCombatSystem extends EntitySystem {
         int count = 0;
         for (int i = 0; i < aliens.size(); i++) {
             Entity alien = aliens.get(i);
-            if (Players.down(alien)) {
+            if (Life.down(alien)) {
                 continue;
             }
             Position where = POSITION.get(alien);

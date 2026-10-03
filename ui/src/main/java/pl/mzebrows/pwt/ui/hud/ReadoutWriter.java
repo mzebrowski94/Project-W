@@ -7,6 +7,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import java.util.Arrays;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
@@ -16,7 +17,6 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Dead;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Nest;
@@ -54,7 +54,6 @@ public final class ReadoutWriter {
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
     private static final ComponentMapper<Respawning> RESPAWNING = ComponentMapper.getFor(Respawning.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
@@ -303,7 +302,7 @@ public final class ReadoutWriter {
         int count = 0;
         for (int i = 0; i < entities.size(); i++) {
             Entity entity = entities.get(i);
-            if (!DYING.has(entity) || !DYING.get(entity).begun) {
+            if (!Life.dying(entity)) {
                 count++;
             }
         }

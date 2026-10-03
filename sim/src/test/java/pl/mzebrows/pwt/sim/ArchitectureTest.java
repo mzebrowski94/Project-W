@@ -34,6 +34,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.upgrade.Reads;
 import pl.mzebrows.pwt.sim.upgrade.Stat;
 
@@ -246,6 +248,17 @@ final class ArchitectureTest {
             .resideInAnyPackage("..sim.system..", "..sim.scenario..")
             .because("the upgrade package is called and does not call (ADR 0017): a rule asks Modifiers for a"
                     + " number, and Modifiers asks nothing of the rules");
+
+    @ArchTest
+    static final ArchRule onlyLifeReadsWhetherAUnitIsDownOrDying = noClasses()
+            .that()
+            .doNotBelongToAnyOf(Life.class, Vitality.class, Dying.class)
+            .should()
+            .accessField(Vitality.class, "begun")
+            .orShould()
+            .accessField(Dying.class, "begun")
+            .because("two flags both named begun answer one question - on his feet, a casualty, or in his"
+                    + " throes - and every copy of the answer was a chance to get it wrong; ask Life");
 
     /**
      * Every number an upgrade may move is read in exactly one place (ADR 0017): one {@code @Reads} method

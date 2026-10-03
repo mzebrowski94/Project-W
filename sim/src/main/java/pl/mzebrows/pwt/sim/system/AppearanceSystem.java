@@ -7,6 +7,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Action;
@@ -16,7 +17,6 @@ import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Health;
@@ -59,7 +59,6 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Slowed> SLOWED = ComponentMapper.getFor(Slowed.class);
     private static final ComponentMapper<Bloat> BLOAT = ComponentMapper.getFor(Bloat.class);
@@ -202,7 +201,7 @@ public final class AppearanceSystem extends IteratingSystem {
             appearance.charge = SHOCK.get(entity).charge;
             return;
         }
-        if (VITALITY.has(entity) && VITALITY.get(entity).begun) {
+        if (Life.casualty(entity)) {
             // How long a man on the ground has left, read backwards (pillar 5).
             appearance.charge = VITALITY.get(entity).fraction();
             return;
@@ -287,10 +286,10 @@ public final class AppearanceSystem extends IteratingSystem {
         if (held && STUNNED.get(entity).grappling) {
             return Appearance.State.GRAPPLING;
         }
-        if (DYING.has(entity) && DYING.get(entity).begun) {
+        if (Life.dying(entity)) {
             return Appearance.State.DYING;
         }
-        if (VITALITY.has(entity) && VITALITY.get(entity).begun) {
+        if (Life.casualty(entity)) {
             // Above staggered, below dying: worst news first.
             return Appearance.State.CASUALTY;
         }

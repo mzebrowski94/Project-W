@@ -7,6 +7,7 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Dodge;
@@ -146,8 +147,9 @@ public final class CooldownSystem extends EntitySystem {
             }
         }
         for (int i = 0; i < dying.size(); i++) {
-            Dying throes = DYING.get(dying.get(i));
-            if (throes.begun) {
+            Entity body = dying.get(i);
+            if (Life.dying(body)) {
+                Dying throes = DYING.get(body);
                 throes.remainingTicks = countDown(throes.remainingTicks);
             }
         }

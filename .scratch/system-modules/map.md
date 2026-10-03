@@ -64,12 +64,17 @@ What the code said on 2026-10-03, which the decisions rest on.
    table in `docs/conventions.md` lists them.
 10. **Order**: 01 -> 02 -> 03 -> 04 -> 05. 03-06 and 09 of `architecture-review` are outside this.
 11. **`core/client`** is its own effort, later (ticket 06).
+12. **`architecture-review` 08 and 10 built before the split** (ticket 02). `Life` (`sim` root) is the one
+    answer to a unit's **life stage** - `down`, `casualty`, `dying` - and only it reads the two `begun`
+    flags (`ArchitectureTest.onlyLifeReadsWhetherAUnitIsDownOrDying`). `Reach` is the one nearest scan and
+    the one surface-to-surface gap for what the action key reaches for; the ranking between offers stays in
+    `ActionSystem` (backlog, trigger: a fourth interactable). Both are `query` candidates for 03.
 
 Sketch of the split - to be replaced by ticket 03's measurement, not trusted as it stands:
 
 ```
 sim/system/
-  query/      Drivers, Sight, Odds ...
+  query/      Drivers, Sight, Odds, Reach ... (Life already public in the sim root)
   motion/     Drive, Movement, Avoidance, Navigation, Weave, Hop, Dodge, Wander, Stun, Facing, PositionHistory
   squad/      SquadOrder, TrooperMind, TrooperMove, TrooperCombat + Trooper*
   commander/  CommanderControl, Melee, Strike, Drag, Action, Aid, Crate, Turret
@@ -89,5 +94,4 @@ Already pushing back: `Pace` (motion) uses `Guns` and `Aid`; `AppearanceSystem` 
 - Two writers 01 found that ticket 03 should weigh: `CooldownSystem` writes 17 components (every timer),
   and `EvolutionSystem` 24 (a strain change rewrites the kit through `Spawner.applyStrain`). Either one
   pulls a package towards it under decision 6.
-- Whether `architecture-review` 08 and 10 are taken (02).
 - The real split, the ports, where tests that span packages go, what becomes of `spreadOut` (03).

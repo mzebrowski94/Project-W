@@ -4,10 +4,10 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Dragged;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.upgrade.Modifiers;
@@ -37,7 +37,6 @@ import pl.mzebrows.pwt.sim.upgrade.Modifiers;
 public final class CasualtySystem extends IteratingSystem {
 
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Dragged> DRAGGED = ComponentMapper.getFor(Dragged.class);
 
     private final Spawner spawner;
@@ -60,10 +59,10 @@ public final class CasualtySystem extends IteratingSystem {
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
         Vitality casualty = VITALITY.get(entity);
-        if (DYING.has(entity) && DYING.get(entity).begun) {
+        if (Life.dying(entity)) {
             return;
         }
-        if (!casualty.begun) {
+        if (!Life.casualty(entity)) {
             mend(entity, casualty);
             return;
         }

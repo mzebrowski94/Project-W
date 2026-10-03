@@ -7,10 +7,10 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Level;
@@ -49,7 +49,6 @@ public final class BarrageSystem extends EntitySystem {
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
 
     private static final float EPSILON = 1e-4f;
@@ -87,7 +86,7 @@ public final class BarrageSystem extends EntitySystem {
             if (!barrage.enabled) {
                 continue;
             }
-            if (Drivers.down(entity)) {
+            if (Life.down(entity)) {
                 fall(entity, barrage);
                 continue;
             }
@@ -108,7 +107,7 @@ public final class BarrageSystem extends EntitySystem {
      * (G0049). A boss is a unit whose barrage is not off, so nothing else needs to know it is one.
      */
     private void fall(Entity entity, Barrage barrage) {
-        if (barrage.fallen || !DYING.has(entity) || !DYING.get(entity).begun) {
+        if (barrage.fallen || !Life.dying(entity)) {
             return;
         }
         barrage.fallen = true;

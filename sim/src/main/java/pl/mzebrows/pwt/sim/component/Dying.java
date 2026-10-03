@@ -14,7 +14,7 @@ import com.badlogic.gdx.utils.Pool;
  * {@code Dead} and the reaper takes it at the end of that tick, so the ordinary death reactions -
  * respawning among them - still run exactly once and in their usual place (G0004).
  *
- * <p>Carried permanently by anything that dies visibly, and read through {@link #begun}: adding it at
+ * <p>Carried permanently by anything that dies visibly, and asked of {@link pl.mzebrows.pwt.sim.Life#dying}: adding it at
  * the moment of death would mutate a family mid-iteration, which silently skips entities.
  */
 public final class Dying implements Component, Pool.Poolable {

@@ -9,10 +9,10 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.Scatter;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Ticks;
@@ -44,7 +44,6 @@ public final class WaveSystem extends EntitySystem {
 
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     private final TileMap map;
     private final SimConfig config;
@@ -98,7 +97,7 @@ public final class WaveSystem extends EntitySystem {
         for (int i = 0; i < aliens.size(); i++) {
             Entity alien = aliens.get(i);
             int wave = STRAIN.get(alien).wave;
-            if (wave == 0 || wave > sent || (DYING.has(alien) && DYING.get(alien).begun)) {
+            if (wave == 0 || wave > sent || Life.dying(alien)) {
                 continue;
             }
             standing |= 1L << (wave - 1);

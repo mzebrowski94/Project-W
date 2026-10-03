@@ -7,10 +7,10 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -27,7 +27,6 @@ import pl.mzebrows.pwt.sim.component.Trooper;
 final class TrooperFight {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
 
     private final TileMap map;
@@ -127,7 +126,7 @@ final class TrooperFight {
         float bestScore = Float.MAX_VALUE;
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
-            if (DYING.has(enemy) && DYING.get(enemy).begun) {
+            if (Life.dying(enemy)) {
                 // A body is not a target.
                 continue;
             }

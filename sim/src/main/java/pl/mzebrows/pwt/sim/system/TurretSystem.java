@@ -10,10 +10,10 @@ import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Crew;
-import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
@@ -40,7 +40,6 @@ public final class TurretSystem extends EntitySystem {
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
-    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -90,7 +89,7 @@ public final class TurretSystem extends EntitySystem {
                 continue;
             }
             @Nullable Entity station = stationOf(crew.station);
-            if (station == null || Drivers.down(rider)) {
+            if (station == null || Life.down(rider)) {
                 // The gun or the man is gone, or he is off his feet.
                 Crews.leave(stations, rider);
                 continue;
@@ -183,7 +182,7 @@ public final class TurretSystem extends EntitySystem {
         float nearestDistance = Float.MAX_VALUE;
         for (int i = 0; i < quarry.size(); i++) {
             Entity candidate = quarry.get(i);
-            if (DYING.has(candidate) && DYING.get(candidate).begun) {
+            if (Life.dying(candidate)) {
                 continue;
             }
             Position where = POSITION.get(candidate);

@@ -10,7 +10,7 @@ import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
-import pl.mzebrows.pwt.sim.Players;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Lair;
@@ -96,7 +96,7 @@ public final class LairSystem extends EntitySystem {
         int needed = 0;
         for (int i = 0; i < commanders.size(); i++) {
             Entity commander = commanders.get(i);
-            if (Players.down(commander) || (presence != null && presence.isAway(COMMANDER.get(commander).slot))) {
+            if (Life.down(commander) || (presence != null && presence.isAway(COMMANDER.get(commander).slot))) {
                 continue;
             }
             needed++;
