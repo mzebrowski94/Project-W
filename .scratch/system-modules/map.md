@@ -24,7 +24,8 @@ What the code said on 2026-10-03, which the decisions rest on.
 - The tick order interleaves domains (grenade: 14, 26, 40), so packages cannot mirror it.
 - Splitting a Java package turns package-private helpers public - there is no "visible to siblings".
   ArchUnit then has to close what the compiler closed for free.
-- ~70 tests sit in package `sim.system` and reach package-private helpers; they move with what they test.
+- ~70 tests sit in package `sim.system`, but they drive the public `Simulation`: only `OddsTest` and
+  `ReachTest` name a helper (03 measured it). Where a test goes is tidiness, not a fence.
 - `core` never imports `sim.system`. The renderer reads `Appearance`, `Position`, `Facing`, `Body`,
   `Commander`; every other component read is `DebugOverlay`. `core/client` is the bigger flat package
   (91 files).
@@ -55,8 +56,12 @@ What the code said on 2026-10-03, which the decisions rest on.
    other fenced packages. Nothing else.
 5. **`query`**: public, stateless, reads components, writes none. Anything that writes is a port of its
    package (`Deaths.kill`).
-6. **Placement**: a new system goes to the package whose components it mostly writes. A new package needs
-   two or more systems, or a system with a helper of its own, **and** a glossary word.
+6. **Placement** (rewritten by 03): a system goes (1) with the non-`query` helpers it uses; failing that,
+   (2) with the component it alone writes; failing that, (3) to the glossary section that names what it
+   does. "Mostly writes" was measured and does not place: shared state swamps it, and 30 of 52 systems
+   write no component that is theirs alone. A package founded after 05 needs two or more systems, or a
+   system with a helper of its own, **and** a glossary word; the founding ten are named by ADR 0020 and
+   their `package-info.java`.
 7. **`upgrade` moves to `sim.system.upgrade`** and becomes one fenced package among several; 0017's
    other fences stand.
 8. **`component` and `def` stay flat and shared.** Ownership is the write rule, not a package.
@@ -70,28 +75,34 @@ What the code said on 2026-10-03, which the decisions rest on.
     the one surface-to-surface gap for what the action key reaches for; the ranking between offers stays in
     `ActionSystem` (backlog, trigger: a fourth interactable). Both are `query` candidates for 03.
 
-Sketch of the split - to be replaced by ticket 03's measurement, not trusted as it stands:
+13. **The split** (ticket 03, approved 2026-10-03) is [`split.txt`](split.txt), checked by
+    `.claude/scripts/system-graph.py --split`; the reasoning, the public list and where every test goes are
+    in [03's answer](issues/03-measure-system-graph.md#answer).
 
 ```
 sim/system/
-  query/      Drivers, Sight, Odds, Reach ... (Life already public in the sim root)
-  motion/     Drive, Movement, Avoidance, Navigation, Weave, Hop, Dodge, Wander, Stun, Facing, PositionHistory
-  squad/      SquadOrder, TrooperMind, TrooperMove, TrooperCombat + Trooper*
-  commander/  CommanderControl, Melee, Strike, Drag, Action, Aid, Crate, Turret
-  creature/   Perception, Grip, EnemyRanged, EnemyLeap, Evolution, Barrage
-  combat/     Collision, Damage, Shock, Grenade, ProjectileBounds, Cooldown, Pickup + Guns, Muzzle, Throws, Aim, Grants, Bounce
-  death/      Casualty, Dying, Respawn, Bloat, Mine, Blast, Slick, Reaper + Deaths, RallyPoint
-  level/      Reinforcement, Wave, Nest, Lair, ControlPoint, Objective + Rouse
-  upgrade/    from sim.upgrade
+  query/       Drivers, Sight, Compass, Reach, Pace, Aim, RallyPoint    (Life stays in the sim root)
+  motion/      Drive, Movement, Avoidance, Navigation, Weave, Hop, Dodge, Wander, Stun, Facing,
+               PositionHistory, TrooperMove
+  squad/       SquadOrder, TrooperMind, TrooperCombat + TrooperAid, -Crew, -Fight, -Mend, -Objective, -Orders, -Roam
+  commander/   CommanderControl, Melee, Strike, Drag, Action, Aid, Crate, Turret + Aid, Crates, Crews*
+  creature/    Perception, Grip, EnemyRanged, EnemyLeap, Evolution, Barrage
+  combat/      Collision, Damage, Shock, Grenade, ProjectileBounds, Cooldown, Pickup
+               + Guns*, Muzzle, Throws*, Grants*, Bounce
+  death/       Casualty, Dying, Respawn, Bloat, Mine, Blast, Slick, Reaper + Deaths*
+  level/       Reinforcement, Wave, Nest, Lair, ControlPoint, Objective + Rouse
+  appearance/  Appearance                     (one system: a named exception to the founding rule)
+  upgrade/     from sim.upgrade; Modifiers* its port to the others
+sim/Odds                                       (out of sim.system: it advances the NERVE stream, so not query)
+                                                * port
 ```
 
-Already pushing back: `Pace` (motion) uses `Guns` and `Aid`; `AppearanceSystem` has no home yet.
+    - `TrooperMoveSystem` is the squad's steering behaviour, as `Hop`, `Weave` and `Wander` are the aliens',
+      so `spreadOut` becomes an in-package call.
+    - Nine more public classes than today: the seven `query` helpers, `Crews` (G0024: commander and trooper
+      crew alike) and `Deaths`. No system is used from another package.
 
 ## Fog
 
 - Whether ADR 0019 stands against its own *Revisit when*: "most components have several writers" is
   what 01 measured (49 of 79). Mateusz's call; 01 landed it as written.
-- Two writers 01 found that ticket 03 should weigh: `CooldownSystem` writes 17 components (every timer),
-  and `EvolutionSystem` 24 (a strain change rewrites the kit through `Spawner.applyStrain`). Either one
-  pulls a package towards it under decision 6.
-- The real split, the ports, where tests that span packages go, what becomes of `spreadOut` (03).

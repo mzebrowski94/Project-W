@@ -1,0 +1,19 @@
+# The split ticket 03 proposes. Check it with:  python3 .claude/scripts/system-graph.py --split .scratch/system-modules/split.txt
+# `root` is not a fenced package: it names a class leaving sim.system for the sim root.
+
+query: Drivers Sight Compass Reach Pace Aim RallyPoint
+motion: DriveSystem MovementSystem AvoidanceSystem NavigationSystem WeaveSystem HopSystem DodgeSystem \
+        WanderSystem StunSystem FacingSystem PositionHistorySystem TrooperMoveSystem
+squad: SquadOrderSystem TrooperMindSystem TrooperCombatSystem \
+       TrooperAid TrooperCrew TrooperFight TrooperMend TrooperObjective TrooperOrders TrooperRoam
+commander: CommanderControlSystem MeleeSystem StrikeSystem DragSystem ActionSystem AidSystem CrateSystem TurretSystem \
+           Aid Crates Crews
+creature: PerceptionSystem GripSystem EnemyRangedSystem EnemyLeapSystem EvolutionSystem BarrageSystem
+combat: CollisionSystem DamageSystem ShockSystem GrenadeSystem ProjectileBoundsSystem CooldownSystem PickupSystem \
+        Guns Muzzle Throws Grants Bounce
+death: CasualtySystem DyingSystem RespawnSystem BloatSystem MineSystem BlastSystem SlickSystem ReaperSystem Deaths
+level: ReinforcementSystem WaveSystem NestSystem LairSystem ControlPointSystem ObjectiveSystem Rouse
+appearance: AppearanceSystem
+upgrade: AdaptationDef Dealer DraftDef Effect Fold Modifiers Picks Reads Rotation Scope Stat StatDef Target \
+         UpgradeDef UpgradeKind UpgradeSystem UpgradeView
+root: Odds

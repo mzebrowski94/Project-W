@@ -28,8 +28,12 @@ already amended it, and this only uses that amendment more widely.
   other packages' ports. Never another package's system or helper.
 - **`sim.system.query`** holds public, stateless questions about components, and writes none (ADR 0019's
   analysis). Something shared that writes is a port of the package it belongs to.
-- **Placement.** A new system goes to the package whose components it mostly writes (ADR 0019's column). A
-  new package needs two or more systems, or a system with a helper of its own, **and** a glossary word.
+- **Placement.** A system goes with the non-`query` helpers it uses; failing that, with the component it
+  alone writes (ADR 0019's column); failing that, to the glossary section that names what it does. Not by
+  the components it mostly writes - shared state (`Velocity`, `Position`, `Steering`) swamps that, and most
+  systems write nothing of their own. A package founded after this record needs two or more systems, or a
+  system with a helper of its own, **and** a glossary word. `appearance` is the one founding exception: a
+  single system that writes for the renderer alone (G0003).
 - Every fence says `.because(...)` naming this record, and fails rather than passes on zero classes.
 - **Packages say nothing about order.** `Simulation`'s constructor is still the one source of it.
 
