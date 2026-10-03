@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 import com.badlogic.gdx.graphics.Color;
 import java.util.List;
@@ -17,7 +17,7 @@ import pl.mzebrows.pwt.ui.page.MenuLayout;
  * everything that decides - where a line is, which entry is under the pointer - is {@link MenuLayout},
  * tested without a display. Decides nothing itself.
  */
-final class MenuPainter {
+public final class MenuPainter {
 
     private final Hud hud;
     private final GraphicConfig graphic;
@@ -28,7 +28,7 @@ final class MenuPainter {
     private final Color dim = new Color();
     private final Color bar = new Color();
 
-    MenuPainter(Hud hud, GraphicConfig graphic, HudMetrics metrics) {
+    public MenuPainter(Hud hud, GraphicConfig graphic, HudMetrics metrics) {
         this.hud = hud;
         this.graphic = graphic;
         this.metrics = metrics;
@@ -41,7 +41,7 @@ final class MenuPainter {
     }
 
     /** Dims the view by {@code alpha}; nothing at zero. */
-    void scrim(Rect view, float alpha) {
+    public void scrim(Rect view, float alpha) {
         if (alpha <= 0f) {
             return;
         }
@@ -51,7 +51,7 @@ final class MenuPainter {
     }
 
     /** One line at the top of the view: the game is paused, and which button opens the menu. */
-    void banner(Rect view, String text) {
+    public void banner(Rect view, String text) {
         line(
                 view,
                 text,
@@ -103,7 +103,7 @@ final class MenuPainter {
      * @param offsetX where the page's arrival has it, in UI pixels
      * @param alpha how opaque its arrival has it
      */
-    Rect page(
+    public Rect page(
             Rect view,
             MenuLayout.Anchor anchor,
             List<String> head,
@@ -170,7 +170,7 @@ final class MenuPainter {
     }
 
     /** How many entries a panel in this view has room for, with this much head and foot. */
-    int visibleEntries(Rect view, List<String> head, int entries, int footLines) {
+    public int visibleEntries(Rect view, List<String> head, int entries, int footLines) {
         int pitch = metrics.fontSize() + metrics.leading();
         int room = (view.height() - 3 * metrics.padding()) / pitch - firstEntryLine(head) - footLines - 2;
         return Math.max(1, Math.min(entries, room));
@@ -181,11 +181,11 @@ final class MenuPainter {
     }
 
     /** The line the first entry is on - a blank line under the head - for finding what the pointer is over. */
-    static int firstEntryLine(List<String> head) {
+    public static int firstEntryLine(List<String> head) {
         return head.isEmpty() ? 0 : head.size() + 1;
     }
 
-    MenuLayout layout() {
+    public MenuLayout layout() {
         return layout;
     }
 
@@ -194,7 +194,7 @@ final class MenuPainter {
      * the last one cut with an ellipsis if it runs over. For body lines and descriptions, which are
      * sentences; titles, entries and hints are short enough for one line.
      */
-    void addWrapped(List<String> lines, String text, int maxLines) {
+    public void addWrapped(List<String> lines, String text, int maxLines) {
         lines.addAll(TextFit.wrap(text, graphic.ui().page().columns(), maxLines));
     }
 }

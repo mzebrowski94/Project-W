@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.Screen;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
+import pl.mzebrows.pwt.client.hud.Hud;
 import pl.mzebrows.pwt.client.input.ControlsConfig;
 import pl.mzebrows.pwt.client.input.GamepadSource;
 import pl.mzebrows.pwt.net.NetConfig;

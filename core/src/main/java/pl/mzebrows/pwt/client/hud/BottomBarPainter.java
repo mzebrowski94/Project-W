@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 import com.badlogic.gdx.graphics.Color;
 import java.util.Arrays;
@@ -34,7 +34,7 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
  * holds upgrade drafts, the tell ({@code UI:hud/bottom/upgrade}) says so at the row's right end, in his
  * colour, with the key that opens them.
  */
-final class BottomBarPainter {
+public final class BottomBarPainter {
 
     private static final int HEAT_BAR_WIDTH = 68;
 
@@ -82,7 +82,7 @@ final class BottomBarPainter {
 
     private final Color tellLit = new Color();
 
-    BottomBarPainter(Hud hud, UiStrings strings, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
+    public BottomBarPainter(Hud hud, UiStrings strings, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
         this.hud = hud;
         this.graphic = graphic;
         this.metrics = metrics;
@@ -120,11 +120,13 @@ final class BottomBarPainter {
     }
 
     /**
+     * Paints the bottom bar, a panel for each player.
+     *
      * @param connected by slot: false for a player whose pad or link is gone, whose panel is greyed
      * @param draftKeys by slot: what that player presses to open his drafts, or empty when he is not
      *     played here
      */
-    void render(
+    public void render(
             ScreenLayout layout,
             Readout readout,
             PanelAssignment seating,
@@ -366,7 +368,7 @@ final class BottomBarPainter {
      * The roll call ({@code UI:hud/bottom/roll-call}): a compact row per player - colour, status, tally
      * - for games of more than four. A placeholder until its design is settled.
      */
-    void renderRollCall(ScreenLayout layout) {
+    public void renderRollCall(ScreenLayout layout) {
         Rect bottom = layout.bottomBar();
         if (bottom.isEmpty()) {
             return;

@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 /**
  * The operating system's mouse pointer, hidden while the game draws its own reticle and shown again on

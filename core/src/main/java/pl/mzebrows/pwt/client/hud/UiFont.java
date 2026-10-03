@@ -1,9 +1,11 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import java.nio.charset.StandardCharsets;
+import pl.mzebrows.pwt.client.Assets;
+import pl.mzebrows.pwt.client.Log;
 
 /**
  * The interface's font: <b>monogram</b> by Vinícius Menézio (CC0, credits beside the file), built from

@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 import com.badlogic.gdx.graphics.Color;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
@@ -16,7 +16,7 @@ import pl.mzebrows.pwt.ui.layout.Rect;
  * is as wide as the whole line from the first character, and the text is cut only when the toast or the
  * view changes.
  */
-final class ToastPainter {
+public final class ToastPainter {
 
     private final MenuPainter painter;
     private final GraphicConfig graphic;
@@ -28,13 +28,13 @@ final class ToastPainter {
     private int builtWidth = -1;
     private int typedLength = -1;
 
-    ToastPainter(Hud hud, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
+    public ToastPainter(Hud hud, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
         this.painter = new MenuPainter(hud, graphic, metrics);
         this.graphic = graphic;
         this.palette = palette;
     }
 
-    void draw(Rect view, Toast toast) {
+    public void draw(Rect view, Toast toast) {
         if (!toast.showing()) {
             return;
         }

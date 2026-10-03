@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 import java.util.function.Consumer;
 import java.util.function.IntPredicate;

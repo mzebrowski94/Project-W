@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import pl.mzebrows.pwt.client.Log;
 import pl.mzebrows.pwt.ui.hud.TallyIcon;
 import pl.mzebrows.pwt.ui.layout.LayoutSpec;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;

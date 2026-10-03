@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 import com.badlogic.gdx.graphics.Color;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;

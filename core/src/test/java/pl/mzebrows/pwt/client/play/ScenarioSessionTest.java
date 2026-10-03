@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.client.ActionPrompts;
+import pl.mzebrows.pwt.client.hud.ActionPrompts;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;

@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 import com.badlogic.gdx.graphics.Color;
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ import pl.mzebrows.pwt.ui.page.ScrollList;
  * overlap; under the menu where there is no room beside it (A). More rows than the panel has lines for
  * scroll - a wheel over the list, a pad's right stick - with a bar on its right edge (A.1).
  */
-final class HeldUpgradesPainter {
+public final class HeldUpgradesPainter {
 
     private final Hud hud;
     private final GraphicConfig graphic;
@@ -61,7 +61,7 @@ final class HeldUpgradesPainter {
     /** The panel as last drawn, so a wheel is read only over it. */
     private Rect panel = Rect.EMPTY;
 
-    HeldUpgradesPainter(Hud hud, UiStrings strings, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
+    public HeldUpgradesPainter(Hud hud, UiStrings strings, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
         this.hud = hud;
         this.graphic = graphic;
         this.metrics = metrics;
@@ -79,7 +79,7 @@ final class HeldUpgradesPainter {
      *
      * @param page where the pause menu's panel rests, which the list keeps clear of
      */
-    void draw(Rect view, Rect page, Readout readout, float alpha) {
+    public void draw(Rect view, Rect page, Readout readout, float alpha) {
         if (readout.upgradeRevision != built) {
             build(readout);
             built = readout.upgradeRevision;
@@ -146,7 +146,7 @@ final class HeldUpgradesPainter {
     }
 
     /** Moves the list by a wheel's notches, when the pointer is over it. */
-    void wheel(float notches, int pointerX, int pointerY) {
+    public void wheel(float notches, int pointerX, int pointerY) {
         if (notches == 0f
                 || pointerX < panel.x()
                 || pointerX >= panel.right()
@@ -158,12 +158,12 @@ final class HeldUpgradesPainter {
     }
 
     /** Moves the list by a stick's push, down for positive. */
-    void glide(float push, float linesPerSecond, float seconds) {
+    public void glide(float push, float linesPerSecond, float seconds) {
         scroll.glide(push, linesPerSecond, seconds, full.size(), room);
     }
 
     /** Back to the top, for the next time the pause menu opens. */
-    void home() {
+    public void home() {
         scroll.home();
     }
 

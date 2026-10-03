@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.lwjgl3;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
 import org.lwjgl.glfw.GLFW;
-import pl.mzebrows.pwt.client.SystemPointer;
+import pl.mzebrows.pwt.client.hud.SystemPointer;
 
 /**
  * GLFW's own hidden pointer: gone over the window, still absolute, so the mouse aims exactly as before.

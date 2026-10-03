@@ -7,6 +7,8 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.config.NetConfigLoader;
 import pl.mzebrows.pwt.client.config.SimConfigLoader;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
+import pl.mzebrows.pwt.client.hud.Hud;
+import pl.mzebrows.pwt.client.hud.SystemPointer;
 import pl.mzebrows.pwt.client.input.ChosenGamepads;
 import pl.mzebrows.pwt.client.input.ControlsConfig;
 import pl.mzebrows.pwt.client.input.GamepadSource;

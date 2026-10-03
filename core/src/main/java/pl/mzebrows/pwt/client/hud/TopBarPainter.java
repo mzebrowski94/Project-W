@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 import com.badlogic.gdx.graphics.Color;
 import java.util.Arrays;
@@ -42,7 +42,7 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
  * <p>Content sits inside the view's span and hangs from the bar's bottom edge, the one touching the
  * view, so a taller bar grows empty space outwards. Text is rebuilt only when what it says changes.
  */
-final class TopBarPainter {
+public final class TopBarPainter {
 
     /** The mission and the goal. */
     private static final int LINES_ABOVE_TERMINAL = 2;
@@ -111,7 +111,7 @@ final class TopBarPainter {
     private long builtCrateKey = -1L;
     private ScreenLayout crateFor = ScreenLayout.NONE;
 
-    TopBarPainter(Hud hud, UiStrings strings, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
+    public TopBarPainter(Hud hud, UiStrings strings, GraphicConfig graphic, HudMetrics metrics, Palette palette) {
         this.hud = hud;
         this.strings = strings;
         this.graphic = graphic;
@@ -138,7 +138,7 @@ final class TopBarPainter {
      * off; {@code mode} says whether they go in the panel or over the view's corner. While {@code draft}
      * is open the bar is the draft's; {@code hints} names the keys its seat works it with.
      */
-    void render(
+    public void render(
             ScreenLayout layout,
             Readout readout,
             GoalLine goalLine,

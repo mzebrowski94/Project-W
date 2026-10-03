@@ -4,6 +4,8 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.utils.Disposable;
+import pl.mzebrows.pwt.client.hud.UiFont;
+import pl.mzebrows.pwt.client.hud.UiStrings;
 
 /**
  * Every asset path the game knows, in one place. Nothing else may reference an asset by string

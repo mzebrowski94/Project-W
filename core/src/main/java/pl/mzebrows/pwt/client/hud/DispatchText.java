@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.hud;
 
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
@@ -12,7 +12,7 @@ import pl.mzebrows.pwt.ui.hud.RankText;
  * one), {@code {1}} and {@code {2}} its numbers, {@code {3}} the name it carries - the gun's, or the
  * upgrade's with its rank ({@code LARGER ARMY II}).
  */
-final class DispatchText implements DispatchWords {
+public final class DispatchText implements DispatchWords {
 
     /** Once: {@code values()} hands out a new array on every call. */
     private static final WeaponKind[] WEAPONS = WeaponKind.values();
@@ -21,7 +21,7 @@ final class DispatchText implements DispatchWords {
 
     private final UiStrings strings;
 
-    DispatchText(UiStrings strings) {
+    public DispatchText(UiStrings strings) {
         this.strings = strings;
     }
 
