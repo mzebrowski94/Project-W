@@ -88,8 +88,11 @@ public enum DispatchKind {
         return this == COMMANDER_LOST ? COMMANDER_DOWN : null;
     }
 
-    /** Whether it is also shown as a {@link Toast} over the view: an upgrade earned or taken, the swarm adapting. */
+    /**
+     * Whether it is also shown as a {@link Toast} over the view: an upgrade earned, passed on or taken, the
+     * swarm adapting.
+     */
     boolean toasts() {
-        return this == DRAFT_EARNED || this == UPGRADE_TAKEN || this == SWARM_ADAPTS;
+        return this == DRAFT_EARNED || this == DRAFT_PASSED || this == UPGRADE_TAKEN || this == SWARM_ADAPTS;
     }
 }

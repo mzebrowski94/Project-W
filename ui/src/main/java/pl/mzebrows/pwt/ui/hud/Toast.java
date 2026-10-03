@@ -1,7 +1,7 @@
 package pl.mzebrows.pwt.ui.hud;
 
 /**
- * An upgrade earned or taken, or an adaptation, over the view where the paused banner goes ({@code UI:hud/view/toast}):
+ * An upgrade earned, passed on or taken, or an adaptation, over the view where the paused banner goes ({@code UI:hud/view/toast}):
  * the same words the terminal says, typed out with a cursor and held a while once typed, then gone. One at
  * a time; the rest wait in a short queue, the oldest dropped when it is full. Only the kinds that
  * {@link DispatchKind#toasts()} are kept.
@@ -107,12 +107,12 @@ public final class Toast implements DispatchSink {
         return revealed;
     }
 
-    /** What it is about: an upgrade earned or taken, or the swarm adapting. */
+    /** What it is about: an upgrade earned, passed on or taken, or the swarm adapting. */
     public DispatchKind kind() {
         return shown.kind();
     }
 
-    /** The player who earned or took it, or -1 when it names nobody. */
+    /** The player who earned, took over or took it, or -1 when it names nobody. */
     public int slot() {
         return shown.slot();
     }

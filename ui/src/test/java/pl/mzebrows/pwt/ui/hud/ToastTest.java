@@ -44,6 +44,16 @@ class ToastTest {
     }
 
     @Test
+    void showsAnUpgradePassedOn() {
+        Toast toast = toast(SLOW);
+        toast.offer(DispatchKind.DRAFT_PASSED, 2, 0, 0);
+        toast.advance(0f);
+
+        assertThat(toast.kind()).isEqualTo(DispatchKind.DRAFT_PASSED);
+        assertThat(toast.slot()).isEqualTo(2);
+    }
+
+    @Test
     void showsItWholeAtOnceWithTypingOff() {
         Toast toast = toast(new Toast.Settings(0f, 2f, 2, 0.5f));
         toast.offer(DispatchKind.SWARM_ADAPTS, -1, 4, 1);

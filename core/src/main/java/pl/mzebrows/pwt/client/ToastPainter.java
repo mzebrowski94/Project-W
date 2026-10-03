@@ -9,7 +9,7 @@ import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.Rect;
 
 /**
- * The toast ({@code UI:hud/view/toast}) where the paused banner goes: an upgrade earned or taken in that
+ * The toast ({@code UI:hud/view/toast}) where the paused banner goes: an upgrade earned, passed on or taken in that
  * player's colour - the text colour while he is the only player - and the swarm adapting in the swarm's. The box
  * is as wide as the whole line from the first character, and the text is cut only when the toast or the
  * view changes.
