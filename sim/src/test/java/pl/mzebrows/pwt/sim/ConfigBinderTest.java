@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import org.jspecify.annotations.Nullable;
@@ -62,9 +63,44 @@ class ConfigBinderTest {
         record Reset() implements Change {}
     }
 
+    /** A type the binder has no reading of - a record of one value, as a key code is - read by a conversion. */
+    record Hue(int code) {}
+
+    record Tinted(Hue hue, float alpha) {}
+
+    private static final ConfigBinder.Conversions HUES = new ConfigBinder.Conversions(Map.of(Hue.class, text -> {
+        return switch (text) {
+            case "red" -> new Hue(1);
+            case "blue" -> new Hue(2);
+            default -> throw new IllegalArgumentException("no hue called " + text);
+        };
+    }));
+
     record OneChange(Change change) {}
 
     record Changes(List<Change> changes) {}
+
+    @Test
+    void readsATypeThroughTheConversionItIsGivenRatherThanAsABlock() {
+        ConfigBinder.Bound<Tinted> bound = ConfigBinder.bind(
+                Tinted.class, "t", ConfigBinder.parse("t.hue=blue\nt.alpha=0.5"), new TreeMap<>(), HUES);
+
+        assertThat(bound.problems()).isEmpty();
+        assertThat(bound.value()).isEqualTo(new Tinted(new Hue(2), 0.5f));
+    }
+
+    @Test
+    void namesAValueItsConversionCannotReadAndTakesTheFallback() {
+        ConfigBinder.Bound<Tinted> bound = ConfigBinder.bind(
+                Tinted.class,
+                "t",
+                ConfigBinder.parse("t.hue=mauve\nt.alpha=0.5"),
+                ConfigBinder.parse("t.hue=red\nt.alpha=1"),
+                HUES);
+
+        assertThat(bound.problems()).containsExactly("cannot read t.hue=mauve as Hue (no hue called mauve)");
+        assertThat(bound.value()).isEqualTo(new Tinted(new Hue(1), 0.5f));
+    }
 
     @Test
     void fillsEveryComponentByName() {

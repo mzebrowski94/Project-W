@@ -1,15 +1,15 @@
 package pl.mzebrows.pwt.net;
 
 import java.util.List;
-import java.util.SortedMap;
 import pl.mzebrows.pwt.sim.ConfigBinder;
+import pl.mzebrows.pwt.sim.ConfigFile;
 import pl.mzebrows.pwt.sim.ConfigKey;
 
 /**
  * The networking tunables: {@code network.properties}, bound by component name ({@link ConfigBinder}),
  * so a tunable is a field here and a line there and nothing else. {@code net} reads no file: the shipped
  * one is compiled in ({@code :net:generateShippedNetConfig}) and is {@link #defaults()}; the client finds
- * a player's copy and hands its text to {@link #parse}.
+ * a player's copy and hands its text to {@link #FILE}.
  *
  * @param port the port a host listens on, for both TCP and UDP
  * @param portSearch how many ports after {@code port} a host tries when it is taken - a second instance
@@ -61,37 +61,13 @@ public record NetConfig(
         latencySteps = List.copyOf(latencySteps);
     }
 
+    /** {@code assets/network.properties}: what ships, compiled in, and how a player's copy is read. */
+    public static final ConfigFile<NetConfig> FILE = new ConfigFile<>(
+            "network.properties", NetConfig.class, ROOT, ShippedNetConfig.TEXT, ConfigBinder.Conversions.none());
+
     /** What ships: {@code assets/network.properties}, compiled in. What every test runs. */
     public static NetConfig defaults() {
-        return Shipped.CONFIG;
-    }
-
-    /**
-     * A config from the text of a {@code network.properties}, with every value it lacks or garbles taken
-     * from {@link #defaults()} and named in the result, as is every key no record has.
-     *
-     * @throws IllegalArgumentException if the values are readable but break a rule a record checks
-     */
-    public static Parsed parse(String text) {
-        ConfigBinder.Bound<NetConfig> bound = ConfigBinder.bind(NetConfig.class, ROOT, text, Shipped.VALUES);
-        NetConfig config = bound.value();
-        if (config == null) {
-            throw new IllegalArgumentException("network config: " + String.join("; ", bound.problems()));
-        }
-        return new Parsed(config, bound.problems());
-    }
-
-    /** A config read from text, and everything that had to be taken from what ships instead. */
-    public record Parsed(NetConfig config, List<String> problems) {}
-
-    /** Bound on first use, so a failure names the key rather than a class. */
-    private static final class Shipped {
-
-        static final SortedMap<String, String> VALUES = ConfigBinder.parse(ShippedNetConfig.TEXT);
-
-        static final NetConfig CONFIG = ConfigBinder.bindStrictly(NetConfig.class, ROOT, ShippedNetConfig.TEXT);
-
-        private Shipped() {}
+        return FILE.defaults();
     }
 
     /** The same config with other simulated conditions. */

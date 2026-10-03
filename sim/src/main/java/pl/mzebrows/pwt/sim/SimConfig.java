@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim;
 
 import java.util.List;
-import java.util.SortedMap;
 import java.util.function.UnaryOperator;
 import lombok.With;
 import pl.mzebrows.pwt.map.Terrain;
@@ -38,7 +37,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 /**
  * Tunables the simulation reads at construction time: exactly {@code assets/sim/*.properties}, read in
  * name order and bound as one text by {@link ConfigBinder} from each component's name. The simulation never touches the filesystem - what
- * ships is compiled in ({@link #defaults()}), and anything else arrives as text ({@link #parse}).
+ * ships is compiled in ({@link #defaults()}), and anything else arrives as text ({@link #FILE}).
  * <strong>A new tunable is a component here and a line in the file its prefix lives in</strong>, and
  * nothing else. Why a number is set where it is lives beside it in the file; the docs here say only what
  * it means.
@@ -209,32 +208,20 @@ public record SimConfig(
     }
 
     /**
+     * {@code assets/sim/*.properties}: what ships, compiled in by {@code :sim:generateShippedConfig}, and how
+     * a player's or a host's text of them is read.
+     */
+    public static final ConfigFile<SimConfig> FILE = new ConfigFile<>(
+            "sim/*.properties", SimConfig.class, ROOT, ShippedConfig.TEXT, ConfigBinder.Conversions.none());
+
+    /**
      * What ships: {@code assets/sim/*.properties}, compiled in by {@code :sim:generateShippedConfig} and
      * bound once. What every test runs, and what the client falls back to - so there is one copy of every
      * number, and it is the one players play.
      */
     public static SimConfig defaults() {
-        return Shipped.CONFIG;
+        return FILE.defaults();
     }
-
-    /**
-     * A config from the text of {@code assets/sim/*.properties} - a player's own, or the one a host shipped
-     * (ADR 0012) - with every value it lacks or garbles taken from {@link #defaults()} and named in the
-     * result, so the caller can say so. A key no record has is named too.
-     *
-     * @throws IllegalArgumentException if the values are readable but break a rule a record checks
-     */
-    public static Parsed parse(String text) {
-        ConfigBinder.Bound<SimConfig> bound = ConfigBinder.bind(SimConfig.class, ROOT, text, Shipped.VALUES);
-        SimConfig config = bound.value();
-        if (config == null) {
-            throw new IllegalArgumentException("config: " + String.join("; ", bound.problems()));
-        }
-        return new Parsed(config, bound.problems());
-    }
-
-    /** A config read from text, and everything that had to be taken from what ships instead. */
-    public record Parsed(SimConfig config, List<String> problems) {}
 
     /**
      * The shipped files, by name, in the order their text is read: {@code assets/sim/} holds exactly
@@ -243,16 +230,6 @@ public record SimConfig(
      */
     public static List<String> shippedFiles() {
         return ShippedConfig.FILES;
-    }
-
-    /** Bound on first use rather than with the record, so a failure names the key rather than a class. */
-    private static final class Shipped {
-
-        static final SortedMap<String, String> VALUES = ConfigBinder.parse(ShippedConfig.TEXT);
-
-        static final SimConfig CONFIG = ConfigBinder.bindStrictly(SimConfig.class, ROOT, ShippedConfig.TEXT);
-
-        private Shipped() {}
     }
 
     /**

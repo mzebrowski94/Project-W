@@ -58,8 +58,8 @@ The same commands in every environment.
 | After changing a dependency | `.claude/scripts/verify.sh` then `.claude/scripts/gradle.sh --save-cache` (Cowork; a no-op elsewhere) |
 | Repack art from `assets-raw/` | `.claude/scripts/gradle.sh :core:packTextures` |
 | Raw Gradle, any task | `.claude/scripts/gradle.sh <task>` |
-| New sim tunable | A component on the config record and one line in the `assets/sim/*.properties` file its prefix lives in - nothing else. `ShippedConfigTest` fails on either alone, and the build on a key given in two files. A new file in `assets/sim/` is read without further wiring. |
-| New network tunable | A component on `NetConfig` (or one of its records) and one line in `assets/network.properties` - nothing else. `ShippedNetConfigTest` fails on either alone. |
+| New sim tunable | A component on the config record and one line in the `assets/sim/*.properties` file its prefix lives in - nothing else. `ShippedConfigFilesTest` fails on either alone, and `ShippedConfigTest` on a key given in two files. A new file in `assets/sim/` is read without further wiring. |
+| New network tunable | A component on `NetConfig` (or one of its records) and one line in `assets/network.properties` - nothing else. `ShippedConfigFilesTest` fails on either alone. |
 | Run the game | Desktop only: `./gradlew lwjgl3:run` |
 | Windows exe, Java bundled, for friends | Desktop only: `./gradlew lwjgl3:packageWinX64` -> `dist/` (`docs/packaging.md`) |
 | Run it as copy 1, say, of several | Desktop only: `./gradlew lwjgl3:run --args="--instance=1"` |

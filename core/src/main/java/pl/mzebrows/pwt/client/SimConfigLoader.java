@@ -2,25 +2,21 @@ package pl.mzebrows.pwt.client;
 
 import java.util.Map;
 import pl.mzebrows.pwt.sim.ConfigBinder;
+import pl.mzebrows.pwt.sim.ConfigFile;
 import pl.mzebrows.pwt.sim.SimConfig;
 
 /**
  * Builds a {@link SimConfig} from {@code assets/sim/*.properties}.
  *
  * <p>This lives in the client module because the simulation does no file I/O - it is handed its
- * configuration as text. Binding the text is the simulation's own ({@link SimConfig#parse}); what is
- * left here is finding the files and saying out loud what was wrong with them. A key the records do not
- * have, or a value that is missing or unreadable, is logged and the shipped value is used, so an edited
- * or outdated file degrades the game rather than stopping it. The shipped files themselves are held to
- * stricter terms by {@code ShippedConfigTest}.
+ * configuration as text. It is read as every config file is ({@link ConfigLoader}, {@code SimConfig.FILE});
+ * what is left here is that it is several files read as one text, the text a host ships without its
+ * comments, and how a joiner reports the host's.
  */
 public final class SimConfigLoader {
 
     /** Where the files are on the classpath; which files, and in what order, the simulation says. */
     private static final String DIRECTORY = "sim/";
-
-    /** What a complaint names. */
-    private static final String FILES = DIRECTORY + "*.properties";
 
     private SimConfigLoader() {}
 
@@ -75,17 +71,7 @@ public final class SimConfigLoader {
      * host shipped. Empty text - no file at all, already logged where it was looked for - is what ships.
      */
     public static SimConfig parse(String text) {
-        if (text.isBlank()) {
-            return SimConfig.defaults();
-        }
-        SimConfig.Parsed parsed = SimConfig.parse(text);
-        if (!parsed.problems().isEmpty()) {
-            Log.error(FILES + ": " + parsed.problems().size() + " problem(s); the shipped value stands for each", null);
-        }
-        for (String problem : parsed.problems()) {
-            Log.error(FILES + ": " + problem, null);
-        }
-        return parsed.config();
+        return ConfigLoader.bind(SimConfig.FILE, text);
     }
 
     /**
@@ -93,10 +79,7 @@ public final class SimConfigLoader {
      * are: the host logged each against its own files, and the build id says this parse finds the same.
      */
     public static SimConfig parseFromHost(String text) {
-        if (text.isBlank()) {
-            return SimConfig.defaults();
-        }
-        SimConfig.Parsed parsed = SimConfig.parse(text);
+        ConfigFile.Parsed<SimConfig> parsed = SimConfig.FILE.read(text);
         if (!parsed.problems().isEmpty()) {
             Log.info("The host's world config: " + parsed.problems().size()
                     + " problem(s), the shipped value stands for each");

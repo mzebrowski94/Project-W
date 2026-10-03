@@ -25,13 +25,6 @@ class ShippedConfigTest {
 
     private static final Path SHIPPED = Path.of("..", "assets", "sim");
 
-    @Test
-    void theShippedFilesNameEveryValueAndNothingElse() throws IOException {
-        SimConfig.Parsed parsed = SimConfig.parse(shipped());
-
-        assertThat(parsed.problems()).isEmpty();
-    }
-
     /** The build writes the list from the directory; this holds the two to one another. */
     @Test
     void readsEveryFileTheDirectoryHoldsAndNoOther() throws IOException {
@@ -73,24 +66,6 @@ class ShippedConfigTest {
         assertThat(SimConfigLoader.parse(shipped)).isEqualTo(SimConfigLoader.parse(files));
         assertThat(shipped.lines()).noneMatch(line -> line.startsWith("#") || line.isBlank());
         assertThat(shipped.length()).isLessThan(files.length() / 3);
-    }
-
-    /** Proves the compiled-in copy is these files rather than an older build of them. */
-    @Test
-    void isWhatTheSimulationDefaultsTo() throws IOException {
-        SimConfig shipped = SimConfigLoader.parse(shipped());
-
-        assertThat(shipped).isEqualTo(SimConfig.defaults());
-    }
-
-    @Test
-    void takesTheShippedValueForAKeyAPlayersFileGetsWrong() throws IOException {
-        String broken = shipped().replace("sim.commander.speed=", "sim.commander.speed=fast\n#");
-
-        SimConfig.Parsed parsed = SimConfig.parse(broken);
-
-        assertThat(parsed.config()).isEqualTo(SimConfig.defaults());
-        assertThat(parsed.problems()).singleElement().asString().contains("sim.commander.speed");
     }
 
     /** Every shipped file, in the order the loader reads them. */

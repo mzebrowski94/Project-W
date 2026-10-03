@@ -10,10 +10,12 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
@@ -66,14 +68,38 @@ public final class ConfigBinder {
     /** What a text bound to, and everything wrong with it. The value is null only if something is. */
     public record Bound<T>(@Nullable T value, List<String> problems) {}
 
+    /**
+     * How to read a type the binder has no reading of, from its text - what a module this one may not see
+     * supplies: a colour, a key by its name. A type here is read as one value even when it is a record, and a
+     * reading that throws {@link IllegalArgumentException} is a value that cannot be read, like any other.
+     */
+    public record Conversions(Map<Class<?>, Function<String, ?>> readings) {
+
+        public Conversions {
+            readings = Map.copyOf(readings);
+        }
+
+        /** No readings beyond the binder's own: what {@code sim} and {@code net} bind with. */
+        public static Conversions none() {
+            return new Conversions(Map.of());
+        }
+
+        private @Nullable Function<String, ?> of(Class<?> type) {
+            return readings.get(type);
+        }
+    }
+
     private final SortedMap<String, String> values;
     private final SortedMap<String, String> fallback;
+    private final Conversions conversions;
     private final List<String> problems = new ArrayList<>();
     private final Set<String> used = new TreeSet<>();
 
-    private ConfigBinder(SortedMap<String, String> values, SortedMap<String, String> fallback) {
+    private ConfigBinder(
+            SortedMap<String, String> values, SortedMap<String, String> fallback, Conversions conversions) {
         this.values = values;
         this.fallback = fallback;
+        this.conversions = conversions;
     }
 
     /**
@@ -110,8 +136,14 @@ public final class ConfigBinder {
     /** {@link #bind(Class, String, SortedMap, SortedMap)} from text, naming every key it gives twice. */
     public static <T extends Record> Bound<T> bind(
             Class<T> type, String root, String text, SortedMap<String, String> fallback) {
+        return bind(type, root, text, fallback, Conversions.none());
+    }
+
+    /** The same, reading the types {@code conversions} names with them. */
+    public static <T extends Record> Bound<T> bind(
+            Class<T> type, String root, String text, SortedMap<String, String> fallback, Conversions conversions) {
         List<String> repeated = new ArrayList<>();
-        Bound<T> bound = bind(type, root, parse(text, repeated), fallback);
+        Bound<T> bound = bind(type, root, parse(text, repeated), fallback, conversions);
         if (repeated.isEmpty()) {
             return bound;
         }
@@ -128,6 +160,11 @@ public final class ConfigBinder {
         return strictly(bind(type, root, values, new TreeMap<>()));
     }
 
+    /** The same, reading the types {@code conversions} names with them. */
+    public static <T extends Record> T bindStrictly(Class<T> type, String root, String text, Conversions conversions) {
+        return strictly(bind(type, root, text, new TreeMap<>(), conversions));
+    }
+
     private static <T> T strictly(Bound<T> bound) {
         T value = bound.value();
         if (value == null || !bound.problems().isEmpty()) {
@@ -139,7 +176,17 @@ public final class ConfigBinder {
     /** Binds, taking whatever {@code values} lacks or garbles from {@code fallback}, and says what that was. */
     public static <T extends Record> Bound<T> bind(
             Class<T> type, String root, SortedMap<String, String> values, SortedMap<String, String> fallback) {
-        ConfigBinder binder = new ConfigBinder(values, fallback);
+        return bind(type, root, values, fallback, Conversions.none());
+    }
+
+    /** The same, reading the types {@code conversions} names with them. */
+    public static <T extends Record> Bound<T> bind(
+            Class<T> type,
+            String root,
+            SortedMap<String, String> values,
+            SortedMap<String, String> fallback,
+            Conversions conversions) {
+        ConfigBinder binder = new ConfigBinder(values, fallback, conversions);
         Object value = binder.record(root, type);
         for (String key : values.keySet()) {
             if (!binder.used.contains(key)) {
@@ -151,6 +198,9 @@ public final class ConfigBinder {
 
     private @Nullable Object value(String key, Type type, boolean nullable) {
         Class<?> raw = rawClass(type);
+        if (conversions.of(raw) != null) {
+            return leaf(key, type, nullable);
+        }
         if (raw.isRecord()) {
             return record(key, raw);
         }
@@ -236,7 +286,7 @@ public final class ConfigBinder {
         String written = values.get(key);
         if (written != null) {
             try {
-                return convert(written, type, nullable);
+                return read(written, type, nullable);
             } catch (IllegalArgumentException e) {
                 problems.add("cannot read " + key + "=" + written + " as "
                         + rawClass(type).getSimpleName() + " (" + e.getMessage() + ")");
@@ -246,9 +296,15 @@ public final class ConfigBinder {
         }
         String shipped = fallback.get(key);
         if (shipped != null) {
-            return convert(shipped, type, nullable);
+            return read(shipped, type, nullable);
         }
         return placeholder(rawClass(type));
+    }
+
+    /** Through the conversion for its type, if there is one; otherwise as the binder reads it. */
+    private @Nullable Object read(String text, Type type, boolean nullable) {
+        Function<String, ?> conversion = conversions.of(rawClass(type));
+        return conversion == null ? convert(text, type, nullable) : conversion.apply(text);
     }
 
     private static @Nullable Object convert(String text, Type generic, boolean nullable) {

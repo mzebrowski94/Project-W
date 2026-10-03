@@ -171,7 +171,7 @@ public final class JoinScreen extends ScreenAdapter {
                 OnlineSession.join(
                         context.netConfig(),
                         context.launchOptions(),
-                        NetConfigLoader.latencySteps(),
+                        context.netConfig().latencySteps(),
                         target.host(),
                         target.port())));
         return true;
