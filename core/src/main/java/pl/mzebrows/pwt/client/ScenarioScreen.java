@@ -348,7 +348,9 @@ public final class ScenarioScreen extends ScreenAdapter {
                 ? List.of()
                 : overlay.lines(
                         world,
+                        readout,
                         Math.max(0, play.slotOf(PlayerSeats.KEYBOARD_SLOT)),
+                        Gdx.graphics.getFramesPerSecond(),
                         name == null ? "" : name,
                         play.paused(),
                         play.lastOrder(),
@@ -438,8 +440,8 @@ public final class ScenarioScreen extends ScreenAdapter {
             }
             Position position = POSITION.get(commander);
             PreviousPosition previous = PREVIOUS.get(commander);
-            float x = previous.x + (position.x - previous.x) * alpha;
-            float y = previous.y + (position.y - previous.y) * alpha;
+            float x = Drawn.x(position, previous, alpha);
+            float y = Drawn.y(position, previous, alpha);
             aimPoint.set(
                     x + facing.x * graphic.hud().reticle().padDistance(),
                     y + facing.y * graphic.hud().reticle().padDistance());
@@ -564,8 +566,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             }
             Position position = POSITION.get(entity);
             PreviousPosition previous = PREVIOUS.get(entity);
-            camera.watch(
-                    previous.x + (position.x - previous.x) * alpha, previous.y + (position.y - previous.y) * alpha);
+            camera.watch(Drawn.x(position, previous, alpha), Drawn.y(position, previous, alpha));
         }
         for (int i = 0; i < shaken.size(); i++) {
             Entity entity = shaken.get(i);

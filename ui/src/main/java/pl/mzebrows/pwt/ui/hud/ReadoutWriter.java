@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Dead;
+import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Nest;
@@ -53,6 +54,7 @@ public final class ReadoutWriter {
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
+    private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
     private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
     private static final ComponentMapper<Respawning> RESPAWNING = ComponentMapper.getFor(Respawning.class);
@@ -206,6 +208,8 @@ public final class ReadoutWriter {
             player.maxWounds = world.maxWounds(entity);
         }
         player.shielded = appearance.shield > 0f;
+        player.invulnerable =
+                INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active();
         player.stunned = appearance.state == Appearance.State.STUNNED;
         if (player.posture == Posture.ABOARD && CREW.has(entity)) {
             aboard(CREW.get(entity).station, player);

@@ -142,8 +142,8 @@ public final class WorldRenderer implements Disposable {
                 // thing he is in, which says for itself that somebody is on it.
                 continue;
             }
-            float x = previous.x + (position.x - previous.x) * alpha;
-            float y = previous.y + (position.y - previous.y) * alpha;
+            float x = Drawn.x(position, previous, alpha);
+            float y = Drawn.y(position, previous, alpha);
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {
                 shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
@@ -228,8 +228,8 @@ public final class WorldRenderer implements Disposable {
             }
             Position position = POSITION.get(entity);
             PreviousPosition previous = PREVIOUS.get(entity);
-            float x = previous.x + (position.x - previous.x) * alpha;
-            float y = previous.y + (position.y - previous.y) * alpha;
+            float x = Drawn.x(position, previous, alpha);
+            float y = Drawn.y(position, previous, alpha);
             float radius = BODY.get(entity).radius;
             shapes.setColor(tint(appearance));
             shapes.circle(x, y, radius, CIRCLE_SEGMENTS);

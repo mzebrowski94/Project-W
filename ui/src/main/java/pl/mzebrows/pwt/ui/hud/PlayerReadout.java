@@ -44,6 +44,9 @@ public final class PlayerReadout {
     /** Whether a shield is in front of him, and whether something has stunned him (G0053). */
     public boolean shielded;
 
+    /** Whether nothing can hurt him for now - the protection a respawn or a revive gives him. */
+    public boolean invulnerable;
+
     public boolean stunned;
 
     /** Seconds until he is back, while he is respawning. */
@@ -108,6 +111,7 @@ public final class PlayerReadout {
         wounds = 0;
         maxWounds = 0;
         shielded = false;
+        invulnerable = false;
         stunned = false;
         respawnSeconds = 0f;
         respawnWaiting = false;
@@ -132,6 +136,7 @@ public final class PlayerReadout {
         wounds = other.wounds;
         maxWounds = other.maxWounds;
         shielded = other.shielded;
+        invulnerable = other.invulnerable;
         stunned = other.stunned;
         respawnSeconds = other.respawnSeconds;
         respawnWaiting = other.respawnWaiting;

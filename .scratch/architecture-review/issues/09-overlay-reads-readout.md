@@ -1,6 +1,6 @@
 # 09 - Dev overlay reads the readout
 
-Status: ready-for-agent
+Status: done
 
 Strength: Worth exploring. Dependency: in-process. Report candidate 10.
 
@@ -29,3 +29,11 @@ The overlay and the reticles read the readout filled earlier in the same frame. 
 ## Comments
 - 2026-10-03: Taken (system-modules 06). Gates `.scratch/client-packages/`, which splits `core/client` by layer
   once these are in; order 4th.
+- 2026-10-03: Done, with three calls taken first. The overlay describes the commander from the readout
+  filled earlier in the frame (`DebugOverlay.commanderState(PlayerReadout, godMode)`): down from posture, the
+  gun his panel shows - a sidearm when he has none, the turret's gun aboard - and `PlayerReadout.invulnerable`,
+  new, which `ReadoutWriter` fills beside `shielded`. God mode stays a session flag read from the world, as do
+  the entity counts, which are the world's diagnostics rather than a player's state. Frames a second come in as
+  a value, so the overlay is tested without `Gdx` (`DebugOverlayTest`). The reticles stay with drawing - they
+  need the two positions and the frame's alpha, the renderer's inputs (G0003) - and the four interpolations are
+  one helper, `Drawn` (client).

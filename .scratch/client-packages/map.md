@@ -55,6 +55,8 @@ client/config/     GameProperties and what 03 + 04 leave of the loaders
    in `sim`.
 6. **Review 06 done** (2026-10-03): `DraftKeys` and `CrateKeys` left `client` for `ui.hud`, beside the new
    `TopBarSeats`; `InputReader` is the `input` layer's device reader and decides nothing about the bar.
+7. **Review 09 done** (2026-10-03): `Drawn` is new (the `draw` layer's); `DebugOverlay` reads the readout and
+   no longer touches `Gdx`. Every review ticket that gated this effort is in - ticket 01 can run.
 
 ## Fog
 

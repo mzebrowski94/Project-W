@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
+import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Upgrades;
@@ -134,6 +135,19 @@ class ReadoutWriterTest {
         assertThat(player.shielded).isTrue();
         assertThat(player.stunned).isTrue();
         assertThat(player.posture).isEqualTo(Posture.STANDING);
+    }
+
+    @Test
+    void publishesTheProtectionHeIsUnderAndNoneOnAManWithout() {
+        Simulation world = world();
+        Entity protectedOne = world.spawnCommander(40f, 40f, 0);
+        world.spawnCommander(60f, 40f, 1);
+        protectedOne.getComponent(Invulnerable.class).grant(30);
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        assertThat(readout.player(0).invulnerable).isTrue();
+        assertThat(readout.player(1).invulnerable).isFalse();
     }
 
     @Test
