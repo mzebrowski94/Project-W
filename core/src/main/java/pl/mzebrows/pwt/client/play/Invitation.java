@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.play;
 
 import java.util.List;
 import pl.mzebrows.pwt.net.lan.LanAnnouncement;

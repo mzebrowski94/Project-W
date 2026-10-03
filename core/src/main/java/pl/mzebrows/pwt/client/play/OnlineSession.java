@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.play;
 
 import com.badlogic.ashley.core.Family;
 import java.nio.file.Path;
@@ -6,6 +6,8 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.function.IntUnaryOperator;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.LaunchOptions;
+import pl.mzebrows.pwt.client.Log;
 import pl.mzebrows.pwt.client.input.PlayerSeats;
 import pl.mzebrows.pwt.net.Clock;
 import pl.mzebrows.pwt.net.NetConfig;

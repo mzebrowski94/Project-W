@@ -1,8 +1,9 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.play;
 
 import java.util.Arrays;
 import java.util.function.IntUnaryOperator;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.ScenarioScreen;
 import pl.mzebrows.pwt.client.input.PlayerSeats;
 import pl.mzebrows.pwt.sim.FixedStepClock;
 import pl.mzebrows.pwt.sim.PlayerInputs;

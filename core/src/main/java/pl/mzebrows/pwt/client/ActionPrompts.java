@@ -16,7 +16,7 @@ import pl.mzebrows.pwt.ui.hud.Reporter;
  * noticing a change; what it stands in for is a label, since the simulation already decides and
  * publishes the action.
  */
-final class ActionPrompts implements Reporter {
+public final class ActionPrompts implements Reporter {
 
     private final IntPredicate local;
     private final Consumer<String> console;
@@ -25,7 +25,7 @@ final class ActionPrompts implements Reporter {
      * @param local whether a slot is played on this machine - another machine's player is prompted there
      * @param console where the line goes
      */
-    ActionPrompts(IntPredicate local, Consumer<String> console) {
+    public ActionPrompts(IntPredicate local, Consumer<String> console) {
         this.local = local;
         this.console = console;
     }

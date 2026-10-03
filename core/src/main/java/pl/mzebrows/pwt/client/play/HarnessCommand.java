@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.play;
 
 /**
  * Something the alpha-phase harness can be asked to do while a scenario is running.

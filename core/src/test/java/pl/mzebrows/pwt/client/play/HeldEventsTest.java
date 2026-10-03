@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.play;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

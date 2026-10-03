@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.play;
 
 /**
  * How much of the dev overlay is on screen. A level starts with it {@link #OFF}; {@code F1} steps

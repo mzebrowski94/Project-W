@@ -12,6 +12,8 @@ import pl.mzebrows.pwt.client.input.KeyPresses;
 import pl.mzebrows.pwt.client.input.NavInputReader;
 import pl.mzebrows.pwt.client.input.PadLabels;
 import pl.mzebrows.pwt.client.input.PageControls;
+import pl.mzebrows.pwt.client.play.JoinChoices;
+import pl.mzebrows.pwt.client.play.OnlineSession;
 import pl.mzebrows.pwt.net.SystemClock;
 import pl.mzebrows.pwt.net.lan.LanListener;
 import pl.mzebrows.pwt.net.lan.RoomCode;

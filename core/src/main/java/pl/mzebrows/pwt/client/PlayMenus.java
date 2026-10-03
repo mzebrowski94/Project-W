@@ -11,6 +11,8 @@ import pl.mzebrows.pwt.client.input.KeyHolds;
 import pl.mzebrows.pwt.client.input.KeyPresses;
 import pl.mzebrows.pwt.client.input.NavInputReader;
 import pl.mzebrows.pwt.client.input.PageControls;
+import pl.mzebrows.pwt.client.play.HarnessCommand;
+import pl.mzebrows.pwt.client.play.ScenarioPlay;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.Rect;

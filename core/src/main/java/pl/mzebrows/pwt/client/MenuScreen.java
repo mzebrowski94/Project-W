@@ -11,6 +11,8 @@ import pl.mzebrows.pwt.client.input.KeyHolds;
 import pl.mzebrows.pwt.client.input.KeyPresses;
 import pl.mzebrows.pwt.client.input.NavInputReader;
 import pl.mzebrows.pwt.client.input.PageControls;
+import pl.mzebrows.pwt.client.play.OnlineSession;
+import pl.mzebrows.pwt.client.play.ScenarioSession;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 import pl.mzebrows.pwt.ui.layout.Rect;

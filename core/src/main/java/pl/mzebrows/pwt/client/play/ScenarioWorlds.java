@@ -1,4 +1,4 @@
-package pl.mzebrows.pwt.client;
+package pl.mzebrows.pwt.client.play;
 
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.config.SimConfigLoader;

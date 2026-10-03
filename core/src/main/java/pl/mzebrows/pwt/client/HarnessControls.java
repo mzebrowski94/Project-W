@@ -4,6 +4,7 @@ import com.badlogic.gdx.Input;
 import java.util.ArrayList;
 import java.util.List;
 import pl.mzebrows.pwt.client.input.KeyPresses;
+import pl.mzebrows.pwt.client.play.HarnessCommand;
 
 /**
  * The alpha-phase key bindings, and nothing else.
