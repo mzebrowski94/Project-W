@@ -1,6 +1,6 @@
 # 09 - Dev overlay reads the readout
 
-Status: needs-triage
+Status: ready-for-agent
 
 Strength: Worth exploring. Dependency: in-process. Report candidate 10.
 
@@ -27,3 +27,5 @@ The overlay and the reticles read the readout filled earlier in the same frame. 
 `ReadoutWriterTest`.
 
 ## Comments
+- 2026-10-03: Taken (system-modules 06). Gates `.scratch/client-packages/`, which splits `core/client` by layer
+  once these are in; order 4th.

@@ -1,6 +1,6 @@
 # 03 - One config front door
 
-Status: needs-triage
+Status: ready-for-agent
 
 Strength: Strong. Dependency: in-process. Report candidate 4. Pairs with 04.
 
@@ -56,3 +56,5 @@ config**, **local config** (glossary). What the front door owes the network:
 host ships it through `GameContext.worldConfigText()`, and `SimConfigLoader.shipped()` is gone;
 `ScenarioWorlds` parses the host's text with `parseFromHost`, one line for its problems. The front door
 inherits both.
+- 2026-10-03: Taken (system-modules 06). Gates `.scratch/client-packages/`, which splits `core/client` by layer
+  once these are in; order 2nd, with 04.

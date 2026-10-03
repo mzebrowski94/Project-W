@@ -109,8 +109,8 @@ sim/Odds                                       (out of sim.system: it advances t
 
 15. **Split done** (ticket 05): every system is in its fenced package, `sim.upgrade` is
     `sim.system.upgrade`, and nothing may live straight in `sim.system`. `docs/architecture.md`, *Fenced
-    packages*, is the reference from here on; this map and its tickets are history. Left: ticket 06,
-    `core/client`, its own effort.
+    packages*, is the reference from here on; this map and its tickets are history. Ticket 06 handed
+    `core/client` to `.scratch/client-packages/`.
 
 ## Fog
 

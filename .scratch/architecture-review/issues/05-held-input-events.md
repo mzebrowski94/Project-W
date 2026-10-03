@@ -1,6 +1,6 @@
 # 05 - One queue for held-back input events
 
-Status: needs-triage
+Status: ready-for-agent
 
 Strength: Strong - likely live bug. Dependency: in-process; `PeerSession` is local-substitutable
 (`LoopbackNetwork`, `ManualClock`). Report candidate 6.
@@ -35,3 +35,5 @@ once.
 A failing test in `OnlineSessionTest`: a pick made before the session is `PLAYING` still reaches the world.
 
 ## Comments
+- 2026-10-03: Taken (system-modules 06). Gates `.scratch/client-packages/`, which splits `core/client` by layer
+  once these are in; order 1st.

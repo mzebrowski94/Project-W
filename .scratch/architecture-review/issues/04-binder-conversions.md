@@ -1,6 +1,6 @@
 # 04 - Let the binder convert; drop the mirror records
 
-Status: needs-triage
+Status: ready-for-agent
 
 Strength: Strong. Dependency: in-process. Report candidate 5. Pairs with 03.
 
@@ -30,3 +30,5 @@ Give the binder a conversion for those two types; the `*File` mirrors and their 
 400 lines) go, and `ConfigDefaultsTest` reads the defaults rather than literals.
 
 ## Comments
+- 2026-10-03: Taken (system-modules 06). Gates `.scratch/client-packages/`, which splits `core/client` by layer
+  once these are in; order 2nd, with 03.

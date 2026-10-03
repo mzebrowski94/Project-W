@@ -1,6 +1,6 @@
 # 06 - Local seats and top bar out of ScenarioScreen
 
-Status: needs-triage
+Status: ready-for-agent
 
 Strength: Strong. Dependency: in-process; devices through ports and adapters. Report candidate 7.
 
@@ -35,3 +35,5 @@ ADR 0011: polled device state, never an event-stream port. ADR 0015: decisions a
 shown live in `ui`, so the module probably does too.
 
 ## Comments
+- 2026-10-03: Taken (system-modules 06). Gates `.scratch/client-packages/`, which splits `core/client` by layer
+  once these are in; order 3rd. Open at its start: whether the seat and top-bar module lives in `ui` or `core` - ask first.
