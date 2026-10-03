@@ -25,7 +25,10 @@ edge cases. The question they answer is "what is this for". Name each for the be
 ## 2. Implement
 
 **Component** in `sim/.../component/`: copy `Position.java`. The thing that bites is `reset()` - every
-field, every time. Then regenerate the index: `python3 .claude/scripts/component-index.py`.
+field, every time. Then regenerate the index: `python3 .claude/scripts/component-index.py`. It keeps the
+*Written by* column and leaves a new component's cell empty; fill it - and every row whose writers your
+system changes - from the message `ArchitectureTest.everyComponentIsWrittenByExactlyItsDeclaredWriters`
+fails with (ADR 0019). A new writer of a component that already has one is the change to think twice about.
 
 **System** in `sim/.../system/` - the one exception is `UpgradeSystem`, which lives in `sim/.../upgrade/`
 with the rules it runs (ADR 0017): copy `MovementSystem.java`. It is the smallest one and shows the whole

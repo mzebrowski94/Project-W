@@ -22,11 +22,18 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import pl.mzebrows.pwt.sim.upgrade.Reads;
 import pl.mzebrows.pwt.sim.upgrade.Stat;
 
@@ -275,6 +282,86 @@ final class ArchitectureTest {
     }
 
     private static final String UPGRADE = "pl.mzebrows.pwt.sim.upgrade";
+
+    private static final Path COMPONENTS_DOC = Path.of("..", "docs", "components.md");
+
+    private static final String WRITTEN_BY = "Written by";
+
+    /**
+     * Who writes each component is declared in the <em>Written by</em> column of {@code docs/components.md}
+     * and measured from the bytecode by {@link ComponentWriters} (ADR 0019). Any difference fails, either
+     * way: a writer nobody declared, and a declared one that no longer writes. The message is the cell to
+     * put in the column.
+     */
+    @ArchTest
+    static void everyComponentIsWrittenByExactlyItsDeclaredWriters(JavaClasses classes) throws IOException {
+        Map<String, Set<String>> measured = ComponentWriters.of(classes);
+        Map<String, Set<String>> declared = declaredWriters(Files.readAllLines(COMPONENTS_DOC));
+        org.assertj.core.api.Assertions.assertThat(measured)
+                .as("components measured")
+                .isNotEmpty();
+        org.assertj.core.api.Assertions.assertThat(declared)
+                .as("components declared")
+                .isNotEmpty();
+        // Rows the index keeps for what is not a component - the Components table itself - are not compared.
+        List<String> problems = new ArrayList<>();
+        for (Map.Entry<String, Set<String>> entry : measured.entrySet()) {
+            String component = entry.getKey();
+            Set<String> actual = entry.getValue();
+            Set<String> claimed = declared.get(component);
+            if (claimed == null) {
+                problems.add(component + " has no row in docs/components.md");
+            } else if (!actual.equals(claimed)) {
+                problems.add(component + " is written by " + cell(actual) + ", not " + cell(claimed));
+            }
+        }
+        org.assertj.core.api.Assertions.assertThat(problems)
+                .as("the Written by column of docs/components.md (ADR 0019)")
+                .isEmpty();
+    }
+
+    /** Each component's row of the index, to the names in backticks in its Written by cell. */
+    private static Map<String, Set<String>> declaredWriters(List<String> doc) {
+        Map<String, Set<String>> declared = new TreeMap<>();
+        int column = -1;
+        for (String line : doc) {
+            if (!line.startsWith("|")) {
+                continue;
+            }
+            List<String> cells = List.of(line.split("\\|", -1));
+            if (cells.contains(" " + WRITTEN_BY + " ")) {
+                column = cells.indexOf(" " + WRITTEN_BY + " ");
+                continue;
+            }
+            Matcher row = COMPONENT_ROW.matcher(cells.get(1));
+            if (column < 0 || !row.matches()) {
+                continue;
+            }
+            Set<String> writers = new TreeSet<>();
+            Matcher name = BACKTICKED.matcher(cells.get(column));
+            while (name.find()) {
+                writers.add(name.group(1));
+            }
+            declared.put(row.group(1), writers);
+        }
+        return declared;
+    }
+
+    private static final Pattern COMPONENT_ROW = Pattern.compile(" \\*\\*(\\w+)\\*\\* ");
+
+    private static final Pattern BACKTICKED = Pattern.compile("`(\\w+)`");
+
+    /** Writers the way the column writes them. */
+    private static String cell(Set<String> writers) {
+        if (writers.isEmpty()) {
+            return "-";
+        }
+        StringBuilder out = new StringBuilder();
+        for (String writer : writers) {
+            out.append(out.isEmpty() ? "" : ", ").append('`').append(writer).append('`');
+        }
+        return out.toString();
+    }
 
     /** The collections the snapshot codec knows how to write, by the field that holds each. */
     private static final Set<String> NAMED_COLLECTIONS = Set.of(

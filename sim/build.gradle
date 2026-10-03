@@ -12,6 +12,13 @@ dependencies {
   testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
 }
 
+// ArchitectureTest checks the Written by column of components.md against the bytecode, and SystemOrderTest the
+// order the docs give the systems - an edit to either doc alone changes no class, so each must rerun the tests.
+tasks.named('test') {
+  inputs.files(rootProject.file('docs/components.md'), rootProject.file('docs/simulation-order.md'))
+      .withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 // The shipped tuning, compiled in (ADR 0014's "the simulation reads no files" still holds): every
 // key=value line of assets/sim/*.properties, one Java constant per file, which SimConfig.defaults()
 // binds as one text in file-name order. So the tests, a missing file and a player's file with a bad key

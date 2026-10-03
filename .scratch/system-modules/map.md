@@ -13,8 +13,10 @@ What the code said on 2026-10-03, which the decisions rest on.
 
 - Systems do not call each other. 52 systems; one real call across them -
   `TrooperMoveSystem` -> `NavigationSystem.spreadOut`. Every other mention is javadoc.
-- Coupling in code runs through 19 package-private helpers, and they cross domains: `Drivers` has 32
-  users, `Sight` 14, `Guns` 7, `Throws` 7, `Odds` 5 (plus components, `def`, `Simulation`). The seven
+- Coupling in code runs through 20 package-private helpers, and they cross domains: `Drivers` has 32
+  users, `Sight` 14, `Guns` 7, `Throws` 7, `Odds` 5 (plus components, `def`, `Simulation`). The twentieth,
+  `Bounce` (the disc gun, 2026-10-03), is the one copy of coming off things, for `Collision`, `Grenade` and
+  `ProjectileBounds` - all three already in the sketch's `combat/`. The seven
   `Trooper*` helpers are used by `TrooperMindSystem` alone - a fenced package already in all but name.
 - Coupling in data - who writes which component - is enforced by nothing. `components.md`'s *Touched by*
   cannot tell a read from a write. `architecture-review` 01 (four writers of `Damage`, fixed as G0057) is
@@ -33,12 +35,16 @@ What the code said on 2026-10-03, which the decisions rest on.
 
 ## Decisions so far
 
-1. **Write-ownership first** ([adr-0019-draft.md](adr-0019-draft.md), ticket 01). A *Written by* column in
-   `components.md` is the declaration; an ArchUnit test compares it with what the bytecode writes and
-   fails on any difference, either way. Per component, credited to the system (followed through the
-   helpers it calls). A write is a field set from outside the component or a call to a changing method.
-   `component-index.py` keeps the column. Whether several writers need a *Why several* note: after
-   measuring.
+1. **Write-ownership first** ([ADR 0019](../../docs/adr/0019-a-component-names-its-writers.md), ticket 01 -
+   done). A *Written by* column in `components.md` is the declaration;
+   `ArchitectureTest.everyComponentIsWrittenByExactlyItsDeclaredWriters` compares it with what the bytecode
+   writes and fails on any difference, either way. Per component, credited to the system (followed through
+   helpers, interfaces and lambdas). A write is a field set from outside the component, a call to a
+   changing method, or a changing call on a collection a component field holds. Building a world is not a
+   write - `Spawner`'s and `Simulation`'s `spawn` methods, scenarios, `WorldCodec` - but `Spawner.applyWeapon`
+   and `applyStrain` are their callers' writes. Measured: 49 of 79 components have several writers, so
+   there is no *Why several* note. `component-index.py` keeps the column and now sees `system/` recursively
+   and `sim.upgrade`.
 2. **Fenced packages by domain, coarse** ([adr-0020-draft.md](adr-0020-draft.md)): about eight under
    `sim.system.<domain>`, plus `sim.system.query`. Not by tick phase, not fine-grained. Amends ADR 0017
   only - 0003 was already amended by 0017, and 0020 uses that amendment more widely.
@@ -68,7 +74,7 @@ sim/system/
   squad/      SquadOrder, TrooperMind, TrooperMove, TrooperCombat + Trooper*
   commander/  CommanderControl, Melee, Strike, Drag, Action, Aid, Crate, Turret
   creature/   Perception, Grip, EnemyRanged, EnemyLeap, Evolution, Barrage
-  combat/     Collision, Damage, Shock, Grenade, ProjectileBounds, Cooldown, Pickup + Guns, Muzzle, Throws, Aim, Grants
+  combat/     Collision, Damage, Shock, Grenade, ProjectileBounds, Cooldown, Pickup + Guns, Muzzle, Throws, Aim, Grants, Bounce
   death/      Casualty, Dying, Respawn, Bloat, Mine, Blast, Slick, Reaper + Deaths, RallyPoint
   level/      Reinforcement, Wave, Nest, Lair, ControlPoint, Objective + Rouse
   upgrade/    from sim.upgrade
@@ -78,9 +84,10 @@ Already pushing back: `Pace` (motion) uses `Guns` and `Aid`; `AppearanceSystem` 
 
 ## Fog
 
-- How many components have several writers - decides the *Why several* note (01).
-- What `scenario/` and `Simulation`'s constructor write while assembling a world: treat as assembly like
-  `Spawner`, or list them (01).
-- Whether lambdas inside systems are credited to the system by ArchUnit's call graph (01).
+- Whether ADR 0019 stands against its own *Revisit when*: "most components have several writers" is
+  what 01 measured (49 of 79). Mateusz's call; 01 landed it as written.
+- Two writers 01 found that ticket 03 should weigh: `CooldownSystem` writes 17 components (every timer),
+  and `EvolutionSystem` 24 (a strain change rewrites the kit through `Spawner.applyStrain`). Either one
+  pulls a package towards it under decision 6.
 - Whether `architecture-review` 08 and 10 are taken (02).
 - The real split, the ports, where tests that span packages go, what becomes of `spreadOut` (03).
