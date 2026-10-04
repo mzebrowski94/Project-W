@@ -20,7 +20,7 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
 - Pillars in play: 4 (a mission is wider than the view; one fight), 6 (one seed builds everything),
   7 (online is core: a mission is built from what `SessionSetup` already carries - scenario name, seed,
   config text), 3 (the record is not an economy).
-- `map` owns terrain, walls, gaps and which biome a tile is in (pure function of tier + seed); `sim`
+- `map` owns terrain, ridges, passes and which biome a tile is in (pure function of tier + seed); `sim`
   owns what stands on it (ADR 0009). The UTC date is read only in `core`.
 - Done separately in the charting session, not a step on this route: the Adventure finale fix - a point
   that holds afterwards never becomes the rally point, and a march ends on a ring round the post rather
@@ -43,6 +43,10 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
 - [What lies between two biomes](issues/13-what-lies-between-two-biomes.md): a ragged rock **ridge** crossed by
   1-2 bent **passes**, about one in four a **gatehouse** (a pass through a clearing - a proof of concept that 12
   takes on). Belt and wall stay in the prototype; a chasm with bridges is an idea for later.
+- [Which biome a tile is in](issues/06-which-biome-a-tile-is-in.md): a biome is a grouping of regions - every region
+  in one, a tile in its region's; a ridge tile in the biome whose ground it shows; the finale is the last biome; a
+  map with none is one. A nest wakes in its biome within `wakeRadius`, first brood `sim.nest.firstBroodSeconds` 6
+  then the period, every nest (G0062, amends G0031). Adventures: three bands a biome, walls go east.
 
 ## Not yet specified
 

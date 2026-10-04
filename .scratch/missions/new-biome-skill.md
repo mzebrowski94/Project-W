@@ -1,7 +1,7 @@
 # Sketch: the `new-biome` skill
 
-Status: draft for ticket 10. Becomes `.claude/skills/new-biome/SKILL.md` with the first biome stage; updated
-as tickets 03, 06 and 07 settle. `OPEN (ticket)` marks a step still waiting on one.
+Status: draft for ticket 10. Becomes `.claude/skills/new-biome/SKILL.md` with the first biome stage. Tickets
+03 and 06 are in; 07 is still open. `OPEN (ticket)` marks a step still waiting on one.
 
 ---
 
@@ -44,7 +44,8 @@ is always a **density** - a fraction of the biome - never a count.
 | crags | `crags.density`, `crags.smoothing` | irregular masses; more smoothing, fewer and bigger. Leave the block out for none |
 | outcrops | `outcrops.density`, `lengthMin/Max`, `thicknessMin/Max`, `arms` | rock bent round a corner - the Adventures' shape. Leave the block out for none |
 
-Plus `widthMin/Max` and `regions`, which are geometry and so ground too.
+Plus `widthMin/Max` and `regions`, which are geometry and so ground too. A biome's regions are its own -
+every region lies inside one biome, and a tile is in its region's (G0062) - so `regions` is at least 1.
 
 - **Porting an Adventure biome**: measure it first - rock, thicket and patch density, and the outcrop sizes.
   `.scratch/missions/prototype/biome-ground.html` transcribes both Adventures and prints the measurements
@@ -57,6 +58,10 @@ Plus `widthMin/Max` and `regions`, which are geometry and so ground too.
 - `roster=loose|nest <strain> min max; ...` - loose is put down unaware, a nest is a hole of that strain. The
   ranges are the biome at the first position on a medium tier; tier and ramp scale every count through
   `Roster.count`, and nothing else does. OPEN (07): the numbers that calibrate against.
+- A nest wakes only for somebody **in its own biome** and within `wakeRadius`, and broods
+  `firstBroodSeconds` after waking (G0062). A nest near a ridge is not woken from the far side, so a biome
+  never counts on its neighbour having stirred its nests; the finale is the mission's last biome, and its
+  nests wake the same way.
 - `furniture.pointsMin/Max`, `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, and
   `furniture.pickups=pickup <kind> min max; ...`. Never scaled.
 - Porting: count the Adventure biome's own, one entry per strain and way, scale by the width (an Adventure
@@ -70,6 +75,8 @@ Plus `widthMin/Max` and `regions`, which are geometry and so ground too.
 - **What the design promises in a number** - one test per promise, as `new-kind` says ("the quarry is the
   rockiest biome", "only the brake has thicket over a sixth of it"). Never the ground's connectivity, which
   the sweep owns.
+- **Never which biome a tile is in.** That is `Strip`'s own test, once: every tile in one biome, no region
+  across two, a ridge tile in the biome whose ground it shows. A biome joins it by being a constant.
 
 ## 5. Finish
 
@@ -82,4 +89,5 @@ message lists the block's keys with values and what each does to the feel.
 - The pool still deals: a mission takes `sim.mission.biomes` of them, none twice and never the same base side
   by side - so the pool needs at least that many biomes, with bases enough to alternate.
 - No coordinates anywhere: a biome is rules, never places.
+- `regions` at least 1: a biome's regions are its own and never shared with a neighbour.
 - No armoury pickup in `furniture.pickups` (ticket 01: loose weapons are out of scope).

@@ -1,6 +1,6 @@
 # G0031: A nest is a place that produces, and it sleeps until you arrive
 
-**Status.** accepted
+**Status.** amended by G0062: a nest wakes only for its own biome, and its first brood comes soon
 
 **Trigger.** Anything that puts creatures on the field after the first tick, or that changes what a
 level does while the player is somewhere else.
@@ -73,3 +73,11 @@ survives, and it needs no reordering to read.
 **Revisit when** a level with nests has been played end to end. Two things to watch: whether thirty
 seconds is a pulse or a nuisance, and whether a nest woken by a trooper the player has sent ahead of
 him reads as his own doing or as the level cheating.
+
+## Amended by G0062
+
+**A nest wakes for its own biome.** "Comes inside its wake radius" becomes *is in its biome and within its
+wake radius*: on a level walled into biomes the radius reached through the wall. Its first brood comes
+`sim.nest.firstBroodSeconds` after waking rather than a whole period, because waking on arrival with a
+thirty-second first brood was a hole that did nothing while you stood at it. A map that names no biomes is
+one biome, so a level without them is unchanged.
