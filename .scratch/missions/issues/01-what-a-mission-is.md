@@ -37,8 +37,8 @@ Settled in the charting session, 2026-10-04 (Q1-Q31).
 - No compatibility across builds (F).
 
 **Tier** - numbers only, never which strains (strains belong to the biome):
-enemy count (% of a biome's ranges), enemy health (on top of `sim.swarm.healthPercent`), enemy damage,
-adaptation pace (replaces the `Scenario.adapting` scaffolding for missions only), nest period. Squad,
+enemy count (% of a biome's ranges), enemy health (on top of `sim.swarm.healthPercent`), ~~enemy damage~~
+(dropped, 07), adaptation pace (replaces the `Scenario.adapting` scaffolding for missions only), nest period. Squad,
 reserve, crates and medkits are the same on every tier. One definition per tier in
 `assets/sim/missions.properties`, read in one place.
 
@@ -81,3 +81,6 @@ something major inside one later (rooms, ticket 12). A mission is about 255 colu
 
 Same day, ticket 13: the one-column wall between biomes becomes a **ridge** - a ragged band of rock crossed by
 1-2 bent **passes** - with a **gatehouse** (a pass through a clearing) on about one ridge a mission.
+
+Same day, ticket 07 (G0063): **no enemy damage on a tier** - a man reads a blow's harm, never its amount, so it
+would move only turrets and rabbits. A tier is enemy count, health, nest period and adaptation pace, plus a ramp.

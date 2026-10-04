@@ -47,6 +47,10 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
   in one, a tile in its region's; a ridge tile in the biome whose ground it shows; the finale is the last biome; a
   map with none is one. A nest wakes in its biome within `wakeRadius`, first brood `sim.nest.firstBroodSeconds` 6
   then the period, every nest (G0062, amends G0031). Adventures: three bands a biome, walls go east.
+- [The tiers in numbers](issues/07-the-tiers-in-numbers.md): count 75/100/125 %, health 85/100/115 % on the swarm's,
+  nest period 130/100/75 %, adaptation off / 240 s + 4 cards / 150 s + 3; ramp 10 % a biome position, finale unramped.
+  No damage % - a man reads harm, not amount. `MissionConfig` the one reader, `Whole` the one rounding (two-percent
+  overload, counts too); `sim.melee.damage` 190 -> 220 so one swing still deletes a hard grunt (G0063).
 
 ## Not yet specified
 
