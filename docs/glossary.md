@@ -223,6 +223,12 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **regroup** | The goal line while a **lair** waits on some of the players and not all: `REGROUP - 1/2 PLAYERS IN PLACE`, counting only those on their feet and not **away** (B.1). Published on `Lair` as present of needed. |
 | **control point** | Ground a squad takes by standing near it for a while. Captured by dwelling; the dwell goes back to zero the moment the last capturer leaves, rather than pausing, and starting an attempt wakes what is nearby. |
 | **level** *(source)* | One self-contained combat scenario, start to objective. |
+| **mission** | A level generated whole from a **tier** and a **mission seed**: a march through several **biomes** to a **finale**, played in one go. Upgrades, the reserve and adaptations run on across its biomes because it is one level; losing it loses all of it. Its only **objective** is the finale's; its **control points** are not one - the goal line leads through them, and what they earn is the reason to take them. Can be hosted online, since every machine builds the same one from the same two values. |
+| **mission seed** | The one number a **mission** is built from - its layout, its contents and every **stream** of its run. Two attempts at one seed still drift apart, because what is dealt follows how it is played. Not reproducible across builds: a generator change may make a seed a different mission. |
+| **daily mission** | A **mission** whose seed comes from the UTC date and its **tier**, so everybody has the same three on the same day - a different map for each tier, not one map at three strengths. The clock is read by the client; the simulation sees only the seed. |
+| **tier** | How hard a **mission** is: easy, medium or hard. |
+| **biome** | One stretch of a **mission**, with ground and creatures of its own, crossed into from the one before through a gap that generation keeps open. Biomes may repeat in a mission. Not *sector*, which is a trooper's run of the circle round a point. |
+| **finale** | The last stretch of a **mission**, where its objective is - a **lair** with a **boss** in it, or a **redoubt** to take and hold. |
 | **objective** | A condition a level requires before it counts as done. A level names a set and requires all of it. Two exist: clear the map of enemies, and capture every control point. What a completed level *does* is still open - in the alpha it does nothing. |
 | **proving ground** | The menu's practice range: choose a **setup** and fight it, on a round patch of **sand** with a few rocks on it, ringed by **thicket**, your side on the left and theirs on the right. Outside the campaign on purpose - nothing is carried in or out of it, and nothing it settles is balance (G0060). Not *arena*, which is the rectangle a level is played inside. |
 | **setup** | One configuration of the **proving ground**: the strain, how many or a **nest** of it, the gun, whether the squad comes, the upgrades and adaptations at their ranks, and the others - turrets, mines or barrels. `ProvingSetup`. Remembered for the run, never saved. Not *loadout*, which pillar 3 rules out for the campaign. |
@@ -354,6 +360,8 @@ What the player is shown around the fight and how he moves through it. Decided i
 - *focus* for the entry a menu would act on - say selection. Focus is who the camera keeps in shot.
 - *screen* for one screenful of the menu - say page. A `Screen` is the libGDX class that holds pages.
 - *arena* for the training mode - say proving ground.
+- *sector*, *zone* or *stage* for a stretch of a mission - say biome. A sector is a trooper's arc round a point.
+- *run* or *map* for a generated level - say mission; *difficulty* for which of the three - say tier.
 - *health bar* for a commander - say status. He has no health worth a bar.
 - *HP*, *hit points*, *health* for a commander or a trooper - say wounds. A man has none (G0053).
 - *i-frames*, *invincibility* for a man - say grace, or shield. *Invulnerable* is the harness's god mode.
