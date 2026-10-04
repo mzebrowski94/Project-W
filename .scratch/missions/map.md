@@ -51,12 +51,18 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
   nest period 130/100/75 %, adaptation off / 240 s + 4 cards / 150 s + 3; ramp 10 % a biome position, finale unramped.
   No damage % - a man reads harm, not amount. `MissionConfig` the one reader, `Whole` the one rounding (two-percent
   overload, counts too); `sim.melee.damage` 190 -> 220 so one swing still deletes a hard grunt (G0063).
+- [What a finale definition holds](issues/04-what-a-finale-definition-holds.md): a set piece (G0064) - one `FinaleDef`,
+  ground + hold + waves + lair, at fixed offsets from an anchor, flipped north-south by the seed; the keep is the redoubt
+  with a lair, both won by `HOLD_POINT`. Width 34, rock as fixed `pieces`, the last ridge spills west only. Waves
+  `after strain min max mouth` through `Roster.count` unramped; watch 118; no finale rally ground - the last biome's
+  last point stands in its last `doorColumns` (8). Needs G0061 first. Both Adventure finales ported as blocks.
 
 ## Not yet specified
 
 - **Placement inside a biome**: where points, crates, medkits, nests and loose creatures go relative
   to each other, the gap and the walls - rules rather than coordinates. Unblocked: 02 and 03 are settled,
-  so it can graduate to a ticket.
+  so it can graduate to a ticket. 04 hands it two rules: a point in the last biome's last `doorColumns`, and
+  that biome's nests outside the finale's watch.
 - **How big the field gets**: the size is settled (about 255 x 30 tiles: 4 biomes of 50-58 columns + the
   finale); entity counts and frame time with hard tier numbers are not - the ported rosters are about 1.8 times
   an Adventure biome's - nor whether the avoidance and mine scans (`alpha-phase.md`, known limits) survive it.
