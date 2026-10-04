@@ -13,14 +13,16 @@ is played, what is remembered - before any one part of it is designed?
 Settled in the charting session, 2026-10-04 (Q1-Q31).
 
 **Shape**
-- One **level**, played in one go: a strip west to east of **6 biomes + a finale**, like the Adventure.
+- One **level**, played in one go: a strip west to east of **4 wide biomes + a finale** (amended, below).
   Upgrades (G0049), the reserve and adaptations run on across biomes; losing loses all of it.
 - Biome count is one key, the same for every tier.
 - The generator thinks in an ordered list of biomes, not coordinates, so a turning path stays possible.
-- Biomes are separated by a rock wall with **1-2 gaps** (drawn per transition), each at least a key's
+- Biomes are separated by a rock wall with **1-2 gaps** (drawn per transition) - amended: a **ridge** crossed
+  by 1-2 **passes** (13) - each at least a key's
   width (4 tiles today); no scatter in a strip either side of a gap; reachability start -> finale, every
   gap, point and crate checked by a headless test over many seeds x 3 tiers.
-- Biomes are drawn from a pool by seed, may repeat but **never twice in a row**. A **slight ramp**:
+- Biomes are drawn from a pool by seed, **none twice in a mission** and never the same base ground side by
+  side (amended, below). A **slight ramp**:
   enemy numbers rise with a biome's position by one tunable factor.
 - The **finale** is a kind drawn from a pool by seed, independent of tier: redoubt (waves) and keep +
   lair (boss) are its first two definitions.
@@ -41,9 +43,9 @@ reserve, crates and medkits are the same on every tier. One definition per tier 
 `assets/sim/missions.properties`, read in one place.
 
 **Biome definition** (a kind as data, G0008): ground (base terrain, patches, how much rock), roster
-(strains, how - loose, nests, asleep - and count ranges), furniture (1-2 points, crates, medkits,
+(strains, how - loose, nests, asleep - and count ranges), furniture (2-3 points - amended, below - crates, medkits,
 barrels, rabbits/food), a width range. No turrets or mines outside a finale. First stage ships **plain,
-quarry, brake + redoubt**; the rest of the Adventures' biomes (dust, growth, mire, ashes, scrub, sand,
+quarry, brake, anthill, badlands + redoubt** (03); the rest of the Adventures' biomes (dust, growth, mire, ashes, scrub, sand,
 anthill, fen, cut) and the keep follow one `new-biome` run each.
 
 **Nests** (amends G0031): wake when somebody on the player's side is **in the nest's biome and within
@@ -68,3 +70,14 @@ first brood comes soon after waking, then every `periodSeconds`. Tier scales the
   objective is met writes its own. Codes are not remembered.
 
 **The Adventures** stay hand-built as a measuring stick; their biomes become the first definitions.
+
+## Amended
+
+2026-10-04, in the 02/03 session, by Mateusz: **4 biomes** (was 6), each **50-58 columns** wide (was 29, the
+Adventure's), 30 rows as before - fewer and bigger places, which look more like places and leave room for
+something major inside one later (rooms, ticket 12). A mission is about 255 columns against an Adventure's 216.
+**No biome twice in a mission** (was: never twice in a row), and 03 adds never the same base side by side.
+**2-3 points a biome** (was 1-2), keeping the Adventure's spacing of a point about every fifteen columns.
+
+Same day, ticket 13: the one-column wall between biomes becomes a **ridge** - a ragged band of rock crossed by
+1-2 bent **passes** - with a **gatehouse** (a pass through a clearing) on about one ridge a mission.

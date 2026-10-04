@@ -28,17 +28,30 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
 
 ## Decisions so far
 
-- [What a mission is](issues/01-what-a-mission-is.md): one level of 6 biomes + a finale in a strip,
+- [What a mission is](issues/01-what-a-mission-is.md): one level of 4 wide biomes (50-58 columns, 30 rows,
+  none twice) + a finale in a strip - amended 2026-10-04 from 6 biomes of 29,
   built wholly from (tier, mission seed); daily = UTC date + tier, three maps a day; won at the finale,
   points optional but led to; tier scales numbers only; online from the start; local ✓ + best time.
+- [How a biome's ground is laid](issues/02-how-a-biome-s-ground-is-laid.md): base, patches (rect or grown
+  blob, `neighbour` ground), crags, outcrops - each a density, never a count; clearance 2 everywhere, so a gap
+  is never sealed by construction. Prototype in `prototype/biome-ground.html`.
+- [What a biome definition holds](issues/03-what-a-biome-definition-holds.md): `BiomeGround` in `map` behind
+  one `Strip.lay`; `BiomeDef` = ground + one-line roster (loose/nest) + furniture; every roster count through
+  `Roster.count`, pressure = tier% x (1 + ramp x position); never the same base side by side; 2-3 points a
+  biome. First stage: plain, quarry, brake, anthill, badlands + redoubt. Rooms follow as a stage of their own
+  ([12](issues/12-rooms-inside-a-biome.md)).
+- [What lies between two biomes](issues/13-what-lies-between-two-biomes.md): a ragged rock **ridge** crossed by
+  1-2 bent **passes**, about one in four a **gatehouse** (a pass through a clearing - a proof of concept that 12
+  takes on). Belt and wall stay in the prototype; a chasm with bridges is an idea for later.
 
 ## Not yet specified
 
 - **Placement inside a biome**: where points, crates, medkits, nests and loose creatures go relative
-  to each other, the gap and the walls - rules rather than coordinates. Graduates once the ground
-  technique (02) and the biome definition (03) are settled.
-- **How big the field gets**: map size, entity counts and frame time for a 6-biome mission with hard
-  tier numbers; whether the avoidance and mine scans (`alpha-phase.md`, known limits) survive it.
+  to each other, the gap and the walls - rules rather than coordinates. Unblocked: 02 and 03 are settled,
+  so it can graduate to a ticket.
+- **How big the field gets**: the size is settled (about 255 x 30 tiles: 4 biomes of 50-58 columns + the
+  finale); entity counts and frame time with hard tier numbers are not - the ported rosters are about 1.8 times
+  an Adventure biome's - nor whether the avoidance and mine scans (`alpha-phase.md`, known limits) survive it.
 - **Performance of generation itself**: how long building a mission takes, and whether a join waits on it.
 - **What the goal line says** across a mission: point by point, then the finale; wording with the HUD.
 - **Testing a seed sweep cheaply** enough to run in `verify.sh` - how many seeds, which assertions.

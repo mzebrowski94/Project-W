@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biome ground prototype</title>
+<style>
+  :root {
+    --bg: #f6f6f3; --panel: #ffffff; --ink: #1d1f24; --muted: #6b6f78; --line: #e2e2dc;
+    --accent: #c2410c; --ok: #15803d; --bad: #b91c1c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1400px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 32px 0 4px; }
+  h3 { font-size: 14px; margin: 18px 0 6px; }
+  p { margin: 4px 0 10px; max-width: 80ch; }
+  .tag { display: inline-block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--accent); border: 1px solid var(--accent); border-radius: 3px; padding: 1px 6px; margin-bottom: 8px; }
+  .muted { color: var(--muted); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: end; position: sticky; top: 0; z-index: 2; }
+  .controls label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  .controls select, .controls input { font: inherit; color: var(--ink); padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
+  .controls input[type=number] { width: 80px; }
+  button { font: inherit; padding: 4px 10px; border: 1px solid var(--accent); color: var(--accent); background: #fff; border-radius: 4px; cursor: pointer; }
+  button:hover { background: #fff4ee; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+  .card.ref { border-color: var(--ink); }
+  .card canvas { display: block; image-rendering: pixelated; }
+  .card .cap { font-size: 12px; margin-top: 6px; }
+  .card .cap b { font-weight: 600; }
+  .stats { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; line-height: 1.5; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); font-weight: 600; }
+  .scroll { overflow-x: auto; padding-bottom: 6px; }
+  textarea { width: 100%; min-height: 420px; font: 12px/1.45 ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 8px; }
+  .err { color: var(--bad); font-size: 12px; white-space: pre-wrap; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+  .sw { display: inline-block; width: 12px; height: 12px; vertical-align: -2px; margin-right: 4px; border: 1px solid #0002; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <span class="tag">Prototype - throwaway</span>
+  <h1>How a biome's ground is laid</h1>
+  <p><b>The question (ticket 02).</b> Which technique lays one biome's ground from a seed - a base ground, patches of
+    a neighbouring ground, rock of a given density - so it reads like the hand-painted Adventure biomes and can never
+    seal its own gaps? And therefore: which <em>ground fields</em> does a biome definition need?</p>
+  <p class="muted">Each row starts with the Adventure's own biome (black border), then six seeds of the generator.
+    Switch the technique for patches and for rock independently; edit the definitions at the bottom and everything
+    re-lays. Walls, gaps, aprons and the connectivity check are the same in every technique.</p>
+
+  <div class="panel controls" id="controls">
+    <label>Patches drawn as
+      <select id="patchShape">
+        <option value="def">as each definition says</option>
+        <option value="rect">rectangles (the Adventure)</option>
+        <option value="ragged">ragged rectangles</option>
+        <option value="blob">grown blobs (Eden growth)</option>
+      </select></label>
+    <label>Rock laid as
+      <select id="rockMode">
+        <option value="def">as each definition says</option>
+        <option value="outcrops">all as outcrops: bars and Ls, spaced</option>
+        <option value="caves">all as crags: smoothed noise at the density</option>
+      </select></label>
+    <label>Border between biomes
+      <select id="borderStyle">
+        <option value="def">as the keys say</option>
+        <option value="wall">wall: one column, straight gaps</option>
+        <option value="ridge">ridge only: ragged band, bent passes</option>
+        <option value="gatehouse">every ridge a gatehouse</option>
+        <option value="belt">belt: blended ground, thick crags</option>
+      </select></label>
+    <label>First seed <input type="number" id="seed" value="1"></label>
+    <label>&nbsp;<button id="nextSeeds">next six seeds</button></label>
+    <label>Palette
+      <select id="palette">
+        <option value="game">game (graphic.properties)</option>
+        <option value="clear">clear (for structure)</option>
+      </select></label>
+    <label>Regions
+      <select id="regionShade">
+        <option value="game">shaded as the game does</option>
+        <option value="loud">exaggerated</option>
+        <option value="off">off</option>
+      </select></label>
+    <label>Checks overlay
+      <select id="overlay">
+        <option value="on">on - aprons, slots, pockets</option>
+        <option value="off">off</option>
+      </select></label>
+    <div class="legend" style="flex-basis:100%">
+      <span><span class="sw" style="background:#c2410c55;border-color:#c2410c"></span>gap apron (base ground only)</span>
+      <span><span class="sw" style="background:#f59e0b"></span>one-tile slot (narrower than a brute)</span>
+      <span><span class="sw" style="background:#ef4444"></span>pocket - ground you cannot reach</span>
+    </div>
+  </div>
+
+  <div id="biomes"></div>
+
+  <h2>A whole strip</h2>
+  <p class="muted">The two Adventures as they are, then a generated mission strip: four biomes dealt from the pool
+    (none twice, never the same base side by side) and a bare finale stand-in. Patches marked <code>neighbour</code> take the base ground of
+    the biome on the nearer side, which is what the Adventure's own comment says it does by hand.</p>
+  <div class="panel scroll" id="strips"></div>
+
+  <h2>The definitions</h2>
+  <p class="muted">The ground keys as the ticket 03 grilling settled them (roster and furniture are not drawn here).
+    Every range is drawn from the mission seed. Edits re-lay everything.</p>
+  <div class="two">
+    <div><textarea id="defs" spellcheck="false"></textarea><div class="err" id="defsErr"></div></div>
+    <div class="panel">
+      <h3 style="margin-top:0">What each field does</h3>
+      <p class="stats" style="font-size:12px;color:var(--ink)">
+        <b>widthMin/Max</b> - columns between its walls. <b>regions</b> - shading cells in the biome.<br>
+        <b>ground.base</b> - the ground the biome is painted in first.<br>
+        <b>ground.patches</b> - layers painted in order, each <code>shape ground density sizeMin sizeMax</code>: shape
+        rect / blob (ragged is here only to compare), ground a terrain or <code>neighbour</code> - the base of the
+        biome on the nearer side, or <b>ground.fallback</b> when there is none or it is this biome's own. Patches go
+        down until their <b>density</b> of the biome is covered, each <b>size</b> tiles a side.<br>
+        <b>ground.outcrops</b> - bars <b>length</b> long and <b>thickness</b> thick, an arm bent off one end at
+        a share <b>arms</b> of them, until their <b>density</b> of the biome is rock.<br>
+        <b>ground.crags</b> - smoothed noise thresholded at its <b>density</b>; <b>smoothing</b> passes make
+        blobs out of speckle. Laid before outcrops; repaired - doors opened, narrow passages widened, pockets
+        sealed.<br><br>
+        <b>sim.mission.ground.*</b> - the same for every biome. <b>apron</b> (tiles in front of a pass that stay
+        base ground), <b>clearance</b> (no passage narrower than this many tiles, anywhere - 2 is ten world units,
+        a brute is 5.2 across).<br>
+        The border: a <b>ridge</b> <b>ridgeWidth</b> thick whose edges wander up to <b>ridgeRough</b> into each
+        biome; <b>passesMin/Max</b> passes <b>passWidth</b> wide, <b>passApart</b> apart, each bending up to
+        <b>passJog</b> rows and entered at least <b>snake</b> rows from where the last ridge's pass came out. A
+        share <b>gatehouseShare</b> of ridges have one pass through a clearing <b>chamberWidth</b> x
+        <b>chamberHeight</b>. <code>wall</code> and <code>belt</code> (<b>beltWidth</b>, <b>beltDensity</b>)
+        stay to compare.
+      </p>
+    </div>
+  </div>
+</main>
+
+<script>
+// =====================================================================================================
+// PURE MODULE - biome ground. No DOM in here; the page below calls in, nothing calls out.
+// The bit worth lifting into map/ once the technique is chosen.
+// =====================================================================================================
+const Ground = (() => {
+  const T = { PLAIN: 0, DUST: 1, SAND: 2, ORGANIC: 3, MIRE: 4, ASH: 5, THICKET: 6, ROCK: 7 };
+  const NAMES = ['plain', 'dust', 'sand', 'organic', 'mire', 'ash', 'thicket', 'rock'];
+  const terrain = name => {
+    const i = NAMES.indexOf(String(name).toLowerCase());
+    if (i < 0) throw new Error('no terrain called ' + name);
+    return i;
+  };
+
+  // ---- randomness: one stream per concern, split from the seed (game-patterns) ----
+  function mix(a, b) {
+    let h = (a ^ Math.imul(b, 0x9e3779b1)) >>> 0;
+    h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+    return (h ^ (h >>> 16)) >>> 0;
+  }
+  function word(s) { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
+  function Rng(seed) {
+    let s = seed >>> 0;
+    const next = () => {
+      s = (s + 0x6D2B79F5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    return {
+      next,
+      int: n => Math.floor(next() * n),
+      range: (r) => r[0] + Math.floor(next() * (r[1] - r[0] + 1)),
+      between: (lo, hi) => lo + Math.floor(next() * (hi - lo + 1)),
+      chance: p => next() < p,
+    };
+  }
+  const stream = (seed, concern) => Rng(mix(seed >>> 0, word(concern)));
+
+  // ---- the grid ----
+  function Grid(cols, rows) {
+    return { cols, rows, t: new Uint8Array(cols * rows), region: new Int16Array(cols * rows),
+      keep: new Uint8Array(cols * rows) };
+  }
+  const inside = (g, c, r) => c >= 0 && r >= 0 && c < g.cols && r < g.rows;
+  const get = (g, c, r) => inside(g, c, r) ? g.t[r * g.cols + c] : T.ROCK;
+  function rect(g, c, r, w, h, t) {
+    for (let y = r; y < r + h; y++) for (let x = c; x < c + w; x++) if (inside(g, x, y)) g.t[y * g.cols + x] = t;
+  }
+
+  // ---- connectivity: generate, then validate, then repair (game-patterns; Maps.reachableFrom) ----
+  /** Flood fill, four-connected, inside columns [lo, hi]. */
+  function reach(g, lo, hi, from) {
+    const seen = new Uint8Array(g.cols * g.rows);
+    if (from < 0 || get(g, from % g.cols, (from / g.cols) | 0) === T.ROCK) return seen;
+    const q = [from]; seen[from] = 1;
+    while (q.length) {
+      const at = q.pop(); const c = at % g.cols, r = (at / g.cols) | 0;
+      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const x = c + dc, y = r + dr;
+        if (x < lo || x > hi || !inside(g, x, y)) continue;
+        const i = y * g.cols + x;
+        if (seen[i] || g.t[i] === T.ROCK) continue;
+        seen[i] = 1; q.push(i);
+      }
+    }
+    return seen;
+  }
+  /** Every door of the biome reaches every other, and every ground tile in it is reachable. */
+  function check(g, b) {
+    const lo = b.c0 - 1, hi = b.c1 + 1;
+    const seen = reach(g, lo, hi, b.doors[0]);
+    let doorsOk = b.doors.every(i => seen[i]);
+    let pockets = 0, slots = 0;
+    for (let r = 1; r < g.rows - 1; r++) for (let c = b.c0; c <= b.c1; c++) {
+      const i = r * g.cols + c;
+      if (g.t[i] === T.ROCK) continue;
+      if (!seen[i]) pockets++;
+      const h = get(g, c - 1, r) === T.ROCK && get(g, c + 1, r) === T.ROCK;
+      const v = get(g, c, r - 1) === T.ROCK && get(g, c, r + 1) === T.ROCK;
+      if (h || v) slots++;
+    }
+    return { doorsOk, pockets, slots, seen };
+  }
+
+  // ---- the strip: widths, borders, passes ----
+  /**
+   * order: biome names west to east. ends: 'border' (a mission: solid west and east edge, spawn area on the west)
+   * or 'walls' (a preview: a border at both ends, as a biome in the middle of a strip sees it).
+   *
+   * Between two biomes lies a BORDER, one of four styles:
+   *   wall      - one column of rock with 1-2 straight gaps (the Adventure's).
+   *   ridge     - a solid band `borderWidth` wide whose edges spill up to `borderRough` tiles into each biome,
+   *               ragged, crossed by 1-2 passes that bend up to `passJog` rows on the way through.
+   *   belt      - no wall: a band `beltWidth` wide where the two grounds blend and crags stand thick
+   *               (`beltDensity`); 1-2 passes are carved so it always connects, and it may leak more ways.
+   *   gatehouse - a ridge whose pass opens into a walled clearing `chamberWidth` x `chamberHeight` in the middle,
+   *               entered on one row and left on another: a small room on the border.
+   */
+  function layStrip(defs, order, seed, G, ends) {
+    // The border style, and which ridges are dealt a gatehouse - from their own stream, so dealing them never
+    // moves anything else.
+    const override = G.borderOverride && G.borderOverride !== 'def' ? G.borderOverride : null;
+    const style = override === 'gatehouse' ? 'ridge' : override || G.border;
+    const share = override === 'gatehouse' ? 1 : override === 'ridge' ? 0 : style === 'ridge' ? G.gatehouseShare : 0;
+    const gateRng = stream(seed, 'gatehouses');
+    const bandCount = order.length - 1 + (ends === 'walls' ? 2 : 0);
+    const kinds = Array.from({ length: bandCount }, () => style === 'ridge' && gateRng.chance(share) ? 'gatehouse' : style);
+    const widthOf = k => k === 'wall' ? 1 : k === 'belt' ? G.beltWidth : k === 'gatehouse' ? Math.max(G.borderWidth, G.chamberWidth + 4) : G.borderWidth;
+    const roughOf = k => k === 'ridge' || k === 'gatehouse' ? G.borderRough : 0;
+    const widthRng = stream(seed, 'widths');
+    const widths = order.map(n => widthRng.range(defs[n].width));
+    const rows = G.rows, top = 1, bottom = rows - 2, H = G.gapHeight;
+    const biomes = [];
+    let kindAt = 0;
+    let c = ends === 'walls' ? widthOf(kinds[kindAt++]) : 1;
+    order.forEach((name, i) => {
+      biomes.push({ name, def: defs[name], index: i, c0: c, c1: c + widths[i] - 1, doors: [] });
+      c += widths[i];
+      if (i < order.length - 1) c += widthOf(kinds[kindAt++]);
+    });
+    const cols = c + (ends === 'walls' ? widthOf(kinds[kindAt]) : 1);
+    const g = Grid(cols, rows);
+
+    biomes.forEach(b => rect(g, b.c0, 0, b.c1 - b.c0 + 1, rows, terrain(b.def.base)));
+    const bands = [];
+    kindAt = 0;
+    if (ends === 'walls') bands.push({ x0: 0, x1: biomes[0].c0 - 1, west: null, east: biomes[0], kind: kinds[kindAt++] });
+    for (let i = 1; i < biomes.length; i++) bands.push({ x0: biomes[i - 1].c1 + 1, x1: biomes[i].c0 - 1, west: biomes[i - 1], east: biomes[i], kind: kinds[kindAt++] });
+    if (ends === 'walls') bands.push({ x0: biomes[biomes.length - 1].c1 + 1, x1: cols - 1, west: biomes[biomes.length - 1], east: null, kind: kinds[kindAt] });
+    const R = G.borderRough;
+    const baseOf = (band, x) => terrain(((x <= (band.x0 + band.x1) / 2 ? band.west : band.east) || band.west || band.east).def.base);
+    for (const band of bands) for (let x = band.x0; x <= band.x1; x++) for (let r = 0; r < rows; r++) g.t[r * cols + x] = baseOf(band, x);
+    rect(g, 0, 0, cols, 1, T.ROCK); rect(g, 0, rows - 1, cols, 1, T.ROCK);
+    if (ends === 'border') { rect(g, 0, 0, 1, rows, T.ROCK); rect(g, cols - 1, 0, 1, rows, T.ROCK); }
+
+    const passRng = stream(seed, 'passes');
+    const bandRng = stream(seed, 'bands');
+    const carved = new Uint8Array(cols * rows);
+    let lastExit = -100;
+    for (const band of bands) {
+      const kind = band.kind, R = roughOf(kind);
+      // 1. The band itself.
+      if (kind === 'belt') belt(g, band, bandRng, G);
+      else rect(g, band.x0, top, band.x1 - band.x0 + 1, bottom - top + 1, T.ROCK);
+      if (R > 0) spill(g, band, bandRng, R);
+
+      // 2. Passes: rows drawn as the wall's gaps were - apart on one border, snaking from the last border. A
+      // gatehouse has one, through its clearing.
+      const n = kind === 'gatehouse' ? 1 : passRng.range(G.gaps);
+      const span = kind === 'gatehouse' ? G.chamberHeight - H : kind === 'wall' ? 0 : G.passJog;
+      const passes = [];
+      for (let k = 0; k < n; k++) {
+        for (let attempt = 0; attempt < 40; attempt++) {
+          const y0 = passRng.between(top, bottom - H + 1);
+          const y1 = Math.max(top, Math.min(bottom - H + 1, y0 + passRng.between(-span, span)));
+          const lo = Math.min(y0, y1), hi = Math.max(y0, y1) + H;
+          const snakes = k > 0 || Math.abs(y0 - lastExit) >= G.snake;
+          const apart = passes.every(o => lo >= o.hi + G.gapApart || hi + G.gapApart <= o.lo);
+          if (snakes && apart) { passes.push({ y0, y1, lo, hi }); break; }
+        }
+      }
+      if (passes.length) lastExit = passes[0].y1;
+      band.passes = passes;
+
+      // 3. Carve each pass, west mouth to east mouth, through the spill on both sides.
+      const xa = Math.max(0, band.x0 - R - 1), xb = Math.min(cols - 1, band.x1 + R + 1);
+      for (const ps of passes) {
+        const rowAt = x => {
+          if (kind === 'gatehouse') return x < (band.x0 + band.x1) / 2 ? ps.y0 : ps.y1;
+          return Math.round(ps.y0 + (ps.y1 - ps.y0) * (xb === xa ? 0 : (x - xa) / (xb - xa)));
+        };
+        for (let x = xa; x <= xb; x++) {
+          const y = rowAt(x);
+          for (let r = y; r < y + H; r++) { g.t[r * cols + x] = baseOf(band, x); carved[r * cols + x] = 1; }
+        }
+        if (kind === 'gatehouse') {
+          // The clearing: walled by the band, wide enough to stand a point in, both mouths opening into it.
+          const xc0 = Math.round((band.x0 + band.x1 + 1) / 2 - G.chamberWidth / 2);
+          const yc0 = Math.max(top + 1, Math.min(bottom - G.chamberHeight, Math.round((ps.lo + ps.hi) / 2 - G.chamberHeight / 2)));
+          for (let r = yc0; r < yc0 + G.chamberHeight; r++) for (let x = xc0; x < xc0 + G.chamberWidth; x++) {
+            g.t[r * cols + x] = baseOf(band, x); carved[r * cols + x] = 1;
+          }
+        }
+        // Doors on the band's edge columns; aprons in front of each mouth, through the spill.
+        for (const [side, edge, dir, y] of [[band.west, band.x0, -1, rowAt(band.x0)], [band.east, band.x1, 1, rowAt(band.x1)]]) {
+          if (!side) continue;
+          for (let r = y; r < y + H; r++) side.doors.push(r * cols + edge);
+          for (let d = 1; d <= R + 1 + G.apron; d++) {
+            const x = edge + dir * d; if (x < side.c0 || x > side.c1) continue;
+            const yy = d <= R + 1 ? rowAt(x) : y;
+            for (let r = Math.max(top, yy - 1); r <= Math.min(bottom, yy + H); r++) g.keep[r * cols + x] = 1;
+          }
+        }
+      }
+    }
+    // 4. Ragged edges leave notches a tile wide: fill them, so a ridge face has no slots in it.
+    fillNotches(g, biomes, carved);
+
+    // A mission's first biome is entered from the spawn area, not a gap (SpawnConfig 2,4,8).
+    if (ends === 'border') {
+      const b = biomes[0], h = 8, r0 = ((rows - h) / 2) | 0;
+      for (let r = r0; r < r0 + h; r++) for (let c2 = b.c0; c2 < b.c0 + 5; c2++) {
+        g.keep[r * cols + c2] = 1;
+        if (c2 === b.c0 + 1) b.doors.unshift(r * cols + c2);
+      }
+    }
+    biomes.forEach(b => layBiome(g, b, biomes, seed, G));
+
+    // 5. The whole strip: everything reachable from the first door, and what is not, inside a band, sealed.
+    const start = biomes[0].doors[0];
+    let seen = reach(g, 0, cols - 1, start);
+    let sealed = 0;
+    for (const band of bands) for (let x = Math.max(0, band.x0 - R); x <= Math.min(cols - 1, band.x1 + R); x++) for (let r = top; r <= bottom; r++) {
+      const i = r * cols + x;
+      if (g.t[i] !== T.ROCK && !seen[i] && !(biomes.some(b => x >= b.c0 && x <= b.c1))) { g.t[i] = T.ROCK; sealed++; }
+    }
+    seen = reach(g, 0, cols - 1, start);
+    const connected = biomes.every(b => b.doors.every(i => seen[i]));
+    let bandSlots = 0;
+    for (const band of bands) for (let x = band.x0; x <= band.x1; x++) for (let r = top; r <= bottom; r++) {
+      if (g.t[r * cols + x] === T.ROCK) continue;
+      if ((isRockAt(g, x - 1, r) && isRockAt(g, x + 1, r)) || (isRockAt(g, x, r - 1) && isRockAt(g, x, r + 1))) bandSlots++;
+    }
+    const gatehouses = bands.filter(b => b.kind === 'gatehouse').length;
+    return { g, biomes, bands, style: style + (gatehouses ? ` (${gatehouses} gatehouse${gatehouses > 1 ? 's' : ''})` : ''), strip: { connected, sealed, bandSlots } };
+  }
+
+  const isRockAt = (g, c, r) => get(g, c, r) === T.ROCK;
+
+  /** Spill: each band edge wanders up to R tiles into the biome beside it - a smoothed walk per row. */
+  function spill(g, band, rng, R) {
+    for (const [side, edge, dir] of [[band.west, band.x0, -1], [band.east, band.x1, 1]]) {
+      if (!side) continue;
+      let v = new Array(g.rows).fill(0).map(() => rng.next() * (R + 1));
+      for (let pass = 0; pass < 2; pass++) v = v.map((_, r) => (v[Math.max(0, r - 1)] + v[r] + v[Math.min(g.rows - 1, r + 1)]) / 3);
+      for (let r = 1; r < g.rows - 1; r++) {
+        const depth = Math.min(R, Math.floor(v[r] * 1.6));
+        for (let d = 1; d <= depth; d++) g.t[r * g.cols + edge + dir * d] = T.ROCK;
+      }
+    }
+  }
+
+  /** Belt: the two grounds dithered across the band, and crags standing thick in it. */
+  function belt(g, band, rng, G) {
+    const cols = g.cols, W = band.x1 - band.x0 + 1;
+    const west = band.west || band.east, east = band.east || band.west;
+    // The two grounds meet along a wavy line, not in speckle: a smoothed noise value bends where the line falls.
+    let wave = new Array(g.rows).fill(0).map(() => rng.next());
+    for (let pass = 0; pass < 3; pass++) wave = wave.map((_, r) => (wave[Math.max(0, r - 1)] + wave[r] + wave[Math.min(g.rows - 1, r + 1)]) / 3);
+    for (let x = band.x0; x <= band.x1; x++) for (let r = 1; r < g.rows - 1; r++) {
+      const t = (x - band.x0 + 0.5) / W + (wave[r] - 0.5) * 1.6;
+      g.t[r * cols + x] = terrain((t > 0.5 ? east : west).def.base);
+    }
+    let f = new Float32Array(cols * g.rows).fill(-1);
+    for (let x = band.x0; x <= band.x1; x++) for (let r = 1; r < g.rows - 1; r++) f[r * cols + x] = rng.next();
+    for (let s = 0; s < 3; s++) {
+      const next = new Float32Array(f.length).fill(-1);
+      for (let x = band.x0; x <= band.x1; x++) for (let r = 1; r < g.rows - 1; r++) {
+        let sum = 0, n = 0;
+        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const v = f[(r + dr) * cols + x + dc]; if (v >= 0) { sum += v; n++; } }
+        next[r * cols + x] = sum / n;
+      }
+      f = next;
+    }
+    const values = []; for (const v of f) if (v >= 0) values.push(v);
+    values.sort((a, z) => z - a);
+    const threshold = values[Math.max(0, Math.round(G.beltDensity * values.length) - 1)];
+    for (let i = 0; i < f.length; i++) if (f[i] >= threshold) g.t[i] = T.ROCK;
+    // Widen: a run of open ground shorter than the clearance between two rocks loses a rock inside the band.
+    const ours = (x, r) => x >= band.x0 && x <= band.x1 && r >= 1 && r <= g.rows - 2;
+    for (let pass = 0; pass < 40; pass++) {
+      let widened = 0;
+      for (const [dx, dy] of [[1, 0], [0, 1]]) for (let x = band.x0; x <= band.x1; x++) for (let r = 1; r < g.rows - 1; r++) {
+        if (isRockAt(g, x, r) || !isRockAt(g, x - dx, r - dy)) continue;
+        let len = 0; while (len <= G.clearance && !isRockAt(g, x + len * dx, r + len * dy)) len++;
+        if (len >= G.clearance) continue;
+        const [ax, ay, bx, by] = [x - dx, r - dy, x + len * dx, r + len * dy];
+        const open = ours(ax, ay) ? [ax, ay] : ours(bx, by) ? [bx, by] : null;
+        if (open) { g.t[open[1] * cols + open[0]] = terrain(west.def.base); widened++; }
+      }
+      if (!widened) break;
+    }
+  }
+
+  /** A passable tile in a biome with rock above and below and rock on one side is a notch: fill it. */
+  function fillNotches(g, biomes, carved) {
+    for (let pass = 0; pass < 6; pass++) {
+      let filled = 0;
+      for (const b of biomes) for (let r = 1; r < g.rows - 1; r++) for (let c = b.c0; c <= b.c1; c++) {
+        const i = r * g.cols + c;
+        if (g.t[i] === T.ROCK || carved[i] || g.keep[i]) continue;
+        const vertical = isRockAt(g, c, r - 1) && isRockAt(g, c, r + 1) && (isRockAt(g, c - 1, r) || isRockAt(g, c + 1, r));
+        const horizontal = isRockAt(g, c - 1, r) && isRockAt(g, c + 1, r) && (isRockAt(g, c, r - 1) || isRockAt(g, c, r + 1));
+        if (vertical || horizontal) { g.t[i] = T.ROCK; filled++; }
+      }
+      if (!filled) break;
+    }
+  }
+
+  // ---- one biome ----
+  function layBiome(g, b, all, seed, G) {
+    const d = b.def, rows = g.rows, cols = g.cols;
+    const patchRng = stream(seed, 'patches#' + b.index);
+    const rockRng = stream(seed, 'rock#' + b.index);
+    const regionRng = stream(seed, 'regions#' + b.index);
+    const base = terrain(d.base);
+    const top = 1, bottom = rows - 2;
+    const stats = { patchPlaced: 0, rockPlaced: 0, rejected: 0, repaired: 0 };
+
+    // Patches, layer by layer. A footprint (with a tile of spacing) is kept so layers do not pile up.
+    const used = new Uint8Array(cols * rows);
+    const area = (b.c1 - b.c0 + 1) * (bottom - top + 1);
+    for (const layer of d.patches) {
+      const shape = G.patchShape === 'def' ? layer.shape : G.patchShape;
+      let laid = 0;
+      for (let k = 0; k < 999; k++) {
+        if (laid >= layer.density * area) break;
+        const was = stats.patchPlaced;
+        for (let attempt = 0; attempt < 50; attempt++) {
+          const w = patchRng.range(layer.size), h = patchRng.range(layer.size);
+          if (w > b.c1 - b.c0 + 1 || h > bottom - top + 1) continue;
+          const x = patchRng.between(b.c0, b.c1 - w + 1), y = patchRng.between(top, bottom - h + 1);
+          if (!clearBox(g, used, x - 1, y - 1, w + 2, h + 2)) continue;
+          const tiles = shapeTiles(shape, x, y, w, h, patchRng, g, b);
+          const ground = layer.ground === 'neighbour' ? neighbour(b, all, x + w / 2) : terrain(layer.ground);
+          for (const i of tiles) if (!g.keep[i] && g.t[i] !== T.ROCK) { g.t[i] = ground; laid++; }
+          for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) used[yy * cols + xx] = 1;
+          stats.patchPlaced++;
+          break;
+        }
+        if (stats.patchPlaced === was) break; // no room left
+      }
+    }
+
+    // Rock on top: rock always wins over a patch, as the Adventure paints it. Caves first, then outcrops,
+    // which keep their clearance from cave rock like from any other. Each coat is off at zero density.
+    let oc = d.outcrops, cv = d.caves;
+    if (G.rockMode === 'outcrops') { oc = Object.assign({}, oc, { density: oc.density + cv.density }); cv = Object.assign({}, cv, { density: 0 }); }
+    if (G.rockMode === 'caves') { cv = Object.assign({}, cv, { density: oc.density + cv.density }); oc = Object.assign({}, oc, { density: 0 }); }
+    if (cv.density > 0) caves(g, b, cv, stream(seed, 'caves#' + b.index), G, stats);
+    if (oc.density > 0) outcrops(g, b, oc, rockRng, G, stats);
+
+    // Regions: Voronoi cells inside the biome (Maps.partitionRegions, per biome).
+    const k = Math.max(1, d.regions | 0);
+    const sc = [], sr = [];
+    for (let i = 0; i < k; i++) { sc.push(regionRng.between(b.c0, b.c1)); sr.push(regionRng.between(top, bottom)); }
+    for (let r = 0; r < rows; r++) for (let c = b.c0; c <= b.c1; c++) {
+      let best = 0, bd = 1e9;
+      for (let i = 0; i < k; i++) { const dd = (c - sc[i]) ** 2 + (r - sr[i]) ** 2; if (dd < bd) { bd = dd; best = i; } }
+      g.region[r * cols + c] = b.index * 32 + best;
+    }
+
+    let groundTiles = 0, rockTiles = 0, thicket = 0, patched = 0;
+    for (let r = top; r <= bottom; r++) for (let c = b.c0; c <= b.c1; c++) {
+      const t = g.t[r * cols + c];
+      groundTiles++;
+      if (t === T.ROCK) rockTiles++; else if (t === T.THICKET) thicket++; else if (t !== base) patched++;
+    }
+    b.stats = Object.assign(stats, { tiles: groundTiles, rock: rockTiles / groundTiles, thicket: thicket / groundTiles,
+      patched: patched / groundTiles }, check(g, b));
+  }
+
+  function clearBox(g, used, x, y, w, h) {
+    for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) {
+      if (!inside(g, xx, yy)) continue;
+      const i = yy * g.cols + xx;
+      if (used[i]) return false;
+    }
+    for (let yy = y + 1; yy < y + h - 1; yy++) for (let xx = x + 1; xx < x + w - 1; xx++) {
+      if (inside(g, xx, yy) && g.keep[yy * g.cols + xx]) return false;
+    }
+    return true;
+  }
+
+  /** The base of the biome on the nearer side, if it differs from this one's; else the biome's fallback. */
+  function neighbour(b, all, x) {
+    const own = terrain(b.def.base);
+    const west = all[b.index - 1], east = all[b.index + 1];
+    const nearWest = x < (b.c0 + b.c1) / 2;
+    const first = nearWest ? west : east, second = nearWest ? east : west;
+    for (const o of [first, second]) if (o && terrain(o.def.base) !== own) return terrain(o.def.base);
+    return terrain(b.def.fallback || 'dust');
+  }
+
+  function shapeTiles(shape, x, y, w, h, rng, g, b) {
+    const out = [];
+    const ok = (c, r) => c >= b.c0 && c <= b.c1 && r >= 1 && r <= g.rows - 2;
+    if (shape === 'blob') {
+      // Eden growth from the middle, two candidates drawn and the nearer the middle kept, so it stays compact.
+      const want = Math.max(1, Math.round(w * h * 0.85));
+      const cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
+      const start = Math.round(cy) * g.cols + Math.round(cx);
+      const inBlob = new Set([start]); const frontier = [];
+      const push = i => { const c = i % g.cols, r = (i / g.cols) | 0;
+        for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const xx = c + dc, yy = r + dr;
+          if (!ok(xx, yy) || xx < x - 1 || xx > x + w || yy < y - 1 || yy > y + h) continue;
+          const j = yy * g.cols + xx; if (!inBlob.has(j)) frontier.push(j);
+        } };
+      push(start);
+      const dist = j => { const c = j % g.cols, r = (j / g.cols) | 0; return ((c - cx) / w) ** 2 + ((r - cy) / h) ** 2; };
+      while (inBlob.size < want && frontier.length) {
+        // Best of three candidates by distance from the middle: compact, with a ragged rim.
+        let pick = rng.int(frontier.length);
+        for (let t = 0; t < 2; t++) { const o = rng.int(frontier.length); if (dist(frontier[o]) < dist(frontier[pick])) pick = o; }
+        const j = frontier[pick]; frontier[pick] = frontier[frontier.length - 1]; frontier.pop();
+        if (inBlob.has(j)) continue;
+        inBlob.add(j); push(j);
+      }
+      // One smoothing pass: fill a notch with three sides in, drop a whisker with one or none.
+      const around = i => [1, -1, g.cols, -g.cols].filter(d => inBlob.has(i + d)).length;
+      const fill = [], drop = [];
+      for (let r = y - 1; r <= y + h; r++) for (let c = x - 1; c <= x + w; c++) {
+        if (!ok(c, r)) continue; const i = r * g.cols + c, n = around(i);
+        if (!inBlob.has(i) && n >= 3) fill.push(i); else if (inBlob.has(i) && n <= 1) drop.push(i);
+      }
+      fill.forEach(i => inBlob.add(i)); drop.forEach(i => inBlob.delete(i));
+      return [...inBlob];
+    }
+    for (let r = y; r < y + h; r++) for (let c = x; c < x + w; c++) {
+      if (shape === 'ragged') {
+        const edgeX = c === x || c === x + w - 1, edgeY = r === y || r === y + h - 1;
+        if (edgeX && edgeY && rng.chance(0.6)) continue;
+        if ((edgeX || edgeY) && rng.chance(0.25)) continue;
+      }
+      if (ok(c, r)) out.push(r * g.cols + c);
+    }
+    if (shape === 'ragged') {
+      // A few bumps out past each side.
+      for (let c = x + 1; c < x + w - 1; c++) { if (rng.chance(0.25) && ok(c, y - 1)) out.push((y - 1) * g.cols + c); if (rng.chance(0.25) && ok(c, y + h)) out.push((y + h) * g.cols + c); }
+      for (let r = y + 1; r < y + h - 1; r++) { if (rng.chance(0.25) && ok(x - 1, r)) out.push(r * g.cols + x - 1); if (rng.chance(0.25) && ok(x + w, r)) out.push(r * g.cols + x + w); }
+    }
+    return out;
+  }
+
+  /**
+   * Outcrops: a bar with an optional arm bent off one end - "two or three tiles bent round a corner reads as
+   * rock" (AdventureScenario.rock). Each is placed by dart throwing and must leave `clearance` free tiles to any
+   * other rock, walls and border included. Bars and Ls cannot enclose anything, and spaced apart they cannot
+   * close a ring either - so connectivity holds by construction, and the flood fill after each one is the net.
+   */
+  function outcrops(g, b, rock, rng, G, stats) {
+    // Keep adding outcrops until their density of the biome is rock.
+    const tiles = (b.c1 - b.c0 + 1) * (g.rows - 2);
+    let laid = 0;
+    for (let k = 0; k < 999; k++) {
+      if (laid >= rock.density * tiles) break;
+      const was = stats.rockPlaced;
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const shape = outcropShape(rock, rng);
+        const x = rng.between(b.c0, b.c1 - shape.w + 1), y = rng.between(1, g.rows - 2 - shape.h + 1);
+        if (x < b.c0 || y < 1) continue;
+        const tiles = shape.tiles.map(([dc, dr]) => (y + dr) * g.cols + (x + dc));
+        if (!fitsOutcrop(g, b, tiles, G.clearance)) continue;
+        const before = tiles.map(i => g.t[i]);
+        tiles.forEach(i => { g.t[i] = T.ROCK; });
+        const c = check(g, b);
+        if (c.doorsOk && c.pockets === 0) { stats.rockPlaced++; laid += tiles.length; break; }
+        tiles.forEach((i, j) => { g.t[i] = before[j]; });
+        stats.rejected++;
+      }
+      if (stats.rockPlaced === was) break; // no room left
+    }
+  }
+
+  function outcropShape(rock, rng) {
+    const len = rng.range(rock.length);
+    const thick = Math.min(len, rng.range(rock.thickness));
+    const cells = new Set();
+    for (let a = 0; a < len; a++) for (let t = 0; t < thick; t++) cells.add(t + ',' + a);
+    if (len >= 2 && rng.chance(rock.arm)) {
+      const out = rng.between(1, 2), along = rng.between(2, Math.min(4, len));
+      const atEnd = rng.chance(0.5), side = rng.chance(0.5) ? 1 : -1;
+      const a0 = atEnd ? len - along : 0;
+      for (let a = a0; a < a0 + along; a++) for (let o = 1; o <= out; o++) {
+        const t = side > 0 ? thick - 1 + o : -o;
+        cells.add(t + ',' + a);
+      }
+    }
+    let pts = [...cells].map(s => s.split(',').map(Number));
+    if (rng.chance(0.5)) pts = pts.map(([t, a]) => [a, t]); // lying down rather than standing
+    const minC = Math.min(...pts.map(p => p[0])), minR = Math.min(...pts.map(p => p[1]));
+    pts = pts.map(([c, r]) => [c - minC, r - minR]);
+    return { tiles: pts, w: Math.max(...pts.map(p => p[0])) + 1, h: Math.max(...pts.map(p => p[1])) + 1 };
+  }
+
+  function fitsOutcrop(g, b, tiles, clearance) {
+    const mine = new Set(tiles);
+    for (const i of tiles) {
+      const c = i % g.cols, r = (i / g.cols) | 0;
+      if (c < b.c0 || c > b.c1 || r < 1 || r > g.rows - 2 || g.keep[i]) return false;
+      for (let dr = -clearance; dr <= clearance; dr++) for (let dc = -clearance; dc <= clearance; dc++) {
+        const j = (r + dr) * g.cols + (c + dc);
+        if (mine.has(j)) continue;
+        if (get(g, c + dc, r + dr) === T.ROCK) return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Caves: white noise smoothed `smoothing` times, then thresholded at the density quantile - so the coat lands
+   * on its density whatever the noise did, and the shapes are blobs and ridges rather than bars. Then repaired,
+   * in order: doors opened (a rock mass touching what the first door reaches is cleared), passages narrower
+   * than `clearance` widened, and whatever is still unreachable sealed (Maps.sealUnreachable).
+   */
+  function caves(g, b, cv, rng, G, stats) {
+    const cols = g.cols, top = 1 + G.clearance, bottom = g.rows - 2 - G.clearance;
+    const lo = b.c0 + G.clearance, hi = b.c1 - G.clearance;
+    let f = new Float32Array(cols * g.rows).fill(-1);
+    for (let r = top; r <= bottom; r++) for (let c = lo; c <= hi; c++) {
+      const i = r * cols + c; if (!g.keep[i]) f[i] = rng.next();
+    }
+    for (let s = 0; s < cv.smoothing; s++) {
+      const next = new Float32Array(f.length).fill(-1);
+      for (let r = top; r <= bottom; r++) for (let c = lo; c <= hi; c++) {
+        const i = r * cols + c; if (f[i] < 0) continue;
+        let sum = 0, n = 0;
+        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const v = f[(r + dr) * cols + c + dc]; if (v >= 0) { sum += v; n++; } }
+        next[i] = sum / n;
+      }
+      f = next;
+    }
+    const values = []; for (const v of f) if (v >= 0) values.push(v);
+    values.sort((a, z) => z - a);
+    const want = Math.min(values.length, Math.round(cv.density * (b.c1 - b.c0 + 1) * (g.rows - 2)));
+    if (want === 0) return;
+    const threshold = values[want - 1];
+    const mine = new Uint8Array(f.length);
+    for (let i = 0; i < f.length; i++) if (f[i] >= threshold) { mine[i] = 1; g.t[i] = T.ROCK; }
+    const ground = terrain(b.def.base);
+    // 1. Doors.
+    for (let guard = 0; guard < 80; guard++) {
+      const c = check(g, b);
+      if (c.doorsOk) break;
+      let opened = false;
+      for (let r = 1; r < g.rows - 1 && !opened; r++) for (let cc = b.c0; cc <= b.c1 && !opened; cc++) {
+        const i = r * cols + cc;
+        if (!mine[i] || g.t[i] !== T.ROCK) continue;
+        if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dc, dr]) => c.seen[(r + dr) * cols + cc + dc])) { clearComponent(g, mine, i, ground); opened = true; stats.repaired++; }
+      }
+      if (!opened) break;
+    }
+    // 2. Clearance: a run of open ground shorter than `clearance` between two rocks loses one of them.
+    for (let pass = 0; pass < 40; pass++) {
+      let widened = 0;
+      for (const [along, across] of [[1, cols], [cols, 1]]) {
+        for (let r = 1; r < g.rows - 1; r++) for (let c = b.c0; c <= b.c1; c++) {
+          const i = r * cols + c;
+          if (g.t[i] === T.ROCK || g.t[i - along] !== T.ROCK) continue;
+          let len = 0; while (len <= G.clearance && g.t[i + len * along] !== T.ROCK) len++;
+          if (len >= G.clearance) continue;
+          const left = i - along, right = i + len * along;
+          const clear = mine[left] ? left : mine[right] ? right : -1;
+          if (clear >= 0) { mine[clear] = 0; g.t[clear] = ground; widened++; stats.repaired++; }
+        }
+      }
+      if (!widened) break;
+    }
+    // 3. Pockets.
+    const c = check(g, b);
+    for (let r = 1; r < g.rows - 1; r++) for (let cc = b.c0; cc <= b.c1; cc++) {
+      const i = r * cols + cc; if (g.t[i] !== T.ROCK && !c.seen[i]) { g.t[i] = T.ROCK; stats.repaired++; }
+    }
+  }
+
+  function clearComponent(g, cur, start, ground) {
+    const q = [start]; cur[start] = 0; g.t[start] = ground;
+    while (q.length) {
+      const i = q.pop(); const c = i % g.cols, r = (i / g.cols) | 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        const j = (r + dr) * g.cols + c + dc;
+        if (cur[j]) { cur[j] = 0; g.t[j] = ground; q.push(j); }
+      }
+    }
+  }
+
+  // ---- the Adventures, transcribed from AdventureScenario / AdventureTwoScenario, for reference ----
+  function adventure(which) {
+    const g = Grid(216, 30);
+    const R = (c, r, w, h, t) => rect(g, c, r, w, h, T[t]);
+    R(0, 0, 216, 30, 'PLAIN');
+    if (which === 1) {
+      R(30, 1, 30, 28, 'DUST'); R(60, 1, 30, 28, 'ORGANIC'); R(90, 1, 30, 28, 'DUST'); R(120, 1, 30, 28, 'MIRE');
+      R(150, 1, 30, 28, 'ASH'); R(180, 1, 36, 28, 'DUST');
+      [[6,15,4,3,'DUST'],[20,8,3,4,'DUST'],[14,21,3,3,'ORGANIC'],[33,12,3,3,'ORGANIC'],[48,22,4,3,'ORGANIC'],[41,4,3,3,'PLAIN'],
+       [63,3,4,3,'DUST'],[79,12,3,4,'DUST'],[72,24,4,3,'PLAIN'],[92,15,3,3,'ORGANIC'],[115,3,3,4,'PLAIN'],[100,2,3,3,'PLAIN'],
+       [126,19,4,3,'ORGANIC'],[137,4,3,3,'DUST'],[145,24,3,3,'ORGANIC'],[133,12,4,4,'MIRE'],[156,6,3,3,'DUST'],[167,21,4,3,'MIRE'],
+       [175,11,3,4,'DUST'],[188,6,4,3,'ASH'],[204,21,4,3,'ASH'],[196,25,3,3,'ASH'],[210,9,3,4,'PLAIN']].forEach(a => R(...a));
+      [[44,16,4,5],[63,5,6,7],[72,17,7,6],[82,6,5,6],[124,9,6,6],[132,17,8,7],[142,8,6,9],[152,20,6,6],[160,3,6,5],[170,19,7,6]]
+        .forEach(a => R(...a, 'THICKET'));
+      bandRegions(g);
+      border(g);
+      [[30,3],[60,22],[90,13],[120,24],[150,8],[180,14]].forEach(([c, r]) => advWall(g, c, r));
+      [[17,5,1,2],[13,23,2,1],[24,14,1,1],[36,9,2,6],[38,9,1,3],[45,3,3,2],[45,5,1,4],[52,17,2,7],[50,21,2,2],[41,14,1,1],[57,11,1,2],
+       [70,13,2,4],[66,4,1,1],[76,25,2,1],[85,8,1,2],[95,4,2,9],[97,10,2,3],[103,13,3,8],[101,19,2,2],[110,2,2,7],[112,7,1,4],[93,22,1,2],
+       [107,4,2,1],[116,19,1,3],[127,11,2,3],[139,20,1,2],[146,5,2,1],[155,13,2,7],[157,16,2,2],[162,3,3,2],[164,5,1,4],[169,14,2,6],
+       [167,24,2,2],[174,4,2,5],[176,18,1,3],[188,12,2,3],[205,16,2,3],[196,5,3,1],[197,24,3,1]].forEach(a => R(...a, 'ROCK'));
+    } else {
+      R(31, 1, 29, 28, 'DUST'); R(61, 1, 29, 28, 'ORGANIC'); R(91, 1, 29, 28, 'MIRE'); R(121, 1, 29, 28, 'DUST');
+      R(151, 1, 29, 28, 'PLAIN'); R(181, 1, 35, 28, 'ASH');
+      [[8,5,4,3,'ASH'],[18,22,4,3,'ASH'],[24,9,3,3,'DUST'],[12,14,3,3,'ASH'],[36,20,4,3,'PLAIN'],[47,6,3,3,'ORGANIC'],[54,23,3,3,'ASH'],
+       [66,20,4,3,'DUST'],[80,4,3,3,'MIRE'],[86,23,3,3,'PLAIN'],[95,4,4,3,'ORGANIC'],[111,22,3,3,'DUST'],[126,5,3,3,'ASH'],[140,22,4,3,'PLAIN'],
+       [156,4,3,3,'ORGANIC'],[170,23,4,3,'ORGANIC'],[162,13,3,3,'DUST'],[190,6,4,3,'DUST'],[205,21,4,3,'DUST'],[210,9,3,3,'PLAIN']].forEach(a => R(...a));
+      [[100,8,6,6],[108,17,7,6],[96,20,4,5],[154,8,7,6],[163,18,7,7],[172,5,5,8],[158,22,4,5]].forEach(a => R(...a, 'THICKET'));
+      bandRegions(g);
+      border(g);
+      [30,60,90,120,150,180].forEach((c, i) => advWall(g, c, [20,5,16,3,22,12][i]));
+      [[16,6,1,2],[22,15,2,1],[10,24,1,1],[38,8,2,3],[46,15,1,3],[52,24,3,1],[56,10,1,2],[68,8,2,5],[70,8,1,2],[76,17,3,2],[83,11,1,3],
+       [73,25,2,1],[104,15,2,1],[115,6,1,3],[124,9,2,8],[126,15,2,2],[131,19,3,6],[134,3,2,7],[136,8,1,3],[140,12,3,6],[145,4,2,6],
+       [145,21,2,5],[128,3,1,2],[166,11,2,4],[177,19,1,3],[188,12,2,3],[205,16,2,3],[196,5,3,1],[197,24,3,1]].forEach(a => R(...a, 'ROCK'));
+    }
+    return g;
+  }
+  function border(g) { rect(g, 0, 0, g.cols, 1, T.ROCK); rect(g, 0, g.rows - 1, g.cols, 1, T.ROCK); rect(g, 0, 0, 1, g.rows, T.ROCK); rect(g, g.cols - 1, 0, 1, g.rows, T.ROCK); }
+  function advWall(g, col, gapRow) { rect(g, col, 1, 1, gapRow - 1, T.ROCK); const below = gapRow + 4; rect(g, col, below, 1, 29 - below, T.ROCK); }
+  function bandRegions(g) { for (let c = 0; c < g.cols; c++) for (let r = 0; r < g.rows; r++) g.region[r * g.cols + c] = Math.min(20, (c / 10) | 0); }
+
+  /** A biome of an Adventure, measured with the same check as a generated one. */
+  function adventureBiome(g, name, c0, c1, base) {
+    const b = { name, def: { base }, index: 0, c0, c1, doors: [] };
+    for (const col of [c0 - 1, c1 + 1]) for (let r = 1; r < g.rows - 1; r++) if (get(g, col, r) !== T.ROCK) b.doors.push(r * g.cols + col);
+    if (c0 === 1) for (let r = 11; r < 19; r++) b.doors.push(r * g.cols + 2);
+    let tiles = 0, rock = 0, thicket = 0, patched = 0;
+    for (let r = 1; r < g.rows - 1; r++) for (let c = c0; c <= c1; c++) {
+      const t = g.t[r * g.cols + c]; tiles++;
+      if (t === T.ROCK) rock++; else if (t === T.THICKET) thicket++; else if (t !== terrain(base)) patched++;
+    }
+    b.stats = Object.assign({ tiles, rock: rock / tiles, thicket: thicket / tiles, patched: patched / tiles }, check(g, b));
+    return b;
+  }
+
+  return { T, NAMES, terrain, layStrip, adventure, adventureBiome, stream };
+})();
+
+// =====================================================================================================
+// THE PAGE - a thin shell over the module above.
+// =====================================================================================================
+const PALETTES = {
+  game: { plain: '#1c2130', dust: '#2a2620', sand: '#433722', organic: '#16241c', mire: '#14222a', ash: '#231f22',
+    thicket: '#15291b', rock: '#3f3f52', rockEdge: '#8a8aa8', hatch: 'rgba(127,196,106,0.5)' },
+  clear: { plain: '#dfe3ea', dust: '#cdb88f', sand: '#e6d08a', organic: '#94c08c', mire: '#86adb9', ash: '#a89ca6',
+    thicket: '#4f8a46', rock: '#2f3340', rockEdge: '#2f3340', hatch: 'rgba(20,50,20,0.45)' },
+};
+
+const DEFAULT_DEFS = `# Ground keys in the shape the ticket 03 grilling settled. Calibrated against the Adventure's biomes.
+# A patch is: shape ground density sizeMin sizeMax. ground=neighbour takes the nearer biome's base, else fallback.
+# outcrops and crags are two rock coats, each off at density 0; crags are laid first.
+
+sim.mission.biomes=4
+sim.mission.ground.rows=30
+sim.mission.ground.apron=3
+sim.mission.ground.clearance=2
+# The border between two biomes (ticket 13): a ridge, crossed by passes. wall and belt stay here to compare.
+sim.mission.ground.border=ridge
+sim.mission.ground.ridgeWidth=3
+sim.mission.ground.ridgeRough=3
+sim.mission.ground.passWidth=4
+sim.mission.ground.passesMin=1
+sim.mission.ground.passesMax=2
+sim.mission.ground.passApart=6
+sim.mission.ground.passJog=4
+sim.mission.ground.snake=8
+sim.mission.ground.gatehouseShare=0.25
+sim.mission.ground.chamberWidth=8
+sim.mission.ground.chamberHeight=9
+sim.mission.ground.beltWidth=10
+sim.mission.ground.beltDensity=0.45
+
+# The plain (Adventure: 4% patches, 0.6% rock).
+sim.biome.plain.ground.widthMin=50
+sim.biome.plain.ground.widthMax=58
+sim.biome.plain.ground.regions=3
+sim.biome.plain.ground.base=plain
+sim.biome.plain.ground.fallback=dust
+sim.biome.plain.ground.patches=rect neighbour 0.04 4 6
+sim.biome.plain.ground.outcrops.density=0.006
+sim.biome.plain.ground.outcrops.lengthMin=1
+sim.biome.plain.ground.outcrops.lengthMax=2
+sim.biome.plain.ground.outcrops.thicknessMin=1
+sim.biome.plain.ground.outcrops.thicknessMax=1
+sim.biome.plain.ground.outcrops.arms=0
+sim.biome.plain.ground.crags.density=0
+sim.biome.plain.ground.crags.smoothing=0
+
+# The quarry (Adventure: 3.7% patches, 9.5% rock in six outcrops).
+sim.biome.quarry.ground.widthMin=50
+sim.biome.quarry.ground.widthMax=58
+sim.biome.quarry.ground.regions=3
+sim.biome.quarry.ground.base=dust
+sim.biome.quarry.ground.fallback=plain
+sim.biome.quarry.ground.patches=rect neighbour 0.04 4 6
+sim.biome.quarry.ground.outcrops.density=0.10
+sim.biome.quarry.ground.outcrops.lengthMin=4
+sim.biome.quarry.ground.outcrops.lengthMax=9
+sim.biome.quarry.ground.outcrops.thicknessMin=2
+sim.biome.quarry.ground.outcrops.thicknessMax=3
+sim.biome.quarry.ground.outcrops.arms=0.7
+sim.biome.quarry.ground.crags.density=0
+sim.biome.quarry.ground.crags.smoothing=3
+
+# The brake (Adventure 2: 3.7% patches, 18.6% thicket, 1.4% rock).
+sim.biome.brake.ground.widthMin=50
+sim.biome.brake.ground.widthMax=58
+sim.biome.brake.ground.regions=3
+sim.biome.brake.ground.base=plain
+sim.biome.brake.ground.fallback=organic
+sim.biome.brake.ground.patches=rect organic 0.035 4 6; blob thicket 0.18 6 11
+sim.biome.brake.ground.outcrops.density=0.015
+sim.biome.brake.ground.outcrops.lengthMin=2
+sim.biome.brake.ground.outcrops.lengthMax=4
+sim.biome.brake.ground.outcrops.thicknessMin=1
+sim.biome.brake.ground.outcrops.thicknessMax=2
+sim.biome.brake.ground.outcrops.arms=0.3
+sim.biome.brake.ground.crags.density=0
+sim.biome.brake.ground.crags.smoothing=0
+
+# CANDIDATE - the anthill, its rock as low crags (Adventure 2: 3.7% patches, 2.8% rock).
+sim.biome.anthill.ground.widthMin=50
+sim.biome.anthill.ground.widthMax=58
+sim.biome.anthill.ground.regions=3
+sim.biome.anthill.ground.base=organic
+sim.biome.anthill.ground.fallback=dust
+sim.biome.anthill.ground.patches=rect neighbour 0.04 4 6
+sim.biome.anthill.ground.outcrops.density=0
+sim.biome.anthill.ground.outcrops.lengthMin=1
+sim.biome.anthill.ground.outcrops.lengthMax=1
+sim.biome.anthill.ground.outcrops.thicknessMin=1
+sim.biome.anthill.ground.outcrops.thicknessMax=1
+sim.biome.anthill.ground.outcrops.arms=0
+sim.biome.anthill.ground.crags.density=0.05
+sim.biome.anthill.ground.crags.smoothing=4
+
+# CANDIDATE - the badlands, new: heavy crags on burnt ground, a few short outcrops among them.
+sim.biome.badlands.ground.widthMin=50
+sim.biome.badlands.ground.widthMax=58
+sim.biome.badlands.ground.regions=3
+sim.biome.badlands.ground.base=ash
+sim.biome.badlands.ground.fallback=dust
+sim.biome.badlands.ground.patches=rect neighbour 0.04 4 6
+sim.biome.badlands.ground.outcrops.density=0.02
+sim.biome.badlands.ground.outcrops.lengthMin=2
+sim.biome.badlands.ground.outcrops.lengthMax=4
+sim.biome.badlands.ground.outcrops.thicknessMin=1
+sim.biome.badlands.ground.outcrops.thicknessMax=2
+sim.biome.badlands.ground.outcrops.arms=0.3
+sim.biome.badlands.ground.crags.density=0.13
+sim.biome.badlands.ground.crags.smoothing=4
+`;
+
+function parseDefs(text) {
+  const kv = {};
+  text.split(/\r?\n/).forEach((line, n) => {
+    const t = line.trim(); if (!t || t.startsWith('#')) return;
+    const eq = t.indexOf('='); if (eq < 0) throw new Error('line ' + (n + 1) + ': no "="');
+    kv[t.slice(0, eq).trim()] = t.slice(eq + 1).trim();
+  });
+  const num = (k, fallback) => {
+    const v = kv[k];
+    if (v === undefined) { if (fallback === undefined) throw new Error('missing ' + k); return fallback; }
+    const x = Number(v); if (isNaN(x)) throw new Error(k + ' is not a number: ' + v); return x;
+  };
+  const M = 'sim.mission.ground.';
+  const G = { biomes: num('sim.mission.biomes', 4), rows: num(M + 'rows', 30), gapHeight: num(M + 'passWidth', 4), gaps: [num(M + 'passesMin', 1), num(M + 'passesMax', 2)],
+    gapApart: num(M + 'passApart', 6), apron: num(M + 'apron', 3), clearance: num(M + 'clearance', 2), snake: num(M + 'snake', 8),
+    border: kv[M + 'border'] || 'ridge', borderWidth: num(M + 'ridgeWidth', 3), borderRough: num(M + 'ridgeRough', 3),
+    gatehouseShare: num(M + 'gatehouseShare', 0),
+    passJog: num(M + 'passJog', 4), beltWidth: num(M + 'beltWidth', 10), beltDensity: num(M + 'beltDensity', 0.45),
+    chamberWidth: num(M + 'chamberWidth', 8), chamberHeight: num(M + 'chamberHeight', 9) };
+  const defs = {};
+  for (const key of Object.keys(kv)) {
+    const m = key.match(/^sim\.biome\.([a-z0-9_]+)\./); if (!m || defs[m[1]]) continue;
+    const B = 'sim.biome.' + m[1] + '.', g = B + 'ground.';
+    const patches = (kv[g + 'patches'] || '').split(';').map(x => x.trim()).filter(Boolean).map(entry => {
+      const w = entry.split(/\s+/);
+      if (w.length !== 5 || !['rect', 'ragged', 'blob'].includes(w[0])) throw new Error('a patch is "shape ground density sizeMin sizeMax": ' + entry);
+      if (w[1] !== 'neighbour') Ground.terrain(w[1]);
+      return { shape: w[0], ground: w[1], density: Number(w[2]), size: [Number(w[3]), Number(w[4])] };
+    });
+    defs[m[1]] = {
+      width: [num(g + 'widthMin'), num(g + 'widthMax')], regions: num(g + 'regions', 3),
+      base: kv[g + 'base'] || 'plain', fallback: kv[g + 'fallback'] || 'dust', patches,
+      outcrops: { density: num(g + 'outcrops.density', 0), length: [num(g + 'outcrops.lengthMin', 1), num(g + 'outcrops.lengthMax', 1)],
+        thickness: [num(g + 'outcrops.thicknessMin', 1), num(g + 'outcrops.thicknessMax', 1)], arm: num(g + 'outcrops.arms', 0) },
+      caves: { density: num(g + 'crags.density', 0), smoothing: num(g + 'crags.smoothing', 0) },
+    };
+    Ground.terrain(defs[m[1]].base); Ground.terrain(defs[m[1]].fallback);
+  }
+  return { G, defs };
+}
+
+function shadeFor(region, mode) {
+  if (mode === 'off') return 0;
+  const variance = mode === 'loud' ? 0.22 : 0.06;
+  let h = Math.imul(region + 1, 0x9e3779b1) >>> 0; h ^= h >>> 15;
+  return (((h % 5) - 2) / 2) * variance;
+}
+function mixHex(hex, f) {
+  const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const to = f > 0 ? 255 : 0, a = Math.abs(f);
+  r = Math.round(r + (to - r) * a); g = Math.round(g + (to - g) * a); b = Math.round(b + (to - b) * a);
+  return `rgb(${r},${g},${b})`;
+}
+
+function draw(g, c0, c1, px, opts, keep) {
+  const cv = document.createElement('canvas');
+  const w = c1 - c0 + 1;
+  cv.width = w * px; cv.height = g.rows * px;
+  const x = cv.getContext('2d');
+  const P = PALETTES[opts.palette];
+  const T = Ground.T, N = Ground.NAMES;
+  for (let r = 0; r < g.rows; r++) for (let c = c0; c <= c1; c++) {
+    const t = g.t[r * g.cols + c];
+    const shade = t === T.ROCK ? 0 : shadeFor(g.region[r * g.cols + c], opts.regions);
+    x.fillStyle = mixHex(P[N[t]], shade);
+    x.fillRect((c - c0) * px, r * px, px, px);
+    if (t === T.THICKET) {
+      x.fillStyle = P.hatch; const cell = px / 3, rad = Math.max(0.6, cell * 0.21);
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { x.beginPath(); x.arc((c - c0) * px + cell * (i + 0.5), r * px + cell * (j + 0.5), rad, 0, 7); x.fill(); }
+    }
+  }
+  if (opts.palette === 'game') {
+    x.fillStyle = P.rockEdge; const e = Math.max(1, px * 0.17);
+    for (let r = 0; r < g.rows; r++) for (let c = c0; c <= c1; c++) {
+      if (g.t[r * g.cols + c] !== T.ROCK) continue;
+      const X = (c - c0) * px, Y = r * px, open = (cc, rr) => cc >= 0 && rr >= 0 && cc < g.cols && rr < g.rows && g.t[rr * g.cols + cc] !== T.ROCK;
+      if (open(c - 1, r)) x.fillRect(X, Y, e, px); if (open(c + 1, r)) x.fillRect(X + px - e, Y, e, px);
+      if (open(c, r - 1)) x.fillRect(X, Y, px, e); if (open(c, r + 1)) x.fillRect(X, Y + px - e, px, e);
+    }
+  }
+  if (opts.overlay === 'on') {
+    if (keep) { x.strokeStyle = '#c2410c'; x.lineWidth = 1;
+      for (let r = 0; r < g.rows; r++) for (let c = c0; c <= c1; c++) if (g.keep[r * g.cols + c]) { x.fillStyle = 'rgba(194,65,12,0.22)'; x.fillRect((c - c0) * px, r * px, px, px); } }
+    for (const b of opts.biomes || []) {
+      for (let r = 1; r < g.rows - 1; r++) for (let c = Math.max(c0, b.c0); c <= Math.min(c1, b.c1); c++) {
+        const i = r * g.cols + c; if (g.t[i] === T.ROCK) continue;
+        const X = (c - c0) * px, Y = r * px;
+        if (!b.stats.seen[i]) { x.fillStyle = '#ef4444'; x.fillRect(X + 1, Y + 1, px - 2, px - 2); continue; }
+        const h = isRock(g, c - 1, r) && isRock(g, c + 1, r), v = isRock(g, c, r - 1) && isRock(g, c, r + 1);
+        if (h || v) { x.fillStyle = '#f59e0b'; x.beginPath(); x.arc(X + px / 2, Y + px / 2, px * 0.28, 0, 7); x.fill(); }
+      }
+    }
+  }
+  return cv;
+}
+const isRock = (g, c, r) => c < 0 || r < 0 || c >= g.cols || r >= g.rows || g.t[r * g.cols + c] === Ground.T.ROCK;
+const pct = v => (v * 100).toFixed(1) + '%';
+
+function statsLine(b, generated) {
+  const s = b.stats;
+  const parts = [`rock ${pct(s.rock)}`, `thicket ${pct(s.thicket)}`, `patches ${pct(s.patched)}`];
+  const checks = [s.doorsOk ? '<span class="ok">doors connect</span>' : '<span class="bad">DOOR CUT OFF</span>',
+    s.pockets ? `<span class="bad">${s.pockets} pocket tiles</span>` : '<span class="ok">no pockets</span>',
+    s.slots ? `${s.slots} slot tiles` : 'no slots'];
+  let extra = '';
+  if (generated) {
+    extra = `<br>width ${b.c1 - b.c0 + 1} · ${s.patchPlaced} patches · ${s.rockPlaced} outcrops` +
+      (s.rejected ? ` · ${s.rejected} rejected by the flood fill` : '') + (s.repaired ? ` · ${s.repaired} cave tiles repaired` : '');
+  }
+  return `<div class="stats">${parts.join(' · ')}<br>${checks.join(' · ')}${extra}</div>`;
+}
+
+const REFS = [
+  { name: 'plain', blurb: 'Open ground, three patches, a few pebbles of rock. Where nothing is a problem yet.', adv: 1, c0: 1, c1: 29, base: 'plain', label: 'Adventure - the plain' },
+  { name: 'quarry', blurb: 'Heavy rock bent round corners - "everything the first three taught, in the least room".', adv: 1, c0: 91, c1: 119, base: 'dust', label: 'Adventure - the quarry' },
+  { name: 'brake', blurb: 'Undergrowth he wades through and they barely notice; little rock.', adv: 2, c0: 151, c1: 179, base: 'plain', label: 'Adventure 2 - the brake' },
+  { name: 'anthill', blurb: 'Candidate crag biome: the Adventure 2 anthill, its rock laid as low crags - mounds round the holes.', adv: 2, c0: 61, c1: 89, base: 'organic', label: 'Adventure 2 - the anthill' },
+  { name: 'badlands', blurb: 'Candidate crag biome, new: heavy crags on burnt ground - irregular masses to fight round and behind.', adv: 0 },
+];
+
+let adv = null;
+function render() {
+  const err = document.getElementById('defsErr');
+  let parsed;
+  try { parsed = parseDefs(document.getElementById('defs').value); err.textContent = ''; }
+  catch (e) { err.textContent = e.message; return; }
+  const { G, defs } = parsed;
+  G.patchShape = document.getElementById('patchShape').value;
+  G.rockMode = document.getElementById('rockMode').value;
+  G.borderOverride = document.getElementById('borderStyle').value;
+  const opts = { palette: document.getElementById('palette').value, regions: document.getElementById('regionShade').value,
+    overlay: document.getElementById('overlay').value };
+  const first = Number(document.getElementById('seed').value) || 0;
+  adv = adv || { 1: Ground.adventure(1), 2: Ground.adventure(2) };
+
+  const host = document.getElementById('biomes'); host.innerHTML = '';
+  const PX = 6;
+  for (const ref of REFS) {
+    if (!defs[ref.name]) continue;
+    const h = document.createElement('h2'); h.textContent = 'The ' + ref.name; host.appendChild(h);
+    const p = document.createElement('p'); p.className = 'muted'; p.textContent = ref.blurb; host.appendChild(p);
+    const row = document.createElement('div'); row.className = 'row'; host.appendChild(row);
+    if (ref.adv) {
+      const ag = adv[ref.adv];
+      const ab = Ground.adventureBiome(ag, ref.name, ref.c0, ref.c1, ref.base);
+      row.appendChild(card(draw(ag, ref.c0 - 1, ref.c1 + 1, PX, Object.assign({}, opts, { biomes: [ab] }), false), `<b>${ref.label}</b>`, statsLine(ab, false), true));
+    }
+    for (let k = 0; k < 6; k++) {
+      const seed = first + k;
+      const strip = Ground.layStrip(defs, [ref.name], seed * 7919 + ref.name.length, G, 'walls');
+      const b = strip.biomes[0];
+      row.appendChild(card(draw(strip.g, 0, strip.g.cols - 1, PX, Object.assign({}, opts, { biomes: [b] }), true), `<b>seed ${seed}</b>`, statsLine(b, true), false));
+    }
+  }
+
+  const strips = document.getElementById('strips'); strips.innerHTML = '';
+  const SPX = 5;
+  for (const which of [1, 2]) {
+    const h = document.createElement('h3'); h.textContent = which === 1 ? 'Adventure' : 'Adventure 2'; strips.appendChild(h);
+    strips.appendChild(draw(adv[which], 0, 215, SPX, Object.assign({}, opts, { biomes: [] }), false));
+  }
+  const pool = Object.keys(defs);
+  const orderRng = Ground.stream(first, 'order');
+  const order = [];
+  // No biome twice in a mission, and never the same base ground side by side (03). Dealt from the order
+  // stream; a dead end (only same-base biomes left) starts the deal again from where the stream has got to.
+  for (let attempt = 0; attempt < 50 && order.length < G.biomes; attempt++) {
+    order.length = 0;
+    while (order.length < G.biomes) {
+      const last = order[order.length - 1];
+      const allowed = pool.filter(n => !order.includes(n) && (!last || defs[n].base !== defs[last].base));
+      if (!allowed.length) break;
+      order.push(allowed[orderRng.int(allowed.length)]);
+    }
+  }
+  const fin = { base: 'dust', fallback: 'dust', width: [34, 34], regions: 3, patches: [], outcrops: { density: 0, length: [1, 1], thickness: [1, 1], arm: 0 }, caves: { density: 0, smoothing: 0 } };
+  const mission = Ground.layStrip(Object.assign({}, defs, { 'finale (stand-in)': fin }), [...order, 'finale (stand-in)'], first, G, 'border');
+  const h = document.createElement('h3');
+  h.textContent = `Generated mission, seed ${first}: ` + order.join(' → ') + ' → finale';
+  strips.appendChild(h);
+  strips.appendChild(draw(mission.g, 0, mission.g.cols - 1, SPX, Object.assign({}, opts, { biomes: mission.biomes }), true));
+  const bad = mission.biomes.filter(b => !b.stats.doorsOk || b.stats.pockets);
+  const s = document.createElement('div'); s.className = 'stats';
+  const st = mission.strip;
+  s.innerHTML = (bad.length ? `<span class="bad">${bad.length} biome(s) fail the check</span>` : `<span class="ok">every biome's doors connect, no pockets</span>`) +
+    ` · ${st.connected ? '<span class="ok">start to finale connected</span>' : '<span class="bad">STRIP CUT</span>'}` +
+    ` · ${mission.g.cols} columns (the Adventures are 216) · border: ${mission.style}` +
+    (st.sealed ? ` · ${st.sealed} band tiles sealed` : '') + (st.bandSlots ? ` · ${st.bandSlots} slot tiles in borders` : '');
+  strips.appendChild(s);
+}
+
+function card(canvas, title, stats, isRef) {
+  const d = document.createElement('div'); d.className = 'card' + (isRef ? ' ref' : '');
+  d.appendChild(canvas);
+  const cap = document.createElement('div'); cap.className = 'cap'; cap.innerHTML = title + stats;
+  d.appendChild(cap);
+  return d;
+}
+
+document.getElementById('defs').value = DEFAULT_DEFS;
+for (const id of ['borderStyle', 'patchShape', 'rockMode', 'palette', 'regionShade', 'overlay', 'seed']) document.getElementById(id).addEventListener('change', render);
+document.getElementById('defs').addEventListener('input', () => { clearTimeout(window.__t); window.__t = setTimeout(render, 250); });
+document.getElementById('nextSeeds').addEventListener('click', () => { const s = document.getElementById('seed'); s.value = Number(s.value) + 6; render(); });
+render();
+</script>
+</body>
+</html>

@@ -194,12 +194,22 @@ A term that could sit in two sections goes where a reader would look for it, not
 | Term | Meaning |
 |---|---|
 | **arena** | The rectangle a level is played inside. Not a body - it is handled by clamping, not by a collision test. It is exactly the map's own extent; there is no separate arena size. |
+| **apron** | The ground either side of a **pass** that generation keeps to its biome's base: no **patch**, no rock, nothing scattered, three tiles deep. What makes a pass something you can always walk straight up to. |
 | **focus** | A marker saying the view must keep this entity in shot. The simulation says who matters and stops there; where the camera goes is entirely the client's. |
 | **ash** | Burnt ground. Passable; what is left where a place has already been fought over. |
+| **clearance** | The narrowest passage generation may leave between two pieces of rock - the **ridge**, the border, **outcrops** and **crags** alike - in tiles. Two, which is ten world units and wider than anything that walks a **biome**. Why a laid biome cannot seal its own passes. |
+| **coat** | One layer of a **biome**'s ground laid over its base, in order: **patches**, **crags**, **outcrops**. Each has its own **stream** and its own **density**; rock always wins over a patch. |
+| **crag** | Rock laid as an irregular mass: noise smoothed and cut at the coat's **density**, then repaired so every **pass** stays open and no passage is under the **clearance**. The second way a biome's rock is laid, beside the **outcrop**. Not *cave*: nothing here is underground or enclosed. |
+| **density** | How much of a **biome** one **coat** takes, as a fraction of its tiles - laid until reached. Never a count: a count of things drawn from a range of sizes swings a biome's character from seed to seed. |
 | **fragment** | A piece of map that generation produces and assembles with others into a level. Not built yet; the grid exists to make it cheap. |
+| **gatehouse** | A **pass** that runs through a walled clearing in the middle of its **ridge**, entered on one row and left on another: a small room on the border between two **biomes**, about one ridge a mission. A proof of concept for rooms (missions ticket 12). |
 | **leash** | How far a commander may walk from the middle of the commanders. One shared view cannot frame four players free to walk apart for ever (pillar 4), so past it the outward part of a step is refused - never a shove inwards, so nobody is pushed and a man at the end of the rope walks home himself. A distance in world units, sized against the near-zoom view **by hand**: read from the camera it would turn pulling the view back into extra rope, and zoom is a rendering setting. |
 | **mire** | Standing water and the mud round it. Passable; where the things that **hop** take root. |
+| **outcrop** | Rock laid as a bar, sometimes with an arm bent off one end - two or three tiles bent round a corner, the Adventures' own shape - and kept the **clearance** off all other rock. Bars and Ls enclose nothing, so spaced apart they cannot close a pass. |
+| **pass** | The way through a **ridge**: four tiles wide, one or two to a ridge, bending a few rows on the way through and never entered level with where the last ridge's pass came out. Carved after the ridge is laid, so nothing laid later can close one; an **apron** keeps its mouths clear. Not *gap*, which was the one-column wall's. |
+| **patch** | A piece of different ground laid inside a **biome**: a rectangle of a colour, or a grown blob of ground worth going round (**thicket**). A patch of *neighbour* ground takes the base of the biome on its nearer side, so a biome looks different beside different neighbours. |
 | **region** | A contiguous area of a map, decided before its tiles are filled in. What makes a level read as places rather than one flat sheet: regions are shaded subtly apart, and later decide what terrain and what contents belong where. |
+| **ridge** | What lies between two **biomes** of a mission: a band of rock a few tiles thick whose faces wander into the biomes on either side, crossed by one or two **passes**. Replaced the one-column wall, which read as a ruled line. |
 | **shake** | Something violent that happened somewhere, published for the view - a blast, or a pull of a gun that names one: how hard at the middle of it, how far it is felt, and how far through it is. The simulation says what happened and stops there - what the view does about it is entirely the client's, exactly as *focus* says who matters and not where the camera goes. |
 | **spawn area** | The patch of tiles a side is put on at the start of a level. A rectangle of tiles with everyone jittered inside them, never at a tile centre (G0009) - the same tile-anchored scatter that places everything else. |
 | **sand** | Open yellow-bronze ground. Passable and costs nothing - a colour and a mood, like dust's; the **proving ground** is laid on it. |
@@ -227,7 +237,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **mission seed** | The one number a **mission** is built from - its layout, its contents and every **stream** of its run. Two attempts at one seed still drift apart, because what is dealt follows how it is played. Not reproducible across builds: a generator change may make a seed a different mission. |
 | **daily mission** | A **mission** whose seed comes from the UTC date and its **tier**, so everybody has the same three on the same day - a different map for each tier, not one map at three strengths. The clock is read by the client; the simulation sees only the seed. |
 | **tier** | How hard a **mission** is: easy, medium or hard. |
-| **biome** | One stretch of a **mission**, with ground and creatures of its own, crossed into from the one before through a gap that generation keeps open. Biomes may repeat in a mission. Not *sector*, which is a trooper's run of the circle round a point. |
+| **biome** | One stretch of a **mission**, with ground and creatures of its own, crossed into from the one before over a **ridge**, through a **pass** that generation keeps open. No biome comes twice in a mission, and no two side by side share a base ground. Not *sector*, which is a trooper's run of the circle round a point. |
 | **finale** | The last stretch of a **mission**, where its objective is - a **lair** with a **boss** in it, or a **redoubt** to take and hold. |
 | **objective** | A condition a level requires before it counts as done. A level names a set and requires all of it. Two exist: clear the map of enemies, and capture every control point. What a completed level *does* is still open - in the alpha it does nothing. |
 | **proving ground** | The menu's practice range: choose a **setup** and fight it, on a round patch of **sand** with a few rocks on it, ringed by **thicket**, your side on the left and theirs on the right. Outside the campaign on purpose - nothing is carried in or out of it, and nothing it settles is balance (G0060). Not *arena*, which is the rectangle a level is played inside. |
@@ -362,6 +372,8 @@ What the player is shown around the fight and how he moves through it. Decided i
 - *arena* for the training mode - say proving ground.
 - *sector*, *zone* or *stage* for a stretch of a mission - say biome. A sector is a trooper's arc round a point.
 - *run* or *map* for a generated level - say mission; *difficulty* for which of the three - say tier.
+- *cover* or *count* for how much of a biome a coat takes - say density; cover is shelter. *Cave* for
+  irregular rock - say crag.
 - *health bar* for a commander - say status. He has no health worth a bar.
 - *HP*, *hit points*, *health* for a commander or a trooper - say wounds. A man has none (G0053).
 - *i-frames*, *invincibility* for a man - say grace, or shield. *Invulnerable* is the harness's god mode.
