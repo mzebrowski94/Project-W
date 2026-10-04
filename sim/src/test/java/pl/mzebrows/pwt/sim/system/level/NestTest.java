@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system.level;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.BROOD;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_FIRST_BROOD;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_HATCH_KEEP_OFF;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_HATCH_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_HEALTH;
@@ -12,6 +13,8 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.TILE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.countLiving;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.on;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -20,6 +23,7 @@ import com.badlogic.ashley.core.Entity;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
@@ -36,8 +40,8 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  * the only one that can be walked to and taken away. Ground you have cleared stays cleared only if
  * you dealt with what was filling it in.
  *
- * <p>Three rules are worth more than the rest. <strong>It sleeps until somebody comes near</strong>,
- * or a level four screens wide would hand the player an accumulation rather than a nest.
+ * <p>Three rules are worth more than the rest. <strong>It sleeps until somebody in its biome comes
+ * near</strong>, or a level four screens wide would hand the player an accumulation rather than a nest.
  * <strong>Waking latches</strong>, or a nest would be a thing you could wait out. And <strong>it is
  * at its worst the moment you kill it</strong>, which is what makes destroying one a decision about
  * when rather than a chore.
@@ -52,6 +56,15 @@ class NestTest {
 
     /** A couple of ticks past a whole period, so a brood that was due has actually been sent. */
     private static final int ONE_PERIOD = ticksIn(NEST_PERIOD) + 2;
+
+    /** A couple of ticks past the first brood, and still well short of a period. */
+    private static final int FIRST_BROOD = ticksIn(NEST_FIRST_BROOD) + 2;
+
+    /** The first column of {@link #twoRegions}' eastern region: the tile past the nest's own. */
+    private static final int EDGE_COL = (int) (X / TILE) + 1;
+
+    /** Across that edge from the nest and well inside its wake radius. */
+    private static final float ACROSS = X + NEST_WAKE_RADIUS / 2f;
 
     @Test
     void sendsOutNothingAtAllUntilSomebodyComesNear() {
@@ -69,6 +82,46 @@ class NestTest {
         Simulation simulation = woken();
 
         steps(simulation, ONE_PERIOD);
+
+        assertThat(creatures(simulation)).isEqualTo(BROOD);
+    }
+
+    /**
+     * Its own biome, not the radius alone: a nest across a ridge is somebody else's problem until you
+     * cross, or what came through the pass would be the accumulation its sleep exists to prevent (G0062).
+     */
+    @Test
+    void sleepsThroughSomebodyNearButInAnotherBiome() {
+        Simulation simulation = on(twoRegions().regionInBiome(1, 1).build());
+        simulation.spawnNest(UnitKind.GRUNT, X, Y);
+        simulation.spawnCommander(ACROSS, Y);
+
+        steps(simulation, ONE_PERIOD * 3);
+
+        assertThat(creatures(simulation)).isZero();
+    }
+
+    /** The biome, not the region: a band of shading is not a wall. */
+    @Test
+    void wakesForSomebodyNearInAnotherRegionOfItsOwnBiome() {
+        Simulation simulation = on(twoRegions().build());
+        simulation.spawnNest(UnitKind.GRUNT, X, Y);
+        simulation.spawnCommander(ACROSS, Y);
+
+        steps(simulation, ONE_PERIOD);
+
+        assertThat(creatures(simulation)).isEqualTo(BROOD);
+    }
+
+    /**
+     * It wakes when you arrive, so its first brood is a few seconds off rather than a whole period: you
+     * see the hole, then see it work, rather than walk up to one that does nothing (G0062).
+     */
+    @Test
+    void sendsItsFirstBroodSoonAfterWaking() {
+        Simulation simulation = woken();
+
+        steps(simulation, FIRST_BROOD);
 
         assertThat(creatures(simulation)).isEqualTo(BROOD);
     }
@@ -257,6 +310,17 @@ class NestTest {
         simulation.spawnNest(UnitKind.GRUNT, X, Y);
         simulation.spawnCommander(X + 2f, Y);
         return simulation;
+    }
+
+    /** The test ground in two regions, split one tile east of the nest; one biome until told otherwise. */
+    private static TileMap.Builder twoRegions() {
+        TileMap.Builder builder = ground();
+        for (int col = EDGE_COL; col < builder.cols(); col++) {
+            for (int row = 0; row < builder.rows(); row++) {
+                builder.region(col, row, 1);
+            }
+        }
+        return builder;
     }
 
     /** Everything alive that came out of a nest. The nest itself carries no strain, so it is not one. */

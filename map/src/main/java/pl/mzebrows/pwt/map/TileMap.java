@@ -4,6 +4,10 @@ package pl.mzebrows.pwt.map;
  * The ground a level is played on: a rectangular grid of tiles, each carrying a {@link Terrain} and
  * the id of the region it belongs to.
  *
+ * <p><strong>A biome is a grouping of regions</strong> (G0062): every region lies inside one, and a tile
+ * is in its region's biome - one partition, so the shading and the biome cannot disagree and a region
+ * cannot straddle two. A map that names none is one biome, biome zero.
+ *
  * <p>Immutable once built. It is world state of the same kind as the simulation's config - a value
  * that systems read freely and nothing writes during a tick - which is why reading it from a system
  * is not a boundary crossing worth worrying about.
@@ -26,6 +30,12 @@ public final class TileMap {
     /** What {@link #regionAtTile} reports for a tile the map does not have. */
     public static final int NO_REGION = -1;
 
+    /**
+     * What {@link #biomeAtTile} reports for a tile the map does not have - and only then: every tile on
+     * the map is in a biome (G0062).
+     */
+    public static final int NO_BIOME = -1;
+
     /** What lies outside the map: solid, so nothing can be pushed out through the edge. */
     private static final Terrain OUTSIDE = Terrain.ROCK;
 
@@ -36,16 +46,31 @@ public final class TileMap {
     private final int[] region;
     private final int regionCount;
 
-    private TileMap(int cols, int rows, float tileSize, Terrain[] terrain, int[] region, int regionCount) {
+    /** The biome each region is in, indexed by region id: {@link #regionCount} long. */
+    private final int[] biomeOfRegion;
+
+    private final int biomeCount;
+
+    private TileMap(
+            int cols,
+            int rows,
+            float tileSize,
+            Terrain[] terrain,
+            int[] region,
+            int regionCount,
+            int[] biomeOfRegion,
+            int biomeCount) {
         this.cols = cols;
         this.rows = rows;
         this.tileSize = tileSize;
         this.terrain = terrain;
         this.region = region;
         this.regionCount = regionCount;
+        this.biomeOfRegion = biomeOfRegion;
+        this.biomeCount = biomeCount;
     }
 
-    /** Starts a map of this many tiles, every one of them {@link Terrain#PLAIN} in region zero. */
+    /** Starts a map of this many tiles, every one of them {@link Terrain#PLAIN} in region zero, biome zero. */
     public static Builder builder(int cols, int rows, float tileSize) {
         return new Builder(cols, rows, tileSize);
     }
@@ -66,6 +91,11 @@ public final class TileMap {
     /** How many regions this map was partitioned into. Ids run from zero to one less than this. */
     public int regionCount() {
         return regionCount;
+    }
+
+    /** How many biomes this map's regions were grouped into: one if it named none. Ids run from zero. */
+    public int biomeCount() {
+        return biomeCount;
     }
 
     /** The playable width, in world units. This is the arena. */
@@ -116,6 +146,16 @@ public final class TileMap {
     /** The region a tile belongs to, or {@link #NO_REGION} for anything outside the map. */
     public int regionAtTile(int col, int row) {
         return inBounds(col, row) ? region[row * cols + col] : NO_REGION;
+    }
+
+    /** The biome a tile is in - its region's - or {@link #NO_BIOME} for anything outside the map. */
+    public int biomeAtTile(int col, int row) {
+        return inBounds(col, row) ? biomeOfRegion[region[row * cols + col]] : NO_BIOME;
+    }
+
+    /** The biome at a world position, or {@link #NO_BIOME} for anything outside the map. */
+    public int biomeAt(float worldX, float worldY) {
+        return biomeAtTile(colAt(worldX), rowAt(worldY));
     }
 
     /** Whether a unit may stand on this tile. False for anything outside the map. */
@@ -268,6 +308,9 @@ public final class TileMap {
         private final Terrain[] terrain;
         private final int[] region;
 
+        /** The biome each region has been put in so far, by region id; grown as regions are named. */
+        private int[] biomeOfRegion = new int[0];
+
         private Builder(int cols, int rows, float tileSize) {
             if (cols < 1 || rows < 1) {
                 throw new IllegalArgumentException("a map needs at least one tile, was " + cols + "x" + rows);
@@ -344,6 +387,24 @@ public final class TileMap {
             return this;
         }
 
+        /**
+         * Puts a whole region in a biome. Every region is in biome zero until told otherwise; biome ids
+         * are dense from zero, and the count is taken from the highest.
+         */
+        public Builder regionInBiome(int id, int biome) {
+            if (id < 0) {
+                throw new IllegalArgumentException("region id must not be negative, was " + id);
+            }
+            if (biome < 0) {
+                throw new IllegalArgumentException("biome id must not be negative, was " + biome);
+            }
+            if (id >= biomeOfRegion.length) {
+                biomeOfRegion = java.util.Arrays.copyOf(biomeOfRegion, id + 1);
+            }
+            biomeOfRegion[id] = biome;
+            return this;
+        }
+
         public TileMap build() {
             int highest = 0;
             for (int id : region) {
@@ -351,7 +412,35 @@ public final class TileMap {
                     highest = id;
                 }
             }
-            return new TileMap(cols, rows, tileSize, terrain.clone(), region.clone(), highest + 1);
+            int regionCount = highest + 1;
+            if (biomeOfRegion.length > regionCount) {
+                throw new IllegalArgumentException("region " + (biomeOfRegion.length - 1)
+                        + " was put in a biome, but the map has only " + regionCount + " regions");
+            }
+            int[] biomes = java.util.Arrays.copyOf(biomeOfRegion, regionCount);
+            return new TileMap(
+                    cols, rows, tileSize, terrain.clone(), region.clone(), regionCount, biomes, biomeCount(biomes));
+        }
+
+        /** One more than the highest biome any region is in, refusing a gap: a biome nothing is in. */
+        private static int biomeCount(int[] biomes) {
+            int highest = 0;
+            for (int biome : biomes) {
+                if (biome > highest) {
+                    highest = biome;
+                }
+            }
+            boolean[] named = new boolean[highest + 1];
+            for (int biome : biomes) {
+                named[biome] = true;
+            }
+            for (int biome = 0; biome <= highest; biome++) {
+                if (!named[biome]) {
+                    throw new IllegalArgumentException("no region is in biome " + biome + " of " + (highest + 1)
+                            + ": biome ids must be dense from zero");
+                }
+            }
+            return highest + 1;
         }
 
         private int index(int col, int row) {

@@ -4,8 +4,12 @@
 
 **Trigger.** Changing what wakes a nest or when its first brood comes, or asking which biome a tile is in.
 
-**Enforced by.** nothing yet - the build stage writes the nest and map tests and names them here
-(missions ticket 06).
+**Enforced by.** `NestTest` (`.sleepsThroughSomebodyNearButInAnotherBiome`,
+`.wakesForSomebodyNearInAnotherRegionOfItsOwnBiome`, `.sendsItsFirstBroodSoonAfterWaking`), `TileMapTest`
+(`.putsEveryTileInBiomeZeroUntilToldOtherwise`, `.answersARegionsBiomeForEveryTileInIt`), and the
+Adventures' `AdventureScenarioTest.putsEachWallInTheBiomeToItsEastAndHasSevenBiomes` and
+`AdventureTwoScenarioTest.putsEachWallInTheBiomeToItsEastAndHasSevenBiomes`. The ridge tile waits for a
+test of `Strip`.
 
 **Constraint.** **Amends G0031.** A nest wakes when somebody on the player's side is **in its biome and
 within `wakeRadius`** - not within the radius alone. Its first brood comes `sim.nest.firstBroodSeconds`

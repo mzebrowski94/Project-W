@@ -90,6 +90,15 @@ final class AdventureScenario implements Scenario {
     /** How many columns one shading band covers. */
     private static final int BAND = COLS / REGIONS;
 
+    /**
+     * Bands to a biome. Every wall sits on a band's first column, so each wall is in the biome to its east
+     * - the one it lets you into (G0062).
+     */
+    private static final int REGIONS_PER_BIOME = 3;
+
+    /** The redoubt: seven biomes, the last one held rather than marched through. */
+    private static final int LAST_BIOME = 6;
+
     /** The walkable rows inside the border. */
     private static final int FIRST_ROW = 1;
 
@@ -369,6 +378,9 @@ final class AdventureScenario implements Scenario {
             for (int row = 0; row < ROWS; row++) {
                 builder.region(col, row, region);
             }
+        }
+        for (int region = 0; region < REGIONS; region++) {
+            builder.regionInBiome(region, Math.min(region / REGIONS_PER_BIOME, LAST_BIOME));
         }
     }
 

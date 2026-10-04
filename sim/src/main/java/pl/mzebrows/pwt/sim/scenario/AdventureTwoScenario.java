@@ -61,6 +61,12 @@ final class AdventureTwoScenario implements Scenario {
 
     private static final int BAND = COLS / REGIONS;
 
+    /** Bands to a biome; each wall on a band's first column, so in the biome to its east (G0062). */
+    private static final int REGIONS_PER_BIOME = 3;
+
+    /** The keep: seven biomes, the last one held rather than marched through. */
+    private static final int LAST_BIOME = 6;
+
     private static final int FIRST_ROW = 1;
 
     private static final int LAST_ROW = ROWS - 2;
@@ -255,6 +261,9 @@ final class AdventureTwoScenario implements Scenario {
             for (int row = 0; row < ROWS; row++) {
                 builder.region(col, row, region);
             }
+        }
+        for (int region = 0; region < REGIONS; region++) {
+            builder.regionInBiome(region, Math.min(region / REGIONS_PER_BIOME, LAST_BIOME));
         }
     }
 

@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
@@ -34,7 +35,8 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * <ul>
  *   <li><strong>A destroyed nest empties itself</strong> - a last brood and a shout - while its body is
  *       still on the field, before the reaper.
- *   <li><strong>A nest nobody has come near does nothing.</strong> Waking latches.
+ *   <li><strong>A nest nobody in its biome has come near does nothing</strong> (G0062). Waking latches,
+ *       and the first brood comes soon after.
  *   <li><strong>A nest being hit calls the neighbours</strong> (G0016), read from its health against
  *       last tick - damage is already cleared by then.
  * </ul>
@@ -58,6 +60,9 @@ public final class NestSystem extends EntitySystem {
     private final Spawner spawner;
     private final Rng rng;
 
+    /** How long after waking a nest's first brood comes: one number for every nest (G0062). */
+    private final int firstBroodTicks;
+
     private ImmutableArray<Entity> nests = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> quarry = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
@@ -67,6 +72,7 @@ public final class NestSystem extends EntitySystem {
         this.map = map;
         this.spawner = spawner;
         this.rng = rng;
+        this.firstBroodTicks = Ticks.of(config.nest().firstBroodSeconds(), config.tickSeconds());
     }
 
     @Override
@@ -99,7 +105,7 @@ public final class NestSystem extends EntitySystem {
             nest.watchedHealth = health.current;
             if (!nest.awake) {
                 if (anybodyNear(at, nest.wakeRadius)) {
-                    nest.wake();
+                    nest.wake(firstBroodTicks);
                 }
                 continue;
             }
@@ -113,16 +119,19 @@ public final class NestSystem extends EntitySystem {
     }
 
     /**
-     * Whether anybody on the player's side is close enough to be worth waking for.
+     * Whether anybody on the player's side is in the nest's biome and close enough to be worth waking for
+     * (G0062): the radius alone reaches through a ridge into a biome nobody has entered.
      *
      * <p>The list an alien hunts from; a man who is down does not wake one. A scan, as
-     * {@code Drivers.nearestLivingTarget}.
+     * {@code Drivers.nearestLivingTarget}. The biome is looked up rather than kept: a nest never moves and
+     * the lookup is an array read.
      */
     private boolean anybodyNear(Position at, float radius) {
         if (radius <= 0f) {
             return false;
         }
         float reach = radius * radius;
+        int biome = map.biomeAt(at.x, at.y);
         for (int i = 0; i < quarry.size(); i++) {
             Entity candidate = quarry.get(i);
             if (!Drivers.huntable(candidate)) {
@@ -131,7 +140,7 @@ public final class NestSystem extends EntitySystem {
             Position where = POSITION.get(candidate);
             float toX = where.x - at.x;
             float toY = where.y - at.y;
-            if (toX * toX + toY * toY <= reach) {
+            if (toX * toX + toY * toY <= reach && map.biomeAt(where.x, where.y) == biome) {
                 return true;
             }
         }

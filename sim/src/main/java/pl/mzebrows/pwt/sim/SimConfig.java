@@ -288,6 +288,8 @@ public record SimConfig(
      * @param radius its circular body, in world units; solid and shootable
      * @param health what it absorbs before it is destroyed
      * @param periodSeconds how long between broods
+     * @param firstBroodSeconds how long after waking the first brood comes, for every nest - soon, because a
+     *     nest wakes when you arrive in its biome (G0062)
      * @param broodMin how few come out at a time
      * @param broodMax how many, dealt from the nest's own bag. At most {@code Bag.MOST} sizes
      * @param deathBroodMin how few come out when it is destroyed
@@ -295,8 +297,8 @@ public record SimConfig(
      * @param hatchRadius how far around it a brood is put down, in world units; outside its own body
      * @param hatchKeepOff how far off every man on the player's side a hatched creature is put down, in
      *     world units, so a brood comes out of the hole rather than out of the man standing over it
-     * @param wakeRadius how close somebody on the player's side must come before it starts working, in
-     *     world units. Not a detection range
+     * @param wakeRadius how close somebody on the player's side and in its biome must come before it starts
+     *     working, in world units. Not a detection range
      * @param rouseRadius how far its cry carries when it is attacked, in world units
      */
     @With
@@ -304,6 +306,7 @@ public record SimConfig(
             float radius,
             int health,
             float periodSeconds,
+            float firstBroodSeconds,
             int broodMin,
             int broodMax,
             int deathBroodMin,
@@ -317,6 +320,7 @@ public record SimConfig(
             Require.positive("nest radius", radius);
             Require.positive("nest health", health);
             Require.positive("nest periodSeconds", periodSeconds);
+            Require.positive("nest firstBroodSeconds", firstBroodSeconds);
             Require.notNegative("nest broodMin", broodMin);
             Require.notNegative("nest deathBroodMin", deathBroodMin);
             Require.atLeast("nest broodMax", broodMax, broodMin, "a nest cannot have a smaller most than fewest");

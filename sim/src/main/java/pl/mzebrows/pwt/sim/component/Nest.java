@@ -7,8 +7,9 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 /**
  * A hole in the ground that keeps sending more of one strain out of it.
  *
- * <p>A <strong>place</strong> that produces. <strong>It sleeps until somebody comes near</strong>, and
- * {@link #awake} latches. {@link #watchedHealth} is how it knows it is being hit (G0016).
+ * <p>A <strong>place</strong> that produces. <strong>It sleeps until somebody in its biome comes
+ * near</strong> (G0062), and {@link #awake} latches. {@link #watchedHealth} is how it knows it is
+ * being hit (G0016).
  */
 public final class Nest implements Component, Pool.Poolable {
 
@@ -76,10 +77,13 @@ public final class Nest implements Component, Pool.Poolable {
         return this;
     }
 
-    /** Starts the first clock. Called once, when somebody first comes near enough. */
-    public void wake() {
+    /**
+     * Starts the first clock, at the first brood rather than a whole period (G0062). Called once, when
+     * somebody first comes near enough.
+     */
+    public void wake(int firstBroodTicks) {
         this.awake = true;
-        this.untilNext = periodTicks;
+        this.untilNext = firstBroodTicks;
     }
 
     /**

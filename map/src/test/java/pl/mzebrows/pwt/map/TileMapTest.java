@@ -19,6 +19,11 @@ class TileMapTest {
     /** A brute: 5.2 across against a 5-unit tile, so a one-tile crack is a wall. */
     private static final float BROAD = 2.6f;
 
+    /** Columns to a region in {@link #banded}: four regions across the map. */
+    private static final int BAND = 8;
+
+    private static final int REGIONS = COLS / BAND;
+
     @Test
     void reportsTheWorldSizeItsGridAddsUpTo() {
         TileMap map = plain();
@@ -54,6 +59,8 @@ class TileMapTest {
         assertThat(map.terrainAtTile(-1, 0)).isEqualTo(Terrain.ROCK);
         assertThat(map.terrainAtTile(COLS, 0)).isEqualTo(Terrain.ROCK);
         assertThat(map.regionAtTile(-1, 0)).isEqualTo(TileMap.NO_REGION);
+        assertThat(map.biomeAtTile(-1, 0)).isEqualTo(TileMap.NO_BIOME);
+        assertThat(map.biomeAt(-1f, 0f)).isEqualTo(TileMap.NO_BIOME);
     }
 
     @Test
@@ -78,6 +85,54 @@ class TileMapTest {
                 .build();
 
         assertThat(map.regionCount()).isEqualTo(5);
+    }
+
+    /** A map that names no biomes is one biome, so a level without them reads exactly as it did before. */
+    @Test
+    void putsEveryTileInBiomeZeroUntilToldOtherwise() {
+        TileMap map = banded(TileMap.builder(COLS, ROWS, TILE)).build();
+
+        assertThat(map.biomeCount()).isEqualTo(1);
+        for (int col = 0; col < COLS; col++) {
+            for (int row = 0; row < ROWS; row++) {
+                assertThat(map.biomeAtTile(col, row)).isZero();
+            }
+        }
+    }
+
+    /** A tile is in its region's biome: one partition, so a region can never straddle two. */
+    @Test
+    void answersARegionsBiomeForEveryTileInIt() {
+        TileMap map = banded(TileMap.builder(COLS, ROWS, TILE))
+                .regionInBiome(1, 0)
+                .regionInBiome(2, 1)
+                .regionInBiome(3, 1)
+                .build();
+
+        assertThat(map.biomeCount()).isEqualTo(2);
+        for (int col = 0; col < COLS; col++) {
+            int expected = col < BAND * 2 ? 0 : 1;
+            for (int row = 0; row < ROWS; row++) {
+                assertThat(map.biomeAtTile(col, row)).as("tile %d,%d", col, row).isEqualTo(expected);
+            }
+        }
+        assertThat(map.biomeAt(BAND * 2 * TILE - 0.1f, 1f)).isZero();
+        assertThat(map.biomeAt(BAND * 2 * TILE, 1f)).isEqualTo(1);
+    }
+
+    /** A biome nothing is in would make the count a lie, and every caller sizes from the count. */
+    @Test
+    void refusesBiomesThatLeaveOneOut() {
+        TileMap.Builder builder = banded(TileMap.builder(COLS, ROWS, TILE)).regionInBiome(3, 2);
+
+        assertThatThrownBy(builder::build).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void refusesABiomeForARegionTheMapDoesNotHave() {
+        TileMap.Builder builder = banded(TileMap.builder(COLS, ROWS, TILE)).regionInBiome(REGIONS, 1);
+
+        assertThatThrownBy(builder::build).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -254,5 +309,15 @@ class TileMapTest {
 
     private static TileMap plain() {
         return TileMap.builder(COLS, ROWS, TILE).fill(Terrain.PLAIN).build();
+    }
+
+    /** {@link #REGIONS} regions in column bands of {@link #BAND}, west to east. */
+    private static TileMap.Builder banded(TileMap.Builder builder) {
+        for (int col = 0; col < COLS; col++) {
+            for (int row = 0; row < ROWS; row++) {
+                builder.region(col, row, col / BAND);
+            }
+        }
+        return builder;
     }
 }

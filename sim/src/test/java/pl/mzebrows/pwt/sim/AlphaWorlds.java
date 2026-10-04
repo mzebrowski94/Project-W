@@ -279,6 +279,9 @@ public final class AlphaWorlds {
     /** Short, because a test that waits out a thirty-second period is a test nobody runs. */
     public static final float NEST_PERIOD = 1f;
 
+    /** Well inside a period, so a test can tell the first brood from the ones that follow it. */
+    public static final float NEST_FIRST_BROOD = 0.25f;
+
     /** Fixed rather than a range, so a test can assert a count instead of a band. */
     public static final int BROOD = 2;
 
@@ -1507,6 +1510,7 @@ public final class AlphaWorlds {
                         NEST_RADIUS,
                         NEST_HEALTH,
                         NEST_PERIOD,
+                        NEST_FIRST_BROOD,
                         BROOD,
                         BROOD,
                         BROOD,

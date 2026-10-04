@@ -154,6 +154,23 @@ class AdventureScenarioTest {
         }
     }
 
+    /**
+     * The map knows the biomes {@link #BIOME_END} draws, and a wall - standing on each of those columns -
+     * belongs to the biome it lets you into: a nest wakes when you come through the gap, not from behind
+     * the rock (G0062).
+     */
+    @Test
+    void putsEachWallInTheBiomeToItsEastAndHasSevenBiomes() {
+        TileMap map = world().map();
+
+        for (int col = 0; col < map.cols(); col++) {
+            for (int row = 0; row < map.rows(); row++) {
+                assertThat(map.biomeAtTile(col, row)).as("tile %d,%d", col, row).isEqualTo(biomeOf(col));
+            }
+        }
+        assertThat(map.biomeCount()).isEqualTo(BIOME_END.length);
+    }
+
     private static int biomeOf(int col) {
         for (int biome = 0; biome < BIOME_END.length; biome++) {
             if (col < BIOME_END[biome]) {
