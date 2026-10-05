@@ -1,5 +1,6 @@
 package pl.mzebrows.pwt.sim.system.commander;
 
+import pl.mzebrows.pwt.sim.collision.Solid;
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
@@ -8,7 +9,6 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
@@ -53,7 +53,7 @@ public final class TurretSystem extends EntitySystem {
      */
     private static final float ON_TARGET = 0.985f;
 
-    private final TileMap map;
+    private final Solid map;
     private final Guns guns;
 
     /** Scratch, so swinging a gun and firing it cost no allocation per tick. */
@@ -64,7 +64,7 @@ public final class TurretSystem extends EntitySystem {
     private ImmutableArray<Entity> quarry = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> obstacles = new ImmutableArray<>(new Array<>());
 
-    public TurretSystem(TileMap map, Guns guns) {
+    public TurretSystem(Solid map, Guns guns) {
         this.map = map;
         this.guns = guns;
     }

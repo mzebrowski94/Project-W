@@ -6,6 +6,7 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.RngStream;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
@@ -54,7 +55,17 @@ public final class Scenarios {
     }
 
     /**
-     * The registered scenario with this name - how an online session names the one it plays (ADR 0012).
+     * A mission on one tier (G0065), built from the seed of the config it is given - the mission seed. Not in the
+     * registry: it is reached by its code, never from the campaign list, and is built through {@link #world} like
+     * everything else.
+     */
+    public static Scenario mission(TierKind tier) {
+        return new MissionScenario(tier);
+    }
+
+    /**
+     * The registered scenario with this name, or a mission by its form, {@code mission <tier>} - how an online
+     * session names the one it plays (ADR 0012, G0065). A mission's seed travels as the session's.
      *
      * @throws IllegalArgumentException if there is none; peers on one build know the same scenarios
      */
@@ -62,6 +73,11 @@ public final class Scenarios {
         for (Scenario scenario : ALL) {
             if (scenario.name().equals(name)) {
                 return scenario;
+            }
+        }
+        for (TierKind tier : TierKind.values()) {
+            if (MissionScenario.nameOf(tier).equals(name)) {
+                return mission(tier);
             }
         }
         throw new IllegalArgumentException("no scenario named \"" + name + "\"");

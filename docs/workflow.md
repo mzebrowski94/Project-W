@@ -64,6 +64,7 @@ The same commands in every environment.
 | Run the game | Desktop only: `./gradlew lwjgl3:run` |
 | Windows exe, Java bundled, for friends | Desktop only: `./gradlew lwjgl3:packageWinX64` -> `dist/` (`docs/packaging.md`) |
 | Run it as copy 1, say, of several | Desktop only: `./gradlew lwjgl3:run --args="--instance=1"` |
+| Play a mission by its code | Desktop only: `./gradlew lwjgl3:run --args="--mission=MQHN-R4YX"` - codes are printed by `PWT_SWEEP=1` (the `new-biome` skill) |
 
 Claude's build output lands in `~/.pwt/out/<module>/build/`, apart from IntelliJ's `<project>/build`;
 test result XML under `.../test-results/test/`. Verify log: `ai/logs/verify.log`.

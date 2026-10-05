@@ -25,7 +25,7 @@ package pl.mzebrows.pwt.map;
  * throwing or reporting open ground. Callers then need no bounds guard of their own, and a mistake at
  * the border fails safe.
  */
-public final class TileMap {
+public final class TileMap implements Passability {
 
     /** What {@link #regionAtTile} reports for a tile the map does not have. */
     public static final int NO_REGION = -1;
@@ -159,6 +159,7 @@ public final class TileMap {
     }
 
     /** Whether a unit may stand on this tile. False for anything outside the map. */
+    @Override
     public boolean passableAtTile(int col, int row) {
         return terrainAtTile(col, row).passable();
     }
@@ -178,13 +179,18 @@ public final class TileMap {
      * in a wall. It is deliberately not what the constraint solver uses, which needs the exact answer.
      */
     public boolean isClear(float worldX, float worldY, float radius) {
+        return isClear(worldX, worldY, radius, this);
+    }
+
+    /** {@link #isClear(float, float, float)} over {@code ground}'s passability rather than the terrain's alone. */
+    public boolean isClear(float worldX, float worldY, float radius, Passability ground) {
         int minCol = colAt(worldX - radius);
         int maxCol = colAt(worldX + radius);
         int minRow = rowAt(worldY - radius);
         int maxRow = rowAt(worldY + radius);
         for (int row = minRow; row <= maxRow; row++) {
             for (int col = minCol; col <= maxCol; col++) {
-                if (!passableAtTile(col, row)) {
+                if (!ground.passableAtTile(col, row)) {
                     return false;
                 }
             }
@@ -201,13 +207,18 @@ public final class TileMap {
      * the right way round for a caller deciding whether it may take a shortcut.
      */
     public boolean isClearPath(float fromX, float fromY, float toX, float toY, float radius) {
+        return isClearPath(fromX, fromY, toX, toY, radius, this);
+    }
+
+    /** {@link #isClearPath(float, float, float, float, float)} over {@code ground}'s passability. */
+    public boolean isClearPath(float fromX, float fromY, float toX, float toY, float radius, Passability ground) {
         float spanX = toX - fromX;
         float spanY = toY - fromY;
         float span = (float) Math.sqrt(spanX * spanX + spanY * spanY);
         int steps = (int) Math.ceil(span / (tileSize * 0.5f));
         for (int step = 0; step <= steps; step++) {
             float along = steps == 0 ? 0f : (float) step / steps;
-            if (!isClear(fromX + spanX * along, fromY + spanY * along, radius)) {
+            if (!isClear(fromX + spanX * along, fromY + spanY * along, radius, ground)) {
                 return false;
             }
         }
@@ -233,7 +244,12 @@ public final class TileMap {
      * accepts.
      */
     public boolean clearLine(float fromX, float fromY, float toX, float toY) {
-        return passableFraction(fromX, fromY, toX, toY) >= 1f;
+        return clearLine(fromX, fromY, toX, toY, this);
+    }
+
+    /** {@link #clearLine(float, float, float, float)} over {@code ground}'s passability - the same exact walk. */
+    public boolean clearLine(float fromX, float fromY, float toX, float toY, Passability ground) {
+        return passableFraction(fromX, fromY, toX, toY, ground) >= 1f;
     }
 
     /**
@@ -244,9 +260,14 @@ public final class TileMap {
      * so where a shot that flew into rock meets the face is answered by the rule a sight line uses.
      */
     public float passableFraction(float fromX, float fromY, float toX, float toY) {
+        return passableFraction(fromX, fromY, toX, toY, this);
+    }
+
+    /** {@link #passableFraction(float, float, float, float)} over {@code ground}'s passability - the same walk. */
+    public float passableFraction(float fromX, float fromY, float toX, float toY, Passability ground) {
         int col = colAt(fromX);
         int row = rowAt(fromY);
-        if (!passableAtTile(col, row)) {
+        if (!ground.passableAtTile(col, row)) {
             return 0f;
         }
         int endCol = colAt(toX);
@@ -280,7 +301,7 @@ public final class TileMap {
                 row += stepY;
                 toBoundaryY += perTileY;
             }
-            if (!passableAtTile(col, row)) {
+            if (!ground.passableAtTile(col, row)) {
                 // Strictly short of one, so a line blocked on its last tile is never read as clear.
                 return Math.max(0f, Math.min(Math.nextDown(1f), crossed));
             }

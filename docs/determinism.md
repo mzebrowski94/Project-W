@@ -35,7 +35,7 @@ reproducible from a single seed either way.
 makes a child from a stream's current state without advancing it - the same mixing `Rng.stream` uses, which is
 built on it - so `map` can split the MAP stream per biome and per coat while still owning no generator, and a
 mission's deal splits the MISSION concern per biome. Retuning one coat of one biome then moves nothing else.
-Three rules:
+Four rules:
 
 - **A stream either derives or draws, never both.** A child is made from its parent's state, so a parent that
   had drawn first would make its children depend on how much it drew. No two call sites derive under one salt
@@ -43,6 +43,9 @@ Three rules:
 - **A derived stream lives only during the build.** Everything drawn once the first tick runs comes from a
   concern in `Streams`, so a snapshot carries it (ADR 0014). A restored world is the build plus the snapshot.
 - **Key a child by position, not by kind.** A biome's coats derive from its place in the march.
+- **A retry derives an attempt, and never redraws a count.** A biome placed again (G0070) draws its passes from
+  the next attempt's stream; its counts come from a stream of their own, drawn once, so a retry cannot select for
+  small draws - and the attempt is the first that fits every tier, so the tier moves no point.
 
 ## What catches a break
 
@@ -50,7 +53,7 @@ Three rules:
 |---|---|
 | `ArchitectureTest` | The mechanical bans, in `sim`. |
 | `MapArchitectureTest` | The same in `map`, plus all of `com.badlogic` and any reference to an entity. |
-| `SimulationDeterminismTest` | Everything else - replays every registered scenario twice and compares whole worlds, every field of every component and every stream. |
+| `SimulationDeterminismTest` | Everything else - replays every registered scenario, and a mission on hard, twice and compares whole worlds, every field of every component and every stream. |
 | `SnapshotRoundTripTest` | State a snapshot does not carry - a counter in a system, a cache that is not a pure function of the world (ADR 0014). |
 | `DeterminismFuzzTest` | Both, over five minutes of every scenario under random input with restores at random ticks. Opt-in: `PWT_FUZZ=1`, about a minute. |
 | `SessionTest` | The same across machines: peers over a bad network ending on one world (ADR 0012). |

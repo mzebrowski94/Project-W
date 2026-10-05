@@ -8,9 +8,9 @@ and seed.
 
 **Enforced by.** `MissionCodeTest` (`.readsBackEveryTierAndSeedItWrites`, `.refusesEverySingleWrongCharacter`,
 `.refusesEverySwappedNeighbourPair`, `.givesEveryTierALetterOfTheAlphabetThatNoOtherTierHas`);
-`LaunchOptionsTest.refusesAMissionCodeThatFailsItsCheck`. Not yet, until missions are built: the seed sweep
-building one seed at three tiers to the same ground (stage 7); a test that a daily is the same for a fixed date
-(stage 9). Missions ticket 05 holds the reasoning.
+`LaunchOptionsTest.refusesAMissionCodeThatFailsItsCheck`. `MissionTest.laysTheSameGroundAndPointsOnEveryTier` (one seed
+at three tiers, the same ground and points), `.namesAMissionByItsTierForASession`, `MissionCodeTest.playsAsItsTiersMission`.
+Not yet: a test that a daily is the same for a fixed date (stage 9). Missions ticket 05 holds the reasoning.
 
 **Constraint.**
 

@@ -25,6 +25,29 @@ class GoalLineTest {
         assertThat(line.second()).isEqualTo(4);
     }
 
+    /**
+     * A mission's points are not its objective, but the goal line leads through them (missions stage 7): a level
+     * naming no objective that has points counts them while any is left, then says nothing.
+     */
+    @Test
+    void leadsThroughThePointsOfALevelThatNamesNoObjective() {
+        Readout readout = new Readout();
+        readout.pointsTaken = 3;
+        readout.pointsTotal = 11;
+        GoalLine line = line();
+
+        line.update(readout, FRAME);
+
+        assertThat(line.shown()).isEqualTo(Goal.CAPTURE_POINTS);
+        assertThat(line.first()).isEqualTo(3);
+        assertThat(line.second()).isEqualTo(11);
+        readout.pointsTaken = 11;
+        assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.NONE);
+        readout.pointsTotal = 0;
+        readout.pointsTaken = 0;
+        assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.NONE);
+    }
+
     @Test
     void movesToTheNextObjectiveOnceTheFirstIsMet() {
         Readout readout = requiring(Objective.CLEAR_ENEMIES, Objective.CAPTURE_POINTS);

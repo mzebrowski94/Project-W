@@ -7,8 +7,8 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
@@ -56,17 +56,17 @@ public final class ProjectileBoundsSystem extends EntitySystem {
     private static final float SHORT_OF_THE_FACE = 1e-3f;
 
     private final Spawner spawner;
-    private final TileMap map;
+    private final Solid map;
     private final float width;
     private final float height;
 
     private ImmutableArray<Entity> projectiles = new ImmutableArray<>(new Array<>());
 
-    public ProjectileBoundsSystem(TileMap map, Spawner spawner) {
+    public ProjectileBoundsSystem(Solid map, Spawner spawner) {
         this.spawner = spawner;
         this.map = map;
-        this.width = map.worldWidth();
-        this.height = map.worldHeight();
+        this.width = map.map().worldWidth();
+        this.height = map.map().worldHeight();
     }
 
     @Override
@@ -139,8 +139,8 @@ public final class ProjectileBoundsSystem extends EntitySystem {
         float fromX = previous.x;
         float fromY = previous.y;
         if (!map.passableAt(fromX, fromY)) {
-            fromX -= directionX * map.tileSize();
-            fromY -= directionY * map.tileSize();
+            fromX -= directionX * map.map().tileSize();
+            fromY -= directionY * map.map().tileSize();
         }
         float spanX = position.x - fromX;
         float spanY = position.y - fromY;

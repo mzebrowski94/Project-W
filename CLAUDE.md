@@ -36,9 +36,9 @@ and lag on demand), `NetLog` (the connection log), `WorldCodec` (a world as byte
 `Grants` (what a pickup's grant does to a taker, and whether it is worth anything to him), `Damage.land`
 (the one way a blow is recorded, G0057), `Whole` (the one rounding rule for a whole quantity - hit points,
 damage, a count - G0054), `MissionConfig` (what a tier does to the numbers, G0063), `MissionCode` (a mission
-as text and back, G0065), `Ticks` (a duration as whole ticks) - plus a
-component or system for most behaviour. `docs/glossary.md` is the cheap check: if the word exists, the
-thing usually does too.
+as text and back, G0065), `Mission` (a mission's deal, strip and placement from its seed, G0068), `Ticks` (a
+duration as whole ticks), `StripFaults` (what a laid strip may never show, a `map` test fixture) - plus a component or
+system for most behaviour. `docs/glossary.md` is the cheap check: if the word exists, the thing usually does too.
 
 **Read narrow.** The target module, the classes the task names, their nearest tests. Widen only when a
 symbol will not resolve, a dependency's behaviour is unclear, you cross a module boundary, or a test

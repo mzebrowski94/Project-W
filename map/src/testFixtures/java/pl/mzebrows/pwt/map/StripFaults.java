@@ -8,14 +8,14 @@ import org.jspecify.annotations.Nullable;
  * What a laid strip may never show, each check a list of faults - empty when it holds - so a sweep can report
  * every seed and every fault at once. Ridges and passes are read off the map and the biomes' rects: a ridge is
  * the columns between two biomes, and a pass is a run of open tiles on its edge column. A gatehouse is a house
- * laid in a ridge's columns.
+ * laid in a ridge's columns. A test fixture, so core's mission sweep holds the shipped biomes to it as well.
  */
-final class StripFaults {
+public final class StripFaults {
 
     private StripFaults() {}
 
     /** Every check. */
-    static List<String> all(Strip.Laid laid, List<BiomeGround> grounds, StripRules rules) {
+    public static List<String> all(Strip.Laid laid, List<BiomeGround> grounds, StripRules rules) {
         List<String> faults = new ArrayList<>();
         faults.addAll(layout(laid, grounds, rules));
         faults.addAll(passes(laid, rules));
@@ -24,11 +24,13 @@ final class StripFaults {
         faults.addAll(membership(laid, grounds));
         faults.addAll(finaleEdge(laid));
         faults.addAll(houses(laid, grounds, rules));
+        faults.addAll(entries(laid, grounds, rules));
+        faults.addAll(kept(laid, grounds, rules));
         return faults;
     }
 
     /** Biomes west to east inside the border, each as wide as its ground allows, a ridge between every two. */
-    static List<String> layout(Strip.Laid laid, List<BiomeGround> grounds, StripRules rules) {
+    public static List<String> layout(Strip.Laid laid, List<BiomeGround> grounds, StripRules rules) {
         List<String> faults = new ArrayList<>();
         List<TileRect> rects = laid.biomes();
         TileMap map = laid.map();
@@ -64,7 +66,7 @@ final class StripFaults {
      * Every ridge crossed by between {@code passesMin} and {@code passesMax} passes, as many out as in - a gatehouse
      * by one.
      */
-    static List<String> passes(Strip.Laid laid, StripRules rules) {
+    public static List<String> passes(Strip.Laid laid, StripRules rules) {
         List<String> faults = new ArrayList<>();
         for (int b = 0; b < ridges(laid); b++) {
             int in = runs(laid.map(), westEdge(laid, b));
@@ -79,12 +81,12 @@ final class StripFaults {
     }
 
     /** How many passes cross a ridge, read on its west edge. */
-    static int passesThrough(Strip.Laid laid, int ridge) {
+    public static int passesThrough(Strip.Laid laid, int ridge) {
         return runs(laid.map(), westEdge(laid, ridge));
     }
 
     /** Every open tile on the strip reached from the first pass's end: every pass connects, and no pockets. */
-    static List<String> reach(Strip.Laid laid) {
+    public static List<String> reach(Strip.Laid laid) {
         TileMap map = laid.map();
         int x0 = westEdge(laid, 0);
         int start = -1;
@@ -112,7 +114,7 @@ final class StripFaults {
     }
 
     /** No run of open ground shorter than the clearance between two rocks, along any row or column. */
-    static List<String> clearance(Strip.Laid laid, StripRules rules) {
+    public static List<String> clearance(Strip.Laid laid, StripRules rules) {
         List<String> faults = new ArrayList<>();
         TileMap map = laid.map();
         for (int r = 0; r < map.rows(); r++) {
@@ -129,7 +131,7 @@ final class StripFaults {
      * and the rest the east's, the border with the biome it closes - and every open ridge tile showing its biome's
      * base. Each biome holds as many regions as its ground asks for.
      */
-    static List<String> membership(Strip.Laid laid, List<BiomeGround> grounds) {
+    public static List<String> membership(Strip.Laid laid, List<BiomeGround> grounds) {
         List<String> faults = new ArrayList<>();
         TileMap map = laid.map();
         if (map.biomeCount() != grounds.size()) {
@@ -160,7 +162,7 @@ final class StripFaults {
     }
 
     /** The finale's west edge straight: no rock from the ridge before it in its first column. */
-    static List<String> finaleEdge(Strip.Laid laid) {
+    public static List<String> finaleEdge(Strip.Laid laid) {
         TileRect finale = laid.biomes().getLast();
         for (int r = finale.row(); r < finale.endRow(); r++) {
             if (!laid.map().passableAtTile(finale.col(), r)) {
@@ -177,7 +179,7 @@ final class StripFaults {
      * inside a biome has {@code doorways} doorways and lies wholly in it, each biome holding between its
      * {@code min} and {@code max}; a gatehouse has two and lies in a ridge, never the one before the finale.
      */
-    static List<String> houses(Strip.Laid laid, List<BiomeGround> grounds, StripRules rules) {
+    public static List<String> houses(Strip.Laid laid, List<BiomeGround> grounds, StripRules rules) {
         List<String> faults = new ArrayList<>();
         TileMap map = laid.map();
         HouseRules shape = rules.houses();
@@ -247,8 +249,100 @@ final class StripFaults {
         return faults;
     }
 
+    /**
+     * Every biome entered from the west as {@link Strip.Laid#entries} says: the first by the start alone, inside it
+     * and on its base ground; every other by each pass through the ridge before it, a run of open tiles a pass wide
+     * on the ridge's east edge.
+     */
+    public static List<String> entries(Strip.Laid laid, List<BiomeGround> grounds, StripRules rules) {
+        List<String> faults = new ArrayList<>();
+        if (laid.entries().size() != laid.biomes().size()) {
+            return List.of(laid.entries().size() + " biomes' entries for "
+                    + laid.biomes().size() + " biomes");
+        }
+        List<TileRect> first = laid.entries().getFirst();
+        if (first.size() != 1) {
+            faults.add("the first biome is entered " + first.size() + " ways, not by the start alone");
+        } else {
+            TileRect start = first.getFirst();
+            TileRect biome = laid.biomes().getFirst();
+            if (!biome.contains(start.col(), start.row()) || !biome.contains(start.endCol() - 1, start.endRow() - 1)) {
+                faults.add("the start " + start + " is not inside the first biome");
+            } else {
+                baseGround(laid.map(), grounds, start, "the start", faults);
+            }
+        }
+        for (int p = 1; p < laid.biomes().size(); p++) {
+            List<TileRect> passes = laid.entries().get(p);
+            int edge = eastEdge(laid, p - 1);
+            if (passes.size() != passesThrough(laid, p - 1)) {
+                faults.add("biome " + p + " is entered by " + passes.size() + " passes, its ridge has "
+                        + passesThrough(laid, p - 1));
+            }
+            for (TileRect pass : passes) {
+                if (pass.col() != edge || pass.width() != 1 || pass.height() != rules.passWidth()) {
+                    faults.add("biome " + p + " is entered at " + pass + ", not a pass's mouth on column " + edge);
+                    continue;
+                }
+                for (int r = pass.row(); r < pass.endRow(); r++) {
+                    if (!laid.map().passableAtTile(edge, r)) {
+                        faults.add("biome " + p + "'s entry at (" + edge + "," + r + ") is rock");
+                    }
+                }
+            }
+        }
+        return faults;
+    }
+
+    /**
+     * Every open tile generation kept is its biome's base ground - an apron may keep a ridge's face, which is rock -
+     * and the start, every house's inside, doorways and doorsteps are kept.
+     */
+    public static List<String> kept(Strip.Laid laid, List<BiomeGround> grounds, StripRules rules) {
+        List<String> faults = new ArrayList<>();
+        TileMap map = laid.map();
+        for (int r = 0; r < map.rows(); r++) {
+            for (int c = 0; c < map.cols(); c++) {
+                if (laid.kept(c, r)
+                        && map.passableAtTile(c, r)
+                        && map.terrainAtTile(c, r)
+                                != grounds.get(map.biomeAtTile(c, r)).base()) {
+                    faults.add("kept tile (" + c + "," + r + ") shows " + map.terrainAtTile(c, r));
+                    return faults;
+                }
+            }
+        }
+        if (!laid.entries().isEmpty() && !laid.entries().getFirst().isEmpty()) {
+            allKept(laid, laid.entries().getFirst().getFirst(), "the start", faults);
+        }
+        for (House house : laid.houses()) {
+            String name =
+                    "house at (" + house.walls().col() + "," + house.walls().row() + ")";
+            allKept(laid, house.inside(), name + "'s inside", faults);
+            for (TileRect door : house.doorways()) {
+                int wall = wallOf(house, door);
+                allKept(laid, door, name + "'s doorway", faults);
+                if (wall >= 0) {
+                    allKept(laid, doorstep(door, wall, rules.clearance()), name + "'s doorstep", faults);
+                }
+            }
+        }
+        return faults;
+    }
+
+    private static void allKept(Strip.Laid laid, TileRect rect, String what, List<String> faults) {
+        for (int r = rect.row(); r < rect.endRow(); r++) {
+            for (int c = rect.col(); c < rect.endCol(); c++) {
+                if (!laid.kept(c, r)) {
+                    faults.add(what + " is not kept at (" + c + "," + r + ")");
+                    return;
+                }
+            }
+        }
+    }
+
     /** Whether a ridge is a gatehouse: a house stands in its columns. */
-    static boolean gatehouse(Strip.Laid laid, int ridge) {
+    public static boolean gatehouse(Strip.Laid laid, int ridge) {
         for (House house : laid.houses()) {
             if (ridgeOf(laid, house.walls()) == ridge) {
                 return true;
@@ -258,7 +352,7 @@ final class StripFaults {
     }
 
     /** How many houses lie inside a biome. */
-    static int housesIn(Strip.Laid laid, int biome) {
+    public static int housesIn(Strip.Laid laid, int biome) {
         int count = 0;
         for (House house : laid.houses()) {
             count += biomeOf(laid, house.walls()) == biome ? 1 : 0;
@@ -267,7 +361,7 @@ final class StripFaults {
     }
 
     /** The gatehouse in a ridge, or null. */
-    static @Nullable House gatehouseIn(Strip.Laid laid, int ridge) {
+    public static @Nullable House gatehouseIn(Strip.Laid laid, int ridge) {
         for (House house : laid.houses()) {
             if (ridgeOf(laid, house.walls()) == ridge) {
                 return house;
@@ -298,7 +392,7 @@ final class StripFaults {
     }
 
     /** Which wall a doorway is in - west, east, south, north - off the corners, or -1. */
-    static int wallOf(House house, TileRect door) {
+    public static int wallOf(House house, TileRect door) {
         TileRect walls = house.walls();
         TileRect inside = house.inside();
         if (door.width() == 1 && door.row() >= inside.row() && door.endRow() <= inside.endRow()) {
@@ -354,15 +448,15 @@ final class StripFaults {
         }
     }
 
-    static int ridges(Strip.Laid laid) {
+    public static int ridges(Strip.Laid laid) {
         return laid.biomes().size() - 1;
     }
 
-    static int westEdge(Strip.Laid laid, int ridge) {
+    public static int westEdge(Strip.Laid laid, int ridge) {
         return laid.biomes().get(ridge).endCol();
     }
 
-    static int eastEdge(Strip.Laid laid, int ridge) {
+    public static int eastEdge(Strip.Laid laid, int ridge) {
         return laid.biomes().get(ridge + 1).col() - 1;
     }
 

@@ -10,11 +10,11 @@ import org.jspecify.annotations.Nullable;
  * before the finale, each crossed by passes (missions ticket 13), a share of them gatehouses (ticket 12). The one
  * seam everything that lays ground sits behind.
  *
- * <p>In order: each biome's base; each ridge's core, its faces wandering into the biomes either side - the west
+ * <p>In order: each biome's base, and the start kept to it; each ridge's core, its faces wandering into the biomes either side - the west
  * side only before the finale, so the finale's west edge is straight - and its passes carved through core and
  * faces alike, with an apron that follows a bent pass out through the face; notches the faces left filled; each
- * biome's regions; each biome's {@link Coats}, houses first, entered by its passes' ends; and last the whole strip
- * flooded from the first pass, anything it misses sealed.
+ * biome's regions; each biome's {@link Coats}, houses first, entered by its passes' ends - and the first by the
+ * start; and last the whole strip flooded from the start, anything it misses sealed.
  *
  * <p>A <em>gatehouse</em> is a ridge between two biomes - never the one before the finale - widened round a
  * {@link House}: a column of rock, the wall, the inside, the wall, a column of rock. Its one pass comes in through
@@ -68,6 +68,9 @@ public final class Strip {
 
     private final List<House> houses = new ArrayList<>();
 
+    /** Where each biome is entered from the west: the start for the first, each pass's mouth for the rest. */
+    private final List<List<TileRect>> entries = new ArrayList<>();
+
     private final boolean[] apron;
     private final boolean[] carved;
     private final List<List<Integer>> ends;
@@ -88,19 +91,60 @@ public final class Strip {
         this.ends = new ArrayList<>();
         for (int p = 0; p < grounds.size(); p++) {
             ends.add(new ArrayList<>());
+            entries.add(new ArrayList<>());
         }
     }
 
     /**
-     * The strip laid, and where each biome lies on it.
+     * The strip laid, and where each biome lies on it and is entered.
      *
-     * @param biomes each biome's columns, inside the border rows, west to east; the finale last
-     * @param houses every house laid, a biome's and a gatehouse alike, west to east
+     * <p>Not a record: it holds which tiles were kept, one flag a tile, and a record would hand that array out.
      */
-    public record Laid(TileMap map, List<TileRect> biomes, List<House> houses) {
-        public Laid {
-            biomes = List.copyOf(biomes);
-            houses = List.copyOf(houses);
+    public static final class Laid {
+
+        private final TileMap map;
+        private final List<TileRect> biomes;
+        private final List<House> houses;
+        private final List<List<TileRect>> entries;
+        private final boolean[] kept;
+
+        private Laid(
+                TileMap map, List<TileRect> biomes, List<House> houses, List<List<TileRect>> entries, boolean[] kept) {
+            this.map = map;
+            this.biomes = List.copyOf(biomes);
+            this.houses = List.copyOf(houses);
+            this.entries = entries.stream().map(List::copyOf).toList();
+            this.kept = kept.clone();
+        }
+
+        public TileMap map() {
+            return map;
+        }
+
+        /** Each biome's columns, inside the border rows, west to east; the finale last. */
+        public List<TileRect> biomes() {
+            return biomes;
+        }
+
+        /** Every house laid, a biome's and a gatehouse alike, west to east. */
+        public List<House> houses() {
+            return houses;
+        }
+
+        /**
+         * Where each biome is entered from the west, by position: the start for the first, and for every other the
+         * mouth of each pass through the ridge before it, one column on that ridge's east edge.
+         */
+        public List<List<TileRect>> entries() {
+            return entries;
+        }
+
+        /**
+         * Whether generation kept this tile its biome's base ground and nothing else: the start, an apron, a house's
+         * inside, a doorway or a doorstep. False off the map.
+         */
+        public boolean kept(int col, int row) {
+            return map.inBounds(col, row) && kept[row * map.cols() + col];
         }
     }
 
@@ -109,10 +153,17 @@ public final class Strip {
      *
      * @param biomes the dealt biomes, west to east; at least one
      * @param finale the last biome, after the last ridge
+     * @param start where the strip is entered: tiles inside the first biome, kept its base ground and reached from
+     *     every pass
      * @param map the map stream; only derived from, never drawn
      */
     public static Laid lay(
-            StripRules rules, List<BiomeGround> biomes, BiomeGround finale, Randomness map, float tileSize) {
+            StripRules rules,
+            List<BiomeGround> biomes,
+            BiomeGround finale,
+            TileRect start,
+            Randomness map,
+            float tileSize) {
         if (biomes.isEmpty()) {
             throw new IllegalArgumentException("a strip needs a biome before its finale");
         }
@@ -136,8 +187,14 @@ public final class Strip {
             col += width + (p < gated.length ? ridgeWidth(rules, gated[p]) : 0);
         }
 
+        TileRect first = rects.getFirst();
+        if (!first.contains(start.col(), start.row()) || !first.contains(start.endCol() - 1, start.endRow() - 1)) {
+            throw new IllegalArgumentException("the start " + start + " must lie inside the first biome " + first);
+        }
+
         Strip strip = new Strip(rules, grounds, rects, gated, tileSize);
         strip.bases();
+        strip.start(start);
         for (int b = 0; b < gated.length; b++) {
             Randomness ridge = ridges.derive(b);
             strip.ridge(b, ridge.derive(FACES), ridge.derive(PASSES));
@@ -147,7 +204,7 @@ public final class Strip {
         strip.coats(at);
         strip.seal();
         strip.houses.sort(Comparator.comparingInt(house -> house.walls().col()));
-        return new Laid(strip.map.build(), rects, strip.houses);
+        return new Laid(strip.map.build(), rects, strip.houses, strip.entries, strip.apron);
     }
 
     private static int ridgeWidth(StripRules rules, boolean gatehouse) {
@@ -163,6 +220,17 @@ public final class Strip {
             map.rect(c, 0, 1, rules.rows(), grounds.get(owner[c]).base());
         }
         map.border(1, Terrain.ROCK);
+    }
+
+    /** The start: kept the first biome's base, and the first biome's first end, which the strip is flooded from. */
+    private void start(TileRect start) {
+        for (int r = start.row(); r < start.endRow(); r++) {
+            for (int c = start.col(); c < start.endCol(); c++) {
+                apron[r * cols + c] = true;
+            }
+        }
+        ends.getFirst().add(start.row() * cols + start.col());
+        entries.getFirst().add(start);
     }
 
     private int ownerOf(int col) {
@@ -236,8 +304,21 @@ public final class Strip {
         open(walls.col() + 1, walls.row() + 1, walls.width() - 2, walls.height() - 2);
         open(in.col(), in.row(), in.width(), in.height());
         open(out.col(), out.row(), out.width(), out.height());
+        int step = rules.clearance();
+        keep(in.col() - step, in.row(), step + 1, door);
+        keep(out.col(), out.row(), step + 1, door);
+        keep(walls.col() + 1, walls.row() + 1, walls.width() - 2, walls.height() - 2);
         houses.add(new House(walls, List.of(in, out)));
         return new int[] {entry, exit, walls.col() + walls.width() / 2};
+    }
+
+    /** Kept: a house's inside, a doorway and its doorstep - as a biome's houses are by its coats. */
+    private void keep(int col, int row, int width, int height) {
+        for (int c = col; c < col + width; c++) {
+            for (int r = row; r < row + height; r++) {
+                apron[r * cols + c] = true;
+            }
+        }
     }
 
     /** A row other than {@code entry} among the entry rows, at most {@code jog} from it. */
@@ -378,6 +459,9 @@ public final class Strip {
         for (int r = y; r < y + rules.passWidth(); r++) {
             ends.get(biome).add(r * cols + edge);
         }
+        if (dir > 0) {
+            entries.get(biome).add(new TileRect(edge, y, 1, rules.passWidth()));
+        }
         TileRect rect = rects.get(biome);
         for (int d = 1; d <= rough + 1 + rules.apron(); d++) {
             int c = edge + dir * d;
@@ -470,7 +554,7 @@ public final class Strip {
         return biome < 0 || biome >= grounds.size() ? null : grounds.get(biome).base();
     }
 
-    /** The net: whatever open ground the first pass does not reach becomes rock. */
+    /** The net: whatever open ground the start does not reach becomes rock. */
     private void seal() {
         int start = ends.getFirst().getFirst();
         Maps.sealUnreachable(map, start % cols, start / cols, Terrain.ROCK);

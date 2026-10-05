@@ -2,7 +2,7 @@ package pl.mzebrows.pwt.ui.hud;
 
 /** What the goal line says, before it becomes words. */
 public enum Goal {
-    /** The level names no objective: the line is empty. */
+    /** The level names no objective, and has no point left to lead through: the line is empty. */
     NONE,
     CAPTURE_POINTS,
     HOLD_POINT,

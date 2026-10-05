@@ -8,8 +8,8 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -46,7 +46,7 @@ public final class EnemyRangedSystem extends EntitySystem {
 
     private static final float EPSILON = 1e-4f;
 
-    private final TileMap map;
+    private final Solid map;
     private final Guns guns;
 
     /** How badly the creature aims, which is a different thing from the gun's own pattern. */
@@ -60,7 +60,7 @@ public final class EnemyRangedSystem extends EntitySystem {
 
     private ImmutableArray<Entity> shooters = new ImmutableArray<>(new Array<>());
 
-    public EnemyRangedSystem(TileMap map, Guns guns, Rng rng) {
+    public EnemyRangedSystem(Solid map, Guns guns, Rng rng) {
         this.map = map;
         this.guns = guns;
         this.rng = rng;

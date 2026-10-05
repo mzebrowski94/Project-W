@@ -78,7 +78,14 @@ public enum RngStream {
      * Which adaptation the swarm takes when one is due (ADR 0017). Its own, so the swarm adapting never moves
      * what a draft deals or where a wave lands, and a schedule that is off draws nothing at all.
      */
-    ADAPTATION(0x1656_67B1_9E37_79F9L);
+    ADAPTATION(0x1656_67B1_9E37_79F9L),
+
+    /**
+     * What a mission is built from besides its ground (G0065): the order its biomes are dealt in, their counts and
+     * where everything stands. Only ever derived from - per sub-concern and per position - and only while the world
+     * is built, so it sits here as one more long a snapshot carries and its children never do.
+     */
+    MISSION(0x6E3F_A1C9_58B2_D40BL);
 
     private final long salt;
 

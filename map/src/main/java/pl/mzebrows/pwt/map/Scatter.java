@@ -34,6 +34,12 @@ public final class Scatter {
         void at(float x, float y);
     }
 
+    /** Which tiles nothing may be anchored on, whatever their ground. */
+    @FunctionalInterface
+    public interface Exclusion {
+        boolean excludes(int col, int row);
+    }
+
     private static final Set<Terrain> ANY_GROUND = anyGround();
 
     private final TileMap map;
@@ -43,6 +49,9 @@ public final class Scatter {
 
     /** How far off impassable ground a placed circle must stay. Zero is flush, which is the default. */
     private float rockMargin;
+
+    /** Tiles never offered, whatever their ground. None by default. */
+    private Exclusion excluded = (col, row) -> false;
 
     private final List<Circle> taken = new ArrayList<>();
 
@@ -75,6 +84,15 @@ public final class Scatter {
         return this;
     }
 
+    /**
+     * Anchors nothing this scatter places on a tile {@code excluded} names, and returns this scatter - ground a
+     * generator kept clear, such as a pass's apron. The tile an anchor falls on decides, as its ground does.
+     */
+    public Scatter excluding(Exclusion excluded) {
+        this.excluded = excluded;
+        return this;
+    }
+
     /** Marks space as occupied without putting anything there - keeps a scatter off the commander. */
     public void reserve(float x, float y, float radius) {
         taken.add(new Circle(x, y, radius));
@@ -98,6 +116,15 @@ public final class Scatter {
      */
     public int scatter(TileRect area, int count, float radius, Place place) {
         return place(shuffledTilesIn(area, ANY_GROUND), count, radius, place);
+    }
+
+    /**
+     * The same, on tiles whose terrain is one of {@code on} only - food on the ground it grows on, in one band.
+     *
+     * @return how many it actually placed
+     */
+    public int scatter(TileRect area, int count, float radius, Set<Terrain> on, Place place) {
+        return place(shuffledTilesIn(area, on), count, radius, place);
     }
 
     /**
@@ -179,7 +206,9 @@ public final class Scatter {
         int found = 0;
         for (int row = area.row(); row < area.endRow(); row++) {
             for (int col = area.col(); col < area.endCol(); col++) {
-                if (map.inBounds(col, row) && on.contains(map.terrainAtTile(col, row))) {
+                if (map.inBounds(col, row)
+                        && on.contains(map.terrainAtTile(col, row))
+                        && !excluded.excludes(col, row)) {
                     candidates[found++] = row * map.cols() + col;
                 }
             }

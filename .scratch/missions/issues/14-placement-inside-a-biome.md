@@ -132,6 +132,11 @@ points and each other; no point, nest or creature in a house; one point a band; 
 **The word.** The finale's `doorColumns` is renamed `approachColumns` - unbuilt, so free - and "the finale's door"
 becomes "the last biome's last point" in prose. *Door* is now the thing in a doorway.
 
+**Amended in stage 7** (2026-10-05, G0070): at these numbers 63 of 64 missions fell short even on easy. A biome
+that falls short is now placed again from a fresh attempt - the first that fits every tier - and the counts were cut
+to the room (`biomes.properties`). Anchors keep `nestKeepOff` off the passes, not `startKeepOff`; `packApart` 30;
+a new `rockMargin` (6) for nests and boulders.
+
 ### Doors
 
 A new mechanic, through `feature`. **A door is a wall that opens.**

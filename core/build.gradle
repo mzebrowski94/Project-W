@@ -14,6 +14,8 @@ dependencies {
 
   // Same version the sim module already uses; see ClientArchitectureTest for what it guards.
   testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
+  // The checks a laid strip is held to, so the mission sweep holds the shipped biomes to them and prints codes.
+  testImplementation testFixtures(project(':map'))
 }
 
 // UiFontTest reads the shipped font and words, and SourceCitationsTest every module's sources, the shipped

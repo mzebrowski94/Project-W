@@ -1,14 +1,16 @@
 # G0068: A biome is populated by rules in order, never by coordinates
 
-**Status.** accepted
+**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has
 
 **Trigger.** Changing where anything a biome's roster or furniture counts is put down, the order it goes down in,
 what a house holds, or what happens when a rule cannot be met.
 
-**Enforced by.** Nothing yet - placement is built in missions stage 7. When it is: `MissionSweepTest` (every point,
+**Enforced by.** `MissionSweepTest.holdsEveryMissionToTheRules` in `core`, through `MissionFaults` (every point,
 crate and house's stock reachable from the start; nothing on an apron or a doorstep; nothing hostile within
-`startKeepOff`; nests off the entry pass, the points and each other; nothing hostile and no point in a house; one
-point a band; a pass short of its count fails the seed). Missions ticket 14 holds the reasoning and the keys.
+`startKeepOff`; nests off the entry pass, the points, each other and every pickup; nothing hostile and no point in a
+house; one point a band and the last in the last `approachColumns`; crates by points; a pass short of its count fails
+the seed) - 64 seeds on every tier on every verify, 2000 under `PWT_SWEEP=1`. Missions ticket 14 holds the reasoning
+and the keys.
 
 **Constraint.**
 

@@ -3,8 +3,8 @@ package pl.mzebrows.pwt.sim.def;
 import lombok.With;
 
 /**
- * How hard pulling a gun's trigger shakes the ground where it is fired, as numbers - the simulation's
- * half of a screen shake ({@code Shake}). What the view does about it is the client's.
+ * How hard something shakes the ground where it happens - a gun's trigger pulled, a leap landing on a door - as
+ * numbers: the simulation's half of a screen shake ({@code Shake}). What the view does about it is the client's.
  *
  * @param strength how hard the ground moves at the shooter, in world units; zero shakes nothing, which is
  *     what every gun but the bazooka declares

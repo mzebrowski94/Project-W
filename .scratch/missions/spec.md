@@ -77,7 +77,7 @@ Tickets 12 and 14 can be grilled while stages 0-4 are being built. If either run
 ship on stand-in rules.
 
 **Polish** is the `new-biome` amend step (ticket 10): what was wrong, missing or slow, fixed in the text, with one
-dated line - "nothing" included. *Draft* means `new-biome-skill.md`, under its *Amended* heading. *Skill* means
+dated line - "nothing" included. *Draft* meant `new-biome-skill.md`, under its *Amended* heading, until stage 7 moved it. *Skill* means
 `.claude/skills/new-biome/SKILL.md` and its `CHANGELOG.md`.
 
 **Scaffolding** means rows of `docs/design/alpha-phase.md`, *Still scaffolding*. A stage adds the rows its stand-ins

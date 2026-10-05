@@ -1,5 +1,6 @@
 package pl.mzebrows.pwt.sim;
 
+import pl.mzebrows.pwt.map.TileRect;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
@@ -25,6 +26,7 @@ import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dodge;
+import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Drafts;
 import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Dragged;
@@ -713,6 +715,29 @@ public final class Spawner {
         admit(entity);
         // So the system that runs it can tell it is being hit from the bar alone.
         entity.getComponent(Nest.class).watchedHealth = config.nestHealth();
+        return entity;
+    }
+
+    /**
+     * Spawns a door in a doorway (G0069): shut, its doorway's tiles solid ground until it is opened or broken (ADR
+     * 0022). <strong>No body and no collider</strong> - a shut door is those tiles, never a circle in the pairwise
+     * path. It stands at the doorway's middle, for a reach to be measured to and a bar to be drawn over; its health
+     * is what a leap, a blast or a heavy gun takes off it, and its shake what a leap landing on it publishes.
+     */
+    public Entity spawnDoor(TileRect doorway, float tileSize) {
+        SimConfig.DoorConfig door = config.door();
+        float x = (doorway.col() + doorway.width() * 0.5f) * tileSize;
+        float y = (doorway.row() + doorway.height() * 0.5f) * tileSize;
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Door.class)
+                .set(doorway, ticks(door.openSeconds()), ticks(door.sinkSeconds())));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Health.class).set(door.health()));
+        entity.add(engine.createComponent(Damage.class));
+        entity.add(engine.createComponent(Shake.class));
+        entity.add(engine.createComponent(Appearance.class).set(Look.DOOR));
+        admit(entity);
         return entity;
     }
 

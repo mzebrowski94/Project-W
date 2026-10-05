@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
@@ -46,8 +47,12 @@ class SimulationDeterminismTest {
                 .isEqualTo(runScenario(scenario));
     }
 
+    /** The menu's, and a mission on hard - the most going on, built from the seed by its own streams (G0065). */
     private static Stream<Arguments> registeredScenarios() {
-        return Scenarios.all().stream().map(scenario -> Arguments.of(scenario.name(), scenario));
+        Scenario mission = Scenarios.mission(TierKind.HARD);
+        return Stream.concat(
+                Scenarios.all().stream().map(scenario -> Arguments.of(scenario.name(), scenario)),
+                Stream.of(Arguments.of(mission.name(), mission)));
     }
 
     private static byte[] runBodies(long seed) {

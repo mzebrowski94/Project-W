@@ -7,7 +7,7 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
-import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Intent;
@@ -42,19 +42,19 @@ public final class GrenadeSystem extends EntitySystem {
 
     private final Spawner spawner;
     private final Throws throwing;
-    private final TileMap map;
+    private final Solid solid;
     private final float width;
     private final float height;
 
     private ImmutableArray<Entity> flying = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> throwers = new ImmutableArray<>(new Array<>());
 
-    public GrenadeSystem(TileMap map, Spawner spawner, Throws throwing) {
-        this.map = map;
+    public GrenadeSystem(Solid solid, Spawner spawner, Throws throwing) {
+        this.solid = solid;
         this.spawner = spawner;
         this.throwing = throwing;
-        this.width = map.worldWidth();
-        this.height = map.worldHeight();
+        this.width = solid.map().worldWidth();
+        this.height = solid.map().worldHeight();
     }
 
     @Override
@@ -107,7 +107,7 @@ public final class GrenadeSystem extends EntitySystem {
     /** Comes off rock and off the arena edge, neither of which is a body (G0019). */
     private void comeOffTheGround(Entity entity, Velocity velocity) {
         Position at = POSITION.get(entity);
-        Bounce.offRock(map, at, PREVIOUS.get(entity), velocity);
+        Bounce.offRock(solid, at, PREVIOUS.get(entity), velocity);
         Bounce.offEdge(at, BODY.get(entity).radius, width, height, velocity);
     }
 

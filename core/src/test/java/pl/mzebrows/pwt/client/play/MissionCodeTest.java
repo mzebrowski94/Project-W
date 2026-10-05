@@ -30,6 +30,15 @@ class MissionCodeTest {
         }
     }
 
+    /** A session plays a code as its tier's mission, the seed travelling as the session's (G0065). */
+    @Test
+    void playsAsItsTiersMission() {
+        for (TierKind tier : TierKind.values()) {
+            assertThat(new MissionCode(tier, 77L).scenario().name())
+                    .isEqualTo("mission " + tier.name().toLowerCase(Locale.ROOT));
+        }
+    }
+
     @Test
     void readsWhatAPlayerTypesHoweverHeTypesIt() {
         MissionCode code = new MissionCode(TierKind.HARD, 123_456L);

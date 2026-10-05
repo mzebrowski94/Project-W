@@ -8,7 +8,6 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.NotState;
@@ -16,6 +15,7 @@ import pl.mzebrows.pwt.sim.Odds;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.collision.ConstraintSolver;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Armour;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
@@ -111,8 +111,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     /** Every entity with a handle, for finding who swung a strike. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
-    public CollisionSystem(SimConfig config, TileMap map, Spawner spawner, Odds odds) {
-        this.solver = new ConstraintSolver(config, map, this);
+    public CollisionSystem(SimConfig config, Solid solid, Spawner spawner, Odds odds) {
+        this.solver = new ConstraintSolver(config, solid, this);
         this.spawner = spawner;
         this.pickups = config.pickups();
         this.odds = odds;

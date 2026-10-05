@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
@@ -144,9 +145,9 @@ class ScenariosTest {
     }
 
     /**
-     * Every registered scenario, and the proving ground over a spread of setups (G0060): every strain
-     * in numbers and out of a nest, and each of the others with the squad - not in the registry, and
-     * held to the same rules.
+     * Every registered scenario, the proving ground over a spread of setups (G0060) - every strain in numbers and
+     * out of a nest, and each of the others with the squad - and a mission on every tier (G0065): none of them in
+     * the registry, and all held to the same rules.
      */
     private static Stream<Arguments> scenarios() {
         Stream<Arguments> registered =
@@ -162,6 +163,9 @@ class ScenariosTest {
             proving.add(proving(
                     others + " and squad",
                     ProvingSetup.first().withOthers(others).withSquad(true)));
+        }
+        for (TierKind tier : TierKind.values()) {
+            proving.add(Arguments.of(Scenarios.mission(tier).name(), Scenarios.mission(tier)));
         }
         return Stream.concat(registered, proving.build());
     }

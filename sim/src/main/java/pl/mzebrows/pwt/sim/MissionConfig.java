@@ -1,5 +1,9 @@
 package pl.mzebrows.pwt.sim;
 
+import java.util.ArrayList;
+import java.util.List;
+import lombok.With;
+import pl.mzebrows.pwt.map.StripRules;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Require;
 import pl.mzebrows.pwt.sim.def.TierKind;
@@ -7,22 +11,38 @@ import pl.mzebrows.pwt.sim.def.Whole;
 import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
 
 /**
- * What a mission is built with that no other level has: its tiers and its ramp (G0063). <strong>The one
- * reader of a tier</strong> - {@link #apply} folds one into the config a mission's world is built from, and
- * {@link #pressure} scales the counts its biomes are dealt - so no system learns what a tier is.
+ * What a mission is built with that no other level has: its tiers and its ramp (G0063), how many biomes it deals,
+ * the strip they are laid in and where what they count is put down (G0068). <strong>The one reader of a
+ * tier</strong> - {@link #apply} folds one into the config a mission's world is built from, and {@link #pressure}
+ * scales the counts its biomes are dealt - so no system learns what a tier is.
  *
  * @param rampPercent how much a biome's creature counts rise for each position it stands at in the march, as
  *     a whole percentage: the first biome is at none, the fourth at three times this. Zero is no ramp. The
  *     finale is not ramped
  * @param tiers every tier, by kind
+ * @param biomes how many biomes a mission deals before its finale, the same on every tier; the pool holds at
+ *     least this many
+ * @param ground the strip every mission is laid in: its height, ridges, passes and houses (missions tickets 03, 12,
+ *     13)
+ * @param placement where what a biome counts is put down (G0068)
+ * @param approachColumns how many columns at the east end of the last biome hold its last control point, the one
+ *     before the finale (G0064)
  */
+@With
 public record MissionConfig(
-        int rampPercent, @ConfigKey("tier") Defs<TierKind, TierDef> tiers) {
+        int rampPercent,
+        @ConfigKey("tier") Defs<TierKind, TierDef> tiers,
+        int biomes,
+        StripRules ground,
+        PlacementRules placement,
+        @ConfigKey("finale.approachColumns") int approachColumns) {
 
     private static final int WHOLE = 100;
 
     public MissionConfig {
         Require.notNegative("mission rampPercent", rampPercent);
+        Require.atLeastOne("mission biomes", biomes);
+        Require.atLeastOne("mission finale approachColumns", approachColumns);
     }
 
     /**
@@ -32,6 +52,18 @@ public record MissionConfig(
     public Pressure pressure(TierKind tier, int position) {
         Require.notNegative("mission position", position);
         return new Pressure(tiers.of(tier).enemyPercent(), WHOLE + rampPercent * position);
+    }
+
+    /**
+     * How every tier presses on the biome at this position: what a biome's placement must find room for, so one seed
+     * stands its points in the same places on every tier (G0068).
+     */
+    public List<Pressure> pressures(int position) {
+        List<Pressure> every = new ArrayList<>();
+        for (TierKind tier : TierKind.values()) {
+            every.add(pressure(tier, position));
+        }
+        return every;
     }
 
     /**

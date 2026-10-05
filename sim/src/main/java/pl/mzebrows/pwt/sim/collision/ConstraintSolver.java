@@ -43,6 +43,9 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
     private final SpatialGrid grid;
     private final ContactListener listener;
     private final TileMap map;
+
+    /** Whether a tile is solid now: terrain and shut doorways (ADR 0022). The clamp asks it, never the map. */
+    private final Solid solid;
     private final float width;
     private final float height;
     private final int passes;
@@ -53,9 +56,10 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
     /** Set for the duration of a pass, so contacts are announced once rather than once per pass. */
     private boolean reportContacts;
 
-    public ConstraintSolver(SimConfig config, TileMap map, ContactListener listener) {
+    public ConstraintSolver(SimConfig config, Solid solid, ContactListener listener) {
         this.listener = listener;
-        this.map = map;
+        this.solid = solid;
+        this.map = solid.map();
         this.width = map.worldWidth();
         this.height = map.worldHeight();
         this.passes = config.collision().passes();
@@ -234,7 +238,7 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
      * way it came in.
      */
     private void pushOutOfTerrain(Position position, float radius) {
-        if (map.inBounds(map.colAt(position.x), map.rowAt(position.y)) && !map.passableAt(position.x, position.y)) {
+        if (map.inBounds(map.colAt(position.x), map.rowAt(position.y)) && !solid.passableAt(position.x, position.y)) {
             ejectFromInside(position, radius);
             return;
         }
@@ -255,7 +259,7 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
 
         for (int row = minRow; row <= maxRow; row++) {
             for (int col = minCol; col <= maxCol; col++) {
-                if (!map.inBounds(col, row) || map.passableAtTile(col, row)) {
+                if (!map.inBounds(col, row) || solid.passableAtTile(col, row)) {
                     continue;
                 }
                 float tileLeft = col * tile;
@@ -313,9 +317,9 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
      */
     private boolean exposed(int col, int row, int stepX, int stepY) {
         if (stepX != 0 && stepY != 0) {
-            return map.passableAtTile(col + stepX, row) && map.passableAtTile(col, row + stepY);
+            return solid.passableAtTile(col + stepX, row) && solid.passableAtTile(col, row + stepY);
         }
-        return map.passableAtTile(col + stepX, row + stepY);
+        return solid.passableAtTile(col + stepX, row + stepY);
     }
 
     /**
@@ -336,19 +340,19 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
 
         float shallowest = Float.MAX_VALUE;
         int face = -1;
-        if (map.passableAtTile(col - 1, row) && position.x - tileLeft < shallowest) {
+        if (solid.passableAtTile(col - 1, row) && position.x - tileLeft < shallowest) {
             shallowest = position.x - tileLeft;
             face = 0;
         }
-        if (map.passableAtTile(col + 1, row) && tileRight - position.x < shallowest) {
+        if (solid.passableAtTile(col + 1, row) && tileRight - position.x < shallowest) {
             shallowest = tileRight - position.x;
             face = 1;
         }
-        if (map.passableAtTile(col, row - 1) && position.y - tileBottom < shallowest) {
+        if (solid.passableAtTile(col, row - 1) && position.y - tileBottom < shallowest) {
             shallowest = position.y - tileBottom;
             face = 2;
         }
-        if (map.passableAtTile(col, row + 1) && tileTop - position.y < shallowest) {
+        if (solid.passableAtTile(col, row + 1) && tileTop - position.y < shallowest) {
             face = 3;
         }
         switch (face) {

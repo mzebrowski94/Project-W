@@ -428,6 +428,11 @@ public final class Simulation {
         return spawner.spawnPost(x, y, watchRadius);
     }
 
+    /** Spawns a shut door in a doorway of this map (G0069). */
+    public Entity spawnDoor(TileRect doorway) {
+        return spawner.spawnDoor(doorway, map.tileSize());
+    }
+
     /** Spawns ground a squad takes by standing on it. Spawn these before whatever stands on them. */
     public Entity spawnControlPoint(float x, float y) {
         return spawner.spawnControlPoint(x, y);

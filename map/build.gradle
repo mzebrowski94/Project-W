@@ -3,6 +3,16 @@ eclipse.project.name = appName + '-map'
 // The terrain field and the algorithms that build one. This module depends on NOTHING -
 // not libGDX, not Ashley, not sim - so a generator can never reach for an entity.
 // MapArchitectureTest fails the build if that changes.
+//
+// Its test fixtures are the checks a laid strip is held to (StripFaults), shared with core's mission sweep,
+// which sweeps the shipped biomes and prints mission codes - neither of which this module can see.
+apply plugin: 'java-test-fixtures'
+
 dependencies {
   testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
+}
+
+// Fixtures are test code: NullAway is for what ships, as compileTestJava says.
+tasks.named('compileTestFixturesJava') {
+  options.errorprone.disable('NullAway')
 }

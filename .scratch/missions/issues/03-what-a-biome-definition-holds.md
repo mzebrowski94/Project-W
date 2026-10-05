@@ -69,7 +69,8 @@ a scaled count rounds through `Whole` ([07](07-the-tiers-in-numbers.md)).
 (the goal-line ticket); where anything goes inside a biome ("placement inside a biome"); looks and sound.
 Sub-variants stay possible: one is another constant with a copied block, and nothing here is global to a biome.
 
-**The blocks** - ported from the Adventures, then scaled to the wider biome (amended 01): 50-58 columns
+**The blocks** - *rosters cut to the room placement leaves in stage 7 (G0070); `biomes.properties` holds them.*
+Ported from the Adventures, then scaled to the wider biome (amended 01): 50-58 columns
 against the Adventure's 29, so every roster and furniture range is about 1.8 times the Adventure's count, and
 patches are a size bigger so a wide biome is not confetti. Points are 2-3. The Adventures' numbers are also at
 their own place in the march (the quarry is fourth), so the roster ranges are recalibrated once 07 sets

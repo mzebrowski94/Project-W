@@ -196,13 +196,17 @@ final class ArchitectureTest {
             .doNotHaveSimpleName("Rng")
             .and()
             .doNotHaveSimpleName("Scenarios")
+            .and()
+            .doNotHaveSimpleName("Mission")
             .should()
             .callMethod(Rng.class, "stream", long.class, RngStream.class)
             .orShould()
             .callConstructor(Rng.class, long.class)
             .because("every stream a level draws from lives in one table a snapshot can write (ADR 0014);"
                     + " a stream started anywhere else is state no snapshot sees. Scenarios lays the map out"
-                    + " before the world exists, and the map is rebuilt from the seed rather than carried");
+                    + " before the world exists, and the map is rebuilt from the seed rather than carried; a"
+                    + " Mission is laid out and placed before it too, from the map stream and from MISSION,"
+                    + " which is only ever derived from, so a fresh one is the table's (G0065)");
 
     @ArchTest
     static final ArchRule systemsHoldNoStateAcrossTicks = fields().that()

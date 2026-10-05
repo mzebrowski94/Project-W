@@ -9,6 +9,7 @@ import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.ApproachDef;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
+import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
@@ -19,6 +20,7 @@ import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Require;
+import pl.mzebrows.pwt.sim.def.ShakeDef;
 import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.TrooperGrenadeDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
@@ -83,7 +85,10 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * @param adaptation when the swarm adapts (ADR 0017), both halves off at zero
  * @param swarm what every strain and nest is scaled by, read through {@link #healthOf} and
  *     {@link #nestHealth} and nowhere else
- * @param mission what a mission is built with that no other level has: its tiers and its ramp (G0063)
+ * @param mission what a mission is built with that no other level has: its tiers and its ramp (G0063), its strip
+ *     and where its biomes' contents go (G0068)
+ * @param biomes every biome a mission deals from, by kind (missions ticket 03)
+ * @param door what stands in every doorway (G0069)
  * @param medkit how many medkits a level that asks for them scatters (G0053)
  * @param crate how many pickups a crate is dealt (G0056)
  */
@@ -126,6 +131,8 @@ public record SimConfig(
         AdaptationDef adaptation,
         SwarmConfig swarm,
         MissionConfig mission,
+        @ConfigKey("biome") Defs<BiomeKind, BiomeDef> biomes,
+        DoorConfig door,
         MedkitConfig medkit,
         CrateConfig crate) {
 
@@ -144,6 +151,11 @@ public record SimConfig(
                     "a clinch that stops short of the commander leaves the freeze playing across a gap");
         }
         UpgradeDef.checkCatalogue(draft, stats, upgrades, pickups);
+        if (BiomeKind.values().length < mission.biomes()) {
+            throw new IllegalArgumentException("a mission deals " + mission.biomes()
+                    + " biomes, none twice, from a pool of " + BiomeKind.values().length);
+        }
+        BiomeDef.checkStock(biomes, pickups);
     }
 
     /** The definition of one strain, for a system or a scenario that needs its numbers. */
@@ -336,6 +348,26 @@ public record SimConfig(
             Require.notNegative("nest hatchKeepOff", hatchKeepOff);
             Require.notNegative("nest wakeRadius", wakeRadius);
             Require.notNegative("nest rouseRadius", rouseRadius);
+        }
+    }
+
+    /**
+     * What stands in a doorway (G0069): one block for every door, since one door fits every doorway.
+     *
+     * @param openSeconds how long opening one takes - the action key held, at arm's length, standing still
+     * @param sinkSeconds how long an opened door is seen sinking into the ground; a look only, its doorway is open
+     *     from the tick it opened
+     * @param leapDamage what a creature's leap lands on it, whatever the strain
+     * @param health what it takes before it breaks
+     * @param shake how hard a leap landing on it shakes the ground - felt by the commanders near it
+     */
+    @With
+    public record DoorConfig(float openSeconds, float sinkSeconds, int leapDamage, int health, ShakeDef shake) {
+        public DoorConfig {
+            Require.positive("door openSeconds", openSeconds);
+            Require.notNegative("door sinkSeconds", sinkSeconds);
+            Require.notNegative("door leapDamage", leapDamage);
+            Require.positive("door health", health);
         }
     }
 
@@ -613,9 +645,14 @@ public record SimConfig(
 
         /** The spawn area on this map: the configured columns, centred on the map's own height. */
         public TileRect on(TileMap map) {
-            int rows = Math.min(height, map.rows());
-            int row = Math.max(0, (map.rows() - rows) / 2);
-            return new TileRect(col, row, Math.min(width, map.cols()), rows);
+            return on(map.cols(), map.rows());
+        }
+
+        /** The spawn area on a map this many tiles across and down, before the map exists - a mission's start. */
+        public TileRect on(int mapCols, int mapRows) {
+            int rows = Math.min(height, mapRows);
+            int row = Math.max(0, (mapRows - rows) / 2);
+            return new TileRect(col, row, Math.min(width, mapCols), rows);
         }
     }
 

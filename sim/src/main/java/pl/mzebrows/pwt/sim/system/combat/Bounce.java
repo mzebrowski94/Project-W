@@ -1,6 +1,6 @@
 package pl.mzebrows.pwt.sim.system.combat;
 
-import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Velocity;
@@ -36,7 +36,7 @@ final class Bounce {
      *
      * <p>It is put back where it started the tick, so it is not asked again next tick.
      */
-    static boolean offRock(TileMap map, Position at, PreviousPosition from, Velocity velocity) {
+    static boolean offRock(Solid map, Position at, PreviousPosition from, Velocity velocity) {
         if (map.passableAt(at.x, at.y)) {
             return false;
         }

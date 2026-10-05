@@ -8,9 +8,9 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -48,14 +48,14 @@ public final class PerceptionSystem extends EntitySystem {
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
 
     private final Defs<PickupKind, PickupDef> pickupDefs;
-    private final TileMap map;
+    private final Solid map;
 
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> sides = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> posts = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> edible = new ImmutableArray<>(new Array<>());
 
-    public PerceptionSystem(SimConfig config, TileMap map) {
+    public PerceptionSystem(SimConfig config, Solid map) {
         this.pickupDefs = config.pickups();
         this.map = map;
     }
@@ -102,7 +102,7 @@ public final class PerceptionSystem extends EntitySystem {
                 perception.hunt(target.x, target.y);
                 // Somebody in front of it outranks a grudge, which is dropped for good.
                 perception.provoked = false;
-            } else if (perception.provoked && withinRange(position, provokedPlace(perception), map.tileSize())) {
+            } else if (perception.provoked && withinRange(position, provokedPlace(perception), map.map().tileSize())) {
                 // Arrived: whatever is here is decided by contact.
                 perception.provoked = false;
             }

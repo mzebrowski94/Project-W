@@ -11,7 +11,7 @@ and what a reviewer checks. Written as a skill when the first biome stage is bui
 
 ## Answer
 
-Grilled 2026-10-05 (Q1-Q9). The text it starts from is `../new-biome-skill.md`, updated with these answers.
+Grilled 2026-10-05 (Q1-Q9). The text it starts from was `../new-biome-skill.md`, updated with these answers; since stage 7 it is `.claude/skills/new-biome/SKILL.md`.
 
 **Scope** (Q1). One skill, two families, as `new-kind` has them: **biome** (a dealt kind, `biomes.properties`)
 and **finale** (a set piece, `finales.properties` - `pieces`, hold, mouths, waves, lair as offsets from the

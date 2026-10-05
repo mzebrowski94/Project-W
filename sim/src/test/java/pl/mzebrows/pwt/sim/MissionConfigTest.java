@@ -132,9 +132,10 @@ class MissionConfigTest {
     }
 
     private static MissionConfig mission() {
-        return new MissionConfig(
-                RAMP,
-                Defs.<TierKind, TierDef>builder(TierKind.class)
+        return SimConfig.defaults()
+                .mission()
+                .withRampPercent(RAMP)
+                .withTiers(Defs.<TierKind, TierDef>builder(TierKind.class)
                         .put(TierKind.EASY, new TierDef(75, 85, 130, 0f, 0))
                         .put(TierKind.MEDIUM, new TierDef(100, 100, 100, 240f, 4))
                         .put(

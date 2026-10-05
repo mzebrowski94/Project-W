@@ -13,6 +13,9 @@ class StripTest {
     static final StripRules RULES = new StripRules(30, 3, 2, 3, 3, 4, 1, 2, 6, 4, 8, HOUSES);
     static final float TILE_SIZE = 5f;
 
+    /** Where the strip is entered: against the first biome's west border, on the middle rows. */
+    static final TileRect START = new TileRect(1, 12, 2, 5);
+
     private static final int SEEDS = 8;
 
     private static final List<BiomeGround> ORDER = List.of(
@@ -33,6 +36,49 @@ class StripTest {
     }
 
     @Test
+    void entersTheFirstBiomeByTheStartAndEveryOtherByThePassesIntoIt() {
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Strip.Laid laid = lay(ORDER, seed);
+
+            assertThat(StripFaults.entries(laid, grounds(ORDER), RULES))
+                    .as("seed %d", seed)
+                    .isEmpty();
+            assertThat(laid.entries().getFirst()).containsExactly(START);
+        }
+    }
+
+    @Test
+    void keepsTheStartTheApronsAndEveryHousesGroundTheBiomesBase() {
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Strip.Laid laid = lay(ORDER, seed);
+
+            assertThat(StripFaults.kept(laid, grounds(ORDER), RULES))
+                    .as("seed %d", seed)
+                    .isEmpty();
+        }
+    }
+
+    @Test
+    void keepsTheStartClearOfHousesAndRockWhereverItIs() {
+        TileRect north = new TileRect(1, 2, 3, 4);
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Strip.Laid laid = Strip.lay(RULES, ORDER, FINALE, north, TestStream.seeded(seed), TILE_SIZE);
+
+            assertThat(StripFaults.all(laid, grounds(ORDER), RULES))
+                    .as("seed %d", seed)
+                    .isEmpty();
+        }
+    }
+
+    @Test
+    void refusesAStartOutsideTheFirstBiome() {
+        assertThatThrownBy(() ->
+                        Strip.lay(RULES, ORDER, FINALE, new TileRect(0, 12, 2, 5), TestStream.seeded(1L), TILE_SIZE))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("inside the first biome");
+    }
+
+    @Test
     void putsEveryRidgeTileInTheBiomeWhoseGroundItShows() {
         for (long seed = 0; seed < SEEDS; seed++) {
             Strip.Laid laid = lay(ORDER, seed);
@@ -47,7 +93,7 @@ class StripTest {
     void putsAOneColumnRidgeInTheBiomeToItsEast() {
         StripRules wall = new StripRules(30, 3, 2, 1, 3, 4, 1, 2, 6, 4, 8, gatehouses(0f));
 
-        Strip.Laid laid = Strip.lay(wall, ORDER, FINALE, TestStream.seeded(5L), TILE_SIZE);
+        Strip.Laid laid = Strip.lay(wall, ORDER, FINALE, START, TestStream.seeded(5L), TILE_SIZE);
 
         for (int b = 0; b < StripFaults.ridges(laid); b++) {
             int col = StripFaults.westEdge(laid, b);
@@ -96,7 +142,7 @@ class StripTest {
     void honoursAHouseWithADoorwayInEveryWall() {
         StripRules four = rules(new HouseRules(8, 12, 7, 10, 4, 3, 0.25f, 8, 9));
         for (long seed = 0; seed < SEEDS; seed++) {
-            Strip.Laid laid = Strip.lay(four, ORDER, FINALE, TestStream.seeded(seed), TILE_SIZE);
+            Strip.Laid laid = Strip.lay(four, ORDER, FINALE, START, TestStream.seeded(seed), TILE_SIZE);
 
             assertThat(StripFaults.all(laid, grounds(ORDER), four))
                     .as("seed %d", seed)
@@ -141,7 +187,7 @@ class StripTest {
     void makesEveryRidgeButTheOneBeforeTheFinaleAGatehouseAtAFullShare() {
         StripRules always = rules(gatehouses(1f));
         for (long seed = 0; seed < SEEDS; seed++) {
-            Strip.Laid laid = Strip.lay(always, ORDER, FINALE, TestStream.seeded(seed), TILE_SIZE);
+            Strip.Laid laid = Strip.lay(always, ORDER, FINALE, START, TestStream.seeded(seed), TILE_SIZE);
 
             for (int b = 0; b < StripFaults.ridges(laid); b++) {
                 assertThat(StripFaults.gatehouse(laid, b))
@@ -158,7 +204,7 @@ class StripTest {
     void laysNoGatehouseAtAShareOfNothing() {
         StripRules never = rules(gatehouses(0f));
         for (long seed = 0; seed < SEEDS; seed++) {
-            Strip.Laid laid = Strip.lay(never, ORDER, FINALE, TestStream.seeded(seed), TILE_SIZE);
+            Strip.Laid laid = Strip.lay(never, ORDER, FINALE, START, TestStream.seeded(seed), TILE_SIZE);
 
             for (int b = 0; b < StripFaults.ridges(laid); b++) {
                 assertThat(StripFaults.gatehouse(laid, b))
@@ -172,7 +218,7 @@ class StripTest {
     void entersAGatehouseByItsWestWallAndLeavesByItsEastOnAnotherRow() {
         StripRules always = rules(gatehouses(1f));
         for (long seed = 0; seed < SEEDS; seed++) {
-            Strip.Laid laid = Strip.lay(always, ORDER, FINALE, TestStream.seeded(seed), TILE_SIZE);
+            Strip.Laid laid = Strip.lay(always, ORDER, FINALE, START, TestStream.seeded(seed), TILE_SIZE);
 
             House gatehouse = StripFaults.gatehouseIn(laid, 0);
             assertThat(gatehouse).as("seed %d", seed).isNotNull();
@@ -200,7 +246,7 @@ class StripTest {
         TestStream stream = TestStream.seeded(3L);
         TestStream twin = TestStream.seeded(3L);
 
-        Strip.lay(RULES, ORDER, FINALE, stream, TILE_SIZE);
+        Strip.lay(RULES, ORDER, FINALE, START, stream, TILE_SIZE);
 
         assertThat(stream.nextLong()).isEqualTo(twin.nextLong());
     }
@@ -256,7 +302,7 @@ class StripTest {
     }
 
     static Strip.Laid lay(List<BiomeGround> order, long seed) {
-        return Strip.lay(RULES, order, FINALE, TestStream.seeded(seed), TILE_SIZE);
+        return Strip.lay(RULES, order, FINALE, START, TestStream.seeded(seed), TILE_SIZE);
     }
 
     /** The dealt biomes and the finale, as the strip lays them west to east. */

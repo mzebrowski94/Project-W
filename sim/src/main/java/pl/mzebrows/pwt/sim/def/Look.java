@@ -44,6 +44,8 @@ public enum Look {
     NEST,
     /** A gun on a mount that a man gets on. Square rather than round, because it is not a creature. */
     TURRET,
+    /** A shut door: its doorway's squares, apart from the wall either side of it so it reads as the way in (G0069). */
+    DOOR,
     PROJECTILE,
     /** A heavy shot, so a gun is visible in what it fires. */
     SLUG,

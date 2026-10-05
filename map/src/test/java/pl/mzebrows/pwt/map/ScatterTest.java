@@ -54,6 +54,36 @@ class ScatterTest {
         }
     }
 
+    @Test
+    void keepsAnAreaScatterOnTheGroundItWasOfferedInsideItsOwnTiles() {
+        TileMap map = TileMap.builder(COLS, ROWS, TILE)
+                .fill(Terrain.PLAIN)
+                .rect(4, 4, 12, 12, Terrain.ORGANIC)
+                .build();
+        TileRect area = new TileRect(10, 2, 8, 8);
+        List<float[]> placed = new ArrayList<>();
+
+        scatterer(map).scatter(area, 6, RADIUS, EnumSet.of(Terrain.ORGANIC), (x, y) -> placed.add(new float[] {x, y}));
+
+        assertThat(placed).isNotEmpty().allSatisfy(at -> {
+            assertThat(map.terrainAt(at[0], at[1])).isEqualTo(Terrain.ORGANIC);
+            assertThat(area.contains(map.colAt(at[0]), map.rowAt(at[1]))).isTrue();
+        });
+    }
+
+    @Test
+    void anchorsNothingOnATileItWasToldToKeepOff() {
+        List<float[]> placed = new ArrayList<>();
+
+        scatterer(open())
+                .excluding((col, row) -> col < COLS / 2)
+                .scatter(30, RADIUS, (x, y) -> placed.add(new float[] {x, y}));
+
+        assertThat(placed)
+                .hasSize(30)
+                .allSatisfy(at -> assertThat(open().colAt(at[0])).isGreaterThanOrEqualTo(COLS / 2));
+    }
+
     /**
      * Something that never moves, laid nearly flush against rock, leaves a slot narrower than anything
      * that must get past it - and nothing routes round an entity, so a man walks into the slot and stays

@@ -4,7 +4,8 @@ import pl.mzebrows.pwt.sim.def.Objective;
 
 /**
  * The top bar's second line - the one that is always current: the first objective the level still
- * wants, or that it has everything it wants.
+ * wants, or that it has everything it wants. A level that names no objective but has control points - a mission
+ * before its finale - leads through them instead, and says nothing once they are all taken.
  *
  * <p>Objectives are recomputed every tick rather than latched ({@code Level}), so before the level is won
  * the line may go back from completed to a goal when a new wave walks onto a cleared field. That is the
@@ -57,7 +58,8 @@ public final class GoalLine {
             return Goal.REGROUP;
         }
         if (readout.objectivesRequired == 0) {
-            return Goal.NONE;
+            // A mission's points are not its objective, but the line leads through them while any is left.
+            return readout.pointsTaken < readout.pointsTotal ? Goal.CAPTURE_POINTS : Goal.NONE;
         }
         if (readout.complete()) {
             return Goal.COMPLETE;

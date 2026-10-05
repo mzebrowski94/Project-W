@@ -3,6 +3,8 @@ package pl.mzebrows.pwt.client.play;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.lan.RoomCode;
 import pl.mzebrows.pwt.sim.def.TierKind;
+import pl.mzebrows.pwt.sim.scenario.Scenario;
+import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
 /**
  * What names a mission (G0065): eight characters of the room code's alphabet, shown {@code HK3X-Q7RA} - the
@@ -57,6 +59,11 @@ public record MissionCode(TierKind tier, long seed) {
             }
         }
         return null;
+    }
+
+    /** What a session plays this mission as: {@code mission <tier>}, built from {@link #seed} as its seed (G0065). */
+    public Scenario scenario() {
+        return Scenarios.mission(tier);
     }
 
     /** The eight characters, with no dash. */

@@ -37,6 +37,7 @@ public final class Components {
                     Damage.class,
                     Dead.class,
                     Dodge.class,
+                    Door.class,
                     Drag.class,
                     Dragged.class,
                     Dying.class,
