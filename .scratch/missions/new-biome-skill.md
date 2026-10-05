@@ -1,37 +1,42 @@
 # Sketch: the `new-biome` skill
 
-Status: draft for ticket 10. Becomes `.claude/skills/new-biome/SKILL.md` with the first biome stage. Tickets
-03 and 06 are in; 07 is still open. `OPEN (ticket)` marks a step still waiting on one.
+Status: draft, settled by ticket 10 (2026-10-05). Stages 3-5 of `spec.md` amend it; stage 7 rewrites it against what
+building the five took, moves it to `.claude/skills/new-biome/SKILL.md`, moves *Amended* below to
+`.claude/skills/new-biome/CHANGELOG.md`, and deletes this file. `STAGE n` marks a step whose tool or test arrives
+with that stage.
 
 ---
 
 ```
 ---
 name: new-biome
-description: Add a biome to Project-W's missions as data - a constant, a block in biomes.properties, and the
-  seed sweep that proves the generator lays it and keeps its passes open. Use when porting one of the Adventures'
-  biomes or adding a new one, once `feature` has cleared it.
+description: Add a biome or a finale to Project-W's missions as data - a constant, a block in biomes.properties or
+  finales.properties, and the sweeps that prove the generator lays it and keeps its passes open. Use when porting
+  one of the Adventures' biomes or finales, or adding a new one, once `feature` has cleared it.
 ---
 ```
 
-# Adding a biome
+# Adding a biome or a finale
 
-A **biome** is a kind (G0008): one `BiomeKind` constant and one `sim.biome.<name>` block in
-`assets/sim/biomes.properties` - no class, no scenario, no branch. The mission generator deals it from the
-pool, `map` lays its ground (`BiomeGround`, through `Strip.lay`) and `sim` puts its roster and furniture on that
-ground. The steps every kind shares - constant, block, glossary - are `new-kind`'s; this skill is what a biome
-adds to them.
+A **biome** and a **finale** are kinds (G0008): one constant and one block - no class, no scenario, no branch. The
+mission generator deals biomes from the pool and draws a finale from its own; `map` lays the ground (`BiomeGround`,
+through `Strip.lay`) and `sim` puts the roster, furniture or set piece on it. The steps every kind shares - constant,
+block, glossary - are `new-kind`'s; this skill is what a biome or a finale adds to them. A **tier** is not here: it is
+a block in `missions.properties` through `new-kind`.
 
 ## 1. Fit
 
-For every trait the design gives the biome, name the field that carries it: ground, roster or furniture.
-Done when every trait has a field.
+For every trait the design gives it, name the field that carries it: ground, roster or furniture (a biome); ground,
+hold, waves or lair (a finale). Done when every trait has a field.
 
-- A trait with no field is new behaviour: `new-system` first, on the definition every biome has, off at zero.
+- A trait with no field is new behaviour: `new-system` first, on the definition every biome (or finale) has, off at
+  zero.
 - A strain it needs that does not exist yet: `new-kind` first.
-- A turret, a mine or a gun cache: a finale's or out of scope, never a biome's (ticket 01).
+- A turret, a mine or a gun cache in a biome: a finale's, or out of scope (ticket 01).
+- **Where** anything stands in a biome: placement's (ticket 14), never the biome's. A biome holds counts.
+  `STAGE 7` amends this line once placement is built.
 
-## 2. Ground
+## 2. Biome: ground
 
 `map` lays it in coats, each from its own stream: **base**, then **patches** in order, then **crags**, then
 **outcrops**. Rock always wins over a patch, and a pass's **apron** keeps base ground only. How much of a coat
@@ -46,48 +51,92 @@ is always a **density** - a fraction of the biome - never a count.
 
 Plus `widthMin/Max` and `regions`, which are geometry and so ground too. A biome's regions are its own -
 every region lies inside one biome, and a tile is in its region's (G0062) - so `regions` is at least 1.
+Rooms: `STAGE 5` adds their coat, or says why a biome has none (ticket 12).
 
-- **Porting an Adventure biome**: measure it first - rock, thicket and patch density, and the outcrop sizes.
-  `.scratch/missions/prototype/biome-ground.html` transcribes both Adventures and prints the measurements
-  beside six generated seeds; add the biome's block there and tune until the two read alike.
-- Done when the sweep's median density sits within a point of the measured one for rock and for thicket, and
-  a rendered seed reads as the same place. Mateusz judges the second.
+**Porting an Adventure biome**: measure it first. `PWT_MEASURE=1 .claude/scripts/gradle.sh :sim:test --tests
+'*BiomeMeasureTest' -i` (`STAGE 7`) builds the Adventure headless and prints the band's rock, thicket and patch
+density and its outcrop sizes beside the sweep's p10 / median / p90 for your block. Tune until the medians sit
+within a point of the measured ones. The HTML prototype is for looks only.
 
-## 3. Roster and furniture
+## 3. Biome: roster and furniture
 
 - `roster=loose|nest <strain> min max; ...` - loose is put down unaware, a nest is a hole of that strain. The
-  ranges are the biome at the first position on a medium tier; tier and ramp scale every count through
-  `Roster.count`, and nothing else does. OPEN (07): the numbers that calibrate against.
+  ranges are the biome at the first position on medium; tier and ramp scale every count through `Roster.count`
+  (pressure = tier `enemyPercent` x (1 + `rampPercent` x position), G0063), and nothing else does.
 - A nest wakes only for somebody **in its own biome** and within `wakeRadius`, and broods
-  `firstBroodSeconds` after waking (G0062). A nest near a ridge is not woken from the far side, so a biome
-  never counts on its neighbour having stirred its nests; the finale is the mission's last biome, and its
-  nests wake the same way.
-- `furniture.pointsMin/Max`, `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, and
-  `furniture.pickups=pickup <kind> min max; ...`. Never scaled.
-- Porting: count the Adventure biome's own, one entry per strain and way, scale by the width (an Adventure
-  biome is 29 columns, a mission's 50-58, so about 1.8), and drop what a biome may not hold.
+  `firstBroodSeconds` after waking (G0062). A biome never counts on its neighbour having stirred its nests.
+- `furniture.pointsMin/Max` (2-3), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, and
+  `furniture.pickups=pickup <kind> min max; ...`. Never scaled. No armoury pickup - `BiomeDef` refuses one.
+- **Porting**: the Adventure biome's own counts, one entry per strain and way, scaled by width only (x1.8 - an
+  Adventure biome is 29 columns, a mission's 50-58), no correction for its place in the Adventure's march; a range
+  about +-20 % round the scaled count. Drop turrets, mines, armoury caches and sleeping extras.
 
-## 4. Tests
+## 4. Finale
 
-- **The seed sweep** - one, generic, never copied per biome: over many seeds x 3 tiers, every pass of every
-  biome connects, no pockets, no passage under `clearance`, every point and crate reachable (ticket 01). A
-  biome joins it by being a constant. Done when it is green with the biome in the pool.
-- **What the design promises in a number** - one test per promise, as `new-kind` says ("the quarry is the
-  rockiest biome", "only the brake has thicket over a sixth of it"). Never the ground's connectivity, which
-  the sweep owns.
-- **Never which biome a tile is in.** That is `Strip`'s own test, once: every tile in one biome, no region
-  across two, a ridge tile in the biome whose ground it shows. A biome joins it by being a constant.
+`STAGE 8` writes this section from building the redoubt; the keep is its first run. Settled (ticket 04, G0064):
+`FinaleDef(ground, hold, waves, lair)` in `finales.properties`, a set piece - every position a tile offset `dx dy`
+from the anchor, flipped north-south by one bit, never east-west. Ground is `BiomeGround` with width fixed, no dealt
+coats, rock as `pieces`. Hold: `post`, `watch`, `turrets`, `mines`, `barrels`, `pickups`, `mouths`. Waves
+`after strain min max mouth`, counted through `Roster.count` unramped. Lair (a keep): `unit|nest|pickup kind dx dy`
+in the order written. **Porting**: offsets from the Adventure's (197, 15); counts become ranges round the port.
 
-## 5. Finish
+## 5. Tests
 
-`verify.sh` green. Glossary row for the biome's word (`docs/glossary.md`, *Levels and objectives*). The final
-message lists the block's keys with values and what each does to the feel.
+None is written per biome; a biome or finale joins every one by being a constant.
+
+- **`StripSweepTest`** (`map`): every pass connects, no pockets, no passage under `clearance`, every ridge tile in
+  the biome whose ground it shows, the finale's west edge straight. `STAGE 4`; rooms `STAGE 5`.
+- **`MissionSweepTest`** (`sim`): every point and crate reachable, every finale layout spot standable and
+  reachable, the last biome's nests outside the watch, a point in its last `doorColumns`. `STAGE 7` / `8`.
+- **Coats**: every coat of every biome lands within tolerance of its declared density. **Same ground**: one seed at
+  three tiers. **Coverage**: every `BiomeKind` dealt at least once at every position.
+- `verify.sh` runs 64 seeds a sweep. **Run the big one** before you finish:
+  `PWT_SWEEP=1 .claude/scripts/gradle.sh :map:test :sim:test --tests '*SweepTest' -i` - 2000 seeds; a failing seed
+  prints its mission code, and the run prints a few codes that deal your biome first.
+- **What the design promises in a number** - one test per promise ("the quarry is the rockiest biome"). Never
+  connectivity, which the sweeps own; never which biome a tile is in, which is `Strip`'s own test.
+
+## 6. Look at it
+
+Hand Mateusz one of the printed codes: `--mission=<code>` (`STAGE 7`), or ENTER CODE once the DAILY MISSIONS page
+exists. He judges whether it reads as the place it was ported from.
+
+## 7. Finish
+
+`verify.sh` green. Glossary row for the word (`docs/glossary.md`, *Levels and objectives*). The final message lists
+the block's keys with values and what each does to the feel, and pastes the `PWT_SWEEP` and `PWT_MEASURE` output.
+
+## 8. Amend this skill
+
+Every run ends here, and so does every stage that touches biomes. Ask:
+
+- which step was **wrong** - you followed it and it failed;
+- what was **missing** - you had to find it out;
+- what was **slow** - done by hand where a test, a runner or a key would do it.
+
+Fix text here, in this run. A fix needing code: in this run if it is one helper, otherwise a `docs/backlog.md` row
+with its trigger. Then one dated line in `CHANGELOG.md` beside this file - run or stage, what, what changed - and
+**"nothing" when nothing**, so the step is never skipped silently.
 
 ## Reviewer checks
 
-- The block names every key its nearest neighbour does; a coat is off by leaving its block out, nothing else.
-- The pool still deals: a mission takes `sim.mission.biomes` of them, none twice and never the same base side
-  by side - so the pool needs at least that many biomes, with bases enough to alternate.
-- No coordinates anywhere: a biome is rules, never places.
-- `regions` at least 1: a biome's regions are its own and never shared with a neighbour.
-- No armoury pickup in `furniture.pickups` (ticket 01: loose weapons are out of scope).
+The build already refuses a constant without a block, `regions` under 1, an armoury pickup in `furniture.pickups`, a
+pool smaller than `sim.mission.biomes`, and a biome the deal never places. By eye:
+
+- a comment above the block: source, measured numbers, why;
+- every key its nearest neighbour's block has; a coat off by leaving its block out, nothing else;
+- no coordinates in a biome - rules, never places;
+- ported counts traceable to the Adventure (x1.8);
+- the glossary row;
+- the `PWT_SWEEP` and `PWT_MEASURE` output in the final message;
+- a `CHANGELOG.md` line.
+
+---
+
+## Amended
+
+Moves to `CHANGELOG.md` with the skill. One dated line each: stage or run - what was wrong, missing or slow - what
+changed.
+
+- 2026-10-05, ticket 10 grilling - draft settled: finale family added, sweeps split by module, Java measuring,
+  printed codes to play, the amend step.

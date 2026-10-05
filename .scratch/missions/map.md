@@ -22,9 +22,9 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
   config text), 3 (the record is not an economy).
 - `map` owns terrain, ridges, passes and which biome a tile is in (pure function of tier + seed); `sim`
   owns what stands on it (ADR 0009). The UTC date is read only in `core`.
-- Done separately in the charting session, not a step on this route: the Adventure finale fix - a point
-  that holds afterwards never becomes the rally point, and a march ends on a ring round the post rather
-  than its middle (G0055 amended, G0061).
+- The Adventure finale fix - a point that holds afterwards never becomes the rally point, and a march ends on
+  a ring round the post rather than its middle (G0055 amended, G0061) - was to be done separately and never was;
+  11 makes it stage 0 of the build.
 
 ## Decisions so far
 
@@ -41,8 +41,8 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
   biome. First stage: plain, quarry, brake, anthill, badlands + redoubt. Rooms follow as a stage of their own
   ([12](issues/12-rooms-inside-a-biome.md)).
 - [What lies between two biomes](issues/13-what-lies-between-two-biomes.md): a ragged rock **ridge** crossed by
-  1-2 bent **passes**, about one in four a **gatehouse** (a pass through a clearing - a proof of concept that 12
-  takes on). Belt and wall stay in the prototype; a chasm with bridges is an idea for later.
+  1-2 bent **passes**, about one in four a **gatehouse** (a pass through a clearing - built with rooms in 12's
+  form, amended by 11). Belt and wall stay in the prototype; a chasm with bridges is an idea for later.
 - [Which biome a tile is in](issues/06-which-biome-a-tile-is-in.md): a biome is a grouping of regions - every region
   in one, a tile in its region's; a ridge tile in the biome whose ground it shows; the finale is the last biome; a
   map with none is one. A nest wakes in its biome within `wakeRadius`, first brood `sim.nest.firstBroodSeconds` 6
@@ -71,19 +71,27 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
   libGDX `Preferences` store of its own behind `core`'s `MissionRecords`, kept forever (G0067). Written on the outcome
   tick by every machine present, a late joiner too; a joiner matches the seed against its day and the days either
   side. A build that moves a daily's map leaves the record standing; two copies on one PC, last flush wins.
+- [What the new-biome skill says](issues/10-what-the-new-biome-skill-says.md): one skill, families biome and finale
+  (the keep is a run; a tier is `new-kind`'s); a biome holds counts, never places. Tests none per biome:
+  `StripSweepTest` (`map`) and `MissionSweepTest` (`sim`), seeds only, 64 in `verify.sh` and 2000 under `PWT_SWEEP=1`;
+  coats hit their density, one seed at three tiers lays the same ground, every kind dealt at every position. Port by
+  measuring in Java (`PWT_MEASURE`), counts x1.8, the Adventures untouched; Mateusz judges a printed code. A **living
+  skill**: every run and every biome-touching stage ends by amending it, one line in its `CHANGELOG.md`, "nothing"
+  included.
+- [The build in stages](issues/11-the-build-in-stages.md): rally fix, result screen, nests by biome, ground, strip,
+  rooms, tiers and the code, **the first biome stage** (skill written), finale, DAILY MISSIONS, records, then one
+  `new-biome` run a biome and the keep. Rooms moved ahead of the biomes; gatehouses with them. Placement became
+  ticket 14. **Destination reached: [`spec.md`](spec.md).**
 
 ## Not yet specified
 
-- **Placement inside a biome**: where points, crates, medkits, nests and loose creatures go relative
-  to each other, the gap and the walls - rules rather than coordinates. Unblocked: 02 and 03 are settled,
-  so it can graduate to a ticket. 04 hands it two rules: a point in the last biome's last `doorColumns`, and
-  that biome's nests outside the finale's watch.
-- **How big the field gets**: the size is settled (about 255 x 30 tiles: 4 biomes of 50-58 columns + the
-  finale); entity counts and frame time with hard tier numbers are not - the ported rosters are about 1.8 times
-  an Adventure biome's - nor whether the avoidance and mine scans (`alpha-phase.md`, known limits) survive it.
-- **Performance of generation itself**: how long building a mission takes, and whether a join waits on it.
-- **What the goal line says** across a mission: point by point, then the finale; wording with the HUD.
-- **Testing a seed sweep cheaply** enough to run in `verify.sh` - how many seeds, which assertions.
+Everything here was resolved by 11; what remains is a ticket or a measurement inside a stage.
+
+- **Placement inside a biome** - [ticket 14](issues/14-placement-inside-a-biome.md), before stage 7.
+- **How big the field gets** - measured at the end of stage 8 (finale); a ticket only if frame time breaks the budget.
+- **Performance of generation** - a budget asserted by stage 7's sweep (100 ms median a mission).
+- **What the goal line says** - stage 8's `feature` run.
+- **Testing a seed sweep cheaply** - settled in 10.
 
 ## Out of scope
 

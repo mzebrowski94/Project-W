@@ -9,7 +9,10 @@ Blocked by: 03
 How generation lays **rooms** - houses, bases: rectangular or square ground enclosed by thin walls with a way
 in - inside a biome, and what may stand in one (a control point, crates). Asked for by Mateusz on 2026-10-04,
 in the same breath as the wider biomes of amended 01: bigger biomes are what leave room for something major
-inside one. Built as a stage after the first biome stage (11).
+inside one. Built as stage 5 (11): after the strip, before the first biome stage, so the biomes and the
+`new-biome` skill are built with rooms settled. The stage is `map` only - what stands in a room is placement
+(ticket 14), built in the first biome stage. **Gatehouses are built here**, not with the ridges, in the form this
+ticket settles.
 
 Run `game-patterns` first - nothing on its shortlist lays enclosures yet, so the technique that wins (stamped
 rectangles placed like outcrops, a BSP split of a lot, a prefab with rules) goes on it with its trade-off.

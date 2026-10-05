@@ -31,7 +31,7 @@ shoot over but not cross is a second property and an ADR.
 - Laid by `Strip.lay`: the ridge, then its passes carved through it and through what spilt into each biome, so
   no later coat can close one; doors on the ridge's edge columns; an **apron** that follows a bent pass out
   through the spill; notches filled; then the whole strip flooded from the start.
-- **Gatehouses** ship as a proof of concept with the ridges: a share of ridges (`gatehouseShare` 0.25 - about one
+- **Gatehouses** - *amended by 11: built with rooms (stage 5) in the form 12 settles, not with the ridges.* Were to ship as a proof of concept with the ridges: a share of ridges (`gatehouseShare` 0.25 - about one
   a mission) is wider and has one pass through a clearing. Improved or expanded in 12; a room on a border is
   probably not the same thing as a room inside a biome.
 - The **belt** and the **wall** stay in the prototype only, to compare against.
