@@ -758,6 +758,9 @@ public final class AlphaWorlds {
     /** How near a point a commander counts as being at it. Wider than a point, narrower than the arena. */
     public static final float RALLY_RADIUS = 15f;
 
+    /** How far round ground held afterwards the squad's march ends. Past a point's radius, inside the arena. */
+    public static final float POST_RING_RADIUS = 12f;
+
     /** How long a walking trooper may make almost no ground before he counts as stuck. */
     public static final float BLOCK_SECONDS = 1f;
 
@@ -894,6 +897,7 @@ public final class AlphaWorlds {
                         HOLD_SECONDS,
                         HOLD_JITTER_SECONDS,
                         RALLY_RADIUS,
+                        POST_RING_RADIUS,
                         BLOCK_SECONDS,
                         BLOCK_DISTANCE,
                         DETOUR_SECONDS,

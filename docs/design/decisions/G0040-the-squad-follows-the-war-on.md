@@ -1,6 +1,6 @@
 # G0040: The squad follows the war on; it never runs ahead of it
 
-**Status.** accepted
+**Status.** amended by G0061: with nothing left to take, the next point is the ground held afterwards
 
 **Trigger.** Anything that changes when a trooper leaves a point, what "forward" is for, or how the
 squad paces a level.

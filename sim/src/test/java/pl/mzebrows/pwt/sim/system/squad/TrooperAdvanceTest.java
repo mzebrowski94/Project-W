@@ -7,6 +7,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.HOLD_JITTER_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.HOLD_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_CAPTURE_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_RADIUS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.POST_RING_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RALLY_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SCAN_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SPEED;
@@ -401,6 +402,72 @@ class TrooperAdvanceTest {
         assertThat(at(trooper).x).isCloseTo(wasX, Offset.offset(0.6f));
     }
 
+    /**
+     * Ground held afterwards is where the last fight is fought (G0061). The squad forms up round it -
+     * every man with the circle in front of him - rather than piling onto its middle, where the waves
+     * are walking.
+     */
+    @Test
+    void stopsOnARingRoundGroundThatIsHeldAfterwards() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(CORNER, CORNER);
+        heldAfterwards(simulation.spawnControlPoint(MIDDLE, MIDDLE));
+        Entity trooper = simulation.spawnTrooper(MIDDLE + 40f, MIDDLE);
+
+        steps(simulation, ticksIn(4f));
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);
+        assertThat(distance(trooper, MIDDLE, MIDDLE)).isCloseTo(POST_RING_RADIUS, Offset.offset(1f));
+    }
+
+    /** And so taking it, which starts the last fight, is the player's to do (G0061). */
+    @Test
+    void leavesTheTakingOfGroundHeldAfterwardsToTheCommander() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity point = heldAfterwards(simulation.spawnControlPoint(MIDDLE, MIDDLE));
+        simulation.spawnTrooper(MIDDLE + 40f, MIDDLE);
+
+        steps(simulation, ticksIn(4f + 2f * POINT_CAPTURE_SECONDS));
+
+        assertThat(point.getComponent(ControlPoint.class).captured).isFalse();
+    }
+
+    /**
+     * Nothing is left to take once the held ground is taken, so a man standing on a point behind it -
+     * where the reserve's men now come onto the field - follows the war on to it (G0040, G0061).
+     */
+    @Test
+    void goesOnToGroundHeldAfterwardsOnceNothingIsLeftToTake() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(80f, 20f + POST_RING_RADIUS - 2f);
+        take(simulation.spawnControlPoint(20f, 20f));
+        take(heldAfterwards(simulation.spawnControlPoint(80f, 20f)));
+        Entity trooper = simulation.spawnTrooper(20f, 20f);
+
+        steps(simulation, ticksIn(5f));
+
+        assertThat(distance(trooper, 80f, 20f)).isCloseTo(POST_RING_RADIUS, Offset.offset(1f));
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);
+    }
+
+    /** The ring is where they hold, not a leash: "forward" still pushes the line out past it. */
+    @Test
+    void stillPushesOutFromTheRingWhenHeSaysForward() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        take(heldAfterwards(simulation.spawnControlPoint(MIDDLE, MIDDLE)));
+        simulation.spawnPost(MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + POST_RING_RADIUS - 1f, MIDDLE);
+        steps(simulation, 10);
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);
+
+        simulation.step(ordering(Order.FORWARD));
+        steps(simulation, ticksIn(1f));
+
+        assertThat(distance(trooper, MIDDLE, MIDDLE)).isGreaterThan(POST_RING_RADIUS + 5f);
+    }
+
     @Test
     void walksInWhenItIsStillOutsideThePoint() {
         Simulation simulation = simulation();
@@ -524,6 +591,22 @@ class TrooperAdvanceTest {
 
         Velocity velocity = trooper.getComponent(Velocity.class);
         return (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+    }
+
+    private static Entity heldAfterwards(Entity point) {
+        point.getComponent(ControlPoint.class).holdAfterwards(0f);
+        return point;
+    }
+
+    private static Entity take(Entity point) {
+        point.getComponent(ControlPoint.class).captured = true;
+        return point;
+    }
+
+    private static float distance(Entity trooper, float x, float y) {
+        float dx = at(trooper).x - x;
+        float dy = at(trooper).y - y;
+        return (float) Math.sqrt(dx * dx + dy * dy);
     }
 
     private static boolean moved(Entity trooper, float fromX, float fromY) {

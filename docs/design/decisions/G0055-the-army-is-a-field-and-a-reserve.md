@@ -1,6 +1,6 @@
 # G0055: The army is a field and a reserve, and every man after the first tick comes from the reserve
 
-**Status.** accepted
+**Status.** amended by G0061: a point that holds afterwards is never the rally point
 
 **Trigger.** Anything that changes how many men a side has, where a man comes onto the field, what a
 commander's return costs, what a crate of men is worth, or how a level is lost.
@@ -36,7 +36,7 @@ may raise:
 - **A crate of men** goes onto the field one a tick while it has room, then into the reserve, and past
   the reserve's most it is wasted.
 - **The rally point** is where all of them appear: the spawn area until a point is taken, the point
-  taken last after that (`RallyPoint`).
+  taken last after that (`RallyPoint`) - never one that holds afterwards (G0061).
 - **The level is lost** when every commander is out, somebody is waiting to come back, and the reserve
   is empty. Latched - a crate a trooper reaches afterwards does not bring it back. The goal line says
   MISSION FAILED; like MISSION COMPLETED, there is no end screen yet.

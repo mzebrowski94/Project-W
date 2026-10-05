@@ -144,6 +144,25 @@ class ReserveTest {
         }
     }
 
+    /** Ground held afterwards is where the last fight is, never where a man comes onto the field (G0061). */
+    @Test
+    void neverMustersMenOnGroundThatIsHeldAfterwards() {
+        Simulation simulation = new Simulation(mustering(20));
+        take(simulation.spawnControlPoint(40f, 50f), 1);
+        Entity held = simulation.spawnControlPoint(80f, 50f);
+        held.getComponent(ControlPoint.class).holdAfterwards(0f);
+        take(held, 2);
+
+        steps(simulation, ONE_MUSTER);
+
+        TileMap map = simulation.map();
+        TileRect around = TileRect.around(map, 40f, 50f, TROOPER_REINFORCEMENT_RADIUS);
+        for (Entity trooper : troopers(simulation)) {
+            Position at = trooper.getComponent(Position.class);
+            assertThat(around.contains(map.colAt(at.x), map.rowAt(at.y))).isTrue();
+        }
+    }
+
     /** A commander coming back is a man from the reserve like any other. */
     @Test
     void takesAManFromTheReserveToBringACommanderBack() {

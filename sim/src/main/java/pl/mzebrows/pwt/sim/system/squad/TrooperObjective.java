@@ -28,6 +28,11 @@ import pl.mzebrows.pwt.sim.system.query.Sight;
  *
  * <p><strong>Nearest means nearest by route</strong> (2.e): each point owns a flow field built for a
  * trooper's body, once, because points neither move nor go away.
+ *
+ * <p><strong>Ground held afterwards is stood round, not on</strong> (G0061): a march to a point that holds
+ * afterwards ends on a ring {@code sim.trooper.postRingRadius} round its middle, past its radius, so the
+ * squad forms up round the last fight and starting it is left to whoever steps in. Once it is taken and
+ * nothing is left to take, it is where every man goes next.
  */
 final class TrooperObjective {
 
@@ -44,6 +49,7 @@ final class TrooperObjective {
     private final float holdSeconds;
     private final float holdJitterSeconds;
     private final float rallyRadius;
+    private final float postRingRadius;
 
     /** One field per control point, parallel to the family. Rebuilt only if the set of points changes. */
     @NotState("cache of one flow field per control point, a pure function of the map and where the points are")
@@ -72,6 +78,7 @@ final class TrooperObjective {
         this.holdSeconds = config.trooper().holdSeconds();
         this.holdJitterSeconds = config.trooper().holdJitterSeconds();
         this.rallyRadius = config.trooper().rallyRadius();
+        this.postRingRadius = config.trooper().postRingRadius();
     }
 
     /** Takes the views it reads from the engine, once, as its system is added. */
@@ -85,11 +92,15 @@ final class TrooperObjective {
     }
 
     /**
-     * Heads for the nearest point not yet taken, and settles on it once standing there - or reports
-     * that there is none left to go to.
+     * Heads for the nearest point not yet taken, and settles on it once standing there - or, with none
+     * left, for ground held afterwards unless he is pushing out from it - or reports that there is
+     * nowhere to go.
      */
     boolean advances(Trooper trooper, Position at) {
         int nearest = nearestUncapturedPoint(at);
+        if (nearest < 0 && !trooper.pushingForward()) {
+            nearest = heldPoint();
+        }
         if (nearest < 0) {
             return false;
         }
@@ -163,14 +174,16 @@ final class TrooperObjective {
     }
 
     /**
-     * Whether this trooper is far enough inside the point to stop walking.
+     * Whether this trooper is far enough in to stop walking.
      *
-     * <p>Short of the edge, so one shove does not drop it out and reset the capture.
+     * <p>Short of the edge, so one shove does not drop it out and reset the capture - or, round ground
+     * held afterwards, on the ring rather than inside the point at all (G0061).
      */
-    private static boolean standingOn(Entity point, Position at) {
+    private boolean standingOn(Entity point, Position at) {
         ControlPoint held = POINT.get(point);
         Position where = POSITION.get(point);
-        return Sight.withinRange(at.x, at.y, where.x, where.y, held.radius * INSIDE_THE_EDGE);
+        float reach = held.holdsAfterwards ? postRingRadius : held.radius * INSIDE_THE_EDGE;
+        return Sight.withinRange(at.x, at.y, where.x, where.y, reach);
     }
 
     /**
@@ -209,6 +222,10 @@ final class TrooperObjective {
     private boolean movesOn(Trooper trooper, Position at, int taken, float deltaTime) {
         int next = nearestUncapturedPoint(at);
         if (next < 0) {
+            // Nothing left to take: what is left is the ground held afterwards (G0061).
+            next = heldPoint();
+        }
+        if (next < 0 || next == taken) {
             return false;
         }
         if (aCommanderAt(points.get(next))) {
@@ -289,6 +306,20 @@ final class TrooperObjective {
             }
         }
         return nearest;
+    }
+
+    /**
+     * Which point has been taken and is held afterwards, or {@code -1}. One a level, as there is one post
+     * (G0027).
+     */
+    private int heldPoint() {
+        for (int i = 0; i < points.size(); i++) {
+            ControlPoint point = POINT.get(points.get(i));
+            if (point.captured && point.holdsAfterwards) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /** Builds one field per point, aimed at that point, the first time there are any. */

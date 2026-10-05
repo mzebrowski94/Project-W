@@ -491,6 +491,9 @@ public record SimConfig(
      *     squad's stream
      * @param rallyRadius how near a point a commander must be to count as at it, in world units: at the
      *     next one, the men holding this one set off at once; at this one, they stay
+     * @param postRingRadius how far round a point that holds afterwards a trooper's march to it ends, in
+     *     world units (G0061): past the point's own radius, so the squad forms up round it and taking it is
+     *     left to whoever steps in
      * @param blockSeconds how long a walking man may make less than {@code blockDistance} before he
      *     counts as stuck and takes a detour. Zero never counts anybody as stuck
      * @param blockDistance how much ground in that time still counts as progress, in world units
@@ -536,6 +539,7 @@ public record SimConfig(
             float holdSeconds,
             float holdJitterSeconds,
             float rallyRadius,
+            float postRingRadius,
             float blockSeconds,
             float blockDistance,
             float detourSeconds,
@@ -571,6 +575,7 @@ public record SimConfig(
             Require.notNegative("trooper holdSeconds", holdSeconds);
             Require.notNegative("trooper holdJitterSeconds", holdJitterSeconds);
             Require.positive("trooper rallyRadius", rallyRadius);
+            Require.positive("trooper postRingRadius", postRingRadius);
             Require.notNegative("trooper blockSeconds", blockSeconds);
             Require.notNegative("trooper blockDistance", blockDistance);
             Require.notNegative("trooper detourSeconds", detourSeconds);

@@ -17,6 +17,10 @@ import pl.mzebrows.pwt.sim.component.Position;
  * after that - ground the side holds, and the ground nearest the fight it has moved on to. One answer
  * for everybody drawn from the reserve: a muster's troopers, a crate's men, and a returning commander.
  * A pure function of the points and the config, asked on the tick a man arrives rather than kept.
+ *
+ * <p><strong>A point that holds afterwards never counts</strong> (G0061): taking it starts the last fight
+ * on it, and a man put down in the middle of that has not come onto the field, he has been dropped into
+ * the waves. The point before it stays the rally point.
  */
 public final class RallyPoint {
 
@@ -38,14 +42,14 @@ public final class RallyPoint {
         return TileRect.around(map, taken.x, taken.y, config.trooper().reinforcementRadius());
     }
 
-    /** Where the point taken last stands, or null while none has been. */
+    /** Where the point taken last stands, leaving out ground held afterwards, or null while none has been. */
     private static @Nullable Position lastTaken(ImmutableArray<Entity> points) {
         Position found = null;
         int order = -1;
         for (int i = 0; i < points.size(); i++) {
             Entity entity = points.get(i);
             ControlPoint point = POINT.get(entity);
-            if (point.captured && point.takenOrder > order) {
+            if (point.captured && !point.holdsAfterwards && point.takenOrder > order) {
                 order = point.takenOrder;
                 found = POSITION.get(entity);
             }
