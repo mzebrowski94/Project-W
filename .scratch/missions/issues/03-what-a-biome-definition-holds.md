@@ -61,9 +61,9 @@ by tier or ramp (01). No turrets, mines or armoury caches - a finale's, or out o
 | `sim` | `BiomeKind`; `BiomeDef(BiomeGround ground, List<Roster> roster, Furniture furniture)` as `Defs<BiomeKind, BiomeDef>`, root `sim.biome`, in `assets/sim/biomes.properties` - the table refuses a biome without a block. `Roster` sealed (`Loose`, `Nest`); `Furniture`; `Stock` sealed with one record, `Pickup`. |
 | config | Ranges as `xMin`/`xMax`, the house form (`sim.nest.broodMin`). Lists in the binder's existing `;` form; a block left out is off. No new binder code but the `PatchGround` conversion. |
 
-Open for the build: `map` holds no generator, and `Strip` wants a stream per coat per biome - either `sim`
-passes a stream factory or `Randomness` grows a way to derive one. Rounding a scaled count: `Whole` if its
-rule fits a count, else one rule beside it.
+~~Open for the build~~ - both settled: `Strip` derives a stream per biome position and per coat from the MAP
+stream through `Randomness.derive(salt)`, `map` still holding no generator ([05](05-the-mission-seed-and-its-code.md));
+a scaled count rounds through `Whole` ([07](07-the-tiers-in-numbers.md)).
 
 **Out** - a pool weight (every `BiomeKind` is dealt, equally, until a biome needs otherwise); a name on screen
 (the goal-line ticket); where anything goes inside a biome ("placement inside a biome"); looks and sound.

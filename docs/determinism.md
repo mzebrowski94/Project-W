@@ -31,6 +31,19 @@ reproducible from a single seed either way.
 
 `Rng` is SplitMix64 and its state is one `long`, so a world can be snapshotted and replayed exactly.
 
+**Derived streams split a concern while a world is built** (G0065, missions ticket 05). `Randomness.derive(salt)`
+makes a child from a stream's current state without advancing it - the same mixing `Rng.stream` uses, which is
+built on it - so `map` can split the MAP stream per biome and per coat while still owning no generator, and a
+mission's deal splits the MISSION concern per biome. Retuning one coat of one biome then moves nothing else.
+Three rules:
+
+- **A stream either derives or draws, never both.** A child is made from its parent's state, so a parent that
+  had drawn first would make its children depend on how much it drew. No two call sites derive under one salt
+  path: two children from one path are one sequence twice.
+- **A derived stream lives only during the build.** Everything drawn once the first tick runs comes from a
+  concern in `Streams`, so a snapshot carries it (ADR 0014). A restored world is the build plus the snapshot.
+- **Key a child by position, not by kind.** A biome's coats derive from its place in the march.
+
 ## What catches a break
 
 | Guard | Catches |
