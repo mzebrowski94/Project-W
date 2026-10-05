@@ -167,10 +167,10 @@ contradiction three features later.
   a level breeds them, whether running out matters, and whether the aliens are meant to clear them
   before you can get to them are all still open - and they decide whether the rabbit is a resource or
   a set piece.
-- **What happens when a level's objectives are met?** The alpha only says MISSION COMPLETED on the goal
-  line and the world runs on. Extraction, an immediate cut, a lull before the next wave and a
-  score screen are all still open, and this is now the question standing between the alpha and a
-  playable level.
+- **What happens when a level's objectives are met?** **Answered (G0066):** the first outcome is final, the
+  world runs on, and after a short hold the result screen says won or lost and offers RETRY and MENU.
+  Extraction and a lull before a next wave stay open - a level that goes on after its objective revisits
+  G0066.
 - **Should a trooper ever break off a fight?** It stands still and shoots until whatever it noticed
   is dead or out of range (1.d), which is exactly right for an arcade squad and exactly wrong if the
   thing shooting back is a brute. Retreating, repositioning and taking cover are all unaddressed, and
@@ -185,7 +185,8 @@ contradiction three features later.
   In single-player it is the same question asked once. **A first answer (G0049):** personal upgrades
   give each slot a kit of its own over a level; whether commanders *start* distinct is still open.
 - Does the squad persist between levels, or does each level grant a fresh one?
-- On failure, do you retry the level, or is the run over?
+- On failure, do you retry the level, or is the run over? **Retry (G0066)** - the result screen's RETRY is the
+  same level again.
 - Given "no between-level management", what does progression across the nine levels actually consist
   of - only what you carry out of a level?
 - **A one-tile gap takes grunts and refuses brutes**, because a tile is 5 world units and a brute is

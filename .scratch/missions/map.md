@@ -61,6 +61,12 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
   seed and alone builds the map, the tier moves numbers (G0065). Daily = pure `daily(epochDay, tier)` in `core`'s
   `MissionCode`. Online as `SessionSetup("mission <tier>", seed)` via `Scenarios.mission`. Streams: `Randomness.derive`,
   keyed by position, build-time only; `RngStream.MISSION` for the deal.
+- [Menu pages and the result screen](issues/08-menu-pages-and-the-result-screen.md): DAILY MISSIONS first in the main
+  menu - three dailies with ✓ and best, the selected one's code under them, RANDOM a tier choice row, ENTER CODE an
+  inline line with an 8-slot picker whose first slot is tiers only, a refused code never hinted at; a code equal to a
+  daily is that daily; HOST reuses the page. The result screen for every level (G0066): first outcome final, world
+  runs on, 3 s hold, time and NEW BEST on a win only, RETRY / COPY CODE / MENU back to where it was started.
+  Another tier deferred.
 
 ## Not yet specified
 
