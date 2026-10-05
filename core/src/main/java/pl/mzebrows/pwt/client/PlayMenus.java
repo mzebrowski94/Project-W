@@ -18,6 +18,8 @@ import pl.mzebrows.pwt.client.input.PageControls;
 import pl.mzebrows.pwt.client.play.HarnessCommand;
 import pl.mzebrows.pwt.client.play.ScenarioPlay;
 import pl.mzebrows.pwt.sim.PlayerInputs;
+import pl.mzebrows.pwt.ui.hud.LevelTime;
+import pl.mzebrows.pwt.ui.hud.Readout;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
@@ -35,8 +37,8 @@ import pl.mzebrows.pwt.ui.page.UiIntent;
 import pl.mzebrows.pwt.ui.page.UiPage;
 
 /**
- * A level's pages: the pause menu and the leave confirm over the view, the paused banner, and the
- * connecting panel before an online world has arrived ({@code UI:play...}, {@code UI:connecting}).
+ * A level's pages: the pause menu, the leave confirm and the result over the view, the paused banner, and
+ * the connecting panel before an online world has arrived ({@code UI:play...}, {@code UI:connecting}).
  *
  * <p>What a press does is {@link UiFlow}'s, where things are is {@code MenuLayout}'s, and the selection is
  * {@link PageControls}'; this carries out the flow's effects on the {@link ScenarioPlay} and draws.
@@ -74,6 +76,14 @@ final class PlayMenus {
     /** The pause in force is a solo draft's (G0049): no banner and no scrim over the game being chosen for. */
     private boolean quiet;
 
+    /** The level was won, as last read: the result's title (G0066). */
+    private boolean won;
+
+    /** The level's time, as last read: the result's TIME on a win. */
+    private long outcomeTick;
+
+    private float tickSeconds;
+
     PlayMenus(
             Hud hud,
             GraphicConfig graphic,
@@ -110,6 +120,7 @@ final class PlayMenus {
     /**
      * One frame of the level's pages, after the devices were read and before the session advances.
      *
+     * @param readout the world as the last frame read it: whether the result is due, and which
      * @return whether a menu opened or closed - a change of context, whose held presses the caller spends
      */
     boolean update(
@@ -119,7 +130,8 @@ final class PlayMenus {
             PlayerInputs players,
             KeyPresses keys,
             KeyHolds held,
-            ScreenLayout layout) {
+            ScreenLayout layout,
+            Readout readout) {
         boolean wasOpen = flow.menuOpen();
         reader.read(nav, frameSeconds, wasOpen, input.pauseRequested(), keys, held, layout);
         modality.update(nav);
@@ -128,6 +140,10 @@ final class PlayMenus {
         }
         motion.advance(frameSeconds);
         flow.observe(play.paused(), play.canRestart());
+        won = readout.won;
+        outcomeTick = readout.outcomeTick;
+        tickSeconds = readout.tickSeconds;
+        flow.observeResult(readout.resultDue(graphic.ui().resultHoldSeconds()), hosting(play));
 
         boolean lostAPad = input.seats().nextNewlyUnplugged() >= 0;
         if ((focusLost || lostAPad) && !play.online() && flow.top() == UiPage.PLAY) {
@@ -280,11 +296,16 @@ final class PlayMenus {
         motion.arrive(deeper ? 1 : -1);
         MenuPage content = MenuTree.page(top);
         head.clear();
-        if (!content.titleKey().isEmpty()) {
+        if (top == UiPage.RESULT) {
+            head.add(strings.get(won ? "ui.result.won" : "ui.result.lost"));
+            if (won) {
+                head.add(strings.format("ui.result.time", LevelTime.text(outcomeTick, tickSeconds)));
+            }
+        } else if (!content.titleKey().isEmpty()) {
             head.add(strings.get(content.titleKey()));
         }
         if (!content.bodyKey().isEmpty()) {
-            boolean hostLeaving = top == UiPage.LEAVE_CONFIRM && play.online() && play.canRestart();
+            boolean hostLeaving = top == UiPage.LEAVE_CONFIRM && hosting(play);
             painter.addWrapped(head, strings.get(hostLeaving ? "ui.leave.bodyHost" : content.bodyKey()), 3);
         }
         labels.clear();
@@ -317,6 +338,11 @@ final class PlayMenus {
             footFor = invitation;
         }
         return foot;
+    }
+
+    /** This machine hosts an online session: leaving ends it for everybody. */
+    private static boolean hosting(ScenarioPlay play) {
+        return play.online() && play.canRestart();
     }
 
     private void carryOut(UiEffect effect, ScenarioPlay play, PlayerInputs players) {

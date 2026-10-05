@@ -17,8 +17,8 @@ public enum UiPage {
     PLAY("UI:play", Kind.STATE, null),
     PAUSE("UI:play/pause", Kind.MODAL, PLAY),
     LEAVE_CONFIRM("UI:play/leave", Kind.MODAL, PAUSE),
-    /** Specified so the flow has it; nothing reaches it until a run can be over (plan Q20). */
-    GAME_OVER("UI:play/game-over", Kind.MODAL, PLAY);
+    /** How a level with an objective ended, opened by the flow after the hold, never by an entry (G0066). */
+    RESULT("UI:play/result", Kind.MODAL, PLAY);
 
     /** How a page is drawn: instead of what is behind it, over it, or not at all. */
     public enum Kind {

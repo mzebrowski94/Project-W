@@ -13,6 +13,15 @@ class MenuTreeTest {
                 .containsExactly("resume", "restart", "leave");
     }
 
+    /** RETRY selected: the next attempt is one press away (G0066). */
+    @Test
+    void offersRetryThenMenuOnTheResultWithRetrySelected() {
+        MenuPage page = MenuTree.page(UiPage.RESULT);
+
+        assertThat(page.entries()).extracting(MenuEntry::id).containsExactly("retry", "menu");
+        assertThat(page.entries().get(page.defaultSelection()).intent()).isEqualTo(UiIntent.RESTART);
+    }
+
     @Test
     void selectsTheHarmlessAnswerFirstOnEveryConfirm() {
         for (UiPage confirm : new UiPage[] {UiPage.EXIT_CONFIRM, UiPage.LEAVE_CONFIRM}) {

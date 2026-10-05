@@ -123,7 +123,6 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | Scaffolding | Replaced by |
 |---|---|
 | Both Adventure levels turn the swarm's adaptations on (`Scenario.adapting`: one every 180 s, one per 3 cards taken); what ships in `upgrades.properties` leaves both off | A level's own numbers once levels are generated, or a shipped default once a playtest has settled one. The schedule, the pool and the fold are real (upgrades S10) |
-| A lost level (G0055) says MISSION FAILED on the goal line and the world runs on, as a completed one says MISSION COMPLETED | The result screen (G0066, `UI:play/result`), designed and not built. `Level.failed` is latched, so a screen has one fact to read; the win must latch the same way, the first outcome final. |
 | Rabbits are spawned by a scenario and never replaced | Whatever a level does about them - breeding, a population, or nothing at all. The creature is designed; where they come from is an open question in `README.md`. |
 | A body in its death throes is a frozen circle in a darker colour | The dying animation. The window is real and configured per unit kind (`*.deathThroesSeconds`); only what plays in it is missing. |
 | Two units in a clinch are two circles touching, both drawn the same | The grapple animation, which resolves into one of them dying. `Appearance.State.GRAPPLING` is the hook and is already published for both parties for the whole lock. |
@@ -149,7 +148,6 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | A charged spitter is the same purple circle inside an orange-red ring | Whatever a creature carrying an explosive looks like. The swallow, the gun and the blast are all real, and the ring is the colour of the thing it swallowed. `Appearance.charged` is the hook and is already published, so the renderer decides. |
 | A trooper under orders wears a ring | Whatever the art does with it. `Appearance.ordered` is the hook and is already published. |
 | A control point is a dark disc that fills up, drawn under everything standing on it | Whatever a control point looks like. The dwell, the reset and the radius are real, and the fill rides the same `charge` channel as everything else that fills up. |
-| A level's objectives are met and nothing happens | The result screen (G0066): the world runs on and, after a hold, the screen opens. Designed, not built. |
 | A scenario names its control points by hand, and the spawn area is a config value | Generated fragments saying where their own entrances and objectives are. Same standing as hand-laid rock. |
 | **Where you are connected, and your input delay, are a line in the stats overlay** | Whatever tells a player the link is slow without reading numbers (pillar 5). The numbers are real and published by `OnlineSession`; what is missing is a tell. |
 | Troopers roam to seeded random points when nothing is left to take | Something that actually searches - a sweep, a last-known-position, a patrol route. Roaming is enough to see the squad clear a map and is not a decision about how they search. |

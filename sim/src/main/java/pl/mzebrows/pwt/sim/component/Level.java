@@ -38,9 +38,21 @@ public final class Level implements Component, Pool.Poolable {
     /**
      * Whether the level is lost: every commander was out with nobody left in reserve to bring one back
      * (G0055). <strong>Latched</strong>, unlike the objectives - a crate a trooper reaches afterwards does
-     * not bring a lost level back.
+     * not bring a lost level back. Set only through {@link #decide}.
      */
     public boolean failed;
+
+    /**
+     * Whether the level is won: every objective it names was met on one tick (G0066). <strong>Latched</strong>
+     * like {@link #failed}, and never both - the first outcome is final. Set only through {@link #decide}.
+     */
+    public boolean won;
+
+    /**
+     * The level's {@link #tick} count at the end of the tick its outcome landed on: its time, in ticks.
+     * Meaningless until {@link #decided()}; never moves after.
+     */
+    public long outcomeTick;
 
     /**
      * Which objectives this level names, and which of them are currently met, as bit sets.
@@ -79,6 +91,25 @@ public final class Level implements Component, Pool.Poolable {
      * by {@code TrooperCombatSystem} when a man throws; zero lets the first throw go at once.
      */
     public long squadThrowReadyTick;
+
+    /** Whether the level is won or lost - for good (G0066). */
+    public boolean decided() {
+        return won || failed;
+    }
+
+    /**
+     * Lands the outcome on this tick, unless one already has: <strong>the first outcome is final</strong>
+     * (G0066). The one way {@link #won} and {@link #failed} are set, so the rule has one place.
+     */
+    public void decide(boolean win) {
+        if (decided()) {
+            return;
+        }
+        won = win;
+        failed = !win;
+        // Counted with the tick it lands on: Simulation moves the clock on after every system has run.
+        outcomeTick = tick + 1;
+    }
 
     /** Adds an objective this level requires. */
     public void require(Objective objective) {
@@ -126,6 +157,8 @@ public final class Level implements Component, Pool.Poolable {
         musterNext = 0;
         musterDealt = 0L;
         failed = false;
+        won = false;
+        outcomeTick = 0L;
         required = 0;
         met = 0;
         tick = 0L;

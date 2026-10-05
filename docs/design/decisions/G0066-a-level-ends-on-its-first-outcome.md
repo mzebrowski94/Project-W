@@ -5,9 +5,12 @@
 **Trigger.** Anything that changes what happens when a level is won or lost, whether an outcome can be undone,
 what the result screen shows or offers, or where leaving a level returns the player to.
 
-**Enforced by.** Nothing yet - the result screen is not built. When it is: a test that a level won and then
-wiped stays won (and lost stays lost), that its time is the tick the outcome landed on, and `UiFlow` tests for
-RETRY, MENU and the page MENU returns to. Missions ticket 08 holds the reasoning.
+**Enforced by.** `OutcomeTest` (won then wiped stays won, lost stays lost, the time is the tick it landed on,
+a tie is the loss), `ReadoutTest` (when the screen is due), `UiFlowTest` (RETRY, MENU, the host's confirm,
+Back ignored), `LevelTimeTest` (the time as `m:ss.t`); the page MENU returns to is `ScenarioScreen`'s `back`,
+untested (it needs GL). Built 2026-10-05 for every level with an objective, the time included; the mission
+lines and COPY CODE wait for missions. Missions ticket 08 holds
+the reasoning.
 
 **Answers** the open questions "what happens when a level's objectives are met?" and "on failure, do you retry
 the level, or is the run over?" (`README.md`), for every level with an objective - a mission and an Adventure
@@ -20,9 +23,9 @@ alike. **Retires** the blocked `UI:play/game-over` modal: it becomes `UI:play/re
   line keeps saying so. The simulation decides it on one tick, so every machine agrees.
 - **The world runs on.** The goal line pulses, and after `graphic.ui.resultHoldSeconds` (3) - the same for both
   outcomes, not skipped by a press - the **result screen** opens over the scrim. No pause crosses the network.
-- **What it shows**: `MISSION COMPLETE` or `MISSION FAILED`; for a mission, points taken x/y, the code with its
-  tier's name, `DAILY <date>` for a daily, and the time - on a win only, `m:ss.t`, compared in ticks - with
-  `NEW BEST` when it beats the remembered one. Then RETRY (default) and MENU; a mission adds COPY CODE.
+- **What it shows**: `MISSION COMPLETE` or `MISSION FAILED`, and on a win the time - `m:ss.t`, compared in
+  ticks - for every level; for a mission also points taken x/y, the code with its tier's name, `DAILY <date>`
+  for a daily, and `NEW BEST` when the time beats the remembered one. Then RETRY (default) and MENU; a mission adds COPY CODE.
 - **RETRY is the same level again**: the same scenario and seed, offline or by the host, as RESTART is; a joined
   machine sees it dimmed. **MENU** leaves - the host through the leave confirm, since it ends the session - and
   returns to the page the level was started from, with what was played selected.

@@ -240,6 +240,23 @@ class ReadoutWriterTest {
         assertThat(fill(new ReadoutWriter(), world).failed).isTrue();
     }
 
+    /** The outcome, and how long the world has run on since it landed - what the result screen waits on. */
+    @Test
+    void copiesAWonLevelAndHowLongAgoItWasWon() {
+        Simulation world = world();
+        world.level().require(Objective.CLEAR_ENEMIES);
+        for (int tick = 0; tick < 60; tick++) {
+            world.step();
+        }
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        assertThat(readout.won).isTrue();
+        assertThat(readout.outcomeTick).isEqualTo(1L);
+        assertThat(readout.tickSeconds).isEqualTo(world.config().tickSeconds());
+        assertThat(readout.sinceOutcomeSeconds).isCloseTo(59 * world.config().tickSeconds(), TOLERANCE);
+    }
+
     @Test
     void copiesHisTally() {
         Simulation world = world();

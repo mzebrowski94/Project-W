@@ -197,12 +197,77 @@ class UiFlowTest {
     }
 
     @Test
-    void cannotReachGameOver() {
-        UiFlow flow = playing(true);
+    void cannotOpenTheResultByHand() {
+        UiFlow flow = playing(false);
 
-        flow.apply(UiIntent.open(UiPage.GAME_OVER));
+        flow.apply(UiIntent.open(UiPage.RESULT));
 
         assertThat(flow.top()).isEqualTo(UiPage.PLAY);
+    }
+
+    @Test
+    void opensTheResultOnceItIsDue() {
+        UiFlow flow = playing(false);
+        flow.observeResult(false, false);
+        assertThat(flow.top()).isEqualTo(UiPage.PLAY);
+
+        flow.observeResult(true, false);
+
+        assertThat(flow.top()).isEqualTo(UiPage.RESULT);
+        assertThat(flow.menuOpen()).isTrue();
+    }
+
+    @Test
+    void retriesTheLevelFromTheResult() {
+        UiFlow flow = resultShown(true, false);
+
+        assertThat(flow.apply(UiIntent.RESTART)).isEqualTo(UiEffect.RESTART);
+        assertThat(flow.top()).isEqualTo(UiPage.PLAY);
+    }
+
+    @Test
+    void leavesFromTheResultAtOnceWhenNobodyElseIsPlaying() {
+        UiFlow flow = resultShown(true, false);
+
+        assertThat(flow.apply(UiIntent.LEAVE)).isEqualTo(UiEffect.LEAVE);
+    }
+
+    /** Leaving ends the session for everyone, so the host is asked first, as from the pause menu. */
+    @Test
+    void asksTheHostToConfirmLeavingFromTheResult() {
+        UiFlow flow = resultShown(true, true);
+
+        assertThat(flow.apply(UiIntent.LEAVE)).isEqualTo(UiEffect.NONE);
+        assertThat(flow.top()).isEqualTo(UiPage.LEAVE_CONFIRM);
+        assertThat(flow.apply(UiIntent.BACK)).isEqualTo(UiEffect.NONE);
+        assertThat(flow.top()).isEqualTo(UiPage.RESULT);
+        flow.apply(UiIntent.LEAVE);
+        assertThat(flow.apply(UiIntent.LEAVE)).isEqualTo(UiEffect.LEAVE);
+    }
+
+    /** A lost level does not close on an accidental press. */
+    @Test
+    void ignoresBackOnTheResult() {
+        UiFlow flow = resultShown(true, false);
+
+        assertThat(flow.apply(UiIntent.BACK)).isEqualTo(UiEffect.NONE);
+        assertThat(flow.apply(UiIntent.RESUME)).isEqualTo(UiEffect.NONE);
+        assertThat(flow.top()).isEqualTo(UiPage.RESULT);
+    }
+
+    @Test
+    void offersNoRetryToAPeerThatDoesNotHost() {
+        UiFlow flow = resultShown(false, false);
+
+        assertThat(flow.apply(UiIntent.RESTART)).isEqualTo(UiEffect.NONE);
+        assertThat(flow.top()).isEqualTo(UiPage.RESULT);
+    }
+
+    private static UiFlow resultShown(boolean restartAllowed, boolean hosting) {
+        UiFlow flow = new UiFlow(UiPage.PLAY);
+        flow.observe(false, restartAllowed);
+        flow.observeResult(true, hosting);
+        return flow;
     }
 
     @Test

@@ -152,10 +152,11 @@ public final class RespawnSystem extends EntitySystem {
 
     /**
      * Every commander out, somebody waiting to come back, and nobody left to come back as: the level is
-     * lost. A ticket already paid for is a man on his way, so it holds the verdict off.
+     * lost - unless it was won first (G0066). A ticket already paid for is a man on his way, so it holds
+     * the verdict off.
      */
     private void judge(Level level) {
-        if (level.failed || living.size() > 0 || pending.size() == 0 || level.reserve > 0) {
+        if (level.decided() || living.size() > 0 || pending.size() == 0 || level.reserve > 0) {
             return;
         }
         for (int i = 0; i < pending.size(); i++) {
@@ -163,6 +164,6 @@ public final class RespawnSystem extends EntitySystem {
                 return;
             }
         }
-        level.failed = true;
+        level.decide(false);
     }
 }

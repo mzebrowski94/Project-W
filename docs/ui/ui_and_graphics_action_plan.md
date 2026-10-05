@@ -194,7 +194,7 @@ UI:main ─OPEN─▶ campaign ───────────── START ─
 
 BACK pops one page anywhere; BACK on UI:main only moves focus to exit.
 Paused with no menu open on this machine: the paused banner over UI:play (derived, not a page).
-UI:play/game-over: specified, blocked.
+UI:play/game-over: specified, blocked - built as UI:play/result (G0066).
 ```
 
 The full table, with effects, is section 5 of `menu_layout_agent.md`.
@@ -208,7 +208,7 @@ The full table, with effects, is section 5 of `menu_layout_agent.md`.
 | `UI:connecting` | derived from `play.simulation() == null` | Existing behaviour. |
 | back to `UI:main` with a notice | derived from `play.ended()` | Existing behaviour. |
 | `UI:play/leave`, `UI:main/exit`, every menu page | chosen | Local to this machine. |
-| `UI:play/game-over` | derived, **blocked** | Nothing in the simulation says a run is over; the commander always respawns (scaffolding). |
+| `UI:play/game-over` | derived - **superseded** | Built as `UI:play/result` (G0066): opened by the level's first outcome after a hold. |
 | "Mission completed" | **not a state** - a goal-line text | What a completed level does is an open question; showing that it is complete settles nothing. |
 
 Online the menu opens on the press and the world stops when the pause command lands a few ticks

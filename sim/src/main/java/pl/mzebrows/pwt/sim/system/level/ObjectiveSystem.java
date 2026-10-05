@@ -17,10 +17,11 @@ import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Objective;
 
 /**
- * Answers, once a tick, whether the level's objectives are met.
+ * Answers, once a tick, whether the level's objectives are met - and the first tick they all are, that
+ * the level is won (G0066).
  *
- * <p>Every objective is <strong>recomputed from the world</strong>, never latched. <strong>Nothing
- * reads the answer yet</strong> - scaffolding, in {@code docs/design/alpha-phase.md}.
+ * <p>Every objective is <strong>recomputed from the world</strong>, never latched; the win is, through
+ * {@link Level#decide}, unless the level was lost first.
  */
 public final class ObjectiveSystem extends EntitySystem {
 
@@ -56,6 +57,9 @@ public final class ObjectiveSystem extends EntitySystem {
             level.setMet(Objective.CLEAR_ENEMIES, cleared);
             level.setMet(Objective.CAPTURE_POINTS, taken);
             level.setMet(Objective.HOLD_POINT, postHeld(entity, cleared));
+            if (level.complete()) {
+                level.decide(true);
+            }
         }
     }
 

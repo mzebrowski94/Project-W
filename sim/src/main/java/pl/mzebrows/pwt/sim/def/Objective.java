@@ -7,10 +7,9 @@ package pl.mzebrows.pwt.sim.def;
  * the whole point: "clear the map and take both points" is a different level from either half, and it
  * is one that costs no new code once both exist separately.
  *
- * <p>What a completed level then <em>does</em> is deliberately not decided here, and in the alpha it
- * does nothing at all: the level entity knows it is done and nothing reads the answer. Extraction, a
- * cut to the next level and a lull before another wave are all still open questions, and any of them
- * would be a bad thing to guess at from inside a system about counting.
+ * <p>The first tick all of them are met wins the level, for good (G0066, {@code Level.decide}); the world
+ * runs on and the result screen says so. Extraction and a lull before another wave are still open - a
+ * level that goes on after its objective revisits G0066.
  */
 public enum Objective {
     /** Nothing hostile left standing. A body still in its throes does not count against it. */

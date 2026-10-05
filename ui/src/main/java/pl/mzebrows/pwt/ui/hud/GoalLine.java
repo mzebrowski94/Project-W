@@ -6,13 +6,14 @@ import pl.mzebrows.pwt.sim.def.Objective;
  * The top bar's second line - the one that is always current: the first objective the level still
  * wants, or that it has everything it wants.
  *
- * <p>Objectives are recomputed every tick rather than latched ({@code Level}), so the line may go back
- * from completed to a goal when a new wave walks onto a cleared field. That is the truth and it is
- * shown - but a change of goal waits {@code minHoldSeconds}, so a one-tick flip never flickers. The
- * counts on a goal change at once: they only ever say more has happened.
+ * <p>Objectives are recomputed every tick rather than latched ({@code Level}), so before the level is won
+ * the line may go back from completed to a goal when a new wave walks onto a cleared field. That is the
+ * truth and it is shown - but a change of goal waits {@code minHoldSeconds}, so a one-tick flip never
+ * flickers. The counts on a goal change at once: they only ever say more has happened. Once won or lost
+ * the line says so for good (G0066).
  *
- * <p>Becoming complete pulses the line twice, then it holds still: motion says something changed and
- * nothing moves when nothing did (plan 6.4). Frame time, not simulation time.
+ * <p>Becoming complete, or failed, pulses the line twice, then it holds still: motion says something
+ * changed and nothing moves when nothing did (plan 6.4). Frame time, not simulation time.
  */
 public final class GoalLine {
 
@@ -30,7 +31,7 @@ public final class GoalLine {
     private int first;
     private int second;
     private float heldSeconds;
-    private float completedSeconds = Float.MAX_VALUE;
+    private float outcomeSeconds = Float.MAX_VALUE;
     private int revision;
 
     /**
@@ -48,6 +49,9 @@ public final class GoalLine {
     public static Goal resolve(Readout readout) {
         if (readout.failed) {
             return Goal.FAILED;
+        }
+        if (readout.won) {
+            return Goal.COMPLETE;
         }
         if (readout.regroupPresent > 0 && readout.regroupPresent < readout.regroupNeeded) {
             return Goal.REGROUP;
@@ -69,13 +73,13 @@ public final class GoalLine {
     /** Follows the readout. Call once a frame. */
     public void update(Readout readout, float frameSeconds) {
         heldSeconds += frameSeconds;
-        completedSeconds += frameSeconds;
+        outcomeSeconds += frameSeconds;
         Goal wanted = resolve(readout);
         boolean newWorld = readout.worldSerial != worldSerial;
         worldSerial = readout.worldSerial;
         if (newWorld || (wanted != shown && heldSeconds >= minHoldSeconds)) {
-            if (wanted == Goal.COMPLETE && shown != Goal.COMPLETE && !newWorld) {
-                completedSeconds = 0f;
+            if (outcome(wanted) && wanted != shown && !newWorld) {
+                outcomeSeconds = 0f;
             }
             shown = wanted;
             heldSeconds = 0f;
@@ -123,14 +127,19 @@ public final class GoalLine {
 
     /** Whether the line is drawn bright this frame: false only in the off half of a completion pulse. */
     public boolean bright() {
-        if (!flashes || shown != Goal.COMPLETE) {
+        if (!flashes || !outcome(shown)) {
             return true;
         }
-        float cycles = completedSeconds * pulseHz;
+        float cycles = outcomeSeconds * pulseHz;
         if (cycles >= PULSES) {
             return true;
         }
         return cycles - (int) cycles >= 0.5f;
+    }
+
+    /** A goal that says how the level ended - or, before the win, that it could. */
+    private static boolean outcome(Goal goal) {
+        return goal == Goal.COMPLETE || goal == Goal.FAILED;
     }
 
     private static Goal goalOf(Objective objective) {

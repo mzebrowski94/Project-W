@@ -105,7 +105,7 @@ public final class ScenarioScreen extends ScreenAdapter {
     private final GameContext context;
     private final ScenarioPlay play;
 
-    /** The menu page leaving this level goes back to. */
+    /** The menu page leaving this level goes back to: the one it was started from (G0066). */
     private final UiPage back;
 
     private final LetterboxViewport viewport = new LetterboxViewport();
@@ -328,7 +328,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         ScreenLayout layout = context.hud().layout();
         if (play.simulation() == null) {
             menus.updateConnecting(delta, play, players, keys, held, input, layout);
-        } else if (menus.update(delta, play, input, players, keys, held, layout)) {
+        } else if (menus.update(delta, play, input, players, keys, held, layout, readout)) {
             input.spendHeldPresses();
         }
         topBarSeats.work(players, readout, menus.menuOpen(), play);
@@ -349,9 +349,9 @@ public final class ScenarioScreen extends ScreenAdapter {
         String ended = play.ended();
         if (ended != null) {
             // Online, the game cannot go on: the host has left, the link has dropped, the host said no.
-            // Back to the menu, saying why, rather than a world that will never move again.
+            // Back to the main page, saying why, rather than a world that will never move again.
             Log.info(ended);
-            context.queueScreen(new MenuScreen(context, ended, back));
+            context.queueScreen(new MenuScreen(context, ended));
         }
         Simulation world = play.simulation();
         if (world == null) {

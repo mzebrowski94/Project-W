@@ -105,7 +105,10 @@ public final class MenuScreen extends ScreenAdapter {
         this(context, notice, UiPage.MAIN);
     }
 
-    /** The menu opened on a page under MAIN - back from joining, the online page. */
+    /**
+     * The menu opened on a page under MAIN, with the pages above it under it, so Back climbs out as it would
+     * have - back from joining, the online page; back from a level, the page it was started from (G0066).
+     */
     public MenuScreen(GameContext context, String notice, UiPage start) {
         this.context = context;
         this.notice = notice;
@@ -119,9 +122,16 @@ public final class MenuScreen extends ScreenAdapter {
                 graphic.ui().motion().pageSlide(),
                 graphic.ui().motionScale());
         this.rows = new ProvingRows(context.simConfig());
-        if (start.parent() == UiPage.MAIN) {
-            flow.apply(UiIntent.open(start));
+        openDown(start);
+    }
+
+    private void openDown(UiPage page) {
+        UiPage parent = page.parent();
+        if (parent == null) {
+            return;
         }
+        openDown(parent);
+        flow.apply(UiIntent.open(page));
     }
 
     @Override
@@ -586,7 +596,8 @@ public final class MenuScreen extends ScreenAdapter {
         Scenario scenario = scenarios.get(index);
         context.selections().set(UiPage.CAMPAIGN, index);
         Log.info("Starting scenario " + scenario.name());
-        context.queueScreen(new ScenarioScreen(context, new ScenarioSession(scenario, context.simConfig())));
+        context.queueScreen(
+                new ScenarioScreen(context, new ScenarioSession(scenario, context.simConfig()), UiPage.CAMPAIGN));
     }
 
     /**
@@ -596,6 +607,7 @@ public final class MenuScreen extends ScreenAdapter {
     private boolean host(int index) {
         Scenario scenario = scenarios.get(index);
         context.selections().set(UiPage.CAMPAIGN, index);
+        context.selections().set(UiPage.ONLINE_HOST, index);
         try {
             context.queueScreen(new ScenarioScreen(
                     context,
@@ -605,7 +617,8 @@ public final class MenuScreen extends ScreenAdapter {
                             context.worldConfigText(),
                             context.netConfig(),
                             context.launchOptions(),
-                            LocalMachineId.load())));
+                            LocalMachineId.load()),
+                    UiPage.ONLINE_HOST));
             return true;
         } catch (RuntimeException e) {
             Log.error("Could not host " + scenario.name(), e);

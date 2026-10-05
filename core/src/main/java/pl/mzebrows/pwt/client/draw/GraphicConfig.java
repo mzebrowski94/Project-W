@@ -127,6 +127,8 @@ public record GraphicConfig(
      * @param flashScale how bright a flash is; zero turns them off
      * @param scrimAlpha how dark the scrim behind a page is
      * @param bannerScrimAlpha how dark the scrim behind the paused banner is
+     * @param resultHoldSeconds how long the world runs on after a level's outcome before the result
+     *     screen opens (G0066)
      */
     public record Ui(
             int padding,
@@ -138,12 +140,16 @@ public record GraphicConfig(
             float flashScale,
             float scrimAlpha,
             float bannerScrimAlpha,
+            float resultHoldSeconds,
             Motion motion,
             Page page) {
 
         public Ui {
             if (motionScale < 0f || flashScale < 0f) {
                 throw new IllegalArgumentException("HUD motion out of range");
+            }
+            if (resultHoldSeconds < 0f) {
+                throw new IllegalArgumentException("result hold must not be negative");
             }
         }
     }

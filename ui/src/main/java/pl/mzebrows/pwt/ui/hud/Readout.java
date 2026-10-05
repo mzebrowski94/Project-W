@@ -51,6 +51,18 @@ public final class Readout {
     /** The level is lost - every commander out, nobody left in reserve (G0055). Latched in the world. */
     public boolean failed;
 
+    /** The level is won - every objective met on one tick (G0066). Latched in the world, never with failed. */
+    public boolean won;
+
+    /** The level's time: the ticks to its outcome, the same on every machine (G0066). Meaningless before. */
+    public long outcomeTick;
+
+    /** The length of one of the world's ticks: what turns {@link #outcomeTick} into a time to read. */
+    public float tickSeconds;
+
+    /** How long the world has run since the level was won or lost; meaningless before. */
+    public float sinceOutcomeSeconds;
+
     /**
      * The lair waiting on players (B.1): how many commanders on their feet stand on its ground, and how many
      * it is waiting for. Both zero while nothing waits.
@@ -108,6 +120,14 @@ public final class Readout {
         return objectivesRequired != 0 && (objectivesMet & objectivesRequired) == objectivesRequired;
     }
 
+    /**
+     * Whether the result screen should be open: a level with an objective, won or lost, and the world has
+     * run on for {@code holdSeconds} since (G0066).
+     */
+    public boolean resultDue(float holdSeconds) {
+        return objectivesRequired != 0 && (won || failed) && sinceOutcomeSeconds >= holdSeconds;
+    }
+
     /** Makes this an exact copy of another, for a reporter keeping the last frame. Allocates nothing. */
     public void copyFrom(Readout other) {
         worldSerial = other.worldSerial;
@@ -126,6 +146,10 @@ public final class Readout {
         squadMost = other.squadMost;
         reserve = other.reserve;
         failed = other.failed;
+        won = other.won;
+        outcomeTick = other.outcomeTick;
+        tickSeconds = other.tickSeconds;
+        sinceOutcomeSeconds = other.sinceOutcomeSeconds;
         regroupPresent = other.regroupPresent;
         regroupNeeded = other.regroupNeeded;
         heldCount = other.heldCount;
@@ -155,6 +179,10 @@ public final class Readout {
         squadMost = 0;
         reserve = 0;
         failed = false;
+        won = false;
+        outcomeTick = 0L;
+        tickSeconds = 0f;
+        sinceOutcomeSeconds = 0f;
         regroupPresent = 0;
         regroupNeeded = 0;
         heldCount = 0;

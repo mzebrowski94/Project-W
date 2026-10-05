@@ -166,6 +166,12 @@ public final class ReadoutWriter {
         out.squadMost = world.squadMost();
         out.reserve = level.reserve;
         out.failed = level.failed;
+        out.won = level.won;
+        out.outcomeTick = level.outcomeTick;
+        out.tickSeconds = world.config().tickSeconds();
+        out.sinceOutcomeSeconds = level.decided()
+                ? (level.tick - level.outcomeTick) * world.config().tickSeconds()
+                : 0f;
         Lair lair = world.lair();
         out.regroupPresent = lair.waiting() ? lair.present() : 0;
         out.regroupNeeded = lair.waiting() ? lair.needed() : 0;

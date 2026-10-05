@@ -81,13 +81,14 @@ public final class MenuTree {
                                 entry("leave", "ui.common.yes", UiIntent.LEAVE)),
                         0));
         PAGES.put(
-                UiPage.GAME_OVER,
+                UiPage.RESULT,
+                // The title is the outcome's: ui.result.won here, ui.result.lost for a loss - the screen's choice.
                 new MenuPage(
-                        "",
+                        "ui.result.won",
                         "",
                         List.of(
-                                entry("retry", "ui.gameOver.retry", UiIntent.RESTART),
-                                entry("menu", "ui.gameOver.menu", UiIntent.LEAVE)),
+                                entry("retry", "ui.result.retry", UiIntent.RESTART),
+                                entry("menu", "ui.result.menu", UiIntent.LEAVE)),
                         0));
     }
 

@@ -51,6 +51,15 @@ class GoalLineTest {
         assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.FAILED);
     }
 
+    /** The first outcome is final (G0066): a won level is complete, whatever comes onto the field after. */
+    @Test
+    void keepsSayingCompletedOnceTheLevelIsWon() {
+        Readout readout = requiring(Objective.CLEAR_ENEMIES);
+        readout.won = true;
+
+        assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.COMPLETE);
+    }
+
     /** Some players on the lair's ground and not all: the line says how many of how many (B.1). */
     @Test
     void asksThePlayersToRegroupWhileTheLairWaitsForSomeOfThem() {
@@ -148,6 +157,30 @@ class GoalLineTest {
         line.update(readout, FRAME);
         run(line, readout, HOLD);
         readout.objectivesMet = readout.objectivesRequired;
+        line.update(readout, FRAME);
+
+        int dark = 0;
+        boolean wasBright = true;
+        for (int frame = 0; frame < 240; frame++) {
+            line.update(readout, FRAME);
+            if (wasBright && !line.bright()) {
+                dark++;
+            }
+            wasBright = line.bright();
+        }
+
+        assertThat(dark).isEqualTo(2);
+        assertThat(line.bright()).isTrue();
+    }
+
+    /** Either outcome pulses the line through the hold before the result screen (G0066). */
+    @Test
+    void pulsesTwiceWhenTheLevelIsLost() {
+        Readout readout = requiring(Objective.CLEAR_ENEMIES);
+        GoalLine line = line();
+        line.update(readout, FRAME);
+        run(line, readout, HOLD);
+        readout.failed = true;
         line.update(readout, FRAME);
 
         int dark = 0;
