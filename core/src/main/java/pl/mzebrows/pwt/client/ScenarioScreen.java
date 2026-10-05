@@ -284,7 +284,8 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().layout().metrics(),
                 context.controlsConfig(),
                 strings,
-                context.gamepads());
+                context.gamepads(),
+                context.missionRecords());
         // The press that started the level - Enter, Space, a click, SOUTH - is spent, not fired.
         input.spendHeldPresses();
         bound = null;
@@ -399,6 +400,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             name(world);
         }
         readoutWriter.fill(world, missionLine, play.planet(), readout);
+        menus.record(readout);
         topBarSeats.follow(readout, menus.menuOpen(), play);
         goalLine.update(readout, delta);
         reporters.report(readout, dispatches);

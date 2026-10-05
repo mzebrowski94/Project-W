@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.client.input.NavInputReader;
 import pl.mzebrows.pwt.client.input.PageControls;
 import pl.mzebrows.pwt.client.play.MissionChoices;
 import pl.mzebrows.pwt.client.play.MissionCode;
+import pl.mzebrows.pwt.client.play.MissionRecords;
 import pl.mzebrows.pwt.client.play.OnlineSession;
 import pl.mzebrows.pwt.client.play.ScenarioSession;
 import pl.mzebrows.pwt.sim.SimConfig;
@@ -27,6 +28,7 @@ import pl.mzebrows.pwt.sim.scenario.ProvingSetup;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.ui.hud.LevelTime;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 import pl.mzebrows.pwt.ui.nav.CodePicker;
@@ -718,9 +720,18 @@ public final class MenuScreen extends ScreenAdapter {
         for (MenuEntry entry : entries) {
             labelWidth = Math.max(labelWidth, strings.get(entry.labelKey()).length());
         }
+        TierKind[] tiers = TierKind.values();
         for (int i = 0; i < entries.size(); i++) {
             String label = strings.get(entries.get(i).labelKey());
-            if (i == MenuTree.MISSION_RANDOM) {
+            long best =
+                    i < tiers.length ? context.missionRecords().best(missions.day(), tiers[i]) : MissionRecords.NONE;
+            if (best != MissionRecords.NONE) {
+                // Won on this machine: the ✓ and the best time (G0067).
+                labels.add(pad(label)
+                        + strings.format(
+                                "ui.missions.won",
+                                LevelTime.text(best, context.simConfig().tickSeconds())));
+            } else if (i == MenuTree.MISSION_RANDOM) {
                 labels.add(choice(label, tierName(missions.randomTier())));
             } else if (i == MenuTree.MISSION_CODE) {
                 labels.add(pad(label) + codeLine());

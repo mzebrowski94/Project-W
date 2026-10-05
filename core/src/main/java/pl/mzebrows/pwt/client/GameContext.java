@@ -6,6 +6,7 @@ import pl.mzebrows.pwt.client.hud.Hud;
 import pl.mzebrows.pwt.client.input.ControlsConfig;
 import pl.mzebrows.pwt.client.input.GamepadSource;
 import pl.mzebrows.pwt.client.play.MissionChoices;
+import pl.mzebrows.pwt.client.play.MissionRecords;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.scenario.ProvingSetup;
@@ -66,6 +67,9 @@ public interface GameContext {
 
     /** The DAILY MISSIONS page's choices, kept for the run: RANDOM's tier and the last code played (G0065). */
     MissionChoices missions();
+
+    /** What this machine remembers of the dailies it has won: a ✓ and a best time each (G0067). */
+    MissionRecords missionRecords();
 
     /** Asks for a screen change. It happens once the current frame has finished drawing. */
     void queueScreen(Screen next);

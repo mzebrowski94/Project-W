@@ -162,7 +162,8 @@ public record MissionCode(TierKind tier, long seed) {
         return text.substring(0, HALF) + "-" + text.substring(HALF);
     }
 
-    private static char letter(TierKind tier) {
+    /** The tier's letter, first in its codes and in its records' keys. */
+    static char letter(TierKind tier) {
         return tier.name().charAt(0);
     }
 

@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.client.input.NavInputReader;
 import pl.mzebrows.pwt.client.input.PageControls;
 import pl.mzebrows.pwt.client.play.HarnessCommand;
 import pl.mzebrows.pwt.client.play.MissionCode;
+import pl.mzebrows.pwt.client.play.MissionRecords;
 import pl.mzebrows.pwt.client.play.ScenarioPlay;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
@@ -103,14 +104,29 @@ final class PlayMenus {
     /** The tick the pause page's mission line was written for, or -1 for none. */
     private long missionFootTick = -1;
 
+    /** What this machine remembers of the dailies won: written on the win's tick, read for NEW BEST. */
+    private final MissionRecords records;
+
+    /**
+     * This machine has seen the world before its outcome, so a win is one it was present at (G0067): set on
+     * every frame before it, spent by the win. A world that arrives already won - a joiner too late, or a heal
+     * after the win - is never offered, nor is the same win twice.
+     */
+    private boolean present;
+
+    /** The win beat this machine's best for the daily: the result says NEW BEST. */
+    private boolean newBest;
+
     PlayMenus(
             Hud hud,
             GraphicConfig graphic,
             HudMetrics metrics,
             ControlsConfig controls,
             UiStrings strings,
-            GamepadSource pads) {
+            GamepadSource pads,
+            MissionRecords records) {
         this.graphic = graphic;
+        this.records = records;
         this.strings = strings;
         this.hints = new PageHints(controls, strings);
         this.painter = new MenuPainter(hud, graphic, metrics);
@@ -360,11 +376,32 @@ final class PlayMenus {
         }
     }
 
+    /**
+     * Offers a daily's win to the record on the frame it is first read - the outcome tick as the client sees
+     * it, not the result three seconds on, so a machine that drops in the hold still writes (G0067). Called
+     * with each readout as it is filled from the world, so the first a world shows is its own.
+     */
+    void record(Readout readout) {
+        MissionCode played = mission;
+        if (!readout.won) {
+            present = !readout.failed;
+            newBest = false;
+            return;
+        }
+        if (present && played != null) {
+            newBest = records.offer(missionDay, played.tier(), readout.outcomeTick);
+        }
+        present = false;
+    }
+
     /** A mission's lines on the result, under the outcome and the time: points, code and tier, the daily's day. */
     private void describeMission() {
         MissionCode played = mission;
         if (played == null) {
             return;
+        }
+        if (won && newBest) {
+            head.add(strings.get("ui.result.best"));
         }
         head.add(strings.format("ui.result.points", pointsTaken, pointsTotal));
         head.add(strings.format("ui.result.code", played, strings.get("ui.tier." + played.tier())));

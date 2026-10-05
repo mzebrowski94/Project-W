@@ -5,10 +5,12 @@
 **Trigger.** Changing what a machine remembers of a mission, where it keeps it, when it writes it, who writes it,
 or how long it is kept; tying a record to a build; carrying anything about the record in a session.
 
-**Enforced by.** Nothing yet - missions are not built. When they are: a `MissionRecords` test that only a won daily
-is written, that a better time replaces a worse and an equal one does not, that a garbled key is skipped and the
-rest still read; a test that a joiner files a daily started the day before its own under that day. Missions
-ticket 09 holds the reasoning.
+**Enforced by.** `MissionRecordsTest`: a won daily is written under its day and tier's letter, a mission that is
+no daily writes nothing, a better time replaces a worse and an equal one does not, a garbled key is skipped and the
+rest still read, a joiner files a daily started the day before its own under that day. Written from `PlayMenus.record`
+on the first readout that shows the win, and only by a machine that saw the world before it (a world that arrives
+already won - a joiner too late, a heal after the win - writes nothing). A daily's first win on a machine is a NEW
+BEST too: there is no remembered time for it to fail to beat.
 
 **Constraint.**
 

@@ -18,3 +18,4 @@ https://itch.io/post/2625522
 
 Only monogram-bitmap.json is used: the glyph table the game builds its interface font from at
 start-up (client class MonogramFont). CC0 - no attribution is required, and it is given anyway.
+One glyph is ours, not monogram's: the check mark ✓ (U+2713), added for a won daily's row (G0067).

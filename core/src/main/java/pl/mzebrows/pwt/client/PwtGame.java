@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.client.input.GamepadSource;
 import pl.mzebrows.pwt.client.input.GdxGamepads;
 import pl.mzebrows.pwt.client.play.MissionChoices;
 import pl.mzebrows.pwt.client.play.MissionCode;
+import pl.mzebrows.pwt.client.play.MissionRecords;
 import pl.mzebrows.pwt.client.play.ScenarioSession;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
@@ -49,6 +50,7 @@ public final class PwtGame extends Game implements GameContext {
     private final SelectionMemory selections = new SelectionMemory();
     private ProvingSetup provingSetup = ProvingSetup.first();
     private final MissionChoices missions = new MissionChoices(Clock.systemUTC(), new SecureRandom()::nextLong);
+    private @Nullable MissionRecords missionRecords;
 
     private @Nullable Screen pendingScreen;
 
@@ -192,6 +194,17 @@ public final class PwtGame extends Game implements GameContext {
     @Override
     public MissionChoices missions() {
         return missions;
+    }
+
+    @Override
+    public MissionRecords missionRecords() {
+        MissionRecords read = missionRecords;
+        if (read == null) {
+            // Read on first use, once the application - and so its preferences - exists.
+            read = LocalMissionRecords.load();
+            missionRecords = read;
+        }
+        return read;
     }
 
     @Override

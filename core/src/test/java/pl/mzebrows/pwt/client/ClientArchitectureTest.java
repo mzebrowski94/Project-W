@@ -82,7 +82,8 @@ final class ClientArchitectureTest {
             CLIENT + ".Log",
             CLIENT + ".Assets",
             CLIENT + ".LaunchOptions",
-            CLIENT + ".LocalMachineId");
+            CLIENT + ".LocalMachineId",
+            CLIENT + ".LocalMissionRecords");
 
     /**
      * The classes a layer may use from another layer or from the root (ADR 0021). Each is named in its own

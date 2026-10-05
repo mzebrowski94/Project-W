@@ -53,7 +53,7 @@ keeps in shot).
 | Id | Kind | Parent | Code anchor | Implemented by | Status |
 |---|---|---|---|---|---|
 | `UI:main` | page | - | `UiPage.MAIN` | `MenuScreen` | built |
-| `UI:main/missions` | page | `UI:main` | `UiPage.MISSIONS` | `MenuScreen` + `MissionChoices` + `CodePicker` | built; ✓ and the best time planned (missions stage 10) |
+| `UI:main/missions` | page | `UI:main` | `UiPage.MISSIONS` | `MenuScreen` + `MissionChoices` + `CodePicker` | built |
 | `UI:main/campaign` | page | `UI:main` | `UiPage.CAMPAIGN` | `MenuScreen` + scenario list | built |
 | `UI:main/proving-ground` | page | `UI:main` | `UiPage.PROVING_GROUND` | `MenuScreen` + `ProvingRows` + preview | built |
 | `UI:main/proving-ground/upgrades` | page | `UI:main/proving-ground` | `UiPage.PROVING_UPGRADES` | `MenuScreen` + `ProvingRows` | built |
@@ -67,7 +67,7 @@ keeps in shot).
 | `UI:play` | state | - | `UiPage.PLAY` | `ScenarioScreen` | built |
 | `UI:play/pause` | modal | `UI:play` | `UiPage.PAUSE` | `PlayMenus` | built |
 | `UI:play/leave` | modal | `UI:play/pause` | `UiPage.LEAVE_CONFIRM` | `PlayMenus` | built |
-| `UI:play/result` | modal | `UI:play` | `UiPage.RESULT` | `PlayMenus` | built (G0066); NEW BEST planned (missions stage 10) |
+| `UI:play/result` | modal | `UI:play` | `UiPage.RESULT` | `PlayMenus` | built (G0066, G0067) |
 
 `MenuScreen` stays the one libGDX `Screen` for every `UI:main...` page: pages are a stack inside it,
 not a `Screen` each. Swapping `Screen`s disposes GL resources (`GameContext.queueScreen`), and a page
@@ -165,7 +165,7 @@ daily keeps the day it was started on. What each entry starts is `MissionChoices
 
 | Entry | Label | Value | Intent |
 |---|---|---|---|
-| `easy`, `medium`, `hard` | `ui.tier.*` - one per `TierKind`, in order | `✓` and the best time `m:ss.t` once that day's daily is won, else nothing - **planned**, missions stage 10 | `MISSION(daily)` - starts at once |
+| `easy`, `medium`, `hard` | `ui.tier.*` - one per `TierKind`, in order | `ui.missions.won = ✓ {m:ss.t}`, the best time, once that day's daily is won on this machine (`MissionRecords`, G0067), else nothing | `MISSION(daily)` - starts at once |
 | `random` | `ui.missions.random = RANDOM` | a choice row `< MEDIUM >`, `ui.tier.*`, left and right step it; remembered for the run, first MEDIUM | `MISSION(random)` - a seed drawn uniformly from [0, 25^6) with the client's own randomness, a new one each confirm |
 | `code` | `ui.missions.code = ENTER CODE` | the code line in a code's shape, `MJGF-6___` - the dash there from the start, never typed | opens the picker, or starts what is typed |
 | `back` | `ui.common.back = BACK` | | `BACK` |
@@ -313,12 +313,12 @@ this opens over the scrim, docked as the pause menu is. Every machine shows its 
 world's time since the outcome (`Readout.resultDue`), so a pause holds it too; a pause menu open when it
 runs out is left alone and the result opens once it closes. A level that names no objective has no result:
 its loss is the goal line's alone. Built for every such level, the time with it; a mission's lines and COPY
-CODE built with the DAILY MISSIONS page (stage 9); **NEW BEST planned** with the record (stage 10).
+CODE built with the DAILY MISSIONS page (stage 9); NEW BEST with the record (stage 10, G0067).
 
 Title `ui.result.won = MISSION COMPLETE` or `ui.result.lost = MISSION FAILED`. Under it, on a win only and
 for every level, `ui.result.time = TIME {m:ss.t}` (`LevelTime`, the tenths cut; compared in ticks). In a
 mission, also: `ui.result.points = POINTS {taken}/{all}`; on a win only `ui.result.best = NEW BEST` when it
-beats the remembered one; `ui.result.code = {code}  {tier}`, and `ui.result.daily = DAILY {date}` for a daily.
+beats the remembered one, or is that daily's first win on this machine (G0067); `ui.result.code = {code}  {tier}`, and `ui.result.daily = DAILY {date}` for a daily.
 
 | Entry | Label | Intent | Enabled |
 |---|---|---|---|
