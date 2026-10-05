@@ -83,6 +83,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * @param adaptation when the swarm adapts (ADR 0017), both halves off at zero
  * @param swarm what every strain and nest is scaled by, read through {@link #healthOf} and
  *     {@link #nestHealth} and nowhere else
+ * @param mission what a mission is built with that no other level has: its tiers and its ramp (G0063)
  * @param medkit how many medkits a level that asks for them scatters (G0053)
  * @param crate how many pickups a crate is dealt (G0056)
  */
@@ -124,6 +125,7 @@ public record SimConfig(
         @ConfigKey("upgrade") Defs<UpgradeKind, UpgradeDef> upgrades,
         AdaptationDef adaptation,
         SwarmConfig swarm,
+        MissionConfig mission,
         MedkitConfig medkit,
         CrateConfig crate) {
 
@@ -150,17 +152,17 @@ public record SimConfig(
     }
 
     /**
-     * How much health one strain arrives with: its own, scaled by the swarm's factor. <strong>The one
-     * place a strain's health is read</strong>, so a unit spawned, a unit evolved and
+     * How much health one strain arrives with: its own, scaled by the swarm's factor and its tier's, rounded
+     * once. <strong>The one place a strain's health is read</strong>, so a unit spawned, a unit evolved and
      * a check on the shipped numbers all see the same number.
      */
     public int healthOf(UnitKind kind) {
-        return Whole.percentOf(units.of(kind).health(), swarm.healthPercent());
+        return Whole.percentOf(units.of(kind).health(), swarm.healthPercent(), swarm.tierPercent());
     }
 
-    /** How much health a nest arrives with: its own, scaled by the swarm's factor, as a strain's is. */
+    /** How much health a nest arrives with: its own, scaled by the swarm's factors, as a strain's is. */
     public int nestHealth() {
-        return Whole.percentOf(nest.health(), swarm.healthPercent());
+        return Whole.percentOf(nest.health(), swarm.healthPercent(), swarm.tierPercent());
     }
 
     /** The definition of one kind of pickup. */
@@ -1065,12 +1067,15 @@ public record SimConfig(
      *     percentage - one number, so the ratios between strains survive a retune. Not barrels, mines,
      *     rabbits or turrets. A hundred is the numbers as written; the result is rounded by the one rule
      *     hit points have ({@link Whole})
+     * @param tierPercent the same, for a mission's tier, on top of {@code healthPercent} and rounded with it
+     *     once (G0063). A hundred off a mission; a mission's comes from {@link MissionConfig#apply}
      */
     @With
-    public record SwarmConfig(int healthPercent) {
+    public record SwarmConfig(int healthPercent, int tierPercent) {
 
         public SwarmConfig {
             Require.atLeastOne("swarm healthPercent", healthPercent);
+            Require.atLeastOne("swarm tierPercent", tierPercent);
         }
     }
 

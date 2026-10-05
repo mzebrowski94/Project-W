@@ -42,16 +42,26 @@ public record RoomCode(String text) {
      * What a player typed, as a code - any case, spaces and dashes ignored - or null if it cannot be one.
      */
     public static @Nullable RoomCode parse(String typed) {
+        String letters = letters(typed, LENGTH);
+        return letters == null ? null : new RoomCode(letters);
+    }
+
+    /**
+     * What a player typed, as {@code length} characters of the {@link #ALPHABET} in upper case - any case,
+     * spaces and dashes ignored - or null if it cannot be. The one reading of every code a player reads out:
+     * a room's, and a mission's (G0065).
+     */
+    public static @Nullable String letters(String typed, int length) {
         String cleaned = typed.replace(" ", "").replace("-", "").toUpperCase(Locale.ROOT);
-        if (cleaned.length() != LENGTH) {
+        if (cleaned.length() != length) {
             return null;
         }
-        for (int i = 0; i < LENGTH; i++) {
+        for (int i = 0; i < length; i++) {
             if (ALPHABET.indexOf(cleaned.charAt(i)) < 0) {
                 return null;
             }
         }
-        return new RoomCode(cleaned);
+        return cleaned;
     }
 
     @Override

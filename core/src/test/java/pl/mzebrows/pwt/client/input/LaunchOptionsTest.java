@@ -3,10 +3,15 @@ package pl.mzebrows.pwt.client.input;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.client.LaunchOptions;
+import pl.mzebrows.pwt.client.play.MissionCode;
+import pl.mzebrows.pwt.sim.def.TierKind;
 
 class LaunchOptionsTest {
+
+    private static final MissionCode MISSION = new MissionCode(TierKind.HARD, 31_337L);
 
     @Test
     void startsAsCopyZeroReadingEveryPad() {
@@ -15,7 +20,29 @@ class LaunchOptionsTest {
         assertThat(options.instance()).isZero();
         assertThat(options.instanceGiven()).isFalse();
         assertThat(options.pads().takes(3)).isTrue();
+        assertThat(options.mission()).isNull();
         assertThat(options.problems()).isEmpty();
+    }
+
+    @Test
+    void readsTheMissionItWasStartedWithHoweverItIsTyped() {
+        LaunchOptions options =
+                LaunchOptions.parse("--mission=" + MISSION.toString().toLowerCase(Locale.ROOT));
+
+        assertThat(options.mission()).isEqualTo(MISSION);
+        assertThat(options.problems()).isEmpty();
+    }
+
+    /** A typo is refused rather than played as some other mission (G0065). */
+    @Test
+    void refusesAMissionCodeThatFailsItsCheck() {
+        String text = MISSION.text();
+        String typo = text.substring(0, 2) + (text.charAt(2) == 'A' ? 'C' : 'A') + text.substring(3);
+
+        LaunchOptions options = LaunchOptions.parse("--mission=" + typo);
+
+        assertThat(options.mission()).isNull();
+        assertThat(options.problems()).singleElement().asString().startsWith("ignored --mission=");
     }
 
     @Test

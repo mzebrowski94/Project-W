@@ -5,14 +5,15 @@
  *
  * <p>Ports: {@link pl.mzebrows.pwt.client.play.OverlayMode} (how much of the dev overlay is on, which lays
  * the top bar out). Entries, for the root: {@code ScenarioPlay}, {@code ScenarioSession}, {@code
- * OnlineSession}, {@code JoinChoices}, {@code HarnessCommand}.
+ * OnlineSession}, {@code JoinChoices}, {@code HarnessCommand}, {@code MissionCode} (what names a mission,
+ * read from the command line).
  *
  * <p>Not here: the keys that ask for a harness command ({@code HarnessControls}, the scenario screen's), the
  * devices ({@code input}), anything drawn. No libGDX: everything here is decided from values, testable
  * without a window - which is what makes {@code ScenarioSessionTest} and {@code OnlineSessionTest}
  * possible.
  *
- * <p>Answers to ADR 0012, G0038, G0049 and G0056.
+ * <p>Answers to ADR 0012, G0038, G0049, G0056 and G0065.
  */
 @NullMarked
 package pl.mzebrows.pwt.client.play;

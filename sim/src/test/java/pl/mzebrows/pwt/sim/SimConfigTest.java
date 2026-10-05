@@ -6,7 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.component.Shock;
@@ -17,6 +22,7 @@ import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.Ticks;
+import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
@@ -32,6 +38,9 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * The numbers here that fail silently. Everything else in {@code SimConfig} is validated at
  * construction or is visible the moment it is wrong; the grid's cell size and the clinch carry are
  * neither - one lets units walk through each other, the other leaves a freeze playing across a gap.
+ *
+ * <p>Every relation a player learns holds on every tier's numbers too, folded as a mission folds them (G0063):
+ * those tests run once off a mission and once a tier.
  */
 class SimConfigTest {
 
@@ -81,9 +90,9 @@ class SimConfigTest {
      * - and there is no system anywhere that would notice if somebody widened the gap to match the
      * rest of the table while tuning. The mechanic would simply stop existing.
      */
-    @Test
-    void letsGoOfHimSoonerThanAnythingElseOnTheFieldDoes() {
-        SimConfig config = SimConfig.defaults();
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void letsGoOfHimSoonerThanAnythingElseOnTheFieldDoes(SimConfig config) {
 
         float frog = leeway(config, UnitKind.FROG);
 
@@ -102,9 +111,9 @@ class SimConfigTest {
      * as long as a grunt's health had been raised past the strike's damage: the sweep landed, the grunt
      * stood, and its claws killed him on the next tick.
      */
-    @Test
-    void deletesAnOrdinaryEnemyWithOneSwingAndNotABrute() {
-        SimConfig config = SimConfig.defaults();
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void deletesAnOrdinaryEnemyWithOneSwingAndNotABrute(SimConfig config) {
 
         assertThat(config.melee().damage()).isGreaterThanOrEqualTo(config.healthOf(UnitKind.GRUNT));
         assertThat(config.melee().damage()).isLessThan(config.healthOf(UnitKind.BRUTE));
@@ -122,9 +131,9 @@ class SimConfigTest {
      * than once before they stop: one that a single pull runs to the stop - the bazooka - is reloading,
      * not being held down, and is never the gun anybody holds instead of the beam.
      */
-    @Test
-    void runsHotterThanAnyOtherGunAManCanCarry() {
-        SimConfig config = SimConfig.defaults();
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void runsHotterThanAnyOtherGunAManCanCarry(SimConfig config) {
 
         float beam = secondsOfHolding(config, WeaponKind.LASER);
 
@@ -144,9 +153,9 @@ class SimConfigTest {
      * game uses (ADR 0017). Weapon Handling shortens every cooldown and cools nothing, so it is the
      * rounding of cooldowns to whole ticks that could tip it.
      */
-    @Test
-    void runsHotterThanAnyOtherGunAManCanCarryWithEveryUpgradeAtItsHighestRank() {
-        SimConfig config = SimConfig.defaults();
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void runsHotterThanAnyOtherGunAManCanCarryWithEveryUpgradeAtItsHighestRank(SimConfig config) {
         Simulation world = everythingHeld(config);
         Entity commander = world.spawnCommander(10f, 10f, 0);
         Modifiers modifiers = new Modifiers(world.engine(), config);
@@ -170,9 +179,9 @@ class SimConfigTest {
      * shock draining between them as it does in play - fills it before the bolts have emptied its
      * health. Read through the one {@code Shock} the game builds and drains, at the gun's own cadence.
      */
-    @Test
-    void stunsWithThePulseRifleBeforeItKills() {
-        SimConfig config = SimConfig.defaults();
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void stunsWithThePulseRifleBeforeItKills(SimConfig config) {
         WeaponDef gun = config.weapon(WeaponKind.PULSE);
         int ticksBetween = Ticks.of(gun.cooldownSeconds(), config.tickSeconds());
 
@@ -286,9 +295,9 @@ class SimConfigTest {
      * him strings out behind rather than crowding him (the trooper block says why), and Forced March
      * must not undo that at its last rank.
      */
-    @Test
-    void keepsTheSquadSlowerThanTheCommanderAtEveryUpgradesHighestRank() {
-        SimConfig config = SimConfig.defaults();
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void keepsTheSquadSlowerThanTheCommanderAtEveryUpgradesHighestRank(SimConfig config) {
         Simulation world = everythingHeld(config);
         world.spawnCommander(10f, 10f, 0);
         Entity trooper = world.spawnTrooper(20f, 10f);
@@ -305,9 +314,10 @@ class SimConfigTest {
      * whole mechanic and it is two numbers in one table, so nothing else in the game would notice
      * somebody evening them up while tuning how thick the undergrowth feels.
      */
-    @Test
-    void costsThePlayersSideMoreToWadeThroughThanItCostsTheAliens() {
-        GroundDef thicket = SimConfig.defaults().ground(Terrain.THICKET);
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void costsThePlayersSideMoreToWadeThroughThanItCostsTheAliens(SimConfig config) {
+        GroundDef thicket = config.ground(Terrain.THICKET);
 
         assertThat(thicket.playerFactor()).isLessThan(thicket.alienFactor());
         assertThat(thicket.matters()).isTrue();
@@ -317,9 +327,9 @@ class SimConfigTest {
      * <strong>The disc gun reloads a little sooner than the bazooka.</strong> Both run their bar to the stop
      * with every pull, so the wait for the next is the bar cooling from full to where it comes back.
      */
-    @Test
-    void reloadsTheDiscGunSoonerThanTheBazooka() {
-        SimConfig config = SimConfig.defaults();
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void reloadsTheDiscGunSoonerThanTheBazooka(SimConfig config) {
 
         assertThat(stopsAfterOnePull(config, WeaponKind.DISC_GUN)).isTrue();
         assertThat(secondsToReload(config, WeaponKind.DISC_GUN))
@@ -342,6 +352,17 @@ class SimConfigTest {
                         .isNotEqualTo(WeaponType.NONE);
             }
         }
+    }
+
+    /** What ships, as every level but a mission plays it, and as a mission plays it on each tier. */
+    static Stream<Named<SimConfig>> everyTier() {
+        SimConfig shipped = SimConfig.defaults();
+        return Stream.concat(
+                Stream.of(Named.of("off a mission", shipped)),
+                Stream.of(TierKind.values())
+                        .map(tier -> Named.of(
+                                tier.name().toLowerCase(Locale.ROOT),
+                                shipped.mission().apply(tier, shipped))));
     }
 
     private static float secondsToReload(SimConfig config, WeaponKind kind) {

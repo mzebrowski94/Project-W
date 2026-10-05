@@ -264,6 +264,21 @@ final class ArchitectureTest {
             .because("two flags both named begun answer one question - on his feet, a casualty, or in his"
                     + " throes - and every copy of the answer was a chance to get it wrong; ask Life");
 
+    @ArchTest
+    static final ArchRule onlyMissionConfigReadsATier = noClasses()
+            .that()
+            .doNotBelongToAnyOf(MissionConfig.class, TierDef.class)
+            .should()
+            .dependOnClassesThat()
+            .belongToAnyOf(TierDef.class)
+            .orShould()
+            .callMethod(MissionConfig.class, "tiers")
+            .orShould()
+            .callMethod(MissionConfig.class, "rampPercent")
+            .because("a tier is read in one place, MissionConfig, and folded into the config a world is built from"
+                    + " (G0063): no system learns what a tier is, and its percents meet a whole quantity only in"
+                    + " Whole");
+
     private static final String SYSTEM = "pl.mzebrows.pwt.sim.system";
 
     /** The fenced packages under {@code sim.system} (ADR 0020); nothing lives there outside one. */

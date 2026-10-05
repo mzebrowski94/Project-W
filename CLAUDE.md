@@ -34,8 +34,9 @@ belongs on the definition every kind already has rather than on the one kind tha
 and lag on demand), `NetLog` (the connection log), `WorldCodec` (a world as bytes, a hash, a diff),
 `SessionHarness` (a whole online session in one test), `Modifiers` (any number an upgrade may move),
 `Grants` (what a pickup's grant does to a taker, and whether it is worth anything to him), `Damage.land`
-(the one way a blow is recorded, G0057), `Whole` (the one rounding rule for hit points and damage,
-G0054), `Ticks` (a duration as whole ticks) - plus a
+(the one way a blow is recorded, G0057), `Whole` (the one rounding rule for a whole quantity - hit points,
+damage, a count - G0054), `MissionConfig` (what a tier does to the numbers, G0063), `MissionCode` (a mission
+as text and back, G0065), `Ticks` (a duration as whole ticks) - plus a
 component or system for most behaviour. `docs/glossary.md` is the cheap check: if the word exists, the
 thing usually does too.
 

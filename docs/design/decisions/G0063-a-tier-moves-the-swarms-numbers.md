@@ -6,9 +6,10 @@
 squad, the reserve, crates or medkits; changing `sim.melee.damage`, a strain's health or
 `sim.swarm.healthPercent` in a way that could break a relational guarantee at some tier.
 
-**Enforced by.** Nothing yet - the tiers are not built. When they are: `SimConfigTest`'s relational
-guarantees at every tier, through the same fold the game uses; `WholeTest` for the two-percent rounding;
-a `MissionConfig` test that it is the only reader of a tier. Missions ticket 07 holds the numbers.
+**Enforced by.** `SimConfigTest`'s relational guarantees, each run off a mission and at every tier through
+`MissionConfig.apply`, the fold the game uses; `WholeTest.multipliesBothPercentsBeforeRoundingOnce`;
+`ArchitectureTest.onlyMissionConfigReadsATier`; `MissionConfigTest` for the fold and the pressure. Missions
+ticket 07 holds the numbers.
 
 **Constraint.**
 

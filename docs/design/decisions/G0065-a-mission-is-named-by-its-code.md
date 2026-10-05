@@ -6,10 +6,11 @@
 reading the date anywhere but the client; carrying a mission online as anything but `SessionSetup`'s scenario
 and seed.
 
-**Enforced by.** Nothing yet - missions are not built. When they are: a `MissionCode` test that every code
-round-trips, that every single wrong character and every swapped neighbour pair is refused, and that every
-tier's letter is in the alphabet and no two share one; the seed sweep building one seed at three tiers to the
-same ground; a test that a daily is the same for a fixed date. Missions ticket 05 holds the reasoning.
+**Enforced by.** `MissionCodeTest` (`.readsBackEveryTierAndSeedItWrites`, `.refusesEverySingleWrongCharacter`,
+`.refusesEverySwappedNeighbourPair`, `.givesEveryTierALetterOfTheAlphabetThatNoOtherTierHas`);
+`LaunchOptionsTest.refusesAMissionCodeThatFailsItsCheck`. Not yet, until missions are built: the seed sweep
+building one seed at three tiers to the same ground (stage 7); a test that a daily is the same for a fixed date
+(stage 9). Missions ticket 05 holds the reasoning.
 
 **Constraint.**
 

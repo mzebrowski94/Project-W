@@ -72,7 +72,8 @@ class SwarmHealthTest {
     }
 
     private static Simulation tougher() {
-        return new Simulation(config().withSwarm(new SimConfig.SwarmConfig(DOUBLE_PERCENT)));
+        SimConfig config = config();
+        return new Simulation(config.withSwarm(config.swarm().withHealthPercent(DOUBLE_PERCENT)));
     }
 
     private static float health(Entity entity) {
