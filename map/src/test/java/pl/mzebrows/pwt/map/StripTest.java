@@ -170,6 +170,49 @@ class StripTest {
     }
 
     @Test
+    void anchorsAFinaleWhereTheAdventuresHaveTheirRedoubt() {
+        assertThat(Strip.anchor(new TileRect(181, 1, 34, 28))).isEqualTo(TileRect.ofTile(197, 15));
+    }
+
+    @Test
+    void laysAFinalesPiecesAsRockAtTheirOffsetsFromItsAnchor() {
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Strip.Laid laid = lay(ORDER, seed);
+            TileRect anchor = Strip.anchor(laid.biomes().getLast());
+
+            for (TileRect piece : FINALE.pieces()) {
+                for (int row = piece.row(); row < piece.endRow(); row++) {
+                    for (int col = piece.col(); col < piece.endCol(); col++) {
+                        assertThat(laid.map().terrainAtTile(anchor.col() + col, anchor.row() + row))
+                                .as("seed %d, piece %s at %d,%d", seed, piece, col, row)
+                                .isEqualTo(Terrain.ROCK);
+                    }
+                }
+            }
+            assertThat(laid.map().terrainAtTile(anchor.col(), anchor.row())).isEqualTo(FINALE.base());
+        }
+    }
+
+    @Test
+    void refusesAPieceThatReachesPastItsBiome() {
+        BiomeGround past = new BiomeGround(
+                34,
+                34,
+                3,
+                Terrain.DUST,
+                Terrain.ASH,
+                Houses.off(),
+                List.of(),
+                Crags.off(),
+                Outcrops.off(),
+                List.of(new TileRect(18, 0, 1, 1)));
+
+        assertThatThrownBy(() -> Strip.lay(RULES, ORDER, past, START, TestStream.seeded(1L), TILE_SIZE))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("reaches past");
+    }
+
+    @Test
     void wallsEveryHouseWithItsDoorwaysInWallsOfTheirOwnAndItsInsideOpen() {
         for (long seed = 0; seed < SEEDS; seed++) {
             Strip.Laid laid = lay(ORDER, seed);
@@ -263,7 +306,8 @@ class StripTest {
                 badlands.houses(),
                 badlands.patches(),
                 new Crags(0.05f, 2),
-                Outcrops.off());
+                Outcrops.off(),
+                badlands.pieces());
         List<BiomeGround> order = new ArrayList<>(ORDER);
         order.set(2, retuned);
         for (long seed = 0; seed < SEEDS; seed++) {

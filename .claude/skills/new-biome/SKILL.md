@@ -6,7 +6,7 @@ description: Add a biome or a finale to Project-W's missions as data - a constan
 # Adding a biome or a finale
 
 A **biome** and a **finale** are kinds (G0008): one constant and one block - no class, no scenario, no branch. A
-mission deals biomes from the pool (`Mission.deal`) and will draw a finale from its own; `map` lays the ground
+mission deals biomes from the pool (`Mission.deal`) and draws a finale from its own; `map` lays the ground
 (`BiomeGround`, through `Strip.lay`) and `sim` puts the roster and furniture on it by rules (`Placement`, G0068) - or
 the set piece, for a finale. The steps every kind shares - constant, block, glossary - are `new-kind`'s; this skill
 is what a biome or a finale adds to them. A **tier** is not here: it is a block in `missions.properties` through
@@ -93,13 +93,43 @@ prototype is for looks only.
 
 ## 4. Finale
 
-`STAGE 8` writes this section from building the redoubt; the keep is its first run. Settled (ticket 04, G0064):
-`FinaleDef(ground, hold, waves, lair)` in `finales.properties`, a set piece - every position a tile offset `dx dy`
-from the anchor, flipped north-south by one bit, never east-west. Ground is `BiomeGround` with width fixed, no dealt
-coats, rock as `pieces`. Hold: `post`, `watch`, `turrets`, `mines`, `barrels`, `pickups`, `mouths`. Waves
-`after strain min max mouth`, counted through `Roster.count` unramped. Lair (a keep): `unit|nest|pickup kind dx dy`
-in the order written. **Porting**: offsets from the Adventure's (197, 15); counts become ranges round the port.
-Until then the strip ends on bare ground, `Mission`'s scaffolding stand-in.
+A finale is a **set piece** (G0064): `FinaleKind`, and a block under `sim.finale.<name>.` in
+`assets/sim/finales.properties` binding `FinaleDef(ground, hold, waves, lair)`. The same layout every mission; the
+only variety is one bit of the finale's stream that flips it north-south. Drawn from its own stream, equally, whatever
+the tier. Never rules, never a dealt coat - a finale laid by rules is G0064's first DO NOT BUILD.
+
+**Every position is an offset `dx dy` from the anchor**, `Strip.anchor`: the finale's middle column rounded west and
+its middle row - (197, 15) on the Adventures' ground, so a port subtracts that. `dy` counts rows **north**, and a
+rect's `dx dy` is its south-west corner (`TileRect` counts rows from the bottom). The flip is `Offset.flipped` - a
+point's `dy` negated, a rect's south edge `-(dy + height - 1)` - and `FinaleDef.flipped()` applies it to all of it; a
+new field with a position must go through it, or the flip tests fail.
+
+| Part | Keys | What to know |
+|---|---|---|
+| ground | `widthMin` = `widthMax`, `regions`, `base`, `fallback`, `pieces=dx dy w h; ...` | A dealt width or any coat - houses, patches, crags, outcrops - is refused. Its rock is its `pieces`, laid by `Coats` before anything; a piece past the finale's rect is refused at lay |
+| hold | `post=dx dy`, `watch`, `turrets`, `mines`, `barrels` (`dx dy; ...`), `pickups=pickup <kind> dx dy; ...`, `mouths=name dx dy w h; ...` | Nothing scaled by tier. `watch` is world units, from the post. A gun's cache may lie here, never in a biome. Mouth names are unique |
+| waves | `waves=afterSeconds strain countMin countMax mouth; ...` | Held back until the post is taken. A mouth the hold lacks is refused, and so are more than `Waves.MOST` (63). Each count through `Roster.count` at `MissionConfig.finale(tier)` - the tier's `enemyPercent`, no ramp |
+| lair | `lair=unit\|nest\|pickup <kind> dx dy; ...` | **Refused until the keep's run builds it** (`alpha-phase.md`). That run resolves each line into an `Arrival` behind a `Lair`, in the order written |
+
+**What a block may use**: interior rows 1-28 with the anchor on 15, so with the flip a position fits `dy` -13..13;
+columns `dx` -16..17 of a 34-wide finale. The pass from the ridge before it keeps the first four columns (`dx` -16..-13)
+its base ground with its apron: a mouth may lie there, nothing that stands may (`MissionFaults.kept`). The `watch`
+reaches west into the ridge and the last biome, whose placement keeps **everything hostile** outside it (G0064,
+amended) - a wider watch costs the last biome room, and the sweep says when it has none.
+
+**Where it ends up**: `Mission.build` resolves the set piece into `Placed.Hold`, `Turret`, `Mine`, `Barrel` and
+`Pickup` at the position after the last biome, and `Mission.finale().waves()` into `Wave`s at their mouths;
+`MissionScenario.populate` spawns them, holds the waves back and requires `HOLD_POINT` alone. The goal line leads
+through every point, the finale's among them, until the waves are let go, then says the hold.
+
+**Porting from an Adventure**: offsets from (197, 15); each wave's count a range of about +-1 round the Adventure's;
+the Adventure's own comments carried into the block's. Drop what neither a wave nor the lair brings (the keep's
+sleeping ants, ticket 04). Each finale names its own strains.
+
+**Measure the field**: `PWT_BENCH=1 .claude/scripts/gradle.sh :sim:test --tests '*SimulationBenchmarkTest' --rerun -i`
+prints `BENCH mission` (a hard mission as built) and `BENCH finale` (the same with every wave on the field at once)
+and fails either past one tick. Stage 8, the redoubt: 0.33 and 0.58 ms of 16.7. Then `F1` on a hard code from the
+sweep's output, for what the client draws.
 
 ## 5. Tests
 
@@ -109,17 +139,21 @@ None is written per biome; a biome joins every one by being a constant.
   built on **every tier**, held to `StripFaults` (the strip, over the **shipped** pool - a `map` test fixture) and
   `MissionFaults` (G0068: nothing short, points and stock reached from the start, nothing on kept ground, nothing
   hostile near the start or in a house, nests off the passes, points, each other and pickups, a point a band and
-  the last in the last `approachColumns`, crates by points). Also the build budget: a mission's whole world, median
+  the last in the last `approachColumns`, crates by points; the finale's set piece and every mouth open and reached,
+  nothing hostile of the last biome in its watch). Also the build budget: a mission's whole world, median
   of 16, under 100 ms (stage 7: about 6 ms). Under `PWT_SWEEP=1` a green run prints one summary line - seeds,
-  ms/build, creatures per biome on hard - and three medium codes that deal each biome first.
+  ms/build, creatures per biome on hard - and three seeds that deal each biome first, each as its medium and hard
+  code.
 - **`StripSweepTest`**, **`StripTest`**, **`CoatsTest`** (`map`): the generator against `TestBiome`, five literal
   blocks kept as `map`'s own fixtures - representative, not the shipped ones, which `map` cannot read. A new biome
   does not go there; its ground is swept by `MissionSweepTest`.
 - **`MissionTest`** (`sim`): the deal (none twice, no base side by side), **coverage** (every kind at every position
   over 512 deals - a biome the deal can never place fails), the **same ground and points** on every tier (G0065),
-  more creatures on a harder tier.
+  more creatures on a harder tier; the finale flipped north-south only, the same on every tier but for its wave counts,
+  and populated with its waves held back and `HOLD_POINT` alone.
 - **`BiomeDefTest`** (`sim`): the table binds; a gun's cache, a roster line backwards and a pool smaller than
-  `sim.mission.biomes` are refused.
+  `sim.mission.biomes` are refused. **`FinaleDefTest`** the same for finales: the redoubt binds - add a line for
+  yours - and the refusals and the flip.
 - **`BiomePromisesTest`** (`sim`): one test per promise the design makes in a number - "the brake is the one biome
   overgrown", "crags from mounds to masses". Add yours. Never connectivity or room, which the sweeps own.
 - `verify.sh` runs 64 seeds a sweep (three tiers each in the mission sweep). **Run the big one** before you finish:
@@ -154,7 +188,8 @@ with its trigger. Then one dated line in `CHANGELOG.md` beside this file - run o
 
 The build refuses a constant without a block, `regions` under 1, a gun's cache in `furniture.pickups`, a pool
 smaller than `sim.mission.biomes`, a biome the deal never places, and a count that does not fit its room on some
-seed. By eye:
+seed - and for a finale, a dealt width or coat, a piece past its rect, a wave from a mouth its hold lacks, a hold
+pickup that is not a pickup, a lair before the keep, and anything it stands on shut or unreached ground. By eye:
 
 - a comment above the block: source, measured numbers, why - and for `houses`, why this biome has them;
 - every key its nearest neighbour's block has; a coat off by leaving its block out, nothing else;

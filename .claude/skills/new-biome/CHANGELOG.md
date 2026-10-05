@@ -30,3 +30,11 @@ changed. Git carries the diff.
 - 2026-10-05, stage 7b (doors) - missing: that a house is now shut - a door in every doorway, opened by hand,
   besieged by what hunts a man inside - which changes what a house in a biome costs; added to the houses row in
   *Ground*. Nothing wrong; the sweeps are unchanged, a doorway being open ground to the map.
+- 2026-10-05, stage 8 (the redoubt) - wrong: ticket 04's "the binder's existing `;` lists, no new conversion" - the
+  binder read only lists of sealed records and refused a list it was not given, so `turrets=-5 -5`, `post=0 0` and a
+  block without `patches` or `lair` could not bind; it now reads plain records on one line and a list it is not given
+  as empty. Missing: *Finale* itself - the anchor and which way `dy` runs, the flip's one place, what the finale's
+  ground refuses, which positions the flip and the pass's apron leave, the lair refused until the keep, where the set
+  piece ends up, measuring the field. Slow: a hard code to play took a throwaway test (the sweep printed medium codes
+  only - it now prints both), and seeing the pieces laid took the throwaway ASCII dump again. *Finale* written,
+  *Tests* and *Reviewer checks* gain the finale.

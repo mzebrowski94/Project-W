@@ -11,9 +11,14 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.Wave;
+import pl.mzebrows.pwt.sim.scenario.Mission;
+import pl.mzebrows.pwt.sim.scenario.Scenarios;
 import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeDef;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
@@ -26,7 +31,9 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * PWT_BENCH=1}. Prints one line per crowd size. Three guards, the last two independent of how fast the
  * machine is: the largest crowd fits one tick (in lockstep every peer pays the whole step); the cost grows
  * with the crowd rather than its square (an O(N²) pair loop is the classic regression); and what a step
- * allocates stays near nothing per entity (an allocation inside a per-entity loop is the other one).
+ * allocates stays near nothing per entity (an allocation inside a per-entity loop is the other one). Then the
+ * field a player meets: a hard mission as it is built, and the same with every wave of its finale on the field at
+ * once - the most the field gets - each within one tick (missions stage 8).
  */
 @EnabledIfEnvironmentVariable(named = "PWT_BENCH", matches = "1")
 class SimulationBenchmarkTest {
@@ -84,12 +91,31 @@ class SimulationBenchmarkTest {
 
     private static Fold fold = new Fold(0.0, 0.0);
 
+    /** A hard mission: the seed, whatever it deals, is one the sweep holds to the rules. */
+    private static final long MISSION_SEED = 7L;
+
+    private static Sample mission = new Sample(0, 0, 0.0, 0.0);
+
+    private static Sample finale = new Sample(0, 0, 0.0, 0.0);
+
     @BeforeAll
     static void measureEveryCrowd() {
         for (int i = 0; i < CROWDS.length; i++) {
             SAMPLES[i] = measure(CROWDS[i]);
         }
         fold = measureTheFold(CROWDS[CROWDS.length - 1]);
+        mission = measure("mission", missionWorld(false));
+        finale = measure("finale", missionWorld(true));
+    }
+
+    @Test
+    void aHardMissionStepsInsideOneTick() {
+        assertThat(mission.milliseconds()).isLessThan(SimConfig.defaults().tickSeconds() * 1000.0);
+    }
+
+    @Test
+    void aHardMissionWithItsWholeFinaleOnTheFieldStepsInsideOneTick() {
+        assertThat(finale.milliseconds()).isLessThan(SimConfig.defaults().tickSeconds() * 1000.0);
     }
 
     @Test
@@ -176,7 +202,14 @@ class SimulationBenchmarkTest {
 
     /** A commander nobody can kill, his squad, and a crowd of grunts converging on them from everywhere. */
     private static Sample measure(int crowd) {
-        Simulation simulation = crowd(crowd, 0);
+        return measure("crowd=" + crowd, crowd, crowd(crowd, 0));
+    }
+
+    private static Sample measure(String name, Simulation simulation) {
+        return measure(name, simulation.engine().getEntities().size(), simulation);
+    }
+
+    private static Sample measure(String name, int crowd, Simulation simulation) {
         long thread = Thread.currentThread().threadId();
         long allocatedBefore = THREADS.getThreadAllocatedBytes(thread);
         double milliseconds = Double.MAX_VALUE;
@@ -187,9 +220,35 @@ class SimulationBenchmarkTest {
                 (double) (THREADS.getThreadAllocatedBytes(thread) - allocatedBefore) / (MEASURED_TICKS * WINDOWS);
 
         int entities = simulation.engine().getEntities().size();
-        System.out.printf(
-                "BENCH crowd=%d entities=%d ms/step=%.3f bytes/step=%.0f%n", crowd, entities, milliseconds, bytes);
+        System.out.printf("BENCH %s entities=%d ms/step=%.3f bytes/step=%.0f%n", name, entities, milliseconds, bytes);
         return new Sample(crowd, entities, milliseconds, bytes);
+    }
+
+    /**
+     * A hard mission as it is built, warmed up, its commanders beyond killing - and, if asked, every wave of its
+     * finale put down in its mouth at once rather than over a minute: the most the field ever holds.
+     */
+    private static Simulation missionWorld(boolean wholeFinale) {
+        SimConfig config = SimConfig.defaults().withSeed(MISSION_SEED);
+        Simulation simulation = Scenarios.world(Scenarios.mission(TierKind.HARD), config);
+        simulation.level().commandersInvulnerable = true;
+        if (wholeFinale) {
+            Mission built = Mission.build(simulation.config(), TierKind.HARD);
+            TileMap map = simulation.map();
+            for (Wave wave : built.finale().waves()) {
+                TileRect where = wave.where();
+                for (int i = 0; i < wave.count(); i++) {
+                    simulation.spawnUnit(
+                            wave.kind(),
+                            map.tileCentreX(where.col() + i % where.width()),
+                            map.tileCentreY(where.row() + i / where.width() % where.height()));
+                }
+            }
+        }
+        for (int tick = 0; tick < WARM_UP_TICKS; tick++) {
+            simulation.step();
+        }
+        return simulation;
     }
 
     /** Milliseconds per step, over one window. */

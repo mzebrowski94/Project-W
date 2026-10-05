@@ -3,36 +3,43 @@ package pl.mzebrows.pwt.sim.scenario;
 import java.util.ArrayList;
 import java.util.List;
 import pl.mzebrows.pwt.map.BiomeGround;
-import pl.mzebrows.pwt.map.Crags;
-import pl.mzebrows.pwt.map.Houses;
-import pl.mzebrows.pwt.map.Outcrops;
 import pl.mzebrows.pwt.map.Randomness;
 import pl.mzebrows.pwt.map.Strip;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.BiomeDef;
+import pl.mzebrows.pwt.sim.FinaleDef;
+import pl.mzebrows.pwt.sim.Hold;
+import pl.mzebrows.pwt.sim.LairLine;
+import pl.mzebrows.pwt.sim.Offset;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.RngStream;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.WaveLine;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.FinaleKind;
 import pl.mzebrows.pwt.sim.def.TierKind;
+import pl.mzebrows.pwt.sim.def.Wave;
 
 /**
  * A mission as it is built from its seed and tier, before anything is spawned (G0065): the biomes dealt, the strip
- * they are laid in, and everything placement put down on it (G0068). One seed is one mission on every tier - the
- * seed deals the order, lays the ground and chooses where things stand, and the tier moves only how many creatures
- * there are.
+ * they are laid in, everything placement put down on it (G0068), and the finale's set piece (G0064). One seed is one
+ * mission on every tier - the seed deals the order, draws and flips the finale, lays the ground and chooses where
+ * things stand, and the tier moves only how many creatures there are, in a biome and in a wave.
  *
- * <p>Streams (G0065): the strip derives from the map stream; the order, the counts and every placement pass derive
- * from {@link RngStream#MISSION}, per sub-concern and per position, so retuning one biome's block moves no other
- * biome, and hard's bigger counts move nothing put down before the creatures.
+ * <p>Streams (G0065): the strip derives from the map stream; the order, the counts, every placement pass and the
+ * finale derive from {@link RngStream#MISSION}, per sub-concern and per position, so retuning one biome's block moves
+ * no other biome, and hard's bigger counts move nothing put down before the creatures.
  *
  * @param tier how hard it is
  * @param seed the mission seed: the simulation's
  * @param order the biomes dealt, west to east
- * @param laid the strip they are laid in, and the bare ground past its last ridge
- * @param placed everything placement put down, biome by biome in the order of its passes
+ * @param laid the strip they are laid in, and the finale past its last ridge
+ * @param placed everything placement put down, biome by biome in the order of its passes, then the finale's set
+ *     piece: its hold, turrets, mines, barrels and pickups
+ * @param finale which finale, whether it is flipped, and its waves
  * @param shortfalls every pass that put down fewer than it was dealt - a generator fault, which the sweep fails
  */
 public record Mission(
@@ -41,20 +48,16 @@ public record Mission(
         List<BiomeKind> order,
         Strip.Laid laid,
         List<Placed> placed,
+        Finale finale,
         List<String> shortfalls) {
 
     private static final long ORDER = 0x2F5B_4C81_D7A3_906EL;
     private static final long PLACEMENT = 0x8D1E_63F7_0BA2_C459L;
+    private static final long FINALE = 0xE7C4_1A0D_93B6_5F28L;
+    private static final long WAVES = 0x4B19_F6E2_07CD_A853L;
 
     /** How many deals are tried before a pool that cannot deal its count is refused. */
     private static final int DEALS = 64;
-
-    /**
-     * The ground past the last ridge while missions have no finale: the redoubt's, bare. Scaffolding until the
-     * finale is built (missions stage 8), listed in {@code alpha-phase.md}.
-     */
-    private static final BiomeGround BARE =
-            new BiomeGround(34, 34, 3, Terrain.DUST, Terrain.ASH, Houses.off(), List.of(), Crags.off(), Outcrops.off());
 
     public Mission {
         order = List.copyOf(order);
@@ -62,18 +65,38 @@ public record Mission(
         shortfalls = List.copyOf(shortfalls);
     }
 
+    /**
+     * The finale a mission ends on (G0064). Its set piece is in {@code placed}, at the position after the last biome.
+     *
+     * @param kind which one was drawn
+     * @param flipped whether its layout is mirrored north-south
+     * @param waves its schedule, held back until its post is taken, each count drawn and scaled for the tier
+     */
+    public record Finale(FinaleKind kind, boolean flipped, List<Wave> waves) {
+
+        public Finale {
+            waves = List.copyOf(waves);
+        }
+
+        /** Its definition as it is laid: flipped, if it is. */
+        public FinaleDef def(SimConfig config) {
+            FinaleDef def = config.finales().of(kind);
+            return flipped ? def.flipped() : def;
+        }
+    }
+
     /** The mission {@code config.seed()} names on this tier, from a config the tier has been applied to or not. */
     public static Mission build(SimConfig config, TierKind tier) {
         return build(config, tier, Rng.stream(config.seed(), RngStream.MAP));
     }
 
-    /** Every ground the strip laid, west to east, the ground past the last ridge last. */
+    /** Every ground the strip laid, west to east, the finale's last. */
     public List<BiomeGround> grounds(SimConfig config) {
         List<BiomeGround> grounds = new ArrayList<>();
         for (BiomeKind kind : order) {
             grounds.add(config.biomes().of(kind).ground());
         }
-        grounds.add(BARE);
+        grounds.add(finale.def(config).ground());
         return grounds;
     }
 
@@ -88,9 +111,15 @@ public record Mission(
     /** {@link #build(SimConfig, TierKind)} on a map stream already derived, as {@code Scenarios.world} hands one. */
     static Mission build(SimConfig config, TierKind tier, Randomness map) {
         List<BiomeKind> order = deal(config);
+        Randomness drawing = mission(config).derive(FINALE);
+        List<FinaleKind> kinds = List.of(FinaleKind.values());
+        FinaleKind kind = kinds.get(drawing.nextInt(kinds.size()));
+        boolean flipped = drawing.nextInt(2) == 1;
+        FinaleDef finale = new Finale(kind, flipped, List.of()).def(config);
+
         List<BiomeGround> grounds = new ArrayList<>();
-        for (BiomeKind kind : order) {
-            grounds.add(config.biomes().of(kind).ground());
+        for (BiomeKind dealt : order) {
+            grounds.add(config.biomes().of(dealt).ground());
         }
         // The start lies inside the first biome whatever width it is dealt, against the border.
         TileRect start = config.spawn()
@@ -98,26 +127,72 @@ public record Mission(
         Strip.Laid laid = Strip.lay(
                 config.mission().ground(),
                 grounds,
-                BARE,
+                finale.ground(),
                 start,
                 map,
                 config.map().tileSize());
 
-        Placement placement = new Placement(config, laid);
+        int position = order.size();
+        TileRect anchor = Strip.anchor(laid.biomes().getLast());
+        TileMap tiles = laid.map();
+        Hold hold = finale.hold();
+        Placed.Hold point = new Placed.Hold(
+                centreX(tiles, hold.post(), anchor), centreY(tiles, hold.post(), anchor), hold.watch(), position);
+
+        Placement placement = new Placement(config, laid, point);
         Randomness placing = mission(config).derive(PLACEMENT);
-        for (int position = 0; position < order.size(); position++) {
-            BiomeKind kind = order.get(position);
-            BiomeDef def = config.biomes().of(kind);
+        for (int p = 0; p < order.size(); p++) {
+            BiomeKind dealt = order.get(p);
+            BiomeDef def = config.biomes().of(dealt);
             placement.biome(
-                    position,
-                    kind,
+                    p,
+                    dealt,
                     def,
-                    config.mission().pressure(tier, position),
-                    config.mission().pressures(position),
-                    position == order.size() - 1,
-                    placing.derive(position));
+                    config.mission().pressure(tier, p),
+                    config.mission().pressures(p),
+                    p == order.size() - 1,
+                    placing.derive(p));
         }
-        return new Mission(tier, config.seed(), order, laid, placement.placed(), placement.shortfalls());
+
+        List<Placed> placed = new ArrayList<>(placement.placed());
+        placed.add(point);
+        for (Offset at : hold.turrets()) {
+            placed.add(new Placed.Turret(centreX(tiles, at, anchor), centreY(tiles, at, anchor), position));
+        }
+        for (Offset at : hold.mines()) {
+            placed.add(new Placed.Mine(centreX(tiles, at, anchor), centreY(tiles, at, anchor), position));
+        }
+        for (Offset at : hold.barrels()) {
+            placed.add(new Placed.Barrel(centreX(tiles, at, anchor), centreY(tiles, at, anchor), position));
+        }
+        for (LairLine line : hold.pickups()) {
+            if (line instanceof LairLine.Pickup pickup) {
+                Offset at = pickup.at();
+                placed.add(new Placed.Pickup(
+                        pickup.kind(), centreX(tiles, at, anchor), centreY(tiles, at, anchor), position));
+            }
+        }
+
+        // Every tier draws the same counts from the same stream and scales them, so a harder tier moves nothing else.
+        Randomness counting = drawing.derive(WAVES);
+        List<Wave> waves = new ArrayList<>();
+        for (WaveLine line : finale.waves()) {
+            waves.add(new Wave(
+                    line.afterSeconds(),
+                    line.strain(),
+                    line.count(counting, config.mission().finale(tier)),
+                    hold.mouth(line.mouth()).from(anchor)));
+        }
+        return new Mission(
+                tier, config.seed(), order, laid, placed, new Finale(kind, flipped, waves), placement.shortfalls());
+    }
+
+    private static float centreX(TileMap map, Offset at, TileRect anchor) {
+        return map.tileCentreX(at.from(anchor).col());
+    }
+
+    private static float centreY(TileMap map, Offset at, TileRect anchor) {
+        return map.tileCentreY(at.from(anchor).row());
     }
 
     private static Randomness mission(SimConfig config) {

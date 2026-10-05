@@ -25,7 +25,9 @@ import pl.mzebrows.pwt.sim.def.Side;
  * Puts down what each biome of a mission counts, by rules and never by places (G0068): ordered {@link Scatter}
  * passes, the most constrained first - points, what a house holds, nests, packs, crates by points, medkits and food,
  * barrels, boulders, rabbits. Each pass keeps off what went down before it by its radii, crow-flies, and off every
- * tile the strip kept: the start, aprons, doorsteps, and every house's inside but for its stock.
+ * tile the strip kept: the start, aprons, doorsteps, and every house's inside but for its stock. The last biome keeps
+ * everything hostile outside the finale's watch (G0064), so holding its post never waits on a hole or a sleeper behind
+ * the ridge.
  *
  * <p>Counts are drawn first, each from a stream of its own, and never rescaled by placement. A biome whose passes
  * cannot put down all they were dealt is placed again from a fresh stream, as a deal that reaches a dead end is dealt
@@ -58,14 +60,18 @@ final class Placement {
     private final Strip.Laid laid;
     private final TileMap map;
 
+    /** The finale's point, whose watch the last biome keeps everything hostile out of. */
+    private final Placed.Hold hold;
+
     private final List<Placed> placed = new ArrayList<>();
     private final List<String> shortfalls = new ArrayList<>();
 
-    Placement(SimConfig config, Strip.Laid laid) {
+    Placement(SimConfig config, Strip.Laid laid, Placed.Hold hold) {
         this.config = config;
         this.rules = config.mission().placement();
         this.laid = laid;
         this.map = laid.map();
+        this.hold = hold;
     }
 
     /** Everything put down so far, biome by biome in the order of its passes. */
@@ -85,7 +91,8 @@ final class Placement {
      * @param position where it stands in the march, the first zero
      * @param pressure this tier's, which the counts are scaled by
      * @param every every tier's, which the attempt is chosen by
-     * @param last whether it is the last before the finale, whose last point stands in its last {@code approachColumns}
+     * @param last whether it is the last before the finale: its last point stands in its last {@code approachColumns},
+     *     and nothing hostile in it stands within the finale's watch
      * @param stream its own stream; only derived from
      */
     void biome(
@@ -236,10 +243,11 @@ final class Placement {
             }
         }
 
-        /** Holes: off the way in, off every point and off each other; never in a house. */
+        /** Holes: off the way in, off every point and off each other; never in a house, nor in the finale's watch. */
         private void nests(int[] creatures, Randomness rng) {
             Scatter scatter = scatter(rng, 0f).keepingOffRock(rules.rockMargin());
             keepOffEntries(scatter, entryKeepOff(rules.nestKeepOff()));
+            keepOffTheWatch(scatter, 0f);
             for (Placed point : points) {
                 scatter.reserve(point.x(), point.y(), rules.pointKeepOff());
             }
@@ -269,10 +277,12 @@ final class Placement {
             float spread = rules.packApart() / 2f;
             Scatter anchoring = scatter(rng, 0f);
             keepOffEntries(anchoring, position == 0 ? rules.startKeepOff() : rules.nestKeepOff());
+            keepOffTheWatch(anchoring, spread);
             Scatter members = scatter(rng, 0f);
             if (position == 0) {
                 keepOffEntries(members, rules.startKeepOff());
             }
+            keepOffTheWatch(members, 0f);
             for (int i = 0; i < creatures.length; i++) {
                 if (!(def.roster().get(i) instanceof Roster.Loose loose)) {
                     continue;
@@ -451,6 +461,13 @@ final class Placement {
             }
         }
 
+        /** The last biome's: keeps a scatter out of the finale's watch, and {@code more} past it. */
+        private void keepOffTheWatch(Scatter scatter, float more) {
+            if (last) {
+                scatter.reserve(hold.x(), hold.y(), hold.watch() + more);
+            }
+        }
+
         private void keepOffNests(Scatter scatter) {
             for (Placed nest : nests) {
                 scatter.reserve(nest.x(), nest.y(), rules.pickupKeepOff());
@@ -517,6 +534,9 @@ final class Placement {
             case Placed.Barrel _ -> config.pickup(PickupKind.BARREL).radius();
             case Placed.Boulder _ -> config.obstacle().radius();
             case Placed.Rabbit _ -> config.pickup(PickupKind.RABBIT).radius();
+            case Placed.Hold _ -> config.controlPoint().radius();
+            case Placed.Turret _ -> config.turret().radius();
+            case Placed.Mine _ -> config.mine().radius();
         };
     }
 

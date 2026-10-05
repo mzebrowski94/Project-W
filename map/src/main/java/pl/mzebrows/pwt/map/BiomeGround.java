@@ -4,9 +4,9 @@ import java.util.List;
 
 /**
  * The ground of one kind of biome: its width, its regions, and the coats laid over its base - houses, then
- * patches in order, then crags, then outcrops. Rock always wins over a patch, and a pass's apron and a house's
- * inside keep base ground only. How much of each coat is a density, never a count - but for houses, which are
- * places rather than texture.
+ * patches in order, then crags, then outcrops - after any fixed {@code pieces} of rock. Rock always wins over a
+ * patch, and a pass's apron and a house's inside keep base ground only. How much of each coat is a density, never
+ * a count - but for houses, which are places rather than texture.
  *
  * <p>Not {@code Ground}: {@code GroundDef} already names what standing on a terrain costs.
  *
@@ -15,6 +15,8 @@ import java.util.List;
  * @param regions how many regions it is cut into, at least one: every region lies inside one biome (G0062)
  * @param base the ground everything else is laid over
  * @param fallback what neighbour ground is when there is no other biome's base to take
+ * @param pieces fixed rock, rects of tiles offset from the biome's {@link Strip#anchor}, laid before every coat - a
+ *     finale's set piece (G0064); empty for every dealt biome, whose rock is its coats
  */
 public record BiomeGround(
         int widthMin,
@@ -25,7 +27,8 @@ public record BiomeGround(
         Houses houses,
         List<Patch> patches,
         Crags crags,
-        Outcrops outcrops) {
+        Outcrops outcrops,
+        List<TileRect> pieces) {
 
     public BiomeGround {
         if (widthMin < 1 || widthMax < widthMin) {
@@ -40,5 +43,6 @@ public record BiomeGround(
                     "a biome's base and fallback are ground, were " + base + " and " + fallback);
         }
         patches = List.copyOf(patches);
+        pieces = List.copyOf(pieces);
     }
 }

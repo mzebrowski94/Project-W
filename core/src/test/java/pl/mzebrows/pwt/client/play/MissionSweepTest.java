@@ -17,11 +17,11 @@ import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
 /**
- * Many missions, each held to every rule {@link MissionFaults} checks - its strip's and placement's (G0068) - on
- * every tier: the tier never moves the ground (G0065), but it moves how much there is to place. 64 seeds on every
- * verify; {@code PWT_SWEEP=1} runs 2000 and prints a summary and a few codes that deal each biome first. A failure
- * lists every failing mission by its code. In {@code core}, beside {@link MissionCode}, so a seed is named by the code
- * that plays it.
+ * Many missions, each held to every rule {@link MissionFaults} checks - its strip's, placement's (G0068) and its
+ * finale's (G0064) - on every tier: the tier never moves the ground (G0065), but it moves how much there is to place.
+ * 64 seeds on every verify; {@code PWT_SWEEP=1} runs 2000 and prints a summary and a few seeds that deal each biome
+ * first, each as its medium and its hard code - the hard one to measure the field on. A failure lists every failing
+ * mission by its code. In {@code core}, beside {@link MissionCode}, so a seed is named by the code that plays it.
  */
 class MissionSweepTest {
 
@@ -86,7 +86,7 @@ class MissionSweepTest {
             }
             List<String> first = codes.get(mission.order().getFirst());
             if (first.size() < CODES) {
-                first.add(new MissionCode(TierKind.MEDIUM, seed).toString());
+                first.add(new MissionCode(TierKind.MEDIUM, seed) + "|" + new MissionCode(TierKind.HARD, seed));
             }
         }
 

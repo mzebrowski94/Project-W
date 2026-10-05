@@ -1550,6 +1550,7 @@ public final class AlphaWorlds {
                 new SimConfig.SwarmConfig(100, 100),
                 SimConfig.defaults().mission(),
                 SimConfig.defaults().biomes(),
+                SimConfig.defaults().finales(),
                 SimConfig.defaults().door(),
                 new SimConfig.MedkitConfig(0),
                 new SimConfig.CrateConfig(CRATE_FEWEST, CRATE_MOST));

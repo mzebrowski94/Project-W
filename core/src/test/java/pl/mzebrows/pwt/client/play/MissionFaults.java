@@ -9,11 +9,13 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.PlacementRules;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.def.Wave;
 import pl.mzebrows.pwt.sim.scenario.Mission;
 import pl.mzebrows.pwt.sim.scenario.Placed;
 
 /**
- * What a built mission may never show - its strip's faults ({@link StripFaults}) and placement's (G0068) - each
+ * What a built mission may never show - its strip's faults ({@link StripFaults}), placement's (G0068) and its
+ * finale's (G0064) - each
  * check a list of faults, empty when it holds, so the sweep reports every seed and every fault at once. Distances
  * are crow-flies, the measure placement keeps them by; a distance from a way in is from the nearest point of it.
  */
@@ -34,6 +36,55 @@ final class MissionFaults {
         faults.addAll(nests(mission, config.mission().placement()));
         faults.addAll(bands(mission, config));
         faults.addAll(crates(mission, config));
+        faults.addAll(finale(mission));
+        return faults;
+    }
+
+    /**
+     * The finale's set piece where it can be played (G0064): everything it stands, and every tile of every mouth a wave
+     * comes from, on open ground reached from the start - and nothing hostile of the last biome inside its watch, so
+     * holding its post never waits on a hole or a sleeper behind the ridge.
+     */
+    static List<String> finale(Mission mission) {
+        TileMap map = mission.laid().map();
+        TileRect start = start(mission);
+        boolean[] reached = Maps.reachableFrom(map, start.col(), start.row());
+        int finale = mission.order().size();
+        List<String> faults = new ArrayList<>();
+        Placed.Hold hold = null;
+        for (Placed placed : mission.placed()) {
+            if (placed.biome() != finale) {
+                continue;
+            }
+            if (placed instanceof Placed.Hold point) {
+                hold = point;
+            }
+            int col = map.colAt(placed.x());
+            int row = map.rowAt(placed.y());
+            if (!map.inBounds(col, row) || !reached[row * map.cols() + col]) {
+                faults.add("the finale's " + placed + " is not on open ground reached from the start");
+            }
+        }
+        if (hold == null) {
+            faults.add("the finale has no point that holds afterwards");
+            return faults;
+        }
+        for (Wave wave : mission.finale().waves()) {
+            TileRect mouth = wave.where();
+            for (int row = mouth.row(); row < mouth.endRow(); row++) {
+                for (int col = mouth.col(); col < mouth.endCol(); col++) {
+                    if (!map.inBounds(col, row) || !reached[row * map.cols() + col]) {
+                        faults.add("the finale's mouth " + mouth + " is shut at (" + col + "," + row + ")");
+                    }
+                }
+            }
+        }
+        for (Placed placed : mission.placed()) {
+            boolean hostile = placed instanceof Placed.Nest || placed instanceof Placed.Loose;
+            if (hostile && placed.biome() == finale - 1 && between(placed, hold) <= hold.watch()) {
+                faults.add(placed + " is " + (int) between(placed, hold) + " from the finale's post, inside its watch");
+            }
+        }
         return faults;
     }
 
@@ -184,14 +235,15 @@ final class MissionFaults {
         return faults;
     }
 
-    /** Every crate a house did not take within {@code pointReach} of a point of its biome. */
+    /** Every crate a house did not take within {@code pointReach} of a point of its biome; a finale's is laid. */
     static List<String> crates(Mission mission, SimConfig config) {
         TileMap map = mission.laid().map();
         List<String> faults = new ArrayList<>();
         for (Placed crate : mission.placed()) {
             if (!(crate instanceof Placed.Pickup pickup)
                     || !config.pickup(pickup.kind()).armoury().crate()
-                    || inAHouse(mission, map.colAt(crate.x()), map.rowAt(crate.y()))) {
+                    || inAHouse(mission, map.colAt(crate.x()), map.rowAt(crate.y()))
+                    || crate.biome() == mission.order().size()) {
                 continue;
             }
             float nearest = Float.MAX_VALUE;

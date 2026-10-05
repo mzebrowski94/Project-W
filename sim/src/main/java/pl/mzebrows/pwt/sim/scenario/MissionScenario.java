@@ -8,13 +8,18 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Waves;
+import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.Wave;
 
 /**
  * A mission on one tier (G0065): the config's seed is the mission seed, and the {@link Mission} it builds is what
- * stands on the field - the biomes dealt into a strip, each populated by rules (G0068). Not in the menu registry:
- * reached by its code, as {@code mission <tier>}.
+ * stands on the field - the biomes dealt into a strip, each populated by rules (G0068), and the finale's set piece
+ * (G0064). Won by holding the finale's post alone. Not in the menu registry: reached by its code, as {@code mission
+ * <tier>}.
  *
  * <p>Holds the last mission its map was built for, so populating that world does not build it twice; a world
  * built for another seed builds its own.
@@ -41,7 +46,7 @@ final class MissionScenario implements Scenario {
 
     @Override
     public String description() {
-        return "Four biomes dealt from the mission seed, each populated by rules, on "
+        return "Four biomes dealt from the mission seed, each populated by rules, and a finale to hold, on "
                 + tier.name().toLowerCase(Locale.ROOT) + ".";
     }
 
@@ -67,9 +72,10 @@ final class MissionScenario implements Scenario {
     }
 
     /**
-     * Points first and then nests, which are ground rather than things on it, then a shut door in every doorway of
-     * every house and gatehouse (G0069); then the squad on the start; then everything else in the order placement
-     * put it down.
+     * Points first - the finale's, which holds afterwards, among them - and then nests, which are ground rather than
+     * things on it, then a shut door in every doorway of every house and gatehouse (G0069); then the squad on the
+     * start; then everything else in the order it was put down; then the finale's waves, held back until its post is
+     * taken, and the one objective: hold it (G0064).
      */
     @Override
     public void populate(Simulation simulation) {
@@ -80,6 +86,11 @@ final class MissionScenario implements Scenario {
         for (Placed placed : mission.placed()) {
             if (placed instanceof Placed.Point) {
                 simulation.spawnControlPoint(placed.x(), placed.y());
+            } else if (placed instanceof Placed.Hold hold) {
+                simulation
+                        .spawnControlPoint(hold.x(), hold.y())
+                        .getComponent(ControlPoint.class)
+                        .holdAfterwards(hold.watch());
             }
         }
         for (Placed placed : mission.placed()) {
@@ -95,13 +106,20 @@ final class MissionScenario implements Scenario {
         deployPlayerSide(simulation);
         for (Placed placed : mission.placed()) {
             switch (placed) {
-                case Placed.Point _, Placed.Nest _ -> {}
+                case Placed.Point _, Placed.Hold _, Placed.Nest _ -> {}
                 case Placed.Loose loose -> simulation.spawnUnit(loose.strain(), loose.x(), loose.y());
                 case Placed.Pickup pickup -> simulation.spawnPickup(pickup.kind(), pickup.x(), pickup.y());
                 case Placed.Barrel barrel -> simulation.spawnBarrel(barrel.x(), barrel.y());
                 case Placed.Boulder boulder -> simulation.spawnObstacle(boulder.x(), boulder.y());
                 case Placed.Rabbit rabbit -> simulation.spawnRabbit(rabbit.x(), rabbit.y());
+                case Placed.Turret turret -> simulation.spawnTurret(turret.x(), turret.y());
+                case Placed.Mine mine -> simulation.spawnMine(mine.x(), mine.y());
             }
         }
+        Waves waves = simulation.waves().holdBack();
+        for (Wave wave : mission.finale().waves()) {
+            waves.add(wave);
+        }
+        simulation.level().require(Objective.HOLD_POINT);
     }
 }

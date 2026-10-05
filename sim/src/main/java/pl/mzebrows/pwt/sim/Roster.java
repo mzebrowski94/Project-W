@@ -21,7 +21,15 @@ public sealed interface Roster {
 
     /** How many: drawn between the fewest and the most, then scaled by the tier and the ramp, rounded once. */
     default int count(Randomness rng, MissionConfig.Pressure pressure) {
-        return pressure.scale(min() + rng.nextInt(max() - min() + 1));
+        return count(min(), max(), rng, pressure);
+    }
+
+    /**
+     * How many of a range the swarm deals: drawn between the fewest and the most, then scaled once. The one place a
+     * creature count is drawn - a roster line's, and a finale's wave's (G0064).
+     */
+    static int count(int min, int max, Randomness rng, MissionConfig.Pressure pressure) {
+        return pressure.scale(min + rng.nextInt(max - min + 1));
     }
 
     /** Creatures put down unaware, in packs round anchors (G0068). */

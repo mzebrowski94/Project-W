@@ -87,6 +87,13 @@ class ConfigBinderTest {
 
     record Changes(List<Change> changes) {}
 
+    /** A plain record in a list, read by its arguments alone, as a finale's turrets and mouths are. */
+    record Spot(String name, int dx, int dy) {}
+
+    record Spots(List<Spot> spots, List<Change> changes) {}
+
+    record Placed(Spot at) {}
+
     @Test
     void readsATypeThroughTheConversionItIsGivenRatherThanAsABlock() {
         ConfigBinder.Bound<Tinted> bound = ConfigBinder.bind(
@@ -214,6 +221,32 @@ class ConfigBinderTest {
     }
 
     @Test
+    void readsAListOfPlainRecordsByTheirArgumentsAlone() {
+        Spots spots = strict(Spots.class, "test.spots=nw -14 -13; se 12 8\ntest.changes=reset");
+
+        assertThat(spots.spots()).containsExactly(new Spot("nw", -14, -13), new Spot("se", 12, 8));
+    }
+
+    @Test
+    void readsARecordGivenAValueAtItsOwnKeyAsItsArgumentsOnOneLine() {
+        assertThat(strict(Placed.class, "test.at=post 0 -3").at()).isEqualTo(new Spot("post", 0, -3));
+    }
+
+    @Test
+    void readsAListOfRecordsTheFileSaysNothingAboutAsEmpty() {
+        Spots spots = strict(Spots.class, "test.changes=reset");
+
+        assertThat(spots.spots()).isEmpty();
+    }
+
+    @Test
+    void refusesAPlainRecordGivenTheWrongNumberOfArguments() {
+        assertThatThrownBy(() -> strict(Spots.class, "test.spots=nw -14\ntest.changes=reset"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("spot takes 3 argument(s)");
+    }
+
+    @Test
     void reportsAKeyGivenTwiceRatherThanLettingTheLastOneWinQuietly() {
         ConfigBinder.Bound<Gait> bound =
                 ConfigBinder.bind(Gait.class, "test", "test.enabled=true\ntest.speed=2\ntest.speed=3\n", text(""));
@@ -309,7 +342,8 @@ class ConfigBinderTest {
                                 new Patch.Rect(PatchGround.neighbour(), 0.035f, 4, 6),
                                 new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
                         Crags.off(),
-                        new Outcrops(0.015f, 2, 4, 1, 2, 0.3f)));
+                        new Outcrops(0.015f, 2, 4, 1, 2, 0.3f),
+                        List.of()));
     }
 
     @Test

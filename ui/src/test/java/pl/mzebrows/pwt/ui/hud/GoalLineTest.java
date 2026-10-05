@@ -25,10 +25,7 @@ class GoalLineTest {
         assertThat(line.second()).isEqualTo(4);
     }
 
-    /**
-     * A mission's points are not its objective, but the goal line leads through them (missions stage 7): a level
-     * naming no objective that has points counts them while any is left, then says nothing.
-     */
+    /** A level naming no objective that has points counts them while any is left, then says nothing. */
     @Test
     void leadsThroughThePointsOfALevelThatNamesNoObjective() {
         Readout readout = new Readout();
@@ -46,6 +43,32 @@ class GoalLineTest {
         readout.pointsTotal = 0;
         readout.pointsTaken = 0;
         assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.NONE);
+    }
+
+    /**
+     * A mission is won by holding its finale's post alone, and there is no post until its ground is taken (G0064):
+     * the line leads through every point, the finale's among them, while the waves are held back - then the hold.
+     */
+    @Test
+    void leadsThroughThePointsToAPostThatIsNotStoodYet() {
+        Readout readout = requiring(Objective.HOLD_POINT);
+        readout.pointsTaken = 7;
+        readout.pointsTotal = 12;
+        readout.wavesTotal = 12;
+
+        assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.CAPTURE_POINTS);
+        readout.pointsTaken = 9;
+        readout.wavesArmed = true;
+        assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.HOLD_POINT);
+    }
+
+    @Test
+    void holdsAPostWhoseWavesRunFromTheStartWhateverPointsAreLeft() {
+        Readout readout = requiring(Objective.HOLD_POINT);
+        readout.pointsTotal = 2;
+        readout.wavesArmed = true;
+
+        assertThat(GoalLine.resolve(readout)).isEqualTo(Goal.HOLD_POINT);
     }
 
     @Test

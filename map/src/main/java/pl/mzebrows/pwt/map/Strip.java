@@ -207,6 +207,15 @@ public final class Strip {
         return new Laid(strip.map.build(), rects, strip.houses, strip.entries, strip.apron);
     }
 
+    /**
+     * The tile a biome's fixed layout is measured from - a finale's set piece, every position of it an offset from
+     * here (G0064): its middle column, rounded west, and its middle row. Asked of a finale's rect, it is (197, 15) on
+     * the Adventures' ground. The one place it is worked out.
+     */
+    public static TileRect anchor(TileRect biome) {
+        return TileRect.ofTile(biome.col() + (biome.width() - 1) / 2, biome.row() + biome.height() / 2);
+    }
+
     private static int ridgeWidth(StripRules rules, boolean gatehouse) {
         return gatehouse ? rules.houses().gatehouseRidge() : rules.ridgeWidth();
     }

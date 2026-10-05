@@ -3,9 +3,10 @@ package pl.mzebrows.pwt.map;
 import java.util.List;
 
 /**
- * The five first biomes and a bare finale, written out as {@code biomes.properties} and {@code finales.properties}
- * will hold them, for this module's tests until {@code sim} reads the tables. Houses: the quarry 1-2, "a quarry
- * with a base in it", the rest 0-1 so the sweep proves a house survives every coat (missions ticket 12).
+ * The five first biomes and the redoubt's ground, written out as {@code biomes.properties} and {@code
+ * finales.properties} hold them, as this module's own fixtures: {@code map} cannot read the tables. Houses: the
+ * quarry 1-2, "a quarry with a base in it", the rest 0-1 so the sweep proves a house survives every coat (missions
+ * ticket 12).
  */
 record TestBiome(String name, BiomeGround ground) {
 
@@ -20,7 +21,8 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     Crags.off(),
-                    new Outcrops(0.006f, 1, 2, 1, 1, 0f)));
+                    new Outcrops(0.006f, 1, 2, 1, 1, 0f),
+                    List.of()));
 
     static final TestBiome QUARRY = new TestBiome(
             "quarry",
@@ -33,7 +35,8 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(1, 2),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     Crags.off(),
-                    new Outcrops(0.10f, 4, 9, 2, 3, 0.7f)));
+                    new Outcrops(0.10f, 4, 9, 2, 3, 0.7f),
+                    List.of()));
 
     static final TestBiome BRAKE = new TestBiome(
             "brake",
@@ -48,7 +51,8 @@ record TestBiome(String name, BiomeGround ground) {
                             new Patch.Rect(PatchGround.of(Terrain.ORGANIC), 0.035f, 4, 6),
                             new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
                     Crags.off(),
-                    new Outcrops(0.015f, 2, 4, 1, 2, 0.3f)));
+                    new Outcrops(0.015f, 2, 4, 1, 2, 0.3f),
+                    List.of()));
 
     static final TestBiome ANTHILL = new TestBiome(
             "anthill",
@@ -61,7 +65,8 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     new Crags(0.05f, 4),
-                    Outcrops.off()));
+                    Outcrops.off(),
+                    List.of()));
 
     static final TestBiome BADLANDS = new TestBiome(
             "badlands",
@@ -74,15 +79,29 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     new Crags(0.13f, 4),
-                    new Outcrops(0.02f, 2, 4, 1, 2, 0.3f)));
+                    new Outcrops(0.02f, 2, 4, 1, 2, 0.3f),
+                    List.of()));
 
     static final List<TestBiome> FIVE = List.of(PLAIN, QUARRY, BRAKE, ANTHILL, BADLANDS);
 
-    /** The redoubt's ground without its pieces: a fixed width, no dealt coats. */
+    /** The redoubt's ground: a fixed width, no dealt coats, its rock four fixed pieces round the anchor. */
     static final TestBiome REDOUBT = new TestBiome(
             "redoubt",
             new BiomeGround(
-                    34, 34, 3, Terrain.DUST, Terrain.ASH, Houses.off(), List.of(), Crags.off(), Outcrops.off()));
+                    34,
+                    34,
+                    3,
+                    Terrain.DUST,
+                    Terrain.ASH,
+                    Houses.off(),
+                    List.of(),
+                    Crags.off(),
+                    Outcrops.off(),
+                    List.of(
+                            new TileRect(-9, -3, 2, 3),
+                            new TileRect(8, 1, 2, 3),
+                            new TileRect(-1, -10, 3, 1),
+                            new TileRect(0, 9, 3, 1))));
 
     /** How much of the biome its rock coats take together. */
     float rock() {

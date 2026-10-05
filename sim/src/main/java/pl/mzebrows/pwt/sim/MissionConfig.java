@@ -55,6 +55,14 @@ public record MissionConfig(
     }
 
     /**
+     * How hard the swarm presses on this tier in the finale's waves: the tier's count and no ramp (G0064). A finale
+     * is the same fight however long the march to it was.
+     */
+    public Pressure finale(TierKind tier) {
+        return new Pressure(tiers.of(tier).enemyPercent(), WHOLE);
+    }
+
+    /**
      * How every tier presses on the biome at this position: what a biome's placement must find room for, so one seed
      * stands its points in the same places on every tier (G0068).
      */

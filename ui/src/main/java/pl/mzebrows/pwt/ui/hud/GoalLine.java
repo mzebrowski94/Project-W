@@ -4,8 +4,9 @@ import pl.mzebrows.pwt.sim.def.Objective;
 
 /**
  * The top bar's second line - the one that is always current: the first objective the level still
- * wants, or that it has everything it wants. A level that names no objective but has control points - a mission
- * before its finale - leads through them instead, and says nothing once they are all taken.
+ * wants, or that it has everything it wants. A level that names no objective but has control points leads through
+ * them instead, and says nothing once they are all taken; so does one whose post is not stood yet, its waves still
+ * held back - a mission's march, through its points to its finale's, and then the hold (G0064).
  *
  * <p>Objectives are recomputed every tick rather than latched ({@code Level}), so before the level is won
  * the line may go back from completed to a goal when a new wave walks onto a cleared field. That is the
@@ -58,11 +59,18 @@ public final class GoalLine {
             return Goal.REGROUP;
         }
         if (readout.objectivesRequired == 0) {
-            // A mission's points are not its objective, but the line leads through them while any is left.
+            // Points that are not an objective are still the way on: the line leads through them while any is left.
             return readout.pointsTaken < readout.pointsTotal ? Goal.CAPTURE_POINTS : Goal.NONE;
         }
         if (readout.complete()) {
             return Goal.COMPLETE;
+        }
+        if (readout.requires(Objective.HOLD_POINT)
+                && !readout.wavesArmed
+                && readout.pointsTaken < readout.pointsTotal) {
+            // No post until its ground is taken, and its waves wait for it: a mission's march leads through its
+            // points - the finale's among them - to the ground it is then told to hold (G0064).
+            return Goal.CAPTURE_POINTS;
         }
         for (Objective objective : ORDER) {
             if (readout.requires(objective) && !readout.met(objective)) {

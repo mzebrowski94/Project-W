@@ -4,8 +4,9 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
- * One thing a mission's placement put down (G0068), where, and in which biome. What a {@code Mission} plans and its
- * scenario spawns, so the sweep holds exactly what is spawned to the rules.
+ * One thing a mission's placement put down (G0068) or its finale's set piece stands (G0064), where, and in which
+ * biome - the finale's position being the march's length. What a {@code Mission} plans and its scenario spawns, so
+ * the sweep holds exactly what is spawned to the rules.
  */
 public sealed interface Placed {
 
@@ -15,7 +16,7 @@ public sealed interface Placed {
     /** Where it stands, in world units. */
     float y();
 
-    /** The position in the march of the biome it was put down in, the first zero. */
+    /** The position in the march of the biome it was put down in, the first zero; the finale's after the last. */
     int biome();
 
     /** A control point: the goal line leads east through them. */
@@ -38,4 +39,16 @@ public sealed interface Placed {
 
     /** A rabbit, food that runs. */
     record Rabbit(float x, float y, int biome) implements Placed {}
+
+    /**
+     * A finale's point that holds afterwards (G0061): taking it puts the post down and lets the waves go, and
+     * holding it means nothing hostile within {@code watch}, in world units.
+     */
+    record Hold(float x, float y, float watch, int biome) implements Placed {}
+
+    /** A gun on a mount, a finale's. */
+    record Turret(float x, float y, int biome) implements Placed {}
+
+    /** A mine, a finale's, which only the other side sets off. */
+    record Mine(float x, float y, int biome) implements Placed {}
 }

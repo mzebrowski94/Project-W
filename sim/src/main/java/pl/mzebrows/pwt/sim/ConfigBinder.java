@@ -35,9 +35,10 @@ import pl.mzebrows.pwt.sim.def.Defs;
  *   <li>a {@code List<Integer>} as whole numbers separated by commas;
  *   <li>an enum as its constant's name in lower case, and a {@code @Nullable} one as {@code none} for
  *       nothing;
- *   <li>a nested record as a block of keys under its own name - and a block the file says nothing
- *       about at all, of a record that has a static {@code off()}, {@code none()} or {@code clear()},
- *       as that: "zero means off" for whole abilities, so a strain that does not leap needs no leap
+ *   <li>a nested record as a block of keys under its own name - or, for a record that cannot be off, given a value
+ *       at its own key and no block under it, as its arguments on one line, one word each: {@code post=0 0} - and a
+ *       block the file says nothing about at all, of a record that has a static {@code off()}, {@code none()} or
+ *       {@code clear()}, as that: "zero means off" for whole abilities, so a strain that does not leap needs no leap
  *       block;
  *   <li>a {@link Defs} table as one block per kind, named by the kind in lower case;
  *   <li>a sealed interface of records as the record's name and then its arguments, one word each - or,
@@ -45,6 +46,10 @@ import pl.mzebrows.pwt.sim.def.Defs;
  *       nothing}, {@code count men_per_crate side 1};
  *   <li>a {@code List} of such records separated by {@code ;}: {@code count men_per_crate side 1; count
  *       squad_headroom side 2};
+ *   <li>a {@code List} of a plain record the same way, its arguments alone, one word each: {@code -5 -5; 5 -5},
+ *       {@code nw -14 -13 4 4};
+ *   <li>a {@code List} of records the file says nothing about at all as empty - "zero means off" for a list, as
+ *       for a block: a biome with no fixed rock needs no {@code pieces} line;
  *   <li>a {@link PatchGround} as {@code neighbour} or a terrain's name: {@code rect neighbour 0.04 4 6};
  *   <li>{@link Chances} as one key per {@link AiChance} plus {@code longestGap}, each taken from the
  *       shared block {@value #SHARED_CHANCES} when a strain's own block does not name it.
@@ -204,7 +209,7 @@ public final class ConfigBinder {
             return leaf(key, type, nullable);
         }
         if (raw.isRecord()) {
-            return record(key, raw);
+            return onOneLine(key, raw) ? leaf(key, type, nullable) : record(key, raw);
         }
         if (raw == Defs.class) {
             return table(key, (ParameterizedType) type);
@@ -214,6 +219,9 @@ public final class ConfigBinder {
         }
         if (raw == List.class && !isReadableList(type)) {
             throw new IllegalArgumentException("no reading for " + type + " at " + key);
+        }
+        if (raw == List.class && listOfRecords(type) && !values.containsKey(key) && !fallback.containsKey(key)) {
+            return List.of();
         }
         return leaf(key, type, nullable);
     }
@@ -330,6 +338,10 @@ public final class ConfigBinder {
                 for (String part : text.split(",", -1)) {
                     items.add(Integer.parseInt(part.strip()));
                 }
+            } else if (element.isRecord()) {
+                for (String part : text.split(";", -1)) {
+                    items.add(fromWords(element, part.strip()));
+                }
             } else {
                 for (String part : text.split(";", -1)) {
                     items.add(sealed(element, part.strip()));
@@ -355,6 +367,9 @@ public final class ConfigBinder {
         if (type.isInterface() && type.isSealed()) {
             return sealed(type, text);
         }
+        if (type.isRecord()) {
+            return fromWords(type, text);
+        }
         throw new IllegalArgumentException("no reading for " + type.getSimpleName());
     }
 
@@ -367,34 +382,38 @@ public final class ConfigBinder {
         String name = space < 0 ? text : text.substring(0, space);
         String argument = space < 0 ? "" : text.substring(space + 1).strip();
         for (Class<?> permitted : type.getPermittedSubclasses()) {
-            if (!permitted.getSimpleName().toLowerCase(Locale.ROOT).equals(name)) {
-                continue;
-            }
-            RecordComponent[] components = permitted.getRecordComponents();
-            String[] words = argument.isEmpty()
-                    ? new String[0]
-                    : components.length == 1 ? new String[] {argument} : argument.split("\\s+");
-            if (words.length != components.length) {
-                throw new IllegalArgumentException(name + " takes " + components.length + " argument(s)");
-            }
-            Class<?>[] types = new Class<?>[components.length];
-            @Nullable Object[] arguments = new Object[components.length];
-            for (int i = 0; i < components.length; i++) {
-                types[i] = components[i].getType();
-                arguments[i] = convert(
-                        words[i],
-                        components[i].getGenericType(),
-                        components[i].getAnnotatedType().isAnnotationPresent(Nullable.class));
-            }
-            try {
-                Constructor<?> constructor = permitted.getDeclaredConstructor(types);
-                constructor.setAccessible(true);
-                return constructor.newInstance(arguments);
-            } catch (ReflectiveOperationException e) {
-                throw new IllegalArgumentException(reason(e), e);
+            if (permitted.getSimpleName().toLowerCase(Locale.ROOT).equals(name)) {
+                return fromWords(permitted, argument);
             }
         }
         throw new IllegalArgumentException("no " + type.getSimpleName() + " called " + name);
+    }
+
+    /** A record built from words, one per argument - or the whole text, for a record of one argument. */
+    private static Object fromWords(Class<?> type, String text) {
+        RecordComponent[] components = type.getRecordComponents();
+        String[] words =
+                text.isEmpty() ? new String[0] : components.length == 1 ? new String[] {text} : text.split("\\s+");
+        if (words.length != components.length) {
+            throw new IllegalArgumentException(
+                    type.getSimpleName().toLowerCase(Locale.ROOT) + " takes " + components.length + " argument(s)");
+        }
+        Class<?>[] types = new Class<?>[components.length];
+        @Nullable Object[] arguments = new Object[components.length];
+        for (int i = 0; i < components.length; i++) {
+            types[i] = components[i].getType();
+            arguments[i] = convert(
+                    words[i],
+                    components[i].getGenericType(),
+                    components[i].getAnnotatedType().isAnnotationPresent(Nullable.class));
+        }
+        try {
+            Constructor<?> constructor = type.getDeclaredConstructor(types);
+            constructor.setAccessible(true);
+            return constructor.newInstance(arguments);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalArgumentException(reason(e), e);
+        }
     }
 
     /** What a constructor objected to, rather than the reflection that carried the objection. */
@@ -450,6 +469,17 @@ public final class ConfigBinder {
         }
     }
 
+    /**
+     * Whether a record is written on one line at its own key rather than as a block under it. Never one that can be
+     * off: a look's colour variants share their key with its colour, and are off where it has no block.
+     */
+    private boolean onOneLine(String key, Class<?> type) {
+        return offFactory(type) == null
+                && (values.containsKey(key) || fallback.containsKey(key))
+                && !mentions(values, key)
+                && !mentions(fallback, key);
+    }
+
     /** Whether any key lies under this block. */
     private static boolean mentions(SortedMap<String, String> map, String key) {
         String prefix = key + ".";
@@ -466,13 +496,19 @@ public final class ConfigBinder {
         return constant.name().toLowerCase(Locale.ROOT);
     }
 
-    /** A list of whole numbers, or of the records of one sealed interface. */
+    /** A list of whole numbers, of the records of one sealed interface, or of one record. */
     private static boolean isReadableList(Type type) {
+        return type instanceof ParameterizedType list
+                && (rawClass(list.getActualTypeArguments()[0]) == Integer.class || listOfRecords(type));
+    }
+
+    /** A list of the records of one sealed interface, or of one record. */
+    private static boolean listOfRecords(Type type) {
         if (!(type instanceof ParameterizedType list)) {
             return false;
         }
         Class<?> element = rawClass(list.getActualTypeArguments()[0]);
-        return element == Integer.class || (element.isInterface() && element.isSealed());
+        return element.isRecord() || (element.isInterface() && element.isSealed());
     }
 
     private static Class<?> rawClass(Type type) {

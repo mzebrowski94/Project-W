@@ -5,10 +5,17 @@
 **Trigger.** Adding or changing a finale kind; laying anything in a finale from rules or the `Rng`; proposing a
 second objective for a finale, a rally ground of its own, or waves that change with the march.
 
-**Enforced by.** Nothing yet - finales are not built. When they are: the seed sweep (every layout spot standable
-and reachable, the last biome's nests outside the watch, a point in its last `approachColumns`), a `FinaleDef` test
-that a wave naming a missing mouth is refused, and a populate test that the flip mirrors north-south only.
-Missions ticket 04 holds the shape and both blocks.
+**Enforced by.** `MissionSweepTest.holdsEveryMissionToTheRules` (`MissionFaults.finale`: everything the set piece
+stands and every mouth's tiles open and reached from the start, nothing hostile of the last biome inside the watch;
+`MissionFaults.bands`: a point in the last `approachColumns`), `FinaleDefTest.refusesAWaveFromAMouthItsHoldLacks`,
+`.flipsEveryPositionNorthSouthAndNoneEastWest`, `MissionTest.flipsTheFinaleNorthSouthAndNeverEastWest`,
+`.endsOnTheSameFinaleOnEveryTierButForHowManyComeInAWave`, `.holdsTheFinalesWavesBackAndAsksOnlyThatItsPostBeHeld`,
+`StripTest.laysAFinalesPiecesAsRockAtTheirOffsetsFromItsAnchor`. Missions ticket 04 holds the shape and both blocks.
+
+**Amended 2026-10-05 (missions stage 8).** The last biome keeps **everything hostile** outside the watch - packs as
+well as nests: a sleeper left inside it behind the ridge blocks the win where the player cannot see why. And the goal
+line across a mission leads through the points, the finale's among them, while its waves are held back, then says the
+hold - no goal word of its own.
 
 **Constraint.**
 
@@ -22,6 +29,8 @@ Missions ticket 04 holds the shape and both blocks.
 - **Waves count like a roster.** A wave's count is a range drawn through `Roster.count` with the tier's
   `enemyPercent` and no ramp (G0063); its timing, its strain and its mouth are the block's. A lair's contents are
   positions and are never scaled by count.
+- **Nothing hostile of the last biome stands inside the watch** - no nest and no pack - so holding the post is
+  the finale's fight and never a search behind the ridge.
 - **The rally point stays G0055's.** One of the last biome's points stands in its last `approachColumns` columns, so
   the finale's approach is ground the side can take. A finale has no rally ground of its own, and its held point
   never becomes the rally point (G0061).

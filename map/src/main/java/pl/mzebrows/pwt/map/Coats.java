@@ -128,6 +128,7 @@ final class Coats {
             throw new IllegalArgumentException("the apron is one flag per tile of the map");
         }
         Coats coats = new Coats(map, area, ground, west, east, apron, ends, rules.clearance());
+        coats.pieces();
         List<House> houses = coats.houses(rules.houses(), biome.derive(HOUSES));
         coats.patches(biome.derive(PATCHES));
         coats.crags(biome.derive(CRAGS));
@@ -138,6 +139,25 @@ final class Coats {
             }
         }
         return houses;
+    }
+
+    // ---- pieces ----
+
+    /** The biome's fixed rock, each rect at its offset from the anchor - a finale's set piece (G0064). */
+    private void pieces() {
+        TileRect anchor = Strip.anchor(area);
+        for (TileRect piece : ground.pieces()) {
+            for (int row = piece.row(); row < piece.endRow(); row++) {
+                for (int col = piece.col(); col < piece.endCol(); col++) {
+                    int c = anchor.col() + col;
+                    int r = anchor.row() + row;
+                    if (!area.contains(c, r)) {
+                        throw new IllegalArgumentException("a piece " + piece + " reaches past " + area);
+                    }
+                    tiles[r * cols + c] = Terrain.ROCK;
+                }
+            }
+        }
     }
 
     // ---- houses ----

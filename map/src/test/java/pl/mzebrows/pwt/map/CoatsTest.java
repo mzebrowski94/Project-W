@@ -202,7 +202,8 @@ class CoatsTest {
                 houses,
                 g.patches(),
                 g.crags(),
-                g.outcrops());
+                g.outcrops(),
+                g.pieces());
     }
 
     private static BiomeGround withPatches(BiomeGround g, List<Patch> patches) {
@@ -215,7 +216,8 @@ class CoatsTest {
                 g.houses(),
                 patches,
                 g.crags(),
-                g.outcrops());
+                g.outcrops(),
+                g.pieces());
     }
 
     private static BiomeGround withCrags(BiomeGround g, Crags crags) {
@@ -228,7 +230,8 @@ class CoatsTest {
                 g.houses(),
                 g.patches(),
                 crags,
-                g.outcrops());
+                g.outcrops(),
+                g.pieces());
     }
 
     private static BiomeGround withOutcrops(BiomeGround g, Outcrops outcrops) {
@@ -241,7 +244,8 @@ class CoatsTest {
                 g.houses(),
                 g.patches(),
                 g.crags(),
-                outcrops);
+                outcrops,
+                g.pieces());
     }
 
     /** The median within {@link #MEDIAN_OFF} of the density, and no seed under {@link #FLOOR} of it. */

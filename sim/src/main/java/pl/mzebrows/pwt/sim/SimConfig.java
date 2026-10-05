@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
+import pl.mzebrows.pwt.sim.def.FinaleKind;
 import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -88,6 +89,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * @param mission what a mission is built with that no other level has: its tiers and its ramp (G0063), its strip
  *     and where its biomes' contents go (G0068)
  * @param biomes every biome a mission deals from, by kind (missions ticket 03)
+ * @param finales every finale a mission ends on, by kind (G0064)
  * @param door what stands in every doorway (G0069)
  * @param medkit how many medkits a level that asks for them scatters (G0053)
  * @param crate how many pickups a crate is dealt (G0056)
@@ -132,6 +134,7 @@ public record SimConfig(
         SwarmConfig swarm,
         MissionConfig mission,
         @ConfigKey("biome") Defs<BiomeKind, BiomeDef> biomes,
+        @ConfigKey("finale") Defs<FinaleKind, FinaleDef> finales,
         DoorConfig door,
         MedkitConfig medkit,
         CrateConfig crate) {
