@@ -34,6 +34,17 @@ public final class PageHints {
         return strings.format("ui.hint.back", button);
     }
 
+    /**
+     * Under a pad's code picker: the template {@code key} given the confirm and back buttons, in the pad's
+     * own words - {@code A: JOIN  B: DONE  D-PAD: EDIT}.
+     */
+    public String picker(InputModality modality, String key) {
+        return strings.format(
+                key,
+                PadLabels.of(controls.ui().pad().confirm(), modality.playStation()),
+                PadLabels.of(controls.ui().pad().back(), modality.playStation()));
+    }
+
     /** The button that opens the pause menu. */
     public String menuButton(InputModality modality) {
         return modality.padHints()

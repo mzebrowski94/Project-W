@@ -38,3 +38,5 @@ changed. Git carries the diff.
   piece ends up, measuring the field. Slow: a hard code to play took a throwaway test (the sweep printed medium codes
   only - it now prints both), and seeing the pieces laid took the throwaway ASCII dump again. *Finale* written,
   *Tests* and *Reviewer checks* gain the finale.
+- 2026-10-05, stage 9 (DAILY MISSIONS page) - stale: *Look at it* pointed at a page still to come; it names ENTER CODE
+  beside `--mission`, which stays as a dev tool.

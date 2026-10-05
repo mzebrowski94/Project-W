@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.ui.page;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.def.TierKind;
 
 class MenuTreeTest {
 
@@ -69,5 +70,42 @@ class MenuTreeTest {
             assertThat(page.entries().get(i).intent()).isEqualTo(UiIntent.choose(i));
             assertThat(page.entries().get(i).id()).isEqualTo(rows[i].name().toLowerCase(java.util.Locale.ROOT));
         }
+    }
+
+    /** Missions are the loop: the main page opens on them, the Adventures one press down (ticket 08). */
+    @Test
+    void opensTheMainPageOnDailyMissions() {
+        MenuPage page = MenuTree.page(UiPage.MAIN);
+
+        assertThat(page.entries().get(page.defaultSelection()).intent()).isEqualTo(UiIntent.open(UiPage.MISSIONS));
+        assertThat(page.defaultSelection()).isZero();
+    }
+
+    @Test
+    void offersTheThreeDailiesThenRandomThenACodeWithMediumSelected() {
+        for (UiPage missions : new UiPage[] {UiPage.MISSIONS, UiPage.HOST_MISSIONS}) {
+            MenuPage page = MenuTree.page(missions);
+
+            assertThat(page.entries())
+                    .extracting(MenuEntry::id)
+                    .containsExactly("easy", "medium", "hard", "random", "code", "back");
+            assertThat(page.entries().get(page.defaultSelection()).id()).isEqualTo("medium");
+            TierKind[] tiers = TierKind.values();
+            for (int i = 0; i < tiers.length; i++) {
+                assertThat(page.entries().get(i).intent()).isEqualTo(UiIntent.mission(i));
+            }
+            assertThat(page.entries().get(MenuTree.MISSION_RANDOM).id()).isEqualTo("random");
+            assertThat(page.entries().get(MenuTree.MISSION_CODE).id()).isEqualTo("code");
+        }
+    }
+
+    /** COPY CODE is a mission's alone; RETRY stays selected either way (G0066). */
+    @Test
+    void offersCopyCodeOnAMissionsResultOnly() {
+        MenuPage mission = MenuTree.result(true);
+
+        assertThat(mission.entries()).extracting(MenuEntry::id).containsExactly("retry", "copy", "menu");
+        assertThat(mission.entries().get(mission.defaultSelection()).intent()).isEqualTo(UiIntent.RESTART);
+        assertThat(MenuTree.result(false)).isEqualTo(MenuTree.page(UiPage.RESULT));
     }
 }

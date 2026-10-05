@@ -46,26 +46,28 @@ keeps in shot).
 | 1.4 OPTIONS / 1.4.1 placeholder | `UI:main/options` | Settings live in `assets/*.properties` in the alpha. |
 | 1.5 EXIT | `UI:main/exit` | A confirm modal, so Back pressed once too often never quits. |
 | - | `UI:connecting`, `UI:play`, `UI:play/pause`, `UI:play/leave`, `UI:play/result` | Not in the outline; needed to get into and out of a level. `UI:play/result` was the blocked `UI:play/game-over` until G0066. |
-| - | `UI:main/missions` | Planned 2026-10-05 (missions ticket 08, G0065); its section 3 row arrives with its `UiPage` constant, since `UiSpecTest` holds the table to the enum. |
+| - | `UI:main/missions`, `UI:main/online/host/missions` | Built 2026-10-05 (missions ticket 08, G0065, stage 9): the day's three missions, RANDOM and ENTER CODE; the same page opened from HOST GAME hosts what it starts. |
 
 ## 3. Page and modal table
 
 | Id | Kind | Parent | Code anchor | Implemented by | Status |
 |---|---|---|---|---|---|
 | `UI:main` | page | - | `UiPage.MAIN` | `MenuScreen` | built |
+| `UI:main/missions` | page | `UI:main` | `UiPage.MISSIONS` | `MenuScreen` + `MissionChoices` + `CodePicker` | built; ✓ and the best time planned (missions stage 10) |
 | `UI:main/campaign` | page | `UI:main` | `UiPage.CAMPAIGN` | `MenuScreen` + scenario list | built |
 | `UI:main/proving-ground` | page | `UI:main` | `UiPage.PROVING_GROUND` | `MenuScreen` + `ProvingRows` + preview | built |
 | `UI:main/proving-ground/upgrades` | page | `UI:main/proving-ground` | `UiPage.PROVING_UPGRADES` | `MenuScreen` + `ProvingRows` | built |
 | `UI:main/online` | page | `UI:main` | `UiPage.ONLINE` | `MenuScreen` | built |
 | `UI:main/online/join` | page | `UI:main/online` | `UiPage.ONLINE_JOIN` | `JoinScreen` / `JoinChoices` / `CodePicker` | built (on the canvas; the pad's letter picker) |
 | `UI:main/online/host` | page | `UI:main/online` | `UiPage.ONLINE_HOST` | `MenuScreen` + scenario list | built |
+| `UI:main/online/host/missions` | page | `UI:main/online/host` | `UiPage.HOST_MISSIONS` | `MenuScreen` + `MissionChoices` + `CodePicker` | built - `UI:main/missions` in host mode |
 | `UI:main/options` | page | `UI:main` | `UiPage.OPTIONS` | `MenuScreen` | placeholder |
 | `UI:main/exit` | modal | `UI:main` | `UiPage.EXIT_CONFIRM` | `MenuScreen` | built |
 | `UI:connecting` | page | - | `UiPage.CONNECTING` | `PlayMenus` (no world yet) | built (a panel on the canvas; Back leaves) |
 | `UI:play` | state | - | `UiPage.PLAY` | `ScenarioScreen` | built |
 | `UI:play/pause` | modal | `UI:play` | `UiPage.PAUSE` | `PlayMenus` | built |
 | `UI:play/leave` | modal | `UI:play/pause` | `UiPage.LEAVE_CONFIRM` | `PlayMenus` | built |
-| `UI:play/result` | modal | `UI:play` | `UiPage.RESULT` | `PlayMenus` | built (G0066); a mission's rows and COPY CODE planned |
+| `UI:play/result` | modal | `UI:play` | `UiPage.RESULT` | `PlayMenus` | built (G0066); NEW BEST planned (missions stage 10) |
 
 `MenuScreen` stays the one libGDX `Screen` for every `UI:main...` page: pages are a stack inside it,
 not a `Screen` each. Swapping `Screen`s disposes GL resources (`GameContext.queueScreen`), and a page
@@ -86,7 +88,7 @@ back here - an online game that ended under him) when there is one; that is toda
 
 | Entry | Label | Intent | Enabled |
 |---|---|---|---|
-| `missions` | `ui.main.missions = DAILY MISSIONS` | `OPEN(MISSIONS)` | always - **planned**, first entry |
+| `missions` | `ui.main.missions = DAILY MISSIONS` | `OPEN(MISSIONS)` | always - first entry, default selection |
 | `campaign` | `ui.main.campaign = CAMPAIGN` | `OPEN(CAMPAIGN)` | always |
 | `proving-ground` | `ui.main.provingGround = PROVING GROUND` | `OPEN(PROVING_GROUND)` | always |
 | `online` | `ui.main.online = PLAY ONLINE` | `OPEN(ONLINE)` | always |
@@ -94,8 +96,8 @@ back here - an online game that ended under him) when there is one; that is toda
 | `exit` | `ui.main.exit = EXIT` | `OPEN(EXIT_CONFIRM)` | always |
 
 Back on this page moves the selection to `exit`; it does not open the confirm and never quits.
-Default selection: `campaign`, or the entry selected when the player last left this page. Once
-`missions` is built it is the default instead: missions are the game's loop, the Adventures one press down.
+Default selection: `missions`, or the entry selected when the player last left this page - missions are the
+game's loop, the Adventures one press down.
 
 ### `UI:main/campaign`
 
@@ -106,8 +108,7 @@ jump and confirm, as `MenuScreen` does today. The list scrolls when it is taller
 the selection drives the scroll. Selection logic is `MenuSelection`, which already exists and is tested -
 reuse it, do not write a second list cursor.
 
-Default selection: the scenario last played this session, else the first - so launch to a level is two
-confirms (MAIN's default selection is `campaign`). A one-confirm CONTINUE is plan Q25.
+Default selection: the scenario last played this session, else the first. A one-confirm CONTINUE is plan Q25.
 
 Do not build: a separate campaign registry beside `Scenarios.ALL` (alpha-phase.md: "that list is the
 whole registry"); a level-select map; progression or unlocks (open questions on progression).
@@ -155,36 +156,44 @@ the left panel into the right one, and the pointer selects in either. Label `ui.
 rank in roman, `ui.provingGround.rankNone = -` for none, stepping from none to the upgrade's most and
 round again. Neither panel scrolls - the catalogue fits the canvas.
 
-### `UI:main/missions` - planned
+### `UI:main/missions`
 
-Missions ticket 08 (G0065, G0066). Title `ui.missions.title = DAILY MISSIONS {date} UTC`, the date ISO
-(`2026-10-05`), read when the page opens (`LocalDate.now(clock)`, a UTC `Clock`, in `core`); a daily keeps
-the day it was started on. Entries, top to bottom:
+Missions ticket 08 (G0065, G0066), built in missions stage 9. Title `ui.missions.title = DAILY MISSIONS {date}
+UTC`, the date ISO (`2026-10-05`), read when the page opens (`MissionChoices.open`, a UTC `Clock`, in `core`); a
+daily keeps the day it was started on. What each entry starts is `MissionChoices` (tested); the page is
+`MenuScreen`'s. Entries, top to bottom:
 
 | Entry | Label | Value | Intent |
 |---|---|---|---|
-| `easy`, `medium`, `hard` | `ui.tier.*` - one per `TierKind`, in order | `✓` and the best time `m:ss.t` once that day's daily is won, else nothing | `MISSION(daily)` - starts at once |
+| `easy`, `medium`, `hard` | `ui.tier.*` - one per `TierKind`, in order | `✓` and the best time `m:ss.t` once that day's daily is won, else nothing - **planned**, missions stage 10 | `MISSION(daily)` - starts at once |
 | `random` | `ui.missions.random = RANDOM` | a choice row `< MEDIUM >`, `ui.tier.*`, left and right step it; remembered for the run, first MEDIUM | `MISSION(random)` - a seed drawn uniformly from [0, 25^6) with the client's own randomness, a new one each confirm |
-| `code` | `ui.missions.code = ENTER CODE` | the code line | opens the picker, or starts what is typed |
+| `code` | `ui.missions.code = ENTER CODE` | the code line in a code's shape, `MJGF-6___` - the dash there from the start, never typed | opens the picker, or starts what is typed |
 | `back` | `ui.common.back = BACK` | | `BACK` |
 
 Under the list, the selected daily's code: `ui.missions.selectedCode = CODE {code}` - the only place a code
 is shown before it is played. Default selection: the entry last played from here, else `medium`.
 
 **ENTER CODE** works as join's code line: a keyboard (and the Steam keyboard, STEAM+X) types into it at any
-time, forgiven as the room code is - any case, spaces and dashes ignored - and `Ctrl+V` pastes. With a pad,
+time, forgiven as the room code is - any case, spaces and dashes ignored - into a code's eight places, no more,
+and `Ctrl+V` pastes a whole code in the line's place. **The first place takes only a tier's letter**: any
+other, typed or starting a paste, is refused as it arrives and the line says `ui.missions.badTier = A MISSION CODE
+STARTS WITH {E/M/H}` - the tiers, never the check (`MissionChoices`). With a pad,
 confirm opens an eight-slot `CodePicker`, a dash drawn after the fourth: **slot one cycles only the tiers'
 letters** (an alphabet per slot), the rest the room code's alphabet. It opens on the last code played this
 run, else today's MEDIUM daily, so a code close to a known one is a few presses. Beside it, the tier's name
-once the first slot holds one. Confirm on a code that fails its check shows `ui.missions.badCode = NOT A
-MISSION CODE` and starts nothing; the picker stays open on what was entered, with no hint which character
+once the first slot holds one; under the page `ui.missions.pickHint = {confirm}: START  {back}: DONE  D-PAD:
+EDIT`. Typing a character, or a paste, moves the selection to the code line and closes the picker. Confirm on a
+code that fails its check shows `ui.missions.badCode = NOT A MISSION CODE` on the second line under the list and
+starts nothing; the picker stays open on what was entered, with no hint which character
 is wrong - showing the right check would let a typo through (G0065).
 
 **A code is a daily when it equals one of the three dailies of the day the page opened**, however it
-arrived - typed, pasted or picked. What is remembered of it is missions ticket 09.
+arrived - typed, pasted or picked; a machine that joined one, or never opened the page, looks on its own day and
+the day either side (`MissionCode.dailyNear`). What is remembered of it is missions ticket 09.
 
-From `UI:main/online/host` the same page opens **in host mode**: every start hosts instead
-(`HOST(mission)`), as the host list is the campaign list with a different confirm.
+From `UI:main/online/host` the same page opens **in host mode** as `UI:main/online/host/missions`: the same
+entries, and every start hosts instead (`HOST_MISSION`), as the host list is the campaign list with a different
+confirm. Its own id, so leaving a hosted mission comes back to it and Back climbs to HOST GAME.
 
 Do not build: a daily's code on every row; a countdown to the next day; "this mission on another tier"
 (deferred, G0066); a hint at which character of a refused code is wrong; correcting a refused code (G0065).
@@ -218,10 +227,10 @@ password.
 
 ### `UI:main/online/host`
 
-Title `ui.host.title = HOST GAME`. **Planned** (missions 08): a first entry `ui.host.missions = DAILY
-MISSIONS` opening `UI:main/missions` in host mode; a mission travels as `SessionSetup("mission <tier>",
-seed)` (G0065). Then the same scenario list widget as `UI:main/campaign` with a
-different confirm: `HOST(scenarioIndex)`, which calls `OnlineSession.host(...)` and goes straight to
+Title `ui.host.title = HOST GAME`. A first entry `ui.host.missions = DAILY MISSIONS` opening
+`UI:main/online/host/missions`, the missions page in host mode; a mission travels as `SessionSetup("mission
+<tier>", seed)` (G0065). Then the same scenario list widget as `UI:main/campaign` with a different confirm - its
+number keys still jump to the scenarios: `HOST(scenarioIndex)`, which calls `OnlineSession.host(...)` and goes straight to
 `UI:play`. The host is playing from the first frame; friends drop in (G0038). The room code reaches
 the player as a terminal dispatch when hosting starts (plan section 8.3) and on `UI:play/pause`, not
 only in the dev overlay (retires the alpha-phase scaffolding row about the room code).
@@ -282,9 +291,9 @@ at `controls.ui.nav.scrollLinesPerSecond` - with a scrollbar down its right edge
 
 Under the entries, one line per local player with his tally in words - `P1  KILL COUNT: 1234  MISSION
 GOALS: 2  UNITS HEALED: 2` - the labelled form the panel has no room for, and whole numbers.
-**Planned** (missions 08): in a mission, one more line, `ui.pause.mission = {code}  {tier}  TIME {m:ss.t}` -
-the only place the code and the time are seen during play; the HUD's mission line says
-`ui.hud.missionDaily = DAILY {tier}` or `{tier}`, never the code or the time.
+In a mission, one more line, `ui.pause.mission = {code}  {tier}  TIME {m:ss.t}` - the only place the code and
+the time are seen during play; the HUD's mission line says `ui.hud.missionDaily = DAILY {tier}` or `{tier}`, never
+the code or the time (missions stage 9).
 Online it also shows `ui.pause.room = ROOM {code}` and the addresses, from `Invitation`, while this
 machine hosts. Back = `RESUME`. The press that resumes is spent: it does not fire, act or throw on
 the first tick of play (plan 6.2, `ReleaseLatch`).
@@ -303,9 +312,8 @@ goal line pulses; after `graphic.ui.resultHoldSeconds` (3), the same for both an
 this opens over the scrim, docked as the pause menu is. Every machine shows its own. The hold is the
 world's time since the outcome (`Readout.resultDue`), so a pause holds it too; a pause menu open when it
 runs out is left alone and the result opens once it closes. A level that names no objective has no result:
-its loss is the goal line's alone. Built for every such level, the time with it; **the mission lines and
-COPY CODE are planned** (missions ticket 08) - POINTS and the code with missions (stage 7), DAILY and COPY
-CODE with the page (stage 9), NEW BEST with the record (stage 10).
+its loss is the goal line's alone. Built for every such level, the time with it; a mission's lines and COPY
+CODE built with the DAILY MISSIONS page (stage 9); **NEW BEST planned** with the record (stage 10).
 
 Title `ui.result.won = MISSION COMPLETE` or `ui.result.lost = MISSION FAILED`. Under it, on a win only and
 for every level, `ui.result.time = TIME {m:ss.t}` (`LevelTime`, the tenths cut; compared in ticks). In a
@@ -315,7 +323,7 @@ beats the remembered one; `ui.result.code = {code}  {tier}`, and `ui.result.dail
 | Entry | Label | Intent | Enabled |
 |---|---|---|---|
 | `retry` | `ui.result.retry = RETRY` | `RESTART` - the same scenario and seed | offline, or this machine is the host - default selection |
-| `copy` | `ui.result.copy = COPY CODE` | `COPY_CODE` - the code to the clipboard (libGDX `Clipboard`) | a mission only - planned |
+| `copy` | `ui.result.copy = COPY CODE` | `COPY_CODE` - the code to the clipboard (libGDX `Clipboard`) | a mission only (`MenuTree.result`) |
 | `menu` | `ui.result.menu = MENU` | `LEAVE`; as host through `UI:play/leave` | always |
 
 Back does nothing here - a lost level does not close by an accidental press. MENU returns to the page the
@@ -351,12 +359,14 @@ carried out by the screen that owns the page, through `GameContext.queueScreen` 
 | `UI:play/pause` | `OPEN(LEAVE_CONFIRM)` | `UI:play/leave` | - |
 | `UI:play/leave` | `LEAVE` | the page the level was started from, as `UI:play/result`'s MENU | `queueScreen(new MenuScreen(ctx, "", back))`; the screen's `hide()` closes the play |
 | `UI:play` | `play.ended() != null` | `UI:main` | `queueScreen(new MenuScreen(ctx, reason))` - built today |
-| `UI:main/missions` (planned) | `MISSION(m)` | `UI:play` | builds `Scenarios.mission(tier)` on the mission seed offline; in host mode `OnlineSession.host(...)` with `SessionSetup("mission <tier>", seed)` |
-| `UI:main/missions` (planned) | code refused | stay | `ui.missions.badCode`, the picker open on what was entered |
+| `UI:main/online/host` | `OPEN(HOST_MISSIONS)` | `UI:main/online/host/missions` pushed | - |
+| `UI:main/missions` | `MISSION(m)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(Scenarios.mission(tier), seed), MISSIONS))` |
+| `UI:main/online/host/missions` | `MISSION(m)` -> `HOST_MISSION(m)` | `UI:play` | `OnlineSession.host(...)` with `SessionSetup("mission <tier>", seed)`; on failure `UI:main` with the notice |
+| `UI:main/missions`, `.../host/missions` | code refused | stay | `ui.missions.badCode`, the picker open on what was entered |
 | `UI:play` | first outcome + `graphic.ui.resultHoldSeconds` | `UI:play/result` | - (derived, `UiFlow.observeResult`) |
 | `UI:play/result` | `RESTART` | `UI:play` | `play.apply(HarnessCommand.RESTART, ...)` - host or offline |
-| `UI:play/result` (planned) | `COPY_CODE` | stay | the mission code to the clipboard |
-| `UI:play/result` | `LEAVE` | the page the level was started from - `UI:main/missions` (planned), `UI:main/campaign`, `UI:main/online/host`, `UI:main/proving-ground` - with what was played selected; a joined machine `UI:main` | `queueScreen(new MenuScreen(ctx, "", back))`; as host via `UI:play/leave` |
+| `UI:play/result` | `COPY_CODE` | stay | the mission code to the clipboard |
+| `UI:play/result` | `LEAVE` | the page the level was started from - `UI:main/missions`, `UI:main/online/host/missions`, `UI:main/campaign`, `UI:main/online/host`, `UI:main/proving-ground` - with what was played selected; a joined machine `UI:main` | `queueScreen(new MenuScreen(ctx, "", back))`; as host via `UI:play/leave` |
 
 A screen never switches itself mid-frame: every `queueScreen` in this table is already the deferred
 swap (`PwtGame.queueScreen`).
@@ -372,8 +382,8 @@ buttons are named by position (ADR 0011); what the player is told to press comes
 | Confirm | `Enter`, `Space` | left click on an entry | `SOUTH` (A / Cross) | pages, modals |
 | Back | `Esc`, `Backspace` | right click | `EAST` (B / Circle) | pages, modals |
 | Jump to entry | `1`-`9` | - | - | scenario lists |
-| Paste a code (planned) | `Ctrl+V` | - | - | the code lines of `UI:main/online/join` and `UI:main/missions` |
-| Step a choice row | `A`/`D`, left/right arrows | left click on `<` or `>` | d-pad left/right, left stick | `UI:main/proving-ground`, `.../upgrades`, `UI:main/missions` (RANDOM's tier, planned) |
+| Paste a code | `Ctrl+V` | - | - | the code line of `UI:main/missions` (built); of `UI:main/online/join` (planned) |
+| Step a choice row | `A`/`D`, left/right arrows | left click on `<` or `>` | d-pad left/right, left stick | `UI:main/proving-ground`, `.../upgrades`, `UI:main/missions` (RANDOM's tier) |
 | Page tabs (future Options) | `Q` / `E` | - | `L1` / `R1` | pages with tabs |
 | Swap panels / roll call | `` ` `` | - | - | `UI:play` |
 | Pause | `Esc` | - | `START` | `UI:play` |
@@ -417,7 +427,7 @@ the look of the selection.
 
 | Id | Code anchor | Where | Shows | Status |
 |---|---|---|---|---|
-| `UI:hud/top/mission` | `HudSlot.MISSION` | top bar, left, line 1, dim | `ui.hud.planet = PLANET:` `{planet}` `ui.hud.mission = MISSION:` `{scenario name}`; the planet half hidden while `Scenario.planet()` is empty, and the line cut short of the army, which is centred on the bar's span on the same line, bright: `ui.hud.army = ARMY {on field}/{most} RES {reserve}` (G0055) | built |
+| `UI:hud/top/mission` | `HudSlot.MISSION` | top bar, left, line 1, dim | `ui.hud.planet = PLANET:` `{planet}` `ui.hud.mission = MISSION:` `{scenario name}` - a mission's `ui.hud.missionDaily = DAILY {tier}` or `{tier}`, never its code or time; the planet half hidden while `Scenario.planet()` is empty, and the line cut short of the army, which is centred on the bar's span on the same line, bright: `ui.hud.army = ARMY {on field}/{most} RES {reserve}` (G0055) | built |
 | `UI:hud/top/goal` | `HudSlot.GOAL` | top bar, left, line 2, bright | `ui.hud.goal = CURRENT GOAL:` `{goal}` - first unmet required objective, or `ui.hud.goal.complete = MISSION COMPLETED`, pulsing twice when it becomes true; over everything else `ui.hud.goal.failed = MISSION FAILED` once the level is lost (G0055); `ui.goal.REGROUP` with how many of how many are in place while a lair waits on some of the players (B.1); on a level whose post is not stood yet - its waves still held back, a mission's march - `ui.goal.CAPTURE_POINTS` over every point, the finale's among them, then `ui.goal.HOLD_POINT` once it is taken (G0064) | built |
 | `UI:hud/top/terminal` | `HudSlot.TERMINAL` | top bar, left, lines 3-4 | the last two dispatches - the battlefield's voice, narrative only, nothing the goal line or a panel shows (plan 8.3) - older dimmed, newest typing with a cursor (a high one appears at once) | built (`Terminal`, the reporters, `TopBarPainter`) |
 | `UI:hud/top/aside` | `HudSlot.ASIDE` | top bar, right: the block beside the goal, `graphic.hud.overlay.widthShare` of the view's span | what the side holds, one upgrade a row, `ui.upgrade.*` name - a personal one prefixed `P{n}` and in his colour - and its rank as pips, filled to its ranks out of its most; a last row `ui.hud.aside.more = +{n} MORE` when more is held than fits. A first answer to plan Q30; the aliens' adaptations are in it too, prefixed `ui.hud.swarm = SWARM` and written in `graphic.hud.color.swarm` (upgrades S10), as they are in the pause menu's list. The dev overlay's panel takes it while F1 steps it on | built (upgrades S5) |

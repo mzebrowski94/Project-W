@@ -72,6 +72,30 @@ class UiFlowTest {
     }
 
     @Test
+    void startsAMissionOnlyFromTheMissionsPage() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+
+        assertThat(flow.apply(UiIntent.mission(MenuTree.MISSION_RANDOM))).isEqualTo(UiEffect.NONE);
+        flow.apply(UiIntent.open(UiPage.MISSIONS));
+        assertThat(flow.apply(UiIntent.mission(MenuTree.MISSION_RANDOM)))
+                .isEqualTo(new UiEffect(UiEffect.Kind.MISSION, MenuTree.MISSION_RANDOM));
+    }
+
+    /** From HOST GAME the same page hosts what it starts, and Back climbs out to hosting. */
+    @Test
+    void hostsAMissionFromTheMissionsPageOpenedFromHosting() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+        flow.apply(UiIntent.open(UiPage.ONLINE));
+        flow.apply(UiIntent.open(UiPage.ONLINE_HOST));
+        flow.apply(UiIntent.open(UiPage.HOST_MISSIONS));
+
+        assertThat(flow.top()).isEqualTo(UiPage.HOST_MISSIONS);
+        assertThat(flow.apply(UiIntent.mission(1))).isEqualTo(new UiEffect(UiEffect.Kind.HOST_MISSION, 1));
+        flow.apply(UiIntent.BACK);
+        assertThat(flow.top()).isEqualTo(UiPage.ONLINE_HOST);
+    }
+
+    @Test
     void provesTheSetupOnlyFromTheProvingGround() {
         UiFlow flow = new UiFlow(UiPage.MAIN);
 
@@ -246,6 +270,16 @@ class UiFlowTest {
     }
 
     /** A lost level does not close on an accidental press. */
+    @Test
+    void copiesTheCodeOnlyFromTheResult() {
+        UiFlow flow = new UiFlow(UiPage.PLAY);
+
+        assertThat(flow.apply(UiIntent.COPY_CODE)).isEqualTo(UiEffect.NONE);
+        flow.observeResult(true, false);
+        assertThat(flow.apply(UiIntent.COPY_CODE)).isEqualTo(UiEffect.COPY_CODE);
+        assertThat(flow.top()).isEqualTo(UiPage.RESULT);
+    }
+
     @Test
     void ignoresBackOnTheResult() {
         UiFlow flow = resultShown(true, false);

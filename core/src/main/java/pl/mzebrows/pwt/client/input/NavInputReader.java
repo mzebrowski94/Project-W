@@ -25,7 +25,7 @@ public final class NavInputReader {
     private final GamepadSource pads;
 
     /** Letters are being typed on this page: only the arrows move, and only Esc goes back. */
-    private final boolean typing;
+    private boolean typing;
 
     private final NavRepeat[] keyRepeat = new NavRepeat[DIRECTIONS];
     private final NavRepeat[][] padRepeat = new NavRepeat[PADS][DIRECTIONS];
@@ -58,6 +58,15 @@ public final class NavInputReader {
                         bindings.nav().repeatDelaySeconds(), bindings.nav().repeatIntervalSeconds());
             }
         }
+    }
+
+    /**
+     * Whether the page now shown is one letters are typed on. One reader across pages that type and pages
+     * that do not: a second reader would not have seen the press that changed the page, and would take the
+     * button still held from it for a new one.
+     */
+    public void typing(boolean on) {
+        typing = on;
     }
 
     /**

@@ -163,8 +163,8 @@ None is written per biome; a biome joins every one by being a constant.
 
 ## 6. Look at it
 
-Hand Mateusz one of the printed codes: `./gradlew lwjgl3:run --args="--mission=<code>"` - or ENTER CODE once the
-DAILY MISSIONS page exists. He judges whether it reads as the place it was ported from.
+Hand Mateusz one of the printed codes: `./gradlew lwjgl3:run --args="--mission=<code>"`, or ENTER CODE on the
+DAILY MISSIONS page. He judges whether it reads as the place it was ported from.
 
 ## 7. Finish
 

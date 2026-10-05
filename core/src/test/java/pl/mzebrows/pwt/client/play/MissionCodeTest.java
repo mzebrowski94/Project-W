@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.client.play;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -55,6 +56,53 @@ class MissionCodeTest {
         assertThat(code.text()).hasSize(MissionCode.LENGTH);
         assertThat(code.toString()).matches("[" + RoomCode.ALPHABET + "]{4}-[" + RoomCode.ALPHABET + "]{4}");
         assertThat(code.text()).startsWith("E");
+    }
+
+    /** Every machine, every build of this code, deals the same three dailies for a date (G0065). */
+    @Test
+    void dealsTheSameDailyForADate() {
+        long day = LocalDate.of(2026, 10, 5).toEpochDay();
+
+        // Pinned: a change here moves every player's daily, and their ticks with it (G0067).
+        assertThat(MissionCode.daily(day, TierKind.MEDIUM).toString()).isEqualTo("MJGF-66MQ");
+    }
+
+    @Test
+    void dealsEachTierAndEachDayADifferentDaily() {
+        long day = LocalDate.of(2026, 10, 5).toEpochDay();
+        Set<Long> seeds = new HashSet<>();
+
+        for (TierKind tier : TierKind.values()) {
+            assertThat(MissionCode.daily(day, tier).tier()).isEqualTo(tier);
+            assertThat(seeds.add(MissionCode.daily(day, tier).seed()))
+                    .as("%s", tier)
+                    .isTrue();
+            assertThat(seeds.add(MissionCode.daily(day + 1, tier).seed()))
+                    .as("%s the next day", tier)
+                    .isTrue();
+        }
+    }
+
+    /** A joiner's day may be a neighbour of the host's: a daily is found on the day either side too. */
+    @Test
+    void findsTheDayADailyBelongsTo() {
+        LocalDate today = LocalDate.of(2026, 10, 5);
+        MissionCode yesterdays = MissionCode.daily(today.minusDays(1).toEpochDay(), TierKind.HARD);
+
+        assertThat(MissionCode.daily(today.toEpochDay(), TierKind.HARD).dailyNear(today))
+                .isEqualTo(today);
+        assertThat(yesterdays.dailyNear(today)).isEqualTo(today.minusDays(1));
+        assertThat(yesterdays.dailyNear(today.plusDays(1))).isNull();
+        assertThat(new MissionCode(TierKind.HARD, 77L).dailyNear(today)).isNull();
+    }
+
+    /** What a session plays is a mission when its scenario is one; the code is then its tier and its seed. */
+    @Test
+    void namesTheMissionASessionPlays() {
+        MissionCode code = new MissionCode(TierKind.EASY, 4_242L);
+
+        assertThat(MissionCode.of(code.scenario().name(), code.seed())).isEqualTo(code);
+        assertThat(MissionCode.of("Skirmish", 4_242L)).isNull();
     }
 
     /** A typo is refused, never played as some other mission - whichever character it lands on. */

@@ -1,7 +1,11 @@
 package pl.mzebrows.pwt.client.play;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.lan.RoomCode;
+import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
@@ -14,6 +18,9 @@ import pl.mzebrows.pwt.sim.scenario.Scenarios;
  * <p>The check is a weighted sum mod 25, with weights 1 2 3 4 6 7 8 - none divisible by 5, nor the difference
  * between any two neighbours - so every single wrong character and every swapped neighbour pair fails it. A
  * code that fails it is refused, never read as the mission it was probably meant to be.
+ *
+ * <p>A <b>daily mission</b> is a code like any other, its seed a pure function of the UTC day and the tier
+ * ({@link #daily}): every machine deals the same three, and they differ by tier.
  *
  * @param tier how hard the mission is; its letter is the first of its name
  * @param seed the mission seed, in {@code [0, SEEDS)}
@@ -34,6 +41,9 @@ public record MissionCode(TierKind tier, long seed) {
 
     private static final int HALF = LENGTH / 2;
 
+    /** How far either side of a machine's own day a daily is looked for: a joiner's day may be the host's neighbour. */
+    private static final int DAYS_EITHER_SIDE = 1;
+
     public MissionCode {
         if (seed < 0 || seed >= SEEDS) {
             throw new IllegalArgumentException("a mission seed is 0 to " + (SEEDS - 1) + ", not " + seed);
@@ -53,9 +63,75 @@ public record MissionCode(TierKind tier, long seed) {
         for (int i = 1; i <= SEED_LENGTH; i++) {
             seed = seed * BASE + RoomCode.ALPHABET.indexOf(letters.charAt(i));
         }
+        TierKind tier = tierOf(letters.charAt(0));
+        return tier == null ? null : new MissionCode(tier, seed);
+    }
+
+    /**
+     * The day's daily on this tier (G0065): the day mixed with the tier's letter, the way a stream is derived
+     * from a seed, onto a mission seed. The same on every machine and every run.
+     *
+     * @param epochDay the UTC day, as {@link LocalDate#toEpochDay()}
+     */
+    public static MissionCode daily(long epochDay, TierKind tier) {
+        return new MissionCode(
+                tier, Math.floorMod(new Rng(epochDay).derive(letter(tier)).nextLong(), SEEDS));
+    }
+
+    /**
+     * The mission a session plays, from what it names and its seed: a mission when the scenario is a tier's
+     * ({@code mission <tier>}), null for any other scenario.
+     */
+    public static @Nullable MissionCode of(String scenarioName, long seed) {
+        if (seed < 0 || seed >= SEEDS) {
+            return null;
+        }
         for (TierKind tier : TierKind.values()) {
-            if (letter(tier) == letters.charAt(0)) {
+            if (Scenarios.mission(tier).name().equals(scenarioName)) {
                 return new MissionCode(tier, seed);
+            }
+        }
+        return null;
+    }
+
+    /** The tier whose letter this is in a code, or null if no tier's. */
+    public static @Nullable TierKind tierOf(char letter) {
+        for (TierKind tier : TierKind.values()) {
+            if (letter(tier) == letter) {
+                return tier;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * What each character of a code may be, slot by slot, for a picker: the tiers' letters first, then the
+     * room code's alphabet - so a picked code is always of some tier.
+     */
+    public static List<String> alphabets() {
+        StringBuilder tiers = new StringBuilder();
+        for (TierKind tier : TierKind.values()) {
+            tiers.append(letter(tier));
+        }
+        List<String> alphabets = new ArrayList<>(LENGTH);
+        alphabets.add(tiers.toString());
+        for (int i = 1; i < LENGTH; i++) {
+            alphabets.add(RoomCode.ALPHABET);
+        }
+        return List.copyOf(alphabets);
+    }
+
+    /**
+     * The day this is the daily of, looked for on {@code around} first and then the day either side - or
+     * null if it is no daily of those. Where a daily was started, {@code around} is the day its page opened.
+     */
+    public @Nullable LocalDate dailyNear(LocalDate around) {
+        for (int i = 0; i <= 2 * DAYS_EITHER_SIDE; i++) {
+            // 0, -1, +1: the day itself before its neighbours.
+            int offset = (i + 1) / 2 * (i % 2 == 1 ? -1 : 1);
+            LocalDate day = around.plusDays(offset);
+            if (equals(daily(day.toEpochDay(), tier))) {
+                return day;
             }
         }
         return null;

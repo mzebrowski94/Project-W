@@ -6,7 +6,7 @@ package pl.mzebrows.pwt.ui.page;
  * screen carries it out and decides nothing.
  *
  * @param index the scenario a {@link Kind#START} or {@link Kind#HOST} means, the row a {@link Kind#CHOOSE}
- *     steps, else -1
+ *     steps, the missions page's entry a {@link Kind#MISSION} or {@link Kind#HOST_MISSION} plays, else -1
  */
 public record UiEffect(Kind kind, int index) {
 
@@ -28,7 +28,13 @@ public record UiEffect(Kind kind, int index) {
         /** Step one choice row of the proving ground forward. */
         CHOOSE,
         /** Fight the proving ground's setup (G0060). */
-        PROVE
+        PROVE,
+        /** Play the mission an entry of the missions page names, offline. */
+        MISSION,
+        /** Host it: the missions page was opened from HOST GAME. */
+        HOST_MISSION,
+        /** The mission's code to the clipboard. */
+        COPY_CODE
     }
 
     public static final UiEffect NONE = of(Kind.NONE);
@@ -40,6 +46,7 @@ public record UiEffect(Kind kind, int index) {
     public static final UiEffect RESTART = of(Kind.RESTART);
     public static final UiEffect LEAVE = of(Kind.LEAVE);
     public static final UiEffect PROVE = of(Kind.PROVE);
+    public static final UiEffect COPY_CODE = of(Kind.COPY_CODE);
 
     private static UiEffect of(Kind kind) {
         return new UiEffect(kind, -1);

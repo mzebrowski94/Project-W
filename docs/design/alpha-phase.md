@@ -85,7 +85,7 @@ Launch options, for more than one copy on a PC and for a mission:
 |---|---|
 | `--instance=N` | Which copy this is: its window's title and place (side by side), its connection log's name, and its pads |
 | `--pads=all\|none\|0,2` | Which pads this copy reads. Copy 0 reads all and every other copy none, because SDL hands every pad to every copy |
-| `--mission=<code>` | Starts straight into a mission by its code (G0065), `HK3X-Q7RA` or `hk3xq7ra`; a code that fails its check is refused and the menu opens. Leaving it goes to the main menu. The only way into a mission until the DAILY MISSIONS page (missions stage 9) |
+| `--mission=<code>` | Starts straight into a mission by its code (G0065), `HK3X-Q7RA` or `hk3xq7ra`; a code that fails its check is refused and the menu opens. Leaving it goes to DAILY MISSIONS. A developer's shortcut past ENTER CODE - one launch into a printed code - kept by decision in missions stage 9 |
 
 How to start two copies is in `docs/workflow.md`.
 
@@ -125,7 +125,6 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 |---|---|
 | Both Adventure levels turn the swarm's adaptations on (`Scenario.adapting`: one every 180 s, one per 3 cards taken); what ships in `upgrades.properties` leaves both off | A shipped default once a playtest has settled one. A mission already takes its tier's pace (`MissionConfig.apply`, G0063); the Adventures stay hand-laid by decision (missions ticket 10) and keep this. The schedule, the pool and the fold are real (upgrades S10) |
 | **A finale has no lair**: `FinaleDef` refuses one, so the redoubt is the only finale a mission ends on | The keep, missions stage 11+: Adventure 2's lair ported as `LairLine`s resolved into `Arrival`s, after the boss is turned to face the players (`.scratch/bugs/issues/01`) |
-| **A mission is started only by `--mission=<code>`** | The DAILY MISSIONS page and ENTER CODE, missions stage 9, which also decides whether the flag stays as a dev tool |
 | Rabbits are spawned by a scenario and never replaced | Whatever a level does about them - breeding, a population, or nothing at all. The creature is designed; where they come from is an open question in `README.md`. |
 | A body in its death throes is a frozen circle in a darker colour | The dying animation. The window is real and configured per unit kind (`*.deathThroesSeconds`); only what plays in it is missing. |
 | Two units in a clinch are two circles touching, both drawn the same | The grapple animation, which resolves into one of them dying. `Appearance.State.GRAPPLING` is the hook and is already published for both parties for the whole lock. |

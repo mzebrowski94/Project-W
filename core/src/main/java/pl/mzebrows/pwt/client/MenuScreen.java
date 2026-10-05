@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.utils.ScreenUtils;
 import java.util.ArrayList;
@@ -16,14 +17,19 @@ import pl.mzebrows.pwt.client.input.KeyHolds;
 import pl.mzebrows.pwt.client.input.KeyPresses;
 import pl.mzebrows.pwt.client.input.NavInputReader;
 import pl.mzebrows.pwt.client.input.PageControls;
+import pl.mzebrows.pwt.client.play.MissionChoices;
+import pl.mzebrows.pwt.client.play.MissionCode;
 import pl.mzebrows.pwt.client.play.OnlineSession;
 import pl.mzebrows.pwt.client.play.ScenarioSession;
+import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.scenario.ProvingSetup;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
+import pl.mzebrows.pwt.ui.nav.CodePicker;
 import pl.mzebrows.pwt.ui.nav.InputModality;
 import pl.mzebrows.pwt.ui.nav.NavInput;
 import pl.mzebrows.pwt.ui.page.MenuEntry;
@@ -44,8 +50,8 @@ import pl.mzebrows.pwt.ui.page.UiPage;
  * definition to keep in sync.
  *
  * <p>What a press does is {@link UiFlow}'s and the selection is {@link PageControls}'; this turns the
- * flow's effects into screens and draws. Launch to a level is two confirms: MAIN opens on CAMPAIGN, and
- * the campaign list on the scenario played last this run.
+ * flow's effects into screens and draws. MAIN opens on DAILY MISSIONS, and that page on MEDIUM: a daily
+ * is two confirms away (missions ticket 08). What the missions page starts is {@link MissionChoices}'.
  */
 public final class MenuScreen extends ScreenAdapter {
 
@@ -56,6 +62,9 @@ public final class MenuScreen extends ScreenAdapter {
     /** Spaces between a choice row's label and its value. */
     private static final int CHOICE_GAP = 2;
 
+    /** Lines under the missions page's list: the selected daily's code, and why a code started nothing. */
+    private static final int MISSION_FOOT = 2;
+
     private final GameContext context;
     private final UiStrings strings = UiStrings.load();
     private final List<Scenario> scenarios = Scenarios.all();
@@ -65,7 +74,17 @@ public final class MenuScreen extends ScreenAdapter {
     private final PageControls page = new PageControls();
     private final PageHints hints;
     private final MenuPainter painter;
+    /** One reader for every page: on the missions page W, A, S, D and Backspace are the code line's text. */
     private final NavInputReader reader;
+
+    private final MissionChoices missions;
+
+    /** A pad is picking the missions page's code a letter at a time; null otherwise. */
+    private @Nullable CodePicker picker;
+
+    /** A key typed a character since the last frame: the selection goes to the code line. */
+    private boolean typed;
+
     private final PageMotion motion;
     private final KeyPresses keys = keycode -> Gdx.input.isKeyJustPressed(keycode);
     private final KeyHolds held = keycode -> Gdx.input.isKeyPressed(keycode);
@@ -94,6 +113,10 @@ public final class MenuScreen extends ScreenAdapter {
 
     private UiPage shown = UiPage.PLAY;
     private int describedFor = -1;
+
+    /** The missions page's problem as last written under it. */
+    private String describedProblem = "";
+
     private Rect panel = Rect.EMPTY;
 
     public MenuScreen(GameContext context) {
@@ -117,6 +140,7 @@ public final class MenuScreen extends ScreenAdapter {
         this.painter = new MenuPainter(
                 context.hud(), graphic, context.graphicConfig().layout().metrics());
         this.reader = new NavInputReader(context.controlsConfig().ui(), context.gamepads());
+        this.missions = context.missions();
         this.motion = new PageMotion(
                 graphic.ui().motion().pageSeconds(),
                 graphic.ui().motion().pageSlide(),
@@ -135,8 +159,25 @@ public final class MenuScreen extends ScreenAdapter {
     }
 
     @Override
+    public void show() {
+        // A keyboard types into the missions page's code line at any time, as into join's (ticket 08).
+        Gdx.input.setInputProcessor(new InputAdapter() {
+            @Override
+            public boolean keyTyped(char character) {
+                if (!isMissions(flow.top())) {
+                    return false;
+                }
+                // Enter arrives here too: only a key that changed the line takes the selection to it.
+                typed |= missions.type(character);
+                return true;
+            }
+        });
+    }
+
+    @Override
     public void render(float delta) {
         ScreenLayout layout = context.hud().layout();
+        reader.typing(isMissions(flow.top()));
         reader.read(nav, delta, true, false, keys, held, layout);
         modality.update(nav);
         if (nav.any()) {
@@ -183,7 +224,7 @@ public final class MenuScreen extends ScreenAdapter {
                 page.scroll(),
                 visible,
                 foot,
-                hints.selectAndBack(modality),
+                picker == null ? hints.selectAndBack(modality) : hints.picker(modality, "ui.missions.pickHint"),
                 motion.offsetX(),
                 motion.alpha());
         if (top == UiPage.PROVING_GROUND) {
@@ -293,15 +334,26 @@ public final class MenuScreen extends ScreenAdapter {
     /** Applies this frame's presses. False when the screen is being left and should draw nothing more. */
     private boolean handle(ScreenLayout layout) {
         UiPage top = flow.top();
+        if (isMissions(top)) {
+            typeAndPaste();
+            if (picker != null) {
+                return pick(top);
+            }
+        }
         if (isScenarioList(top)) {
+            int first = listOffset(top);
             for (int i = 0; i < scenarios.size() && i < MAX_NUMBER_KEYS; i++) {
-                if (keys.justPressed(Input.Keys.NUM_1 + i) && page.jump(i)) {
-                    return carryOut(flow.apply(intentFor(top, i)));
+                if (keys.justPressed(Input.Keys.NUM_1 + i) && page.jump(first + i)) {
+                    return carryOut(flow.apply(intentFor(top, first + i)));
                 }
             }
         }
         if (isProving(top) && (nav.left || nav.right)) {
             step(top, page.index(), nav.right ? 1 : -1);
+        }
+        if (isMissions(top) && (nav.left || nav.right) && page.index() == MenuTree.MISSION_RANDOM) {
+            missions.stepRandomTier(nav.right ? 1 : -1);
+            relabelMissions();
         }
         int chosen;
         if (top == UiPage.PROVING_UPGRADES) {
@@ -326,6 +378,15 @@ public final class MenuScreen extends ScreenAdapter {
             step(top, chosen, -1);
             return true;
         }
+        if (chosen == MenuTree.MISSION_RANDOM && nav.pointerPressed && isMissions(top)) {
+            // RANDOM's confirm starts; a click on either of its arrows steps its tier instead.
+            int arrow = randomArrowUnder(nav.pointerX);
+            if (arrow != 0) {
+                missions.stepRandomTier(arrow);
+                relabelMissions();
+                return true;
+            }
+        }
         if (chosen >= 0) {
             return carryOut(flow.apply(intentFor(top, chosen)));
         }
@@ -338,7 +399,8 @@ public final class MenuScreen extends ScreenAdapter {
     private UiIntent intentFor(UiPage top, int entry) {
         return switch (top) {
             case CAMPAIGN -> UiIntent.start(entry);
-            case ONLINE_HOST -> UiIntent.host(entry);
+            case ONLINE_HOST ->
+                entry < listOffset(top) ? UiIntent.open(UiPage.HOST_MISSIONS) : UiIntent.host(entry - 1);
             case PROVING_UPGRADES -> entry < rows.upgrades().size() ? UiIntent.choose(entry) : UiIntent.BACK;
             default -> MenuTree.page(top).entries().get(entry).intent();
         };
@@ -362,6 +424,9 @@ public final class MenuScreen extends ScreenAdapter {
             case PROVE -> {
                 prove();
                 return false;
+            }
+            case MISSION, HOST_MISSION -> {
+                return mission(effect.index(), effect.kind() == UiEffect.Kind.HOST_MISSION);
             }
             default -> {
                 // Page changes are the flow's own; nothing else arises on the main menu.
@@ -400,11 +465,14 @@ public final class MenuScreen extends ScreenAdapter {
         int defaultSelection = 0;
         if (isScenarioList(top)) {
             head.add(strings.get(top == UiPage.CAMPAIGN ? "ui.campaign.title" : "ui.host.title"));
+            if (top == UiPage.ONLINE_HOST) {
+                labels.add(strings.get("ui.host.missions"));
+            }
             for (Scenario scenario : scenarios) {
                 labels.add(scenario.name());
             }
             // Hosting opens where the campaign was: the scenario played last is the likeliest to host.
-            defaultSelection = context.selections().get(UiPage.CAMPAIGN, 0, scenarios.size());
+            defaultSelection = listOffset(top) + context.selections().get(UiPage.CAMPAIGN, 0, scenarios.size());
         } else if (top == UiPage.PROVING_UPGRADES) {
             head.add(strings.get("ui.provingUpgrades.title"));
             swarmHead.clear();
@@ -412,7 +480,12 @@ public final class MenuScreen extends ScreenAdapter {
             relabel(top);
         } else {
             MenuPage content = MenuTree.page(top);
-            if (!content.titleKey().isEmpty()) {
+            if (isMissions(top)) {
+                // The date is read as the page opens, and a daily started from it keeps that day (G0065).
+                missions.open();
+                picker = null;
+                head.add(strings.format(content.titleKey(), missions.day()));
+            } else if (!content.titleKey().isEmpty()) {
                 head.add(strings.get(content.titleKey()));
             }
             if (!content.bodyKey().isEmpty()) {
@@ -423,6 +496,8 @@ public final class MenuScreen extends ScreenAdapter {
             }
             if (top == UiPage.PROVING_GROUND) {
                 relabel(top);
+            } else if (isMissions(top)) {
+                relabelMissions();
             } else {
                 for (MenuEntry entry : content.entries()) {
                     labels.add(strings.get(entry.labelKey()));
@@ -572,7 +647,12 @@ public final class MenuScreen extends ScreenAdapter {
      * blank if it needs one, so the panel keeps its height as the selection moves.
      */
     private void describe() {
-        if (!isScenarioList(flow.top())) {
+        UiPage top = flow.top();
+        if (isMissions(top)) {
+            describeMission();
+            return;
+        }
+        if (!isScenarioList(top)) {
             foot.clear();
             return;
         }
@@ -582,7 +662,9 @@ public final class MenuScreen extends ScreenAdapter {
         }
         describedFor = selected;
         foot.clear();
-        painter.addWrapped(foot, scenarios.get(selected).description(), DESCRIPTION_LINES);
+        if (selected >= listOffset(top)) {
+            painter.addWrapped(foot, scenarios.get(selected - listOffset(top)).description(), DESCRIPTION_LINES);
+        }
         while (foot.size() < DESCRIPTION_LINES) {
             foot.add("");
         }
@@ -590,6 +672,179 @@ public final class MenuScreen extends ScreenAdapter {
 
     private static boolean isScenarioList(UiPage page) {
         return page == UiPage.CAMPAIGN || page == UiPage.ONLINE_HOST;
+    }
+
+    /** Entries before a scenario list's scenarios: hosting's DAILY MISSIONS. */
+    private static int listOffset(UiPage page) {
+        return page == UiPage.ONLINE_HOST ? 1 : 0;
+    }
+
+    private static boolean isMissions(UiPage page) {
+        return page == UiPage.MISSIONS || page == UiPage.HOST_MISSIONS;
+    }
+
+    /**
+     * Under the missions page's list, always two lines so the panel keeps its height: the selected daily's
+     * code - the one place a code shows before it is played - and why a code started nothing.
+     */
+    private void describeMission() {
+        int selected = page.index();
+        String problem = missions.problem();
+        if (selected == describedFor && problem.equals(describedProblem)) {
+            return;
+        }
+        describedFor = selected;
+        describedProblem = problem;
+        foot.clear();
+        TierKind[] tiers = TierKind.values();
+        foot.add(
+                selected < tiers.length
+                        ? strings.format("ui.missions.selectedCode", missions.daily(tiers[selected]))
+                        : "");
+        foot.add(problem.isEmpty() ? "" : strings.format(problem, MissionChoices.tierLetters()));
+        while (foot.size() < MISSION_FOOT) {
+            foot.add("");
+        }
+    }
+
+    /**
+     * The missions page's entries: RANDOM as a choice row of tiers, the code line as what is typed - or, while
+     * a pad picks it, the picker with a dash between the halves and the tier its first slot names.
+     */
+    private void relabelMissions() {
+        List<MenuEntry> entries = MenuTree.page(flow.top()).entries();
+        labels.clear();
+        labelWidth = 0;
+        for (MenuEntry entry : entries) {
+            labelWidth = Math.max(labelWidth, strings.get(entry.labelKey()).length());
+        }
+        for (int i = 0; i < entries.size(); i++) {
+            String label = strings.get(entries.get(i).labelKey());
+            if (i == MenuTree.MISSION_RANDOM) {
+                labels.add(choice(label, tierName(missions.randomTier())));
+            } else if (i == MenuTree.MISSION_CODE) {
+                labels.add(pad(label) + codeLine());
+            } else {
+                labels.add(label);
+            }
+        }
+    }
+
+    private String codeLine() {
+        CodePicker picking = picker;
+        if (picking == null) {
+            return missions.line();
+        }
+        TierKind tier = MissionCode.tierOf(picking.code().charAt(0));
+        return picking.shown(MissionCode.LENGTH / 2) + (tier == null ? "" : "  " + tierName(tier));
+    }
+
+    private String tierName(TierKind tier) {
+        return strings.get("ui.tier." + tier);
+    }
+
+    /** What a key typed or {@code Ctrl+V} pasted since the last frame: the selection goes to the code line. */
+    private void typeAndPaste() {
+        boolean control = held.held(Input.Keys.CONTROL_LEFT) || held.held(Input.Keys.CONTROL_RIGHT);
+        if (control && keys.justPressed(Input.Keys.V)) {
+            String clipboard = Gdx.app.getClipboard().getContents();
+            if (clipboard != null) {
+                missions.paste(clipboard);
+                typed = true;
+            }
+        }
+        if (typed) {
+            typed = false;
+            picker = null;
+            page.jump(MenuTree.MISSION_CODE);
+        }
+        relabelMissions();
+    }
+
+    /**
+     * The pad's code picker: left and right choose the slot, up and down the letter, confirm starts the code
+     * or says it is none and stays open on it, back closes it. False when the screen is being left.
+     */
+    private boolean pick(UiPage top) {
+        CodePicker picking = picker;
+        if (picking == null) {
+            return true;
+        }
+        if (nav.left) {
+            picking.left();
+        }
+        if (nav.right) {
+            picking.right();
+        }
+        if (nav.up) {
+            picking.up();
+        }
+        if (nav.down) {
+            picking.down();
+        }
+        if (nav.back || nav.pointerSecondary) {
+            picker = null;
+        } else if (nav.confirm) {
+            missions.replaceTyped(picking.code());
+            MissionCode code = missions.choose();
+            if (code != null) {
+                return !play(code, top == UiPage.HOST_MISSIONS);
+            }
+        }
+        relabelMissions();
+        return true;
+    }
+
+    /** Which arrow of RANDOM's {@code < TIER >} the pointer is on: -1, +1, or 0 for neither. */
+    private int randomArrowUnder(int pointerX) {
+        if (onBackArrow(pointerX, panel)) {
+            return -1;
+        }
+        MenuLayout menu = painter.layout();
+        int value = tierName(missions.randomTier()).length();
+        int arrow = menu.lineX(panel) + (labelWidth + CHOICE_GAP + 2 + value) * menu.advance();
+        return pointerX >= arrow && pointerX < arrow + 2 * menu.advance() ? 1 : 0;
+    }
+
+    /**
+     * Plays what an entry of the missions page names: a daily, a fresh RANDOM, or the code line - which with
+     * nothing typed, or on a pad, opens the picker instead. False when the screen is being left.
+     */
+    private boolean mission(int entry, boolean hosted) {
+        TierKind[] tiers = TierKind.values();
+        MissionCode code;
+        if (entry < tiers.length) {
+            code = missions.daily(tiers[entry]);
+        } else if (entry == MenuTree.MISSION_RANDOM) {
+            code = missions.random();
+        } else if (missions.typed().isBlank() || modality.padHints()) {
+            picker = missions.openPicker();
+            relabelMissions();
+            return true;
+        } else {
+            code = missions.choose();
+            if (code == null) {
+                return true;
+            }
+        }
+        return !play(code, hosted);
+    }
+
+    /**
+     * Starts a mission - offline, or hosted for friends to drop into as the scenario {@code mission <tier>}
+     * on the mission seed (G0065) - coming back to this page with it selected. False if it could not host.
+     */
+    private boolean play(MissionCode code, boolean hosted) {
+        UiPage from = flow.top();
+        missions.played(code);
+        context.selections().set(from, page.index());
+        SimConfig config = context.simConfig().withSeed(code.seed());
+        if (hosted) {
+            return host(code.scenario(), config, from);
+        }
+        Log.info("Starting mission " + code);
+        context.queueScreen(new ScenarioScreen(context, new ScenarioSession(code.scenario(), config), from));
+        return true;
     }
 
     private void start(int index) {
@@ -605,32 +860,38 @@ public final class MenuScreen extends ScreenAdapter {
      * friends drop in (G0038). If it cannot, the player stays here and is told why.
      */
     private boolean host(int index) {
-        Scenario scenario = scenarios.get(index);
         context.selections().set(UiPage.CAMPAIGN, index);
-        context.selections().set(UiPage.ONLINE_HOST, index);
+        context.selections().set(UiPage.ONLINE_HOST, listOffset(UiPage.ONLINE_HOST) + index);
+        return host(scenarios.get(index), context.simConfig(), UiPage.ONLINE_HOST);
+    }
+
+    /** Hosts {@code scenario} on {@code config}, coming back to {@code back}; if it cannot, MAIN says why. */
+    private boolean host(Scenario scenario, SimConfig config, UiPage back) {
         try {
             context.queueScreen(new ScenarioScreen(
                     context,
                     OnlineSession.host(
                             scenario,
-                            context.simConfig(),
+                            config,
                             context.worldConfigText(),
                             context.netConfig(),
                             context.launchOptions(),
                             LocalMachineId.load()),
-                    UiPage.ONLINE_HOST));
+                    back));
             return true;
         } catch (RuntimeException e) {
             Log.error("Could not host " + scenario.name(), e);
             notice = "Could not host " + scenario.name() + ": " + e.getMessage();
-            flow.apply(UiIntent.BACK);
-            flow.apply(UiIntent.BACK);
+            while (flow.top() != UiPage.MAIN) {
+                flow.apply(UiIntent.BACK);
+            }
             return false;
         }
     }
 
     @Override
     public void hide() {
+        Gdx.input.setInputProcessor(null);
         context.hud().showSystemCursor();
         closePreview();
     }

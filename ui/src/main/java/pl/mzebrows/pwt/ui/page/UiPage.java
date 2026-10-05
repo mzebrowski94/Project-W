@@ -5,12 +5,16 @@ import org.jspecify.annotations.Nullable;
 /** Every page, modal and state the player can be in, by its {@code UI:} id in the specification. */
 public enum UiPage {
     MAIN("UI:main", Kind.PAGE, null),
+    /** The day's three missions, RANDOM and ENTER CODE (G0065); starting from it plays offline. */
+    MISSIONS("UI:main/missions", Kind.PAGE, MAIN),
     CAMPAIGN("UI:main/campaign", Kind.PAGE, MAIN),
     PROVING_GROUND("UI:main/proving-ground", Kind.PAGE, MAIN),
     PROVING_UPGRADES("UI:main/proving-ground/upgrades", Kind.PAGE, PROVING_GROUND),
     ONLINE("UI:main/online", Kind.PAGE, MAIN),
     ONLINE_JOIN("UI:main/online/join", Kind.PAGE, ONLINE),
     ONLINE_HOST("UI:main/online/host", Kind.PAGE, ONLINE),
+    /** {@link #MISSIONS} opened from hosting: the same page, and everything it starts is hosted. */
+    HOST_MISSIONS("UI:main/online/host/missions", Kind.PAGE, ONLINE_HOST),
     OPTIONS("UI:main/options", Kind.PAGE, MAIN),
     EXIT_CONFIRM("UI:main/exit", Kind.MODAL, MAIN),
     CONNECTING("UI:connecting", Kind.PAGE, null),

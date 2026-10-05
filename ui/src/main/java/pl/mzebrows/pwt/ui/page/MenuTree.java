@@ -1,8 +1,11 @@
 package pl.mzebrows.pwt.ui.page;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import pl.mzebrows.pwt.sim.def.TierKind;
 
 /**
  * Every fixed page's entries, as {@code docs/ui/menu_layout_agent.md} section 4 lists them. The scenario
@@ -11,7 +14,16 @@ import java.util.Map;
  */
 public final class MenuTree {
 
+    /** The missions page's RANDOM, after one daily per tier in {@link TierKind} order. */
+    public static final int MISSION_RANDOM = TierKind.values().length;
+
+    /** The missions page's ENTER CODE, after RANDOM. */
+    public static final int MISSION_CODE = MISSION_RANDOM + 1;
+
     private static final Map<UiPage, MenuPage> PAGES = new EnumMap<>(UiPage.class);
+
+    /** The result of a mission: COPY CODE between RETRY and MENU (G0066). */
+    private static final MenuPage MISSION_RESULT;
 
     static {
         PAGES.put(
@@ -20,12 +32,16 @@ public final class MenuTree {
                         "ui.main.title",
                         "",
                         List.of(
+                                entry("missions", "ui.main.missions", UiIntent.open(UiPage.MISSIONS)),
                                 entry("campaign", "ui.main.campaign", UiIntent.open(UiPage.CAMPAIGN)),
                                 entry("proving-ground", "ui.main.provingGround", UiIntent.open(UiPage.PROVING_GROUND)),
                                 entry("online", "ui.main.online", UiIntent.open(UiPage.ONLINE)),
                                 entry("options", "ui.main.options", UiIntent.open(UiPage.OPTIONS)),
                                 entry("exit", "ui.main.exit", UiIntent.open(UiPage.EXIT_CONFIRM))),
                         0));
+        MenuPage missions = missions();
+        PAGES.put(UiPage.MISSIONS, missions);
+        PAGES.put(UiPage.HOST_MISSIONS, missions);
         PAGES.put(
                 UiPage.PROVING_GROUND,
                 new MenuPage(
@@ -90,6 +106,33 @@ public final class MenuTree {
                                 entry("retry", "ui.result.retry", UiIntent.RESTART),
                                 entry("menu", "ui.result.menu", UiIntent.LEAVE)),
                         0));
+        MISSION_RESULT = new MenuPage(
+                "ui.result.won",
+                "",
+                List.of(
+                        entry("retry", "ui.result.retry", UiIntent.RESTART),
+                        entry("copy", "ui.result.copy", UiIntent.COPY_CODE),
+                        entry("menu", "ui.result.menu", UiIntent.LEAVE)),
+                0);
+    }
+
+    /**
+     * The day's three missions, one a tier, then RANDOM and ENTER CODE; MEDIUM selected. Its title takes the
+     * date, which the screen fills in.
+     */
+    private static MenuPage missions() {
+        List<MenuEntry> entries = new ArrayList<>();
+        int medium = 0;
+        TierKind[] tiers = TierKind.values();
+        for (int i = 0; i < tiers.length; i++) {
+            TierKind tier = tiers[i];
+            entries.add(entry(tier.name().toLowerCase(Locale.ROOT), "ui.tier." + tier, UiIntent.mission(i)));
+            medium = tier == TierKind.MEDIUM ? i : medium;
+        }
+        entries.add(entry("random", "ui.missions.random", UiIntent.mission(MISSION_RANDOM)));
+        entries.add(entry("code", "ui.missions.code", UiIntent.mission(MISSION_CODE)));
+        entries.add(back());
+        return new MenuPage("ui.missions.title", "", entries, medium);
     }
 
     private MenuTree() {}
@@ -101,6 +144,11 @@ public final class MenuTree {
             throw new IllegalArgumentException(page + " has no fixed entries");
         }
         return found;
+    }
+
+    /** The result's entries: a mission's add COPY CODE. */
+    public static MenuPage result(boolean mission) {
+        return mission ? MISSION_RESULT : page(UiPage.RESULT);
     }
 
     public static boolean hasFixedEntries(UiPage page) {

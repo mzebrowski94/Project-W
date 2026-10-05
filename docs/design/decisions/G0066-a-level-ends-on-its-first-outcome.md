@@ -8,9 +8,9 @@ what the result screen shows or offers, or where leaving a level returns the pla
 **Enforced by.** `OutcomeTest` (won then wiped stays won, lost stays lost, the time is the tick it landed on,
 a tie is the loss), `ReadoutTest` (when the screen is due), `UiFlowTest` (RETRY, MENU, the host's confirm,
 Back ignored), `LevelTimeTest` (the time as `m:ss.t`); the page MENU returns to is `ScenarioScreen`'s `back`,
-untested (it needs GL). Built 2026-10-05 for every level with an objective, the time included; the mission
-lines and COPY CODE wait for missions. Missions ticket 08 holds
-the reasoning.
+untested (it needs GL); `MenuTreeTest.offersCopyCodeOnAMissionsResultOnly`, `UiFlowTest.copiesTheCodeOnlyFromTheResult`.
+Built 2026-10-05 for every level with an objective, the time included; a mission's lines and COPY CODE with the DAILY
+MISSIONS page (missions stage 9), NEW BEST with the record (stage 10). Missions ticket 08 holds the reasoning.
 
 **Answers** the open questions "what happens when a level's objectives are met?" and "on failure, do you retry
 the level, or is the run over?" (`README.md`), for every level with an objective - a mission and an Adventure

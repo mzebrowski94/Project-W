@@ -10,7 +10,9 @@ and seed.
 `.refusesEverySwappedNeighbourPair`, `.givesEveryTierALetterOfTheAlphabetThatNoOtherTierHas`);
 `LaunchOptionsTest.refusesAMissionCodeThatFailsItsCheck`. `MissionTest.laysTheSameGroundAndPointsOnEveryTier` (one seed
 at three tiers, the same ground and points), `.namesAMissionByItsTierForASession`, `MissionCodeTest.playsAsItsTiersMission`.
-Not yet: a test that a daily is the same for a fixed date (stage 9). Missions ticket 05 holds the reasoning.
+`MissionCodeTest.dealsTheSameDailyForADate` (pinned for 2026-10-05), `.dealsEachTierAndEachDayADifferentDaily`;
+`MissionChoicesTest` (`.keepsItsDayUntilThePageOpensAgain`, `.refusesATypoInTheSameWordsWhereverItIs`,
+`.callsACodeADailyWhenItIsOneOfTheDaysThree`). Missions ticket 05 holds the reasoning.
 
 **Constraint.**
 

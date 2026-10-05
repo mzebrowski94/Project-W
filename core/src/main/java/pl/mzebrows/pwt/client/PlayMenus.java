@@ -1,7 +1,10 @@
 package pl.mzebrows.pwt.client;
 
+import com.badlogic.gdx.Gdx;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.client.hud.Hud;
@@ -16,8 +19,10 @@ import pl.mzebrows.pwt.client.input.KeyPresses;
 import pl.mzebrows.pwt.client.input.NavInputReader;
 import pl.mzebrows.pwt.client.input.PageControls;
 import pl.mzebrows.pwt.client.play.HarnessCommand;
+import pl.mzebrows.pwt.client.play.MissionCode;
 import pl.mzebrows.pwt.client.play.ScenarioPlay;
 import pl.mzebrows.pwt.sim.PlayerInputs;
+import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.ui.hud.LevelTime;
 import pl.mzebrows.pwt.ui.hud.Readout;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
@@ -84,6 +89,20 @@ final class PlayMenus {
 
     private float tickSeconds;
 
+    /** The control points taken and all of them, as last read: a mission's result shows them. */
+    private int pointsTaken;
+
+    private int pointsTotal;
+
+    /** The mission being played, or null for any other level: its code, tier and time on the pause page. */
+    private @Nullable MissionCode mission;
+
+    /** The day it is the daily of, or null if it is none. */
+    private @Nullable LocalDate missionDay;
+
+    /** The tick the pause page's mission line was written for, or -1 for none. */
+    private long missionFootTick = -1;
+
     PlayMenus(
             Hud hud,
             GraphicConfig graphic,
@@ -100,6 +119,13 @@ final class PlayMenus {
                 graphic.ui().motion().pageSeconds(),
                 graphic.ui().motion().pageSlide(),
                 graphic.ui().motionScale());
+    }
+
+    /** The level is this mission - a daily of {@code day}, or of none - or, for null, no mission at all. */
+    void mission(@Nullable MissionCode code, @Nullable LocalDate day) {
+        mission = code;
+        missionDay = day;
+        missionFootTick = -1;
     }
 
     /** Whether a page is open here: this machine's commanders stand still and its presses are the menu's. */
@@ -143,6 +169,8 @@ final class PlayMenus {
         won = readout.won;
         outcomeTick = readout.outcomeTick;
         tickSeconds = readout.tickSeconds;
+        pointsTaken = readout.pointsTaken;
+        pointsTotal = readout.pointsTotal;
         flow.observeResult(readout.resultDue(graphic.ui().resultHoldSeconds()), hosting(play));
 
         boolean lostAPad = input.seats().nextNewlyUnplugged() >= 0;
@@ -259,8 +287,13 @@ final class PlayMenus {
         return flow.menuOpen() && modality.showsPointer();
     }
 
+    /** The open page's entries: a mission's result has COPY CODE too. */
+    private MenuPage content(UiPage top) {
+        return top == UiPage.RESULT ? MenuTree.result(mission != null) : MenuTree.page(top);
+    }
+
     private void navigate(ScenarioPlay play, PlayerInputs players, Rect view) {
-        List<MenuEntry> entries = MenuTree.page(flow.top()).entries();
+        List<MenuEntry> entries = content(flow.top()).entries();
         int visible = painter.visibleEntries(view, head, entries.size(), foot.size());
         int chosen = page.handle(nav, painter.layout(), panel, MenuPainter.firstEntryLine(head), visible);
         if (chosen >= 0) {
@@ -276,7 +309,7 @@ final class PlayMenus {
     private void follow(ScenarioPlay play) {
         UiPage top = flow.top();
         if (top == shown && top != UiPage.PLAY) {
-            refreshEnabled(MenuTree.page(top).entries());
+            refreshEnabled(content(top).entries());
             return;
         }
         if (shown != UiPage.PLAY) {
@@ -294,13 +327,14 @@ final class PlayMenus {
             return;
         }
         motion.arrive(deeper ? 1 : -1);
-        MenuPage content = MenuTree.page(top);
+        MenuPage content = content(top);
         head.clear();
         if (top == UiPage.RESULT) {
             head.add(strings.get(won ? "ui.result.won" : "ui.result.lost"));
             if (won) {
                 head.add(strings.format("ui.result.time", LevelTime.text(outcomeTick, tickSeconds)));
             }
+            describeMission();
         } else if (!content.titleKey().isEmpty()) {
             head.add(strings.get(content.titleKey()));
         }
@@ -326,16 +360,45 @@ final class PlayMenus {
         }
     }
 
-    /** Under the pause menu's entries, while this machine hosts: the room code and addresses. */
+    /** A mission's lines on the result, under the outcome and the time: points, code and tier, the daily's day. */
+    private void describeMission() {
+        MissionCode played = mission;
+        if (played == null) {
+            return;
+        }
+        head.add(strings.format("ui.result.points", pointsTaken, pointsTotal));
+        head.add(strings.format("ui.result.code", played, strings.get("ui.tier." + played.tier())));
+        LocalDate day = missionDay;
+        if (day != null) {
+            head.add(strings.format("ui.result.daily", day));
+        }
+    }
+
+    /**
+     * Under the pause menu's entries: in a mission its code, tier and time so far - the only place the code
+     * and the time are seen during play - and while this machine hosts, the room code and addresses.
+     */
     private List<String> foot(ScenarioPlay play) {
-        String invitation = flow.top() == UiPage.PAUSE ? play.invitation() : null;
-        if (invitation == null) {
-            foot.clear();
-            footFor = null;
-        } else if (!invitation.equals(footFor)) {
-            foot.clear();
+        boolean pause = flow.top() == UiPage.PAUSE;
+        String invitation = pause ? play.invitation() : null;
+        Simulation world = play.simulation();
+        MissionCode played = mission;
+        long tick = pause && played != null && world != null ? world.tick() : -1;
+        if (tick == missionFootTick && Objects.equals(invitation, footFor)) {
+            return foot;
+        }
+        missionFootTick = tick;
+        footFor = invitation;
+        foot.clear();
+        if (tick >= 0 && played != null) {
+            foot.add(strings.format(
+                    "ui.pause.mission",
+                    played,
+                    strings.get("ui.tier." + played.tier()),
+                    LevelTime.text(tick, tickSeconds)));
+        }
+        if (invitation != null) {
             painter.addWrapped(foot, invitation, 2);
-            footFor = invitation;
         }
         return foot;
     }
@@ -351,6 +414,12 @@ final class PlayMenus {
             case REQUEST_RESUME -> play.setPaused(false);
             case RESTART -> play.apply(HarnessCommand.RESTART, players);
             case LEAVE -> play.apply(HarnessCommand.LEAVE, players);
+            case COPY_CODE -> {
+                MissionCode played = mission;
+                if (played != null) {
+                    Gdx.app.getClipboard().setContents(played.toString());
+                }
+            }
             default -> {
                 // The main menu's effects never arise in a level.
             }

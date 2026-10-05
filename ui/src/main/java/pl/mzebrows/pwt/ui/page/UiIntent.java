@@ -6,7 +6,7 @@ package pl.mzebrows.pwt.ui.page;
  *
  * @param page the page an {@link Kind#OPEN} opens; ignored by the rest
  * @param index the scenario a {@link Kind#START} or {@link Kind#HOST} means, the row a {@link Kind#CHOOSE}
- *     steps; ignored by the rest
+ *     steps, the entry of the missions page a {@link Kind#MISSION} was asked on; ignored by the rest
  */
 public record UiIntent(Kind kind, UiPage page, int index) {
 
@@ -24,7 +24,11 @@ public record UiIntent(Kind kind, UiPage page, int index) {
         /** Step a choice row of the proving ground forward - its confirm; left and right step it too. */
         CHOOSE,
         /** Fight the proving ground's setup (G0060). */
-        PROVE
+        PROVE,
+        /** Play what an entry of the missions page names - a daily, RANDOM, or the code line (G0065). */
+        MISSION,
+        /** The mission's code to the clipboard, from the result (G0066). */
+        COPY_CODE
     }
 
     public static final UiIntent BACK = of(Kind.BACK);
@@ -35,6 +39,7 @@ public record UiIntent(Kind kind, UiPage page, int index) {
     public static final UiIntent RESTART = of(Kind.RESTART);
     public static final UiIntent LEAVE = of(Kind.LEAVE);
     public static final UiIntent PROVE = of(Kind.PROVE);
+    public static final UiIntent COPY_CODE = of(Kind.COPY_CODE);
 
     public static UiIntent open(UiPage page) {
         return new UiIntent(Kind.OPEN, page, -1);
@@ -47,6 +52,11 @@ public record UiIntent(Kind kind, UiPage page, int index) {
     /** A choice row: on the proving ground its place in {@code ProvingRows.Row}, on its upgrades page the kind's. */
     public static UiIntent choose(int row) {
         return new UiIntent(Kind.CHOOSE, UiPage.PLAY, row);
+    }
+
+    /** An entry of the missions page: a tier's daily by its place, {@code MenuTree.MISSION_RANDOM} or {@code .MISSION_CODE}. */
+    public static UiIntent mission(int entry) {
+        return new UiIntent(Kind.MISSION, UiPage.PLAY, entry);
     }
 
     public static UiIntent host(int scenario) {

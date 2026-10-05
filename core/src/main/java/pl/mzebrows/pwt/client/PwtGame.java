@@ -3,6 +3,8 @@ package pl.mzebrows.pwt.client;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import java.security.SecureRandom;
+import java.time.Clock;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.config.NetConfigLoader;
 import pl.mzebrows.pwt.client.config.SimConfigLoader;
@@ -13,12 +15,14 @@ import pl.mzebrows.pwt.client.input.ChosenGamepads;
 import pl.mzebrows.pwt.client.input.ControlsConfig;
 import pl.mzebrows.pwt.client.input.GamepadSource;
 import pl.mzebrows.pwt.client.input.GdxGamepads;
+import pl.mzebrows.pwt.client.play.MissionChoices;
 import pl.mzebrows.pwt.client.play.MissionCode;
 import pl.mzebrows.pwt.client.play.ScenarioSession;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.scenario.ProvingSetup;
 import pl.mzebrows.pwt.ui.nav.SelectionMemory;
+import pl.mzebrows.pwt.ui.page.UiPage;
 
 /**
  * Application entry point: owns everything that outlives a single screen - configuration, assets and
@@ -44,6 +48,7 @@ public final class PwtGame extends Game implements GameContext {
 
     private final SelectionMemory selections = new SelectionMemory();
     private ProvingSetup provingSetup = ProvingSetup.first();
+    private final MissionChoices missions = new MissionChoices(Clock.systemUTC(), new SecureRandom()::nextLong);
 
     private @Nullable Screen pendingScreen;
 
@@ -77,9 +82,13 @@ public final class PwtGame extends Game implements GameContext {
         if (mission == null) {
             setScreen(new MenuScreen(this));
         } else {
+            // A developer's way in; leaving it lands where a player would have started it.
             Log.info("Starting mission " + mission);
+            missions.played(mission);
             setScreen(new ScenarioScreen(
-                    this, new ScenarioSession(mission.scenario(), simConfig.withSeed(mission.seed()))));
+                    this,
+                    new ScenarioSession(mission.scenario(), simConfig.withSeed(mission.seed())),
+                    UiPage.MISSIONS));
         }
     }
 
@@ -178,6 +187,11 @@ public final class PwtGame extends Game implements GameContext {
     @Override
     public void provingSetup(ProvingSetup setup) {
         provingSetup = setup;
+    }
+
+    @Override
+    public MissionChoices missions() {
+        return missions;
     }
 
     @Override

@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -41,6 +42,7 @@ import pl.mzebrows.pwt.client.input.KeyHolds;
 import pl.mzebrows.pwt.client.input.KeyPresses;
 import pl.mzebrows.pwt.client.input.PlayerSeats;
 import pl.mzebrows.pwt.client.play.HarnessCommand;
+import pl.mzebrows.pwt.client.play.MissionCode;
 import pl.mzebrows.pwt.client.play.OnlineSession;
 import pl.mzebrows.pwt.client.play.OverlayMode;
 import pl.mzebrows.pwt.client.play.ScenarioPlay;
@@ -198,6 +200,12 @@ public final class ScenarioScreen extends ScreenAdapter {
     /** The world the renderer is currently bound to; a restart replaces it with a different one. */
     private @Nullable Simulation bound;
 
+    /** The world {@link #missionLine} was worked out for; a restart or a heal replaces it. */
+    private @Nullable Simulation named;
+
+    /** What the top bar calls the level: a mission's tier, {@code DAILY} before a daily's, else its name. */
+    private String missionLine = "";
+
     /** Takes {@code play} over: the screen closes it when it is hidden. */
     public ScenarioScreen(GameContext context, ScenarioPlay play) {
         this(context, play, UiPage.MAIN);
@@ -307,6 +315,26 @@ public final class ScenarioScreen extends ScreenAdapter {
         return most;
     }
 
+    /**
+     * Works out, once a world, whether it is a mission and whether a daily (G0065) - on a joined machine too,
+     * from the scenario and the seed the session carries - for the top bar, the pause page and the result.
+     */
+    private void name(Simulation world) {
+        named = world;
+        String scenario = play.scenarioName();
+        MissionCode mission = scenario == null
+                ? null
+                : MissionCode.of(scenario, world.config().seed());
+        LocalDate day = mission == null ? null : context.missions().dailyDay(mission);
+        menus.mission(mission, day);
+        if (mission == null) {
+            missionLine = scenario == null ? "" : scenario;
+            return;
+        }
+        String tier = strings.get("ui.tier." + mission.tier());
+        missionLine = day == null ? tier : strings.format("ui.hud.missionDaily", tier);
+    }
+
     /** The window lost focus: offline, the pause menu opens (plan Q7). */
     public void focusLost() {
         menus.focusLost();
@@ -367,7 +395,10 @@ public final class ScenarioScreen extends ScreenAdapter {
         aimAhead(players);
 
         String name = play.scenarioName();
-        readoutWriter.fill(world, name == null ? "" : name, play.planet(), readout);
+        if (world != named) {
+            name(world);
+        }
+        readoutWriter.fill(world, missionLine, play.planet(), readout);
         topBarSeats.follow(readout, menus.menuOpen(), play);
         goalLine.update(readout, delta);
         reporters.report(readout, dispatches);

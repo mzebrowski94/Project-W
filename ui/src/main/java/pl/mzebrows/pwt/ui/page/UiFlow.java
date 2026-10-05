@@ -126,6 +126,17 @@ public final class UiFlow {
                         ? new UiEffect(UiEffect.Kind.CHOOSE, intent.index())
                         : UiEffect.NONE;
             case PROVE -> page == UiPage.PROVING_GROUND ? UiEffect.PROVE : UiEffect.NONE;
+            case MISSION -> mission(page, intent.index());
+            case COPY_CODE -> page == UiPage.RESULT ? UiEffect.COPY_CODE : UiEffect.NONE;
+        };
+    }
+
+    /** The missions page plays what it starts; opened from hosting, it hosts it. */
+    private static UiEffect mission(UiPage page, int entry) {
+        return switch (page) {
+            case MISSIONS -> new UiEffect(UiEffect.Kind.MISSION, entry);
+            case HOST_MISSIONS -> new UiEffect(UiEffect.Kind.HOST_MISSION, entry);
+            default -> UiEffect.NONE;
         };
     }
 

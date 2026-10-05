@@ -13,7 +13,6 @@ import pl.mzebrows.pwt.client.hud.UiStrings;
 import pl.mzebrows.pwt.client.input.KeyHolds;
 import pl.mzebrows.pwt.client.input.KeyPresses;
 import pl.mzebrows.pwt.client.input.NavInputReader;
-import pl.mzebrows.pwt.client.input.PadLabels;
 import pl.mzebrows.pwt.client.input.PageControls;
 import pl.mzebrows.pwt.client.play.JoinChoices;
 import pl.mzebrows.pwt.client.play.OnlineSession;
@@ -117,7 +116,7 @@ public final class JoinScreen extends ScreenAdapter {
                 page.scroll(),
                 painter.visibleEntries(view, head, lines.size(), foot.size()),
                 foot,
-                picking ? pickHint() : hints.selectAndBack(modality),
+                picking ? hints.picker(modality, "ui.join.pickHint") : hints.selectAndBack(modality),
                 0,
                 1f);
     }
@@ -201,7 +200,7 @@ public final class JoinScreen extends ScreenAdapter {
         }
         lines.add(
                 picking
-                        ? strings.format("ui.join.picking", bracketed(picker.code(), picker.slot()))
+                        ? strings.format("ui.join.picking", picker.shown(0))
                         : strings.format("ui.join.typed", choices.typed() + "_"));
         foot.clear();
         if (sessions.isEmpty()) {
@@ -225,25 +224,6 @@ public final class JoinScreen extends ScreenAdapter {
                 + announcement.capacity()
                 + (choices.joinable(session) ? "" : "  " + strings.get("ui.join.otherBuild"))
                 + "  " + announcement.host();
-    }
-
-    private String pickHint() {
-        String confirm = PadLabels.of(context.controlsConfig().ui().pad().confirm(), modality.playStation());
-        String back = PadLabels.of(context.controlsConfig().ui().pad().back(), modality.playStation());
-        return strings.format("ui.join.pickHint", confirm, back);
-    }
-
-    /** {@code A[C]DE}: the code with the slot being changed in brackets. */
-    private static String bracketed(String code, int slot) {
-        StringBuilder text = new StringBuilder(code.length() + 2);
-        for (int i = 0; i < code.length(); i++) {
-            if (i == slot) {
-                text.append('[').append(code.charAt(i)).append(']');
-            } else {
-                text.append(' ').append(code.charAt(i)).append(' ');
-            }
-        }
-        return text.toString();
     }
 
     @Override
