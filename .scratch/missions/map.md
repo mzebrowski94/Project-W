@@ -67,6 +67,10 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
   daily is that daily; HOST reuses the page. The result screen for every level (G0066): first outcome final, world
   runs on, 3 s hold, time and NEW BEST on a win only, RETRY / COPY CODE / MENU back to where it was started.
   Another tier deferred.
+- [What is remembered and where](issues/09-what-is-remembered-and-where.md): one key per won (UTC day, tier), best ticks, in a
+  libGDX `Preferences` store of its own behind `core`'s `MissionRecords`, kept forever (G0067). Written on the outcome
+  tick by every machine present, a late joiner too; a joiner matches the seed against its day and the days either
+  side. A build that moves a daily's map leaves the record standing; two copies on one PC, last flush wins.
 
 ## Not yet specified
 

@@ -215,6 +215,9 @@ Behaviour that looks like design and is not. Each line names what replaces it.
   Fixing it properly means a different model, not more passes.
 - **Rendering lags the simulation by up to one tick.** That is what interpolation costs, and it is
   the standard trade.
+- **Two copies on one computer share one mission record** (G0067). libGDX loads the preferences once
+  and flushes them whole, so the last copy to write wins. Both saw the same win on the same tick, so
+  they write the same value; only a copy that played a different daily alone loses its ✓.
 
 ## What this phase does not decide
 
