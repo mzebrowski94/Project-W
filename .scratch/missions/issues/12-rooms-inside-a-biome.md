@@ -67,7 +67,7 @@ is judged in a played mission (stage 7), the first place a strip can be seen.
   fight. 2 - the commander walks in; nothing is managed from outside.
 - **Gatehouses** - a house on the border, the second answer: a share of the ridges between two biomes
   (`gatehouseShare` 0.25, drawn per ridge from its own stream), **never the ridge before the finale** (04's straight
-  west edge and door point untouched). The ridge widens to the house plus one rock column each side - inside 8 x 9,
+  west edge and its last point untouched). The ridge widens to the house plus one rock column each side - inside 8 x 9,
   so 12 columns - its faces wander as any ridge's, and its one pass enters by a doorway in the west wall and leaves by
   one in the east, on another row. The pass runs a row in from the border either side, so a doorway is never at a
   corner, and the house stands as high as both doorways need, in the middle of the rows that allow. Its doorways are 3 wide like a house's (the 4-wide pass narrows to the gate):

@@ -1,6 +1,6 @@
 # G0026: An alien comes for whoever is nearest, and the commander is on that list
 
-**Status.** accepted
+**Status.** amended by G0069: a hunter whose way is shut by a door leaps at the door
 
 **Trigger.** Anything that changes who an alien fights, or that assumes the answer is the commander.
 

@@ -116,7 +116,7 @@ None is written per biome; a biome or finale joins every one by being a constant
   doorway 3 wide in a wall of its own off the corners, inside, doorways and doorsteps the biome's base, each biome
   between its `houses.min` and `.max`, no gatehouse before the finale; `reach` already holds every inside reached.
 - **`MissionSweepTest`** (`sim`): every point and crate reachable, every finale layout spot standable and
-  reachable, the last biome's nests outside the watch, a point in its last `doorColumns`. `STAGE 7` / `8`.
+  reachable, the last biome's nests outside the watch, a point in its last `approachColumns`. `STAGE 7` / `8`.
 - **`CoatsTest`** (`map`): every coat of every biome, over 64 seeds, lands with its **median within 1.5 points**
   of its density and **no seed under half** of it; rock is the crags' and outcrops' densities summed, never the
   houses' walls (`Terrain.WALL`, not `ROCK`). Houses: between `min` and `max`, inside base ground. Also: no

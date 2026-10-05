@@ -23,18 +23,18 @@ plus its best time.
 | [13](issues/13-what-lies-between-two-biomes.md) | - | ridge, pass, apron; gatehouses (settled by 12) |
 | [06](issues/06-which-biome-a-tile-is-in.md) | G0062 | a biome is a grouping of regions; a nest wakes for its own biome; first brood |
 | [07](issues/07-the-tiers-in-numbers.md) | G0063 | four numbers and a ramp; `MissionConfig`; `Whole.percentOf`; melee 220 |
-| [04](issues/04-what-a-finale-definition-holds.md) | G0064 | a finale is a set piece; the redoubt and keep blocks; the door point |
+| [04](issues/04-what-a-finale-definition-holds.md) | G0064 | a finale is a set piece; the redoubt and keep blocks; the last biome's last point at the approach |
 | [05](issues/05-the-mission-seed-and-its-code.md) | G0065 | the code, the check, `daily()`, `Randomness.derive`, streams |
 | [08](issues/08-menu-pages-and-the-result-screen.md) | G0066 | DAILY MISSIONS page; the result screen for every level |
 | [09](issues/09-what-is-remembered-and-where.md) | G0067 | `MissionRecords`, written on the outcome tick by every machine |
 | [10](issues/10-what-the-new-biome-skill-says.md) | - | the `new-biome` skill, its tests, porting, the living-skill step |
 | [11](issues/11-the-build-in-stages.md) | - | this staging |
 | [12](issues/12-rooms-inside-a-biome.md) | - | houses and gatehouses: `Terrain.WALL`, two doorways 3 wide, the first coat by count; doors folded into 14 |
-| [14](issues/14-placement-inside-a-biome.md) | - | placement inside a biome, and doors (**open**, gates stage 7) |
+| [14](issues/14-placement-inside-a-biome.md) | G0068, G0069, ADR 0022 | placement by ordered passes; doors, a wall that opens (stage 7b); `doorColumns` renamed `approachColumns` |
 | map.md *Notes* | G0061 | the held point never becomes the rally point; a march ends on a ring round the post (**to write**, stage 0) |
 
 Glossary words, all settled: **mission**, **mission seed**, **daily mission**, **tier**, **biome**, **finale**,
-**region**, **ridge**, **pass**, **apron**, **gatehouse**, **house**, **doorway**, **wall**. Never *sector*, *run*, *map* or *difficulty* for these.
+**region**, **ridge**, **pass**, **apron**, **gatehouse**, **house**, **doorway**, **door**, **wall**. Never *sector*, *run*, *map* or *difficulty* for these.
 
 ## Keys
 
@@ -47,8 +47,9 @@ Values and comments are in the tickets. Each stage adds the keys it needs, never
 | | `sim.mission.ground.{houseWidthMin/Max, houseHeightMin/Max, doorways, doorwayWidth, gatehouseShare, gatehouseWidth, gatehouseHeight}` - `StripRules.houses` in stage 5, keys when `sim` reads them | 12 | 5, 7 |
 | `assets/graphic.properties` | `graphic.terrain.wall=57524aff` | 12 | 5 |
 | | `sim.mission.rampPercent=10`; `sim.mission.tier.{easy,medium,hard}.*` | 07 | 6 |
-| | `sim.mission.biomes=4`; placement keys, as 14 settles them | 03, 14 | 7 |
-| | `sim.mission.finale.doorColumns=8` | 04 | 8 |
+| | `sim.mission.biomes=4`; `sim.mission.placement.{startKeepOff, pointApart, pointKeepOff, nestKeepOff, nestApart, packMin/Max, packApart, houseStock, pointReach, pickupKeepOff, barrelReach}` | 03, 14 | 7 |
+| | `sim.mission.finale.approachColumns=8` | 04, 14 | 7 |
+| `assets/sim/level.properties` | `sim.door.{openSeconds, sinkSeconds, leapDamage, health, shake.*}` | 14 | 7b |
 | `assets/sim/biomes.properties` | `sim.biome.{plain, quarry, brake, anthill, badlands}.*`, `houses.min/max` among them | 03, 12 | 7 |
 | `assets/sim/finales.properties` | `sim.finale.redoubt.*`; `sim.finale.keep.*` | 04 | 8; keep run |
 | `assets/sim/weapons.properties` | `sim.melee.damage` 190 -> 220 | 07 | 6 |
@@ -66,6 +67,7 @@ Values and comments are in the tickets. Each stage adds the keys it needs, never
 | 5 | Houses and gatehouses (`map`) | ticket 12 | draft |
 | 6 | Tiers and the code | - | - |
 | 7 | **First biome stage** | ticket 14 | **`SKILL.md` written** |
+| 7b | Doors (G0069, ADR 0022) | 7 | - |
 | 8 | Finale: the redoubt | 0, 7 | skill |
 | 9 | DAILY MISSIONS page | 6 | - |
 | 10 | Records | 1, 9 | - |
@@ -246,39 +248,66 @@ need and deletes the rows it retires, in the same diff.
   - `biomes.properties` with plain, quarry, brake, anthill and badlands.
   - The deal: none twice, never the same base side by side.
   - `RngStream.MISSION`.
-  - Populate per ticket 14, what stands in a house included, and doors as 14 settles them - a new mechanic its
-    grilling may split into a stage of its own.
+  - Populate per G0068 (ticket 14, *Placement*): ordered `Scatter` passes, what stands in a house included, the
+    last biome's last point in its `approachColumns`. Doors are 7b's.
   - `sim.mission.ground.*` read into `StripRules` and `HouseRules`; each block's `houses.min/max`.
   - `Scenarios.mission(tier)` and `Scenarios.named`'s mission form, with `--mission` wired to it.
   - The `PWT_MEASURE` runner.
   - The goal line leads through points.
   - **`.claude/skills/new-biome/SKILL.md` and `CHANGELOG.md`** written from the draft, and the draft deleted.
 - **Tests**:
-  - `MissionSweepTest`: points and crates reachable, plus 14's rules;
+  - `MissionSweepTest`: points, crates and house stock reachable, plus G0068's rules and a pass short of its count;
   - coverage: every kind dealt at every position;
   - the same ground at three tiers;
   - the build-time budget (median 100 ms, printed);
   - the five's number promises;
   - a mission joins `ScenariosTest` and `SimulationDeterminismTest` cases.
   - `PWT_SWEEP` prints codes.
-- ***Enforced by***: G0065, the same-ground test.
+- ***Enforced by***: G0065, the same-ground test; G0068, the sweep.
 - **Scaffolding**:
   - **adds** "A mission has no finale and no objective: the strip ends past the last ridge on bare ground"
     (retired in 8);
   - **adds** "A mission is started only by `--mission=<code>`" (decided in 9);
+  - **adds** "A house has no door: its doorways stand open" (retired in 7b);
   - amends the `Scenario.adapting` row, since a mission takes its tier's pace;
   - reviews the hand-laid rows (rock, posts, barrels, spitters, ants): the Adventures stay hand-laid by decision
     (10), so their *Replaced by* names missions as the generated fragments.
 
 > Build the first biome stage of Project-W's missions: five biomes as data, dealt into a strip, populated, playable
 > from `--mission=<code>`. Read `CLAUDE.md`, `.scratch/missions/spec.md` (this stage), `.scratch/missions/issues/03-…`
-> (the five blocks), `14-…` (placement, doors), `12-…` (houses, `Strip.Laid.houses()`), `05-…` (*Streams*), `10-…`,
+> (the five blocks), `14-…` (*Placement*), `G0068`, `12-…` (houses, `Strip.Laid.houses()`), `05-…` (*Streams*), `10-…`,
 > `.scratch/missions/new-biome-skill.md`, `.claude/skills/new-kind/SKILL.md`, and stages 3-6's `map` and tier code.
-> Settled: the definitions, blocks, deal rules, placement, sweeps and their sizes, the build budget. No finale yet;
+> Settled: the definitions, blocks, deal rules, placement, sweeps and their sizes, the build budget. No doors (7b), no finale yet;
 > the strip ends past the last ridge. Open: whatever building the five turns up, which goes into the skill. Run
 > `feature` (placement is new play), `new-kind` for `BiomeKind`, `new-system` for populate. Finish by writing
 > `SKILL.md` and `CHANGELOG.md` from the draft against what this took, deleting the draft, then offer Mateusz a few
 > printed codes to play.
+
+### 7b - Doors
+
+- **Ships**: per ticket 14 (*Doors*), G0069 and ADR 0022.
+  - The door: a `sim.door.*` block, an entity in every doorway of `Strip.Laid.houses()`, shut at the start.
+  - One place in `sim` answering "solid now?" - terrain plus shut doorways - read by the solver's clamp, shots into
+    rock, a blast's line, perception's line and target choice.
+  - Opening on stabilise's rules; the action key's list gains a door; a commander and one trooper at most.
+  - A trooper opens whatever door his route needs; the others wait by it and watch their sectors.
+  - A hunter shut out leaps at the door: `leapDamage` through `Damage.land`, thrown back, the door's shake.
+  - Broken by a leap, a blast or a heavy gun, and nothing else.
+  - The door's green bar over it; an opened door seen sinking - its squares shrinking - then gone; a broken one
+    gone at once (`core`).
+- **Tests**: tests first, the smallest per rule in G0069's *Enforced by*; a crowd driven into a shut door ends with
+  nobody past it; a door joins `SnapshotRoundTripTest` and `SimulationDeterminismTest`; `MissionSweepTest` unchanged
+  (a doorway is open ground to the map).
+- ***Enforced by***: G0069, ADR 0022. G0021's action-key row and G0026's amendment get their test names.
+- **Scaffolding**: retires "A house has no door: its doorways stand open".
+
+> Build doors for Project-W's missions. Read `CLAUDE.md`, `docs/design/decisions/G0069-…`, `docs/adr/0022-…`,
+> `G0026`, `G0023` (stabilise), `G0021` (the action key), `.scratch/missions/issues/14-…` (*Doors* and its *Answer*),
+> `12-…` (doorways, `Strip.Laid.houses()`), `ConstraintSolver`, `Sight`, the blast and the shot-into-rock systems,
+> `EnemyLeapSystem`, the stabilise and point-sector code, and `docs/design/invariants/` rows marked for 7b. Settled:
+> all of G0069 and ADR 0022. Open: the one "solid now?" place's shape and its cost inside per-entity loops (read
+> `docs/performance.md`); `sim.door.health` against the flamer's burn time. Run `feature`, then `new-system` (tests
+> first). Offer Mateusz a printed code with a gatehouse and a house to play.
 
 ### 8 - Finale: the redoubt
 
@@ -286,7 +315,7 @@ need and deletes the rows it retires, in the same diff.
   - `FinaleKind` and `FinaleDef` (`Hold`, `Mouth`, `WaveLine`, `LairLine`) in `finales.properties`, the redoubt only.
   - `BiomeGround.pieces`; the anchor computed in `map` in one place; the flip in populate.
   - Waves held back until the post is taken, counted through `Roster.count` unramped.
-  - The last biome's point in its last `doorColumns`, and its nests outside the watch.
+  - The last biome's nests outside the watch (its last point in its `approachColumns` is stage 7's).
   - The goal line's wording across a mission, decided in `feature`.
   - The field measured.
 - **Tests**:
@@ -303,7 +332,7 @@ need and deletes the rows it retires, in the same diff.
 > Build the finale of Project-W's missions, the redoubt only, as a set piece. Read `CLAUDE.md`,
 > `docs/design/decisions/G0064-…` and `G0061-…`, `.scratch/missions/issues/04-…` (the whole *Answer* and the redoubt
 > block), `.claude/skills/new-biome/SKILL.md`, `AdventureScenario`'s redoubt, and `Waves`, `WaveSystem`,
-> `ObjectiveSystem`. Settled: the shape, the offsets, the flip, the waves, the door point, no rally ground. Open:
+> `ObjectiveSystem`. Settled: the shape, the offsets, the flip, the waves, the last biome's last point, no rally ground. Open:
 > what the goal line says across a mission (run `feature` for it, with the HUD's mission line from ticket 08). After
 > it plays, measure the field on hard (`F1`, `SimulationBenchmarkTest`), and write a ticket only if frame time
 > breaks the budget. End with the skill's amend step; section 4 is written here.

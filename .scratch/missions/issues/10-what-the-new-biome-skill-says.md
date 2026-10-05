@@ -28,7 +28,7 @@ rewriting each step against what building the five actually took, and deletes th
 | Test | Module | Asserts |
 |---|---|---|
 | `StripSweepTest` | `map` | every pass connects, no pockets, no passage under `clearance`, every ridge tile in the biome whose ground it shows, the finale's west edge straight; rooms open (stage 5) |
-| `MissionSweepTest` | `sim` | every point and crate reachable; every finale layout spot standable and reachable; the last biome's nests outside the watch; a point in its last `doorColumns` |
+| `MissionSweepTest` | `sim` | every point and crate reachable; every finale layout spot standable and reachable; the last biome's nests outside the watch; a point in its last `approachColumns` |
 | coats | `map` | every coat of every biome in the pool lands within tolerance of its declared density - generic, once |
 | same ground | `sim` | one seed at three tiers lays the same ground (G0065) |
 | coverage | `sim` | over the sweep, every `BiomeKind` is dealt at least once at every position - a biome the deal can never place fails |

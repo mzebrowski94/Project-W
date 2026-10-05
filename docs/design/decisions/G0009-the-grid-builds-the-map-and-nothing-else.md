@@ -1,6 +1,6 @@
 # G0009: The grid builds the map and nothing else
 
-**Status.** accepted
+**Status.** amended by ADR 0022: a shut door's shape is its doorway's tiles in the terrain clamp
 
 **Trigger.** Placing objects, terrain collision or pathing; proposing anything quantised to a tile.
 

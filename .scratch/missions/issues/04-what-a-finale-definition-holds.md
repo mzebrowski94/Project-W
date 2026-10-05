@@ -52,9 +52,9 @@ reaches about seven tiles past the finale's west edge, into the ridge. A placeme
 nests outside the watch**; the sweep checks it.
 
 **Rally** (Q28) - no rally ground in the finale. **One of the last biome's 2-3 points stands in its last
-`sim.mission.finale.doorColumns` (8) columns** before the ridge. Taking it moves the rally point to the finale's
-door; skipping it is a visible choice with a cost (G0055 unchanged). In prose "the last biome's last point" - no
-new word (*door* is the connectivity check's in 12 and 13). Assumes **G0061** has landed: the held point never
+`sim.mission.finale.approachColumns` (8) columns** before the ridge. Taking it moves the rally point to the finale's
+approach; skipping it is a visible choice with a cost (G0055 unchanged). In prose "the last biome's last point" - no
+new word (*door* is now the thing in a doorway, ticket 14). Assumes **G0061** has landed: the held point never
 becomes the rally point.
 
 **Drawn** from its own stream, equal weight, independent of tier (01).
@@ -65,7 +65,7 @@ becomes the rally point.
 |---|---|
 | `map` | `BiomeGround` gains `pieces` (rects from the anchor); the anchor computed in one place; `Strip.lay` spills the last ridge west only. |
 | `sim` | `FinaleKind { REDOUBT, KEEP }`; `FinaleDef(ground, Hold, waves, lair)` as `Defs<FinaleKind, FinaleDef>`, root `sim.finale`, in `assets/sim/finales.properties` - the table refuses a finale without a block. `Hold`, `Mouth`, `WaveLine`, `LairLine`; populate resolves lines into `Wave` and `Arrival` and mirrors on the flip. `Waves`, `Lair`, `WaveSystem` and `ObjectiveSystem` untouched. |
-| config | The binder's existing `;` lists of space-separated fields; no new conversion expected. `sim.mission.finale.doorColumns=8` beside the tiers. |
+| config | The binder's existing `;` lists of space-separated fields; no new conversion expected. `sim.mission.finale.approachColumns=8` beside the tiers. |
 
 **Dropped in the port**: the keep's two ants asleep in its far corners. A finale's creatures arrive by wave or rise
 from the lair; a third way would be a `Hold` field for two units.
@@ -78,7 +78,7 @@ Separate: the boss stands with his back to the players (`.scratch/bugs/issues/01
 **The blocks** - ported from both Adventures, offsets from (197, 15); counts become ranges round the port.
 
 ```properties
-sim.mission.finale.doorColumns=8
+sim.mission.finale.approachColumns=8
 
 # The redoubt (Adventure 1). A bare square to see across: four guns round the post, mines across the approaches
 # from each corner, barrels between the guns, a crate and a flamer behind the post. Waves from all four corners.

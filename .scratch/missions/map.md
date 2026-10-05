@@ -55,7 +55,7 @@ it can be written with the first biome stage. Ready to hand to `feature` -> `new
   ground + hold + waves + lair, at fixed offsets from an anchor, flipped north-south by the seed; the keep is the redoubt
   with a lair, both won by `HOLD_POINT`. Width 34, rock as fixed `pieces`, the last ridge spills west only. Waves
   `after strain min max mouth` through `Roster.count` unramped; watch 118; no finale rally ground - the last biome's
-  last point stands in its last `doorColumns` (8). Needs G0061 first. Both Adventure finales ported as blocks.
+  last point stands in its last `approachColumns` (8). Needs G0061 first. Both Adventure finales ported as blocks.
 - [The mission seed and its code](issues/05-the-mission-seed-and-its-code.md): the code is `T SSSSSS C` (`HK3X-Q7RA`) -
   tier letter, seed in base 25, one check that refuses every single slip; room code's alphabet; the seed is the sim
   seed and alone builds the map, the tier moves numbers (G0065). Daily = pure `daily(epochDay, tier)` in `core`'s
