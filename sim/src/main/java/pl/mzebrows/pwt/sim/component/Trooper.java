@@ -198,7 +198,7 @@ public final class Trooper implements Component, Pool.Poolable {
     /**
      * The first compass slot of its <strong>sector</strong>, or {@code -1} for none.
      *
-     * <p>Men standing on a point split the circle between them. Written by {@code TrooperMindSystem}
+     * <p>Men standing on a point split the circle between them, and so do the men waiting at a door (G0069). Written by {@code TrooperMindSystem}
      * once a tick.
      */
     public int sectorFrom = -1;
@@ -211,6 +211,12 @@ public final class Trooper implements Component, Pool.Poolable {
      * its sector it is looking at now. Written by {@code TrooperMoveSystem} as the sweep turns over.
      */
     public int sectorStep;
+
+    /**
+     * The shut door his way runs into, by handle, or nobody (G0069). Written by {@code TrooperMoveSystem} every
+     * tick he walks: the one it went to opens it, and the rest stand by it and watch their sectors.
+     */
+    public long door = Handle.NOBODY;
 
     /**
      * What it is still due before it next swings at a leap, {@code Odds}' budget for
@@ -293,6 +299,7 @@ public final class Trooper implements Component, Pool.Poolable {
         sectorFrom = -1;
         sectorSpan = 0;
         sectorStep = 0;
+        door = Handle.NOBODY;
         swingDue = 0f;
         struggleDue = 0f;
         turretDue = 0f;

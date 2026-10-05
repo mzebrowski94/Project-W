@@ -7,13 +7,15 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
+import pl.mzebrows.pwt.sim.component.Door;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Vitality;
@@ -24,8 +26,11 @@ import pl.mzebrows.pwt.sim.system.query.Sight;
  * Runs the blasts on the field: each catches what is standing in it, once, and then burns out.
  *
  * <p><strong>A blast is on nobody's side.</strong> One radius and death inside it, no falloff (pillar
- * 1); the drawn circle is the lethal one. Rock stops it. It owes damage, which lands the tick
+ * 1); the drawn circle is the lethal one. Rock and a shut door stop it (ADR 0022). It owes damage, which lands the tick
  * <em>after</em> it appears - so a row of barrels cascades.
+ *
+ * <p><strong>A shut door it reaches is broken outright</strong> (G0069): measured to the nearest part of the
+ * doorway, since a door has no body, along a line that may end in the door's own tiles (ADR 0022).
  */
 public final class BlastSystem extends EntitySystem {
 
@@ -34,15 +39,19 @@ public final class BlastSystem extends EntitySystem {
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Damage> DAMAGE = ComponentMapper.getFor(Damage.class);
     private static final ComponentMapper<BlastsOnDeath> REACTION = ComponentMapper.getFor(BlastsOnDeath.class);
+    private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
+    private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
+    private static final ComponentMapper<Handle> HANDLE = ComponentMapper.getFor(Handle.class);
 
     private final Spawner spawner;
-    private final TileMap map;
+    private final Solid map;
 
     private ImmutableArray<Entity> blasts = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> victims = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> detonating = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
 
-    public BlastSystem(TileMap map, Spawner spawner) {
+    public BlastSystem(Solid map, Spawner spawner) {
         this.map = map;
         this.spawner = spawner;
     }
@@ -53,7 +62,10 @@ public final class BlastSystem extends EntitySystem {
                 Family.all(Blast.class, Position.class, Body.class).get());
         victims = engine.getEntitiesFor(Family.all(Damage.class, Position.class)
                 .one(Health.class, Vitality.class)
+                .exclude(Door.class)
                 .get());
+        doors = engine.getEntitiesFor(
+                Family.all(Door.class, Health.class, Damage.class, Handle.class).get());
         detonating = engine.getEntitiesFor(
                 Family.all(BlastsOnDeath.class, Dead.class, Position.class).get());
     }
@@ -110,6 +122,24 @@ public final class BlastSystem extends EntitySystem {
             // Decisive for anything with health; a man takes the blast kind's harm (G0018, G0053).
             owed.land(damage, harm, credit);
             owed.cameFrom(x, y);
+        }
+        breakEveryDoorInside(x, y, radius, harm, credit);
+    }
+
+    /** Every shut door the blast reaches, broken outright: whatever it has left is what it takes (G0069). */
+    private void breakEveryDoorInside(float x, float y, float radius, Harm harm, int credit) {
+        float tileSize = map.map().tileSize();
+        for (int i = 0; i < doors.size(); i++) {
+            Entity entity = doors.get(i);
+            Door door = DOOR.get(entity);
+            if (door.open || door.distanceFrom(x, y, tileSize) > radius) {
+                continue;
+            }
+            Position middle = POSITION.get(entity);
+            if (!map.clearLineTo(HANDLE.get(entity).id, x, y, middle.x, middle.y)) {
+                continue;
+            }
+            DAMAGE.get(entity).land(HEALTH.get(entity).current, harm, credit);
         }
     }
 }

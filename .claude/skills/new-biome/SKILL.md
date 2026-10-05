@@ -36,7 +36,7 @@ are the one exception**, counted, because a house is a place.
 | Coat | Keys | Reach for it when |
 |---|---|---|
 | base | `base`, `fallback` | always |
-| houses | `houses.min`, `houses.max` | a place worth taking - "a quarry with a base in it". 0-2; leave the block out for none. Size and doorways are the strip's (`sim.mission.ground.houses.*`) |
+| houses | `houses.min`, `houses.max` | a place worth taking - "a quarry with a base in it". 0-2; leave the block out for none. Size and doorways are the strip's (`sim.mission.ground.houses.*`). Every doorway gets a shut door at populate (G0069): a house's stock is behind three seconds of work, and a hunter that chases a man in will siege it - count that into how busy the biome is |
 | patches | `patches=rect\|blob <terrain\|neighbour> density sizeMin sizeMax; ...` | `rect` for small patches of colour, `blob` for ground worth going round (thicket). `neighbour` takes the nearer biome's base, or `fallback` |
 | crags | `crags.density`, `crags.smoothing` | irregular masses; more smoothing, fewer and bigger. Leave the block out for none |
 | outcrops | `outcrops.density`, `lengthMin/Max`, `thicknessMin/Max`, `arms` | rock bent round a corner - the Adventures' shape. Leave the block out for none |

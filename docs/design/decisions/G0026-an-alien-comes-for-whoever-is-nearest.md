@@ -6,7 +6,7 @@
 
 **Enforced by.** `AlienTargetingTest.comesForWhoeverIsNearestRatherThanForTheCommander`,
 `.leavesAManWhoIsDownForWhoeverIsStillOnHisFeet`, `.takesUpWithWhoeverIsLeftWhenTheOneItWasAfterGoesDown`,
-`.comesForATurretAsReadilyAsForAMan`, `.shootsTheNearestManRatherThanOnlyTheCommander`.
+`.comesForATurretAsReadilyAsForAMan`, `.shootsTheNearestManRatherThanOnlyTheCommander`, `DoorSiegeTest.leapsAtTheDoorBetweenItAndTheManItHuntsAndIsThrownBack`.
 
 **Constraint.** An alien hunts the nearest thing on the player's side still on its feet - the commander,
 a trooper, or a gun a level put down. `Drivers.nearestLivingTarget` is the only place that decides,

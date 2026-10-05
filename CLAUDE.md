@@ -26,7 +26,8 @@ belongs on the definition every kind already has rather than on the one kind tha
 
 **Reuse before you create.** A second way to do what already has one way is a defect. Already here:
 `Spawner` (entity kinds), `Defs` (kind definitions), `Pool` (transients), `Rng` (randomness),
-`SpatialGrid` (neighbour queries), `ConstraintSolver` (where bodies may be), `Sight` (detection tests),
+`SpatialGrid` (neighbour queries), `ConstraintSolver` (where bodies may be), `Solid` (whether a tile is solid
+now - terrain and shut doors, and a way shut by a door, ADR 0022), `Sight` (detection tests),
 `FlowField` (routes), `Scatter` (placement), `Maps` (layouts and their validity checks), `Log`,
 `ConfigFile` and `ConfigLoader` (a config file and its record), `ConfigBinder` (config records from text),
 `GameProperties` (a file off the classpath), `AlphaWorlds` (test fixtures),

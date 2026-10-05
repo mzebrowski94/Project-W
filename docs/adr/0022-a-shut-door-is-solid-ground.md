@@ -5,8 +5,10 @@
 **Trigger.** Building or changing doors; adding anything else that blocks for a while and then does not; adding a
 reader of "is this tile solid" in `sim`.
 
-**Enforced by.** Nothing yet - doors are built in missions stage 7b. When they are: a door test that a crowd driven
-into a shut door ends with nobody past it, and that every reader named below stops at one.
+**Enforced by.** `ShutDoorTest`: a crowd driven into a shut door ends with nobody past it, a shot stops at its face,
+a blast's line and a clear line stop at it, and an open one is open ground. `Solid` is the one place, derived before
+every tick and by `DoorSystem` whenever a door opens or breaks; `Sight.clearLine` takes it, so perception's and a
+trooper's target choice ask it too.
 
 **Amends G0009.** A door is an entity, as G0009 asks of anything that can die or change; its *shape* while shut is
 its doorway's tiles in the terrain clamp rather than a circle in the pairwise path.

@@ -1,6 +1,5 @@
 package pl.mzebrows.pwt.sim.system.commander;
 
-import pl.mzebrows.pwt.sim.collision.Solid;
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Engine;
 import com.badlogic.ashley.core.Entity;
@@ -12,6 +11,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Enemy;

@@ -27,3 +27,6 @@ changed. Git carries the diff.
   where a block's lines go, the room each biome leaves and how to fit a block to it, `BiomeMeasureTest.ports()`,
   `--mission` to play, the promises test's home. Slow: finding the room took three throwaway probes - now
   `BiomeMeasureTest.printsTheRoomEachBiomeLeavesForCreatures`. Fixed throughout; *Finale* waits for stage 8.
+- 2026-10-05, stage 7b (doors) - missing: that a house is now shut - a door in every doorway, opened by hand,
+  besieged by what hunts a man inside - which changes what a house in a biome costs; added to the houses row in
+  *Ground*. Nothing wrong; the sweeps are unchanged, a doorway being open ground to the map.

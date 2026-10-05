@@ -38,6 +38,12 @@ public final class Projectile implements Component, Pool.Poolable {
     public int bouncesLeft;
 
     /**
+     * Whether it lands its blow on a shut door it flies into (G0069): a heavy gun's shot. Every other shot
+     * stops at a door as at rock and leaves it whole - a door is opened, not shot open.
+     */
+    public boolean breaksDoors;
+
+    /**
      * How far back along its own path this shot is drawn, in world units. Zero is a dot, which is
      * what every gun but the beam declares.
      *
@@ -73,6 +79,12 @@ public final class Projectile implements Component, Pool.Poolable {
     /** Lets it come off this many things before it stops, and returns this component, for fluent spawning. */
     public Projectile bouncing(int bounces) {
         this.bouncesLeft = bounces;
+        return this;
+    }
+
+    /** Makes it a shot that breaks doors, and returns this component, for fluent spawning. */
+    public Projectile breakingDoors(boolean breaks) {
+        this.breaksDoors = breaks;
         return this;
     }
 
@@ -116,5 +128,6 @@ public final class Projectile implements Component, Pool.Poolable {
         range = 0f;
         piercing = false;
         bouncesLeft = 0;
+        breaksDoors = false;
     }
 }

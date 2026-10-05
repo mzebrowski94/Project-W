@@ -1,17 +1,19 @@
 package pl.mzebrows.pwt.sim.collision;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.DOORWAY;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.DOORWAY_MIDDLE_X;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.WALL_BOTTOM;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.WALL_ROW;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.WALL_TOP;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.on;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.walledAtADoorway;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.map.Terrain;
-import pl.mzebrows.pwt.map.TileMap;
-import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -30,17 +32,9 @@ import pl.mzebrows.pwt.sim.component.Projectile;
  */
 class ShutDoorTest {
 
-    /** A wall along row 10, its lower face at y = 50, with a doorway three tiles wide in columns 9 to 11. */
-    private static final int WALL_ROW = 10;
-
-    private static final TileRect DOORWAY = new TileRect(9, WALL_ROW, 3, 1);
-    private static final float WALL_BOTTOM = 50f;
-    private static final float WALL_TOP = 55f;
-    private static final float DOORWAY_MIDDLE_X = 52.5f;
-
     @Test
     void holdsACrowdDrivenIntoAShutDoorAsAWallDoes() {
-        Simulation simulation = on(walled());
+        Simulation simulation = on(walledAtADoorway());
         simulation.spawnDoor(DOORWAY);
         simulation.spawnCommander(DOORWAY_MIDDLE_X, 46f);
         for (int i = 0; i < 8; i++) {
@@ -64,7 +58,7 @@ class ShutDoorTest {
 
     @Test
     void letsEverybodyThroughTheDoorwayOnceItsDoorIsOpen() {
-        Simulation simulation = on(walled());
+        Simulation simulation = on(walledAtADoorway());
         simulation.spawnDoor(DOORWAY).getComponent(Door.class).open = true;
         Entity commander = simulation.spawnCommander(DOORWAY_MIDDLE_X, 46f);
 
@@ -75,7 +69,7 @@ class ShutDoorTest {
 
     @Test
     void stopsAShotThatFliesIntoAShutDoorAtItsFace() {
-        Simulation simulation = on(walled());
+        Simulation simulation = on(walledAtADoorway());
         simulation.spawnDoor(DOORWAY);
         simulation.spawnProjectile(DOORWAY_MIDDLE_X, 45f, 0f, 1f);
 
@@ -87,7 +81,7 @@ class ShutDoorTest {
     /** The blast catches nobody behind the door; what it does to the door itself is the door's. */
     @Test
     void stopsABlastsClearLineAtAShutDoor() {
-        Simulation simulation = on(walled());
+        Simulation simulation = on(walledAtADoorway());
         simulation.spawnDoor(DOORWAY);
         Entity behind = simulation.spawnEnemy(DOORWAY_MIDDLE_X, 60f);
         int health = behind.getComponent(Health.class).current;
@@ -101,7 +95,7 @@ class ShutDoorTest {
 
     @Test
     void answersEveryTileOfAShutDoorSolidAndAnOpenOneNot() {
-        Simulation simulation = on(walled());
+        Simulation simulation = on(walledAtADoorway());
         Entity door = simulation.spawnDoor(DOORWAY);
         simulation.step();
 
@@ -109,7 +103,8 @@ class ShutDoorTest {
         for (int col = DOORWAY.col(); col < DOORWAY.endCol(); col++) {
             assertThat(solid.passableAtTile(col, WALL_ROW)).as("column %d", col).isFalse();
         }
-        assertThat(solid.clearLine(DOORWAY_MIDDLE_X, 45f, DOORWAY_MIDDLE_X, 60f)).isFalse();
+        assertThat(solid.clearLine(DOORWAY_MIDDLE_X, 45f, DOORWAY_MIDDLE_X, 60f))
+                .isFalse();
         assertThat(simulation.map().passableAtTile(10, WALL_ROW))
                 .as("the map itself still has the doorway")
                 .isTrue();
@@ -118,14 +113,8 @@ class ShutDoorTest {
         simulation.step();
 
         assertThat(solid.passableAtTile(10, WALL_ROW)).isTrue();
-        assertThat(solid.clearLine(DOORWAY_MIDDLE_X, 45f, DOORWAY_MIDDLE_X, 60f)).isTrue();
-    }
-
-    /** A wall across the map but for the doorway. */
-    private static TileMap walled() {
-        return ground().rect(0, WALL_ROW, DOORWAY.col(), 1, Terrain.ROCK)
-                .rect(DOORWAY.endCol(), WALL_ROW, 20 - DOORWAY.endCol(), 1, Terrain.ROCK)
-                .build();
+        assertThat(solid.clearLine(DOORWAY_MIDDLE_X, 45f, DOORWAY_MIDDLE_X, 60f))
+                .isTrue();
     }
 
     private static void steps(Simulation simulation, int count, float moveX, float moveY) {

@@ -359,15 +359,30 @@ public record SimConfig(
      *     from the tick it opened
      * @param leapDamage what a creature's leap lands on it, whatever the strain
      * @param health what it takes before it breaks
+     * @param waitDistance how far ahead of a trooper a shut door has to be for his way to count as shut by it, in
+     *     world units: where the men behind the one opening it stop and watch. Above arm's length
+     * @param throwSpeed how fast a creature whose leap lands on it is thrown back off it, in world units a second
+     * @param throwSeconds how long it is held while it is, slowing to a stop as the hold ends
      * @param shake how hard a leap landing on it shakes the ground - felt by the commanders near it
      */
     @With
-    public record DoorConfig(float openSeconds, float sinkSeconds, int leapDamage, int health, ShakeDef shake) {
+    public record DoorConfig(
+            float openSeconds,
+            float sinkSeconds,
+            int leapDamage,
+            int health,
+            float waitDistance,
+            float throwSpeed,
+            float throwSeconds,
+            ShakeDef shake) {
         public DoorConfig {
             Require.positive("door openSeconds", openSeconds);
             Require.notNegative("door sinkSeconds", sinkSeconds);
             Require.notNegative("door leapDamage", leapDamage);
             Require.positive("door health", health);
+            Require.positive("door waitDistance", waitDistance);
+            Require.notNegative("door throwSpeed", throwSpeed);
+            Require.positive("door throwSeconds", throwSeconds);
         }
     }
 

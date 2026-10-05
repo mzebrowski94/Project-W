@@ -1,11 +1,11 @@
 package pl.mzebrows.pwt.sim;
 
-import pl.mzebrows.pwt.map.TileRect;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Approach;
@@ -96,6 +96,7 @@ import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.def.WeaponType;
 
 /**
  * The one place that builds entity state, so no system has to remember which components a commander
@@ -729,14 +730,16 @@ public final class Spawner {
         float x = (doorway.col() + doorway.width() * 0.5f) * tileSize;
         float y = (doorway.row() + doorway.height() * 0.5f) * tileSize;
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Door.class)
-                .set(doorway, ticks(door.openSeconds()), ticks(door.sinkSeconds())));
+        entity.add(
+                engine.createComponent(Door.class).set(doorway, ticks(door.openSeconds()), ticks(door.sinkSeconds())));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Health.class).set(door.health()));
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(Shake.class));
-        entity.add(engine.createComponent(Appearance.class).set(Look.DOOR));
+        entity.add(engine.createComponent(Appearance.class)
+                .set(Look.DOOR)
+                .squares(doorway.width(), doorway.height(), tileSize));
         admit(entity);
         return entity;
     }
@@ -888,6 +891,8 @@ public final class Spawner {
                 weapon.harm,
                 weapon.blastHarm,
                 weapon.bounces,
+                // A heavy gun's shot is the one a door takes a blow from (G0069).
+                config.weapon(weapon.kind).type() == WeaponType.HEAVY,
                 side,
                 credit);
     }
@@ -914,6 +919,7 @@ public final class Spawner {
             Harm harm,
             Harm blastHarm,
             int bounces,
+            boolean breaksDoors,
             Side side,
             int credit) {
         Entity entity = engine.createEntity();
@@ -921,7 +927,8 @@ public final class Spawner {
                 .from(x, y)
                 .lasting(range)
                 .trailing(trailLength)
-                .bouncing(bounces);
+                .bouncing(bounces)
+                .breakingDoors(breaksDoors);
         if (pierceIntervalTicks > 0) {
             // A shot that goes through things: the contact cooldown makes one crossing one blow.
             shot.piercing();

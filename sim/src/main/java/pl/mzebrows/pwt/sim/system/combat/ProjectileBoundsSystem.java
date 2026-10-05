@@ -7,9 +7,15 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.ContactDamage;
+import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Door;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
@@ -42,6 +48,9 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  * does ({@link Bounce}), for as long as it has bounces left; the last one it has not got ends it here like
  * any other.
  *
+ * <p><strong>A shut door is a wall here too</strong> (ADR 0022): a shot ends at its face. A heavy gun's shot lands
+ * its blow on the door as it does (G0069); every other shot leaves it whole.
+ *
  * <p>Marks rather than removes: only {@code ReaperSystem} takes an entity out of the world.
  */
 public final class ProjectileBoundsSystem extends EntitySystem {
@@ -51,6 +60,8 @@ public final class ProjectileBoundsSystem extends EntitySystem {
     private static final ComponentMapper<Projectile> PROJECTILE = ComponentMapper.getFor(Projectile.class);
     private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
+    private static final ComponentMapper<ContactDamage> BLOW = ComponentMapper.getFor(ContactDamage.class);
+    private static final ComponentMapper<Damage> DAMAGE = ComponentMapper.getFor(Damage.class);
 
     /** How far short of the face a shot is put, so the point it ends on is on the open side of it. */
     private static final float SHORT_OF_THE_FACE = 1e-3f;
@@ -61,6 +72,7 @@ public final class ProjectileBoundsSystem extends EntitySystem {
     private final float height;
 
     private ImmutableArray<Entity> projectiles = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
 
     public ProjectileBoundsSystem(Solid map, Spawner spawner) {
         this.spawner = spawner;
@@ -73,6 +85,8 @@ public final class ProjectileBoundsSystem extends EntitySystem {
     public void addedToEngine(Engine engine) {
         projectiles = engine.getEntitiesFor(
                 Family.all(Position.class, Body.class, Projectile.class).get());
+        doors = engine.getEntitiesFor(
+                Family.all(Door.class, Damage.class, Handle.class).get());
     }
 
     @Override
@@ -98,9 +112,20 @@ public final class ProjectileBoundsSystem extends EntitySystem {
                     || position.y - radius > height) {
                 spawner.markDead(projectile);
             } else if (!map.passableAt(position.x, position.y)) {
+                if (shot.breaksDoors) {
+                    breakAt(projectile, map.doorAt(position.x, position.y));
+                }
                 backToTheFace(projectile, position);
                 spawner.markDead(projectile);
             }
+        }
+    }
+
+    /** Lands a heavy shot's blow on the shut door it flew into, if it was a door and not rock (G0069). */
+    private void breakAt(Entity projectile, long door) {
+        @Nullable Entity struck = Handles.resolve(doors, door);
+        if (struck != null && BLOW.has(projectile)) {
+            DAMAGE.get(struck).land(BLOW.get(projectile));
         }
     }
 

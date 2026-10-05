@@ -74,6 +74,14 @@ public final class WorldRenderer implements Disposable {
     private static final Family DRAWABLE = Family.all(
                     Position.class, PreviousPosition.class, Body.class, Appearance.class)
             .get();
+    /**
+     * What has no body is drawn from its appearance alone, as the squares it publishes - a door, its doorway's
+     * tiles (G0069). It is not round and is never hit as a circle (ADR 0022), so it is not among the bodies.
+     */
+    private static final Family SQUARED = Family.all(Position.class, PreviousPosition.class, Appearance.class)
+            .exclude(Body.class)
+            .get();
+
     private static final int CIRCLE_SEGMENTS = 16;
 
     /** Reused, so drawing a see-through mark costs no colour per entity per frame. */
@@ -102,11 +110,14 @@ public final class WorldRenderer implements Disposable {
     /** Cached: Ashley keeps this view live, so it must not be re-queried per frame. */
     private ImmutableArray<Entity> drawable = new ImmutableArray<>(new Array<>());
 
+    private ImmutableArray<Entity> squared = new ImmutableArray<>(new Array<>());
+
     private boolean disposed;
 
     /** Points the renderer at a world. Call again after a restart - a new simulation is a new engine. */
     public void bind(Simulation simulation) {
         drawable = simulation.engine().getEntitiesFor(DRAWABLE);
+        squared = simulation.engine().getEntitiesFor(SQUARED);
     }
 
     /**
@@ -128,6 +139,7 @@ public final class WorldRenderer implements Disposable {
         shapes.setProjectionMatrix(viewport.getCamera().combined);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         drawGround(alpha);
+        drawSquared(alpha);
         for (int i = 0; i < drawable.size(); i++) {
             Entity entity = drawable.get(i);
             Position position = POSITION.get(entity);
@@ -245,6 +257,37 @@ public final class WorldRenderer implements Disposable {
         }
     }
 
+    /**
+     * Everything drawn as squares rather than as a body: each square as much of a tile as it publishes, round its
+     * own middle, so a door sinking is seen as its squares shrinking (G0069). What it is filling up to is the arc
+     * the heat bar is drawn as, over it, in the colour its charge names.
+     */
+    private void drawSquared(float alpha) {
+        for (int i = 0; i < squared.size(); i++) {
+            Entity entity = squared.get(i);
+            Appearance appearance = APPEARANCE.get(entity);
+            if (appearance.squaresAcross <= 0 || appearance.squareFill <= 0f) {
+                continue;
+            }
+            float x = Drawn.x(POSITION.get(entity), PREVIOUS.get(entity), alpha);
+            float y = Drawn.y(POSITION.get(entity), PREVIOUS.get(entity), alpha);
+            float pitch = appearance.squarePitch;
+            float side = pitch * appearance.squareFill;
+            shapes.setColor(tint(appearance));
+            for (int across = 0; across < appearance.squaresAcross; across++) {
+                for (int down = 0; down < appearance.squaresDown; down++) {
+                    float middleX = x + (across - (appearance.squaresAcross - 1) * 0.5f) * pitch;
+                    float middleY = y + (down - (appearance.squaresDown - 1) * 0.5f) * pitch;
+                    shapes.rect(middleX - side * 0.5f, middleY - side * 0.5f, side, side);
+                }
+            }
+            if (appearance.charge > 0f) {
+                float extent = 0.5f * pitch * Math.max(appearance.squaresAcross, appearance.squaresDown);
+                drawArc(x, y, extent, palette.colorFor(appearance.chargeLook), appearance.charge);
+            }
+        }
+    }
+
     /** Whether a look is underfoot rather than standing on the ground. */
     private static boolean ground(Look look) {
         return look == Look.SLICK || look == Look.FIRE;
@@ -306,10 +349,15 @@ public final class WorldRenderer implements Disposable {
      * one or two things on the worst tick.
      */
     private void drawHeat(float x, float y, float radius, Appearance appearance) {
-        shapes.setColor(palette.colorFor(appearance.overheated ? Look.OVERHEAT : Look.HEAT));
+        drawArc(x, y, radius, palette.colorFor(appearance.overheated ? Look.OVERHEAT : Look.HEAT), appearance.heat);
+    }
+
+    /** The heat bar's arc, over something this big, this full, in this colour. */
+    private void drawArc(float x, float y, float radius, Color color, float fraction) {
+        shapes.setColor(color);
         float arc = heatMark.radiusFor(radius);
         float width = heatMark.widthFor(radius);
-        int steps = heatMark.segmentsFor(appearance.heat);
+        int steps = heatMark.segmentsFor(fraction);
         float fromX = x + MathUtils.cosDeg(heatMark.angleAt(0)) * arc;
         float fromY = y + MathUtils.sinDeg(heatMark.angleAt(0)) * arc;
         for (int step = 1; step <= steps; step++) {

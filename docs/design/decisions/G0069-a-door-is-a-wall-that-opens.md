@@ -5,11 +5,12 @@
 **Trigger.** Adding or changing what stands in a doorway; what opens, breaks or blocks one; what a creature does
 when its way is shut.
 
-**Enforced by.** Nothing yet - doors are built in missions stage 7b. When they are: a door test that a shut door holds
-under crowd pressure, stops a shot, a blast's line and a creature's clear line, opens on the held action key and loses
-the work on a wound or a step away; that a rifle leaves it whole and a leap, a blast and a heavy gun break it; that a
-hunter shut out leaps at it and is thrown back; and that one trooper opens while the others watch. Missions ticket 14
-holds the reasoning and the keys; ADR 0022 how a shut door is solid.
+**Enforced by.** `DoorTest` (opened on the held key, lost to letting go, a wound or going down, last on a tie; broken
+by a blast, a rocket and the flamer, whole under a rifle; sunk and gone), `ShutDoorTest` (ADR 0022's), `DoorSiegeTest`
+(a hunter shut out leaps at it, is thrown back, shakes the ground, breaks it in the end; one that cannot leap waits),
+`TrooperDoorTest` (one trooper opens while the others watch their sectors, no faster with a commander), and
+`MissionTest.standsAShutDoorInEveryDoorwayOfEveryHouse`. Missions ticket 14 holds the reasoning and the keys; ADR 0022
+how a shut door is solid.
 
 **Amends G0026.** A creature hunts whoever is nearest by route, and a route runs through a shut door; a hunter whose
 way is shut by a door leaps at the **door**.

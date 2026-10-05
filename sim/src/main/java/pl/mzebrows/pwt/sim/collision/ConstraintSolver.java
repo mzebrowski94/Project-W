@@ -46,6 +46,7 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
 
     /** Whether a tile is solid now: terrain and shut doorways (ADR 0022). The clamp asks it, never the map. */
     private final Solid solid;
+
     private final float width;
     private final float height;
     private final int passes;

@@ -71,7 +71,7 @@ do not treat one as taken when adding a game binding. None of them is on the pad
 | Left mouse | `X` / `Square`, or `RT` / `R2` | Fire | built |
 | Right mouse | `LT` / `L2` | Melee strike | built |
 | `Q` | `B` / `Circle` | Throw a grenade | built - G0019 |
-| `E` | `A` / `Cross` | Act on what is in reach - stabilise a casualty, get on or off a turret, open a crate | built - G0021, G0024, G0056 |
+| `E` | `A` / `Cross` | Act on what is in reach - stabilise a casualty, get on or off a turret, open a crate, open a shut door (held) | built - G0021, G0024, G0056, G0069 |
 | `F` | `RB` / `R1` | Take hold of a load, or let go of it | built - G0021 |
 | `1` | D-pad up | Squad order: follow me | built - scaffolding, see below |
 | `2` | D-pad right | Squad order: forward | built - scaffolding, see below |

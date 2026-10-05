@@ -151,6 +151,14 @@ public final class Vitality implements Component, Pool.Poolable {
         return Taken.WOUNDED;
     }
 
+    /**
+     * Whether a wound landed on him this tick: his grace has just started and not yet run a tick. What loses the
+     * work on a door he is opening (G0069). Read after {@code DamageSystem}.
+     */
+    public boolean woundedThisTick() {
+        return graceTicks > 0 && graceRemaining == graceTicks && wounded();
+    }
+
     /** True while he is on his feet with at least one wound. */
     public boolean wounded() {
         return !begun && wounds > 0;

@@ -2,14 +2,19 @@ package pl.mzebrows.pwt.sim.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.badlogic.ashley.core.Family;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.TierKind;
 
@@ -94,6 +99,35 @@ class MissionTest {
             assertThat(easy).as("seed %d", seed).isLessThan(medium);
             assertThat(medium).as("seed %d", seed).isLessThan(hard);
         }
+    }
+
+    @Test
+    void standsAShutDoorInEveryDoorwayOfEveryHouse() {
+        int laid = 0;
+        for (long seed = 0; seed < 4; seed++) {
+            Simulation simulation = Scenarios.world(
+                    Scenarios.mission(TierKind.MEDIUM), SimConfig.defaults().withSeed(seed));
+            Mission mission = Mission.build(simulation.config(), TierKind.MEDIUM);
+            simulation.step();
+
+            int doorways = 0;
+            for (House house : mission.laid().houses()) {
+                for (TileRect doorway : house.doorways()) {
+                    doorways++;
+                    assertThat(simulation.solid().passableAtTile(doorway.col(), doorway.row()))
+                            .as("seed %d, doorway at %d,%d", seed, doorway.col(), doorway.row())
+                            .isFalse();
+                }
+            }
+            assertThat(simulation
+                            .engine()
+                            .getEntitiesFor(Family.all(Door.class).get())
+                            .size())
+                    .as("seed %d", seed)
+                    .isEqualTo(doorways);
+            laid += doorways;
+        }
+        assertThat(laid).as("doorways across the seeds").isPositive();
     }
 
     @Test

@@ -9,10 +9,15 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.collision.Solid;
+import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Approach;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Door;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
@@ -20,6 +25,7 @@ import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.Compass;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
+import pl.mzebrows.pwt.sim.system.query.Reach;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
@@ -29,6 +35,10 @@ import pl.mzebrows.pwt.sim.system.query.Sight;
  * <p><strong>Urgency blends the route against the sweep, and never the speed</strong> - "forward"
  * changes speed. The sweep is "looking around": its look is written from the lean, not the walk. How
  * long a lean lasts is drawn from the squad's stream, so a squad does not sweep in lockstep.
+ *
+ * <p><strong>A shut door in his way stops him</strong> (G0069): the first man at arm's length is the one it goes to
+ * ({@code DoorSystem}) and stands at it, facing it; every other man whose way it shuts stands where he is and
+ * watches his sector. His route still runs through it, as every route does (ADR 0022).
  *
  * <p>Writes a desired velocity; {@code DriveSystem} commits it.
  */
@@ -40,6 +50,8 @@ public final class TrooperMoveSystem extends EntitySystem {
     private static final ComponentMapper<Speed> SPEED = ComponentMapper.getFor(Speed.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Approach> APPROACH = ComponentMapper.getFor(Approach.class);
+    private static final ComponentMapper<Action> ACTION = ComponentMapper.getFor(Action.class);
+    private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -59,6 +71,10 @@ public final class TrooperMoveSystem extends EntitySystem {
     private static final int BEARING_ATTEMPTS = 8;
 
     private final TileMap map;
+
+    /** Whether a tile is solid now, for the one question of a way shut by a door. */
+    private final Solid solid;
+
     private final Rng rng;
     private final float urgency;
     private final float scanSpread;
@@ -71,6 +87,9 @@ public final class TrooperMoveSystem extends EntitySystem {
     private final float blockDistance;
     private final int detourTicks;
 
+    /** How far ahead a shut door shuts his way (G0069). */
+    private final float doorWait;
+
     /** One field, re-aimed at whatever a trooper is currently walking to. */
     private final FlowField route;
 
@@ -81,9 +100,12 @@ public final class TrooperMoveSystem extends EntitySystem {
     private final Position goal = new Position();
 
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
 
-    public TrooperMoveSystem(SimConfig config, TileMap map, Rng rng) {
-        this.map = map;
+    public TrooperMoveSystem(SimConfig config, Solid solid, Rng rng) {
+        this.solid = solid;
+        this.map = solid.map();
+        this.doorWait = config.door().waitDistance();
         this.rng = rng;
         SimConfig.TrooperConfig trooper = config.trooper();
         this.urgency = trooper.urgency();
@@ -96,23 +118,26 @@ public final class TrooperMoveSystem extends EntitySystem {
         this.blockTicks = Ticks.of(trooper.blockSeconds(), config.tickSeconds());
         this.blockDistance = trooper.blockDistance();
         this.detourTicks = Ticks.of(trooper.detourSeconds(), config.tickSeconds());
-        this.route = FlowField.over(map, trooper.radius());
+        this.route = FlowField.over(this.map, trooper.radius());
     }
 
     @Override
     public void addedToEngine(Engine engine) {
         troopers = engine.getEntitiesFor(Family.all(Trooper.class, Position.class, Steering.class, Speed.class)
                 .get());
+        doors = engine.getEntitiesFor(Family.all(Door.class, Handle.class).get());
     }
 
     @Override
     public void update(float deltaTime) {
         for (int i = 0; i < troopers.size(); i++) {
             Entity entity = troopers.get(i);
+            Trooper trooper = TROOPER.get(entity);
+            // Asked afresh every tick he walks; a man standing, fighting or held has no door in his way.
+            trooper.door = Handle.NOBODY;
             if (Drivers.held(entity)) {
                 continue;
             }
-            Trooper trooper = TROOPER.get(entity);
             sweep(trooper, deltaTime);
             if (trooper.mode == Trooper.Mode.HOLD
                     || trooper.mode == Trooper.Mode.SECURE
@@ -140,6 +165,13 @@ public final class TrooperMoveSystem extends EntitySystem {
                 trooper.sampling = false;
                 continue;
             }
+            // A walk of the grid ahead of him, skipped on a level with no doors at all.
+            trooper.door = doors.size() == 0
+                    ? Handle.NOBODY
+                    : solid.doorAhead(at.x, at.y, direction[0], direction[1], doorWait);
+            if (trooper.door != Handle.NOBODY && waitsAtTheDoor(entity, trooper, at)) {
+                continue;
+            }
             if (trooper.mode == Trooper.Mode.FOLLOW && closeEnoughToTheCommander(at, trooper)) {
                 // 3.a: a loose formation, still watching while it waits.
                 keepWatching(trooper, at);
@@ -161,6 +193,32 @@ public final class TrooperMoveSystem extends EntitySystem {
             float speed = SPEED.get(entity).value * (closingIn ? 1f : pace(trooper, deltaTime));
             STEERING.get(entity).set(direction[0] * speed, direction[1] * speed);
         }
+    }
+
+    /**
+     * Whether a man whose way a shut door shuts stands rather than walks, and which way he looks if he does
+     * (G0069): the man it went to stands at it facing it, as does the first to reach it before it has gone to
+     * anybody; a man it went to somebody else stands where he is and watches his sector. A man still short of arm's
+     * length of a door nobody has walks on up to it.
+     */
+    private boolean waitsAtTheDoor(Entity entity, Trooper trooper, Position at) {
+        Entity door = Handles.resolve(doors, trooper.door);
+        if (door == null || !ACTION.has(entity)) {
+            return false;
+        }
+        long opener = DOOR.get(door).trooper;
+        boolean atIt = Reach.doorGap(entity, door, map.tileSize()) <= ACTION.get(entity).reach;
+        if (opener != Handle.NOBODY && opener != Handles.of(entity)) {
+            keepWatching(trooper, at);
+            return true;
+        }
+        if (!atIt) {
+            return false;
+        }
+        trooper.sampling = false;
+        trooper.settled = false;
+        trooper.look(direction[0], direction[1]);
+        return true;
     }
 
     /**

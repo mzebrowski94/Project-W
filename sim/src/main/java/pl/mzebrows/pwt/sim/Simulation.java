@@ -9,7 +9,9 @@ import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Lair;
@@ -56,6 +58,7 @@ import pl.mzebrows.pwt.sim.system.death.ReaperSystem;
 import pl.mzebrows.pwt.sim.system.death.RespawnSystem;
 import pl.mzebrows.pwt.sim.system.death.SlickSystem;
 import pl.mzebrows.pwt.sim.system.level.ControlPointSystem;
+import pl.mzebrows.pwt.sim.system.level.DoorSystem;
 import pl.mzebrows.pwt.sim.system.level.LairSystem;
 import pl.mzebrows.pwt.sim.system.level.NestSystem;
 import pl.mzebrows.pwt.sim.system.level.ObjectiveSystem;
@@ -105,11 +108,16 @@ public final class Simulation {
 
     private final SimConfig config;
     private final TileMap map;
+
+    /** Whether a tile is solid now - the map and every shut door (ADR 0022) - derived before every tick. */
+    private final Solid solid;
+
     private final Streams streams;
     private final PooledEngine engine;
     private final Spawner spawner;
     private final ImmutableArray<Entity> commanders;
     private final ImmutableArray<Entity> levels;
+    private final ImmutableArray<Entity> doors;
     private final SpawnOrder spawnOrder;
 
     /** Where a tick's picks enter the upgrade package. */
@@ -157,6 +165,7 @@ public final class Simulation {
         this.solo = new PlayerInputs(capacity);
         this.config = config;
         this.map = map;
+        this.solid = new Solid(map);
         this.streams = new Streams(config.seed());
         this.engine = new PooledEngine();
         this.spawner = new Spawner(engine, config);
@@ -166,6 +175,7 @@ public final class Simulation {
         this.commanders = engine.getEntitiesFor(
                 Family.all(Commander.class, Intent.class, Position.class).get());
         this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
+        this.doors = engine.getEntitiesFor(Family.all(Door.class).get());
 
         // How loosely a gun throws, for every shooter; not how badly a creature aims (SPIT).
         Rng scatter = streams.of(RngStream.SCATTER);
@@ -179,8 +189,8 @@ public final class Simulation {
         engine.addSystem(new CommanderControlSystem(config, map, guns, capacity));
         engine.addSystem(new MeleeSystem(spawner));
         // After the commander's hands, before anything looks around.
-        engine.addSystem(new TurretSystem(map, guns));
-        engine.addSystem(new PerceptionSystem(config, map));
+        engine.addSystem(new TurretSystem(solid, guns));
+        engine.addSystem(new PerceptionSystem(config, solid));
         engine.addSystem(new NavigationSystem(config, map));
         // After the course it bends, before avoidance.
         engine.addSystem(new WeaveSystem());
@@ -193,32 +203,35 @@ public final class Simulation {
         // Everything the AI leaves to the dice (AiChance), apart from where the squad roams.
         Odds odds = new Odds(modifiers, config.chances(), streams.of(RngStream.NERVE));
         engine.addSystem(new SquadOrderSystem(config, capacity));
-        engine.addSystem(new TrooperMindSystem(config, map, squad, odds));
-        engine.addSystem(new TrooperMoveSystem(config, map, squad));
-        engine.addSystem(new TrooperCombatSystem(config, map, guns, throwing, odds));
+        engine.addSystem(new TrooperMindSystem(config, solid, squad, odds));
+        engine.addSystem(new TrooperMoveSystem(config, solid, squad));
+        engine.addSystem(new TrooperCombatSystem(config, solid, guns, throwing, odds));
         engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds()));
         engine.addSystem(new AvoidanceSystem(config, map));
-        engine.addSystem(new EnemyRangedSystem(map, guns, streams.of(RngStream.SPIT)));
+        engine.addSystem(new EnemyRangedSystem(solid, guns, streams.of(RngStream.SPIT)));
         // After everything that chooses a course; before the dodge, which overwrites it.
         engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
         engine.addSystem(new DriveSystem(map, config.ground(), modifiers));
-        engine.addSystem(new EnemyLeapSystem(streams.of(RngStream.LEAP), config.tickSeconds()));
+        engine.addSystem(new EnemyLeapSystem(streams.of(RngStream.LEAP), config.tickSeconds(), solid, config.door()));
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));
-        engine.addSystem(new CollisionSystem(config, map, spawner, odds));
-        engine.addSystem(new GrenadeSystem(map, spawner, throwing));
+        engine.addSystem(new CollisionSystem(config, solid, spawner, odds));
+        engine.addSystem(new GrenadeSystem(solid, spawner, throwing));
         engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(config, spawner, modifiers));
         // Straight after the hits it reads: a body a bolt built on this tick does not drain this tick (G0059).
         engine.addSystem(new ShockSystem(config));
-        engine.addSystem(new ActionSystem(config, modifiers, capacity));
+        engine.addSystem(new ActionSystem(config, modifiers, map.tileSize(), capacity));
         // Straight after the key that opens a crate, so a crate opened this tick is dealt and shown this
         // tick; after damage, so a man hurt this tick has his crate shut on it (G0056).
         engine.addSystem(new CrateSystem(config, spawner, modifiers, streams.of(RngStream.ARMOURY)));
         engine.addSystem(new AidSystem(config, modifiers));
+        // After the hands that work a door this tick and the damage that breaks it, so a door opened or broken
+        // this tick is open ground from here on (G0069, ADR 0022).
+        engine.addSystem(new DoorSystem(solid, spawner));
         engine.addSystem(new CasualtySystem(config, spawner, modifiers));
         engine.addSystem(new DyingSystem(spawner));
         // Where a man from the reserve is put down, whether he is a returning commander or a muster's
@@ -227,13 +240,13 @@ public final class Simulation {
         engine.addSystem(new RespawnSystem(config, map, spawner, reinforcement));
         // Before the death reactions: a shot that misses ends by dying too (G0018), and must leave
         // its blast or spatter.
-        engine.addSystem(new ProjectileBoundsSystem(map, spawner));
+        engine.addSystem(new ProjectileBoundsSystem(solid, spawner));
         // Beside the mine, for the same reasons; a full body explodes by dying (G0018).
         engine.addSystem(new BloatSystem(config, spawner));
         // After the solver settles positions, and immediately before the blast, so a fuse that runs
         // out reaches this tick's death reactions (G0018).
         engine.addSystem(new MineSystem(spawner));
-        engine.addSystem(new BlastSystem(map, spawner));
+        engine.addSystem(new BlastSystem(solid, spawner));
         // Beside the blast: in the window between marked dead and reaped (G0018).
         engine.addSystem(new SlickSystem(map, spawner, streams.of(RngStream.SLICK)));
         // Level systems from here, after the solver and the death chain.
@@ -339,6 +352,8 @@ public final class Simulation {
                 INVULNERABLE.get(commander).permanent = level.commandersInvulnerable;
             }
         }
+        // Derived, never carried: a world restored from a snapshot answers as the one it was taken from (ADR 0022).
+        solid.derive(doors);
         engine.update(config.tickSeconds());
         level.tick++;
     }
@@ -586,5 +601,13 @@ public final class Simulation {
      */
     public TileMap map() {
         return map;
+    }
+
+    /**
+     * Whether a tile is solid now: the map, and the doorway of every shut door (ADR 0022). As of the start of
+     * the last tick, and as any door that opened or broke during it has left it.
+     */
+    public Solid solid() {
+        return solid;
     }
 }

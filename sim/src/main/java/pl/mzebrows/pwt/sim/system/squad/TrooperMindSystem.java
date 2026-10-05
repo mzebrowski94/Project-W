@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Odds;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Weapon;
@@ -45,8 +46,9 @@ public final class TrooperMindSystem extends EntitySystem {
 
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
 
-    public TrooperMindSystem(SimConfig config, TileMap map, Rng rng, Odds odds) {
-        this.fight = new TrooperFight(config, map);
+    public TrooperMindSystem(SimConfig config, Solid solid, Rng rng, Odds odds) {
+        TileMap map = solid.map();
+        this.fight = new TrooperFight(config, solid);
         this.orders = new TrooperOrders(config, map);
         this.aid = new TrooperAid(config, odds);
         this.mend = new TrooperMend(config);

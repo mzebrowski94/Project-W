@@ -27,14 +27,25 @@ public final class Solid implements Passability {
     private static final ComponentMapper<Handle> HANDLE = ComponentMapper.getFor(Handle.class);
     private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
 
+    /** How far past the face a probe for the door behind it reaches, in world units: well inside one tile. */
+    private static final float DOOR_PROBE = 1e-2f;
+
     private final TileMap map;
 
     /** The handle of the shut door standing in each tile, or nobody - {@code row * cols + col}. */
     private final long[] shut;
 
+    /** The one door {@link #clearLineTo} lets a line into, for the length of one walk. */
+    private long excepted = Handle.NOBODY;
+
+    /** This, but for the tiles of {@link #excepted}: built once, so a walk to a door allocates nothing. */
+    private final Passability toExcepted;
+
     public Solid(TileMap map) {
         this.map = map;
         this.shut = new long[map.cols() * map.rows()];
+        this.toExcepted = (col, row) -> map.passableAtTile(col, row)
+                && (shut[row * map.cols() + col] == Handle.NOBODY || shut[row * map.cols() + col] == excepted);
     }
 
     /** The ground under it, which never changes: its extent, its tiles and its terrain. */
@@ -86,6 +97,39 @@ public final class Solid implements Passability {
     /** Whether an unobstructed straight line runs between two points now: the map's exact walk, over this. */
     public boolean clearLine(float fromX, float fromY, float toX, float toY) {
         return map.clearLine(fromX, fromY, toX, toY, this);
+    }
+
+    /** Whether something this big could travel the straight line between two points now, the map's walk over this. */
+    public boolean isClearPath(float fromX, float fromY, float toX, float toY, float radius) {
+        return map.isClearPath(fromX, fromY, toX, toY, radius, this);
+    }
+
+    /**
+     * Whether a straight line reaches this shut door now: nothing solid on it but the door's own tiles. What a
+     * blast asks of a door it might catch - its line to the door ends at the door (ADR 0022).
+     */
+    public boolean clearLineTo(long door, float fromX, float fromY, float toX, float toY) {
+        excepted = door;
+        boolean clear = map.clearLine(fromX, fromY, toX, toY, toExcepted);
+        excepted = Handle.NOBODY;
+        return clear;
+    }
+
+    /**
+     * The shut door that is the first solid thing on the way from a point along a unit direction, within this
+     * distance, or nobody - nobody too when rock comes first. <strong>The one test of a way shut by a
+     * door</strong> (G0069): a trooper whose way it is opens it, and a hunter whose way it is leaps at it.
+     */
+    public long doorAhead(float fromX, float fromY, float directionX, float directionY, float distance) {
+        float toX = fromX + directionX * distance;
+        float toY = fromY + directionY * distance;
+        float open = map.passableFraction(fromX, fromY, toX, toY, this);
+        if (open >= 1f) {
+            return Handle.NOBODY;
+        }
+        // A hair past where the line met it, so the point is in the tile that stopped it.
+        float into = distance * open + DOOR_PROBE;
+        return doorAt(fromX + directionX * into, fromY + directionY * into);
     }
 
     /** How much of the line runs over open ground before it first meets something solid now, as a fraction. */

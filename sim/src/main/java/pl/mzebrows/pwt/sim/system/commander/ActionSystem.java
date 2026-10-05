@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Crate;
+import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -31,7 +32,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  *
  * <p><strong>One key, and the game chooses what it means.</strong> Whatever is within arm's length
  * is what is on offer, nearest first; there is nothing to select. A tie goes to the gun, then the crate,
- * then the casualty. A crate is the one thing the key opens a choice on - what to take from it, in the
+ * then the casualty, and only then to a shut door (G0069). A crate is the one thing the key opens a choice on - what to take from it, in the
  * top bar - and that choice is {@code CrateSystem}'s (G0056). That is pillar 1 -
  * anything that makes the player stop and pick belongs in a different game - and it is why the
  * available action is published on {@link Action} for the interface to show rather than assembled by
@@ -52,6 +53,11 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  * body hitting the ground. Before, because a man picked up on the tick his clock would have run out
  * should be picked up rather than buried.
  *
+ * <p><strong>A door is opened on stabilise's rules</strong> (G0069): held at arm's length, the work lost the
+ * moment he lets go, steps away, goes down or takes a wound. Here he only puts his hands to it; how much work a
+ * tick is worth, and when the door gives, is {@code DoorSystem}'s - so a commander and a trooper at one door
+ * open it no faster than one.
+ *
  * <p>Being that late also means it reads positions the solver has already settled, so arm's length
  * means where things actually ended up rather than where they were going.
  */
@@ -62,9 +68,14 @@ public final class ActionSystem extends EntitySystem {
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
+    private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
+    private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
 
     private final float reviveInvulnerableSeconds;
     private final Modifiers modifiers;
+
+    /** The map's tile, which a doorway is counted in. */
+    private final float tileSize;
 
     /**
      * Scratch, by slot: pressed to open a crate this tick. Opened after every commander has been heard, in
@@ -78,10 +89,15 @@ public final class ActionSystem extends EntitySystem {
     private ImmutableArray<Entity> stations = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> crates = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
 
-    /** @param capacity how many slots the game holds */
-    public ActionSystem(SimConfig config, Modifiers modifiers, int capacity) {
+    /**
+     * @param tileSize the map's tile, which a doorway is counted in
+     * @param capacity how many slots the game holds
+     */
+    public ActionSystem(SimConfig config, Modifiers modifiers, float tileSize, int capacity) {
         this.modifiers = modifiers;
+        this.tileSize = tileSize;
         this.reviveInvulnerableSeconds = config.casualty().reviveInvulnerableSeconds();
         this.opening = new boolean[capacity];
     }
@@ -98,6 +114,7 @@ public final class ActionSystem extends EntitySystem {
         crates = engine.getEntitiesFor(
                 Family.all(Crate.class, Position.class, Body.class).get());
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
+        doors = engine.getEntitiesFor(Family.all(Door.class).get());
     }
 
     @Override
@@ -125,6 +142,16 @@ public final class ActionSystem extends EntitySystem {
             @Nullable Entity station = Reach.nearest(stations, commander, action.reach, ActionKind.MAN_TURRET);
             @Nullable Entity subject = Reach.nearest(casualties, commander, action.reach, ActionKind.STABILISE);
             @Nullable Entity crate = Reach.nearest(crates, commander, action.reach, ActionKind.OPEN_CRATE);
+            @Nullable Entity door = Reach.nearestDoor(doors, commander, action.reach, tileSize);
+            if (door != null
+                    && Reach.doorGap(commander, door, tileSize) < nearestGap(commander, station, crate, subject)) {
+                // The bar is the door's, drawn over it; nothing fills on him.
+                offer(action, ActionKind.OPEN_DOOR);
+                if (acting) {
+                    putHandsTo(commander, DOOR.get(door));
+                }
+                continue;
+            }
             if (station != null
                     && nearer(commander, station, subject)
                     && (crate == null || Reach.gap(commander, station) <= Reach.gap(commander, crate))) {
@@ -174,6 +201,34 @@ public final class ActionSystem extends EntitySystem {
                 Crates.open(crate, slot, tick);
             }
         }
+    }
+
+    /**
+     * A tick of his hands on a door: work for {@code DoorSystem} to count, or - on the tick a wound lands on him
+     * - every tick of it lost (G0069).
+     */
+    private static void putHandsTo(Entity commander, Door door) {
+        if (VITALITY.has(commander) && VITALITY.get(commander).woundedThisTick()) {
+            door.workTicks = 0;
+            return;
+        }
+        door.worked = true;
+    }
+
+    /** How near the nearest of the other offers is, surface to surface; none at all is as far as can be. */
+    private static float nearestGap(
+            Entity commander, @Nullable Entity station, @Nullable Entity crate, @Nullable Entity subject) {
+        float nearest = Float.MAX_VALUE;
+        if (station != null) {
+            nearest = Math.min(nearest, Reach.gap(commander, station));
+        }
+        if (crate != null) {
+            nearest = Math.min(nearest, Reach.gap(commander, crate));
+        }
+        if (subject != null) {
+            nearest = Math.min(nearest, Reach.gap(commander, subject));
+        }
+        return nearest;
     }
 
     /**

@@ -6,10 +6,10 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Obstacle;
@@ -30,7 +30,7 @@ final class TrooperFight {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
 
-    private final TileMap map;
+    private final Solid map;
     private final float threatBonus;
     private final float sharedTargetPenalty;
     private final float closeInFactor;
@@ -44,7 +44,7 @@ final class TrooperFight {
     /** The boulders, which stop a shot though they hide nothing (G0015). */
     private ImmutableArray<Entity> obstacles = new ImmutableArray<>(new Array<>());
 
-    TrooperFight(SimConfig config, TileMap map) {
+    TrooperFight(SimConfig config, Solid map) {
         this.map = map;
         this.threatBonus = config.trooper().threatBonus();
         this.sharedTargetPenalty = config.trooper().sharedTargetPenalty();

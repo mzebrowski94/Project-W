@@ -167,7 +167,7 @@ constructor of `Simulation` is still the one source of it.
 | `creature` | The aliens' noticing, attacks and growth | Perception, Grip, EnemyRanged, EnemyLeap, Evolution, Barrage | - |
 | `combat` | Contact, blows, guns and throws | Collision, Damage, Shock, Grenade, ProjectileBounds, Cooldown, Pickup | `Guns`, `Throws`, `Grants` |
 | `death` | Casualties, throes, the reaper and what a death leaves | Casualty, Dying, Respawn, Bloat, Mine, Blast, Slick, Reaper | `Deaths` |
-| `level` | Waves, nests, the lair, points, reinforcements, winning | Reinforcement, Wave, Nest, Lair, ControlPoint, Objective | - |
+| `level` | Waves, nests, the lair, points, reinforcements, doors, winning | Reinforcement, Wave, Nest, Lair, ControlPoint, Door, Objective | - |
 | `appearance` | What the renderer is shown (G0003) | Appearance | - |
 | `upgrade` | Upgrades and adaptations (ADR 0017) | Upgrade | `Modifiers` |
 

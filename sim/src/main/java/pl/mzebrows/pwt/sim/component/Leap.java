@@ -58,6 +58,12 @@ public final class Leap implements Component, Pool.Poolable {
     public float directionX;
     public float directionY;
 
+    /**
+     * The shut door this leap is at, by handle, or nobody (G0069): a hunter whose way a door shuts leaps at the
+     * door instead of at the man behind it, aimed once at its face.
+     */
+    public long door = Handle.NOBODY;
+
     /** Sets the configuration and leaves the unit ready to leap, for fluent spawning. */
     public Leap set(
             boolean newEnabled,
@@ -84,6 +90,7 @@ public final class Leap implements Component, Pool.Poolable {
         this.leapsLeft = 0;
         this.directionX = 0f;
         this.directionY = 0f;
+        this.door = Handle.NOBODY;
         return this;
     }
 
@@ -105,6 +112,7 @@ public final class Leap implements Component, Pool.Poolable {
         leapsLeft = 0;
         directionX = 0f;
         directionY = 0f;
+        door = Handle.NOBODY;
     }
 
     @Override
@@ -124,5 +132,6 @@ public final class Leap implements Component, Pool.Poolable {
         leapsLeft = 0;
         directionX = 0f;
         directionY = 0f;
+        door = Handle.NOBODY;
     }
 }

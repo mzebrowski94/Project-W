@@ -10,6 +10,7 @@ import java.util.function.UnaryOperator;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dying;
@@ -1740,6 +1741,28 @@ public final class AlphaWorlds {
     /** The test grid, filled with open ground, ready for a test to lay rock into. */
     public static TileMap.Builder ground() {
         return TileMap.builder(ARENA_TILES, ARENA_TILES, TILE).fill(Terrain.PLAIN);
+    }
+
+    /** The row of the wall {@link #walledAtADoorway()} lays across the arena. */
+    public static final int WALL_ROW = 10;
+
+    /** Its doorway: three tiles wide, in columns 9 to 11 - what one door fills (G0069). */
+    public static final TileRect DOORWAY = new TileRect(9, WALL_ROW, 3, 1);
+
+    /** The wall's lower face, the side a test usually stands on. */
+    public static final float WALL_BOTTOM = WALL_ROW * TILE;
+
+    /** Its upper face. */
+    public static final float WALL_TOP = WALL_BOTTOM + TILE;
+
+    /** Halfway across the doorway. */
+    public static final float DOORWAY_MIDDLE_X = (DOORWAY.col() + DOORWAY.width() * 0.5f) * TILE;
+
+    /** A wall of rock across the arena along {@link #WALL_ROW}, but for {@link #DOORWAY}. */
+    public static TileMap walledAtADoorway() {
+        return ground().rect(0, WALL_ROW, DOORWAY.col(), 1, Terrain.ROCK)
+                .rect(DOORWAY.endCol(), WALL_ROW, ARENA_TILES - DOORWAY.endCol(), 1, Terrain.ROCK)
+                .build();
     }
 
     public static Simulation simulation() {

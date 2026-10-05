@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
+import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Health;
@@ -85,6 +86,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Mine> MINE = ComponentMapper.getFor(Mine.class);
     private static final ComponentMapper<Barrage> BARRAGE = ComponentMapper.getFor(Barrage.class);
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
+    private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
 
     private final Defs<UnitKind, UnitDef> units;
     private final Defs<PickupKind, PickupDef> pickups;
@@ -145,6 +147,10 @@ public final class AppearanceSystem extends IteratingSystem {
         // How many wounds a man on his feet is carrying, one mark each (G0053, pillar 5).
         appearance.wounds = VITALITY.has(entity) && VITALITY.get(entity).wounded() ? VITALITY.get(entity).wounds : 0;
         appearance.shield = SHIELD.has(entity) ? SHIELD.get(entity).fraction() : 0f;
+        if (DOOR.has(entity)) {
+            // An opened door is seen sinking, its squares shrinking to nothing (G0069). A look only.
+            appearance.squareFill = 1f - DOOR.get(entity).sunk();
+        }
     }
 
     /**
@@ -180,6 +186,12 @@ public final class AppearanceSystem extends IteratingSystem {
      */
     private void publishCharge(Entity entity, Appearance appearance) {
         appearance.chargeLook = Look.NONE;
+        if (DOOR.has(entity)) {
+            // The door's bar, not the man's (G0069): green, the one clock the player is winning, as a rescue's.
+            appearance.chargeLook = Look.MENDING;
+            appearance.charge = DOOR.get(entity).progress();
+            return;
+        }
         if (ACTION.has(entity) && ACTION.get(entity).progress > 0f) {
             // The work shows on the man doing it; the casualty's circle shows his clock. Its own
             // colour: the one clock the player is winning.

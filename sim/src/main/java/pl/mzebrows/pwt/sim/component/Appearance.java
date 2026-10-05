@@ -142,9 +142,32 @@ public final class Appearance implements Component, Pool.Poolable {
      */
     public float shield;
 
+    /**
+     * How many squares across and down a thing with no body is drawn as, centred on where it stands: a door, its
+     * doorway's tiles (G0069). Zero for everything drawn from its body.
+     */
+    public int squaresAcross;
+
+    public int squaresDown;
+
+    /** How far apart the middles of its squares are, in world units: one tile. */
+    public float squarePitch;
+
+    /** How much of each square is drawn, in {@code [0, 1]}: one whole, shrinking to nothing as a door sinks. */
+    public float squareFill;
+
     /** Sets the look and returns this component, for fluent spawning. */
     public Appearance set(Look newLook) {
         return set(newLook, 0);
+    }
+
+    /** Draws this as squares across and down, this far apart and whole, and returns this component. */
+    public Appearance squares(int across, int down, float pitch) {
+        this.squaresAcross = across;
+        this.squaresDown = down;
+        this.squarePitch = pitch;
+        this.squareFill = 1f;
+        return this;
     }
 
     /** Draws this back to the given point rather than as a dot, and returns this component. */
@@ -184,5 +207,9 @@ public final class Appearance implements Component, Pool.Poolable {
         overheated = false;
         wounds = 0;
         shield = 0f;
+        squaresAcross = 0;
+        squaresDown = 0;
+        squarePitch = 0f;
+        squareFill = 0f;
     }
 }

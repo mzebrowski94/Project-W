@@ -8,12 +8,15 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Door;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.Ticks;
@@ -39,6 +42,7 @@ final class TrooperObjective {
     private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
+    private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
 
     /** How far inside a point counts as standing on it, as a fraction of its radius. */
     private static final float INSIDE_THE_EDGE = 0.7f;
@@ -55,11 +59,14 @@ final class TrooperObjective {
     @NotState("cache of one flow field per control point, a pure function of the map and where the points are")
     private FlowField[] routes = new FlowField[0];
 
-    /** Scratch: which point each trooper is standing on this tick, in family order. */
+    /**
+     * Scratch: where each trooper is watching from this tick, in family order - a point's index, the number of
+     * points plus a door's index for a man waiting at a door, or {@code -1}.
+     */
     @NotState("scratch rebuilt every tick by splitIntoSectors")
     private int[] standingOnPoint = new int[0];
 
-    /** Scratch: how many men are watching from each point this tick, parallel to the family. */
+    /** Scratch: how many men are watching from each point, then each door, this tick. */
     @NotState("scratch rebuilt every tick by splitIntoSectors")
     private int[] menOnPoint = new int[0];
 
@@ -70,6 +77,7 @@ final class TrooperObjective {
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
 
     TrooperObjective(SimConfig config, TileMap map, Rng rng) {
         this.map = map;
@@ -89,6 +97,7 @@ final class TrooperObjective {
                 Family.all(ControlPoint.class, Position.class).get());
         commanders = engine.getEntitiesFor(
                 Family.all(Commander.class, Position.class).get());
+        doors = engine.getEntitiesFor(Family.all(Door.class, Handle.class).get());
     }
 
     /**
@@ -118,7 +127,8 @@ final class TrooperObjective {
     }
 
     /**
-     * Splits the circle round each point into sectors, one for each man standing on it.
+     * Splits the circle round each point into sectors, one for each man standing on it - and round each shut
+     * door, one for each man its trooper keeps waiting (G0069): the rest keep a lookout.
      *
      * <p>Each man gets a run of compass slots, the runs together making the whole circle, handed out in
      * family (spawn) order and reshuffled on the same tick anyone arrives, leaves or turns to fight. Two
@@ -128,11 +138,12 @@ final class TrooperObjective {
         if (standingOnPoint.length < troopers.size()) {
             standingOnPoint = new int[troopers.size()];
         }
-        if (menOnPoint.length < points.size()) {
-            menOnPoint = new int[points.size()];
-            placed = new int[points.size()];
+        int groups = points.size() + doors.size();
+        if (menOnPoint.length < groups) {
+            menOnPoint = new int[groups];
+            placed = new int[groups];
         }
-        for (int p = 0; p < points.size(); p++) {
+        for (int p = 0; p < groups; p++) {
             menOnPoint[p] = 0;
             placed[p] = 0;
         }
@@ -142,6 +153,9 @@ final class TrooperObjective {
             standingOnPoint[i] = trooper.mode == Trooper.Mode.SECURE && !Drivers.held(entity)
                     ? pointUnder(POSITION.get(entity))
                     : -1;
+            if (standingOnPoint[i] < 0 && !Drivers.held(entity)) {
+                standingOnPoint[i] = doorWaitedAt(entity, trooper);
+            }
             if (standingOnPoint[i] >= 0) {
                 menOnPoint[standingOnPoint[i]]++;
             }
@@ -161,6 +175,24 @@ final class TrooperObjective {
             trooper.sectorFrom = from;
             trooper.sectorSpan = Math.max(1, to - from);
         }
+    }
+
+    /**
+     * The group of the shut door this man is waiting at - his way shut by it and it gone to somebody else - or
+     * {@code -1}. Read from last tick's walk, which is when he stopped.
+     */
+    private int doorWaitedAt(Entity entity, Trooper trooper) {
+        if (trooper.door == Handle.NOBODY) {
+            return -1;
+        }
+        for (int d = 0; d < doors.size(); d++) {
+            Entity door = doors.get(d);
+            long opener = DOOR.get(door).trooper;
+            if (Handles.of(door) == trooper.door && opener != Handle.NOBODY && opener != Handles.of(entity)) {
+                return points.size() + d;
+            }
+        }
+        return -1;
     }
 
     /** Which point this position counts as standing on, or {@code -1}. The first, if they overlap. */

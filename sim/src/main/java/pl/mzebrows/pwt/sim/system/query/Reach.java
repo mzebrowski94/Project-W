@@ -9,6 +9,7 @@ import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Dead;
+import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.ActionKind;
@@ -28,6 +29,7 @@ public final class Reach {
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
     private static final ComponentMapper<Crate> CRATE = ComponentMapper.getFor(Crate.class);
     private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
+    private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
 
     private Reach() {}
 
@@ -53,6 +55,33 @@ public final class Reach {
         return nearest;
     }
 
+    /**
+     * The shut door the man would reach first, or null if none is within reach (G0069). Measured from his
+     * surface to the nearest part of its doorway: a door has no body.
+     */
+    public static @Nullable Entity nearestDoor(ImmutableArray<Entity> doors, Entity man, float reach, float tileSize) {
+        Entity nearest = null;
+        float nearestGap = Float.MAX_VALUE;
+        for (int i = 0; i < doors.size(); i++) {
+            Entity door = doors.get(i);
+            if (DOOR.get(door).open || DEAD.has(door)) {
+                continue;
+            }
+            float gap = doorGap(man, door, tileSize);
+            if (gap <= reach && gap < nearestGap) {
+                nearest = door;
+                nearestGap = gap;
+            }
+        }
+        return nearest;
+    }
+
+    /** How far a man is from a door, his surface to the nearest part of its doorway, in world units. */
+    public static float doorGap(Entity man, Entity door, float tileSize) {
+        Position at = POSITION.get(man);
+        return DOOR.get(door).distanceFrom(at.x, at.y, tileSize) - BODY.get(man).radius;
+    }
+
     /** How far apart two bodies are, surface to surface, in world units. */
     public static float gap(Entity man, Entity other) {
         Position at = POSITION.get(man);
@@ -68,7 +97,8 @@ public final class Reach {
             case STABILISE -> Life.casualty(candidate);
             case MAN_TURRET -> !TURRET.get(candidate).crewed;
             case OPEN_CRATE -> !CRATE.get(candidate).open() && !DEAD.has(candidate);
-            case NONE, LEAVE_TURRET -> throw new IllegalArgumentException("nothing is reached for to " + offer);
+            case NONE, LEAVE_TURRET, OPEN_DOOR ->
+                throw new IllegalArgumentException("nothing is reached for to " + offer);
         };
     }
 }

@@ -24,5 +24,10 @@ public enum ActionKind {
      * Open the crate he is standing next to (G0056). What he takes from it he chooses from the cards in
      * his top bar - the one place the key leads to a choice, and the second named exception to pillar 1.
      */
-    OPEN_CRATE
+    OPEN_CRATE,
+    /**
+     * Open the shut door he is standing at (G0069): a hold, on stabilise's rules. Last on a tie - it goes to
+     * whatever is already on the list.
+     */
+    OPEN_DOOR
 }

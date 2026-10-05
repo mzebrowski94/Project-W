@@ -49,6 +49,7 @@ import pl.mzebrows.pwt.sim.system.death.ReaperSystem;
 import pl.mzebrows.pwt.sim.system.death.RespawnSystem;
 import pl.mzebrows.pwt.sim.system.death.SlickSystem;
 import pl.mzebrows.pwt.sim.system.level.ControlPointSystem;
+import pl.mzebrows.pwt.sim.system.level.DoorSystem;
 import pl.mzebrows.pwt.sim.system.level.LairSystem;
 import pl.mzebrows.pwt.sim.system.level.NestSystem;
 import pl.mzebrows.pwt.sim.system.level.ObjectiveSystem;
@@ -213,6 +214,16 @@ class SystemOrderTest {
         rows.add(new Before(
                 AidSystem.class, CasualtySystem.class, "a man picked up as his clock runs out is not buried"));
         rows.add(new Before(CasualtySystem.class, DyingSystem.class, "who stayed down too long, then the body"));
+        rows.add(new Before(
+                ActionSystem.class,
+                DoorSystem.class,
+                "a commander's hands on a door this tick count this tick (G0069)"));
+        rows.add(new Before(
+                TrooperMoveSystem.class,
+                DoorSystem.class,
+                "a door goes to a man whose way it shuts this tick (G0069)"));
+        rows.add(new Before(
+                DamageSystem.class, DoorSystem.class, "a door broken this tick stops being a wall this tick (G0069)"));
         rows.add(new Before(DyingSystem.class, RespawnSystem.class, "reactions run while the dead are still there"));
         rows.add(new Before(RespawnSystem.class, ProjectileBoundsSystem.class, "a spent shot joins the death chain"));
         rows.add(new Before(

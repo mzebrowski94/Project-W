@@ -7,11 +7,11 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Odds;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -66,7 +66,7 @@ public final class TrooperCombatSystem extends EntitySystem {
     private final Throws throwing;
     private final Odds odds;
 
-    private final TileMap map;
+    private final Solid map;
     private final TrooperGrenadeDef grenade;
     private final int squadGapTicks;
     private final float tickSeconds;
@@ -86,7 +86,7 @@ public final class TrooperCombatSystem extends EntitySystem {
     /** Every entity with a handle, for finding what has a man in its jaws. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
-    public TrooperCombatSystem(SimConfig config, TileMap map, Guns guns, Throws throwing, Odds odds) {
+    public TrooperCombatSystem(SimConfig config, Solid map, Guns guns, Throws throwing, Odds odds) {
         this.guns = guns;
         this.throwing = throwing;
         this.odds = odds;
@@ -255,9 +255,9 @@ public final class TrooperCombatSystem extends EntitySystem {
     /** Whether a thing this size ends here still wholly inside the arena, where no edge turns it. */
     private boolean insideArena(float x, float y, float radius) {
         return x - radius >= 0f
-                && x + radius <= map.worldWidth()
+                && x + radius <= map.map().worldWidth()
                 && y - radius >= 0f
-                && y + radius <= map.worldHeight();
+                && y + radius <= map.map().worldHeight();
     }
 
     /** Whether at least the cluster a throw is worth stands on its feet within the blast of this point. */

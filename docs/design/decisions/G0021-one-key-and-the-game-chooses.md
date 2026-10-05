@@ -6,7 +6,7 @@
 the player to pick between two of them.
 
 **Enforced by.** `ActionTest.offersToPickUpAManWhoIsDownBesideHim`,
-`.offersNothingForAManWhoIsDownOutOfReach`, `.stopsOfferingWhenHeWalksOutOfReach`.
+`.offersNothingForAManWhoIsDownOutOfReach`, `.stopsOfferingWhenHeWalksOutOfReach`, `DoorTest.offersToOpenAShutDoorWithinArmsLength`, `.offersAManDownBesideHimBeforeADoorAsNear`.
 
 **Constraint.** `E` performs whatever the commander could do to whatever is within arm's length,
 nearest first. There is no selection step and nothing to choose from: `ActionSystem` resolves the

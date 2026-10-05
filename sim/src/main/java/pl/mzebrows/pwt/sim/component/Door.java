@@ -63,6 +63,18 @@ public final class Door implements Component, Pool.Poolable {
         return this;
     }
 
+    /**
+     * How far a point is from the nearest part of its doorway, in world units: zero inside it. What arm's length,
+     * a blast's radius and a leap's landing are measured to - a door has no body.
+     */
+    public float distanceFrom(float x, float y, float tileSize) {
+        float left = col * tileSize;
+        float bottom = row * tileSize;
+        float outX = Math.max(Math.max(left - x, 0f), x - (left + width * tileSize));
+        float outY = Math.max(Math.max(bottom - y, 0f), y - (bottom + height * tileSize));
+        return (float) Math.sqrt(outX * outX + outY * outY);
+    }
+
     /** Whether this tile is one of its doorway's. */
     public boolean covers(int atCol, int atRow) {
         return atCol >= col && atCol < col + width && atRow >= row && atRow < row + height;

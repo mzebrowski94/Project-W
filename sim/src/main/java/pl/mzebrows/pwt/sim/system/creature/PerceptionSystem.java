@@ -102,7 +102,9 @@ public final class PerceptionSystem extends EntitySystem {
                 perception.hunt(target.x, target.y);
                 // Somebody in front of it outranks a grudge, which is dropped for good.
                 perception.provoked = false;
-            } else if (perception.provoked && withinRange(position, provokedPlace(perception), map.map().tileSize())) {
+            } else if (perception.provoked
+                    && withinRange(
+                            position, provokedPlace(perception), map.map().tileSize())) {
                 // Arrived: whatever is here is decided by contact.
                 perception.provoked = false;
             }

@@ -2,8 +2,10 @@ package pl.mzebrows.pwt.sim.scenario;
 
 import java.util.Locale;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Randomness;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.def.TierKind;
@@ -65,8 +67,9 @@ final class MissionScenario implements Scenario {
     }
 
     /**
-     * Points first and then nests, which are ground rather than things on it; then the squad on the start; then
-     * everything else in the order placement put it down.
+     * Points first and then nests, which are ground rather than things on it, then a shut door in every doorway of
+     * every house and gatehouse (G0069); then the squad on the start; then everything else in the order placement
+     * put it down.
      */
     @Override
     public void populate(Simulation simulation) {
@@ -82,6 +85,11 @@ final class MissionScenario implements Scenario {
         for (Placed placed : mission.placed()) {
             if (placed instanceof Placed.Nest nest) {
                 simulation.spawnNest(nest.strain(), nest.x(), nest.y());
+            }
+        }
+        for (House house : mission.laid().houses()) {
+            for (TileRect doorway : house.doorways()) {
+                simulation.spawnDoor(doorway);
             }
         }
         deployPlayerSide(simulation);

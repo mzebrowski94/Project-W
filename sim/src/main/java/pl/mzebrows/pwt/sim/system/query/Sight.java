@@ -3,7 +3,7 @@ package pl.mzebrows.pwt.sim.system.query;
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
-import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Position;
 
@@ -65,11 +65,12 @@ public final class Sight {
     /**
      * Whether nothing solid stands between the two points.
      *
-     * <p>Only terrain blocks a line. Obstacles, corpses and other units do not - a limit accepted on
-     * purpose and listed with the others, and the same asymmetry routing already lives with.
+     * <p>Only solid ground blocks a line - terrain and a shut door (ADR 0022). Obstacles, corpses and other
+     * units do not - a limit accepted on purpose and listed with the others, and the same asymmetry routing
+     * already lives with.
      */
-    public static boolean clearLine(TileMap map, float fromX, float fromY, float toX, float toY, boolean required) {
-        return !required || map.clearLine(fromX, fromY, toX, toY);
+    public static boolean clearLine(Solid solid, float fromX, float fromY, float toX, float toY, boolean required) {
+        return !required || solid.clearLine(fromX, fromY, toX, toY);
     }
 
     /**
