@@ -49,6 +49,12 @@ piece over. A patch is measured on the finished ground, so rock laid over it rea
 (quantile cut) less a few repaired tiles. A coat asked for more than fits stops short without a word - the density
 test's floor is what catches it.
 
+**What the strip does round a biome** (stage 4): every ridge's face wanders up to `ridgeRough` (3) columns into
+the biome either side - into the finale from the west only, so its west edge is straight - and every pass leaves
+an apron of base ground a row wider than the pass, out through the face and `apron` (3) tiles on. A density is a
+fraction of the biome's whole rect, laid on what the faces leave: a share of rock measured on the rect counts the
+faces too, about ten points of a 54-column biome. Measure a coat on the biome inside its faces.
+
 | Coat | Keys under `sim.biome.<name>.ground.` | Reach for it when |
 |---|---|---|
 | base | `base`, `fallback` | always |
@@ -91,20 +97,29 @@ in the order written. **Porting**: offsets from the Adventure's (197, 15); count
 
 None is written per biome; a biome or finale joins every one by being a constant.
 
-- **`StripSweepTest`** (`map`): every pass connects, no pockets, no passage under `clearance`, every ridge tile in
-  the biome whose ground it shows, the finale's west edge straight. `STAGE 4`; rooms `STAGE 5`.
+- **`StripSweepTest`** (`map`): four of the pool dealt per seed into a strip before a bare finale; every ridge
+  crossed by `passesMin`-`passesMax` passes, every open tile reached from the first pass, no passage under
+  `clearance`, every tile in the biome whose ground it shows and each biome holding its `regions`, the finale's
+  west edge straight. Checks live in `StripFaults`, one list of faults each, so `StripTest` asserts one of them
+  alone. A failure lists every failing seed and fault together (`seed 1412: ridge 2 has 0 passes in and 0 out`);
+  under `PWT_SWEEP=1` a green run prints one line - seeds, ms per strip, columns min/median/max, passes per ridge.
+  Rooms `STAGE 5`.
 - **`MissionSweepTest`** (`sim`): every point and crate reachable, every finale layout spot standable and
   reachable, the last biome's nests outside the watch, a point in its last `doorColumns`. `STAGE 7` / `8`.
 - **`CoatsTest`** (`map`): every coat of every biome, over 64 seeds, lands with its **median within 1.5 points**
   of its density and **no seed under half** of it; rock is the crags' and outcrops' densities summed. Also: no
   passage under `clearance`, no pockets, every pass end reaches every other, the apron base ground, rock a crag
-  did not lay never cleared, retuning one coat moving no other's draws. It holds the five blocks as literal
-  `BiomeGround`s until `sim` reads `biomes.properties` (`STAGE 7` swaps them for the table). A new biome's
-  block goes in there by hand until then. **Same ground**: one seed at
+  did not lay never cleared, retuning one coat moving no other's draws. The five blocks and a bare redoubt
+  are literal `BiomeGround`s in `TestBiome` (`map` tests), shared by `CoatsTest` and both strip tests, until `sim`
+  reads `biomes.properties` (`STAGE 7` swaps them for the table). A new biome's block goes in there by hand until
+  then, and into `TestBiome.FIVE`. **Same ground**: one seed at
   three tiers. **Coverage**: every `BiomeKind` dealt at least once at every position.
 - `verify.sh` runs 64 seeds a sweep. **Run the big one** before you finish:
-  `PWT_SWEEP=1 .claude/scripts/gradle.sh :map:test :sim:test --tests '*SweepTest' -i` - 2000 seeds; a failing seed
-  prints its mission code, and the run prints a few codes that deal your biome first.
+  `PWT_SWEEP=1 .claude/scripts/gradle.sh :map:test --tests '*SweepTest' --rerun -i` - 2000 seeds. `--rerun`
+  because the variable is no input of the test task: without it a sweep that passed at 64 is up to date and
+  silently skipped. `:sim:test` joins the command at `STAGE 7`, with `MissionSweepTest` - a `--tests` filter
+  that matches nothing in a module fails the build. A failing seed prints its index until codes exist; then its
+  mission code, and the run prints a few codes that deal your biome first (`STAGE 7`).
 - **What the design promises in a number** - one test per promise ("the quarry is the rockiest biome"). Never
   connectivity, which the sweeps own; never which biome a tile is in, which is `Strip`'s own test.
 
@@ -156,3 +171,8 @@ changed.
   low under heavy rock; a greedy coat stops short silently) and the coats test's tolerance; slow: the
   distributions took a throwaway probe test, which `BiomeMeasureTest` (`STAGE 7`) replaces - added both to *Ground*
   and *Tests*. Nothing wrong.
+- 2026-10-05, stage 4 (the strip) - wrong: the big-sweep command named `:sim:test`, which has no sweep yet and
+  fails the filter, and lacked `--rerun`, without which Gradle skips the sweep as up to date; missing: what the
+  strip does round a biome (faces, aprons, a rock share measured on the rect reading the faces), `StripSweepTest`'s
+  checks and output, the five blocks' new home `TestBiome`; slow: checking a strip by eye took a throwaway ASCII
+  dump - not kept, since a `new-biome` run looks through a played code. Fixed in *Ground* and *Tests*.

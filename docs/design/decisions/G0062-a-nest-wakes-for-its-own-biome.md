@@ -8,8 +8,8 @@
 `.wakesForSomebodyNearInAnotherRegionOfItsOwnBiome`, `.sendsItsFirstBroodSoonAfterWaking`), `TileMapTest`
 (`.putsEveryTileInBiomeZeroUntilToldOtherwise`, `.answersARegionsBiomeForEveryTileInIt`), and the
 Adventures' `AdventureScenarioTest.putsEachWallInTheBiomeToItsEastAndHasSevenBiomes` and
-`AdventureTwoScenarioTest.putsEachWallInTheBiomeToItsEastAndHasSevenBiomes`. The ridge tile waits for a
-test of `Strip`.
+`AdventureTwoScenarioTest.putsEachWallInTheBiomeToItsEastAndHasSevenBiomes`, and for a mission's ridge
+`StripTest` (`.putsEveryRidgeTileInTheBiomeWhoseGroundItShows`, `.putsAOneColumnRidgeInTheBiomeToItsEast`).
 
 **Constraint.** **Amends G0031.** A nest wakes when somebody on the player's side is **in its biome and
 within `wakeRadius`** - not within the radius alone. Its first brood comes `sim.nest.firstBroodSeconds`

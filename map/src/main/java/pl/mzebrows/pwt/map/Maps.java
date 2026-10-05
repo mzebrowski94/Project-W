@@ -44,12 +44,20 @@ public final class Maps {
      * wants when it is hand-authoring walls on top of a generated partition.
      */
     public static TileMap.Builder partitionRegions(TileMap.Builder builder, int regionCount, Randomness rng) {
+        return partitionRegions(builder, new TileRect(0, 0, builder.cols(), builder.rows()), 0, regionCount, rng);
+    }
+
+    /**
+     * Partitions one rectangle of a builder's tiles into regions numbered from {@code firstId}, leaving the
+     * rest of the map alone - how a strip gives each biome regions of its own (G0062).
+     */
+    public static TileMap.Builder partitionRegions(
+            TileMap.Builder builder, TileRect within, int firstId, int regionCount, Randomness rng) {
         if (regionCount < 1) {
             throw new IllegalArgumentException("a map needs at least one region, was " + regionCount);
         }
-        int cols = builder.cols();
-        int rows = builder.rows();
-        int tiles = cols * rows;
+        int cols = within.width();
+        int tiles = within.tileCount();
         int wanted = Math.min(regionCount, tiles);
 
         int[] seedCol = new int[wanted];
@@ -61,13 +69,13 @@ public final class Maps {
                 at = (at + 1) % tiles;
             }
             taken[at] = true;
-            seedCol[seed] = at % cols;
-            seedRow[seed] = at / cols;
+            seedCol[seed] = within.col() + at % cols;
+            seedRow[seed] = within.row() + at / cols;
         }
 
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                builder.region(col, row, nearest(col, row, seedCol, seedRow));
+        for (int row = within.row(); row < within.endRow(); row++) {
+            for (int col = within.col(); col < within.endCol(); col++) {
+                builder.region(col, row, firstId + nearest(col, row, seedCol, seedRow));
             }
         }
         return builder;

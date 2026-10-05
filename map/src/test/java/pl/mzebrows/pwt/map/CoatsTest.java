@@ -32,7 +32,7 @@ class CoatsTest {
      */
     @Test
     void laysEachCoatAtItsDensity() {
-        for (Biome biome : Biome.FIVE) {
+        for (TestBiome biome : TestBiome.FIVE) {
             BiomeGround ground = biome.ground();
             assertLandsAt(
                     biome.name() + " rock",
@@ -50,7 +50,7 @@ class CoatsTest {
 
     @Test
     void leavesNoPassageUnderTheClearanceAndNothingSealedOff() {
-        for (Biome biome : Biome.FIVE) {
+        for (TestBiome biome : TestBiome.FIVE) {
             for (long seed = 0; seed < SEEDS; seed++) {
                 Rig rig = Rig.laid(biome.ground(), seed);
 
@@ -67,7 +67,7 @@ class CoatsTest {
 
     @Test
     void keepsTheApronToBaseGround() {
-        for (Biome biome : Biome.FIVE) {
+        for (TestBiome biome : TestBiome.FIVE) {
             for (long seed = 0; seed < SEEDS; seed++) {
                 Rig rig = Rig.laid(biome.ground(), seed);
 
@@ -80,7 +80,7 @@ class CoatsTest {
 
     @Test
     void retuningOneCoatMovesNoOther() {
-        BiomeGround badlands = Biome.BADLANDS.ground();
+        BiomeGround badlands = TestBiome.BADLANDS.ground();
         BiomeGround fewerPatches = withPatches(badlands, List.of(new Patch.Rect(PatchGround.neighbour(), 0.08f, 4, 6)));
         BiomeGround fewerOutcrops = withOutcrops(badlands, new Outcrops(0.05f, 2, 4, 1, 2, 0.3f));
         BiomeGround moreCrags = withCrags(badlands, new Crags(0.08f, 4));
@@ -97,7 +97,7 @@ class CoatsTest {
 
     @Test
     void laysTheSameGroundFromTheSameStream() {
-        for (Biome biome : Biome.FIVE) {
+        for (TestBiome biome : TestBiome.FIVE) {
             assertThat(Rig.laid(biome.ground(), 7L).tiles())
                     .isEqualTo(Rig.laid(biome.ground(), 7L).tiles());
         }
@@ -108,14 +108,14 @@ class CoatsTest {
         TestStream stream = TestStream.seeded(3L);
         TestStream twin = TestStream.seeded(3L);
 
-        Rig.laid(Biome.QUARRY.ground(), stream);
+        Rig.laid(TestBiome.QUARRY.ground(), stream);
 
         assertThat(stream.nextLong()).isEqualTo(twin.nextLong());
     }
 
     @Test
     void neighbourGroundTakesTheBaseOfTheBiomeOnTheNearerSide() {
-        BiomeGround plain = Biome.PLAIN.ground();
+        BiomeGround plain = TestBiome.PLAIN.ground();
         for (long seed = 0; seed < SEEDS; seed++) {
             Rig rig = Rig.laid(plain, Terrain.ASH, Terrain.PLAIN, TestStream.seeded(seed));
 
@@ -127,7 +127,7 @@ class CoatsTest {
     @Test
     void neverClearsRockItDidNotLay() {
         TileRect spill = new TileRect(1, 16, 2, 10);
-        for (Biome biome : List.of(Biome.ANTHILL, Biome.BADLANDS)) {
+        for (TestBiome biome : List.of(TestBiome.ANTHILL, TestBiome.BADLANDS)) {
             for (long seed = 0; seed < SEEDS; seed++) {
                 Rig rig = Rig.laid(biome.ground(), null, null, spill, TestStream.seeded(seed));
 
@@ -144,7 +144,7 @@ class CoatsTest {
 
     @Test
     void aCoatAskedForMoreThanFitsStillLeavesEverythingReachable() {
-        BiomeGround quarry = Biome.QUARRY.ground();
+        BiomeGround quarry = TestBiome.QUARRY.ground();
         List<BiomeGround> greedy = List.of(
                 withOutcrops(quarry, new Outcrops(0.9f, 4, 9, 2, 3, 0.7f)), withCrags(quarry, new Crags(0.6f, 4)));
         for (BiomeGround ground : greedy) {
@@ -368,78 +368,6 @@ class CoatsTest {
                 }
             }
             return narrowest;
-        }
-    }
-
-    /** The five first biomes, written out as {@code biomes.properties} will hold them. */
-    private record Biome(String name, BiomeGround ground) {
-
-        static final Biome PLAIN = new Biome(
-                "plain",
-                new BiomeGround(
-                        50,
-                        58,
-                        3,
-                        Terrain.PLAIN,
-                        Terrain.DUST,
-                        List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
-                        Crags.off(),
-                        new Outcrops(0.006f, 1, 2, 1, 1, 0f)));
-
-        static final Biome QUARRY = new Biome(
-                "quarry",
-                new BiomeGround(
-                        50,
-                        58,
-                        3,
-                        Terrain.DUST,
-                        Terrain.PLAIN,
-                        List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
-                        Crags.off(),
-                        new Outcrops(0.10f, 4, 9, 2, 3, 0.7f)));
-
-        static final Biome BRAKE = new Biome(
-                "brake",
-                new BiomeGround(
-                        50,
-                        58,
-                        3,
-                        Terrain.PLAIN,
-                        Terrain.ORGANIC,
-                        List.of(
-                                new Patch.Rect(PatchGround.of(Terrain.ORGANIC), 0.035f, 4, 6),
-                                new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
-                        Crags.off(),
-                        new Outcrops(0.015f, 2, 4, 1, 2, 0.3f)));
-
-        static final Biome ANTHILL = new Biome(
-                "anthill",
-                new BiomeGround(
-                        50,
-                        58,
-                        3,
-                        Terrain.ORGANIC,
-                        Terrain.DUST,
-                        List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
-                        new Crags(0.05f, 4),
-                        Outcrops.off()));
-
-        static final Biome BADLANDS = new Biome(
-                "badlands",
-                new BiomeGround(
-                        50,
-                        58,
-                        3,
-                        Terrain.ASH,
-                        Terrain.DUST,
-                        List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
-                        new Crags(0.13f, 4),
-                        new Outcrops(0.02f, 2, 4, 1, 2, 0.3f)));
-
-        static final List<Biome> FIVE = List.of(PLAIN, QUARRY, BRAKE, ANTHILL, BADLANDS);
-
-        float rock() {
-            return ground.crags().density() + ground.outcrops().density();
         }
     }
 }
