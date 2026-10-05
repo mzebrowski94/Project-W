@@ -36,7 +36,16 @@ public final class Rng implements Randomness {
      * two "independent" streams that are anything but. Mixing removes that whole class of accident.
      */
     public static Rng stream(long seed, RngStream concern) {
-        return new Rng(mix(seed ^ (concern.salt() * GOLDEN_GAMMA)));
+        return new Rng(seed).derive(concern.salt());
+    }
+
+    /**
+     * A child from this generator's current state and a salt, with the mixing {@link #stream} uses, and
+     * without advancing this one (G0065). {@link #stream} is this applied to the level seed.
+     */
+    @Override
+    public Rng derive(long salt) {
+        return new Rng(mix(state ^ (salt * GOLDEN_GAMMA)));
     }
 
     /** Returns the next 64 random bits. */

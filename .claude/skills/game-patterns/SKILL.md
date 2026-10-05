@@ -132,5 +132,34 @@ repaired or regenerated. Flood fill from the player's start is the cheap connect
 graphs - then fill them. Deciding tile by tile produces noise; deciding region by region produces
 places, and gives the player something to recognise.
 
+**Rock bent round a corner: outcrops by dart throwing.** A bar with an arm off one end, thrown at a
+random place and kept only if no other rock is within the clearance (`Coats`). Bars
+and Ls enclose nothing, and spaced apart they cannot ring anything, so connectivity holds by
+construction - the flood fill after each is the net, and in 1500 prototype biomes it never fired. A
+cellular automaton was tried for the same job: it makes caves and worms, not the Adventures' rock, and
+needs a repair pass to be safe.
+
+**Irregular masses: smoothed noise cut at a quantile, then repaired (crags).** White noise averaged over
+its neighbours a few times, thresholded at the value that makes exactly the wanted share rock - so the
+coat lands on its density whatever the noise did. Unlike outcrops it can close things off, so it is
+repaired in order: a mass touching what the first end reaches is cleared while an end is cut off, a
+straight run of open ground under the clearance loses one of its own rocks (never rock it did not lay),
+and what is still unreachable is sealed (`Maps.sealUnreachable`'s idea).
+
+**Ground worth going round: Eden growth, best of a few.** A blob grown tile by tile from the middle of
+its box, each step drawing a few frontier tiles and keeping the nearest the middle, then one smoothing
+pass. Compact with a ragged rim - reads as thicket. A ragged rectangle was tried and a small one frays
+into a cross.
+
+**How much is a density, never a count.** Lay pieces until a fraction of the area is done. A count of
+pieces drawn from a range of sizes swings a biome's character from seed to seed (quarry rock 10.5-17%
+on counts against 10-12% on density). Lay-until-reached overshoots by half a piece on average and one
+piece at worst, so a big piece size buys a looser landing.
+
+**Split a stream while building, never while playing.** `Randomness.derive(salt)` makes a child from
+the parent's state without advancing it, so a build can give each biome and each coat its own stream
+and retuning one moves nothing else. A stream either derives or draws, never both
+(`docs/determinism.md`).
+
 **Keep the authored path open.** Whatever generates a map must produce the same type a hand-written
 one does, so a fixed level and a generated one are indistinguishable downstream.

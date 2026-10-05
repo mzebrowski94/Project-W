@@ -161,8 +161,7 @@ class ScatterTest {
     }
 
     private static Randomness seeded() {
-        long[] state = {0L};
-        return () -> state[0] += 0x9E3779B97F4A7C15L;
+        return TestStream.weyl();
     }
 
     @Test

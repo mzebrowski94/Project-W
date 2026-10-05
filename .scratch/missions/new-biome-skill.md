@@ -39,8 +39,15 @@ hold, waves or lair (a finale). Done when every trait has a field.
 ## 2. Biome: ground
 
 `map` lays it in coats, each from its own stream: **base**, then **patches** in order, then **crags**, then
-**outcrops**. Rock always wins over a patch, and a pass's **apron** keeps base ground only. How much of a coat
-is always a **density** - a fraction of the biome - never a count.
+**outcrops** (`Coats`, behind `Strip.lay`). Rock always wins over a patch, and a pass's **apron** keeps base ground
+only. How much of a coat is always a **density** - a fraction of the biome - never a count.
+
+What a density does, measured over 2000 seeds (stage 3): a coat is laid *until reached*, so its median lands about
+half a piece **over** - +0.1 point for 1-2 tile pebbles, +1.3 for 6-11 thicket blobs - and its worst seed one whole
+piece over. A patch is measured on the finished ground, so rock laid over it reads it **low**: neighbour patches at
+4% under the badlands' 15% rock land at a 4.2% median but 1.6% on the worst seed. Crags land on their density
+(quantile cut) less a few repaired tiles. A coat asked for more than fits stops short without a word - the density
+test's floor is what catches it.
 
 | Coat | Keys under `sim.biome.<name>.ground.` | Reach for it when |
 |---|---|---|
@@ -88,7 +95,12 @@ None is written per biome; a biome or finale joins every one by being a constant
   the biome whose ground it shows, the finale's west edge straight. `STAGE 4`; rooms `STAGE 5`.
 - **`MissionSweepTest`** (`sim`): every point and crate reachable, every finale layout spot standable and
   reachable, the last biome's nests outside the watch, a point in its last `doorColumns`. `STAGE 7` / `8`.
-- **Coats**: every coat of every biome lands within tolerance of its declared density. **Same ground**: one seed at
+- **`CoatsTest`** (`map`): every coat of every biome, over 64 seeds, lands with its **median within 1.5 points**
+  of its density and **no seed under half** of it; rock is the crags' and outcrops' densities summed. Also: no
+  passage under `clearance`, no pockets, every pass end reaches every other, the apron base ground, rock a crag
+  did not lay never cleared, retuning one coat moving no other's draws. It holds the five blocks as literal
+  `BiomeGround`s until `sim` reads `biomes.properties` (`STAGE 7` swaps them for the table). A new biome's
+  block goes in there by hand until then. **Same ground**: one seed at
   three tiers. **Coverage**: every `BiomeKind` dealt at least once at every position.
 - `verify.sh` runs 64 seeds a sweep. **Run the big one** before you finish:
   `PWT_SWEEP=1 .claude/scripts/gradle.sh :map:test :sim:test --tests '*SweepTest' -i` - 2000 seeds; a failing seed
@@ -140,3 +152,7 @@ changed.
 
 - 2026-10-05, ticket 10 grilling - draft settled: finale family added, sweeps split by module, Java measuring,
   printed codes to play, the amend step.
+- 2026-10-05, stage 3 (biome ground) - missing: what a density actually lands at (half a piece over; patches read
+  low under heavy rock; a greedy coat stops short silently) and the coats test's tolerance; slow: the
+  distributions took a throwaway probe test, which `BiomeMeasureTest` (`STAGE 7`) replaces - added both to *Ground*
+  and *Tests*. Nothing wrong.

@@ -17,6 +17,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.PatchGround;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -44,6 +45,7 @@ import pl.mzebrows.pwt.sim.def.Defs;
  *       nothing}, {@code count men_per_crate side 1};
  *   <li>a {@code List} of such records separated by {@code ;}: {@code count men_per_crate side 1; count
  *       squad_headroom side 2};
+ *   <li>a {@link PatchGround} as {@code neighbour} or a terrain's name: {@code rect neighbour 0.04 4 6};
  *   <li>{@link Chances} as one key per {@link AiChance} plus {@code longestGap}, each taken from the
  *       shared block {@value #SHARED_CHANCES} when a strain's own block does not name it.
  * </ul>
@@ -340,6 +342,9 @@ public final class ConfigBinder {
                 throw new IllegalArgumentException("not true or false: " + text);
             }
             return Boolean.parseBoolean(text);
+        }
+        if (type == PatchGround.class) {
+            return PatchGround.parse(text);
         }
         if (type.isEnum()) {
             if (nullable && text.equals(NOTHING)) {

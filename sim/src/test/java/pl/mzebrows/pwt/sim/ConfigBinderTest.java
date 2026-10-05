@@ -9,6 +9,12 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.BiomeGround;
+import pl.mzebrows.pwt.map.Crags;
+import pl.mzebrows.pwt.map.Outcrops;
+import pl.mzebrows.pwt.map.Patch;
+import pl.mzebrows.pwt.map.PatchGround;
+import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -269,6 +275,53 @@ class ConfigBinderTest {
                 .anySatisfy(problem -> assertThat(problem).contains("missing test.enabled"))
                 .anySatisfy(problem -> assertThat(problem).contains("test.speed"))
                 .anySatisfy(problem -> assertThat(problem).contains("unknown key test.extra"));
+    }
+
+    record Biome(BiomeGround ground) {}
+
+    @Test
+    void readsABiomesGroundWithItsPatchesAndLeavesALeftOutCoatOff() {
+        Biome brake = strict(Biome.class, """
+                test.ground.widthMin=50
+                test.ground.widthMax=58
+                test.ground.regions=3
+                test.ground.base=plain
+                test.ground.fallback=organic
+                test.ground.patches=rect neighbour 0.035 4 6; blob thicket 0.18 6 11
+                test.ground.outcrops.density=0.015
+                test.ground.outcrops.lengthMin=2
+                test.ground.outcrops.lengthMax=4
+                test.ground.outcrops.thicknessMin=1
+                test.ground.outcrops.thicknessMax=2
+                test.ground.outcrops.arms=0.3
+                """);
+
+        assertThat(brake.ground())
+                .isEqualTo(new BiomeGround(
+                        50,
+                        58,
+                        3,
+                        Terrain.PLAIN,
+                        Terrain.ORGANIC,
+                        List.of(
+                                new Patch.Rect(PatchGround.neighbour(), 0.035f, 4, 6),
+                                new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
+                        Crags.off(),
+                        new Outcrops(0.015f, 2, 4, 1, 2, 0.3f)));
+    }
+
+    @Test
+    void refusesPatchGroundThatIsNotGround() {
+        ConfigBinder.Bound<Biome> bound = ConfigBinder.bind(Biome.class, "test", """
+                        test.ground.widthMin=50
+                        test.ground.widthMax=58
+                        test.ground.regions=3
+                        test.ground.base=plain
+                        test.ground.fallback=organic
+                        test.ground.patches=rect rock 0.04 4 6
+                        """, new TreeMap<>());
+
+        assertThat(bound.problems()).anySatisfy(problem -> assertThat(problem).contains("test.ground.patches"));
     }
 
     @Test

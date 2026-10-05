@@ -36,9 +36,17 @@ class BagTest {
     @Test
     void drawsNothingForARangeOfOneValue() {
         int[] calls = {0};
-        Randomness counted = () -> {
-            calls[0]++;
-            return 0L;
+        Randomness counted = new Randomness() {
+            @Override
+            public long nextLong() {
+                calls[0]++;
+                return 0L;
+            }
+
+            @Override
+            public Randomness derive(long salt) {
+                throw new UnsupportedOperationException();
+            }
         };
 
         int value = Bag.draw(counted, 0L, 1);
@@ -69,9 +77,7 @@ class BagTest {
         assertThatThrownBy(() -> Bag.draw(seeded(), 0L, 0)).isInstanceOf(IllegalArgumentException.class);
     }
 
-    /** The same Weyl sequence {@code MapsTest} uses: deterministic, and not the simulation's generator. */
     private static Randomness seeded() {
-        long[] state = {0L};
-        return () -> state[0] += 0x9E3779B97F4A7C15L;
+        return TestStream.weyl();
     }
 }

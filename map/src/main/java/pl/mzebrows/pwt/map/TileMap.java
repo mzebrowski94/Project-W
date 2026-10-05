@@ -345,6 +345,11 @@ public final class TileMap {
             return region[index(col, row)];
         }
 
+        /** The terrain a tile has been given so far, for a step that lays over what is already there. */
+        public Terrain terrainAt(int col, int row) {
+            return terrain[index(col, row)];
+        }
+
         /** Sets one tile's terrain. */
         public Builder set(int col, int row, Terrain kind) {
             terrain[index(col, row)] = kind;

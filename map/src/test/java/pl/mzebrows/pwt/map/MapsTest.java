@@ -120,13 +120,8 @@ class MapsTest {
         assertThat(map.terrainAtTile(0, 0)).isEqualTo(Terrain.PLAIN);
     }
 
-    /**
-     * A Weyl sequence: deterministic, well spread in its high bits, and deliberately not the
-     * simulation's generator - these tests are about the partition, not about SplitMix64.
-     */
     private static Randomness seeded() {
-        long[] state = {0L};
-        return () -> state[0] += 0x9E3779B97F4A7C15L;
+        return TestStream.weyl();
     }
 
     private static java.util.Set<Terrain> everyTerrainIn(TileMap map) {
