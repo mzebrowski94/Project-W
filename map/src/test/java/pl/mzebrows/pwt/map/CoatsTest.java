@@ -96,6 +96,27 @@ class CoatsTest {
     }
 
     @Test
+    void laysTheHousesItsBiomeAsksForWalledAndReachedByTheirDoorways() {
+        for (TestBiome biome : TestBiome.FIVE) {
+            Houses wanted = biome.ground().houses();
+            for (long seed = 0; seed < SEEDS; seed++) {
+                Rig rig = Rig.laid(biome.ground(), seed);
+
+                assertThat(rig.houses.size())
+                        .as("%s, seed %d", biome.name(), seed)
+                        .isBetween(wanted.min(), wanted.max());
+                for (House house : rig.houses) {
+                    assertThat(rig.groundIn(house.inside()))
+                            .as("%s, seed %d", biome.name(), seed)
+                            .containsOnly(biome.ground().base());
+                    assertThat(house.doorways()).hasSize(StripTest.HOUSES.doorways());
+                }
+                assertThat(rig.pockets()).as("%s, seed %d", biome.name(), seed).isZero();
+            }
+        }
+    }
+
+    @Test
     void laysTheSameGroundFromTheSameStream() {
         for (TestBiome biome : TestBiome.FIVE) {
             assertThat(Rig.laid(biome.ground(), 7L).tiles())
@@ -158,19 +179,69 @@ class CoatsTest {
         }
     }
 
+    @Test
+    void aBiomeAskedForMoreHousesThanFitLaysWhatFitsAndLeavesEverythingReachable() {
+        BiomeGround crowded = withHouses(TestBiome.QUARRY.ground(), new Houses(12, 12));
+        for (long seed = 0; seed < 8; seed++) {
+            Rig rig = Rig.laid(crowded, seed);
+
+            assertThat(rig.houses.size()).as("seed %d", seed).isBetween(1, 11);
+            assertThat(rig.passesConnect()).as("seed %d", seed).isTrue();
+            assertThat(rig.pockets()).as("seed %d", seed).isZero();
+            assertThat(rig.narrowest()).as("seed %d", seed).isGreaterThanOrEqualTo(CLEARANCE);
+        }
+    }
+
+    private static BiomeGround withHouses(BiomeGround g, Houses houses) {
+        return new BiomeGround(
+                g.widthMin(),
+                g.widthMax(),
+                g.regions(),
+                g.base(),
+                g.fallback(),
+                houses,
+                g.patches(),
+                g.crags(),
+                g.outcrops());
+    }
+
     private static BiomeGround withPatches(BiomeGround g, List<Patch> patches) {
         return new BiomeGround(
-                g.widthMin(), g.widthMax(), g.regions(), g.base(), g.fallback(), patches, g.crags(), g.outcrops());
+                g.widthMin(),
+                g.widthMax(),
+                g.regions(),
+                g.base(),
+                g.fallback(),
+                g.houses(),
+                patches,
+                g.crags(),
+                g.outcrops());
     }
 
     private static BiomeGround withCrags(BiomeGround g, Crags crags) {
         return new BiomeGround(
-                g.widthMin(), g.widthMax(), g.regions(), g.base(), g.fallback(), g.patches(), crags, g.outcrops());
+                g.widthMin(),
+                g.widthMax(),
+                g.regions(),
+                g.base(),
+                g.fallback(),
+                g.houses(),
+                g.patches(),
+                crags,
+                g.outcrops());
     }
 
     private static BiomeGround withOutcrops(BiomeGround g, Outcrops outcrops) {
         return new BiomeGround(
-                g.widthMin(), g.widthMax(), g.regions(), g.base(), g.fallback(), g.patches(), g.crags(), outcrops);
+                g.widthMin(),
+                g.widthMax(),
+                g.regions(),
+                g.base(),
+                g.fallback(),
+                g.houses(),
+                g.patches(),
+                g.crags(),
+                outcrops);
     }
 
     /** The median within {@link #MEDIAN_OFF} of the density, and no seed under {@link #FLOOR} of it. */
@@ -206,11 +277,13 @@ class CoatsTest {
         private final TileMap map;
         private final boolean[] apron;
         private final int[] ends;
+        private final List<House> houses;
 
-        private Rig(TileMap map, boolean[] apron, int[] ends) {
+        private Rig(TileMap map, boolean[] apron, int[] ends, List<House> houses) {
             this.map = map;
             this.apron = apron;
             this.ends = ends;
+            this.houses = houses;
         }
 
         static Rig laid(BiomeGround ground, long seed) {
@@ -250,8 +323,8 @@ class CoatsTest {
                     apron[(EAST_PASS + r) * COLS + COLS - 1 - d] = true;
                 }
             }
-            Coats.lay(builder, AREA, ground, west, east, apron, ends, CLEARANCE, stream);
-            return new Rig(builder.build(), apron, ends);
+            List<House> houses = Coats.lay(builder, AREA, ground, west, east, apron, ends, StripTest.RULES, stream);
+            return new Rig(builder.build(), apron, ends, houses);
         }
 
         float share(Terrain terrain) {

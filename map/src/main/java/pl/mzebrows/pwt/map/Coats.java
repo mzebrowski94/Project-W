@@ -1,11 +1,14 @@
 package pl.mzebrows.pwt.map;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Lays one biome's coats over its base: patches in order, then crags, then outcrops. Rock always wins over a patch; an apron tile keeps base ground; no passage is left under the
- * clearance; nothing is sealed off. Each coat draws from a stream of its own, derived from the biome's, so
+ * Lays one biome's coats over its base: houses, then patches in order, then crags, then outcrops. Rock always wins
+ * over a patch; an apron tile keeps base ground, and so do a house's inside, doorways and doorsteps; no passage is
+ * left under the clearance; nothing is sealed off. Each coat draws from a stream of its own, derived from the biome's, so
  * retuning one moves no other's draws (G0065).
  *
  * <p>The biome's area arrives with its base already laid and whatever is round it - the border, a ridge
@@ -16,7 +19,8 @@ import org.jspecify.annotations.Nullable;
  * <p>The techniques, named so they can be looked up (the {@code game-patterns} skill): patches are
  * rectangles or blobs grown by Eden growth; crags are smoothed white noise cut at a quantile, then
  * repaired; outcrops are bars and Ls placed by dart throwing, the clearance off all other rock - so they
- * cannot enclose anything, and the flood fill after each is only the net. Package-private: {@code Strip}
+ * cannot enclose anything, and the flood fill after each is only the net; houses are walled rects thrown the same
+ * way, each doorstep an end so the repairs after keep it reached. Package-private: {@code Strip}
  * is the seam a caller crosses.
  *
  * <p>Allocates freely: a world is built once.
@@ -26,6 +30,14 @@ final class Coats {
     private static final long PATCHES = 0x6A09_E667_F3BC_C909L;
     private static final long CRAGS = 0xBB67_AE85_84CA_A73BL;
     private static final long OUTCROPS = 0x3C6E_F372_FE94_F82BL;
+    private static final long HOUSES = 0x428A_2F98_D728_AE22L;
+
+    /** A house's walls, in the order they are drawn from. */
+    private static final int WEST = 0;
+
+    private static final int EAST = 1;
+    private static final int SOUTH = 2;
+    private static final int NORTH = 3;
 
     /** Places tried for one piece before its coat counts as full. */
     private static final int TRIES = 600;
@@ -53,8 +65,10 @@ final class Coats {
     private final @Nullable Terrain west;
     private final @Nullable Terrain east;
     private final boolean[] apron;
-    private final int[] ends;
     private final int clearance;
+
+    /** Where the biome is entered: the strip's ends, then each house's doorsteps as it is laid. */
+    private int[] ends;
 
     /** Scratch: the tiles of the outcrop being tried. */
     private final boolean[] own;
@@ -89,12 +103,15 @@ final class Coats {
      *
      * @param west the base of the biome to the west, null when there is none
      * @param east the base of the biome to the east, null when there is none
-     * @param apron per tile of the map, {@code row * cols + col}: whether it is kept base ground
+     * @param apron per tile of the map, {@code row * cols + col}: whether it is kept base ground. A house's inside,
+     *     doorways and doorsteps are added to it
      * @param ends tiles of the map, {@code row * cols + col}, where the biome is entered; at least one
-     * @param clearance the narrowest passage left between two rocks, in tiles
+     * @param rules the clearance, and every house's size and doorways
      * @param biome this biome's stream; only derived from, never drawn
+     * @return the houses laid, as many as fitted up to the count drawn - fewer than the biome's {@code min} only
+     *     when there was no room, which the strip sweep reports
      */
-    static void lay(
+    static List<House> lay(
             TileMap.Builder map,
             TileRect area,
             BiomeGround ground,
@@ -102,7 +119,7 @@ final class Coats {
             @Nullable Terrain east,
             boolean[] apron,
             int[] ends,
-            int clearance,
+            StripRules rules,
             Randomness biome) {
         if (ends.length == 0) {
             throw new IllegalArgumentException("a biome needs an end to be entered by");
@@ -110,7 +127,8 @@ final class Coats {
         if (apron.length != map.cols() * map.rows()) {
             throw new IllegalArgumentException("the apron is one flag per tile of the map");
         }
-        Coats coats = new Coats(map, area, ground, west, east, apron, ends, clearance);
+        Coats coats = new Coats(map, area, ground, west, east, apron, ends, rules.clearance());
+        List<House> houses = coats.houses(rules.houses(), biome.derive(HOUSES));
         coats.patches(biome.derive(PATCHES));
         coats.crags(biome.derive(CRAGS));
         coats.outcrops(biome.derive(OUTCROPS));
@@ -119,6 +137,122 @@ final class Coats {
                 map.set(col, row, coats.tiles[row * coats.cols + col]);
             }
         }
+        return houses;
+    }
+
+    // ---- houses ----
+
+    /** As many houses as drawn between the biome's {@code min} and {@code max}, until one finds nowhere to stand. */
+    private List<House> houses(HouseRules rules, Randomness rng) {
+        Houses wanted = ground.houses();
+        int count = between(rng, wanted.min(), wanted.max());
+        List<House> laid = new ArrayList<>();
+        for (int k = 0; k < count; k++) {
+            House house = house(rules, rng);
+            if (house == null) {
+                break;
+            }
+            laid.add(house);
+        }
+        return laid;
+    }
+
+    /**
+     * Dart throwing, as an outcrop is placed: a rect at a random place, kept if it and the clearance round it are
+     * open ground off every apron - so it stands the clearance off all rock and every other house, and cannot
+     * enclose anything. Then its wall, its doorways in walls of their own, and its inside and doorsteps kept as
+     * apron, each doorstep an end of the biome.
+     */
+    private @Nullable House house(HouseRules rules, Randomness rng) {
+        for (int attempt = 0; attempt < TRIES; attempt++) {
+            int w = between(rng, rules.widthMin(), rules.widthMax());
+            int h = between(rng, rules.heightMin(), rules.heightMax());
+            if (w + 2 * clearance > area.width() || h + 2 * clearance > area.height()) {
+                continue;
+            }
+            int x = area.col() + clearance + rng.nextInt(area.width() - w - 2 * clearance + 1);
+            int y = area.row() + clearance + rng.nextInt(area.height() - h - 2 * clearance + 1);
+            if (!openRound(x, y, w, h)) {
+                continue;
+            }
+            TileRect walls = new TileRect(x, y, w, h);
+            List<TileRect> doorways = doorways(walls, rules, rng);
+            build(walls, doorways);
+            return new House(walls, doorways);
+        }
+        return null;
+    }
+
+    /** The rect and the clearance round it all open ground, none of it apron. */
+    private boolean openRound(int x, int y, int w, int h) {
+        for (int row = y - clearance; row < y + h + clearance; row++) {
+            for (int col = x - clearance; col < x + w + clearance; col++) {
+                if (rock(col, row) || apron[row * cols + col]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /** {@code doorways} of the four walls drawn, each a doorway drawn along it off the corners. */
+    private static List<TileRect> doorways(TileRect walls, HouseRules rules, Randomness rng) {
+        int[] order = {WEST, EAST, SOUTH, NORTH};
+        for (int i = 0; i < rules.doorways(); i++) {
+            int pick = i + rng.nextInt(order.length - i);
+            int swap = order[i];
+            order[i] = order[pick];
+            order[pick] = swap;
+        }
+        int width = rules.doorwayWidth();
+        List<TileRect> doorways = new ArrayList<>();
+        for (int i = 0; i < rules.doorways(); i++) {
+            int wall = order[i];
+            boolean standing = wall == WEST || wall == EAST;
+            int along = 1 + rng.nextInt((standing ? walls.height() : walls.width()) - 2 - width + 1);
+            doorways.add(
+                    switch (wall) {
+                        case WEST -> new TileRect(walls.col(), walls.row() + along, 1, width);
+                        case EAST -> new TileRect(walls.endCol() - 1, walls.row() + along, 1, width);
+                        case SOUTH -> new TileRect(walls.col() + along, walls.row(), width, 1);
+                        default -> new TileRect(walls.col() + along, walls.endRow() - 1, width, 1);
+                    });
+        }
+        return doorways;
+    }
+
+    /** The wall round the rect but for the doorways; the inside, doorways and doorsteps kept; doorsteps as ends. */
+    private void build(TileRect walls, List<TileRect> doorways) {
+        for (int row = walls.row(); row < walls.endRow(); row++) {
+            for (int col = walls.col(); col < walls.endCol(); col++) {
+                boolean edge = row == walls.row()
+                        || row == walls.endRow() - 1
+                        || col == walls.col()
+                        || col == walls.endCol() - 1;
+                if (edge) {
+                    tiles[row * cols + col] = Terrain.WALL;
+                } else {
+                    apron[row * cols + col] = true;
+                }
+            }
+        }
+        int[] entered = Arrays.copyOf(ends, ends.length + doorways.size());
+        for (int d = 0; d < doorways.size(); d++) {
+            TileRect door = doorways.get(d);
+            int dc = door.width() == 1 ? (door.col() == walls.col() ? -1 : 1) : 0;
+            int dr = door.height() == 1 ? (door.row() == walls.row() ? -1 : 1) : 0;
+            for (int row = door.row(); row < door.endRow(); row++) {
+                for (int col = door.col(); col < door.endCol(); col++) {
+                    for (int step = 0; step <= clearance; step++) {
+                        int at = (row + dr * step) * cols + col + dc * step;
+                        tiles[at] = ground.base();
+                        apron[at] = true;
+                    }
+                }
+            }
+            entered[ends.length + d] = (door.row() + dr * clearance) * cols + door.col() + dc * clearance;
+        }
+        ends = entered;
     }
 
     // ---- patches ----

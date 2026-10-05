@@ -34,13 +34,15 @@ hold, waves or lair (a finale). Done when every trait has a field.
 - A strain it needs that does not exist yet: `new-kind` first.
 - A turret, a mine or a gun cache in a biome: a finale's, or out of scope (ticket 01).
 - **Where** anything stands in a biome: placement's (ticket 14), never the biome's. A biome holds counts.
-  `STAGE 7` amends this line once placement is built.
+  What stands in a house, and its doors, are placement's too. `STAGE 7` amends this line once placement is built.
 
 ## 2. Biome: ground
 
-`map` lays it in coats, each from its own stream: **base**, then **patches** in order, then **crags**, then
-**outcrops** (`Coats`, behind `Strip.lay`). Rock always wins over a patch, and a pass's **apron** keeps base ground
-only. How much of a coat is always a **density** - a fraction of the biome - never a count.
+`map` lays it in coats, each from its own stream: **base**, then **houses**, then **patches** in order, then
+**crags**, then **outcrops** (`Coats`, behind `Strip.lay`). Rock always wins over a patch, and a pass's **apron** and
+a house's inside, doorways and doorsteps keep base ground only. How much of a coat is a **density** - a fraction of
+the biome - never a count; **houses are the one exception**, counted, because a house is a place and a density of
+~80-tile pieces lands a whole house off.
 
 What a density does, measured over 2000 seeds (stage 3): a coat is laid *until reached*, so its median lands about
 half a piece **over** - +0.1 point for 1-2 tile pebbles, +1.3 for 6-11 thicket blobs - and its worst seed one whole
@@ -61,10 +63,17 @@ faces too, about ten points of a 54-column biome. Measure a coat on the biome in
 | patches | `patches=rect\|blob <terrain\|neighbour> density sizeMin sizeMax; ...` | `rect` for small patches of colour, `blob` for ground worth going round (thicket). `neighbour` takes the nearer biome's base, or `fallback` |
 | crags | `crags.density`, `crags.smoothing` | irregular masses; more smoothing, fewer and bigger. Leave the block out for none |
 | outcrops | `outcrops.density`, `lengthMin/Max`, `thicknessMin/Max`, `arms` | rock bent round a corner - the Adventures' shape. Leave the block out for none |
+| houses | `houses.min`, `houses.max` | a place worth taking - "a quarry with a base in it". 0-2; leave the block out for none. Size and doorways are the strip's (`HouseRules`), never a biome's |
 
 Plus `widthMin/Max` and `regions`, which are geometry and so ground too. A biome's regions are its own -
 every region lies inside one biome, and a tile is in its region's (G0062) - so `regions` is at least 1.
-Rooms: `STAGE 5` adds their coat, or says why a biome has none (ticket 12).
+
+**What houses do to the other coats** (stage 5): each house takes 8-12 x 7-10 tiles in `Terrain.WALL`, stands the
+clearance off all rock, and keeps its inside and a doorstep two deep outside each of its two doorways as base ground -
+roughly 6% of a 54-column biome a house that no patch, crag or outcrop may use. The other coats are still measured on
+the whole rect, and with the five's 0-2 houses every coat still lands within the density test's 1.5 points. A biome
+asking for more houses than fit lays what fits: `StripSweepTest` reports it as under its `houses.min`. A **gatehouse**
+is the strip's, never a biome's: about one ridge in four, never the one before the finale.
 
 **Porting an Adventure biome**: measure it first. `PWT_MEASURE=1 .claude/scripts/gradle.sh :sim:test --tests
 '*BiomeMeasureTest' -i` (`STAGE 7`) builds the Adventure headless and prints the band's rock, thicket and patch
@@ -102,12 +111,15 @@ None is written per biome; a biome or finale joins every one by being a constant
   `clearance`, every tile in the biome whose ground it shows and each biome holding its `regions`, the finale's
   west edge straight. Checks live in `StripFaults`, one list of faults each, so `StripTest` asserts one of them
   alone. A failure lists every failing seed and fault together (`seed 1412: ridge 2 has 0 passes in and 0 out`);
-  under `PWT_SWEEP=1` a green run prints one line - seeds, ms per strip, columns min/median/max, passes per ridge.
-  Rooms `STAGE 5`.
+  under `PWT_SWEEP=1` a green run prints one line - seeds, ms per strip, columns min/median/max, passes per ridge,
+  houses per biome, gatehouses per strip. Houses (`StripFaults.houses`): every wall whole but for its doorways, each
+  doorway 3 wide in a wall of its own off the corners, inside, doorways and doorsteps the biome's base, each biome
+  between its `houses.min` and `.max`, no gatehouse before the finale; `reach` already holds every inside reached.
 - **`MissionSweepTest`** (`sim`): every point and crate reachable, every finale layout spot standable and
   reachable, the last biome's nests outside the watch, a point in its last `doorColumns`. `STAGE 7` / `8`.
 - **`CoatsTest`** (`map`): every coat of every biome, over 64 seeds, lands with its **median within 1.5 points**
-  of its density and **no seed under half** of it; rock is the crags' and outcrops' densities summed. Also: no
+  of its density and **no seed under half** of it; rock is the crags' and outcrops' densities summed, never the
+  houses' walls (`Terrain.WALL`, not `ROCK`). Houses: between `min` and `max`, inside base ground. Also: no
   passage under `clearance`, no pockets, every pass end reaches every other, the apron base ground, rock a crag
   did not lay never cleared, retuning one coat moving no other's draws. The five blocks and a bare redoubt
   are literal `BiomeGround`s in `TestBiome` (`map` tests), shared by `CoatsTest` and both strip tests, until `sim`
@@ -150,7 +162,7 @@ with its trigger. Then one dated line in `CHANGELOG.md` beside this file - run o
 The build already refuses a constant without a block, `regions` under 1, an armoury pickup in `furniture.pickups`, a
 pool smaller than `sim.mission.biomes`, and a biome the deal never places. By eye:
 
-- a comment above the block: source, measured numbers, why;
+- a comment above the block: source, measured numbers, why - and for `houses`, why this biome has them;
 - every key its nearest neighbour's block has; a coat off by leaving its block out, nothing else;
 - no coordinates in a biome - rules, never places;
 - ported counts traceable to the Adventure (x1.8);
@@ -176,3 +188,7 @@ changed.
   strip does round a biome (faces, aprons, a rock share measured on the rect reading the faces), `StripSweepTest`'s
   checks and output, the five blocks' new home `TestBiome`; slow: checking a strip by eye took a throwaway ASCII
   dump - not kept, since a `new-biome` run looks through a played code. Fixed in *Ground* and *Tests*.
+- 2026-10-05, stage 5 (houses and gatehouses) - wrong: *Ground* said a coat is always a density, never a count -
+  houses are counted; missing: the houses coat, its keys, what it takes from the other coats, the gatehouse, and the
+  sweep's house checks and summary; slow: checking a house by eye took the throwaway ASCII dump again - still not
+  kept, stage 5 being the last stage with no code to play. Fixed in *Fit*, *Ground*, *Tests* and *Reviewer checks*.

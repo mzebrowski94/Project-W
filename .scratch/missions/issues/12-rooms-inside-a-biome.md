@@ -1,7 +1,7 @@
 # Rooms inside a biome
 
 Type: prototype, then grilling
-Status: open
+Status: resolved (grilled 2026-10-05, no prototype: the look is judged in a played mission)
 Blocked by: 03
 
 ## Question
@@ -38,3 +38,55 @@ Open, roughly in the order they unblock each other:
   a room inside a biome, so the two may be two answers.
 - **The word.** *Room* is close to **room code** (a session's name) and *headroom*; *house*, *base*, *compound*
   and *post* (taken - a level's ground to hold) are the others to weigh. Glossary, once chosen.
+
+## Answer
+
+Grilled 2026-10-05. The prototype was skipped: the edge wall was ruled out on cost alone, and the tile wall's look
+is judged in a played mission (stage 7), the first place a strip can be seen.
+
+- **The word**: a **house**, entered by **doorways**, enclosed by a **wall**. Not *room* (room code), not *base* (a
+  biome's base ground), not *post* (taken). Glossary.
+- **The wall**: one tile thick, a new impassable `Terrain.WALL` - blocks a unit, a shot and a clear line exactly as
+  rock does, drawn apart from rock (its own `graphic.terrain.wall`, rimmed as rock is) so a house reads as built
+  (pillar 5). A wall on the edge between two tiles is ruled out: new geometry for the map, the flow field, `Sight`
+  and the solver, and an ADR, for nothing a tile wall cannot do.
+- **The shape**: a rectangle 8-12 x 7-10 tiles outside its walls (6-10 x 5-8 inside), strip-wide.
+- **The way in**: exactly **2 doorways**, each **3 wide** (one over the clearance: a fight in one is a squeeze, not
+  a jam), in two different walls drawn from the four, each drawn along its wall and never at a corner.
+- **Its place in the definition**: the first **coat** of `BiomeGround` - `Houses(min, max)`, off at zero - laid
+  before patches because it is the big shape (regions before tiles). **A count, not a density**: a house is a
+  place, not texture, 0-2 a biome; a density of ~80-tile pieces lands a whole house off. The one exception to
+  *density, never a count*. A biome that cannot fit its `min` is a sweep fault, never silently short.
+- **What it keeps clear**: the house stands the clearance off every rock already laid (faces, border, other
+  houses). Its inside and a **doorstep** - the clearance deep outside each doorway - are kept base ground like an
+  apron: no patch, crag or outcrop lands there. Each doorstep is an end of the biome's coats, so a crag is cleared
+  rather than cut a house off and an outcrop that would is refused.
+- **What goes in it**: placement's (ticket 14), and the **door** with it - Mateusz's spec is in 14. `Strip.Laid`
+  reports every house and its doorways; the map knows nothing of doors.
+- **Pillars**: 4 - no roof, no fog: a house is drawn open and you see into it. 1 - two doorways 3 wide, a reflex
+  fight. 2 - the commander walks in; nothing is managed from outside.
+- **Gatehouses** - a house on the border, the second answer: a share of the ridges between two biomes
+  (`gatehouseShare` 0.25, drawn per ridge from its own stream), **never the ridge before the finale** (04's straight
+  west edge and door point untouched). The ridge widens to the house plus one rock column each side - inside 8 x 9,
+  so 12 columns - its faces wander as any ridge's, and its one pass enters by a doorway in the west wall and leaves by
+  one in the east, on another row. The pass runs a row in from the border either side, so a doorway is never at a
+  corner, and the house stands as high as both doorways need, in the middle of the rows that allow. Its doorways are 3 wide like a house's (the 4-wide pass narrows to the gate):
+  one doorway width, one door. Which biome a gatehouse tile is in stays 06's halves.
+
+Strip-wide fields of `StripRules` (keys `sim.mission.ground.*` when `sim` reads them, stage 7; replacing 13's
+`chamberWidth`, `chamberHeight`):
+
+```properties
+sim.mission.ground.houseWidthMin=8
+sim.mission.ground.houseWidthMax=12
+sim.mission.ground.houseHeightMin=7
+sim.mission.ground.houseHeightMax=10
+sim.mission.ground.doorways=2
+sim.mission.ground.doorwayWidth=3
+sim.mission.ground.gatehouseShare=0.25
+sim.mission.ground.gatehouseWidth=8
+sim.mission.ground.gatehouseHeight=9
+```
+
+Per biome, `sim.biome.<name>.ground.houses.min` / `.max` (stage 7; `ConfigBinder` already leaves a left-out `houses` off, as it does crags and outcrops). The test biomes: quarry 1-2 ("a quarry with a base
+in it"), the other four 0-1, so the sweep proves a house survives every coat.

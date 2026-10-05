@@ -139,6 +139,15 @@ construction - the flood fill after each is the net, and in 1500 prototype biome
 cellular automaton was tried for the same job: it makes caves and worms, not the Adventures' rock, and
 needs a repair pass to be safe.
 
+**Enclosures: walled rects by dart throwing, doorsteps as ends (houses).** A rect thrown at a random place
+and kept only if it and the clearance round it are open ground off every apron - so it can ring nothing
+- then walled one tile thick with its doorways cut off the corners, its inside and a doorstep outside
+each doorway kept like an apron, and each doorstep added to the ends every later coat must keep reached
+(`Coats`). A wall is a tile, never an edge between tiles: the flow field, sight and the solver already
+handle a tile. Laid first, the big shape before the texture. A BSP split of a lot makes towns, not a
+house or two in open ground; a prefab with rules is a fixed look the player learns in a mission. Count,
+not density: a house is a place.
+
 **Irregular masses: smoothed noise cut at a quantile, then repaired (crags).** White noise averaged over
 its neighbours a few times, thresholded at the value that makes exactly the wanted share rock - so the
 coat lands on its density whatever the noise did. Unlike outcrops it can close things off, so it is
@@ -154,7 +163,8 @@ into a cross.
 **How much is a density, never a count.** Lay pieces until a fraction of the area is done. A count of
 pieces drawn from a range of sizes swings a biome's character from seed to seed (quarry rock 10.5-17%
 on counts against 10-12% on density). Lay-until-reached overshoots by half a piece on average and one
-piece at worst, so a big piece size buys a looser landing.
+piece at worst, so a big piece size buys a looser landing - which is why a house, at ~80 tiles, is
+counted instead.
 
 **Split a stream while building, never while playing.** `Randomness.derive(salt)` makes a child from
 the parent's state without advancing it, so a build can give each biome and each coat its own stream

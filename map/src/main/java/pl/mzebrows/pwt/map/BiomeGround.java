@@ -3,9 +3,10 @@ package pl.mzebrows.pwt.map;
 import java.util.List;
 
 /**
- * The ground of one kind of biome: its width, its regions, and the coats laid over its base - patches
- * in order, then crags, then outcrops. Rock always wins over a patch, and a pass's apron keeps base
- * ground only. How much of each coat is a density, never a count.
+ * The ground of one kind of biome: its width, its regions, and the coats laid over its base - houses, then
+ * patches in order, then crags, then outcrops. Rock always wins over a patch, and a pass's apron and a house's
+ * inside keep base ground only. How much of each coat is a density, never a count - but for houses, which are
+ * places rather than texture.
  *
  * <p>Not {@code Ground}: {@code GroundDef} already names what standing on a terrain costs.
  *
@@ -21,6 +22,7 @@ public record BiomeGround(
         int regions,
         Terrain base,
         Terrain fallback,
+        Houses houses,
         List<Patch> patches,
         Crags crags,
         Outcrops outcrops) {

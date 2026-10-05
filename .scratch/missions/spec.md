@@ -20,7 +20,7 @@ plus its best time.
 | [01](issues/01-what-a-mission-is.md) | - | shape, seed, tier's scope, winning and losing, where it is played |
 | [02](issues/02-how-a-biome-s-ground-is-laid.md) | - | the ground's coats and techniques (prototype `prototype/biome-ground.html`) |
 | [03](issues/03-what-a-biome-definition-holds.md) | - | `BiomeGround`, `Strip.lay`, `BiomeDef`, `Roster.count`; the five blocks |
-| [13](issues/13-what-lies-between-two-biomes.md) | - | ridge, pass, apron; gatehouses (moved to 12's stage by 11) |
+| [13](issues/13-what-lies-between-two-biomes.md) | - | ridge, pass, apron; gatehouses (settled by 12) |
 | [06](issues/06-which-biome-a-tile-is-in.md) | G0062 | a biome is a grouping of regions; a nest wakes for its own biome; first brood |
 | [07](issues/07-the-tiers-in-numbers.md) | G0063 | four numbers and a ramp; `MissionConfig`; `Whole.percentOf`; melee 220 |
 | [04](issues/04-what-a-finale-definition-holds.md) | G0064 | a finale is a set piece; the redoubt and keep blocks; the door point |
@@ -29,12 +29,12 @@ plus its best time.
 | [09](issues/09-what-is-remembered-and-where.md) | G0067 | `MissionRecords`, written on the outcome tick by every machine |
 | [10](issues/10-what-the-new-biome-skill-says.md) | - | the `new-biome` skill, its tests, porting, the living-skill step |
 | [11](issues/11-the-build-in-stages.md) | - | this staging |
-| [12](issues/12-rooms-inside-a-biome.md) | - | rooms and gatehouses (**open**, gates stage 5) |
-| [14](issues/14-placement-inside-a-biome.md) | - | placement inside a biome (**open**, gates stage 7) |
+| [12](issues/12-rooms-inside-a-biome.md) | - | houses and gatehouses: `Terrain.WALL`, two doorways 3 wide, the first coat by count; doors folded into 14 |
+| [14](issues/14-placement-inside-a-biome.md) | - | placement inside a biome, and doors (**open**, gates stage 7) |
 | map.md *Notes* | G0061 | the held point never becomes the rally point; a march ends on a ring round the post (**to write**, stage 0) |
 
 Glossary words, all settled: **mission**, **mission seed**, **daily mission**, **tier**, **biome**, **finale**,
-**region**, **ridge**, **pass**, **apron**, **gatehouse**. Never *sector*, *run*, *map* or *difficulty* for these.
+**region**, **ridge**, **pass**, **apron**, **gatehouse**, **house**, **doorway**, **wall**. Never *sector*, *run*, *map* or *difficulty* for these.
 
 ## Keys
 
@@ -44,11 +44,12 @@ Values and comments are in the tickets. Each stage adds the keys it needs, never
 |---|---|---|---|
 | `assets/sim/level.properties` | `sim.nest.firstBroodSeconds=6`; the `wakeRadius` comment rewritten | 06 | 2 |
 | `assets/sim/missions.properties` | `sim.mission.ground.{rows, apron, clearance, ridgeWidth, ridgeRough, passWidth, passesMin/Max, passApart, passJog, snake}` | 03, 13 | 3-4 |
-| | `sim.mission.ground.{gatehouseShare, chamberWidth, chamberHeight}` and the room keys, as 12 settles them | 12, 13 | 5 |
+| | `sim.mission.ground.{houseWidthMin/Max, houseHeightMin/Max, doorways, doorwayWidth, gatehouseShare, gatehouseWidth, gatehouseHeight}` - `StripRules.houses` in stage 5, keys when `sim` reads them | 12 | 5, 7 |
+| `assets/graphic.properties` | `graphic.terrain.wall=57524aff` | 12 | 5 |
 | | `sim.mission.rampPercent=10`; `sim.mission.tier.{easy,medium,hard}.*` | 07 | 6 |
 | | `sim.mission.biomes=4`; placement keys, as 14 settles them | 03, 14 | 7 |
 | | `sim.mission.finale.doorColumns=8` | 04 | 8 |
-| `assets/sim/biomes.properties` | `sim.biome.{plain, quarry, brake, anthill, badlands}.*` | 03 | 7 |
+| `assets/sim/biomes.properties` | `sim.biome.{plain, quarry, brake, anthill, badlands}.*`, `houses.min/max` among them | 03, 12 | 7 |
 | `assets/sim/finales.properties` | `sim.finale.redoubt.*`; `sim.finale.keep.*` | 04 | 8; keep run |
 | `assets/sim/weapons.properties` | `sim.melee.damage` 190 -> 220 | 07 | 6 |
 | `assets/graphic.properties` | `graphic.ui.resultHoldSeconds=3` | 08 | 1 |
@@ -62,7 +63,7 @@ Values and comments are in the tickets. Each stage adds the keys it needs, never
 | 2 | Nests wake by biome (G0062) | - | - |
 | 3 | Biome ground (`map`) | - | draft |
 | 4 | The strip (`map`) | - | draft |
-| 5 | Rooms and gatehouses (`map`) | ticket 12 | draft |
+| 5 | Houses and gatehouses (`map`) | ticket 12 | draft |
 | 6 | Tiers and the code | - | - |
 | 7 | **First biome stage** | ticket 14 | **`SKILL.md` written** |
 | 8 | Finale: the redoubt | 0, 7 | skill |
@@ -198,12 +199,14 @@ need and deletes the rows it retires, in the same diff.
 > output format. Biome definitions aren't in `sim` yet, so test with literal `BiomeGround`s. Name G0062's ridge test
 > in its *Enforced by*. End by amending the draft skill.
 
-### 5 - Rooms and gatehouses (`map`)
+### 5 - Houses and gatehouses (`map`)
 
-- **Ships**: per ticket 12. Rooms as ground and gatehouses in 12's form, kept open by construction.
-- **Tests**: `StripSweepTest` extended so every room's way in is reachable and its inside too, plus 12's own.
-- **Scaffolding**: per 12.
-- **Polish**: the draft. Section 2 gains rooms.
+- **Ships**: per ticket 12. `Terrain.WALL` (and its colour in `core`); `Houses` as `BiomeGround`'s first coat;
+  `HouseRules` on `StripRules`; houses laid by `Coats`, gatehouses by `Strip`, both in `Strip.Laid.houses()`.
+- **Tests**: `StripFaults.houses` in `StripSweepTest`; `StripTest`'s house and gatehouse cases; `CoatsTest`'s.
+- ***Enforced by***: the *map-and-view* row "a house is never cut off".
+- **Scaffolding**: none (test-only; no door - that is 14's).
+- **Polish**: the draft. Section 2 gains houses.
 
 > Build rooms and gatehouses in Project-W's `map` module as ticket 12 settled them. Read `CLAUDE.md`,
 > `.scratch/missions/issues/12-…` (*Answer*), `13-…`, stage 4's `Strip`, `StripSweepTest`, and
@@ -243,7 +246,9 @@ need and deletes the rows it retires, in the same diff.
   - `biomes.properties` with plain, quarry, brake, anthill and badlands.
   - The deal: none twice, never the same base side by side.
   - `RngStream.MISSION`.
-  - Populate per ticket 14, room contents included.
+  - Populate per ticket 14, what stands in a house included, and doors as 14 settles them - a new mechanic its
+    grilling may split into a stage of its own.
+  - `sim.mission.ground.*` read into `StripRules` and `HouseRules`; each block's `houses.min/max`.
   - `Scenarios.mission(tier)` and `Scenarios.named`'s mission form, with `--mission` wired to it.
   - The `PWT_MEASURE` runner.
   - The goal line leads through points.
@@ -267,7 +272,7 @@ need and deletes the rows it retires, in the same diff.
 
 > Build the first biome stage of Project-W's missions: five biomes as data, dealt into a strip, populated, playable
 > from `--mission=<code>`. Read `CLAUDE.md`, `.scratch/missions/spec.md` (this stage), `.scratch/missions/issues/03-…`
-> (the five blocks), `14-…` (placement), `12-…` (room contents), `05-…` (*Streams*), `10-…`,
+> (the five blocks), `14-…` (placement, doors), `12-…` (houses, `Strip.Laid.houses()`), `05-…` (*Streams*), `10-…`,
 > `.scratch/missions/new-biome-skill.md`, `.claude/skills/new-kind/SKILL.md`, and stages 3-6's `map` and tier code.
 > Settled: the definitions, blocks, deal rules, placement, sweeps and their sizes, the build budget. No finale yet;
 > the strip ends past the last ridge. Open: whatever building the five turns up, which goes into the skill. Run

@@ -4,7 +4,8 @@ import java.util.List;
 
 /**
  * The five first biomes and a bare finale, written out as {@code biomes.properties} and {@code finales.properties}
- * will hold them, for this module's tests until {@code sim} reads the tables.
+ * will hold them, for this module's tests until {@code sim} reads the tables. Houses: the quarry 1-2, "a quarry
+ * with a base in it", the rest 0-1 so the sweep proves a house survives every coat (missions ticket 12).
  */
 record TestBiome(String name, BiomeGround ground) {
 
@@ -16,6 +17,7 @@ record TestBiome(String name, BiomeGround ground) {
                     3,
                     Terrain.PLAIN,
                     Terrain.DUST,
+                    new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     Crags.off(),
                     new Outcrops(0.006f, 1, 2, 1, 1, 0f)));
@@ -28,6 +30,7 @@ record TestBiome(String name, BiomeGround ground) {
                     3,
                     Terrain.DUST,
                     Terrain.PLAIN,
+                    new Houses(1, 2),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     Crags.off(),
                     new Outcrops(0.10f, 4, 9, 2, 3, 0.7f)));
@@ -40,6 +43,7 @@ record TestBiome(String name, BiomeGround ground) {
                     3,
                     Terrain.PLAIN,
                     Terrain.ORGANIC,
+                    new Houses(0, 1),
                     List.of(
                             new Patch.Rect(PatchGround.of(Terrain.ORGANIC), 0.035f, 4, 6),
                             new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
@@ -54,6 +58,7 @@ record TestBiome(String name, BiomeGround ground) {
                     3,
                     Terrain.ORGANIC,
                     Terrain.DUST,
+                    new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     new Crags(0.05f, 4),
                     Outcrops.off()));
@@ -66,6 +71,7 @@ record TestBiome(String name, BiomeGround ground) {
                     3,
                     Terrain.ASH,
                     Terrain.DUST,
+                    new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     new Crags(0.13f, 4),
                     new Outcrops(0.02f, 2, 4, 1, 2, 0.3f)));
@@ -74,7 +80,9 @@ record TestBiome(String name, BiomeGround ground) {
 
     /** The redoubt's ground without its pieces: a fixed width, no dealt coats. */
     static final TestBiome REDOUBT = new TestBiome(
-            "redoubt", new BiomeGround(34, 34, 3, Terrain.DUST, Terrain.ASH, List.of(), Crags.off(), Outcrops.off()));
+            "redoubt",
+            new BiomeGround(
+                    34, 34, 3, Terrain.DUST, Terrain.ASH, Houses.off(), List.of(), Crags.off(), Outcrops.off()));
 
     /** How much of the biome its rock coats take together. */
     float rock() {

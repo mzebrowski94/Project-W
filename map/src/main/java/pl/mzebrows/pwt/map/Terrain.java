@@ -46,7 +46,13 @@ public enum Terrain {
     THICKET(true),
 
     /** Rock. The blocking terrain, and what anything outside the map reads as. */
-    ROCK(false);
+    ROCK(false),
+
+    /**
+     * A house's wall: built rather than grown. Blocks exactly as {@link #ROCK} does - a unit, a shot, a clear
+     * line - and is its own constant only so it is drawn apart from rock, and a house reads as one (pillar 5).
+     */
+    WALL(false);
 
     private final boolean passable;
 

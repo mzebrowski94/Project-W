@@ -2,11 +2,13 @@ package pl.mzebrows.pwt.map;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /**
  * What a laid strip may never show, each check a list of faults - empty when it holds - so a sweep can report
  * every seed and every fault at once. Ridges and passes are read off the map and the biomes' rects: a ridge is
- * the columns between two biomes, and a pass is a run of open tiles on its edge column.
+ * the columns between two biomes, and a pass is a run of open tiles on its edge column. A gatehouse is a house
+ * laid in a ridge's columns.
  */
 final class StripFaults {
 
@@ -21,6 +23,7 @@ final class StripFaults {
         faults.addAll(clearance(laid, rules));
         faults.addAll(membership(laid, grounds));
         faults.addAll(finaleEdge(laid));
+        faults.addAll(houses(laid, grounds, rules));
         return faults;
     }
 
@@ -48,21 +51,27 @@ final class StripFaults {
             if (rect.row() != 1 || rect.height() != rules.rows() - 2) {
                 faults.add("biome " + p + " does not run between the border rows");
             }
-            if (p > 0 && rect.col() - rects.get(p - 1).endCol() != rules.ridgeWidth()) {
-                faults.add("ridge " + (p - 1) + " is "
-                        + (rect.col() - rects.get(p - 1).endCol()) + " wide");
+            int ridgeWidth = p > 0 ? rect.col() - rects.get(p - 1).endCol() : 0;
+            boolean gatehouse = p > 0 && gatehouse(laid, p - 1);
+            if (p > 0 && ridgeWidth != (gatehouse ? rules.houses().gatehouseRidge() : rules.ridgeWidth())) {
+                faults.add("ridge " + (p - 1) + (gatehouse ? ", a gatehouse," : "") + " is " + ridgeWidth + " wide");
             }
         }
         return faults;
     }
 
-    /** Every ridge crossed by between {@code passesMin} and {@code passesMax} passes, as many out as in. */
+    /**
+     * Every ridge crossed by between {@code passesMin} and {@code passesMax} passes, as many out as in - a gatehouse
+     * by one.
+     */
     static List<String> passes(Strip.Laid laid, StripRules rules) {
         List<String> faults = new ArrayList<>();
         for (int b = 0; b < ridges(laid); b++) {
             int in = runs(laid.map(), westEdge(laid, b));
             int out = runs(laid.map(), eastEdge(laid, b));
-            if (in != out || in < rules.passesMin() || in > rules.passesMax()) {
+            int min = gatehouse(laid, b) ? 1 : rules.passesMin();
+            int max = gatehouse(laid, b) ? 1 : rules.passesMax();
+            if (in != out || in < min || in > max) {
                 faults.add("ridge " + b + " has " + in + " passes in and " + out + " out");
             }
         }
@@ -159,6 +168,190 @@ final class StripFaults {
             }
         }
         return List.of();
+    }
+
+    /**
+     * Every house walled round in {@link Terrain#WALL} but for its doorways, and no wall anywhere else; each doorway
+     * {@code doorwayWidth} long in a wall of its own, off the corners, open with its doorstep - the clearance deep
+     * outside it; the inside open; inside, doorways and doorsteps the base of the biome each tile is in. A house
+     * inside a biome has {@code doorways} doorways and lies wholly in it, each biome holding between its
+     * {@code min} and {@code max}; a gatehouse has two and lies in a ridge, never the one before the finale.
+     */
+    static List<String> houses(Strip.Laid laid, List<BiomeGround> grounds, StripRules rules) {
+        List<String> faults = new ArrayList<>();
+        TileMap map = laid.map();
+        HouseRules shape = rules.houses();
+        boolean[] walled = new boolean[map.cols() * map.rows()];
+        int[] perBiome = new int[grounds.size()];
+        for (House house : laid.houses()) {
+            TileRect walls = house.walls();
+            String name = "house at (" + walls.col() + "," + walls.row() + ")";
+            int ridge = ridgeOf(laid, walls);
+            int biome = biomeOf(laid, walls);
+            if (ridge < 0 && biome < 0) {
+                faults.add(name + " lies across a biome's edge");
+            } else if (ridge >= 0 && ridge == ridges(laid) - 1) {
+                faults.add(name + " is a gatehouse before the finale");
+            } else if (biome >= 0) {
+                perBiome[biome]++;
+            }
+            int wanted = ridge >= 0 ? 2 : shape.doorways();
+            if (house.doorways().size() != wanted) {
+                faults.add(name + " has " + house.doorways().size() + " doorways, should have " + wanted);
+            }
+            boolean[] used = new boolean[4];
+            for (TileRect door : house.doorways()) {
+                int wall = wallOf(house, door);
+                if (wall < 0) {
+                    faults.add(name + " has a doorway at (" + door.col() + "," + door.row()
+                            + ") off its walls or at a corner");
+                    continue;
+                }
+                if (used[wall]) {
+                    faults.add(name + " has two doorways in one wall");
+                }
+                used[wall] = true;
+                if (Math.max(door.width(), door.height()) != shape.doorwayWidth()) {
+                    faults.add(name + " has a doorway " + Math.max(door.width(), door.height()) + " wide");
+                }
+                baseGround(map, grounds, door, name + "'s doorway", faults);
+                baseGround(map, grounds, doorstep(door, wall, rules.clearance()), name + "'s doorstep", faults);
+            }
+            baseGround(map, grounds, house.inside(), name + "'s inside", faults);
+            for (int r = walls.row(); r < walls.endRow(); r++) {
+                for (int c = walls.col(); c < walls.endCol(); c++) {
+                    if (house.inside().contains(c, r)) {
+                        continue;
+                    }
+                    walled[r * map.cols() + c] = true;
+                    if (!inDoorway(house, c, r) && map.terrainAtTile(c, r) != Terrain.WALL) {
+                        faults.add(name + " has " + map.terrainAtTile(c, r) + " in its wall at (" + c + "," + r + ")");
+                    }
+                }
+            }
+        }
+        for (int r = 0; r < map.rows(); r++) {
+            for (int c = 0; c < map.cols(); c++) {
+                if (map.terrainAtTile(c, r) == Terrain.WALL && !walled[r * map.cols() + c]) {
+                    faults.add("wall at (" + c + "," + r + ") is no house's");
+                }
+            }
+        }
+        for (int p = 0; p < grounds.size(); p++) {
+            Houses wanted = grounds.get(p).houses();
+            if (perBiome[p] < wanted.min() || perBiome[p] > wanted.max()) {
+                faults.add("biome " + p + " has " + perBiome[p] + " houses, its ground asks for " + wanted.min() + ".."
+                        + wanted.max());
+            }
+        }
+        return faults;
+    }
+
+    /** Whether a ridge is a gatehouse: a house stands in its columns. */
+    static boolean gatehouse(Strip.Laid laid, int ridge) {
+        for (House house : laid.houses()) {
+            if (ridgeOf(laid, house.walls()) == ridge) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** How many houses lie inside a biome. */
+    static int housesIn(Strip.Laid laid, int biome) {
+        int count = 0;
+        for (House house : laid.houses()) {
+            count += biomeOf(laid, house.walls()) == biome ? 1 : 0;
+        }
+        return count;
+    }
+
+    /** The gatehouse in a ridge, or null. */
+    static @Nullable House gatehouseIn(Strip.Laid laid, int ridge) {
+        for (House house : laid.houses()) {
+            if (ridgeOf(laid, house.walls()) == ridge) {
+                return house;
+            }
+        }
+        return null;
+    }
+
+    /** The ridge whose columns hold these walls, or -1. */
+    private static int ridgeOf(Strip.Laid laid, TileRect walls) {
+        for (int b = 0; b < ridges(laid); b++) {
+            if (walls.col() >= westEdge(laid, b) && walls.endCol() - 1 <= eastEdge(laid, b)) {
+                return b;
+            }
+        }
+        return -1;
+    }
+
+    /** The biome whose rect holds these walls whole, or -1. */
+    private static int biomeOf(Strip.Laid laid, TileRect walls) {
+        for (int p = 0; p < laid.biomes().size(); p++) {
+            TileRect rect = laid.biomes().get(p);
+            if (rect.contains(walls.col(), walls.row()) && rect.contains(walls.endCol() - 1, walls.endRow() - 1)) {
+                return p;
+            }
+        }
+        return -1;
+    }
+
+    /** Which wall a doorway is in - west, east, south, north - off the corners, or -1. */
+    static int wallOf(House house, TileRect door) {
+        TileRect walls = house.walls();
+        TileRect inside = house.inside();
+        if (door.width() == 1 && door.row() >= inside.row() && door.endRow() <= inside.endRow()) {
+            if (door.col() == walls.col()) {
+                return 0;
+            }
+            if (door.col() == walls.endCol() - 1) {
+                return 1;
+            }
+        }
+        if (door.height() == 1 && door.col() >= inside.col() && door.endCol() <= inside.endCol()) {
+            if (door.row() == walls.row()) {
+                return 2;
+            }
+            if (door.row() == walls.endRow() - 1) {
+                return 3;
+            }
+        }
+        return -1;
+    }
+
+    /** The ground just outside a doorway, {@code depth} deep. */
+    private static TileRect doorstep(TileRect door, int wall, int depth) {
+        return switch (wall) {
+            case 0 -> new TileRect(door.col() - depth, door.row(), depth, door.height());
+            case 1 -> new TileRect(door.endCol(), door.row(), depth, door.height());
+            case 2 -> new TileRect(door.col(), door.row() - depth, door.width(), depth);
+            default -> new TileRect(door.col(), door.endRow(), door.width(), depth);
+        };
+    }
+
+    private static boolean inDoorway(House house, int col, int row) {
+        for (TileRect door : house.doorways()) {
+            if (door.contains(col, row)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Every tile of {@code rect} the base of the biome it is in - open, then, and no patch on it. */
+    private static void baseGround(
+            TileMap map, List<BiomeGround> grounds, TileRect rect, String what, List<String> faults) {
+        for (int r = rect.row(); r < rect.endRow(); r++) {
+            for (int c = rect.col(); c < rect.endCol(); c++) {
+                Terrain base = grounds.get(map.biomeAtTile(c, r)).base();
+                if (map.terrainAtTile(c, r) != base) {
+                    faults.add(what + " shows " + map.terrainAtTile(c, r) + " at (" + c + "," + r + "), its base is "
+                            + base);
+                    return;
+                }
+            }
+        }
     }
 
     static int ridges(Strip.Laid laid) {

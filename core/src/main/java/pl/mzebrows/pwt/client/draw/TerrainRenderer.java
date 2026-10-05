@@ -147,8 +147,8 @@ public final class TerrainRenderer implements Disposable {
                 Terrain terrain = current.terrainAtTile(col, row);
                 if (terrain == Terrain.THICKET) {
                     undergrowth(current, col, row, tile);
-                } else if (terrain == Terrain.ROCK && detail.rimsRock()) {
-                    wallEdges(current, col, row, tile);
+                } else if (!terrain.passable() && detail.rimsRock()) {
+                    wallEdges(current, terrain, col, row, tile);
                 }
             }
         }
@@ -184,13 +184,14 @@ public final class TerrainRenderer implements Disposable {
      * <p>Rock and floor were two dark colours a shade apart, and at the pulled-back view that is a
      * map you have to squint at to find the walls in. A lighter edge where the wall <em>stops</em>
      * is what the eye actually reads a wall by, and it costs nothing on the tiles in the middle of
-     * one: an outcrop draws its outline and a solid block draws its perimeter.
+     * one: an outcrop draws its outline and a solid block draws its perimeter. A house's wall is rimmed as rock
+     * is, off its own colour, so the two read as one kind of thing - in the way - and two materials.
      *
      * <p>Anything off the map counts as rock, so the border of a level is not outlined against
      * nothing.
      */
-    private void wallEdges(TileMap current, int col, int row, float tile) {
-        shapes.setColor(rim[index(Terrain.ROCK, region(current, col, row), palette.shadeStepFor(col, row))]);
+    private void wallEdges(TileMap current, Terrain terrain, int col, int row, float tile) {
+        shapes.setColor(rim[index(terrain, region(current, col, row), palette.shadeStepFor(col, row))]);
         float width = tile * detail.rockEdgeWidth();
         float x = col * tile;
         float y = row * tile;
@@ -210,7 +211,7 @@ public final class TerrainRenderer implements Disposable {
 
     /** Whether the tile next door is something a unit could stand on. Off the map is not. */
     private static boolean open(TileMap current, int col, int row) {
-        return current.inBounds(col, row) && current.terrainAtTile(col, row) != Terrain.ROCK;
+        return current.inBounds(col, row) && current.terrainAtTile(col, row).passable();
     }
 
     private int region(TileMap current, int col, int row) {

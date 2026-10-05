@@ -9,7 +9,8 @@ import org.junit.jupiter.api.Test;
 
 class StripTest {
 
-    static final StripRules RULES = new StripRules(30, 3, 2, 3, 3, 4, 1, 2, 6, 4, 8);
+    static final HouseRules HOUSES = new HouseRules(8, 12, 7, 10, 2, 3, 0.25f, 8, 9);
+    static final StripRules RULES = new StripRules(30, 3, 2, 3, 3, 4, 1, 2, 6, 4, 8, HOUSES);
     static final float TILE_SIZE = 5f;
 
     private static final int SEEDS = 8;
@@ -44,7 +45,7 @@ class StripTest {
 
     @Test
     void putsAOneColumnRidgeInTheBiomeToItsEast() {
-        StripRules wall = new StripRules(30, 3, 2, 1, 3, 4, 1, 2, 6, 4, 8);
+        StripRules wall = new StripRules(30, 3, 2, 1, 3, 4, 1, 2, 6, 4, 8, gatehouses(0f));
 
         Strip.Laid laid = Strip.lay(wall, ORDER, FINALE, TestStream.seeded(5L), TILE_SIZE);
 
@@ -61,9 +62,46 @@ class StripTest {
 
     @Test
     void refusesRulesThatCannotEnterAPassFarEnoughFromTheLastOne() {
-        assertThatThrownBy(() -> new StripRules(16, 3, 2, 3, 3, 4, 1, 2, 6, 4, 8))
+        assertThatThrownBy(() -> new StripRules(16, 3, 2, 3, 3, 4, 1, 2, 6, 4, 8, HOUSES))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("8 rows from the last");
+    }
+
+    @Test
+    void refusesADoorwayNarrowerThanTheClearanceOrWiderThanAPass() {
+        assertThatThrownBy(() -> rules(new HouseRules(8, 12, 7, 10, 2, 1, 0.25f, 8, 9)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("at least the clearance");
+        assertThatThrownBy(() -> rules(new HouseRules(8, 12, 7, 10, 2, 5, 0.25f, 8, 9)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("at most a pass");
+    }
+
+    @Test
+    void refusesAHouseTooSmallToHoldADoorwayOffItsCorners() {
+        assertThatThrownBy(() -> new HouseRules(4, 12, 7, 10, 2, 3, 0.25f, 8, 9))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("off its corners");
+    }
+
+    @Test
+    void refusesAGatehouseTooHighToStandInsideTheBorder() {
+        assertThatThrownBy(() -> rules(new HouseRules(8, 12, 7, 10, 2, 3, 0.25f, 8, 27)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("gatehouse 27 high");
+        assertThat(rules(new HouseRules(8, 12, 7, 10, 2, 3, 0f, 8, 27))).isNotNull();
+    }
+
+    @Test
+    void honoursAHouseWithADoorwayInEveryWall() {
+        StripRules four = rules(new HouseRules(8, 12, 7, 10, 4, 3, 0.25f, 8, 9));
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Strip.Laid laid = Strip.lay(four, ORDER, FINALE, TestStream.seeded(seed), TILE_SIZE);
+
+            assertThat(StripFaults.all(laid, grounds(ORDER), four))
+                    .as("seed %d", seed)
+                    .isEmpty();
+        }
     }
 
     @Test
@@ -86,11 +124,73 @@ class StripTest {
     }
 
     @Test
+    void wallsEveryHouseWithItsDoorwaysInWallsOfTheirOwnAndItsInsideOpen() {
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Strip.Laid laid = lay(ORDER, seed);
+
+            assertThat(StripFaults.houses(laid, grounds(ORDER), RULES))
+                    .as("seed %d", seed)
+                    .isEmpty();
+            assertThat(StripFaults.housesIn(laid, 0))
+                    .as("seed %d, the quarry", seed)
+                    .isBetween(1, 2);
+        }
+    }
+
+    @Test
+    void makesEveryRidgeButTheOneBeforeTheFinaleAGatehouseAtAFullShare() {
+        StripRules always = rules(gatehouses(1f));
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Strip.Laid laid = Strip.lay(always, ORDER, FINALE, TestStream.seeded(seed), TILE_SIZE);
+
+            for (int b = 0; b < StripFaults.ridges(laid); b++) {
+                assertThat(StripFaults.gatehouse(laid, b))
+                        .as("seed %d, ridge %d", seed, b)
+                        .isEqualTo(b < StripFaults.ridges(laid) - 1);
+            }
+            assertThat(StripFaults.all(laid, grounds(ORDER), always))
+                    .as("seed %d", seed)
+                    .isEmpty();
+        }
+    }
+
+    @Test
+    void laysNoGatehouseAtAShareOfNothing() {
+        StripRules never = rules(gatehouses(0f));
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Strip.Laid laid = Strip.lay(never, ORDER, FINALE, TestStream.seeded(seed), TILE_SIZE);
+
+            for (int b = 0; b < StripFaults.ridges(laid); b++) {
+                assertThat(StripFaults.gatehouse(laid, b))
+                        .as("seed %d, ridge %d", seed, b)
+                        .isFalse();
+            }
+        }
+    }
+
+    @Test
+    void entersAGatehouseByItsWestWallAndLeavesByItsEastOnAnotherRow() {
+        StripRules always = rules(gatehouses(1f));
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Strip.Laid laid = Strip.lay(always, ORDER, FINALE, TestStream.seeded(seed), TILE_SIZE);
+
+            House gatehouse = StripFaults.gatehouseIn(laid, 0);
+            assertThat(gatehouse).as("seed %d", seed).isNotNull();
+            TileRect in = gatehouse.doorways().get(0);
+            TileRect out = gatehouse.doorways().get(1);
+            assertThat(StripFaults.wallOf(gatehouse, in)).as("seed %d", seed).isZero();
+            assertThat(StripFaults.wallOf(gatehouse, out)).as("seed %d", seed).isOne();
+            assertThat(out.row()).as("seed %d", seed).isNotEqualTo(in.row());
+        }
+    }
+
+    @Test
     void laysTheSameStripFromTheSameStream() {
         Strip.Laid once = lay(ORDER, 11L);
         Strip.Laid twice = lay(ORDER, 11L);
 
         assertThat(twice.biomes()).isEqualTo(once.biomes());
+        assertThat(twice.houses()).isEqualTo(once.houses());
         assertThat(terrain(twice.map())).isEqualTo(terrain(once.map()));
         assertThat(regions(twice.map())).isEqualTo(regions(once.map()));
     }
@@ -114,6 +214,7 @@ class StripTest {
                 badlands.regions(),
                 badlands.base(),
                 badlands.fallback(),
+                badlands.houses(),
                 badlands.patches(),
                 new Crags(0.05f, 2),
                 Outcrops.off());
@@ -133,6 +234,25 @@ class StripTest {
                 }
             }
         }
+    }
+
+    /** The strip's rules with houses of their own. */
+    static StripRules rules(HouseRules houses) {
+        return new StripRules(30, 3, 2, 3, 3, 4, 1, 2, 6, 4, 8, houses);
+    }
+
+    /** The strip's houses with a gatehouse share of their own. */
+    static HouseRules gatehouses(float share) {
+        return new HouseRules(
+                HOUSES.widthMin(),
+                HOUSES.widthMax(),
+                HOUSES.heightMin(),
+                HOUSES.heightMax(),
+                HOUSES.doorways(),
+                HOUSES.doorwayWidth(),
+                share,
+                HOUSES.gatehouseWidth(),
+                HOUSES.gatehouseHeight());
     }
 
     static Strip.Laid lay(List<BiomeGround> order, long seed) {

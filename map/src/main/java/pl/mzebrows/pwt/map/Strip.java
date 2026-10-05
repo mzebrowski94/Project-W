@@ -1,27 +1,32 @@
 package pl.mzebrows.pwt.map;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
  * A mission's ground: its biomes laid west to east inside a rock border, a ridge between every two and
- * before the finale, each crossed by passes (missions ticket 13). The one seam everything that lays ground sits
- * behind.
+ * before the finale, each crossed by passes (missions ticket 13), a share of them gatehouses (ticket 12). The one
+ * seam everything that lays ground sits behind.
  *
  * <p>In order: each biome's base; each ridge's core, its faces wandering into the biomes either side - the west
  * side only before the finale, so the finale's west edge is straight - and its passes carved through core and
  * faces alike, with an apron that follows a bent pass out through the face; notches the faces left filled; each
- * biome's regions; each biome's {@link Coats}, entered by its passes' ends; and last the whole strip flooded from
- * the first pass, anything it misses sealed.
+ * biome's regions; each biome's {@link Coats}, houses first, entered by its passes' ends; and last the whole strip
+ * flooded from the first pass, anything it misses sealed.
+ *
+ * <p>A <em>gatehouse</em> is a ridge between two biomes - never the one before the finale - widened round a
+ * {@link House}: a column of rock, the wall, the inside, the wall, a column of rock. Its one pass comes in through
+ * the west face to a doorway in the west wall and leaves by one in the east, on another row.
  *
  * <p>A tile is in the biome whose ground it shows (G0062): a biome's own columns are its own, a face is the
  * biome it wandered into, a ridge's first half is the west biome's and the rest the east's - so a one-column
  * ridge goes east - and the border is the biome it closes.
  *
  * <p>Streams (G0065): a node per biome position and one per ridge, derived from the map stream; each node only
- * derives - width, regions and coats for a biome, faces and passes for a ridge - so retuning one moves nothing
- * else. Allocates freely: a world is built once.
+ * derives - width, regions and coats for a biome, faces, passes and whether it is a gatehouse for a ridge - so
+ * retuning one moves nothing else. Allocates freely: a world is built once.
  */
 public final class Strip {
 
@@ -32,6 +37,10 @@ public final class Strip {
     private static final long COATS = 0x5BE0_CD19_137E_2179L;
     private static final long FACES = 0xCBBB_9D5D_C105_9ED8L;
     private static final long PASSES = 0x629A_292A_367C_D507L;
+    private static final long GATEHOUSE = 0x9159_015A_3070_DD17L;
+
+    /** A pass that bends the whole way through; otherwise the column a gatehouse's pass steps from entry to exit. */
+    private static final int BENDS = -1;
 
     /** How many times a face's walk is averaged over its neighbouring rows: more, a smoother face. */
     private static final int FACE_SMOOTHING = 2;
@@ -54,6 +63,11 @@ public final class Strip {
     /** The biome each column is in. */
     private final int[] owner;
 
+    /** Whether each ridge is a gatehouse. */
+    private final boolean[] gated;
+
+    private final List<House> houses = new ArrayList<>();
+
     private final boolean[] apron;
     private final boolean[] carved;
     private final List<List<Integer>> ends;
@@ -61,8 +75,9 @@ public final class Strip {
     /** The row the last ridge's first pass came out on, or -1 before the first ridge. */
     private int lastExit = -1;
 
-    private Strip(StripRules rules, List<BiomeGround> grounds, List<TileRect> rects, float tileSize) {
+    private Strip(StripRules rules, List<BiomeGround> grounds, List<TileRect> rects, boolean[] gated, float tileSize) {
         this.rules = rules;
+        this.gated = gated;
         this.grounds = grounds;
         this.rects = rects;
         this.cols = rects.getLast().endCol() + 1;
@@ -80,10 +95,12 @@ public final class Strip {
      * The strip laid, and where each biome lies on it.
      *
      * @param biomes each biome's columns, inside the border rows, west to east; the finale last
+     * @param houses every house laid, a biome's and a gatehouse alike, west to east
      */
-    public record Laid(TileMap map, List<TileRect> biomes) {
+    public record Laid(TileMap map, List<TileRect> biomes, List<House> houses) {
         public Laid {
             biomes = List.copyOf(biomes);
+            houses = List.copyOf(houses);
         }
     }
 
@@ -104,6 +121,11 @@ public final class Strip {
         Randomness positions = map.derive(POSITIONS);
         Randomness ridges = map.derive(RIDGES);
         Randomness[] at = new Randomness[grounds.size()];
+        boolean[] gated = new boolean[grounds.size() - 1];
+        for (int b = 0; b < gated.length - 1; b++) {
+            gated[b] = ridges.derive(b).derive(GATEHOUSE).nextFloat()
+                    < rules.houses().gatehouseShare();
+        }
         List<TileRect> rects = new ArrayList<>();
         int col = 1;
         for (int p = 0; p < grounds.size(); p++) {
@@ -111,12 +133,12 @@ public final class Strip {
             BiomeGround ground = grounds.get(p);
             int width = between(at[p].derive(WIDTH), ground.widthMin(), ground.widthMax());
             rects.add(new TileRect(col, 1, width, rules.rows() - 2));
-            col += width + rules.ridgeWidth();
+            col += width + (p < gated.length ? ridgeWidth(rules, gated[p]) : 0);
         }
 
-        Strip strip = new Strip(rules, grounds, rects, tileSize);
+        Strip strip = new Strip(rules, grounds, rects, gated, tileSize);
         strip.bases();
-        for (int b = 0; b < grounds.size() - 1; b++) {
+        for (int b = 0; b < gated.length; b++) {
             Randomness ridge = ridges.derive(b);
             strip.ridge(b, ridge.derive(FACES), ridge.derive(PASSES));
         }
@@ -124,7 +146,12 @@ public final class Strip {
         strip.regions(at);
         strip.coats(at);
         strip.seal();
-        return new Laid(strip.map.build(), rects);
+        strip.houses.sort(Comparator.comparingInt(house -> house.walls().col()));
+        return new Laid(strip.map.build(), rects, strip.houses);
+    }
+
+    private static int ridgeWidth(StripRules rules, boolean gatehouse) {
+        return gatehouse ? rules.houses().gatehouseRidge() : rules.ridgeWidth();
     }
 
     // ---- bases ----
@@ -146,7 +173,7 @@ public final class Strip {
                     return p;
                 }
                 int ridgeCol = rects.get(p - 1).endCol();
-                return col - ridgeCol < rules.ridgeWidth() / 2 ? p - 1 : p;
+                return col - ridgeCol < ridgeWidth(rules, gated[p - 1]) / 2 ? p - 1 : p;
             }
         }
         return rects.size() - 1;
@@ -154,24 +181,80 @@ public final class Strip {
 
     // ---- ridges ----
 
-    /** Ridge {@code b}, between biome {@code b} and the next: core, faces, passes. */
+    /** Ridge {@code b}, between biome {@code b} and the next: core, faces, passes - or one through a gatehouse. */
     private void ridge(int b, Randomness faces, Randomness passes) {
+        int width = ridgeWidth(rules, gated[b]);
         int x0 = rects.get(b).endCol();
-        int x1 = x0 + rules.ridgeWidth() - 1;
+        int x1 = x0 + width - 1;
         boolean beforeFinale = b + 1 == grounds.size() - 1;
         int westRough = rules.ridgeRough();
         int eastRough = beforeFinale ? 0 : rules.ridgeRough();
-        map.rect(x0, 1, rules.ridgeWidth(), rules.rows() - 2, Terrain.ROCK);
+        map.rect(x0, 1, width, rules.rows() - 2, Terrain.ROCK);
         face(x0, -1, westRough, faces);
         face(x1, 1, eastRough, faces);
 
-        int[][] drawn = passRows(passes);
         int xa = x0 - westRough - 1;
         int xb = x1 + eastRough + 1;
+        int[][] drawn = gated[b] ? new int[][] {gatehouse(x0, xa, xb, passes)} : passRows(passes);
         for (int[] pass : drawn) {
-            carve(pass, xa, xb);
+            if (pass[2] == BENDS) {
+                carve(pass, xa, xb);
+            }
             mouth(b, x0, -1, westRough, pass, xa, xb);
             mouth(b + 1, x1, 1, eastRough, pass, xa, xb);
+        }
+    }
+
+    /**
+     * The house in a gatehouse ridge whose west edge is {@code x0}, and its pass: entered at least {@code snake}
+     * rows from the last ridge's exit, left on another row no further than the house allows, a row in from the
+     * border either side so the doorways are never at its corners. The house stands as high as both doorways
+     * need, in the middle of the rows that allow. Returns the pass, {@code [entry, exit, step column]}.
+     */
+    private int[] gatehouse(int x0, int xa, int xb, Randomness rng) {
+        HouseRules shape = rules.houses();
+        int top = 2;
+        int entries = rules.gatehouseEntryRows();
+        int entry = top + firstEntry(rng, entries, top);
+        int exit = otherRow(entry, rng, top, entries, shape.gatehouseJog(rules.passJog()));
+        lastExit = exit;
+
+        int door = shape.doorwayWidth();
+        int inDoor = entry + (rules.passWidth() - door) / 2;
+        int outDoor = exit + (rules.passWidth() - door) / 2;
+        int high = shape.gatehouseHeight();
+        int lowest = Math.max(top, Math.max(inDoor, outDoor) + door - high);
+        int highest = Math.min(rules.rows() - 2 - high, Math.min(inDoor, outDoor));
+        TileRect walls = new TileRect(x0 + 1, (lowest + highest) / 2 - 1, shape.gatehouseWidth() + 2, high + 2);
+        TileRect in = new TileRect(walls.col(), inDoor, 1, door);
+        TileRect out = new TileRect(walls.endCol() - 1, outDoor, 1, door);
+        map.rect(walls.col(), walls.row(), walls.width(), walls.height(), Terrain.WALL);
+
+        int x1 = walls.endCol();
+        open(xa, entry, x0 - xa + 1, rules.passWidth());
+        open(x1, exit, xb - x1 + 1, rules.passWidth());
+        open(walls.col() + 1, walls.row() + 1, walls.width() - 2, walls.height() - 2);
+        open(in.col(), in.row(), in.width(), in.height());
+        open(out.col(), out.row(), out.width(), out.height());
+        houses.add(new House(walls, List.of(in, out)));
+        return new int[] {entry, exit, walls.col() + walls.width() / 2};
+    }
+
+    /** A row other than {@code entry} among the entry rows, at most {@code jog} from it. */
+    private static int otherRow(int entry, Randomness rng, int top, int entries, int jog) {
+        int lo = Math.max(top, entry - jog);
+        int hi = Math.min(top + entries - 1, entry + jog);
+        int pick = lo + rng.nextInt(hi - lo);
+        return pick >= entry ? pick + 1 : pick;
+    }
+
+    /** A rect laid as the ground of whichever biome each column is in, carved so no notch fill closes it. */
+    private void open(int col, int row, int width, int height) {
+        for (int c = col; c < col + width; c++) {
+            for (int r = row; r < row + height; r++) {
+                map.set(c, r, grounds.get(owner[c]).base());
+                carved[r * cols + c] = true;
+            }
         }
     }
 
@@ -211,13 +294,13 @@ public final class Strip {
         int entries = rules.entryRows();
         List<int[]> passes = new ArrayList<>();
         int entry = top + firstEntry(rng, entries, top);
-        passes.add(new int[] {entry, exit(entry, rng, top, entries)});
+        passes.add(new int[] {entry, exit(entry, rng, top, entries), BENDS});
         for (int k = 1; k < count; k++) {
             for (int attempt = 0; attempt < TRIES; attempt++) {
                 int y0 = top + rng.nextInt(entries);
                 int y1 = exit(y0, rng, top, entries);
                 if (apart(y0, y1, passes)) {
-                    passes.add(new int[] {y0, y1});
+                    passes.add(new int[] {y0, y1, BENDS});
                     break;
                 }
             }
@@ -262,8 +345,14 @@ public final class Strip {
         return true;
     }
 
-    /** A pass's bottom row at a column: a straight bend from its entry at {@code xa} to its exit at {@code xb}. */
+    /**
+     * A pass's bottom row at a column: a straight bend from its entry at {@code xa} to its exit at {@code xb} - or,
+     * through a gatehouse, its entry west of the house's middle and its exit east of it.
+     */
     private static int rowAt(int[] pass, int col, int xa, int xb) {
+        if (pass[2] != BENDS) {
+            return col < pass[2] ? pass[0] : pass[1];
+        }
         int x = Math.clamp(col, xa, xb);
         int span = xb - xa;
         return pass[0] + Math.floorDiv(2 * (pass[1] - pass[0]) * (x - xa) + span, 2 * span);
@@ -364,7 +453,7 @@ public final class Strip {
     private void coats(Randomness[] at) {
         for (int p = 0; p < grounds.size(); p++) {
             int[] entered = ends.get(p).stream().mapToInt(Integer::intValue).toArray();
-            Coats.lay(
+            houses.addAll(Coats.lay(
                     map,
                     rects.get(p),
                     grounds.get(p),
@@ -372,8 +461,8 @@ public final class Strip {
                     baseOf(p + 1),
                     apron,
                     entered,
-                    rules.clearance(),
-                    at[p].derive(COATS));
+                    rules,
+                    at[p].derive(COATS)));
         }
     }
 
