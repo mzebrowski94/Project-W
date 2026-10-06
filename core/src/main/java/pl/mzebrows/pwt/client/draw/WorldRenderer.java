@@ -89,6 +89,8 @@ public final class WorldRenderer implements Disposable {
 
     private static final int CIRCLE_SEGMENTS = 16;
 
+    private static final int HEXAGON_SEGMENTS = 6;
+
     /** A tree's foliage is several bodies wide; sixteen sides read as a polygon at that size. */
     private static final int FOLIAGE_SEGMENTS = 28;
 
@@ -274,12 +276,16 @@ public final class WorldRenderer implements Disposable {
      * reads as round rock. {@code base} is the shared tint colour, copied out before it is brightened.
      */
     private void drawBoulder(float x, float y, float radius, Color base) {
+        float outlineThickness = 0.5f;
+        Color outlineColor = darkened(SCRATCH.set(base), 0.3f);
+        shapes.setColor(outlineColor);
+        shapes.circle(x, y, radius + outlineThickness, 8);
         shapes.setColor(base);
-        shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
+        shapes.circle(x, y, radius, 8);
         for (int step = 1; step <= boulderMark.steps(); step++) {
             float offset = boulderMark.offsetAt(radius, step);
             shapes.setColor(brightened(SCRATCH.set(base), boulderMark.lightAt(step)));
-            shapes.circle(x - offset, y + offset, boulderMark.radiusAt(radius, step), CIRCLE_SEGMENTS);
+            shapes.circle(x - offset, y + offset, boulderMark.radiusAt(radius, step), HEXAGON_SEGMENTS);
         }
     }
 
@@ -309,6 +315,19 @@ public final class WorldRenderer implements Disposable {
                 shapes.circle(position.x, position.y, treeMark.outerFor(BODY.get(entity).radius), FOLIAGE_SEGMENTS);
             }
         }
+        SCRATCH.set(treeMark.outer());
+        SCRATCH.a = treeMark.outerAlpha() * 0.5f;
+        shapes.setColor(SCRATCH);
+        for (int i = 0; i < drawable.size(); i++) {
+            Entity entity = drawable.get(i);
+            if (APPEARANCE.get(entity).look == Look.TREE) {
+                Position position = POSITION.get(entity);
+                float v = treeMark.outerFor(BODY.get(entity).radius * 0.85f);
+                float y = position.y - v * 0.5f;
+                shapes.ellipse(position.x - v, y, v * 2f, v, 0f, FOLIAGE_SEGMENTS);
+                shapes.ellipse(position.x - v, y, v * 2f, v, 90f, FOLIAGE_SEGMENTS);
+            }
+        }
         SCRATCH.set(treeMark.inner());
         SCRATCH.a = 1f;
         shapes.setColor(SCRATCH);
@@ -325,7 +344,7 @@ public final class WorldRenderer implements Disposable {
             if (appearance.look == Look.TREE) {
                 Position position = POSITION.get(entity);
                 shapes.setColor(tint(appearance));
-                shapes.circle(position.x, position.y, BODY.get(entity).radius, CIRCLE_SEGMENTS);
+                shapes.circle(position.x, position.y, BODY.get(entity).radius, HEXAGON_SEGMENTS);
             }
         }
         shapes.end();
