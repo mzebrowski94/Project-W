@@ -129,7 +129,7 @@ public final class StripFaults {
     /**
      * Every tile in the biome it should be: a biome's own columns its own, a ridge's first half the west biome's
      * and the rest the east's, the border with the biome it closes - and every open ridge tile showing its biome's
-     * base. Each biome holds as many regions as its ground asks for.
+     * base, or a gatehouse's floor. Each biome holds as many regions as its ground asks for.
      */
     public static List<String> membership(Strip.Laid laid, List<BiomeGround> grounds) {
         List<String> faults = new ArrayList<>();
@@ -145,9 +145,9 @@ public final class StripFaults {
                     faults.add("tile (" + c + "," + r + ") in biome " + biome + ", should be " + owner);
                 } else if (inRidge(laid, c)
                         && map.passableAtTile(c, r)
-                        && map.terrainAtTile(c, r) != grounds.get(biome).base()) {
+                        && map.terrainAtTile(c, r) != laidGround(laid, grounds, c, r)) {
                     faults.add("tile (" + c + "," + r + ") in biome " + biome + " shows " + map.terrainAtTile(c, r)
-                            + ", its base is " + grounds.get(biome).base());
+                            + ", should be " + laidGround(laid, grounds, c, r));
                 }
             }
         }
@@ -216,10 +216,10 @@ public final class StripFaults {
                 if (Math.max(door.width(), door.height()) != shape.doorwayWidth()) {
                     faults.add(name + " has a doorway " + Math.max(door.width(), door.height()) + " wide");
                 }
-                baseGround(map, grounds, door, name + "'s doorway", faults);
+                floor(map, door, name + "'s doorway", faults);
                 baseGround(map, grounds, doorstep(door, wall, rules.clearance()), name + "'s doorstep", faults);
             }
-            baseGround(map, grounds, house.inside(), name + "'s inside", faults);
+            floor(map, house.inside(), name + "'s inside", faults);
             for (int r = walls.row(); r < walls.endRow(); r++) {
                 for (int c = walls.col(); c < walls.endCol(); c++) {
                     if (house.inside().contains(c, r)) {
@@ -295,8 +295,8 @@ public final class StripFaults {
     }
 
     /**
-     * Every open tile generation kept is its biome's base ground - an apron may keep a ridge's face, which is rock -
-     * and the start, every house's inside, doorways and doorsteps are kept.
+     * Every open tile generation kept is its biome's base ground, or a house's floor inside one - an apron may keep a
+     * ridge's face, which is rock - and the start, every house's inside, doorways and doorsteps are kept.
      */
     public static List<String> kept(Strip.Laid laid, List<BiomeGround> grounds, StripRules rules) {
         List<String> faults = new ArrayList<>();
@@ -305,8 +305,7 @@ public final class StripFaults {
             for (int c = 0; c < map.cols(); c++) {
                 if (laid.kept(c, r)
                         && map.passableAtTile(c, r)
-                        && map.terrainAtTile(c, r)
-                                != grounds.get(map.biomeAtTile(c, r)).base()) {
+                        && map.terrainAtTile(c, r) != laidGround(laid, grounds, c, r)) {
                     faults.add("kept tile (" + c + "," + r + ") shows " + map.terrainAtTile(c, r));
                     return faults;
                 }
@@ -431,6 +430,28 @@ public final class StripFaults {
             }
         }
         return false;
+    }
+
+    /** Every tile of {@code rect} a house's floor, whichever biome it is in. */
+    private static void floor(TileMap map, TileRect rect, String what, List<String> faults) {
+        for (int r = rect.row(); r < rect.endRow(); r++) {
+            for (int c = rect.col(); c < rect.endCol(); c++) {
+                if (map.terrainAtTile(c, r) != Terrain.FLOOR) {
+                    faults.add(what + " shows " + map.terrainAtTile(c, r) + " at (" + c + "," + r + "), not a floor");
+                    return;
+                }
+            }
+        }
+    }
+
+    /** What an open tile generation laid should show: a house's floor inside a house or its doorway, else the base. */
+    private static Terrain laidGround(Strip.Laid laid, List<BiomeGround> grounds, int col, int row) {
+        for (House house : laid.houses()) {
+            if (house.inside().contains(col, row) || inDoorway(house, col, row)) {
+                return Terrain.FLOOR;
+            }
+        }
+        return grounds.get(laid.map().biomeAtTile(col, row)).base();
     }
 
     /** Every tile of {@code rect} the base of the biome it is in - open, then, and no patch on it. */

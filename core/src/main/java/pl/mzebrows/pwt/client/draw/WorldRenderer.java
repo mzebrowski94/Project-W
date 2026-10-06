@@ -101,6 +101,11 @@ public final class WorldRenderer implements Disposable {
     private final WoundMark woundMark;
     private final ShieldMark shieldMark;
     private final CrateMark crateMark;
+    private final DoorMark doorMark;
+    private final PostMark postMark;
+
+    /** The client's own clock, for the post's pulse alone - a look, never read back by the simulation. */
+    private float pulseSeconds;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
 
@@ -133,6 +138,7 @@ public final class WorldRenderer implements Disposable {
             Log.error("WorldRenderer.render called after dispose; nothing drawn", null);
             return;
         }
+        pulseSeconds += Gdx.graphics.getDeltaTime();
         viewport.apply();
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
@@ -225,7 +231,8 @@ public final class WorldRenderer implements Disposable {
 
     /**
      * Everything that is ground rather than something standing on it, drawn first so that nothing
-     * underfoot can hide a man standing in it (pillar 5).
+     * underfoot can hide a man standing in it (pillar 5). A post among it: it is put down mid-fight, and drawn
+     * where it was spawned it covered the fight.
      *
      * <p>A control point says the same thing by being spawned before anything stands on it, and
      * that is the cheaper answer where it works. It does not work for ruined ground or for fire,
@@ -244,6 +251,10 @@ public final class WorldRenderer implements Disposable {
             float x = Drawn.x(position, previous, alpha);
             float y = Drawn.y(position, previous, alpha);
             float radius = BODY.get(entity).radius;
+            if (appearance.look == Look.POST) {
+                drawPost(x, y, radius);
+                continue;
+            }
             shapes.setColor(tint(appearance));
             shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
             if (appearance.charge > 0f) {
@@ -259,8 +270,8 @@ public final class WorldRenderer implements Disposable {
 
     /**
      * Everything drawn as squares rather than as a body: each square as much of a tile as it publishes, round its
-     * own middle, so a door sinking is seen as its squares shrinking (G0069). What it is filling up to is the arc
-     * the heat bar is drawn as, over it, in the colour its charge names.
+     * own middle, so a door sinking is seen as its squares shrinking (G0069). What it is filling up to is a
+     * loading circle on it, in the colour its charge names.
      */
     private void drawSquared(float alpha) {
         for (int i = 0; i < squared.size(); i++) {
@@ -282,15 +293,51 @@ public final class WorldRenderer implements Disposable {
                 }
             }
             if (appearance.charge > 0f) {
-                float extent = 0.5f * pitch * Math.max(appearance.squaresAcross, appearance.squaresDown);
-                drawArc(x, y, extent, palette.colorFor(appearance.chargeLook), appearance.charge);
+                drawLoading(x, y, pitch, palette.colorFor(appearance.chargeLook), appearance.charge);
             }
+        }
+    }
+
+    /**
+     * A loading circle on a door: as much of a ring as it is through, clockwise from straight up. Straight pieces,
+     * because the renderer's own arc is a pie slice.
+     */
+    private void drawLoading(float x, float y, float pitch, Color color, float fraction) {
+        shapes.setColor(color);
+        float ring = doorMark.radiusFor(pitch);
+        float width = doorMark.widthFor(pitch);
+        int steps = doorMark.segmentsFor(fraction);
+        float fromX = x + MathUtils.cosDeg(doorMark.angleAt(0)) * ring;
+        float fromY = y + MathUtils.sinDeg(doorMark.angleAt(0)) * ring;
+        for (int step = 1; step <= steps; step++) {
+            float toX = x + MathUtils.cosDeg(doorMark.angleAt(step)) * ring;
+            float toY = y + MathUtils.sinDeg(doorMark.angleAt(step)) * ring;
+            shapes.rectLine(fromX, fromY, toX, toY, width);
+            fromX = toX;
+            fromY = toY;
+        }
+    }
+
+    /** A post: an outline just round the point it stands on, pulsing between its dark green and a light one. */
+    private void drawPost(float x, float y, float radius) {
+        tinted.set(palette.colorFor(Look.POST)).lerp(postMark.light(), postMark.lightAt(pulseSeconds));
+        shapes.setColor(tinted);
+        float ring = postMark.ringFor(radius);
+        float width = postMark.widthFor(radius);
+        float fromX = x + ring;
+        float fromY = y;
+        for (int step = 1; step <= postMark.segments(); step++) {
+            float toX = x + MathUtils.cosDeg(postMark.angleAt(step)) * ring;
+            float toY = y + MathUtils.sinDeg(postMark.angleAt(step)) * ring;
+            shapes.rectLine(fromX, fromY, toX, toY, width);
+            fromX = toX;
+            fromY = toY;
         }
     }
 
     /** Whether a look is underfoot rather than standing on the ground. */
     private static boolean ground(Look look) {
-        return look == Look.SLICK || look == Look.FIRE;
+        return look == Look.SLICK || look == Look.FIRE || look == Look.POST;
     }
 
     /**

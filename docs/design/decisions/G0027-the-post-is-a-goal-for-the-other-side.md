@@ -6,13 +6,16 @@
 taken, damaged or defended by a bar.
 
 **Enforced by.** `DefendTest.walksTheAliensAtThePostWhenTheyHaveNoticedNobody`,
-`.leavesThePostForSomebodyItHasNoticed`, `.holdsThePostOnlyOnceTheLastWaveHasBeenSeenOff`,
+`.stopsWalkingAtThePostOnceItIsNearIt`, `.millsAboutOnceItIsNearThePost`, `.leavesThePostForSomebodyItHasNoticed`, `.holdsThePostOnlyOnceTheLastWaveHasBeenSeenOff`,
 `.neverHoldsAPostOnALevelThatHasNone`.
 
 **Constraint.** A post is ground with a position and nothing else: no health, no faction, no capture
 bar, nothing in the collision path. Its whole effect is that an alien which has noticed nobody walks
 at it instead of ambling about its patch - the lowest thing that can have a creature's attention,
-below anything it has noticed, anything that hurt it and anything it could eat. Holding it is the
+below anything it has noticed, anything that hurt it and anything it could eat. **It walks at it only from
+beyond `sim.controlPoint.loiterRadius`** (amended 2026-10-06): inside that it ambles about its own patch, where it
+arrived, and finds the squad by its own detection - the waves come to the ground and mill round it rather than
+piling onto its middle as if drawn there. Holding it is the
 objective: every wave sent, and nothing hostile standing.
 
 **Scope.** One per level, and it never moves - which is what lets the route to it be a flow field per

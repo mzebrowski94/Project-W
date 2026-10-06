@@ -52,7 +52,9 @@ final class ProvingPreview implements Disposable {
                 graphic.heat(),
                 graphic.wound(),
                 graphic.shield(),
-                graphic.crate());
+                graphic.crate(),
+                graphic.door(),
+                graphic.post());
         this.terrain = new TerrainRenderer(viewport, graphic.terrainPalette(), graphic.groundDetail());
     }
 

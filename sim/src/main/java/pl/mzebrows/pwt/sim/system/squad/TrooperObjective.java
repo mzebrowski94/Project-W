@@ -32,10 +32,10 @@ import pl.mzebrows.pwt.sim.system.query.Sight;
  * <p><strong>Nearest means nearest by route</strong> (2.e): each point owns a flow field built for a
  * trooper's body, once, because points neither move nor go away.
  *
- * <p><strong>Ground held afterwards is stood round, not on</strong> (G0061): a march to a point that holds
- * afterwards ends on a ring {@code sim.trooper.postRingRadius} round its middle, past its radius, so the
- * squad forms up round the last fight and starting it is left to whoever steps in. Once it is taken and
- * nothing is left to take, it is where every man goes next.
+ * <p><strong>Ground held afterwards waits for a commander</strong> (G0061): a point that holds afterwards is
+ * walked to and taken as any point is, but only while a commander on his feet is in its biome - the last
+ * fight starts when he gets there. Once it is taken it is stood round, on a ring {@code
+ * sim.trooper.postRingRadius} round its middle, and with nothing left to take it is where every man goes next.
  */
 final class TrooperObjective {
 
@@ -209,12 +209,12 @@ final class TrooperObjective {
      * Whether this trooper is far enough in to stop walking.
      *
      * <p>Short of the edge, so one shove does not drop it out and reset the capture - or, round ground
-     * held afterwards, on the ring rather than inside the point at all (G0061).
+     * held afterwards that has been taken, on the ring rather than inside the point at all (G0061).
      */
     private boolean standingOn(Entity point, Position at) {
         ControlPoint held = POINT.get(point);
         Position where = POSITION.get(point);
-        float reach = held.holdsAfterwards ? postRingRadius : held.radius * INSIDE_THE_EDGE;
+        float reach = held.holdsAfterwards && held.captured ? postRingRadius : held.radius * INSIDE_THE_EDGE;
         return Sight.withinRange(at.x, at.y, where.x, where.y, reach);
     }
 
@@ -288,6 +288,23 @@ final class TrooperObjective {
         return false;
     }
 
+    /** Whether any commander on his feet is in the same biome as this point. */
+    private boolean aCommanderInBiomeOf(Entity point) {
+        Position where = POSITION.get(point);
+        int biome = map.biomeAt(where.x, where.y);
+        for (int i = 0; i < commanders.size(); i++) {
+            Entity commander = commanders.get(i);
+            if (Life.down(commander)) {
+                continue;
+            }
+            Position standing = POSITION.get(commander);
+            if (map.biomeAt(standing.x, standing.y) == biome) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Whether any commander on his feet is a shorter walk from that point than this position is. */
     private boolean aCommanderAheadOf(Position at, int next) {
         FlowField route = routes[next];
@@ -318,7 +335,8 @@ final class TrooperObjective {
     }
 
     /**
-     * Which uncaptured point is the shortest walk away, or {@code -1} if none can be reached.
+     * Which uncaptured point is the shortest walk away, or {@code -1} if none can be reached - ground held
+     * afterwards only while a commander is in its biome (G0061).
      *
      * <p>Ties go to the first spawned: insertion order and a strict comparison.
      */
@@ -328,7 +346,8 @@ final class TrooperObjective {
         int nearest = -1;
         int shortest = Integer.MAX_VALUE;
         for (int i = 0; i < points.size(); i++) {
-            if (POINT.get(points.get(i)).captured) {
+            ControlPoint point = POINT.get(points.get(i));
+            if (point.captured || (point.holdsAfterwards && !aCommanderInBiomeOf(points.get(i)))) {
                 continue;
             }
             int steps = routes[i].stepsTo(col, row);

@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.system.level;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.POST_LOITER_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_PATCH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmless;
@@ -8,17 +9,20 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.wandering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.watching;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Level;
+import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.Harm;
@@ -63,6 +67,39 @@ class DefendTest {
         steps(simulation, ticksIn(SECONDS));
 
         assertThat(at(grunt).x).isLessThan(EAST - 10f);
+    }
+
+    /**
+     * Somewhere to get near, not somewhere to stand: within the loiter radius it stops walking at the post, so
+     * the waves do not pile onto it.
+     */
+    @Test
+    void stopsWalkingAtThePostOnceItIsNearIt() {
+        Simulation simulation = watching();
+        simulation.spawnCommander(OUT_OF_THE_WAY, LANE);
+        simulation.spawnPost(POST_X, LANE);
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, EAST - 10f, LANE);
+
+        steps(simulation, ticksIn(10f));
+
+        assertThat(at(grunt).x).isCloseTo(POST_X + POST_LOITER_RADIUS, Offset.offset(2f));
+    }
+
+    /** And there it ambles about its patch as it would anywhere, which is how it comes across the squad. */
+    @Test
+    void millsAboutOnceItIsNearThePost() {
+        Simulation simulation = wandering();
+        simulation.spawnCommander(OUT_OF_THE_WAY, LANE);
+        simulation.spawnPost(POST_X, LANE);
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, POST_X + POST_LOITER_RADIUS - 3f, LANE);
+        float startX = at(grunt).x;
+        float startY = at(grunt).y;
+
+        steps(simulation, ticksIn(3f));
+
+        assertThat(Math.abs(at(grunt).x - startX) + Math.abs(at(grunt).y - startY))
+                .isGreaterThan(1f);
+        assertThat(grunt.getComponent(Perception.class).marching).isFalse();
     }
 
     /** Somewhere to be, not somewhere to go: anything it notices outranks the walk. */

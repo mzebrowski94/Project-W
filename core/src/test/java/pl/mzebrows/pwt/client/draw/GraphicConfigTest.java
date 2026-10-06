@@ -133,6 +133,8 @@ class GraphicConfigTest {
                         d.crate(),
                         d.wound(),
                         d.heat(),
+                        d.door(),
+                        d.post(),
                         d.camera()))
                 .isInstanceOf(IllegalArgumentException.class);
     }

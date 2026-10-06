@@ -692,6 +692,9 @@ public final class AlphaWorlds {
 
     public static final float POINT_AGGRO_RADIUS = 26f;
 
+    /** How near a post a creature with nothing to do stops walking at it. Inside the arena from any post. */
+    public static final float POST_LOITER_RADIUS = 15f;
+
     /** Half and half, so a test can see both the advance and the weave in one run. */
     public static final float TROOPER_URGENCY = 0.5f;
 
@@ -1530,7 +1533,8 @@ public final class AlphaWorlds {
                         POINT_AGGRO_RADIUS,
                         POINT_REINFORCEMENT_RADIUS,
                         POINT_REINFORCEMENTS,
-                        POINT_REINFORCEMENTS),
+                        POINT_REINFORCEMENTS,
+                        POST_LOITER_RADIUS),
                 new SimConfig.TurretConfig(
                         TURRET_RADIUS,
                         TURRET_HEALTH,

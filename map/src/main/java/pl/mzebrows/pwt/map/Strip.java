@@ -202,6 +202,7 @@ public final class Strip {
         strip.fillNotches();
         strip.regions(at);
         strip.coats(at);
+        strip.floors();
         strip.seal();
         strip.houses.sort(Comparator.comparingInt(house -> house.walls().col()));
         return new Laid(strip.map.build(), rects, strip.houses, strip.entries, strip.apron);
@@ -557,6 +558,23 @@ public final class Strip {
                     rules,
                     at[p].derive(COATS)));
         }
+    }
+
+    /**
+     * Every house's inside and doorways laid as {@link Terrain#FLOOR}, gatehouses and a biome's houses alike - once,
+     * after everything that lays ground, so nothing paints over it. Its doorsteps keep the biome's base.
+     */
+    private void floors() {
+        for (House house : houses) {
+            floor(house.inside());
+            for (TileRect doorway : house.doorways()) {
+                floor(doorway);
+            }
+        }
+    }
+
+    private void floor(TileRect rect) {
+        map.rect(rect.col(), rect.row(), rect.width(), rect.height(), Terrain.FLOOR);
     }
 
     private @Nullable Terrain baseOf(int biome) {

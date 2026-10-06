@@ -49,6 +49,7 @@ public final class PerceptionSystem extends EntitySystem {
 
     private final Defs<PickupKind, PickupDef> pickupDefs;
     private final Solid map;
+    private final float loiterRadius;
 
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> sides = new ImmutableArray<>(new Array<>());
@@ -58,6 +59,7 @@ public final class PerceptionSystem extends EntitySystem {
     public PerceptionSystem(SimConfig config, Solid map) {
         this.pickupDefs = config.pickups();
         this.map = map;
+        this.loiterRadius = config.controlPoint().loiterRadius();
     }
 
     @Override
@@ -113,8 +115,11 @@ public final class PerceptionSystem extends EntitySystem {
             if (!perception.occupied()) {
                 lookForFood(watcher, perception, position);
             }
-            if (!perception.occupied() && posts.size() > 0) {
-                // Nothing noticed, owed or edible, and a post to walk at: the lowest priority.
+            if (!perception.occupied()
+                    && posts.size() > 0
+                    && !withinRange(position, POSITION.get(posts.first()), loiterRadius)) {
+                // Nothing noticed, owed or edible, and a post to walk at: the lowest priority. Near it,
+                // it ambles about its patch instead of piling onto it (G0027).
                 perception.marching = true;
             }
         }

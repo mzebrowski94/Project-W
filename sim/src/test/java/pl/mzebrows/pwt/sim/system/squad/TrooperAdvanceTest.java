@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.system.squad;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA_TILES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.HOLD_JITTER_SECONDS;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
@@ -53,6 +55,11 @@ class TrooperAdvanceTest {
     private static final float CORNER = 95f;
 
     private static final float MIDDLE = 50f;
+
+    /** In the west half of {@link #twoBiomes} and in the east half. */
+    private static final float WEST = 20f;
+
+    private static final float EAST = 80f;
 
     /** Long enough for one man to turn through half the circle a scan at a time, and no longer. */
     private static final float WATCH_SECONDS = 8f;
@@ -403,12 +410,41 @@ class TrooperAdvanceTest {
     }
 
     /**
-     * Ground held afterwards is where the last fight is fought (G0061). The squad forms up round it -
-     * every man with the circle in front of him - rather than piling onto its middle, where the waves
-     * are walking.
+     * Ground held afterwards is taken by the squad as any point is, once a commander has come into its biome
+     * (G0061): the last fight starts when he gets there, not when the squad does.
      */
     @Test
-    void stopsOnARingRoundGroundThatIsHeldAfterwards() {
+    void takesGroundHeldAfterwardsOnceACommanderIsInItsBiome() {
+        Simulation simulation = on(twoBiomes());
+        simulation.spawnCommander(EAST, CORNER);
+        Entity point = heldAfterwards(simulation.spawnControlPoint(EAST, MIDDLE));
+        simulation.spawnTrooper(WEST, MIDDLE);
+
+        steps(simulation, ticksIn(6f + POINT_CAPTURE_SECONDS));
+
+        assertThat(point.getComponent(ControlPoint.class).captured).isTrue();
+    }
+
+    /** And never before: with every commander still in a biome behind it, the squad leaves it alone (G0061). */
+    @Test
+    void leavesGroundHeldAfterwardsAloneWhileNoCommanderIsInItsBiome() {
+        Simulation simulation = on(twoBiomes());
+        simulation.spawnCommander(WEST, CORNER);
+        Entity point = heldAfterwards(simulation.spawnControlPoint(EAST, MIDDLE));
+        Entity trooper = simulation.spawnTrooper(WEST, MIDDLE);
+
+        steps(simulation, ticksIn(6f + POINT_CAPTURE_SECONDS));
+
+        assertThat(point.getComponent(ControlPoint.class).captured).isFalse();
+        assertThat(mode(trooper)).isNotEqualTo(Trooper.Mode.ADVANCE);
+    }
+
+    /**
+     * Walking in to take it, a man goes inside its radius as on any point - not to the ring, which is where
+     * they hold once it is taken (G0061).
+     */
+    @Test
+    void walksIntoGroundHeldAfterwardsRatherThanStoppingOnTheRing() {
         Simulation simulation = simulation();
         simulation.spawnCommander(CORNER, CORNER);
         heldAfterwards(simulation.spawnControlPoint(MIDDLE, MIDDLE));
@@ -416,21 +452,7 @@ class TrooperAdvanceTest {
 
         steps(simulation, ticksIn(4f));
 
-        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.SECURE);
-        assertThat(distance(trooper, MIDDLE, MIDDLE)).isCloseTo(POST_RING_RADIUS, Offset.offset(1f));
-    }
-
-    /** And so taking it, which starts the last fight, is the player's to do (G0061). */
-    @Test
-    void leavesTheTakingOfGroundHeldAfterwardsToTheCommander() {
-        Simulation simulation = simulation();
-        simulation.spawnCommander(CORNER, CORNER);
-        Entity point = heldAfterwards(simulation.spawnControlPoint(MIDDLE, MIDDLE));
-        simulation.spawnTrooper(MIDDLE + 40f, MIDDLE);
-
-        steps(simulation, ticksIn(4f + 2f * POINT_CAPTURE_SECONDS));
-
-        assertThat(point.getComponent(ControlPoint.class).captured).isFalse();
+        assertThat(distance(trooper, MIDDLE, MIDDLE)).isLessThan(POINT_RADIUS);
     }
 
     /**
@@ -591,6 +613,17 @@ class TrooperAdvanceTest {
 
         Velocity velocity = trooper.getComponent(Velocity.class);
         return (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+    }
+
+    /** The arena split down the middle: the west half biome zero, the east half biome one. */
+    private static TileMap twoBiomes() {
+        TileMap.Builder builder = ground();
+        for (int col = ARENA_TILES / 2; col < ARENA_TILES; col++) {
+            for (int row = 0; row < ARENA_TILES; row++) {
+                builder.region(col, row, 1);
+            }
+        }
+        return builder.regionInBiome(1, 1).build();
     }
 
     private static Entity heldAfterwards(Entity point) {

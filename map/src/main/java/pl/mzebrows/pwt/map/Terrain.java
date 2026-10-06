@@ -52,7 +52,14 @@ public enum Terrain {
      * A house's wall: built rather than grown. Blocks exactly as {@link #ROCK} does - a unit, a shot, a clear
      * line - and is its own constant only so it is drawn apart from rock, and a house reads as one (pillar 5).
      */
-    WALL(false);
+    WALL(false),
+
+    /**
+     * A house's floor: open ground as the biome's base is, the same in every biome, and its own constant only so
+     * the inside of a house is drawn apart from the ground outside it (pillar 5). Laid on a house's inside and
+     * its doorways; its doorsteps keep the biome's base.
+     */
+    FLOOR(true);
 
     private final boolean passable;
 

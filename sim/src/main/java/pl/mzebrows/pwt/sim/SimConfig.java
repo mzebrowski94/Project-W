@@ -400,6 +400,8 @@ public record SimConfig(
      * @param reinforcementsMin fewest crates a point is worth
      * @param reinforcementsMax most, dealt from one bag across the level's points. At most
      *     {@code Bag.MOST} values
+     * @param loiterRadius how near a post a creature walking at it stops and ambles about its own patch
+     *     instead, in world units - so the other side comes near the post without piling onto it (G0027)
      */
     @With
     public record ControlPointConfig(
@@ -408,7 +410,8 @@ public record SimConfig(
             float aggroRadius,
             float reinforcementRadius,
             int reinforcementsMin,
-            int reinforcementsMax) {
+            int reinforcementsMax,
+            float loiterRadius) {
         public ControlPointConfig {
             Require.positive("control point radius", radius);
             Require.positive("control point captureSeconds", captureSeconds);
@@ -419,6 +422,7 @@ public record SimConfig(
                 throw new IllegalArgumentException("control point reinforcementsMax must not be below its minimum");
             }
             Require.fitsABag("control point reinforcements", reinforcementsMin, reinforcementsMax);
+            Require.positive("control point loiterRadius", loiterRadius);
         }
     }
 
