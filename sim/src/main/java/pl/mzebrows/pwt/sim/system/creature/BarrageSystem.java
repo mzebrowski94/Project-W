@@ -16,6 +16,8 @@ import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Shake;
+import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.BarrageDef;
@@ -24,7 +26,7 @@ import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.combat.Guns;
 
 /**
- * Runs a boss's barrage: winds up, fires a pattern salvo by salvo, rests, and goes on to the next
+ * Runs a boss's or a giant's barrage: winds up, fires a pattern salvo by salvo, rests, and goes on to the next
  * (G0048).
  *
  * <ul>
@@ -34,7 +36,7 @@ import pl.mzebrows.pwt.sim.system.combat.Guns;
  *       is the way it faces.
  *   <li><strong>A blow does not interrupt it.</strong> A fist holds a grunt still for a moment; a boss
  *       held still by every swing would be a boss beaten by standing next to it and pressing one key.
- *       Only going down stops it.
+ *       Only going down stops it - or, for a barrage that says so, a declared stun.
  *   <li><strong>Nothing is rolled.</strong> The cycle, the turn and the timings are all counted, so a
  *       barrage can be learnt and replays exactly (pillar 6).
  * </ul>
@@ -52,6 +54,8 @@ public final class BarrageSystem extends EntitySystem {
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
+    private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
+    private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -88,22 +92,36 @@ public final class BarrageSystem extends EntitySystem {
             if (!barrage.enabled) {
                 continue;
             }
+            if (barrage.burstTicks > 0) {
+                barrage.burstTicks--;
+            }
             if (Life.down(entity)) {
                 fall(entity, barrage);
                 continue;
             }
             Perception perception = PERCEPTION.get(entity);
-            if (!perception.aggro && !perception.provoked) {
+            boolean hunting = perception.aggro || perception.provoked;
+            if (!hunting && !committed(barrage)) {
                 barrage.phase = Barrage.Phase.IDLE;
                 continue;
             }
-            float targetX = perception.aggro ? perception.targetX : perception.provokedX;
-            float targetY = perception.aggro ? perception.targetY : perception.provokedY;
+            if (cancelledByStun(entity, barrage)) {
+                continue;
+            }
             Position at = POSITION.get(entity);
-            barrage.aimX = targetX - at.x;
-            barrage.aimY = targetY - at.y;
+            if (hunting) {
+                float huntedX = perception.aggro ? perception.targetX : perception.provokedX;
+                float huntedY = perception.aggro ? perception.targetY : perception.provokedY;
+                barrage.aimX = huntedX - at.x;
+                barrage.aimY = huntedY - at.y;
+            }
+            // Lost while winding up or firing, it finishes what it started at the place it last aimed (G0071).
+            float targetX = at.x + barrage.aimX;
+            float targetY = at.y + barrage.aimY;
+            boolean inReach = barrage.reach <= 0f
+                    || barrage.aimX * barrage.aimX + barrage.aimY * barrage.aimY <= barrage.reach * barrage.reach;
             float pace = enraged(barrage, HEALTH.get(entity)) ? barrage.enragedFactor : 1f;
-            advance(entity, barrage, targetX, targetY, pace, deltaTime);
+            advance(entity, barrage, targetX, targetY, inReach, pace, deltaTime);
         }
     }
 
@@ -121,9 +139,45 @@ public final class BarrageSystem extends EntitySystem {
         }
     }
 
-    private void advance(Entity entity, Barrage barrage, float targetX, float targetY, float pace, float deltaTime) {
+    /**
+     * Whether it has started a pattern - wound up or firing - which it then finishes whoever walks away: a roar is
+     * always answered (G0071). Only a declared stun, for a barrage that says so, or going down stops one.
+     */
+    private static boolean committed(Barrage barrage) {
+        return barrage.aiming() && (barrage.phase == Barrage.Phase.WINDING_UP || barrage.phase == Barrage.Phase.FIRING);
+    }
+
+    /**
+     * A declared stun breaks off a barrage that says so: it goes back to idle on the pattern it was on, and
+     * winds that one up again from the start once the stun is over. A stagger or a lock does not - only a
+     * stun something declared (G0053), shock among them.
+     */
+    private static boolean cancelledByStun(Entity entity, Barrage barrage) {
+        if (!barrage.stunCancels || !STUNNED.has(entity)) {
+            return false;
+        }
+        Stunned stunned = STUNNED.get(entity);
+        if (!stunned.active() || !stunned.dazed) {
+            return false;
+        }
+        barrage.phase = Barrage.Phase.IDLE;
+        return true;
+    }
+
+    private void advance(
+            Entity entity,
+            Barrage barrage,
+            float targetX,
+            float targetY,
+            boolean inReach,
+            float pace,
+            float deltaTime) {
         switch (barrage.phase) {
-            case IDLE -> windUp(barrage, pace);
+            case IDLE -> {
+                if (inReach) {
+                    windUp(entity, barrage, pace);
+                }
+            }
             case WINDING_UP -> {
                 barrage.remainingTicks--;
                 if (barrage.remainingTicks <= 0) {
@@ -142,7 +196,11 @@ public final class BarrageSystem extends EntitySystem {
                 barrage.remainingTicks--;
                 if (barrage.remainingTicks <= 0) {
                     barrage.pattern++;
-                    windUp(barrage, pace);
+                    if (inReach) {
+                        windUp(entity, barrage, pace);
+                    } else {
+                        barrage.phase = Barrage.Phase.IDLE;
+                    }
                 }
             }
         }
@@ -150,9 +208,13 @@ public final class BarrageSystem extends EntitySystem {
 
     /**
      * Starts showing the next pattern that is in the barrage, from the one it is on. Going past the
-     * last is going round again, which turns every pattern the other way.
+     * last is going round again, which turns every pattern the other way. A barrage that roars shakes the ground
+     * as it starts.
      */
-    private static void windUp(Barrage barrage, float pace) {
+    private static void windUp(Entity entity, Barrage barrage, float pace) {
+        if (barrage.roarStrength > 0f && SHAKE.has(entity)) {
+            SHAKE.get(entity).set(barrage.roarStrength, barrage.roarRadius, barrage.roarTicks);
+        }
         for (int looked = 0; looked < BarrageDef.PATTERNS && !barrage.current().enabled(); looked++) {
             barrage.pattern++;
         }
@@ -169,6 +231,13 @@ public final class BarrageSystem extends EntitySystem {
     private void salvo(Entity entity, Barrage barrage, float targetX, float targetY, float pace, float deltaTime) {
         PatternDef pattern = barrage.current();
         fire(entity, barrage, pattern, targetX, targetY);
+        if (pattern.burstSeconds() > 0f) {
+            // The ground its shots cover, drawn round it for a moment: from its middle, past its body and the
+            // gap every shot leaves by, to the end of the gun's reach.
+            barrage.burstReach = guns.reach(entity);
+            barrage.burstTotal = Ticks.of(pattern.burstSeconds(), deltaTime);
+            barrage.burstTicks = barrage.burstTotal;
+        }
         barrage.salvo--;
         if (barrage.salvo > 0) {
             barrage.remainingTicks = scaled(Ticks.of(pattern.intervalSeconds(), deltaTime), pace);

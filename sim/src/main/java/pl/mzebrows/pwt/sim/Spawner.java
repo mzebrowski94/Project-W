@@ -401,6 +401,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Grip.class));
         entity.add(engine.createComponent(Armour.class));
         entity.add(engine.createComponent(Barrage.class));
+        // Inert until a barrage that roars winds up; read by the view, never the simulation.
+        entity.add(engine.createComponent(Shake.class));
         entity.add(engine.createComponent(Weapon.class));
         entity.add(engine.createComponent(Taking.class));
         entity.add(engine.createComponent(Feed.class));
@@ -506,7 +508,8 @@ public final class Spawner {
                 .set(
                         def.barrage(),
                         ticks(def.barrage().windUpSeconds()),
-                        ticks(def.barrage().restSeconds()));
+                        ticks(def.barrage().restSeconds()),
+                        ticks(def.barrage().roar().seconds()));
         // A strain that never walks is scenery to the solver: what it meets is pushed out of its way (G0048).
         entity.getComponent(Collider.class).movable = !def.rooted();
         entity.getComponent(Ranged.class)

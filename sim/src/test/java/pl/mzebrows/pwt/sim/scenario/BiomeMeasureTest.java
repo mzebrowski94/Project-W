@@ -233,6 +233,8 @@ class BiomeMeasureTest {
         ports.put(BiomeKind.QUARRY, new Port("Adventure", 91, 119, Terrain.DUST));
         ports.put(BiomeKind.ANTHILL, new Port("Adventure 2", 61, 88, Terrain.ORGANIC));
         ports.put(BiomeKind.BRAKE, new Port("Adventure 2", 151, 178, Terrain.PLAIN));
+        ports.put(BiomeKind.CUT, new Port("Adventure 2", 121, 148, Terrain.DUST));
+        ports.put(BiomeKind.FEN, new Port("Adventure 2", 91, 118, Terrain.MIRE));
         return ports;
     }
 

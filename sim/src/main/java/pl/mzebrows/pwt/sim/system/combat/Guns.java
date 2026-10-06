@@ -63,6 +63,15 @@ public final class Guns {
         this.muzzleGap = muzzleGap;
     }
 
+    /**
+     * How far from the middle of whoever holds it the gun in its hands reaches: past its body and the gap a shot
+     * leaves by, to the far edge of a shot at the end of its flight. What a slam's circle is drawn to (G0071).
+     */
+    public float reach(Entity holder) {
+        Weapon weapon = WEAPON.get(holder);
+        return BODY.get(holder).radius + muzzleGap + weapon.projectileRadius * 2f + weapon.projectileRange;
+    }
+
     /** Whether this thing may fire at all this tick: the gun is off cooldown and has not stopped itself. */
     public boolean ready(Entity firer) {
         if (!WEAPON.get(firer).ready()) {

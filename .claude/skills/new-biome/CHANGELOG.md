@@ -51,3 +51,12 @@ changed. Git carries the diff.
   running; G0064 amended to one kind of fight a finale, the keep a lair instead of waves, and a waiting lair holds a
   post back as an unsent wave does. Slow: the benchmark measured one seed's finale, which became the wave-less keep -
   `BENCH finale <kind>` now measures every finale; *Measure the field* says so.
+- 2026-10-06, the cut and the fen (with the giants) - missing: that every roster line is its own pack, so a block's
+  line count costs room (the cut's seventh line fell short on 9 seeds dealt first); what the fen's 9-14 reed blobs
+  land at (+2.8); that a rect patch line reads 3-4 points over in every biome, so match the blocks rather than the
+  Adventure; that a new biome breaks an old "the one biome" promise, reworded rather than deleted. Slow:
+  `BiomeMeasureTest` takes about six minutes - now said, with "run it in the background". Nothing wrong. Fixed in
+  *Ground*, *Roster and furniture* and *Tests*.
+- 2026-10-06, the cut and the fen after play - missing: a way to break a slab's square outline - `outcrops.ragged`,
+  added to *Ground*'s table; a notch looked like the obvious way and left a one-tile slot under the clearance
+  (`CoatsTest` caught it), so ragged knocks corners off and bumps faces, never notches. Nothing wrong, nothing slow.

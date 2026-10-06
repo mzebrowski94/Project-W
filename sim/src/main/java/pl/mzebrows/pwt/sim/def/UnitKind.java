@@ -61,5 +61,17 @@ public enum UnitKind {
      * cannot be got round: it is a place, like a nest, that shoots in patterns - so what to read is
      * the gap in the next salvo, and what to do is walk into it and keep firing.
      */
-    BOSS_GRUNT
+    BOSS_GRUNT,
+    /**
+     * A giant that sears (G0071): a brute half as big again and four times as hard to kill, too heavy to leap,
+     * that stands and roars before it sprays a cone of short beams that wound and slow. What to read is the
+     * roar; what to do is get out of the cone, or stun it out of it.
+     */
+    SEARER,
+    /**
+     * A giant that thumps (G0071): the searer's body, and after its roar a slam - a ring of the ground round it
+     * that wounds and stuns every man of the squad in it. What to read is the roar; what to do is not be
+     * standing next to it when it ends.
+     */
+    THUMPER
 }

@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Barrage;
+import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -25,11 +26,13 @@ import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.BarrageDef;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PatternDef;
+import pl.mzebrows.pwt.sim.def.ShakeDef;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
@@ -68,6 +71,15 @@ class BarrageTest {
     private static final float ENRAGED_FACTOR = 0.5f;
 
     private static final Offset<Float> CLOSE = Offset.offset(1e-3f);
+
+    /** A giant's reach: nearer than {@link #NEAR}, so a man standing there is hunted but not yet shot at. */
+    private static final float REACH = 10f;
+
+    private static final float GIANT_SPEED = 4f;
+
+    private static final float ROAR_STRENGTH = 2f;
+
+    private static final float ROAR_RADIUS = 30f;
 
     /** Until the first salvo of a pattern the barrage has just started winding up: one tick to start, then the wind-up. */
     private static final int UNTIL_THE_FIRST_SALVO = 1 + ticksIn(WIND_UP);
@@ -301,6 +313,129 @@ class BarrageTest {
         assertThat(simulation.level().bossesDown).isEqualTo(1);
     }
 
+    // ---- a giant's barrage: one that walks (G0071) ----
+
+    @Test
+    void startsAPatternOnlyOnceWhatItHuntsIsWithinReach() {
+        Simulation simulation = new Simulation(giant());
+        simulation.spawnCommander(MIDDLE - NEAR * 3f, MIDDLE);
+        Entity giant = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+        giant.getComponent(Perception.class).provokeAt(MIDDLE - NEAR * 3f, MIDDLE);
+
+        steps(simulation, 2);
+
+        assertThat(giant.getComponent(Barrage.class).phase).isEqualTo(Barrage.Phase.IDLE);
+
+        Simulation near = new Simulation(giant());
+        near.spawnCommander(MIDDLE - OFF_THE_LINES * 0.6f, MIDDLE + OFF_THE_LINES * 0.6f);
+        Entity close = near.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+
+        steps(near, 2);
+
+        assertThat(close.getComponent(Barrage.class).phase).isEqualTo(Barrage.Phase.WINDING_UP);
+    }
+
+    @Test
+    void standsStillWhileItWindsUpAndFiresAndWalksWhileItRests() {
+        Simulation simulation = new Simulation(giant());
+        simulation.spawnCommander(MIDDLE - REACH * 0.8f, MIDDLE);
+        Entity giant = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+        steps(simulation, 2);
+        float x = giant.getComponent(Position.class).x;
+
+        steps(simulation, ticksIn(WIND_UP) - 2);
+
+        assertThat(giant.getComponent(Barrage.class).phase).isEqualTo(Barrage.Phase.WINDING_UP);
+        assertThat(giant.getComponent(Position.class).x).isEqualTo(x);
+
+        steps(simulation, ticksIn(REST));
+
+        assertThat(giant.getComponent(Position.class).x).isLessThan(x);
+    }
+
+    @Test
+    void shakesTheGroundWhenItStartsWindingUp() {
+        Simulation simulation = new Simulation(giant());
+        simulation.spawnCommander(MIDDLE - REACH * 0.8f, MIDDLE);
+        Entity giant = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+
+        steps(simulation, 2);
+
+        Shake shake = giant.getComponent(Shake.class);
+        assertThat(shake.strength).isEqualTo(ROAR_STRENGTH);
+        assertThat(shake.radius).isEqualTo(ROAR_RADIUS);
+        assertThat(shake.fade()).isPositive();
+    }
+
+    @Test
+    void breaksOffThePatternWhenADeclaredStunLandsAndWindsItUpAgainAfter() {
+        Simulation simulation = new Simulation(giant());
+        simulation.spawnCommander(MIDDLE - OFF_THE_LINES * 0.6f, MIDDLE + OFF_THE_LINES * 0.6f);
+        Entity giant = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+        steps(simulation, UNTIL_THE_FIRST_SALVO - 2);
+
+        giant.getComponent(Stunned.class).daze(UNTIL_THE_FIRST_SALVO);
+        steps(simulation, UNTIL_THE_FIRST_SALVO);
+
+        assertThat(alienShots(simulation)).isEmpty();
+
+        steps(simulation, UNTIL_THE_FIRST_SALVO + 1);
+
+        assertThat(alienShots(simulation)).hasSize(RING_SHOTS);
+    }
+
+    /** A slam is read at a glance (pillar 5): the ground its shots cover, drawn round it, fading, after the salvo. */
+    @Test
+    void showsTheCircleItsShotsReachForAMomentAfterASalvoThatSaysSo() {
+        PatternDef slam = ring(RING_SHOTS, 1).withBurstSeconds(REST);
+        Simulation simulation = new Simulation(barraging(slam));
+        simulation.spawnCommander(MIDDLE - OFF_THE_LINES, MIDDLE + OFF_THE_LINES);
+        Entity boss = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+
+        steps(simulation, UNTIL_THE_FIRST_SALVO - 1);
+
+        assertThat(boss.getComponent(Appearance.class).burst).isZero();
+
+        steps(simulation, 2);
+
+        Appearance appearance = boss.getComponent(Appearance.class);
+        assertThat(appearance.burst).isGreaterThan(boss.getComponent(Body.class).radius);
+        assertThat(appearance.burstFade).isBetween(0.5f, 1f);
+
+        steps(simulation, ticksIn(REST));
+
+        assertThat(boss.getComponent(Appearance.class).burst).isZero();
+    }
+
+    /** A roar is always answered (G0071): a man who walks out of reach and out of mind while it winds up is still fired at. */
+    @Test
+    void finishesAPatternItHasStartedWhenWhatItHuntsGetsAway() {
+        Simulation simulation = new Simulation(giant());
+        simulation.spawnCommander(MIDDLE - OFF_THE_LINES * 0.6f, MIDDLE + OFF_THE_LINES * 0.6f);
+        Entity giant = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+        steps(simulation, 2);
+
+        giant.getComponent(Perception.class).aggro = false;
+        giant.getComponent(Perception.class).detectionRange = 0f;
+        steps(simulation, UNTIL_THE_FIRST_SALVO);
+
+        assertThat(alienShots(simulation)).hasSize(RING_SHOTS);
+    }
+
+    /** A stagger is not a declared stun: a fist does not stop a giant's roar any more than a boss's barrage. */
+    @Test
+    void keepsWindingUpThroughAStagger() {
+        Simulation simulation = new Simulation(giant());
+        simulation.spawnCommander(MIDDLE - OFF_THE_LINES * 0.6f, MIDDLE + OFF_THE_LINES * 0.6f);
+        Entity giant = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+        steps(simulation, 2);
+
+        giant.getComponent(Stunned.class).apply(UNTIL_THE_FIRST_SALVO * 10, 0f);
+        steps(simulation, UNTIL_THE_FIRST_SALVO);
+
+        assertThat(alienShots(simulation)).hasSize(RING_SHOTS);
+    }
+
     // ---- through the one trigger ----
 
     /**
@@ -310,7 +445,7 @@ class BarrageTest {
      */
     @Test
     void firesOutOfTheMuzzleItsGunNamesLikeEveryOtherShooter() {
-        PatternDef aimedTwin = new PatternDef(true, WeaponKind.TURRET_GUN, 1, 0f, true, 0f, 1, INTERVAL);
+        PatternDef aimedTwin = new PatternDef(true, WeaponKind.TURRET_GUN, 1, 0f, true, 0f, 1, INTERVAL, 0f);
         Simulation simulation = new Simulation(barraging(aimedTwin));
         simulation.spawnCommander(MIDDLE + NEAR, MIDDLE);
         simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
@@ -326,18 +461,45 @@ class BarrageTest {
     }
 
     private static SimConfig barraging(PatternDef first, PatternDef second) {
-        BarrageDef barrage = new BarrageDef(
-                true, WIND_UP, REST, ENRAGED_BELOW, ENRAGED_FACTOR, first, second, PatternDef.off(), PatternDef.off());
         return config().withUnit(
-                        UnitKind.BOSS_GRUNT, boss -> boss.withContactDamage(0).withBarrage(barrage));
+                        UnitKind.BOSS_GRUNT, boss -> boss.withContactDamage(0).withBarrage(barrage(first, second)));
+    }
+
+    private static BarrageDef barrage(PatternDef first, PatternDef second) {
+        return new BarrageDef(
+                true,
+                WIND_UP,
+                REST,
+                ENRAGED_BELOW,
+                ENRAGED_FACTOR,
+                first,
+                second,
+                PatternDef.off(),
+                PatternDef.off(),
+                0f,
+                false,
+                false,
+                ShakeDef.off());
+    }
+
+    /** A giant's barrage (G0071): it walks, starts a pattern only within reach, stands for it, roars and is stunned out of it. */
+    private static SimConfig giant() {
+        BarrageDef barrage = barrage(ring(RING_SHOTS, 1), PatternDef.off())
+                .withReach(REACH)
+                .withHoldsStill(true)
+                .withStunCancels(true)
+                .withRoar(new ShakeDef(ROAR_STRENGTH, ROAR_RADIUS, WIND_UP));
+        return config().withUnit(
+                        UnitKind.BOSS_GRUNT,
+                        boss -> boss.withContactDamage(0).withSpeed(GIANT_SPEED).withBarrage(barrage));
     }
 
     private static PatternDef ring(int shots, int salvos) {
-        return new PatternDef(true, WeaponKind.SPEW, shots, 360f, false, TURN_DEGREES, salvos, INTERVAL);
+        return new PatternDef(true, WeaponKind.SPEW, shots, 360f, false, TURN_DEGREES, salvos, INTERVAL, 0f);
     }
 
     private static PatternDef fan(int shots) {
-        return new PatternDef(true, WeaponKind.SPEW, shots, FAN_DEGREES, true, 0f, 1, INTERVAL);
+        return new PatternDef(true, WeaponKind.SPEW, shots, FAN_DEGREES, true, 0f, 1, INTERVAL, 0f);
     }
 
     private static List<Entity> alienShots(Simulation simulation) {

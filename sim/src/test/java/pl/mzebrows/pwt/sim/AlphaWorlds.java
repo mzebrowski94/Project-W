@@ -317,6 +317,8 @@ public final class AlphaWorlds {
     public static final float BRUTE_RADIUS = 1f;
     public static final float BRUTE_SPEED = 30f;
     public static final int BRUTE_HEALTH = 300;
+    public static final float GIANT_RADIUS = 1.5f;
+    public static final int GIANT_HEALTH = 1200;
 
     /** How close the commander must come before a watching strain notices him, in {@link #watching()}. */
     public static final float DETECTION_RANGE = 20f;
@@ -928,6 +930,9 @@ public final class AlphaWorlds {
                                 UnitKind.BOSS_GRUNT,
                                 strain(BOSS_RADIUS, 0f, BOSS_HEALTH, Look.BOSS_GRUNT)
                                         .withShockable(false))
+                        // Brute-like, with no barrage: the fixtures about one switch it on (G0071).
+                        .put(UnitKind.SEARER, strain(GIANT_RADIUS, BRUTE_SPEED, GIANT_HEALTH, Look.SEARER))
+                        .put(UnitKind.THUMPER, strain(GIANT_RADIUS, BRUTE_SPEED, GIANT_HEALTH, Look.THUMPER))
                         .build(),
                 onShipped(
                                 PickupKind.class,

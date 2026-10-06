@@ -137,6 +137,21 @@ public final class Appearance implements Component, Pool.Poolable {
     public int wounds;
 
     /**
+     * How far round it the circle of a slam it has just fired reaches, in world units; zero is none (G0071). Drawn
+     * as a white outline over a pale fill, fading by {@link #burstFade}.
+     */
+    public float burst;
+
+    /** How much of that circle is left to draw, in {@code [0, 1]}. */
+    public float burstFade;
+
+    /**
+     * How much of a declared stun it is under is left, in {@code [0, 1]}; zero with none (G0053). Drawn as a pale
+     * circle shrinking onto it as the stun runs out.
+     */
+    public float daze;
+
+    /**
      * How much of a shield is left in front of him, in {@code [0, 1]} (G0053): one for a shield that
      * lasts until it is hit, running down for one that runs out on its own, zero for none.
      */
@@ -206,6 +221,9 @@ public final class Appearance implements Component, Pool.Poolable {
         heat = 0f;
         overheated = false;
         wounds = 0;
+        burst = 0f;
+        burstFade = 0f;
+        daze = 0f;
         shield = 0f;
         squaresAcross = 0;
         squaresDown = 0;

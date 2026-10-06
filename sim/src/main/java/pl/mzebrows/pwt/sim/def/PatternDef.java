@@ -22,6 +22,9 @@ import lombok.With;
  *     time the barrage comes back to this pattern, so a spiral is never learnt by heart
  * @param salvos how many salvos the pattern fires before the barrage rests
  * @param intervalSeconds how long between one salvo and the next
+ * @param burstSeconds how long the circle its shots reach is drawn round the shooter after each salvo - a
+ *     slam read at a glance as the ground it covers (G0071, pillar 5). Zero draws nothing, as every
+ *     pattern of the boss's declares
  */
 @With
 public record PatternDef(
@@ -32,7 +35,8 @@ public record PatternDef(
         boolean aimed,
         float turnDegrees,
         int salvos,
-        float intervalSeconds) {
+        float intervalSeconds,
+        float burstSeconds) {
 
     private static final float FULL_CIRCLE = 360f;
 
@@ -40,6 +44,7 @@ public record PatternDef(
         Require.notNegative("pattern shots", shots);
         Require.notNegative("pattern salvos", salvos);
         Require.notNegative("pattern intervalSeconds", intervalSeconds);
+        Require.notNegative("pattern burstSeconds", burstSeconds);
         if (arcDegrees < 0f || arcDegrees > FULL_CIRCLE) {
             throw new IllegalArgumentException("pattern arcDegrees must be in [0, 360], was " + arcDegrees);
         }
@@ -50,7 +55,7 @@ public record PatternDef(
 
     /** A pattern the barrage skips. */
     public static PatternDef off() {
-        return new PatternDef(false, WeaponKind.SPIT, 0, 0f, false, 0f, 0, 0f);
+        return new PatternDef(false, WeaponKind.SPIT, 0, 0f, false, 0f, 0, 0f, 0f);
     }
 
     /** Whether the spread closes on itself: the last shot of a full ring would land on the first. */

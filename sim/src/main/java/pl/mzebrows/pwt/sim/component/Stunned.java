@@ -41,6 +41,9 @@ public final class Stunned implements Component, Pool.Poolable {
      */
     public boolean dazed;
 
+    /** How long the declared stun running now was when it landed, in ticks: what the view shrinks its mark over. */
+    public int dazeTicks;
+
     /** True if this entity may not act right now. */
     public boolean active() {
         return remainingTicks > 0;
@@ -61,8 +64,19 @@ public final class Stunned implements Component, Pool.Poolable {
         if (ticks <= 0) {
             return;
         }
+        if (ticks >= remainingTicks) {
+            dazeTicks = ticks;
+        }
         apply(ticks, 0f);
         dazed = true;
+    }
+
+    /** How much of a declared stun is left, in {@code [0, 1]}; zero with none running. */
+    public float dazeLeft() {
+        if (!dazed || dazeTicks <= 0 || remainingTicks <= 0) {
+            return 0f;
+        }
+        return Math.min(1f, remainingTicks / (float) dazeTicks);
     }
 
     /**
@@ -92,5 +106,6 @@ public final class Stunned implements Component, Pool.Poolable {
         knockbackDecay = 0f;
         grappling = false;
         dazed = false;
+        dazeTicks = 0;
     }
 }

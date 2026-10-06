@@ -51,6 +51,9 @@ final class Coats {
     /** An outcrop's arm: how far it stands off the bar, and how far along it runs - the Adventures' shape. */
     private static final int ARM_OUT_MAX = 2;
 
+    /** How many columns a ragged bar's bumps keep between them, so none leaves a slot under the clearance. */
+    private static final int BUMP_APART = 2;
+
     private static final int ARM_ALONG_MIN = 2;
     private static final int ARM_ALONG_MAX = 4;
 
@@ -727,15 +730,11 @@ final class Coats {
     private static int[] shape(Outcrops outcrops, Randomness rng) {
         int length = between(rng, outcrops.lengthMin(), outcrops.lengthMax());
         int thickness = Math.min(length, between(rng, outcrops.thicknessMin(), outcrops.thicknessMax()));
-        int[] across = new int[length * thickness + ARM_OUT_MAX * ARM_ALONG_MAX];
+        int[] across = new int[length * (thickness + 1) + ARM_OUT_MAX * ARM_ALONG_MAX];
         int[] along = new int[across.length];
-        int count = 0;
-        for (int a = 0; a < length; a++) {
-            for (int t = 0; t < thickness; t++) {
-                across[count] = t;
-                along[count++] = a;
-            }
-        }
+        int count = outcrops.ragged() > 0f && thickness >= 2
+                ? ragged(length, thickness, outcrops.ragged(), rng, across, along)
+                : bar(length, thickness, across, along);
         if (length >= 2 && rng.nextFloat() < outcrops.arms()) {
             int out = between(rng, 1, ARM_OUT_MAX);
             int run = between(rng, ARM_ALONG_MIN, Math.min(ARM_ALONG_MAX, length));
@@ -766,6 +765,47 @@ final class Coats {
             shape[2] = Math.max(shape[2], row + 1);
         }
         return shape;
+    }
+
+    /** A clean bar's tiles, {@code across} its thickness and {@code along} its length. Returns how many. */
+    private static int bar(int length, int thickness, int[] across, int[] along) {
+        int count = 0;
+        for (int a = 0; a < length; a++) {
+            for (int t = 0; t < thickness; t++) {
+                across[count] = t;
+                along[count++] = a;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * A bar with a broken outline: each of its four corners knocked off at {@code chance}, and a tile bumped out of
+     * one face at half that, column by column along it - never within two columns of the last bump, so no slot a
+     * tile wide is ever left between two of them, and never notched, which would leave one in the bar. What is left
+     * meets edge to edge, and the clearance round it is the dart's to keep. Returns how many tiles.
+     */
+    private static int ragged(int length, int thickness, float chance, Randomness rng, int[] across, int[] along) {
+        int count = 0;
+        int lastBump = -BUMP_APART;
+        for (int a = 0; a < length; a++) {
+            boolean end = a == 0 || a == length - 1;
+            boolean knockLow = end && rng.nextFloat() < chance;
+            boolean knockHigh = end && rng.nextFloat() < chance;
+            for (int t = 0; t < thickness; t++) {
+                boolean knocked = (t == 0 && knockLow) || (t == thickness - 1 && knockHigh);
+                if (!knocked) {
+                    across[count] = t;
+                    along[count++] = a;
+                }
+            }
+            if (!end && a - lastBump > BUMP_APART && rng.nextFloat() < chance * 0.5f) {
+                across[count] = rng.nextInt(2) == 0 ? -1 : thickness;
+                along[count++] = a;
+                lastBump = a;
+            }
+        }
+        return count;
     }
 
     /** Every tile inside the area, open and off the apron, and no other rock within the clearance. */

@@ -84,6 +84,9 @@ public final class WorldRenderer implements Disposable {
 
     private static final int CIRCLE_SEGMENTS = 16;
 
+    /** A slam's circle is many bodies wide; sixteen sides read as a polygon at that size. */
+    private static final int BURST_SEGMENTS = 40;
+
     /** Reused, so drawing a see-through mark costs no colour per entity per frame. */
     private static final Color SCRATCH = new Color();
 
@@ -103,6 +106,8 @@ public final class WorldRenderer implements Disposable {
     private final CrateMark crateMark;
     private final DoorMark doorMark;
     private final PostMark postMark;
+    private final BurstMark burstMark;
+    private final DazeMark dazeMark;
 
     /** The client's own clock, for the post's pulse alone - a look, never read back by the simulation. */
     private float pulseSeconds;
@@ -163,6 +168,13 @@ public final class WorldRenderer implements Disposable {
             }
             float x = Drawn.x(position, previous, alpha);
             float y = Drawn.y(position, previous, alpha);
+            if (appearance.burst > 0f) {
+                // Under the body, so the thumper stays readable in the middle of its own slam (G0071).
+                SCRATCH.set(burstMark.color());
+                SCRATCH.a = burstMark.fillAlpha() * appearance.burstFade;
+                shapes.setColor(SCRATCH);
+                shapes.circle(x, y, appearance.burst, BURST_SEGMENTS);
+            }
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {
                 shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
@@ -222,6 +234,13 @@ public final class WorldRenderer implements Disposable {
             }
             if (appearance.wounds > 0) {
                 drawWounds(x, y, body.radius, appearance.wounds);
+            }
+            if (appearance.daze > 0f) {
+                // A declared stun, shrinking onto the body as it is spent (G0053, G0071).
+                SCRATCH.set(dazeMark.color());
+                SCRATCH.a = dazeMark.alpha();
+                shapes.setColor(SCRATCH);
+                shapes.circle(x, y, dazeMark.radiusFor(body.radius, appearance.daze), CIRCLE_SEGMENTS);
             }
         }
         shapes.end();
@@ -356,7 +375,7 @@ public final class WorldRenderer implements Disposable {
         boolean any = false;
         for (int i = 0; i < drawable.size(); i++) {
             Appearance appearance = APPEARANCE.get(drawable.get(i));
-            if (appearance.ordered || appearance.charged || appearance.shield > 0f) {
+            if (appearance.ordered || appearance.charged || appearance.shield > 0f || appearance.burst > 0f) {
                 any = true;
                 break;
             }
@@ -382,6 +401,12 @@ public final class WorldRenderer implements Disposable {
             }
             if (appearance.shield > 0f) {
                 drawShield(position.x, position.y, radius, appearance.shield);
+            }
+            if (appearance.burst > 0f) {
+                SCRATCH.set(burstMark.color());
+                SCRATCH.a = burstMark.outlineAlpha() * appearance.burstFade;
+                shapes.setColor(SCRATCH);
+                shapes.circle(position.x, position.y, appearance.burst, BURST_SEGMENTS);
             }
         }
         shapes.end();

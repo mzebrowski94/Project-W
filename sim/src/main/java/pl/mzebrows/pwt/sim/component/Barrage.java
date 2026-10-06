@@ -6,7 +6,7 @@ import pl.mzebrows.pwt.sim.def.BarrageDef;
 import pl.mzebrows.pwt.sim.def.PatternDef;
 
 /**
- * The cycle of patterns a boss shoots, and how far through it it is (G0048).
+ * The cycle of patterns a boss or a giant shoots, and how far through it it is (G0048).
  *
  * <p>Carried by every strain and switched off for all but one, like every other ability. The patterns
  * are the definition's own records, so a snapshot carries them as it carries everything else; where
@@ -53,7 +53,34 @@ public final class Barrage implements Component, Pool.Poolable {
     /** The fourth. Configuration. */
     public PatternDef stream = PatternDef.off();
 
+    /** How near its target must be before it starts a pattern; zero is any distance. Configuration. */
+    public float reach;
+
+    /** Whether it stands still while winding up and firing. Configuration. */
+    public boolean holdsStill;
+
+    /** Whether a declared stun breaks off the pattern it is on. Configuration. */
+    public boolean stunCancels;
+
+    /** How hard the ground shakes at it when it starts winding up - its roar. Configuration. */
+    public float roarStrength;
+
+    /** How far from it the roar is felt. Configuration. */
+    public float roarRadius;
+
+    /** How long the roar's shake lasts, in ticks. Configuration. */
+    public int roarTicks;
+
     public Phase phase = Phase.IDLE;
+
+    /** How far from its middle the circle of its last salvo reaches, in world units, while it is drawn. */
+    public float burstReach;
+
+    /** Ticks the circle of its last salvo is still drawn for; zero is none. */
+    public int burstTicks;
+
+    /** How long that circle was drawn for when it began, in ticks. */
+    public int burstTotal;
 
     /** Which pattern it is winding up, firing or has just fired, as its place in the cycle. */
     public int pattern;
@@ -84,7 +111,7 @@ public final class Barrage implements Component, Pool.Poolable {
     public float aimY;
 
     /** Sets the barrage from its definition and returns this component. Starts nothing. */
-    public Barrage set(BarrageDef def, int newWindUpTicks, int newRestTicks) {
+    public Barrage set(BarrageDef def, int newWindUpTicks, int newRestTicks, int newRoarTicks) {
         this.enabled = def.enabled();
         this.windUpTicks = newWindUpTicks;
         this.restTicks = newRestTicks;
@@ -94,6 +121,12 @@ public final class Barrage implements Component, Pool.Poolable {
         this.fan = def.fan();
         this.spiral = def.spiral();
         this.stream = def.stream();
+        this.reach = def.reach();
+        this.holdsStill = def.holdsStill();
+        this.stunCancels = def.stunCancels();
+        this.roarStrength = def.roar().shakes() ? def.roar().strength() : 0f;
+        this.roarRadius = def.roar().radius();
+        this.roarTicks = newRoarTicks;
         return this;
     }
 
@@ -122,6 +155,19 @@ public final class Barrage implements Component, Pool.Poolable {
         return enabled && phase == Phase.WINDING_UP;
     }
 
+    /**
+     * How much of its own speed it keeps this tick: none while a barrage that holds still is winding up or
+     * firing, all of it otherwise. Read by {@code Pace} alone.
+     */
+    public float paceFactor() {
+        return enabled && holdsStill && (phase == Phase.WINDING_UP || phase == Phase.FIRING) ? 0f : 1f;
+    }
+
+    /** How much of the circle of its last salvo is left to draw, in {@code [0, 1]}; zero is none. */
+    public float burstFade() {
+        return burstTotal <= 0 || burstTicks <= 0 ? 0f : burstTicks / (float) burstTotal;
+    }
+
     /** Which way round the current pattern turns this time through: one way, then the other. */
     public float spin() {
         return (cycles & 1) == 0 ? 1f : -1f;
@@ -138,7 +184,16 @@ public final class Barrage implements Component, Pool.Poolable {
         fan = PatternDef.off();
         spiral = PatternDef.off();
         stream = PatternDef.off();
+        reach = 0f;
+        holdsStill = false;
+        stunCancels = false;
+        roarStrength = 0f;
+        roarRadius = 0f;
+        roarTicks = 0;
         phase = Phase.IDLE;
+        burstReach = 0f;
+        burstTicks = 0;
+        burstTotal = 0;
         pattern = 0;
         remainingTicks = 0;
         phaseTicks = 0;

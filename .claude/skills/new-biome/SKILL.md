@@ -39,13 +39,15 @@ are the one exception**, counted, because a house is a place.
 | houses | `houses.min`, `houses.max` | a place worth taking - "a quarry with a base in it". 0-2; leave the block out for none. Size and doorways are the strip's (`sim.mission.ground.houses.*`). Every doorway gets a shut door at populate (G0069): a house's stock is behind three seconds of work, and a hunter that chases a man in will siege it - count that into how busy the biome is |
 | patches | `patches=rect\|blob <terrain\|neighbour> density sizeMin sizeMax; ...` | `rect` for small patches of colour, `blob` for ground worth going round (thicket). `neighbour` takes the nearer biome's base, or `fallback` |
 | crags | `crags.density`, `crags.smoothing` | irregular masses; more smoothing, fewer and bigger. Leave the block out for none |
-| outcrops | `outcrops.density`, `lengthMin/Max`, `thicknessMin/Max`, `arms` | rock bent round a corner - the Adventures' shape. Leave the block out for none |
+| outcrops | `outcrops.density`, `lengthMin/Max`, `thicknessMin/Max`, `arms`, `ragged` | rock bent round a corner - the Adventures' shape. `ragged` (0-1, no arms with it) knocks corners off and bumps the faces, so a slab reads as broken rock rather than a block from above (the cut, 0.6). Leave the block out for none |
 
 Plus `widthMin/Max` and `regions` (at least 1 - every region lies inside one biome, G0062), which are geometry.
 
 **What a density lands at**: a coat is laid *until reached*, so its median lands about half a piece **over** - +0.1
-point for 1-2 tile pebbles, +1.3 for 6-11 thicket blobs, +1.7 for the quarry's 4-9 bars - and its worst seed one
-whole piece over. A patch is measured on the finished ground, so rock laid over it reads it low. A coat asked for
+point for 1-2 tile pebbles, +1.3 for 6-11 thicket blobs, +1.7 for the quarry's 4-9 bars, +2.8 for the fen's 9-14
+reed blobs (0.11 landed at 15.3; 0.075 lands at 12.3) - and its worst seed one whole piece over. A `rect` patch line
+reads 3-4 points over the Adventure in every biome, neighbour or terrain alike: match the other blocks' 0.02-0.04
+rather than chasing it. A patch is measured on the finished ground, so rock laid over it reads it low. A coat asked for
 more than fits stops short without a word - the density test's floor catches it.
 
 **What the strip does round a biome**: every ridge's face wanders up to `ridgeRough` (3) columns into the biome
@@ -61,8 +63,9 @@ than fit lays what fits, and the strip sweep reports it under its `houses.min`.
 `PWT_MEASURE=1 .claude/scripts/gradle.sh :sim:test --tests '*BiomeMeasureTest' --rerun -i` builds each Adventure a
 biome was ported from and prints the band's rock, thicket and patch share and its outcrops' count and size beside
 the same over 256 missions, p10 / median / p90. **Add your port's row to `BiomeMeasureTest.ports()`** - scenario,
-first and last column, base ground - first. Tune until the medians sit within a point of the measured ones. The HTML
-prototype is for looks only.
+first and last column, base ground - first. Tune until the medians sit within a point of the measured ones. The run
+takes about six minutes (the room over 2000 missions): start it in the background and write the block's comment
+meanwhile. The HTML prototype is for looks only.
 
 ## 3. Biome: roster and furniture
 
@@ -80,7 +83,9 @@ prototype is for looks only.
   `PWT_MEASURE=1 ... BiomeMeasureTest` prints the **room** each biome leaves - holes and loose creatures, least /
   p1 / p10 / median over 2000 missions, dealt first and later - for one attempt. Stage 7 measured, for the five:
   holes 1-3 at the median dealt first, 4-5 later; loose about 42 first, 75 later; their worst seeds 1 / 2 holes and
-  25 / 45 loose. A block must fit on hard: **x1.25 its most if dealt first, x1.625 at the last position** - in
+  25 / 45 loose. **Every roster line is a pack of its own**, kept `packApart` from the others, so a block's
+  number of lines costs room as well as its counts: the cut's seventh line (a lone grunt, beside two 0-1 giants) fell
+  short on 9 seeds of 2000 dealt first. Fold a line of one or two into a neighbour, or drop it. A block must fit on hard: **x1.25 its most if dealt first, x1.625 at the last position** - in
   practice **1-2 holes and at most about 25 loose creatures** a block. Ground that leaves less room (heavy crags,
   houses) holds less: the quarry holds one hole.
 - **Where it goes** (G0068): points one a column band; house stock (crates, then medkits) up to `houseStock` a house;
@@ -161,8 +166,9 @@ None is written per biome; a biome joins every one by being a constant.
 - **`BiomeDefTest`** (`sim`): the table binds; a gun's cache, a roster line backwards and a pool smaller than
   `sim.mission.biomes` are refused. **`FinaleDefTest`** the same for finales: the redoubt binds - add a line for
   yours - and the refusals and the flip.
-- **`BiomePromisesTest`** (`sim`): one test per promise the design makes in a number - "the brake is the one biome
-  overgrown", "crags from mounds to masses". Add yours. Never connectivity or room, which the sweeps own.
+- **`BiomePromisesTest`** (`sim`): one test per promise the design makes in a number - "the brake is the most
+  overgrown", "crags from mounds to masses". Add yours. A new biome often breaks an old "the one biome" promise:
+  reword it to what still holds, never delete it. Never connectivity or room, which the sweeps own.
 - `verify.sh` runs 64 seeds a sweep (three tiers each in the mission sweep). **Run the big one** before you finish:
   `PWT_SWEEP=1 .claude/scripts/gradle.sh :map:test --tests '*SweepTest' --rerun :core:test --tests '*SweepTest' --rerun -i`
   - 2000 seeds. Each test task takes its own `--tests` and `--rerun`: the variable is no input of the task, and

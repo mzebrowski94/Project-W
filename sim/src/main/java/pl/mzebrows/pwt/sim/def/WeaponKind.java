@@ -78,5 +78,15 @@ public enum WeaponKind {
      * twenty at a time and the pattern is the threat rather than any one shot (G0048). No pickup
      * grants it.
      */
-    SPEW
+    SPEW,
+    /**
+     * What a searer sprays (G0071): a short beam that wounds a man and slows him, fired a cone at a time.
+     * Shorter than the laser it is drawn like, and no bloat. No pickup grants it.
+     */
+    SEAR,
+    /**
+     * What a thumper slams (G0071): a ring of short, fast shots all the way round it that wound and stun a man,
+     * read as the one circle they cover. No pickup grants it.
+     */
+    SLAM
 }

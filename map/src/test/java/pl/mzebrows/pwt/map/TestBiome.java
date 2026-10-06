@@ -21,7 +21,7 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     Crags.off(),
-                    new Outcrops(0.006f, 1, 2, 1, 1, 0f),
+                    new Outcrops(0.006f, 1, 2, 1, 1, 0f, 0f),
                     List.of()));
 
     static final TestBiome QUARRY = new TestBiome(
@@ -35,7 +35,7 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(1, 2),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     Crags.off(),
-                    new Outcrops(0.10f, 4, 9, 2, 3, 0.7f),
+                    new Outcrops(0.10f, 4, 9, 2, 3, 0.7f, 0f),
                     List.of()));
 
     static final TestBiome BRAKE = new TestBiome(
@@ -51,7 +51,7 @@ record TestBiome(String name, BiomeGround ground) {
                             new Patch.Rect(PatchGround.of(Terrain.ORGANIC), 0.035f, 4, 6),
                             new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
                     Crags.off(),
-                    new Outcrops(0.015f, 2, 4, 1, 2, 0.3f),
+                    new Outcrops(0.015f, 2, 4, 1, 2, 0.3f, 0f),
                     List.of()));
 
     static final TestBiome ANTHILL = new TestBiome(
@@ -79,7 +79,7 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     new Crags(0.13f, 4),
-                    new Outcrops(0.02f, 2, 4, 1, 2, 0.3f),
+                    new Outcrops(0.02f, 2, 4, 1, 2, 0.3f, 0f),
                     List.of()));
 
     static final List<TestBiome> FIVE = List.of(PLAIN, QUARRY, BRAKE, ANTHILL, BADLANDS);

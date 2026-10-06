@@ -56,7 +56,11 @@ class ShippedConfigTest {
         assertThat(twice).isEmpty();
     }
 
-    /** A join over a slow link waits for every byte the host ships, and seven in ten were comments. */
+    /**
+     * A join over a slow link waits for every byte the host ships, and seven in ten were comments. Under two
+     * fifths of it is left once they are stripped - loosened from a third when the giants' key-heavy blocks
+     * landed (G0071): the guard is that stripping happens, not a budget on how many keys there are.
+     */
     @Test
     void shipsToPeersWithoutItsCommentsAsTheSameConfig() throws IOException {
         String files = shipped();
@@ -65,7 +69,7 @@ class ShippedConfigTest {
 
         assertThat(SimConfigLoader.parse(shipped)).isEqualTo(SimConfigLoader.parse(files));
         assertThat(shipped.lines()).noneMatch(line -> line.startsWith("#") || line.isBlank());
-        assertThat(shipped.length()).isLessThan(files.length() / 3);
+        assertThat(shipped.length()).isLessThan(files.length() * 2 / 5);
     }
 
     /** Every shipped file, in the order the loader reads them. */

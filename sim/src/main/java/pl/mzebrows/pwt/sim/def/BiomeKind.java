@@ -16,5 +16,9 @@ public enum BiomeKind {
     /** Low crags mounded round the holes, ants, and food lying about for them. */
     ANTHILL,
     /** Heavy crags on burnt ground - masses to fight round and behind - and spitters on them. */
-    BADLANDS
+    BADLANDS,
+    /** Straight slabs of rock on sand, corridors through them, brutes and spitters and ants in the corridors. */
+    CUT,
+    /** Mire with islands of reeds, frogs ruining the ground and ants on it: where walking round something costs. */
+    FEN
 }

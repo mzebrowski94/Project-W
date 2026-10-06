@@ -147,6 +147,11 @@ public final class AppearanceSystem extends IteratingSystem {
         // How many wounds a man on his feet is carrying, one mark each (G0053, pillar 5).
         appearance.wounds = VITALITY.has(entity) && VITALITY.get(entity).wounded() ? VITALITY.get(entity).wounds : 0;
         appearance.shield = SHIELD.has(entity) ? SHIELD.get(entity).fraction() : 0f;
+        // The circle a slam covers, for a moment after it lands, and how much of a declared stun is left (G0071).
+        boolean bursting = BARRAGE.has(entity) && BARRAGE.get(entity).burstFade() > 0f;
+        appearance.burst = bursting ? BARRAGE.get(entity).burstReach : 0f;
+        appearance.burstFade = bursting ? BARRAGE.get(entity).burstFade() : 0f;
+        appearance.daze = STUNNED.has(entity) ? STUNNED.get(entity).dazeLeft() : 0f;
         if (DOOR.has(entity)) {
             // An opened door is seen sinking, its squares shrinking to nothing (G0069). A look only.
             appearance.squareFill = 1f - DOOR.get(entity).sunk();

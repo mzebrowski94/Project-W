@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 import java.util.List;
@@ -82,7 +83,7 @@ class CoatsTest {
     void retuningOneCoatMovesNoOther() {
         BiomeGround badlands = TestBiome.BADLANDS.ground();
         BiomeGround fewerPatches = withPatches(badlands, List.of(new Patch.Rect(PatchGround.neighbour(), 0.08f, 4, 6)));
-        BiomeGround fewerOutcrops = withOutcrops(badlands, new Outcrops(0.05f, 2, 4, 1, 2, 0.3f));
+        BiomeGround fewerOutcrops = withOutcrops(badlands, new Outcrops(0.05f, 2, 4, 1, 2, 0.3f, 0f));
         BiomeGround moreCrags = withCrags(badlands, new Crags(0.08f, 4));
         for (long seed = 0; seed < SEEDS; seed++) {
             Rig original = Rig.laid(badlands, seed);
@@ -93,6 +94,34 @@ class CoatsTest {
             assertThat(Rig.laid(moreCrags, seed).groundWhereBothAreGround(original))
                     .isEqualTo(original.groundWhereBothAreGround(Rig.laid(moreCrags, seed)));
         }
+    }
+
+    /**
+     * A ragged slab (the cut's) breaks its outline - corners knocked off, notches and bumps along it - and still keeps
+     * the clearance, seals nothing and leaves every pass reachable: what it leaves always meets edge to edge.
+     */
+    @Test
+    void laysRaggedSlabsThatKeepTheClearanceAndBreakTheirOutline() {
+        BiomeGround clean = withOutcrops(TestBiome.QUARRY.ground(), new Outcrops(0.12f, 6, 9, 2, 2, 0f, 0f));
+        BiomeGround ragged = withOutcrops(clean, new Outcrops(0.12f, 6, 9, 2, 2, 0f, 0.6f));
+        int differ = 0;
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Rig rig = Rig.laid(ragged, seed);
+
+            assertThat(rig.narrowest()).as("seed %d", seed).isGreaterThanOrEqualTo(CLEARANCE);
+            assertThat(rig.pockets()).as("seed %d", seed).isZero();
+            assertThat(rig.passesConnect()).as("seed %d", seed).isTrue();
+            if (!java.util.Arrays.equals(rig.rockTiles(), Rig.laid(clean, seed).rockTiles())) {
+                differ++;
+            }
+        }
+        assertThat(differ).isEqualTo(SEEDS);
+    }
+
+    @Test
+    void refusesARaggedOutcropWithArms() {
+        assertThatThrownBy(() -> new Outcrops(0.1f, 4, 9, 2, 3, 0.7f, 0.5f))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -167,7 +196,7 @@ class CoatsTest {
     void aCoatAskedForMoreThanFitsStillLeavesEverythingReachable() {
         BiomeGround quarry = TestBiome.QUARRY.ground();
         List<BiomeGround> greedy = List.of(
-                withOutcrops(quarry, new Outcrops(0.9f, 4, 9, 2, 3, 0.7f)), withCrags(quarry, new Crags(0.6f, 4)));
+                withOutcrops(quarry, new Outcrops(0.9f, 4, 9, 2, 3, 0.7f, 0f)), withCrags(quarry, new Crags(0.6f, 4)));
         for (BiomeGround ground : greedy) {
             for (long seed = 0; seed < 8; seed++) {
                 Rig rig = Rig.laid(ground, seed);

@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -18,11 +19,13 @@ import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.GroundDef;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.TierKind;
+import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
@@ -456,5 +459,73 @@ class SimConfigTest {
                         .melee()
                         .carryDistance())
                 .isEqualTo(Float.MAX_VALUE);
+    }
+
+    /**
+     * <strong>A giant is a brute grown</strong> (G0071): half as big again, four times its health, slower, no
+     * leap, and quicker to let you go - but never sooner than a frog, which the test above holds.
+     */
+    @Test
+    void makesEachGiantABruteGrownHalfAsBigAgainAndFourTimesAsHard() {
+        SimConfig config = SimConfig.defaults();
+        UnitDef brute = config.units().of(UnitKind.BRUTE);
+        for (UnitKind giant : List.of(UnitKind.SEARER, UnitKind.THUMPER)) {
+            UnitDef def = config.units().of(giant);
+            assertThat(def.radius()).as("%s's size", giant).isCloseTo(brute.radius() * 1.5f, Offset.offset(0.01f));
+            assertThat(def.health()).as("%s's health", giant).isEqualTo(brute.health() * 4);
+            assertThat(def.speed()).as("%s's pace", giant).isLessThan(brute.speed());
+            assertThat(def.leap().enabled()).as("%s's leap", giant).isFalse();
+            assertThat(leeway(config, giant)).as("%s's leeway", giant).isLessThan(leeway(config, UnitKind.BRUTE));
+            assertThat(def.barrage().holdsStill()
+                            && def.barrage().stunCancels()
+                            && def.barrage().roar().shakes())
+                    .as("%s stands, roars and is stunned out of it", giant)
+                    .isTrue();
+        }
+    }
+
+    /** A giant still walks every passage the strip leaves: two tiles of clearance, ten units (G0062, G0071). */
+    @Test
+    void letsAGiantThroughTheNarrowestPassageAMissionLeaves() {
+        SimConfig config = SimConfig.defaults();
+        float narrowest = config.mission().ground().clearance() * config.map().tileSize();
+        for (UnitKind giant : List.of(UnitKind.SEARER, UnitKind.THUMPER)) {
+            assertThat(config.units().of(giant).radius() * 2f)
+                    .as("%s across", giant)
+                    .isLessThan(narrowest);
+        }
+    }
+
+    /** "Its range twice its size": the slam's circle has a radius of twice the thumper's width. */
+    @Test
+    void slamsACircleWhoseRadiusIsTwiceTheThumpersWidthAndStartsOnlyWithSomebodyInIt() {
+        SimConfig config = SimConfig.defaults();
+        UnitDef thumper = config.units().of(UnitKind.THUMPER);
+        WeaponDef slam = config.weapons().of(WeaponKind.SLAM);
+        float reach = thumper.radius() + config.muzzleGap() + slam.projectileRadius() * 2f + slam.projectileRange();
+
+        assertThat(reach).isCloseTo(thumper.radius() * 4f, Offset.offset(0.01f));
+        assertThat(thumper.barrage().reach()).isLessThan(reach);
+        assertThat(slam.harm()).isEqualTo(Harm.WOUND);
+        assertThat(slam.stunSeconds()).isEqualTo(2f);
+    }
+
+    /**
+     * A searer starts its cone only where the cone lands, beam after beam rather than in volleys, each thrown inside
+     * a 75-degree cone; every beam wounds and slows.
+     */
+    @Test
+    void searsOnlyWhereItsConeLands() {
+        SimConfig config = SimConfig.defaults();
+        UnitDef searer = config.units().of(UnitKind.SEARER);
+        WeaponDef sear = config.weapons().of(WeaponKind.SEAR);
+
+        assertThat(searer.barrage().reach()).isLessThan(searer.radius() + sear.projectileRange());
+        assertThat(sear.harm()).isEqualTo(Harm.WOUND);
+        assertThat(sear.slowFactor()).isLessThan(1f);
+        assertThat(sear.bloatPerShot()).isZero();
+        assertThat(searer.barrage().fan().shots()).isEqualTo(1);
+        assertThat(searer.barrage().fan().salvos()).isGreaterThan(1);
+        assertThat(sear.halfSpreadRadians() * 2f).isCloseTo((float) Math.toRadians(75.0), Offset.offset(1e-4f));
     }
 }

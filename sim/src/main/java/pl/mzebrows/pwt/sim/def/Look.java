@@ -32,6 +32,10 @@ public enum Look {
     ANT,
     /** The boss: a grunt grown huge. Kin to a grunt at a glance, and darker, because it does not move. */
     BOSS_GRUNT,
+    /** A giant that sears: a brute's darker, bigger cousin (G0071). */
+    SEARER,
+    /** A giant that thumps: the same body, paler, as the circle it slams (G0071). */
+    THUMPER,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */
@@ -77,6 +81,10 @@ public enum Look {
      * What a spitter fires once it has eaten a barrel; tellable from an ordinary spit at a glance.
      */
     CHARGED_SPIT,
+    /** A searer's beam: the laser's kind of line, in a colour no gun of the player's has. */
+    SEAR,
+    /** A thumper's slam, and the circle it is read as: white. */
+    SLAM,
     /** What a frog fires. Fat and slow, and unmistakably the same stuff as the slick it leaves. */
     VENOM,
     /** What the boss throws, twenty at a time. Must read against every other shot, the player's and a spit alike. */

@@ -90,6 +90,8 @@ public record GraphicConfig(
         HeatMark heat,
         DoorMark door,
         PostMark post,
+        BurstMark burst,
+        DazeMark daze,
         CameraDirector.Settings camera) {
 
     /** How a colour is written: red, green and blue in hex, and alpha after them if it is not opaque. */

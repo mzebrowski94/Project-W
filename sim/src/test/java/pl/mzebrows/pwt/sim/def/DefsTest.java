@@ -55,7 +55,9 @@ class DefsTest {
                         strain(RADIUS, Look.RUNNER),
                         strain(RADIUS, Look.FROG),
                         strain(RADIUS, Look.ANT),
-                        strain(RADIUS * 3f, Look.BOSS_GRUNT));
+                        strain(RADIUS * 3f, Look.BOSS_GRUNT),
+                        strain(RADIUS * 2f, Look.SEARER),
+                        strain(RADIUS * 2f, Look.THUMPER));
     }
 
     @Test
@@ -72,6 +74,8 @@ class DefsTest {
                 .put(UnitKind.FROG, strain(RADIUS, Look.FROG))
                 .put(UnitKind.ANT, strain(RADIUS, Look.ANT))
                 .put(UnitKind.BOSS_GRUNT, strain(RADIUS * 3f, Look.BOSS_GRUNT))
+                .put(UnitKind.SEARER, strain(RADIUS * 2f, Look.SEARER))
+                .put(UnitKind.THUMPER, strain(RADIUS * 2f, Look.THUMPER))
                 .build();
     }
 

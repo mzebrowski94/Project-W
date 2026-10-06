@@ -328,6 +328,7 @@ class ConfigBinderTest {
                 test.ground.outcrops.thicknessMin=1
                 test.ground.outcrops.thicknessMax=2
                 test.ground.outcrops.arms=0.3
+                test.ground.outcrops.ragged=0
                 """);
 
         assertThat(brake.ground())
@@ -342,7 +343,7 @@ class ConfigBinderTest {
                                 new Patch.Rect(PatchGround.neighbour(), 0.035f, 4, 6),
                                 new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
                         Crags.off(),
-                        new Outcrops(0.015f, 2, 4, 1, 2, 0.3f),
+                        new Outcrops(0.015f, 2, 4, 1, 2, 0.3f, 0f),
                         List.of()));
     }
 
