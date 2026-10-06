@@ -32,6 +32,10 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  *
  * <p>Every tick it waits it says how many are there of how many it wants, for the interface (B.1).
  *
+ * <p>A creature rises facing the nearest commander on its ground, not east as everything spawns: a boss
+ * that met the players with his back would read as asleep, and nothing turns a rooted thing until it
+ * has somebody to shoot at (pillar 5).
+ *
  * <p>It runs with the other systems that are about the level rather than anything standing in it, after
  * the death chain and before the objectives, for the reason {@code WaveSystem} does: what rises this
  * tick counts against the level on this tick.
@@ -82,11 +86,35 @@ public final class LairSystem extends EntitySystem {
                 } else if (arrival.form() == Arrival.Form.NEST && strain != null) {
                     spawner.spawnNest(strain, arrival.x(), arrival.y());
                 } else if (strain != null) {
-                    spawner.spawnUnit(strain, arrival.x(), arrival.y());
+                    Entity nearest = nearestOn(lair.ground(), arrival.x(), arrival.y());
+                    Position at = nearest == null ? null : POSITION.get(nearest);
+                    float faceX = at == null ? 1f : at.x - arrival.x();
+                    float faceY = at == null ? 0f : at.y - arrival.y();
+                    spawner.spawnUnit(strain, arrival.x(), arrival.y(), faceX, faceY);
                 }
             }
             lair.wake();
         }
+    }
+
+    /** The commander on his feet on this ground nearest a place - what rises there faces him. */
+    private @Nullable Entity nearestOn(TileRect ground, float x, float y) {
+        Entity nearest = null;
+        float closest = Float.MAX_VALUE;
+        for (int i = 0; i < commanders.size(); i++) {
+            Entity commander = commanders.get(i);
+            Position at = POSITION.get(commander);
+            if (Life.down(commander) || !ground.contains(map.colAt(at.x), map.rowAt(at.y))) {
+                continue;
+            }
+            float dx = at.x - x;
+            float dy = at.y - y;
+            if (dx * dx + dy * dy < closest) {
+                closest = dx * dx + dy * dy;
+                nearest = commander;
+            }
+        }
+        return nearest;
     }
 
     /** How many commanders on their feet and present stand on its ground, of how many there are. */

@@ -199,6 +199,24 @@ class DefendTest {
         assertThat(simulation.level().isMet(Objective.HOLD_POINT)).isFalse();
     }
 
+    /**
+     * A lair still waiting is held back like a wave not yet sent (G0048): a player lagging outside it must not let the
+     * others win before the boss has risen.
+     */
+    @Test
+    void refusesToHoldAPostWhileALairStillWaitsToRise() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(POST_X, LANE);
+        simulation.spawnPost(POST_X, LANE, WATCH);
+        simulation.level().require(Objective.HOLD_POINT);
+        simulation.lair().at(FAR_CORNER).unit(UnitKind.GRUNT, POST_X, LANE);
+
+        steps(simulation, 3);
+
+        assertThat(simulation.lair().waiting()).isTrue();
+        assertThat(simulation.level().isMet(Objective.HOLD_POINT)).isFalse();
+    }
+
     /** A post that names no watch still means the whole level, which is every level built so far. */
     @Test
     void stillMeansTheWholeLevelForAPostThatNamesNoWatch() {

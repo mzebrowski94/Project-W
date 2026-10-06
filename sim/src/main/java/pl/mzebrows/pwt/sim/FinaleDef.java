@@ -42,10 +42,6 @@ public record FinaleDef(BiomeGround ground, Hold hold, List<WaveLine> waves, Lis
         if (waves.size() > Waves.MOST) {
             throw new IllegalArgumentException("a finale sends at most " + Waves.MOST + " waves, had " + waves.size());
         }
-        if (!lair.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "a lair is built with the keep (missions stage 11+): until then a finale has none");
-        }
     }
 
     /** The same set piece flipped north-south - its pieces, its hold and its lair - and never east-west. */

@@ -124,7 +124,6 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | Scaffolding | Replaced by |
 |---|---|
 | Both Adventure levels turn the swarm's adaptations on (`Scenario.adapting`: one every 180 s, one per 3 cards taken); what ships in `upgrades.properties` leaves both off | A shipped default once a playtest has settled one. A mission already takes its tier's pace (`MissionConfig.apply`, G0063); the Adventures stay hand-laid by decision (missions ticket 10) and keep this. The schedule, the pool and the fold are real (upgrades S10) |
-| **A finale has no lair**: `FinaleDef` refuses one, so the redoubt is the only finale a mission ends on | The keep, missions stage 11+: Adventure 2's lair ported as `LairLine`s resolved into `Arrival`s, after the boss is turned to face the players (`.scratch/bugs/issues/01`) |
 | Rabbits are spawned by a scenario and never replaced | Whatever a level does about them - breeding, a population, or nothing at all. The creature is designed; where they come from is an open question in `README.md`. |
 | A body in its death throes is a frozen circle in a darker colour | The dying animation. The window is real and configured per unit kind (`*.deathThroesSeconds`); only what plays in it is missing. |
 | Two units in a clinch are two circles touching, both drawn the same | The grapple animation, which resolves into one of them dying. `Appearance.State.GRAPPLING` is the hook and is already published for both parties for the whole lock. |

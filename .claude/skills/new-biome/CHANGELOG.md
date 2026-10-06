@@ -40,3 +40,14 @@ changed. Git carries the diff.
   *Tests* and *Reviewer checks* gain the finale.
 - 2026-10-05, stage 9 (DAILY MISSIONS page) - stale: *Look at it* pointed at a page still to come; it names ENTER CODE
   beside `--mission`, which stays as a dev tool.
+- 2026-10-06, the keep (second finale) - wrong: the lair row said refused until the keep, and the reviewer checks
+  listed that refusal; missing: where a lair ends up (`Mission.Finale.lair`, the finale's rect as its ground), that
+  a mission strips `alwaysAggressive` so a risen boss faced east until somebody came near (bug 01 - now rises facing
+  the nearest commander, and turns with his barrage), that a second constant re-draws every seed's finale, and that
+  `MissionTest` held the redoubt's own counts; slow: finding a code that ends on the keep - the sweep now prints
+  each code's finale. *Finale*, *Measure the field* and *Reviewer checks*
+  updated; `BENCH finale` now measures the keep with its lair risen.
+- 2026-10-06, the keep, after play - wrong: the keep shipped with waves *and* a boss, which read as both finales
+  running; G0064 amended to one kind of fight a finale, the keep a lair instead of waves, and a waiting lair holds a
+  post back as an unsent wave does. Slow: the benchmark measured one seed's finale, which became the wave-less keep -
+  `BENCH finale <kind>` now measures every finale; *Measure the field* says so.

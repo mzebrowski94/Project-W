@@ -75,6 +75,12 @@ finale's waves. Fine for a strain the Adventures teach; revisit if it reads as u
 
 Separate: the boss stands with his back to the players (`.scratch/bugs/issues/01`). Fix before or with the keep.
 
+**Built 2026-10-06**: `FinaleKind.KEEP` and its block, as above; the lair resolved into `Mission.Finale.lair` and
+put on the level's `Lair` over the finale's rect. Bug 01 fixed first.
+
+**Amended 2026-10-06** (G0064): the keep has **no waves** - the redoubt is the waves, the keep the boss. Its `waves`,
+`mouths` and `turrets` lines are gone from the block above; and no post is held while a lair still waits.
+
 **The blocks** - ported from both Adventures, offsets from (197, 15); counts become ranges round the port.
 
 ```properties

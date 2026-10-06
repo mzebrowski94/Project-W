@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
 import java.lang.management.ManagementFactory;
+import java.util.Locale;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -12,8 +13,10 @@ import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.FinaleKind;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.Wave;
@@ -96,6 +99,7 @@ class SimulationBenchmarkTest {
 
     private static Sample mission = new Sample(0, 0, 0.0, 0.0);
 
+    /** The heaviest of every finale's whole field: each its own, since the redoubt is waves and the keep a lair. */
     private static Sample finale = new Sample(0, 0, 0.0, 0.0);
 
     @BeforeAll
@@ -105,7 +109,12 @@ class SimulationBenchmarkTest {
         }
         fold = measureTheFold(CROWDS[CROWDS.length - 1]);
         mission = measure("mission", missionWorld(false));
-        finale = measure("finale", missionWorld(true));
+        for (FinaleKind kind : FinaleKind.values()) {
+            Sample whole = measure("finale " + kind.name().toLowerCase(Locale.ROOT), missionWorld(kind));
+            if (whole.milliseconds() > finale.milliseconds()) {
+                finale = whole;
+            }
+        }
     }
 
     @Test
@@ -224,12 +233,28 @@ class SimulationBenchmarkTest {
         return new Sample(crowd, entities, milliseconds, bytes);
     }
 
-    /**
-     * A hard mission as it is built, warmed up, its commanders beyond killing - and, if asked, every wave of its
-     * finale put down in its mouth at once rather than over a minute: the most the field ever holds.
-     */
+    /** A hard mission as it is built, warmed up, its commanders beyond killing. */
     private static Simulation missionWorld(boolean wholeFinale) {
-        SimConfig config = SimConfig.defaults().withSeed(MISSION_SEED);
+        return missionWorld(MISSION_SEED, wholeFinale);
+    }
+
+    /**
+     * The first hard mission from {@code MISSION_SEED} that ends on this finale, with every wave of it put down in its
+     * mouth at once rather than over a minute and any lair risen: the most that finale's field ever holds.
+     */
+    private static Simulation missionWorld(FinaleKind kind) {
+        long seed = MISSION_SEED;
+        while (Mission.build(SimConfig.defaults().withSeed(seed), TierKind.HARD)
+                        .finale()
+                        .kind()
+                != kind) {
+            seed++;
+        }
+        return missionWorld(seed, true);
+    }
+
+    private static Simulation missionWorld(long seed, boolean wholeFinale) {
+        SimConfig config = SimConfig.defaults().withSeed(seed);
         Simulation simulation = Scenarios.world(Scenarios.mission(TierKind.HARD), config);
         simulation.level().commandersInvulnerable = true;
         if (wholeFinale) {
@@ -244,6 +269,9 @@ class SimulationBenchmarkTest {
                             map.tileCentreY(where.row() + i / where.width() % where.height()));
                 }
             }
+            // Its ground widened to the whole map, so it rises on the first tick with the squad still at the start.
+            Lair lair = simulation.lair();
+            lair.at(new TileRect(0, 0, map.cols(), map.rows()));
         }
         for (int tick = 0; tick < WARM_UP_TICKS; tick++) {
             simulation.step();

@@ -12,6 +12,12 @@ stands and every mouth's tiles open and reached from the start, nothing hostile 
 `.endsOnTheSameFinaleOnEveryTierButForHowManyComeInAWave`, `.holdsTheFinalesWavesBackAndAsksOnlyThatItsPostBeHeld`,
 `StripTest.laysAFinalesPiecesAsRockAtTheirOffsetsFromItsAnchor`. Missions ticket 04 holds the shape and both blocks.
 
+**Amended 2026-10-06 (the keep).** **One finale, one kind of fight**: the redoubt is the waves, the keep the boss. The
+keep is the redoubt's ground with a lair **instead of** a wave schedule and its guns - Adventure 2's held-back waves
+and four turrets are dropped, the boss fought with what the squad carries (Mateusz, after play: both at once read as two finales running). And a post is never held while a lair still
+waits to rise, as it is never held while a wave is still to be sent - otherwise a player lagging outside the finale
+lets the others win before the boss is on the field.
+
 **Amended 2026-10-05 (missions stage 8).** The last biome keeps **everything hostile** outside the watch - packs as
 well as nests: a sleeper left inside it behind the ridge blocks the win where the player cannot see why. And the goal
 line across a mission leads through the points, the finale's among them, while its waves are held back, then says the
@@ -21,7 +27,7 @@ hold - no goal word of its own.
 
 - **One shape, parts off.** A finale is ground, a **hold** (the point that holds afterwards, its watch, turrets,
   mines, barrels, pickups and **mouths**), a wave schedule, and a **lair** that is empty unless it is a keep. The
-  keep is the redoubt with a lair. Every finale is won by `HOLD_POINT` alone; a lair sits inside the watch.
+  keep is the redoubt with a lair and no waves or turrets (amended 2026-10-06). Every finale is won by `HOLD_POINT` alone; a lair sits inside the watch.
 - **The same layout every time.** Every position is a tile offset from the finale's anchor, written in its block.
   The only variety is one bit from the finale's stream that flips it north-south - never east-west, so west stays
   the way in. Its rock is fixed `pieces` of its ground; nothing dealt lands in a finale, and the ridge before it

@@ -9,6 +9,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.PlacementRules;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.def.Arrival;
 import pl.mzebrows.pwt.sim.def.Wave;
 import pl.mzebrows.pwt.sim.scenario.Mission;
 import pl.mzebrows.pwt.sim.scenario.Placed;
@@ -43,7 +44,8 @@ final class MissionFaults {
     /**
      * The finale's set piece where it can be played (G0064): everything it stands, and every tile of every mouth a wave
      * comes from, on open ground reached from the start - and nothing hostile of the last biome inside its watch, so
-     * holding its post never waits on a hole or a sleeper behind the ridge.
+     * holding its post never waits on a hole or a sleeper behind the ridge. What its lair raises stands there too, off
+     * kept ground, and inside the watch, so holding the post means dealing with it (G0048).
      */
     static List<String> finale(Mission mission) {
         TileMap map = mission.laid().map();
@@ -77,6 +79,20 @@ final class MissionFaults {
                         faults.add("the finale's mouth " + mouth + " is shut at (" + col + "," + row + ")");
                     }
                 }
+            }
+        }
+        for (Arrival arrival : mission.finale().lair()) {
+            int col = map.colAt(arrival.x());
+            int row = map.rowAt(arrival.y());
+            if (!map.inBounds(col, row)
+                    || !reached[row * map.cols() + col]
+                    || mission.laid().kept(col, row)) {
+                faults.add("the lair's " + arrival + " is not on open ground reached from the start");
+            }
+            float dx = arrival.x() - hold.x();
+            float dy = arrival.y() - hold.y();
+            if (dx * dx + dy * dy > hold.watch() * hold.watch()) {
+                faults.add("the lair's " + arrival + " is outside the finale's watch");
             }
         }
         for (Placed placed : mission.placed()) {

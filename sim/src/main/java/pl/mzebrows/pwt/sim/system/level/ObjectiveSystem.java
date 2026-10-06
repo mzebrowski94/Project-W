@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Enemy;
+import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Post;
@@ -27,6 +28,7 @@ public final class ObjectiveSystem extends EntitySystem {
 
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
+    private static final ComponentMapper<Lair> LAIR = ComponentMapper.getFor(Lair.class);
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
     private static final ComponentMapper<Post> POST = ComponentMapper.getFor(Post.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
@@ -80,14 +82,16 @@ public final class ObjectiveSystem extends EntitySystem {
     }
 
     /**
-     * The post held: there is one, everything the level had to send has been sent, and nothing
-     * hostile is left standing.
+     * The post held: there is one, everything the level had to send has been sent - every wave, and
+     * whatever a lair holds (G0048) - and nothing hostile is left standing.
      *
      * <p>Recomputed every tick. <strong>"Nothing hostile standing" is measured against the post's own
      * watch</strong>, and the whole level only when it names none.
      */
     private boolean postHeld(Entity level, boolean cleared) {
-        if (posts.size() == 0 || (WAVES.has(level) && !WAVES.get(level).spent())) {
+        if (posts.size() == 0
+                || (WAVES.has(level) && !WAVES.get(level).spent())
+                || (LAIR.has(level) && LAIR.get(level).waiting())) {
             return false;
         }
         for (int i = 0; i < posts.size(); i++) {

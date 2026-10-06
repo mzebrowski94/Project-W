@@ -19,8 +19,10 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
+import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Stunned;
@@ -96,6 +98,36 @@ class BarrageTest {
         simulation.step();
 
         assertThat(alienShots(simulation)).hasSize(RING_SHOTS);
+    }
+
+    // ---- which way it looks ----
+
+    /** It rises facing east, as everything does; a man to its west turns it round, ring or not. */
+    @Test
+    void facesWhoeverItIsHunting() {
+        Simulation simulation = new Simulation(barraging(ring(RING_SHOTS, 1)));
+        simulation.spawnCommander(MIDDLE - NEAR, MIDDLE);
+        Entity boss = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+
+        steps(simulation, 2);
+
+        Facing facing = boss.getComponent(Facing.class);
+        assertThat(facing.x).isCloseTo(-1f, CLOSE);
+        assertThat(facing.y).isCloseTo(0f, CLOSE);
+    }
+
+    /** With nobody in range it faces the place it was last hurt from, which is where it shoots. */
+    @Test
+    void facesThePlaceItWasHurtFromWithNobodyInRange() {
+        Simulation simulation = new Simulation(barraging(ring(RING_SHOTS, 1)));
+        Entity boss = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+        boss.getComponent(Perception.class).provokeAt(MIDDLE, MIDDLE - NEAR);
+
+        simulation.step();
+
+        Facing facing = boss.getComponent(Facing.class);
+        assertThat(facing.x).isCloseTo(0f, CLOSE);
+        assertThat(facing.y).isCloseTo(-1f, CLOSE);
     }
 
     // ---- the shapes ----

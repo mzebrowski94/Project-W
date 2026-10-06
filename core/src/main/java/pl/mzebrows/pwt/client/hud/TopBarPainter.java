@@ -581,11 +581,16 @@ public final class TopBarPainter {
         if (shown == Goal.NONE) {
             return "";
         }
+        // A post with no waves has nothing to count: "WAVE 0/0" would be a number that says nothing.
+        boolean nothingToCount = shown == Goal.HOLD_POINT && goalLine.second() == 0;
         String what =
                 switch (shown) {
                     case COMPLETE -> strings.get("ui.hud.goal.complete");
                     case FAILED -> strings.get("ui.hud.goal.failed");
-                    default -> strings.format("ui.goal." + shown.name(), goalLine.first(), goalLine.second());
+                    default ->
+                        nothingToCount
+                                ? strings.get("ui.goal.HOLD_POINT.clear")
+                                : strings.format("ui.goal." + shown.name(), goalLine.first(), goalLine.second());
                 };
         return TextFit.fit(strings.get("ui.hud.goal"), what, columns);
     }

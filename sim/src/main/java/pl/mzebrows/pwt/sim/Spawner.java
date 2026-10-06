@@ -347,6 +347,16 @@ public final class Spawner {
     }
 
     /**
+     * The same, looking the given way rather than east, as everything else starts: what rises among the players
+     * faces them (G0048).
+     */
+    public Entity spawnUnit(UnitKind kind, float x, float y, float faceX, float faceY) {
+        Entity entity = spawnUnit(kind, x, y, 0);
+        entity.getComponent(Facing.class).face(faceX, faceY);
+        return entity;
+    }
+
+    /**
      * The same, for one sent by a wave: {@code wave} counts from one, and zero is a unit nothing sent.
      * The stamp is what says a wave is cleared once all it sent is down.
      */

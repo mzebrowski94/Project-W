@@ -5,7 +5,8 @@
 **Trigger.** Adding a second boss, a pattern that is not a spread of shots, anything that makes a
 strain stand still, or anything else a level keeps off the field until the players arrive.
 
-**Enforced by.** `BarrageTest`, `LairTest`, `AdventureTwoScenarioTest.keepsTheBossOffTheFieldUntilEveryPlayerIsInTheKeep`
+**Enforced by.** `BarrageTest`, `LairTest`, `BarrageTest.facesWhoeverItIsHunting`, `LairTest.raisesItsCreaturesFacingTheNearestCommanderOnItsGround`,
+`MissionTest.raisesTheKeepsLairOnlyOnceEveryCommanderIsInTheFinale`, `AdventureTwoScenarioTest.keepsTheBossOffTheFieldUntilEveryPlayerIsInTheKeep`
 and `.raisesTheBossAmongANestOfEveryStrainAndEveryGunClearOfRockAndOfEachOther`.
 
 **Constraint.**

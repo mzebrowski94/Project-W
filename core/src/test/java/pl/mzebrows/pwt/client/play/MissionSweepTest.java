@@ -86,7 +86,8 @@ class MissionSweepTest {
             }
             List<String> first = codes.get(mission.order().getFirst());
             if (first.size() < CODES) {
-                first.add(new MissionCode(TierKind.MEDIUM, seed) + "|" + new MissionCode(TierKind.HARD, seed));
+                first.add(new MissionCode(TierKind.MEDIUM, seed) + "|" + new MissionCode(TierKind.HARD, seed) + " "
+                        + mission.finale().kind().name().toLowerCase(Locale.ROOT));
             }
         }
 

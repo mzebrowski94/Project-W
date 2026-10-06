@@ -8,5 +8,7 @@ package pl.mzebrows.pwt.sim.def;
  */
 public enum FinaleKind {
     /** A bare square to see across: four guns round the post, mines across the corners, waves from all four. */
-    REDOUBT
+    REDOUBT,
+    /** The redoubt on burnt ground with a lair at its east end: the boss among a nest of every strain that walks. */
+    KEEP
 }

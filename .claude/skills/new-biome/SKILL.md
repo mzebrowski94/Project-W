@@ -109,7 +109,7 @@ new field with a position must go through it, or the flip tests fail.
 | ground | `widthMin` = `widthMax`, `regions`, `base`, `fallback`, `pieces=dx dy w h; ...` | A dealt width or any coat - houses, patches, crags, outcrops - is refused. Its rock is its `pieces`, laid by `Coats` before anything; a piece past the finale's rect is refused at lay |
 | hold | `post=dx dy`, `watch`, `turrets`, `mines`, `barrels` (`dx dy; ...`), `pickups=pickup <kind> dx dy; ...`, `mouths=name dx dy w h; ...` | Nothing scaled by tier. `watch` is world units, from the post. A gun's cache may lie here, never in a biome. Mouth names are unique |
 | waves | `waves=afterSeconds strain countMin countMax mouth; ...` | Held back until the post is taken. A mouth the hold lacks is refused, and so are more than `Waves.MOST` (63). Each count through `Roster.count` at `MissionConfig.finale(tier)` - the tier's `enemyPercent`, no ramp |
-| lair | `lair=unit\|nest\|pickup <kind> dx dy; ...` | **Refused until the keep's run builds it** (`alpha-phase.md`). That run resolves each line into an `Arrival` behind a `Lair`, in the order written |
+| lair | `lair=unit\|nest\|pickup <kind> dx dy; ...` | Positions, never counts. Resolved into `Mission.Finale.lair` (`Arrival`s, in the order written) and put on the level's `Lair` over the finale's whole rect: nothing of it on the field until every commander on his feet stands in the finale, and each creature rises facing the nearest of them. Keep it inside the `watch` - the sweep checks - so holding the post means dealing with it. A mission strips `alwaysAggressive` from every strain, so a risen boss starts shooting only once somebody is within his `detectionRange` |
 
 **What a block may use**: interior rows 1-28 with the anchor on 15, so with the flip a position fits `dy` -13..13;
 columns `dx` -16..17 of a 34-wide finale. The pass from the ridge before it keeps the first four columns (`dx` -16..-13)
@@ -118,8 +118,14 @@ reaches west into the ridge and the last biome, whose placement keeps **everythi
 amended) - a wider watch costs the last biome room, and the sweep says when it has none.
 
 **Where it ends up**: `Mission.build` resolves the set piece into `Placed.Hold`, `Turret`, `Mine`, `Barrel` and
-`Pickup` at the position after the last biome, and `Mission.finale().waves()` into `Wave`s at their mouths;
-`MissionScenario.populate` spawns them, holds the waves back and requires `HOLD_POINT` alone. The goal line leads
+`Pickup` at the position after the last biome, `Mission.finale().waves()` into `Wave`s at their mouths and
+`.lair()` into `Arrival`s; `MissionScenario.populate` spawns them, holds the waves back, fills the lair and requires
+`HOLD_POINT` alone.
+
+**A new finale re-draws every seed**: the draw is one of `FinaleKind.values()`, so adding a constant changes which
+finale every existing mission code ends on - a daily's record among them. Say so in the final message. Tests that
+name one finale's numbers (four turrets, twenty mines) read them from `mission.finale().def(config)` instead, and
+`MissionTest.endsOnEveryFinaleFlippedAndNot` fails a finale the draw never reaches. The goal line leads
 through every point, the finale's among them, until the waves are let go, then says the hold.
 
 **Porting from an Adventure**: offsets from (197, 15); each wave's count a range of about +-1 round the Adventure's;
@@ -127,8 +133,9 @@ the Adventure's own comments carried into the block's. Drop what neither a wave 
 sleeping ants, ticket 04). Each finale names its own strains.
 
 **Measure the field**: `PWT_BENCH=1 .claude/scripts/gradle.sh :sim:test --tests '*SimulationBenchmarkTest' --rerun -i`
-prints `BENCH mission` (a hard mission as built) and `BENCH finale` (the same with every wave on the field at once)
-and fails either past one tick. Stage 8, the redoubt: 0.33 and 0.58 ms of 16.7. Then `F1` on a hard code from the
+prints `BENCH mission` (a hard mission as built) and `BENCH finale <kind>` for every finale (the first seed ending on
+it, every wave on the field at once and its lair risen) and fails any past one tick - a new finale is measured by
+being a constant. Stage 8, the redoubt: 0.33 and 0.58 ms of 16.7. Then `F1` on a hard code from the
 sweep's output, for what the client draws.
 
 ## 5. Tests
@@ -143,7 +150,7 @@ None is written per biome; a biome joins every one by being a constant.
   nothing hostile of the last biome in its watch). Also the build budget: a mission's whole world, median
   of 16, under 100 ms (stage 7: about 6 ms). Under `PWT_SWEEP=1` a green run prints one summary line - seeds,
   ms/build, creatures per biome on hard - and three seeds that deal each biome first, each as its medium and hard
-  code.
+  code and the finale it ends on.
 - **`StripSweepTest`**, **`StripTest`**, **`CoatsTest`** (`map`): the generator against `TestBiome`, five literal
   blocks kept as `map`'s own fixtures - representative, not the shipped ones, which `map` cannot read. A new biome
   does not go there; its ground is swept by `MissionSweepTest`.
@@ -189,7 +196,8 @@ with its trigger. Then one dated line in `CHANGELOG.md` beside this file - run o
 The build refuses a constant without a block, `regions` under 1, a gun's cache in `furniture.pickups`, a pool
 smaller than `sim.mission.biomes`, a biome the deal never places, and a count that does not fit its room on some
 seed - and for a finale, a dealt width or coat, a piece past its rect, a wave from a mouth its hold lacks, a hold
-pickup that is not a pickup, a lair before the keep, and anything it stands on shut or unreached ground. By eye:
+pickup that is not a pickup, anything it stands or its lair raises on shut or unreached ground, and a lair line
+outside the watch. By eye:
 
 - a comment above the block: source, measured numbers, why - and for `houses`, why this biome has them;
 - every key its nearest neighbour's block has; a coat off by leaving its block out, nothing else;

@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
+import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -23,10 +24,12 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  * <p><strong>Aim first, and never a heading, for anything with an {@link Intent}</strong> (G0002). A
  * commander backing away while shooting forwards faces his shots, or the tell contradicts the bullets.
  * A gun on a mount faces where it points, a trooper where it decided to look, a shooter where its gun
- * is aimed, and anything else that steers itself the way it is going.
+ * is aimed, a barrage where it shoots - which is all that ever turns a thing rooted (G0048) - and anything
+ * else that steers itself the way it is going.
  */
 public final class FacingSystem extends IteratingSystem {
 
+    private static final ComponentMapper<Barrage> BARRAGE = ComponentMapper.getFor(Barrage.class);
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
@@ -62,6 +65,11 @@ public final class FacingSystem extends IteratingSystem {
         if (RANGED.has(entity) && RANGED.get(entity).aiming()) {
             Ranged ranged = RANGED.get(entity);
             facing.face(ranged.aimX, ranged.aimY);
+            return;
+        }
+        if (BARRAGE.has(entity) && BARRAGE.get(entity).aiming()) {
+            Barrage barrage = BARRAGE.get(entity);
+            facing.face(barrage.aimX, barrage.aimY);
             return;
         }
         if (STEERING.has(entity) && VELOCITY.has(entity)) {

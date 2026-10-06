@@ -1,7 +1,7 @@
 # The boss faces away from the players
 
 Type: task
-Status: needs-triage
+Status: done
 
 ## What
 
@@ -26,3 +26,9 @@ Tests first, smallest reproduction: a boss risen from a lair with a player west 
   west under that flip.
 
 `docs/design/invariants/aliens.md` (G0048 row) and `AdventureTwoScenarioTest` are the nearest tests.
+
+## Done 2026-10-06
+
+`Barrage` publishes `aimX/aimY` - the place `BarrageSystem` shoots at, less the boss - and `FacingSystem` turns by it
+after an aiming `Ranged`. No arrival facing: the boss is `alwaysAggressive` with a 360 arc, so he turns on his
+first tick to the man he hunts, who is inside the lair, i.e. west. Invariant row in `aliens.md`.

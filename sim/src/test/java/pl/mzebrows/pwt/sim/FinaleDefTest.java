@@ -71,12 +71,23 @@ class FinaleDefTest {
                 .hasMessageContaining("width is fixed");
     }
 
+    /**
+     * The keep is the redoubt's ground with a lair instead of waves or guns: holes, then the cache, then the boss, in
+     * the order written (G0048, G0064).
+     */
     @Test
-    void refusesALairUntilTheKeepIsBuilt() {
-        assertThatThrownBy(() -> new FinaleDef(
-                        ground(List.of()), hold(), List.of(), List.of(new LairLine.Unit(UnitKind.BRUTE, 13, 0))))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("keep");
+    void bindsTheKeepFromItsBlock() {
+        FinaleDef keep = SimConfig.defaults().finales().of(FinaleKind.KEEP);
+
+        assertThat(keep.ground().base()).isEqualTo(Terrain.ASH);
+        assertThat(keep.hold().watch()).isEqualTo(118f);
+        assertThat(keep.hold().barrels()).doesNotContain(new Offset(12, 0));
+        assertThat(keep.waves()).isEmpty();
+        assertThat(keep.hold().mouths()).isEmpty();
+        assertThat(keep.hold().turrets()).isEmpty();
+        assertThat(keep.lair()).hasSize(11);
+        assertThat(keep.lair().getFirst()).isEqualTo(new LairLine.Nest(UnitKind.GRUNT, 13, -6));
+        assertThat(keep.lair().getLast()).isEqualTo(new LairLine.Unit(UnitKind.BOSS_GRUNT, 13, 0));
     }
 
     /** The flip negates every dy and turns nothing east-west, so west stays the way in (G0064). */
@@ -94,6 +105,9 @@ class FinaleDefTest {
         assertThat(flipped.hold().mouth("nw")).isEqualTo(new Mouth("nw", -14, 10, 4, 4));
         assertThat(flipped.waves()).isEqualTo(redoubt.waves());
         assertThat(flipped.flipped()).isEqualTo(redoubt);
+        FinaleDef keep = SimConfig.defaults().finales().of(FinaleKind.KEEP);
+        assertThat(keep.flipped().lair()).contains(new LairLine.Nest(UnitKind.GRUNT, 13, 6));
+        assertThat(keep.flipped().flipped()).isEqualTo(keep);
     }
 
     /** A wave counts like a roster line: drawn, then the tier's percent once (G0063), and no ramp. */

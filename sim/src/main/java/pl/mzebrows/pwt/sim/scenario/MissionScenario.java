@@ -9,7 +9,9 @@ import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Waves;
+import pl.mzebrows.pwt.sim.def.Arrival;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -75,7 +77,8 @@ final class MissionScenario implements Scenario {
      * Points first - the finale's, which holds afterwards, among them - and then nests, which are ground rather than
      * things on it, then a shut door in every doorway of every house and gatehouse (G0069); then the squad on the
      * start; then everything else in the order it was put down; then the finale's waves, held back until its post is
-     * taken, and the one objective: hold it (G0064).
+     * taken, its lair kept off the field until every commander stands in the finale (G0048), and the one objective: hold
+     * it (G0064).
      */
     @Override
     public void populate(Simulation simulation) {
@@ -119,6 +122,10 @@ final class MissionScenario implements Scenario {
         Waves waves = simulation.waves().holdBack();
         for (Wave wave : mission.finale().waves()) {
             waves.add(wave);
+        }
+        Lair lair = simulation.lair().at(mission.laid().biomes().getLast());
+        for (Arrival arrival : mission.finale().lair()) {
+            lair.add(arrival);
         }
         simulation.level().require(Objective.HOLD_POINT);
     }

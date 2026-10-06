@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.RngStream;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.WaveLine;
+import pl.mzebrows.pwt.sim.def.Arrival;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.FinaleKind;
@@ -71,11 +72,14 @@ public record Mission(
      * @param kind which one was drawn
      * @param flipped whether its layout is mirrored north-south
      * @param waves its schedule, held back until its post is taken, each count drawn and scaled for the tier
+     * @param lair what rises once every commander stands in the finale, in the order written - empty but for a keep;
+     *     its ground is the finale's whole rect (G0048)
      */
-    public record Finale(FinaleKind kind, boolean flipped, List<Wave> waves) {
+    public record Finale(FinaleKind kind, boolean flipped, List<Wave> waves, List<Arrival> lair) {
 
         public Finale {
             waves = List.copyOf(waves);
+            lair = List.copyOf(lair);
         }
 
         /** Its definition as it is laid: flipped, if it is. */
@@ -115,7 +119,7 @@ public record Mission(
         List<FinaleKind> kinds = List.of(FinaleKind.values());
         FinaleKind kind = kinds.get(drawing.nextInt(kinds.size()));
         boolean flipped = drawing.nextInt(2) == 1;
-        FinaleDef finale = new Finale(kind, flipped, List.of()).def(config);
+        FinaleDef finale = new Finale(kind, flipped, List.of(), List.of()).def(config);
 
         List<BiomeGround> grounds = new ArrayList<>();
         for (BiomeKind dealt : order) {
@@ -183,8 +187,25 @@ public record Mission(
                     line.count(counting, config.mission().finale(tier)),
                     hold.mouth(line.mouth()).from(anchor)));
         }
+        List<Arrival> lair = new ArrayList<>();
+        for (LairLine line : finale.lair()) {
+            float x = centreX(tiles, line.at(), anchor);
+            float y = centreY(tiles, line.at(), anchor);
+            lair.add(
+                    switch (line) {
+                        case LairLine.Unit unit -> Arrival.unit(unit.strain(), x, y);
+                        case LairLine.Nest nest -> Arrival.nest(nest.strain(), x, y);
+                        case LairLine.Pickup pickup -> Arrival.pickup(pickup.kind(), x, y);
+                    });
+        }
         return new Mission(
-                tier, config.seed(), order, laid, placed, new Finale(kind, flipped, waves), placement.shortfalls());
+                tier,
+                config.seed(),
+                order,
+                laid,
+                placed,
+                new Finale(kind, flipped, waves, lair),
+                placement.shortfalls());
     }
 
     private static float centreX(TileMap map, Offset at, TileRect anchor) {

@@ -45,6 +45,12 @@ public final class Lair implements Component, Pool.Poolable {
         return this;
     }
 
+    /** One thing of any form, put down where it says when it wakes. */
+    public Lair add(Arrival arrival) {
+        pending.add(arrival);
+        return this;
+    }
+
     /** One creature of this strain, put down here when it wakes. */
     public Lair unit(UnitKind kind, float x, float y) {
         pending.add(Arrival.unit(kind, x, y));

@@ -73,6 +73,16 @@ public final class Barrage implements Component, Pool.Poolable {
     /** Whether its going down has been counted on the level, so a boss is counted once. */
     public boolean fallen;
 
+    /**
+     * Which way it is shooting - at whoever it hunts, or the place it was hurt from - as a direction of any
+     * length; {@code (0, 0)} until it has had something to shoot at. Kept while it idles, so it goes on
+     * looking where it last shot. What {@code FacingSystem} turns it by: nothing else turns a thing that
+     * never walks.
+     */
+    public float aimX;
+
+    public float aimY;
+
     /** Sets the barrage from its definition and returns this component. Starts nothing. */
     public Barrage set(BarrageDef def, int newWindUpTicks, int newRestTicks) {
         this.enabled = def.enabled();
@@ -100,6 +110,11 @@ public final class Barrage implements Component, Pool.Poolable {
     /** The pattern it is on. */
     public PatternDef current() {
         return patternAt(pattern);
+    }
+
+    /** True once it has had something to shoot at. */
+    public boolean aiming() {
+        return aimX != 0f || aimY != 0f;
     }
 
     /** True while it is showing what is coming. */
@@ -130,5 +145,7 @@ public final class Barrage implements Component, Pool.Poolable {
         salvo = 0;
         cycles = 0;
         fallen = false;
+        aimX = 0f;
+        aimY = 0f;
     }
 }

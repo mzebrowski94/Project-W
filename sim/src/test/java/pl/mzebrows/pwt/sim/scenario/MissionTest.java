@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.scenario;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
+import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -14,15 +15,23 @@ import pl.mzebrows.pwt.map.Strip;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.Hold;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Door;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Mine;
+import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Turret;
+import pl.mzebrows.pwt.sim.def.Arrival;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
+import pl.mzebrows.pwt.sim.def.FinaleKind;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.TierKind;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.Wave;
 
 /**
@@ -74,6 +83,21 @@ class MissionTest {
             }
         }
         assertThat(never).as("never dealt in %d seeds", DEALS).isEmpty();
+    }
+
+    /** A finale the draw never ends on, or never flips, is one that fails the build, not a quiet hole (G0064). */
+    @Test
+    void endsOnEveryFinaleFlippedAndNot() {
+        Set<String> drawn = new HashSet<>();
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Mission.Finale finale = Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM)
+                    .finale();
+            drawn.add(finale.kind() + " " + finale.flipped());
+        }
+
+        for (FinaleKind kind : FinaleKind.values()) {
+            assertThat(drawn).as("in %d seeds", SEEDS).contains(kind + " false", kind + " true");
+        }
     }
 
     /** The tier never moves the map (G0065): one seed lays the same ground, and the same points, on every tier. */
@@ -171,27 +195,69 @@ class MissionTest {
      */
     @Test
     void flipsTheFinaleNorthSouthAndNeverEastWest() {
-        Mission plain = null;
-        Mission flipped = null;
-        for (long seed = 0; seed < SEEDS && (plain == null || flipped == null); seed++) {
-            Mission mission = Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM);
-            if (mission.finale().flipped()) {
-                flipped = mission;
-            } else {
-                plain = mission;
+        for (FinaleKind kind : FinaleKind.values()) {
+            Mission plain = null;
+            Mission flipped = null;
+            for (long seed = 0; seed < SEEDS && (plain == null || flipped == null); seed++) {
+                Mission mission = Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM);
+                if (mission.finale().kind() != kind) {
+                    continue;
+                }
+                if (mission.finale().flipped()) {
+                    flipped = mission;
+                } else {
+                    plain = mission;
+                }
             }
-        }
-        assertThat(plain).as("an unflipped finale in %d seeds", SEEDS).isNotNull();
-        assertThat(flipped).as("a flipped finale in %d seeds", SEEDS).isNotNull();
+            assertThat(plain).as("an unflipped %s in %d seeds", kind, SEEDS).isNotNull();
+            assertThat(flipped).as("a flipped %s in %d seeds", kind, SEEDS).isNotNull();
 
-        assertThat(finaleTiles(flipped, true)).isEqualTo(finaleTiles(plain, false));
-        assertThat(finaleThings(flipped, true)).isEqualTo(finaleThings(plain, false));
-        assertThat(finaleThings(plain, false)).contains("Hold 0 0", "Turret -5 -5", "Pickup -3 0");
+            assertThat(finaleTiles(flipped, true)).as("%s", kind).isEqualTo(finaleTiles(plain, false));
+            assertThat(finaleThings(flipped, true)).as("%s", kind).isEqualTo(finaleThings(plain, false));
+            assertThat(finaleThings(plain, false)).contains("Hold 0 0", "Pickup -3 0");
+        }
+    }
+
+    /**
+     * The keep's lair (G0048, G0064): nothing of it on the field until every commander stands in the finale, and then
+     * all of it at once - the boss facing the players, never his back to the way in.
+     */
+    @Test
+    void raisesTheKeepsLairOnlyOnceEveryCommanderIsInTheFinale() {
+        long seed = 0;
+        while (Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM)
+                        .finale()
+                        .kind()
+                != FinaleKind.KEEP) {
+            seed++;
+        }
+        Simulation simulation = Scenarios.world(
+                Scenarios.mission(TierKind.MEDIUM), SimConfig.defaults().withSeed(seed));
+        Mission mission = Mission.build(simulation.config(), TierKind.MEDIUM);
+        TileRect finale = mission.laid().biomes().getLast();
+        simulation.step();
+
+        assertThat(simulation.lair().waiting()).isTrue();
+        assertThat(simulation.lair().ground()).isEqualTo(finale);
+        assertThat(simulation.lair().size()).isEqualTo(mission.finale().lair().size());
+        assertThat(bosses(simulation)).isEmpty();
+
+        TileRect anchor = Strip.anchor(finale);
+        TileMap map = mission.laid().map();
+        for (Entity commander :
+                simulation.engine().getEntitiesFor(Family.all(Commander.class).get())) {
+            commander.getComponent(Position.class).set(map.tileCentreX(anchor.col()), map.tileCentreY(anchor.row()));
+        }
+        simulation.step();
+
+        assertThat(bosses(simulation)).hasSize(1);
+        assertThat(bosses(simulation).getFirst().getComponent(Facing.class).x).isNegative();
     }
 
     /** The tier moves how many come in a wave and nothing else of the finale: not its layout, timing or mouths. */
     @Test
     void endsOnTheSameFinaleOnEveryTierButForHowManyComeInAWave() {
+        int withWaves = 0;
         for (long seed = 0; seed < 4; seed++) {
             Mission easy = Mission.build(SimConfig.defaults().withSeed(seed), TierKind.EASY);
             Mission medium = Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM);
@@ -207,9 +273,13 @@ class MissionTest {
                                 .map(wave -> tuple(wave.afterSeconds(), wave.kind(), wave.where()))
                                 .toList());
             }
-            assertThat(sent(easy)).as("seed %d", seed).isLessThan(sent(medium));
-            assertThat(sent(medium)).as("seed %d", seed).isLessThan(sent(hard));
+            if (!medium.finale().waves().isEmpty()) {
+                assertThat(sent(easy)).as("seed %d", seed).isLessThan(sent(medium));
+                assertThat(sent(medium)).as("seed %d", seed).isLessThan(sent(hard));
+                withWaves++;
+            }
         }
+        assertThat(withWaves).as("a finale with waves among the seeds").isPositive();
     }
 
     /**
@@ -234,16 +304,17 @@ class MissionTest {
         }
         assertThat(held).hasSize(1);
         assertThat(held.getFirst().watchRadius).isEqualTo(118f);
+        Hold hold = mission.finale().def(simulation.config()).hold();
         assertThat(simulation
                         .engine()
                         .getEntitiesFor(Family.all(Turret.class).get())
                         .size())
-                .isEqualTo(4);
+                .isEqualTo(hold.turrets().size());
         assertThat(simulation
                         .engine()
                         .getEntitiesFor(Family.all(Mine.class).get())
                         .size())
-                .isEqualTo(20);
+                .isEqualTo(hold.mines().size());
         assertThat(simulation.waves().armed()).isFalse();
         assertThat(simulation.waves().total())
                 .isEqualTo(mission.finale().waves().size());
@@ -265,6 +336,17 @@ class MissionTest {
                             .laid()
                             .map()));
         }
+    }
+
+    private static List<Entity> bosses(Simulation simulation) {
+        List<Entity> bosses = new ArrayList<>();
+        for (Entity entity :
+                simulation.engine().getEntitiesFor(Family.all(Strain.class).get())) {
+            if (entity.getComponent(Strain.class).kind == UnitKind.BOSS_GRUNT) {
+                bosses.add(entity);
+            }
+        }
+        return bosses;
     }
 
     private static Terrain base(SimConfig config, BiomeKind kind) {
@@ -308,15 +390,20 @@ class MissionTest {
     private static List<String> finaleThings(Mission mission, boolean mirrored) {
         TileMap map = mission.laid().map();
         TileRect anchor = Strip.anchor(mission.laid().biomes().getLast());
-        return mission.placed().stream()
-                .filter(placed -> placed.biome() == mission.order().size())
-                .map(placed -> {
-                    int dy = map.rowAt(placed.y()) - anchor.row();
-                    return placed.getClass().getSimpleName() + " " + (map.colAt(placed.x()) - anchor.col()) + " "
-                            + (mirrored ? -dy : dy);
-                })
-                .sorted()
-                .toList();
+        List<String> things = new ArrayList<>();
+        for (Placed placed : mission.placed()) {
+            if (placed.biome() == mission.order().size()) {
+                int dy = map.rowAt(placed.y()) - anchor.row();
+                things.add(placed.getClass().getSimpleName() + " " + (map.colAt(placed.x()) - anchor.col()) + " "
+                        + (mirrored ? -dy : dy));
+            }
+        }
+        for (Arrival arrival : mission.finale().lair()) {
+            int dy = map.rowAt(arrival.y()) - anchor.row();
+            things.add("Lair " + arrival.form() + " " + arrival.strain() + " " + arrival.pickup() + " "
+                    + (map.colAt(arrival.x()) - anchor.col()) + " " + (mirrored ? -dy : dy));
+        }
+        return things.stream().sorted().toList();
     }
 
     private static Terrain[] terrain(TileMap map) {

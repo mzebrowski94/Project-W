@@ -7,10 +7,12 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -34,6 +36,8 @@ class LairTest {
     private static final float MIDDLE = 50f;
 
     private static final float BOSS_X = 90f;
+
+    private static final Offset<Float> CLOSE = Offset.offset(1e-3f);
 
     @Test
     void keepsEverythingOffTheFieldUntilSomebodyIsOnItsGround() {
@@ -110,6 +114,21 @@ class LairTest {
         assertThat(simulation.lair().needed()).isEqualTo(3);
     }
 
+    /** Everything spawns facing east; what rises faces the man who woke it, so a boss never greets them with his back. */
+    @Test
+    void raisesItsCreaturesFacingTheNearestCommanderOnItsGround() {
+        Simulation simulation = withALair();
+        simulation.spawnCommander(INSIDE, MIDDLE - 20f, 0);
+        simulation.spawnCommander(INSIDE - 15f, MIDDLE + 20f, 1);
+
+        simulation.step();
+
+        Facing facing = boss(simulation).getComponent(Facing.class);
+        float diagonal = (float) Math.sqrt(0.5);
+        assertThat(facing.x).isCloseTo(-diagonal, CLOSE);
+        assertThat(facing.y).isCloseTo(-diagonal, CLOSE);
+    }
+
     @Test
     void wakesOnce() {
         Simulation simulation = withALair();
@@ -130,6 +149,16 @@ class LairTest {
 
         assertThat(simulation.lair().waiting()).isFalse();
         assertThat(bosses(simulation)).isZero();
+    }
+
+    private static Entity boss(Simulation simulation) {
+        for (Entity entity :
+                simulation.engine().getEntitiesFor(Family.all(Strain.class).get())) {
+            if (entity.getComponent(Strain.class).kind == UnitKind.BOSS_GRUNT) {
+                return entity;
+            }
+        }
+        throw new AssertionError("no boss on the field");
     }
 
     private static int bosses(Simulation simulation) {
