@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.SlickDef;
 
@@ -53,6 +54,15 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
     /** How hard a man one wounds is thrown off it, in world units per second (G0053). */
     public float knockbackSpeed;
 
+    /** What touching one does to a man (G0053). */
+    public Harm harm = Harm.NONE;
+
+    /** How much of his speed whoever stands in one keeps; one is no slow (G0073). */
+    public float slowFactor = 1f;
+
+    /** How long that lasts after he steps out, in seconds. */
+    public float slowSeconds;
+
     /** Sets the reaction from the definition of what this leaves, for fluent spawning. */
     public SlicksOnDeath set(SlickDef def) {
         this.blobs = def.blobs();
@@ -66,6 +76,9 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
         this.fadeFraction = def.fadeFraction();
         this.look = def.look();
         this.knockbackSpeed = def.knockbackSpeed();
+        this.harm = def.harm();
+        this.slowFactor = def.slowFactor();
+        this.slowSeconds = def.slowSeconds();
         return this;
     }
 
@@ -82,5 +95,8 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
         fadeFraction = 0f;
         look = Look.NONE;
         knockbackSpeed = 0f;
+        harm = Harm.NONE;
+        slowFactor = 1f;
+        slowSeconds = 0f;
     }
 }

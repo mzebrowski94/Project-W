@@ -99,6 +99,10 @@ class BiomeDefTest {
                 furniture.rabbitsMax(),
                 furniture.bouldersMin(),
                 furniture.bouldersMax(),
+                furniture.treesMin(),
+                furniture.treesMax(),
+                furniture.treesByNestMin(),
+                furniture.treesByNestMax(),
                 List.of(new Stock.Pickup(kind, 1, 1)));
     }
 }

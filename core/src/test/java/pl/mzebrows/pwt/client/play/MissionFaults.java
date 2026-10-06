@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.PlacementRules;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Arrival;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Wave;
 import pl.mzebrows.pwt.sim.scenario.Mission;
 import pl.mzebrows.pwt.sim.scenario.Placed;
@@ -37,6 +38,7 @@ final class MissionFaults {
         faults.addAll(nests(mission, config.mission().placement()));
         faults.addAll(bands(mission, config));
         faults.addAll(crates(mission, config));
+        faults.addAll(trees(mission, config));
         faults.addAll(finale(mission));
         return faults;
     }
@@ -273,6 +275,62 @@ final class MissionFaults {
             }
         }
         return faults;
+    }
+
+    /**
+     * Every nest of a biome that stands trees by its nests has at least its fewest within {@code treeReach}, and every
+     * tree stands {@code rockMargin} off everything else in its biome, as a boulder does (G0072, G0042).
+     */
+    static List<String> trees(Mission mission, SimConfig config) {
+        PlacementRules rules = config.mission().placement();
+        List<String> faults = new ArrayList<>();
+        List<Placed> all = mission.placed();
+        for (int i = 0; i < all.size(); i++) {
+            Placed placed = all.get(i);
+            if (placed instanceof Placed.Nest nest
+                    && nest.biome() < mission.order().size()) {
+                int wanted = config.biomes()
+                        .of(mission.order().get(nest.biome()))
+                        .furniture()
+                        .treesByNestMin();
+                int beside = 0;
+                for (Placed other : mission.placed()) {
+                    beside += other instanceof Placed.Tree && between(nest, other) <= rules.treeReach() ? 1 : 0;
+                }
+                if (beside < wanted) {
+                    faults.add(nest + " has " + beside + " trees within " + rules.treeReach() + ", wants " + wanted);
+                }
+            }
+            if (placed instanceof Placed.Tree tree) {
+                for (int j = 0; j < all.size(); j++) {
+                    Placed other = all.get(j);
+                    if (j == i || other.biome() != tree.biome() || other instanceof Placed.Hold) {
+                        continue;
+                    }
+                    float gap = between(tree, other) - tree.trunk() - radius(other, config);
+                    if (gap < rules.rockMargin() - 0.001f) {
+                        faults.add(tree + " is " + gap + " off " + other);
+                    }
+                }
+            }
+        }
+        return faults;
+    }
+
+    /** What a thing standing takes up, as placement reserves it. */
+    private static float radius(Placed thing, SimConfig config) {
+        return switch (thing) {
+            case Placed.Point _, Placed.Hold _ -> config.controlPoint().radius();
+            case Placed.Nest _ -> config.nest().radius();
+            case Placed.Loose loose -> config.unit(loose.strain()).radius();
+            case Placed.Pickup pickup -> config.pickup(pickup.kind()).radius();
+            case Placed.Barrel _ -> config.pickup(PickupKind.BARREL).radius();
+            case Placed.Boulder _ -> config.obstacle().radius();
+            case Placed.Tree tree -> tree.trunk();
+            case Placed.Rabbit _ -> config.pickup(PickupKind.RABBIT).radius();
+            case Placed.Turret _ -> config.turret().radius();
+            case Placed.Mine _ -> config.mine().radius();
+        };
     }
 
     private static TileRect start(Mission mission) {

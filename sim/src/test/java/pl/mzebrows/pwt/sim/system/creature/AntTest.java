@@ -304,7 +304,7 @@ class AntTest {
     /** An ant with its head armoured and nothing else special, which bites nobody. */
     private static SimConfig armoured() {
         return config().withUnit(
-                        UnitKind.ANT, ant -> ant.withContactDamage(0).withArmour(new ArmourDef(true, HEAD_ARC)));
+                        UnitKind.ANT, ant -> ant.withContactDamage(0).withArmour(new ArmourDef(true, HEAD_ARC, 0f)));
     }
 
     /** The ant as it ships, in shape: an armoured head, and a leap that grips. */
@@ -313,7 +313,7 @@ class AntTest {
                 UnitKind.ANT,
                 ant -> ant.withLeap(leapConfig())
                         .withGrip(new GripDef(true, CARRY_SPEED, HOLD_SECONDS, ESCAPE_THROW, Harm.WOUND))
-                        .withArmour(new ArmourDef(true, HEAD_ARC)));
+                        .withArmour(new ArmourDef(true, HEAD_ARC, 0f)));
     }
 
     private static void stepUntilTaken(Simulation simulation, Entity man) {

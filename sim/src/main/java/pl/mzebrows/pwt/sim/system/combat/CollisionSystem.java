@@ -364,8 +364,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     }
 
     /**
-     * Whether a shot arrives at an armoured head and glances off it (G0045): coming at the thing from
-     * inside the arc round the way it faces, judged by the way the shot is flying rather than where on
+     * Whether a shot arrives at an armoured end and glances off it (G0045, G0073): coming at the thing from
+     * inside the arc round its facing, turned to the armoured end, judged by the way the shot is flying rather than where on
      * the body it touched. The shot is still spent; it lands nothing.
      */
     private static boolean glancesOff(Entity projectile, Entity target) {
@@ -378,8 +378,11 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (speed <= EPSILON || (facing.x == 0f && facing.y == 0f)) {
             return false;
         }
-        // Back along the shot, towards where it came from, against the way the head is pointing.
-        return -(flight.x * facing.x + flight.y * facing.y) / speed >= ARMOUR.get(target).arcCosine;
+        // Back along the shot, towards where it came from, against the way the armoured end is pointing.
+        Armour armour = ARMOUR.get(target);
+        float endX = facing.x * armour.centreCosine - facing.y * armour.centreSine;
+        float endY = facing.x * armour.centreSine + facing.y * armour.centreCosine;
+        return -(flight.x * endX + flight.y * endY) / speed >= armour.arcCosine;
     }
 
     /**
@@ -414,6 +417,12 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             return;
         }
         Damage owed = DAMAGE.get(target);
+        if (attack.onlySlows()) {
+            // Ground that only slows is no blow (G0073): no harm owed, no shield broken, nobody provoked or thrown.
+            attack.remainingTicks = attack.cooldownTicks;
+            owed.slowBy(attack);
+            return;
+        }
         boolean staggering = attack.victimInvulnerableTicks > 0;
         if (staggering && owed.staggered()) {
             // Already staggered this tick: no second blow, and no cooldown spent.

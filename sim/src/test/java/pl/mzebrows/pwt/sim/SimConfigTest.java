@@ -528,4 +528,30 @@ class SimConfigTest {
         assertThat(searer.barrage().fan().salvos()).isGreaterThan(1);
         assertThat(sear.halfSpreadRadians() * 2f).isCloseTo((float) Math.toRadians(75.0), Offset.offset(1e-4f));
     }
+
+    /**
+     * The sludger (G0073): armoured behind, a locked, stepped line of single globs - a trail of glue from its mouth to
+     * whoever it aimed at - that starts only where it lands; a glob
+     * wounds the man it hits, and the glue it leaves only slows - no damage, no harm, no shove.
+     */
+    @Test
+    void spitsALockedLineThatWoundsOnTheHitAndLeavesGlueThatOnlySlows() {
+        SimConfig config = SimConfig.defaults();
+        UnitDef sludger = config.units().of(UnitKind.SLUDGER);
+        WeaponDef glob = config.weapons().of(WeaponKind.GLOB);
+
+        assertThat(sludger.armour().centreDegrees()).isEqualTo(180f);
+        assertThat(sludger.barrage().stream().locked()).isTrue();
+        assertThat(sludger.barrage().stream().stepped()).isTrue();
+        // Overlapping circles of glue down the whole reach: a trail, not a dotted line.
+        assertThat(sludger.barrage().reach() / sludger.barrage().stream().salvos())
+                .isLessThan(glob.slicks().radius() * 2f);
+        assertThat(sludger.barrage().stream().shots()).isEqualTo(1);
+        assertThat(sludger.barrage().reach()).isLessThan(sludger.radius() + glob.projectileRange());
+        assertThat(glob.harm()).isEqualTo(Harm.WOUND);
+        assertThat(glob.slicks().damage()).isZero();
+        assertThat(glob.slicks().harm()).isEqualTo(Harm.NONE);
+        assertThat(glob.slicks().knockbackSpeed()).isZero();
+        assertThat(glob.slicks().slowFactor()).isLessThan(1f);
+    }
 }

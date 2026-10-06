@@ -4,8 +4,8 @@ import java.util.List;
 import pl.mzebrows.pwt.map.Randomness;
 
 /**
- * What a biome holds besides its creatures (missions ticket 03): control points, barrels, rabbits, boulders and the
- * pickups lying about. Fixed ranges, never scaled by tier or ramp; where each goes is placement's (G0068).
+ * What a biome holds besides its creatures (missions ticket 03): control points, barrels, rabbits, boulders, trees and
+ * the pickups lying about. Fixed ranges, never scaled by tier or ramp; where each goes is placement's (G0068).
  *
  * @param pointsMin the fewest control points, at least one: the goal line leads east through them
  * @param pointsMax the most
@@ -15,6 +15,10 @@ import pl.mzebrows.pwt.map.Randomness;
  * @param rabbitsMax the most
  * @param bouldersMin the fewest boulders, round rock to fight round
  * @param bouldersMax the most
+ * @param treesMin the fewest trees, a trunk to fight round under foliage that hides what is beneath it (G0072)
+ * @param treesMax the most
+ * @param treesByNestMin the fewest of them stood within {@code treeReach} of each nest, before the rest go anywhere
+ * @param treesByNestMax the most
  * @param pickups what lies about, a line per kind; a house is stocked with its crates and medkits first
  */
 public record Furniture(
@@ -26,6 +30,10 @@ public record Furniture(
         int rabbitsMax,
         int bouldersMin,
         int bouldersMax,
+        int treesMin,
+        int treesMax,
+        int treesByNestMin,
+        int treesByNestMax,
         List<Stock> pickups) {
 
     public Furniture {
@@ -36,6 +44,8 @@ public record Furniture(
         range("barrels", barrelsMin, barrelsMax);
         range("rabbits", rabbitsMin, rabbitsMax);
         range("boulders", bouldersMin, bouldersMax);
+        range("trees", treesMin, treesMax);
+        range("trees by a nest", treesByNestMin, treesByNestMax);
         pickups = List.copyOf(pickups);
     }
 
@@ -57,6 +67,16 @@ public record Furniture(
     /** How many boulders, drawn. */
     public int boulders(Randomness rng) {
         return between(rng, bouldersMin, bouldersMax);
+    }
+
+    /** How many trees, drawn. */
+    public int trees(Randomness rng) {
+        return between(rng, treesMin, treesMax);
+    }
+
+    /** How many trees stand by one nest, drawn. */
+    public int treesByNest(Randomness rng) {
+        return between(rng, treesByNestMin, treesByNestMax);
     }
 
     private static int between(Randomness rng, int min, int max) {

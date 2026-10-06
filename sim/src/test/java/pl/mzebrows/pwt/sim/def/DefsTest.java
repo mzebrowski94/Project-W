@@ -57,7 +57,8 @@ class DefsTest {
                         strain(RADIUS, Look.ANT),
                         strain(RADIUS * 3f, Look.BOSS_GRUNT),
                         strain(RADIUS * 2f, Look.SEARER),
-                        strain(RADIUS * 2f, Look.THUMPER));
+                        strain(RADIUS * 2f, Look.THUMPER),
+                        strain(RADIUS, Look.SLUDGER));
     }
 
     @Test
@@ -76,6 +77,7 @@ class DefsTest {
                 .put(UnitKind.BOSS_GRUNT, strain(RADIUS * 3f, Look.BOSS_GRUNT))
                 .put(UnitKind.SEARER, strain(RADIUS * 2f, Look.SEARER))
                 .put(UnitKind.THUMPER, strain(RADIUS * 2f, Look.THUMPER))
+                .put(UnitKind.SLUDGER, strain(RADIUS, Look.SLUDGER))
                 .build();
     }
 

@@ -72,8 +72,12 @@ meanwhile. The HTML prototype is for looks only.
 - `roster=loose|nest <strain> min max; ...` - loose is put down unaware in packs, a nest is a hole of that strain.
   The ranges are the biome at the first position on medium; tier and ramp scale every count through `Roster.count`
   (pressure = tier `enemyPercent` x (1 + `rampPercent` x position), G0063), and nothing else does.
-- `furniture.pointsMin/Max` (2-3), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, and
-  `furniture.pickups=pickup <kind> min max; ...`. Never scaled.
+- `furniture.pointsMin/Max` (2-3), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, `treesMin/Max` and
+  `treesByNestMin/Max` (0 for none - the fen alone has trees, G0072), and `furniture.pickups=pickup <kind> min max; ...`.
+  Never scaled. **Every block carries every furniture key**, zeros included: a new furniture line is a key in all of
+  them. A furniture thing with a size of its own (a tree's trunk) is drawn from its own stream in its pass, never on
+  the block; a count tied to another pass (trees by each nest) is drawn from the biome's stream, nest by nest, so a
+  biome placed again keeps its counts (G0070).
 - A nest wakes only for somebody **in its own biome** within `wakeRadius` (G0062); a biome never counts on its
   neighbour having stirred its nests.
 - **Counts fit the room** (G0070). Placement keeps every hostile `startKeepOff` off the start, nests off points,
@@ -90,7 +94,8 @@ meanwhile. The HTML prototype is for looks only.
   houses) holds less: the quarry holds one hole.
 - **Where it goes** (G0068): points one a column band; house stock (crates, then medkits) up to `houseStock` a house;
   nests; packs; leftover crates by points; medkits anywhere; **food** - anything a creature gains from - on the
-  biome's organic ground while there is room; barrels by holes and packs; boulders `rockMargin` off rock; rabbits.
+  biome's organic ground while there is room; barrels by holes and packs; boulders `rockMargin` off rock; trees as boulders, the first within `treeReach` of each
+  nest; rabbits.
   A block says none of this; it is why a crate or a medkit line fills the houses first.
 - **Porting**: the Adventure biome's own counts, scaled by width (x1.8 - an Adventure biome is 29 columns, a
   mission's 50-58), then **cut to the room** - holes most of all. A range about +-20 % round the count. Drop

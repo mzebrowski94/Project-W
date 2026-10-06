@@ -73,5 +73,11 @@ public enum UnitKind {
      * that wounds and stuns every man of the squad in it. What to read is the roar; what to do is not be
      * standing next to it when it ends.
      */
-    THUMPER
+    THUMPER,
+    /**
+     * The ant turned round (G0073): its armour is on its back, so its face - the end it spits from - is the soft
+     * end. It stands, tints, and spits a line of globs that wound a man they hit and leave glue that holds him.
+     * What to read is the tint and the line; what to do is step off the line and shoot it in the face.
+     */
+    SLUDGER
 }

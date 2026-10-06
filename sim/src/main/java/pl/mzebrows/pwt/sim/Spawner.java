@@ -503,7 +503,11 @@ public final class Spawner {
                         ticks(config.wound().shoveSeconds()),
                         def.grip().escapeHarm());
         entity.getComponent(Armour.class)
-                .set(def.armour().enabled(), def.armour().arcCosine());
+                .set(
+                        def.armour().enabled(),
+                        def.armour().arcCosine(),
+                        def.armour().centreCosine(),
+                        def.armour().centreSine());
         entity.getComponent(Barrage.class)
                 .set(
                         def.barrage(),
@@ -859,16 +863,24 @@ public final class Spawner {
         return entity;
     }
 
-    /** Spawns a static circle that blocks units and projectiles. On nobody's side, and harmless. */
+    /** Spawns a boulder: a static circle that blocks units and projectiles. On nobody's side, and harmless. */
     public Entity spawnObstacle(float x, float y) {
+        return spawnObstacle(x, y, config.obstacle().radius(), Look.OBSTACLE);
+    }
+
+    /**
+     * Spawns a static circle of this radius that blocks units and projectiles, drawn as {@code look} - a boulder, or a
+     * tree's trunk (G0072). On nobody's side, and harmless.
+     */
+    public Entity spawnObstacle(float x, float y, float radius, Look look) {
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Obstacle.class));
         entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
-        entity.add(engine.createComponent(Body.class).set(config.obstacle().radius()));
+        entity.add(engine.createComponent(Body.class).set(radius));
         entity.add(engine.createComponent(Collider.class).set(true, false));
-        entity.add(engine.createComponent(Appearance.class).set(Look.OBSTACLE));
+        entity.add(engine.createComponent(Appearance.class).set(look));
         admit(entity);
         return entity;
     }
@@ -882,6 +894,23 @@ public final class Spawner {
      */
     public Entity spawnProjectile(
             float x, float y, float directionX, float directionY, Weapon weapon, int damage, Side side, int credit) {
+        return spawnProjectile(x, y, directionX, directionY, weapon, damage, side, credit, weapon.projectileRange);
+    }
+
+    /**
+     * The same, flying {@code range} rather than the gun's own reach - a stepped pattern's shot, stopping short
+     * along the way to its aim (G0073). Zero flies until it hits something.
+     */
+    public Entity spawnProjectile(
+            float x,
+            float y,
+            float directionX,
+            float directionY,
+            Weapon weapon,
+            int damage,
+            Side side,
+            int credit,
+            float range) {
         return projectile(
                 x,
                 y,
@@ -889,7 +918,7 @@ public final class Spawner {
                 directionY,
                 weapon.projectileSpeed,
                 weapon.projectileRadius,
-                weapon.projectileRange,
+                range,
                 damage,
                 weapon.projectileLook,
                 weapon.blastRadius,
@@ -982,8 +1011,9 @@ public final class Spawner {
      * Spawns one circle of ruined ground: an ordinary body carrying an ordinary blow.
      *
      * <p>Non-solid and immovable, like a pickup. <strong>On the side of whatever fired the
-     * shot</strong>, so the collision rule keeps it off its own side. Its blow wounds a man and throws
-     * him off it; his grace is what keeps the next circle of the same spatter off him (G0053).
+     * shot</strong>, so the collision rule keeps it off its own side. Its blow does what its source declares -
+     * venom's and fire's wound a man and throw him off it, his grace keeping the next circle of the same spatter
+     * off him (G0053); glue's only slows him, and is no blow at all (G0073).
      */
     public Entity spawnSlick(
             float x,
@@ -996,6 +1026,9 @@ public final class Spawner {
             float victimInvulnerableSeconds,
             Look look,
             float knockbackSpeed,
+            Harm harm,
+            float slowFactor,
+            float slowSeconds,
             Side side) {
         Entity entity = engine.createEntity();
         Slick slick = engine.createComponent(Slick.class).set(ticks(seconds), radius, growFraction, fadeFraction);
@@ -1012,8 +1045,9 @@ public final class Spawner {
                 .stopsShots(false));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(damage, 0, ticks(victimInvulnerableSeconds))
-                // Ruined ground wounds a man and throws him off itself (G0053).
-                .harming(Harm.WOUND)
+                // Venom and fire wound a man and throw him off themselves (G0053); glue only slows him (G0073).
+                .harming(harm)
+                .slowing(slowFactor, ticks(slowSeconds))
                 .shoving(knockbackSpeed, ticks(config.wound().shoveSeconds()), config.tickSeconds()));
         entity.add(engine.createComponent(Appearance.class).set(look));
         admit(entity);

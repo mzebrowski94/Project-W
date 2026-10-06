@@ -108,6 +108,14 @@ public final class Damage implements Component, Pool.Poolable {
         slowTicks = ticks;
     }
 
+    /**
+     * Records the slow of a touch that is no blow (G0073) - glue underfoot - and nothing else: nothing has
+     * {@link #landed}, so nothing is owed, broken or provoked.
+     */
+    public void slowBy(ContactDamage touch) {
+        slow(touch.slowFactor, touch.slowTicks);
+    }
+
     /** True if something asked to rob this entity of speed this tick. */
     public boolean slowed() {
         return slowFactor < 1f && slowTicks > 0;

@@ -27,13 +27,16 @@ import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Shake;
+import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.BarrageDef;
 import pl.mzebrows.pwt.sim.def.Harm;
+import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PatternDef;
 import pl.mzebrows.pwt.sim.def.ShakeDef;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
@@ -71,6 +74,12 @@ class BarrageTest {
     private static final float ENRAGED_FACTOR = 0.5f;
 
     private static final Offset<Float> CLOSE = Offset.offset(1e-3f);
+
+    /**
+     * How far past its stop a shot may get before it is gone: two ticks of the fixture's flight - the one it notices
+     * it has flown far enough on, and the one it is retired on.
+     */
+    private static final float STEP_SLACK = 2f;
 
     /** A giant's reach: nearer than {@link #NEAR}, so a man standing there is hunted but not yet shot at. */
     private static final float REACH = 10f;
@@ -184,6 +193,67 @@ class BarrageTest {
         float[] right = direction(shots.getLast());
         float cosine = left[0] * right[0] + left[1] * right[1];
         assertThat(cosine).isCloseTo((float) StrictMath.cos(StrictMath.toRadians(FAN_DEGREES)), CLOSE);
+    }
+
+    /**
+     * A locked pattern keeps the bearing it had when its wind-up ended (G0073): the line is told by the tint, and a
+     * sidestep clears it.
+     */
+    @Test
+    void keepsALockedLineOnTheBearingItWoundUpOn() {
+        Simulation simulation = new Simulation(barraging(stream(true)));
+        Entity commander = simulation.spawnCommander(MIDDLE + NEAR, MIDDLE);
+        simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+        steps(simulation, UNTIL_THE_FIRST_SALVO);
+
+        sidestep(commander);
+        steps(simulation, ticksIn(INTERVAL) * 2);
+
+        float[] last = direction(newest(simulation));
+        assertThat(last[0]).isCloseTo(1f, CLOSE);
+        assertThat(last[1]).isCloseTo(0f, CLOSE);
+    }
+
+    /** An aimed pattern that is not locked follows him salvo by salvo, as the boss's stream does. */
+    @Test
+    void followsWhoeverItHuntsSalvoBySalvoWhenItIsNotLocked() {
+        Simulation simulation = new Simulation(barraging(stream(false)));
+        Entity commander = simulation.spawnCommander(MIDDLE + NEAR, MIDDLE);
+        simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+        steps(simulation, UNTIL_THE_FIRST_SALVO);
+
+        sidestep(commander);
+        steps(simulation, ticksIn(INTERVAL) * 2);
+
+        assertThat(direction(newest(simulation))[1]).isGreaterThan(0.5f);
+    }
+
+    /**
+     * A stepped pattern stops each salvo a step further along the way to its aim, the last at it (G0073): what its
+     * shots leave on the ground is a trail from its mouth to whoever it aimed at.
+     */
+    @Test
+    void laysAStepFurtherEachSalvoTheLastReachingItsAim() {
+        PatternDef trail = new PatternDef(true, WeaponKind.VENOM, 1, 0f, true, 0f, 3, INTERVAL, 0f, true, true);
+        SimConfig config = barraging(trail);
+        SlickDef puddle = new SlickDef(1, 0.5f, 0f, 30f, 30f, 0, 0f, 0f, 0f, Look.SLICK, 0f, Harm.NONE, 1f, 0f);
+        Simulation simulation = new Simulation(
+                config.withWeapons(config.weapons().map(WeaponKind.VENOM, gun -> gun.withSlicks(puddle))));
+        simulation.spawnCommander(MIDDLE + NEAR, MIDDLE);
+        simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+
+        steps(simulation, UNTIL_THE_FIRST_SALVO + ticksIn(INTERVAL) * 2 + ticksIn(REST) - 1);
+
+        List<Float> stops = new ArrayList<>();
+        for (Entity slick :
+                simulation.engine().getEntitiesFor(Family.all(Slick.class).get())) {
+            stops.add(slick.getComponent(Position.class).x - MIDDLE);
+        }
+        stops.sort(null);
+        assertThat(stops).hasSize(3);
+        assertThat(stops.get(0)).isCloseTo(NEAR / 3f, Offset.offset(STEP_SLACK));
+        assertThat(stops.get(1)).isCloseTo(NEAR * 2f / 3f, Offset.offset(STEP_SLACK));
+        assertThat(stops.get(2)).isGreaterThan(NEAR * 2f / 3f + STEP_SLACK);
     }
 
     // ---- the cycle ----
@@ -445,7 +515,8 @@ class BarrageTest {
      */
     @Test
     void firesOutOfTheMuzzleItsGunNamesLikeEveryOtherShooter() {
-        PatternDef aimedTwin = new PatternDef(true, WeaponKind.TURRET_GUN, 1, 0f, true, 0f, 1, INTERVAL, 0f);
+        PatternDef aimedTwin =
+                new PatternDef(true, WeaponKind.TURRET_GUN, 1, 0f, true, 0f, 1, INTERVAL, 0f, false, false);
         Simulation simulation = new Simulation(barraging(aimedTwin));
         simulation.spawnCommander(MIDDLE + NEAR, MIDDLE);
         simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
@@ -495,11 +566,23 @@ class BarrageTest {
     }
 
     private static PatternDef ring(int shots, int salvos) {
-        return new PatternDef(true, WeaponKind.SPEW, shots, 360f, false, TURN_DEGREES, salvos, INTERVAL, 0f);
+        return new PatternDef(
+                true, WeaponKind.SPEW, shots, 360f, false, TURN_DEGREES, salvos, INTERVAL, 0f, false, false);
+    }
+
+    /** Three single shots down one line, aimed, locked or not. */
+    private static PatternDef stream(boolean locked) {
+        return new PatternDef(true, WeaponKind.SPEW, 1, 0f, true, 0f, 3, INTERVAL, 0f, locked, false);
+    }
+
+    /** Moves him off the line it is firing down, to its north, between two salvos. */
+    private static void sidestep(Entity commander) {
+        commander.getComponent(Position.class).x = MIDDLE;
+        commander.getComponent(Position.class).y = MIDDLE + NEAR;
     }
 
     private static PatternDef fan(int shots) {
-        return new PatternDef(true, WeaponKind.SPEW, shots, FAN_DEGREES, true, 0f, 1, INTERVAL, 0f);
+        return new PatternDef(true, WeaponKind.SPEW, shots, FAN_DEGREES, true, 0f, 1, INTERVAL, 0f, false, false);
     }
 
     private static List<Entity> alienShots(Simulation simulation) {

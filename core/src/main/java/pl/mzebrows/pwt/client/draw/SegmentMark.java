@@ -13,7 +13,8 @@ package pl.mzebrows.pwt.client.draw;
  * @param bodyScale how big the rear segment is, as a fraction of the body's radius
  * @param headOffset how far in front of the centre the head sits, as a fraction of the body's radius
  * @param headScale how big the head is, as a fraction of the body's radius
- * @param headShade how far the head is shifted toward black, in {@code [0, 1]}: the hard end reads darker
+ * @param headShade how far the armoured segment - the ant's head, the sludger's back (G0073) - is shifted toward
+ *     black, in {@code [0, 1]}: the hard end reads darker
  */
 public record SegmentMark(float bodyOffset, float bodyScale, float headOffset, float headScale, float headShade) {
 

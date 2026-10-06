@@ -60,3 +60,7 @@ changed. Git carries the diff.
 - 2026-10-06, the cut and the fen after play - missing: a way to break a slab's square outline - `outcrops.ragged`,
   added to *Ground*'s table; a notch looked like the obvious way and left a one-tile slot under the clearance
   (`CoatsTest` caught it), so ragged knocks corners off and bumps faces, never notches. Nothing wrong, nothing slow.
+- 2026-10-06, trees in the fen - missing: how a furniture line that is not a count fits - every block takes every
+  furniture key, a size is drawn in its pass from its own stream, a count tied to another pass (trees by each nest)
+  from the biome's stream so a retry keeps it (G0070). Added to *Roster and furniture*. Nothing wrong; nothing slow -
+  the 2000-seed mission sweep ran in 21 s.

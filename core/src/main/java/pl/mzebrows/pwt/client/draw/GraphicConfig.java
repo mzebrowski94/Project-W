@@ -56,6 +56,8 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param heat how to draw how hot the gun a unit is holding has become
  * @param door how to draw a door being opened (G0069)
  * @param post how to draw a post, round the point it was taken from
+ * @param tree how to draw a tree's foliage over its trunk (G0072)
+ * @param boulder how to shade a boulder
  * @param camera how the view follows what it is watching, and how far out it may sit
  */
 public record GraphicConfig(
@@ -92,6 +94,8 @@ public record GraphicConfig(
         PostMark post,
         BurstMark burst,
         DazeMark daze,
+        TreeMark tree,
+        BoulderMark boulder,
         CameraDirector.Settings camera) {
 
     /** How a colour is written: red, green and blue in hex, and alpha after them if it is not opaque. */

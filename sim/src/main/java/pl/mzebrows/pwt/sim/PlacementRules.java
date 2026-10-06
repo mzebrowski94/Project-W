@@ -20,8 +20,9 @@ import pl.mzebrows.pwt.sim.def.Require;
  * @param pointReach how far from a control point a crate left over from the houses stands
  * @param pickupKeepOff how far every pickup keeps off every nest
  * @param barrelReach how far from a nest or a pack's anchor a barrel stands
- * @param rockMargin how far anything that never moves - a nest, a boulder - stands off rock, and a boulder off
- *     everything else: wider than the widest thing that must get past it, so it leaves no slot to be stuck in (G0042)
+ * @param treeReach how far from a nest's middle the trees a biome stands by it go (G0072)
+ * @param rockMargin how far anything that never moves - a nest, a boulder, a tree - stands off rock, and a boulder or
+ *     a tree off everything else: wider than the widest thing that must get past it, so it leaves no slot to be stuck in (G0042)
  */
 public record PlacementRules(
         float startKeepOff,
@@ -36,6 +37,7 @@ public record PlacementRules(
         float pointReach,
         float pickupKeepOff,
         float barrelReach,
+        float treeReach,
         float rockMargin) {
 
     public PlacementRules {
@@ -51,6 +53,7 @@ public record PlacementRules(
         Require.positive("placement pointReach", pointReach);
         Require.notNegative("placement pickupKeepOff", pickupKeepOff);
         Require.positive("placement barrelReach", barrelReach);
+        Require.positive("placement treeReach", treeReach);
         Require.notNegative("placement rockMargin", rockMargin);
     }
 }

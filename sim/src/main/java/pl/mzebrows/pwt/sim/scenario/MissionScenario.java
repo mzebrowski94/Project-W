@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Arrival;
+import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -114,6 +115,7 @@ final class MissionScenario implements Scenario {
                 case Placed.Pickup pickup -> simulation.spawnPickup(pickup.kind(), pickup.x(), pickup.y());
                 case Placed.Barrel barrel -> simulation.spawnBarrel(barrel.x(), barrel.y());
                 case Placed.Boulder boulder -> simulation.spawnObstacle(boulder.x(), boulder.y());
+                case Placed.Tree tree -> simulation.spawnObstacle(tree.x(), tree.y(), tree.trunk(), Look.TREE);
                 case Placed.Rabbit rabbit -> simulation.spawnRabbit(rabbit.x(), rabbit.y());
                 case Placed.Turret turret -> simulation.spawnTurret(turret.x(), turret.y());
                 case Placed.Mine mine -> simulation.spawnMine(mine.x(), mine.y());

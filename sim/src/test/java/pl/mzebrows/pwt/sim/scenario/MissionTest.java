@@ -18,17 +18,21 @@ import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.Hold;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Mine;
+import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.Arrival;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.FinaleKind;
+import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -187,6 +191,94 @@ class MissionTest {
                         furniture.pointsMax());
             }
         }
+    }
+
+    /** A biome's trees number between its fewest and most, each trunk as big as a trunk may be (G0072). */
+    @Test
+    void putsBetweenItsFewestAndMostTreesInEveryBiomeEachTrunkInItsRange() {
+        SimConfig shipped = SimConfig.defaults();
+        int seen = 0;
+        for (long seed = 0; seed < 8; seed++) {
+            Mission mission = Mission.build(shipped.withSeed(seed), TierKind.MEDIUM);
+            for (int p = 0; p < mission.order().size(); p++) {
+                List<Placed.Tree> trees = trees(mission, p);
+                var furniture = shipped.biomes().of(mission.order().get(p)).furniture();
+
+                assertThat(trees.size())
+                        .as("seed %d, biome %d", seed, p)
+                        .isBetween(furniture.treesMin(), furniture.treesMax());
+                for (Placed.Tree tree : trees) {
+                    assertThat(tree.trunk())
+                            .as("seed %d, %s", seed, tree)
+                            .isBetween(
+                                    shipped.obstacle().trunkMin(),
+                                    shipped.obstacle().trunkMax());
+                }
+                seen += trees.size();
+            }
+        }
+        assertThat(seen).as("trees across the seeds").isPositive();
+    }
+
+    /** The first trees of a biome that asks for them stand within a few tiles of each of its nests (G0072). */
+    @Test
+    void standsTreesBesideEveryNestOfABiomeThatAsksForThem() {
+        SimConfig shipped = SimConfig.defaults();
+        float reach = shipped.mission().placement().treeReach();
+        int nests = 0;
+        for (long seed = 0; seed < 16; seed++) {
+            Mission mission = Mission.build(shipped.withSeed(seed), TierKind.HARD);
+            for (Placed placed : mission.placed()) {
+                if (!(placed instanceof Placed.Nest nest)
+                        || nest.biome() >= mission.order().size()) {
+                    continue;
+                }
+                int wanted = shipped.biomes()
+                        .of(mission.order().get(nest.biome()))
+                        .furniture()
+                        .treesByNestMin();
+                if (wanted == 0) {
+                    continue;
+                }
+                long beside = trees(mission, nest.biome()).stream()
+                        .filter(tree -> Math.hypot(tree.x() - nest.x(), tree.y() - nest.y()) <= reach)
+                        .count();
+
+                assertThat(beside).as("seed %d, %s", seed, nest).isGreaterThanOrEqualTo(wanted);
+                nests++;
+            }
+        }
+        assertThat(nests).as("nests asking for trees across the seeds").isPositive();
+    }
+
+    /** A tree stands as a boulder does - an obstacle - its body the trunk it was placed with, and drawn as a tree. */
+    @Test
+    void spawnsEveryTreeAsAnObstacleTheSizeOfItsTrunk() {
+        int seen = 0;
+        for (long seed = 0; seed < 8; seed++) {
+            Simulation simulation = Scenarios.world(
+                    Scenarios.mission(TierKind.MEDIUM), SimConfig.defaults().withSeed(seed));
+            Mission mission = Mission.build(simulation.config(), TierKind.MEDIUM);
+            List<Float> placed = new ArrayList<>();
+            for (int p = 0; p < mission.order().size(); p++) {
+                for (Placed.Tree tree : trees(mission, p)) {
+                    placed.add(tree.trunk());
+                }
+            }
+            List<Float> spawned = new ArrayList<>();
+            for (Entity entity : simulation
+                    .engine()
+                    .getEntitiesFor(Family.all(Obstacle.class, Body.class, Appearance.class)
+                            .get())) {
+                if (entity.getComponent(Appearance.class).look == Look.TREE) {
+                    spawned.add(entity.getComponent(Body.class).radius);
+                }
+            }
+
+            assertThat(spawned).as("seed %d", seed).containsExactlyInAnyOrderElementsOf(placed);
+            seen += spawned.size();
+        }
+        assertThat(seen).as("trees across the seeds").isPositive();
     }
 
     /**
@@ -357,6 +449,16 @@ class MissionTest {
         return mission.placed().stream()
                 .filter(placed -> placed instanceof Placed.Point)
                 .toList();
+    }
+
+    private static List<Placed.Tree> trees(Mission mission, int biome) {
+        List<Placed.Tree> trees = new ArrayList<>();
+        for (Placed placed : mission.placed()) {
+            if (placed instanceof Placed.Tree tree && tree.biome() == biome) {
+                trees.add(tree);
+            }
+        }
+        return trees;
     }
 
     private static int hostile(Mission mission) {

@@ -207,6 +207,22 @@ public final class ContactDamage implements Component, Pool.Poolable {
         return this;
     }
 
+    /**
+     * True if touching this only slows - no amount, no harm, no throw, stun, shock or pumping - which is no blow at
+     * all (G0073): glue. It breaks no shield, turns nobody round and provokes nothing; it is ground.
+     */
+    public boolean onlySlows() {
+        return amount <= 0
+                && harm == Harm.NONE
+                && stunTicks <= 0
+                && shock <= 0f
+                && bloat <= 0f
+                && !shoves()
+                && !locks()
+                && slowFactor < 1f
+                && slowTicks > 0;
+    }
+
     /** True if a landed blow throws a man off without locking anybody. */
     public boolean shoves() {
         return shoveTicks > 0 && knockbackSpeed > 0f && !locks();

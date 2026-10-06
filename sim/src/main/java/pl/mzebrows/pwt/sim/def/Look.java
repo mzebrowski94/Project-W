@@ -36,6 +36,11 @@ public enum Look {
     SEARER,
     /** A giant that thumps: the same body, paler, as the circle it slams (G0071). */
     THUMPER,
+    /**
+     * The strain in two segments the other way round (G0073): the ant's colours, and the darker segment behind - its
+     * armoured back.
+     */
+    SLUDGER,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */
@@ -89,6 +94,8 @@ public enum Look {
     VENOM,
     /** What the boss throws, twenty at a time. Must read against every other shot, the player's and a spit alike. */
     SPEW,
+    /** What a sludger spits: kin to the glue it leaves, brighter, because it is still flying. */
+    GLOB,
     /**
      * One circle of ground a frog has ruined.
      *
@@ -101,6 +108,11 @@ public enum Look {
      * <p>Kin to the blast it came out of, and darker. Reads as <em>not walkable yet</em>.
      */
     FIRE,
+    /**
+     * One circle of glue a sludger has spat (G0073): dark greyish amber, so it reads as ground that holds you rather
+     * than ground that hurts you.
+     */
+    GLUE,
     STRIKE,
     /** Something thrown that bounces and goes off where it stops. */
     GRENADE,
@@ -118,7 +130,12 @@ public enum Look {
      * <p>The colour of the bolts that build it.
      */
     SHOCK,
+    /** A boulder: round rock. */
     OBSTACLE,
+    /**
+     * A tree: a brown trunk that stands as a boulder does, under foliage drawn over everything beneath it (G0072).
+     */
+    TREE,
     /** Alien food growing on the field. */
     MUSHROOM,
     /** Alien food that transforms whatever eats it. */

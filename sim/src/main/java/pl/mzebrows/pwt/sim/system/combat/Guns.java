@@ -107,9 +107,24 @@ public final class Guns {
      * the whole pull.
      */
     public void volley(Entity firer, float aimX, float aimY, int credit) {
+        volley(firer, aimX, aimY, credit, 0f);
+    }
+
+    /**
+     * The same, every shot stopping {@code stopAt} from the firer's middle - never further than the gun reaches - or
+     * at the gun's own reach for zero. How a stepped pattern lays its shots along the way to its aim (G0073); the
+     * muzzle's distance is this class's to know.
+     */
+    public void volley(Entity firer, float aimX, float aimY, int credit, float stopAt) {
         Weapon weapon = WEAPON.get(firer);
         Position at = POSITION.get(firer);
         float bodyRadius = BODY.get(firer).radius;
+        float range = weapon.projectileRange;
+        if (stopAt > 0f) {
+            // Never down to zero, which would be "until it hits something": a shot stopping at the muzzle stops there.
+            float flight = Math.max(stopAt - bodyRadius - muzzleGap, Float.MIN_VALUE);
+            range = range > 0f ? Math.min(range, flight) : flight;
+        }
         int pellets = weapon.pellets < 1 ? 1 : weapon.pellets;
         int damage = modifiers.gunDamage(firer, weapon.kind, weapon.damage);
         for (int pellet = 0; pellet < pellets; pellet++) {
@@ -124,7 +139,15 @@ public final class Guns {
             }
             Muzzle.next(at.x, at.y, bodyRadius, weapon, muzzleGap, directionX, directionY, muzzle);
             spawner.spawnProjectile(
-                    muzzle[0], muzzle[1], directionX, directionY, weapon, damage, FACTION.get(firer).side, credit);
+                    muzzle[0],
+                    muzzle[1],
+                    directionX,
+                    directionY,
+                    weapon,
+                    damage,
+                    FACTION.get(firer).side,
+                    credit,
+                    range);
         }
     }
 

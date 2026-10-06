@@ -933,6 +933,8 @@ public final class AlphaWorlds {
                         // Brute-like, with no barrage: the fixtures about one switch it on (G0071).
                         .put(UnitKind.SEARER, strain(GIANT_RADIUS, BRUTE_SPEED, GIANT_HEALTH, Look.SEARER))
                         .put(UnitKind.THUMPER, strain(GIANT_RADIUS, BRUTE_SPEED, GIANT_HEALTH, Look.THUMPER))
+                        // A plain strain, with no armour and no barrage: the fixtures about one switch it on (G0073).
+                        .put(UnitKind.SLUDGER, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.SLUDGER))
                         .build(),
                 onShipped(
                                 PickupKind.class,
@@ -1417,7 +1419,10 @@ public final class AlphaWorlds {
                                                 0f,
                                                 0f,
                                                 Look.SLICK,
-                                                SLICK_SHOVE_SPEED),
+                                                SLICK_SHOVE_SPEED,
+                                                Harm.WOUND,
+                                                1f,
+                                                0f),
                                         HeatDef.none(),
                                         0f,
                                         0f,
@@ -1550,7 +1555,7 @@ public final class AlphaWorlds {
                         TURRET_CREW_RADIUS,
                         TURRET_QUIET_SECONDS,
                         WeaponKind.TURRET_GUN),
-                new SimConfig.ObstacleConfig(OBSTACLE_RADIUS, 0),
+                new SimConfig.ObstacleConfig(OBSTACLE_RADIUS, 0, OBSTACLE_RADIUS, OBSTACLE_RADIUS),
                 new SimConfig.CollisionConfig(3),
                 new DraftDef(DRAFT_OPTIONS, 1, 1, 1, List.of(0, TIER_TWO_FROM)),
                 stats(),

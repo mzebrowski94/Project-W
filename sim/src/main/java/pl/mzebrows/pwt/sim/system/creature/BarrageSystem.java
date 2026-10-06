@@ -109,7 +109,7 @@ public final class BarrageSystem extends EntitySystem {
                 continue;
             }
             Position at = POSITION.get(entity);
-            if (hunting) {
+            if (hunting && !locked(barrage)) {
                 float huntedX = perception.aggro ? perception.targetX : perception.provokedX;
                 float huntedY = perception.aggro ? perception.targetY : perception.provokedY;
                 barrage.aimX = huntedX - at.x;
@@ -145,6 +145,11 @@ public final class BarrageSystem extends EntitySystem {
      */
     private static boolean committed(Barrage barrage) {
         return barrage.aiming() && (barrage.phase == Barrage.Phase.WINDING_UP || barrage.phase == Barrage.Phase.FIRING);
+    }
+
+    /** Whether it is firing a pattern that keeps the bearing its wind-up ended on (G0073). */
+    private static boolean locked(Barrage barrage) {
+        return barrage.phase == Barrage.Phase.FIRING && barrage.current().locked();
     }
 
     /**
@@ -277,13 +282,22 @@ public final class BarrageSystem extends EntitySystem {
         if (WEAPON.get(entity).kind != pattern.gun()) {
             spawner.applyWeapon(entity, pattern.gun());
         }
+        // A stepped pattern lays its salvos along the way to its aim, the last reaching it (G0073).
+        float stopAt = 0f;
+        if (pattern.stepped()) {
+            float toX = targetX - at.x;
+            float toY = targetY - at.y;
+            // Never zero, which would be the gun's whole reach: an aim on top of it stops at its mouth.
+            stopAt = Math.max(
+                    (float) Math.sqrt(toX * toX + toY * toY) * (fired + 1) / pattern.salvos(), Float.MIN_VALUE);
+        }
         for (int shot = 0; shot < shots; shot++) {
             double angle = turn + first + step * shot;
             float cos = (float) StrictMath.cos(angle);
             float sin = (float) StrictMath.sin(angle);
             float directionX = bearingX * cos - bearingY * sin;
             float directionY = bearingX * sin + bearingY * cos;
-            guns.volley(entity, directionX, directionY, Tally.NOBODY);
+            guns.volley(entity, directionX, directionY, Tally.NOBODY, stopAt);
         }
     }
 

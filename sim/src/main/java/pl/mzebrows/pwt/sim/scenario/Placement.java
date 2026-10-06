@@ -24,7 +24,7 @@ import pl.mzebrows.pwt.sim.def.Side;
 /**
  * Puts down what each biome of a mission counts, by rules and never by places (G0068): ordered {@link Scatter}
  * passes, the most constrained first - points, what a house holds, nests, packs, crates by points, medkits and food,
- * barrels, boulders, rabbits. Each pass keeps off what went down before it by its radii, crow-flies, and off every
+ * barrels, boulders, trees, rabbits. Each pass keeps off what went down before it by its radii, crow-flies, and off every
  * tile the strip kept: the start, aprons, doorsteps, and every house's inside but for its stock. The last biome keeps
  * everything hostile outside the finale's watch (G0064), so holding its post never waits on a hole or a sleeper behind
  * the ridge.
@@ -54,6 +54,9 @@ final class Placement {
     private static final long BARRELS = 0x712F_4803_E234_2E39L;
     private static final long BOULDERS = 0x69CB_E66C_A40B_DAC8L;
     private static final long RABBITS = 0xB4CB_70B3_9630_78A8L;
+    private static final long TREES = 0x2F1D_8A6B_C3E5_9071L;
+    private static final long TREES_BY_NEST = 0x5C83_E1A7_0B9F_42D6L;
+    private static final long TRUNKS = 0xD06A_4B2E_97C1_F358L;
 
     private final SimConfig config;
     private final PlacementRules rules;
@@ -185,6 +188,7 @@ final class Placement {
             for (int i = 0; i < stock.length; i++) {
                 stock[i] = furniture.pickups().get(i).count(counted);
             }
+            int trees = furniture.trees(counted);
 
             points(pointCount, attempt.derive(POINTS));
             houseStock(stock, attempt.derive(STOCK));
@@ -194,6 +198,7 @@ final class Placement {
             pickups(stock, attempt.derive(PICKUPS));
             barrels(barrels, attempt.derive(BARRELS));
             boulders(boulders, attempt.derive(BOULDERS));
+            trees(trees, stream.derive(TREES_BY_NEST), attempt.derive(TREES));
             rabbits(rabbits, attempt.derive(RABBITS));
             return this;
         }
@@ -394,6 +399,38 @@ final class Placement {
             shortOf("boulders", count, got);
         }
 
+        /**
+         * Trees, each as a boulder stands (G0042): {@code treesByNest} within {@code treeReach} of each nest first -
+         * foliage to come out of - then the rest anywhere (G0072). How many by each nest is drawn from {@code byNest},
+         * nest by nest, so an attempt placed again keeps its counts (G0070); each trunk from a stream of its own.
+         */
+        private void trees(int count, Randomness byNest, Randomness rng) {
+            Scatter scatter = scatter(rng, rules.rockMargin()).keepingOffRock(rules.rockMargin());
+            Randomness trunks = rng.derive(TRUNKS);
+            int left = count;
+            for (Placed nest : nests) {
+                int by = Math.min(left, def.furniture().treesByNest(byNest));
+                left -= by;
+                scatter.excluding(within(nest.x(), nest.y(), rules.treeReach()));
+                TileRect around = TileRect.around(map, nest.x(), nest.y(), rules.treeReach());
+                int got = 0;
+                for (int k = 0; k < by; k++) {
+                    got += tree(scatter, around, config.obstacle().trunk(trunks));
+                }
+                shortOf("trees by " + nest, by, got);
+            }
+            scatter.excluding(laid::kept);
+            int got = 0;
+            for (int k = 0; k < left; k++) {
+                got += tree(scatter, rect, config.obstacle().trunk(trunks));
+            }
+            shortOf("trees", left, got);
+        }
+
+        private int tree(Scatter scatter, TileRect area, float trunk) {
+            return scatter.scatter(area, 1, trunk, (x, y) -> put(new Placed.Tree(x, y, trunk, position)));
+        }
+
         /** Rabbits anywhere off the start. */
         private void rabbits(int count, Randomness rng) {
             int got = scatter(rng, 0f)
@@ -533,6 +570,7 @@ final class Placement {
             case Placed.Pickup pickup -> config.pickup(pickup.kind()).radius();
             case Placed.Barrel _ -> config.pickup(PickupKind.BARREL).radius();
             case Placed.Boulder _ -> config.obstacle().radius();
+            case Placed.Tree tree -> tree.trunk();
             case Placed.Rabbit _ -> config.pickup(PickupKind.RABBIT).radius();
             case Placed.Hold _ -> config.controlPoint().radius();
             case Placed.Turret _ -> config.turret().radius();

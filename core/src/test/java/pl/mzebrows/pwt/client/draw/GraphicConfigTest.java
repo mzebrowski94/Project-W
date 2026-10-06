@@ -137,8 +137,35 @@ class GraphicConfigTest {
                         d.post(),
                         d.burst(),
                         d.daze(),
+                        d.tree(),
+                        d.boulder(),
                         d.camera()))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** The inner foliage hides more than the trunk, and the see-through ring reaches past it (G0072). */
+    @Test
+    void hidesMoreThanTheTrunkUnderFoliageThatHalfHidesFurtherOut() {
+        TreeMark tree = GraphicConfig.defaults().tree();
+
+        assertThat(tree.innerFor(2f)).isGreaterThan(2f);
+        assertThat(tree.outerFor(2f)).isGreaterThan(tree.innerFor(2f));
+        assertThat(tree.inner().a).as("the inner foliage is opaque").isEqualTo(1f);
+        assertThatThrownBy(() -> new TreeMark(2.2f, 2f, 0.5f, Color.GREEN, Color.GREEN))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** Every shading disc of a boulder stays inside its outline, so shading never changes its size on screen. */
+    @Test
+    void keepsEveryShadingDiscOfABoulderInsideItsOutline() {
+        BoulderMark boulder = new BoulderMark(6, 0.4f, 0.7f);
+
+        for (int step = 1; step <= boulder.steps(); step++) {
+            float reach = boulder.offsetAt(1f, step) * (float) Math.sqrt(2.0) + boulder.radiusAt(1f, step);
+
+            assertThat(reach).as("step %d", step).isLessThanOrEqualTo(1.0001f);
+        }
+        assertThat(boulder.lightAt(boulder.steps())).isEqualTo(0.4f);
     }
 
     /** A palette missing a look cannot be built, so no renderer has to cope with one. */

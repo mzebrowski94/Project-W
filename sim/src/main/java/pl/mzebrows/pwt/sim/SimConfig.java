@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim;
 import java.util.List;
 import java.util.function.UnaryOperator;
 import lombok.With;
+import pl.mzebrows.pwt.map.Randomness;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
@@ -258,7 +259,7 @@ public record SimConfig(
      * of its registry rather than listed by hand. {@code ConstraintSolver} throws on a body above it.
      */
     public float largestRadius() {
-        float largest = Math.max(commander.radius(), obstacle.radius());
+        float largest = Math.max(commander.radius(), Math.max(obstacle.radius(), obstacle.trunkMax()));
         largest = Math.max(largest, trooper.radius());
         largest = Math.max(largest, melee.radius());
         largest = Math.max(largest, grenade.radius());
@@ -944,7 +945,10 @@ public record SimConfig(
                     growFraction,
                     fadeFraction,
                     Look.FIRE,
-                    knockbackSpeed);
+                    knockbackSpeed,
+                    Harm.WOUND,
+                    1f,
+                    0f);
         }
     }
 
@@ -1231,14 +1235,23 @@ public record SimConfig(
     /**
      * The static circles that block movement and projectiles.
      *
-     * @param radius circular body, in world units
-     * @param count how many the scenario spawns
+     * @param radius a boulder's circular body, in world units
+     * @param count how many boulders the scenario spawns
+     * @param trunkMin the thinnest a tree's trunk is, its radius in world units (G0072)
+     * @param trunkMax the thickest
      */
     @With
-    public record ObstacleConfig(float radius, int count) {
+    public record ObstacleConfig(float radius, int count, float trunkMin, float trunkMax) {
         public ObstacleConfig {
             Require.positive("obstacle radius", radius);
             Require.notNegative("obstacle count", count);
+            Require.positive("obstacle trunkMin", trunkMin);
+            Require.atLeast("obstacle trunkMax", trunkMax, trunkMin, "a trunk cannot be thickest below its thinnest");
+        }
+
+        /** How thick one tree's trunk is, drawn. */
+        public float trunk(Randomness rng) {
+            return trunkMin == trunkMax ? trunkMin : rng.nextFloat(trunkMin, trunkMax);
         }
     }
 }

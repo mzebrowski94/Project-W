@@ -25,6 +25,10 @@ import lombok.With;
  * @param burstSeconds how long the circle its shots reach is drawn round the shooter after each salvo - a
  *     slam read at a glance as the ground it covers (G0071, pillar 5). Zero draws nothing, as every
  *     pattern of the boss's declares
+ * @param locked whether an aimed pattern keeps the bearing it had when its wind-up ended for every salvo, rather than
+ *     following what it hunts salvo by salvo - a line told by the tint and cleared by a sidestep (G0073)
+ * @param stepped whether an aimed pattern's salvos stop a step further along the way to its aim each, the last at it -
+ *     a trail laid from the muzzle to whoever it aimed at, rather than every shot flying its whole reach (G0073)
  */
 @With
 public record PatternDef(
@@ -36,7 +40,9 @@ public record PatternDef(
         float turnDegrees,
         int salvos,
         float intervalSeconds,
-        float burstSeconds) {
+        float burstSeconds,
+        boolean locked,
+        boolean stepped) {
 
     private static final float FULL_CIRCLE = 360f;
 
@@ -55,7 +61,7 @@ public record PatternDef(
 
     /** A pattern the barrage skips. */
     public static PatternDef off() {
-        return new PatternDef(false, WeaponKind.SPIT, 0, 0f, false, 0f, 0, 0f, 0f);
+        return new PatternDef(false, WeaponKind.SPIT, 0, 0f, false, 0f, 0, 0f, 0f, false, false);
     }
 
     /** Whether the spread closes on itself: the last shot of a full ring would land on the first. */

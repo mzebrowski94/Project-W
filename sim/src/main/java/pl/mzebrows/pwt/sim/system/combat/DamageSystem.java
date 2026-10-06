@@ -113,6 +113,9 @@ public final class DamageSystem extends IteratingSystem {
         Damage damage = DAMAGE.get(entity);
         if (damage.landed) {
             settle(entity, damage);
+        } else {
+            // A touch that is no blow - glue underfoot - slows and does nothing else (G0073).
+            slow(entity, damage);
         }
         // The one place a tick's blows are cleared - landed or not, protected or not, so nothing a blow
         // recorded outlives the tick it landed on.
@@ -237,7 +240,7 @@ public final class DamageSystem extends IteratingSystem {
                 damage.clinchCarryDecay);
     }
 
-    /** Only a hit that landed slows; recorded whether or not the hit did anything else. */
+    /** A hit that landed slows, recorded whether or not it did anything else; so does a touch that only slows. */
     private static void slow(Entity entity, Damage damage) {
         if (damage.slowed() && SLOWED.has(entity)) {
             SLOWED.get(entity).apply(damage.slowFactor, damage.slowTicks);

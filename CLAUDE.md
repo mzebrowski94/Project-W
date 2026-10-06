@@ -125,7 +125,8 @@ it rather than working around it.
 4. **One fight, and you can always see it.** No fog of war, no off-screen management, no second front.
    A level may run wider than the view - the camera follows you, one key pulls it back - but the fight
    is the one you are standing in. (Amended by G0008; a minimap is off-screen management with a nicer
-   name and is ruled out there.)
+   name and is ruled out there.) One exception, by G0072: a tree's foliage hides what is beneath it -
+   trees are ambush cover.
 5. **State is visible.** What an entity can do is legible from how it looks. The player never tracks a
    number the game does not show.
 6. **Every run is reproducible** (ADR 0004). No wall-clock effects, no unseeded variety, no bug that

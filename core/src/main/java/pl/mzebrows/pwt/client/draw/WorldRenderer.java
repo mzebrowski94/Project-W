@@ -17,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.Log;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.Armour;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Facing;
@@ -53,6 +54,9 @@ import pl.mzebrows.pwt.sim.def.Look;
  * a thing being pumped up, which has to be seen through - and turning it on once costs nothing that
  * a flush per mark would not cost more of.
  *
+ * <p><strong>Trees are drawn last</strong> (G0072): their foliage hides everything beneath it, and the trunk is
+ * drawn over the foliage, so the part that stops a man is always seen.
+ *
  * <p>Positions are interpolated between the previous tick and the current one. The simulation runs at
  * a fixed 60 ticks per second while the window may refresh at 144, so without this every entity
  * visibly steps. The cost is that what you see lags the simulation by up to one tick, which is the
@@ -66,6 +70,7 @@ public final class WorldRenderer implements Disposable {
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
+    private static final ComponentMapper<Armour> ARMOUR = ComponentMapper.getFor(Armour.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
 
     /** Where a cosmetic lead writes the facing it draws; reused, so it costs nothing per frame. */
@@ -83,6 +88,9 @@ public final class WorldRenderer implements Disposable {
             .get();
 
     private static final int CIRCLE_SEGMENTS = 16;
+
+    /** A tree's foliage is several bodies wide; sixteen sides read as a polygon at that size. */
+    private static final int FOLIAGE_SEGMENTS = 28;
 
     /** A slam's circle is many bodies wide; sixteen sides read as a polygon at that size. */
     private static final int BURST_SEGMENTS = 40;
@@ -108,6 +116,8 @@ public final class WorldRenderer implements Disposable {
     private final PostMark postMark;
     private final BurstMark burstMark;
     private final DazeMark dazeMark;
+    private final TreeMark treeMark;
+    private final BoulderMark boulderMark;
 
     /** The client's own clock, for the post's pulse alone - a look, never read back by the simulation. */
     private float pulseSeconds;
@@ -157,8 +167,8 @@ public final class WorldRenderer implements Disposable {
             PreviousPosition previous = PREVIOUS.get(entity);
             Body body = BODY.get(entity);
             Appearance appearance = APPEARANCE.get(entity);
-            if (ground(appearance.look)) {
-                // Already drawn, underneath everything.
+            if (ground(appearance.look) || appearance.look == Look.TREE) {
+                // Ground is already drawn, underneath everything; a tree is drawn last, over everything (G0072).
                 continue;
             }
             if (appearance.state == Appearance.State.ABOARD) {
@@ -179,9 +189,11 @@ public final class WorldRenderer implements Disposable {
             if (square(appearance.look)) {
                 shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
             } else if (segmented(appearance.look) && faces(entity)) {
-                drawSegments(x, y, body.radius, FACING.get(entity), appearance);
+                drawSegments(x, y, body.radius, FACING.get(entity), hardBehind(entity), appearance);
             } else if (shelled(appearance.look)) {
                 drawShells(x, y, body.radius, appearance);
+            } else if (appearance.look == Look.OBSTACLE) {
+                drawBoulder(x, y, body.radius, tint(appearance));
             } else if (appearance.streaks()) {
                 // Drawn back to where it says it came from, with a head on it so a beam that has
                 // just been fired is still something rather than a zero-length line. The far end is
@@ -245,7 +257,70 @@ public final class WorldRenderer implements Disposable {
         }
         shapes.end();
         drawRings();
+        drawTrees();
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    /**
+     * A boulder: its colour, and over it a stepped gradient of smaller, lighter discs towards the north-west, so it
+     * reads as round rock. {@code base} is the shared tint colour, copied out before it is brightened.
+     */
+    private void drawBoulder(float x, float y, float radius, Color base) {
+        shapes.setColor(base);
+        shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
+        for (int step = 1; step <= boulderMark.steps(); step++) {
+            float offset = boulderMark.offsetAt(radius, step);
+            shapes.setColor(brightened(SCRATCH.set(base), boulderMark.lightAt(step)));
+            shapes.circle(x - offset, y + offset, boulderMark.radiusAt(radius, step), CIRCLE_SEGMENTS);
+        }
+    }
+
+    /**
+     * Trees, last of all, so their foliage hides everything beneath it - bodies, shots, rings, stuns - whoever is
+     * looking and however far the view is pulled back (G0072). Every outer disc first, then every inner one, then
+     * every trunk, so one tree's see-through edge never tints another's opaque middle and the trunks, which stop men
+     * and shots, are always seen. Static, so not interpolated. Skipped when there are none, which is every biome but
+     * the fen.
+     */
+    private void drawTrees() {
+        boolean any = false;
+        for (int i = 0; i < drawable.size() && !any; i++) {
+            any = APPEARANCE.get(drawable.get(i)).look == Look.TREE;
+        }
+        if (!any) {
+            return;
+        }
+        shapes.begin(ShapeRenderer.ShapeType.Filled);
+        SCRATCH.set(treeMark.outer());
+        SCRATCH.a = treeMark.outerAlpha();
+        shapes.setColor(SCRATCH);
+        for (int i = 0; i < drawable.size(); i++) {
+            Entity entity = drawable.get(i);
+            if (APPEARANCE.get(entity).look == Look.TREE) {
+                Position position = POSITION.get(entity);
+                shapes.circle(position.x, position.y, treeMark.outerFor(BODY.get(entity).radius), FOLIAGE_SEGMENTS);
+            }
+        }
+        SCRATCH.set(treeMark.inner());
+        SCRATCH.a = 1f;
+        shapes.setColor(SCRATCH);
+        for (int i = 0; i < drawable.size(); i++) {
+            Entity entity = drawable.get(i);
+            if (APPEARANCE.get(entity).look == Look.TREE) {
+                Position position = POSITION.get(entity);
+                shapes.circle(position.x, position.y, treeMark.innerFor(BODY.get(entity).radius), FOLIAGE_SEGMENTS);
+            }
+        }
+        for (int i = 0; i < drawable.size(); i++) {
+            Entity entity = drawable.get(i);
+            Appearance appearance = APPEARANCE.get(entity);
+            if (appearance.look == Look.TREE) {
+                Position position = POSITION.get(entity);
+                shapes.setColor(tint(appearance));
+                shapes.circle(position.x, position.y, BODY.get(entity).radius, CIRCLE_SEGMENTS);
+            }
+        }
+        shapes.end();
     }
 
     /**
@@ -356,7 +431,7 @@ public final class WorldRenderer implements Disposable {
 
     /** Whether a look is underfoot rather than standing on the ground. */
     private static boolean ground(Look look) {
-        return look == Look.SLICK || look == Look.FIRE || look == Look.POST;
+        return look == Look.SLICK || look == Look.FIRE || look == Look.GLUE || look == Look.POST;
     }
 
     /**
@@ -494,10 +569,15 @@ public final class WorldRenderer implements Disposable {
 
     /**
      * Whether a look is drawn as two segments along its facing rather than as one circle - the client's
-     * decision, as the square is. Only the one strain whose head and back are different things (G0045).
+     * decision, as the square is. The strains whose head and back are different things (G0045, G0073).
      */
     private static boolean segmented(Look look) {
-        return look == Look.ANT;
+        return look == Look.ANT || look == Look.SLUDGER;
+    }
+
+    /** Whether its armour is on its back rather than its head, so the back is the segment drawn hard (G0073). */
+    private static boolean hardBehind(Entity entity) {
+        return ARMOUR.has(entity) && ARMOUR.get(entity).enabled && ARMOUR.get(entity).centreCosine < 0f;
     }
 
     private static boolean faces(Entity entity) {
@@ -505,17 +585,18 @@ public final class WorldRenderer implements Disposable {
     }
 
     /**
-     * A body behind and a darker head in front, both inside the circle that is hit, so the end a bullet
-     * glances off is the end that looks hard (pillar 5).
+     * A body behind and a head in front, both inside the circle that is hit, the armoured one darker - the head, or
+     * for a strain armoured behind the body - so the end a bullet glances off is the end that looks hard (pillar 5).
      */
-    private void drawSegments(float x, float y, float radius, Facing facing, Appearance appearance) {
+    private void drawSegments(
+            float x, float y, float radius, Facing facing, boolean hardBehind, Appearance appearance) {
         float length = (float) Math.sqrt(facing.x * facing.x + facing.y * facing.y);
         float aheadX = facing.x / length;
         float aheadY = facing.y / length;
-        shapes.setColor(tint(appearance));
+        shapes.setColor(hardBehind ? darkened(tint(appearance), segmentMark.headShade()) : tint(appearance));
         float back = segmentMark.bodyOffset() * radius;
         shapes.circle(x - aheadX * back, y - aheadY * back, segmentMark.bodyScale() * radius, CIRCLE_SEGMENTS);
-        shapes.setColor(darkened(tint(appearance), segmentMark.headShade()));
+        shapes.setColor(hardBehind ? tint(appearance) : darkened(tint(appearance), segmentMark.headShade()));
         float front = segmentMark.headOffset() * radius;
         shapes.circle(x + aheadX * front, y + aheadY * front, segmentMark.headScale() * radius, CIRCLE_SEGMENTS);
         shapes.setColor(tint(appearance));

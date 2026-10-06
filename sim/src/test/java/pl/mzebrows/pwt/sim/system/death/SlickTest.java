@@ -6,6 +6,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.AVOID_LOOKAHEAD;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.AVOID_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.AVOID_WEIGHT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SLICK_BLOBS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.SLICK_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SLICK_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.VENOM_REACH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
@@ -28,10 +29,15 @@ import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Slick;
+import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
+import pl.mzebrows.pwt.sim.def.Harm;
+import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
@@ -90,6 +96,10 @@ class SlickTest {
 
     /** How far off its line something walking dead straight may drift. */
     private static final float STRAIGHT = 0.1f;
+
+    private static final float GLUE_FACTOR = 0.4f;
+
+    private static final float GLUE_SECONDS = 0.3f;
 
     @Test
     void ruinsTheGroundWhereItsShotBurst() {
@@ -268,6 +278,58 @@ class SlickTest {
         SimConfig everyone =
                 everyStrain(config, strain -> strain.withContactDamage(0).withAvoidance(avoiding));
         return everyone.withTrooper(everyone.trooper().withAvoidance(avoiding));
+    }
+
+    // ---- glue (G0073) ----
+
+    /** Glue only slows: it costs a man no wound and throws him nowhere, and holds him for as long as he stands in it. */
+    @Test
+    void slowsAManStandingInGlueAndCostsHimNothingElse() {
+        Simulation simulation = gluing();
+        Entity commander = simulation.spawnCommander(VICTIM_X, Y);
+        venomAt(simulation);
+
+        steps(simulation, UNTIL_IT_BURSTS + INTO_THE_SPATTER);
+
+        assertThat(commander.getComponent(Slowed.class).factor()).isEqualTo(GLUE_FACTOR);
+        assertThat(commander.getComponent(Vitality.class).wounds).isZero();
+        assertThat(commander.getComponent(Position.class).x).isCloseTo(VICTIM_X, Offset.offset(STRAIGHT));
+    }
+
+    /** Stepping in glue is not a blow: it breaks no shield. */
+    @Test
+    void leavesTheShieldOfAManStandingInGlueUp() {
+        Simulation simulation = gluing();
+        Entity commander = simulation.spawnCommander(VICTIM_X, Y);
+        venomAt(simulation);
+        steps(simulation, UNTIL_IT_BURSTS);
+
+        commander.getComponent(Shield.class).raise();
+        steps(simulation, INTO_THE_SPATTER);
+
+        assertThat(commander.getComponent(Shield.class).up).isTrue();
+        assertThat(commander.getComponent(Slowed.class).factor()).isEqualTo(GLUE_FACTOR);
+    }
+
+    /** Venom whose spatter is glue: one circle, no damage, no shove, and a slow refreshed while he stands in it. */
+    private static Simulation gluing() {
+        SimConfig config = everyStrain(config(), strain -> strain.withContactDamage(0));
+        SlickDef glue = new SlickDef(
+                1,
+                SLICK_RADIUS,
+                0f,
+                LASTING_SECONDS,
+                LASTING_SECONDS,
+                0,
+                0f,
+                0f,
+                0f,
+                Look.GLUE,
+                0f,
+                Harm.NONE,
+                GLUE_FACTOR,
+                GLUE_SECONDS);
+        return new Simulation(config.withWeapons(config.weapons().map(WeaponKind.VENOM, gun -> gun.withSlicks(glue))));
     }
 
     /** Nothing on the field hits back, so a test about ruined ground is only about ruined ground. */

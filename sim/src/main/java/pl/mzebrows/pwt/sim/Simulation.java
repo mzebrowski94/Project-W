@@ -21,6 +21,7 @@ import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -506,9 +507,14 @@ public final class Simulation {
         return spawner.spawnPickup(kind, x, y);
     }
 
-    /** Spawns a static circle that blocks units and projectiles. */
+    /** Spawns a boulder: a static circle that blocks units and projectiles. */
     public Entity spawnObstacle(float x, float y) {
         return spawner.spawnObstacle(x, y);
+    }
+
+    /** Spawns a static circle of this radius that blocks units and projectiles, drawn as {@code look} (G0072). */
+    public Entity spawnObstacle(float x, float y, float radius, Look look) {
+        return spawner.spawnObstacle(x, y, radius, look);
     }
 
     /** Spawns a grenade travelling along the given unit direction, for the harness and for tests. */

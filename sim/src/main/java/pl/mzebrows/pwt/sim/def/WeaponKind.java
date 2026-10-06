@@ -88,5 +88,10 @@ public enum WeaponKind {
      * What a thumper slams (G0071): a ring of short, fast shots all the way round it that wound and stun a man,
      * read as the one circle they cover. No pickup grants it.
      */
-    SLAM
+    SLAM,
+    /**
+     * What a sludger spits (G0073): a slow blob, fired several down one line, that wounds a man it hits and leaves one
+     * circle of glue where it stops. No pickup grants it.
+     */
+    GLOB
 }
