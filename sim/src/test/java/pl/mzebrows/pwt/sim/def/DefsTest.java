@@ -58,7 +58,8 @@ class DefsTest {
                         strain(RADIUS * 3f, Look.BOSS_GRUNT),
                         strain(RADIUS * 2f, Look.SEARER),
                         strain(RADIUS * 2f, Look.THUMPER),
-                        strain(RADIUS, Look.SLUDGER));
+                        strain(RADIUS, Look.SLUDGER),
+                        strain(RADIUS * 2f, Look.SLINGER));
     }
 
     @Test
@@ -78,6 +79,7 @@ class DefsTest {
                 .put(UnitKind.SEARER, strain(RADIUS * 2f, Look.SEARER))
                 .put(UnitKind.THUMPER, strain(RADIUS * 2f, Look.THUMPER))
                 .put(UnitKind.SLUDGER, strain(RADIUS, Look.SLUDGER))
+                .put(UnitKind.SLINGER, strain(RADIUS * 2f, Look.SLINGER))
                 .build();
     }
 
@@ -107,6 +109,7 @@ class DefsTest {
                 GripDef.off(),
                 ArmourDef.off(),
                 BarrageDef.off(),
+                SlingDef.off(),
                 true,
                 Chances.none(),
                 look);

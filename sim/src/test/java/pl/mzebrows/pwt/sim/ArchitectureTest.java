@@ -313,6 +313,8 @@ final class ArchitectureTest {
             SYSTEM + ".combat.Guns",
             // A throw, for everything that throws.
             SYSTEM + ".combat.Throws",
+            // A brood put down round a place and off the men by it: a nest's, and a dead slinger's riders (G0074).
+            SYSTEM + ".level.Brood",
             // The one way a rule asks for a number an upgrade may move (ADR 0017).
             SYSTEM + ".upgrade.Modifiers");
 

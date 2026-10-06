@@ -52,7 +52,8 @@ public record StateTint(
         return switch (state) {
             case UNAWARE -> unaware;
             case WINDING_UP -> windingUp;
-            case AIRBORNE -> airborne;
+            // A slung rider is in the air like any leap; its shadow is what says it is more (G0074).
+            case AIRBORNE, SLUNG -> airborne;
             case GRAPPLING -> grappling;
             case STAGGERED -> staggered;
             case STUNNED -> stunned;

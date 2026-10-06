@@ -27,7 +27,7 @@ class ProvingRowsTest {
 
         assertThat(seen).startsWith(UnitKind.values()).endsWith(UnitKind.GRUNT);
         assertThat(rows.step(ProvingSetup.first(), ProvingRows.Row.STRAIN, -1).strain())
-                .isEqualTo(UnitKind.SLUDGER);
+                .isEqualTo(UnitKind.SLINGER);
     }
 
     @Test

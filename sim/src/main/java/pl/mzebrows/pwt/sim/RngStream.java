@@ -81,6 +81,12 @@ public enum RngStream {
     ADAPTATION(0x1656_67B1_9E37_79F9L),
 
     /**
+     * Where the riders a slinger still carried spill round its body when it dies (G0074). Its own, for the reason
+     * {@link #NEST} has one: retuning a slinger must not move a nest's brood.
+     */
+    SLING(0x7C15_9E3B_44D2_A6F1L),
+
+    /**
      * What a mission is built from besides its ground (G0065): the order its biomes are dealt in, their counts and
      * where everything stands. Only ever derived from - per sub-concern and per position - and only while the world
      * is built, so it sits here as one more long a snapshot carries and its children never do.

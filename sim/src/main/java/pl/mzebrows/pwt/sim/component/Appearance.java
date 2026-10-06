@@ -24,6 +24,11 @@ public final class Appearance implements Component, Pool.Poolable {
         WINDING_UP,
         AIRBORNE,
         /**
+         * A rider in the air, slung (G0074): nothing can hurt it and it passes over everything in its way, so it must
+         * read as off the ground - drawn above its own shadow.
+         */
+        SLUNG,
+        /**
          * Locked together with whatever it just traded blows with - both parties, winner and loser
          * alike, for the whole lock.
          */
@@ -158,6 +163,15 @@ public final class Appearance implements Component, Pool.Poolable {
     public float shield;
 
     /**
+     * How many riders it still carries on its back (G0074), one circle each, one fewer for every sling; zero for
+     * everything that carries none.
+     */
+    public int riders;
+
+    /** What its riders are drawn as. */
+    public Look riderLook = Look.NONE;
+
+    /**
      * How many squares across and down a thing with no body is drawn as, centred on where it stands: a door, its
      * doorway's tiles (G0069). Zero for everything drawn from its body.
      */
@@ -225,6 +239,8 @@ public final class Appearance implements Component, Pool.Poolable {
         burstFade = 0f;
         daze = 0f;
         shield = 0f;
+        riders = 0;
+        riderLook = Look.NONE;
         squaresAcross = 0;
         squaresDown = 0;
         squarePitch = 0f;

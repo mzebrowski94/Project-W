@@ -118,6 +118,7 @@ public final class WorldRenderer implements Disposable {
     private final DazeMark dazeMark;
     private final TreeMark treeMark;
     private final BoulderMark boulderMark;
+    private final SlingMark slingMark;
 
     /** The client's own clock, for the post's pulse alone - a look, never read back by the simulation. */
     private float pulseSeconds;
@@ -185,6 +186,10 @@ public final class WorldRenderer implements Disposable {
                 shapes.setColor(SCRATCH);
                 shapes.circle(x, y, appearance.burst, BURST_SEGMENTS);
             }
+            if (appearance.state == Appearance.State.SLUNG) {
+                // Off the ground (G0074): its shadow stays below it, so what nothing can hurt reads as up in the air.
+                drawShadow(x, y, body.radius);
+            }
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {
                 shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
@@ -203,6 +208,9 @@ public final class WorldRenderer implements Disposable {
                 shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
             } else {
                 shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
+            }
+            if (appearance.riders > 0 && faces(entity)) {
+                drawRiders(x, y, body.radius, FACING.get(entity), appearance);
             }
             if (FACING.has(entity) && (FACING.get(entity).x != 0f || FACING.get(entity).y != 0f)) {
                 float facingX = FACING.get(entity).x;
@@ -533,6 +541,32 @@ public final class WorldRenderer implements Disposable {
             shapes.line(fromX, fromY, toX, toY);
             fromX = toX;
             fromY = toY;
+        }
+    }
+
+    /** A rider's shadow on the ground below it and to one side (G0074). */
+    private void drawShadow(float x, float y, float radius) {
+        SCRATCH.set(slingMark.shadow());
+        SCRATCH.a = slingMark.shadowAlpha();
+        shapes.setColor(SCRATCH);
+        float offset = slingMark.shadowOffset() * radius;
+        shapes.circle(x + offset, y - offset, slingMark.shadowScale() * radius, CIRCLE_SEGMENTS);
+    }
+
+    /**
+     * What a slinger still carries, side by side across its back behind its facing, in the riders' own colour - one
+     * fewer for every sling (G0074, pillar 5).
+     */
+    private void drawRiders(float x, float y, float radius, Facing facing, Appearance appearance) {
+        float length = (float) Math.sqrt(facing.x * facing.x + facing.y * facing.y);
+        float aheadX = facing.x / length;
+        float aheadY = facing.y / length;
+        float backX = x - aheadX * slingMark.riderOffset() * radius;
+        float backY = y - aheadY * slingMark.riderOffset() * radius;
+        shapes.setColor(palette.colorFor(appearance.riderLook));
+        for (int i = 0; i < appearance.riders; i++) {
+            float side = slingMark.sideFor(radius, i, appearance.riders);
+            shapes.circle(backX - aheadY * side, backY + aheadX * side, slingMark.riderFor(radius), CIRCLE_SEGMENTS);
         }
     }
 

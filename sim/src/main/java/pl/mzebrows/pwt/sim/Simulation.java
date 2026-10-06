@@ -50,6 +50,7 @@ import pl.mzebrows.pwt.sim.system.creature.EnemyRangedSystem;
 import pl.mzebrows.pwt.sim.system.creature.EvolutionSystem;
 import pl.mzebrows.pwt.sim.system.creature.GripSystem;
 import pl.mzebrows.pwt.sim.system.creature.PerceptionSystem;
+import pl.mzebrows.pwt.sim.system.creature.SlingSystem;
 import pl.mzebrows.pwt.sim.system.death.BlastSystem;
 import pl.mzebrows.pwt.sim.system.death.BloatSystem;
 import pl.mzebrows.pwt.sim.system.death.CasualtySystem;
@@ -260,6 +261,9 @@ public final class Simulation {
         engine.addSystem(new LairSystem(map, spawner));
         // After everything that could have put a boss down or killed one, reading this tick's perception.
         engine.addSystem(new BarrageSystem(spawner, guns));
+        // Beside the barrage, for its reasons; after the death chain and before the reaper and the objectives, for
+        // the nests': riders spilled this tick are on the field, and count, this tick (G0074).
+        engine.addSystem(new SlingSystem(config, map, spawner, streams.of(RngStream.SLING)));
         engine.addSystem(new ControlPointSystem(spawner));
         // After every source of a draft (41, 44, 45), so what was earned this tick is dealt this tick; and
         // after every reader of Modifiers, so the ledger changes once, at the end, for every reader alike.

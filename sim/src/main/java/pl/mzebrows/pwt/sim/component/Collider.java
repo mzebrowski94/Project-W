@@ -43,6 +43,12 @@ public final class Collider implements Component, Pool.Poolable {
      */
     public boolean swept;
 
+    /**
+     * Passes through every body but scenery - what is solid and immovable - and touches nothing: a slung rider in
+     * the air (G0074). Rock and the arena still hold it. Written as it is slung and cleared as it comes down.
+     */
+    public boolean throughBodies;
+
     /** Sets both flags and returns this component, for fluent spawning. */
     public Collider set(boolean newSolid, boolean newMovable) {
         this.solid = newSolid;
@@ -51,6 +57,7 @@ public final class Collider implements Component, Pool.Poolable {
         this.avoided = newSolid;
         this.stopsShots = true;
         this.swept = false;
+        this.throughBodies = false;
         return this;
     }
 
@@ -79,5 +86,6 @@ public final class Collider implements Component, Pool.Poolable {
         avoided = false;
         stopsShots = false;
         swept = false;
+        throughBodies = false;
     }
 }

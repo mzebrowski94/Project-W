@@ -120,6 +120,13 @@ public final class ContactDamage implements Component, Pool.Poolable {
         return this;
     }
 
+    /** Keeps its claws from landing anything for at least this long: a slung rider just come down (G0074). */
+    public void sheathe(int ticks) {
+        if (ticks > remainingTicks) {
+            remainingTicks = ticks;
+        }
+    }
+
     /** Sets the attack and leaves it ready to strike, returning this component, for fluent spawning. */
     public ContactDamage set(int newAmount, int newCooldownTicks, int newVictimInvulnerableTicks) {
         this.amount = newAmount;

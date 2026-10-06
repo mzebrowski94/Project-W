@@ -45,6 +45,7 @@ import pl.mzebrows.pwt.sim.def.RangedDef;
 import pl.mzebrows.pwt.sim.def.ShakeDef;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.SlickDef;
+import pl.mzebrows.pwt.sim.def.SlingDef;
 import pl.mzebrows.pwt.sim.def.TrooperGrenadeDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -935,6 +936,8 @@ public final class AlphaWorlds {
                         .put(UnitKind.THUMPER, strain(GIANT_RADIUS, BRUTE_SPEED, GIANT_HEALTH, Look.THUMPER))
                         // A plain strain, with no armour and no barrage: the fixtures about one switch it on (G0073).
                         .put(UnitKind.SLUDGER, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.SLUDGER))
+                        // Brute-like, carrying nothing: the fixtures about its riders load them (G0074).
+                        .put(UnitKind.SLINGER, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.SLINGER))
                         .build(),
                 onShipped(
                                 PickupKind.class,
@@ -1712,6 +1715,7 @@ public final class AlphaWorlds {
                 GripDef.off(),
                 ArmourDef.off(),
                 BarrageDef.off(),
+                SlingDef.off(),
                 true,
                 noChances(),
                 look);

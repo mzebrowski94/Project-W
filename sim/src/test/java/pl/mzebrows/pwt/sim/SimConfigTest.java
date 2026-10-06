@@ -554,4 +554,29 @@ class SimConfigTest {
         assertThat(glob.slicks().knockbackSpeed()).isZero();
         assertThat(glob.slicks().slowFactor()).isLessThan(1f);
     }
+
+    /**
+     * The slinger (G0074): a brute's body grown, carrying runners, that notices as far off as it can sling - one that
+     * saw a man only inside its range would never use the far half of it - and lands a rider behind him, harmless a
+     * moment, never as long as it takes the rider to reach him again.
+     */
+    @Test
+    void slingsRunnersFromAsFarAsItCanNoticeAndLandsThemBehindHim() {
+        SimConfig config = SimConfig.defaults();
+        UnitDef slinger = config.units().of(UnitKind.SLINGER);
+        UnitDef brute = config.units().of(UnitKind.BRUTE);
+
+        assertThat(slinger.radius()).isGreaterThan(brute.radius());
+        assertThat(slinger.health()).isGreaterThan(brute.health());
+        assertThat(slinger.sling().rider()).isEqualTo(UnitKind.RUNNER);
+        assertThat(slinger.sling().riders()).isPositive();
+        assertThat(slinger.perception().detectionRange())
+                .isGreaterThanOrEqualTo(slinger.sling().maxRange());
+        assertThat(slinger.sling().minRange()).isGreaterThan(slinger.radius() + config.muzzleGap());
+        assertThat(slinger.sling().landBehind()).isPositive();
+        assertThat(slinger.sling().landingSeconds())
+                .isLessThan(slinger.sling().landBehind()
+                        / config.units().of(UnitKind.RUNNER).speed());
+        assertThat(slinger.leap().enabled()).isTrue();
+    }
 }

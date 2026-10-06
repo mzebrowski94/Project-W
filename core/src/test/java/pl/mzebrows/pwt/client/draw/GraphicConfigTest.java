@@ -139,6 +139,7 @@ class GraphicConfigTest {
                         d.daze(),
                         d.tree(),
                         d.boulder(),
+                        d.sling(),
                         d.camera()))
                 .isInstanceOf(IllegalArgumentException.class);
     }

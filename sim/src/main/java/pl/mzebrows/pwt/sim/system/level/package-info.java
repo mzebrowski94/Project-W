@@ -5,7 +5,8 @@
  * LairSystem} wakes a lair; {@code ControlPointSystem} takes a point by dwelling on it; {@code
  * ReinforcementSystem} puts men on the field from the reserve; {@code DoorSystem} counts the work on a door, opens
  * it and sinks it (G0069); {@code ObjectiveSystem} says when the level is won. {@code Rouse} - sending everything in earshot to look - is shared by a point and a nest. Ports:
- * none.
+ * {@code Brood}, putting a lot of creatures down round a place and off the men by it - a nest's, and a dead
+ * slinger's riders (G0074).
  *
  * <p>Not here: the level entity's components ({@code component}), how a level is laid out ({@code
  * scenario}, {@code map}), or a commander's respawn ({@code death}).

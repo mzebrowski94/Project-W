@@ -16,6 +16,7 @@ A term that could sit in two sections goes where a reader would look for it, not
 |---|---|
 | **ant** | The strain in two segments (G0045): an **armoured** head that turns a bullet, and a leap that **grips** a man and carries him off rather than killing him. The problem it sets is where you stand - you get round it, or put a fist in its face. Drawn as two circles inside the one body, head darker. |
 | **sludger** | The **ant** turned round (G0073): two segments, **armoured** behind, so its face - the end it spits from - is the soft end and a gun hurts it only from in front or the side. No leap and no grip; it stands, tints and spits a line of **globs** down the bearing the tint ended on, laying a trail of **glue** to its target. Drawn in the ant's colours with the dark segment behind. |
+| **slinger** | A brute-sized brown strain with **riders** on its back, which it **slings** one at a time over the squad at whoever it hunts, to land behind him (G0074). Once its back is empty it **leaps** like a brute; dead, what is still aboard spills round its body like a nest's last **brood**. Drawn with its riders on its back. |
 | **boss** | The one at the end of a level: a **strain** grown too big to walk, **rooted** among **nests**, shooting a **barrage**. The first is the boss grunt, at the east end of Adventure 2's keep, kept off the field by a **lair** (G0048). A boss is its numbers - nothing in the code knows it is one. |
 | **rooted** | A **strain** whose speed is zero: it never walks, the solver pushes whatever it meets out of its way rather than it out of theirs, and a blow that would throw anything else throws nothing (G0048). The **boss** is the only one. |
 | **brute** | A heavy enemy: slower, tougher, and able to survive a hand strike. Carries everything an ordinary enemy carries, so only spawning and drawing tell them apart. |
@@ -93,6 +94,9 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **hesitation** | The pause a unit takes before the first leap of a sequence. The tell: the only part of a leap the player gets to answer. Drawn from the seeded `Rng`, so it varies between leaps and not between runs. |
 | **knockback** | The velocity a landed blow gives a target **that survives it**, bleeding off over the stun. A blow that kills throws nothing - the body stops where it was struck. |
 | **leap** | A unit throwing itself at the commander to close the last of the distance. Committed, telegraphed, and aimed once at launch - never steered. |
+| **sling** | A **slinger** throwing a **rider** at whoever it hunts: told by the winding-up tint it stands for, aimed once as the rider leaves, at a place past him (G0074). A declared **stun** breaks it off. Not *throw* - a throw is what a blow does to a body, and the grenade's. |
+| **rider** | A creature carried on a **slinger**'s back - a count on it, never an entity, until it is **slung** or spilled. Never reloaded. |
+| **slung** | A **rider** in the air: a **leap** nothing can hurt - a blast included - passing through every body and stopped by scenery and rock, coming down where it stops and harmless for a moment after. Drawn over its shadow. |
 | **lock** | The stun a *fatal* blow puts on both parties. What turns a kill into an exchange rather than a deletion. |
 | **projectile** | A fired entity that travels and can hit something. Always simulated; there is no hitscan. |
 | **recovery** | The window after a staggering hit during which an alien takes no further contact damage. A man's is **grace** (G0053). |

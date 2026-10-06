@@ -277,7 +277,8 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().burst(),
                 context.graphicConfig().daze(),
                 context.graphicConfig().tree(),
-                context.graphicConfig().boulder());
+                context.graphicConfig().boulder(),
+                context.graphicConfig().sling());
         terrain = new TerrainRenderer(
                 viewport,
                 context.graphicConfig().terrainPalette(),

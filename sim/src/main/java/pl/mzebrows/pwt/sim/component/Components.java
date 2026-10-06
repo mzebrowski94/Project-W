@@ -74,6 +74,7 @@ public final class Components {
                     Shield.class,
                     Shock.class,
                     Slick.class,
+                    Sling.class,
                     SlicksOnDeath.class,
                     Slowed.class,
                     Speed.class,

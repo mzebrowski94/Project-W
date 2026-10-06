@@ -79,5 +79,11 @@ public enum UnitKind {
      * end. It stands, tints, and spits a line of globs that wound a man they hit and leave glue that holds him.
      * What to read is the tint and the line; what to do is step off the line and shoot it in the face.
      */
-    SLUDGER
+    SLUDGER,
+    /**
+     * A brute-sized thing with runners on its back, which it slings over the squad's heads (G0074): each lands
+     * behind whoever it was slung at, so the fight arrives from both sides. What to read is the tint; what to do is
+     * kill it before it has emptied its back - or after, and take what spills.
+     */
+    SLINGER
 }

@@ -114,6 +114,10 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
         }
         Collider firstCollider = COLLIDER.get(a);
         Collider secondCollider = COLLIDER.get(b);
+        if (firstCollider.throughBodies || secondCollider.throughBodies) {
+            offSceneryOnly(a, b, firstCollider, secondCollider);
+            return;
+        }
         if (firstCollider.swept || secondCollider.swept) {
             touchAlongThePath(a, b, firstCollider.swept);
             return;
@@ -131,6 +135,26 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
             listener.onContact(a, b);
         }
         if (firstCollider.solid && secondCollider.solid) {
+            separate(a, b, firstCollider, secondCollider, dx, dy, (float) Math.sqrt(distanceSquared), contact);
+        }
+    }
+
+    /**
+     * A body that passes through bodies (G0074) is held off scenery - solid and immovable - and nothing else, and
+     * touches nothing at all: no contact is reported, so nothing it passes through is struck, shot or claimed.
+     */
+    private void offSceneryOnly(Entity a, Entity b, Collider firstCollider, Collider secondCollider) {
+        Collider other = firstCollider.throughBodies ? secondCollider : firstCollider;
+        if (other.throughBodies || !other.solid || other.movable) {
+            return;
+        }
+        Position first = POSITION.get(a);
+        Position second = POSITION.get(b);
+        float dx = second.x - first.x;
+        float dy = second.y - first.y;
+        float contact = BODY.get(a).radius + BODY.get(b).radius;
+        float distanceSquared = dx * dx + dy * dy;
+        if (distanceSquared < contact * contact) {
             separate(a, b, firstCollider, secondCollider, dx, dy, (float) Math.sqrt(distanceSquared), contact);
         }
     }

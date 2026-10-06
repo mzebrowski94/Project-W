@@ -7,6 +7,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Sling;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -43,6 +44,7 @@ public final class Pace {
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Barrage> BARRAGE = ComponentMapper.getFor(Barrage.class);
+    private static final ComponentMapper<Sling> SLING = ComponentMapper.getFor(Sling.class);
 
     private Pace() {}
 
@@ -61,6 +63,10 @@ public final class Pace {
         if (BARRAGE.has(entity)) {
             // A giant standing its ground while it roars and fires: the opening it gives (G0071).
             pace *= BARRAGE.get(entity).paceFactor();
+        }
+        if (SLING.has(entity)) {
+            // A slinger standing for the tell before a sling (G0074).
+            pace *= SLING.get(entity).paceFactor();
         }
         if (!POSITION.has(entity)) {
             return pace;

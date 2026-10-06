@@ -35,6 +35,7 @@ import org.jspecify.annotations.Nullable;
  * @param grip what its leap does to a man it lands on, if it does anything but bite him (G0045)
  * @param armour where on it gunfire glances off, if anywhere (G0045)
  * @param barrage the cycle of patterns it shoots, if it is a boss (G0048)
+ * @param sling the riders it carries and slings at whoever it hunts, if any (G0074)
  * @param shockable whether shock builds on it at all (G0059): false for the boss, whose barrage a stun
  *     would not pause (G0048)
  * @param chances how often each occasional behaviour happens for this strain: the shared table, with
@@ -67,6 +68,7 @@ public record UnitDef(
         GripDef grip,
         ArmourDef armour,
         BarrageDef barrage,
+        SlingDef sling,
         boolean shockable,
         Chances chances,
         Look look) {

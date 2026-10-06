@@ -66,6 +66,7 @@ import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.SlicksOnDeath;
+import pl.mzebrows.pwt.sim.component.Sling;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
@@ -357,6 +358,29 @@ public final class Spawner {
     }
 
     /**
+     * The same, slung (G0074): off the ground along a direction fixed now, at this speed, for this long - a leap that
+     * nothing can hurt and that passes through every body but scenery - and harmless for {@code landingTicks} once it
+     * is down. Stamped with the wave of whatever slung it, so a wave is not cleared while its riders are still coming.
+     */
+    public Entity spawnSlung(
+            UnitKind kind,
+            float x,
+            float y,
+            int wave,
+            float directionX,
+            float directionY,
+            float speed,
+            int airborneTicks,
+            int landingTicks) {
+        Entity entity = spawnUnit(kind, x, y, wave);
+        entity.getComponent(Facing.class).face(directionX, directionY);
+        entity.getComponent(Leap.class).sling(directionX, directionY, speed, airborneTicks, landingTicks, x, y);
+        entity.getComponent(Collider.class).throughBodies = true;
+        entity.getComponent(Velocity.class).set(directionX * speed, directionY * speed);
+        return entity;
+    }
+
+    /**
      * The same, for one sent by a wave: {@code wave} counts from one, and zero is a unit nothing sent.
      * The stamp is what says a wave is cleared once all it sent is down.
      */
@@ -401,6 +425,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Grip.class));
         entity.add(engine.createComponent(Armour.class));
         entity.add(engine.createComponent(Barrage.class));
+        // Empty on every strain but the one that carries riders (G0074).
+        entity.add(engine.createComponent(Sling.class));
         // Inert until a barrage that roars winds up; read by the view, never the simulation.
         entity.add(engine.createComponent(Shake.class));
         entity.add(engine.createComponent(Weapon.class));
@@ -514,6 +540,12 @@ public final class Spawner {
                         ticks(def.barrage().windUpSeconds()),
                         ticks(def.barrage().restSeconds()),
                         ticks(def.barrage().roar().seconds()));
+        entity.getComponent(Sling.class)
+                .set(
+                        def.sling(),
+                        ticks(def.sling().windUpSeconds()),
+                        ticks(def.sling().restSeconds()),
+                        ticks(def.sling().landingSeconds()));
         // A strain that never walks is scenery to the solver: what it meets is pushed out of its way (G0048).
         entity.getComponent(Collider.class).movable = !def.rooted();
         entity.getComponent(Ranged.class)

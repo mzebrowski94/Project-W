@@ -8,9 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.Bag;
-import pl.mzebrows.pwt.map.Scatter;
 import pl.mzebrows.pwt.map.TileMap;
-import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
@@ -22,7 +20,6 @@ import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Vitality;
-import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 
@@ -41,10 +38,9 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  *       last tick - damage is already cleared by then.
  * </ul>
  *
- * <p>Hatches through {@code Scatter} (G0009), so a cornered nest produces fewer; its own stream. The
- * ground nearest the hole is filled first, and nothing is put down on its own body or within the
- * keep-off of anybody on the player's side - a brood comes out of the nest, not out of the man who is
- * standing over it.
+ * <p>Hatches through {@link Brood} on its own stream: the ground nearest the hole first, never its own body, and
+ * nothing within the keep-off of anybody on the player's side - a brood comes out of the nest, not out of the man
+ * who is standing over it.
  */
 public final class NestSystem extends EntitySystem {
 
@@ -53,12 +49,11 @@ public final class NestSystem extends EntitySystem {
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
-    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
 
     private final SimConfig config;
     private final TileMap map;
-    private final Spawner spawner;
     private final Rng rng;
+    private final Brood brood;
 
     /** How long after waking a nest's first brood comes: one number for every nest (G0062). */
     private final int firstBroodTicks;
@@ -70,8 +65,8 @@ public final class NestSystem extends EntitySystem {
     public NestSystem(SimConfig config, TileMap map, Spawner spawner, Rng rng) {
         this.config = config;
         this.map = map;
-        this.spawner = spawner;
         this.rng = rng;
+        this.brood = new Brood(map, spawner, config.nest().hatchKeepOff());
         this.firstBroodTicks = Ticks.of(config.nest().firstBroodSeconds(), config.tickSeconds());
     }
 
@@ -168,50 +163,9 @@ public final class NestSystem extends EntitySystem {
         return BODY.has(nest) ? BODY.get(nest).radius : 0f;
     }
 
-    /**
-     * One brood, scattered into the tiles around the nest, nearest first, off its own body and off
-     * everybody on the player's side.
-     *
-     * <p>Allocates, as {@code WaveSystem} does: once per brood, not in a per-entity loop.
-     */
+    /** One brood, out of the hole and off everybody on the player's side ({@link Brood}). */
     private void hatch(Nest nest, Position at, float bodyRadius, int count) {
-        if (count <= 0) {
-            return;
-        }
-        float radius = config.unit(nest.kind).radius();
-        Scatter scatter = new Scatter(map, rng, radius, radius);
-        scatter.reserve(at.x, at.y, bodyRadius);
-        keepOffOurSide(scatter, at, nest.hatchRadius + map.tileSize() * 2f);
-        scatter.scatterNearest(
-                TileRect.around(map, at.x, at.y, nest.hatchRadius),
-                at.x,
-                at.y,
-                count,
-                radius,
-                (x, y) -> spawner.spawnUnit(nest.kind, x, y));
-    }
-
-    /**
-     * Reserves a keep-off round every man on the player's side near enough to matter. The same list an
-     * alien hunts from; a man who is down is still a man it must not land on.
-     */
-    private void keepOffOurSide(Scatter scatter, Position at, float near) {
-        float keepOff = config.nest().hatchKeepOff();
-        if (keepOff <= 0f) {
-            return;
-        }
-        float reach = (near + keepOff) * (near + keepOff);
-        for (int i = 0; i < quarry.size(); i++) {
-            Entity candidate = quarry.get(i);
-            if (FACTION.get(candidate).side != Side.PLAYER || DEAD.has(candidate)) {
-                continue;
-            }
-            Position where = POSITION.get(candidate);
-            float toX = where.x - at.x;
-            float toY = where.y - at.y;
-            if (toX * toX + toY * toY <= reach) {
-                scatter.reserve(where.x, where.y, keepOff);
-            }
-        }
+        brood.hatch(
+                rng, nest.kind, config.unit(nest.kind).radius(), 0, at, bodyRadius, nest.hatchRadius, count, quarry);
     }
 }

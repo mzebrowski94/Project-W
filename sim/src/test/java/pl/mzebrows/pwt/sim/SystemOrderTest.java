@@ -40,6 +40,7 @@ import pl.mzebrows.pwt.sim.system.creature.EnemyRangedSystem;
 import pl.mzebrows.pwt.sim.system.creature.EvolutionSystem;
 import pl.mzebrows.pwt.sim.system.creature.GripSystem;
 import pl.mzebrows.pwt.sim.system.creature.PerceptionSystem;
+import pl.mzebrows.pwt.sim.system.creature.SlingSystem;
 import pl.mzebrows.pwt.sim.system.death.BlastSystem;
 import pl.mzebrows.pwt.sim.system.death.BloatSystem;
 import pl.mzebrows.pwt.sim.system.death.CasualtySystem;
@@ -245,6 +246,12 @@ class SystemOrderTest {
         rows.add(new Before(LairSystem.class, ObjectiveSystem.class, "a boss rising this tick counts this tick"));
         rows.add(new Before(
                 PerceptionSystem.class, BarrageSystem.class, "a boss shoots at what perception wrote (G0026)"));
+        rows.add(new Before(
+                PerceptionSystem.class, SlingSystem.class, "a slinger slings at what perception wrote (G0026)"));
+        rows.add(new Before(
+                SlickSystem.class, SlingSystem.class, "a dead slinger spills its riders inside the death window"));
+        rows.add(
+                new Before(SlingSystem.class, ObjectiveSystem.class, "riders spilled this tick are not a clear level"));
         rows.add(new Before(WaveSystem.class, ControlPointSystem.class, "a schedule armed this tick sends next tick"));
         rows.add(new Before(
                 ControlPointSystem.class, ObjectiveSystem.class, "the post exists on the tick it is asked about"));

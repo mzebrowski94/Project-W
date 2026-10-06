@@ -58,6 +58,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param post how to draw a post, round the point it was taken from
  * @param tree how to draw a tree's foliage over its trunk (G0072)
  * @param boulder how to shade a boulder
+ * @param sling how to draw a slinger's riders on its back and a slung rider's shadow (G0074)
  * @param camera how the view follows what it is watching, and how far out it may sit
  */
 public record GraphicConfig(
@@ -96,6 +97,7 @@ public record GraphicConfig(
         DazeMark daze,
         TreeMark tree,
         BoulderMark boulder,
+        SlingMark sling,
         CameraDirector.Settings camera) {
 
     /** How a colour is written: red, green and blue in hex, and alpha after them if it is not opaque. */

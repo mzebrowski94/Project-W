@@ -13,6 +13,8 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Collider;
+import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Door;
@@ -22,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Shake;
+import pl.mzebrows.pwt.sim.component.Sling;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Ticks;
@@ -73,12 +76,21 @@ public final class EnemyLeapSystem extends EntitySystem {
     private static final ComponentMapper<Damage> DAMAGE = ComponentMapper.getFor(Damage.class);
     private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
+    private static final ComponentMapper<Sling> SLING = ComponentMapper.getFor(Sling.class);
+    private static final ComponentMapper<ContactDamage> CONTACT = ComponentMapper.getFor(ContactDamage.class);
+    private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
 
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
     private static final float EPSILON = 1e-4f;
 
     /** How near a body's edge has to be to a door's face to have reached it: the solver leaves it touching. */
     private static final float TOUCHING = 0.05f;
+
+    /**
+     * The share of a tick's flight a slung rider must have made good to still be flying: below it, rock or scenery
+     * has stopped it, and it comes down there.
+     */
+    private static final float STOPPED = 0.5f;
 
     private final Rng rng;
 
@@ -131,9 +143,15 @@ public final class EnemyLeapSystem extends EntitySystem {
 
     @Override
     public void addedToEngine(Engine engine) {
-        leapers = engine.getEntitiesFor(
-                Family.all(Leap.class, Grip.class, Position.class, Velocity.class, Perception.class)
-                        .get());
+        leapers = engine.getEntitiesFor(Family.all(
+                        Leap.class,
+                        Grip.class,
+                        Position.class,
+                        Velocity.class,
+                        Perception.class,
+                        ContactDamage.class,
+                        Collider.class)
+                .get());
         doors = engine.getEntitiesFor(
                 Family.all(Door.class, Damage.class, Shake.class, Handle.class).get());
     }
@@ -143,6 +161,11 @@ public final class EnemyLeapSystem extends EntitySystem {
         for (int i = 0; i < leapers.size(); i++) {
             Entity entity = leapers.get(i);
             Leap leap = LEAP.get(entity);
+            if (leap.slung()) {
+                // Aimed once as it was slung, and nothing can hold it or change its mind in the air (G0074).
+                fly(entity, leap);
+                continue;
+            }
             if (Drivers.held(entity)) {
                 if (leap.committed()) {
                     leap.finish();
@@ -151,6 +174,10 @@ public final class EnemyLeapSystem extends EntitySystem {
             }
             if (!leap.enabled || GRIP.get(entity).holding()) {
                 // Jaws full: nothing to leap with until it lets go (G0045).
+                continue;
+            }
+            if (SLING.has(entity) && SLING.get(entity).loaded()) {
+                // Back full: it slings its riders, and leaps once there are none left (G0074).
                 continue;
             }
             Perception perception = PERCEPTION.get(entity);
@@ -300,6 +327,29 @@ public final class EnemyLeapSystem extends EntitySystem {
         leap.remainingTicks = leap.airborneTicks;
         leap.leapsLeft--;
         velocity.set(leap.directionX * leap.speed, leap.directionY * leap.speed);
+    }
+
+    /**
+     * A slung rider's flight (G0074): on along the line it was slung until its time is up, or until it has stopped
+     * making headway - rock, the arena's edge or scenery held it - and then down where it is, its claws sheathed for
+     * a moment, and an ordinary creature from then on.
+     */
+    private void fly(Entity entity, Leap leap) {
+        Position position = POSITION.get(entity);
+        Velocity velocity = VELOCITY.get(entity);
+        float headway = (position.x - leap.fromX) * leap.directionX + (position.y - leap.fromY) * leap.directionY;
+        boolean stopped = leap.flownTicks > 0 && headway < leap.slungSpeed * tickSeconds * STOPPED;
+        if (leap.remainingTicks <= 0 || stopped) {
+            velocity.set(0f, 0f);
+            CONTACT.get(entity).sheathe(leap.landingTicks);
+            COLLIDER.get(entity).throughBodies = false;
+            leap.finish();
+            return;
+        }
+        leap.fromX = position.x;
+        leap.fromY = position.y;
+        leap.flownTicks++;
+        velocity.set(leap.directionX * leap.slungSpeed, leap.directionY * leap.slungSpeed);
     }
 
     private static void land(Leap leap, Velocity velocity) {

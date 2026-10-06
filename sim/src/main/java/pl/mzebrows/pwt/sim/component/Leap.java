@@ -64,6 +64,26 @@ public final class Leap implements Component, Pool.Poolable {
      */
     public long door = Handle.NOBODY;
 
+    /**
+     * Whether this leap is a sling (G0074): a rider in the air, which nothing can hurt and which passes through
+     * bodies - the second is its {@code Collider}'s, which the solver reads. Cleared as it comes down.
+     */
+    public boolean untouchable;
+
+    /** How fast a slung rider flies: the slinger's, never its own leap's {@link #speed}. */
+    public float slungSpeed;
+
+    /** How long a slung rider's claws stay sheathed once it is down: harmless, and killable. */
+    public int landingTicks;
+
+    /** Where a slung rider stood when its flight was last looked at, to see whether something has stopped it. */
+    public float fromX;
+
+    public float fromY;
+
+    /** Ticks a slung rider has flown; the first has nothing before it to measure headway against. */
+    public int flownTicks;
+
     /** Sets the configuration and leaves the unit ready to leap, for fluent spawning. */
     public Leap set(
             boolean newEnabled,
@@ -91,7 +111,34 @@ public final class Leap implements Component, Pool.Poolable {
         this.directionX = 0f;
         this.directionY = 0f;
         this.door = Handle.NOBODY;
+        clearSling();
         return this;
+    }
+
+    /**
+     * Throws it off the ground as a slung rider (G0074): along a direction fixed now, at this speed, for this long,
+     * from where it stands - untouchable until it comes down, and harmless for {@code newLandingTicks} after.
+     */
+    public void sling(
+            float newDirectionX,
+            float newDirectionY,
+            float newSpeed,
+            int newAirborneTicks,
+            int newLandingTicks,
+            float x,
+            float y) {
+        phase = Phase.AIRBORNE;
+        remainingTicks = newAirborneTicks;
+        leapsLeft = 0;
+        directionX = newDirectionX;
+        directionY = newDirectionY;
+        slungSpeed = newSpeed;
+        door = Handle.NOBODY;
+        untouchable = true;
+        landingTicks = newLandingTicks;
+        fromX = x;
+        fromY = y;
+        flownTicks = 0;
     }
 
     /** True while the unit is doing anything other than walking - the leap owns its velocity. */
@@ -104,6 +151,20 @@ public final class Leap implements Component, Pool.Poolable {
         return phase == Phase.AIRBORNE;
     }
 
+    /** True while it is a slung rider in the air. */
+    public boolean slung() {
+        return untouchable && phase == Phase.AIRBORNE;
+    }
+
+    private void clearSling() {
+        untouchable = false;
+        slungSpeed = 0f;
+        landingTicks = 0;
+        fromX = 0f;
+        fromY = 0f;
+        flownTicks = 0;
+    }
+
     /** Puts the unit back to walking and starts the wait before it may commit again. */
     public void finish() {
         phase = Phase.READY;
@@ -113,6 +174,7 @@ public final class Leap implements Component, Pool.Poolable {
         directionX = 0f;
         directionY = 0f;
         door = Handle.NOBODY;
+        clearSling();
     }
 
     @Override
@@ -133,5 +195,6 @@ public final class Leap implements Component, Pool.Poolable {
         directionX = 0f;
         directionY = 0f;
         door = Handle.NOBODY;
+        clearSling();
     }
 }

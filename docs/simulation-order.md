@@ -31,13 +31,13 @@ row's reason. A new constraint is a row here and a row there.
 | 18 | `HopSystem` | 45 | `NestSystem` |
 | 19 | `DodgeSystem` | 46 | `LairSystem` |
 | 20 | `DriveSystem` | 47 | `BarrageSystem` |
-| 21 | `EnemyLeapSystem` | 48 | `ControlPointSystem` |
-| 22 | `StunSystem` | 49 | `UpgradeSystem` |
-| 23 | `MovementSystem` | 50 | `ObjectiveSystem` |
-| 24 | `StrikeSystem` | 51 | `FacingSystem` |
-| 25 | `CollisionSystem` | 52 | `AppearanceSystem` |
-| 26 | `GrenadeSystem` | 53 | `ReaperSystem` |
-| 27 | `PickupSystem` | | |
+| 21 | `EnemyLeapSystem` | 48 | `SlingSystem` |
+| 22 | `StunSystem` | 49 | `ControlPointSystem` |
+| 23 | `MovementSystem` | 50 | `UpgradeSystem` |
+| 24 | `StrikeSystem` | 51 | `ObjectiveSystem` |
+| 25 | `CollisionSystem` | 52 | `FacingSystem` |
+| 26 | `GrenadeSystem` | 53 | `AppearanceSystem` |
+| 27 | `PickupSystem` | 54 | `ReaperSystem` |
 
 Before system 1, `step(PlayerInputs)` copies each slot's `CommanderInput` into that commander's
 `Intent`. That is the only way input enters the simulation, and it is also **the one place a relative
@@ -51,7 +51,7 @@ two salts to keep apart for no benefit.
 
 How loosely a *gun* throws draws from `RngStream.SCATTER`, shared by all four things that fire one - the commander, a trooper, a shooting alien and a gun on a mount. Deliberately not `SPIT`, which is how badly a *creature* aims and narrows as it settles: retuning a shotgun's pattern must not reshuffle where a spitter's next shot goes.
 
-How big a nest's brood is and where it lands draws from `RngStream.NEST`, for the reason `WAVE` has its own: re-tuning what a nest produces must not move where a wave arrives.
+How big a nest's brood is and where it lands draws from `RngStream.NEST`, for the reason `WAVE` has its own: re-tuning what a nest produces must not move where a wave arrives. Where a dead slinger's riders spill draws from `RngStream.SLING`, for the same reason against the nest (G0074).
 
 Everything the AI leaves to the dice draws from a second stream, `RngStream.NERVE` - the trooper's
 sweep at a leaper, its decision to go and fetch somebody, and a creature biting into a barrel. One
@@ -79,15 +79,16 @@ against the order above on 2026-09-13 and hold.
 | `EvolutionSystem` (28) after pickups, before damage | Turns what a unit has eaten into what it becomes, in time for the damage to land on the new strain. |
 | `DyingSystem` (36) after `DamageSystem` (29) | Marks a body that has lain out its throes; damage decides who is dying. |
 | Reactions - `RespawnSystem` (37) - run **while the dead are still there** | They react to a body that has not been removed yet. |
-| `WaveSystem` (44) **before** `ObjectiveSystem` (50) | A level whose last wave lands this tick must not read as complete for the tick before the aliens appear. It sits with the other systems that are about the level rather than about anything standing in it, at the end of the tick. |
-| `NestSystem` (45) **after** the death chain (29-42) and **before** `ReaperSystem` (53) | A destroyed nest empties the last of itself while its body is still on the field - the same window, and the same reason, as respawning and blasts. One system earlier and the brood would be owed to a tick that had already gone; one later and there would be nothing left to react to. |
-| `NestSystem` (45) **before** `ObjectiveSystem` (50) | The same reason `WaveSystem` is: a level whose last nest dies this tick must not read as clear for the tick before its brood appears. |
-| `LairSystem` (46) **after** the death chain (29-42) and **before** `ObjectiveSystem` (50) | The reason `WaveSystem` and `NestSystem` sit there: a boss that rises this tick counts against the level on this tick, and a lair is level state like the schedule beside it (G0048). It reads where the commanders ended up, which is after the solver. |
+| `WaveSystem` (44) **before** `ObjectiveSystem` (51) | A level whose last wave lands this tick must not read as complete for the tick before the aliens appear. It sits with the other systems that are about the level rather than about anything standing in it, at the end of the tick. |
+| `NestSystem` (45) **after** the death chain (29-42) and **before** `ReaperSystem` (54) | A destroyed nest empties the last of itself while its body is still on the field - the same window, and the same reason, as respawning and blasts. One system earlier and the brood would be owed to a tick that had already gone; one later and there would be nothing left to react to. |
+| `NestSystem` (45) **before** `ObjectiveSystem` (51) | The same reason `WaveSystem` is: a level whose last nest dies this tick must not read as clear for the tick before its brood appears. |
+| `LairSystem` (46) **after** the death chain (29-42) and **before** `ObjectiveSystem` (51) | The reason `WaveSystem` and `NestSystem` sit there: a boss that rises this tick counts against the level on this tick, and a lair is level state like the schedule beside it (G0048). It reads where the commanders ended up, which is after the solver. |
 | `BarrageSystem` (47) **after** `PerceptionSystem` (7) | Whom a boss shoots at is what perception wrote this tick (G0026), the same rule as every other alien gun. It sits late, after `LairSystem` rather than with `EnemyRangedSystem` (17), because it owes no desired velocity to anything and a boss that rises this tick has its first salvo counted from the next one. A salvo fired here first moves on the next tick: one tick against patterns timed in tenths of a second. |
-| `UpgradeSystem` (49) **after** `WaveSystem` (44), `BarrageSystem` (47) and `ControlPointSystem` (48) | A point taken, a boss felled or a hold wave cleared this tick earns its draft this tick (G0049). Those three publish the facts - `ControlPoint.captured`, `Level.bossesDown`, `Waves.cleared` - and this counts them. |
-| `UpgradeSystem` (49) **after** every system that reads `Modifiers` | The ledger changes once per tick, at the end of it, so every reader in a tick sees the same ledger and a pick takes effect from the next tick: one position and one writer, at the cost of 17 ms nobody can see (ADR 0017). `SystemOrderTest` finds the readers by the `Modifiers` their constructors are handed, so a new one is held to this without being listed. |
-| `ReaperSystem` **last** (53) | Nothing else in the simulation removes an entity; `onlyTheReaperRemovesEntities` fails the build if it tries. |
-| `FacingSystem` (51) **after** every aim and move has settled - `CollisionSystem` (25) is the last of them | A facing is where the thing ended the tick looking. `PerceptionSystem` (7) reads it on the next tick, so the arc the game notices within is exactly the one the renderer drew (G0015, pillar 5). |
+| `SlingSystem` (48) **after** `PerceptionSystem` (7) and the death chain (29-42), **before** `ObjectiveSystem` (51) and `ReaperSystem` (54) | Whom a slinger slings at is what perception wrote this tick (G0026). It sits beside `BarrageSystem` for its reasons - a wind-up and a rest, no desired velocity owed (its stand is `Pace`'s), and a stun declared this tick breaks a wind-up this tick - and in the nests' window for theirs: a slinger killed this tick spills its riders while its body is on the field, and they count against the level this tick (G0074). A rider slung here first moves on the next tick. |
+| `UpgradeSystem` (50) **after** `WaveSystem` (44), `BarrageSystem` (47) and `ControlPointSystem` (49) | A point taken, a boss felled or a hold wave cleared this tick earns its draft this tick (G0049). Those three publish the facts - `ControlPoint.captured`, `Level.bossesDown`, `Waves.cleared` - and this counts them. |
+| `UpgradeSystem` (50) **after** every system that reads `Modifiers` | The ledger changes once per tick, at the end of it, so every reader in a tick sees the same ledger and a pick takes effect from the next tick: one position and one writer, at the cost of 17 ms nobody can see (ADR 0017). `SystemOrderTest` finds the readers by the `Modifiers` their constructors are handed, so a new one is held to this without being listed. |
+| `ReaperSystem` **last** (54) | Nothing else in the simulation removes an entity; `onlyTheReaperRemovesEntities` fails the build if it tries. |
+| `FacingSystem` (52) **after** every aim and move has settled - `CollisionSystem` (25) is the last of them | A facing is where the thing ended the tick looking. `PerceptionSystem` (7) reads it on the next tick, so the arc the game notices within is exactly the one the renderer drew (G0015, pillar 5). |
 | Drivers write *desired* velocity; `DriveSystem` (20) commits it once and clears it | Several systems may have an opinion without knowing the others exist. A unit no system spoke for stands still, and no driver needs a halt-everything branch (G0010). |
 | `GripSystem` (10) **after** the course setters (7-9), **before** the squad block (11-15) and `AvoidanceSystem` (16) | A creature with a man in its jaws is carrying him off, not hunting, so it overwrites the course navigation wrote - and avoidance still bends that, so a carry goes round rock and ruined ground like any other walk. It moves the man in its jaws by velocity, which the squad block and `DriveSystem` then leave alone because he is held: it is the only thing that moves him (G0045). |
 | `WeaveSystem` (9) **after** `NavigationSystem` (8) and **before** `AvoidanceSystem` (16) | It bends the course navigation has just written, and avoidance keeps the last word about it - a weave that could steer a creature into rock would stop being a weave the moment a level had walls in it. Its phase advances with ground covered rather than with the clock, which is why it reads the desired velocity before anything has moved. |
@@ -103,7 +104,7 @@ against the order above on 2026-09-13 and hold.
 | `BlastSystem` (41) after `RespawnSystem` (37), inside the death-reaction window | A blast is what a death leaves behind, so it has to run while the dead are still on the field - the same window, and the same reason, as respawning. |
 | `BlastSystem` (41) after `DamageSystem` (29), **knowingly** | A blast owes damage that therefore lands on the following tick. That delay is not a defect: it is what makes a row of barrels go off as a cascade, one link per tick, instead of as one flat bang. |
 | `MineSystem` (40) after the solver (25) and **immediately before** `BlastSystem` (41) | "Near enough to set one off" has to mean where things actually ended up, and a fuse that runs out this tick has to reach the death-reaction window on this tick rather than being owed to the next one. It spawns nothing itself: a mine explodes by dying, through the one reaction (G0018). |
-| `ControlPointSystem` (48) is the only thing that puts a **post** down mid-level | Taking ground the level says is held afterwards is the same event this system already decides, so a second system watching for it would be a second place the rule can drift. It runs before `ObjectiveSystem` (50), so the post exists on the tick it is asked about - and **after** `WaveSystem` (44), so a schedule armed this tick sends its first wave on the next one, which is a tick against a clock measured in seconds. |
+| `ControlPointSystem` (49) is the only thing that puts a **post** down mid-level | Taking ground the level says is held afterwards is the same event this system already decides, so a second system watching for it would be a second place the rule can drift. It runs before `ObjectiveSystem` (51), so the post exists on the tick it is asked about - and **after** `WaveSystem` (44), so a schedule armed this tick sends its first wave on the next one, which is a tick against a clock measured in seconds. |
 | `DragSystem` (3) **before** `CommanderControlSystem` (4) | It publishes which way the load lies; the system that owns his velocity is the only one that may constrain it. Two systems writing one velocity is how a unit travels somewhere neither asked for. |
 | `EnemyRangedSystem` (17) after `AvoidanceSystem` (16), before `DriveSystem` (20) | Planting a shooter has to beat the course avoidance has just bent, and a desired velocity is spent on the tick it is written. |
 | `ActionSystem` (31) and `AidSystem` (33) **after** `DamageSystem` (29) | A man who goes down this tick must be on offer this tick. Decided any earlier and the prompt is permanently one tick behind the body hitting the ground. It also reads positions the solver has already settled, so arm's length means where things ended up. |

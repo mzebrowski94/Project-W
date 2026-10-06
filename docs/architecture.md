@@ -164,10 +164,10 @@ constructor of `Simulation` is still the one source of it.
 | `motion` | The steering pipeline, `Steering` to `Position` | Drive, Movement, Avoidance, Navigation, Weave, Hop, Dodge, Wander, Stun, Facing, PositionHistory, TrooperMove | - |
 | `squad` | What a trooper decides and how it fights | SquadOrder, TrooperMind, TrooperCombat | - |
 | `commander` | His controls, his hands, the action key | CommanderControl, Melee, Strike, Drag, Action, Aid, Crate, Turret | `Crews` |
-| `creature` | The aliens' noticing, attacks and growth | Perception, Grip, EnemyRanged, EnemyLeap, Evolution, Barrage | - |
+| `creature` | The aliens' noticing, attacks and growth | Perception, Grip, EnemyRanged, EnemyLeap, Evolution, Barrage, Sling | - |
 | `combat` | Contact, blows, guns and throws | Collision, Damage, Shock, Grenade, ProjectileBounds, Cooldown, Pickup | `Guns`, `Throws`, `Grants` |
 | `death` | Casualties, throes, the reaper and what a death leaves | Casualty, Dying, Respawn, Bloat, Mine, Blast, Slick, Reaper | `Deaths` |
-| `level` | Waves, nests, the lair, points, reinforcements, doors, winning | Reinforcement, Wave, Nest, Lair, ControlPoint, Door, Objective | - |
+| `level` | Waves, nests, the lair, points, reinforcements, doors, winning | Reinforcement, Wave, Nest, Lair, ControlPoint, Door, Objective | `Brood` |
 | `appearance` | What the renderer is shown (G0003) | Appearance | - |
 | `upgrade` | Upgrades and adaptations (ADR 0017) | Upgrade | `Modifiers` |
 

@@ -7,6 +7,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.SimConfig;
@@ -33,6 +34,7 @@ import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Slick;
+import pl.mzebrows.pwt.sim.component.Sling;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Stunned;
@@ -85,6 +87,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Slick> SLICK = ComponentMapper.getFor(Slick.class);
     private static final ComponentMapper<Mine> MINE = ComponentMapper.getFor(Mine.class);
     private static final ComponentMapper<Barrage> BARRAGE = ComponentMapper.getFor(Barrage.class);
+    private static final ComponentMapper<Sling> SLING = ComponentMapper.getFor(Sling.class);
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
 
@@ -152,10 +155,23 @@ public final class AppearanceSystem extends IteratingSystem {
         appearance.burst = bursting ? BARRAGE.get(entity).burstReach : 0f;
         appearance.burstFade = bursting ? BARRAGE.get(entity).burstFade() : 0f;
         appearance.daze = STUNNED.has(entity) ? STUNNED.get(entity).dazeLeft() : 0f;
+        publishRiders(entity, appearance);
         if (DOOR.has(entity)) {
             // An opened door is seen sinking, its squares shrinking to nothing (G0069). A look only.
             appearance.squareFill = 1f - DOOR.get(entity).sunk();
         }
+    }
+
+    /** What it still carries on its back, and as what (G0074, pillar 5). */
+    private void publishRiders(Entity entity, Appearance appearance) {
+        @Nullable UnitKind rider = SLING.has(entity) ? SLING.get(entity).rider : null;
+        if (rider == null || !SLING.get(entity).loaded()) {
+            appearance.riders = 0;
+            appearance.riderLook = Look.NONE;
+            return;
+        }
+        appearance.riders = SLING.get(entity).riders;
+        appearance.riderLook = units.of(rider).look();
     }
 
     /**
@@ -327,12 +343,19 @@ public final class AppearanceSystem extends IteratingSystem {
             // Below the states that say he is hurt.
             return Appearance.State.ABOARD;
         }
+        if (SLING.has(entity) && SLING.get(entity).windingUp()) {
+            // The tell before a sling, the same one again.
+            return Appearance.State.WINDING_UP;
+        }
         if (BARRAGE.has(entity) && BARRAGE.get(entity).windingUp()) {
             // The tell before a pattern, the same one a leap gives: something is about to come at you.
             return Appearance.State.WINDING_UP;
         }
         if (LEAP.has(entity)) {
             Leap leap = LEAP.get(entity);
+            if (leap.slung()) {
+                return Appearance.State.SLUNG;
+            }
             if (leap.airborne()) {
                 return Appearance.State.AIRBORNE;
             }

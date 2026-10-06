@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Shield;
@@ -68,6 +69,7 @@ public final class DamageSystem extends IteratingSystem {
     private static final ComponentMapper<BlastsOnDeath> REACTION = ComponentMapper.getFor(BlastsOnDeath.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
+    private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -125,6 +127,10 @@ public final class DamageSystem extends IteratingSystem {
     /** What this tick's blows cost the entity they landed on. */
     private void settle(Entity entity, Damage damage) {
         if (INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active()) {
+            return;
+        }
+        if (LEAP.has(entity) && LEAP.get(entity).slung()) {
+            // A rider in the air: nothing lands on it, a blast included (G0074).
             return;
         }
         if (damage.hasSource && PERCEPTION.has(entity)) {
