@@ -148,9 +148,9 @@ nobody framed as gameplay work, exactly when an on-demand file would not be read
 
 **Alpha**: systems built to be built on. A session takes as many systems as the change genuinely needs
 (a leap and the strike that answers it are worth building together), staged so the work can stop after
-any stage. Each system goes: design it (`feature`), build it tests first (`new-system`), then **ask**
-whether Mateusz wants a scenario to judge it by feel. A stand-in is allowed only while it is listed as
-scaffolding in `docs/design/alpha-phase.md`.
+any stage. Each system goes: design it (`grill-with-docs` with `feature`), build it tests first
+(`implement` with `new-system`), then **ask** whether Mateusz wants a scenario to judge it by feel. A
+stand-in is allowed only while it is listed as scaffolding in `docs/design/alpha-phase.md`.
 
 ## How we work
 
@@ -234,5 +234,8 @@ Read the row that matches. On-demand by design - loading all of them costs more 
 The engineering skills from `mattpocock-skills` read three files: `docs/agents/issue-tracker.md` (issues
 are local markdown under `.scratch/<feature>/`), `docs/agents/triage-labels.md` (the five default labels,
 as `Status:` lines) and `docs/agents/domain.md` (single context; the glossary is `docs/glossary.md`, never
-a root `CONTEXT.md`). Where one of them and a skill of this repository cover the same ground, this
-repository's wins.
+a root `CONTEXT.md`). Where one of them and a skill of this repository cover the same ground, the
+`mattpocock-skills` one drives the session and the repository's adds the project context - its reading list,
+rules and checks: `grill-with-docs` with `feature`, `implement` with `new-system`, `new-kind` or `new-biome`,
+`diagnosing-bugs` with `docs/workflow.md`'s failure protocol. How to run the session is the mattpocock skill's;
+a project rule - a pillar, a G-record, an invariant, the checklist above - still holds.
