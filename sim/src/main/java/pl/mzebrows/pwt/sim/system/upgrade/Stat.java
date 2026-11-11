@@ -45,7 +45,26 @@ public enum Stat {
      * How many of one card every crate holds at least (G0056). Read where a crate is dealt; the side's
      * number, moved only by a {@code Stock}.
      */
-    CRATE_STOCK(Form.COUNT, Reader.SIDE);
+    CRATE_STOCK(Form.COUNT, Reader.SIDE),
+    /** How fast a leap flies. Read where a leap leaves the ground, and held for that flight. */
+    LEAP_SPEED(Form.SCALE, Reader.UNIT),
+    /** How close a man must be before a leaper commits. Read where it decides whether to commit. */
+    LEAP_TRIGGER_RANGE(Form.SCALE, Reader.UNIT),
+    /** How long a leap is in the air, and so how far it goes. Read where a leap leaves the ground. */
+    LEAP_AIRBORNE_TICKS(Form.SCALE, Reader.UNIT),
+    /** How many leaps one commitment strings together. Read where it commits, at a man - a door gets one. */
+    LEAP_SEQUENCE_LENGTH(Form.COUNT, Reader.UNIT),
+    /** How far from its patch's middle an idle unit picks somewhere to amble to. Read where it picks. */
+    WANDER_RADIUS(Form.SCALE, Reader.UNIT),
+    /** How close a man must come before an unaware unit notices him. Read where it is asked whether it does. */
+    DETECTION_RANGE(Form.SCALE, Reader.UNIT),
+    /**
+     * How far a man must get before a hunting unit gives up. Read where it is asked whether it does; never
+     * shorter than the detection range at any rank (SimConfigTest).
+     */
+    LOSE_RANGE(Form.SCALE, Reader.UNIT),
+    /** How many a nest's brood holds, the size it drew plus what is held. Read where the brood is sized, for the nest. */
+    NEST_BROOD_SIZE(Form.COUNT, Reader.UNIT);
 
     /** How an effect moves the number. */
     public enum Form {

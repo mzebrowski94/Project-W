@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
@@ -34,6 +35,7 @@ import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * A nest is a place that produces, which is the third way a level puts creatures on the field and
@@ -84,6 +86,17 @@ class NestTest {
         steps(simulation, ONE_PERIOD);
 
         assertThat(creatures(simulation)).isEqualTo(BROOD);
+    }
+
+    /** On top of whatever size it drew, every brood after the adaptation, rank by rank. */
+    @Test
+    void sendsOneMoreInEveryBroodPerRankOnceTheSwarmBreedsLarger() {
+        Simulation simulation = woken();
+        AlphaWorlds.hold(simulation, UpgradeKind.LARGER_BROOD, 2);
+
+        steps(simulation, ONE_PERIOD);
+
+        assertThat(creatures(simulation)).isEqualTo(BROOD + 2);
     }
 
     /**

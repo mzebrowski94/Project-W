@@ -137,6 +137,24 @@ class AdaptationTest {
         assertThat(cooldown(simulation, commander)).isEqualTo(BASE_TICKS);
     }
 
+    /** The same, asked of one port in turn: what one strain's read found is not handed to another strain. */
+    @Test
+    void movesOnlyItsOwnStrainsNumberWhicheverStrainIsReadFirst() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, MIDDLE + 20f, MIDDLE + 20f);
+        Entity spitter = simulation.spawnUnit(UnitKind.SPITTER, MIDDLE + 20f, MIDDLE);
+        Modifiers modifiers = new Modifiers(simulation.engine(), simulation.config());
+        DraftTest.ledger(simulation).held.add(new Upgrades.Held(UpgradeKind.RAPID_SPIT, Upgrades.SHARED, 1));
+
+        int first = modifiers.fireCooldownTicks(grunt, WeaponKind.SPIT, BASE_TICKS);
+
+        assertThat(modifiers.fireCooldownTicks(spitter, WeaponKind.SPIT, BASE_TICKS))
+                .isLessThan(BASE_TICKS);
+        assertThat(first)
+                .isEqualTo(modifiers.fireCooldownTicks(grunt, WeaponKind.SPIT, BASE_TICKS))
+                .isEqualTo(BASE_TICKS);
+    }
+
     @Test
     void readsTheSameForASpitterOnTheFieldAndOneThatArrivesAfterwards() {
         Simulation simulation = new Simulation(scheduled(EVERY_SECONDS, 0));

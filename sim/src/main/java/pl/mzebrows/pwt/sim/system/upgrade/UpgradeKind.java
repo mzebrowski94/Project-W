@@ -29,6 +29,16 @@ public enum UpgradeKind {
     EXPLOSIVES,
     /** Every crate opened from now on holds as many pickups as a crate can (G0056). */
     FULL_CRATES,
-    /** An adaptation: spitters spit more often. */
-    RAPID_SPIT
+    /** An adaptation: every alien spits more often. */
+    RAPID_SPIT,
+    /** An adaptation: the swarm walks faster - the speed stat the squad's Forced March moves. */
+    SWIFT_MOVEMENT,
+    /** An adaptation: a leaper commits from farther, and flies faster and farther. */
+    LONG_LEAP,
+    /** An adaptation: one more leap strung onto every sequence at a man. */
+    CHAIN_LEAP,
+    /** An adaptation: the swarm notices from farther, gives up later and ambles wider while idle. */
+    BLOODHOUND,
+    /** An adaptation: every brood a nest sends holds more. */
+    LARGER_BROOD
 }

@@ -27,6 +27,7 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Sight;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * Decides, once a tick, which units are hunting somebody, and who that somebody is.
@@ -51,15 +52,19 @@ public final class PerceptionSystem extends EntitySystem {
     private final Solid map;
     private final float loiterRadius;
 
+    /** What the adaptations held make of both ranges (ADR 0017). */
+    private final Modifiers modifiers;
+
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> sides = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> posts = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> edible = new ImmutableArray<>(new Array<>());
 
-    public PerceptionSystem(SimConfig config, Solid map) {
+    public PerceptionSystem(SimConfig config, Solid map, Modifiers modifiers) {
         this.pickupDefs = config.pickups();
         this.map = map;
         this.loiterRadius = config.controlPoint().loiterRadius();
+        this.modifiers = modifiers;
     }
 
     @Override
@@ -96,7 +101,7 @@ public final class PerceptionSystem extends EntitySystem {
                 perception.aggro = true;
             } else if (perception.aggro) {
                 // Losing him is range alone, whatever else this strain declares.
-                perception.aggro = withinRange(position, target, perception.loseRange);
+                perception.aggro = withinRange(position, target, modifiers.loseRange(watcher, perception.loseRange));
             } else {
                 perception.aggro = notices(watcher, perception, position, target);
             }
@@ -128,10 +133,11 @@ public final class PerceptionSystem extends EntitySystem {
     /**
      * Whether this unit notices the target, by every test its strain declares (G0015).
      *
-     * <p><strong>Cheapest first, short-circuiting</strong>: squared distance, dot product, grid walk.
+     * <p><strong>Cheapest first, short-circuiting</strong>: squared distance (its range folded through the
+     * adaptations held, a pass over the ledger), dot product, grid walk.
      */
     private boolean notices(Entity watcher, Perception perception, Position position, Position target) {
-        if (!withinRange(position, target, perception.detectionRange)) {
+        if (!withinRange(position, target, modifiers.detectionRange(watcher, perception.detectionRange))) {
             return false;
         }
         if (!withinArc(watcher, perception, position, target)) {

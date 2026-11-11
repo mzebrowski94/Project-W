@@ -161,6 +161,41 @@ class UpgradeTest {
         assertThat(modifiers.grenadeCooldownTicks(other, 100)).isEqualTo(100);
     }
 
+    /**
+     * A read remembers nothing past the ledger it was folded from: the same port, asked before a pick and after,
+     * answers for what is held each time - through the real pick, which is what moves the ledger in play.
+     */
+    @Test
+    void foldsAfreshOnceTheLedgerChangesBetweenTwoReads() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE - 10f, MIDDLE);
+        Modifiers modifiers = new Modifiers(simulation.engine(), simulation.config());
+        int before = modifiers.fireCooldownTicks(trooper, WeaponKind.SIDEARM, 100);
+
+        take(simulation, UpgradeKind.WEAPON_HANDLING);
+
+        assertThat(before).isEqualTo(100);
+        assertThat(modifiers.fireCooldownTicks(trooper, WeaponKind.SIDEARM, 100))
+                .isLessThan(100);
+    }
+
+    /** One port reading two commanders in turn, and the first again: a personal upgrade stays his slot's. */
+    @Test
+    void tellsTheChooserFromTheOtherCommanderWhicheverIsReadFirst() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        Entity other = simulation.spawnCommander(MIDDLE + 5f, MIDDLE, 1);
+        Entity chooser = simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        Modifiers modifiers = new Modifiers(simulation.engine(), simulation.config());
+        hold(simulation, new Upgrades.Held(UpgradeKind.GRENADIER, 0, 1));
+
+        int first = modifiers.grenadeCooldownTicks(other, 100);
+        int chosen = modifiers.grenadeCooldownTicks(chooser, 100);
+
+        assertThat(first).isEqualTo(modifiers.grenadeCooldownTicks(other, 100)).isEqualTo(100);
+        assertThat(chosen).isEqualTo(100 + GRENADIER_PERCENT);
+    }
+
     /** Forced March speeds the squad up, and nothing else DriveSystem moves. */
     @Test
     void drivesTheSquadFasterAndNoAlien() {

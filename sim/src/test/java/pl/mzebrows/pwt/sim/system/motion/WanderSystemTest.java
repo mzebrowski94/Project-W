@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.system.motion;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.BLOODHOUND_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DETECTION_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LOSE_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.WANDER_RADIUS;
@@ -10,8 +11,10 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.watching;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 class WanderSystemTest {
 
@@ -52,6 +55,23 @@ class WanderSystemTest {
             simulation.step();
             assertThat(distanceFrom(enemy, MIDDLE, MIDDLE)).isLessThan(WANDER_RADIUS + SLACK);
         }
+    }
+
+    /** The patch is wider, and nothing else: it still ambles about where it was spawned. */
+    @Test
+    void amblesAboutAWiderPatchOnceTheSwarmTracksBetter() {
+        Simulation simulation = wandering();
+        AlphaWorlds.hold(simulation, UpgradeKind.BLOODHOUND, 2);
+        Entity enemy = simulation.spawnEnemy(MIDDLE, MIDDLE);
+        float widened = WANDER_RADIUS * (100 + 2 * BLOODHOUND_PERCENT) / 100f;
+        float farthest = 0f;
+
+        for (int i = 0; i < A_LONG_WHILE; i++) {
+            simulation.step();
+            farthest = Math.max(farthest, distanceFrom(enemy, MIDDLE, MIDDLE));
+        }
+
+        assertThat(farthest).isGreaterThan(WANDER_RADIUS + SLACK).isLessThan(widened + SLACK);
     }
 
     @Test

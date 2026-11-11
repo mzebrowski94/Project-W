@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * Walks a unit that has noticed nobody slowly around the patch it was spawned in.
@@ -48,12 +49,16 @@ public final class WanderSystem extends EntitySystem {
 
     private final TileMap map;
 
+    /** What the adaptations held make of a patch's radius (ADR 0017). */
+    private final Modifiers modifiers;
+
     private ImmutableArray<Entity> idlers = new ImmutableArray<>(new Array<>());
 
-    public WanderSystem(Rng rng, TileMap map, float tickSeconds) {
+    public WanderSystem(Rng rng, TileMap map, float tickSeconds, Modifiers modifiers) {
         this.rng = rng;
         this.tickSeconds = tickSeconds;
         this.map = map;
+        this.modifiers = modifiers;
     }
 
     @Override
@@ -125,10 +130,11 @@ public final class WanderSystem extends EntitySystem {
      */
     private void pickSomewhere(Entity entity, Wander wander) {
         float bodyRadius = BODY.get(entity).radius;
+        float radius = modifiers.wanderRadius(entity, wander.radius);
         for (int attempt = 0; attempt < PLACEMENT_ATTEMPTS; attempt++) {
-            float offsetX = rng.nextFloat(-wander.radius, wander.radius);
-            float offsetY = rng.nextFloat(-wander.radius, wander.radius);
-            if (offsetX * offsetX + offsetY * offsetY > wander.radius * wander.radius) {
+            float offsetX = rng.nextFloat(-radius, radius);
+            float offsetY = rng.nextFloat(-radius, radius);
+            if (offsetX * offsetX + offsetY * offsetY > radius * radius) {
                 continue;
             }
             float x = wander.homeX + offsetX;

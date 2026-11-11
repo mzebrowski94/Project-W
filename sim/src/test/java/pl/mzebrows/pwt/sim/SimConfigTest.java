@@ -108,6 +108,39 @@ class SimConfigTest {
         }
     }
 
+    /** The same, with the swarm's perception moved as far as every adaptation takes it, through the game's fold. */
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void letsGoOfHimSoonerThanAnythingElseOnTheFieldDoesWithEveryAdaptationAtItsHighestRank(SimConfig config) {
+        Simulation world = everythingHeld(config);
+        Modifiers modifiers = new Modifiers(world.engine(), config);
+
+        float frog = leeway(config, UnitKind.FROG, world, modifiers);
+
+        for (UnitKind kind : UnitKind.values()) {
+            if (kind != UnitKind.FROG) {
+                assertThat(frog)
+                        .as("a frog must give up sooner than a %s", kind)
+                        .isLessThan(leeway(config, kind, world, modifiers));
+            }
+        }
+    }
+
+    /**
+     * <strong>A lose range is never shorter than the detection range</strong> (glossary) - or a unit standing
+     * between the two would notice him and give up on alternate ticks - at every rank an adaptation takes either.
+     */
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void neverGivesUpInsideTheRangeItNoticesHimAtWithEveryAdaptationAtItsHighestRank(SimConfig config) {
+        Simulation world = everythingHeld(config);
+        Modifiers modifiers = new Modifiers(world.engine(), config);
+
+        for (UnitKind kind : UnitKind.values()) {
+            assertThat(leeway(config, kind, world, modifiers)).as("%s", kind).isNotNegative();
+        }
+    }
+
     /**
      * <strong>The hand strike deletes an ordinary enemy and staggers a brute</strong> - the contrast the
      * whole parry is built on (G0013). It is two numbers in two blocks, and it was quietly broken for
@@ -426,6 +459,14 @@ class SimConfigTest {
     private static float leeway(SimConfig config, UnitKind kind) {
         PerceptionDef perception = config.unit(kind).perception();
         return perception.loseRange() - perception.detectionRange();
+    }
+
+    /** The same for one of the strain standing in {@code world}, both ranges folded as the game reads them. */
+    private static float leeway(SimConfig config, UnitKind kind, Simulation world, Modifiers modifiers) {
+        PerceptionDef perception = config.unit(kind).perception();
+        Entity unit = world.spawnUnit(kind, 10f, 10f);
+        return modifiers.loseRange(unit, perception.loseRange())
+                - modifiers.detectionRange(unit, perception.detectionRange());
     }
 
     @Test

@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.upgrade.Effect;
 import pl.mzebrows.pwt.sim.system.upgrade.Stat;
@@ -23,7 +24,8 @@ import pl.mzebrows.pwt.ui.hud.DraftLayout;
 
 /**
  * A card says exactly what its definition does (pillar 5): every shipped upgrade has a name and every
- * effect it has a line, and each fits a card on the 640-wide canvas with the rank at its highest.
+ * effect it has a line, and each fits a card on the 640-wide canvas with the rank at its highest - an
+ * adaptation's lines too, though it is never dealt on a card.
  */
 class CardTextTest {
 
@@ -63,9 +65,12 @@ class CardTextTest {
                 lines.add(TEXT.effect(effect));
             }
 
-            assertThat(def.effects().size())
-                    .as("%s effects on a card", kind)
-                    .isLessThanOrEqualTo(CardText.EFFECT_LINES);
+            if (def.side() == Side.PLAYER) {
+                // Only a players' upgrade is dealt on a card; an adaptation is shown by its name and rank.
+                assertThat(def.effects().size())
+                        .as("%s effects on a card", kind)
+                        .isLessThanOrEqualTo(CardText.EFFECT_LINES);
+            }
             for (String line : lines) {
                 assertThat(line).as(kind.name()).doesNotContain("#ui.").doesNotContain("{");
                 assertThat(line.length()).as(line).isLessThanOrEqualTo(columns);

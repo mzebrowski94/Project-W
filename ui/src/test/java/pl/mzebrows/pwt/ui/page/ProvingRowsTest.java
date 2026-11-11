@@ -109,10 +109,13 @@ class ProvingRowsTest {
     void listsThePlayersUpgradesBeforeTheSwarmsAdaptations() {
         List<UpgradeKind> kinds = rows.upgrades();
 
+        int firstSwarm = kinds.indexOf(UpgradeKind.RAPID_SPIT);
+
         assertThat(kinds).hasSize(UpgradeKind.values().length);
-        assertThat(kinds.getLast()).isEqualTo(UpgradeKind.RAPID_SPIT);
-        assertThat(rows.swarm(UpgradeKind.RAPID_SPIT)).isTrue();
-        assertThat(rows.swarm(UpgradeKind.MARKSMEN)).isFalse();
+        assertThat(kinds.subList(0, firstSwarm)).noneMatch(rows::swarm).contains(UpgradeKind.MARKSMEN);
+        assertThat(kinds.subList(firstSwarm, kinds.size()))
+                .allMatch(rows::swarm)
+                .contains(UpgradeKind.LARGER_BROOD);
     }
 
     @Test

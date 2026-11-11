@@ -6,6 +6,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.LEAP_HESITATION;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LEAP_SEQUENCE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LEAP_SPEED;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LEAP_TRIGGER_RANGE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.LONG_LEAP_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmlessLeaping;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -25,6 +26,7 @@ import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * Throwing yourself at the commander.
@@ -187,6 +189,39 @@ class EnemyLeapSystemTest {
         List<Leap.Phase> phases = record(simulation, enemy, ticksIn(LEAP_HESITATION + LEAP_AIRBORNE * 4f) + 40);
 
         assertThat(airborneRuns(phases)).isEqualTo(LEAP_SEQUENCE);
+    }
+
+    /** The adaptation's three numbers, each read for the leaper: farther to commit from, faster and longer in the air. */
+    @Test
+    void commitsFromFartherAndFliesFasterAndLongerOnceTheSwarmLeapsLonger() {
+        Simulation simulation = harmlessLeaping();
+        AlphaWorlds.hold(simulation, UpgradeKind.LONG_LEAP, 1);
+        simulation.spawnCommander(50f, 50f);
+        float beyond = LEAP_TRIGGER_RANGE * (100f + LONG_LEAP_PERCENT / 2f) / 100f;
+        Entity enemy = simulation.spawnEnemy(50f + beyond, 50f);
+
+        simulation.step();
+        assertThat(enemy.getComponent(Leap.class).phase).isEqualTo(Leap.Phase.HESITATING);
+
+        List<Leap.Phase> phases = record(simulation, enemy, ticksIn(LEAP_HESITATION) + 2);
+        Velocity velocity = enemy.getComponent(Velocity.class);
+        float speed = (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+        assertThat(phases).contains(Leap.Phase.AIRBORNE);
+        assertThat(speed).isCloseTo(LEAP_SPEED * (100 + LONG_LEAP_PERCENT) / 100f, Offset.offset(TOLERANCE));
+        assertThat(enemy.getComponent(Leap.class).remainingTicks).isGreaterThan(ticksIn(LEAP_AIRBORNE) - 2);
+    }
+
+    /** Rank by rank, at a man: one more leap strung on per rank. */
+    @Test
+    void stringsOneMoreLeapPerRankOnceTheSwarmChainsItsLeaps() {
+        Simulation simulation = harmlessLeaping();
+        AlphaWorlds.hold(simulation, UpgradeKind.CHAIN_LEAP, 2);
+        simulation.spawnCommander(50f, 50f);
+        Entity enemy = simulation.spawnEnemy(50f, 80f);
+
+        List<Leap.Phase> phases = record(simulation, enemy, ticksIn(LEAP_HESITATION + LEAP_AIRBORNE * 6f) + 60);
+
+        assertThat(airborneRuns(phases)).isEqualTo(LEAP_SEQUENCE + 2);
     }
 
     /** A landed counter does not merely interrupt the hop; it ends the whole sequence. */

@@ -68,16 +68,17 @@ class SimulationBenchmarkTest {
 
     /**
      * The share of the largest crowd's step the fold may take with every upgrade and adaptation held at its
-     * top rank, reckoned as {@value #READS_PER_ENTITY} reads per entity per step. Every read folds the
-     * ledger afresh (ADR 0017); a cache in front of {@code Modifiers} waits in the backlog for this line.
+     * top rank, reckoned as {@value #READS_PER_ENTITY} reads per entity per step. A sum is folded once per
+     * ledger and kind of reader and kept (ADR 0017), so this times what a step pays: the reads that find it kept.
      */
     private static final double MOST_FOLD_SHARE = 0.10;
 
     /**
-     * Reads per entity per step the fold's share is reckoned at: the pace every driven unit is read for,
-     * and a chance. A shot, a hit and a crate are read for far less often.
+     * Reads per entity per step the fold's share is reckoned at: the pace every driven unit is read for, a
+     * chance, and the trigger range a hunting leaper is read for while it waits to commit - or, unaware, its
+     * detection range instead. A shot, a hit and a crate are read for far less often.
      */
-    private static final int READS_PER_ENTITY = 2;
+    private static final int READS_PER_ENTITY = 3;
 
     /** Passes over the crowd a fold timing takes, half of them a pace and half a chance. */
     private static final int FOLD_PASSES = 200;
@@ -290,11 +291,16 @@ class SimulationBenchmarkTest {
 
     /**
      * The benchmark's world, warmed up: {@code crowd} aliens converging on a commander and his squad, one
-     * in every {@code spittersEvery} a spitter (zero for none).
+     * in every {@code spittersEvery} a spitter (zero for none). Its grunts hunt from the first tick, whatever
+     * the shipped strain says: a crowd standing idle across the map is the cheap case, not the one measured.
      */
     private static Simulation crowd(int crowd, int spittersEvery) {
         TileMap map = Maps.uniform(COLS, ROWS, TILE, Terrain.PLAIN);
-        Simulation simulation = new Simulation(SimConfig.defaults(), map);
+        SimConfig hunting = SimConfig.defaults()
+                .withUnit(
+                        UnitKind.GRUNT,
+                        grunt -> grunt.withPerception(grunt.perception().withAlwaysAggressive(true)));
+        Simulation simulation = new Simulation(hunting, map);
         simulation.level().commandersInvulnerable = true;
         float middleX = map.worldWidth() / 2f;
         float middleY = map.worldHeight() / 2f;

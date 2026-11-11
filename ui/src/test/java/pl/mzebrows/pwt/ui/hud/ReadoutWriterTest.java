@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
@@ -393,7 +394,7 @@ class ReadoutWriterTest {
         Readout readout = fill(new ReadoutWriter(), world);
 
         assertThat(readout.heldCount).isEqualTo(1);
-        assertThat(readout.heldKind[0]).isEqualTo(UpgradeKind.RAPID_SPIT);
+        assertThat(config.upgrades().of(readout.heldKind[0]).side()).isEqualTo(Side.ALIEN);
         assertThat(readout.heldAlien[0]).isTrue();
         assertThat(readout.heldSlot[0]).isEqualTo(UpgradeView.SHARED);
     }

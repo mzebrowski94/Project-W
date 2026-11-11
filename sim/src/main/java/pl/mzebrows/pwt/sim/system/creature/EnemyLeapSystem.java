@@ -29,6 +29,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * Throws a unit at whoever it is hunting once he is close enough, and owns its velocity while it is
@@ -118,6 +119,9 @@ public final class EnemyLeapSystem extends EntitySystem {
     private final int throwTicks;
     private final float throwDecay;
 
+    /** What the adaptations held make of a leap's reach, speed, time in the air and sequence (ADR 0017). */
+    private final Modifiers modifiers;
+
     /** Scratch for the place being leapt at, so reading it costs no allocation per unit per tick. */
     private final Position hunted = new Position();
 
@@ -127,7 +131,7 @@ public final class EnemyLeapSystem extends EntitySystem {
     private ImmutableArray<Entity> leapers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
 
-    public EnemyLeapSystem(Rng rng, float tickSeconds, Solid solid, SimConfig.DoorConfig door) {
+    public EnemyLeapSystem(Rng rng, float tickSeconds, Solid solid, SimConfig.DoorConfig door, Modifiers modifiers) {
         this.rng = rng;
         this.tickSeconds = tickSeconds;
         this.solid = solid;
@@ -139,6 +143,7 @@ public final class EnemyLeapSystem extends EntitySystem {
         this.throwSpeed = door.throwSpeed();
         this.throwTicks = Ticks.of(door.throwSeconds(), tickSeconds);
         this.throwDecay = door.throwSpeed() / door.throwSeconds();
+        this.modifiers = modifiers;
     }
 
     @Override
@@ -196,11 +201,11 @@ public final class EnemyLeapSystem extends EntitySystem {
         Position position = POSITION.get(entity);
         Velocity velocity = VELOCITY.get(entity);
         switch (leap.phase) {
-            case READY -> commitIfClose(leap, position, target, velocity);
+            case READY -> commitIfClose(entity, leap, position, target, velocity);
             case HESITATING -> {
                 velocity.set(0f, 0f);
                 if (leap.remainingTicks <= 0) {
-                    launch(leap, position, target, velocity);
+                    launch(entity, leap, position, target, velocity);
                 }
             }
             case AIRBORNE -> {
@@ -209,7 +214,7 @@ public final class EnemyLeapSystem extends EntitySystem {
                     bounceOff(entity, leap, door, velocity);
                     return;
                 }
-                velocity.set(leap.directionX * leap.speed, leap.directionY * leap.speed);
+                velocity.set(leap.directionX * leap.flightSpeed, leap.directionY * leap.flightSpeed);
                 if (leap.remainingTicks <= 0) {
                     land(leap, velocity);
                 }
@@ -217,7 +222,7 @@ public final class EnemyLeapSystem extends EntitySystem {
             case RECOVERING -> {
                 velocity.set(0f, 0f);
                 if (leap.remainingTicks <= 0) {
-                    launch(leap, position, target, velocity);
+                    launch(entity, leap, position, target, velocity);
                 }
             }
         }
@@ -227,21 +232,21 @@ public final class EnemyLeapSystem extends EntitySystem {
      * The tell: it stops dead, and only then does the wind-up clock start. At the man once he is within its
      * trigger range - or, for one leap, at a shut door its way runs into within it (G0069).
      */
-    private void commitIfClose(Leap leap, Position position, Position target, Velocity velocity) {
+    private void commitIfClose(Entity entity, Leap leap, Position position, Position target, Velocity velocity) {
         if (leap.cooldownRemaining > 0) {
             return;
         }
         float toTargetX = target.x - position.x;
         float toTargetY = target.y - position.y;
-        long door = doorInTheWay(position, toTargetX, toTargetY, velocity, leap.triggerRange);
-        if (door == Handle.NOBODY
-                && toTargetX * toTargetX + toTargetY * toTargetY > leap.triggerRange * leap.triggerRange) {
+        float triggerRange = modifiers.leapTriggerRange(entity, leap.triggerRange);
+        long door = doorInTheWay(position, toTargetX, toTargetY, velocity, triggerRange);
+        if (door == Handle.NOBODY && toTargetX * toTargetX + toTargetY * toTargetY > triggerRange * triggerRange) {
             return;
         }
         leap.phase = Leap.Phase.HESITATING;
         leap.remainingTicks =
                 Ticks.of(rng.nextFloat(leap.hesitationMinSeconds, leap.hesitationMaxSeconds), tickSeconds);
-        leap.leapsLeft = door == Handle.NOBODY ? leap.sequenceLength : 1;
+        leap.leapsLeft = door == Handle.NOBODY ? modifiers.leapSequenceLength(entity, leap.sequenceLength) : 1;
         leap.door = door;
         velocity.set(0f, 0f);
     }
@@ -297,8 +302,11 @@ public final class EnemyLeapSystem extends EntitySystem {
         leap.finish();
     }
 
-    /** Off the ground, along a direction fixed now: at the man, or at the face of the door the leap is at. */
-    private void launch(Leap leap, Position position, Position target, Velocity velocity) {
+    /**
+     * Off the ground, along a direction fixed now: at the man, or at the face of the door the leap is at - at a speed
+     * and for a time fixed now too, so an adaptation landing mid-flight changes the next leap, not this one.
+     */
+    private void launch(Entity entity, Leap leap, Position position, Position target, Velocity velocity) {
         Position at = target;
         @Nullable Entity door = standing(leap.door);
         if (door == null) {
@@ -324,9 +332,10 @@ public final class EnemyLeapSystem extends EntitySystem {
         leap.directionX = toTargetX / distance;
         leap.directionY = toTargetY / distance;
         leap.phase = Leap.Phase.AIRBORNE;
-        leap.remainingTicks = leap.airborneTicks;
+        leap.remainingTicks = modifiers.leapAirborneTicks(entity, leap.airborneTicks);
+        leap.flightSpeed = modifiers.leapSpeed(entity, leap.speed);
         leap.leapsLeft--;
-        velocity.set(leap.directionX * leap.speed, leap.directionY * leap.speed);
+        velocity.set(leap.directionX * leap.flightSpeed, leap.directionY * leap.flightSpeed);
     }
 
     /**
@@ -338,7 +347,7 @@ public final class EnemyLeapSystem extends EntitySystem {
         Position position = POSITION.get(entity);
         Velocity velocity = VELOCITY.get(entity);
         float headway = (position.x - leap.fromX) * leap.directionX + (position.y - leap.fromY) * leap.directionY;
-        boolean stopped = leap.flownTicks > 0 && headway < leap.slungSpeed * tickSeconds * STOPPED;
+        boolean stopped = leap.flownTicks > 0 && headway < leap.flightSpeed * tickSeconds * STOPPED;
         if (leap.remainingTicks <= 0 || stopped) {
             velocity.set(0f, 0f);
             CONTACT.get(entity).sheathe(leap.landingTicks);
@@ -349,7 +358,7 @@ public final class EnemyLeapSystem extends EntitySystem {
         leap.fromX = position.x;
         leap.fromY = position.y;
         leap.flownTicks++;
-        velocity.set(leap.directionX * leap.slungSpeed, leap.directionY * leap.slungSpeed);
+        velocity.set(leap.directionX * leap.flightSpeed, leap.directionY * leap.flightSpeed);
     }
 
     private static void land(Leap leap, Velocity velocity) {

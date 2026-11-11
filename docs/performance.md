@@ -57,7 +57,8 @@ of the machine:
 - a step allocates 2 bytes or more per entity - an allocation inside a per-entity loop (one `new float[4]`
   measured 32);
 - with every upgrade and adaptation held at its top rank, the fold (`Modifiers`) would take a tenth of the
-  800 step at two reads per entity, or a read allocates. 2026-09-30: 105-205 ns a read, about 4-5%, no bytes.
+  800 step at three reads per entity, or a read allocates. 2026-09-30, uncached: 105-205 ns a read. 2026-11-11,
+  18 kinds held: 106 ns uncached (12% at three reads); 24 ns with the sums kept per kind of reader, about 3%.
 
 Run it after any change to a system, the solver or `SpatialGrid`, and quote the 800 line in the summary. A
 time failure within a hair of the line: rerun once; twice over is a regression.

@@ -17,6 +17,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.watchingInFront;
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Facing;
@@ -27,6 +28,7 @@ import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 class PerceptionSystemTest {
 
@@ -79,6 +81,32 @@ class PerceptionSystemTest {
         simulation.step();
 
         assertThat(aggro(enemy)).isFalse();
+    }
+
+    @Test
+    void noticesHimFromFartherOnceTheSwarmTracksBetter() {
+        Simulation simulation = watching();
+        AlphaWorlds.hold(simulation, UpgradeKind.BLOODHOUND, 1);
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity enemy = simulation.spawnEnemy(MIDDLE + DETECTION_RANGE + 1f, MIDDLE);
+
+        simulation.step();
+
+        assertThat(aggro(enemy)).isTrue();
+    }
+
+    @Test
+    void keepsHuntingHimPastTheLoseRangeOnceTheSwarmTracksBetter() {
+        Simulation simulation = watching();
+        AlphaWorlds.hold(simulation, UpgradeKind.BLOODHOUND, 1);
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity enemy = simulation.spawnEnemy(MIDDLE + DETECTION_RANGE - 1f, MIDDLE);
+
+        simulation.step();
+        commander.getComponent(Position.class).set(MIDDLE + DETECTION_RANGE - 1f - LOSE_RANGE - 1f, MIDDLE);
+        simulation.step();
+
+        assertThat(aggro(enemy)).isTrue();
     }
 
     @Test

@@ -22,6 +22,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * Runs the nests: wakes them, hatches what they owe, and empties the last of one into the fight that
@@ -55,6 +56,9 @@ public final class NestSystem extends EntitySystem {
     private final Rng rng;
     private final Brood brood;
 
+    /** What the adaptations held make of a brood's size (ADR 0017). */
+    private final Modifiers modifiers;
+
     /** How long after waking a nest's first brood comes: one number for every nest (G0062). */
     private final int firstBroodTicks;
 
@@ -62,10 +66,11 @@ public final class NestSystem extends EntitySystem {
     private ImmutableArray<Entity> quarry = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
 
-    public NestSystem(SimConfig config, TileMap map, Spawner spawner, Rng rng) {
+    public NestSystem(SimConfig config, TileMap map, Spawner spawner, Rng rng, Modifiers modifiers) {
         this.config = config;
         this.map = map;
         this.rng = rng;
+        this.modifiers = modifiers;
         this.brood = new Brood(map, spawner, config.nest().hatchKeepOff());
         this.firstBroodTicks = Ticks.of(config.nest().firstBroodSeconds(), config.tickSeconds());
     }
@@ -108,7 +113,7 @@ public final class NestSystem extends EntitySystem {
             if (nest.untilNext > 0) {
                 continue;
             }
-            hatch(nest, at, bodyOf(entity), nextBrood(nest));
+            hatch(nest, at, bodyOf(entity), nextBrood(entity, nest));
             nest.untilNext = nest.periodTicks;
         }
     }
@@ -144,13 +149,14 @@ public final class NestSystem extends EntitySystem {
 
     /**
      * How big the next of a nest's broods is, dealt from the nest's own bag: every size in its range
-     * comes out once before any comes out again, so a nest never sends its smallest three times running.
+     * comes out once before any comes out again, so a nest never sends its smallest three times running - and
+     * then whatever the swarm's adaptations add to every brood.
      */
-    private int nextBrood(Nest nest) {
+    private int nextBrood(Entity entity, Nest nest) {
         int sizes = nest.broodMax - nest.broodMin + 1;
         int size = Bag.draw(rng, nest.broodsDealt, sizes);
         nest.broodsDealt = Bag.take(nest.broodsDealt, size, sizes);
-        return nest.broodMin + size;
+        return modifiers.broodSize(entity, nest.broodMin + size);
     }
 
     /** How big the brood it leaves when it dies is. Once per nest, so there is nothing to deal evenly. */

@@ -21,7 +21,10 @@ public final class Upgrades implements Component, Pool.Poolable {
     /** Everything held, in the order it was first taken. */
     public final Array<Held> held = new Array<>();
 
-    /** Bumped whenever the ledger changes, so whoever shows it rebuilds only then. */
+    /**
+     * Bumped whenever the ledger changes, so whoever shows it rebuilds only then - and {@code Modifiers} folds
+     * its sums afresh: a write that moves neither this nor the size of {@link #held} would read stale numbers.
+     */
     public int revision;
 
     /** How many cards the players have taken this level. */

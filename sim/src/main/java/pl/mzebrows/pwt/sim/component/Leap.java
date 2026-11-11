@@ -70,8 +70,11 @@ public final class Leap implements Component, Pool.Poolable {
      */
     public boolean untouchable;
 
-    /** How fast a slung rider flies: the slinger's, never its own leap's {@link #speed}. */
-    public float slungSpeed;
+    /**
+     * How fast the leap in the air flies: its own {@link #speed} as the upgrades held made it when it left the
+     * ground - or, slung, the slinger's, never its own.
+     */
+    public float flightSpeed;
 
     /** How long a slung rider's claws stay sheathed once it is down: harmless, and killable. */
     public int landingTicks;
@@ -111,6 +114,7 @@ public final class Leap implements Component, Pool.Poolable {
         this.directionX = 0f;
         this.directionY = 0f;
         this.door = Handle.NOBODY;
+        flightSpeed = 0f;
         clearSling();
         return this;
     }
@@ -132,7 +136,7 @@ public final class Leap implements Component, Pool.Poolable {
         leapsLeft = 0;
         directionX = newDirectionX;
         directionY = newDirectionY;
-        slungSpeed = newSpeed;
+        flightSpeed = newSpeed;
         door = Handle.NOBODY;
         untouchable = true;
         landingTicks = newLandingTicks;
@@ -158,7 +162,6 @@ public final class Leap implements Component, Pool.Poolable {
 
     private void clearSling() {
         untouchable = false;
-        slungSpeed = 0f;
         landingTicks = 0;
         fromX = 0f;
         fromY = 0f;
@@ -174,6 +177,7 @@ public final class Leap implements Component, Pool.Poolable {
         directionX = 0f;
         directionY = 0f;
         door = Handle.NOBODY;
+        flightSpeed = 0f;
         clearSling();
     }
 
@@ -195,6 +199,7 @@ public final class Leap implements Component, Pool.Poolable {
         directionX = 0f;
         directionY = 0f;
         door = Handle.NOBODY;
+        flightSpeed = 0f;
         clearSling();
     }
 }

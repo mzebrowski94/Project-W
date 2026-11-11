@@ -192,7 +192,7 @@ public final class Simulation {
         engine.addSystem(new MeleeSystem(spawner));
         // After the commander's hands, before anything looks around.
         engine.addSystem(new TurretSystem(solid, guns));
-        engine.addSystem(new PerceptionSystem(config, solid));
+        engine.addSystem(new PerceptionSystem(config, solid, modifiers));
         engine.addSystem(new NavigationSystem(config, map));
         // After the course it bends, before avoidance.
         engine.addSystem(new WeaveSystem());
@@ -208,14 +208,15 @@ public final class Simulation {
         engine.addSystem(new TrooperMindSystem(config, solid, squad, odds));
         engine.addSystem(new TrooperMoveSystem(config, solid, squad));
         engine.addSystem(new TrooperCombatSystem(config, solid, guns, throwing, odds));
-        engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds()));
+        engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds(), modifiers));
         engine.addSystem(new AvoidanceSystem(config, map));
         engine.addSystem(new EnemyRangedSystem(solid, guns, streams.of(RngStream.SPIT)));
         // After everything that chooses a course; before the dodge, which overwrites it.
         engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
         engine.addSystem(new DriveSystem(map, config.ground(), modifiers));
-        engine.addSystem(new EnemyLeapSystem(streams.of(RngStream.LEAP), config.tickSeconds(), solid, config.door()));
+        engine.addSystem(
+                new EnemyLeapSystem(streams.of(RngStream.LEAP), config.tickSeconds(), solid, config.door(), modifiers));
         engine.addSystem(new StunSystem());
         engine.addSystem(new MovementSystem());
         engine.addSystem(new StrikeSystem(spawner));
@@ -256,7 +257,7 @@ public final class Simulation {
         // Before the objectives.
         engine.addSystem(new WaveSystem(config, map, spawner, streams.of(RngStream.WAVE)));
         // After the death chain, before the reaper and the objectives.
-        engine.addSystem(new NestSystem(config, map, spawner, streams.of(RngStream.NEST)));
+        engine.addSystem(new NestSystem(config, map, spawner, streams.of(RngStream.NEST), modifiers));
         // Beside the waves and the nests, for their reason: what rises this tick counts this tick (G0048).
         engine.addSystem(new LairSystem(map, spawner));
         // After everything that could have put a boss down or killed one, reading this tick's perception.

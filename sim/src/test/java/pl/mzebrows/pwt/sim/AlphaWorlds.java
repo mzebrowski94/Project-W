@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Steering;
+import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.AiChance;
@@ -1662,7 +1663,53 @@ public final class AlphaWorlds {
                                 null,
                                 0,
                                 List.of(new Effect.Breed(UnitKind.SPITTER, Stat.FIRE_COOLDOWN, SPIT_PERCENT))))
+                // The swarm's others are switched off, so a due adaptation is still Rapid Spit; a test about
+                // one of these holds it directly.
+                .put(
+                        UpgradeKind.SWIFT_MOVEMENT,
+                        offSwarm(3, new Effect.Scale(Stat.SPEED, Target.ALIENS, SWIFT_PERCENT)))
+                .put(
+                        UpgradeKind.LONG_LEAP,
+                        offSwarm(
+                                3,
+                                new Effect.Scale(Stat.LEAP_SPEED, Target.ALIENS, LONG_LEAP_PERCENT),
+                                new Effect.Scale(Stat.LEAP_TRIGGER_RANGE, Target.ALIENS, LONG_LEAP_PERCENT),
+                                new Effect.Scale(Stat.LEAP_AIRBORNE_TICKS, Target.ALIENS, LONG_LEAP_PERCENT)))
+                .put(UpgradeKind.CHAIN_LEAP, offSwarm(2, new Effect.Count(Stat.LEAP_SEQUENCE_LENGTH, Target.ALIENS, 1)))
+                .put(
+                        UpgradeKind.BLOODHOUND,
+                        offSwarm(
+                                3,
+                                new Effect.Scale(Stat.WANDER_RADIUS, Target.ALIENS, BLOODHOUND_PERCENT),
+                                new Effect.Scale(Stat.DETECTION_RANGE, Target.ALIENS, BLOODHOUND_PERCENT),
+                                new Effect.Scale(Stat.LOSE_RANGE, Target.ALIENS, BLOODHOUND_PERCENT)))
+                .put(UpgradeKind.LARGER_BROOD, offSwarm(2, new Effect.Count(Stat.NEST_BROOD_SIZE, Target.ALIENS, 1)))
                 .build();
+    }
+
+    /** What one rank of Swift Movement adds to the swarm's pace, in percent. */
+    public static final int SWIFT_PERCENT = 20;
+
+    /** What one rank of Long Leap adds to a leap's speed, trigger range and time in the air, in percent. */
+    public static final int LONG_LEAP_PERCENT = 50;
+
+    /** What one rank of Bloodhound adds to the wander radius and both perception ranges, in percent. */
+    public static final int BLOODHOUND_PERCENT = 50;
+
+    /** An adaptation no schedule here deals, for a test to hold directly. */
+    private static UpgradeDef offSwarm(int ranks, Effect... effects) {
+        return new UpgradeDef(Side.ALIEN, 0, ranks, 1, null, 0, List.of(effects));
+    }
+
+    /** Puts {@code ranks} of the side's - or the swarm's - {@code kind} in the ledger, as if dealt. */
+    public static void hold(Simulation simulation, UpgradeKind kind, int ranks) {
+        simulation
+                .engine()
+                .getEntitiesFor(Family.all(Upgrades.class).get())
+                .first()
+                .getComponent(Upgrades.class)
+                .held
+                .add(new Upgrades.Held(kind, Upgrades.SHARED, ranks));
     }
 
     public static final int MARKSMEN_PERCENT = 15;
