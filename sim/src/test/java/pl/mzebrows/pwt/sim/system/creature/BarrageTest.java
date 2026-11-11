@@ -137,7 +137,7 @@ class BarrageTest {
         nest.getComponent(Damage.class).land(1, Harm.KILL);
         steps(simulation, UNTIL_THE_FIRST_SALVO * 4);
 
-        assertThat(alienShots(simulation)).isEmpty();
+        assertThat(alienShots(simulation)).hasSize(0);
     }
 
     // ---- which way it looks ----

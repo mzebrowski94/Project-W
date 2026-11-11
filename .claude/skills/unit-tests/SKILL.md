@@ -37,6 +37,8 @@ assertThat(entity.getComponent(Position.class).x).isCloseTo(1f, Offset.offset(1e
 - AssertJ `assertThat` for everything. `SoftAssertions` when checking several fields of one object.
 - Floats need an `Offset` - see `MovementSystemTest`. Exact equality only for values that were never
   arithmetic (a position that was set and not integrated).
+- A collection of entities is asserted as something readable - `hasSize(n)`, or mapped to what matters
+  (`extracting` a kind, a position) - so a failure prints a number or a value, not `PooledEntity@hash` lines.
 - `var` only where the type is obvious from the right-hand side.
 - Repeated literals and shared config become `private static final` constants, passed straight to
   the code under test. No local aliasing of a constant.

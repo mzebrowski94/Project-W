@@ -20,6 +20,13 @@ repository records it (G-record, invariant row, glossary row, input-map row).
 - **Skills per ticket** are the first line of its *Read first*: `/mattpocock-skills:grill-with-docs` where
   open points need exploring (03-16), `/mattpocock-skills:implement` where a feature is built (03-17). The bug
   tickets (01, 02) take neither.
+- **Starting a ticket is Mateusz's**: `wayfinder` cannot be called by an agent, so the session's message
+  begins with the command itself - `/mattpocock-skills:wayfinder .scratch/playtest-feedback/map.md ticket NN`
+  (no ticket: the first on the frontier). `grill-with-docs` and `implement` are his to start too: at either,
+  the session stops and gives the exact message to send next - the command first, then a brief.
+- **A bug ticket's *Done when* states the symptom**, as the player saw it ("an alien fires nothing at the point
+  or nest that roused it"), never a strain or a setup: those are the session's guess to make and test. 01's
+  named a spitter, which was never the shooter.
 - **Bundled by shared code**: items that touch the same systems share a ticket, sized to one session. A
   ticket that turns out bigger stops after a stage and leaves the rest as a new ticket here.
 - **Order**: 01 first (Mateusz). The rest by number when nothing blocks; 17 last by request.

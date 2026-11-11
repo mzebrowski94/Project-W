@@ -53,7 +53,8 @@ public final class Perception implements Component, Pool.Poolable {
      * True while this unit is on its way to somewhere it was provoked from - shot at, struck, or
      * stood next to a point being taken off it.
      *
-     * <p>A place and not a target (G0016).
+     * <p>A place and not a target (G0016). Two readers: {@code NavigationSystem} walks there, and
+     * {@code BarrageSystem} shoots there, through {@link #hurtFromAPlace()} only.
      */
     public boolean provoked;
 

@@ -50,6 +50,8 @@ class DecisionRecordsTest {
 
     private static final Path INVARIANTS = Path.of("docs/design/invariants");
 
+    private static final String INVARIANTS_HEADER = "| Invariant | Status |";
+
     private static final List<String> MODULES = List.of("map", "sim", "core", "ui", "net", "lwjgl3");
 
     /**
@@ -272,6 +274,24 @@ class DecisionRecordsTest {
         }
 
         assertThat(missing).as("name the test that enforces it now").isEmpty();
+    }
+
+    /**
+     * A file of invariants keeps its table and at least one row. A rewrite gone wrong that leaves one empty
+     * would otherwise pass every other check here: no row left, no test named, nothing to find missing.
+     */
+    @Test
+    void keepsATableOfInvariantsInEveryFileOfThem() {
+        List<String> empty = new ArrayList<>();
+        for (Path file : markdownIn(INVARIANTS)) {
+            List<String> lines = lines(file);
+            long rows = lines.stream().filter(line -> line.startsWith("| ")).count();
+            if (!lines.contains(INVARIANTS_HEADER) || rows < 2) {
+                empty.add(file.getFileName().toString());
+            }
+        }
+
+        assertThat(empty).as("restore the invariants it held").isEmpty();
     }
 
     /** Every record in a folder, by file name. */

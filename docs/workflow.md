@@ -179,6 +179,8 @@ Only things actually hit. Add what you hit; delete what stops happening.
 | `.claude/scripts/verify.sh: Permission denied` (Cloud) | The scripts were committed as `100644` from Windows, so a Linux clone cannot execute them. Hit 2026-09-26; now committed as `100755`, and `verify.sh` calls `gradle.sh` through `bash`. | Run `bash .claude/scripts/verify.sh`. The session-start hook also restores the bit. |
 | `sandbox-helper: no Plan9 drive shares mounted under /mnt/.virtiofs-root/shared` (Cowork) | The device shell cannot mount `D:` at all. Hit 2026-09-11, attributed to a Windows update of 2026-09-08; fixed on Mateusz's side 2026-09-12. | Nothing in the build can run. Say so and fall back to the file tools - see below. |
 | IntelliJ or the command line says `Unable to create '.git/index.lock': File exists. Another git process seems to be running` (Cowork) | **A `git` command run from the sandbox left its lock behind** - see *Reading git state*. Hit 2026-09-17. | Delete `.git/index.lock` (needs delete permission), then **always** `git --no-optional-locks ...` for anything read-only. |
+| A `--tests 'Class.method'` run reports the whole class, and IntelliJ's `<project>/*/build` changes under it (Desktop) | `./gradlew` called directly: it builds into IntelliJ's output, not `~/.pwt/out` (ADR 0006). Hit 2026-11-11. Through `gradle.sh` the same filter runs the one method. | `.claude/scripts/gradle.sh`, never `./gradlew`, in every environment. |
+| An `invariants/*.md` (or any doc) left empty or cut short (Desktop) | An inline Python or shell script that read a whole file and rewrote it failed between the two. Hit 2026-11-11; `DecisionRecordsTest.keepsATableOfInvariantsInEveryFileOfThem` now catches an empty invariants file. | Change docs with the Edit tool, one exact replacement at a time. A file clean at HEAD comes back with `git restore -- <path>` - see the friction below. |
 | `too deeply nested to stage: N folders below the connected folder` (Cowork) | `device_stage_files` supports 7 folders; Java sources sit 8-9 deep. | Not workable around from here. Read the file another way or ask Mateusz to connect a deeper folder. |
 
 ## Cloud sessions
@@ -223,6 +225,9 @@ Named so it is not re-discovered every session. None of it blocks work; each is 
   game.
 - **Allowlisting `repo.maven.apache.org`** would allow plain `mavenCentral()` in Cowork; `api.foojay.io`
   would fix Gradle toolchain provisioning there.
+- **Auto mode denies `git restore`** (Desktop), and `git show HEAD:<path> > <path>` with it, even for a
+  file that is clean at HEAD. Closed 2026-11-11 for docs and tickets by `Bash(git restore -- docs/*)` and
+  `Bash(git restore -- .scratch/*)` in `.claude/settings.json`; anywhere else Claude still hands it over.
 - **In Cowork the repo lives on `D:`, a Windows mount** - the ~175x write penalty above. Worked around in
   `gradle.sh`.
 
