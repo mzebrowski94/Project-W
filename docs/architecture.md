@@ -171,8 +171,9 @@ constructor of `Simulation` is still the one source of it.
 | `appearance` | What the renderer is shown (G0003) | Appearance | - |
 | `upgrade` | Upgrades and adaptations (ADR 0017) | Upgrade | `Modifiers` |
 
-`Life` (a unit's life stage) and `Odds` (the dice) are questions every package asks too; they live in
-the `sim` root, `Life` because `Players` and `ui` ask it, `Odds` because it advances a stream.
+`Life` (a unit's life stage), `Odds` (the dice) and `Seats` (which slots have a commander) are questions every
+package asks too; they live in the `sim` root, `Life` because `Players` and `ui` ask it, `Odds` because it advances a
+stream, `Seats` because `upgrade` asks it and calls nothing in `query` (ADR 0017).
 
 **Where a new system goes**: with the non-`query` helpers it uses; failing that, with the component it
 alone writes; failing that, to the package whose glossary section names what it does. Not by the

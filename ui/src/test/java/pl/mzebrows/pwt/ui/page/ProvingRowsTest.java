@@ -84,7 +84,7 @@ class ProvingRowsTest {
         assertThat(rows.step(ProvingSetup.first(), ProvingRows.Row.SQUAD, 1).squad())
                 .isTrue();
         assertThat(rows.step(ProvingSetup.first(), ProvingRows.Row.OTHERS, -1).others())
-                .isEqualTo(ProvingSetup.Others.BARRELS);
+                .isEqualTo(ProvingSetup.Others.GRENADE_CACHES);
         assertThat(rows.value(ProvingSetup.first(), ProvingRows.Row.OTHERS).key())
                 .isEqualTo("ui.provingGround.others.NONE");
     }

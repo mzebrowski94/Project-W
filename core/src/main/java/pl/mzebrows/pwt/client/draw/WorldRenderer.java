@@ -122,6 +122,7 @@ public final class WorldRenderer implements Disposable {
     private final BoulderMark boulderMark;
     private final SlingMark slingMark;
     private final ShadowMark shadowMark;
+    private final PopMark popMark;
 
     /** The client's own clock, for the post's pulse alone - a look, never read back by the simulation. */
     private float pulseSeconds;
@@ -182,6 +183,11 @@ public final class WorldRenderer implements Disposable {
             }
             float x = Drawn.x(position, previous, alpha);
             float y = Drawn.y(position, previous, alpha);
+            if (appearance.pop > 0f) {
+                // A take by touch, rising off the taker and fading (G0078): its look and nothing on it.
+                drawPop(x, y, body.radius, appearance);
+                continue;
+            }
             if (appearance.burst > 0f) {
                 // Under the body, so the thumper stays readable in the middle of its own slam (G0071).
                 SCRATCH.set(burstMark.color());
@@ -562,6 +568,26 @@ public final class WorldRenderer implements Disposable {
             shapes.line(fromX, fromY, toX, toY);
             fromX = toX;
             fromY = toY;
+        }
+    }
+
+    /** A pop: what was taken, in its own shape, risen by how far through it is and faded by how much is left. */
+    private void drawPop(float x, float y, float radius, Appearance appearance) {
+        float left = appearance.pop;
+        float risen = y + popMark.riseFor(radius, left);
+        SCRATCH.set(tint(appearance));
+        SCRATCH.a = popMark.alpha() * left;
+        shapes.setColor(SCRATCH);
+        if (square(appearance.look)) {
+            shapes.rect(x - radius, risen - radius, radius * 2f, radius * 2f);
+        } else {
+            shapes.circle(x, risen, radius, CIRCLE_SEGMENTS);
+        }
+        if (dotted(appearance.look)) {
+            SCRATCH.set(crateMark.color());
+            SCRATCH.a = popMark.alpha() * left;
+            shapes.setColor(SCRATCH);
+            shapes.circle(x, risen, crateMark.dotFor(radius), CIRCLE_SEGMENTS);
         }
     }
 

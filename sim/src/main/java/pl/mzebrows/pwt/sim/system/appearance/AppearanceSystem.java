@@ -29,6 +29,7 @@ import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
+import pl.mzebrows.pwt.sim.component.Pop;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Shield;
@@ -59,6 +60,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  */
 public final class AppearanceSystem extends IteratingSystem {
 
+    private static final ComponentMapper<Pop> POP = ComponentMapper.getFor(Pop.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
@@ -155,6 +157,8 @@ public final class AppearanceSystem extends IteratingSystem {
         appearance.burst = bursting ? BARRAGE.get(entity).burstReach : 0f;
         appearance.burstFade = bursting ? BARRAGE.get(entity).burstFade() : 0f;
         appearance.daze = STUNNED.has(entity) ? STUNNED.get(entity).dazeLeft() : 0f;
+        // A take by touch, rising and fading as it runs out (G0078).
+        appearance.pop = POP.has(entity) ? POP.get(entity).left() : 0f;
         publishRiders(entity, appearance);
         if (DOOR.has(entity)) {
             // An opened door is seen sinking, its squares shrinking to nothing (G0069). A look only.

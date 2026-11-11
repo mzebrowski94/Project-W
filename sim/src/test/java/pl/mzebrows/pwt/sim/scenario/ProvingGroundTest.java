@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Nest;
@@ -97,6 +98,7 @@ class ProvingGroundTest {
                 switch (others) {
                     case TURRETS -> Turret.class;
                     case MINES -> Mine.class;
+                    case CRATES -> Crate.class;
                     default -> Pickup.class;
                 };
         float him = position(commander(simulation)).x;

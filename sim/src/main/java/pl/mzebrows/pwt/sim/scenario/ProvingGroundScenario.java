@@ -245,7 +245,14 @@ final class ProvingGroundScenario implements Scenario {
             case MINES -> scatter.scatter(band, OTHERS, config.mine().radius(), simulation::spawnMine);
             case BARRELS ->
                 scatter.scatter(band, OTHERS, config.pickup(PickupKind.BARREL).radius(), simulation::spawnBarrel);
+            case CRATES -> lay(simulation, scatter, band, PickupKind.CRATE);
+            case GRENADE_CACHES -> lay(simulation, scatter, band, PickupKind.ARMOURY_GRENADES);
         }
+    }
+
+    private static void lay(Simulation simulation, Scatter scatter, TileRect band, PickupKind kind) {
+        scatter.scatter(
+                band, OTHERS, simulation.config().pickup(kind).radius(), (x, y) -> simulation.spawnPickup(kind, x, y));
     }
 
     /** The chosen strain, or a nest of it; a rooted strain is one, standing - it cannot come out of a hole. */

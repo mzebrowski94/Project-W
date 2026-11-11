@@ -47,6 +47,19 @@ class GraphicConfigTest {
         assertThat(config.terrainPalette()).isNotNull();
     }
 
+    /** A take by touch is seen: it rises off the taker and starts out visible (G0078). */
+    @Test
+    void readsAPopThatRisesAndIsSeen() {
+        PopMark pop = GraphicConfig.load().pop();
+
+        assertThat(pop.rise()).isPositive();
+        assertThat(pop.alpha()).isPositive();
+        assertThat(pop.riseFor(1f, 1f))
+                .as("nothing risen the instant it appears")
+                .isZero();
+        assertThatThrownBy(() -> new PopMark(1f, 1.5f)).isInstanceOf(IllegalArgumentException.class);
+    }
+
     /** One shadow for whatever is off the ground - a slung rider, a thrown grenade (G0077) - and it is seen. */
     @Test
     void readsOneShadowForEverythingOffTheGround() {
@@ -153,6 +166,7 @@ class GraphicConfigTest {
                         d.boulder(),
                         d.sling(),
                         d.shadow(),
+                        d.pop(),
                         d.camera()))
                 .isInstanceOf(IllegalArgumentException.class);
     }

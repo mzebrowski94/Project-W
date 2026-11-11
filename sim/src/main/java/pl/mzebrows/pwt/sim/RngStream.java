@@ -91,7 +91,13 @@ public enum RngStream {
      * where everything stands. Only ever derived from - per sub-concern and per position - and only while the world
      * is built, so it sits here as one more long a snapshot carries and its children never do.
      */
-    MISSION(0x6E3F_A1C9_58B2_D40BL);
+    MISSION(0x6E3F_A1C9_58B2_D40BL),
+
+    /**
+     * Where the grenade caches a taken point lays fall round it (G0078). Its own, so taking a point never moves where
+     * a reinforcement lands, and laying none draws nothing.
+     */
+    CACHE(0x5D3A_8F21_C76E_B419L);
 
     private final long salt;
 

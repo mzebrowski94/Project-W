@@ -1,6 +1,6 @@
 # G0060: The proving ground is practice, outside the campaign
 
-**Status.** accepted
+**Status.** amended by G0078: the others add crates and grenade caches
 
 **Trigger.** Letting the player choose a gun, an upgrade or a squad anywhere but the proving ground, or
 carrying anything into or out of it.
@@ -10,7 +10,7 @@ carrying anything into or out of it.
 **Constraint.** **An exception to pillar 3, on the terms pillar 1 already grants its two.** The proving
 ground (`UI:main/proving-ground`) lets the player choose a **setup** - one strain, how many or a nest of
 it, the gun he spawns and comes back with, whether the squad comes, the upgrades and adaptations at their
-ranks, and turrets, mines or barrels - and fight it on a round patch of sand with a few seeded rocks on it, ringed by thicket, his side
+ranks, and turrets, mines, barrels, crates or grenade caches (G0078) - and fight it on a round patch of sand with a few seeded rocks on it, ringed by thicket, his side
 on the left and theirs on the right. Nothing is carried in or out: no tally, no upgrade, no gun leaves it,
 and nothing in the campaign reads what was chosen there. It earns no drafts - it has no objectives - and
 it is offline only.

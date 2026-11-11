@@ -63,6 +63,7 @@ public final class Components {
                     Obstacle.class,
                     Perception.class,
                     Pickup.class,
+                    Pop.class,
                     Position.class,
                     Post.class,
                     PreviousPosition.class,

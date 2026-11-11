@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_AGGRO_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_CAPTURE_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_RADIUS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_REINFORCEMENT_RADIUS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmless;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -12,6 +14,8 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.watching;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
+import java.util.ArrayList;
+import java.util.List;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileRect;
@@ -21,9 +25,12 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Perception;
+import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Post;
+import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.def.Objective;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
@@ -44,6 +51,13 @@ class ControlPointTest {
 
     /** How far the post a held point becomes watches. Any positive number; the value is the level's. */
     private static final float WATCH = 20f;
+
+    /** Caches enough to crowd the ring, and the drops lying round it in a circle this far out. */
+    private static final int CROWD = 20;
+
+    private static final int DROPS = 12;
+
+    private static final float DROP_RING = 9f;
 
     /** A corner of the fixture arena for a wave to arrive in. */
     private static final TileRect A_CORNER = new TileRect(16, 16, 2, 2);
@@ -334,6 +348,118 @@ class ControlPointTest {
         steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + ticksIn(0.2f) + 4);
 
         assertThat(count(simulation, Enemy.class)).isEqualTo(3);
+    }
+
+    /** G0078: a refill where the fighting is, one for every player, so co-op is not a race for it. */
+    @Test
+    void laysAGrenadeCacheBesideItForEverySeatedSlotWhenItIsTaken() {
+        Simulation simulation = new Simulation(config(), 2);
+        simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        simulation.spawnCommander(ELSEWHERE, ELSEWHERE, 1);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) - 1);
+        int beforeItFell = grenadeCaches(simulation).size();
+
+        steps(simulation, 3);
+
+        TileRect reach = TileRect.around(simulation.map(), MIDDLE, MIDDLE, POINT_REINFORCEMENT_RADIUS);
+        assertThat(beforeItFell).isZero();
+        assertThat(grenadeCaches(simulation)).hasSize(2).allSatisfy(cache -> {
+            Position at = cache.getComponent(Position.class);
+            assertThat(distance(at, MIDDLE, MIDDLE)).isGreaterThan(POINT_RADIUS);
+            assertThat(reach.contains(
+                            simulation.map().colAt(at.x), simulation.map().rowAt(at.y)))
+                    .isTrue();
+        });
+    }
+
+    /** Seated is seated: a player whose commander is on his way back is still a player, and still gets his. */
+    @Test
+    void countsASlotWhoseCommanderIsOnHisWayBack() {
+        Simulation simulation = new Simulation(config(), 2);
+        simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        Entity ticket = simulation.engine().createEntity();
+        ticket.add(simulation.engine().createComponent(Respawning.class).set(ticksIn(60f), 0, 1));
+        simulation.engine().addEntity(ticket);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        assertThat(grenadeCaches(simulation)).hasSize(2);
+    }
+
+    /** A refill before the hold waves is the point of it: the point the level ends on lays them too. */
+    @Test
+    void laysThemBesideAPointThatIsHeldAfterwards() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        held(simulation);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        assertThat(grenadeCaches(simulation)).hasSize(1);
+    }
+
+    /** The point's supply drops lie in the same ring, and a cache laid on one would hide it. */
+    @Test
+    void laysThemOffWhateverAlreadyLiesBesideIt() {
+        // Many caches against a ring of drops, so a cache laid blind to them is all but sure to land on one.
+        Simulation simulation =
+                new Simulation(config().withControlPoint(config().controlPoint().withGrenadeCaches(CROWD)));
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+        for (int i = 0; i < DROPS; i++) {
+            float turn = i * (float) (2.0 * Math.PI / DROPS);
+            simulation.spawnPickup(
+                    PickupKind.SUPPLY_DROP,
+                    MIDDLE + DROP_RING * (float) Math.cos(turn),
+                    MIDDLE + DROP_RING * (float) Math.sin(turn));
+        }
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        float apart = simulation.config().pickup(PickupKind.ARMOURY_GRENADES).radius()
+                + simulation.config().pickup(PickupKind.SUPPLY_DROP).radius();
+        for (Entity cache : grenadeCaches(simulation)) {
+            for (Entity other :
+                    simulation.engine().getEntitiesFor(Family.all(Pickup.class).get())) {
+                if (other.getComponent(Pickup.class).kind == PickupKind.SUPPLY_DROP) {
+                    assertThat(distance(
+                                    cache.getComponent(Position.class),
+                                    other.getComponent(Position.class).x,
+                                    other.getComponent(Position.class).y))
+                            .isGreaterThanOrEqualTo(apart);
+                }
+            }
+        }
+    }
+
+    @Test
+    void laysThemOnceAndNeverAgainWhileItIsHeld() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) * 3);
+
+        assertThat(grenadeCaches(simulation)).hasSize(1);
+    }
+
+    private static List<Entity> grenadeCaches(Simulation simulation) {
+        List<Entity> caches = new ArrayList<>();
+        for (Entity entity :
+                simulation.engine().getEntitiesFor(Family.all(Pickup.class).get())) {
+            if (entity.getComponent(Pickup.class).kind == PickupKind.ARMOURY_GRENADES) {
+                caches.add(entity);
+            }
+        }
+        return caches;
+    }
+
+    private static float distance(Position at, float x, float y) {
+        float dx = at.x - x;
+        float dy = at.y - y;
+        return (float) Math.sqrt(dx * dx + dy * dy);
     }
 
     /** A point in the middle of the arena that the level says is ground to hold afterwards. */

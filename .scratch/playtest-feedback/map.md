@@ -69,6 +69,9 @@ Blocking: 05 by 04 · 08 by 06 · 12 by 03 · 16 by 15. Everything else is on th
 - [A grenade count](issues/04-a-grenade-count.md): the commander carries 3 (Bandolier +1 a rank), spent a throw, full
   on return; a grenade cache card in crates refills him; pips in the panel; one shadow for what is in the air (G0077).
   Counter to nests withdrawn.
+- [A crate where a point was taken](issues/05-a-crate-where-a-point-was-taken.md): no new kind - a taken point lays a
+  grenade cache per seated slot beside it, once; a take by touch on the player's side pops; the proving ground's
+  others gain crates and grenade caches (G0078).
 
 ## Not yet specified
 

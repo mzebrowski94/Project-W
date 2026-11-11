@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.Rng;
+import pl.mzebrows.pwt.sim.Seats;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
@@ -45,8 +46,6 @@ public final class UpgradeSystem extends EntitySystem {
     private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
-    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
-    private static final ComponentMapper<Respawning> RESPAWNING = ComponentMapper.getFor(Respawning.class);
     private static final ComponentMapper<ControlPoint> CONTROL_POINT = ComponentMapper.getFor(ControlPoint.class);
 
     private static final UpgradeKind[] KINDS = UpgradeKind.values();
@@ -123,21 +122,9 @@ public final class UpgradeSystem extends EntitySystem {
 
     /** Who has a commander this tick, standing, down or on his way back, and who is away. */
     private void seat(Presence presence) {
-        for (int slot = 0; slot < seated.length; slot++) {
-            seated[slot] = false;
+        Seats.mark(seated, commanders, returning);
+        for (int slot = 0; slot < away.length; slot++) {
             away[slot] = presence.isAway(slot);
-        }
-        for (int i = 0; i < commanders.size(); i++) {
-            sit(COMMANDER.get(commanders.get(i)).slot);
-        }
-        for (int i = 0; i < returning.size(); i++) {
-            sit(RESPAWNING.get(returning.get(i)).slot);
-        }
-    }
-
-    private void sit(int slot) {
-        if (slot >= 0 && slot < seated.length) {
-            seated[slot] = true;
         }
     }
 

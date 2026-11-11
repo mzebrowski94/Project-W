@@ -691,6 +691,12 @@ public final class AlphaWorlds {
     /** Fixed rather than a range, so a test counting crates is not also testing the dice. */
     public static final int POINT_REINFORCEMENTS = 2;
 
+    /** Round, so a test can step half of one without counting fractions of a tick. */
+    public static final float POP_SECONDS = 0.5f;
+
+    /** One a seated slot, as the shipped number is, so a test counting caches counts players. */
+    public static final int POINT_GRENADE_CACHES = 1;
+
     /** What one crate is worth. Three, as the shipped one is. */
     public static final int CRATE_TROOPERS = 3;
 
@@ -1560,7 +1566,8 @@ public final class AlphaWorlds {
                         POINT_REINFORCEMENT_RADIUS,
                         POINT_REINFORCEMENTS,
                         POINT_REINFORCEMENTS,
-                        POST_LOITER_RADIUS),
+                        POST_LOITER_RADIUS,
+                        POINT_GRENADE_CACHES),
                 new SimConfig.TurretConfig(
                         TURRET_RADIUS,
                         TURRET_HEALTH,
@@ -1583,7 +1590,8 @@ public final class AlphaWorlds {
                 SimConfig.defaults().finales(),
                 SimConfig.defaults().door(),
                 new SimConfig.MedkitConfig(0),
-                new SimConfig.CrateConfig(CRATE_FEWEST, CRATE_MOST));
+                new SimConfig.CrateConfig(CRATE_FEWEST, CRATE_MOST),
+                new SimConfig.PopConfig(POP_SECONDS));
     }
 
     /** Cards a draft deals here - more than the catalogue has, so every draft offers all it can. */

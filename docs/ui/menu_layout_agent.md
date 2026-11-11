@@ -125,7 +125,7 @@ sidearm, no squad, no others, nothing held. Entries, top to bottom:
 | `count` | `ui.provingGround.count = COUNT` | 1, 3, 5, 10, `ui.provingGround.nest = NEST`; held at 1 and dimmed for a rooted strain | `CHOOSE(1)` |
 | `gun` | `ui.provingGround.gun = GUN` | `ui.weapon.*`, every gun with a weapon type - the ones a man carries | `CHOOSE(2)` |
 | `squad` | `ui.provingGround.squad = SQUAD` | `ui.provingGround.on`/`.off` | `CHOOSE(3)` |
-| `others` | `ui.provingGround.others = OTHERS` | `ui.provingGround.others.*`: none, 3 turrets, 3 mines, 3 barrels | `CHOOSE(4)` |
+| `others` | `ui.provingGround.others = OTHERS` | `ui.provingGround.others.*`: none, 3 turrets, 3 mines, 3 barrels, 3 crates, 3 grenade caches | `CHOOSE(4)` |
 | `upgrades` | `ui.provingGround.upgrades = UPGRADES`, with `ui.provingGround.held = {n} TAKEN` as its value | | `OPEN(PROVING_UPGRADES)` |
 | `start` | `ui.provingGround.start = START` | | `PROVE` - default selection |
 | `back` | `ui.common.back = BACK` | | `BACK` |

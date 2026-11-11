@@ -270,7 +270,7 @@ public final class Simulation {
         // Beside the barrage, for its reasons; after the death chain and before the reaper and the objectives, for
         // the nests': riders spilled this tick are on the field, and count, this tick (G0074).
         engine.addSystem(new SlingSystem(config, map, spawner, streams.of(RngStream.SLING)));
-        engine.addSystem(new ControlPointSystem(spawner));
+        engine.addSystem(new ControlPointSystem(config, map, spawner, streams.of(RngStream.CACHE), capacity));
         // After every source of a draft (41, 44, 45), so what was earned this tick is dealt this tick; and
         // after every reader of Modifiers, so the ledger changes once, at the end, for every reader alike.
         engine.addSystem(

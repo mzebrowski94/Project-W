@@ -96,6 +96,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * @param door what stands in every doorway (G0069)
  * @param medkit how many medkits a level that asks for them scatters (G0053)
  * @param crate how many pickups a crate is dealt (G0056)
+ * @param pop how long a take by touch is shown for (G0078)
  */
 @With
 public record SimConfig(
@@ -141,7 +142,8 @@ public record SimConfig(
         @ConfigKey("finale") Defs<FinaleKind, FinaleDef> finales,
         DoorConfig door,
         MedkitConfig medkit,
-        CrateConfig crate) {
+        CrateConfig crate,
+        PopConfig pop) {
 
     /** The prefix every key in {@code assets/sim/*.properties} starts with. */
     private static final String ROOT = "sim";
@@ -407,6 +409,8 @@ public record SimConfig(
      *     {@code Bag.MOST} values
      * @param loiterRadius how near a post a creature walking at it stops and ambles about its own patch
      *     instead, in world units - so the other side comes near the post without piling onto it (G0027)
+     * @param grenadeCaches how many grenade caches a point lays beside itself the tick it is taken, for every seated
+     *     slot (G0078); zero lays none
      */
     @With
     public record ControlPointConfig(
@@ -416,7 +420,8 @@ public record SimConfig(
             float reinforcementRadius,
             int reinforcementsMin,
             int reinforcementsMax,
-            float loiterRadius) {
+            float loiterRadius,
+            int grenadeCaches) {
         public ControlPointConfig {
             Require.positive("control point radius", radius);
             Require.positive("control point captureSeconds", captureSeconds);
@@ -428,6 +433,7 @@ public record SimConfig(
             }
             Require.fitsABag("control point reinforcements", reinforcementsMin, reinforcementsMax);
             Require.positive("control point loiterRadius", loiterRadius);
+            Require.notNegative("control point grenadeCaches", grenadeCaches);
         }
     }
 
@@ -1195,6 +1201,18 @@ public record SimConfig(
                 throw new IllegalArgumentException(
                         "a crate holds at most " + CAPACITY + " pickups - the cards a top bar shows - not " + most);
             }
+        }
+    }
+
+    /**
+     * A pop (G0078): a pickup the player's side has just taken by touch, shown for a moment rising off the taker.
+     *
+     * @param seconds how long one lasts; how far it rises and how it fades are the renderer's
+     */
+    @With
+    public record PopConfig(float seconds) {
+        public PopConfig {
+            Require.positive("pop seconds", seconds);
         }
     }
 

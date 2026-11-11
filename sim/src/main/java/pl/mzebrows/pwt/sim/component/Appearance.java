@@ -151,6 +151,12 @@ public final class Appearance implements Component, Pool.Poolable {
     public float burstFade;
 
     /**
+     * How much of a pop is left, in {@code [0, 1]}; zero for everything that is no pop (G0078). Drawn rising off where
+     * it appeared and fading as it runs down.
+     */
+    public float pop;
+
+    /**
      * How much of a declared stun it is under is left, in {@code [0, 1]}; zero with none (G0053). Drawn as a pale
      * circle shrinking onto it as the stun runs out.
      */
@@ -237,6 +243,7 @@ public final class Appearance implements Component, Pool.Poolable {
         wounds = 0;
         burst = 0f;
         burstFade = 0f;
+        pop = 0f;
         daze = 0f;
         shield = 0f;
         riders = 0;

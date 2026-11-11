@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Melee;
+import pl.mzebrows.pwt.sim.component.Pop;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Slick;
@@ -65,6 +66,7 @@ public final class CooldownSystem extends EntitySystem {
     private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
     private static final ComponentMapper<Thrower> THROWER = ComponentMapper.getFor(Thrower.class);
     private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
+    private static final ComponentMapper<Pop> POP = ComponentMapper.getFor(Pop.class);
 
     private ImmutableArray<Entity> invulnerable = new ImmutableArray<>(new Array<>());
 
@@ -85,6 +87,7 @@ public final class CooldownSystem extends EntitySystem {
     private ImmutableArray<Entity> shakes = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> throwers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> heats = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> pops = new ImmutableArray<>(new Array<>());
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -105,6 +108,7 @@ public final class CooldownSystem extends EntitySystem {
         shakes = engine.getEntitiesFor(Family.all(Shake.class).get());
         throwers = engine.getEntitiesFor(Family.all(Thrower.class).get());
         heats = engine.getEntitiesFor(Family.all(Heat.class, Weapon.class).get());
+        pops = engine.getEntitiesFor(Family.all(Pop.class).get());
     }
 
     @Override
@@ -182,6 +186,10 @@ public final class CooldownSystem extends EntitySystem {
         for (int i = 0; i < shakes.size(); i++) {
             Shake shake = SHAKE.get(shakes.get(i));
             shake.remainingTicks = countDown(shake.remainingTicks);
+        }
+        for (int i = 0; i < pops.size(); i++) {
+            Pop pop = POP.get(pops.get(i));
+            pop.remainingTicks = countDown(pop.remainingTicks);
         }
         for (int i = 0; i < throwers.size(); i++) {
             Thrower thrower = THROWER.get(throwers.get(i));

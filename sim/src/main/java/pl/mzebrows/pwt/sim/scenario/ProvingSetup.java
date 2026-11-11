@@ -40,7 +40,11 @@ public record ProvingSetup(
         NONE,
         TURRETS,
         MINES,
-        BARRELS
+        BARRELS,
+        /** Crates to open, dealt from the armoury deck as anywhere (G0056, G0078). */
+        CRATES,
+        /** Grenade caches lying loose, to fill up from by touch after throwing (G0078). */
+        GRENADE_CACHES
     }
 
     public ProvingSetup {

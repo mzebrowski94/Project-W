@@ -53,6 +53,7 @@ import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
+import pl.mzebrows.pwt.sim.component.Pop;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.component.Presence;
@@ -1243,6 +1244,21 @@ public final class Spawner {
             // What the explosion leaves burning, through the one reaction (G0018, G0035).
             entity.add(engine.createComponent(SlicksOnDeath.class).set(fire));
         }
+        admit(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a pop (G0078): a pickup just taken by touch, drawn as {@code look} at {@code radius} where it was taken,
+     * for {@code sim.pop.seconds}. No collider, no side: feedback, which nothing touches or hunts (G0004).
+     */
+    public Entity spawnPop(float x, float y, Look look, float radius) {
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Pop.class).set(ticks(config.pop().seconds())));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(radius));
+        entity.add(engine.createComponent(Appearance.class).set(look));
         admit(entity);
         return entity;
     }
