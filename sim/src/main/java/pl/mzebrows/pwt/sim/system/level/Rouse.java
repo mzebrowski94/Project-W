@@ -51,7 +51,7 @@ final class Rouse {
             float toX = where.x - x;
             float toY = where.y - y;
             if (toX * toX + toY * toY <= reach) {
-                PERCEPTION.get(watcher).provokeAt(x, y);
+                PERCEPTION.get(watcher).rouseAt(x, y);
             }
         }
     }

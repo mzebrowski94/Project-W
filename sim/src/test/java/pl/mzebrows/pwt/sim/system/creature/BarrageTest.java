@@ -86,6 +86,9 @@ class BarrageTest {
 
     private static final float GIANT_SPEED = 4f;
 
+    /** How far off a nest that rouses it stands: inside the nest's earshot, outside its own detection. */
+    private static final float ROUSED_FROM = 25f;
+
     private static final float ROAR_STRENGTH = 2f;
 
     private static final float ROAR_RADIUS = 30f;
@@ -119,6 +122,22 @@ class BarrageTest {
         simulation.step();
 
         assertThat(alienShots(simulation)).hasSize(RING_SHOTS);
+    }
+
+    /**
+     * A nest being hit sends it to look (G0016), but that place is trouble, not somebody who hurt it: it shoots
+     * men, never the nest it was sent to.
+     */
+    @Test
+    void holdsFireAtANestItWasRousedTo() {
+        Simulation simulation = new Simulation(barraging(ring(RING_SHOTS, 1)));
+        simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
+        Entity nest = simulation.spawnNest(UnitKind.GRUNT, MIDDLE + ROUSED_FROM, MIDDLE);
+
+        nest.getComponent(Damage.class).land(1, Harm.KILL);
+        steps(simulation, UNTIL_THE_FIRST_SALVO * 4);
+
+        assertThat(alienShots(simulation)).isEmpty();
     }
 
     // ---- which way it looks ----

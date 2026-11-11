@@ -63,6 +63,13 @@ public final class Perception implements Component, Pool.Poolable {
     public float provokedY;
 
     /**
+     * True while that place is trouble it was sent to look at - a point being taken, a nest being hit - rather
+     * than somewhere it was hurt from. Nobody is known to stand there, so nothing shoots at it. Meaningless
+     * unless {@link #provoked}.
+     */
+    public boolean roused;
+
+    /**
      * True while this unit is walking at the ground the level told the other side to come for.
      *
      * <p>The lowest thing that can have its attention. The post's place is read from the field.
@@ -116,8 +123,24 @@ public final class Perception implements Component, Pool.Poolable {
      */
     public void provokeAt(float x, float y) {
         this.provoked = true;
+        this.roused = false;
         this.provokedX = x;
         this.provokedY = y;
+    }
+
+    /**
+     * Sends it to see what the trouble is at a place nobody hurt it from - a point being taken, a nest being hit.
+     *
+     * <p>Latched exactly as {@link #provokeAt}, but nothing it carries shoots at the place.
+     */
+    public void rouseAt(float x, float y) {
+        provokeAt(x, y);
+        this.roused = true;
+    }
+
+    /** Where it may shoot without having noticed anybody: a place it was hurt from, never one it was roused to. */
+    public boolean hurtFromAPlace() {
+        return provoked && !roused;
     }
 
     /** Sends it after something edible at a place, rather than at an entity that may not last the tick. */
@@ -147,6 +170,7 @@ public final class Perception implements Component, Pool.Poolable {
         provoked = false;
         provokedX = 0f;
         provokedY = 0f;
+        roused = false;
         marching = false;
         foraging = false;
         foodX = 0f;

@@ -32,7 +32,7 @@ import pl.mzebrows.pwt.sim.system.combat.Guns;
  * <ul>
  *   <li><strong>It shoots what {@code PerceptionSystem} published</strong> (G0026) - whoever it is
  *       hunting, or, with nobody in range, the place it was last hurt from - and holds fire with
- *       neither. Idle keeps its place in the cycle. Where it shoots is published on the barrage, and
+ *       neither. A place it was only roused to (a point being taken, a nest being hit) is not one. Idle keeps its place in the cycle. Where it shoots is published on the barrage, and
  *       is the way it faces.
  *   <li><strong>A blow does not interrupt it.</strong> A fist holds a grunt still for a moment; a boss
  *       held still by every swing would be a boss beaten by standing next to it and pressing one key.
@@ -100,7 +100,7 @@ public final class BarrageSystem extends EntitySystem {
                 continue;
             }
             Perception perception = PERCEPTION.get(entity);
-            boolean hunting = perception.aggro || perception.provoked;
+            boolean hunting = perception.aggro || perception.hurtFromAPlace();
             if (!hunting && !committed(barrage)) {
                 barrage.phase = Barrage.Phase.IDLE;
                 continue;

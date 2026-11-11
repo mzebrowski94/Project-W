@@ -51,6 +51,9 @@ Blocking: 05 by 04 · 08 by 06 · 12 by 03 · 16 by 15. Everything else is on th
 
 <!-- one line per resolved ticket: [title](issues/NN-....md): gist -->
 
+- [Aliens shoot at control points and nests](issues/01-aliens-shoot-at-points-and-nests.md): a rouse latched
+  the same place a hit does, and barrages shoot a hurt-from place; `Perception.roused` now keeps them apart.
+
 ## Not yet specified
 
 - **Balance after the round.** Several tickets move the same fight from different ends - grenade count (04),
