@@ -39,6 +39,8 @@ public final class Hud implements Disposable {
     private final Texture plus = icon(TallyIcon.STABILISED);
     private final Texture wound = icon(TallyIcon.WOUND);
     private final Texture woundSpare = icon(TallyIcon.WOUND_SPARE);
+    private final Texture grenade = icon(TallyIcon.GRENADE);
+    private final Texture grenadeSpare = icon(TallyIcon.GRENADE_SPARE);
     private final SystemPointer pointer;
     private ScreenLayout layout = ScreenLayout.NONE;
     private boolean warnedSmall;
@@ -204,6 +206,8 @@ public final class Hud implements Disposable {
             case STABILISED -> plus;
             case WOUND -> wound;
             case WOUND_SPARE -> woundSpare;
+            case GRENADE -> grenade;
+            case GRENADE_SPARE -> grenadeSpare;
         };
     }
 

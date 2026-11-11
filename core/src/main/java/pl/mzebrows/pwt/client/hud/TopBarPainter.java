@@ -319,8 +319,7 @@ public final class TopBarPainter {
             }
             Grant grant = config.pickup(player.crate[i]).playerGrant();
             card[0] = TextFit.fit(crateName(grant, player.crate[i]), columns);
-            card[1] =
-                    TextFit.fit(player.crateRefused[i] ? strings.get("ui.crate.refused") : crateEffect(grant), columns);
+            card[1] = TextFit.fit(player.crateRefused[i] ? crateRefusal(grant) : crateEffect(grant), columns);
             String hint = i == crate.highlighted()
                     ? strings.format("ui.crate.take", hints.take(), hints.close())
                     : hints.card(i).isEmpty() ? "" : strings.format("ui.draft.choose", hints.card(i));
@@ -340,7 +339,17 @@ public final class TopBarPainter {
         return switch (grant) {
             case Grant.Arm _ -> strings.get("ui.crate.effect.arm");
             case Grant.Mend _ -> strings.get("ui.crate.effect.mend");
+            case Grant.Grenades _ -> strings.get("ui.crate.effect.grenades");
             case Grant.None _, Grant.Detonate _, Grant.Feed _, Grant.Mutate _, Grant.Reinforce _ -> "";
+        };
+    }
+
+    /** Why he cannot take it: the one thing that card would have done for him, and he does not need (G0053, G0077). */
+    private String crateRefusal(Grant grant) {
+        return switch (grant) {
+            case Grant.Grenades _ -> strings.get("ui.crate.refused.grenades");
+            case Grant.Mend _ -> strings.get("ui.crate.refused.mend");
+            case Grant.None _, Grant.Detonate _, Grant.Arm _, Grant.Feed _, Grant.Mutate _, Grant.Reinforce _ -> "";
         };
     }
 

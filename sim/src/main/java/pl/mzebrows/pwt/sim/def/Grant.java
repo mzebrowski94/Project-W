@@ -64,6 +64,12 @@ public sealed interface Grant {
      */
     record Mend() implements Grant {}
 
+    /**
+     * Fills the taker's grenades to his most (G0077). Worth something only to a commander who has thrown one, so a
+     * man carrying every grenade he can is turned down, as a man with no wound is for a medkit.
+     */
+    record Grenades() implements Grant {}
+
     /** Adds troopers to the level rather than changing whoever picked it up. */
     record Reinforce(int troopers) implements Grant {
         public Reinforce {

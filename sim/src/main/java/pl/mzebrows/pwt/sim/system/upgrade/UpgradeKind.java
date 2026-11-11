@@ -42,5 +42,7 @@ public enum UpgradeKind {
     /** An adaptation: every brood a nest sends holds more. */
     LARGER_BROOD,
     /** An adaptation: every alien leaves a spatter of venom where it dies, which a man goes round only on a chance. */
-    TOXIC_BLOOD
+    TOXIC_BLOOD,
+    /** The chooser carries one more grenade per rank, and is handed it when he takes it (G0077). Personal. */
+    BANDOLIER
 }

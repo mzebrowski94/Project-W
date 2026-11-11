@@ -1,6 +1,6 @@
 # G0019: The grenade is a fixed throw
 
-**Status.** accepted
+**Status.** amended by G0077: he carries his grenades as a count
 
 **Trigger.** Adding or changing anything thrown, or proposing that a throw land where the player is
 pointing.

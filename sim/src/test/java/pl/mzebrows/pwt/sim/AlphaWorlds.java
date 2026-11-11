@@ -193,6 +193,9 @@ public final class AlphaWorlds {
     /** Shorter than a whole flight, so a test can watch a second grenade join the first in the air. */
     public static final float GRENADE_COOLDOWN = 0.2f;
 
+    /** What he carries at most and starts with (G0077): the shipped three, so a test can throw them all. */
+    public static final int GRENADE_MOST = 3;
+
     /** One of anything sets it off. A barrel is a trigger, not something to grind down. */
     public static final int BARREL_HEALTH = 1;
 
@@ -1517,7 +1520,8 @@ public final class AlphaWorlds {
                         GRENADE_RANGE,
                         GRENADE_RADIUS,
                         GRENADE_BLAST_RADIUS,
-                        Harm.WOUND),
+                        Harm.WOUND,
+                        GRENADE_MOST),
                 new SimConfig.RabbitConfig(RABBIT_SPEED, RABBIT_HEALTH, RABBIT_THROES, WanderDef.off(), DodgeDef.off()),
                 new SimConfig.BarrelConfig(BARREL_HEALTH, BARREL_BLAST_RADIUS, BARREL_BITTEN_BLAST_RADIUS),
                 new SimConfig.MineConfig(
@@ -1650,6 +1654,7 @@ public final class AlphaWorlds {
                 .put(
                         UpgradeKind.SELF_TREATMENT,
                         off(1, new Effect.Count(Stat.MEND_SECONDS, Target.CHOOSER, SELF_TREATMENT_SECONDS)))
+                .put(UpgradeKind.BANDOLIER, off(2, new Effect.Count(Stat.GRENADE_MOST, Target.CHOOSER, 1)))
                 .put(
                         UpgradeKind.FIREPOWER,
                         off(

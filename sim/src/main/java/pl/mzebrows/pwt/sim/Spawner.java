@@ -200,7 +200,8 @@ public final class Spawner {
                         grenade.speed(),
                         grenade.range(),
                         grenade.radius(),
-                        grenade.blastRadius()));
+                        grenade.blastRadius(),
+                        grenade.most()));
         entity.add(engine.createComponent(Taking.class));
         // He can be shot off his feet like his men (G0023); his bleed-out is his own, read only here.
         entity.add(engine.createComponent(Vitality.class)
@@ -325,7 +326,8 @@ public final class Spawner {
                         config.grenade().speed(),
                         config.grenade().range(),
                         config.grenade().radius(),
-                        config.grenade().blastRadius()));
+                        config.grenade().blastRadius(),
+                        0));
         entity.add(engine.createComponent(Taking.class));
         // Hands, as the commander's, so work on a casualty is published the same way.
         entity.add(engine.createComponent(Action.class).set(config.action().reach()));

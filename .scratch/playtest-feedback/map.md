@@ -66,6 +66,9 @@ Blocking: 05 by 04 · 08 by 06 · 12 by 03 · 16 by 15. Everything else is on th
 - [Ground worth going round, and venom on death](issues/03-ground-avoidance-and-venom-on-death.md): men clipped the
   flank of ground they ran past (avoidance looked only from a point ahead) - now measured from both; and toxic blood,
   an adaptation leaving a venom spatter where any alien dies, heeded by a man on a keyed chance (G0076).
+- [A grenade count](issues/04-a-grenade-count.md): the commander carries 3 (Bandolier +1 a rank), spent a throw, full
+  on return; a grenade cache card in crates refills him; pips in the panel; one shadow for what is in the air (G0077).
+  Counter to nests withdrawn.
 
 ## Not yet specified
 

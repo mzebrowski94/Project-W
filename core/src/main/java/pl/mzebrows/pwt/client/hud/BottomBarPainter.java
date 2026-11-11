@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.ui.hud.PlayerReadout;
 import pl.mzebrows.pwt.ui.hud.Posture;
 import pl.mzebrows.pwt.ui.hud.Readout;
 import pl.mzebrows.pwt.ui.hud.TallyIcon;
+import pl.mzebrows.pwt.ui.hud.TextFit;
 import pl.mzebrows.pwt.ui.hud.UpgradeTell;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
 import pl.mzebrows.pwt.ui.layout.Rect;
@@ -24,8 +25,8 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
 /**
  * The bottom bar ({@code UI:hud/bottom/...}): four fixed quarters, each holding one player's panel -
- * frame and label in his colour, his status, his gun and its heat, a block where his portrait will be,
- * and a row kept for his tally. Who is in which quarter is {@link PanelAssignment}'s: everybody while
+ * frame and label in his colour, his status, his gun and its heat with his grenades at the row's end (G0077), a
+ * block where his portrait will be, and a row kept for his tally. Who is in which quarter is {@link PanelAssignment}'s: everybody while
  * there are four or fewer, this machine's seats otherwise. A quarter nobody holds stays black; a player
  * whose pad or link is gone is drawn grey and says OFFLINE.
  *
@@ -226,10 +227,16 @@ public final class BottomBarPainter {
         if (player.posture == Posture.STANDING || player.posture == Posture.ABOARD) {
             hud.text(weapons.getOrDefault(player.weapon, ""), textX, row, text);
             int heatX = textX + (weaponColumns + 1) * UiFont.ADVANCE;
+            int heatRight = grenades(player, textRight, row, palette.colorFor(Look.GRENADE));
             if (player.overheated) {
-                inverse(overheat, heatX, row, alert);
+                inverse(TextFit.fit(overheat, TextFit.columns(heatRight - heatX, UiFont.ADVANCE)), heatX, row, alert);
             } else {
-                bar(heatX, row, Math.min(HEAT_BAR_WIDTH, textRight - heatX), player.heat, palette.colorFor(Look.HEAT));
+                bar(
+                        heatX,
+                        row,
+                        Math.max(0, Math.min(HEAT_BAR_WIDTH, heatRight - heatX)),
+                        player.heat,
+                        palette.colorFor(Look.HEAT));
             }
         } else if (player.posture == Posture.CASUALTY) {
             hud.text(
@@ -237,6 +244,8 @@ public final class BottomBarPainter {
                     textX,
                     row,
                     graphic.hud().color().textDim());
+            // Down keeps them (G0077), so they are still shown - dim, as his gun is.
+            grenades(player, textRight, row, graphic.hud().color().textDim());
         }
 
         row -= line;
@@ -284,19 +293,47 @@ public final class BottomBarPainter {
     }
 
     /**
+     * Row 2's right end, ending at {@code right}: a grenade per one he can carry, filled for each he has and hollow for
+     * the rest (G0077) - his count is shown, never remembered (pillar 5). Nothing for a man whose throws are not
+     * counted.
+     *
+     * @return where what goes before them on the row must end
+     */
+    private int grenades(PlayerReadout player, int right, int row, Color color) {
+        if (player.grenadeMost <= 0) {
+            return right;
+        }
+        int x = right - player.grenadeMost * UiFont.ADVANCE;
+        pips(player.grenades, player.grenadeMost, x, row, TallyIcon.GRENADE, TallyIcon.GRENADE_SPARE, color);
+        return x - UiFont.ADVANCE;
+    }
+
+    /** A row of {@code most} icons from {@code x}, the first {@code filled} lit in {@code color} and the rest hollow and dim. */
+    private void pips(int filled, int most, int x, int row, TallyIcon lit, TallyIcon spare, Color color) {
+        for (int i = 0; i < most; i++) {
+            int left = x + i * UiFont.ADVANCE;
+            if (i < filled) {
+                hud.icon(lit, left, row, color);
+            } else {
+                hud.icon(spare, left, row, graphic.hud().color().textDim());
+            }
+        }
+    }
+
+    /**
      * Row 1 while he stands: a narrow diamond per wound he can carry, filled in the wound colour for each
      * he is carrying and hollow for the rest (G0053) - the count is shown, never guessed (pillar 5).
      * Nothing at all for a man who can carry none.
      */
     private void wounds(PlayerReadout player, int x, int row) {
-        for (int wound = 0; wound < player.maxWounds; wound++) {
-            int left = x + wound * UiFont.ADVANCE;
-            if (wound < player.wounds) {
-                hud.icon(TallyIcon.WOUND, left, row, graphic.hud().color().wound());
-            } else {
-                hud.icon(TallyIcon.WOUND_SPARE, left, row, graphic.hud().color().textDim());
-            }
-        }
+        pips(
+                player.wounds,
+                player.maxWounds,
+                x,
+                row,
+                TallyIcon.WOUND,
+                TallyIcon.WOUND_SPARE,
+                graphic.hud().color().wound());
     }
 
     /**

@@ -121,6 +121,7 @@ public final class WorldRenderer implements Disposable {
     private final TreeMark treeMark;
     private final BoulderMark boulderMark;
     private final SlingMark slingMark;
+    private final ShadowMark shadowMark;
 
     /** The client's own clock, for the post's pulse alone - a look, never read back by the simulation. */
     private float pulseSeconds;
@@ -188,8 +189,9 @@ public final class WorldRenderer implements Disposable {
                 shapes.setColor(SCRATCH);
                 shapes.circle(x, y, appearance.burst, BURST_SEGMENTS);
             }
-            if (appearance.state == Appearance.State.SLUNG) {
-                // Off the ground (G0074): its shadow stays below it, so what nothing can hurt reads as up in the air.
+            if (appearance.state == Appearance.State.SLUNG || appearance.look == Look.GRENADE) {
+                // Off the ground (G0074, G0077): its shadow stays below it, so a slung rider nothing can hurt and a
+                // grenade on its way read as up in the air.
                 drawShadow(x, y, body.radius);
             }
             shapes.setColor(tint(appearance));
@@ -563,13 +565,13 @@ public final class WorldRenderer implements Disposable {
         }
     }
 
-    /** A rider's shadow on the ground below it and to one side (G0074). */
+    /** A shadow on the ground below what is in the air and to one side - a slung rider, a grenade (G0074, G0077). */
     private void drawShadow(float x, float y, float radius) {
-        SCRATCH.set(slingMark.shadow());
-        SCRATCH.a = slingMark.shadowAlpha();
+        SCRATCH.set(shadowMark.color());
+        SCRATCH.a = shadowMark.alpha();
         shapes.setColor(SCRATCH);
-        float offset = slingMark.shadowOffset() * radius;
-        shapes.circle(x + offset, y - offset, slingMark.shadowScale() * radius, CIRCLE_SEGMENTS);
+        float offset = shadowMark.offset() * radius;
+        shapes.circle(x + offset, y - offset, shadowMark.scale() * radius, CIRCLE_SEGMENTS);
     }
 
     /**

@@ -5,6 +5,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Thrown;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Upgrades;
@@ -57,6 +58,19 @@ class TrooperGrenadeTest {
         explosives(simulation);
 
         assertThat(watch(simulation)).isTrue();
+    }
+
+    /** A trooper's throws are not counted (G0051, G0077): the chance, his wait and the squad's gap are his limit. */
+    @Test
+    void spendsNothingWhenHeThrows() {
+        Simulation simulation = world();
+        Entity man = simulation.spawnTrooper(MAN_X, Y);
+        pack(simulation, 3);
+        explosives(simulation);
+
+        assertThat(watch(simulation)).isTrue();
+        assertThat(man.getComponent(Thrower.class).spent).isZero();
+        assertThat(simulation.grenadeMost(man)).isZero();
     }
 
     /** Read at the seam, so a man who lands after the upgrade throws like one who was there (ADR 0017). */

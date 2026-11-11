@@ -217,7 +217,7 @@ public final class TrooperCombatSystem extends EntitySystem {
         }
         Thrower thrower = THROWER.get(entity);
         Level level = LEVEL.get(levels.first());
-        if (!thrower.ready() || Drivers.handsFull(entity) || level.tick < level.squadThrowReadyTick) {
+        if (!throwing.ready(entity, thrower) || Drivers.handsFull(entity) || level.tick < level.squadThrowReadyTick) {
             return false;
         }
         Position at = POSITION.get(entity);

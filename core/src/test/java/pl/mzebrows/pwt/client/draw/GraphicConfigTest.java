@@ -47,6 +47,18 @@ class GraphicConfigTest {
         assertThat(config.terrainPalette()).isNotNull();
     }
 
+    /** One shadow for whatever is off the ground - a slung rider, a thrown grenade (G0077) - and it is seen. */
+    @Test
+    void readsOneShadowForEverythingOffTheGround() {
+        assertThat(GraphicConfig.load().shadow().alpha()).isPositive();
+    }
+
+    @Test
+    void refusesAShadowMoreThanOpaque() {
+        assertThatThrownBy(() -> new ShadowMark(0.9f, 0.9f, 1.5f, Color.BLACK))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     @Test
     void refusesAnAlertThatPulsesFasterThanThreeTimesASecond() {
         assertThatThrownBy(() -> new GraphicConfig.Alert(3.5f)).isInstanceOf(IllegalArgumentException.class);
@@ -140,6 +152,7 @@ class GraphicConfigTest {
                         d.tree(),
                         d.boulder(),
                         d.sling(),
+                        d.shadow(),
                         d.camera()))
                 .isInstanceOf(IllegalArgumentException.class);
     }

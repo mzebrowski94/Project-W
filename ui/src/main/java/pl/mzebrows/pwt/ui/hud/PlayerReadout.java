@@ -41,6 +41,11 @@ public final class PlayerReadout {
 
     public int maxWounds;
 
+    /** The grenades he carries, and the most he can (G0077) - one pip each, filled for those he has. */
+    public int grenades;
+
+    public int grenadeMost;
+
     /** Whether a shield is in front of him, and whether something has stunned him (G0053). */
     public boolean shielded;
 
@@ -110,6 +115,8 @@ public final class PlayerReadout {
         bleedOut = 0f;
         wounds = 0;
         maxWounds = 0;
+        grenades = 0;
+        grenadeMost = 0;
         shielded = false;
         invulnerable = false;
         stunned = false;
@@ -135,6 +142,8 @@ public final class PlayerReadout {
         bleedOut = other.bleedOut;
         wounds = other.wounds;
         maxWounds = other.maxWounds;
+        grenades = other.grenades;
+        grenadeMost = other.grenadeMost;
         shielded = other.shielded;
         invulnerable = other.invulnerable;
         stunned = other.stunned;

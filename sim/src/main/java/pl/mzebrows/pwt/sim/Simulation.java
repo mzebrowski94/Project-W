@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.component.Tally;
+import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -104,6 +105,7 @@ public final class Simulation {
     private static final ComponentMapper<Lair> LAIR = ComponentMapper.getFor(Lair.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
+    private static final ComponentMapper<Thrower> THROWER = ComponentMapper.getFor(Thrower.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
@@ -130,6 +132,9 @@ public final class Simulation {
 
     /** What the upgrades held have made of the numbers; read here only for {@link #squadMost}. */
     private final Modifiers modifiers;
+
+    /** The one hand every thrower goes through, kept so the interface reads his grenades through it too. */
+    private final Throws throwing;
 
     /**
      * Reused by {@link #step(CommanderInput)}, so driving one player costs no allocation per tick.
@@ -183,7 +188,7 @@ public final class Simulation {
         Rng scatter = streams.of(RngStream.SCATTER);
         // The one trigger and the one hand: every shooter and every thrower goes through these.
         Guns guns = new Guns(spawner, modifiers, scatter, config.muzzleGap());
-        Throws throwing = new Throws(spawner, modifiers, config.muzzleGap());
+        this.throwing = new Throws(spawner, modifiers, config.muzzleGap());
 
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
@@ -418,6 +423,18 @@ public final class Simulation {
     /** How many wounds this man carries on his feet right now, upgrades included (G0053) - for the interface. */
     public int maxWounds(Entity man) {
         return DamageSystem.carries(modifiers, man);
+    }
+
+    /** How many grenades this commander has left (G0077) - for the interface; zero for anything that throws none. */
+    public int grenades(Entity man) {
+        Thrower thrower = THROWER.get(man);
+        return thrower == null ? 0 : throwing.left(man, thrower);
+    }
+
+    /** How many grenades this commander carries at most, upgrades included (G0077) - for the interface. */
+    public int grenadeMost(Entity man) {
+        Thrower thrower = THROWER.get(man);
+        return thrower == null ? 0 : throwing.most(man, thrower);
     }
 
     /**

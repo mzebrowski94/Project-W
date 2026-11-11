@@ -1067,11 +1067,20 @@ public record SimConfig(
      * @param blastRadius how wide the blast it leaves is, in world units
      * @param blastHarm what that blast does to a man (G0053): a grenade is a weapon meant to wound, the
      *     second kind of blast G0018 asked for
+     * @param most how many grenades a commander carries at most, and starts with (G0077) - a trooper's throws are
+     *     not counted
      */
     @With
     public record GrenadeConfig(
-            float cooldownSeconds, float speed, float range, float radius, float blastRadius, Harm blastHarm) {
+            float cooldownSeconds,
+            float speed,
+            float range,
+            float radius,
+            float blastRadius,
+            Harm blastHarm,
+            int most) {
         public GrenadeConfig {
+            Require.atLeastOne("grenade most", most);
             Require.notNegative("grenade cooldownSeconds", cooldownSeconds);
             Require.positive("grenade speed", speed);
             Require.positive("grenade range", range);

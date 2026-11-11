@@ -20,7 +20,8 @@ public record PanelLayout(int padding, int portrait, int advance) {
 
     /**
      * Columns the text needs beside the portrait: the widest row, three tally counts with their icons,
-     * rounded up - {@code SIDEARM} and a heat bar, {@code P8 KIA 1.2} and a bleed-out bar fit inside it.
+     * rounded up - {@code SIDEARM} and a heat bar, {@code P8 KIA 1.2} and a bleed-out bar fit inside it. His grenades
+     * take the gun row's right end (G0077): the heat bar shortens for them, and OVERHEAT is cut to what is left.
      */
     public static final int TEXT_COLUMNS = 19;
 

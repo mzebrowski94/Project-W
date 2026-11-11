@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARMY_HEADROOM;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARMY_MEN;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.GRENADE_MOST;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.GRENADIER_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MARCH_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MARKSMEN_PERCENT;
@@ -159,6 +160,25 @@ class UpgradeTest {
 
         assertThat(modifiers.grenadeCooldownTicks(chooser, 100)).isEqualTo(100 + GRENADIER_PERCENT);
         assertThat(modifiers.grenadeCooldownTicks(other, 100)).isEqualTo(100);
+    }
+
+    /**
+     * Bandolier is personal (G0077): the chooser's most goes up a grenade a rank, and the grenade it adds is in his
+     * hand at once - however many he had already thrown. Nobody else carries more.
+     */
+    @Test
+    void raisesTheChoosersMostAndHandsHimTheGrenadesItAdds() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        Entity chooser = simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        Entity other = simulation.spawnCommander(MIDDLE + 5f, MIDDLE, 1);
+        simulation.step(new PlayerInputs()
+                .set(0, new CommanderInput(0f, 0f, MIDDLE - 10f, MIDDLE, false, false, true, false, false, false)));
+
+        hold(simulation, new Upgrades.Held(UpgradeKind.BANDOLIER, 0, 2));
+
+        assertThat(simulation.grenadeMost(chooser)).isEqualTo(GRENADE_MOST + 2);
+        assertThat(simulation.grenades(chooser)).isEqualTo(GRENADE_MOST + 1);
+        assertThat(simulation.grenadeMost(other)).isEqualTo(GRENADE_MOST);
     }
 
     /**

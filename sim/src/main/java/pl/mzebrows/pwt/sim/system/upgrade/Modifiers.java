@@ -154,6 +154,15 @@ public final class Modifiers {
                 stats.of(Stat.MEND_SECONDS).min());
     }
 
+    /** How many grenades {@code who} carries at most (G0077). */
+    @Reads(Stat.GRENADE_MOST)
+    public int grenadeMost(Entity who, int base) {
+        return Fold.count(
+                base,
+                sum(Stat.GRENADE_MOST, who, null, null),
+                stats.of(Stat.GRENADE_MOST).min());
+    }
+
     /** How many cards of this cache the armoury deck holds (G0056). The side's number. */
     @Reads(Stat.ARMOURY_CARDS)
     public int armouryCards(PickupKind card, int base) {

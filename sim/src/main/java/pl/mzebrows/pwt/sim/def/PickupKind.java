@@ -61,5 +61,11 @@ public enum PickupKind {
      * wound walks over it and leaves it standing; the aliens have nothing to gain from it and no weapon
      * can touch it.
      */
-    MEDKIT
+    MEDKIT,
+    /**
+     * A grenade cache (G0077): a card in the armoury deck that fills a commander's grenades to his most. Taken from
+     * a crate, never walked onto - and turned down while he carries his most, as a medkit is for a man with no
+     * wound.
+     */
+    ARMOURY_GRENADES
 }

@@ -7,6 +7,7 @@ import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Ranged;
+import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -27,6 +28,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 public final class Grants {
 
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
+    private static final ComponentMapper<Thrower> THROWER = ComponentMapper.getFor(Thrower.class);
     private static final ComponentMapper<Feed> FEED = ComponentMapper.getFor(Feed.class);
     private static final ComponentMapper<Ranged> RANGED = ComponentMapper.getFor(Ranged.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
@@ -41,12 +43,13 @@ public final class Grants {
 
     /**
      * Whether a grant would do anything for <em>this</em> taker (G0006 as amended by G0053). A medkit is
-     * worth something only to a man with a wound; everything else is worth taking by anybody its side is
+     * worth something only to a man with a wound, a grenade cache only to one short of his most (G0077); everything else is worth taking by anybody its side is
      * offered it. Asked of the grant and the taker, never of a flag on the pickup.
      */
     public static boolean worthTo(Grant grant, Entity taker) {
         return switch (grant) {
             case Grant.Mend _ -> VITALITY.has(taker) && VITALITY.get(taker).wounded();
+            case Grant.Grenades _ -> THROWER.has(taker) && !THROWER.get(taker).full();
             case Grant.None _, Grant.Detonate _, Grant.Arm _, Grant.Feed _, Grant.Mutate _, Grant.Reinforce _ -> true;
         };
     }
@@ -67,6 +70,7 @@ public final class Grants {
             case Grant.Mutate(UnitKind into) -> mutate(taker, into);
             case Grant.Reinforce(int troopers) -> reinforce(troopers, levels);
             case Grant.Mend _ -> mend(taker);
+            case Grant.Grenades _ -> refill(taker);
         }
     }
 
@@ -91,6 +95,13 @@ public final class Grants {
     private static void mend(Entity taker) {
         if (VITALITY.has(taker)) {
             VITALITY.get(taker).recover();
+        }
+    }
+
+    /** Every grenade he has thrown given back, so he carries his most again, whatever that is now (G0077). */
+    private static void refill(Entity taker) {
+        if (THROWER.has(taker)) {
+            THROWER.get(taker).spent = 0;
         }
     }
 

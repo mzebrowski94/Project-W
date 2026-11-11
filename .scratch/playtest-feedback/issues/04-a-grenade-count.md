@@ -1,7 +1,7 @@
 # A grenade count
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: -
 Section: Grenades and crates
 
@@ -39,3 +39,29 @@ open for"), `docs/ui/menu_layout_agent.md` (player panel), the slinger's shadow 
 ## Done when
 
 Built, the panel shows the count, input-map row and invariants updated, `verify.sh` green.
+
+## Settled in the grilling (2026-11-11)
+
+Recorded as G0077 (`docs/design/decisions/G0077-the-commander-carries-his-grenades.md`); glossary rows *grenade*,
+*grenade cache*, *crate*, *armoury deck*, *player panel* and the *ammo* line written.
+
+- Count: `sim.grenade.most=3`, start full, full again on return, kept while down; none left throws nothing; troopers
+  uncounted (G0051 stands).
+- Counter to nests: **withdrawn** by Mateusz - nothing changes; written as a Do-not-build in G0077.
+- Crates: a **grenade cache** card in the armoury deck fills him to his most, turned down while full (medkit's rule).
+  No walk-over refill on a crate - that is 05's small crate.
+- Resources: grenades only.
+- Added in the session: **Bandolier** - personal, 2 ranks, tier 1, weight 10, `count grenade_most chooser 1`, floor 1,
+  hands him the grenade it adds.
+- Panel: pips beside the gun, filled / hollow up to his most; no other tell at zero.
+- Shadow: one shadow for the slung rider and the grenade, keys renamed `graphic.sling.shadow*` -> `graphic.shadow.*`.
+
+## Answer
+
+Built (G0077). The commander carries `sim.grenade.most=3`, kept on `Thrower` as what he has spent, so a new body is
+full and Bandolier's raise is in his hand at once; the most is folded in one place, `Throws.most`. A throw spends one;
+none left throws nothing; troopers are uncounted. A grenade cache (`ARMOURY_GRENADES`, `playerGrant=grenades`, 3 cards)
+fills him from a crate and is turned down while he is full (`GRENADES FULL`). Bandolier: personal, 2 ranks, +1 most a
+rank. Pips at the right end of the gun row (dim while down); the heat bar shortens for them and OVERHEAT is cut to the
+room left. One shadow, `graphic.shadow.*`, under a slung rider and a thrown grenade. Counter to nests withdrawn.
+Invariant rows in `combat.md` and `pickups.md`, input-map row, alpha-phase scaffolding row removed.

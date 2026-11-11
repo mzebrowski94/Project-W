@@ -32,6 +32,11 @@ public enum Stat {
     /** How long after his last wound a man's wounds clear on their own, in seconds; zero never. Read where it runs. */
     MEND_SECONDS(Form.COUNT, Reader.UNIT),
     /**
+     * How many grenades a commander carries at most (G0077). Read where a throw is weighed, and by his panel
+     * through the same method - so the pips are the number the next throw meets.
+     */
+    GRENADE_MOST(Form.COUNT, Reader.UNIT),
+    /**
      * How many cards of one cache the armoury deck holds (G0056). Read where a crate is dealt its
      * pickups; the side's number, moved only by a {@code Deal}.
      */

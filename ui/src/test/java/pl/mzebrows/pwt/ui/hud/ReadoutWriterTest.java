@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.Tally;
+import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Objective;
@@ -122,6 +123,26 @@ class ReadoutWriterTest {
         PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
 
         assertThat(player.maxWounds).isEqualTo(SimConfig.defaults().commander().maxWounds() + 1);
+    }
+
+    /** A pip per grenade he carries and per one he could (G0077): Bandolier's raise is in the most from the frame he takes it. */
+    @Test
+    void publishesTheGrenadesHeCarriesAndHisMost() {
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 0);
+        commander.getComponent(Thrower.class).spent = 1;
+        world.engine()
+                .getEntitiesFor(Family.all(Upgrades.class).get())
+                .first()
+                .getComponent(Upgrades.class)
+                .held
+                .add(new Upgrades.Held(UpgradeKind.BANDOLIER, 0, 1));
+
+        PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
+
+        int most = SimConfig.defaults().grenade().most() + 1;
+        assertThat(player.grenadeMost).isEqualTo(most);
+        assertThat(player.grenades).isEqualTo(most - 1);
     }
 
     @Test

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ACTION_REACH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CRATE_FEWEST;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CRATE_MOST;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.GRENADE_MOST;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 
@@ -42,6 +43,10 @@ class CrateTest {
     private static final CommanderInput STILL = CommanderInput.IDLE;
 
     private static final CommanderInput ACT = STILL.acting(true);
+
+    /** One throw, away from the crate, so he is a grenade short of his most. */
+    private static final CommanderInput THROWING_AWAY =
+            new CommanderInput(0f, 0f, MIDDLE - 10f, MIDDLE, false, false, true, false, false, false);
 
     @Test
     void offersToOpenACrateWithinArmsLength() {
@@ -284,6 +289,37 @@ class CrateTest {
         simulation.step(new PlayerInputs().set(0, ACT).takeFromCrate(0, PickupKind.MEDKIT));
 
         assertThat(commander.getComponent(Vitality.class).wounds).isZero();
+    }
+
+    /** A grenade cache fills him to his most (G0077), whatever he has thrown. */
+    @Test
+    void fillsHisGrenadesWhenHeTakesAGrenadeCacheFromIt() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity crate = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
+        simulation.step(THROWING_AWAY);
+        simulation.step(ACT);
+        crate(crate).put(0, PickupKind.ARMOURY_GRENADES);
+
+        simulation.step(new PlayerInputs().set(0, ACT).takeFromCrate(0, PickupKind.ARMOURY_GRENADES));
+
+        assertThat(simulation.grenades(commander)).isEqualTo(GRENADE_MOST);
+    }
+
+    /** The medkit's rule for a man with no wound (G0053), asked of a man with every grenade he can carry (G0077). */
+    @Test
+    void turnsDownAGrenadeCacheForAManCarryingHisMostAndLeavesTheCrateOpen() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity crate = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
+        simulation.step(ACT);
+        crate(crate).put(0, PickupKind.ARMOURY_GRENADES);
+        int held = crate(crate).count;
+
+        simulation.step(new PlayerInputs().set(0, ACT).takeFromCrate(0, PickupKind.ARMOURY_GRENADES));
+
+        assertThat(crate(crate).count).isEqualTo(held);
+        assertThat(crate(crate).open()).isTrue();
     }
 
     /** A take from somebody without the crate open, or of something it does not hold, changes nothing. */

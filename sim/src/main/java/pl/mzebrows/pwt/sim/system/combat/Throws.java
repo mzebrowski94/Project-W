@@ -41,7 +41,28 @@ public final class Throws {
         return BODY.get(entity).radius + thrower.radius + muzzleGap + thrower.range;
     }
 
-    /** Throws one grenade from this thrower along this direction, and starts his wait for the next. */
+    /**
+     * How many grenades he carries at most, upgrades included (G0077) - the one place it is folded, for the
+     * throw and for his panel. Zero for a thrower whose throws are not counted.
+     */
+    public int most(Entity entity, Thrower thrower) {
+        return thrower.counted() ? modifiers.grenadeMost(entity, thrower.most) : 0;
+    }
+
+    /** How many he has left to throw (G0077); zero for a thrower whose throws are not counted. */
+    public int left(Entity entity, Thrower thrower) {
+        return Math.max(0, most(entity, thrower) - thrower.spent);
+    }
+
+    /** Whether he can throw now: his wait has run out and, where his throws are counted, he has one left. */
+    public boolean ready(Entity entity, Thrower thrower) {
+        return thrower.ready() && (!thrower.counted() || left(entity, thrower) > 0);
+    }
+
+    /**
+     * Throws one grenade from this thrower along this direction, spends it where his throws are counted, and starts
+     * his wait for the next.
+     */
     public void release(Entity entity, Thrower thrower, float directionX, float directionY) {
         Position at = POSITION.get(entity);
         float muzzle = BODY.get(entity).radius + thrower.radius + muzzleGap;
@@ -52,6 +73,9 @@ public final class Throws {
                 directionY,
                 thrower,
                 Players.credit(entity));
+        if (thrower.counted()) {
+            thrower.spent++;
+        }
         thrower.remainingTicks = modifiers.grenadeCooldownTicks(entity, thrower.cooldownTicks);
     }
 }

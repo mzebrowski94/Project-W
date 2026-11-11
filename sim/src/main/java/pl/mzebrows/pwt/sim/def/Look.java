@@ -158,6 +158,8 @@ public enum Look {
     ARMOURY_BAZOOKA,
     ARMOURY_PULSE,
     ARMOURY_DISC,
+    /** A grenade cache (G0077): never on the field, only a card in a crate - its look is the card's colour. */
+    ARMOURY_GRENADES,
     /**
      * A crate (G0056): a small square with a dot, because what it holds is nobody's to see until it is
      * opened - one look for every crate, whatever is inside.

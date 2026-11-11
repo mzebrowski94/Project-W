@@ -213,6 +213,9 @@ public final class ReadoutWriter {
             player.wounds = appearance.wounds;
             player.maxWounds = world.maxWounds(entity);
         }
+        // A pip per grenade he carries and per one he could (G0077), through the throw's own fold.
+        player.grenades = world.grenades(entity);
+        player.grenadeMost = world.grenadeMost(entity);
         player.shielded = appearance.shield > 0f;
         player.invulnerable =
                 INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active();
