@@ -64,7 +64,9 @@ public enum Stat {
      */
     LOSE_RANGE(Form.SCALE, Reader.UNIT),
     /** How many a nest's brood holds, the size it drew plus what is held. Read where the brood is sized, for the nest. */
-    NEST_BROOD_SIZE(Form.COUNT, Reader.UNIT);
+    NEST_BROOD_SIZE(Form.COUNT, Reader.UNIT),
+    /** How many circles of venom an alien leaves where it dies (G0076). Read where it dies, for the one dying. */
+    DEATH_SLICKS(Form.COUNT, Reader.UNIT);
 
     /** How an effect moves the number. */
     public enum Form {

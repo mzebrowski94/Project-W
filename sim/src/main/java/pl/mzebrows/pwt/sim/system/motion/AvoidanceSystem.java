@@ -9,7 +9,9 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import java.util.Objects;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.NotState;
+import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.collision.SpatialGrid;
 import pl.mzebrows.pwt.sim.component.Avoidance;
@@ -37,11 +39,16 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * <strong>never the other side</strong> - that is what it is trying to reach. <strong>Ground is the
  * other way round</strong> (G0035, amended): ruined ground is given room by whoever it could catch and
  * walked through by the side it belongs to, so a frog wades through its own venom and a man goes round
- * it. Something solid is a body; something that is not is ground.
+ * it. Something solid is a body; something that is not is ground. <strong>Ground may be heeded only on a
+ * chance</strong> (G0076) - an alien's toxic blood - drawn from the man and the spatter together, so he goes
+ * round all of one spatter or walks through all of it, and the same every tick.
  *
  * <p><strong>A unit standing still steps off ground that would hurt it.</strong> With no course there is
  * nothing to bend, so it walks straight away from whatever ground is inside its scan range instead -
  * a man holding a point does not watch fire swell up round his boots. Bodies never move it.
+ *
+ * <p><strong>Ground is measured from where the unit is as well as from where it will be</strong>, so a circle
+ * level with a unit running past it is never behind the point it is measured from.
  *
  * <p>Adjusts a desired velocity, never sets one. Hazards are filed in a grid once a tick; the query
  * reach is an exact bound, so the answer equals a scan over every hazard.
@@ -74,6 +81,9 @@ public final class AvoidanceSystem extends EntitySystem {
     @NotState("scratch: refilled for every unit")
     private float awayY;
 
+    /** The world's seed, which the chance of heeding a piece of ground is keyed from (G0076). */
+    private final long seed;
+
     /** Every hazard, filed once per tick so each unit asks only the cells within reach of it. */
     private final SpatialGrid grid;
 
@@ -92,6 +102,7 @@ public final class AvoidanceSystem extends EntitySystem {
     private ImmutableArray<Entity> hazards = new ImmutableArray<>(new Array<>());
 
     public AvoidanceSystem(SimConfig config, TileMap map) {
+        this.seed = config.seed();
         this.grid = new SpatialGrid(map.worldWidth(), map.worldHeight(), config.largestRadius() * 2f);
     }
 
@@ -218,10 +229,23 @@ public final class AvoidanceSystem extends EntitySystem {
             if (Objects.equals(hazard, entity)
                     || !collider.avoided
                     || (PICKUP.has(hazard) && !shunnedBy(entity, hazard))
-                    || (collider.solid ? opposed(side, hazard) : ownGround(side, hazard))) {
+                    || (collider.solid
+                            ? opposed(side, hazard)
+                            : (ownGround(side, hazard) || !heeds(entity, collider)))) {
                 continue;
             }
             Position hazardPosition = POSITION.get(hazard);
+            float hazardRadius = BODY.get(hazard).radius;
+            if (!collider.solid) {
+                // Ground from where the unit is now, too: a circle level with him is behind the point he will
+                // be at, and measured only from there it would look clear to every way forward (G0046).
+                threatened |= weigh(
+                        hazardPosition.x - position.x,
+                        hazardPosition.y - position.y,
+                        radius + hazardRadius,
+                        avoidance,
+                        false);
+            }
             float hazardAheadX = hazardPosition.x;
             float hazardAheadY = hazardPosition.y;
             if (VELOCITY.has(hazard)) {
@@ -229,36 +253,46 @@ public final class AvoidanceSystem extends EntitySystem {
                 hazardAheadX += hazardVelocity.x * avoidance.lookaheadSeconds;
                 hazardAheadY += hazardVelocity.y * avoidance.lookaheadSeconds;
             }
-            float towardsX = hazardAheadX - aheadX;
-            float towardsY = hazardAheadY - aheadY;
-            float distance = (float) Math.sqrt(towardsX * towardsX + towardsY * towardsY);
-            if (distance <= EPSILON) {
-                continue;
-            }
-            float gap = distance - radius - BODY.get(hazard).radius;
-            if (gap >= avoidance.scanRange) {
-                continue;
-            }
-            threatened = true;
-            float closeness = gap <= 0f ? 1f : (avoidance.scanRange - gap) / avoidance.scanRange;
-            float unitX = towardsX / distance;
-            float unitY = towardsY / distance;
-            if (!collider.solid) {
-                awayX -= unitX * closeness;
-                awayY -= unitY * closeness;
-            }
-            for (int slot = 0; slot < SLOTS; slot++) {
-                float alignment = Compass.x(slot) * unitX + Compass.y(slot) * unitY;
-                if (alignment <= 0f) {
-                    continue;
-                }
-                float threat = closeness * alignment;
-                if (threat > danger[slot]) {
-                    danger[slot] = threat;
-                }
-            }
+            threatened |= weigh(
+                    hazardAheadX - aheadX, hazardAheadY - aheadY, radius + hazardRadius, avoidance, collider.solid);
         }
         return threatened;
+    }
+
+    /**
+     * Scores every candidate direction against one hazard seen from one place, keeping the greater
+     * threat in each, and reports whether it was close enough to matter.
+     *
+     * @param towardsX from the unit to the hazard, centre to centre
+     * @param radii the two bodies' radii together
+     */
+    private boolean weigh(float towardsX, float towardsY, float radii, Avoidance avoidance, boolean solid) {
+        float distance = (float) Math.sqrt(towardsX * towardsX + towardsY * towardsY);
+        if (distance <= EPSILON) {
+            return false;
+        }
+        float gap = distance - radii;
+        if (gap >= avoidance.scanRange) {
+            return false;
+        }
+        float closeness = gap <= 0f ? 1f : (avoidance.scanRange - gap) / avoidance.scanRange;
+        float unitX = towardsX / distance;
+        float unitY = towardsY / distance;
+        if (!solid) {
+            awayX -= unitX * closeness;
+            awayY -= unitY * closeness;
+        }
+        for (int slot = 0; slot < SLOTS; slot++) {
+            float alignment = Compass.x(slot) * unitX + Compass.y(slot) * unitY;
+            if (alignment <= 0f) {
+                continue;
+            }
+            float threat = closeness * alignment;
+            if (threat > danger[slot]) {
+                danger[slot] = threat;
+            }
+        }
+        return true;
     }
 
     /**
@@ -283,6 +317,15 @@ public final class AvoidanceSystem extends EntitySystem {
             return false;
         }
         return FACTION.get(hazard).side == side;
+    }
+
+    /**
+     * Whether this man gives this ground room at all (G0076). Always, but for ground that says it is heeded only
+     * on a chance - and that is drawn from the man and the spatter alone, so it is one answer for every circle of
+     * it, on every tick and every machine.
+     */
+    private boolean heeds(Entity steerer, Collider ground) {
+        return ground.heeded >= 1f || Rng.keyed(seed, ground.spatter, Handles.of(steerer)) < ground.heeded;
     }
 
     /** On the other side, and therefore the thing being hunted rather than something in the way. */

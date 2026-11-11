@@ -36,6 +36,8 @@ import org.jspecify.annotations.Nullable;
  * @param armour where on it gunfire glances off, if anywhere (G0045)
  * @param barrage the cycle of patterns it shoots, if it is a boss (G0048)
  * @param sling the riders it carries and slings at whoever it hunts, if any (G0074)
+ * @param deathSlicks how many circles of venom it leaves where it dies, whatever kills it (G0076), shaped by the
+ *     shared blood block; zero leaves none, and the swarm's toxic blood adds to it
  * @param shockable whether shock builds on it at all (G0059): false for the boss, whose barrage a stun
  *     would not pause (G0048)
  * @param chances how often each occasional behaviour happens for this strain: the shared table, with
@@ -69,6 +71,7 @@ public record UnitDef(
         ArmourDef armour,
         BarrageDef barrage,
         SlingDef sling,
+        int deathSlicks,
         boolean shockable,
         Chances chances,
         Look look) {
@@ -78,6 +81,7 @@ public record UnitDef(
         Require.notNegative("unit speed", speed);
         Require.notNegative("unit count", count);
         Require.positive("unit health", health);
+        Require.notNegative("unit deathSlicks", deathSlicks);
         Require.notNegative("unit contactDamage", contactDamage);
         if (attackArcDegrees <= 0f || attackArcDegrees > PerceptionDef.ALL_ROUND) {
             throw new IllegalArgumentException("unit attackArcDegrees must be in (0, 360], was " + attackArcDegrees);

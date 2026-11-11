@@ -328,7 +328,8 @@ class SlickTest {
                 0f,
                 Harm.NONE,
                 GLUE_FACTOR,
-                GLUE_SECONDS);
+                GLUE_SECONDS,
+                1f);
         return new Simulation(config.withWeapons(config.weapons().map(WeaponKind.VENOM, gun -> gun.withSlicks(glue))));
     }
 

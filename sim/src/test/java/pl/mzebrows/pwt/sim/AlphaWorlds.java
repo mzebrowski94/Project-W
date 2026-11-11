@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Upgrades;
@@ -464,6 +465,11 @@ public final class AlphaWorlds {
      * comfortably past the lane the tests fire down.
      */
     public static final float VENOM_REACH = 45f;
+
+    /** How many ranks of toxic blood there are, and how many circles each adds to what a dying alien leaves. */
+    public static final int TOXIC_BLOOD_RANKS = 2;
+
+    public static final int TOXIC_BLOOD_CIRCLES = 2;
 
     /**
      * How many circles of fire one explosion leaves, and how big each is against the blast itself.
@@ -1426,7 +1432,8 @@ public final class AlphaWorlds {
                                                 SLICK_SHOVE_SPEED,
                                                 Harm.WOUND,
                                                 1f,
-                                                0f),
+                                                0f,
+                                                1f),
                                         HeatDef.none(),
                                         0f,
                                         0f,
@@ -1496,6 +1503,7 @@ public final class AlphaWorlds {
                         KNOCKBACK_DECAY),
                 new SimConfig.BlastConfig(BLAST_DAMAGE, BLAST_SECONDS, BLAST_SHAKE, BLAST_SHAKE_REACH, Harm.DOWN),
                 new SimConfig.FireConfig(0, 0f, 0f, 0f, 0f, 0, 0f, 0f, 0f, 0f),
+                SimConfig.defaults().blood(),
                 new SimConfig.BloatConfig(
                         BLOAT_REFERENCE_RADIUS,
                         BLOAT_LIVING_FACTOR,
@@ -1684,6 +1692,11 @@ public final class AlphaWorlds {
                                 new Effect.Scale(Stat.DETECTION_RANGE, Target.ALIENS, BLOODHOUND_PERCENT),
                                 new Effect.Scale(Stat.LOSE_RANGE, Target.ALIENS, BLOODHOUND_PERCENT)))
                 .put(UpgradeKind.LARGER_BROOD, offSwarm(2, new Effect.Count(Stat.NEST_BROOD_SIZE, Target.ALIENS, 1)))
+                .put(
+                        UpgradeKind.TOXIC_BLOOD,
+                        offSwarm(
+                                TOXIC_BLOOD_RANKS,
+                                new Effect.Count(Stat.DEATH_SLICKS, Target.ALIENS, TOXIC_BLOOD_CIRCLES)))
                 .build();
     }
 
@@ -1763,6 +1776,7 @@ public final class AlphaWorlds {
                 ArmourDef.off(),
                 BarrageDef.off(),
                 SlingDef.off(),
+                0,
                 true,
                 noChances(),
                 look);
@@ -2146,6 +2160,25 @@ public final class AlphaWorlds {
     public static boolean unhurt(Entity man) {
         Vitality vitality = man.getComponent(Vitality.class);
         return vitality.wounds == 0 && !vitality.begun && !killed(man);
+    }
+
+    /** Whether this body overlaps any circle of ruined ground this tick - whichever side laid it. */
+    public static boolean inRuinedGround(Simulation simulation, Entity body) {
+        Position at = body.getComponent(Position.class);
+        float reach = body.getComponent(Body.class).radius;
+        for (Entity circle : simulation
+                .engine()
+                .getEntitiesFor(
+                        Family.all(Slick.class, Position.class, Body.class).get())) {
+            Position there = circle.getComponent(Position.class);
+            float touching = reach + circle.getComponent(Body.class).radius;
+            float dx = there.x - at.x;
+            float dy = there.y - at.y;
+            if (dx * dx + dy * dy < touching * touching) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Whether anything has been killed: in its throes, or marked dead already. */

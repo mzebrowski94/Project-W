@@ -1,6 +1,6 @@
 # G0039: A chance is dealt, not tossed
 
-**Status.** accepted
+**Status.** amended by G0076: a chance taken once per pair of things is keyed, not dealt
 
 **Trigger.** Changing how `Odds` decides whether an occasional behaviour happens, adding a new kind of
 chance, or proposing a "pity timer", "bad luck protection" or "pseudo-random distribution".

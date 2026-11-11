@@ -63,6 +63,9 @@ Blocking: 05 by 04 · 08 by 06 · 12 by 03 · 16 by 15. Everything else is on th
 - [Aliens stuck at a shut house](issues/02-aliens-stuck-at-a-shut-house.md): routes were terrain-only; a hunter now
   routes over the ground as it is (shut doors solid) and takes the through-the-door route, the siege, only when it
   can reach nobody otherwise (G0075, amends ADR 0022).
+- [Ground worth going round, and venom on death](issues/03-ground-avoidance-and-venom-on-death.md): men clipped the
+  flank of ground they ran past (avoidance looked only from a point ahead) - now measured from both; and toxic blood,
+  an adaptation leaving a venom spatter where any alien dies, heeded by a man on a keyed chance (G0076).
 
 ## Not yet specified
 

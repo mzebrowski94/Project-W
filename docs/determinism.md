@@ -29,6 +29,11 @@ Sharing one sequence keeps every run reproducible and makes the game miserable t
 often anything draws a number reshuffles every number every other system gets afterwards. A level stays
 reproducible from a single seed either way.
 
+**A chance taken once per pair of things is keyed rather than drawn** (G0076): `Rng.keyed(seed, a, b)` is a
+function of the world's seed and two handles - whether this man heeds that spatter - so it advances no stream,
+holds no state for a snapshot to carry, and gives the same answer on every tick and every machine. Anything that
+is a sequence of draws still comes from a stream.
+
 `Rng` is SplitMix64 and its state is one `long`, so a world can be snapshotted and replayed exactly.
 
 **Derived streams split a concern while a world is built** (G0065, missions ticket 05). `Randomness.derive(salt)`

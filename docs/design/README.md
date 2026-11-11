@@ -139,10 +139,11 @@ contradiction three features later.
 - **Is a shield ever found rather than earned?** The respawn shield is the only one (G0053). A pickup, an
   upgrade that restores one, or one that holds more than a hit are all open, and each changes how
   often pillar 2's "no invulnerability" is tested.
-- **How is a chance per attempt dealt, when there first is one?** Every chance today is per second of
-  opportunity and is dealt from a due (G0039). A critical hit, a drop or anything else rolled once per
-  attempt would want the same even deal counted in attempts - Dota's P = C x N or a hard pity - and
-  whether it is kept per unit or per slot (pillar 7) is a real choice. Nothing needs it yet.
+- **How is a chance taken again and again per attempt dealt, when there first is one?** Every chance is
+  per second of opportunity and dealt from a due (G0039), except one taken once per pair of things, which is
+  keyed and holds no state (G0076: whether a man heeds a spatter). A critical hit, a drop or anything else
+  rolled on every attempt would want an even deal counted in attempts - Dota's P = C x N or a hard pity -
+  and whether it is kept per unit or per slot (pillar 7) is a real choice. Nothing needs it yet.
 
 - **What is the input for a squad order?** The model is settled (G0017): an order reaches the troopers
   near the commander and names one of four verbs, never a target. Keys `1`-`4` are scaffolding; the

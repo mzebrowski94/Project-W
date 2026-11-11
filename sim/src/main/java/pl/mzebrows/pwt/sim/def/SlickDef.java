@@ -27,6 +27,8 @@ import lombok.With;
  * @param harm what touching one does to a man (G0053): a wound for venom and fire, none for glue
  * @param slowFactor how much of his speed whoever stands in one keeps, in {@code (0, 1]}; one is no slow
  * @param slowSeconds how long that lasts after he steps out, refreshed every tick he is in it rather than added to
+ * @param heeded the chance a man it could catch gives it room, decided once per man per spatter, so he goes round
+ *     all of it or walks through all of it. One is always, which every slick but an alien's toxic blood declares
  */
 @With
 public record SlickDef(
@@ -43,7 +45,8 @@ public record SlickDef(
         float knockbackSpeed,
         Harm harm,
         float slowFactor,
-        float slowSeconds) {
+        float slowSeconds,
+        float heeded) {
 
     public SlickDef {
         Require.notNegative("slick blobs", blobs);
@@ -60,6 +63,9 @@ public record SlickDef(
         if (slowFactor <= 0f || slowFactor > 1f) {
             throw new IllegalArgumentException("slick slowFactor must be in (0, 1], was " + slowFactor);
         }
+        if (heeded < 0f || heeded > 1f) {
+            throw new IllegalArgumentException("slick heeded is a chance, in [0, 1], was " + heeded);
+        }
         if (blobs > 0 && (radius <= 0f || seconds <= 0f)) {
             throw new IllegalArgumentException("a slick needs a radius and a life to be anything at all");
         }
@@ -73,7 +79,7 @@ public record SlickDef(
 
     /** A source that leaves nothing behind. What every gun but one declares. */
     public static SlickDef off() {
-        return new SlickDef(0, 0f, 0f, 0f, 0f, 0, 0f, 0f, 0f, Look.NONE, 0f, Harm.NONE, 1f, 0f);
+        return new SlickDef(0, 0f, 0f, 0f, 0f, 0, 0f, 0f, 0f, Look.NONE, 0f, Harm.NONE, 1f, 0f, 1f);
     }
 
     /** True if a burst of this leaves anything on the ground. */

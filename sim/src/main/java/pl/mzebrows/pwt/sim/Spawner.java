@@ -403,6 +403,10 @@ public final class Spawner {
         entity.add(engine.createComponent(Shock.class));
         entity.add(engine.createComponent(BlastsOnDeath.class)
                 .harming(config.blast().harm()));
+        // Its own blood, which its strain names the circles of and the swarm's toxic blood adds to (G0076).
+        entity.add(engine.createComponent(SlicksOnDeath.class)
+                .set(config.blood().shape())
+                .bodily(0));
         entity.add(engine.createComponent(Collider.class).set(true, true));
         entity.add(engine.createComponent(Health.class));
         entity.add(engine.createComponent(Damage.class));
@@ -454,6 +458,7 @@ public final class Spawner {
         entity.getComponent(Strain.class).set(kind);
         entity.getComponent(Body.class).set(def.radius());
         entity.getComponent(Speed.class).set(def.speed());
+        entity.getComponent(SlicksOnDeath.class).bodily(def.deathSlicks());
         // The boss takes none: a stun would not pause its barrage (G0048, G0059).
         entity.getComponent(Shock.class).immuneIf(!def.shockable());
         entity.getComponent(Health.class).set(config.healthOf(kind));
@@ -1061,6 +1066,8 @@ public final class Spawner {
             Harm harm,
             float slowFactor,
             float slowSeconds,
+            float heeded,
+            long spatter,
             Side side) {
         Entity entity = engine.createEntity();
         Slick slick = engine.createComponent(Slick.class).set(ticks(seconds), radius, growFraction, fadeFraction);
@@ -1074,7 +1081,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class)
                 .set(false, false)
                 .avoided(true)
-                .stopsShots(false));
+                .stopsShots(false)
+                // Gone round by a man only on a chance, the same for all of one spatter (G0076).
+                .heeded(heeded, spatter));
         entity.add(engine.createComponent(ContactDamage.class)
                 .set(damage, 0, ticks(victimInvulnerableSeconds))
                 // Venom and fire wound a man and throw him off themselves (G0053); glue only slows him (G0073).

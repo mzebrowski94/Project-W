@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -17,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.SlicksOnDeath;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
  * Leaves a spatter of ruined ground where something carrying one died, and cleans it up again when
@@ -40,14 +42,16 @@ public final class SlickSystem extends EntitySystem {
     private final Spawner spawner;
     private final TileMap map;
     private final Rng rng;
+    private final Modifiers modifiers;
 
     private ImmutableArray<Entity> slicks = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> bursting = new ImmutableArray<>(new Array<>());
 
-    public SlickSystem(TileMap map, Spawner spawner, Rng rng) {
+    public SlickSystem(TileMap map, Spawner spawner, Rng rng, Modifiers modifiers) {
         this.map = map;
         this.spawner = spawner;
         this.rng = rng;
+        this.modifiers = modifiers;
     }
 
     @Override
@@ -87,13 +91,17 @@ public final class SlickSystem extends EntitySystem {
         for (int i = 0; i < bursting.size(); i++) {
             Entity entity = bursting.get(i);
             SlicksOnDeath reaction = REACTION.get(entity);
-            if (reaction.blobs <= 0 || reaction.radius <= 0f) {
+            // An alien's own blood is counted as it dies, so one already on the field when the swarm
+            // adapts leaves it as readily as one born after (G0076).
+            int blobs = reaction.bodily ? modifiers.deathSlicks(entity, reaction.blobs) : reaction.blobs;
+            if (blobs <= 0 || reaction.radius <= 0f) {
                 continue;
             }
             Position at = POSITION.get(entity);
             Side side = FACTION.has(entity) ? FACTION.get(entity).side : Side.NEUTRAL;
-            for (int blob = 0; blob < reaction.blobs; blob++) {
-                scatterOne(at, side, reaction, blob);
+            long spatter = Handles.of(entity);
+            for (int blob = 0; blob < blobs; blob++) {
+                scatterOne(at, side, reaction, blob, spatter);
             }
         }
     }
@@ -104,7 +112,7 @@ public final class SlickSystem extends EntitySystem {
      *
      * <p>Its own stream. {@link StrictMath}, once per circle of a burst (pillar 6).
      */
-    private void scatterOne(Position at, Side side, SlicksOnDeath reaction, int blob) {
+    private void scatterOne(Position at, Side side, SlicksOnDeath reaction, int blob, long spatter) {
         float x = at.x;
         float y = at.y;
         if (blob > 0 && reaction.spread > 0f) {
@@ -136,6 +144,8 @@ public final class SlickSystem extends EntitySystem {
                 reaction.harm,
                 reaction.slowFactor,
                 reaction.slowSeconds,
+                reaction.heeded,
+                spatter,
                 side);
     }
 }

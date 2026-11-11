@@ -64,6 +64,18 @@ public final class Rng implements Randomness {
         this.state = snapshot;
     }
 
+    /**
+     * A number in {@code [0, 1)} that is a function of its three keys alone - the same answer every time it
+     * is asked, on every machine, without advancing any stream (G0076). For a chance taken once per pair
+     * of things rather than per second of opportunity: whether this man gives that spatter room. It
+     * allocates nothing, so a per-entity loop may ask it.
+     */
+    public static float keyed(long seed, long first, long second) {
+        long mixed = mix(mix(seed ^ (first * GOLDEN_GAMMA)) ^ (second * GOLDEN_GAMMA));
+        // The top 24 bits, as Randomness.nextFloat takes them, so the answer is exact in a float.
+        return (mixed >>> 40) * 0x1.0p-24f;
+    }
+
     /** SplitMix64's finalizer: avalanches a counter into a value with no visible structure. */
     private static long mix(long value) {
         long z = value;

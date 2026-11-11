@@ -1,11 +1,12 @@
 # G0046: Ground is given room by whoever it can catch
 
-**Status.** accepted
+**Status.** amended by G0076: ground may be heeded only on a chance it declares
 
 **Trigger.** Changing what a unit steers around, or proposing that a unit stand still on ground that is
 hurting it. **Amends G0035**: its avoidance declaration named this as its revisit trigger.
 
-**Enforced by.** `SlickTest.isGivenRoomByAManItCouldCatch`, `.isWalkedThroughByTheSideThatSpatIt`,
+**Enforced by.** `AvoidanceSystemTest.neverClipsTheFlankOfGroundItIsRunningAlongside`,
+`.walksPastEveryShippedSpatterWithoutSettingFootInIt`, `SlickTest.isGivenRoomByAManItCouldCatch`, `.isWalkedThroughByTheSideThatSpatIt`,
 `FireTest.stepsAManStandingStillOffGroundThatIsCatchingFire`, `.leansOffBurningGroundAsReadilyAsOffARock`.
 
 **Constraint.** Whether a unit goes round something is a question about the pair for **ground** (a

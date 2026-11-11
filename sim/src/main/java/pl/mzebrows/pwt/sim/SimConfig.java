@@ -70,6 +70,8 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * @param melee the commander's hand strike
  * @param blast what an explosion does, wherever it came from
  * @param fire what an explosion leaves burning behind it, wherever it came from
+ * @param blood what an alien leaves where it dies, for as many circles as its strain and the swarm's
+ *     toxic blood make it (G0076)
  * @param shock what a gun's shocks build to, and how fast that comes off again (G0059)
  * @param grenade what the commander throws
  * @param rabbit the neutral creature that wanders the field and is eaten
@@ -114,6 +116,7 @@ public record SimConfig(
         MeleeConfig melee,
         BlastConfig blast,
         FireConfig fire,
+        BloodConfig blood,
         BloatConfig bloat,
         ShockConfig shock,
         GrenadeConfig grenade,
@@ -265,6 +268,7 @@ public record SimConfig(
         largest = Math.max(largest, grenade.radius());
         // Fire is an ordinary body; the widest is the one the widest explosion leaves.
         largest = Math.max(largest, fire.forBlast(largestBlastRadius()).radius());
+        largest = Math.max(largest, blood.radius());
         for (WeaponDef gun : weapons.values()) {
             // A shot is swept and filed at the middle of its path: its radius plus half a tick's travel.
             largest = Math.max(largest, gun.projectileRadius() + gun.projectileSpeed() * tickSeconds * 0.5f);
@@ -948,7 +952,84 @@ public record SimConfig(
                     knockbackSpeed,
                     Harm.WOUND,
                     1f,
-                    0f);
+                    0f,
+                    1f);
+        }
+    }
+
+    /**
+     * What an alien leaves where it dies: a spatter of its own venom (G0076).
+     *
+     * <p>One block for every strain, as fire is one block for every explosion. How many circles is not
+     * here: it is the strain's own count plus what the swarm's toxic blood adds, read when it dies, so an
+     * alien already on the field when the swarm adapts leaves it as readily as one born after. Produces a
+     * {@link SlickDef}: it is ruined ground, on the side of whatever died.
+     *
+     * @param radius how wide each circle is, in world units
+     * @param spread how far from where it fell their centres may land
+     * @param seconds the shortest a circle stays on the ground
+     * @param secondsMax the longest; drawn per circle between the two
+     * @param damage what walking into one takes off anything with health. A man it wounds (G0053)
+     * @param victimInvulnerableSeconds how long whatever it hurts is protected from the rest of it; a man's protection
+     *     is his own grace
+     * @param fadeFraction how much of its life a circle spends drying up
+     * @param knockbackSpeed how hard a man it wounds is thrown off it, in world units per second
+     * @param heeded the chance a trooper gives one spatter room, decided once per man per spatter
+     */
+    @With
+    public record BloodConfig(
+            float radius,
+            float spread,
+            float seconds,
+            float secondsMax,
+            int damage,
+            float victimInvulnerableSeconds,
+            float fadeFraction,
+            float knockbackSpeed,
+            float heeded) {
+
+        public BloodConfig {
+            Require.notNegative("blood radius", radius);
+            Require.notNegative("blood spread", spread);
+            Require.notNegative("blood seconds", seconds);
+            Require.notNegative("blood damage", damage);
+            Require.notNegative("blood victimInvulnerableSeconds", victimInvulnerableSeconds);
+            Require.notNegative("blood fadeFraction", fadeFraction);
+            Require.notNegative("blood knockbackSpeed", knockbackSpeed);
+            if (secondsMax < seconds) {
+                throw new IllegalArgumentException("blood cannot lie for less than its own minimum");
+            }
+            if (heeded < 0f || heeded > 1f) {
+                throw new IllegalArgumentException("blood heeded is a chance, in [0, 1], was " + heeded);
+            }
+        }
+
+        /** No blood at all: a game in which an alien leaves nothing where it dies. */
+        public static BloodConfig off() {
+            return new BloodConfig(0f, 0f, 0f, 0f, 0, 0f, 0f, 0f, 1f);
+        }
+
+        /**
+         * The shape of what an alien leaves, as the ruined ground it is, with no circles yet: how many is the dier's
+         * own count and the swarm's, read as it dies.
+         */
+        public SlickDef shape() {
+            return new SlickDef(
+                    0,
+                    radius,
+                    spread,
+                    seconds,
+                    secondsMax,
+                    damage,
+                    victimInvulnerableSeconds,
+                    0f,
+                    fadeFraction,
+                    Look.SLICK,
+                    knockbackSpeed,
+                    Harm.WOUND,
+                    1f,
+                    0f,
+                    heeded);
         }
     }
 

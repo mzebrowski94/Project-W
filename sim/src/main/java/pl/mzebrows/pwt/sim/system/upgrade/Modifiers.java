@@ -242,6 +242,15 @@ public final class Modifiers {
                 stats.of(Stat.NEST_BROOD_SIZE).min());
     }
 
+    /** How many circles of venom {@code who} leaves where it dies, given its strain's own (G0076). */
+    @Reads(Stat.DEATH_SLICKS)
+    public int deathSlicks(Entity who, int base) {
+        return Fold.count(
+                base,
+                sum(Stat.DEATH_SLICKS, who, null, null),
+                stats.of(Stat.DEATH_SLICKS).min());
+    }
+
     /** How often {@code who} does this occasional thing, per second of opportunity. */
     @Reads(Stat.CHANCE)
     @SuppressWarnings("EnumOrdinal") // an index into this world's own cache, never stored or sent

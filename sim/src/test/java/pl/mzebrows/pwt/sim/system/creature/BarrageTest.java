@@ -255,7 +255,7 @@ class BarrageTest {
     void laysAStepFurtherEachSalvoTheLastReachingItsAim() {
         PatternDef trail = new PatternDef(true, WeaponKind.VENOM, 1, 0f, true, 0f, 3, INTERVAL, 0f, true, true);
         SimConfig config = barraging(trail);
-        SlickDef puddle = new SlickDef(1, 0.5f, 0f, 30f, 30f, 0, 0f, 0f, 0f, Look.SLICK, 0f, Harm.NONE, 1f, 0f);
+        SlickDef puddle = new SlickDef(1, 0.5f, 0f, 30f, 30f, 0, 0f, 0f, 0f, Look.SLICK, 0f, Harm.NONE, 1f, 0f, 1f);
         Simulation simulation = new Simulation(
                 config.withWeapons(config.weapons().map(WeaponKind.VENOM, gun -> gun.withSlicks(puddle))));
         simulation.spawnCommander(MIDDLE + NEAR, MIDDLE);

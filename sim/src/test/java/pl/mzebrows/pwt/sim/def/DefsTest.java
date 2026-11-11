@@ -110,6 +110,7 @@ class DefsTest {
                 ArmourDef.off(),
                 BarrageDef.off(),
                 SlingDef.off(),
+                0,
                 true,
                 Chances.none(),
                 look);

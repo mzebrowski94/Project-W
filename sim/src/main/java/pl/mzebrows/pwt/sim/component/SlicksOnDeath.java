@@ -21,7 +21,8 @@ import pl.mzebrows.pwt.sim.def.SlickDef;
  */
 public final class SlicksOnDeath implements Component, Pool.Poolable {
 
-    /** How many circles it leaves. Zero is a death that leaves nothing, which never carries this. */
+    /** How many circles it leaves. Zero is a death that leaves nothing; only an alien's
+     * own blood carries this at zero, for the swarm's toxic blood to add to (G0076). */
     public int blobs;
 
     /** How wide each of them gets at its widest, in world units. */
@@ -63,6 +64,15 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
     /** How long that lasts after he steps out, in seconds. */
     public float slowSeconds;
 
+    /** The chance a man it could catch gives one spatter of it room (G0076); one is always. */
+    public float heeded = 1f;
+
+    /**
+     * Whether {@link #blobs} is the dier's own - an alien's blood - rather than its gun's or its blast's, so the
+     * swarm's toxic blood adds to it when it dies (G0076). A declaration, so the death reaction never asks what died.
+     */
+    public boolean bodily;
+
     /** Sets the reaction from the definition of what this leaves, for fluent spawning. */
     public SlicksOnDeath set(SlickDef def) {
         this.blobs = def.blobs();
@@ -79,6 +89,15 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
         this.harm = def.harm();
         this.slowFactor = def.slowFactor();
         this.slowSeconds = def.slowSeconds();
+        this.heeded = def.heeded();
+        this.bodily = false;
+        return this;
+    }
+
+    /** Says these are the dier's own circles, {@code own} of them before the swarm's toxic blood (G0076). */
+    public SlicksOnDeath bodily(int own) {
+        this.blobs = own;
+        this.bodily = true;
         return this;
     }
 
@@ -98,5 +117,7 @@ public final class SlicksOnDeath implements Component, Pool.Poolable {
         harm = Harm.NONE;
         slowFactor = 1f;
         slowSeconds = 0f;
+        heeded = 1f;
+        bodily = false;
     }
 }

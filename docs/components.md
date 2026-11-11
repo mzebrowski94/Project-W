@@ -82,7 +82,7 @@ who does; whether more than one may is still G0010's question, answered by readi
 | **Shield** | Something that takes the next hit of any harm instead of the man carrying it, and breaks (G0053). | `CooldownSystem`, `DamageSystem`, `RespawnSystem` | `Appearance`, `Collision`, `Cooldown`, `Damage`, `Respawn` · `Spawner` |
 | **Shock** | How far along something is towards being stunned by a gun that stuns only once enough of it has landed - the pulse rifle (G0059). | `DamageSystem`, `EvolutionSystem`, `ShockSystem` | `Appearance`, `Damage`, `Shock` · `Spawner` |
 | **Slick** | One circle of ground that has been ruined, for a while. | `CooldownSystem` | `Appearance`, `Cooldown`, `Slick` · `Spawner` |
-| **SlicksOnDeath** | A death reaction: this entity leaves a spatter of ruined ground where it fell. | - | `Slick` · `Spawner` |
+| **SlicksOnDeath** | A death reaction: this entity leaves a spatter of ruined ground where it fell; an alien carries its own blood, counted as it dies (G0076). | `EvolutionSystem` | `Slick` · `Spawner` |
 | **Sling** | The riders a unit carries on its back and where it is in slinging the next of them (G0074). | `EvolutionSystem`, `SlingSystem` | `Appearance`, `EnemyLeap`, `Pace`, `Sling` · `Spawner` |
 | **Slowed** | How much of its own speed an entity has been robbed of, and for how long. | `CommanderControlSystem`, `CooldownSystem`, `DamageSystem`, `EnemyRangedSystem`, `TrooperCombatSystem`, `TurretSystem` | `Appearance`, `Cooldown`, `Damage`, `Guns`, `Pace` · `Spawner` |
 | **Speed** | How fast an entity moves under its own power, in world units per second. | `EvolutionSystem` | `Avoidance`, `CommanderControl`, `Drag`, `Navigation`, `TrooperMove`, `Wander` · `Spawner` |

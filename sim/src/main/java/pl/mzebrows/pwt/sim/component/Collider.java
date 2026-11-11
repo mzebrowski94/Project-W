@@ -49,6 +49,15 @@ public final class Collider implements Component, Pool.Poolable {
      */
     public boolean throughBodies;
 
+    /**
+     * The chance a man it could catch gives it room, for ground (G0076). One - always - for everything but an
+     * alien's toxic blood; decided once per man per {@link #spatter}, so he goes round all of it or none of it.
+     */
+    public float heeded = 1f;
+
+    /** Which spatter this circle belongs to - the handle of what died to leave it - for {@link #heeded}. */
+    public long spatter = Handle.NOBODY;
+
     /** Sets both flags and returns this component, for fluent spawning. */
     public Collider set(boolean newSolid, boolean newMovable) {
         this.solid = newSolid;
@@ -58,6 +67,15 @@ public final class Collider implements Component, Pool.Poolable {
         this.stopsShots = true;
         this.swept = false;
         this.throughBodies = false;
+        this.heeded = 1f;
+        this.spatter = Handle.NOBODY;
+        return this;
+    }
+
+    /** Says a man gives this room only on a chance, decided once per man for the whole of its spatter (G0076). */
+    public Collider heeded(float chance, long ofSpatter) {
+        this.heeded = chance;
+        this.spatter = ofSpatter;
         return this;
     }
 
@@ -87,5 +105,7 @@ public final class Collider implements Component, Pool.Poolable {
         stopsShots = false;
         swept = false;
         throughBodies = false;
+        heeded = 1f;
+        spatter = Handle.NOBODY;
     }
 }

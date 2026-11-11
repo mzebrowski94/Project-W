@@ -40,5 +40,7 @@ public enum UpgradeKind {
     /** An adaptation: the swarm notices from farther, gives up later and ambles wider while idle. */
     BLOODHOUND,
     /** An adaptation: every brood a nest sends holds more. */
-    LARGER_BROOD
+    LARGER_BROOD,
+    /** An adaptation: every alien leaves a spatter of venom where it dies, which a man goes round only on a chance. */
+    TOXIC_BLOOD
 }

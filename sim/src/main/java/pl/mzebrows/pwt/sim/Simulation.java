@@ -251,7 +251,7 @@ public final class Simulation {
         engine.addSystem(new MineSystem(spawner));
         engine.addSystem(new BlastSystem(solid, spawner));
         // Beside the blast: in the window between marked dead and reaped (G0018).
-        engine.addSystem(new SlickSystem(map, spawner, streams.of(RngStream.SLICK)));
+        engine.addSystem(new SlickSystem(map, spawner, streams.of(RngStream.SLICK), modifiers));
         // Level systems from here, after the solver and the death chain.
         engine.addSystem(new ReinforcementSystem(config, map, spawner, modifiers, reinforcement));
         // Before the objectives.
