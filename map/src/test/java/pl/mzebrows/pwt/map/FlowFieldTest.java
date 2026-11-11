@@ -93,6 +93,33 @@ class FlowFieldTest {
         assertThat(field.rebuildFor(GOAL_COL - 1, GAP_ROW)).isTrue();
     }
 
+    @Test
+    void walksOnlyWhereTheGroundItWasGivenSaysItMay() {
+        TileMap map = walled();
+        boolean[] gapShut = {true};
+        Passability now = (col, row) -> map.passableAtTile(col, row) && !(gapShut[0] && col == WALL_COL);
+        FlowField field = FlowField.over(map, now, SLIM);
+
+        field.rebuildFor(GOAL_COL, GAP_ROW);
+
+        assertThat(field.reaches(FAR_SIDE_COL, GAP_ROW)).as("the gap shut").isFalse();
+    }
+
+    @Test
+    void floodsAgainForTheSameGoalOnceInvalidated() {
+        TileMap map = walled();
+        boolean[] gapShut = {true};
+        Passability now = (col, row) -> map.passableAtTile(col, row) && !(gapShut[0] && col == WALL_COL);
+        FlowField field = FlowField.over(map, now, SLIM);
+        field.rebuildFor(GOAL_COL, GAP_ROW);
+
+        gapShut[0] = false;
+        field.invalidate();
+
+        assertThat(field.rebuildFor(GOAL_COL, GAP_ROW)).isTrue();
+        assertThat(field.reaches(FAR_SIDE_COL, GAP_ROW)).as("the gap open").isTrue();
+    }
+
     private static TileMap open() {
         return Maps.uniform(COLS, ROWS, TILE, Terrain.PLAIN);
     }

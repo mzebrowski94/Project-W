@@ -23,6 +23,11 @@ package pl.mzebrows.pwt.map;
  * function of terrain and a goal; who follows it, and how fast, is gameplay. It reads no clock, no
  * entity and no randomness, so it is testable on a hand-built map with no simulation at all.
  *
+ * <p><strong>Ground now, or terrain alone.</strong> A field floods over a {@link Passability}: the map's terrain by
+ * default, or a world's answer for ground that is blocked for a while - a shut door (ADR 0022) - so a route can
+ * go round a door rather than into it. Clearance stays the terrain's; what blocks for a while blocks its own
+ * tiles. A field cannot see that ground change, so its owner calls {@link #invalidate} when it has.
+ *
  * <p>Directions are the gradient of the distance field and are sampled with a bilinear blend between
  * the four nearest tile centres, so following one is a smooth curve rather than a staircase - nothing
  * in this game is quantised to the grid, and a unit stepping tile-by-tile would be.
@@ -35,6 +40,10 @@ public final class FlowField {
     private static final float EPSILON = 1e-4f;
 
     private final TileMap map;
+
+    /** What the flood may walk on, over and above the clearance: the terrain itself, or ground blocked for a while. */
+    private final Passability ground;
+
     private final float bodyRadius;
     private final int cols;
     private final int rows;
@@ -59,8 +68,9 @@ public final class FlowField {
 
     private final int[] oneRow = new int[1];
 
-    private FlowField(TileMap map, float bodyRadius) {
+    private FlowField(TileMap map, Passability ground, float bodyRadius) {
         this.map = map;
+        this.ground = ground;
         this.bodyRadius = bodyRadius;
         this.cols = map.cols();
         this.rows = map.rows();
@@ -79,7 +89,20 @@ public final class FlowField {
 
     /** A field over this map for a body of this radius. Allocates once; rebuilding allocates nothing. */
     public static FlowField over(TileMap map, float bodyRadius) {
-        return new FlowField(map, bodyRadius);
+        return new FlowField(map, map, bodyRadius);
+    }
+
+    /**
+     * A field over this map for a body of this radius that walks only where {@code ground} says may be stood on
+     * now. The caller {@link #invalidate}s it whenever that answer changes.
+     */
+    public static FlowField over(TileMap map, Passability ground, float bodyRadius) {
+        return new FlowField(map, ground, bodyRadius);
+    }
+
+    /** Forgets the last rebuild, so the next one floods even for the same goals: the ground under it has changed. */
+    public void invalidate() {
+        built = false;
     }
 
     /** The body radius this field was built for, in world units. */
@@ -269,7 +292,7 @@ public final class FlowField {
             return tail;
         }
         int at = row * cols + col;
-        if (!fits[at] || distance[at] != UNREACHED) {
+        if (!fits[at] || distance[at] != UNREACHED || !ground.passableAtTile(col, row)) {
             return tail;
         }
         distance[at] = next;

@@ -193,7 +193,7 @@ public final class Simulation {
         // After the commander's hands, before anything looks around.
         engine.addSystem(new TurretSystem(solid, guns));
         engine.addSystem(new PerceptionSystem(config, solid, modifiers));
-        engine.addSystem(new NavigationSystem(config, map));
+        engine.addSystem(new NavigationSystem(config, solid));
         // After the course it bends, before avoidance.
         engine.addSystem(new WeaveSystem());
         // After every course a creature sets itself (7-9) and before avoidance bends it: a creature with

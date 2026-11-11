@@ -1,6 +1,6 @@
 # 0022: A shut door is solid ground, not a body
 
-**Status.** accepted
+**Status.** amended by G0075: a hunter's route and line go over the ground now, round a shut door when there is a way round
 
 **Trigger.** Building or changing doors; adding anything else that blocks for a while and then does not; adding a
 reader of "is this tile solid" in `sim`.
@@ -37,7 +37,7 @@ the drawn door.
 **No:** *Writing the door into the `TileMap`.* The map is built once and is a function of its seed (ADR 0009); a world
 that edits it carries terrain in its snapshot.
 
-**No:** *Routes that know shut doors.* A route round a shut door leads a hunter away from the man behind it, and the
+**Reversed by G0075:** *Routes that know shut doors.* A route round a shut door leads a hunter away from the man behind it, and the
 siege (G0069) would need a second way to find him.
 
 **Revisit when** a second thing blocks for a while - a barricade, a gate that closes - and wants the same place, or

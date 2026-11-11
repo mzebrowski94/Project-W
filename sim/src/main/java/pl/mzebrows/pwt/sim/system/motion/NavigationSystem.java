@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Approach;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Enemy;
@@ -44,6 +45,11 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * funnel a pack onto one row - and the last tile is steered at the man, not the tile. Provocations and
  * food are steered straight, without a field.
  *
+ * <p><strong>Round a shut door, or at it</strong> (G0075, amending ADR 0022): a hunter's route and its line both go
+ * over the ground as it is now ({@link Solid}), so a shut house between it and a man in the open is walked round.
+ * Only a hunter that cannot reach any man with the doors shut takes the terrain's route, which runs through the
+ * door to the man behind it, and so walks up to the door it then leaps at (G0069).
+ *
  * <p>Writes a desired velocity; {@code DriveSystem} commits it (G0010).
  */
 @SuppressWarnings("EnumOrdinal")
@@ -62,10 +68,23 @@ public final class NavigationSystem extends EntitySystem {
 
     private final TileMap map;
 
+    /** Whether a tile is solid now: the terrain and every shut door (ADR 0022). */
+    private final Solid solid;
+
     /**
-     * One field per strain, indexed by ordinal, never persisted.
+     * One field per strain over the ground as it is now, indexed by ordinal, never persisted: the way round a shut
+     * door.
      */
     private final FlowField[] fields;
+
+    /**
+     * One field per strain over the terrain alone, through shut doors: the way to a man a shut door is between.
+     */
+    private final FlowField[] sieges;
+
+    /** The {@link Solid#revision} the fields were last flooded over; a different one floods them again. */
+    @NotState("cache of the shut doors the fields were flooded over: a pure function of Solid's revision")
+    private int floodedOver;
 
     /**
      * One field per strain pointed at the post, built once: the post never moves.
@@ -90,12 +109,17 @@ public final class NavigationSystem extends EntitySystem {
     @NotState("scratch: refilled from the targets every update; only its capacity survives a tick")
     private int[] goalRows = new int[8];
 
-    public NavigationSystem(SimConfig config, TileMap map) {
-        this.map = map;
+    public NavigationSystem(SimConfig config, Solid solid) {
+        this.solid = solid;
+        this.map = solid.map();
+        this.floodedOver = solid.revision();
         this.fields = new FlowField[UnitKind.values().length];
+        this.sieges = new FlowField[UnitKind.values().length];
         this.marches = new FlowField[UnitKind.values().length];
         for (UnitKind kind : UnitKind.values()) {
-            fields[kind.ordinal()] = FlowField.over(map, config.unit(kind).radius());
+            fields[kind.ordinal()] =
+                    FlowField.over(map, solid, config.unit(kind).radius());
+            sieges[kind.ordinal()] = FlowField.over(map, config.unit(kind).radius());
             marches[kind.ordinal()] = FlowField.over(map, config.unit(kind).radius());
         }
     }
@@ -114,6 +138,12 @@ public final class NavigationSystem extends EntitySystem {
     @Override
     public void update(float deltaTime) {
         int goals = collectGoals();
+        if (solid.revision() != floodedOver) {
+            floodedOver = solid.revision();
+            for (FlowField field : fields) {
+                field.invalidate();
+            }
+        }
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
             Perception perception = PERCEPTION.get(enemy);
@@ -148,14 +178,20 @@ public final class NavigationSystem extends EntitySystem {
             // Its own line in (G0033), after the shooter's range question: a pack arrives abreast.
             spreadOut(enemy, position, hunted);
             if (within(position, target, map.tileSize())
-                    || map.isClearPath(position.x, position.y, target.x, target.y, radius)) {
+                    || solid.isClearPath(position.x, position.y, target.x, target.y, radius)) {
                 straightAt(enemy, position, target, speed);
                 continue;
             }
             // Flooded from every man at once - one grid pass either way - so it leads to the nearest
-            // by route (G0026). The last of the approach is steered at the man.
-            FlowField field = fields[STRAIN.get(enemy).kind.ordinal()];
+            // by route (G0026). The last of the approach is steered at the man. Round a shut door if
+            // there is a way round; through it, to the door, if there is none (G0075).
+            int kind = STRAIN.get(enemy).kind.ordinal();
+            FlowField field = fields[kind];
             field.rebuildFor(goalCols, goalRows, goals);
+            if (!field.reaches(map.colAt(position.x), map.rowAt(position.y))) {
+                field = sieges[kind];
+                field.rebuildFor(goalCols, goalRows, goals);
+            }
             if (field.directionAt(position.x, position.y, direction)) {
                 STEERING.get(enemy).set(direction[0] * speed, direction[1] * speed);
                 continue;

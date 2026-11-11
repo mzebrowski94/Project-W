@@ -60,6 +60,9 @@ Blocking: 05 by 04 · 08 by 06 · 12 by 03 · 16 by 15. Everything else is on th
 
 - [Aliens shoot at control points and nests](issues/01-aliens-shoot-at-points-and-nests.md): a rouse latched
   the same place a hit does, and barrages shoot a hurt-from place; `Perception.roused` now keeps them apart.
+- [Aliens stuck at a shut house](issues/02-aliens-stuck-at-a-shut-house.md): routes were terrain-only; a hunter now
+  routes over the ground as it is (shut doors solid) and takes the through-the-door route, the siege, only when it
+  can reach nobody otherwise (G0075, amends ADR 0022).
 
 ## Not yet specified
 

@@ -14,8 +14,9 @@ import pl.mzebrows.pwt.sim.component.Handle;
  * Whether a tile is solid now (ADR 0022): the map's terrain, and the doorway of every shut door. <strong>The one
  * place in {@code sim} that answers it</strong> for a running world - the solver's clamp, a shot flying into rock, a
  * blast's line, perception's clear line and a shooter's choice of target all ask here - so a shut door is a wall to
- * everything that moves, shoots, explodes or looks. Routes do not ask: a flow field is the map's (ADR 0009), and a
- * route runs through a shut door so a hunter walks up to it (G0069).
+ * everything that moves, shoots, explodes or looks. A hunter's route asks too, and goes round a shut door when there
+ * is a way round; only when there is none does it run through the door, so a hunter walks up to it (G0069, G0075).
+ * {@link #revision} says when the answer has changed, so a route floods again only then.
  *
  * <p>Derived from the doors, never carried: {@link #derive} rebuilds it from every door standing shut, before every
  * tick and whenever a door opens or breaks, so a restored world answers exactly as the one it was taken from. Read
@@ -34,6 +35,14 @@ public final class Solid implements Passability {
 
     /** The handle of the shut door standing in each tile, or nobody - {@code row * cols + col}. */
     private final long[] shut;
+
+    /** The handles of the doors standing shut at the last {@link #derive}, in the order the doors came, and how many. */
+    private long[] shutDoors = new long[4];
+
+    private int shutDoorCount;
+
+    /** Changes whenever the set of shut doors does; nothing else. */
+    private int revision;
 
     /** The one door {@link #clearLineTo} lets a line into, for the length of one walk. */
     private long excepted = Handle.NOBODY;
@@ -56,6 +65,8 @@ public final class Solid implements Passability {
     /** Rebuilds which tiles a shut door stands in, from every door still standing and not yet opened. */
     public void derive(ImmutableArray<Entity> doors) {
         Arrays.fill(shut, Handle.NOBODY);
+        int count = 0;
+        boolean changed = false;
         for (int i = 0; i < doors.size(); i++) {
             Entity entity = doors.get(i);
             Door door = DOOR.get(entity);
@@ -63,6 +74,11 @@ public final class Solid implements Passability {
                 continue;
             }
             long handle = HANDLE.get(entity).id;
+            if (count == shutDoors.length) {
+                shutDoors = Arrays.copyOf(shutDoors, count * 2);
+            }
+            changed |= count >= shutDoorCount || shutDoors[count] != handle;
+            shutDoors[count++] = handle;
             for (int row = door.row; row < door.row + door.height; row++) {
                 for (int col = door.col; col < door.col + door.width; col++) {
                     if (map.inBounds(col, row)) {
@@ -71,6 +87,18 @@ public final class Solid implements Passability {
                 }
             }
         }
+        if (changed || count != shutDoorCount) {
+            revision++;
+        }
+        shutDoorCount = count;
+    }
+
+    /**
+     * A number that changes whenever the set of shut doors does, and only then: what a cache of anything built over
+     * this - a route - compares to know it is stale. Not state; derived with the rest.
+     */
+    public int revision() {
+        return revision;
     }
 
     /** Whether something can stand on this tile, and a line pass through it, now. False off the map. */
