@@ -1,6 +1,6 @@
 # G0058: The bazooka's reload is its heat bar, and its kick is not a blow
 
-**Status.** accepted
+**Status.** amended by G0079: a reload may take more than one pull
 
 **Trigger.** Changing how a gun that fires once and then waits shows the wait, or making a gun move the
 man who fires it.
