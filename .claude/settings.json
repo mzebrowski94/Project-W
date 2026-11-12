@@ -6,14 +6,19 @@
       "Bash(.claude/scripts/cloud-commit.sh:*)",
       "Bash(./gradlew:*)",
       "Bash(git restore -- docs/*)",
-      "Bash(git restore -- .scratch/*)"
+      "Bash(git restore -- .scratch/*)",
+      "Bash(git -C .claude/worktrees/* commit *)",
+      "Bash(git -C .claude/worktrees/integration merge *)",
+      "Bash(git -C . merge *)"
     ],
     "deny": [
-      "Bash(git commit:*)",
-      "Bash(git add:*)",
-      "Bash(git push:*)",
-      "Bash(git reset:*)",
-      "Bash(git checkout:*)"
+      "Bash(git commit *)",
+      "Bash(git merge *)",
+      "Bash(git -C *..* commit *)",
+      "Bash(git -C *..* merge *)",
+      "Bash(git push *)",
+      "Bash(git -C * push *)",
+      "Bash(git reset:*)"
     ]
   },
   "hooks": {
