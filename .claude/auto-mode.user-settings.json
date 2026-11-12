@@ -1,0 +1,21 @@
+{
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "Project-W is solo Java game repository on own Windows machine. Its only remote is his own GitHub repository.",
+      "In Project-W, git worktrees under .claude/worktrees/ are disposable agent workspaces. Branches other than main (pf/*, claude/*, worktree-agent-*, *-integration) are Claude's working branches; Mateusz reviews and merges them into main himself.",
+      "In Project-W, main is protected by a git reference-transaction hook (.git/hooks/reference-transaction) that refuses any update of refs/heads/main from a Claude shell, and a PreToolUse hook (.claude/hooks/git-guard.py) that refuses push, branch -D, forced worktree removal, stash drops, and anything discarding working-tree changes in the main checkout.",
+      "In Project-W, .claude/scripts/verify.sh and .claude/scripts/gradle.sh build and test the project locally; they write only to ai/logs and ~/.pwt/out."
+    ],
+    "allow": [
+      "$defaults",
+      "In Project-W, an AFK run (docs/workflow.md, AFK runs) is sanctioned by Mateusz: the orchestrator may launch subagents or side sessions to implement tickets from .scratch/, each in its own worktree, and they decide open design questions themselves, marked provisional for review, without asking him. That is the requested workflow, not an attempt to bypass oversight.",
+      "In Project-W, git add, commit, merge, switch -c, checkout -b, worktree add, restore, and reset --hard inside a worktree under .claude/worktrees/ or on any branch other than main are allowed; the hooks guard main and the main checkout.",
+      "In Project-W, running .claude/scripts/verify.sh, .claude/scripts/gradle.sh and python scripts in the session scratchpad that edit files in the repository's worktrees is allowed."
+    ],
+    "soft_deny": [
+      "$defaults",
+      "In Project-W, never push, never change git hooks or core.hooksPath, never unset CLAUDECODE, and never edit .claude/settings*.json or ~/.claude/settings.json as part of an AFK run."
+    ]
+  }
+}

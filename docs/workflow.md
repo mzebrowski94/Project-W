@@ -13,9 +13,9 @@ A session runs in one of three places. The commands are the same in all of them 
 | What it is | Claude Code desktop on Mateusz's Windows machine | A Linux VM with `D:` mounted, reached through `device_bash` | Claude Code on the web: a fresh Linux clone |
 | How to tell | `uname -s` starts `MINGW` (Git Bash) | the device shell; the repo is under a mount | `CLAUDE_CODE_REMOTE=true` |
 | Gradle | `gradle.sh` hands over to `./gradlew` with the machine's JDK 25 | `gradle.sh` bootstraps JDK and Gradle into `ai/toolchain`, through the proxy | as Cowork, provisioned by the session-start hook |
-| Build output | `~/.pwt/out/<module>/build/` | same | same |
+| Build output | `~/.pwt/out/<module>/build/`; a linked worktree `~/.pwt/out/wt/<folder>/<module>/build/` | same | same |
 | Delete permission | nothing to ask for | resets every session - ask in your first message | always |
-| Commits | Mateusz | Mateusz | Claude, through `cloud-commit.sh` (*Cloud sessions*) |
+| Commits | Mateusz; an AFK run commits its own branches (*AFK runs*) | Mateusz | Claude, through `cloud-commit.sh` (*Cloud sessions*) |
 | The game | runs (`./gradlew lwjgl3:run`); Mateusz judges the feel | cannot run | cannot run |
 
 Sections below marked **(Cowork)** apply only there.
@@ -67,7 +67,9 @@ The same commands in every environment.
 | Play a mission by its code | Desktop only: `./gradlew lwjgl3:run --args="--mission=MQHN-R4YX"` - codes are printed by `PWT_SWEEP=1` (the `new-biome` skill) |
 
 Claude's build output lands in `~/.pwt/out/<module>/build/`, apart from IntelliJ's `<project>/build`;
-test result XML under `.../test-results/test/`. Verify log: `ai/logs/verify.log`.
+a linked worktree builds into `~/.pwt/out/wt/<folder>/` instead (`.claude/scripts/out-dir.sh`), so
+parallel agents never overwrite each other's classes. Test result XML under `.../test-results/test/`.
+Verify log: `ai/logs/verify.log`.
 
 **Connection logs** are in `ai/logs/net/` when the game runs from Gradle, one file per instance,
 `<instance>-<yyyyMMdd-HHmmss>.log`; a build run any other way writes `logs/net/` beside itself, which is
@@ -126,9 +128,8 @@ hazard: removing it needs delete rights on `D:`, which reset between sessions, s
 them strands a zero-byte lock that makes Mateusz's own `git add` fail with "another git process seems
 to be running". Elsewhere the flag costs nothing, and one habit beats three.
 
-Nothing here runs `git add`, `commit` or `push` - see `CLAUDE.md`; a cloud session commits only through
-`cloud-commit.sh` (*Cloud sessions*, below). So no command from this side has any business writing the
-index at all, and the flag makes that true rather than hoped for.
+A read has no business writing the index, and the flag makes that true rather than hoped for. Writes
+are `CLAUDE.md`'s *Mateusz commits* and *AFK runs* below.
 
 ## Verification ladder
 
@@ -183,6 +184,41 @@ Only things actually hit. Add what you hit; delete what stops happening.
 | An `invariants/*.md` (or any doc) left empty or cut short (Desktop) | An inline Python or shell script that read a whole file and rewrote it failed between the two. Hit 2026-11-11; `DecisionRecordsTest.keepsATableOfInvariantsInEveryFileOfThem` now catches an empty invariants file. | Change docs with the Edit tool, one exact replacement at a time. A file clean at HEAD comes back with `git restore -- <path>` - see the friction below. |
 | `too deeply nested to stage: N folders below the connected folder` (Cowork) | `device_stage_files` supports 7 folders; Java sources sit 8-9 deep. | Not workable around from here. Read the file another way or ask Mateusz to connect a deeper folder. |
 
+## AFK runs
+
+Mateusz hands over a set of tickets and walks away; an orchestrator session fans them out to agents, each
+in its own worktree, and gathers them on one integration branch he merges when back. Desktop only.
+
+**The decisions are the orchestrator's.** Grilling tickets and "agree, then plan" assume Mateusz answers;
+in an AFK run nobody does. The orchestrator settles each open question in the agent's brief, every record
+or invariant the run changes says *provisional, for review*, and the final message lists each such
+decision with its alternative. A question that would break a pillar is not settled - that ticket is left
+open, with the question written in it.
+
+**Allocate before fanning out.** Decision-record numbers (`G00NN`) are handed out in the briefs, one block
+per ticket, so two branches never claim the same one.
+
+**Models.** Exploration and merger subagents get `model: "sonnet"`; implementers keep the session's model,
+since theirs is the work Mateusz judges.
+
+**Branches and where they live.**
+- The integration branch is cut from main, its worktree at `.claude/worktrees/integration`.
+- Each agent works in its own worktree under `.claude/worktrees/`, on its own branch, cut from the
+  integration branch; it commits there and merges the integration tip in before it reports.
+- The orchestrator merges each finished branch into integration with `git -C .claude/worktrees/integration
+  merge`, resolves conflicts, runs `verify.sh` there alone, and reviews the whole branch at the end.
+- Agents edit by absolute path inside their own worktree. In 2026-11-11's run one agent's test edits turned
+  up in another's worktree, cause never found; absolute paths make the next one visible.
+
+**What keeps it safe** - so the permission rules can allow git writes in any wording:
+- `.githooks/reference-transaction`, copied into `.git/hooks` by the session-start hook, refuses any move
+  of `main` from a Claude shell (`CLAUDECODE=1`) - commit, merge, fast-forward, reset - in every worktree.
+- `.claude/hooks/git-guard.py` (PreToolUse) refuses push, `branch -D`, `worktree remove --force` and
+  stash drops anywhere, and in the main checkout anything that discards working-tree changes or switches
+  its branch. Its docstring lists exactly what.
+- The auto-mode classifier needs the same picture: `.claude/auto-mode.user-settings.json` is the
+  `autoMode` block for Mateusz's `~/.claude/settings.json` - the only place Claude Code reads it from.
+
 ## Cloud sessions
 
 A Claude Code session on the web runs in a Linux container cloned fresh from GitHub: no Windows mount, no
@@ -195,8 +231,8 @@ IntelliJ, no display, and **thrown away** after a while idle. `CLAUDE_CODE_REMOT
 - **Commit and push, or lose the work.** `.claude/scripts/cloud-commit.sh -m "Subject" -m "trailer"...
   [-- path...]` stages (everything, or the paths given), commits and pushes to the current `claude/*`
   branch with retries. It refuses outside a cloud session, on any other branch, and with nothing staged;
-  it never amends or forces. Raw `git add/commit/push` stay denied in `.claude/settings.json` for every
-  session - the script is the one door, and its guards are what make it safe to leave open.
+  it never amends or forces. Push stays denied in `.claude/settings.json` for every session - the script
+  is the one door to the remote, and its guards are what make it safe to leave open.
   Commit at each stage a change can stop after, not only at the end. Mateusz merges into main.
 - **Several commits for several concerns**: pass paths after `--` to commit one concern at a time.
 - **The game cannot run.** Level 5 of the ladder is still Mateusz's machine.

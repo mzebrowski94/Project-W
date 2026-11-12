@@ -55,7 +55,7 @@ component holding an `Entity` - is left to `verify.sh`.
 
 - [ ] `.claude/scripts/verify.sh` green. Reading the code is not evidence it compiles.
 - [ ] Cloud session: committed and pushed to the `claude/*` branch with `cloud-commit.sh`, tree clean.
-      Desktop or Cowork: nothing committed.
+      AFK run: committed on its own branch, tree clean. Otherwise on the desktop or in Cowork: nothing committed.
 - [ ] Inside a per-entity loop: no allocation (`new`, boxing, varargs, capturing lambda, stream,
       iterator) and no log call. Once per system per tick is fine.
 - [ ] Entity pairs go through `SpatialGrid`, never an O(N²) loop.
@@ -168,6 +168,9 @@ Conventions: `unit-tests` skill.
 
 - **Desktop and Cowork** (Mateusz's machine): leave the tree for review; `git add`, `commit` and `push`
   are his.
+- **AFK run** (he handed over tickets and is away): Claude commits and merges its own worktree branches
+  and an integration branch, never main, never pushes, and takes the open decisions as *provisional, for
+  review*. `docs/workflow.md`, *AFK runs*.
 - **Cloud** (`CLAUDE_CODE_REMOTE=true`): unpushed work is lost with the container, so Claude **commits
   and pushes its own `claude/*` branch** through `.claude/scripts/cloud-commit.sh`, at each stage the
   work could stop after; no pull request unless asked. Mateusz merges. `docs/workflow.md`, *Cloud

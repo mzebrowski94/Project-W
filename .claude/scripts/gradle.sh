@@ -16,6 +16,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT/.claude/scripts/out-dir.sh"
 
 # Claude Code desktop on Windows (Git Bash) has its own JDK 25, network and Gradle wrapper, so none of
 # the sandbox work below applies: hand over to ./gradlew. Output still goes to ~/.pwt/out, apart from
@@ -35,7 +36,7 @@ case "$(uname -s)" in
     INIT="$HOME/.pwt/local-build-windows.gradle"
     cat > "$INIT" <<'INIT'
 allprojects {
-  layout.buildDirectory = file("${System.getProperty('user.home')}/.pwt/out/${project.path.replace(':', '_')}/build")
+  layout.buildDirectory = file("${System.getProperty('user.home')}/.pwt/out/${System.getenv('PWT_OUT_SUB') ?: ''}${project.path.replace(':', '_')}/build")
 }
 INIT
     exec "$ROOT/gradlew" -p "$(cygpath -w "$ROOT")" -I "$(cygpath -w "$INIT")" --console=plain "$@"
@@ -88,7 +89,7 @@ fi
 # test classes as production code without it.
 cat > "$LOCAL/local-build.gradle" <<'INIT'
 allprojects {
-  layout.buildDirectory = file("${System.getenv('HOME')}/.pwt/out/${project.path.replace(':', '_')}/build")
+  layout.buildDirectory = file("${System.getenv('HOME')}/.pwt/out/${System.getenv('PWT_OUT_SUB') ?: ''}${project.path.replace(':', '_')}/build")
 }
 INIT
 

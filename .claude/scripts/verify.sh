@@ -9,6 +9,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$ROOT/.claude/scripts/out-dir.sh"
 GRADLE="$ROOT/.claude/scripts/gradle.sh"
 LOG="$ROOT/ai/logs/verify.log"
 mkdir -p "$(dirname "$LOG")"
@@ -40,7 +41,7 @@ fi
 if [[ $STATUS -eq 0 ]]; then
   echo "VERIFY: PASS"
   shopt -s nullglob
-  RESULTS=("$HOME"/.pwt/out/*/build/test-results/test/TEST-*.xml)
+  RESULTS=("$HOME/.pwt/out/$PWT_OUT_SUB"*/build/test-results/test/TEST-*.xml)
   if [[ ${#RESULTS[@]} -gt 0 ]]; then
     # One line, not one per class: a green run is a fact, not a list.
     sed -n 's/.*<testsuite [^>]*tests="\([0-9]*\)".*failures="\([0-9]*\)".*errors="\([0-9]*\)".*/\1 \2 \3/p' "${RESULTS[@]}" \

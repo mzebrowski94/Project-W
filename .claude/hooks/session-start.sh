@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
-# SessionStart hook. Cloud sessions only (CLAUDE_CODE_REMOTE=true); a local session exits at once.
+# SessionStart hook. Every session installs the git guard on main; the rest is cloud only
+# (CLAUDE_CODE_REMOTE=true), and a local session exits after the guard.
 #
 # A cloud container starts from a fresh clone: no JDK 25, no Gradle, no dependency cache, and scripts
 # whose executable bit a Windows checkout may have lost. This provisions all of it once, before the
 # session starts, so the first verify is a build and not a two-minute download. The container is
 # cached after the hook, so a resumed session pays nothing.
 set -euo pipefail
+
+# The guard that keeps Claude off main (.githooks/reference-transaction). .git/hooks is shared by
+# every worktree, so one copy covers them all, whatever branch a worktree was cut from.
+GUARD_ROOT="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+if HOOKS="$(git -C "$GUARD_ROOT" rev-parse --git-common-dir 2>/dev/null)/hooks" && [[ -f "$GUARD_ROOT/.githooks/reference-transaction" ]]; then
+  [[ "$HOOKS" = /* || "$HOOKS" =~ ^[A-Za-z]: ]] || HOOKS="$GUARD_ROOT/$HOOKS"
+  mkdir -p "$HOOKS" && cp "$GUARD_ROOT/.githooks/reference-transaction" "$HOOKS/reference-transaction" \
+    && chmod +x "$HOOKS/reference-transaction" 2>/dev/null || true
+fi
 
 if [[ "${CLAUDE_CODE_REMOTE:-}" != "true" ]]; then
   exit 0

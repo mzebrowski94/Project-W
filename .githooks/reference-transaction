@@ -1,0 +1,18 @@
+#!/bin/sh
+# Refuses any move of the main branch made from a Claude Code shell (CLAUDECODE=1): a commit, a merge
+# (fast-forward included), a reset, `branch -f`, `update-ref`. Mateusz alone moves main; his own
+# terminal and IntelliJ do not carry CLAUDECODE, so they are untouched.
+#
+# Git runs this for every ref update in every worktree of the repository, which is the point: a
+# permission rule matches a command's text and cannot see which branch it lands on; this sees the ref.
+# Installed into .git/hooks by .claude/hooks/session-start.sh (docs/workflow.md, *AFK runs*).
+[ "$1" = "prepared" ] || exit 0
+[ "${CLAUDECODE:-}" = "1" ] || exit 0
+status=0
+while read -r old new ref; do
+  if [ "$ref" = "refs/heads/main" ]; then
+    echo "refused by .githooks/reference-transaction: Claude does not move main - commit to your own branch; Mateusz merges." >&2
+    status=1
+  fi
+done
+exit $status

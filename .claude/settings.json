@@ -5,20 +5,40 @@
       "Bash(.claude/scripts/gradle.sh:*)",
       "Bash(.claude/scripts/cloud-commit.sh:*)",
       "Bash(./gradlew:*)",
-      "Bash(git restore -- docs/*)",
-      "Bash(git restore -- .scratch/*)",
-      "Bash(git -C .claude/worktrees/* commit *)",
-      "Bash(git -C .claude/worktrees/integration merge *)",
-      "Bash(git -C . merge *)"
+      "Bash(git add *)",
+      "Bash(git -C * add *)",
+      "Bash(git commit *)",
+      "Bash(git -C * commit *)",
+      "Bash(git merge *)",
+      "Bash(git -C * merge *)",
+      "Bash(git switch *)",
+      "Bash(git -C * switch *)",
+      "Bash(git checkout *)",
+      "Bash(git -C * checkout *)",
+      "Bash(git restore *)",
+      "Bash(git -C * restore *)",
+      "Bash(git reset *)",
+      "Bash(git -C * reset *)",
+      "Bash(git branch *)",
+      "Bash(git -C * branch *)",
+      "Bash(git worktree *)",
+      "Bash(git -C * worktree *)",
+      "Bash(git --no-optional-locks *)",
+      "Bash(git -C * --no-optional-locks *)",
+      "Bash(git log *)",
+      "Bash(git -C * log *)",
+      "Bash(git diff *)",
+      "Bash(git -C * diff *)",
+      "Bash(git show *)",
+      "Bash(git -C * show *)",
+      "Bash(git merge-base *)",
+      "Bash(git -C * merge-base *)",
+      "Bash(git rev-parse *)",
+      "Bash(git -C * rev-parse *)"
     ],
     "deny": [
-      "Bash(git commit *)",
-      "Bash(git merge *)",
-      "Bash(git -C *..* commit *)",
-      "Bash(git -C *..* merge *)",
       "Bash(git push *)",
-      "Bash(git -C * push *)",
-      "Bash(git reset:*)"
+      "Bash(git -C * push *)"
     ]
   },
   "hooks": {
@@ -29,6 +49,18 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh\"",
             "timeout": 600
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/git-guard.sh\"",
+            "timeout": 15
           }
         ]
       }
