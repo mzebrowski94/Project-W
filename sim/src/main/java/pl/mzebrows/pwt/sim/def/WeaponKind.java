@@ -16,8 +16,8 @@ public enum WeaponKind {
      */
     FLAMER,
     /**
-     * A handful of pellets thrown wide with every pull, slowly: devastating up close. It stays cold;
-     * it costs the wait between pulls.
+     * A handful of pellets thrown wide with every pull, slowly: devastating up close. Four pulls
+     * fired close together stop it, and the wait for the bar to cool all the way down is its reload (G0079).
      */
     SHOTGUN,
     /**

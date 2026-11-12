@@ -15,6 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.Grant;
@@ -163,9 +164,9 @@ class SimConfigTest {
      * definition and no system anywhere would notice it being tuned away.
      *
      * <p>Asked of the guns a <em>crate</em> grants, which is the honest definition of a gun a man
-     * can carry: a turret's gun runs hot too and nobody carries one away. And of the guns that fire more
-     * than once before they stop: one that a single pull runs to the stop - the bazooka - is reloading,
-     * not being held down, and is never the gun anybody holds instead of the beam.
+     * can carry: a turret's gun runs hot too and nobody carries one away. And of the guns that do not reload:
+     * one whose stop holds until its bar is empty - the bazooka, the disc gun, the shotgun (G0058, G0079) - is
+     * reloading, not being held down, and is never the gun anybody holds instead of the beam.
      */
     @ParameterizedTest
     @MethodSource("everyTier")
@@ -176,7 +177,7 @@ class SimConfigTest {
         for (PickupKind kind : PickupKind.values()) {
             if (config.pickup(kind).playerGrant() instanceof Grant.Arm crate
                     && crate.weapon() != WeaponKind.LASER
-                    && !stopsAfterOnePull(config, crate.weapon())) {
+                    && !reloads(config, crate.weapon())) {
                 assertThat(beam)
                         .as("the beam must stop itself sooner than the %s does", crate.weapon())
                         .isLessThan(secondsOfHolding(config, crate.weapon()));
@@ -201,7 +202,7 @@ class SimConfigTest {
         for (PickupKind kind : PickupKind.values()) {
             if (config.pickup(kind).playerGrant() instanceof Grant.Arm crate
                     && crate.weapon() != WeaponKind.LASER
-                    && !stopsAfterOnePull(config, crate.weapon())) {
+                    && !reloads(config, crate.weapon())) {
                 assertThat(beam)
                         .as("the beam must stop itself sooner than the %s does", crate.weapon())
                         .isLessThan(secondsOfHolding(config, crate.weapon(), modifiers, commander));
@@ -373,6 +374,45 @@ class SimConfigTest {
     }
 
     /**
+     * <strong>The shotgun's bar is worth four pulls fired close together</strong> (G0079): the fourth stops
+     * it and the third never does - at its own cadence, and at the shorter one every upgrade at its highest
+     * rank gives it, where less comes off between pulls. Read through the one {@code Heat} the game fills and
+     * cools, a tick at a time.
+     */
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void stopsTheShotgunOnTheFourthPullFiredCloseTogether(SimConfig config) {
+        Simulation world = everythingHeld(config);
+        Entity commander = world.spawnCommander(10f, 10f, 0);
+        Modifiers modifiers = new Modifiers(world.engine(), config);
+        int base = Ticks.of(config.weapon(WeaponKind.SHOTGUN).cooldownSeconds(), config.tickSeconds());
+
+        assertThat(pullsBeforeTheStop(config, WeaponKind.SHOTGUN, base)).isEqualTo(4);
+        assertThat(pullsBeforeTheStop(
+                        config, WeaponKind.SHOTGUN, modifiers.fireCooldownTicks(commander, WeaponKind.SHOTGUN, base)))
+                .isEqualTo(4);
+    }
+
+    /**
+     * <strong>Once stopped, the shotgun reloads</strong> (G0079): the bar must cool all the way down before
+     * it fires again, as the bazooka's does, and the pull that hits harder kicks him lightly and shakes
+     * nothing. A pull at the muzzle kills a grunt outright.
+     */
+    @ParameterizedTest
+    @MethodSource("everyTier")
+    void reloadsTheShotgunFromEmptyWithALightKickAndNoShake(SimConfig config) {
+        WeaponDef shotgun = config.weapon(WeaponKind.SHOTGUN);
+
+        assertThat(reloads(config, WeaponKind.SHOTGUN)).isTrue();
+        assertThat(shotgun.kicks()).isTrue();
+        assertThat(shotgun.recoilSpeed() * shotgun.recoilSeconds())
+                .isLessThan(config.weapon(WeaponKind.DISC_GUN).recoilSpeed()
+                        * config.weapon(WeaponKind.DISC_GUN).recoilSeconds());
+        assertThat(shotgun.shake().strength()).isZero();
+        assertThat(shotgun.damage() * shotgun.pellets()).isGreaterThanOrEqualTo(config.healthOf(UnitKind.GRUNT));
+    }
+
+    /**
      * Every gun a man can be armed with - the sidearm and whatever a crate holds - has a weapon type, so
      * whatever names a type reaches every gun he can carry; nothing found falls through it as none.
      */
@@ -411,6 +451,33 @@ class SimConfigTest {
     /** True for a gun one pull runs to the stop: its heat bar is its reload rather than a burst. */
     private static boolean stopsAfterOnePull(SimConfig config, WeaponKind kind) {
         return config.weapon(kind).heat().perShot() >= 1f;
+    }
+
+    /**
+     * True for a gun whose stop holds until its bar is empty (G0058, G0079): the wait is a reload rather than a
+     * gun being held down - the bazooka, the disc gun, the shotgun.
+     */
+    private static boolean reloads(SimConfig config, WeaponKind kind) {
+        WeaponDef gun = config.weapon(kind);
+        return gun.overheats() && gun.heat().resumeBelow() <= 0f;
+    }
+
+    /**
+     * How many pulls a gun fired as soon as it is ready makes before it stops itself, cooling a tick at a time
+     * for {@code ticksBetween} ticks after each; a large number for one that never stops.
+     */
+    private static int pullsBeforeTheStop(SimConfig config, WeaponKind kind, int ticksBetween) {
+        WeaponDef gun = config.weapon(kind);
+        Heat heat = new Heat();
+        int pulls = 0;
+        while (!heat.locked && pulls < 1000) {
+            heat.spend(gun.heat().perShot());
+            pulls++;
+            for (int tick = 0; tick < ticksBetween && !heat.locked; tick++) {
+                heat.cool(gun.heat().coolPerSecond(), gun.heat().resumeBelow(), config.tickSeconds());
+            }
+        }
+        return pulls;
     }
 
     /**
