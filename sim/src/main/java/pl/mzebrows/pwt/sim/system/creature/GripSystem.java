@@ -11,7 +11,9 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
+import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Facing;
@@ -44,6 +46,12 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  *       rather than position, so the solver still keeps him out of rock.
  * </ul>
  *
+ * <p><strong>A grip that does not pin clings</strong> (G0083), and the carrying goes the other way: he goes where he
+ * likes and it goes with him, kept touching his edge on the side it took him from. It is no body to him while it
+ * clings - not solid, so it neither blocks nor shoves the man it is on, and still touched by whatever comes at it - and
+ * a body again once it lets go. Getting it off throws nobody clear: what it costs him is whatever it leaves when it
+ * dies. One that is <strong>spent on finishing him</strong> dies with its blow.
+ *
  * <p>Runs after the course setters that would otherwise speak for the creature (7-9) and before
  * avoidance (G0010), and before anything that would drive the man - every driver leaves a held unit
  * alone, which is what makes this the only thing that moves him.
@@ -59,6 +67,7 @@ public final class GripSystem extends EntitySystem {
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
     private static final ComponentMapper<Damage> DAMAGE = ComponentMapper.getFor(Damage.class);
     private static final ComponentMapper<ContactDamage> CONTACT_DAMAGE = ComponentMapper.getFor(ContactDamage.class);
+    private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -68,6 +77,12 @@ public final class GripSystem extends EntitySystem {
     private ImmutableArray<Entity> takeable = new ImmutableArray<>(new Array<>());
 
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
+
+    private final Spawner spawner;
+
+    public GripSystem(Spawner spawner) {
+        this.spawner = spawner;
+    }
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -87,18 +102,26 @@ public final class GripSystem extends EntitySystem {
                 continue;
             }
             Entity man = heldBy(gripper, grip);
-            if (man == null || Life.dying(gripper) || Life.down(man)) {
-                if (man != null && Life.dying(gripper) && !Life.down(man)) {
+            if (man == null || Life.dying(gripper) || Life.down(man) || gripper.isScheduledForRemoval()) {
+                if (man != null && grip.pins && Life.dying(gripper) && !Life.down(man)) {
                     escape(gripper, grip, man, deltaTime);
                 }
-                letGo(grip, man);
+                letGo(gripper, grip, man);
                 continue;
             }
             grip.remainingTicks--;
             GRIPPED.get(man).fraction = grip.fraction();
             if (grip.remainingTicks <= 0) {
                 finish(gripper, man);
-                letGo(grip, man);
+                letGo(gripper, grip, man);
+                if (grip.spentOnFinish) {
+                    // It goes off with its blow, by dying (G0018): whatever it leaves, it leaves on him.
+                    spawner.markDead(gripper);
+                }
+                continue;
+            }
+            if (!grip.pins) {
+                cling(gripper, man, deltaTime);
                 continue;
             }
             if (!Drivers.held(gripper)) {
@@ -107,6 +130,42 @@ public final class GripSystem extends EntitySystem {
             pullAlong(gripper, man, deltaTime);
         }
         releaseStrays();
+    }
+
+    /**
+     * Puts a thing that clings on his edge, on the side it is already on, where he will be once this tick's course is
+     * spent (G0083). By its position, so nothing that holds it still or slows it - a stun, the ground - takes it off
+     * him, and rock never scrapes it off; not solid while it is on him, so the two never push each other about.
+     */
+    private static void cling(Entity gripper, Entity man, float deltaTime) {
+        if (deltaTime <= 0f) {
+            return;
+        }
+        if (COLLIDER.has(gripper)) {
+            COLLIDER.get(gripper).solid = false;
+        }
+        Position at = POSITION.get(gripper);
+        Position where = POSITION.get(man);
+        float bearingX = at.x - where.x;
+        float bearingY = at.y - where.y;
+        float apart = (float) Math.sqrt(bearingX * bearingX + bearingY * bearingY);
+        if (apart <= EPSILON) {
+            bearingX = FACING.has(man) ? -FACING.get(man).x : 1f;
+            bearingY = FACING.has(man) ? -FACING.get(man).y : 0f;
+            apart = (float) Math.sqrt(bearingX * bearingX + bearingY * bearingY);
+            if (apart <= EPSILON) {
+                bearingX = 1f;
+                bearingY = 0f;
+                apart = 1f;
+            }
+        }
+        float reach = BODY.get(gripper).radius + (BODY.has(man) ? BODY.get(man).radius : 0f);
+        float aheadX = VELOCITY.has(man) ? VELOCITY.get(man).x * deltaTime : 0f;
+        float aheadY = VELOCITY.has(man) ? VELOCITY.get(man).y * deltaTime : 0f;
+        at.set(where.x + aheadX + bearingX / apart * reach, where.y + aheadY + bearingY / apart * reach);
+        if (VELOCITY.has(gripper)) {
+            VELOCITY.get(gripper).set(0f, 0f);
+        }
     }
 
     /** The man in its jaws, if he is still on the field and still agrees he is in them. */
@@ -118,8 +177,12 @@ public final class GripSystem extends EntitySystem {
         return man;
     }
 
-    private static void letGo(Grip grip, @Nullable Entity man) {
+    private static void letGo(Entity gripper, Grip grip, @Nullable Entity man) {
         grip.release();
+        if (!grip.pins && COLLIDER.has(gripper) && !Life.dying(gripper)) {
+            // Off him, it is a body again.
+            COLLIDER.get(gripper).solid = true;
+        }
         if (man == null) {
             return;
         }

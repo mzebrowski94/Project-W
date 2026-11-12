@@ -85,5 +85,16 @@ public enum UnitKind {
      * behind whoever it was slung at, so the fight arrives from both sides. What to read is the tint; what to do is
      * kill it before it has emptied its back - or after, and take what spills.
      */
-    SLINGER
+    SLINGER,
+    /**
+     * A small thing that never walks (G0083): slung onto a man, it clings to him and, when his time is up, kills him
+     * and goes off in venom. Left alone it goes off where it lies. What to read is the clock on him; what to do is
+     * shoot it off him - which costs him a wound of its venom rather than his life - and get him away from the squad.
+     */
+    LEECH,
+    /**
+     * A slinger whose riders are leeches, slung onto whoever it hunts rather than past him (G0083). The same body and
+     * the same answer as the slinger; what it leaves is a man with a clock on him rather than a runner behind him.
+     */
+    LEECH_SLINGER
 }

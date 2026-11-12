@@ -21,10 +21,23 @@ import lombok.With;
  *     world units per second (G0053)
  * @param escapeHarm what getting out of its jaws that way costs him: a wound for every gripper there is
  *     (G0053, G0057)
+ * @param pins whether the man it has hold of is held still - in its jaws, driving nothing and firing nothing. A grip
+ *     that does not pin <strong>clings</strong> (G0083): he goes where he likes and it goes with him, on his edge
+ * @param byTouch whether it takes hold of a man it merely touches, on the ground as well as in the air, rather than
+ *     only one its leap lands on. A strain that takes hold by touch never bites
+ * @param spentOnFinish whether finishing him spends it: it dies with its blow, and goes off as anything does that goes
+ *     off by dying (G0018)
  */
 @With
 public record GripDef(
-        boolean enabled, float carrySpeed, float holdSeconds, float escapeKnockbackSpeed, Harm escapeHarm) {
+        boolean enabled,
+        float carrySpeed,
+        float holdSeconds,
+        float escapeKnockbackSpeed,
+        Harm escapeHarm,
+        boolean pins,
+        boolean byTouch,
+        boolean spentOnFinish) {
 
     public GripDef {
         Require.notNegative("grip carrySpeed", carrySpeed);
@@ -37,6 +50,6 @@ public record GripDef(
 
     /** A leap that bites. What every strain but one declares. */
     public static GripDef off() {
-        return new GripDef(false, 0f, 0f, 0f, Harm.NONE);
+        return new GripDef(false, 0f, 0f, 0f, Harm.NONE, true, false, false);
     }
 }

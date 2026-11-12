@@ -72,6 +72,10 @@ Blocking: 05 by 04 · 08 by 06 · 12 by 03 · 16 by 15. Everything else is on th
 - [A crate where a point was taken](issues/05-a-crate-where-a-point-was-taken.md): no new kind - a taken point lays a
   grenade cache per seated slot beside it, once; a take by touch on the player's side pops; the proving ground's
   others gain crates and grenade caches (G0078).
+- [The leech and the slinger that throws it](issues/12-the-leech-and-its-slinger.md): a leech clings - a grip that pins
+  nobody, taken by touch or by a leap at a man passing close by, spent on finishing him - and goes off in alien
+  venom; alone, on a fuse (a mine's clock). A
+  leech slinger slings them onto its target; in badlands and the cut (G0083).
 
 ## Not yet specified
 

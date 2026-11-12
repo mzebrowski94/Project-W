@@ -687,4 +687,28 @@ class SimConfigTest {
                         / config.units().of(UnitKind.RUNNER).speed());
         assertThat(slinger.leap().enabled()).isTrue();
     }
+
+    /**
+     * The leech (G0083): it never walks, clings by touch and never pins, is spent on finishing him, and a leech that
+     * missed is a moment's hazard rather than a mine - its fuse runs out well before a man's clock would.
+     */
+    @Test
+    void slingsLeechesOntoHimThatClingAndGoOffSoonerOnTheGroundThanOnHim() {
+        SimConfig config = SimConfig.defaults();
+        UnitDef leech = config.units().of(UnitKind.LEECH);
+        UnitDef slinger = config.units().of(UnitKind.LEECH_SLINGER);
+
+        assertThat(leech.rooted()).isTrue();
+        assertThat(leech.grip().byTouch()).isTrue();
+        assertThat(leech.grip().pins()).isFalse();
+        assertThat(leech.grip().spentOnFinish()).isTrue();
+        assertThat(leech.deathSlicks()).isPositive();
+        assertThat(leech.fuse().seconds()).isPositive().isLessThan(leech.grip().holdSeconds());
+        assertThat(leech.leap().enabled()).isTrue();
+        assertThat(leech.leap().triggerRange())
+                .isLessThanOrEqualTo(leech.perception().detectionRange());
+        assertThat(slinger.sling().rider()).isEqualTo(UnitKind.LEECH);
+        assertThat(slinger.sling().landBehind()).isZero();
+        assertThat(slinger.sling().landingSeconds()).isZero();
+    }
 }

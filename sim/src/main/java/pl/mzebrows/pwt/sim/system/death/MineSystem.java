@@ -10,6 +10,8 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Enemy;
+import pl.mzebrows.pwt.sim.component.Grip;
+import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.system.query.Sight;
@@ -27,6 +29,10 @@ import pl.mzebrows.pwt.sim.system.query.Sight;
  * impossible, and not a list of what may step on one - the marker that already says "on the other
  * side and worth shooting" says it here too.
  *
+ * <p><strong>A strain's fuse is a mine with no trigger</strong> (G0083): nothing coming near it starts it. It starts
+ * once the creature carrying it is down with hold of nobody, and stands down, whole, while it is slung or has hold of a
+ * man - so it shows nothing then, rather than a fuse that has stopped.
+ *
  * <p>A body in its throes arms nothing. A corpse lying across a mine would otherwise set it off
  * seconds after the fight that put it there was over, which reads as the mine misfiring.
  *
@@ -42,6 +48,8 @@ import pl.mzebrows.pwt.sim.system.query.Sight;
 public final class MineSystem extends EntitySystem {
 
     private static final ComponentMapper<Mine> MINE = ComponentMapper.getFor(Mine.class);
+    private static final ComponentMapper<Grip> GRIP = ComponentMapper.getFor(Grip.class);
+    private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
 
     private final Spawner spawner;
@@ -63,14 +71,22 @@ public final class MineSystem extends EntitySystem {
     public void update(float deltaTime) {
         for (int i = mines.size() - 1; i >= 0; i--) {
             Entity entity = mines.get(i);
-            if (entity.isScheduledForRemoval()) {
+            if (entity.isScheduledForRemoval() || Life.dying(entity)) {
+                // Already on its way out: its death, not its fuse, is what it goes off by.
                 continue;
             }
             Mine mine = MINE.get(entity);
             if (!mine.armed) {
-                if (anythingHostileNear(POSITION.get(entity), mine.triggerRadius)) {
+                boolean starts = mine.triggerRadius > 0f
+                        ? anythingHostileNear(POSITION.get(entity), mine.triggerRadius)
+                        : !fuseWaits(entity);
+                if (starts) {
                     mine.arm();
                 }
+                continue;
+            }
+            if (mine.triggerRadius <= 0f && fuseWaits(entity)) {
+                mine.standDown();
                 continue;
             }
             if (mine.remainingTicks > 0) {
@@ -80,6 +96,15 @@ public final class MineSystem extends EntitySystem {
                 spawner.markDead(entity);
             }
         }
+    }
+
+    /**
+     * A strain's fuse that waits, whole (G0083): it runs from where it comes down, so not while it is slung, and not
+     * while it has hold of a man - his clock runs then, and the fuse starts afresh once it lets go.
+     */
+    private static boolean fuseWaits(Entity entity) {
+        return (LEAP.has(entity) && LEAP.get(entity).slung())
+                || (GRIP.has(entity) && GRIP.get(entity).holding());
     }
 
     /**

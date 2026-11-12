@@ -379,7 +379,10 @@ public final class Spawner {
         Entity entity = spawnUnit(kind, x, y, wave);
         entity.getComponent(Facing.class).face(directionX, directionY);
         entity.getComponent(Leap.class).sling(directionX, directionY, speed, airborneTicks, landingTicks, x, y);
+        // In the air it is carried by its flight and held off scenery like any rider, rooted on the ground or not
+        // (G0083).
         entity.getComponent(Collider.class).throughBodies = true;
+        entity.getComponent(Collider.class).movable = true;
         entity.getComponent(Velocity.class).set(directionX * speed, directionY * speed);
         return entity;
     }
@@ -431,6 +434,11 @@ public final class Spawner {
         entity.add(engine.createComponent(Hop.class).phaseFrom(x, y));
         entity.add(engine.createComponent(Dodge.class));
         entity.add(engine.createComponent(Grip.class));
+        if (config.unit(kind).fuse().enabled()) {
+            // Its fuse (G0083): a mine's clock, which nothing near it can start. Only on a strain that has one - a
+            // mine is what carries one - and no strain evolves into or out of one.
+            entity.add(engine.createComponent(Mine.class));
+        }
         entity.add(engine.createComponent(Armour.class));
         entity.add(engine.createComponent(Barrage.class));
         // Empty on every strain but the one that carries riders (G0074).
@@ -537,7 +545,19 @@ public final class Spawner {
                         ticks(def.grip().holdSeconds()),
                         def.grip().escapeKnockbackSpeed(),
                         ticks(config.wound().shoveSeconds()),
-                        def.grip().escapeHarm());
+                        def.grip().escapeHarm(),
+                        def.grip().pins(),
+                        def.grip().byTouch(),
+                        def.grip().spentOnFinish());
+        // A fuse is a mine's clock with nothing to set it off, running from the start (G0083).
+        Mine fuse = entity.getComponent(Mine.class);
+        if (fuse != null) {
+            fuse.set(
+                    0f,
+                    ticks(def.fuse().seconds()),
+                    config.mine().flashFromSeconds() / config.tickSeconds(),
+                    config.mine().flashToSeconds() / config.tickSeconds());
+        }
         entity.getComponent(Armour.class)
                 .set(
                         def.armour().enabled(),

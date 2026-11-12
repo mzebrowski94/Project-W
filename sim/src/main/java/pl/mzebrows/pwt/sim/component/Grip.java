@@ -5,7 +5,7 @@ import com.badlogic.gdx.utils.Pool;
 import pl.mzebrows.pwt.sim.def.Harm;
 
 /**
- * What this creature's leap does to a man it lands on, and who it has in its jaws (G0045).
+ * What this creature does to a man it takes hold of rather than bites, and who it has hold of (G0045, G0083).
  *
  * <p>Carried by every strain and switched off for all but one, like every other ability.
  *
@@ -36,6 +36,18 @@ public final class Grip implements Component, Pool.Poolable {
     /** What getting out of its jaws costs him (G0053, G0057). Configuration; {@link Harm#NONE} when off. */
     public Harm escapeHarm = Harm.NONE;
 
+    /**
+     * Whether the man it has hold of is held still. One that does not pin <strong>clings</strong> (G0083): he goes
+     * where he likes, and it is carried on his edge. Configuration.
+     */
+    public boolean pins = true;
+
+    /** Whether it takes hold of a man it merely touches, rather than only one its leap lands on. Configuration. */
+    public boolean byTouch;
+
+    /** Whether finishing him spends it: it dies with its blow (G0083). Configuration. */
+    public boolean spentOnFinish;
+
     /** The handle of the man in its jaws, or {@link Handle#NOBODY}. */
     public long load = Handle.NOBODY;
 
@@ -49,13 +61,19 @@ public final class Grip implements Component, Pool.Poolable {
             int newHoldTicks,
             float newEscapeKnockbackSpeed,
             int newEscapeShoveTicks,
-            Harm newEscapeHarm) {
+            Harm newEscapeHarm,
+            boolean newPins,
+            boolean newByTouch,
+            boolean newSpentOnFinish) {
         this.enabled = newEnabled;
         this.carrySpeed = newCarrySpeed;
         this.holdTicks = newHoldTicks;
         this.escapeKnockbackSpeed = newEscapeKnockbackSpeed;
         this.escapeShoveTicks = newEscapeShoveTicks;
         this.escapeHarm = newEscapeHarm;
+        this.pins = newPins;
+        this.byTouch = newByTouch;
+        this.spentOnFinish = newSpentOnFinish;
         return this;
     }
 
@@ -89,6 +107,9 @@ public final class Grip implements Component, Pool.Poolable {
         escapeKnockbackSpeed = 0f;
         escapeShoveTicks = 0;
         escapeHarm = Harm.NONE;
+        pins = true;
+        byTouch = false;
+        spentOnFinish = false;
         load = Handle.NOBODY;
         remainingTicks = 0;
     }

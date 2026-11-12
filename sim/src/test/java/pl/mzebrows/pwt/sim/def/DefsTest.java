@@ -59,6 +59,8 @@ class DefsTest {
                         strain(RADIUS * 2f, Look.SEARER),
                         strain(RADIUS * 2f, Look.THUMPER),
                         strain(RADIUS, Look.SLUDGER),
+                        strain(RADIUS * 2f, Look.SLINGER),
+                        strain(RADIUS, Look.LEECH),
                         strain(RADIUS * 2f, Look.SLINGER));
     }
 
@@ -80,6 +82,8 @@ class DefsTest {
                 .put(UnitKind.THUMPER, strain(RADIUS * 2f, Look.THUMPER))
                 .put(UnitKind.SLUDGER, strain(RADIUS, Look.SLUDGER))
                 .put(UnitKind.SLINGER, strain(RADIUS * 2f, Look.SLINGER))
+                .put(UnitKind.LEECH, strain(RADIUS, Look.LEECH))
+                .put(UnitKind.LEECH_SLINGER, strain(RADIUS * 2f, Look.SLINGER))
                 .build();
     }
 
@@ -110,6 +114,7 @@ class DefsTest {
                 ArmourDef.off(),
                 BarrageDef.off(),
                 SlingDef.off(),
+                FuseDef.off(),
                 0,
                 true,
                 Chances.none(),

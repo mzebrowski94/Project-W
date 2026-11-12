@@ -31,6 +31,7 @@ import pl.mzebrows.pwt.sim.def.BarrageDef;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
+import pl.mzebrows.pwt.sim.def.FuseDef;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.GripDef;
 import pl.mzebrows.pwt.sim.def.GroundDef;
@@ -1808,6 +1809,7 @@ public final class AlphaWorlds {
                 ArmourDef.off(),
                 BarrageDef.off(),
                 SlingDef.off(),
+                FuseDef.off(),
                 0,
                 true,
                 noChances(),

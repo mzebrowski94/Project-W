@@ -43,6 +43,8 @@ public enum Look {
     SLUDGER,
     /** A brute-sized brown body with its riders drawn on its back, one fewer for every sling (G0074). */
     SLINGER,
+    /** A small magenta body, off the spitter's purple, flashing its fuse as it runs out (G0083). */
+    LEECH,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */

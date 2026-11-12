@@ -209,7 +209,7 @@ public final class Simulation {
         // After every course a creature sets itself (7-9) and before avoidance bends it: a creature with
         // a man in its jaws is carrying him off, not hunting. Before the squad block, which leaves a
         // man in its jaws alone, so this is the only thing that moves him (G0045).
-        engine.addSystem(new GripSystem());
+        engine.addSystem(new GripSystem(spawner));
         // One stream for the squad's mind and legs: one concern.
         Rng squad = streams.of(RngStream.TROOPER);
         // Everything the AI leaves to the dice (AiChance), apart from where the squad roams.

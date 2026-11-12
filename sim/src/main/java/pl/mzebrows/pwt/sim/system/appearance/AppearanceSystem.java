@@ -254,7 +254,7 @@ public final class AppearanceSystem extends IteratingSystem {
             return;
         }
         if (MINE.has(entity)) {
-            // The fuse, in its own colour; nothing before it is armed.
+            // The fuse, in its own colour; nothing before it is armed - a mine's or a leech's (G0083).
             appearance.chargeLook = Look.FUSE;
             appearance.charge = MINE.get(entity).flash();
             return;

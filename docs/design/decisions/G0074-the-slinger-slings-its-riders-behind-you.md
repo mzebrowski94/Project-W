@@ -1,6 +1,6 @@
 # G0074: The slinger slings its riders over you, and they land behind you
 
-**Status.** accepted
+**Status.** amended by G0083: a slinger whose riders are leeches, slung onto its target
 
 **Trigger.** Adding a strain that carries, throws or launches another; anything that cannot be hurt for a while; a
 body that passes through bodies; reloading a slinger; making a blast decisive against everything again.
@@ -51,3 +51,7 @@ velocity, ends - and the leap system already runs it. The new part is two fields
 
 **Revisit when** play says a landing cannot be read in a crowd (a bigger shadow, or a mark where it will land - drawn
 only, never state), or that a slinger dies with its back full too often for the sling to matter.
+
+## Amended by G0083
+
+A second slinger, the **leech slinger**, carries leeches rather than runners and slings them onto its target (`landBehind` 0), live the moment they land (`landingSeconds` 0). Everything else here holds for it.

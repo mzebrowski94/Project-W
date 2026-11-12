@@ -9,6 +9,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.collision.Solid;
@@ -25,6 +26,7 @@ import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Sling;
+import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Ticks;
@@ -80,6 +82,7 @@ public final class EnemyLeapSystem extends EntitySystem {
     private static final ComponentMapper<Sling> SLING = ComponentMapper.getFor(Sling.class);
     private static final ComponentMapper<ContactDamage> CONTACT = ComponentMapper.getFor(ContactDamage.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
+    private static final ComponentMapper<Speed> SPEED = ComponentMapper.getFor(Speed.class);
 
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
     private static final float EPSILON = 1e-4f;
@@ -166,6 +169,7 @@ public final class EnemyLeapSystem extends EntitySystem {
         for (int i = 0; i < leapers.size(); i++) {
             Entity entity = leapers.get(i);
             Leap leap = LEAP.get(entity);
+            holdOffSceneryInTheAir(entity, leap);
             if (leap.slung()) {
                 // Aimed once as it was slung, and nothing can hold it or change its mind in the air (G0074).
                 fly(entity, leap);
@@ -194,6 +198,16 @@ public final class EnemyLeapSystem extends EntitySystem {
             }
             hunted.set(perception.targetX, perception.targetY);
             advance(entity, leap, hunted);
+        }
+    }
+
+    /**
+     * What never walks is scenery on the ground (G0048) and a body in the air like any leaper's, held off rock and
+     * scenery by the solver (G0083): movable exactly while airborne. A body in its throes is left as its death made it.
+     */
+    private static void holdOffSceneryInTheAir(Entity entity, Leap leap) {
+        if (SPEED.has(entity) && SPEED.get(entity).rooted() && !Life.dying(entity)) {
+            COLLIDER.get(entity).movable = leap.airborne();
         }
     }
 

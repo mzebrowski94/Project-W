@@ -20,6 +20,14 @@ public final class Speed implements Component, Pool.Poolable {
         return this;
     }
 
+    /**
+     * Whether it never walks: <strong>rooted</strong> (G0048) - scenery to the solver, which pushes whatever it meets out
+     * of its way. The one reading of a strain's speed as that, for the solver's {@code Collider.movable}.
+     */
+    public boolean rooted() {
+        return value <= 0f;
+    }
+
     @Override
     public void reset() {
         value = 0f;

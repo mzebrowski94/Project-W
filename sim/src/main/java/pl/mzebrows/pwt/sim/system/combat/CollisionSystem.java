@@ -465,13 +465,17 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      * takes hold</strong> of a man on his feet whom nothing else has hold of, and never kills on landing:
      * whatever it lands on that it cannot take - a man already taken, a man who is down, a gun - it
      * simply lands on. On the ground it bites like anything else. The leap ends as it takes hold.
+     *
+     * <p><strong>One that takes hold by touch</strong> (G0083) does so on the ground as well, and so never bites at
+     * all: what it touches that it cannot take, it merely touches.
      */
     private boolean takesHoldInsteadOfBiting(Entity attacker, Entity target) {
         Grip grip = GRIP.get(attacker);
         if (grip.holding()) {
             return true;
         }
-        if (!LEAP.has(attacker) || !LEAP.get(attacker).airborne()) {
+        boolean airborne = LEAP.has(attacker) && LEAP.get(attacker).airborne();
+        if (!airborne && !grip.byTouch) {
             return false;
         }
         if (GRIPPED.has(target)
@@ -487,13 +491,18 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
                     owed.land(0, Harm.NONE);
                     recordSource(attacker, owed);
                 }
-                LEAP.get(attacker).finish();
+                if (airborne) {
+                    LEAP.get(attacker).finish();
+                }
                 return true;
             }
             grip.take(Handles.of(target));
             GRIPPED.get(target).by = Handles.of(attacker);
+            GRIPPED.get(target).pinned = grip.pins;
             GRIPPED.get(target).fraction = 1f;
-            LEAP.get(attacker).finish();
+            if (airborne) {
+                LEAP.get(attacker).finish();
+            }
         }
         return true;
     }

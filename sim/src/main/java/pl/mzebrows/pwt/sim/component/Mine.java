@@ -19,6 +19,10 @@ import com.badlogic.gdx.utils.Pool;
  * <p>Arming <strong>latches</strong>, for the reason a nest waking latches: a fuse a creature could
  * walk away from is a fuse the player watches rather than a threat the other side has to deal with,
  * and a mine that could be reset by backing off would have no moment in it.
+ *
+ * <p><strong>A strain's fuse is one too</strong> (G0083): a unit whose strain has a fuse carries one, with no trigger
+ * at all - it starts the moment the creature is down on the field with hold of nobody, and stands down, whole, while
+ * it is slung or has hold of a man.
  */
 public final class Mine implements Component, Pool.Poolable {
 
@@ -48,6 +52,15 @@ public final class Mine implements Component, Pool.Poolable {
         this.flashToTicks = newFlashToTicks;
         this.armed = false;
         return this;
+    }
+
+    /**
+     * Stops the clock and puts the whole fuse back: a leech slung, or with hold of a man, whose clock runs instead
+     * (G0083). Only a strain's fuse stands down - a mine's arming latches.
+     */
+    public void standDown() {
+        armed = false;
+        remainingTicks = fuseTicks;
     }
 
     /** Starts the clock. Does nothing to one that is already ticking. */

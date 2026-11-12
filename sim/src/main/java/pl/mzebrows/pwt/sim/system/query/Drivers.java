@@ -48,9 +48,18 @@ public final class Drivers {
     /**
      * In something's jaws (G0045). Held like any other held unit, with one exception every caller that
      * cares asks for by name: <strong>he may still swing</strong>, because that is how a man gets out.
+     * A thing that only clings to him (G0083) holds nothing still: see {@link #clung}.
      */
     public static boolean gripped(Entity entity) {
-        return GRIPPED.has(entity) && GRIPPED.get(entity).held();
+        return GRIPPED.has(entity) && GRIPPED.get(entity).held() && GRIPPED.get(entity).pinned;
+    }
+
+    /**
+     * Something clings to him that holds him in nothing (G0083): he drives, fires and throws as ever, with a clock on
+     * him. Not held.
+     */
+    public static boolean clung(Entity entity) {
+        return GRIPPED.has(entity) && GRIPPED.get(entity).held() && !GRIPPED.get(entity).pinned;
     }
 
     /**

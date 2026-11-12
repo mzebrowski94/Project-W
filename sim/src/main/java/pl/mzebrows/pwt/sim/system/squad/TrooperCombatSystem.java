@@ -119,6 +119,10 @@ public final class TrooperCombatSystem extends EntitySystem {
                 struggle(entity, deltaTime);
                 continue;
             }
+            if (Drivers.clung(entity) && struggle(entity, deltaTime)) {
+                // A leech on him (G0083): now and then he swings at it instead of fighting on.
+                continue;
+            }
             if (Drivers.held(entity)) {
                 continue;
             }
@@ -173,28 +177,30 @@ public final class TrooperCombatSystem extends EntitySystem {
     }
 
     /**
-     * A man in something's jaws swings at it, now and then (G0045).
+     * A man in something's jaws swings at it, now and then (G0045) - and so does one with a leech on him (G0083), who
+     * otherwise fights on. Returns whether he swung.
      *
      * <p><strong>Slow on purpose</strong>, through {@code Odds} on {@code AiChance.STRUGGLE}: every swing
      * lands on the thing holding him, and a man who freed himself every time would make being taken a
      * formality. The commander coming for him is meant to matter.
      */
-    private void struggle(Entity entity, float deltaTime) {
+    private boolean struggle(Entity entity, float deltaTime) {
         Melee melee = MELEE.get(entity);
         if (!melee.ready()) {
-            return;
+            return false;
         }
         Entity holder = Handles.resolve(handled, GRIPPED.get(entity).by);
         if (holder == null || !POSITION.has(holder)) {
-            return;
+            return false;
         }
         Trooper trooper = TROOPER.get(entity);
         trooper.struggleDue = odds.roll(entity, AiChance.STRUGGLE, trooper.struggleDue, deltaTime);
         if (!Odds.spent(trooper.struggleDue)) {
-            return;
+            return false;
         }
         Position where = POSITION.get(holder);
         melee.beginSwing(where.x, where.y);
+        return true;
     }
 
     /**

@@ -312,7 +312,8 @@ class AntTest {
         return config.withUnit(
                 UnitKind.ANT,
                 ant -> ant.withLeap(leapConfig())
-                        .withGrip(new GripDef(true, CARRY_SPEED, HOLD_SECONDS, ESCAPE_THROW, Harm.WOUND))
+                        .withGrip(new GripDef(
+                                true, CARRY_SPEED, HOLD_SECONDS, ESCAPE_THROW, Harm.WOUND, true, false, false))
                         .withArmour(new ArmourDef(true, HEAD_ARC, 0f)));
     }
 

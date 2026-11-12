@@ -1,6 +1,6 @@
 # G0045: The ant is got round, and its leap takes a man away
 
-**Status.** accepted
+**Status.** amended by G0083: a grip may cling - by touch, leaving its man free, spent on finishing him
 
 **Trigger.** Adding or changing armour, a creature a shot cannot hurt from one side, a leap that does
 anything but bite, or anything that carries a unit off; or proposing that a held man free himself by
@@ -68,3 +68,7 @@ creature you can only hurt from one side in a corridor is a wall.
 **Revisit when** a second creature wants armour on a side other than its front, or a carry that goes
 somewhere rather than away from somebody (a nest, a drop). The first is an arc centred off the facing;
 the second is a destination on the grip, and this record is what it has to argue with.
+
+## Amended by G0083
+
+A grip declares three more things (`GripDef`): whether it **pins** - the ant does; a leech **clings**, leaving its man his legs and his gun, carried on his edge - whether it takes hold **by touch**, on the ground as in the air, and so never bites, and whether finishing him **spends** it. "Killing it is the only way out" holds for both. A man a cling lets go of is thrown clear of nothing: what getting it off costs him is what it leaves when it dies.
