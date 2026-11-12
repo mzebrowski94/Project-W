@@ -63,6 +63,25 @@ public final class Sight {
     }
 
     /**
+     * The arc test with its <strong>all-round range</strong> folded in: whether a point is near enough to be
+     * noticed whichever way the unit is looking, or else inside its arc. The one place a strain's
+     * {@code allRoundRange} is read, so an alien and a trooper cannot come to mean two things by it.
+     * Zero adds nothing.
+     */
+    public static boolean withinNotice(
+            float lookX,
+            float lookY,
+            float fromX,
+            float fromY,
+            float toX,
+            float toY,
+            float arcCosine,
+            float allRoundRange) {
+        return withinRange(fromX, fromY, toX, toY, allRoundRange)
+                || withinArc(lookX, lookY, fromX, fromY, toX, toY, arcCosine);
+    }
+
+    /**
      * Whether nothing solid stands between the two points.
      *
      * <p>Only solid ground blocks a line - terrain and a shut door (ADR 0022). Obstacles, corpses and other

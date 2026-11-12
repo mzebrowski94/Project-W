@@ -25,9 +25,16 @@ class PerceptionDefTest {
 
     @Test
     void refusesAnArcThatIsNotAnArc() {
-        assertThatThrownBy(() -> new PerceptionDef(false, true, 30f, 30f, 0f, 0f, false))
+        assertThatThrownBy(() -> new PerceptionDef(false, true, 30f, 30f, 0f, 0f, false, 0f))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new PerceptionDef(false, true, 30f, 30f, 0f, 400f, false))
+        assertThatThrownBy(() -> new PerceptionDef(false, true, 30f, 30f, 0f, 400f, false, 0f))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** An all-round range past the detection range would leave the arc nothing to decide (pillar 5). */
+    @Test
+    void refusesAnAllRoundRangePastWhereItNoticesAnything() {
+        assertThatThrownBy(() -> new PerceptionDef(false, true, 30f, 30f, 0f, 90f, false, 31f))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -40,7 +47,7 @@ class PerceptionDefTest {
 
     @Test
     void turnsAnArcIntoTheCosineOfItsHalfAngle() {
-        assertThat(new PerceptionDef(false, true, 30f, 30f, 0f, 180f, false).arcCosine())
+        assertThat(new PerceptionDef(false, true, 30f, 30f, 0f, 180f, false, 0f).arcCosine())
                 .isCloseTo(0f, org.assertj.core.data.Offset.offset(1e-6f));
     }
 }

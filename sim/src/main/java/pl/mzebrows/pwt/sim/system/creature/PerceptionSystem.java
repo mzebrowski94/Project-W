@@ -163,14 +163,23 @@ public final class PerceptionSystem extends EntitySystem {
     /**
      * Whether the target is inside the cone this unit notices within, centred on the way it is facing.
      *
-     * <p>Last tick's {@code Facing}, the one the renderer drew. No facing notices all round.
+     * <p>Last tick's {@code Facing}, the one the renderer drew. No facing notices all round, and so does
+     * anything inside its all-round range.
      */
     private static boolean withinArc(Entity watcher, Perception perception, Position position, Position target) {
         if (!FACING.has(watcher)) {
             return true;
         }
         Facing facing = FACING.get(watcher);
-        return Sight.withinArc(facing.x, facing.y, position.x, position.y, target.x, target.y, perception.arcCosine);
+        return Sight.withinNotice(
+                facing.x,
+                facing.y,
+                position.x,
+                position.y,
+                target.x,
+                target.y,
+                perception.arcCosine,
+                perception.allRoundRange);
     }
 
     /**

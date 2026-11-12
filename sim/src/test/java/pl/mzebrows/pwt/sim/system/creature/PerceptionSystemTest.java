@@ -247,6 +247,24 @@ class PerceptionSystemTest {
         assertThat(aggro(watcher)).isFalse();
     }
 
+    /** Within its all-round range the arc does not count: what is right behind it is noticed too. */
+    @Test
+    void noticesWhatIsRightBehindItWithinItsAllRoundRange() {
+        Simulation simulation = new Simulation(
+                everyStrain(
+                        config(),
+                        strain -> strain.withPerception(new PerceptionDef(
+                                false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE, 90f, true, 6f))),
+                ground().build());
+        Entity watcher = simulation.spawnEnemy(MIDDLE, MIDDLE);
+        watcher.getComponent(Facing.class).face(1f, 0f);
+        simulation.spawnCommander(MIDDLE - 5f, MIDDLE);
+
+        simulation.step();
+
+        assertThat(aggro(watcher)).isTrue();
+    }
+
     @Test
     void noticesWhatItIsFacing() {
         Simulation simulation = watchingInFront(ground().build());

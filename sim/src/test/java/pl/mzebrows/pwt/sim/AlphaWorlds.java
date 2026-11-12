@@ -302,6 +302,9 @@ public final class AlphaWorlds {
 
     public static final float NEST_ROUSE_RADIUS = 30f;
 
+    /** How much further off than his sight a trooper picks a nest out from. */
+    public static final float NEST_STANDS_OUT = 12f;
+
     /** Wide enough to catch two units either side of the middle and leave a third of them clear. */
     public static final float BLAST_RADIUS = 6f;
 
@@ -730,6 +733,9 @@ public final class AlphaWorlds {
 
     public static final float TROOPER_ARC = 100f;
 
+    /** Inside this he notices all round; past it only within his arc. Short of where the tests stand things behind him. */
+    public static final float TROOPER_ALL_ROUND = 8f;
+
     /**
      * Nothing occasional happens in the base fixture.
      *
@@ -909,7 +915,8 @@ public final class AlphaWorlds {
                         TROOPER_SCAN_SECONDS,
                         TROOPER_SCAN_SECONDS,
                         TROOPER_ARRIVE_RADIUS,
-                        new PerceptionDef(false, true, TROOPER_SIGHT, TROOPER_HOLD, 0f, TROOPER_ARC, true),
+                        new PerceptionDef(
+                                false, true, TROOPER_SIGHT, TROOPER_HOLD, 0f, TROOPER_ARC, true, TROOPER_ALL_ROUND),
                         ORDER_RADIUS,
                         FORWARD_DISTANCE,
                         FORWARD_FACTOR,
@@ -1558,7 +1565,8 @@ public final class AlphaWorlds {
                         NEST_HATCH_RADIUS,
                         NEST_HATCH_KEEP_OFF,
                         NEST_WAKE_RADIUS,
-                        NEST_ROUSE_RADIUS),
+                        NEST_ROUSE_RADIUS,
+                        NEST_STANDS_OUT),
                 new SimConfig.ControlPointConfig(
                         POINT_RADIUS,
                         POINT_CAPTURE_SECONDS,
@@ -1827,7 +1835,7 @@ public final class AlphaWorlds {
                 everyStrain(
                         config(),
                         strain -> strain.withPerception(new PerceptionDef(
-                                false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE, ARC_DEGREES, true))),
+                                false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE, ARC_DEGREES, true, 0f))),
                 map);
     }
 

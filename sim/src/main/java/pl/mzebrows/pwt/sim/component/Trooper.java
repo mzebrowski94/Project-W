@@ -189,6 +189,9 @@ public final class Trooper implements Component, Pool.Poolable {
 
     public boolean requiresClearLine;
 
+    /** Inside this he notices whatever is there whichever way he is looking, in world units (G0015). Zero means none. */
+    public float allRoundRange;
+
     /** How long until it sweeps its attention the other way, in ticks. */
     public int scanRemaining;
 
@@ -244,11 +247,17 @@ public final class Trooper implements Component, Pool.Poolable {
     public float throwDue;
 
     /** Sets what this trooper can notice, and returns this component, for fluent spawning. */
-    public Trooper sees(float newSightRange, float newHoldRange, float newArcCosine, boolean newRequiresClearLine) {
+    public Trooper sees(
+            float newSightRange,
+            float newHoldRange,
+            float newArcCosine,
+            boolean newRequiresClearLine,
+            float newAllRoundRange) {
         this.sightRange = newSightRange;
         this.holdRange = newHoldRange;
         this.arcCosine = newArcCosine;
         this.requiresClearLine = newRequiresClearLine;
+        this.allRoundRange = newAllRoundRange;
         return this;
     }
 
@@ -327,5 +336,6 @@ public final class Trooper implements Component, Pool.Poolable {
         holdRange = 0f;
         arcCosine = -1f;
         requiresClearLine = false;
+        allRoundRange = 0f;
     }
 }

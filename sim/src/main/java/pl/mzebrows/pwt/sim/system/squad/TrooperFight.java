@@ -29,6 +29,7 @@ final class TrooperFight {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
+    private static final ComponentMapper<Enemy> ENEMY = ComponentMapper.getFor(Enemy.class);
 
     private final Solid map;
     private final float threatBonus;
@@ -110,7 +111,8 @@ final class TrooperFight {
      * nothing to shoot at.
      *
      * <p><strong>Starting a fight and staying in one are different questions</strong> (the hysteresis):
-     * starting costs every declared test (G0015), staying the longer hold range and a clear line.
+     * starting costs every declared test (G0015), staying the longer hold range and a clear line. Both
+     * ranges are stretched by what the target {@code standsOut} by, so the hysteresis holds for a nest too.
      * <strong>Both need a clear shot</strong>: a boulder hides nothing but eats every round fired at
      * what stands behind it.
      *
@@ -135,7 +137,9 @@ final class TrooperFight {
             float dx = where.x - at.x;
             float dy = where.y - at.y;
             float distanceSquared = dx * dx + dy * dy;
-            if (distanceSquared > range * range) {
+            // A nest stands out: picked out, and held, from further off than anything else.
+            float reach = range + ENEMY.get(enemy).standsOut;
+            if (distanceSquared > reach * reach) {
                 continue;
             }
             float score = (float) Math.sqrt(distanceSquared) + sharedTargetPenalty * shooters[i];
@@ -160,12 +164,20 @@ final class TrooperFight {
      * Every test this trooper declares, cheapest first.
      *
      * <p><strong>A fight in progress forgives the arc and never the wall</strong>, and so does a man
-     * who has just been hit: his sweep is his own doing, rock is not.
+     * who has just been hit: his sweep is his own doing, rock is not. So does anything inside his
+     * all-round range, which turns him on what has come right up behind him before it hits him.
      */
     private boolean inSight(Trooper trooper, Position at, Position target, boolean lookingAllRound) {
         return (lookingAllRound
-                        || Sight.withinArc(
-                                trooper.lookX, trooper.lookY, at.x, at.y, target.x, target.y, trooper.arcCosine))
+                        || Sight.withinNotice(
+                                trooper.lookX,
+                                trooper.lookY,
+                                at.x,
+                                at.y,
+                                target.x,
+                                target.y,
+                                trooper.arcCosine,
+                                trooper.allRoundRange))
                 && Sight.clearLine(map, at.x, at.y, target.x, target.y, trooper.requiresClearLine);
     }
 }

@@ -37,6 +37,9 @@ public final class Perception implements Component, Pool.Poolable {
     /** Whether rock between this unit and what it might notice hides that thing (G0015). */
     public boolean requiresClearLine;
 
+    /** How close something must be to be noticed whichever way it is facing, in world units. Zero means none. */
+    public float allRoundRange;
+
     /** True while this unit is hunting something on the player's side. */
     public boolean aggro;
 
@@ -93,7 +96,8 @@ public final class Perception implements Component, Pool.Poolable {
             float newLoseRange,
             float newSecondaryRange,
             float newArcCosine,
-            boolean newRequiresClearLine) {
+            boolean newRequiresClearLine,
+            float newAllRoundRange) {
         this.alwaysAggressive = newAlwaysAggressive;
         this.losesInterest = newLosesInterest;
         this.detectionRange = newDetectionRange;
@@ -101,6 +105,7 @@ public final class Perception implements Component, Pool.Poolable {
         this.secondaryRange = newSecondaryRange;
         this.arcCosine = newArcCosine;
         this.requiresClearLine = newRequiresClearLine;
+        this.allRoundRange = newAllRoundRange;
         return this;
     }
 
@@ -165,6 +170,7 @@ public final class Perception implements Component, Pool.Poolable {
         secondaryRange = 0f;
         arcCosine = -1f;
         requiresClearLine = false;
+        allRoundRange = 0f;
         aggro = false;
         targetX = 0f;
         targetY = 0f;

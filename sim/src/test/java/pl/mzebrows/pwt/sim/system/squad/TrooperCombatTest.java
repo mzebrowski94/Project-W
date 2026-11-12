@@ -6,8 +6,11 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.DETECTION_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.FLAME_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LOSE_RANGE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_STANDS_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_CAPTURE_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SECONDARY_RANGE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_ALL_ROUND;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SIGHT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.everyStrain;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
@@ -212,7 +215,7 @@ class TrooperCombatTest {
         assertThat(at(trooper).x).isCloseTo(wasX, org.assertj.core.data.Offset.offset(0.6f));
     }
 
-    /** 1.c. In front of it, at close range - not everything within a radius of it. */
+    /** 1.c. In front of it - not everything within a radius of it, past his all-round range (G0080). */
     @Test
     void takesNoNoticeOfSomethingBehindIt() {
         Simulation simulation = harmless();
@@ -225,6 +228,61 @@ class TrooperCombatTest {
 
         assertThat(mode(trooper)).isNotEqualTo(Trooper.Mode.FIGHT);
         assertThat(count(simulation, Projectile.class)).isZero();
+    }
+
+    /**
+     * <strong>Something that has come right up behind him turns him round before it hits him</strong>:
+     * within his all-round range the arc does not count, and past it - the test above - it still does.
+     */
+    @Test
+    void turnsOnSomethingThatComesRightUpBehindHim() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnEnemy(MIDDLE - TROOPER_ALL_ROUND + 1f, MIDDLE);
+        facing(trooper, 1f, 0f);
+
+        simulation.step();
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+        assertThat(trooper.getComponent(Trooper.class).targetX).isLessThan(MIDDLE);
+    }
+
+    /** All round is never through rock: rock between them still hides what is right behind him. */
+    @Test
+    void stillWillNotSeeThroughRockWhatIsRightBehindHim() {
+        Simulation simulation = on(
+                harmless().config(), ground().rect(10, 0, 1, 20, Terrain.ROCK).build());
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(56f, MIDDLE);
+        simulation.spawnEnemy(56f - TROOPER_ALL_ROUND + 1f, MIDDLE);
+        facing(trooper, 1f, 0f);
+
+        simulation.step();
+
+        assertThat(mode(trooper)).isNotEqualTo(Trooper.Mode.FIGHT);
+    }
+
+    /**
+     * <strong>A nest stands out</strong>: a man picks one out from further off than he would anything
+     * else at the same distance, so a squad goes for the holes rather than walking past them.
+     */
+    @Test
+    void picksANestOutFromFurtherOffThanAnythingElse() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity atANest = simulation.spawnTrooper(MIDDLE, MIDDLE - 20f);
+        Entity atAGrunt = simulation.spawnTrooper(MIDDLE, MIDDLE + 20f);
+        float pastHisSight = TROOPER_SIGHT + NEST_STANDS_OUT * 0.5f;
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE - pastHisSight, MIDDLE - 20f);
+        simulation.spawnEnemy(MIDDLE - pastHisSight, MIDDLE + 20f);
+        facing(atANest, -1f, 0f);
+        facing(atAGrunt, -1f, 0f);
+
+        simulation.step();
+
+        assertThat(mode(atANest)).isEqualTo(Trooper.Mode.FIGHT);
+        assertThat(mode(atAGrunt)).isNotEqualTo(Trooper.Mode.FIGHT);
     }
 
     /**

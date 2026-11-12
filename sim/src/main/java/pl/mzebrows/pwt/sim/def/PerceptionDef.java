@@ -24,6 +24,9 @@ import lombok.With;
  * @param arcDegrees how wide the cone it can notice within is, centred on its {@code Facing}; 360 is
  *     all round
  * @param requiresClearLine whether rock between it and what it might notice hides that thing (G0011)
+ * @param allRoundRange how close something must be for it to be noticed whichever way this unit is facing, in
+ *     world units: the arc counts only beyond it. Zero means none. Never past {@code detectionRange}, so the arc
+ *     always has ground of its own (pillar 5); never through rock for a strain that requires a clear line
  */
 @With
 public record PerceptionDef(
@@ -33,7 +36,8 @@ public record PerceptionDef(
         float loseRange,
         float secondaryRange,
         float arcDegrees,
-        boolean requiresClearLine) {
+        boolean requiresClearLine,
+        float allRoundRange) {
 
     /** Notices all round. */
     public static final float ALL_ROUND = 360f;
@@ -42,6 +46,10 @@ public record PerceptionDef(
         Require.notNegative("perception detectionRange", detectionRange);
         Require.notNegative("perception loseRange", loseRange);
         Require.notNegative("perception secondaryRange", secondaryRange);
+        Require.notNegative("perception allRoundRange", allRoundRange);
+        if (allRoundRange > detectionRange) {
+            throw new IllegalArgumentException("perception allRoundRange must not be past detectionRange");
+        }
         if (loseRange < detectionRange) {
             throw new IllegalArgumentException("perception loseRange must not be below detectionRange");
         }
@@ -63,7 +71,7 @@ public record PerceptionDef(
 
     /** A strain that hunts from the first tick and never stops, whatever the ranges say. */
     public static PerceptionDef alwaysAggressive(float detectionRange, float loseRange) {
-        return new PerceptionDef(true, false, detectionRange, loseRange, 0f, ALL_ROUND, false);
+        return new PerceptionDef(true, false, detectionRange, loseRange, 0f, ALL_ROUND, false, 0f);
     }
 
     /** A strain that notices all round and through rock: what every alien declares. */
@@ -74,6 +82,6 @@ public record PerceptionDef(
             float loseRange,
             float secondaryRange) {
         return new PerceptionDef(
-                alwaysAggressive, losesInterest, detectionRange, loseRange, secondaryRange, ALL_ROUND, false);
+                alwaysAggressive, losesInterest, detectionRange, loseRange, secondaryRange, ALL_ROUND, false, 0f);
     }
 }

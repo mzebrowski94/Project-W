@@ -338,7 +338,8 @@ public record SimConfig(
             float hatchRadius,
             float hatchKeepOff,
             float wakeRadius,
-            float rouseRadius) {
+            float rouseRadius,
+            float standsOut) {
 
         public NestConfig {
             Require.positive("nest radius", radius);
@@ -358,6 +359,7 @@ public record SimConfig(
             Require.notNegative("nest hatchKeepOff", hatchKeepOff);
             Require.notNegative("nest wakeRadius", wakeRadius);
             Require.notNegative("nest rouseRadius", rouseRadius);
+            Require.notNegative("nest standsOut", standsOut);
         }
     }
 

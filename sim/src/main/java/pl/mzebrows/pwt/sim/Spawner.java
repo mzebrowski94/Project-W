@@ -252,7 +252,8 @@ public final class Spawner {
                         trooper.perception().detectionRange(),
                         trooper.perception().loseRange(),
                         trooper.perception().arcCosine(),
-                        trooper.perception().requiresClearLine())
+                        trooper.perception().requiresClearLine(),
+                        trooper.perception().allRoundRange())
                 .look(1f, 0f));
         entity.add(engine.createComponent(Faction.class).set(Side.PLAYER));
         entity.add(engine.createComponent(Position.class).set(x, y));
@@ -480,7 +481,8 @@ public final class Spawner {
                         def.perception().loseRange(),
                         def.perception().secondaryRange(),
                         def.perception().arcCosine(),
-                        def.perception().requiresClearLine());
+                        def.perception().requiresClearLine(),
+                        def.perception().allRoundRange());
         entity.getComponent(Wander.class)
                 .set(
                         def.wander().enabled(),
@@ -761,7 +763,7 @@ public final class Spawner {
                         nest.hatchRadius(),
                         nest.wakeRadius(),
                         nest.rouseRadius()));
-        entity.add(engine.createComponent(Enemy.class));
+        entity.add(engine.createComponent(Enemy.class).standingOut(nest.standsOut()));
         entity.add(engine.createComponent(Faction.class).set(Side.ALIEN));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
