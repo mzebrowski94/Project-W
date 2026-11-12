@@ -839,7 +839,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Velocity.class).set(0f, 0f));
         entity.add(engine.createComponent(Body.class).set(turret.radius()));
         entity.add(engine.createComponent(Collider.class).set(true, false));
-        entity.add(engine.createComponent(Health.class).set(turret.health()));
+        entity.add(engine.createComponent(Health.class).set(turret.health()).resisting(turret.blastResistance()));
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(BlastsOnDeath.class)
                 .set(turret.blastRadius(), turret.blastRadius())

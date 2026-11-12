@@ -1,6 +1,6 @@
 # G0068: A biome is populated by rules in order, never by coordinates
 
-**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has
+**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has; amended by G0082: turrets by points
 
 **Trigger.** Changing where anything a biome's roster or furniture counts is put down, the order it goes down in,
 what a house holds, or what happens when a rule cannot be met.
@@ -57,3 +57,9 @@ rather than fought through.
 
 **Revisit when** play shows the same rhythm in every biome reads as stale, or a biome genuinely needs a rule of its
 own - then it is a field on `BiomeDef`, off at zero for every other (missions ticket 10).
+
+## Amended by G0082
+
+A pass after the crates by points puts a biome's turrets, `furniture.turretsMin/Max`, each within `pointReach` of
+a point, a point at a time from a drawn one, off every nest. Only the plain asks for any (1-2). Provisional, for
+review.

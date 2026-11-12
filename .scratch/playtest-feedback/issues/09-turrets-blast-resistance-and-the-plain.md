@@ -1,7 +1,7 @@
 # Turrets that shrug off blasts, and turrets in the plain
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: -
 Section: Turrets and the finale
 
@@ -34,3 +34,16 @@ where placement puts them; the new-biome amend step.
 ## Done when
 
 Both built, keys with values, `StripSweepTest` / `MissionSweepTest` green, `verify.sh` green.
+
+## Answer
+
+G0082 (provisional, for review).
+
+- **Blast resistance** lives on `Health` - the one thing every damageable kind has - as `blastResistance`, per cent
+  shrugged off, zero (off) by default. One reader, `Health.fromBlast`, in `BlastSystem` before `Damage.land`, rounded
+  by `Whole`. Not G0045's armour: no side, no head. Key `sim.turret.blastResistance=90` (`level.properties`): a blast
+  takes 100 of the turret's 360, so the fourth one takes it.
+- **The crew** still takes the blast (G0024 unchanged): he has no health to resist with.
+- **The plain** lays `furniture.turretsMin=1`, `turretsMax=2` (zero on every other block); placement puts each within
+  `pointReach` of a point, after the crates by points, off nests. Drawn last, so other biomes draw as before.
+  `new-biome` amended (*Fit*, *Roster and furniture*, *Porting*) with a CHANGELOG line.

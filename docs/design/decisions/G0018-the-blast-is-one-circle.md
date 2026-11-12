@@ -1,6 +1,6 @@
 # G0018: The blast is one circle, and things explode by dying
 
-**Status.** amended by G0053: each blast kind declares its harm to a man
+**Status.** amended by G0053: each blast kind declares its harm to a man; amended by G0082: a thing with health shrugs off its blast resistance
 
 **Trigger.** Adding or changing anything explosive - a weapon with an area, a hazard, a death that
 hurts what is near it - or proposing that damage fall off with distance.
@@ -72,3 +72,10 @@ the harm it does to a man - a grenade's `WOUND`, a barrel's, a mine's and a char
 Inside the circle there is still one meaning for a man and outside it none; everything with health is
 still caught by the same decisive amount, so a grenade kills every alien it catches exactly as before.
 It is still not a free button: it costs its thrower a wound, and a second one puts him down.
+
+## Amended by G0082
+
+The circle is still uniform, but not uniformly fatal: a thing with health takes the blast's damage less its
+`Health.blastResistance` per cent, rounded by `Whole`, read in `BlastSystem` alone. Zero for everything but a
+turret (90), which a blast scars rather than takes. A man has no health and takes the blast's harm as before.
+Provisional, for review.

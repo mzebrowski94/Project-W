@@ -1,6 +1,8 @@
 package pl.mzebrows.pwt.sim.system.commander;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.BLAST_DAMAGE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.BLAST_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TURRET_COOLDOWN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TURRET_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TURRET_MUZZLE_OFFSET;
@@ -21,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Drag;
+import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Turret;
@@ -225,6 +228,46 @@ class TurretTest {
         shoot(turret);
         steps(simulation, 4, STILL);
 
+        assertThat(commander.getComponent(Vitality.class).begun).isTrue();
+    }
+
+    /** A blast takes a tenth of what it takes from anything else (G0082): losing one is an event. */
+    @Test
+    void shrugsOffMostOfABlast() {
+        Simulation simulation = simulation();
+        Entity turret = simulation.spawnTurret(MIDDLE, MIDDLE);
+
+        simulation.spawnBlast(MIDDLE + 1f, MIDDLE, BLAST_RADIUS);
+        steps(simulation, 3, STILL);
+
+        assertThat(turret.getComponent(Health.class).current).isEqualTo(TURRET_HEALTH - BLAST_DAMAGE / 10);
+    }
+
+    @Test
+    void goesUpOnTheBlastThatTakesTheLastOfIt() {
+        Simulation simulation = simulation();
+        simulation.spawnTurret(MIDDLE, MIDDLE);
+
+        for (int i = 0; i < TURRET_HEALTH / (BLAST_DAMAGE / 10); i++) {
+            simulation.spawnBlast(MIDDLE + 1f, MIDDLE, BLAST_RADIUS);
+            steps(simulation, 3, STILL);
+        }
+
+        assertThat(count(simulation, Turret.class)).isZero();
+    }
+
+    /** The gun shrugs it off; the man on it does not (G0024). */
+    @Test
+    void leavesTheCrewToTakeABlastTheGunSurvives() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity turret = simulation.spawnTurret(MIDDLE + BESIDE, MIDDLE);
+        simulation.step(PRESSING);
+
+        simulation.spawnBlast(MIDDLE + BESIDE, MIDDLE + 1f, BLAST_RADIUS);
+        steps(simulation, 3, STILL);
+
+        assertThat(turret.getComponent(Health.class).current).isPositive();
         assertThat(commander.getComponent(Vitality.class).begun).isTrue();
     }
 

@@ -1327,6 +1327,7 @@ public record SimConfig(
     public record TurretConfig(
             float radius,
             int health,
+            int blastResistance,
             float blastRadius,
             float turnRate,
             float firingTurnFactor,
@@ -1338,6 +1339,10 @@ public record SimConfig(
         public TurretConfig {
             Require.positive("turret radius", radius);
             Require.positive("turret health", health);
+            if (blastResistance < 0 || blastResistance > 100) {
+                throw new IllegalArgumentException(
+                        "turret blastResistance must be in [0, 100], was " + blastResistance);
+            }
             Require.notNegative("turret blastRadius", blastRadius);
             Require.notNegative("turret turnRate", turnRate);
             if (firingTurnFactor <= 0f || firingTurnFactor > 1f) {

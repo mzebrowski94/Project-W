@@ -20,7 +20,8 @@ hold, waves or lair (a finale). Done when every trait has a field.
 - A trait with no field is new behaviour: `new-system` first, on the definition every biome (or finale) has, off at
   zero.
 - A strain it needs that does not exist yet: `new-kind` first.
-- A turret, a mine or a gun's cache in a biome: a finale's, or out of scope (ticket 01). `BiomeDef` refuses a cache.
+- A mine or a gun's cache in a biome: a finale's, or out of scope (ticket 01). `BiomeDef` refuses a cache. A turret
+  is a furniture line, `turretsMin/Max`, each placed by a point (G0082) - zero in every biome but the plain.
 - **Where** anything stands is placement's, never the biome's: ordered passes with strip-wide rules,
   `sim.mission.placement.*` (G0068). A biome holds counts. A biome that genuinely needs a rule of its own gets a
   field on `PlacementRules` or `BiomeDef`, off at zero for every other biome (G0068, *Revisit when*).
@@ -73,7 +74,8 @@ meanwhile. The HTML prototype is for looks only.
   The ranges are the biome at the first position on medium; tier and ramp scale every count through `Roster.count`
   (pressure = tier `enemyPercent` x (1 + `rampPercent` x position), G0063), and nothing else does.
 - `furniture.pointsMin/Max` (2-3), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, `treesMin/Max` and
-  `treesByNestMin/Max` (0 for none - the fen alone has trees, G0072), and `furniture.pickups=pickup <kind> min max; ...`.
+  `treesByNestMin/Max` (0 for none - the fen alone has trees, G0072), `turretsMin/Max` (0 for none - the plain alone
+  has them, G0082), and `furniture.pickups=pickup <kind> min max; ...`.
   Never scaled. **Every block carries every furniture key**, zeros included: a new furniture line is a key in all of
   them. A furniture thing with a size of its own (a tree's trunk) is drawn from its own stream in its pass, never on
   the block; a count tied to another pass (trees by each nest) is drawn from the biome's stream, nest by nest, so a
@@ -93,13 +95,13 @@ meanwhile. The HTML prototype is for looks only.
   practice **1-2 holes and at most about 25 loose creatures** a block. Ground that leaves less room (heavy crags,
   houses) holds less: the quarry holds one hole.
 - **Where it goes** (G0068): points one a column band; house stock (crates, then medkits) up to `houseStock` a house;
-  nests; packs; leftover crates by points; medkits anywhere; **food** - anything a creature gains from - on the
+  nests; packs; leftover crates by points; turrets by points; medkits anywhere; **food** - anything a creature gains from - on the
   biome's organic ground while there is room; barrels by holes and packs; boulders `rockMargin` off rock; trees as boulders, the first within `treeReach` of each
   nest; rabbits.
   A block says none of this; it is why a crate or a medkit line fills the houses first.
 - **Porting**: the Adventure biome's own counts, scaled by width (x1.8 - an Adventure biome is 29 columns, a
   mission's 50-58), then **cut to the room** - holes most of all. A range about +-20 % round the count. Drop
-  turrets, mines, armoury caches and sleeping extras.
+  mines, armoury caches and sleeping extras; a turret only as a `turrets` line, by a point.
 
 ## 4. Finale
 

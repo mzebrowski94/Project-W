@@ -4,8 +4,8 @@ import java.util.List;
 import pl.mzebrows.pwt.map.Randomness;
 
 /**
- * What a biome holds besides its creatures (missions ticket 03): control points, barrels, rabbits, boulders, trees and
- * the pickups lying about. Fixed ranges, never scaled by tier or ramp; where each goes is placement's (G0068).
+ * What a biome holds besides its creatures (missions ticket 03): control points, barrels, rabbits, boulders, trees,
+ * turrets and the pickups lying about. Fixed ranges, never scaled by tier or ramp; where each goes is placement's (G0068).
  *
  * @param pointsMin the fewest control points, at least one: the goal line leads east through them
  * @param pointsMax the most
@@ -19,6 +19,8 @@ import pl.mzebrows.pwt.map.Randomness;
  * @param treesMax the most
  * @param treesByNestMin the fewest of them stood within {@code treeReach} of each nest, before the rest go anywhere
  * @param treesByNestMax the most
+ * @param turretsMin the fewest turrets, each by a point (G0082): zero in every biome but the plain
+ * @param turretsMax the most
  * @param pickups what lies about, a line per kind; a house is stocked with its crates and medkits first
  */
 public record Furniture(
@@ -34,6 +36,8 @@ public record Furniture(
         int treesMax,
         int treesByNestMin,
         int treesByNestMax,
+        int turretsMin,
+        int turretsMax,
         List<Stock> pickups) {
 
     public Furniture {
@@ -46,6 +50,7 @@ public record Furniture(
         range("boulders", bouldersMin, bouldersMax);
         range("trees", treesMin, treesMax);
         range("trees by a nest", treesByNestMin, treesByNestMax);
+        range("turrets", turretsMin, turretsMax);
         pickups = List.copyOf(pickups);
     }
 
@@ -77,6 +82,11 @@ public record Furniture(
     /** How many trees stand by one nest, drawn. */
     public int treesByNest(Randomness rng) {
         return between(rng, treesByNestMin, treesByNestMax);
+    }
+
+    /** How many turrets, drawn. */
+    public int turrets(Randomness rng) {
+        return between(rng, turretsMin, turretsMax);
     }
 
     private static int between(Randomness rng, int min, int max) {

@@ -64,3 +64,7 @@ changed. Git carries the diff.
   furniture key, a size is drawn in its pass from its own stream, a count tied to another pass (trees by each nest)
   from the biome's stream so a retry keeps it (G0070). Added to *Roster and furniture*. Nothing wrong; nothing slow -
   the 2000-seed mission sweep ran in 21 s.
+- 2026-11-12, turrets in the plain (playtest ticket 09) - wrong: *Fit* said a turret in a biome is a finale's; a
+  turret is now a furniture line, `turretsMin/Max`, placed by a point (G0082). Fixed in *Fit*, *Roster and furniture*
+  and *Porting*. Missing: a new count drawn from the furniture stream re-draws every biome after it unless drawn
+  last - noted in `Placement`. Nothing slow.

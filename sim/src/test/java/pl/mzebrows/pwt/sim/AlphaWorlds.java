@@ -622,6 +622,9 @@ public final class AlphaWorlds {
     /** Wide enough to catch whoever was on it, narrow enough not to reach the next thing along. */
     public static final float TURRET_BLAST_RADIUS = 5f;
 
+    /** Per cent of a blast it shrugs off: a tenth of one is a third of its health. */
+    public static final int TURRET_BLAST_RESISTANCE = 90;
+
     /** Slow enough that a test can watch one come round rather than find it already there. */
     public static final float TURRET_TURN_RATE = 2f;
 
@@ -1586,6 +1589,7 @@ public final class AlphaWorlds {
                 new SimConfig.TurretConfig(
                         TURRET_RADIUS,
                         TURRET_HEALTH,
+                        TURRET_BLAST_RESISTANCE,
                         TURRET_BLAST_RADIUS,
                         TURRET_TURN_RATE,
                         TURRET_FIRING_TURN_FACTOR,

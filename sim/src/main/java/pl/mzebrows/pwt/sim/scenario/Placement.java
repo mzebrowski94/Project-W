@@ -23,7 +23,8 @@ import pl.mzebrows.pwt.sim.def.Side;
 
 /**
  * Puts down what each biome of a mission counts, by rules and never by places (G0068): ordered {@link Scatter}
- * passes, the most constrained first - points, what a house holds, nests, packs, crates by points, medkits and food,
+ * passes, the most constrained first - points, what a house holds, nests, packs, crates by points, turrets by points,
+ * medkits and food,
  * barrels, boulders, trees, rabbits. Each pass keeps off what went down before it by its radii, crow-flies, and off every
  * tile the strip kept: the start, aprons, doorsteps, and every house's inside but for its stock. The last biome keeps
  * everything hostile outside the finale's watch (G0064), so holding its post never waits on a hole or a sleeper behind
@@ -57,6 +58,7 @@ final class Placement {
     private static final long TREES = 0x2F1D_8A6B_C3E5_9071L;
     private static final long TREES_BY_NEST = 0x5C83_E1A7_0B9F_42D6L;
     private static final long TRUNKS = 0xD06A_4B2E_97C1_F358L;
+    private static final long TURRETS = 0x4E2B_97D3_1A6C_F085L;
 
     private final SimConfig config;
     private final PlacementRules rules;
@@ -189,12 +191,15 @@ final class Placement {
                 stock[i] = furniture.pickups().get(i).count(counted);
             }
             int trees = furniture.trees(counted);
+            // Drawn last, so a biome with none draws every other count as it did before turrets were a line (G0082).
+            int turrets = furniture.turrets(counted);
 
             points(pointCount, attempt.derive(POINTS));
             houseStock(stock, attempt.derive(STOCK));
             nests(creatures, attempt.derive(NESTS));
             packs(creatures, attempt.derive(PACKS));
             crates(stock, attempt.derive(CRATES));
+            turrets(turrets, attempt.derive(TURRETS));
             pickups(stock, attempt.derive(PICKUPS));
             barrels(barrels, attempt.derive(BARRELS));
             boulders(boulders, attempt.derive(BOULDERS));
@@ -343,6 +348,31 @@ final class Placement {
                     shortOf(pickup + " by a point", 1, got);
                 }
                 stock[line] = 0;
+            }
+        }
+
+        /**
+         * Turrets, each within {@code pointReach} of a point, a point at a time from a drawn one, off every nest: a gun
+         * where the fight is, somewhere the level tells you to stand (G0082).
+         */
+        private void turrets(int count, Randomness rng) {
+            if (count == 0) {
+                return;
+            }
+            Scatter scatter = scatter(rng, 0f);
+            keepOffNests(scatter);
+            float radius = config.turret().radius();
+            Scatter.Place place = (x, y) -> put(new Placed.Turret(x, y, position));
+            int first = rng.nextInt(points.size());
+            for (int k = 0; k < count; k++) {
+                int got = 0;
+                for (int j = 0; j < points.size() && got == 0; j++) {
+                    Placed point = points.get((first + k + j) % points.size());
+                    scatter.excluding(within(point.x(), point.y(), rules.pointReach()));
+                    got = scatter.scatter(
+                            TileRect.around(map, point.x(), point.y(), rules.pointReach()), 1, radius, place);
+                }
+                shortOf("turret by a point", 1, got);
             }
         }
 

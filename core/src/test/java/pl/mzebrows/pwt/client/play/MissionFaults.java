@@ -253,15 +253,19 @@ final class MissionFaults {
         return faults;
     }
 
-    /** Every crate a house did not take within {@code pointReach} of a point of its biome; a finale's is laid. */
+    /**
+     * Every crate a house did not take, and every turret, within {@code pointReach} of a point of its biome (G0082); a
+     * finale's are laid.
+     */
     static List<String> crates(Mission mission, SimConfig config) {
         TileMap map = mission.laid().map();
         List<String> faults = new ArrayList<>();
         for (Placed crate : mission.placed()) {
-            if (!(crate instanceof Placed.Pickup pickup)
-                    || !config.pickup(pickup.kind()).armoury().crate()
-                    || inAHouse(mission, map.colAt(crate.x()), map.rowAt(crate.y()))
-                    || crate.biome() == mission.order().size()) {
+            boolean byAPoint = crate instanceof Placed.Turret
+                    || (crate instanceof Placed.Pickup pickup
+                            && config.pickup(pickup.kind()).armoury().crate()
+                            && !inAHouse(mission, map.colAt(crate.x()), map.rowAt(crate.y())));
+            if (!byAPoint || crate.biome() == mission.order().size()) {
                 continue;
             }
             float nearest = Float.MAX_VALUE;

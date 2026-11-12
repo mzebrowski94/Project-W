@@ -193,6 +193,41 @@ class MissionTest {
         }
     }
 
+    /**
+     * A biome's turrets number between its fewest and most, each within {@code pointReach} of one of its points: a
+     * gun where the fight is, and somewhere the level tells you to stand (G0082). Only the plain asks for any.
+     */
+    @Test
+    void putsBetweenItsFewestAndMostTurretsInEveryBiomeEachByAPoint() {
+        SimConfig shipped = SimConfig.defaults();
+        float reach = shipped.mission().placement().pointReach();
+        int seen = 0;
+        for (long seed = 0; seed < 16; seed++) {
+            Mission mission = Mission.build(shipped.withSeed(seed), TierKind.MEDIUM);
+            for (int p = 0; p < mission.order().size(); p++) {
+                int position = p;
+                List<Placed> turrets = mission.placed().stream()
+                        .filter(placed -> placed instanceof Placed.Turret && placed.biome() == position)
+                        .toList();
+                var furniture = shipped.biomes().of(mission.order().get(p)).furniture();
+
+                assertThat(turrets.size())
+                        .as("seed %d, biome %d", seed, p)
+                        .isBetween(furniture.turretsMin(), furniture.turretsMax());
+                for (Placed turret : turrets) {
+                    assertThat(mission.placed().stream()
+                                    .filter(placed -> placed instanceof Placed.Point && placed.biome() == position)
+                                    .anyMatch(point ->
+                                            Math.hypot(point.x() - turret.x(), point.y() - turret.y()) <= reach))
+                            .as("seed %d, %s by a point", seed, turret)
+                            .isTrue();
+                }
+                seen += turrets.size();
+            }
+        }
+        assertThat(seen).as("turrets across the seeds").isPositive();
+    }
+
     /** A biome's trees number between its fewest and most, each trunk as big as a trunk may be (G0072). */
     @Test
     void putsBetweenItsFewestAndMostTreesInEveryBiomeEachTrunkInItsRange() {
@@ -401,7 +436,11 @@ class MissionTest {
                         .engine()
                         .getEntitiesFor(Family.all(Turret.class).get())
                         .size())
-                .isEqualTo(hold.turrets().size());
+                .isEqualTo(hold.turrets().size()
+                        + mission.placed().stream()
+                                .filter(placed -> placed instanceof Placed.Turret
+                                        && placed.biome() < mission.order().size())
+                                .count());
         assertThat(simulation
                         .engine()
                         .getEntitiesFor(Family.all(Mine.class).get())

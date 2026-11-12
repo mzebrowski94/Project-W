@@ -30,6 +30,21 @@ class BiomePromisesTest {
         }
     }
 
+    /** "Turrets should be added to the plain" (G0082): the open ground a long gun earns its keep on, and no other. */
+    @Test
+    void thePlainIsTheOneBiomeThatLaysTurrets() {
+        for (BiomeKind kind : BiomeKind.values()) {
+            var furniture = SHIPPED.biomes().of(kind).furniture();
+            if (kind == BiomeKind.PLAIN) {
+                assertThat(furniture.turretsMin())
+                        .as("the plain's fewest turrets")
+                        .isPositive();
+            } else {
+                assertThat(furniture.turretsMax()).as("%s's turrets", kind).isZero();
+            }
+        }
+    }
+
     /** "Crags at both ends of their range": mounds round the anthill's holes, masses in the badlands. */
     @Test
     void cragsRiseFromMoundsInTheAnthillToMassesInTheBadlands() {
