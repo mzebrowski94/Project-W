@@ -15,17 +15,16 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.collision.SpatialGrid;
 import pl.mzebrows.pwt.sim.component.Body;
-import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
-import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
+import pl.mzebrows.pwt.sim.system.query.Sight;
 import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
@@ -110,10 +109,7 @@ public final class NestSystem extends EntitySystem {
         watchers = engine.getEntitiesFor(
                 Family.all(Perception.class, Position.class).get());
         // On the field in any state short of gone: a man down beside a nest is still a man beside it.
-        men = engine.getEntitiesFor(Family.all(Position.class)
-                .one(Trooper.class, Commander.class)
-                .exclude(Dead.class)
-                .get());
+        men = engine.getEntitiesFor(ReinforcementSystem.onTheField());
     }
 
     @Override
@@ -188,12 +184,9 @@ public final class NestSystem extends EntitySystem {
     /** Whether any man on the field stands within the left-behind radius - biome or none. */
     private boolean anyManNear(SpatialGrid filed, Position at) {
         filed.near(at.x, at.y, leftBehindRadius, nearby);
-        float reach = leftBehindRadius * leftBehindRadius;
         for (int i = 0; i < nearby.size; i++) {
             Position where = POSITION.get(nearby.get(i));
-            float toX = where.x - at.x;
-            float toY = where.y - at.y;
-            if (toX * toX + toY * toY <= reach) {
+            if (Sight.withinRange(at.x, at.y, where.x, where.y, leftBehindRadius)) {
                 return true;
             }
         }

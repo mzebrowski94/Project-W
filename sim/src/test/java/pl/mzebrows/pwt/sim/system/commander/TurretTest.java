@@ -248,7 +248,11 @@ class TurretTest {
         Simulation simulation = simulation();
         simulation.spawnTurret(MIDDLE, MIDDLE);
 
-        for (int i = 0; i < TURRET_HEALTH / (BLAST_DAMAGE / 10); i++) {
+        int blasts = TURRET_HEALTH / (BLAST_DAMAGE / 10);
+        for (int i = 0; i < blasts; i++) {
+            assertThat(count(simulation, Turret.class))
+                    .as("standing before blast %d", i + 1)
+                    .isOne();
             simulation.spawnBlast(MIDDLE + 1f, MIDDLE, BLAST_RADIUS);
             steps(simulation, 3, STILL);
         }

@@ -334,18 +334,9 @@ final class Placement {
                     continue;
                 }
                 float radius = config.pickup(pickup).radius();
+                Scatter.Place place = (x, y) -> put(new Placed.Pickup(pickup, x, y, position));
                 for (int k = 0; k < stock[line]; k++) {
-                    int got = 0;
-                    for (int j = 0; j < points.size() && got == 0; j++) {
-                        Placed point = points.get((k + j) % points.size());
-                        scatter.excluding(within(point.x(), point.y(), rules.pointReach()));
-                        got = scatter.scatter(
-                                TileRect.around(map, point.x(), point.y(), rules.pointReach()),
-                                1,
-                                radius,
-                                (x, y) -> put(new Placed.Pickup(pickup, x, y, position)));
-                    }
-                    shortOf(pickup + " by a point", 1, got);
+                    shortOf(pickup + " by a point", 1, byAPoint(scatter, k, radius, place));
                 }
                 stock[line] = 0;
             }
@@ -365,15 +356,22 @@ final class Placement {
             Scatter.Place place = (x, y) -> put(new Placed.Turret(x, y, position));
             int first = rng.nextInt(points.size());
             for (int k = 0; k < count; k++) {
-                int got = 0;
-                for (int j = 0; j < points.size() && got == 0; j++) {
-                    Placed point = points.get((first + k + j) % points.size());
-                    scatter.excluding(within(point.x(), point.y(), rules.pointReach()));
-                    got = scatter.scatter(
-                            TileRect.around(map, point.x(), point.y(), rules.pointReach()), 1, radius, place);
-                }
-                shortOf("turret by a point", 1, got);
+                shortOf("turret by a point", 1, byAPoint(scatter, first + k, radius, place));
             }
+        }
+
+        /**
+         * One thing within {@code pointReach} of a point, trying the points in turn from the {@code from}-th: how many
+         * went down, one or none.
+         */
+        private int byAPoint(Scatter scatter, int from, float radius, Scatter.Place place) {
+            int got = 0;
+            for (int j = 0; j < points.size() && got == 0; j++) {
+                Placed point = points.get((from + j) % points.size());
+                scatter.excluding(within(point.x(), point.y(), rules.pointReach()));
+                got = scatter.scatter(TileRect.around(map, point.x(), point.y(), rules.pointReach()), 1, radius, place);
+            }
+            return got;
         }
 
         /** Everything else lying about, off every nest; food on the biome's organic ground while there is room. */

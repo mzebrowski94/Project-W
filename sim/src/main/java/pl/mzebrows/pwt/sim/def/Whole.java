@@ -24,6 +24,11 @@ public final class Whole {
         return percentOf(base, percent, HUNDRED);
     }
 
+    /** {@code base} less {@code percent} per cent of it, rounded once: 1000 less 90 is 100, 7 less 0 is 7. */
+    public static int less(int base, int percent) {
+        return percentOf(base, HUNDRED - percent);
+    }
+
     /**
      * {@code percent} per cent of {@code another} per cent of {@code base}, rounded once: 125 and 115 of 150 is
      * 216, 125 and 85 of 150 is 159.

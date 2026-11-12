@@ -10,6 +10,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_STANDS_OUT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.POINT_CAPTURE_SECONDS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SECONDARY_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_ALL_ROUND;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_HOLD;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SIGHT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.everyStrain;
@@ -278,6 +279,31 @@ class TrooperCombatTest {
         simulation.spawnEnemy(MIDDLE - pastHisSight, MIDDLE + 20f);
         facing(atANest, -1f, 0f);
         facing(atAGrunt, -1f, 0f);
+
+        simulation.step();
+
+        assertThat(mode(atANest)).isEqualTo(Trooper.Mode.FIGHT);
+        assertThat(mode(atAGrunt)).isNotEqualTo(Trooper.Mode.FIGHT);
+    }
+
+    /**
+     * <strong>And holds it from further off</strong>: a nest he is fighting stays his past the range he would
+     * let anything else go at (G0080).
+     */
+    @Test
+    void holdsANestFromFurtherOffThanAnythingElse() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity atANest = simulation.spawnTrooper(MIDDLE, MIDDLE - 20f);
+        Entity atAGrunt = simulation.spawnTrooper(MIDDLE, MIDDLE + 20f);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE - 10f, MIDDLE - 20f);
+        simulation.spawnEnemy(MIDDLE - 10f, MIDDLE + 20f);
+        facing(atANest, -1f, 0f);
+        facing(atAGrunt, -1f, 0f);
+        simulation.step();
+        float pastHisHold = TROOPER_HOLD + NEST_STANDS_OUT * 0.5f;
+        atANest.getComponent(Position.class).x = MIDDLE - 10f + pastHisHold;
+        atAGrunt.getComponent(Position.class).x = MIDDLE - 10f + pastHisHold;
 
         simulation.step();
 

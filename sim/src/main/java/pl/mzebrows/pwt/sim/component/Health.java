@@ -7,8 +7,6 @@ import pl.mzebrows.pwt.sim.def.Whole;
 /** How much damage an entity can take before it dies. Anything with this can be killed. */
 public final class Health implements Component, Pool.Poolable {
 
-    private static final int HUNDRED = 100;
-
     /** Whole hit points (G0054): no fraction is ever stored here. */
     public int max;
 
@@ -35,7 +33,7 @@ public final class Health implements Component, Pool.Poolable {
 
     /** What a blast that owes {@code damage} takes from it: the rest, after what it shrugs off, rounded once (G0054). */
     public int fromBlast(int damage) {
-        return blastResistance == 0 ? damage : Whole.percentOf(damage, HUNDRED - blastResistance);
+        return Whole.less(damage, blastResistance);
     }
 
     /** Fraction remaining, in {@code [0, 1]}. For anything that displays a health bar. */

@@ -324,6 +324,8 @@ public record SimConfig(
      * @param wakeRadius how close somebody on the player's side and in its biome must come before it starts
      *     working, in world units. Not a detection range
      * @param rouseRadius how far its cry carries when it is attacked, in world units
+     * @param standsOut how much further off than his sight a trooper picks a nest out from, and holds it, in world
+     *     units (G0080). Zero is no further
      * @param leftBehindRadius how close a man - trooper or commander - must be for an awake nest to keep its
      *     pace, in world units, biome or none; with nobody that close it is <em>left behind</em>. Zero is off
      * @param leftBehindSlowdown how many times longer every tick of its countdown takes while it is left
@@ -1339,10 +1341,7 @@ public record SimConfig(
         public TurretConfig {
             Require.positive("turret radius", radius);
             Require.positive("turret health", health);
-            if (blastResistance < 0 || blastResistance > 100) {
-                throw new IllegalArgumentException(
-                        "turret blastResistance must be in [0, 100], was " + blastResistance);
-            }
+            Require.percent("turret blastResistance", blastResistance);
             Require.notNegative("turret blastRadius", blastRadius);
             Require.notNegative("turret turnRate", turnRate);
             if (firingTurnFactor <= 0f || firingTurnFactor > 1f) {

@@ -6,9 +6,9 @@ import com.badlogic.gdx.utils.Pool;
 /**
  * A unit that chases the commander, or anything else the squad is there to shoot.
  *
- * <p>Systems select on it through a {@code Family} rather than branching on what an entity is, which
- * is the whole reason markers are preferred to a kind enum here. Its one number is how it reads as a
- * target, so a trooper's choice never asks what kind of thing it is.
+ * <p>Systems select on it through a {@code Family} rather than branching on what an entity is - never a
+ * kind enum. Its one number is how it reads as a target, so a trooper's choice never asks what kind of
+ * thing it is.
  */
 public final class Enemy implements Component, Pool.Poolable {
 

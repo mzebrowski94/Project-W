@@ -20,6 +20,13 @@ public final class Require {
         }
     }
 
+    /** Rejects anything outside 0-100, for a whole per cent of something - none of it to all of it. */
+    public static void percent(String name, int value) {
+        if (value < 0 || value > 100) {
+            throw new IllegalArgumentException(name + " must be a per cent in [0, 100], was " + value);
+        }
+    }
+
     /** Rejects below zero, for a value that is meaningful at zero - a cooldown, a count. */
     public static void notNegative(String name, float value) {
         if (value < 0f) {
