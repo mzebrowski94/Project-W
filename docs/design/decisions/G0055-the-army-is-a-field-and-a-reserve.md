@@ -1,13 +1,13 @@
 # G0055: The army is a field and a reserve, and every man after the first tick comes from the reserve
 
-**Status.** amended by G0061: a point that holds afterwards is never the rally point
+**Status.** amended by G0061: a point that holds afterwards is never the rally point; amended by G0081: every commander on the field counts towards its most
 
 **Trigger.** Anything that changes how many men a side has, where a man comes onto the field, what a
 commander's return costs, what a crate of men is worth, or how a level is lost.
 
 **Enforced by.** `ReserveTest` (the reserve, the muster, the rally point, a commander paid for from the
 reserve, the lost level), `ReinforcementSystemTest` (a crate: the field first, then the reserve, then
-waste), `RespawnSystemTest.bringsItBackInTheSpawnAreaWhileNoPointIsTaken`,
+waste; a commander on the field takes a place), `RespawnSystemTest.bringsItBackInTheSpawnAreaWhileNoPointIsTaken`,
 `CoopTest.bringsHimBackAtTheRallyPointEvenWithAFriendStillOnHisFeet`,
 `ControlPointTest.numbersThePointsInTheOrderTheyAreTaken`, `GoalLineTest.saysFailedOverEverythingOnceTheLevelIsLost`.
 
@@ -77,3 +77,9 @@ waits on anybody.
 **Revisit when** a level has been played end to end with a squad that has been chewed on - whether 30
 seconds is a trickle or a flood, whether 20 in reserve is tension or a formality, and whether respawning
 at the last point reads as fair in co-op.
+
+## Amended by G0081
+
+**B is the most men the field holds, troopers and commanders together** (provisional, for review): every
+commander on the field takes a place, whatever his slot; one waiting to come back takes none, and a
+commander coming back is never kept off a full field.

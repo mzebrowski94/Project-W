@@ -175,6 +175,24 @@ class ReserveTest {
         assertThat(simulation.level().reserve).isEqualTo(RESERVE_START - 1);
     }
 
+    /**
+     * He counts against the field's most once he is on it, and is never kept off it by that: a full field
+     * stops troopers, not a player coming back.
+     */
+    @Test
+    void bringsACommanderBackEvenOntoAFullField() {
+        SimConfig base = config();
+        Simulation simulation = new Simulation(base.withTrooper(base.trooper().withSquadGrowth(0)));
+        for (int i = 0; i < SQUAD_SIZE; i++) {
+            simulation.spawnTrooper(20f + i * 3f, 20f);
+        }
+        kill(simulation.spawnCommander(50f, 50f));
+
+        steps(simulation, RETURN);
+
+        assertThat(count(simulation, Commander.class)).isEqualTo(1);
+    }
+
     @Test
     void bringsACommanderBackAtTheRallyPointRatherThanWhereHeFell() {
         Simulation simulation = new Simulation(config());

@@ -6,6 +6,8 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_FIRST_BROOD;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_HATCH_KEEP_OFF;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_HATCH_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_LEFT_BEHIND_RADIUS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_LEFT_BEHIND_SLOWDOWN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_PERIOD;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_ROUSE_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_WAKE_RADIUS;
@@ -29,6 +31,7 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Enemy;
+import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Strain;
@@ -64,6 +67,9 @@ class NestTest {
 
     /** The first column of {@link #twoRegions}' eastern region: the tile past the nest's own. */
     private static final int EDGE_COL = (int) (X / TILE) + 1;
+
+    /** Outside the left-behind radius as well as the wake radius, and still inside the fixture's arena. */
+    private static final float BEHIND = X + NEST_LEFT_BEHIND_RADIUS + 10f;
 
     /** Across that edge from the nest and well inside its wake radius. */
     private static final float ACROSS = X + NEST_WAKE_RADIUS / 2f;
@@ -178,7 +184,7 @@ class NestTest {
     /**
      * Waking latches. A nest that went quiet the moment you backed off would be a nest you could
      * wait out from just past its own radius, which is not a problem the level wants the player to
-     * be able to solve by standing still.
+     * be able to solve by standing still. Left behind it breeds slower, never not at all.
      */
     @Test
     void goesOnWorkingAfterWhoeverWokeItHasGone() {
@@ -186,9 +192,80 @@ class NestTest {
         simulation.spawnNest(UnitKind.GRUNT, X, Y);
         Entity commander = simulation.spawnCommander(X + 2f, Y);
         simulation.step();
-        commander.getComponent(pl.mzebrows.pwt.sim.component.Position.class).set(FAR, Y);
+        commander.getComponent(Position.class).set(FAR, Y);
 
-        steps(simulation, ONE_PERIOD);
+        steps(simulation, ONE_PERIOD * NEST_LEFT_BEHIND_SLOWDOWN);
+
+        assertThat(creatures(simulation)).isEqualTo(BROOD);
+    }
+
+    /**
+     * A nest nobody is near any more - a biome the march has left behind - breeds at a fraction of its
+     * pace, so what it sends after the squad is a trickle rather than the pile its sleep exists to prevent.
+     */
+    @Test
+    void breedsFarSlowerOnceEveryManHasLeftIt() {
+        Simulation simulation = simulation();
+        simulation.spawnNest(UnitKind.GRUNT, X, Y);
+        Entity commander = simulation.spawnCommander(X + 2f, Y);
+        simulation.step();
+        commander.getComponent(Position.class).set(BEHIND, Y);
+
+        steps(simulation, FIRST_BROOD);
+        assertThat(creatures(simulation)).isZero();
+
+        steps(simulation, FIRST_BROOD * NEST_LEFT_BEHIND_SLOWDOWN);
+        assertThat(creatures(simulation)).isEqualTo(BROOD);
+    }
+
+    /** Any man counts, not only a commander: a trooper standing by it keeps it at pace. */
+    @Test
+    void keepsItsPaceWhileATrooperIsNearIt() {
+        Simulation simulation = simulation();
+        simulation.spawnNest(UnitKind.GRUNT, X, Y);
+        Entity commander = simulation.spawnCommander(X + 2f, Y);
+        simulation.spawnTrooper(X + NEST_LEFT_BEHIND_RADIUS / 3f, Y);
+        simulation.step();
+        commander.getComponent(Position.class).set(BEHIND, Y);
+        godMode(simulation);
+
+        steps(simulation, FIRST_BROOD);
+
+        assertThat(creatures(simulation)).isEqualTo(BROOD);
+    }
+
+    /** Back to its pace the tick a man is near again: what it lost while alone is not made up, nor held over. */
+    @Test
+    void comesBackToItsPaceTheTickAManIsNearAgain() {
+        Simulation simulation = simulation();
+        Entity entity = simulation.spawnNest(UnitKind.GRUNT, X, Y);
+        Entity commander = simulation.spawnCommander(X + 2f, Y);
+        simulation.step();
+        Nest nest = entity.getComponent(Nest.class);
+        Position him = commander.getComponent(Position.class);
+
+        him.set(BEHIND, Y);
+        int alone = nest.untilNext;
+        steps(simulation, NEST_LEFT_BEHIND_SLOWDOWN);
+        assertThat(nest.untilNext).isEqualTo(alone - 1);
+
+        him.set(X + 2f, Y);
+        int near = nest.untilNext;
+        simulation.step();
+        assertThat(nest.untilNext).isEqualTo(near - 1);
+    }
+
+    /** Off, the nest keeps its pace wherever everybody is - the radius is the switch, as zero is everywhere. */
+    @Test
+    void keepsItsPaceAloneWhenThereIsNoLeftBehindRadius() {
+        SimConfig config = config().withNest(config().nest().withLeftBehindRadius(0f));
+        Simulation simulation = new Simulation(config);
+        simulation.spawnNest(UnitKind.GRUNT, X, Y);
+        Entity commander = simulation.spawnCommander(X + 2f, Y);
+        simulation.step();
+        commander.getComponent(Position.class).set(BEHIND, Y);
+
+        steps(simulation, FIRST_BROOD);
 
         assertThat(creatures(simulation)).isEqualTo(BROOD);
     }
@@ -317,11 +394,15 @@ class NestTest {
         assertThat(simulation.level().isMet(Objective.CLEAR_ENEMIES)).isFalse();
     }
 
-    /** A world with a nest standing in it and somebody already inside its wake radius. */
+    /**
+     * A world with a nest standing in it and somebody already inside its wake radius - who cannot be
+     * killed, or the nest would be left behind the moment its brood got to him.
+     */
     private static Simulation woken() {
         Simulation simulation = simulation();
         simulation.spawnNest(UnitKind.GRUNT, X, Y);
         simulation.spawnCommander(X + 2f, Y);
+        godMode(simulation);
         return simulation;
     }
 

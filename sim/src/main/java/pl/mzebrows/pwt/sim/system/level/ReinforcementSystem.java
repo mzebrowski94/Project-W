@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Level;
@@ -26,7 +27,8 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  * Fills the field from what the side has (G0055): a crate's men, and the reserve's muster.
  *
  * <p><strong>How many is capped, and the cap is the point</strong> (pillar 3): the field holds the
- * squad plus its headroom and upgrades. A crate's men go onto it <strong>one a tick</strong> while it
+ * squad plus its headroom and upgrades, and <strong>every commander on it is one of those men</strong>
+ * (G0055) - whatever his slot; one waiting to come back is not on it. A crate's men go onto it <strong>one a tick</strong> while it
  * has room, and into the reserve after that - past the reserve's own most they are wasted. Every
  * {@code sim.reserve.musterSeconds} a muster calls a few men out of the reserve, as many as the field
  * has room for; a full field leaves them where they are.
@@ -49,7 +51,7 @@ public final class ReinforcementSystem extends EntitySystem {
     private final int musterTicks;
 
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
-    private ImmutableArray<Entity> squad = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> men = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
 
     public ReinforcementSystem(SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng rng) {
@@ -64,9 +66,7 @@ public final class ReinforcementSystem extends EntitySystem {
     @Override
     public void addedToEngine(Engine engine) {
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
-        // A body already marked dead is not a man the squad still has; a man down still is.
-        squad = engine.getEntitiesFor(
-                Family.all(Trooper.class).exclude(Dead.class).get());
+        men = engine.getEntitiesFor(onTheField());
         points = engine.getEntitiesFor(
                 Family.all(ControlPoint.class, Position.class).get());
     }
@@ -79,15 +79,24 @@ public final class ReinforcementSystem extends EntitySystem {
                 level.pendingReinforcements = 0;
                 continue;
             }
-            int room = squadMost(config, modifiers) - squad.size();
+            int room = squadMost(config, modifiers) - men.size();
             room -= deliver(level, room);
             muster(level, room);
         }
     }
 
     /**
-     * The most troopers the field holds: the squad the level started with, its headroom, and what the
-     * upgrades held add to that. The one place it is worked out.
+     * The men the field's most is held against (G0055): every trooper and every commander on it, whatever
+     * his slot. A body already marked dead is not a man the side still has; a man down still is. A
+     * commander waiting to come back is a ticket, not a man, so he is not on it. The one place it is said.
+     */
+    public static Family onTheField() {
+        return Family.one(Trooper.class, Commander.class).exclude(Dead.class).get();
+    }
+
+    /**
+     * The most men the field holds, troopers and commanders together: the squad the level started with,
+     * its headroom, and what the upgrades held add to that. The one place it is worked out.
      */
     public static int squadMost(SimConfig config, Modifiers modifiers) {
         return config.trooper().squadSize()

@@ -44,6 +44,12 @@ public final class Nest implements Component, Pool.Poolable {
     /** True once somebody has come close enough. Latched: backing off does not put it to sleep. */
     public boolean awake;
 
+    /**
+     * Ticks spent left behind - nobody near - since its countdown last moved. Its countdown moves once
+     * every {@code sim.nest.leftBehindSlowdown} of them, and this is back to zero the tick a man is near.
+     */
+    public int leftBehindTicks;
+
     /** What its health was last tick, so a system can tell it has been hit without reading damage. */
     public int watchedHealth;
 
@@ -115,6 +121,7 @@ public final class Nest implements Component, Pool.Poolable {
         wakeRadius = 0f;
         rouseRadius = 0f;
         awake = false;
+        leftBehindTicks = 0;
         watchedHealth = 0;
         broodsDealt = 0L;
     }

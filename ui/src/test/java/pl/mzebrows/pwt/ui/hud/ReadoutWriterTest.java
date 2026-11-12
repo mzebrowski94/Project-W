@@ -254,6 +254,19 @@ class ReadoutWriterTest {
         assertThat(readout.failed).isFalse();
     }
 
+    /** A commander on the field is one of its men, so the bar counts him against its most (G0055). */
+    @Test
+    void countsACommanderOnTheFieldInTheArmy() {
+        Simulation world = world();
+        world.spawnCommander(30f, 30f);
+        world.spawnTrooper(40f, 40f);
+        world.step();
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        assertThat(readout.squadOnField).isEqualTo(2);
+    }
+
     @Test
     void copiesALostLevel() {
         Simulation world = world();

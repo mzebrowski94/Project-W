@@ -7,18 +7,22 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.collision.SpatialGrid;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
@@ -35,6 +39,10 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  *       still on the field, before the reaper.
  *   <li><strong>A nest nobody in its biome has come near does nothing</strong> (G0062). Waking latches,
  *       and the first brood comes soon after.
+ *   <li><strong>A nest nobody is near is left behind</strong> (G0031): with no man - trooper or commander -
+ *       within {@code sim.nest.leftBehindRadius}, its countdown moves once every
+ *       {@code sim.nest.leftBehindSlowdown} ticks. It still breeds, and is back at its pace the tick a man
+ *       is near again. The men are filed in a {@link SpatialGrid} once a tick, and each nest asks it.
  *   <li><strong>A nest being hit calls the neighbours</strong> (G0016), read from its health against
  *       last tick - damage is already cleared by then.
  * </ul>
@@ -62,7 +70,20 @@ public final class NestSystem extends EntitySystem {
     /** How long after waking a nest's first brood comes: one number for every nest (G0062). */
     private final int firstBroodTicks;
 
+    /** How close a man keeps a nest at its pace; zero, and no nest is ever left behind (G0031). */
+    private final float leftBehindRadius;
+
+    /** How many ticks a left-behind nest takes for each of its own. */
+    private final int leftBehindSlowdown;
+
+    /** The men on the field, filed by where they stand; none when nothing is ever left behind. */
+    private final @Nullable SpatialGrid grid;
+
+    /** What the grid hands back for one nest; reused, so asking costs nothing per nest. */
+    private final Array<Entity> nearby = new Array<>(false, 16);
+
     private ImmutableArray<Entity> nests = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> men = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> quarry = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
 
@@ -73,6 +94,10 @@ public final class NestSystem extends EntitySystem {
         this.modifiers = modifiers;
         this.brood = new Brood(map, spawner, config.nest().hatchKeepOff());
         this.firstBroodTicks = Ticks.of(config.nest().firstBroodSeconds(), config.tickSeconds());
+        this.leftBehindRadius = config.nest().leftBehindRadius();
+        this.leftBehindSlowdown = config.nest().leftBehindSlowdown();
+        this.grid =
+                leftBehindRadius > 0f ? new SpatialGrid(map.worldWidth(), map.worldHeight(), leftBehindRadius) : null;
     }
 
     @Override
@@ -84,10 +109,16 @@ public final class NestSystem extends EntitySystem {
                 .get());
         watchers = engine.getEntitiesFor(
                 Family.all(Perception.class, Position.class).get());
+        // On the field in any state short of gone: a man down beside a nest is still a man beside it.
+        men = engine.getEntitiesFor(Family.all(Position.class)
+                .one(Trooper.class, Commander.class)
+                .exclude(Dead.class)
+                .get());
     }
 
     @Override
     public void update(float deltaTime) {
+        fileTheMen();
         for (int i = 0; i < nests.size(); i++) {
             Entity entity = nests.get(i);
             Nest nest = NEST.get(entity);
@@ -109,6 +140,9 @@ public final class NestSystem extends EntitySystem {
                 }
                 continue;
             }
+            if (!keepsPace(nest, at)) {
+                continue;
+            }
             nest.untilNext--;
             if (nest.untilNext > 0) {
                 continue;
@@ -116,6 +150,54 @@ public final class NestSystem extends EntitySystem {
             hatch(nest, at, bodyOf(entity), nextBrood(entity, nest));
             nest.untilNext = nest.periodTicks;
         }
+    }
+
+    /** Every man on the field into the grid, once a tick, before any nest asks it. */
+    private void fileTheMen() {
+        SpatialGrid filed = grid;
+        if (filed == null) {
+            return;
+        }
+        filed.clear();
+        for (int i = 0; i < men.size(); i++) {
+            Entity man = men.get(i);
+            Position at = POSITION.get(man);
+            filed.insert(man, at.x, at.y);
+        }
+    }
+
+    /**
+     * Whether an awake nest's countdown moves this tick (G0031): every tick while a man is near, once every
+     * {@link #leftBehindSlowdown} ticks while it is left behind. A man near again puts it back at its pace on
+     * that tick, and what it spent alone is neither made up nor held over.
+     */
+    private boolean keepsPace(Nest nest, Position at) {
+        SpatialGrid filed = grid;
+        if (filed == null || anyManNear(filed, at)) {
+            nest.leftBehindTicks = 0;
+            return true;
+        }
+        nest.leftBehindTicks++;
+        if (nest.leftBehindTicks < leftBehindSlowdown) {
+            return false;
+        }
+        nest.leftBehindTicks = 0;
+        return true;
+    }
+
+    /** Whether any man on the field stands within the left-behind radius - biome or none. */
+    private boolean anyManNear(SpatialGrid filed, Position at) {
+        filed.near(at.x, at.y, leftBehindRadius, nearby);
+        float reach = leftBehindRadius * leftBehindRadius;
+        for (int i = 0; i < nearby.size; i++) {
+            Position where = POSITION.get(nearby.get(i));
+            float toX = where.x - at.x;
+            float toY = where.y - at.y;
+            if (toX * toX + toY * toY <= reach) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

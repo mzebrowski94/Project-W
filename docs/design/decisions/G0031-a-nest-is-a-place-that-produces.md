@@ -1,13 +1,14 @@
 # G0031: A nest is a place that produces, and it sleeps until you arrive
 
-**Status.** amended by G0062: a nest wakes only for its own biome, and its first brood comes soon
+**Status.** amended by G0062: a nest wakes only for its own biome, and its first brood comes soon; amended by G0081: a nest left behind breeds slower
 
 **Trigger.** Anything that puts creatures on the field after the first tick, or that changes what a
 level does while the player is somewhere else.
 
 **Enforced by.** `NestTest.sendsOutNothingAtAllUntilSomebodyComesNear`,
 `.startsWorkingOnceSomebodyComesNear`, `.goesOnWorkingAfterWhoeverWokeItHasGone`,
-`.goesOnSendingThemOutPeriodAfterPeriod`, `.emptiesTheLastOfItselfWhenItIsDestroyed`,
+`.goesOnSendingThemOutPeriodAfterPeriod`, `.breedsFarSlowerOnceEveryManHasLeftIt`,
+`.keepsItsPaceWhileATrooperIsNearIt`, `.comesBackToItsPaceTheTickAManIsNearAgain`, `.emptiesTheLastOfItselfWhenItIsDestroyed`,
 `.sendsOutWhateverStrainItWasBuiltFor`, `.sendsEverythingWithinEarshotToSeeWhoIsHittingIt`,
 `.leavesALevelUnclearedWhileItIsStillStanding`.
 
@@ -81,3 +82,9 @@ wake radius*: on a level walled into biomes the radius reached through the wall.
 `sim.nest.firstBroodSeconds` after waking rather than a whole period, because waking on arrival with a
 thirty-second first brood was a hole that did nothing while you stood at it. A map that names no biomes is
 one biome, so a level without them is unchanged.
+
+## Amended by G0081
+
+**A nest left behind breeds slower** (provisional, for review): an awake nest with no man within
+`sim.nest.leftBehindRadius` counts down `sim.nest.leftBehindSlowdown` times slower, and keeps its pace again
+the tick a man is that near. Slower is not the sleep ruled out above - it still breeds.

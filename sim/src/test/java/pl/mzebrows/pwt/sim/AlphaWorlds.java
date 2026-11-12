@@ -302,6 +302,12 @@ public final class AlphaWorlds {
 
     public static final float NEST_ROUSE_RADIUS = 30f;
 
+    /** Past the wake radius, so a man can wake a nest, step off a little and still keep it at pace. */
+    public static final float NEST_LEFT_BEHIND_RADIUS = 30f;
+
+    /** Small, so a test can wait out a slowed brood; above one, so it is slowed at all. */
+    public static final int NEST_LEFT_BEHIND_SLOWDOWN = 4;
+
     /** Wide enough to catch two units either side of the middle and leave a third of them clear. */
     public static final float BLAST_RADIUS = 6f;
 
@@ -1558,7 +1564,9 @@ public final class AlphaWorlds {
                         NEST_HATCH_RADIUS,
                         NEST_HATCH_KEEP_OFF,
                         NEST_WAKE_RADIUS,
-                        NEST_ROUSE_RADIUS),
+                        NEST_ROUSE_RADIUS,
+                        NEST_LEFT_BEHIND_RADIUS,
+                        NEST_LEFT_BEHIND_SLOWDOWN),
                 new SimConfig.ControlPointConfig(
                         POINT_RADIUS,
                         POINT_CAPTURE_SECONDS,

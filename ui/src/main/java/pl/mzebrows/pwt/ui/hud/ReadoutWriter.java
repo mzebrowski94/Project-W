@@ -16,7 +16,6 @@ import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
-import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
@@ -56,7 +55,6 @@ public final class ReadoutWriter {
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
-    private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
     private static final ComponentMapper<Respawning> RESPAWNING = ComponentMapper.getFor(Respawning.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
@@ -156,13 +154,7 @@ public final class ReadoutWriter {
 
     /** The men on the field against its most, and the reserve (G0055). */
     private void army(Simulation world, Level level, Readout out) {
-        int onField = 0;
-        for (int i = 0; i < troopers.size(); i++) {
-            if (!DEAD.has(troopers.get(i))) {
-                onField++;
-            }
-        }
-        out.squadOnField = onField;
+        out.squadOnField = world.menOnField();
         out.squadMost = world.squadMost();
         out.reserve = level.reserve;
         out.failed = level.failed;
