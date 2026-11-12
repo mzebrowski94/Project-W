@@ -3,6 +3,8 @@ package pl.mzebrows.pwt.sim.system.query;
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
+import pl.mzebrows.pwt.sim.Rng;
+import pl.mzebrows.pwt.sim.RngStream;
 import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -63,10 +65,9 @@ public final class Sight {
     }
 
     /**
-     * The arc test with its <strong>all-round range</strong> folded in: whether a point is near enough to be
-     * noticed whichever way the unit is looking, or else inside its arc. The one place a strain's
-     * {@code allRoundRange} is read, so an alien and a trooper cannot come to mean two things by it.
-     * Zero adds nothing.
+     * The arc test with its <strong>all-round range</strong> folded in: whether a point is near enough to be noticed
+     * whichever way the unit is looking, or else inside its arc. The one place a strain's {@code allRoundRange} is
+     * read, so an alien and a trooper cannot come to mean two things by it. Zero adds nothing.
      */
     public static boolean withinNotice(
             float lookX,
@@ -79,6 +80,33 @@ public final class Sight {
             float allRoundRange) {
         return withinRange(fromX, fromY, toX, toY, allRoundRange)
                 || withinArc(lookX, lookY, fromX, fromY, toX, toY, arcCosine);
+    }
+
+    /**
+     * The same, and a man's: <strong>noticed from behind, on a chance keyed per pair</strong> (G0086) as well. Outside
+     * the arc, a point within {@code sightRange} is noticed too when {@link Rng#keyed} of the two identities, on the
+     * squad's concern, falls under {@code behindChance} - one fixed yes or no for that noticer and that thing, never a chance per second, which
+     * everything behind him would win in the end. Asked last, and only above zero, so a unit that declares none
+     * pays one comparison. Rock is not asked here: a caller still asks {@link #clearLine}.
+     */
+    public static boolean withinNotice(
+            float lookX,
+            float lookY,
+            float fromX,
+            float fromY,
+            float toX,
+            float toY,
+            float arcCosine,
+            float allRoundRange,
+            float sightRange,
+            float behindChance,
+            long levelSeed,
+            long noticer,
+            long noticed) {
+        return withinNotice(lookX, lookY, fromX, fromY, toX, toY, arcCosine, allRoundRange)
+                || (behindChance > 0f
+                        && withinRange(fromX, fromY, toX, toY, sightRange)
+                        && Rng.keyed(levelSeed, RngStream.TROOPER, noticer, noticed) < behindChance);
     }
 
     /**

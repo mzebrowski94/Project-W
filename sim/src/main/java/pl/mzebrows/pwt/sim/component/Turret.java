@@ -25,6 +25,12 @@ public final class Turret implements Component, Pool.Poolable {
     /** Whether anybody is on it. Recomputed every tick from the riders; never trusted between ticks. */
     public boolean crewed;
 
+    /**
+     * Whether anybody has ever been on it this level: the aliens pay a gun no heed until then, and from then
+     * on they come for it whether it is crewed or not (G0086). Latched; nothing clears it but the pool.
+     */
+    public boolean manned;
+
     /** Where the gun points, as a unit vector. */
     public float aimX = 1f;
 
@@ -57,9 +63,16 @@ public final class Turret implements Component, Pool.Poolable {
         this.range = newRange;
         this.quietTicks = newQuietTicks;
         this.crewed = false;
+        this.manned = false;
         this.aimX = 1f;
         this.aimY = 0f;
         return this;
+    }
+
+    /** Somebody is on it now, and so it has been manned (G0086). */
+    public void man() {
+        this.crewed = true;
+        this.manned = true;
     }
 
     /** Points the gun along a direction that is already a unit vector. */
@@ -76,6 +89,7 @@ public final class Turret implements Component, Pool.Poolable {
     @Override
     public void reset() {
         crewed = false;
+        manned = false;
         aimX = 1f;
         aimY = 0f;
         turnRate = 0f;

@@ -26,6 +26,9 @@ import lombok.With;
  *     stream, so idling varies between units and not between runs
  * @param waypointTimeoutSeconds how long it will keep trying to reach one spot before choosing
  *     another. What stops a unit wedged behind an obstacle leaning into it for the rest of the level
+ * @param driftPerStop how far its home moves towards each spot it arrives at, in world units, never out of
+ *     its own biome (G0086): the <strong>drift</strong>, by which a biome's creatures fill it over minutes.
+ *     Zero means off - what is rooted stays put
  */
 @With
 public record WanderDef(
@@ -35,7 +38,8 @@ public record WanderDef(
         float arriveRadius,
         float pauseMinSeconds,
         float pauseMaxSeconds,
-        float waypointTimeoutSeconds) {
+        float waypointTimeoutSeconds,
+        float driftPerStop) {
 
     public WanderDef {
         Require.notNegative("wander radius", radius);
@@ -44,6 +48,7 @@ public record WanderDef(
         Require.notNegative("wander pauseMinSeconds", pauseMinSeconds);
         Require.notNegative("wander pauseMaxSeconds", pauseMaxSeconds);
         Require.positive("wander waypointTimeoutSeconds", waypointTimeoutSeconds);
+        Require.notNegative("wander driftPerStop", driftPerStop);
         if (pauseMaxSeconds < pauseMinSeconds) {
             throw new IllegalArgumentException("wander pauseMaxSeconds must not be below pauseMinSeconds");
         }
@@ -51,6 +56,6 @@ public record WanderDef(
 
     /** A strain that stands where it was put. */
     public static WanderDef off() {
-        return new WanderDef(false, 0f, 0f, 1f, 0f, 0f, 1f);
+        return new WanderDef(false, 0f, 0f, 1f, 0f, 0f, 1f, 0f);
     }
 }

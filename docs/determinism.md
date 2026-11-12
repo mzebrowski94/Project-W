@@ -34,6 +34,13 @@ function of the world's seed and two handles - whether this man heeds that spatt
 holds no state for a snapshot to carry, and gives the same answer on every tick and every machine. Anything that
 is a sequence of draws still comes from a stream.
 
+**Every keyed chance goes through `Rng.keyed(levelSeed, stream, a, b)`** (G0086) - or `(…, a, b, c)` for a third
+key, such as which leap of a creature's this is. The stream is the concern the chance belongs to (`LEAP` for a
+deflect, `TROOPER` for noticing from behind, `CACHE` for a point's medkit), and only its salt is used: the helper
+advances nothing. So two keyed chances of the same handles never give one answer, and nothing salts a seed or folds a
+counter into it by hand. G0076's spatter heeding is the one exception: it shipped keyed off the bare seed
+(`Rng.keyed(seed, a, b)` in `AvoidanceSystem`), and moving it would re-roll which spatter every man heeds for no gain.
+
 `Rng` is SplitMix64 and its state is one `long`, so a world can be snapshotted and replayed exactly.
 
 **Derived streams split a concern while a world is built** (G0065, missions ticket 05). `Randomness.derive(salt)`

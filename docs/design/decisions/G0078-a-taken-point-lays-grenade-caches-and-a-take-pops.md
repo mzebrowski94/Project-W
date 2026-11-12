@@ -1,6 +1,6 @@
 # G0078: A taken point lays grenade caches, and a take by touch pops
 
-**Status.** accepted
+**Status.** amended by G0086: a taken point may lay a medkit
 
 **Trigger.** Anything a taken control point lays or hands out; a pickup a point leaves, how many, for whom; showing a
 take; proposing a new kind for a refill at a point, one cache per point, or a crate that refills by touch.

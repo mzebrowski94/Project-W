@@ -429,6 +429,9 @@ public record SimConfig(
      *     instead, in world units - so the other side comes near the post without piling onto it (G0027)
      * @param grenadeCaches how many grenade caches a point lays beside itself the tick it is taken, for every seated
      *     slot (G0078); zero lays none
+     * @param medkitChance the chance, per cent, that a point lays one medkit in the same ring the tick it is taken,
+     *     keyed on the point (G0086): one a point, not a slot, because a trooper takes it too. Furniture, so a tier
+     *     does not scale it; zero lays none
      */
     @With
     public record ControlPointConfig(
@@ -439,7 +442,8 @@ public record SimConfig(
             int reinforcementsMin,
             int reinforcementsMax,
             float loiterRadius,
-            int grenadeCaches) {
+            int grenadeCaches,
+            int medkitChance) {
         public ControlPointConfig {
             Require.positive("control point radius", radius);
             Require.positive("control point captureSeconds", captureSeconds);
@@ -452,6 +456,7 @@ public record SimConfig(
             Require.fitsABag("control point reinforcements", reinforcementsMin, reinforcementsMax);
             Require.positive("control point loiterRadius", loiterRadius);
             Require.notNegative("control point grenadeCaches", grenadeCaches);
+            Require.percent("control point medkitChance", medkitChance);
         }
     }
 
@@ -596,6 +601,16 @@ public record SimConfig(
      *     is past the reach itself, so below one is the margin that stops him ambling in and out of it
      * @param aimAcross how far off a target's middle a man whose line is fouled by a mate may aim to fire past him,
      *     as a fraction of the target's radius, in {@code [0, 1]} (G0084). Zero aims only at the middle
+     * @param turnDegreesPerSecond how fast he turns, every turn, in degrees a second (G0086). Zero turns at once
+     * @param fireArcDegrees how far off where he aims his facing may still be when he fires, in degrees, in
+     *     {@code [0, 180]} (G0086)
+     * @param aimErrorDegrees how far either side of where he aims each shot of his own may go, in degrees,
+     *     drawn per shot from the squad's stream (G0086). Zero is none; a gun on a mount he crews has its own
+     * @param noticeBehindPercent the chance, per cent, keyed once per man and alien, that he notices that alien
+     *     behind him out to his whole sight rather than only inside his all-round range (G0086)
+     * @param captureCrowd how many men on their feet on a point being taken are enough (G0086): a trooper who comes
+     *     to it once that many stand on it goes on to the next point the squad would take, and holds there - never
+     *     past it. Zero is off
      * @param grenade how often a trooper throws a grenade, and the rules that keep its blast off his own
      *     side (G0051); whether he ever does is {@code AiChance.THROW_A_GRENADE}
      */
@@ -636,6 +651,11 @@ public record SimConfig(
             float medkitReach,
             float closeInFactor,
             float aimAcross,
+            float turnDegreesPerSecond,
+            float fireArcDegrees,
+            float aimErrorDegrees,
+            int noticeBehindPercent,
+            int captureCrowd,
             TrooperGrenadeDef grenade) {
         public TrooperConfig {
             Require.positive("trooper radius", radius);
@@ -679,6 +699,26 @@ public record SimConfig(
             if (holdJitterSeconds > holdSeconds) {
                 throw new IllegalArgumentException("trooper holdJitterSeconds must not be above holdSeconds");
             }
+            Require.notNegative("trooper turnDegreesPerSecond", turnDegreesPerSecond);
+            if (fireArcDegrees < 0f || fireArcDegrees > 180f) {
+                throw new IllegalArgumentException("trooper fireArcDegrees must be in [0, 180], was " + fireArcDegrees);
+            }
+            if (aimErrorDegrees < 0f || aimErrorDegrees > 180f) {
+                throw new IllegalArgumentException(
+                        "trooper aimErrorDegrees must be in [0, 180], was " + aimErrorDegrees);
+            }
+            Require.percent("trooper noticeBehindPercent", noticeBehindPercent);
+            Require.notNegative("trooper captureCrowd", captureCrowd);
+        }
+
+        /** The cosine of {@link #fireArcDegrees}: a facing at least this far onto his aim may fire. */
+        public float fireArcCosine() {
+            return (float) StrictMath.cos(StrictMath.toRadians(fireArcDegrees));
+        }
+
+        /** {@link #aimErrorDegrees} in radians. */
+        public float aimErrorRadians() {
+            return (float) StrictMath.toRadians(aimErrorDegrees);
         }
     }
 

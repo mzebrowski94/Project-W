@@ -59,6 +59,18 @@ class ControlPointTest {
 
     private static final float DROP_RING = 9f;
 
+    private static final int ALWAYS = 100;
+
+    /** The shipped number (G0086), so the spread is measured where the game plays it. */
+    private static final int SHIPPED_MEDKIT_CHANCE = 35;
+
+    private static final int SEEDS = 20;
+
+    private static final int POINTS = 100;
+
+    /** Two thousand draws: about three standard deviations of a fair coin at this chance. */
+    private static final float CHANCE_TOLERANCE = 0.03f;
+
     /** A corner of the fixture arena for a wave to arrive in. */
     private static final TileRect A_CORNER = new TileRect(16, 16, 2, 2);
 
@@ -445,15 +457,81 @@ class ControlPointTest {
         assertThat(grenadeCaches(simulation)).hasSize(1);
     }
 
-    private static List<Entity> grenadeCaches(Simulation simulation) {
-        List<Entity> caches = new ArrayList<>();
-        for (Entity entity :
-                simulation.engine().getEntitiesFor(Family.all(Pickup.class).get())) {
-            if (entity.getComponent(Pickup.class).kind == PickupKind.ARMOURY_GRENADES) {
-                caches.add(entity);
+    /** G0086: a taken point may lay a medkit, one a point, in the ring its grenade caches lie in. */
+    @Test
+    void laysOneMedkitBesideItWhenItsChanceSaysSo() {
+        Simulation simulation = withMedkitChance(ALWAYS);
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        TileRect reach = TileRect.around(simulation.map(), MIDDLE, MIDDLE, POINT_REINFORCEMENT_RADIUS);
+        assertThat(lying(simulation, PickupKind.MEDKIT)).singleElement().satisfies(medkit -> {
+            Position at = medkit.getComponent(Position.class);
+            assertThat(distance(at, MIDDLE, MIDDLE)).isGreaterThan(POINT_RADIUS);
+            assertThat(reach.contains(
+                            simulation.map().colAt(at.x), simulation.map().rowAt(at.y)))
+                    .isTrue();
+        });
+    }
+
+    @Test
+    void laysNoMedkitWhenItsChanceSaysNo() {
+        Simulation simulation = withMedkitChance(0);
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        assertThat(lying(simulation, PickupKind.MEDKIT)).isEmpty();
+        assertThat(grenadeCaches(simulation)).hasSize(1);
+    }
+
+    @Test
+    void laysItsMedkitOnceAndNeverAgainWhileItIsHeld() {
+        Simulation simulation = withMedkitChance(ALWAYS);
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) * 3);
+
+        assertThat(lying(simulation, PickupKind.MEDKIT)).hasSize(1);
+    }
+
+    /** Keyed on the point, so across a level's points and a run's seeds it comes up at about its chance. */
+    @Test
+    void laysAMedkitAtAboutItsChanceAcrossPointsAndSeeds() {
+        int yes = 0;
+        for (long seed = 0; seed < SEEDS; seed++) {
+            for (long point = 1; point <= POINTS; point++) {
+                if (ControlPointSystem.laysAMedkit(seed, point, SHIPPED_MEDKIT_CHANCE / 100f)) {
+                    yes++;
+                }
             }
         }
-        return caches;
+
+        assertThat(yes / (float) (SEEDS * POINTS))
+                .isCloseTo(SHIPPED_MEDKIT_CHANCE / 100f, Offset.offset(CHANCE_TOLERANCE));
+    }
+
+    private static Simulation withMedkitChance(int percent) {
+        return new Simulation(config().withControlPoint(config().controlPoint().withMedkitChance(percent)));
+    }
+
+    private static List<Entity> lying(Simulation simulation, PickupKind kind) {
+        List<Entity> lying = new ArrayList<>();
+        for (Entity entity :
+                simulation.engine().getEntitiesFor(Family.all(Pickup.class).get())) {
+            if (entity.getComponent(Pickup.class).kind == kind) {
+                lying.add(entity);
+            }
+        }
+        return lying;
+    }
+
+    private static List<Entity> grenadeCaches(Simulation simulation) {
+        return lying(simulation, PickupKind.ARMOURY_GRENADES);
     }
 
     private static float distance(Position at, float x, float y) {

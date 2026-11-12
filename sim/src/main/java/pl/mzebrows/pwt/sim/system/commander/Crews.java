@@ -46,7 +46,7 @@ public final class Crews {
         Crew crew = CREW.get(man);
         crew.station = Handles.of(station);
         crew.quietTicks = 0;
-        turret.crewed = true;
+        turret.man();
         Position at = POSITION.get(station);
         POSITION.get(man).set(at.x, at.y);
         if (VELOCITY.has(man)) {

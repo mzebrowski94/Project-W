@@ -45,9 +45,9 @@ aim becomes a place on the field**: a stick sends an offset because it does not 
 commander is standing, and his position is added here so every system below reads the absolute point
 it has always read.
 
-`TrooperMindSystem` and `TrooperMoveSystem` share **one** `Rng` stream (`RngStream.TROOPER`), by the
-comment in the constructor: roaming and sweeping are the same concern and separating them would mean
-two salts to keep apart for no benefit.
+`TrooperMindSystem`, `TrooperMoveSystem` and `TrooperCombatSystem` share **one** `Rng` stream (`RngStream.TROOPER`), by
+the comment in the constructor: roaming, sweeping and how far a man's own shot errs (G0086) are the same concern -
+the man - and separating them would mean salts to keep apart for no benefit.
 
 How loosely a *gun* throws draws from `RngStream.SCATTER`, shared by all four things that fire one - the commander, a trooper, a shooting alien and a gun on a mount. Deliberately not `SPIT`, which is how badly a *creature* aims and narrows as it settles: retuning a shotgun's pattern must not reshuffle where a spitter's next shot goes.
 

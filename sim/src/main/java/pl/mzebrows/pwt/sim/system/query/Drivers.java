@@ -12,6 +12,7 @@ import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.Side;
 
 /**
@@ -27,6 +28,7 @@ public final class Drivers {
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
     private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
+    private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
 
     private Drivers() {}
 
@@ -118,11 +120,15 @@ public final class Drivers {
     }
 
     /**
-     * Whether an alien would come for this: on the player's side, and still on its feet (G0026).
+     * Whether an alien would come for this: on the player's side, still on its feet (G0026), and not a gun
+     * nobody has ever been on (G0086) - a turret becomes a target once it has been manned, and stays one.
      *
      * <p>One question for both who is hunted and how to get there.
      */
     public static boolean huntable(Entity entity) {
+        if (TURRET.has(entity) && !TURRET.get(entity).manned) {
+            return false;
+        }
         return !Life.down(entity) && FACTION.get(entity).side == Side.PLAYER;
     }
 }

@@ -19,6 +19,8 @@ import lombok.With;
  * @param hesitationMaxSeconds longest wind-up before the first leap of a sequence. Drawn from the
  *     simulation's seeded {@code Rng}, so it varies between leaps and not between runs - the player
  *     has to read the tell rather than count the frames, and a replay still matches.
+ * @param deflectChance the chance, per cent, that a trooper it comes at inside his arc meets it with his hand strike
+ *     as it lands, so it never takes hold of him (G0086) - keyed once per leap and man. Zero is never
  */
 @With
 public record LeapDef(
@@ -30,7 +32,8 @@ public record LeapDef(
         float betweenSeconds,
         float cooldownSeconds,
         float hesitationMinSeconds,
-        float hesitationMaxSeconds) {
+        float hesitationMaxSeconds,
+        int deflectChance) {
 
     public LeapDef {
         Require.notNegative("leap triggerRange", triggerRange);
@@ -41,6 +44,7 @@ public record LeapDef(
         Require.notNegative("leap hesitationMinSeconds", hesitationMinSeconds);
         Require.notNegative("leap hesitationMaxSeconds", hesitationMaxSeconds);
         Require.atLeastOne("leap sequenceLength", sequenceLength);
+        Require.percent("leap deflectChance", deflectChance);
         if (hesitationMaxSeconds < hesitationMinSeconds) {
             throw new IllegalArgumentException("leap hesitationMaxSeconds must not be below hesitationMinSeconds");
         }
@@ -48,7 +52,7 @@ public record LeapDef(
 
     /** A strain that does not leap. */
     public static LeapDef off() {
-        return new LeapDef(false, 0f, 0f, 0f, 1, 0f, 0f, 0f, 0f);
+        return new LeapDef(false, 0f, 0f, 0f, 1, 0f, 0f, 0f, 0f, 0);
     }
 
     /** The same leap with a fixed wind-up, for a test that needs to know when the jump comes. */

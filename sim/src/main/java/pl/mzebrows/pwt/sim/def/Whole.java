@@ -19,6 +19,11 @@ public final class Whole {
 
     private Whole() {}
 
+    /** A whole per cent as a fraction, the shape a chance is compared with: 30 is 0.3. */
+    public static float fraction(int percent) {
+        return percent / (float) HUNDRED;
+    }
+
     /** {@code percent} per cent of {@code base}: 125 of 150 is 188, 115 of 7 is 8, 10 of 1 is 1. */
     public static int percentOf(int base, int percent) {
         return percentOf(base, percent, HUNDRED);

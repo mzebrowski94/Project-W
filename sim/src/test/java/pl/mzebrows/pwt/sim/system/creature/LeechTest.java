@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.Sling;
 import pl.mzebrows.pwt.sim.component.Strain;
@@ -64,6 +65,9 @@ class LeechTest {
 
     /** Long enough to walk into it from a few strides off. */
     private static final int UNTIL_HE_REACHES_IT = 60;
+
+    /** A few ticks after it touches him: well inside its claws' cooldown and its leap's. */
+    private static final int A_BEAT = 10;
 
     private static final CommanderInput WALK_EAST = new CommanderInput(1f, 0f, MIDDLE + 100f, MIDDLE, false, false);
 
@@ -195,6 +199,26 @@ class LeechTest {
         assertThat(commander.getComponent(Gripped.class).held()).isFalse();
         assertThat(killed(commander)).isFalse();
         assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
+    }
+
+    /**
+     * A shield takes its touch, and its claws and its leap with it: a man who walks on into it is not taken a few
+     * ticks later (G0053).
+     */
+    @Test
+    void clingsToNobodyTheMomentAShieldHasTurnedIt() {
+        Simulation simulation = new Simulation(lyingInWait());
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        commander.getComponent(Shield.class).raise();
+        simulation.spawnUnit(UnitKind.LEECH, MIDDLE + A_FEW_STRIDES, MIDDLE);
+        for (int i = 0; i < UNTIL_HE_REACHES_IT && commander.getComponent(Shield.class).up; i++) {
+            simulation.step(WALK_EAST);
+        }
+
+        steps(simulation, A_BEAT, WALK_EAST);
+
+        assertThat(commander.getComponent(Shield.class).up).isFalse();
+        assertThat(commander.getComponent(Gripped.class).held()).isFalse();
     }
 
     @Test

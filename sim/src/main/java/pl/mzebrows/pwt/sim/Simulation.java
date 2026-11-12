@@ -210,14 +210,14 @@ public final class Simulation {
         // a man in its jaws is carrying him off, not hunting. Before the squad block, which leaves a
         // man in its jaws alone, so this is the only thing that moves him (G0045).
         engine.addSystem(new GripSystem(spawner));
-        // One stream for the squad's mind and legs: one concern.
+        // One stream for the squad's mind, legs and aim: one concern (G0086).
         Rng squad = streams.of(RngStream.TROOPER);
         // Everything the AI leaves to the dice (AiChance), apart from where the squad roams.
         Odds odds = new Odds(modifiers, config.chances(), streams.of(RngStream.NERVE));
         engine.addSystem(new SquadOrderSystem(config, capacity));
         engine.addSystem(new TrooperMindSystem(config, solid, squad, odds));
         engine.addSystem(new TrooperMoveSystem(config, solid, squad));
-        engine.addSystem(new TrooperCombatSystem(config, solid, guns, throwing, odds));
+        engine.addSystem(new TrooperCombatSystem(config, solid, guns, throwing, odds, squad));
         engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds(), modifiers));
         engine.addSystem(new AvoidanceSystem(config, map));
         engine.addSystem(new EnemyRangedSystem(solid, guns, streams.of(RngStream.SPIT)));

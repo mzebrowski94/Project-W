@@ -44,6 +44,7 @@ import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.system.query.Deflect;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 
@@ -97,6 +98,9 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private final Defs<PickupKind, PickupDef> pickups;
     private final Odds odds;
 
+    /** The level's seed, which a trooper's deflect of a leap is keyed from (G0086). */
+    private final long levelSeed;
+
     /**
      * The length of the tick being resolved, for the one decision here that is a chance per second.
      *
@@ -116,6 +120,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         this.spawner = spawner;
         this.pickups = config.pickups();
         this.odds = odds;
+        this.levelSeed = config.seed();
     }
 
     @Override
@@ -467,7 +472,11 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
      * simply lands on. On the ground it bites like anything else. The leap ends as it takes hold.
      *
      * <p><strong>One that takes hold by touch</strong> (G0083) does so on the ground as well, and so never bites at
-     * all: what it touches that it cannot take, it merely touches.
+     * all: what it touches that it cannot take, it merely touches - and on the ground it waits on its claws.
+     *
+     * <p><strong>A shield takes the grab</strong> as it takes a bite, and spends the claws the same way - and the
+     * leap - so the creature it turned neither bites nor leaps on him again before its waits are out. <strong>So does a
+     * deflect</strong> (G0086): a trooper it comes at inside his arc, on its leap's keyed chance, is not taken.
      */
     private boolean takesHoldInsteadOfBiting(Entity attacker, Entity target) {
         Grip grip = GRIP.get(attacker);
@@ -478,6 +487,12 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (!airborne && !grip.byTouch) {
             return false;
         }
+        if (!airborne
+                && CONTACT_DAMAGE.has(attacker)
+                && !CONTACT_DAMAGE.get(attacker).ready()) {
+            // A touch waits on its claws as a bite does: one a shield has just turned merely touches (G0053).
+            return true;
+        }
         if (GRIPPED.has(target)
                 && !GRIPPED.get(target).held()
                 && !Life.down(target)
@@ -485,15 +500,25 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
                 && !protectedNow(target)) {
             if (shielded(target)) {
                 // A shield takes a grab as it takes any hit, and breaks: the grab lands as a harmless blow,
-                // and the creature simply lands (G0053, G0057).
+                // and the creature simply lands (G0053, G0057). Its claws are spent, as on a bite the shield
+                // took, and its leap with them, in the air or winding up - or it bites or leaps on him a few
+                // ticks later and the shield bought him nothing.
                 if (DAMAGE.has(target)) {
                     Damage owed = DAMAGE.get(target);
                     owed.land(0, Harm.NONE);
                     recordSource(attacker, owed);
                 }
-                if (airborne) {
+                spendClaws(attacker);
+                if (LEAP.has(attacker)) {
                     LEAP.get(attacker).finish();
                 }
+                return true;
+            }
+            if (Deflect.deflects(levelSeed, attacker, target)) {
+                // Deflected (G0086): he meets it with his hand strike, swung as it came into his reach, so it never
+                // takes hold - it lands, its claws spent as on a grab a shield turned, and the strike lands on it.
+                spendClaws(attacker);
+                LEAP.get(attacker).finish();
                 return true;
             }
             grip.take(Handles.of(target));
@@ -505,6 +530,14 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             }
         }
         return true;
+    }
+
+    /** Puts a creature's claws on their cooldown, as a bite would have: what it was turned off does not bite it next. */
+    private static void spendClaws(Entity attacker) {
+        if (CONTACT_DAMAGE.has(attacker)) {
+            ContactDamage claws = CONTACT_DAMAGE.get(attacker);
+            claws.remainingTicks = claws.cooldownTicks;
+        }
     }
 
     /**

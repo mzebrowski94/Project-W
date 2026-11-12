@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.Whole;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
@@ -49,6 +50,12 @@ final class TrooperFight {
     private final float closeInFactor;
     private final float aimAcross;
     private final float widestMate;
+
+    /** The chance, keyed per man and alien, that he notices that alien behind him from his whole sight (G0086). */
+    private final float noticeBehind;
+
+    /** The level's seed, which that chance is keyed from. */
+    private final long levelSeed;
 
     /** Every man on his feet on the player's side, filed once a tick: whose edge a shot must clear. */
     private final SpatialGrid mates;
@@ -92,6 +99,8 @@ final class TrooperFight {
         this.closeInFactor = config.trooper().closeInFactor();
         this.aimAcross = config.trooper().aimAcross();
         this.widestMate = Math.max(config.trooper().radius(), config.commander().radius());
+        this.noticeBehind = Whole.fraction(config.trooper().noticeBehindPercent());
+        this.levelSeed = config.seed();
         this.mates = new SpatialGrid(map.map().worldWidth(), map.map().worldHeight(), config.largestRadius() * 2f);
     }
 
@@ -130,9 +139,9 @@ final class TrooperFight {
      * {@code reach} is how far his shot flies before it goes out, zero for until it hits something; and
      * {@code staysPut} is whether he is standing on ground he was told to hold or has taken.
      */
-    boolean engages(Trooper trooper, Position at, float shotWidth, float reach, boolean staysPut) {
+    boolean engages(Trooper trooper, long man, Position at, float shotWidth, float reach, boolean staysPut) {
         boolean wasClosing = trooper.mode == Trooper.Mode.FIGHT && trooper.closing;
-        int quarry = enemyFor(trooper, at, shotWidth);
+        int quarry = enemyFor(trooper, man, at, shotWidth);
         // A nest he is keeping on stays his until it dies or something presses him (G0085): fouled or out of his
         // reach for a while, he fights what else he can and comes back to it.
         boolean stillKeeping = keptAlive && !pressed;
@@ -193,7 +202,7 @@ final class TrooperFight {
      * <p><strong>Never down a fouled line</strong> (G0084): a target is taken down the first open line across it; one
      * he has only fouled lines to is kept back, and chosen - to hold his fire on - only when there is no other.
      */
-    private int enemyFor(Trooper trooper, Position at, float shotWidth) {
+    private int enemyFor(Trooper trooper, long man, Position at, float shotWidth) {
         boolean alreadyFighting = trooper.mode == Trooper.Mode.FIGHT;
         boolean lookingAllRound = alreadyFighting || trooper.alertRemaining > 0;
         float range = alreadyFighting ? trooper.holdRange : trooper.sightRange;
@@ -236,7 +245,7 @@ final class TrooperFight {
             if (!isKept && !close && score >= bestScore && (best >= 0 || score >= fallbackScore)) {
                 continue;
             }
-            if (!inSight(trooper, at, where, lookingAllRound)
+            if (!inSight(trooper, man, at, enemy, where, reach, lookingAllRound)
                     || !Sight.clearShot(obstacles, at.x, at.y, where.x, where.y, shotWidth)) {
                 // Seen or not, a shot a boulder would eat is not worth firing.
                 continue;
@@ -351,7 +360,14 @@ final class TrooperFight {
      * who has just been hit: his sweep is his own doing, rock is not. So does anything inside his
      * all-round range, which turns him on what has come right up behind him before it hits him.
      */
-    private boolean inSight(Trooper trooper, Position at, Position target, boolean lookingAllRound) {
+    private boolean inSight(
+            Trooper trooper,
+            long man,
+            Position at,
+            Entity enemy,
+            Position target,
+            float reach,
+            boolean lookingAllRound) {
         return (lookingAllRound
                         || Sight.withinNotice(
                                 trooper.lookX,
@@ -361,7 +377,12 @@ final class TrooperFight {
                                 target.x,
                                 target.y,
                                 trooper.arcCosine,
-                                trooper.allRoundRange))
+                                trooper.allRoundRange,
+                                reach,
+                                noticeBehind,
+                                levelSeed,
+                                man,
+                                Handles.of(enemy)))
                 && Sight.clearLine(map, at.x, at.y, target.x, target.y, trooper.requiresClearLine);
     }
 }

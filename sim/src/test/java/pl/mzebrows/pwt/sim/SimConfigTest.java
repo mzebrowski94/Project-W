@@ -709,11 +709,11 @@ class SimConfigTest {
     }
 
     /**
-     * The leech (G0083): it never walks, clings by touch and never pins, is spent on finishing him, and a leech that
-     * missed is a moment's hazard rather than a mine - its fuse runs out well before a man's clock would.
+     * The leech (G0083): it never walks, clings by touch and never pins, is spent on finishing him, and one that has
+     * hold of nobody never goes off by itself - it waits for a man to pass (G0086).
      */
     @Test
-    void slingsLeechesOntoHimThatClingAndGoOffSoonerOnTheGroundThanOnHim() {
+    void slingsLeechesOntoHimThatClingAndWaitOnTheGroundForAManToPass() {
         SimConfig config = SimConfig.defaults();
         UnitDef leech = config.units().of(UnitKind.LEECH);
         UnitDef slinger = config.units().of(UnitKind.LEECH_SLINGER);
@@ -723,7 +723,7 @@ class SimConfigTest {
         assertThat(leech.grip().pins()).isFalse();
         assertThat(leech.grip().spentOnFinish()).isTrue();
         assertThat(leech.deathSlicks()).isPositive();
-        assertThat(leech.fuse().seconds()).isPositive().isLessThan(leech.grip().holdSeconds());
+        assertThat(leech.fuse().seconds()).isZero();
         assertThat(leech.leap().enabled()).isTrue();
         assertThat(leech.leap().triggerRange())
                 .isLessThanOrEqualTo(leech.perception().detectionRange());

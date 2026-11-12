@@ -9,7 +9,9 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.Harm;
@@ -32,6 +34,11 @@ class AlienTargetingTest {
     private static final float MIDDLE = 55f;
 
     private static final float EAST = 75f;
+
+    /** Within arm's length of the gun once both bodies are counted. */
+    private static final float BESIDE = 4f;
+
+    private static final CommanderInput PRESSING = CommanderInput.IDLE.acting(true);
 
     /** Long enough to see which way it set off, short enough that it has not arrived. */
     private static final int WATCH = 12;
@@ -90,9 +97,9 @@ class AlienTargetingTest {
         assertThat(at(grunt).x).isLessThan(wentEast);
     }
 
-    /** A gun on the player's side is on the list too: the aliens come and take the guns off you. */
+    /** A gun nobody has been on is furniture to them, not a target (G0086). */
     @Test
-    void comesForATurretAsReadilyAsForAMan() {
+    void ignoresATurretNobodyHasManned() {
         Simulation simulation = simulation();
         simulation.spawnCommander(WEST, LANE);
         simulation.spawnTurret(EAST, LANE);
@@ -100,6 +107,24 @@ class AlienTargetingTest {
 
         steps(simulation, WATCH);
 
+        assertThat(at(grunt).x).isLessThan(MIDDLE);
+    }
+
+    /** Once somebody has been on it, the aliens come and take the gun off you, crewed or not (G0086). */
+    @Test
+    void comesForATurretOnceItHasBeenMannedEvenAfterItsCrewStepsOff() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(EAST + BESIDE, LANE);
+        simulation.spawnTurret(EAST, LANE);
+        simulation.step(PRESSING);
+        simulation.step(CommanderInput.IDLE);
+        simulation.step(PRESSING);
+        at(commander).set(WEST, LANE);
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, MIDDLE, LANE);
+
+        steps(simulation, WATCH);
+
+        assertThat(commander.getComponent(Crew.class).aboard()).isFalse();
         assertThat(at(grunt).x).isGreaterThan(MIDDLE);
     }
 

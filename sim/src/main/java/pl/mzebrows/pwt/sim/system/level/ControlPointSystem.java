@@ -10,7 +10,9 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.Scatter;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Rng;
+import pl.mzebrows.pwt.sim.RngStream;
 import pl.mzebrows.pwt.sim.Seats;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
@@ -26,6 +28,7 @@ import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.Whole;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
@@ -38,8 +41,8 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * Progress is drawn by {@code AppearanceSystem}.
  *
  * <p><strong>A taken point lays grenade caches</strong> beside itself, once, on the tick it falls: so many a seated
- * slot, in the ring its reinforcements lie in, off every point (G0078). Allocates a {@code Scatter} then - once per
- * point taken, never per entity.
+ * slot, in the ring its reinforcements lie in, off every point (G0078) - and, on a chance keyed on the point, one
+ * medkit in the same ring (G0086). Allocates a {@code Scatter} then - once per point taken, never per entity.
  */
 public final class ControlPointSystem extends EntitySystem {
 
@@ -50,11 +53,18 @@ public final class ControlPointSystem extends EntitySystem {
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
     private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
 
+    /** A medkit is one draw a point: its second key has nothing to tell apart. */
+    private static final long ONE_A_POINT = 0L;
+
     private final Spawner spawner;
     private final TileMap map;
     private final Rng rng;
     private final SimConfig.ControlPointConfig config;
     private final float cacheRadius;
+    private final float medkitRadius;
+
+    /** The level's seed, which whether a point lays a medkit is keyed from (G0086). */
+    private final long levelSeed;
 
     /** Scratch for counting seats, by slot; overwritten before each read. */
     private final boolean[] seated;
@@ -78,6 +88,8 @@ public final class ControlPointSystem extends EntitySystem {
         this.rng = rng;
         this.config = config.controlPoint();
         this.cacheRadius = config.pickup(PickupKind.ARMOURY_GRENADES).radius();
+        this.medkitRadius = config.pickup(PickupKind.MEDKIT).radius();
+        this.levelSeed = config.seed();
         this.seated = new boolean[capacity];
     }
 
@@ -119,7 +131,7 @@ public final class ControlPointSystem extends EntitySystem {
                 point.takenOrder = lastTaken() + 1;
                 point.heldTicks = point.captureTicks;
                 creditTheTaking(at, point.radius);
-                layGrenadeCaches(at);
+                layWhatATakingLeaves(entity, at);
                 if (point.holdsAfterwards) {
                     standTo(point, at);
                 }
@@ -145,13 +157,22 @@ public final class ControlPointSystem extends EntitySystem {
     }
 
     /**
-     * The grenade caches a point lays the tick it is taken (G0078): so many for every seated slot - standing, down or
-     * on his way back, away or not - outside every point and off every pickup lying there, within the reinforcements'
-     * reach of this one. A cornered point lays fewer.
+     * Whether the point carrying this identity lays a medkit when it is taken (G0086): a function of the point and
+     * the seed alone, so the same point on the same seed always does or never does.
      */
-    private void layGrenadeCaches(Position at) {
+    static boolean laysAMedkit(long levelSeed, long point, float chance) {
+        return Rng.keyed(levelSeed, RngStream.CACHE, point, ONE_A_POINT) < chance;
+    }
+
+    /**
+     * What a point lays the tick it is taken: the grenade caches (G0078), so many for every seated slot - standing,
+     * down or on his way back, away or not - and a medkit on its keyed chance (G0086). Outside every point and off
+     * every pickup lying there, within the reinforcements' reach of this one. A cornered point lays fewer.
+     */
+    private void layWhatATakingLeaves(Entity point, Position at) {
         int count = config.grenadeCaches() * Seats.count(seated, seatedCommanders, returning);
-        if (count <= 0) {
+        boolean medkit = laysAMedkit(levelSeed, Handles.of(point), Whole.fraction(config.medkitChance()));
+        if (count <= 0 && !medkit) {
             return;
         }
         Scatter scatter = new Scatter(map, rng, cacheRadius, cacheRadius);
@@ -165,11 +186,11 @@ public final class ControlPointSystem extends EntitySystem {
             Position where = POSITION.get(pickup);
             scatter.reserve(where.x, where.y, BODY.get(pickup).radius);
         }
-        scatter.scatter(
-                TileRect.around(map, at.x, at.y, config.reinforcementRadius()),
-                count,
-                cacheRadius,
-                (x, y) -> spawner.spawnPickup(PickupKind.ARMOURY_GRENADES, x, y));
+        TileRect ring = TileRect.around(map, at.x, at.y, config.reinforcementRadius());
+        scatter.scatter(ring, count, cacheRadius, (x, y) -> spawner.spawnPickup(PickupKind.ARMOURY_GRENADES, x, y));
+        if (medkit) {
+            scatter.scatter(ring, 1, medkitRadius, (x, y) -> spawner.spawnPickup(PickupKind.MEDKIT, x, y));
+        }
     }
 
     /**

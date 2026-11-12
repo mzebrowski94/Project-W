@@ -98,7 +98,7 @@ public final class TurretSystem extends EntitySystem {
                 continue;
             }
             Turret turret = TURRET.get(station);
-            turret.crewed = true;
+            turret.man();
             work(rider, station, turret, deltaTime);
         }
     }

@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
@@ -39,8 +40,9 @@ class ProvingPreviewTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = UnitKind.class, names = "BOSS_GRUNT", mode = EnumSource.Mode.EXCLUDE)
+    @EnumSource(UnitKind.class)
     void keepsAnythingThatWalksMoving(UnitKind strain) {
+        assumeFalse(SimConfig.defaults().units().of(strain).rooted(), "rooted: it never walks");
         Simulation simulation = Scenarios.world(Scenarios.preview(strain), SimConfig.defaults());
         Position at = simulation
                 .engine()

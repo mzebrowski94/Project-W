@@ -1,6 +1,6 @@
 # G0080: A trooper notices all round up close, and a nest stands out
 
-**Status.** amended by G0085: a nest is weighed as a threat and kept
+**Status.** amended by G0085: a nest is weighed as a threat and kept; amended by G0086: noticed from behind on a chance keyed per pair
 
 **Trigger.** Making a trooper turn on something behind him other than by being hit; widening the **alert**;
 making the squad prefer, or ignore, nests; giving a target kind a weight in a trooper's choice.

@@ -90,6 +90,14 @@ public final class TrooperMoveSystem extends EntitySystem {
     /** How far ahead a shut door shuts his way (G0069). */
     private final float doorWait;
 
+    /** Whether he turns onto a new look at once: a turn speed of zero, or a tick's turn of half round or more. */
+    private final boolean turnsAtOnce;
+
+    /** The most he turns in one tick (G0086), as its cosine and sine. */
+    private final float turnCosine;
+
+    private final float turnSine;
+
     /** One field, re-aimed at whatever a trooper is currently walking to. */
     private final FlowField route;
 
@@ -119,6 +127,10 @@ public final class TrooperMoveSystem extends EntitySystem {
         this.blockDistance = trooper.blockDistance();
         this.detourTicks = Ticks.of(trooper.detourSeconds(), config.tickSeconds());
         this.route = FlowField.over(this.map, trooper.radius());
+        double tickTurn = StrictMath.toRadians(trooper.turnDegreesPerSecond() * config.tickSeconds());
+        this.turnsAtOnce = tickTurn <= 0.0 || tickTurn >= StrictMath.PI;
+        this.turnCosine = (float) StrictMath.cos(tickTurn);
+        this.turnSine = (float) StrictMath.sin(tickTurn);
     }
 
     @Override
@@ -138,61 +150,96 @@ public final class TrooperMoveSystem extends EntitySystem {
             if (Drivers.held(entity)) {
                 continue;
             }
-            sweep(trooper, deltaTime);
-            if (trooper.mode == Trooper.Mode.HOLD
-                    || trooper.mode == Trooper.Mode.SECURE
-                    || (trooper.mode == Trooper.Mode.AID && !trooper.hasTarget)) {
-                // Holding, securing, or standing over somebody: asks for no velocity, still watching.
-                keepWatching(trooper, POSITION.get(entity));
-                continue;
-            }
-            if (!trooper.hasTarget) {
-                trooper.sampling = false;
-                continue;
-            }
-            Position at = POSITION.get(entity);
-            if (trooper.mode == Trooper.Mode.FIGHT && !trooper.closing) {
-                // 1.d: stands still to shoot, facing its target; a fresh bearing when the fight ends.
-                trooper.settled = false;
-                trooper.sampling = false;
-                aimAt(trooper, at);
-                continue;
-            }
-            // Past here a man in a fight is closing in: straight at it, eyes on it, at his own pace.
-            boolean closingIn = trooper.mode == Trooper.Mode.FIGHT;
-            int way = headingTowards(entity, at, trooper);
-            if (way == NOWHERE) {
-                trooper.sampling = false;
-                continue;
-            }
-            // A walk of the grid ahead of him, skipped on a level with no doors at all.
-            trooper.door = doors.size() == 0
-                    ? Handle.NOBODY
-                    : solid.doorAhead(at.x, at.y, direction[0], direction[1], doorWait);
-            if (trooper.door != Handle.NOBODY && waitsAtTheDoor(entity, trooper, at)) {
-                continue;
-            }
-            if (trooper.mode == Trooper.Mode.FOLLOW && closeEnoughToTheCommander(at, trooper)) {
-                // 3.a: a loose formation, still watching while it waits.
-                keepWatching(trooper, at);
-                continue;
-            }
-            trooper.settled = false;
-            trooper.baseLookX = direction[0];
-            trooper.baseLookY = direction[1];
-            watchForABlock(trooper, at);
-            if (trooper.detourRemaining > 0) {
-                trooper.detourRemaining--;
-                sidestep(entity, trooper);
-            } else if (way == STRAIGHT && !closingIn) {
-                // Only in the open: on the route a lean is a lean into the walls.
-                lean(trooper);
-            }
-            trooper.lookX = direction[0];
-            trooper.lookY = direction[1];
-            float speed = SPEED.get(entity).value * (closingIn ? 1f : pace(trooper, deltaTime));
-            STEERING.get(entity).set(direction[0] * speed, direction[1] * speed);
+            float wasX = trooper.lookX;
+            float wasY = trooper.lookY;
+            drive(entity, trooper, deltaTime);
+            turn(trooper, wasX, wasY);
         }
+    }
+
+    /** Decides where he walks and where he would look, this tick: the look he then turns towards. */
+    private void drive(Entity entity, Trooper trooper, float deltaTime) {
+        sweep(trooper, deltaTime);
+        if (trooper.mode == Trooper.Mode.HOLD
+                || trooper.mode == Trooper.Mode.SECURE
+                || (trooper.mode == Trooper.Mode.AID && !trooper.hasTarget)) {
+            // Holding, securing, or standing over somebody: asks for no velocity, still watching.
+            keepWatching(trooper, POSITION.get(entity));
+            return;
+        }
+        if (!trooper.hasTarget) {
+            trooper.sampling = false;
+            return;
+        }
+        Position at = POSITION.get(entity);
+        if (trooper.mode == Trooper.Mode.FIGHT && !trooper.closing) {
+            // 1.d: stands still to shoot, facing its target; a fresh bearing when the fight ends.
+            trooper.settled = false;
+            trooper.sampling = false;
+            aimAt(trooper, at);
+            return;
+        }
+        // Past here a man in a fight is closing in: straight at it, eyes on it, at his own pace.
+        boolean closingIn = trooper.mode == Trooper.Mode.FIGHT;
+        int way = headingTowards(entity, at, trooper);
+        if (way == NOWHERE) {
+            trooper.sampling = false;
+            return;
+        }
+        // A walk of the grid ahead of him, skipped on a level with no doors at all.
+        trooper.door =
+                doors.size() == 0 ? Handle.NOBODY : solid.doorAhead(at.x, at.y, direction[0], direction[1], doorWait);
+        if (trooper.door != Handle.NOBODY && waitsAtTheDoor(entity, trooper, at)) {
+            return;
+        }
+        if (trooper.mode == Trooper.Mode.FOLLOW && closeEnoughToTheCommander(at, trooper)) {
+            // 3.a: a loose formation, still watching while it waits.
+            keepWatching(trooper, at);
+            return;
+        }
+        trooper.settled = false;
+        trooper.baseLookX = direction[0];
+        trooper.baseLookY = direction[1];
+        watchForABlock(trooper, at);
+        if (trooper.detourRemaining > 0) {
+            trooper.detourRemaining--;
+            sidestep(entity, trooper);
+        } else if (way == STRAIGHT && !closingIn) {
+            // Only in the open: on the route a lean is a lean into the walls.
+            lean(trooper);
+        }
+        trooper.lookX = direction[0];
+        trooper.lookY = direction[1];
+        float speed = SPEED.get(entity).value * (closingIn ? 1f : pace(trooper, deltaTime));
+        STEERING.get(entity).set(direction[0] * speed, direction[1] * speed);
+    }
+
+    /**
+     * Turns him from the way he was looking towards the way he has just decided to look, by no more than a tick's
+     * turn (G0086): every turn, not only onto something behind him - a snap reads as a machine. What he decided
+     * stays in his base look; his look is where he has got to, which is the facing drawn and the arc he notices in.
+     *
+     * <p>A fixed angle a tick, as its cosine and sine worked out once, so the turn itself needs no trigonometry.
+     * Within one tick's turn of it, he is on it. The way round is the shorter; dead behind, to his left.
+     */
+    private void turn(Trooper trooper, float wasX, float wasY) {
+        if (turnsAtOnce || (wasX == 0f && wasY == 0f)) {
+            return;
+        }
+        float wantX = trooper.lookX;
+        float wantY = trooper.lookY;
+        if (wasX * wantX + wasY * wantY >= turnCosine) {
+            return;
+        }
+        float side = wasX * wantY - wasY * wantX < 0f ? -1f : 1f;
+        float turnedX = wasX * turnCosine - wasY * turnSine * side;
+        float turnedY = wasX * turnSine * side + wasY * turnCosine;
+        float length = (float) Math.sqrt(turnedX * turnedX + turnedY * turnedY);
+        if (length <= EPSILON) {
+            return;
+        }
+        trooper.lookX = turnedX / length;
+        trooper.lookY = turnedY / length;
     }
 
     /**

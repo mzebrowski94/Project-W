@@ -349,6 +349,7 @@ public final class EnemyLeapSystem extends EntitySystem {
         leap.remainingTicks = modifiers.leapAirborneTicks(entity, leap.airborneTicks);
         leap.flightSpeed = modifiers.leapSpeed(entity, leap.speed);
         leap.leapsLeft--;
+        leap.leaps++;
         velocity.set(leap.directionX * leap.flightSpeed, leap.directionY * leap.flightSpeed);
     }
 

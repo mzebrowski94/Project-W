@@ -1,7 +1,6 @@
 package pl.mzebrows.pwt.sim.system.squad;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA_TILES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.HOLD_JITTER_SECONDS;
@@ -19,6 +18,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ordering;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.twoBiomes;
 
 import com.badlogic.ashley.core.Entity;
 import org.assertj.core.data.Offset;
@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import pl.mzebrows.pwt.map.Terrain;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
@@ -56,7 +55,7 @@ class TrooperAdvanceTest {
 
     private static final float MIDDLE = 50f;
 
-    /** In the west half of {@link #twoBiomes} and in the east half. */
+    /** In the west half of {@link AlphaWorlds#twoBiomes} and in the east half. */
     private static final float WEST = 20f;
 
     private static final float EAST = 80f;
@@ -613,17 +612,6 @@ class TrooperAdvanceTest {
 
         Velocity velocity = trooper.getComponent(Velocity.class);
         return (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
-    }
-
-    /** The arena split down the middle: the west half biome zero, the east half biome one. */
-    private static TileMap twoBiomes() {
-        TileMap.Builder builder = ground();
-        for (int col = ARENA_TILES / 2; col < ARENA_TILES; col++) {
-            for (int row = 0; row < ARENA_TILES; row++) {
-                builder.region(col, row, 1);
-            }
-        }
-        return builder.regionInBiome(1, 1).build();
     }
 
     private static Entity heldAfterwards(Entity point) {

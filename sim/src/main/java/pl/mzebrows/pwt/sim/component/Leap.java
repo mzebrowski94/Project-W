@@ -44,6 +44,15 @@ public final class Leap implements Component, Pool.Poolable {
     public float hesitationMinSeconds;
     public float hesitationMaxSeconds;
 
+    /** The chance, a fraction, that a trooper it comes at inside his arc deflects one of its leaps (G0086). */
+    public float deflectChance;
+
+    /**
+     * How many leaps it has launched since it was put on the field: which leap this is, for a chance keyed once per
+     * leap and man (G0086). Never reset by {@link #finish()}.
+     */
+    public int leaps;
+
     public Phase phase = Phase.READY;
 
     /** Counts down the current phase. Decremented by {@code CooldownSystem} with every other timer. */
@@ -97,7 +106,8 @@ public final class Leap implements Component, Pool.Poolable {
             int newBetweenTicks,
             int newCooldownTicks,
             float newHesitationMinSeconds,
-            float newHesitationMaxSeconds) {
+            float newHesitationMaxSeconds,
+            float newDeflectChance) {
         this.enabled = newEnabled;
         this.triggerRange = newTriggerRange;
         this.speed = newSpeed;
@@ -107,6 +117,8 @@ public final class Leap implements Component, Pool.Poolable {
         this.cooldownTicks = newCooldownTicks;
         this.hesitationMinSeconds = newHesitationMinSeconds;
         this.hesitationMaxSeconds = newHesitationMaxSeconds;
+        this.deflectChance = newDeflectChance;
+        this.leaps = 0;
         this.phase = Phase.READY;
         this.remainingTicks = 0;
         this.cooldownRemaining = 0;
@@ -192,6 +204,8 @@ public final class Leap implements Component, Pool.Poolable {
         cooldownTicks = 0;
         hesitationMinSeconds = 0f;
         hesitationMaxSeconds = 0f;
+        deflectChance = 0f;
+        leaps = 0;
         phase = Phase.READY;
         remainingTicks = 0;
         cooldownRemaining = 0;

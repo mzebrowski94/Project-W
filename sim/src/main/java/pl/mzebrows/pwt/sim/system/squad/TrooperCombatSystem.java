@@ -7,11 +7,15 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
+import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Odds;
+import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.collision.Solid;
+import pl.mzebrows.pwt.sim.collision.SpatialGrid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -32,6 +36,7 @@ import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.TrooperGrenadeDef;
 import pl.mzebrows.pwt.sim.system.combat.Guns;
 import pl.mzebrows.pwt.sim.system.combat.Throws;
+import pl.mzebrows.pwt.sim.system.query.Deflect;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 
@@ -43,6 +48,11 @@ import pl.mzebrows.pwt.sim.system.query.Sight;
  * is rare on purpose</strong> - answering a leap is the commander's moment (G0013) - rolled through
  * {@code Odds} on {@code AiChance.SWING_AT_A_LEAP}. A man in something's jaws fires nothing and
  * swings at what holds him, now and then ({@code AiChance.STRUGGLE}, G0045).
+ *
+ * <p><strong>A man, not a machine</strong> (G0086): he fires only once he has turned to within {@code fireArcDegrees}
+ * of where he aims, and each shot of his own errs by up to {@code aimErrorDegrees} either side, drawn from the squad's
+ * stream. And a leap he would deflect - {@code Deflect}, keyed per leap and man - he meets with his hand strike as it
+ * comes into his reach, whatever else he is doing, so it lands on the creature before its grip could.
  *
  * <p>And, once an upgrade has turned {@code AiChance.THROW_A_GRENADE} up, throws a grenade into a pack
  * instead of a shot - only where the blast is the enemy's (G0051): a pack where it lands, nobody of
@@ -66,10 +76,28 @@ public final class TrooperCombatSystem extends EntitySystem {
     private final Throws throwing;
     private final Odds odds;
 
+    /** The squad's stream, for how far each of his shots errs (G0086). */
+    private final Rng rng;
+
     private final Solid map;
     private final TrooperGrenadeDef grenade;
     private final int squadGapTicks;
     private final float tickSeconds;
+
+    /** How far onto his aim his facing must be before he fires, as a cosine (G0086). */
+    private final float fireArcCosine;
+
+    /** How far either side of his aim a shot of his may go, in radians; zero shoots true (G0086). */
+    private final float aimError;
+
+    /** The level's seed, which a deflect is keyed from (G0086). */
+    private final long levelSeed;
+
+    /** Every leaper on the field, filed once a tick, for the leaps that come into a man's reach. */
+    private final SpatialGrid leapsNear;
+
+    @NotState("scratch refilled by every query of the leapers")
+    private final Array<Entity> nearby = new Array<>();
 
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
@@ -86,10 +114,15 @@ public final class TrooperCombatSystem extends EntitySystem {
     /** Every entity with a handle, for finding what has a man in its jaws. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
-    public TrooperCombatSystem(SimConfig config, Solid map, Guns guns, Throws throwing, Odds odds) {
+    public TrooperCombatSystem(SimConfig config, Solid map, Guns guns, Throws throwing, Odds odds, Rng rng) {
         this.guns = guns;
         this.throwing = throwing;
         this.odds = odds;
+        this.rng = rng;
+        this.fireArcCosine = config.trooper().fireArcCosine();
+        this.aimError = config.trooper().aimErrorRadians();
+        this.levelSeed = config.seed();
+        this.leapsNear = new SpatialGrid(map.map().worldWidth(), map.map().worldHeight(), config.largestRadius() * 2f);
         this.map = map;
         this.grenade = config.trooper().grenade();
         this.tickSeconds = config.tickSeconds();
@@ -113,6 +146,7 @@ public final class TrooperCombatSystem extends EntitySystem {
 
     @Override
     public void update(float deltaTime) {
+        fileTheLeapers();
         for (int i = 0; i < troopers.size(); i++) {
             Entity entity = troopers.get(i);
             if (Drivers.gripped(entity)) {
@@ -124,6 +158,9 @@ public final class TrooperCombatSystem extends EntitySystem {
                 continue;
             }
             if (Drivers.held(entity)) {
+                continue;
+            }
+            if (deflectALeap(entity)) {
                 continue;
             }
             Trooper trooper = TROOPER.get(entity);
@@ -158,26 +195,90 @@ public final class TrooperCombatSystem extends EntitySystem {
         if (!melee.ready()) {
             return false;
         }
-        Position at = POSITION.get(entity);
-        float reach = melee.reach + melee.radius + BODY.get(entity).radius;
+        Entity leaper = leapInReach(entity, melee, false);
+        if (leaper == null) {
+            return false;
+        }
+        Trooper trooper = TROOPER.get(entity);
+        trooper.swingDue = odds.roll(entity, AiChance.SWING_AT_A_LEAP, trooper.swingDue, deltaTime);
+        if (!Odds.spent(trooper.swingDue)) {
+            return false;
+        }
+        Position where = POSITION.get(leaper);
+        melee.beginSwing(where.x, where.y);
+        return true;
+    }
+
+    /**
+     * Meets a leap he deflects with his hand strike as it comes into his reach (G0086): no dice per second, the
+     * keyed answer {@link Deflect} gives for that leap and him. Returns whether he swung; if so he does not fire.
+     *
+     * <p>Swung now, while it is still in the air, so the strike lands on it before it could take hold of him - and
+     * the contact rules refuse its grip on the same answer, should it land first: the strike is recorded as spent on
+     * this leap.
+     */
+    private boolean deflectALeap(Entity entity) {
+        Melee melee = MELEE.get(entity);
+        if (!melee.ready()) {
+            return false;
+        }
+        Entity leaper = leapInReach(entity, melee, true);
+        if (leaper == null) {
+            return false;
+        }
+        Position where = POSITION.get(leaper);
+        melee.beginSwing(where.x, where.y);
+        // The strike now spent on this leap still answers for it as it lands, and for no other.
+        Trooper trooper = TROOPER.get(entity);
+        trooper.metLeaper = Handles.of(leaper);
+        trooper.metLeap = LEAP.get(leaper).leaps;
+        return true;
+    }
+
+    /** Every leaper not dying into the grid, once a tick, before any man asks it. */
+    private void fileTheLeapers() {
+        leapsNear.clear();
         for (int i = 0; i < leapers.size(); i++) {
             Entity leaper = leapers.get(i);
-            if (!LEAP.get(leaper).committed() || Life.dying(leaper)) {
+            if (Life.dying(leaper)) {
                 continue;
             }
             Position where = POSITION.get(leaper);
-            if (!Sight.withinRange(at.x, at.y, where.x, where.y, reach)) {
+            leapsNear.insert(leaper, where.x, where.y);
+        }
+    }
+
+    /**
+     * The nearest leap within his hand strike's reach that he would deflect, or else - {@code deflecting} false - the
+     * nearest one merely committed (G0013), or null. From the grid; ties go to the lower handle, so the answer does
+     * not hang on the order it files them in.
+     */
+    private @Nullable Entity leapInReach(Entity entity, Melee melee, boolean deflecting) {
+        Position at = POSITION.get(entity);
+        float reach = melee.reach + melee.radius + BODY.get(entity).radius;
+        leapsNear.near(at.x, at.y, reach, nearby);
+        @Nullable Entity nearest = null;
+        float shortest = Float.MAX_VALUE;
+        for (int i = 0; i < nearby.size; i++) {
+            Entity leaper = nearby.get(i);
+            Position where = POSITION.get(leaper);
+            float dx = where.x - at.x;
+            float dy = where.y - at.y;
+            float squared = dx * dx + dy * dy;
+            if (squared > reach * reach
+                    || squared > shortest
+                    || (squared == shortest && nearest != null && Handles.of(leaper) > Handles.of(nearest))) {
                 continue;
             }
-            Trooper trooper = TROOPER.get(entity);
-            trooper.swingDue = odds.roll(entity, AiChance.SWING_AT_A_LEAP, trooper.swingDue, deltaTime);
-            if (!Odds.spent(trooper.swingDue)) {
-                return false;
+            boolean answers = deflecting
+                    ? Deflect.deflects(levelSeed, leaper, entity)
+                    : LEAP.get(leaper).committed();
+            if (answers) {
+                nearest = leaper;
+                shortest = squared;
             }
-            melee.beginSwing(where.x, where.y);
-            return true;
         }
-        return false;
+        return nearest;
     }
 
     /**
@@ -320,9 +421,11 @@ public final class TrooperCombatSystem extends EntitySystem {
     }
 
     /**
-     * One pull of the trigger at what it is aiming at, whenever the gun is ready.
+     * One pull of the trigger at what it is aiming at, whenever the gun is ready and he has turned onto it.
      *
-     * <p>Through {@link Guns} and {@code Muzzle}, as every other shooter.
+     * <p>Through {@link Guns} and {@code Muzzle}, as every other shooter. <strong>Only once his facing is within his
+     * fire arc of the aim</strong>, and the shot then errs by a draw from the squad's stream (G0086) - his own error,
+     * before his gun's spread; a gun on a mount he crews is the mount's, and never comes through here.
      */
     private void fire(Entity entity, Trooper trooper) {
         if (!guns.ready(entity)) {
@@ -335,6 +438,20 @@ public final class TrooperCombatSystem extends EntitySystem {
         if (distance <= EPSILON) {
             return;
         }
-        guns.pull(entity, toX / distance, toY / distance, Tally.NOBODY);
+        float aimX = toX / distance;
+        float aimY = toY / distance;
+        if (trooper.lookX * aimX + trooper.lookY * aimY < fireArcCosine) {
+            // Still turning onto it (G0086).
+            return;
+        }
+        if (aimError > 0f) {
+            float turn = rng.nextFloat(-aimError, aimError);
+            float cos = (float) StrictMath.cos(turn);
+            float sin = (float) StrictMath.sin(turn);
+            float erredX = aimX * cos - aimY * sin;
+            aimY = aimX * sin + aimY * cos;
+            aimX = erredX;
+        }
+        guns.pull(entity, aimX, aimY, Tally.NOBODY);
     }
 }

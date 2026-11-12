@@ -36,6 +36,14 @@ import pl.mzebrows.pwt.sim.system.query.Sight;
  * walked to and taken as any point is, but only while a commander on his feet is in its biome - the last
  * fight starts when he gets there. Once it is taken it is stood round, on a ring {@code
  * sim.trooper.postRingRadius} round its middle, and with nothing left to take it is where every man goes next.
+ *
+ * <p><strong>The capture crowd</strong> (G0086): once {@code sim.trooper.captureCrowd} men are settled on a point
+ * being taken - commanders on it, troopers on it securing it - a trooper who comes to it goes on to the next point the
+ * squad would take after it and holds there: one point ahead, never past it (G0040's line), so a point somebody was
+ * sent on to is never itself passed over. Men who settle on it together past a full crowd are its spares, the last in
+ * spawn order, and go on the same way. A man sent on keeps to the point chosen for him ({@code Trooper.sentAhead})
+ * until he stands on it or it is taken. With none, he wanders round this one. Counted once a tick, men against points;
+ * never man against man.
  */
 final class TrooperObjective {
 
@@ -43,6 +51,7 @@ final class TrooperObjective {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
+    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
 
     /** How far inside a point counts as standing on it, as a fraction of its radius. */
     private static final float INSIDE_THE_EDGE = 0.7f;
@@ -54,6 +63,10 @@ final class TrooperObjective {
     private final float holdJitterSeconds;
     private final float rallyRadius;
     private final float postRingRadius;
+    private final int captureCrowd;
+
+    /** Where a crowd's spare man with no next point wanders round it. */
+    private final TrooperRoam roam;
 
     /** One field per control point, parallel to the family. Rebuilt only if the set of points changes. */
     @NotState("cache of one flow field per control point, a pure function of the map and where the points are")
@@ -74,12 +87,29 @@ final class TrooperObjective {
     @NotState("scratch rebuilt every tick by splitIntoSectors")
     private int[] placed = new int[0];
 
+    /** Scratch: how many men are settled on each point being taken this tick - its crowd, up to a full one. */
+    @NotState("scratch rebuilt every tick by countCrowds")
+    private int[] crowdOn = new int[0];
+
+    /** Scratch: for each crowded point, the next point the squad would take after it, or {@code -1}. */
+    @NotState("scratch rebuilt every tick by countCrowds")
+    private int[] nextAfter = new int[0];
+
+    /** Scratch: whether a point is the one a crowded point sends its spare men on to - never passed over itself. */
+    @NotState("scratch rebuilt every tick by countCrowds")
+    private boolean[] onePointAhead = new boolean[0];
+
+    /** Scratch: the troopers settled on a point whose crowd was already full, in family order. */
+    @NotState("scratch rebuilt every tick by countCrowds")
+    private final Array<Entity> spares = new Array<>();
+
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> men = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
 
-    TrooperObjective(SimConfig config, TileMap map, Rng rng) {
+    TrooperObjective(SimConfig config, TileMap map, Rng rng, TrooperRoam roam) {
         this.map = map;
         this.rng = rng;
         this.bodyRadius = config.trooper().radius();
@@ -87,6 +117,8 @@ final class TrooperObjective {
         this.holdJitterSeconds = config.trooper().holdJitterSeconds();
         this.rallyRadius = config.trooper().rallyRadius();
         this.postRingRadius = config.trooper().postRingRadius();
+        this.captureCrowd = config.trooper().captureCrowd();
+        this.roam = roam;
     }
 
     /** Takes the views it reads from the engine, once, as its system is added. */
@@ -98,15 +130,127 @@ final class TrooperObjective {
         commanders = engine.getEntitiesFor(
                 Family.all(Commander.class, Position.class).get());
         doors = engine.getEntitiesFor(Family.all(Door.class, Handle.class).get());
+        men = engine.getEntitiesFor(Life.onTheField());
+    }
+
+    /**
+     * Counts the crowd settled on each point being taken, settles where each crowded point sends its spare men, and
+     * sends on the troopers settled past a full crowd (G0086). Once a tick, before any man decides: men against
+     * points, then points against points. Commanders first, so a man never crowds out a commander; then troopers
+     * securing it, in family order, so who is a spare is the same answer on every machine.
+     */
+    void countCrowds() {
+        int count = points.size();
+        if (crowdOn.length < count) {
+            crowdOn = new int[count];
+            nextAfter = new int[count];
+            onePointAhead = new boolean[count];
+        }
+        for (int p = 0; p < count; p++) {
+            crowdOn[p] = 0;
+            nextAfter[p] = -1;
+            onePointAhead[p] = false;
+        }
+        spares.clear();
+        if (captureCrowd <= 0) {
+            return;
+        }
+        for (int i = 0; i < men.size(); i++) {
+            Entity man = men.get(i);
+            if (COMMANDER.has(man) && !Drivers.held(man) && POSITION.has(man)) {
+                int point = pointBeingTakenUnder(POSITION.get(man));
+                if (point >= 0) {
+                    crowdOn[point]++;
+                }
+            }
+        }
+        countTroopers(true);
+        countTroopers(false);
+        for (int p = 0; p < count; p++) {
+            if (crowdOn[p] >= captureCrowd) {
+                Position where = POSITION.get(points.get(p));
+                nextAfter[p] = nearestUncapturedPoint(map.colAt(where.x), map.rowAt(where.y), p);
+                if (nextAfter[p] >= 0) {
+                    onePointAhead[nextAfter[p]] = true;
+                }
+            }
+        }
+        for (int i = 0; i < spares.size; i++) {
+            Entity spare = spares.get(i);
+            int point = pointBeingTakenUnder(POSITION.get(spare));
+            if (!onePointAhead[point] && nextAfter[point] >= 0) {
+                TROOPER.get(spare).sentAhead = Handles.of(points.get(nextAfter[point]));
+            }
+        }
+    }
+
+    /**
+     * Counts into each point's crowd the troopers settled on it - securing it ({@code securing}), or else on their way
+     * onto it - up to a full crowd; the rest are its spares. Those securing it first, so a man walking in never
+     * displaces one already standing there.
+     */
+    private void countTroopers(boolean securing) {
+        for (int i = 0; i < men.size(); i++) {
+            Entity man = men.get(i);
+            if (!TROOPER.has(man) || Drivers.held(man) || !POSITION.has(man)) {
+                continue;
+            }
+            Trooper trooper = TROOPER.get(man);
+            if ((trooper.mode == Trooper.Mode.SECURE) != securing) {
+                continue;
+            }
+            int point = settledOn(trooper, POSITION.get(man));
+            if (point < 0) {
+                continue;
+            }
+            if (crowdOn[point] < captureCrowd) {
+                crowdOn[point]++;
+            } else {
+                spares.add(man);
+            }
+        }
+    }
+
+    /**
+     * The point being taken this trooper is settled on, or {@code -1}: inside its whole radius, and securing it or
+     * walking onto it - not merely crossing it, nor wandering round it. A man shoved off his spot is still on it.
+     */
+    private int settledOn(Trooper trooper, Position at) {
+        int point = pointBeingTakenUnder(at);
+        if (point < 0) {
+            return -1;
+        }
+        if (trooper.mode == Trooper.Mode.SECURE) {
+            return point;
+        }
+        Position where = POSITION.get(points.get(point));
+        boolean walkingOnto = trooper.mode == Trooper.Mode.ADVANCE
+                && trooper.hasTarget
+                && trooper.targetX == where.x
+                && trooper.targetY == where.y;
+        return walkingOnto ? point : -1;
     }
 
     /**
      * Heads for the nearest point not yet taken, and settles on it once standing there - or, with none
      * left, for ground held afterwards unless he is pushing out from it - or reports that there is
-     * nowhere to go.
+     * nowhere to go. A man the capture crowd sent on heads for the point chosen for him instead (G0086).
      */
     boolean advances(Trooper trooper, Position at) {
-        int nearest = nearestUncapturedPoint(at);
+        int nearest = sentAheadTo(trooper);
+        if (nearest < 0) {
+            nearest = nearestUncapturedPoint(at);
+            if (nearest >= 0 && crowdedFor(nearest, trooper, at)) {
+                if (nextAfter[nearest] < 0) {
+                    // Nowhere further to go: round this one, as a squad with nothing left to take roams.
+                    Position where = POSITION.get(points.get(nearest));
+                    roam.exploresAround(trooper, at, where.x, where.y, POINT.get(points.get(nearest)).radius);
+                    return true;
+                }
+                nearest = nextAfter[nearest];
+                trooper.sentAhead = Handles.of(points.get(nearest));
+            }
+        }
         if (nearest < 0 && !trooper.pushingForward()) {
             nearest = heldPoint();
         }
@@ -119,11 +263,30 @@ final class TrooperObjective {
         // Already standing on it: hold this spot and watch, not shuffle towards the middle.
         boolean arrived = standingOn(point, at);
         if (arrived) {
-            // One "forward" buys one point: spent on arrival.
+            // One "forward" buys one point: spent on arrival. So does being sent on by a crowd.
             trooper.sentOn = false;
+            trooper.sentAhead = Handle.NOBODY;
         }
         trooper.mode = arrived ? Trooper.Mode.SECURE : Trooper.Mode.ADVANCE;
         return true;
+    }
+
+    /**
+     * The point the capture crowd sent this man on to while it is still there to take, or {@code -1} - clearing it
+     * once it is taken or gone (G0086).
+     */
+    private int sentAheadTo(Trooper trooper) {
+        if (trooper.sentAhead == Handle.NOBODY) {
+            return -1;
+        }
+        for (int p = 0; p < points.size(); p++) {
+            Entity point = points.get(p);
+            if (Handles.of(point) == trooper.sentAhead && !POINT.get(point).captured) {
+                return p;
+            }
+        }
+        trooper.sentAhead = Handle.NOBODY;
+        return -1;
     }
 
     /**
@@ -195,6 +358,37 @@ final class TrooperObjective {
         return -1;
     }
 
+    /**
+     * Whether a man here, coming to this point, finds it already crowded (G0086): a full crowd settled on it, and it
+     * not the point a crowd elsewhere sent men on to - one point ahead, never past it. A man already settled on it
+     * stays: he is one of the crowd, or a spare {@link #countCrowds} has sent on. One crossing it or wandering round it
+     * is not settled and never counted, and men arriving on one tick are counted before any of them is a spare.
+     */
+    private boolean crowdedFor(int point, Trooper trooper, Position at) {
+        if (captureCrowd <= 0 || onePointAhead[point]) {
+            return false;
+        }
+        if (settledOn(trooper, at) == point) {
+            return false;
+        }
+        return crowdOn[point] >= captureCrowd;
+    }
+
+    /**
+     * Which point being taken this position stands inside, its whole radius, or {@code -1}: the measure a point is
+     * held by. The first, if they overlap.
+     */
+    private int pointBeingTakenUnder(Position at) {
+        for (int p = 0; p < points.size(); p++) {
+            ControlPoint point = POINT.get(points.get(p));
+            Position where = POSITION.get(points.get(p));
+            if (!point.captured && Sight.withinRange(at.x, at.y, where.x, where.y, point.radius)) {
+                return p;
+            }
+        }
+        return -1;
+    }
+
     /** Which point this position counts as standing on, or {@code -1}. The first, if they overlap. */
     private int pointUnder(Position at) {
         for (int p = 0; p < points.size(); p++) {
@@ -226,7 +420,8 @@ final class TrooperObjective {
      * who is ahead, never to run ahead of one (G0040). Posture is {@code SECURE}, as while capturing.
      */
     boolean holdsWhatItHasTaken(Trooper trooper, Position at, float deltaTime) {
-        if (trooper.sentOn) {
+        if (trooper.sentOn || trooper.sentAhead != Handle.NOBODY) {
+            // Told to go on, or sent on by a crowd (G0086): ground already taken is ground he crosses.
             return false;
         }
         int taken = takenPointUnder(at);
@@ -341,13 +536,16 @@ final class TrooperObjective {
      * <p>Ties go to the first spawned: insertion order and a strict comparison.
      */
     private int nearestUncapturedPoint(Position at) {
-        int col = map.colAt(at.x);
-        int row = map.rowAt(at.y);
+        return nearestUncapturedPoint(map.colAt(at.x), map.rowAt(at.y), -1);
+    }
+
+    /** The same, from a tile, passing over one point by its index ({@code -1} passes over none). */
+    private int nearestUncapturedPoint(int col, int row, int passOver) {
         int nearest = -1;
         int shortest = Integer.MAX_VALUE;
         for (int i = 0; i < points.size(); i++) {
             ControlPoint point = POINT.get(points.get(i));
-            if (point.captured || (point.holdsAfterwards && !aCommanderInBiomeOf(points.get(i)))) {
+            if (i == passOver || point.captured || (point.holdsAfterwards && !aCommanderInBiomeOf(points.get(i)))) {
                 continue;
             }
             int steps = routes[i].stepsTo(col, row);

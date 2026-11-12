@@ -714,6 +714,9 @@ public final class AlphaWorlds {
     /** One a seated slot, as the shipped number is, so a test counting caches counts players. */
     public static final int POINT_GRENADE_CACHES = 1;
 
+    /** Off, so a test counting what a taken point lays counts grenade caches; a medkit test turns it on. */
+    public static final int POINT_MEDKIT_CHANCE = 0;
+
     /** What one crate is worth. Three, as the shipped one is. */
     public static final int CRATE_TROOPERS = 3;
 
@@ -752,6 +755,21 @@ public final class AlphaWorlds {
 
     /** As it ships: a fouled man may aim most of the way to his target's edge (G0084). */
     public static final float TROOPER_AIM_ACROSS = 0.9f;
+
+    /**
+     * A man who turns at once, fires on any facing, shoots true and notices nothing behind him past his all-round
+     * range: G0086 off, so no test about something else waits on a turn or a draw. The tests about it switch it on.
+     */
+    public static final float TROOPER_TURN_DEGREES_PER_SECOND = 0f;
+
+    public static final float TROOPER_FIRE_ARC_DEGREES = 180f;
+
+    public static final float TROOPER_AIM_ERROR_DEGREES = 0f;
+
+    public static final int TROOPER_NOTICE_BEHIND_PERCENT = 0;
+
+    /** Off, so a test about something else may stand any number of men on a point; the crowd's tests set it. */
+    public static final int TROOPER_CAPTURE_CROWD = 0;
 
     /**
      * Nothing occasional happens in the base fixture.
@@ -954,6 +972,11 @@ public final class AlphaWorlds {
                         MEDKIT_REACH,
                         CLOSE_IN_FACTOR,
                         TROOPER_AIM_ACROSS,
+                        TROOPER_TURN_DEGREES_PER_SECOND,
+                        TROOPER_FIRE_ARC_DEGREES,
+                        TROOPER_AIM_ERROR_DEGREES,
+                        TROOPER_NOTICE_BEHIND_PERCENT,
+                        TROOPER_CAPTURE_CROWD,
                         new TrooperGrenadeDef(TROOPER_GRENADE_COOLDOWN, MIN_CLUSTER, SAFETY_MARGIN, SQUAD_GAP_SECONDS)),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 // Never musters: men turning up every so often would move every count in every test.
@@ -1597,7 +1620,8 @@ public final class AlphaWorlds {
                         POINT_REINFORCEMENTS,
                         POINT_REINFORCEMENTS,
                         POST_LOITER_RADIUS,
-                        POINT_GRENADE_CACHES),
+                        POINT_GRENADE_CACHES,
+                        POINT_MEDKIT_CHANCE),
                 new SimConfig.TurretConfig(
                         TURRET_RADIUS,
                         TURRET_HEALTH,
@@ -1868,6 +1892,17 @@ public final class AlphaWorlds {
         return TileMap.builder(ARENA_TILES, ARENA_TILES, TILE).fill(Terrain.PLAIN);
     }
 
+    /** The arena split down the middle: the west half biome zero, the east half biome one. */
+    public static TileMap twoBiomes() {
+        TileMap.Builder builder = ground();
+        for (int col = ARENA_TILES / 2; col < ARENA_TILES; col++) {
+            for (int row = 0; row < ARENA_TILES; row++) {
+                builder.region(col, row, 1);
+            }
+        }
+        return builder.regionInBiome(1, 1).build();
+    }
+
     /** The row of the wall {@link #walledAtADoorway()} lays across the arena. */
     public static final int WALL_ROW = 10;
 
@@ -1918,7 +1953,8 @@ public final class AlphaWorlds {
                 LEAP_BETWEEN,
                 LEAP_COOLDOWN,
                 LEAP_HESITATION,
-                LEAP_HESITATION);
+                LEAP_HESITATION,
+                0);
     }
 
     /**
@@ -1962,7 +1998,12 @@ public final class AlphaWorlds {
      * wants an enemy that stays where it was put.
      */
     public static Simulation wandering() {
-        return new Simulation(everyStrain(
+        return new Simulation(drifting(0f));
+    }
+
+    /** {@link #wandering()}'s config, with every strain's home drifting this far towards each spot it reaches. */
+    public static SimConfig drifting(float driftPerStop) {
+        return everyStrain(
                 config(),
                 strain -> strain.withPerception(
                                 PerceptionDef.allRound(false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))
@@ -1973,7 +2014,8 @@ public final class AlphaWorlds {
                                 WANDER_ARRIVE_RADIUS,
                                 WANDER_PAUSE,
                                 WANDER_PAUSE,
-                                WANDER_TIMEOUT))));
+                                WANDER_TIMEOUT,
+                                driftPerStop)));
     }
 
     /**
@@ -2123,7 +2165,8 @@ public final class AlphaWorlds {
                                 WANDER_ARRIVE_RADIUS,
                                 WANDER_PAUSE,
                                 WANDER_PAUSE,
-                                WANDER_TIMEOUT))));
+                                WANDER_TIMEOUT,
+                                0f))));
     }
 
     /**

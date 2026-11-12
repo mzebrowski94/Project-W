@@ -99,6 +99,7 @@ import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.WeaponType;
+import pl.mzebrows.pwt.sim.def.Whole;
 
 /**
  * The one place that builds entity state, so no system has to remember which components a commander
@@ -499,7 +500,8 @@ public final class Spawner {
                         def.wander().arriveRadius(),
                         def.wander().pauseMinSeconds(),
                         def.wander().pauseMaxSeconds(),
-                        ticks(def.wander().waypointTimeoutSeconds()));
+                        ticks(def.wander().waypointTimeoutSeconds()),
+                        def.wander().driftPerStop());
         entity.getComponent(Avoidance.class)
                 .set(
                         def.avoidance().enabled(),
@@ -516,7 +518,8 @@ public final class Spawner {
                         ticks(def.leap().betweenSeconds()),
                         ticks(def.leap().cooldownSeconds()),
                         def.leap().hesitationMinSeconds(),
-                        def.leap().hesitationMaxSeconds());
+                        def.leap().hesitationMaxSeconds(),
+                        Whole.fraction(def.leap().deflectChance()));
         entity.getComponent(Hop.class)
                 .set(
                         def.hop().enabled(),
@@ -681,7 +684,8 @@ public final class Spawner {
                         rabbit.wander().arriveRadius(),
                         rabbit.wander().pauseMinSeconds(),
                         rabbit.wander().pauseMaxSeconds(),
-                        ticks(rabbit.wander().waypointTimeoutSeconds()))
+                        ticks(rabbit.wander().waypointTimeoutSeconds()),
+                        rabbit.wander().driftPerStop())
                 .anchor(x, y));
         entity.add(engine.createComponent(Dodge.class)
                 .set(

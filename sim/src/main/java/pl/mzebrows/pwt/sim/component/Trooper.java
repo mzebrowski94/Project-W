@@ -235,6 +235,20 @@ public final class Trooper implements Component, Pool.Poolable {
     public boolean fouled;
 
     /**
+     * The creature whose leap he last swung his strike at to deflect it (G0086), by handle, and which of its leaps
+     * that was: the strike he spent still answers for that leap as it lands, and for no other.
+     */
+    public long metLeaper = Handle.NOBODY;
+
+    public int metLeap;
+
+    /**
+     * The point the capture crowd sent him on to (G0086), by handle, or nobody: he keeps to it until he stands on it
+     * or it is taken - one point ahead, never a nearer one he passes on the way.
+     */
+    public long sentAhead = Handle.NOBODY;
+
+    /**
      * What it is still due before it next swings at a leap, {@code Odds}' budget for
      * {@code AiChance.SWING_AT_A_LEAP}. Zero until the first time the chance comes up.
      */
@@ -324,6 +338,9 @@ public final class Trooper implements Component, Pool.Poolable {
         door = Handle.NOBODY;
         keeping = Handle.NOBODY;
         fouled = false;
+        metLeaper = Handle.NOBODY;
+        metLeap = 0;
+        sentAhead = Handle.NOBODY;
         swingDue = 0f;
         struggleDue = 0f;
         turretDue = 0f;

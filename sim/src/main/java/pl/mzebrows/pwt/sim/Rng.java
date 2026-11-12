@@ -71,8 +71,29 @@ public final class Rng implements Randomness {
      * allocates nothing, so a per-entity loop may ask it.
      */
     public static float keyed(long seed, long first, long second) {
-        long mixed = mix(mix(seed ^ (first * GOLDEN_GAMMA)) ^ (second * GOLDEN_GAMMA));
-        // The top 24 bits, as Randomness.nextFloat takes them, so the answer is exact in a float.
+        return unit(mixKeys(seed, first, second));
+    }
+
+    /**
+     * <strong>The keyed chance</strong> (G0086): {@link #keyed(long, long, long)} of the level's seed salted by the
+     * concern the chance belongs to, so two keyed chances of the same things never give the same answer. Every keyed
+     * chance goes through here - only G0076's spatter, which shipped before it, keys off the bare seed.
+     */
+    public static float keyed(long levelSeed, RngStream stream, long first, long second) {
+        return keyed(levelSeed ^ stream.salt(), first, second);
+    }
+
+    /** The same, of three keys: a thing, another, and which of its tries this is - this leap of a creature's. */
+    public static float keyed(long levelSeed, RngStream stream, long first, long second, long third) {
+        return unit(mix(mixKeys(levelSeed ^ stream.salt(), first, second) ^ (third * GOLDEN_GAMMA)));
+    }
+
+    private static long mixKeys(long seed, long first, long second) {
+        return mix(mix(seed ^ (first * GOLDEN_GAMMA)) ^ (second * GOLDEN_GAMMA));
+    }
+
+    /** The top 24 bits, as Randomness.nextFloat takes them, so the answer is exact in a float. */
+    private static float unit(long mixed) {
         return (mixed >>> 40) * 0x1.0p-24f;
     }
 

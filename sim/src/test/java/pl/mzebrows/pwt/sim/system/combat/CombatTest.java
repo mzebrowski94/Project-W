@@ -25,6 +25,7 @@ import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -194,7 +195,7 @@ class CombatTest {
     @Test
     void makesAnEnemyWaitOutItsCooldownBetweenStrikes() {
         Simulation simulation = survivableWorld();
-        Entity gun = simulation.spawnTurret(50f, 50f);
+        Entity gun = manned(simulation.spawnTurret(50f, 50f));
         simulation.spawnEnemy(50f, 50f);
 
         for (int i = 0; i < ticksIn(ENEMY_ATTACK_COOLDOWN) - 2; i++) {
@@ -207,7 +208,7 @@ class CombatTest {
     @Test
     void letsAnEnemyStrikeAgainOnceItsCooldownHasPassed() {
         Simulation simulation = survivableWorld();
-        Entity gun = simulation.spawnTurret(50f, 50f);
+        Entity gun = manned(simulation.spawnTurret(50f, 50f));
         simulation.spawnEnemy(50f, 50f);
 
         for (int i = 0; i < ticksIn(ENEMY_ATTACK_COOLDOWN) + 4; i++) {
@@ -224,7 +225,7 @@ class CombatTest {
     @Test
     void letsOnlyOneOfACrowdLandAHitAtATime() {
         Simulation simulation = survivableWorld();
-        Entity gun = simulation.spawnTurret(50f, 50f);
+        Entity gun = manned(simulation.spawnTurret(50f, 50f));
         simulation.spawnEnemy(50f, 50f);
         simulation.spawnEnemy(50.1f, 50f);
         simulation.spawnEnemy(49.9f, 50f);
@@ -232,6 +233,12 @@ class CombatTest {
         simulation.step();
 
         assertThat(gun.getComponent(Health.class).current).isEqualTo(TURRET_HEALTH - SURVIVABLE_HIT);
+    }
+
+    /** A gun somebody has been on, so the aliens come back for it after a blow throws them off (G0086). */
+    private static Entity manned(Entity gun) {
+        gun.getComponent(Turret.class).manned = true;
+        return gun;
     }
 
     /** Fires a projectile into whatever is at (50, 50) and lets it land. */

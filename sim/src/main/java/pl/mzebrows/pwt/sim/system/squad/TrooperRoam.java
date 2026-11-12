@@ -58,12 +58,27 @@ final class TrooperRoam {
         }
     }
 
+    /**
+     * Wanders round a place rather than across the level, off the circle of {@code keepOff} round it: the capture
+     * crowd's spare man with no next point to go on to (G0086). A fresh spot the moment he takes it up, so a walk
+     * he had begun into that circle is not finished.
+     */
+    void exploresAround(Trooper trooper, Position at, float x, float y, float keepOff) {
+        boolean takenUp = trooper.mode != Trooper.Mode.EXPLORE;
+        trooper.mode = Trooper.Mode.EXPLORE;
+        if (takenUp || !trooper.hasTarget || arrived(at, trooper)) {
+            roamsAround(trooper, x, y, keepOff);
+        }
+    }
+
     /** Somewhere on the map a trooper can actually stand, drawn from the squad's own stream. */
     private void roam(Trooper trooper, Position at) {
         if (trooper.pushingForward() && pushesOutFromThePost(trooper, at)) {
             return;
         }
-        if (posts.size() > 0 && roamsAroundThePost(trooper)) {
+        if (posts.size() > 0) {
+            Position post = POSITION.get(posts.first());
+            roamsAround(trooper, post.x, post.y, 0f);
             return;
         }
         for (int attempt = 0; attempt < ROAM_ATTEMPTS; attempt++) {
@@ -117,7 +132,8 @@ final class TrooperRoam {
     }
 
     /**
-     * Roams inside the squad's patch around the post, rather than across the whole level.
+     * Roams inside the squad's patch around a place - the post, or a crowded point (G0086) - rather than across the
+     * whole level.
      *
      * <p>A defence has nothing to take, so with nothing in front of them the squad falls through to
      * roaming - and roaming the map is the wrong answer on the one level whose whole instruction is
@@ -128,27 +144,26 @@ final class TrooperRoam {
      * unit was spawned - and it costs the player nothing, because "forward" still pushes the line out
      * past it and a fight still outranks all of this.
      *
-     * <p>Drawn inside the square and rejected outside the circle, so no trigonometry is needed to
-     * pick a point in a disc; {@code Math.sin} and {@code Math.cos} are banned here (pillar 6).
+     * <p>Drawn inside the square and rejected outside the circle - and inside {@code keepOff} - so no trigonometry
+     * is needed to pick a point in a disc; {@code Math.sin} and {@code Math.cos} are banned here (pillar 6).
      */
-    private boolean roamsAroundThePost(Trooper trooper) {
-        Position post = POSITION.get(posts.first());
+    private void roamsAround(Trooper trooper, float centreX, float centreY, float keepOff) {
         for (int attempt = 0; attempt < ROAM_ATTEMPTS; attempt++) {
             float offsetX = rng.nextFloat(-patchRadius, patchRadius);
             float offsetY = rng.nextFloat(-patchRadius, patchRadius);
-            if (offsetX * offsetX + offsetY * offsetY > patchRadius * patchRadius) {
+            float offset = offsetX * offsetX + offsetY * offsetY;
+            if (offset > patchRadius * patchRadius || offset < keepOff * keepOff) {
                 continue;
             }
-            float x = post.x + offsetX;
-            float y = post.y + offsetY;
+            float x = centreX + offsetX;
+            float y = centreY + offsetY;
             if (map.isClear(x, y, bodyRadius)) {
                 trooper.headFor(x, y);
-                return true;
+                return;
             }
         }
         // Nowhere to stand anywhere near it. Better to hold where it is than to walk into rock.
         trooper.clearTarget();
-        return true;
     }
 
     private boolean arrived(Position at, Trooper trooper) {

@@ -1,12 +1,12 @@
 # G0083: The leech clings, and a slinger slings it onto you
 
-**Status.** accepted
+**Status.** amended by G0086: the leech ships with no fuse
 
 **Trigger.** Adding a creature that rides, latches onto or travels with a man; a grip that leaves its man free; a
 creature that goes off of itself after a time; a sling aimed onto a man rather than past him; making a leech pin; a
 creature that never walks and still leaps.
 
-**Enforced by.** `LeechTest`; `SimConfigTest.slingsLeechesOntoHimThatClingAndGoOffSoonerOnTheGroundThanOnHim`; `AntTest`
+**Enforced by.** `LeechTest`; `SimConfigTest.slingsLeechesOntoHimThatClingAndWaitOnTheGroundForAManToPass`; `AntTest`
 (a grip that pins, unchanged); `MissionSweepTest` (the rosters).
 
 **Settled with Mateusz, 2026-11-12**, from the playtest list of 2026-11-11 (ticket 12 of the playtest-feedback map).

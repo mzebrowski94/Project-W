@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Odds;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
@@ -53,8 +54,8 @@ public final class TrooperMindSystem extends EntitySystem {
         this.aid = new TrooperAid(config, odds);
         this.mend = new TrooperMend(config);
         this.crew = new TrooperCrew(config, odds);
-        this.objective = new TrooperObjective(config, map, rng);
         this.roam = new TrooperRoam(config, map, rng);
+        this.objective = new TrooperObjective(config, map, rng, roam);
     }
 
     @Override
@@ -73,6 +74,7 @@ public final class TrooperMindSystem extends EntitySystem {
     @Override
     public void update(float deltaTime) {
         objective.buildRoutesIfNeeded();
+        objective.countCrowds();
         fight.beginTick();
         for (int i = 0; i < troopers.size(); i++) {
             Entity entity = troopers.get(i);
@@ -92,7 +94,13 @@ public final class TrooperMindSystem extends EntitySystem {
                 trooper.alertRemaining--;
             }
 
-            if (fight.engages(trooper, at, shotWidth(entity), reach(entity), staysPut(trooper, onTakenPoint))
+            if (fight.engages(
+                            trooper,
+                            Handles.of(entity),
+                            at,
+                            shotWidth(entity),
+                            reach(entity),
+                            staysPut(trooper, onTakenPoint))
                     || orders.obeys(trooper, at)
                     || aid.aids(entity, trooper, at, deltaTime)
                     || mend.mends(entity, trooper, at)

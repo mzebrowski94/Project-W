@@ -24,7 +24,8 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  * Walks a unit that has noticed nobody slowly around the patch it was spawned in.
  *
  * <p>Pick a spot, walk to it, stand a moment, pick again. <strong>The patch is wherever it last had
- * nothing to do</strong>: the anchor is dragged along while it hunts or feeds. It drives only units
+ * nothing to do</strong>: the anchor is dragged along while it hunts or feeds, and <strong>drifts</strong>
+ * towards each spot it arrives at, never out of its biome (G0086). It drives only units
  * that are not hunting, so it never writes the same tick as navigation. Its own stream.
  */
 public final class WanderSystem extends EntitySystem {
@@ -116,11 +117,38 @@ public final class WanderSystem extends EntitySystem {
         float toTargetY = wander.targetY - position.y;
         float distance = (float) Math.sqrt(toTargetX * toTargetX + toTargetY * toTargetY);
         if (distance <= wander.arriveRadius || wander.remainingTicks <= 0) {
+            if (distance <= wander.arriveRadius) {
+                drift(wander);
+            }
             wander.rest(Ticks.of(rng.nextFloat(wander.pauseMinSeconds, wander.pauseMaxSeconds), tickSeconds));
             return;
         }
         float speed = SPEED.get(entity).value * wander.speedFactor;
         STEERING.get(entity).set(toTargetX / distance * speed, toTargetY / distance * speed);
+    }
+
+    /**
+     * Moves home up to {@code driftPerStop} towards the spot it has just reached, unless that would take it
+     * out of the biome it is in (G0086). Arriving, not giving up: a unit wedged behind a rock does not
+     * drift into it. Every tile is in a biome, so a world of one biome is clamped only by the map's edge.
+     */
+    private void drift(Wander wander) {
+        if (wander.driftPerStop <= 0f) {
+            return;
+        }
+        float toX = wander.targetX - wander.homeX;
+        float toY = wander.targetY - wander.homeY;
+        float distance = (float) Math.sqrt(toX * toX + toY * toY);
+        if (distance <= 0f) {
+            return;
+        }
+        float step = Math.min(wander.driftPerStop, distance) / distance;
+        float x = wander.homeX + toX * step;
+        float y = wander.homeY + toY * step;
+        if (map.biomeAt(x, y) != map.biomeAt(wander.homeX, wander.homeY)) {
+            return;
+        }
+        wander.anchor(x, y);
     }
 
     /**

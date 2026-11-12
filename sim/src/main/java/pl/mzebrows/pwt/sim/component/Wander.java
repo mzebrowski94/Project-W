@@ -6,9 +6,10 @@ import com.badlogic.gdx.utils.Pool;
 /**
  * A unit's patch of ground, and where inside it it is currently headed.
  *
- * <p>The home point is written once, at the spawn, and never again - evolving rewrites every other
- * number here from the new strain's definition but leaves home alone, because where a thing lives is
- * a fact about that individual and not about what it has turned into.
+ * <p>The home point is written at the spawn, dragged along while the unit hunts, and drifted towards each
+ * spot it arrives at (G0086) - evolving rewrites every other number here from the new strain's definition but
+ * leaves home alone, because where a thing lives is a fact about that individual and not about what it has
+ * turned into.
  *
  * <p>The phases are a two-state machine of the same shape as {@link Leap}'s, and for the same reason:
  * state that changes over time is a field on a component the entity already carries, never a
@@ -31,6 +32,9 @@ public final class Wander implements Component, Pool.Poolable {
     public float pauseMinSeconds;
     public float pauseMaxSeconds;
     public int waypointTimeoutTicks;
+
+    /** How far home moves towards each spot it arrives at, in world units; zero means it stays put. */
+    public float driftPerStop;
 
     /** Where it was spawned: the centre of its patch, and where losing the commander takes it back to. */
     public float homeX;
@@ -58,7 +62,8 @@ public final class Wander implements Component, Pool.Poolable {
             float newArriveRadius,
             float newPauseMinSeconds,
             float newPauseMaxSeconds,
-            int newWaypointTimeoutTicks) {
+            int newWaypointTimeoutTicks,
+            float newDriftPerStop) {
         this.enabled = newEnabled;
         this.radius = newRadius;
         this.speedFactor = newSpeedFactor;
@@ -66,6 +71,7 @@ public final class Wander implements Component, Pool.Poolable {
         this.pauseMinSeconds = newPauseMinSeconds;
         this.pauseMaxSeconds = newPauseMaxSeconds;
         this.waypointTimeoutTicks = newWaypointTimeoutTicks;
+        this.driftPerStop = newDriftPerStop;
         return this;
     }
 
@@ -99,6 +105,7 @@ public final class Wander implements Component, Pool.Poolable {
         pauseMinSeconds = 0f;
         pauseMaxSeconds = 0f;
         waypointTimeoutTicks = 0;
+        driftPerStop = 0f;
         homeX = 0f;
         homeY = 0f;
         targetX = 0f;
