@@ -68,3 +68,7 @@ changed. Git carries the diff.
   turret is now a furniture line, `turretsMin/Max`, placed by a point (G0082). Fixed in *Fit*, *Roster and furniture*
   and *Porting*. Missing: a new count drawn from the furniture stream re-draws every biome after it unless drawn
   last - noted in `Placement`. Nothing slow.
+- 2026-11-12, the balance round (playtest ticket 18) - the plain's turrets 1-2 -> 4-6, `MissionSweepTest` green on
+  every seed; `sim.mission.placement.pointKeepOff` 50 -> 60 to stay above the point's `aggroRadius`, now 58 - measured: 66 left
+  nests unplaced on 6 seeds, 74 on 15. Nothing wrong or missing; slow: finding the largest keep-off that fits is a
+  sweep per guess.

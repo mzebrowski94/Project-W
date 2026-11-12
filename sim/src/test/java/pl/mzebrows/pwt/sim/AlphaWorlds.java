@@ -305,6 +305,11 @@ public final class AlphaWorlds {
 
     /** How much further off than his sight a trooper picks a nest out from. */
     public static final float NEST_STANDS_OUT = 12f;
+
+    /** As it ships (G0085): a nest is weighed as a threat, and a man keeps on one he picked out. */
+    public static final boolean NEST_THREAT = true;
+
+    public static final boolean NEST_KEPT = true;
     /** Past the wake radius, so a man can wake a nest, step off a little and still keep it at pace. */
     public static final float NEST_LEFT_BEHIND_RADIUS = 30f;
 
@@ -745,6 +750,9 @@ public final class AlphaWorlds {
     /** Inside this he notices all round; past it only within his arc. Short of where the tests stand things behind him. */
     public static final float TROOPER_ALL_ROUND = 8f;
 
+    /** As it ships: a fouled man may aim most of the way to his target's edge (G0084). */
+    public static final float TROOPER_AIM_ACROSS = 0.9f;
+
     /**
      * Nothing occasional happens in the base fixture.
      *
@@ -945,6 +953,7 @@ public final class AlphaWorlds {
                         SHARED_TARGET_PENALTY,
                         MEDKIT_REACH,
                         CLOSE_IN_FACTOR,
+                        TROOPER_AIM_ACROSS,
                         new TrooperGrenadeDef(TROOPER_GRENADE_COOLDOWN, MIN_CLUSTER, SAFETY_MARGIN, SQUAD_GAP_SECONDS)),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 // Never musters: men turning up every so often would move every count in every test.
@@ -1576,6 +1585,8 @@ public final class AlphaWorlds {
                         NEST_WAKE_RADIUS,
                         NEST_ROUSE_RADIUS,
                         NEST_STANDS_OUT,
+                        NEST_THREAT,
+                        NEST_KEPT,
                         NEST_LEFT_BEHIND_RADIUS,
                         NEST_LEFT_BEHIND_SLOWDOWN),
                 new SimConfig.ControlPointConfig(
@@ -2194,6 +2205,34 @@ public final class AlphaWorlds {
     public static boolean unhurt(Entity man) {
         Vitality vitality = man.getComponent(Vitality.class);
         return vitality.wounds == 0 && !vitality.begun && !killed(man);
+    }
+
+    private static final float LASTS_PAST_ANY_WALK_SECONDS = 600f;
+
+    /**
+     * One circle of the aliens' ruined ground, full-sized from its first tick and lasting long past any walk: a man
+     * heeds it always, and it wounds him if he sets foot in it.
+     */
+    public static Entity layRuinedGround(Simulation simulation, float x, float y, float radius) {
+        return simulation
+                .spawner()
+                .spawnSlick(
+                        x,
+                        y,
+                        radius,
+                        LASTS_PAST_ANY_WALK_SECONDS,
+                        0f,
+                        0f,
+                        100,
+                        0f,
+                        Look.SLICK,
+                        0f,
+                        Harm.WOUND,
+                        1f,
+                        0f,
+                        1f,
+                        0L,
+                        Side.ALIEN);
     }
 
     /** Whether this body overlaps any circle of ruined ground this tick - whichever side laid it. */

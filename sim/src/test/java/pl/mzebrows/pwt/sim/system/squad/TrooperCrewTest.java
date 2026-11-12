@@ -92,6 +92,23 @@ class TrooperCrewTest {
         assertThat(countLiving(simulation, Enemy.class)).isZero();
     }
 
+    /**
+     * A man on a gun is never fouled (G0084): the mount fires where it points, a mate standing in front of it or not -
+     * the discipline is the trooper's own gun's.
+     */
+    @Test
+    void firesFromAGunWithAMateStandingInFrontOfIt() {
+        Simulation simulation = keen();
+        deploy(simulation);
+        simulation.spawnTurret(MIDDLE + NEARBY, MIDDLE);
+        simulation.spawnTrooper(MIDDLE + NEARBY + (FAR - NEARBY) / 2f, MIDDLE);
+        simulation.spawnUnit(UnitKind.GRUNT, MIDDLE + FAR, MIDDLE);
+
+        steps(simulation, ticksIn(3f));
+
+        assertThat(countLiving(simulation, Enemy.class)).isZero();
+    }
+
     /** 2c: a man on a gun nothing is coming at is a man missing from the squad. */
     @Test
     void getsOffAgainOnceThereHasBeenNothingToShootAtForAWhile() {

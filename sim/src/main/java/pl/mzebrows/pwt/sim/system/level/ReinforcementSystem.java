@@ -10,15 +10,13 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.map.Scatter;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
-import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
-import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
-import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.RallyPoint;
 import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
@@ -66,7 +64,7 @@ public final class ReinforcementSystem extends EntitySystem {
     @Override
     public void addedToEngine(Engine engine) {
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
-        men = engine.getEntitiesFor(onTheField());
+        men = engine.getEntitiesFor(Life.onTheField());
         points = engine.getEntitiesFor(
                 Family.all(ControlPoint.class, Position.class).get());
     }
@@ -83,15 +81,6 @@ public final class ReinforcementSystem extends EntitySystem {
             room -= deliver(level, room);
             muster(level, room);
         }
-    }
-
-    /**
-     * The men the field's most is held against (G0055): every trooper and every commander on it, whatever
-     * his slot. A body already marked dead is not a man the side still has; a man down still is. A
-     * commander waiting to come back is a ticket, not a man, so he is not on it. The one place it is said.
-     */
-    public static Family onTheField() {
-        return Family.one(Trooper.class, Commander.class).exclude(Dead.class).get();
     }
 
     /**

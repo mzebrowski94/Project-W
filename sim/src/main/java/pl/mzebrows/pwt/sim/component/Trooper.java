@@ -222,6 +222,19 @@ public final class Trooper implements Component, Pool.Poolable {
     public long door = Handle.NOBODY;
 
     /**
+     * The target he is keeping on, by handle, or nobody (G0085): one whose {@code Enemy.kept} is set, which he
+     * goes back to whenever he can take it, until it dies or something he could take is inside his all-round range.
+     * Written by {@code TrooperMindSystem}.
+     */
+    public long keeping = Handle.NOBODY;
+
+    /**
+     * Whether every line he has to what he is fighting is fouled by a mate on his feet (G0084): he stays on it and
+     * holds his fire. Written by {@code TrooperMindSystem}, read by {@code TrooperCombatSystem}.
+     */
+    public boolean fouled;
+
+    /**
      * What it is still due before it next swings at a leap, {@code Odds}' budget for
      * {@code AiChance.SWING_AT_A_LEAP}. Zero until the first time the chance comes up.
      */
@@ -309,6 +322,8 @@ public final class Trooper implements Component, Pool.Poolable {
         sectorSpan = 0;
         sectorStep = 0;
         door = Handle.NOBODY;
+        keeping = Handle.NOBODY;
+        fouled = false;
         swingDue = 0f;
         struggleDue = 0f;
         turretDue = 0f;

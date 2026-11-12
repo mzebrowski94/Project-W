@@ -288,6 +288,13 @@ public final class AvoidanceSystem extends EntitySystem {
                 continue;
             }
             float threat = closeness * alignment;
+            if (!solid) {
+                // Ground is weighed by whether a way takes his body across it, not by how near its middle that way
+                // points: across it is as bad as straight at it, past its edge costs nothing. So a seam between two
+                // circles narrower than he is reads as shut, and the way round as open (ticket 18).
+                float offTheWay = Math.abs(Compass.x(slot) * towardsY - Compass.y(slot) * towardsX);
+                threat = offTheWay < radii ? closeness : 0f;
+            }
             if (threat > danger[slot]) {
                 danger[slot] = threat;
             }

@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.system.motion;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.avoiding;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.inRuinedGround;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.layRuinedGround;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 
 import com.badlogic.ashley.core.Entity;
@@ -142,6 +143,26 @@ class AvoidanceSystemTest {
                         .isZero();
             }
         }
+    }
+
+    /**
+     * Two circles across his lane with a seam between them narrower than he is: he weighs how wide each looks, not
+     * only where its middle is, so the seam reads as shut and he goes round the pair rather than through it.
+     */
+    @Test
+    void goesRoundTwoCirclesWhoseSeamIsNarrowerThanHimRatherThanThroughIt() {
+        Simulation simulation = new Simulation(SimConfig.defaults());
+        simulation.spawnCommander(CORNER, CORNER);
+        float circle = 3.3f;
+        float seam = 1.7f;
+        float apart = circle * 2f + seam;
+        layRuinedGround(simulation, BLAST_X, LANE + apart / 2f, circle);
+        layRuinedGround(simulation, BLAST_X, LANE - apart / 2f, circle);
+        simulation.spawnControlPoint(GOAL_X, LANE);
+        Lane lane = new Lane(simulation, simulation.spawnTrooper(SET_OFF_X, LANE));
+
+        assertThat(ticksInRuinedGround(lane)).isZero();
+        assertThat(lane.man().getComponent(Position.class).x).isGreaterThan(BLAST_X);
     }
 
     /** A shipped shot of venom thrown east along the lane, and a man sent past it {@code offset} off it. */

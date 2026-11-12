@@ -187,7 +187,7 @@ public final class Simulation {
                 Family.all(Commander.class, Intent.class, Position.class).get());
         this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
         this.doors = engine.getEntitiesFor(Family.all(Door.class).get());
-        this.men = engine.getEntitiesFor(ReinforcementSystem.onTheField());
+        this.men = engine.getEntitiesFor(Life.onTheField());
 
         // How loosely a gun throws, for every shooter; not how badly a creature aims (SPIT).
         Rng scatter = streams.of(RngStream.SCATTER);

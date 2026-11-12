@@ -2,7 +2,11 @@ package pl.mzebrows.pwt.sim;
 
 import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
+import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Vitality;
 
 /**
@@ -19,6 +23,16 @@ public final class Life {
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     private Life() {}
+
+    /**
+     * The men on the field: every trooper and every commander on it, whatever his slot (G0055). A body already
+     * marked dead is not a man the side still has; a man down still is. A commander waiting to come back is a
+     * ticket, not a man, so he is not on it. The one place it is said - the field's most is held against it,
+     * a nest is left behind by it, and a trooper's line is fouled by it (G0084).
+     */
+    public static Family onTheField() {
+        return Family.one(Trooper.class, Commander.class).exclude(Dead.class).get();
+    }
 
     /** Off his feet: a casualty or in his throes. Neither drives, and neither is a target. */
     public static boolean down(Entity entity) {

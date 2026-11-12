@@ -352,15 +352,39 @@ class TrooperCombatTest {
     }
 
     /**
-     * What is coming for somebody outranks what is standing still, even a little nearer: a man shoots
-     * the grunt walking at him before the nest behind it.
+     * <strong>A nest is a threat at its own distance</strong> (ticket 18, amending G0080): weighed as something coming
+     * for somebody would be, so a man shoots the nearer of a nest and a grunt walking at him - here the nest.
      */
     @Test
-    void shootsWhatIsComingForSomebodyBeforeWhatIsStandingStill() {
+    void weighsANestAsAThreatAtItsOwnDistance() {
         Simulation simulation = harmless();
         simulation.spawnCommander(CORNER, CORNER);
         Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
-        simulation.spawnNest(UnitKind.GRUNT, MIDDLE + 12f, MIDDLE);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE + 14f, MIDDLE);
+        simulation.spawnEnemy(MIDDLE + 22f, MIDDLE + 3f);
+        facing(trooper, 1f, 0f);
+
+        simulation.step();
+
+        assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
+        assertThat(trooper.getComponent(Trooper.class).targetX).isLessThan(MIDDLE + 18f);
+    }
+
+    /**
+     * What is coming for somebody outranks what is standing still, even a little nearer: a man shoots the grunt
+     * walking at him before the alien in front of it that has noticed nobody.
+     */
+    @Test
+    void shootsWhatIsComingForSomebodyBeforeWhatIsStandingStill() {
+        Simulation simulation = new Simulation(harmless()
+                .config()
+                .withUnit(
+                        UnitKind.RUNNER,
+                        runner -> runner.withContactDamage(0)
+                                .withPerception(PerceptionDef.allRound(false, true, 0f, 0f, 0f))));
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnUnit(UnitKind.RUNNER, MIDDLE + 12f, MIDDLE);
         simulation.spawnEnemy(MIDDLE + 22f, MIDDLE + 3f);
         facing(trooper, 1f, 0f);
 
@@ -368,6 +392,79 @@ class TrooperCombatTest {
 
         assertThat(mode(trooper)).isEqualTo(Trooper.Mode.FIGHT);
         assertThat(trooper.getComponent(Trooper.class).targetX).isGreaterThan(MIDDLE + 15f);
+    }
+
+    /** And the other way round: a grunt walking at him nearer than a nest is shot first, the nest being no nearer. */
+    @Test
+    void shootsAGruntComingForSomebodyNearerThanANest() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE + 22f, MIDDLE);
+        simulation.spawnEnemy(MIDDLE + TROOPER_ALL_ROUND + 2f, MIDDLE + 3f);
+        facing(trooper, 1f, 0f);
+
+        simulation.step();
+
+        assertThat(trooper.getComponent(Trooper.class).targetX).isLessThan(MIDDLE + 18f);
+    }
+
+    /**
+     * <strong>A nest he is on is kept</strong> (ticket 18): something coming for somebody that turns up nearer, but
+     * outside his all-round range, does not take him off it - a squad finishes a hole rather than leaving it half shot.
+     */
+    @Test
+    void keepsShootingANestWhenSomethingNearerTurnsUpOutsideHisAllRoundRange() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE + 22f, MIDDLE);
+        facing(trooper, 1f, 0f);
+        simulation.step();
+        simulation.spawnEnemy(MIDDLE + TROOPER_ALL_ROUND + 2f, MIDDLE + 3f);
+
+        simulation.step();
+
+        assertThat(trooper.getComponent(Trooper.class).targetX).isGreaterThan(MIDDLE + 18f);
+    }
+
+    /**
+     * Kept means kept (G0085): a mate stepping across his line to the nest sends him to what else he can shoot for as
+     * long as it is fouled, and once the line is clear he goes back to the nest, the nearer grunt or no.
+     */
+    @Test
+    void goesBackToTheNestHeKeptOnceAMateStopsFoulingHisLine() {
+        Simulation simulation = harmless();
+        Entity commander = simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE + 22f, MIDDLE);
+        facing(trooper, 1f, 0f);
+        simulation.step();
+        simulation.spawnEnemy(MIDDLE + TROOPER_ALL_ROUND + 2f, MIDDLE + 3f);
+        standAt(commander, MIDDLE + 11f, MIDDLE);
+        simulation.step();
+        assertThat(trooper.getComponent(Trooper.class).targetX).isLessThan(MIDDLE + 18f);
+
+        standAt(commander, CORNER, CORNER);
+        simulation.step();
+
+        assertThat(trooper.getComponent(Trooper.class).targetX).isGreaterThan(MIDDLE + 18f);
+    }
+
+    /** Inside his all-round range it does: what has come right up to him is turned on, nest or no nest. */
+    @Test
+    void turnsFromANestOnSomethingInsideHisAllRoundRange() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(CORNER, CORNER);
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        simulation.spawnNest(UnitKind.GRUNT, MIDDLE + 22f, MIDDLE);
+        facing(trooper, 1f, 0f);
+        simulation.step();
+        simulation.spawnEnemy(MIDDLE + TROOPER_ALL_ROUND - 2f, MIDDLE + 3f);
+
+        simulation.step();
+
+        assertThat(trooper.getComponent(Trooper.class).targetX).isLessThan(MIDDLE + 18f);
     }
 
     /** Two men with two things in front of them shoot one each, rather than both at the nearer one. */
@@ -612,6 +709,12 @@ class TrooperCombatTest {
         Damage damage = trooper.getComponent(Damage.class);
         damage.land(0, Harm.WOUND);
         damage.cameFrom(x, y);
+    }
+
+    private static void standAt(Entity man, float x, float y) {
+        Position at = man.getComponent(Position.class);
+        at.x = x;
+        at.y = y;
     }
 
     private static void facing(Entity trooper, float x, float y) {

@@ -140,6 +140,10 @@ public final class TrooperCombatSystem extends EntitySystem {
                 // Walking in on it: his fire would go out short, and he does not walk and shoot (1.d).
                 continue;
             }
+            if (trooper.fouled) {
+                // A mate stands across every line he has (G0084): he holds his fire rather than shoot through him.
+                continue;
+            }
             fire(entity, trooper);
         }
     }

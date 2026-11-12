@@ -345,6 +345,26 @@ class SimConfigTest {
     }
 
     /**
+     * <strong>No alien stands off to shoot from further than a trooper sees</strong> (ticket 18): his sight came down
+     * to bring the fight closer, never so far that a squad holding a point is outranged by what it is there to clear.
+     * What walks and shoots - a ranged strain's stand-off, a giant's barrage - starts inside it.
+     */
+    @Test
+    void seesFurtherThanAnyAlienStandsOffToShootFrom() {
+        SimConfig config = SimConfig.defaults();
+        float sight = config.trooper().perception().detectionRange();
+        for (UnitKind kind : UnitKind.values()) {
+            UnitDef def = config.units().of(kind);
+            if (def.ranged().enabled()) {
+                assertThat(def.ranged().range()).as("%s's stand-off", kind).isLessThan(sight);
+            }
+            if (def.barrage().enabled() && !def.rooted()) {
+                assertThat(def.barrage().reach()).as("%s's barrage", kind).isLessThan(sight);
+            }
+        }
+    }
+
+    /**
      * <strong>A thicket has to cost his side more than it costs theirs.</strong> Ground that slowed
      * everybody equally is scenery - both sides arrive at the fight in the order they would have on
      * open ground and the only thing that changed is how long the walk took. The asymmetry is the

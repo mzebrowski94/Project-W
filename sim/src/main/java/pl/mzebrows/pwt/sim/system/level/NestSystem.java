@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.Bag;
 import pl.mzebrows.pwt.map.TileMap;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
@@ -109,7 +110,7 @@ public final class NestSystem extends EntitySystem {
         watchers = engine.getEntitiesFor(
                 Family.all(Perception.class, Position.class).get());
         // On the field in any state short of gone: a man down beside a nest is still a man beside it.
-        men = engine.getEntitiesFor(ReinforcementSystem.onTheField());
+        men = engine.getEntitiesFor(Life.onTheField());
     }
 
     @Override

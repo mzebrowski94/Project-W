@@ -326,6 +326,10 @@ public record SimConfig(
      * @param rouseRadius how far its cry carries when it is attacked, in world units
      * @param standsOut how much further off than his sight a trooper picks a nest out from, and holds it, in world
      *     units (G0080). Zero is no further
+     * @param threat whether a trooper weighs a nest as he weighs something coming for somebody, at its own distance
+     *     rather than {@code threatBonus} further (ticket 18). False is the nest counted as standing still
+     * @param kept whether a man who has picked a nest out keeps on it until it dies or something is inside his
+     *     all-round range (ticket 18). False is the nest re-chosen against everything else every tick
      * @param leftBehindRadius how close a man - trooper or commander - must be for an awake nest to keep its
      *     pace, in world units, biome or none; with nobody that close it is <em>left behind</em>. Zero is off
      * @param leftBehindSlowdown how many times longer every tick of its countdown takes while it is left
@@ -346,6 +350,8 @@ public record SimConfig(
             float wakeRadius,
             float rouseRadius,
             float standsOut,
+            boolean threat,
+            boolean kept,
             float leftBehindRadius,
             int leftBehindSlowdown) {
 
@@ -588,6 +594,8 @@ public record SimConfig(
      * @param closeInFactor how far inside his gun's reach a man whose gun has one walks before he plants
      *     himself to shoot, as a fraction of it, in {@code (0, 1]}. He sets off again only once his target
      *     is past the reach itself, so below one is the margin that stops him ambling in and out of it
+     * @param aimAcross how far off a target's middle a man whose line is fouled by a mate may aim to fire past him,
+     *     as a fraction of the target's radius, in {@code [0, 1]} (G0084). Zero aims only at the middle
      * @param grenade how often a trooper throws a grenade, and the rules that keep its blast off his own
      *     side (G0051); whether he ever does is {@code AiChance.THROW_A_GRENADE}
      */
@@ -627,6 +635,7 @@ public record SimConfig(
             float sharedTargetPenalty,
             float medkitReach,
             float closeInFactor,
+            float aimAcross,
             TrooperGrenadeDef grenade) {
         public TrooperConfig {
             Require.positive("trooper radius", radius);
@@ -663,6 +672,9 @@ public record SimConfig(
             Require.notNegative("trooper sharedTargetPenalty", sharedTargetPenalty);
             if (closeInFactor <= 0f || closeInFactor > 1f) {
                 throw new IllegalArgumentException("trooper closeInFactor must be in (0, 1], was " + closeInFactor);
+            }
+            if (aimAcross < 0f || aimAcross > 1f) {
+                throw new IllegalArgumentException("trooper aimAcross must be in [0, 1], was " + aimAcross);
             }
             if (holdJitterSeconds > holdSeconds) {
                 throw new IllegalArgumentException("trooper holdJitterSeconds must not be above holdSeconds");

@@ -18,14 +18,36 @@ public final class Enemy implements Component, Pool.Poolable {
      */
     public float standsOut;
 
+    /**
+     * Whether a trooper weighs it as a threat whatever it is doing - at its own distance, as he would something
+     * coming for somebody: a nest's {@code sim.nest.threat}. False, for everything that walks, is a threat only
+     * while it hunts.
+     */
+    public boolean threat;
+
+    /**
+     * Whether a man who has picked it out keeps on it until it dies or something is inside his all-round range:
+     * a nest's {@code sim.nest.kept}. False, for everything that walks, is a target chosen afresh every tick.
+     */
+    public boolean kept;
+
     /** Sets how far it stands out, and returns this component, for fluent spawning. */
     public Enemy standingOut(float newStandsOut) {
         this.standsOut = newStandsOut;
         return this;
     }
 
+    /** Sets whether it is a threat whatever it does and whether a man keeps on it, and returns this component. */
+    public Enemy weighed(boolean newThreat, boolean newKept) {
+        this.threat = newThreat;
+        this.kept = newKept;
+        return this;
+    }
+
     @Override
     public void reset() {
         standsOut = 0f;
+        threat = false;
+        kept = false;
     }
 }

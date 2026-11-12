@@ -49,10 +49,14 @@ repository records it (G-record, invariant row, glossary row, input-map row).
 | Turrets and the finale | [09 Turrets that shrug off blasts, and turrets in the plain](issues/09-turrets-blast-resistance-and-the-plain.md), [10 A harder, varied redoubt](issues/10-a-harder-varied-redoubt.md) |
 | Enemies | [11 A grunt that has eaten a man becomes a brute](issues/11-grunt-to-brute-on-a-meal.md), [12 The leech and the slinger that throws it](issues/12-the-leech-and-its-slinger.md) |
 | Weapons and the hand | [13 The shotgun rework](issues/13-the-shotgun-rework.md), [14 The leap counter's lock, and the strike's look](issues/14-the-leap-counter-and-the-strike-look.md) |
-| Biomes | [15 Lava geysers in the cut](issues/15-lava-geysers-in-the-cut.md), [16 A lava biome with upgraded spitters](issues/16-a-lava-biome.md) |
+| Biomes | [15 Lava geysers in the cut](issues/15-lava-geysers-in-the-cut.md), [16 A lava biome with upgraded spitters](issues/16-a-lava-biome.md), [19 A signature strain in every biome](issues/19-a-signature-strain-in-every-biome.md) |
+| Balance | [18 The balance round, and more turrets in the plain](issues/18-the-balance-round-and-turrets-in-the-plain.md) |
 | General (last) | [17 A build version in the artifact and the menu](issues/17-a-build-version.md) |
 
-Blocking: 05 by 04 · 08 by 06 · 12 by 03 · 16 by 15. Everything else is on the frontier.
+Blocking: 05 by 04 · 08 by 06 · 12 by 03 · 16 by 15 · 10 by 18 · 19 by 16, 18. Everything else is on the frontier.
+
+Added 2026-11-12 (Mateusz's second list): 18 and 19, and the keep bug folded into 10. 18 goes first of them -
+his hand-tuned numbers sit uncommitted on `main`, and every later sweep runs on them; he commits after it.
 
 ## Decisions so far
 
@@ -76,12 +80,15 @@ Blocking: 05 by 04 · 08 by 06 · 12 by 03 · 16 by 15. Everything else is on th
   nobody, taken by touch or by a leap at a man passing close by, spent on finishing him - and goes off in alien
   venom; alone, on a fuse (a mine's clock). A
   leech slinger slings them onto its target; in badlands and the cut (G0083).
+- [The balance round, and more turrets in the plain](issues/18-the-balance-round-and-turrets-in-the-plain.md): his
+  numbers in, guarantees kept (strike 300, shotgun 48, pulse 3 bolts, giants 1800, slinger 540); squad sight 27, aliens
+  notice x1.3 and amble wider, leaps from farther; a nest is a threat and kept (G0085); a trooper never fires down a
+  fouled line (G0084); the plain lays 4-6 turrets.
 
 ## Not yet specified
 
-- **Balance after the round.** Several tickets move the same fight from different ends - grenade count (04),
-  troopers who turn and go for nests (06), the profiles (08), turret resistance (09), a two-sided finale (10).
-  A tuning pass across them is likely wanted once they land; what it tunes depends on how they play.
+- **A second balance pass**, after 10 and 16 land - a two-sided finale and a lava biome move the fight again; 18
+  tunes only what has been played.
 - **What else a lava biome brings** besides geysers and its spitters - ground, roster, its finale place in the
   pool - sharpens once 15 has shown how geysers play (16 asks the first of it).
 

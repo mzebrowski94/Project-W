@@ -783,7 +783,9 @@ public final class Spawner {
                         nest.hatchRadius(),
                         nest.wakeRadius(),
                         nest.rouseRadius()));
-        entity.add(engine.createComponent(Enemy.class).standingOut(nest.standsOut()));
+        entity.add(engine.createComponent(Enemy.class)
+                .standingOut(nest.standsOut())
+                .weighed(nest.threat(), nest.kept()));
         entity.add(engine.createComponent(Faction.class).set(Side.ALIEN));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
