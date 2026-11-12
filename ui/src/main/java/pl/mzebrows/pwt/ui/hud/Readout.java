@@ -40,8 +40,8 @@ public final class Readout {
     public int troopersStanding;
 
     /**
-     * The army (G0055): troopers on the field - down or not, the count the field's most is held against
-     * - that most, and the men in reserve.
+     * The army (G0055): men on the field - troopers and commanders, down or not, the count the field's
+     * most is held against - that most, and the men in reserve.
      */
     public int squadOnField;
 

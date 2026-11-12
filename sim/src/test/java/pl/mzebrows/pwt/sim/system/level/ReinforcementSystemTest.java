@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system.level;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CRATE_TROOPERS;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESERVE_MAX;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESERVE_START;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SQUAD_SIZE;
@@ -10,6 +11,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.on;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
@@ -19,8 +21,12 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 
 /**
@@ -155,14 +161,14 @@ class ReinforcementSystemTest {
         SimConfig base = config();
         Simulation simulation = world(base.withTrooper(base.trooper().withSquadGrowth(0)));
         simulation.spawnCommander(X, Y);
-        for (int i = 0; i < SQUAD_SIZE - 1; i++) {
+        for (int i = 0; i < SQUAD_SIZE - 2; i++) {
             simulation.spawnTrooper(X + 20f + i * 3f, Y);
         }
         simulation.level().pendingReinforcements = 1;
 
         simulation.step();
 
-        assertThat(count(simulation, Trooper.class)).isEqualTo(SQUAD_SIZE);
+        assertThat(count(simulation, Trooper.class)).isEqualTo(SQUAD_SIZE - 1);
     }
 
     /** Two crates and one place left in the squad is one man, not two and not none. */
@@ -171,10 +177,67 @@ class ReinforcementSystemTest {
         SimConfig base = config();
         Simulation simulation = world(base.withTrooper(base.trooper().withSquadGrowth(0)));
         simulation.spawnCommander(X, Y);
-        for (int i = 0; i < SQUAD_SIZE - 1; i++) {
+        for (int i = 0; i < SQUAD_SIZE - 2; i++) {
             simulation.spawnTrooper(X + 20f + i * 3f, Y);
         }
         simulation.level().pendingReinforcements = 2;
+
+        simulation.step();
+
+        assertThat(count(simulation, Trooper.class)).isEqualTo(SQUAD_SIZE - 1);
+    }
+
+    /**
+     * A commander on the field is one of its men: the field's most is troopers and commanders together,
+     * so a crate's man goes to the reserve once they fill it between them.
+     */
+    @Test
+    void countsACommanderOnTheFieldAgainstItsMost() {
+        SimConfig base = config();
+        Simulation simulation = world(base.withTrooper(base.trooper().withSquadGrowth(0)));
+        simulation.spawnCommander(X, Y);
+        for (int i = 0; i < SQUAD_SIZE - 1; i++) {
+            simulation.spawnTrooper(X + 20f + i * 3f, Y);
+        }
+        simulation.level().pendingReinforcements = 1;
+
+        simulation.step();
+
+        assertThat(count(simulation, Trooper.class)).isEqualTo(SQUAD_SIZE - 1);
+        assertThat(simulation.level().reserve).isEqualTo(RESERVE_START + 1);
+    }
+
+    /** Every slot's commander, not one assumed player: two on the field take two of its places (pillar 7). */
+    @Test
+    void countsEveryCommanderOnTheFieldWhateverHisSlot() {
+        SimConfig base = config();
+        Simulation simulation = world(base.withTrooper(base.trooper().withSquadGrowth(0)));
+        simulation.spawnCommander(X, Y, 0);
+        simulation.spawnCommander(X + 4f, Y, 1);
+        for (int i = 0; i < SQUAD_SIZE - 2; i++) {
+            simulation.spawnTrooper(X + 20f + i * 3f, Y);
+        }
+        simulation.level().pendingReinforcements = 1;
+
+        simulation.step();
+
+        assertThat(count(simulation, Trooper.class)).isEqualTo(SQUAD_SIZE - 2);
+    }
+
+    /** A commander waiting to come back is in nobody's way: only a man standing on the field takes a place. */
+    @Test
+    void leavesTheRoomOfACommanderWaitingToComeBack() {
+        SimConfig base = config();
+        Simulation simulation = world(base.withTrooper(base.trooper().withSquadGrowth(0)));
+        for (int i = 0; i < SQUAD_SIZE - 1; i++) {
+            simulation.spawnTrooper(X + 20f + i * 3f, Y);
+        }
+        Entity commander = simulation.spawnCommander(X, Y);
+        commander.getComponent(Damage.class).land(0, Harm.KILL);
+        commander.getComponent(Invulnerable.class).remainingTicks = 0;
+        steps(simulation, ticksIn(DEATH_THROES) + 2);
+        assertThat(count(simulation, Commander.class)).isZero();
+        simulation.level().pendingReinforcements = 1;
 
         simulation.step();
 

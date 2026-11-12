@@ -1,6 +1,6 @@
 # G0030: A reinforcement is a man won where the fighting is, and nothing is banked
 
-**Status.** amended by G0055: a reserve banks the men the field has no room for, and they arrive by muster
+**Status.** amended by G0055: a reserve banks the men the field has no room for, and they arrive by muster; amended by G0081: the ceiling counts every commander on the field
 
 **Trigger.** Anything that changes how the squad grows, where a reinforcement comes from, or what a
 level offers for taking ground.
@@ -51,3 +51,8 @@ invisible (pillar 5).
 
 **Revisit when** a level has been played end to end with a squad that has been chewed on: whether the
 headroom is a reason to take the far point or an afterthought.
+
+## Amended by G0081
+
+The squad's ceiling counts every commander on the field too (provisional, for review), so a crate lands one
+man fewer per commander standing before it banks. Where and how a crate lands is unchanged.

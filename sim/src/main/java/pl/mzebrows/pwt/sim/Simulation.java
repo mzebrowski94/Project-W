@@ -122,6 +122,10 @@ public final class Simulation {
     private final ImmutableArray<Entity> commanders;
     private final ImmutableArray<Entity> levels;
     private final ImmutableArray<Entity> doors;
+
+    /** The men the field's most is held against, troopers and commanders (G0055); read only for {@link #menOnField}. */
+    private final ImmutableArray<Entity> men;
+
     private final SpawnOrder spawnOrder;
 
     /** Where a tick's picks enter the upgrade package. */
@@ -183,6 +187,7 @@ public final class Simulation {
                 Family.all(Commander.class, Intent.class, Position.class).get());
         this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
         this.doors = engine.getEntitiesFor(Family.all(Door.class).get());
+        this.men = engine.getEntitiesFor(ReinforcementSystem.onTheField());
 
         // How loosely a gun throws, for every shooter; not how badly a creature aims (SPIT).
         Rng scatter = streams.of(RngStream.SCATTER);
@@ -415,9 +420,14 @@ public final class Simulation {
         return LEVEL.get(levels.first());
     }
 
-    /** The most troopers the field holds right now, upgrades included (G0055) - for the interface. */
+    /** The most men the field holds right now, troopers and commanders, upgrades included (G0055) - for the interface. */
     public int squadMost() {
         return ReinforcementSystem.squadMost(config, modifiers);
+    }
+
+    /** The men on the field that most is held against, every commander on it included (G0055) - for the interface. */
+    public int menOnField() {
+        return men.size();
     }
 
     /** How many wounds this man carries on his feet right now, upgrades included (G0053) - for the interface. */
