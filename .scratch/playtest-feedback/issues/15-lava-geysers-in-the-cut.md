@@ -1,7 +1,7 @@
 # Lava geysers in the cut
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: -
 Section: Biomes
 
@@ -44,3 +44,19 @@ its "Run feature, then new-system" now reads as context for the two skills above
 ## Done when
 
 Built, the G0035 amendment as a record, the sweeps green, `new-biome`'s changelog line, `verify.sh` green.
+
+## Answer (AFK run, 2026-11-13 - provisional, for review)
+
+Built: G0089 (a geyser is a second source of fire; amends G0035, G0068) and G0090 (avoidance weighs ground along
+the way the wall leaves a unit; amends G0046).
+
+- **Troopers wait** by avoidance, no hold of their own. On open ground they go round an eruption; in a corridor it
+  all but fills they slid along the wall into its edge, so G0090 is the narrowest fix inside `AvoidanceSystem`: ground
+  is weighed along each way as the wall a unit is against leaves it. Now they hold short and cross once it is quiet
+  (`GeyserTest.aTrooperHoldsShortOfAnEruptionAcrossACorridorAndGetsPastOnceItIsQuiet`).
+- **Glossary**: *geyser*, under *Fighting*, beside *fire*.
+- **Radius** in world units, as boulders, trunks and `sim.mission.placement.*` are: `sim.geyser.radiusMin/Max` 2-5.
+- Keys: `sim.geyser.*` (hazards.properties), `furniture.geysersMin/Max` (3-5 in the cut, 0 elsewhere),
+  `sim.mission.placement.geyserKeepOff` 15, `graphic.color.geyser`, `graphic.geyser.light/pulseHz`.
+- The 2000-seed mission sweep shows no fault in the cut; its 63 faults are in biomes this change does not reach
+  (badlands, anthill, fen, one strip run) - see `docs/backlog.md`.

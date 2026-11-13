@@ -39,6 +39,7 @@ final class MissionFaults {
         faults.addAll(bands(mission, config));
         faults.addAll(crates(mission, config));
         faults.addAll(trees(mission, config));
+        faults.addAll(geysers(mission, config.mission().placement()));
         faults.addAll(finale(mission));
         return faults;
     }
@@ -321,6 +322,32 @@ final class MissionFaults {
         return faults;
     }
 
+    /**
+     * Every geyser {@code geyserKeepOff} off every point and nest of its biome and every way into it, the start among
+     * them (G0089): its fire is nobody's, so it never erupts where the squad must stand or comes in.
+     */
+    static List<String> geysers(Mission mission, PlacementRules rules) {
+        TileMap map = mission.laid().map();
+        List<String> faults = new ArrayList<>();
+        for (Placed geyser : mission.placed()) {
+            if (!(geyser instanceof Placed.Geyser)) {
+                continue;
+            }
+            for (TileRect entry : mission.laid().entries().get(geyser.biome())) {
+                if (distance(map, entry, geyser) < rules.geyserKeepOff()) {
+                    faults.add(geyser + " is " + (int) distance(map, entry, geyser) + " from the way in at " + entry);
+                }
+            }
+            for (Placed other : mission.placed()) {
+                boolean kept = other instanceof Placed.Point || other instanceof Placed.Nest;
+                if (kept && other.biome() == geyser.biome() && between(geyser, other) < rules.geyserKeepOff()) {
+                    faults.add(geyser + " is " + (int) between(geyser, other) + " from " + other);
+                }
+            }
+        }
+        return faults;
+    }
+
     /** What a thing standing takes up, as placement reserves it. */
     private static float radius(Placed thing, SimConfig config) {
         return switch (thing) {
@@ -331,6 +358,7 @@ final class MissionFaults {
             case Placed.Barrel _ -> config.pickup(PickupKind.BARREL).radius();
             case Placed.Boulder _ -> config.obstacle().radius();
             case Placed.Tree tree -> tree.trunk();
+            case Placed.Geyser geyser -> geyser.radius();
             case Placed.Rabbit _ -> config.pickup(PickupKind.RABBIT).radius();
             case Placed.Turret _ -> config.turret().radius();
             case Placed.Mine _ -> config.mine().radius();

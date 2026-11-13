@@ -181,6 +181,11 @@ public enum Look {
      * <p>On the charge channel, and the only thing there darker than what it is drawn on.
      */
     FUSE,
+    /**
+     * A geyser (G0089): a brown circle on the ground, under everything standing on it. Filling, it wears the
+     * {@link #FIRE} mark on its charge, pulsing - the warning; erupting, its fire is ordinary fire.
+     */
+    GEYSER,
     /** Alien food on legs. */
     RABBIT,
     /**

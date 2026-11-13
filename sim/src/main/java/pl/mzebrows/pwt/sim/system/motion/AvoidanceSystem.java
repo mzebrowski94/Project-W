@@ -8,11 +8,11 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import java.util.Objects;
-import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.collision.SpatialGrid;
 import pl.mzebrows.pwt.sim.component.Avoidance;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -50,6 +50,11 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * <p><strong>Ground is measured from where the unit is as well as from where it will be</strong>, so a circle
  * level with a unit running past it is never behind the point it is measured from.
  *
+ * <p><strong>Ground is weighed along the way rock will let him go</strong> (G0090): a way that leans into a wall he is
+ * against is the way along the wall, since that is where the solver will put him - so a man pressed to a corridor's
+ * side by fire across it holds short of it, rather than taking the way that points past it and sliding into it.
+ * Bodies are weighed as they always were.
+ *
  * <p>Adjusts a desired velocity, never sets one. Hazards are filed in a grid once a tick; the query
  * reach is an exact bound, so the answer equals a scan over every hazard.
  */
@@ -59,6 +64,9 @@ public final class AvoidanceSystem extends EntitySystem {
     private static final int SLOTS = Compass.SLOTS;
 
     private static final float EPSILON = 1e-4f;
+
+    /** How far past his own edge rock is looked for, as a share of his radius: touching, not near (G0090). */
+    private static final float WALL_PROBE = 0.25f;
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
@@ -73,6 +81,17 @@ public final class AvoidanceSystem extends EntitySystem {
 
     /** Danger per candidate direction, refilled per unit. One array, reused, so nothing allocates. */
     private final float[] danger = new float[SLOTS];
+
+    /**
+     * Each candidate direction as rock leaves it for this unit (G0090): the part that leans into a wall he is against
+     * taken off, then made unit length again, or zero where nothing is left. Refilled per unit with {@link #danger}.
+     */
+    private final float[] wayX = new float[SLOTS];
+
+    private final float[] wayY = new float[SLOTS];
+
+    /** Where rock is, which ground is weighed against for the ways above. */
+    private final Solid rock;
 
     /** Which way is away from the ground near this unit, summed; refilled per unit with {@link #danger}. */
     @NotState("scratch: refilled for every unit")
@@ -101,9 +120,10 @@ public final class AvoidanceSystem extends EntitySystem {
     private ImmutableArray<Entity> steerers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> hazards = new ImmutableArray<>(new Array<>());
 
-    public AvoidanceSystem(SimConfig config, TileMap map) {
+    public AvoidanceSystem(SimConfig config, Solid rock) {
         this.seed = config.seed();
-        this.grid = new SpatialGrid(map.worldWidth(), map.worldHeight(), config.largestRadius() * 2f);
+        this.rock = rock;
+        this.grid = new SpatialGrid(rock.map().worldWidth(), rock.map().worldHeight(), config.largestRadius() * 2f);
     }
 
     @Override
@@ -213,6 +233,7 @@ public final class AvoidanceSystem extends EntitySystem {
         Side side = FACTION.get(entity).side;
         float aheadX = position.x + velocity.x * avoidance.lookaheadSeconds;
         float aheadY = position.y + velocity.y * avoidance.lookaheadSeconds;
+        fillWays(position, radius);
         boolean threatened = false;
         // Nothing further than this can project to within scanRange: the gap between projected
         // centres is at most the gap now plus how far each can travel in the lookahead. The extra
@@ -260,6 +281,31 @@ public final class AvoidanceSystem extends EntitySystem {
     }
 
     /**
+     * Each candidate direction as the rock he is against leaves it (G0090): the solver takes off whatever leans into a
+     * wall he touches, so that is the way he will actually go. Four probes a unit, only for one with something near.
+     */
+    private void fillWays(Position at, float radius) {
+        float probe = radius * (1f + WALL_PROBE);
+        boolean east = !rock.passableAt(at.x + probe, at.y);
+        boolean west = !rock.passableAt(at.x - probe, at.y);
+        boolean north = !rock.passableAt(at.x, at.y + probe);
+        boolean south = !rock.passableAt(at.x, at.y - probe);
+        for (int slot = 0; slot < SLOTS; slot++) {
+            float x = Compass.x(slot);
+            float y = Compass.y(slot);
+            if ((x > 0f && east) || (x < 0f && west)) {
+                x = 0f;
+            }
+            if ((y > 0f && north) || (y < 0f && south)) {
+                y = 0f;
+            }
+            float length = (float) Math.sqrt(x * x + y * y);
+            wayX[slot] = length > EPSILON ? x / length : 0f;
+            wayY[slot] = length > EPSILON ? y / length : 0f;
+        }
+    }
+
+    /**
      * Scores every candidate direction against one hazard seen from one place, keeping the greater
      * threat in each, and reports whether it was close enough to matter.
      *
@@ -283,7 +329,10 @@ public final class AvoidanceSystem extends EntitySystem {
             awayY -= unitY * closeness;
         }
         for (int slot = 0; slot < SLOTS; slot++) {
-            float alignment = Compass.x(slot) * unitX + Compass.y(slot) * unitY;
+            // Ground along the way he will actually go, bodies along the way he asked for (G0090).
+            float slotX = solid ? Compass.x(slot) : wayX[slot];
+            float slotY = solid ? Compass.y(slot) : wayY[slot];
+            float alignment = slotX * unitX + slotY * unitY;
             if (alignment <= 0f) {
                 continue;
             }
@@ -292,7 +341,7 @@ public final class AvoidanceSystem extends EntitySystem {
                 // Ground is weighed by whether a way takes his body across it, not by how near its middle that way
                 // points: across it is as bad as straight at it, past its edge costs nothing. So a seam between two
                 // circles narrower than he is reads as shut, and the way round as open (ticket 18).
-                float offTheWay = Math.abs(Compass.x(slot) * towardsY - Compass.y(slot) * towardsX);
+                float offTheWay = Math.abs(slotX * towardsY - slotY * towardsX);
                 threat = offTheWay < radii ? closeness : 0f;
             }
             if (threat > danger[slot]) {

@@ -228,6 +228,37 @@ class MissionTest {
         assertThat(seen).as("turrets across the seeds").isPositive();
     }
 
+    /**
+     * A biome's geysers number between its fewest and most, each as wide as a geyser may be and spawned as one: ground
+     * that erupts in fire on a cycle of its own (G0089). Only the cut asks for any.
+     */
+    @Test
+    void putsBetweenItsFewestAndMostGeysersInEveryBiomeEachInItsRange() {
+        SimConfig shipped = SimConfig.defaults();
+        var geyser = shipped.geyser();
+        int seen = 0;
+        for (long seed = 0; seed < 16; seed++) {
+            Mission mission = Mission.build(shipped.withSeed(seed), TierKind.MEDIUM);
+            for (int p = 0; p < mission.order().size(); p++) {
+                int position = p;
+                List<Placed.Geyser> geysers = mission.placed().stream()
+                        .filter(placed -> placed instanceof Placed.Geyser && placed.biome() == position)
+                        .map(Placed.Geyser.class::cast)
+                        .toList();
+                var furniture = shipped.biomes().of(mission.order().get(p)).furniture();
+
+                assertThat(geysers.size())
+                        .as("seed %d, biome %d", seed, p)
+                        .isBetween(furniture.geysersMin(), furniture.geysersMax());
+                for (Placed.Geyser one : geysers) {
+                    assertThat(one.radius()).isBetween(geyser.radiusMin(), geyser.radiusMax());
+                }
+                seen += geysers.size();
+            }
+        }
+        assertThat(seen).as("geysers across the seeds").isPositive();
+    }
+
     /** A biome's trees number between its fewest and most, each trunk as big as a trunk may be (G0072). */
     @Test
     void putsBetweenItsFewestAndMostTreesInEveryBiomeEachTrunkInItsRange() {

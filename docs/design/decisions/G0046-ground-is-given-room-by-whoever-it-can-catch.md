@@ -1,6 +1,6 @@
 # G0046: Ground is given room by whoever it can catch
 
-**Status.** amended by G0076: ground may be heeded only on a chance it declares
+**Status.** amended by G0076: ground may be heeded only on a chance it declares; amended by G0090: ground is weighed along the way the wall leaves a unit
 
 **Trigger.** Changing what a unit steers around, or proposing that a unit stand still on ground that is
 hurting it. **Amends G0035**: its avoidance declaration named this as its revisit trigger.

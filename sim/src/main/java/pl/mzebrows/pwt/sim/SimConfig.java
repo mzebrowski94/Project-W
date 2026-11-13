@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Require;
 import pl.mzebrows.pwt.sim.def.ShakeDef;
 import pl.mzebrows.pwt.sim.def.SlickDef;
+import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.TrooperGrenadeDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -77,6 +78,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * @param rabbit the neutral creature that wanders the field and is eaten
  * @param barrel the explosive one, which is neither eaten nor picked up
  * @param mine the explosive one that the other side sets off by walking into it
+ * @param geyser ground that erupts in fire on a seeded cycle, a biome's furniture (G0089)
  * @param wound what a wound costs a man on his feet, and how long it protects him (G0053)
  * @param nest the holes in the ground that keep sending more out
  * @param controlPoint what it takes to hold a point, and how far taking one carries
@@ -124,6 +126,7 @@ public record SimConfig(
         RabbitConfig rabbit,
         BarrelConfig barrel,
         MineConfig mine,
+        GeyserConfig geyser,
         CasualtyConfig casualty,
         WoundConfig wound,
         ActionConfig action,
@@ -1213,6 +1216,82 @@ public record SimConfig(
             if (flashToSeconds > flashFromSeconds) {
                 throw new IllegalArgumentException("a fuse that slows down as it runs out is not a warning");
             }
+        }
+    }
+
+    /**
+     * A geyser (G0089): a brown circle on the ground that lies dormant, fills, and erupts in fire, over and over. Dormant
+     * it is walkable ground; only the eruption is anything, and that is the ordinary fire of {@link FireConfig} sized
+     * to the geyser - a second source of it beside a blast, through the one slick path (G0035).
+     *
+     * @param radiusMin the smallest a geyser is, in world units (a tile is five), as a boulder or a trunk is sized
+     * @param radiusMax the largest; drawn per geyser between the two, from its placement pass's own stream
+     * @param dormantMinSeconds the shortest it lies quiet between eruptions - never under {@link #DORMANT_FLOOR_SECONDS}
+     * @param dormantMaxSeconds the longest; drawn per geyser per cycle, keyed off the geyser itself
+     * @param fillingSeconds how long it fills before it erupts: the warning, its fire mark pulsing (pillar 5)
+     * @param burnSeconds how long the fire one eruption lays burns, swell and collapse included; the geyser counts as
+     *     dormant only once it is out
+     */
+    @With
+    public record GeyserConfig(
+            float radiusMin,
+            float radiusMax,
+            float dormantMinSeconds,
+            float dormantMaxSeconds,
+            float fillingSeconds,
+            float burnSeconds) {
+
+        /**
+         * The shortest a geyser may lie quiet, whatever the file says (ticket 15): any shorter and the next eruption
+         * comes before a man who waited out the last one has got across. A rule, not a tunable.
+         */
+        public static final float DORMANT_FLOOR_SECONDS = 4f;
+
+        public GeyserConfig {
+            Require.positive("geyser radiusMin", radiusMin);
+            Require.atLeast("geyser radiusMax", radiusMax, radiusMin, "a geyser cannot be largest below its smallest");
+            Require.atLeast(
+                    "geyser dormantMinSeconds",
+                    dormantMinSeconds,
+                    DORMANT_FLOOR_SECONDS,
+                    "a geyser lies quiet long enough to cross between one eruption and the next");
+            Require.atLeast(
+                    "geyser dormantMaxSeconds",
+                    dormantMaxSeconds,
+                    dormantMinSeconds,
+                    "a geyser cannot lie quiet longest below its shortest");
+            Require.positive("geyser fillingSeconds", fillingSeconds);
+            Require.positive("geyser burnSeconds", burnSeconds);
+        }
+
+        /** How wide one geyser is, drawn. */
+        public float radius(Randomness rng) {
+            return radiusMin == radiusMax ? radiusMin : rng.nextFloat(radiusMin, radiusMax);
+        }
+
+        /**
+         * How long this geyser lies quiet on this cycle, in ticks: keyed off the level's seed, the geyser and the cycle
+         * alone (G0086), so it advances no stream and a snapshot carries only the cycle.
+         */
+        public int dormantTicks(long levelSeed, long geyser, int cycle, float tickSeconds) {
+            float span = dormantMaxSeconds - dormantMinSeconds;
+            float drawn = span > 0f ? Rng.keyed(levelSeed, RngStream.GEYSER, geyser, cycle) * span : 0f;
+            return Ticks.of(dormantMinSeconds + drawn, tickSeconds);
+        }
+
+        /**
+         * What one eruption of a geyser this wide lays: the ordinary fire of a blast of its radius, so it covers the
+         * geyser and no more, burning {@code burnSeconds} with the fire's own swell and collapse (G0089).
+         */
+        public SlickDef eruption(FireConfig fire, float radius) {
+            SlickDef blast = fire.forBlast(radius);
+            if (!blast.leavesAnything()) {
+                return blast;
+            }
+            // Widened first, so neither bound is ever set past the other on the way to one life for every circle.
+            return blast.withSecondsMax(Math.max(burnSeconds, blast.secondsMax()))
+                    .withSeconds(burnSeconds)
+                    .withSecondsMax(burnSeconds);
         }
     }
 

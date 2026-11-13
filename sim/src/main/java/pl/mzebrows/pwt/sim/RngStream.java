@@ -97,7 +97,13 @@ public enum RngStream {
      * Where the grenade caches a taken point lays fall round it (G0078). Its own, so taking a point never moves where
      * a reinforcement lands, and laying none draws nothing.
      */
-    CACHE(0x5D3A_8F21_C76E_B419L);
+    CACHE(0x5D3A_8F21_C76E_B419L),
+
+    /**
+     * How long each geyser lies quiet before it fills again, keyed per geyser and per cycle (G0089) - never advanced,
+     * so a geyser's rhythm is its own and retuning it moves nothing else.
+     */
+    GEYSER(0x8A5D_3C17_E96B_24F3L);
 
     private final long salt;
 

@@ -100,6 +100,9 @@ final class MissionScenario implements Scenario {
         for (Placed placed : mission.placed()) {
             if (placed instanceof Placed.Nest nest) {
                 simulation.spawnNest(nest.strain(), nest.x(), nest.y());
+            } else if (placed instanceof Placed.Geyser geyser) {
+                // Ground, so under whatever comes to stand on it (G0089).
+                simulation.spawnGeyser(geyser.x(), geyser.y(), geyser.radius());
             }
         }
         for (House house : mission.laid().houses()) {
@@ -110,7 +113,7 @@ final class MissionScenario implements Scenario {
         deployPlayerSide(simulation);
         for (Placed placed : mission.placed()) {
             switch (placed) {
-                case Placed.Point _, Placed.Hold _, Placed.Nest _ -> {}
+                case Placed.Point _, Placed.Hold _, Placed.Nest _, Placed.Geyser _ -> {}
                 case Placed.Loose loose -> simulation.spawnUnit(loose.strain(), loose.x(), loose.y());
                 case Placed.Pickup pickup -> simulation.spawnPickup(pickup.kind(), pickup.x(), pickup.y());
                 case Placed.Barrel barrel -> simulation.spawnBarrel(barrel.x(), barrel.y());

@@ -23,6 +23,8 @@ import pl.mzebrows.pwt.sim.def.Require;
  * @param treeReach how far from a nest's middle the trees a biome stands by it go (G0072)
  * @param rockMargin how far anything that never moves - a nest, a boulder, a tree - stands off rock, and a boulder or
  *     a tree off everything else: wider than the widest thing that must get past it, so it leaves no slot to be stuck in (G0042)
+ * @param geyserKeepOff how far a geyser's middle keeps off every control point, every nest and every way into its biome,
+ *     the start among them (G0089): its fire is nobody's, so it never erupts where the squad must stand or comes in
  */
 public record PlacementRules(
         float startKeepOff,
@@ -38,7 +40,8 @@ public record PlacementRules(
         float pickupKeepOff,
         float barrelReach,
         float treeReach,
-        float rockMargin) {
+        float rockMargin,
+        float geyserKeepOff) {
 
     public PlacementRules {
         Require.notNegative("placement startKeepOff", startKeepOff);
@@ -55,5 +58,6 @@ public record PlacementRules(
         Require.positive("placement barrelReach", barrelReach);
         Require.positive("placement treeReach", treeReach);
         Require.notNegative("placement rockMargin", rockMargin);
+        Require.notNegative("placement geyserKeepOff", geyserKeepOff);
     }
 }

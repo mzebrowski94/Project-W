@@ -123,8 +123,9 @@ public final class WorldRenderer implements Disposable {
     private final SlingMark slingMark;
     private final ShadowMark shadowMark;
     private final PopMark popMark;
+    private final GeyserMark geyserMark;
 
-    /** The client's own clock, for the post's pulse alone - a look, never read back by the simulation. */
+    /** The client's own clock, for the post's and a geyser's pulse alone - a look, never read back by the simulation. */
     private float pulseSeconds;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
@@ -386,6 +387,16 @@ public final class WorldRenderer implements Disposable {
             }
             shapes.setColor(tint(appearance));
             shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
+            if (appearance.look == Look.GEYSER) {
+                if (appearance.charge > 0f) {
+                    // Filling: the fire mark at its core, growing and pulsing - the warning (G0089, pillar 5).
+                    tinted.set(palette.colorFor(appearance.chargeLook))
+                            .lerp(geyserMark.light(), geyserMark.lightAt(pulseSeconds));
+                    shapes.setColor(tinted);
+                    shapes.circle(x, y, chargeMark.radiusFor(radius, appearance.charge), CIRCLE_SEGMENTS);
+                }
+                continue;
+            }
             if (appearance.charge > 0f) {
                 // The same core every other thing that fills up wears, on the one channel that draws
                 // it - so burning ground reads as hottest in the middle and cools as it dies without
@@ -466,7 +477,7 @@ public final class WorldRenderer implements Disposable {
 
     /** Whether a look is underfoot rather than standing on the ground. */
     private static boolean ground(Look look) {
-        return look == Look.SLICK || look == Look.FIRE || look == Look.GLUE || look == Look.POST;
+        return look == Look.SLICK || look == Look.FIRE || look == Look.GLUE || look == Look.POST || look == Look.GEYSER;
     }
 
     /**

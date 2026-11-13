@@ -5,7 +5,7 @@ import pl.mzebrows.pwt.map.Randomness;
 
 /**
  * What a biome holds besides its creatures (missions ticket 03): control points, barrels, rabbits, boulders, trees,
- * turrets and the pickups lying about. Fixed ranges, never scaled by tier or ramp; where each goes is placement's (G0068).
+ * turrets, geysers and the pickups lying about. Fixed ranges, never scaled by tier or ramp; where each goes is placement's (G0068).
  *
  * @param pointsMin the fewest control points, at least one: the goal line leads east through them
  * @param pointsMax the most
@@ -21,6 +21,8 @@ import pl.mzebrows.pwt.map.Randomness;
  * @param treesByNestMax the most
  * @param turretsMin the fewest turrets, each by a point (G0082): zero in every biome but the plain
  * @param turretsMax the most
+ * @param geysersMin the fewest geysers, ground that erupts in fire (G0089): zero in every biome but the cut
+ * @param geysersMax the most
  * @param pickups what lies about, a line per kind; a house is stocked with its crates and medkits first
  */
 public record Furniture(
@@ -38,6 +40,8 @@ public record Furniture(
         int treesByNestMax,
         int turretsMin,
         int turretsMax,
+        int geysersMin,
+        int geysersMax,
         List<Stock> pickups) {
 
     public Furniture {
@@ -51,6 +55,7 @@ public record Furniture(
         range("trees", treesMin, treesMax);
         range("trees by a nest", treesByNestMin, treesByNestMax);
         range("turrets", turretsMin, turretsMax);
+        range("geysers", geysersMin, geysersMax);
         pickups = List.copyOf(pickups);
     }
 
@@ -87,6 +92,11 @@ public record Furniture(
     /** How many turrets, drawn. */
     public int turrets(Randomness rng) {
         return between(rng, turretsMin, turretsMax);
+    }
+
+    /** How many geysers, drawn. */
+    public int geysers(Randomness rng) {
+        return between(rng, geysersMin, geysersMax);
     }
 
     private static int between(Randomness rng, int min, int max) {

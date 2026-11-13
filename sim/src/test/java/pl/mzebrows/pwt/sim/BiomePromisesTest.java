@@ -45,6 +45,22 @@ class BiomePromisesTest {
         }
     }
 
+    /** "Add lava geysers to the cut" (ticket 15, G0089): 3-5 there, and none anywhere else - zero is off. */
+    @Test
+    void theCutIsTheOneBiomeThatLaysGeysers() {
+        for (BiomeKind kind : BiomeKind.values()) {
+            var furniture = SHIPPED.biomes().of(kind).furniture();
+            if (kind == BiomeKind.CUT) {
+                assertThat(furniture.geysersMin())
+                        .as("the cut's fewest geysers")
+                        .isEqualTo(3);
+                assertThat(furniture.geysersMax()).as("the cut's most geysers").isEqualTo(5);
+            } else {
+                assertThat(furniture.geysersMax()).as("%s's geysers", kind).isZero();
+            }
+        }
+    }
+
     /** "Crags at both ends of their range": mounds round the anthill's holes, masses in the badlands. */
     @Test
     void cragsRiseFromMoundsInTheAnthillToMassesInTheBadlands() {

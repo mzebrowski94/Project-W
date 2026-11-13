@@ -105,6 +105,8 @@ class BiomeDefTest {
                 furniture.treesByNestMax(),
                 furniture.turretsMin(),
                 furniture.turretsMax(),
+                furniture.geysersMin(),
+                furniture.geysersMax(),
                 List.of(new Stock.Pickup(kind, 1, 1)));
     }
 }

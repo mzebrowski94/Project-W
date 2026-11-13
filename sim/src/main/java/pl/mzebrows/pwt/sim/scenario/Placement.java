@@ -24,7 +24,7 @@ import pl.mzebrows.pwt.sim.def.Side;
 /**
  * Puts down what each biome of a mission counts, by rules and never by places (G0068): ordered {@link Scatter}
  * passes, the most constrained first - points, what a house holds, nests, packs, crates by points, turrets by points,
- * medkits and food,
+ * geysers, medkits and food,
  * barrels, boulders, trees, rabbits. Each pass keeps off what went down before it by its radii, crow-flies, and off every
  * tile the strip kept: the start, aprons, doorsteps, and every house's inside but for its stock. The last biome keeps
  * everything hostile outside the finale's watch (G0064), so holding its post never waits on a hole or a sleeper behind
@@ -59,6 +59,8 @@ final class Placement {
     private static final long TREES_BY_NEST = 0x5C83_E1A7_0B9F_42D6L;
     private static final long TRUNKS = 0xD06A_4B2E_97C1_F358L;
     private static final long TURRETS = 0x4E2B_97D3_1A6C_F085L;
+    private static final long GEYSERS = 0xA71C_3E95_D28B_640FL;
+    private static final long GEYSER_SIZES = 0x3F6B_C150_8E2D_97A4L;
 
     private final SimConfig config;
     private final PlacementRules rules;
@@ -193,6 +195,8 @@ final class Placement {
             int trees = furniture.trees(counted);
             // Drawn last, so a biome with none draws every other count as it did before turrets were a line (G0082).
             int turrets = furniture.turrets(counted);
+            // After turrets, for their reason: a biome with none draws every other count as it did before (G0089).
+            int geysers = furniture.geysers(counted);
 
             points(pointCount, attempt.derive(POINTS));
             houseStock(stock, attempt.derive(STOCK));
@@ -200,6 +204,7 @@ final class Placement {
             packs(creatures, attempt.derive(PACKS));
             crates(stock, attempt.derive(CRATES));
             turrets(turrets, attempt.derive(TURRETS));
+            geysers(geysers, attempt.derive(GEYSERS));
             pickups(stock, attempt.derive(PICKUPS));
             barrels(barrels, attempt.derive(BARRELS));
             boulders(boulders, attempt.derive(BOULDERS));
@@ -358,6 +363,32 @@ final class Placement {
             for (int k = 0; k < count; k++) {
                 shortOf("turret by a point", 1, byAPoint(scatter, first + k, radius, place));
             }
+        }
+
+        /**
+         * Geysers (G0089), each {@code geyserKeepOff} off every point, nest and way in, the start among them - its fire is
+         * nobody's - and off everything already standing by its own radius, drawn from a stream of its own. Before the
+         * pickups, barrels and boulders, which then keep off it, so nothing that goes off stands in its fire.
+         */
+        private void geysers(int count, Randomness rng) {
+            if (count == 0) {
+                return;
+            }
+            Scatter scatter = scatter(rng, 0f);
+            keepOffEntries(scatter, rules.geyserKeepOff());
+            for (Placed point : points) {
+                scatter.reserve(point.x(), point.y(), rules.geyserKeepOff());
+            }
+            for (Placed nest : nests) {
+                scatter.reserve(nest.x(), nest.y(), rules.geyserKeepOff());
+            }
+            Randomness sizes = rng.derive(GEYSER_SIZES);
+            int got = 0;
+            for (int k = 0; k < count; k++) {
+                float radius = config.geyser().radius(sizes);
+                got += scatter.scatter(rect, 1, radius, (x, y) -> put(new Placed.Geyser(x, y, radius, position)));
+            }
+            shortOf("geysers", count, got);
         }
 
         /**
@@ -599,6 +630,7 @@ final class Placement {
             case Placed.Barrel _ -> config.pickup(PickupKind.BARREL).radius();
             case Placed.Boulder _ -> config.obstacle().radius();
             case Placed.Tree tree -> tree.trunk();
+            case Placed.Geyser geyser -> geyser.radius();
             case Placed.Rabbit _ -> config.pickup(PickupKind.RABBIT).radius();
             case Placed.Hold _ -> config.controlPoint().radius();
             case Placed.Turret _ -> config.turret().radius();

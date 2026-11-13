@@ -75,7 +75,8 @@ meanwhile. The HTML prototype is for looks only.
   (pressure = tier `enemyPercent` x (1 + `rampPercent` x position), G0063), and nothing else does.
 - `furniture.pointsMin/Max` (2-3), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, `treesMin/Max` and
   `treesByNestMin/Max` (0 for none - the fen alone has trees, G0072), `turretsMin/Max` (0 for none - the plain alone
-  has them, G0082), and `furniture.pickups=pickup <kind> min max; ...`.
+  has them, G0082), `geysersMin/Max` (0 for none - the cut alone has them, G0089), and
+  `furniture.pickups=pickup <kind> min max; ...`.
   Never scaled. **Every block carries every furniture key**, zeros included: a new furniture line is a key in all of
   them. A furniture thing with a size of its own (a tree's trunk) is drawn from its own stream in its pass, never on
   the block; a count tied to another pass (trees by each nest) is drawn from the biome's stream, nest by nest, so a
@@ -97,7 +98,8 @@ meanwhile. The HTML prototype is for looks only.
 - **Where it goes** (G0068): points one a column band; house stock (crates, then medkits) up to `houseStock` a house;
   nests; packs; leftover crates by points; turrets by points; medkits anywhere; **food** - anything a creature gains from - on the
   biome's organic ground while there is room; barrels by holes and packs; boulders `rockMargin` off rock; trees as boulders, the first within `treeReach` of each
-  nest; rabbits.
+  nest; rabbits. Geysers (G0089) go after turrets and before medkits, `geyserKeepOff` off points, nests and ways in,
+  so what is placed after them keeps off their fire; each one's radius is drawn in its pass, as a trunk is.
   A block says none of this; it is why a crate or a medkit line fills the houses first.
 - **Porting**: the Adventure biome's own counts, scaled by width (x1.8 - an Adventure biome is 29 columns, a
   mission's 50-58), then **cut to the room** - holes most of all. A range about +-20 % round the count. Drop
@@ -179,7 +181,10 @@ None is written per biome; a biome joins every one by being a constant.
 - `verify.sh` runs 64 seeds a sweep (three tiers each in the mission sweep). **Run the big one** before you finish:
   `PWT_SWEEP=1 .claude/scripts/gradle.sh :map:test --tests '*SweepTest' --rerun :core:test --tests '*SweepTest' --rerun -i`
   - 2000 seeds. Each test task takes its own `--tests` and `--rerun`: the variable is no input of the task, and
-  without `--rerun` a sweep that passed at 64 is up to date and silently skipped.
+  without `--rerun` a sweep that passed at 64 is up to date and silently skipped. **Read its faults by biome**: a
+  fault in a biome your change does not reach - its counts and passes untouched - was there before you (on
+  2026-11-13 the integration tip showed 63 in 2000, in the badlands, the anthill and the fen, and one strip run);
+  say so, and own only the ones in what you changed.
 
 ## 6. Look at it
 

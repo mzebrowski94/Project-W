@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Feed;
+import pl.mzebrows.pwt.sim.component.Geyser;
 import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Heat;
@@ -88,6 +89,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Pickup> PICKUP = ComponentMapper.getFor(Pickup.class);
     private static final ComponentMapper<Slick> SLICK = ComponentMapper.getFor(Slick.class);
     private static final ComponentMapper<Mine> MINE = ComponentMapper.getFor(Mine.class);
+    private static final ComponentMapper<Geyser> GEYSER = ComponentMapper.getFor(Geyser.class);
     private static final ComponentMapper<Barrage> BARRAGE = ComponentMapper.getFor(Barrage.class);
     private static final ComponentMapper<Sling> SLING = ComponentMapper.getFor(Sling.class);
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
@@ -257,6 +259,13 @@ public final class AppearanceSystem extends IteratingSystem {
             // The fuse, in its own colour; nothing before it is armed - a mine's or a leech's (G0083).
             appearance.chargeLook = Look.FUSE;
             appearance.charge = MINE.get(entity).flash();
+            return;
+        }
+        if (GEYSER.has(entity)) {
+            // A geyser filling wears the fire mark, growing as it fills, and the client pulses it - the warning
+            // (G0089, pillar 5). Dormant or erupting it says nothing: its fire is fire.
+            appearance.chargeLook = Look.FIRE;
+            appearance.charge = GEYSER.get(entity).filled();
             return;
         }
         if (SLICK.has(entity)) {

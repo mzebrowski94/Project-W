@@ -40,6 +40,9 @@ public sealed interface Placed {
     /** A tree: a trunk of this radius that stands as a boulder does, under its foliage (G0072). */
     record Tree(float x, float y, float trunk, int biome) implements Placed {}
 
+    /** A geyser this wide, ground that erupts in fire on a cycle of its own (G0089). */
+    record Geyser(float x, float y, float radius, int biome) implements Placed {}
+
     /** A rabbit, food that runs. */
     record Rabbit(float x, float y, int biome) implements Placed {}
 

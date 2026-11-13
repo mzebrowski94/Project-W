@@ -36,6 +36,7 @@ import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Focus;
+import pl.mzebrows.pwt.sim.component.Geyser;
 import pl.mzebrows.pwt.sim.component.Grip;
 import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Handle;
@@ -763,6 +764,44 @@ public final class Spawner {
         entity.add(engine.createComponent(Dragged.class));
         entity.add(engine.createComponent(Appearance.class).set(Look.MINE));
         admit(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a geyser (G0089): a circle of ground this wide that lies dormant, fills and erupts in fire, over and over.
+     *
+     * <p><strong>No collider and no side</strong>, as a control point: dormant it is ground a man walks across, and
+     * nothing steers round it, stops on it or hunts it. Its first dormancy is keyed off it as every later one is, so it
+     * is admitted before it is set. Spawn before whatever stands on it - the renderer draws in spawn order.
+     */
+    public Entity spawnGeyser(float x, float y, float radius) {
+        SimConfig.GeyserConfig geyser = config.geyser();
+        Entity entity = engine.createEntity();
+        Geyser cycle = engine.createComponent(Geyser.class);
+        entity.add(cycle);
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(radius));
+        entity.add(engine.createComponent(Appearance.class).set(Look.GEYSER));
+        admit(entity);
+        cycle.set(
+                geyser.dormantTicks(config.seed(), Handles.of(entity), 0, config.tickSeconds()),
+                ticks(geyser.fillingSeconds()),
+                ticks(geyser.burnSeconds()),
+                geyser.eruption(config.fire(), radius));
+        return entity;
+    }
+
+    /**
+     * Spawns a geyser's eruption: a carrier of its fire, born dead, so the fire arrives the way every fire does - by
+     * something dying, through the one reaction (G0018, G0035). Nothing else; the reaper takes it this tick.
+     */
+    public Entity spawnEruption(float x, float y, SlickDef fire) {
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(SlicksOnDeath.class).set(fire));
+        admit(entity);
+        markDead(entity);
         return entity;
     }
 

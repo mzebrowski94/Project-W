@@ -45,6 +45,7 @@ public final class Components {
                     Facing.class,
                     Faction.class,
                     Feed.class,
+                    Geyser.class,
                     Grip.class,
                     Gripped.class,
                     Focus.class,

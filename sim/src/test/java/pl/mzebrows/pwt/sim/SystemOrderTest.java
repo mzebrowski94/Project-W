@@ -45,6 +45,7 @@ import pl.mzebrows.pwt.sim.system.death.BlastSystem;
 import pl.mzebrows.pwt.sim.system.death.BloatSystem;
 import pl.mzebrows.pwt.sim.system.death.CasualtySystem;
 import pl.mzebrows.pwt.sim.system.death.DyingSystem;
+import pl.mzebrows.pwt.sim.system.death.GeyserSystem;
 import pl.mzebrows.pwt.sim.system.death.MineSystem;
 import pl.mzebrows.pwt.sim.system.death.ReaperSystem;
 import pl.mzebrows.pwt.sim.system.death.RespawnSystem;
@@ -232,6 +233,10 @@ class SystemOrderTest {
                 BloatSystem.class,
                 "a miss is marked dead while the reactions can still see it"));
         rows.add(new Before(BloatSystem.class, BlastSystem.class, "a body that fills this tick explodes this tick"));
+        rows.add(new Before(
+                GeyserSystem.class,
+                SlickSystem.class,
+                "an eruption is burning on the tick its filling runs out (G0089)"));
         rows.add(
                 new Before(DamageSystem.class, BlastSystem.class, "a blast owes damage to the next tick: the cascade"));
         rows.add(new Before(

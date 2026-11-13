@@ -224,6 +224,18 @@ public final class AlphaWorlds {
 
     public static final float MINE_FLASH_TO = 0.1f;
 
+    /** A geyser of one size, so a test reads its fire without drawing it (G0089). */
+    public static final float GEYSER_RADIUS = 4f;
+
+    /** The floor and a spread over it, so a test can tell one geyser's rhythm from another's. */
+    public static final float GEYSER_DORMANT_MIN = 4f;
+
+    public static final float GEYSER_DORMANT_MAX = 9f;
+
+    public static final float GEYSER_FILLING = 1.5f;
+
+    public static final float GEYSER_BURN = 3f;
+
     /** Half a second: long enough to be interrupted in a test, short enough not to slow one down. */
     public static final float CASUALTY_STABILISE = 0.5f;
 
@@ -1586,6 +1598,13 @@ public final class AlphaWorlds {
                         MINE_BLAST_RADIUS,
                         MINE_FLASH_FROM,
                         MINE_FLASH_TO),
+                new SimConfig.GeyserConfig(
+                        GEYSER_RADIUS,
+                        GEYSER_RADIUS,
+                        GEYSER_DORMANT_MIN,
+                        GEYSER_DORMANT_MAX,
+                        GEYSER_FILLING,
+                        GEYSER_BURN),
                 new SimConfig.CasualtyConfig(
                         CASUALTY_BLEED_OUT,
                         CASUALTY_STABILISE,

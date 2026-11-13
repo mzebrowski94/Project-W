@@ -1,6 +1,6 @@
 # G0035: Fire is a neutral slick left by the blast dying
 
-**Status.** amended by G0046: whatever a slick can catch gives it room, and a unit standing still steps off it; amended by G0053: fire wounds a man rather than putting him down
+**Status.** amended by G0046: whatever a slick can catch gives it room, and a unit standing still steps off it; amended by G0053: fire wounds a man rather than putting him down; amended by G0089: a geyser is a second source of fire
 
 **Trigger.** Adding or changing anything that leaves ground dangerous after an explosion, or proposing
 that a slick's side stop being a declaration and go back to being a rule.

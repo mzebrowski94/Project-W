@@ -56,6 +56,7 @@ import pl.mzebrows.pwt.sim.system.death.BlastSystem;
 import pl.mzebrows.pwt.sim.system.death.BloatSystem;
 import pl.mzebrows.pwt.sim.system.death.CasualtySystem;
 import pl.mzebrows.pwt.sim.system.death.DyingSystem;
+import pl.mzebrows.pwt.sim.system.death.GeyserSystem;
 import pl.mzebrows.pwt.sim.system.death.MineSystem;
 import pl.mzebrows.pwt.sim.system.death.ReaperSystem;
 import pl.mzebrows.pwt.sim.system.death.RespawnSystem;
@@ -219,7 +220,7 @@ public final class Simulation {
         engine.addSystem(new TrooperMoveSystem(config, solid, squad));
         engine.addSystem(new TrooperCombatSystem(config, solid, guns, throwing, odds, squad));
         engine.addSystem(new WanderSystem(streams.of(RngStream.WANDER), map, config.tickSeconds(), modifiers));
-        engine.addSystem(new AvoidanceSystem(config, map));
+        engine.addSystem(new AvoidanceSystem(config, solid));
         engine.addSystem(new EnemyRangedSystem(solid, guns, streams.of(RngStream.SPIT)));
         // After everything that chooses a course; before the dodge, which overwrites it.
         engine.addSystem(new HopSystem());
@@ -256,6 +257,9 @@ public final class Simulation {
         engine.addSystem(new ProjectileBoundsSystem(solid, spawner));
         // Beside the mine, for the same reasons; a full body explodes by dying (G0018).
         engine.addSystem(new BloatSystem(config, spawner));
+        // Inside the death window and before the slicks, so an eruption's fire is laid this tick by its carrier dying
+        // (G0018, G0089); before the mine, which must stay immediately before the blast.
+        engine.addSystem(new GeyserSystem(config, spawner));
         // After the solver settles positions, and immediately before the blast, so a fuse that runs
         // out reaches this tick's death reactions (G0018).
         engine.addSystem(new MineSystem(spawner));
@@ -276,7 +280,7 @@ public final class Simulation {
         // the nests': riders spilled this tick are on the field, and count, this tick (G0074).
         engine.addSystem(new SlingSystem(config, map, spawner, streams.of(RngStream.SLING)));
         engine.addSystem(new ControlPointSystem(config, map, spawner, streams.of(RngStream.CACHE), capacity));
-        // After every source of a draft (41, 44, 45), so what was earned this tick is dealt this tick; and
+        // After every source of a draft (42, 45, 46), so what was earned this tick is dealt this tick; and
         // after every reader of Modifiers, so the ledger changes once, at the end, for every reader alike.
         engine.addSystem(
                 new UpgradeSystem(config, streams.of(RngStream.DRAFT), streams.of(RngStream.ADAPTATION), capacity));
@@ -532,6 +536,11 @@ public final class Simulation {
     /** Spawns a mine: it starts ticking when something on the other side walks into it. */
     public Entity spawnMine(float x, float y) {
         return spawner.spawnMine(x, y);
+    }
+
+    /** Spawns a geyser this wide: walkable ground that fills and erupts in fire on its own cycle (G0089). */
+    public Entity spawnGeyser(float x, float y, float radius) {
+        return spawner.spawnGeyser(x, y, radius);
     }
 
     /** Spawns something lying on the field for the first thing that touches it. */
