@@ -59,7 +59,8 @@ public final class Geyser implements Component, Pool.Poolable {
         if (phase != Phase.FILLING || fillingTicks <= 0) {
             return 0f;
         }
-        return 1f - remainingTicks / (float) fillingTicks;
+        // The first tick of filling already shows, so the warning lasts the whole of it.
+        return 1f - (remainingTicks - 1) / (float) fillingTicks;
     }
 
     @Override

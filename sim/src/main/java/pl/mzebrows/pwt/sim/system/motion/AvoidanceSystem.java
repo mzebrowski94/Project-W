@@ -233,7 +233,7 @@ public final class AvoidanceSystem extends EntitySystem {
         Side side = FACTION.get(entity).side;
         float aheadX = position.x + velocity.x * avoidance.lookaheadSeconds;
         float aheadY = position.y + velocity.y * avoidance.lookaheadSeconds;
-        fillWays(position, radius);
+        boolean waysFilled = false;
         boolean threatened = false;
         // Nothing further than this can project to within scanRange: the gap between projected
         // centres is at most the gap now plus how far each can travel in the lookahead. The extra
@@ -257,6 +257,10 @@ public final class AvoidanceSystem extends EntitySystem {
             }
             Position hazardPosition = POSITION.get(hazard);
             float hazardRadius = BODY.get(hazard).radius;
+            if (!collider.solid && !waysFilled) {
+                fillWays(position, radius);
+                waysFilled = true;
+            }
             if (!collider.solid) {
                 // Ground from where the unit is now, too: a circle level with him is behind the point he will
                 // be at, and measured only from there it would look clear to every way forward (G0046).
@@ -282,7 +286,7 @@ public final class AvoidanceSystem extends EntitySystem {
 
     /**
      * Each candidate direction as the rock he is against leaves it (G0090): the solver takes off whatever leans into a
-     * wall he touches, so that is the way he will actually go. Four probes a unit, only for one with something near.
+     * wall he touches, so that is the way he will actually go. Four probes a unit, made only once ground near him is weighed.
      */
     private void fillWays(Position at, float radius) {
         float probe = radius * (1f + WALL_PROBE);
