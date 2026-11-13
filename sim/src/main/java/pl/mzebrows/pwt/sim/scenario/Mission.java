@@ -71,22 +71,37 @@ public record Mission(
      *
      * @param kind which one was drawn
      * @param flipped whether its layout is mirrored north-south
+     * @param layout which of its hand-made layouts was dealt, counting from zero (G0087)
      * @param waves its schedule, held back until its post is taken, each count drawn and scaled for the tier
      * @param lair what rises once every commander stands in the finale, in the order written - empty but for a keep;
      *     its ground is the finale's whole rect (G0048)
      */
-    public record Finale(FinaleKind kind, boolean flipped, List<Wave> waves, List<Arrival> lair) {
+    public record Finale(FinaleKind kind, boolean flipped, int layout, List<Wave> waves, List<Arrival> lair) {
 
         public Finale {
             waves = List.copyOf(waves);
             lair = List.copyOf(lair);
         }
 
-        /** Its definition as it is laid: flipped, if it is. */
+        /** Its definition as it is laid: its layout over what every layout shares, then flipped, if it is. */
         public FinaleDef def(SimConfig config) {
-            FinaleDef def = config.finales().of(kind);
+            FinaleDef def = config.finales().of(kind).laid(layout);
             return flipped ? def.flipped() : def;
         }
+    }
+
+    /**
+     * Which finale {@code config.seed()} ends on - its kind, its flip and its layout, in that order from the finale's
+     * stream - with its waves and lair not yet resolved. What a sweep picks seeds by, so it reaches every layout of
+     * every finale by name rather than by luck.
+     */
+    public static Finale drawn(SimConfig config) {
+        Randomness drawing = mission(config).derive(FINALE);
+        List<FinaleKind> kinds = List.of(FinaleKind.values());
+        FinaleKind kind = kinds.get(drawing.nextInt(kinds.size()));
+        boolean flipped = drawing.nextInt(2) == 1;
+        int layout = drawing.nextInt(config.finales().of(kind).layoutCount());
+        return new Finale(kind, flipped, layout, List.of(), List.of());
     }
 
     /** The mission {@code config.seed()} names on this tier, from a config the tier has been applied to or not. */
@@ -115,11 +130,8 @@ public record Mission(
     /** {@link #build(SimConfig, TierKind)} on a map stream already derived, as {@code Scenarios.world} hands one. */
     static Mission build(SimConfig config, TierKind tier, Randomness map) {
         List<BiomeKind> order = deal(config);
-        Randomness drawing = mission(config).derive(FINALE);
-        List<FinaleKind> kinds = List.of(FinaleKind.values());
-        FinaleKind kind = kinds.get(drawing.nextInt(kinds.size()));
-        boolean flipped = drawing.nextInt(2) == 1;
-        FinaleDef finale = new Finale(kind, flipped, List.of(), List.of()).def(config);
+        Finale drawn = drawn(config);
+        FinaleDef finale = drawn.def(config);
 
         List<BiomeGround> grounds = new ArrayList<>();
         for (BiomeKind dealt : order) {
@@ -178,14 +190,17 @@ public record Mission(
         }
 
         // Every tier draws the same counts from the same stream and scales them, so a harder tier moves nothing else.
-        Randomness counting = drawing.derive(WAVES);
+        // A wave from several mouths draws a count for each, in the order written (G0087).
+        Randomness counting = mission(config).derive(FINALE).derive(WAVES);
         List<Wave> waves = new ArrayList<>();
         for (WaveLine line : finale.waves()) {
-            waves.add(new Wave(
-                    line.afterSeconds(),
-                    line.strain(),
-                    line.count(counting, config.mission().finale(tier)),
-                    hold.mouth(line.mouth()).from(anchor)));
+            List<Wave.Lot> lots = new ArrayList<>();
+            for (String mouth : line.mouthNames()) {
+                lots.add(new Wave.Lot(
+                        line.count(counting, config.mission().finale(tier)),
+                        hold.mouth(mouth).from(anchor)));
+            }
+            waves.add(new Wave(line.afterSeconds(), line.strain(), lots));
         }
         List<Arrival> lair = new ArrayList<>();
         for (LairLine line : finale.lair()) {
@@ -204,7 +219,7 @@ public record Mission(
                 order,
                 laid,
                 placed,
-                new Finale(kind, flipped, waves, lair),
+                new Finale(drawn.kind(), drawn.flipped(), drawn.layout(), waves, lair),
                 placement.shortfalls());
     }
 

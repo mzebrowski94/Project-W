@@ -7,9 +7,14 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
+import pl.mzebrows.pwt.sim.def.FinaleKind;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.scenario.Mission;
 import pl.mzebrows.pwt.sim.scenario.Placed;
@@ -22,11 +27,21 @@ import pl.mzebrows.pwt.sim.scenario.Scenarios;
  * 64 seeds on every verify; {@code PWT_SWEEP=1} runs 2000 and prints a summary and a few seeds that deal each biome
  * first, each as its medium and its hard code - the hard one to measure the field on. A failure lists every failing
  * mission by its code. In {@code core}, beside {@link MissionCode}, so a seed is named by the code that plays it.
+ *
+ * <p><strong>Every layout of every finale, by name</strong> (G0087): beside the spread seeds it sweeps the first
+ * {@link #PER_LAYOUT} seeds that end on each finale, layout and flip, picked by {@link Mission#drawn} - never trusting
+ * the spread to happen on them.
  */
 class MissionSweepTest {
 
     private static final boolean BIG = "1".equals(System.getenv("PWT_SWEEP"));
     private static final int SEEDS = BIG ? 2000 : 64;
+
+    /** Seeds swept for each finale, layout and flip, on top of the spread. */
+    private static final int PER_LAYOUT = BIG ? 16 : 2;
+
+    /** Where those are looked for along the stride: past the big spread, so they are other seeds in either run. */
+    private static final int SPREAD = 2000;
 
     /** The tier the summary counts creatures on and the budget is measured on: the one with the most to place. */
     private static final TierKind TIER = TierKind.HARD;
@@ -47,14 +62,15 @@ class MissionSweepTest {
     void holdsEveryMissionToTheRules() {
         List<String> faults = new ArrayList<>();
         long nanos = 0L;
-        int[] creatures = new int[SEEDS * 4];
+        List<Long> seeds = seeds();
+        int[] creatures = new int[seeds.size() * 4];
         int counted = 0;
         EnumMap<BiomeKind, List<String>> codes = new EnumMap<>(BiomeKind.class);
         for (BiomeKind kind : BiomeKind.values()) {
             codes.put(kind, new ArrayList<>());
         }
-        for (int i = 0; i < SEEDS; i++) {
-            long seed = seed(i);
+        Set<String> endings = new TreeSet<>();
+        for (long seed : seeds) {
             Mission mission = null;
             for (TierKind tier : TierKind.values()) {
                 SimConfig config =
@@ -71,6 +87,7 @@ class MissionSweepTest {
                 if (tier == TIER) {
                     mission = built;
                 }
+                endings.add(ending(built.finale()));
             }
             if (mission == null) {
                 continue;
@@ -92,11 +109,12 @@ class MissionSweepTest {
         }
 
         assertThat(faults)
-                .withFailMessage(
-                        () -> String.join("\n", faults) + "\n" + faults.size() + " faults in " + SEEDS + " seeds")
+                .withFailMessage(() ->
+                        String.join("\n", faults) + "\n" + faults.size() + " faults in " + seeds.size() + " seeds")
                 .isEmpty();
+        assertThat(endings).as("every finale, layout and flip swept").containsAll(everyEnding());
         if (BIG) {
-            System.out.println(summary(nanos, Arrays.copyOf(creatures, counted), codes));
+            System.out.println(summary(seeds.size(), nanos, Arrays.copyOf(creatures, counted), codes));
         }
     }
 
@@ -122,14 +140,52 @@ class MissionSweepTest {
         return Math.floorMod(i * STRIDE, MissionCode.SEEDS);
     }
 
-    private static String summary(long nanos, int[] creatures, EnumMap<BiomeKind, List<String>> codes) {
+    /** The spread, then the first {@link #PER_LAYOUT} seeds past the big one that end on each finale, layout and flip. */
+    private static List<Long> seeds() {
+        List<Long> seeds = new ArrayList<>();
+        for (int i = 0; i < SEEDS; i++) {
+            seeds.add(seed(i));
+        }
+        Map<String, Integer> found = new TreeMap<>();
+        Set<String> wanted = new TreeSet<>(everyEnding());
+        for (int i = SPREAD; !wanted.isEmpty(); i++) {
+            long seed = seed(i);
+            String ending = ending(Mission.drawn(SimConfig.defaults().withSeed(seed)));
+            if (wanted.contains(ending)) {
+                seeds.add(seed);
+                if (found.merge(ending, 1, Integer::sum) >= PER_LAYOUT) {
+                    wanted.remove(ending);
+                }
+            }
+        }
+        return seeds;
+    }
+
+    /** Every finale, each of its layouts, flipped and not. */
+    private static List<String> everyEnding() {
+        List<String> endings = new ArrayList<>();
+        for (FinaleKind kind : FinaleKind.values()) {
+            int layouts = SimConfig.defaults().finales().of(kind).layoutCount();
+            for (int layout = 0; layout < layouts; layout++) {
+                endings.add(ending(new Mission.Finale(kind, false, layout, List.of(), List.of())));
+                endings.add(ending(new Mission.Finale(kind, true, layout, List.of(), List.of())));
+            }
+        }
+        return endings;
+    }
+
+    private static String ending(Mission.Finale finale) {
+        return finale.kind() + " layout " + (finale.layout() + 1) + (finale.flipped() ? " flipped" : "");
+    }
+
+    private static String summary(int seeds, long nanos, int[] creatures, EnumMap<BiomeKind, List<String>> codes) {
         int[] sorted = creatures.clone();
         Arrays.sort(sorted);
         StringBuilder text = new StringBuilder(String.format(
                 Locale.ROOT,
                 "MissionSweep %d seeds on every tier, 0 faults, %.1f ms/build, creatures/biome on %s %d/%d/%d",
-                SEEDS,
-                nanos / 1e6 / SEEDS / TierKind.values().length,
+                seeds,
+                nanos / 1e6 / seeds / TierKind.values().length,
                 TIER,
                 sorted[0],
                 sorted[sorted.length / 2],

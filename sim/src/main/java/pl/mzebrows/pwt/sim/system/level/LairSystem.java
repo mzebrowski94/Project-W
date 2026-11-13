@@ -11,8 +11,10 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.Life;
+import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Presence;
@@ -36,6 +38,10 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  * that met the players with his back would read as asleep, and nothing turns a rooted thing until it
  * has somebody to shoot at (pillar 5).
  *
+ * <p><strong>What it raises stands out as its nests do</strong> (G0088, provisional): a trooper picks its boss out, weighs
+ * him and keeps on him on the nest's own terms, {@code sim.nest.standsOut}, {@code threat} and {@code kept}. A boss
+ * that shoots from past where a man notices anything would otherwise be fought by the commander alone.
+ *
  * <p>It runs with the other systems that are about the level rather than anything standing in it, after
  * the death chain and before the objectives, for the reason {@code WaveSystem} does: what rises this
  * tick counts against the level on this tick.
@@ -50,12 +56,16 @@ public final class LairSystem extends EntitySystem {
     private final TileMap map;
     private final Spawner spawner;
 
+    /** The nest's terms as a target, which everything the lair raises is given (G0088). */
+    private final SimConfig.NestConfig nest;
+
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
 
-    public LairSystem(TileMap map, Spawner spawner) {
+    public LairSystem(SimConfig config, TileMap map, Spawner spawner) {
         this.map = map;
         this.spawner = spawner;
+        this.nest = config.nest();
     }
 
     @Override
@@ -90,7 +100,10 @@ public final class LairSystem extends EntitySystem {
                     Position at = nearest == null ? null : POSITION.get(nearest);
                     float faceX = at == null ? 1f : at.x - arrival.x();
                     float faceY = at == null ? 0f : at.y - arrival.y();
-                    spawner.spawnUnit(strain, arrival.x(), arrival.y(), faceX, faceY);
+                    spawner.spawnUnit(strain, arrival.x(), arrival.y(), faceX, faceY)
+                            .getComponent(Enemy.class)
+                            .standingOut(nest.standsOut())
+                            .weighed(nest.threat(), nest.kept());
                 }
             }
             lair.wake();

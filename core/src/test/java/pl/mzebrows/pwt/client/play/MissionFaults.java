@@ -1,7 +1,9 @@
 package pl.mzebrows.pwt.client.play;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.StripFaults;
@@ -48,7 +50,8 @@ final class MissionFaults {
      * The finale's set piece where it can be played (G0064): everything it stands, and every tile of every mouth a wave
      * comes from, on open ground reached from the start - and nothing hostile of the last biome inside its watch, so
      * holding its post never waits on a hole or a sleeper behind the ridge. What its lair raises stands there too, off
-     * kept ground, and inside the watch, so holding the post means dealing with it (G0048).
+     * kept ground, and inside the watch, so holding the post means dealing with it (G0048). And no two things of the
+     * set piece or its lair on one tile - a mine under a gun - which a hand-made layout could write (G0087).
      */
     static List<String> finale(Mission mission) {
         TileMap map = mission.laid().map();
@@ -56,6 +59,7 @@ final class MissionFaults {
         boolean[] reached = Maps.reachableFrom(map, start.col(), start.row());
         int finale = mission.order().size();
         List<String> faults = new ArrayList<>();
+        Set<Integer> taken = new HashSet<>();
         Placed.Hold hold = null;
         for (Placed placed : mission.placed()) {
             if (placed.biome() != finale) {
@@ -66,6 +70,9 @@ final class MissionFaults {
             }
             int col = map.colAt(placed.x());
             int row = map.rowAt(placed.y());
+            if (!taken.add(row * map.cols() + col)) {
+                faults.add("the finale's " + placed + " shares its tile (" + col + "," + row + ") with another");
+            }
             if (!map.inBounds(col, row) || !reached[row * map.cols() + col]) {
                 faults.add("the finale's " + placed + " is not on open ground reached from the start");
             }
@@ -75,11 +82,13 @@ final class MissionFaults {
             return faults;
         }
         for (Wave wave : mission.finale().waves()) {
-            TileRect mouth = wave.where();
-            for (int row = mouth.row(); row < mouth.endRow(); row++) {
-                for (int col = mouth.col(); col < mouth.endCol(); col++) {
-                    if (!map.inBounds(col, row) || !reached[row * map.cols() + col]) {
-                        faults.add("the finale's mouth " + mouth + " is shut at (" + col + "," + row + ")");
+            for (Wave.Lot lot : wave.lots()) {
+                TileRect mouth = lot.where();
+                for (int row = mouth.row(); row < mouth.endRow(); row++) {
+                    for (int col = mouth.col(); col < mouth.endCol(); col++) {
+                        if (!map.inBounds(col, row) || !reached[row * map.cols() + col]) {
+                            faults.add("the finale's mouth " + mouth + " is shut at (" + col + "," + row + ")");
+                        }
                     }
                 }
             }
@@ -87,6 +96,9 @@ final class MissionFaults {
         for (Arrival arrival : mission.finale().lair()) {
             int col = map.colAt(arrival.x());
             int row = map.rowAt(arrival.y());
+            if (!taken.add(row * map.cols() + col)) {
+                faults.add("the lair's " + arrival + " shares its tile (" + col + "," + row + ") with another");
+            }
             if (!map.inBounds(col, row)
                     || !reached[row * map.cols() + col]
                     || mission.laid().kept(col, row)) {

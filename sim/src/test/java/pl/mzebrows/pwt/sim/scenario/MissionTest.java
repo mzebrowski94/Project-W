@@ -15,9 +15,11 @@ import pl.mzebrows.pwt.map.Strip;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.FinaleDef;
 import pl.mzebrows.pwt.sim.Hold;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.WaveLine;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
@@ -349,31 +351,66 @@ class MissionTest {
 
     /**
      * One bit flips the finale north-south (G0064): every tile of its ground and everything standing on it mirrored
-     * about the anchor's row, and nothing moved east-west, so west stays the way in.
+     * about the anchor's row, and nothing moved east-west, so west stays the way in - in every layout (G0087).
      */
     @Test
     void flipsTheFinaleNorthSouthAndNeverEastWest() {
         for (FinaleKind kind : FinaleKind.values()) {
-            Mission plain = null;
-            Mission flipped = null;
-            for (long seed = 0; seed < SEEDS && (plain == null || flipped == null); seed++) {
-                Mission mission = Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM);
-                if (mission.finale().kind() != kind) {
-                    continue;
-                }
-                if (mission.finale().flipped()) {
-                    flipped = mission;
-                } else {
-                    plain = mission;
-                }
-            }
-            assertThat(plain).as("an unflipped %s in %d seeds", kind, SEEDS).isNotNull();
-            assertThat(flipped).as("a flipped %s in %d seeds", kind, SEEDS).isNotNull();
+            int layouts = SimConfig.defaults().finales().of(kind).layoutCount();
+            for (int layout = 0; layout < layouts; layout++) {
+                Mission plain = endingOn(kind, false, layout);
+                Mission flipped = endingOn(kind, true, layout);
 
-            assertThat(finaleTiles(flipped, true)).as("%s", kind).isEqualTo(finaleTiles(plain, false));
-            assertThat(finaleThings(flipped, true)).as("%s", kind).isEqualTo(finaleThings(plain, false));
-            assertThat(finaleThings(plain, false)).contains("Hold 0 0", "Pickup -3 0");
+                assertThat(finaleTiles(flipped, true))
+                        .as("%s layout %d", kind, layout)
+                        .isEqualTo(finaleTiles(plain, false));
+                assertThat(finaleThings(flipped, true))
+                        .as("%s layout %d", kind, layout)
+                        .isEqualTo(finaleThings(plain, false));
+                assertThat(finaleThings(plain, false)).contains("Hold 0 0", "Pickup -3 0");
+            }
         }
+    }
+
+    /**
+     * A finale's stream deals one of its layouts a mission (G0087), each of them on some seed, and lays it: the
+     * finale's rock is the dealt layout's, so two layouts of one finale are two grounds.
+     */
+    @Test
+    void dealsEveryLayoutOfEveryFinaleAndLaysTheOneDealt() {
+        for (FinaleKind kind : FinaleKind.values()) {
+            FinaleDef def = SimConfig.defaults().finales().of(kind);
+            assertThat(def.layoutCount()).as("%s", kind).isGreaterThan(1);
+            Set<List<String>> grounds = new HashSet<>();
+            for (int layout = 0; layout < def.layoutCount(); layout++) {
+                Mission mission = endingOn(kind, false, layout);
+
+                assertThat(mission.finale().def(SimConfig.defaults()).ground().pieces())
+                        .isEqualTo(def.laid(layout).ground().pieces());
+                grounds.add(finaleTiles(mission, false));
+            }
+            assertThat(grounds).as("%s", kind).hasSize(def.layoutCount());
+        }
+    }
+
+    /** A wave from two mouths is one wave of the schedule, a lot from each, each its own draw (G0087). */
+    @Test
+    void sendsAWaveFromEachMouthItNamesAsOneWave() {
+        Mission mission = endingOn(FinaleKind.REDOUBT, false, 0);
+        List<WaveLine> lines =
+                SimConfig.defaults().finales().of(FinaleKind.REDOUBT).waves();
+
+        assertThat(mission.finale().waves()).hasSameSizeAs(lines);
+        for (int w = 0; w < lines.size(); w++) {
+            assertThat(mission.finale().waves().get(w).lots())
+                    .as("wave %d", w)
+                    .hasSize(lines.get(w).mouthNames().size());
+        }
+        assertThat(mission.finale().waves())
+                .anySatisfy(wave -> assertThat(wave.lots())
+                        .hasSize(2)
+                        .extracting(Wave.Lot::where)
+                        .doesNotHaveDuplicates());
     }
 
     /**
@@ -424,11 +461,12 @@ class MissionTest {
             for (Mission other : List.of(easy, hard)) {
                 assertThat(other.finale().kind()).isEqualTo(medium.finale().kind());
                 assertThat(other.finale().flipped()).isEqualTo(medium.finale().flipped());
+                assertThat(other.finale().layout()).isEqualTo(medium.finale().layout());
                 assertThat(finaleThings(other, false)).isEqualTo(finaleThings(medium, false));
                 assertThat(other.finale().waves())
-                        .extracting(Wave::afterSeconds, Wave::kind, Wave::where)
+                        .extracting(Wave::afterSeconds, Wave::kind, MissionTest::mouths)
                         .isEqualTo(medium.finale().waves().stream()
-                                .map(wave -> tuple(wave.afterSeconds(), wave.kind(), wave.where()))
+                                .map(wave -> tuple(wave.afterSeconds(), wave.kind(), mouths(wave)))
                                 .toList());
             }
             if (!medium.finale().waves().isEmpty()) {
@@ -535,6 +573,24 @@ class MissionTest {
         return (int) mission.placed().stream()
                 .filter(placed -> placed instanceof Placed.Loose || placed instanceof Placed.Nest)
                 .count();
+    }
+
+    /** The first seed whose mission ends on this finale, flipped or not, with this layout dealt. */
+    private static Mission endingOn(FinaleKind kind, boolean flipped, int layout) {
+        for (long seed = 0; seed < SEEDS * 8L; seed++) {
+            Mission.Finale drawn = Mission.drawn(SimConfig.defaults().withSeed(seed));
+            if (drawn.kind() == kind && drawn.flipped() == flipped && drawn.layout() == layout) {
+                Mission mission = Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM);
+                assertThat(mission.finale().layout()).isEqualTo(layout);
+                return mission;
+            }
+        }
+        throw new AssertionError(
+                "no seed of " + SEEDS * 8L + " ends on " + kind + " layout " + layout + (flipped ? " flipped" : ""));
+    }
+
+    private static List<TileRect> mouths(Wave wave) {
+        return wave.lots().stream().map(Wave.Lot::where).toList();
     }
 
     private static int sent(Mission mission) {
