@@ -262,12 +262,14 @@ class SimulationBenchmarkTest {
             Mission built = Mission.build(simulation.config(), TierKind.HARD);
             TileMap map = simulation.map();
             for (Wave wave : built.finale().waves()) {
-                TileRect where = wave.where();
-                for (int i = 0; i < wave.count(); i++) {
-                    simulation.spawnUnit(
-                            wave.kind(),
-                            map.tileCentreX(where.col() + i % where.width()),
-                            map.tileCentreY(where.row() + i / where.width() % where.height()));
+                for (Wave.Lot lot : wave.lots()) {
+                    TileRect where = lot.where();
+                    for (int i = 0; i < lot.count(); i++) {
+                        simulation.spawnUnit(
+                                wave.kind(),
+                                map.tileCentreX(where.col() + i % where.width()),
+                                map.tileCentreY(where.row() + i / where.width() % where.height()));
+                    }
                 }
             }
             // Its ground widened to the whole map, so it rises on the first tick with the squad still at the start.

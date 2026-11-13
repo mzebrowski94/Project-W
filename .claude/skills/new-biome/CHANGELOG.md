@@ -72,3 +72,7 @@ changed. Git carries the diff.
   every seed; `sim.mission.placement.pointKeepOff` 50 -> 60 to stay above the point's `aggroRadius`, now 58 - measured: 66 left
   nests unplaced on 6 seeds, 74 on 15. Nothing wrong or missing; slow: finding the largest keep-off that fits is a
   sweep per guess.
+- 2026-11-13, a harder, varied redoubt (playtest ticket 10, AFK) - finales gained hand-made layouts (G0087) and waves
+  from two mouths; step 4 now says how a layout is written, drawn and swept. Missing: the sweep reached a layout only
+  if a seed happened to - now picked by `Mission.drawn`; nothing checked two things of a set piece on one tile - now
+  `MissionFaults.finale` does. Slow: a block's list of whole set pieces needed `ConfigBinder` to read numbered blocks.

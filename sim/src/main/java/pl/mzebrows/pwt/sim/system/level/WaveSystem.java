@@ -106,7 +106,7 @@ public final class WaveSystem extends EntitySystem {
     }
 
     /**
-     * Puts one wave on the field.
+     * Puts one wave on the field: every lot of it, this tick, under the one stamp (G0087).
      *
      * <p>The allocation here is deliberate and safe: a wave arrives every several seconds at most, and
      * this is not a per-entity loop. Doing it any other way would mean a scatter kept alive for the
@@ -115,6 +115,8 @@ public final class WaveSystem extends EntitySystem {
     private void send(Wave wave, int stamp) {
         float radius = config.unit(wave.kind()).radius();
         Scatter scatter = new Scatter(map, rng, radius, radius);
-        scatter.scatter(wave.where(), wave.count(), radius, (x, y) -> spawner.spawnUnit(wave.kind(), x, y, stamp));
+        for (Wave.Lot lot : wave.lots()) {
+            scatter.scatter(lot.where(), lot.count(), radius, (x, y) -> spawner.spawnUnit(wave.kind(), x, y, stamp));
+        }
     }
 }

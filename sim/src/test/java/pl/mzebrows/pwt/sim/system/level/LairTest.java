@@ -1,6 +1,8 @@
 package pl.mzebrows.pwt.sim.system.level;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.NEST_STANDS_OUT;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.TROOPER_SIGHT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -12,11 +14,13 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Strain;
+import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -127,6 +131,39 @@ class LairTest {
         float diagonal = (float) Math.sqrt(0.5);
         assertThat(facing.x).isCloseTo(-diagonal, CLOSE);
         assertThat(facing.y).isCloseTo(-diagonal, CLOSE);
+    }
+
+    /**
+     * What a lair raises stands out as a nest does (G0088): a man picks its boss out from past his sight, so a squad
+     * in the keep fights the boss that out-shoots its notice, not only the holes round him.
+     */
+    @Test
+    void raisesABossTheSquadPicksOutAsItWouldANest() {
+        Simulation simulation = new Simulation(config());
+        simulation.lair().at(GROUND).unit(UnitKind.BOSS_GRUNT, BOSS_X, MIDDLE);
+        simulation.spawnCommander(INSIDE, MIDDLE + 40f);
+        Entity trooper = simulation.spawnTrooper(BOSS_X - TROOPER_SIGHT - NEST_STANDS_OUT * 0.5f, MIDDLE);
+        simulation.step();
+        trooper.getComponent(Trooper.class).look(1f, 0f);
+
+        simulation.step();
+
+        assertThat(trooper.getComponent(Trooper.class).mode).isEqualTo(Trooper.Mode.FIGHT);
+        assertThat(trooper.getComponent(Trooper.class).targetX).isGreaterThan(BOSS_X - 10f);
+    }
+
+    /** And weighed and kept as one, so a man who has picked the boss out stays on him (G0085's terms). */
+    @Test
+    void raisesItsCreaturesWeighedAndKeptAsItsNestsAre() {
+        Simulation simulation = withALair();
+        simulation.spawnCommander(INSIDE, MIDDLE);
+
+        simulation.step();
+
+        Enemy asTarget = boss(simulation).getComponent(Enemy.class);
+        assertThat(asTarget.standsOut).isEqualTo(simulation.config().nest().standsOut());
+        assertThat(asTarget.threat).isEqualTo(simulation.config().nest().threat());
+        assertThat(asTarget.kept).isEqualTo(simulation.config().nest().kept());
     }
 
     @Test

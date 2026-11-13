@@ -269,7 +269,7 @@ public final class Simulation {
         // After the death chain, before the reaper and the objectives.
         engine.addSystem(new NestSystem(config, map, spawner, streams.of(RngStream.NEST), modifiers));
         // Beside the waves and the nests, for their reason: what rises this tick counts this tick (G0048).
-        engine.addSystem(new LairSystem(map, spawner));
+        engine.addSystem(new LairSystem(config, map, spawner));
         // After everything that could have put a boss down or killed one, reading this tick's perception.
         engine.addSystem(new BarrageSystem(spawner, guns));
         // Beside the barrage, for its reasons; after the death chain and before the reaper and the objectives, for

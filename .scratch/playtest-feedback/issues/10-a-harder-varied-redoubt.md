@@ -1,7 +1,7 @@
 # A harder, varied redoubt
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 18
 Section: Turrets and the finale
 
@@ -49,3 +49,15 @@ is no nest, so 18's nest threat and keeping (G0085) do not reach him.
 
 The bug fixed with its reproducing test. Built as data, the sweeps green over every layout, the decision record,
 `verify.sh` green. Ask for a scenario.
+
+## Answer (2026-11-13, AFK run - provisional, for review)
+
+- **The bug** (G0088): the boss out-ranged a trooper's notice - picked out within 27 of his centre, while he is six
+  across, notices at 58 and spews to 32 from his body. The nests did stand out (G0080), so a squad shot the holes and,
+  once they were down, nothing, while being spewed on. Fix: `LairSystem` gives what it raises the nest's
+  `standsOut`, `threat` and `kept`. Reproduced by `LairTest.raisesABossTheSquadPicksOutAsItWouldANest`.
+- **Two mouths** (G0087): a wave may name `nw+se`; one wave, one tick, each mouth its own `Roster.count`. The redoubt
+  sends 6 of 12 from opposite corners, 4 of them in the second half, counts trimmed by up to a fifth.
+- **Variety** (G0087, amends G0064): numbered hand-made `layouts` per finale - the redoubt's square, diamond and
+  bastions; the keep's three of rock and mines, its lair where it was. Drawn after the flip; mouths fixed.
+- **Sweeps**: `MissionSweepTest` sweeps the first seeds that end on every finale, layout and flip by name.

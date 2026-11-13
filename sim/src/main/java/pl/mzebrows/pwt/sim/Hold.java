@@ -9,6 +9,9 @@ import java.util.TreeSet;
  * anchor, none of it scaled by tier. Taking the post puts the post down and lets the waves go; holding it means every
  * wave sent and nothing hostile within {@code watch}.
  *
+ * <p>As a finale's block reads it, its turrets, mines, barrels and pickups are what every {@link Layout} shares; laid,
+ * they are the dealt layout's as well (G0087). Its post, watch and mouths are the finale's, whichever is dealt.
+ *
  * @param post where the point stands
  * @param watch how far round the post must be clear for it to be held, in world units
  * @param turrets a gun on a mount each

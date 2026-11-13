@@ -28,7 +28,8 @@ import pl.mzebrows.pwt.sim.component.Components;
  * then every entity in spawn order (ADR 0013), then each entity's components in registry order - and a
  * new component or a new field needs nothing here at all. The field types a plan can handle are the
  * ones {@code ArchitectureTest.componentFieldsAreWhatASnapshotCanWrite} allows: primitives, enums, an
- * {@code Entity} (written as its place in spawn order), records made of those, and the named lists of
+ * {@code Entity} (written as its place in spawn order), records made of those - and of lists of such records, as a
+ * wave is of its lots (G0087) - and the named lists of
  * records {@code ArchitectureTest.NAMED_COLLECTIONS} admits - the level's schedule and lair, and the
  * upgrade ledger, drafts and presence.
  *
@@ -240,7 +241,9 @@ public final class WorldCodec {
         ENUM,
         ENTITY,
         RECORD,
-        RECORD_ARRAY
+        RECORD_ARRAY,
+        /** A record's {@code List} of records, written as its size and then each. Only inside a record. */
+        RECORD_LIST
     }
 
     /** How to write and read one component class. */
@@ -290,6 +293,7 @@ public final class WorldCodec {
                             sink.putInt(target == null ? -1 : entities.indexOf(target, true));
                         }
                         case RECORD -> recordPlan(f).write(field.get(component), sink);
+                        case RECORD_LIST -> throw new IllegalStateException("a list only inside a record");
                         case RECORD_ARRAY -> {
                             Array<?> array = (Array<?>) field.get(component);
                             int size = array == null ? 0 : array.size;
@@ -319,6 +323,7 @@ public final class WorldCodec {
                         case ENUM -> field.set(component, enumOf(field.getType(), in.getInt()));
                         case ENTITY -> references.add(new Deferred(field, component, in.getInt()));
                         case RECORD -> field.set(component, recordPlan(f).read(in));
+                        case RECORD_LIST -> throw new IllegalStateException("a list only inside a record");
                         case RECORD_ARRAY -> {
                             Array<Object> array = (Array<Object>) field.get(component);
                             if (array == null) {
@@ -391,9 +396,11 @@ public final class WorldCodec {
             Class<?>[] types = new Class<?>[parts.length];
             for (int p = 0; p < parts.length; p++) {
                 types[p] = parts[p].getType();
-                kinds[p] = kindOf(types[p], null);
+                kinds[p] = types[p] == List.class ? Kind.RECORD_LIST : kindOf(types[p], null);
                 if (kinds[p] == Kind.RECORD) {
                     nested[p] = new RecordPlan(types[p]);
+                } else if (kinds[p] == Kind.RECORD_LIST) {
+                    nested[p] = new RecordPlan(elementOf(parts[p]));
                 }
                 try {
                     fields[p] = type.getDeclaredField(parts[p].getName());
@@ -430,6 +437,13 @@ public final class WorldCodec {
                         case BOOLEAN -> sink.putInt(field.getBoolean(value) ? 1 : 0);
                         case ENUM -> sink.putInt(ordinalOf((Enum<?>) field.get(value)));
                         case RECORD -> nestedPlan(p).write(field.get(value), sink);
+                        case RECORD_LIST -> {
+                            List<?> list = (List<?>) field.get(value);
+                            sink.putInt(list.size());
+                            for (int i = 0; i < list.size(); i++) {
+                                nestedPlan(p).write(list.get(i), sink);
+                            }
+                        }
                         case ENTITY, RECORD_ARRAY -> throw new IllegalStateException("not in a record");
                     }
                 }
@@ -454,6 +468,14 @@ public final class WorldCodec {
                     case BOOLEAN -> in.getInt() != 0;
                     case ENUM -> enumOf(parts[p].getType(), in.getInt());
                     case RECORD -> nestedPlan(p).read(in);
+                    case RECORD_LIST -> {
+                        int size = in.getInt();
+                        List<@Nullable Object> list = new ArrayList<>(size);
+                        for (int i = 0; i < size; i++) {
+                            list.add(nestedPlan(p).read(in));
+                        }
+                        yield List.copyOf(list);
+                    }
                     case ENTITY, RECORD_ARRAY -> throw new IllegalStateException("not in a record");
                 };
             }
@@ -474,10 +496,25 @@ public final class WorldCodec {
                 String label = prefix + "." + parts[p].getName();
                 if (kinds[p] == Kind.RECORD) {
                     nestedPlan(p).describe(in, label, lines);
+                } else if (kinds[p] == Kind.RECORD_LIST) {
+                    int size = in.getInt();
+                    lines.add(new String[] {label + ".size", String.valueOf(size)});
+                    for (int i = 0; i < size; i++) {
+                        nestedPlan(p).describe(in, label + "[" + i + "]", lines);
+                    }
                 } else {
                     lines.add(new String[] {label, text(kinds[p], parts[p].getType(), in)});
                 }
             }
+        }
+
+        private static Class<?> elementOf(RecordComponent part) {
+            if (part.getGenericType() instanceof ParameterizedType generic
+                    && generic.getActualTypeArguments()[0] instanceof Class<?> element
+                    && element.isRecord()) {
+                return element;
+            }
+            throw new IllegalStateException(part + " is a list of something a snapshot cannot write");
         }
 
         private RecordPlan nestedPlan(int p) {
@@ -529,7 +566,7 @@ public final class WorldCodec {
                 int index = in.getInt();
                 yield index < 0 ? "none" : "entity " + index;
             }
-            case RECORD, RECORD_ARRAY -> throw new IllegalStateException("not a single value: " + type);
+            case RECORD, RECORD_ARRAY, RECORD_LIST -> throw new IllegalStateException("not a single value: " + type);
         };
     }
 

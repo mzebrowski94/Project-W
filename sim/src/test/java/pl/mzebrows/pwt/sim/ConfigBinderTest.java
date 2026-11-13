@@ -94,6 +94,11 @@ class ConfigBinderTest {
 
     record Placed(Spot at) {}
 
+    /** A block of its own in a list, as a finale's layouts are: numbered from one under the list's key. */
+    record Area(float watch, List<Spot> spots) {}
+
+    record Areas(List<Area> areas) {}
+
     @Test
     void readsATypeThroughTheConversionItIsGivenRatherThanAsABlock() {
         ConfigBinder.Bound<Tinted> bound = ConfigBinder.bind(
@@ -237,6 +242,22 @@ class ConfigBinderTest {
         Spots spots = strict(Spots.class, "test.changes=reset");
 
         assertThat(spots.spots()).isEmpty();
+    }
+
+    @Test
+    void readsAListOfBlocksNumberedFromOne() {
+        Areas areas = strict(Areas.class, "test.areas.1.watch=5\ntest.areas.1.spots=nw -14 -13\ntest.areas.2.watch=6");
+
+        assertThat(areas.areas())
+                .containsExactly(new Area(5f, List.of(new Spot("nw", -14, -13))), new Area(6f, List.of()));
+    }
+
+    /** A gap ends the list, and what lies past it is a key no record has - never a layout quietly dropped. */
+    @Test
+    void endsAListOfBlocksAtTheFirstNumberTheFileDoesNotMention() {
+        assertThatThrownBy(() -> strict(Areas.class, "test.areas.1.watch=5\ntest.areas.3.watch=6"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("unknown key test.areas.3.watch");
     }
 
     @Test

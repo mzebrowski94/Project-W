@@ -1,6 +1,6 @@
 # G0064: A finale is a set piece, and the last biome's last point stands at its approach
 
-**Status.** accepted
+**Status.** amended by G0087: one of a few hand-made layouts, dealt, and a wave from two mouths
 
 **Trigger.** Adding or changing a finale kind; laying anything in a finale from rules or the `Rng`; proposing a
 second objective for a finale, a rally ground of its own, or waves that change with the march.
@@ -11,6 +11,10 @@ stands and every mouth's tiles open and reached from the start, nothing hostile 
 `.flipsEveryPositionNorthSouthAndNoneEastWest`, `MissionTest.flipsTheFinaleNorthSouthAndNeverEastWest`,
 `.endsOnTheSameFinaleOnEveryTierButForHowManyComeInAWave`, `.holdsTheFinalesWavesBackAndAsksOnlyThatItsPostBeHeld`,
 `StripTest.laysAFinalesPiecesAsRockAtTheirOffsetsFromItsAnchor`. Missions ticket 04 holds the shape and both blocks.
+
+**Amended 2026-11-13 by G0087 (provisional, for review).** "The same layout every time" is now one of a few hand-made
+layouts, dealt by the finale's stream after the flip bit; the post, watch and mouths stay the finale's. A wave may name
+several mouths. *A finale laid out by rules* stays below.
 
 **Amended 2026-10-06 (the keep).** **One finale, one kind of fight**: the redoubt is the waves, the keep the boss. The
 keep is the redoubt's ground with a lair **instead of** a wave schedule and its guns - Adventure 2's held-back waves

@@ -15,6 +15,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.watching;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
+import java.util.List;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileRect;
@@ -24,11 +25,13 @@ import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.Wave;
 
 /**
  * A level that tells you where to stand instead of where to go. The post is ground the other side
@@ -143,6 +146,37 @@ class DefendTest {
 
         assertThat(afterTheFirst).isEqualTo(2);
         assertThat(count(simulation, Enemy.class)).isEqualTo(4);
+    }
+
+    /**
+     * A wave from two mouths at once (G0087): both lots on the field on the one tick, each in its own tiles, and one
+     * wave - one stamp, so it is cleared, and earns, once.
+     */
+    @Test
+    void sendsAWaveFromTwoPlacesOnTheOneTickAsOneWave() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(EAST, LANE);
+        TileRect nearCorner = new TileRect(1, 16, 2, 2);
+        simulation
+                .waves()
+                .add(new Wave(
+                        SECONDS, UnitKind.GRUNT, List.of(new Wave.Lot(2, FAR_CORNER), new Wave.Lot(3, nearCorner))));
+
+        steps(simulation, ticksIn(SECONDS) + 1);
+        ImmutableArray<Entity> aliens = simulation
+                .engine()
+                .getEntitiesFor(Family.all(Enemy.class, Position.class).get());
+
+        assertThat(aliens.size()).isEqualTo(5);
+        int west = 0;
+        for (int i = 0; i < aliens.size(); i++) {
+            assertThat(aliens.get(i).getComponent(Strain.class).wave).isEqualTo(1);
+            if (aliens.get(i).getComponent(Position.class).x < LANE) {
+                west++;
+            }
+        }
+        assertThat(west).isEqualTo(3);
+        assertThat(simulation.waves().sent()).isEqualTo(1);
     }
 
     @Test
