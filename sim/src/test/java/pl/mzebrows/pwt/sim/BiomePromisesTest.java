@@ -45,9 +45,12 @@ class BiomePromisesTest {
         }
     }
 
-    /** "Add lava geysers to the cut" (ticket 15, G0089): 3-5 there, and none anywhere else - zero is off. */
+    /**
+     * "Add lava geysers to the cut" (ticket 15, G0089): 3-5 there; "more geysers" in the caldera (ticket 16, G0091,
+     * provisional, for review): 5-7, its fewest the cut's most; and none anywhere else - zero is off.
+     */
     @Test
-    void theCutIsTheOneBiomeThatLaysGeysers() {
+    void theCutAndTheCalderaAreTheBiomesThatLayGeysersTheCalderaMore() {
         for (BiomeKind kind : BiomeKind.values()) {
             var furniture = SHIPPED.biomes().of(kind).furniture();
             if (kind == BiomeKind.CUT) {
@@ -55,17 +58,65 @@ class BiomePromisesTest {
                         .as("the cut's fewest geysers")
                         .isEqualTo(3);
                 assertThat(furniture.geysersMax()).as("the cut's most geysers").isEqualTo(5);
+            } else if (kind == BiomeKind.CALDERA) {
+                assertThat(furniture.geysersMin())
+                        .as("the caldera's fewest geysers")
+                        .isEqualTo(5);
+                assertThat(furniture.geysersMax())
+                        .as("the caldera's most geysers")
+                        .isEqualTo(7);
             } else {
                 assertThat(furniture.geysersMax()).as("%s's geysers", kind).isZero();
             }
         }
     }
 
-    /** "Crags at both ends of their range": mounds round the anthill's holes, masses in the badlands. */
+    /**
+     * "A lava biome" (ticket 16, G0091, provisional, for review): the caldera is the one biome on lava - its pools laid
+     * as crags of it, on ash - with no house, no tree, its barrels kept and fewer boulders than any biome that has them.
+     */
+    @Test
+    void theCalderaIsTheOneBiomeOfLavaPoolsOnAsh() {
+        for (BiomeKind kind : BiomeKind.values()) {
+            assertThat(ground(kind).crags().terrain() == Terrain.LAVA)
+                    .as("%s's lava", kind)
+                    .isEqualTo(kind == BiomeKind.CALDERA);
+        }
+        BiomeGround caldera = ground(BiomeKind.CALDERA);
+        var furniture = SHIPPED.biomes().of(BiomeKind.CALDERA).furniture();
+        assertThat(caldera.base()).isEqualTo(Terrain.ASH);
+        assertThat(caldera.crags().density()).isPositive();
+        assertThat(caldera.houses().max()).isZero();
+        assertThat(furniture.treesMax()).isZero();
+        assertThat(furniture.barrelsMin()).isPositive();
+        for (BiomeKind kind : BiomeKind.values()) {
+            int boulders = SHIPPED.biomes().of(kind).furniture().bouldersMax();
+            if (kind != BiomeKind.CALDERA && boulders > 0) {
+                assertThat(furniture.bouldersMax())
+                        .as("the caldera against %s", kind)
+                        .isLessThan(boulders);
+            }
+        }
+    }
+
+    /** "Upgraded spitters in it" (ticket 16): the magma spitter stands in the caldera and nowhere else. */
+    @Test
+    void theCalderaIsTheOneBiomeWithMagmaSpitters() {
+        for (BiomeKind kind : BiomeKind.values()) {
+            boolean magma = SHIPPED.biomes().of(kind).roster().stream()
+                    .anyMatch(line -> line.strain() == UnitKind.MAGMA_SPITTER);
+            assertThat(magma).as("magma spitters in %s", kind).isEqualTo(kind == BiomeKind.CALDERA);
+        }
+    }
+
+    /**
+     * "Crags at both ends of their range": mounds round the anthill's holes, masses in the badlands - crags of rock; the
+     * caldera's are of lava (G0091).
+     */
     @Test
     void cragsRiseFromMoundsInTheAnthillToMassesInTheBadlands() {
         for (BiomeKind kind : BiomeKind.values()) {
-            boolean crags = ground(kind).crags().density() > 0f;
+            boolean crags = rockCrags(kind) > 0f;
             assertThat(crags).as("%s's crags", kind).isEqualTo(kind == BiomeKind.ANTHILL || kind == BiomeKind.BADLANDS);
         }
         assertThat(ground(BiomeKind.ANTHILL).crags().density())
@@ -164,6 +215,13 @@ class BiomePromisesTest {
     }
 
     private static float rock(BiomeKind kind) {
-        return ground(kind).crags().density() + ground(kind).outcrops().density();
+        return rockCrags(kind) + ground(kind).outcrops().density();
+    }
+
+    /** The share of a biome its crags take when they are of rock; a crag of lava is no rock. */
+    private static float rockCrags(BiomeKind kind) {
+        return ground(kind).crags().terrain() == Terrain.ROCK
+                ? ground(kind).crags().density()
+                : 0f;
     }
 }

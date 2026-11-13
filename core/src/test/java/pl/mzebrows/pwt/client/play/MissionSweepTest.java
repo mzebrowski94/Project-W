@@ -108,14 +108,15 @@ class MissionSweepTest {
             }
         }
 
+        if (BIG) {
+            // Before the verdict, so a run red on faults elsewhere still names codes that deal each biome first.
+            System.out.println(summary(seeds.size(), faults.size(), nanos, Arrays.copyOf(creatures, counted), codes));
+        }
         assertThat(faults)
                 .withFailMessage(() ->
                         String.join("\n", faults) + "\n" + faults.size() + " faults in " + seeds.size() + " seeds")
                 .isEmpty();
         assertThat(endings).as("every finale, layout and flip swept").containsAll(everyEnding());
-        if (BIG) {
-            System.out.println(summary(seeds.size(), nanos, Arrays.copyOf(creatures, counted), codes));
-        }
     }
 
     /** What a player waits for: a mission's whole world, its config, map, simulation and contents. */
@@ -178,13 +179,15 @@ class MissionSweepTest {
         return finale.kind() + " layout " + (finale.layout() + 1) + (finale.flipped() ? " flipped" : "");
     }
 
-    private static String summary(int seeds, long nanos, int[] creatures, EnumMap<BiomeKind, List<String>> codes) {
+    private static String summary(
+            int seeds, int faults, long nanos, int[] creatures, EnumMap<BiomeKind, List<String>> codes) {
         int[] sorted = creatures.clone();
         Arrays.sort(sorted);
         StringBuilder text = new StringBuilder(String.format(
                 Locale.ROOT,
-                "MissionSweep %d seeds on every tier, 0 faults, %.1f ms/build, creatures/biome on %s %d/%d/%d",
+                "MissionSweep %d seeds on every tier, %d faults, %.1f ms/build, creatures/biome on %s %d/%d/%d",
                 seeds,
+                faults,
                 nanos / 1e6 / seeds / TierKind.values().length,
                 TIER,
                 sorted[0],

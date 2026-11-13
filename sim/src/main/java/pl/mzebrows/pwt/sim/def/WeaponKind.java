@@ -93,5 +93,10 @@ public enum WeaponKind {
      * What a sludger spits (G0073): a slow blob, fired several down one line, that wounds a man it hits and leaves one
      * circle of glue where it stops. No pickup grants it.
      */
-    GLOB
+    GLOB,
+    /**
+     * What a magma spitter fires (G0091): a spit that goes off where it stops in a blast smaller than a charged
+     * spit's, so it leaves fire (G0035). No pickup grants it.
+     */
+    MAGMA_SPIT
 }

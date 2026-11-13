@@ -39,7 +39,7 @@ are the one exception**, counted, because a house is a place.
 | base | `base`, `fallback` | always |
 | houses | `houses.min`, `houses.max` | a place worth taking - "a quarry with a base in it". 0-2; leave the block out for none. Size and doorways are the strip's (`sim.mission.ground.houses.*`). Every doorway gets a shut door at populate (G0069): a house's stock is behind three seconds of work, and a hunter that chases a man in will siege it - count that into how busy the biome is |
 | patches | `patches=rect\|blob <terrain\|neighbour> density sizeMin sizeMax; ...` | `rect` for small patches of colour, `blob` for ground worth going round (thicket). `neighbour` takes the nearer biome's base, or `fallback` |
-| crags | `crags.density`, `crags.smoothing` | irregular masses; more smoothing, fewer and bigger. Leave the block out for none |
+| crags | `crags.density`, `crags.smoothing`, `crags.terrain` | irregular masses; more smoothing, fewer and bigger. `terrain` is `rock`, or `lava` for pools nothing stands on (the caldera, G0091) - any solid terrain, laid with the crag repairs, which is why a solid ground is never a patch (`PatchGround` refuses it). Leave the block out for none |
 | outcrops | `outcrops.density`, `lengthMin/Max`, `thicknessMin/Max`, `arms`, `ragged` | rock bent round a corner - the Adventures' shape. `ragged` (0-1, no arms with it) knocks corners off and bumps the faces, so a slab reads as broken rock rather than a block from above (the cut, 0.6). Leave the block out for none |
 
 Plus `widthMin/Max` and `regions` (at least 1 - every region lies inside one biome, G0062), which are geometry.
@@ -75,7 +75,7 @@ meanwhile. The HTML prototype is for looks only.
   (pressure = tier `enemyPercent` x (1 + `rampPercent` x position), G0063), and nothing else does.
 - `furniture.pointsMin/Max` (2-3), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, `treesMin/Max` and
   `treesByNestMin/Max` (0 for none - the fen alone has trees, G0072), `turretsMin/Max` (0 for none - the plain alone
-  has them, G0082), `geysersMin/Max` (0 for none - the cut alone has them, G0089), and
+  has them, G0082), `geysersMin/Max` (0 for none - the cut and the caldera have them, G0089, G0091), and
   `furniture.pickups=pickup <kind> min max; ...`.
   Never scaled. **Every block carries every furniture key**, zeros included: a new furniture line is a key in all of
   them. A furniture thing with a size of its own (a tree's trunk) is drawn from its own stream in its pass, never on
@@ -172,7 +172,7 @@ None is written per biome; a biome joins every one by being a constant.
   hostile near the start or in a house, nests off the passes, points, each other and pickups, a point a band and
   the last in the last `approachColumns`, crates by points; the finale's set piece and every mouth open and reached,
   nothing hostile of the last biome in its watch). Also the build budget: a mission's whole world, median
-  of 16, under 100 ms (stage 7: about 6 ms). Under `PWT_SWEEP=1` a green run prints one summary line - seeds,
+  of 16, under 100 ms (stage 7: about 6 ms). Under `PWT_SWEEP=1` a run, green or red, prints one summary line - seeds, faults,
   ms/build, creatures per biome on hard - and three seeds that deal each biome first, each as its medium and hard
   code and the finale it ends on.
 - **`StripSweepTest`**, **`StripTest`**, **`CoatsTest`** (`map`): the generator against `TestBiome`, five literal

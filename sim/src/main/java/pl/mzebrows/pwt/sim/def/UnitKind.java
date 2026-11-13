@@ -96,5 +96,11 @@ public enum UnitKind {
      * A slinger whose riders are leeches, slung onto whoever it hunts rather than past him (G0083). The same body and
      * the same answer as the slinger; what it leaves is a man with a clock on him rather than a runner behind him.
      */
-    LEECH_SLINGER
+    LEECH_SLINGER,
+    /**
+     * A spitter whose spit goes off where it lands and leaves fire there (G0091, provisional, for review): the same
+     * body and the same way of fighting, so what to read is the ring it wears and the ground its shots leave burning;
+     * what to do is what a spitter asks - get to it - without walking through what it has already spat.
+     */
+    MAGMA_SPITTER
 }

@@ -139,6 +139,31 @@ class TerrainCollisionTest {
         assertThat(count(simulation, Projectile.class)).isZero();
     }
 
+    /**
+     * Lava is solid as rock is (G0091, provisional, for review): nothing stands on it and a shot stops at it. One
+     * solidity answers moving, shooting and seeing, so shots across a pool are deferred rather than built.
+     */
+    @Test
+    void stopsAUnitWalkedIntoLavaAsIntoRock() {
+        Simulation simulation = on(wall(Terrain.LAVA));
+        Entity commander = simulation.spawnCommander(50f, 45f);
+
+        steps(simulation, 60, 0f, 1f);
+
+        assertThat(commander.getComponent(Position.class).y)
+                .isLessThanOrEqualTo(WALL_BOTTOM - COMMANDER_RADIUS + TOLERANCE);
+    }
+
+    @Test
+    void stopsAProjectileThatFliesIntoLavaAsIntoRock() {
+        Simulation simulation = on(wall(Terrain.LAVA));
+        simulation.spawnProjectile(50f, 45f, 0f, 1f);
+
+        steps(simulation, 10, 0f, 0f);
+
+        assertThat(count(simulation, Projectile.class)).isZero();
+    }
+
     @Test
     void letsAProjectileCarryOnOverOpenGround() {
         Simulation simulation = on(wall());
@@ -244,7 +269,11 @@ class TerrainCollisionTest {
     }
 
     private static TileMap wall() {
-        return ground().rect(0, WALL_ROW, 20, 1, Terrain.ROCK).build();
+        return wall(Terrain.ROCK);
+    }
+
+    private static TileMap wall(Terrain terrain) {
+        return ground().rect(0, WALL_ROW, 20, 1, terrain).build();
     }
 
     private static void steps(Simulation simulation, int count, float moveX, float moveY) {

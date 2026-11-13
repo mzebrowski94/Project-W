@@ -731,4 +731,30 @@ class SimConfigTest {
         assertThat(slinger.sling().landBehind()).isZero();
         assertThat(slinger.sling().landingSeconds()).isZero();
     }
+
+    /**
+     * The magma spitter (ticket 16, G0091, provisional, for review): a spitter in body and in how it fights, whose spit
+     * goes off where it lands in a blast smaller than a charged spit's - so it leaves fire (G0035) and is drawn as
+     * carrying a gun that does - a little tougher and slower to fire, so the fire is what it adds, not the numbers.
+     */
+    @Test
+    void makesTheMagmaSpitterASpitterWhoseSpitLeavesFire() {
+        SimConfig config = SimConfig.defaults();
+        UnitDef spitter = config.units().of(UnitKind.SPITTER);
+        UnitDef magma = config.units().of(UnitKind.MAGMA_SPITTER);
+        WeaponDef spit = config.weapons().of(spitter.ranged().gun());
+        WeaponDef magmaSpit = config.weapons().of(magma.ranged().gun());
+
+        assertThat(magma.radius()).isEqualTo(spitter.radius());
+        assertThat(magma.ranged().range()).isEqualTo(spitter.ranged().range());
+        assertThat(magma.ranged().closeRange()).isEqualTo(spitter.ranged().closeRange());
+        assertThat(magma.ranged().holdsGround()).isTrue();
+        assertThat(magma.ranged().haltsToFire()).isTrue();
+        assertThat(magma.health()).isGreaterThan(spitter.health());
+        assertThat(magmaSpit.blastRadius())
+                .isPositive()
+                .isLessThan(config.weapons().of(WeaponKind.CHARGED_SPIT).blastRadius());
+        assertThat(magmaSpit.cooldownSeconds()).isGreaterThan(spit.cooldownSeconds());
+        assertThat(magma.look()).isNotEqualTo(spitter.look());
+    }
 }

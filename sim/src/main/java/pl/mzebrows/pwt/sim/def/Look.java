@@ -45,6 +45,8 @@ public enum Look {
     SLINGER,
     /** A small magenta body, off the spitter's purple, flashing its fuse as it runs out (G0083). */
     LEECH,
+    /** A spitter's body in the colour of what it spits: molten, off the spitter's purple (G0091). */
+    MAGMA_SPITTER,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */
@@ -90,6 +92,8 @@ public enum Look {
      * What a spitter fires once it has eaten a barrel; tellable from an ordinary spit at a glance.
      */
     CHARGED_SPIT,
+    /** What a magma spitter fires: molten, the colour of the fire it leaves, tellable from a charged spit's pink. */
+    MAGMA_SPIT,
     /** A searer's beam: the laser's kind of line, in a colour no gun of the player's has. */
     SEAR,
     /** A thumper's slam, and the circle it is read as: white. */

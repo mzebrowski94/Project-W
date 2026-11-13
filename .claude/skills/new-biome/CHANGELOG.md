@@ -80,3 +80,8 @@ changed. Git carries the diff.
   geysers; added. Missing: how to read a 2000-seed sweep that fails on biomes the change never reached (63 faults,
   none in the cut) - added under step 5. Slow: telling those from new ones by hand, with no baseline to diff against -
   `docs/backlog.md` row.
+- 2026-11-13, AFK run, playtest ticket 16 (the caldera, a lava biome) - missing: step 2 had no way to lay solid ground
+  other than rock - crags now name their `terrain` (rock or lava), with the repairs that keep passes open; the table
+  says so, and why a solid ground is never a patch. Wrong: step 3's "the cut alone has geysers"; fixed. Slow: the
+  2000-seed sweep, red on the known badlands/anthill faults, printed no codes - finding one that dealt the new biome
+  first took a throwaway test; `MissionSweepTest` now prints its summary, with the fault count, before the verdict.

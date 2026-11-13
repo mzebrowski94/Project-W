@@ -1,6 +1,6 @@
 # G0089: A geyser is a second source of fire
 
-**Status.** accepted
+**Status.** amended by G0091: 5-7 in the caldera as well (provisional, for review)
 
 **Trigger.** Adding or changing anything placed on the ground that erupts, burns or goes off on a clock of its own;
 proposing that a geyser's fire differ from a blast's; reusing geysers in another biome (ticket 16, a lava biome).
@@ -9,7 +9,7 @@ proposing that a geyser's fire differ from a blast's; reusing geysers in another
 `.wearsItsFireMarkWhileItFillsAndNothingWhileItIsQuiet`, `.goesQuietOnceItsFireIsOutAndThenEruptsAgain`,
 `.keepsATimeOfItsOwn`, `.neverLiesQuietForLessThanTheFloor`, `.aTrooperGoesRoundAnEruptionOnOpenGround`,
 `.aTrooperHoldsShortOfAnEruptionAcrossACorridorAndGetsPastOnceItIsQuiet`;
-`BiomePromisesTest.theCutIsTheOneBiomeThatLaysGeysers`; `MissionTest.putsBetweenItsFewestAndMostGeysersInEveryBiomeEachInItsRange`;
+`BiomePromisesTest.theCutAndTheCalderaAreTheBiomesThatLayGeysersTheCalderaMore`; `MissionTest.putsBetweenItsFewestAndMostGeysersInEveryBiomeEachInItsRange`;
 `MissionSweepTest` through `MissionFaults.geysers`; `SystemOrderTest` (before `SlickSystem`).
 
 **Provisional, for review** - settled in an AFK run (playtest ticket 15), not with Mateusz.
@@ -39,7 +39,8 @@ the same fire - not a second kind of fire.
 - **Where**: a placement pass after turrets and before the pickups, barrels and boulders (G0068), each geyser
   `sim.mission.placement.geyserKeepOff` (15) off every point, nest and way into its biome, the start among them, and
   off everything already standing by its own radius; what comes after keeps off it, so no barrel stands in its fire.
-- **Counts**: `sim.biome.<b>.furniture.geysersMin/Max` - 3-5 in the cut, zero everywhere else (zero is off).
+- **Counts**: `sim.biome.<b>.furniture.geysersMin/Max` - 3-5 in the cut, 5-7 in the caldera (G0091, provisional, for
+  review), zero everywhere else (zero is off).
 - **Order**: `GeyserSystem` at 40, after `BloatSystem` and before `MineSystem` - inside the death window, before
   `SlickSystem`, without coming between the mine and the blast or the blast and the slicks (`docs/simulation-order.md`).
 

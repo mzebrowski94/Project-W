@@ -305,7 +305,7 @@ class StripTest {
                 badlands.fallback(),
                 badlands.houses(),
                 badlands.patches(),
-                new Crags(0.05f, 2),
+                new Crags(0.05f, 2, Terrain.ROCK),
                 Outcrops.off(),
                 badlands.pieces());
         List<BiomeGround> order = new ArrayList<>(ORDER);

@@ -20,5 +20,10 @@ public enum BiomeKind {
     /** Straight slabs of rock on sand, corridors through them, brutes and spitters and ants in the corridors. */
     CUT,
     /** Mire with islands of reeds, frogs ruining the ground and ants on it: where walking round something costs. */
-    FEN
+    FEN,
+    /**
+     * Ash with pools of lava nothing stands on, geysers among them and magma spitters whose spit leaves fire (G0091,
+     * provisional, for review): where the ground itself is the danger - read it, and time it.
+     */
+    CALDERA
 }

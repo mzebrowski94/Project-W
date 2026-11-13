@@ -525,7 +525,7 @@ final class Coats {
             if (noise[at] >= threshold) {
                 mine[at] = true;
                 under[at] = tiles[at];
-                tiles[at] = Terrain.ROCK;
+                tiles[at] = crags.terrain();
             }
         }
         reopenEnds(mine, under);
@@ -654,14 +654,14 @@ final class Coats {
         return widened;
     }
 
-    /** Whatever open ground of the area the ends cannot reach becomes rock. */
+    /** Whatever open ground of the area the ends cannot reach becomes what the crags are of. */
     private void sealPockets() {
         boolean[] reached = reach();
         for (int row = area.row(); row < area.endRow(); row++) {
             for (int col = area.col(); col < area.endCol(); col++) {
                 int at = row * cols + col;
                 if (tiles[at].passable() && !reached[at]) {
-                    tiles[at] = Terrain.ROCK;
+                    tiles[at] = ground.crags().terrain();
                 }
             }
         }

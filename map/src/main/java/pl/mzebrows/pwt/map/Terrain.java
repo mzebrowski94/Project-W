@@ -59,7 +59,15 @@ public enum Terrain {
      * the inside of a house is drawn apart from the ground outside it (pillar 5). Laid on a house's inside and
      * its doorways; its doorsteps keep the biome's base.
      */
-    FLOOR(true);
+    FLOOR(true),
+
+    /**
+     * Molten ground: nothing stands on it. Solid as {@link #ROCK} is to everything - a unit, a shot, a clear line - for
+     * there is one solidity; shots across a pool are deferred, not built (G0091, provisional, for review). Its own
+     * constant so it is drawn as what it is, glowing (pillar 5). Laid as the caldera's crags, so its pools are repaired
+     * as rock's are and never close a pass.
+     */
+    LAVA(false);
 
     private final boolean passable;
 

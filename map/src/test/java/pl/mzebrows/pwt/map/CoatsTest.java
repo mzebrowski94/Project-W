@@ -84,7 +84,7 @@ class CoatsTest {
         BiomeGround badlands = TestBiome.BADLANDS.ground();
         BiomeGround fewerPatches = withPatches(badlands, List.of(new Patch.Rect(PatchGround.neighbour(), 0.08f, 4, 6)));
         BiomeGround fewerOutcrops = withOutcrops(badlands, new Outcrops(0.05f, 2, 4, 1, 2, 0.3f, 0f));
-        BiomeGround moreCrags = withCrags(badlands, new Crags(0.08f, 4));
+        BiomeGround moreCrags = withCrags(badlands, new Crags(0.08f, 4, Terrain.ROCK));
         for (long seed = 0; seed < SEEDS; seed++) {
             Rig original = Rig.laid(badlands, seed);
 
@@ -116,6 +116,30 @@ class CoatsTest {
             }
         }
         assertThat(differ).isEqualTo(SEEDS);
+    }
+
+    /**
+     * Crags of lava (the caldera's pools, G0091): the masses laid as the terrain they name rather than rock, at their
+     * density, and repaired as rock's are - every pass reached, nothing sealed off, no passage under the clearance.
+     */
+    @Test
+    void laysCragsAsTheTerrainTheyNameAndRepairsThemAsRock() {
+        BiomeGround pools =
+                withOutcrops(withCrags(TestBiome.BADLANDS.ground(), new Crags(0.12f, 4, Terrain.LAVA)), Outcrops.off());
+        assertLandsAt("lava", 0.12f, seed -> Rig.laid(pools, seed).share(Terrain.LAVA));
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Rig rig = Rig.laid(pools, seed);
+
+            assertThat(rig.share(Terrain.ROCK)).as("seed %d", seed).isZero();
+            assertThat(rig.narrowest()).as("seed %d", seed).isGreaterThanOrEqualTo(CLEARANCE);
+            assertThat(rig.pockets()).as("seed %d", seed).isZero();
+            assertThat(rig.passesConnect()).as("seed %d", seed).isTrue();
+        }
+    }
+
+    @Test
+    void refusesCragsOfGroundSomethingCouldStandOn() {
+        assertThatThrownBy(() -> new Crags(0.1f, 4, Terrain.ASH)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -196,7 +220,8 @@ class CoatsTest {
     void aCoatAskedForMoreThanFitsStillLeavesEverythingReachable() {
         BiomeGround quarry = TestBiome.QUARRY.ground();
         List<BiomeGround> greedy = List.of(
-                withOutcrops(quarry, new Outcrops(0.9f, 4, 9, 2, 3, 0.7f, 0f)), withCrags(quarry, new Crags(0.6f, 4)));
+                withOutcrops(quarry, new Outcrops(0.9f, 4, 9, 2, 3, 0.7f, 0f)),
+                withCrags(quarry, new Crags(0.6f, 4, Terrain.ROCK)));
         for (BiomeGround ground : greedy) {
             for (long seed = 0; seed < 8; seed++) {
                 Rig rig = Rig.laid(ground, seed);

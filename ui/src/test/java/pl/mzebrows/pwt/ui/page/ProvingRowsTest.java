@@ -27,7 +27,7 @@ class ProvingRowsTest {
 
         assertThat(seen).startsWith(UnitKind.values()).endsWith(UnitKind.GRUNT);
         assertThat(rows.step(ProvingSetup.first(), ProvingRows.Row.STRAIN, -1).strain())
-                .isEqualTo(UnitKind.LEECH_SLINGER);
+                .isEqualTo(UnitKind.MAGMA_SPITTER);
     }
 
     @Test
