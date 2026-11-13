@@ -20,4 +20,13 @@ public record MouseButton(int code) {
                     default -> throw new IllegalArgumentException("'" + name + "' names no mouse button");
                 });
     }
+
+    /** The name the file gives it - {@code LEFT}, {@code RIGHT} or {@code MIDDLE}. */
+    public String name() {
+        return switch (code) {
+            case Input.Buttons.LEFT -> "LEFT";
+            case Input.Buttons.RIGHT -> "RIGHT";
+            default -> "MIDDLE";
+        };
+    }
 }

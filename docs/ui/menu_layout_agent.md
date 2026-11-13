@@ -46,6 +46,7 @@ keeps in shot).
 | 1.4 OPTIONS / 1.4.1 placeholder | `UI:main/options` | Settings live in `assets/*.properties` in the alpha. |
 | 1.5 EXIT | `UI:main/exit` | A confirm modal, so Back pressed once too often never quits. |
 | - | `UI:connecting`, `UI:play`, `UI:play/pause`, `UI:play/leave`, `UI:play/result` | Not in the outline; needed to get into and out of a level. `UI:play/result` was the blocked `UI:play/game-over` until G0066. |
+| - | `UI:main/controls` | Not in the outline; added 2026-11-13 by request: what every key and pad button does, shown and not changed. |
 | - | `UI:main/missions`, `UI:main/online/host/missions` | Built 2026-10-05 (missions ticket 08, G0065, stage 9): the day's three missions, RANDOM and ENTER CODE; the same page opened from HOST GAME hosts what it starts. |
 
 ## 3. Page and modal table
@@ -54,13 +55,14 @@ keeps in shot).
 |---|---|---|---|---|---|
 | `UI:main` | page | - | `UiPage.MAIN` | `MenuScreen` | built |
 | `UI:main/missions` | page | `UI:main` | `UiPage.MISSIONS` | `MenuScreen` + `MissionChoices` + `CodePicker` | built |
-| `UI:main/campaign` | page | `UI:main` | `UiPage.CAMPAIGN` | `MenuScreen` + scenario list | built |
+| `UI:main/campaign` | page | `UI:main` | `UiPage.CAMPAIGN` | `MenuScreen` + scenario list | built - shipped closed, its scenarios not listed (`graphic.ui.page.scenarios`) |
 | `UI:main/proving-ground` | page | `UI:main` | `UiPage.PROVING_GROUND` | `MenuScreen` + `ProvingRows` + preview | built |
 | `UI:main/proving-ground/upgrades` | page | `UI:main/proving-ground` | `UiPage.PROVING_UPGRADES` | `MenuScreen` + `ProvingRows` | built |
 | `UI:main/online` | page | `UI:main` | `UiPage.ONLINE` | `MenuScreen` | built |
 | `UI:main/online/join` | page | `UI:main/online` | `UiPage.ONLINE_JOIN` | `JoinScreen` / `JoinChoices` / `CodePicker` | built (on the canvas; the pad's letter picker) |
 | `UI:main/online/host` | page | `UI:main/online` | `UiPage.ONLINE_HOST` | `MenuScreen` + scenario list | built |
 | `UI:main/online/host/missions` | page | `UI:main/online/host` | `UiPage.HOST_MISSIONS` | `MenuScreen` + `MissionChoices` + `CodePicker` | built - `UI:main/missions` in host mode |
+| `UI:main/controls` | page | `UI:main` | `UiPage.CONTROLS` | `MenuScreen` + `ControlsTable` | built |
 | `UI:main/options` | page | `UI:main` | `UiPage.OPTIONS` | `MenuScreen` | placeholder |
 | `UI:main/exit` | modal | `UI:main` | `UiPage.EXIT_CONFIRM` | `MenuScreen` | built |
 | `UI:connecting` | page | - | `UiPage.CONNECTING` | `PlayMenus` (no world yet) | built (a panel on the canvas; Back leaves) |
@@ -84,7 +86,9 @@ section 5.
 
 Title `ui.main.title = PROJECT-W`. Shows the notice line (`ui.main.notice`, the reason the player is
 back here - an online game that ended under him) when there is one; that is today's
-`MenuScreen(context, notice)`.
+`MenuScreen(context, notice)`. In the bottom right corner of the canvas, dim, on this page only:
+`ui.main.version = BUILD {version}`, the **build version** (`BuildVersion`) - the words the packaged zip
+carries in its name, `dev` for a copy the launcher's build never stamped.
 
 | Entry | Label | Intent | Enabled |
 |---|---|---|---|
@@ -92,6 +96,7 @@ back here - an online game that ended under him) when there is one; that is toda
 | `campaign` | `ui.main.campaign = CAMPAIGN` | `OPEN(CAMPAIGN)` | always |
 | `proving-ground` | `ui.main.provingGround = PROVING GROUND` | `OPEN(PROVING_GROUND)` | always |
 | `online` | `ui.main.online = PLAY ONLINE` | `OPEN(ONLINE)` | always |
+| `controls` | `ui.main.controls = CONTROLS` | `OPEN(CONTROLS)` | always |
 | `options` | `ui.main.options = OPTIONS` | `OPEN(OPTIONS)` | always |
 | `exit` | `ui.main.exit = EXIT` | `OPEN(EXIT_CONFIRM)` | always |
 
@@ -100,6 +105,12 @@ Default selection: `missions`, or the entry selected when the player last left t
 game's loop, the Adventures one press down.
 
 ### `UI:main/campaign`
+
+**Shipped closed** (2026-11-13, provisional, for review): while `graphic.ui.page.scenarios` is off, as it
+ships, the page lists no scenario - title, the body `ui.campaign.closed = WORK IN PROGRESS - the campaign is
+not open yet. Play the DAILY MISSIONS in the meantime.`, and one entry, `back` (`MenuTree`). `UI:main/online/host`
+then lists no scenario either and hosts missions only. The key on, for a developer's copy, the page is as
+below.
 
 Title `ui.campaign.title = CAMPAIGN`. One entry per scenario in `Scenarios.all()`, in registry
 order: label is `Scenario.name()`, and the selected entry shows `Scenario.description()` under the
@@ -227,6 +238,8 @@ password.
 
 ### `UI:main/online/host`
 
+While `graphic.ui.page.scenarios` is off, as it ships, only the first entry below is listed.
+
 Title `ui.host.title = HOST GAME`. A first entry `ui.host.missions = DAILY MISSIONS` opening
 `UI:main/online/host/missions`, the missions page in host mode; a mission travels as `SessionSetup("mission
 <tier>", seed)` (G0065). Then the same scenario list widget as `UI:main/campaign` with a different confirm - its
@@ -237,6 +250,22 @@ only in the dev overlay (retires the alpha-phase scaffolding row about the room 
 
 Do not build: a waiting room, a host start button, a ready screen, a player list with kick, a slot,
 colour or character choice (G0028, G0038); capacity as a setting (G0038).
+
+### `UI:main/controls`
+
+Title `ui.controls.title = CONTROLS`. Under it a table, a line an action, three columns each as wide as its
+longest word (`ControlsTable`, tested): `ui.controls.action = ACTION`, `ui.controls.keyboard = KEYBOARD`,
+`ui.controls.pad = GAMEPAD`. Every row is read from the bindings (`ControlsConfig`), so a key rebound in
+`controls.properties` shows as what it now is; a pad's buttons are called what the pad last pressed calls
+them (`PadLabels`), Xbox's where none was. Rows, in order: move (two lines - the keys, then their aliases),
+aim, fire, strike, grenade, act, drag a load, the four orders, upgrades (the draft), shut a crate, zoom out,
+pause - `ui.controls.*`, mouse buttons as `ui.controls.mouse.*`. One entry, `back`.
+
+Not on it: the roll call's key (a placeholder), what the order keys do while a draft or a crate is open (the
+top bar's own hints say), the harness keys, and how a page is driven (every page's hint line says).
+
+Do not build: rebinding from this page - a player's bindings belong in a user file that does not exist yet,
+as Options' settings do.
 
 ### `UI:main/options` - placeholder
 

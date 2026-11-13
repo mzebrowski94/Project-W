@@ -6,7 +6,8 @@
  * wrong - every config record loads through it), {@link pl.mzebrows.pwt.client.config.GameProperties} (a
  * file off the classpath, as the interface's words are read) and {@link
  * pl.mzebrows.pwt.client.config.SimConfigLoader} (the sim's config, which a session's worlds are parsed
- * with). Entry: {@code NetConfigLoader}.
+ * with). Entries: {@code NetConfigLoader}, and {@code BuildVersion} - which build this copy is, as the build
+ * stamped it.
  *
  * <p>Not here: a config record the client owns - it lives with its layer ({@code GraphicConfig} in
  * {@code draw}, {@code ControlsConfig} in {@code input}) - or the command line ({@code LaunchOptions}, the

@@ -84,6 +84,9 @@ his hand-tuned numbers sit uncommitted on `main`, and every later sweep runs on 
   numbers in, guarantees kept (strike 300, shotgun 48, pulse 3 bolts, giants 1800, slinger 540); squad sight 27, aliens
   notice x1.3 and amble wider, leaps from farther; a nest is a threat and kept (G0085); a trooper never fires down a
   fouled line (G0084); the plain lays 4-6 turrets.
+- [A build version in the artifact and the menu](issues/17-a-build-version.md): the commit's date and short hash,
+  `-dirty` on an uncommitted tree, worked out by the build; in the zip's name and the main page's corner
+  (provisional, AFK).
 
 ## Not yet specified
 

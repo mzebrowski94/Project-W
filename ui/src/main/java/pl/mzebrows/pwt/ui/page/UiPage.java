@@ -15,6 +15,8 @@ public enum UiPage {
     ONLINE_HOST("UI:main/online/host", Kind.PAGE, ONLINE),
     /** {@link #MISSIONS} opened from hosting: the same page, and everything it starts is hosted. */
     HOST_MISSIONS("UI:main/online/host/missions", Kind.PAGE, ONLINE_HOST),
+    /** What every key and pad button does, read from the bindings; nothing is changed there. */
+    CONTROLS("UI:main/controls", Kind.PAGE, MAIN),
     OPTIONS("UI:main/options", Kind.PAGE, MAIN),
     EXIT_CONFIRM("UI:main/exit", Kind.MODAL, MAIN),
     CONNECTING("UI:connecting", Kind.PAGE, null),
