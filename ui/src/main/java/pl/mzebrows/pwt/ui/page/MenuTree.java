@@ -10,7 +10,8 @@ import pl.mzebrows.pwt.sim.def.TierKind;
 /**
  * Every fixed page's entries, as {@code docs/ui/menu_layout_agent.md} section 4 lists them. The scenario
  * lists - the campaign and hosting - are built from the registry instead, and the proving ground's
- * upgrades from the catalogue ({@link ProvingRows#upgrades()}); neither is here.
+ * upgrades from the catalogue ({@link ProvingRows#upgrades()}); neither is here. The campaign's page here
+ * is what it shows while its scenarios are not listed: that it is not open yet, and BACK.
  */
 public final class MenuTree {
 
@@ -36,6 +37,7 @@ public final class MenuTree {
                                 entry("campaign", "ui.main.campaign", UiIntent.open(UiPage.CAMPAIGN)),
                                 entry("proving-ground", "ui.main.provingGround", UiIntent.open(UiPage.PROVING_GROUND)),
                                 entry("online", "ui.main.online", UiIntent.open(UiPage.ONLINE)),
+                                entry("controls", "ui.main.controls", UiIntent.open(UiPage.CONTROLS)),
                                 entry("options", "ui.main.options", UiIntent.open(UiPage.OPTIONS)),
                                 entry("exit", "ui.main.exit", UiIntent.open(UiPage.EXIT_CONFIRM))),
                         0));
@@ -67,6 +69,9 @@ public final class MenuTree {
                                 entry("host", "ui.online.host", UiIntent.open(UiPage.ONLINE_HOST)),
                                 back()),
                         0));
+        PAGES.put(UiPage.CAMPAIGN, new MenuPage("ui.campaign.title", "ui.campaign.closed", List.of(back()), 0));
+        // Its table of bindings is the screen's to write, from the bindings themselves.
+        PAGES.put(UiPage.CONTROLS, new MenuPage("ui.controls.title", "", List.of(back()), 0));
         PAGES.put(UiPage.OPTIONS, new MenuPage("ui.options.title", "ui.options.body", List.of(back()), 0));
         PAGES.put(
                 UiPage.EXIT_CONFIRM,

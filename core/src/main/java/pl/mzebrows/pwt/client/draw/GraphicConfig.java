@@ -175,8 +175,14 @@ public record GraphicConfig(
     /** How long a scrim and a page take to come in, and how far a page slides. */
     public record Motion(float scrimSeconds, float pageSeconds, int pageSlide) {}
 
-    /** How many columns a page's list is laid out in. */
-    public record Page(int columns) {}
+    /**
+     * The menu's pages, under {@code graphic.ui.page}.
+     *
+     * @param columns how many characters wide a page's panel is
+     * @param scenarios whether the Adventures are listed - under CAMPAIGN, and under HOST GAME after its
+     *     missions. Off, CAMPAIGN says it is not open yet and points at the daily missions
+     */
+    public record Page(int columns, boolean scenarios) {}
 
     /** How wide the view may be against its height, and how much of the bars the top one takes. */
     public record View(float aspectMin, float aspectMax, float topShare) {}

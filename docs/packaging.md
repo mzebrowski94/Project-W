@@ -12,7 +12,11 @@ On Windows, from the project folder (PowerShell or cmd):
 .\gradlew lwjgl3:packageWinX64
 ```
 
-Result: `dist\Project-W-winX64.zip` (about 55 MB). Inside:
+Result: `dist\Project-W-<build version>-winX64.zip` (about 55 MB), as in
+`Project-W-2026.11.13-b412b68-winX64.zip`. The **build version** is the date and short hash of the commit
+the zip was built from, with `-dirty` when the tree held anything uncommitted; the build works it out
+(`lwjgl3/build.gradle`), and the main menu shows the same words in its bottom right corner, so a playtester
+can say which build he has. `.\gradlew lwjgl3:printBuildVersion` prints it without building. Inside:
 
 ```
 Project-W.exe          the launcher - this is what you run
@@ -47,7 +51,7 @@ Claude's sandbox cannot produce the Windows zip; `./gradlew` on the Windows side
 
 | When | Change |
 |---|---|
-| New release | `projectVersion` in `gradle.properties`. The jar name follows it. |
+| New release | Nothing: the zip's name and the menu carry the build version, from the commit. `projectVersion` in `gradle.properties` names only the jar inside. |
 | New Java update | `packagedJdkVersion` in `gradle.properties` - an exact Temurin 25 release, e.g. `25.0.4.1+1`. Keep the major at 25 while `options.release` is 25. |
 | New library | Re-run `jdeps --multi-release 25 --ignore-missing-deps --list-deps <game jar>` and add any new module to `jlink.modules`. A missing module fails only in the packaged game, with `NoClassDefFoundError`. |
 | Memory | `-Xmx1G` under `roast.vmArgs`. |

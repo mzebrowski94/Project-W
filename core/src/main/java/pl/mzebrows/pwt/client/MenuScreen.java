@@ -8,11 +8,13 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.config.BuildVersion;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.client.hud.Hud;
 import pl.mzebrows.pwt.client.hud.MenuPainter;
 import pl.mzebrows.pwt.client.hud.PageHints;
 import pl.mzebrows.pwt.client.hud.UiStrings;
+import pl.mzebrows.pwt.client.input.ControlsTable;
 import pl.mzebrows.pwt.client.input.KeyHolds;
 import pl.mzebrows.pwt.client.input.KeyPresses;
 import pl.mzebrows.pwt.client.input.NavInputReader;
@@ -49,7 +51,8 @@ import pl.mzebrows.pwt.ui.page.UiPage;
  * The main menu ({@code UI:main...}): one libGDX {@code Screen} holding every page as a stack, because
  * swapping screens disposes GL resources and a page change must never cost that. The campaign and the
  * hosting list show every scenario in {@link Scenarios}, the whole registry - there is no separate menu
- * definition to keep in sync.
+ * definition to keep in sync - or none of them, while {@code graphic.ui.page.scenarios} is off: the campaign
+ * then says it is not open yet, and hosting hosts missions only.
  *
  * <p>What a press does is {@link UiFlow}'s and the selection is {@link PageControls}'; this turns the
  * flow's effects into screens and draws. MAIN opens on DAILY MISSIONS, and that page on MEDIUM: a daily
@@ -69,7 +72,9 @@ public final class MenuScreen extends ScreenAdapter {
 
     private final GameContext context;
     private final UiStrings strings = UiStrings.load();
-    private final List<Scenario> scenarios = Scenarios.all();
+    /** The scenarios the lists show: the whole registry, or none while they are not listed. */
+    private final List<Scenario> scenarios;
+
     private final UiFlow flow = new UiFlow(UiPage.MAIN);
     private final NavInput nav = new NavInput();
     private final InputModality modality = new InputModality();
@@ -80,6 +85,9 @@ public final class MenuScreen extends ScreenAdapter {
     private final NavInputReader reader;
 
     private final MissionChoices missions;
+
+    /** The main page's corner: which build this is, in words. */
+    private final String version = strings.format("ui.main.version", BuildVersion.current());
 
     /** A pad is picking the missions page's code a letter at a time; null otherwise. */
     private @Nullable CodePicker picker;
@@ -148,6 +156,7 @@ public final class MenuScreen extends ScreenAdapter {
                 graphic.ui().motion().pageSlide(),
                 graphic.ui().motionScale());
         this.rows = new ProvingRows(context.simConfig());
+        this.scenarios = graphic.ui().page().scenarios() ? Scenarios.all() : List.of();
         openDown(start);
     }
 
@@ -232,6 +241,22 @@ public final class MenuScreen extends ScreenAdapter {
         if (top == UiPage.PROVING_GROUND) {
             drawPreview(delta, layout, area);
         }
+        if (top == UiPage.MAIN) {
+            drawVersion(view);
+        }
+    }
+
+    /** Which build this is, dim in the bottom right corner of the main page. */
+    private void drawVersion(Rect view) {
+        MenuLayout menu = painter.layout();
+        Hud hud = context.hud();
+        hud.beginCanvas();
+        hud.text(
+                version,
+                view.right() - 2 * menu.padding() - version.length() * menu.advance(),
+                view.y() + 2 * menu.padding() + menu.fontSize(),
+                context.graphicConfig().hud().color().textDim());
+        hud.endCanvas();
     }
 
     /**
@@ -399,8 +424,10 @@ public final class MenuScreen extends ScreenAdapter {
     }
 
     private UiIntent intentFor(UiPage top, int entry) {
+        if (top == UiPage.CAMPAIGN && isScenarioList(top)) {
+            return UiIntent.start(entry);
+        }
         return switch (top) {
-            case CAMPAIGN -> UiIntent.start(entry);
             case ONLINE_HOST ->
                 entry < listOffset(top) ? UiIntent.open(UiPage.HOST_MISSIONS) : UiIntent.host(entry - 1);
             case PROVING_UPGRADES -> entry < rows.upgrades().size() ? UiIntent.choose(entry) : UiIntent.BACK;
@@ -474,7 +501,9 @@ public final class MenuScreen extends ScreenAdapter {
                 labels.add(scenario.name());
             }
             // Hosting opens where the campaign was: the scenario played last is the likeliest to host.
-            defaultSelection = listOffset(top) + context.selections().get(UiPage.CAMPAIGN, 0, scenarios.size());
+            defaultSelection = scenarios.isEmpty()
+                    ? 0
+                    : listOffset(top) + context.selections().get(UiPage.CAMPAIGN, 0, scenarios.size());
         } else if (top == UiPage.PROVING_UPGRADES) {
             head.add(strings.get("ui.provingUpgrades.title"));
             swarmHead.clear();
@@ -495,6 +524,10 @@ public final class MenuScreen extends ScreenAdapter {
             }
             if (top == UiPage.MAIN && !notice.isEmpty()) {
                 painter.addWrapped(head, notice, BODY_LINES);
+            }
+            if (top == UiPage.CONTROLS) {
+                // In the words of the pad last pressed, as the hints are; Xbox's where none was.
+                head.addAll(ControlsTable.lines(context.controlsConfig(), strings::get, modality.playStation()));
             }
             if (top == UiPage.PROVING_GROUND) {
                 relabel(top);
@@ -672,8 +705,9 @@ public final class MenuScreen extends ScreenAdapter {
         }
     }
 
-    private static boolean isScenarioList(UiPage page) {
-        return page == UiPage.CAMPAIGN || page == UiPage.ONLINE_HOST;
+    /** A page that lists the scenarios: hosting, and the campaign while its scenarios are listed. */
+    private boolean isScenarioList(UiPage page) {
+        return page == UiPage.ONLINE_HOST || (page == UiPage.CAMPAIGN && !scenarios.isEmpty());
     }
 
     /** Entries before a scenario list's scenarios: hosting's DAILY MISSIONS. */

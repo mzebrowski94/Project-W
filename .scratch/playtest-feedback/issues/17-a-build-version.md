@@ -1,7 +1,7 @@
 # A build version in the artifact and the menu
 
 Type: task
-Status: open
+Status: resolved
 Blocked by: -
 Section: General (last, by request)
 
@@ -30,3 +30,24 @@ dirty tree shows. Not the build id, which hashes the sources and means something
 ## Done when
 
 The artifact's name and the menu both show it, `verify.sh` green.
+
+## Answer
+
+Resolved 2026-11-13, in an AFK session - the open point settled by Claude, **provisional, for review**.
+
+**The build version is the commit's date and short hash**, `2026.11.13-b412b68`, with `-dirty` after it when
+the tree held anything uncommitted (untracked files count; ignored ones do not) and `dev` where there is no
+git to ask or the copy was never stamped. Against the alternatives: `git describe` needs tags somebody must
+remember to make, and a counter needs somewhere to keep it - both are things to watch. The commit's date,
+not the build's, so the same commit is the same version on every machine.
+
+- `lwjgl3/build.gradle` works it out lazily (`generateBuildVersion`; `printBuildVersion` to read it) and
+  stamps `pwt-version.properties` into the launcher's resources - there rather than in `core`, so a new
+  commit rebuilds the launcher's resources and no module's tests.
+- The zip is `dist/Project-W-<build version>-winX64.zip`, every target the same way. The jar inside keeps
+  `projectVersion`.
+- `BuildVersion` (`client.config`) reads the stamp; `MenuScreen` draws `ui.main.version = BUILD {0}` dim in
+  the bottom right corner of `UI:main`.
+- Written down: glossary *build version*, `docs/ui/menu_layout_agent.md` (`UI:main`), `docs/packaging.md`.
+
+Not run: `lwjgl3:packageWinX64` itself, and the look of the corner - Mateusz's.

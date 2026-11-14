@@ -18,6 +18,8 @@ A scenario is one arena, built to make a system visible. Everything needed to ad
 1. Write a class implementing `Scenario` in `sim/.../scenario/`, package-private.
 2. Add it to the list in `Scenarios.ALL`. **That list is the whole registry** - a scenario missing
    from the menu is a scenario missing from that line.
+   The menu lists them only while `graphic.ui.page.scenarios` is on (`assets/graphic.properties`); it ships
+   off, CAMPAIGN saying it is not open yet. Turn it on in your copy to play one.
 3. `name()` is what the menu shows. `description()` is one line saying *which system this exercises
    and what to look at* - "sixty enemies spawned overlapping, watch them untangle", not "a fight".
 4. Override `configure(SimConfig)` to vary tunables - a crowd, an empty arena, a faster weapon -

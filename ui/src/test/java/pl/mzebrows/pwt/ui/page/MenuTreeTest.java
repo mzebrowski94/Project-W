@@ -82,6 +82,24 @@ class MenuTreeTest {
     }
 
     @Test
+    void offersTheMainPagesEntriesInTheSpecificationsOrder() {
+        assertThat(MenuTree.page(UiPage.MAIN).entries())
+                .extracting(MenuEntry::id)
+                .containsExactly("missions", "campaign", "proving-ground", "online", "controls", "options", "exit");
+    }
+
+    /** A page that only tells the player something leaves by its one entry. */
+    @Test
+    void offersOnlyBackOnAPageThatOnlyTells() {
+        for (UiPage telling : new UiPage[] {UiPage.CAMPAIGN, UiPage.CONTROLS, UiPage.OPTIONS}) {
+            assertThat(MenuTree.page(telling).entries())
+                    .as(telling.id())
+                    .extracting(MenuEntry::intent)
+                    .containsExactly(UiIntent.BACK);
+        }
+    }
+
+    @Test
     void offersTheThreeDailiesThenRandomThenACodeWithMediumSelected() {
         for (UiPage missions : new UiPage[] {UiPage.MISSIONS, UiPage.HOST_MISSIONS}) {
             MenuPage page = MenuTree.page(missions);
