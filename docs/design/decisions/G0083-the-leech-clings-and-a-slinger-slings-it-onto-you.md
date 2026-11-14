@@ -14,7 +14,7 @@ creature that never walks and still leaps.
 **Constraint.** **Amends G0045** (a grip may cling: taken by touch, leaving its man free, spent on finishing him).
 **Amends G0074** (a second slinger, whose riders are leeches, slung onto its target).
 
-- **The leech is small, magenta and never walks** (speed 0: rooted). Health 150, a grunt's. Its colour is the purple
+- **The leech is small, magenta and never walks** (speed 0: rooted). Health 250 since the 2026-11-13 playtest (150, a grunt's, before) - five sidearm rounds, still one hand strike. Its colour is the purple
   asked for, taken warm and bright so it reads apart from the spitter's blue-purple and the searer's dark pink
   (pillar 5).
 - **It clings to the first man it touches**, commander or trooper (pillar 2) - on landing, or a man walking into one

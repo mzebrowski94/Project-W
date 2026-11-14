@@ -111,6 +111,11 @@ claim them.
 Deliberately undecided. **Ask rather than inventing an answer** - a guess here becomes a
 contradiction three features later.
 
+- **Do the keep's post barrels stay within the boss's reach?** `sim.weapon.spew.projectileRange` went from 32 to
+  55 after the 2026-11-13 playtest, so the boss's ring, spiral and fan now reach the barrels round the keep's post,
+  about 40 units west of him (`sim.finale.keep.hold.barrels`). At 32 they were out of reach on purpose. Either they
+  go off as part of the fight, or they move out past 55 - play it first.
+
 - **What does the view do with a player it cannot frame?** The leash was tried at the width of the
   view, which is what pillar 4 asks for, and it played badly - being stopped by an invisible wall
   because somebody else walked the other way is not a fight, it is a tether. It is now far wider than

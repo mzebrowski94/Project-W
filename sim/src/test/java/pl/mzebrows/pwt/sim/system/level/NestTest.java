@@ -270,6 +270,49 @@ class NestTest {
         assertThat(creatures(simulation)).isEqualTo(BROOD);
     }
 
+    /**
+     * A nest that has bred its fill turns passive (G0093): what one hole sends is capped, so camping it is not an
+     * endless stream - but slower is not asleep, so it still breeds.
+     */
+    @Test
+    void breedsFarSlowerOnceItHasPutItsFillOnTheField() {
+        int slowdown = 3;
+        SimConfig config = config().withNest(config().nest()
+                .withLeftBehindRadius(0f)
+                .withActiveBrood(BROOD * 2)
+                .withPassiveSlowdown(slowdown));
+        Simulation simulation = new Simulation(config);
+        simulation.spawnNest(UnitKind.GRUNT, X, Y);
+        simulation.spawnCommander(X + 2f, Y);
+        godMode(simulation);
+
+        steps(simulation, FIRST_BROOD + ONE_PERIOD);
+        assertThat(creatures(simulation)).isEqualTo(BROOD * 2);
+
+        steps(simulation, ONE_PERIOD);
+        assertThat(creatures(simulation)).isEqualTo(BROOD * 2);
+
+        steps(simulation, ONE_PERIOD * (slowdown - 1));
+        assertThat(creatures(simulation)).isEqualTo(BROOD * 3);
+    }
+
+    /** Off, a nest is active for good: zero is "not for me", as everywhere. */
+    @Test
+    void keepsItsPaceForGoodWhenThereIsNoActiveBrood() {
+        SimConfig config = config().withNest(config().nest()
+                .withLeftBehindRadius(0f)
+                .withActiveBrood(0)
+                .withPassiveSlowdown(10));
+        Simulation simulation = new Simulation(config);
+        simulation.spawnNest(UnitKind.GRUNT, X, Y);
+        simulation.spawnCommander(X + 2f, Y);
+        godMode(simulation);
+
+        steps(simulation, FIRST_BROOD + ONE_PERIOD * 3);
+
+        assertThat(creatures(simulation)).isEqualTo(BROOD * 4);
+    }
+
     /** It is worst at the moment you kill it, and that is the whole of what makes killing one a choice. */
     @Test
     void emptiesTheLastOfItselfWhenItIsDestroyed() {

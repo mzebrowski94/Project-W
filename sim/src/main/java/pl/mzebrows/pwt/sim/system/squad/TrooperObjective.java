@@ -73,6 +73,18 @@ final class TrooperObjective {
     private FlowField[] routes = new FlowField[0];
 
     /**
+     * Parallel to {@link #routes}: for ground held afterwards, the column of its <em>way in</em> - the tile just outside
+     * its biome that its route enters by - or {@code -1} (for every other point, and for one no route reaches from
+     * outside).
+     */
+    @NotState("cache of the way into each held point's biome, a pure function of the map and where the points are")
+    private int[] wayInCol = new int[0];
+
+    /** Parallel to {@link #wayInCol}: the row of the same tile. */
+    @NotState("cache of the way into each held point's biome, a pure function of the map and where the points are")
+    private int[] wayInRow = new int[0];
+
+    /**
      * Scratch: where each trooper is watching from this tick, in family order - a point's index, the number of
      * points plus a door's index for a man waiting at a door, or {@code -1}.
      */
@@ -244,7 +256,8 @@ final class TrooperObjective {
                 if (nextAfter[nearest] < 0) {
                     // Nowhere further to go: round this one, as a squad with nothing left to take roams.
                     Position where = POSITION.get(points.get(nearest));
-                    roam.exploresAround(trooper, at, where.x, where.y, POINT.get(points.get(nearest)).radius);
+                    roam.exploresAround(
+                            trooper, at, where.x, where.y, POINT.get(points.get(nearest)).radius, TileMap.NO_BIOME);
                     return true;
                 }
                 nearest = nextAfter[nearest];
@@ -255,7 +268,7 @@ final class TrooperObjective {
             nearest = heldPoint();
         }
         if (nearest < 0) {
-            return false;
+            return patrolsTheWayIn(trooper, at);
         }
         Entity point = points.get(nearest);
         Position where = POSITION.get(point);
@@ -571,17 +584,80 @@ final class TrooperObjective {
         return -1;
     }
 
-    /** Builds one field per point, aimed at that point, the first time there are any. */
+    /**
+     * With nothing left to take and ground held afterwards still waiting for a commander (G0061), patrols the way into
+     * its biome from this side (G0094): round its way in, the tile its route enters by, never inside that biome - a
+     * trooper there would wake what it holds before the commander arrives. False when there is no such ground, or no
+     * way in to it, and the man roams as before.
+     */
+    private boolean patrolsTheWayIn(Trooper trooper, Position at) {
+        for (int i = 0; i < points.size(); i++) {
+            ControlPoint point = POINT.get(points.get(i));
+            if (point.captured || !point.holdsAfterwards || wayInCol[i] < 0) {
+                continue;
+            }
+            Position where = POSITION.get(points.get(i));
+            roam.exploresAround(
+                    trooper,
+                    at,
+                    map.tileCentreX(wayInCol[i]),
+                    map.tileCentreY(wayInRow[i]),
+                    0f,
+                    map.biomeAt(where.x, where.y));
+            return true;
+        }
+        return false;
+    }
+
+    /** Builds one field per point, aimed at that point, the first time there are any - and each held one's way in. */
     void buildRoutesIfNeeded() {
         if (routes.length == points.size()) {
             return;
         }
         routes = new FlowField[points.size()];
+        wayInCol = new int[points.size()];
+        wayInRow = new int[points.size()];
         for (int i = 0; i < points.size(); i++) {
             Position where = POSITION.get(points.get(i));
             FlowField field = FlowField.over(map, bodyRadius);
             field.rebuildFor(map.colAt(where.x), map.rowAt(where.y));
             routes[i] = field;
+            wayInCol[i] = -1;
+            wayInRow[i] = -1;
+            if (POINT.get(points.get(i)).holdsAfterwards) {
+                findWayIn(i, field, map.biomeAt(where.x, where.y));
+            }
         }
+    }
+
+    /**
+     * Finds point {@code index}'s way in: the tile outside {@code biome}, beside one inside it, that is the fewest steps
+     * from the point along its route - where the route crosses in. Once per held point, when the routes are built.
+     * Ties go to the first in row order; none found leaves it at {@code -1}.
+     */
+    private void findWayIn(int index, FlowField route, int biome) {
+        int shortest = Integer.MAX_VALUE;
+        for (int row = 0; row < map.rows(); row++) {
+            for (int col = 0; col < map.cols(); col++) {
+                if (map.biomeAtTile(col, row) == biome) {
+                    continue;
+                }
+                int steps = route.stepsTo(col, row);
+                if (steps < 0 || steps >= shortest || !borders(col, row, biome)) {
+                    continue;
+                }
+                shortest = steps;
+                wayInCol[index] = col;
+                wayInRow[index] = row;
+            }
+        }
+    }
+
+    /** Whether one of a tile's four neighbours is in {@code biome}. */
+    private boolean borders(int col, int row, int biome) {
+        return map.biomeAtTile(col - 1, row) == biome
+                || map.biomeAtTile(col + 1, row) == biome
+                || map.biomeAtTile(col, row - 1) == biome
+                || map.biomeAtTile(col, row + 1) == biome;
     }
 }

@@ -337,6 +337,9 @@ public record SimConfig(
      *     pace, in world units, biome or none; with nobody that close it is <em>left behind</em>. Zero is off
      * @param leftBehindSlowdown how many times longer every tick of its countdown takes while it is left
      *     behind; one is no slower. It still breeds - slower is not asleep (G0031)
+     * @param activeBrood how many creatures a nest's broods put on the field before it turns <em>passive</em> (G0093);
+     *     its death brood is not counted. Zero is off: a nest stays active for good
+     * @param passiveSlowdown how many times longer a passive nest's period is; one is no slower. It still breeds
      */
     @With
     public record NestConfig(
@@ -356,7 +359,9 @@ public record SimConfig(
             boolean threat,
             boolean kept,
             float leftBehindRadius,
-            int leftBehindSlowdown) {
+            int leftBehindSlowdown,
+            int activeBrood,
+            int passiveSlowdown) {
 
         public NestConfig {
             Require.positive("nest radius", radius);
@@ -379,6 +384,8 @@ public record SimConfig(
             Require.notNegative("nest standsOut", standsOut);
             Require.notNegative("nest leftBehindRadius", leftBehindRadius);
             Require.positive("nest leftBehindSlowdown", leftBehindSlowdown);
+            Require.notNegative("nest activeBrood", activeBrood);
+            Require.positive("nest passiveSlowdown", passiveSlowdown);
         }
     }
 

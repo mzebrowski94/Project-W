@@ -59,15 +59,17 @@ final class TrooperRoam {
     }
 
     /**
-     * Wanders round a place rather than across the level, off the circle of {@code keepOff} round it: the capture
-     * crowd's spare man with no next point to go on to (G0086). A fresh spot the moment he takes it up, so a walk
-     * he had begun into that circle is not finished.
+     * Wanders round a place rather than across the level, off the circle of {@code keepOff} round it and never onto
+     * ground in {@code keptOutOf} ({@code TileMap.NO_BIOME} keeps out of none): the capture crowd's spare man with no
+     * next point to go on to (G0086), and the squad patrolling the way into ground held afterwards that still waits
+     * for a commander (G0094). A fresh spot the moment he takes it up, so a walk he had begun into that circle is not
+     * finished.
      */
-    void exploresAround(Trooper trooper, Position at, float x, float y, float keepOff) {
+    void exploresAround(Trooper trooper, Position at, float x, float y, float keepOff, int keptOutOf) {
         boolean takenUp = trooper.mode != Trooper.Mode.EXPLORE;
         trooper.mode = Trooper.Mode.EXPLORE;
         if (takenUp || !trooper.hasTarget || arrived(at, trooper)) {
-            roamsAround(trooper, x, y, keepOff);
+            roamsAround(trooper, x, y, keepOff, keptOutOf);
         }
     }
 
@@ -78,7 +80,7 @@ final class TrooperRoam {
         }
         if (posts.size() > 0) {
             Position post = POSITION.get(posts.first());
-            roamsAround(trooper, post.x, post.y, 0f);
+            roamsAround(trooper, post.x, post.y, 0f, TileMap.NO_BIOME);
             return;
         }
         for (int attempt = 0; attempt < ROAM_ATTEMPTS; attempt++) {
@@ -132,8 +134,8 @@ final class TrooperRoam {
     }
 
     /**
-     * Roams inside the squad's patch around a place - the post, or a crowded point (G0086) - rather than across the
-     * whole level.
+     * Roams inside the squad's patch around a place - the post, a crowded point (G0086), or the way into ground held
+     * afterwards (G0094) - rather than across the whole level, and never onto ground in {@code keptOutOf}.
      *
      * <p>A defence has nothing to take, so with nothing in front of them the squad falls through to
      * roaming - and roaming the map is the wrong answer on the one level whose whole instruction is
@@ -147,7 +149,7 @@ final class TrooperRoam {
      * <p>Drawn inside the square and rejected outside the circle - and inside {@code keepOff} - so no trigonometry
      * is needed to pick a point in a disc; {@code Math.sin} and {@code Math.cos} are banned here (pillar 6).
      */
-    private void roamsAround(Trooper trooper, float centreX, float centreY, float keepOff) {
+    private void roamsAround(Trooper trooper, float centreX, float centreY, float keepOff, int keptOutOf) {
         for (int attempt = 0; attempt < ROAM_ATTEMPTS; attempt++) {
             float offsetX = rng.nextFloat(-patchRadius, patchRadius);
             float offsetY = rng.nextFloat(-patchRadius, patchRadius);
@@ -157,13 +159,28 @@ final class TrooperRoam {
             }
             float x = centreX + offsetX;
             float y = centreY + offsetY;
-            if (map.isClear(x, y, bodyRadius)) {
+            if (map.isClear(x, y, bodyRadius) && clearOf(x, y, keptOutOf)) {
                 trooper.headFor(x, y);
                 return;
             }
         }
         // Nowhere to stand anywhere near it. Better to hold where it is than to walk into rock.
         trooper.clearTarget();
+    }
+
+    /**
+     * Whether a spot is far enough out of {@code keptOutOf} that a man stopping anywhere within arriving of it, and
+     * shoved a body's width, is still outside: its four corners at that margin all lie in another biome.
+     */
+    private boolean clearOf(float x, float y, int keptOutOf) {
+        if (keptOutOf == TileMap.NO_BIOME) {
+            return true;
+        }
+        float margin = bodyRadius + arriveRadius;
+        return map.biomeAt(x - margin, y - margin) != keptOutOf
+                && map.biomeAt(x + margin, y - margin) != keptOutOf
+                && map.biomeAt(x - margin, y + margin) != keptOutOf
+                && map.biomeAt(x + margin, y + margin) != keptOutOf;
     }
 
     private boolean arrived(Position at, Trooper trooper) {

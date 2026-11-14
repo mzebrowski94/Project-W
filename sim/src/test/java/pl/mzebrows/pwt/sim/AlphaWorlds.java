@@ -328,6 +328,12 @@ public final class AlphaWorlds {
     /** Small, so a test can wait out a slowed brood; above one, so it is slowed at all. */
     public static final int NEST_LEFT_BEHIND_SLOWDOWN = 4;
 
+    /** Off: a test nest stays active for good unless it asks for a cap (G0093). */
+    public static final int NEST_ACTIVE_BROOD = 0;
+
+    /** No slower, so a nest that does turn passive changes nothing a test did not ask for. */
+    public static final int NEST_PASSIVE_SLOWDOWN = 1;
+
     /** Wide enough to catch two units either side of the middle and leave a third of them clear. */
     public static final float BLAST_RADIUS = 6f;
 
@@ -1630,7 +1636,9 @@ public final class AlphaWorlds {
                         NEST_THREAT,
                         NEST_KEPT,
                         NEST_LEFT_BEHIND_RADIUS,
-                        NEST_LEFT_BEHIND_SLOWDOWN),
+                        NEST_LEFT_BEHIND_SLOWDOWN,
+                        NEST_ACTIVE_BROOD,
+                        NEST_PASSIVE_SLOWDOWN),
                 new SimConfig.ControlPointConfig(
                         POINT_RADIUS,
                         POINT_CAPTURE_SECONDS,

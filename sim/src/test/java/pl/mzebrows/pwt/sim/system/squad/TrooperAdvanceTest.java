@@ -439,6 +439,28 @@ class TrooperAdvanceTest {
     }
 
     /**
+     * Meanwhile, with nothing else left to take, the squad patrols the way into that biome from this side rather than
+     * roaming the map (G0094) - and never sets foot in it, which would wake what it holds before he arrives.
+     */
+    @Test
+    void patrolsTheWayIntoGroundHeldAfterwardsWhileItWaitsForACommander() {
+        Simulation simulation = on(twoBiomes());
+        simulation.spawnCommander(5f, CORNER);
+        heldAfterwards(simulation.spawnControlPoint(EAST, MIDDLE));
+        Entity trooper = simulation.spawnTrooper(5f, 5f);
+        float border = AlphaWorlds.ARENA_TILES / 2 * AlphaWorlds.TILE;
+        float furthestEast = 0f;
+
+        for (int tick = 0; tick < ticksIn(30f); tick++) {
+            simulation.step();
+            furthestEast = Math.max(furthestEast, at(trooper).x);
+        }
+
+        assertThat(furthestEast).isLessThan(border);
+        assertThat(distance(trooper, border, MIDDLE)).isLessThan(AlphaWorlds.TROOPER_PATCH + AlphaWorlds.TILE);
+    }
+
+    /**
      * Walking in to take it, a man goes inside its radius as on any point - not to the ring, which is where
      * they hold once it is taken (G0061).
      */

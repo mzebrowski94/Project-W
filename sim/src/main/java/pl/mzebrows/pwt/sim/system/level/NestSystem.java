@@ -43,6 +43,9 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  *       within {@code sim.nest.leftBehindRadius}, its countdown moves once every
  *       {@code sim.nest.leftBehindSlowdown} ticks. It still breeds, and is back at its pace the tick a man
  *       is near again. The men are filed in a {@link SpatialGrid} once a tick, and each nest asks it.
+ *   <li><strong>A nest that has bred its fill turns passive</strong> (G0093): once its broods have put {@code
+ *       sim.nest.activeBrood} creatures on the field, its period is {@code sim.nest.passiveSlowdown} times as long,
+ *       for good. It still breeds, and still empties itself when it dies.
  *   <li><strong>A nest being hit calls the neighbours</strong> (G0016), read from its health against
  *       last tick - damage is already cleared by then.
  * </ul>
@@ -76,6 +79,12 @@ public final class NestSystem extends EntitySystem {
     /** How many ticks a left-behind nest takes for each of its own. */
     private final int leftBehindSlowdown;
 
+    /** How many a nest's broods put on the field before it turns passive; zero, and none ever does (G0093). */
+    private final int activeBrood;
+
+    /** How many times longer a passive nest's period is. */
+    private final int passiveSlowdown;
+
     /** The men on the field, filed by where they stand; none when nothing is ever left behind. */
     private final @Nullable SpatialGrid grid;
 
@@ -96,6 +105,8 @@ public final class NestSystem extends EntitySystem {
         this.firstBroodTicks = Ticks.of(config.nest().firstBroodSeconds(), config.tickSeconds());
         this.leftBehindRadius = config.nest().leftBehindRadius();
         this.leftBehindSlowdown = config.nest().leftBehindSlowdown();
+        this.activeBrood = config.nest().activeBrood();
+        this.passiveSlowdown = config.nest().passiveSlowdown();
         this.grid =
                 leftBehindRadius > 0f ? new SpatialGrid(map.worldWidth(), map.worldHeight(), leftBehindRadius) : null;
     }
@@ -144,8 +155,24 @@ public final class NestSystem extends EntitySystem {
             if (nest.untilNext > 0) {
                 continue;
             }
-            hatch(nest, at, bodyOf(entity), nextBrood(entity, nest));
+            int count = nextBrood(entity, nest);
+            hatch(nest, at, bodyOf(entity), count);
+            countTowardsPassive(nest, count);
             nest.untilNext = nest.periodTicks;
+        }
+    }
+
+    /**
+     * Counts a brood towards the nest's active brood, and turns it passive on the brood that reaches it (G0093): its
+     * period {@link #passiveSlowdown} times as long from the next countdown on, for good. Zero active brood is off.
+     */
+    private void countTowardsPassive(Nest nest, int count) {
+        if (activeBrood <= 0 || nest.hatched >= activeBrood) {
+            return;
+        }
+        nest.hatched += count;
+        if (nest.hatched >= activeBrood) {
+            nest.periodTicks *= passiveSlowdown;
         }
     }
 

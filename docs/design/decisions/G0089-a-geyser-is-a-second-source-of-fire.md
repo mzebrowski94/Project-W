@@ -19,14 +19,14 @@ the same fire - not a second kind of fire.
 
 **Constraint.**
 
-- **A geyser** is a brown circle on the ground, `sim.geyser.radiusMin/Max` (2-5) **in world units** - the unit every
+- **A geyser** is a brown circle on the ground, `sim.geyser.radiusMin/Max` (5-13 since the 2026-11-13 playtest; 2-5 before) **in world units** - the unit every
   neighbouring placement key uses: a boulder's `sim.obstacle.radius`, a trunk's, `sim.mission.placement.*` (a tile
   is five). Drawn per geyser from its placement pass's own stream, as a trunk is.
 - **Its cycle**: dormant `sim.geyser.dormantMinSeconds`-`dormantMaxSeconds` (4-9 s), drawn per geyser **per cycle**,
   keyed off the level's seed, the geyser's handle and the cycle (`RngStream.GEYSER`, G0086's keyed shape) - so it
   advances no stream, two geysers keep different time, and a snapshot carries only the cycle count. **Never under
   4 s**: `GeyserConfig` refuses a shorter `dormantMinSeconds` at load. Then filling `sim.geyser.fillingSeconds`
-  (1.5 s), then the eruption, burning `sim.geyser.burnSeconds` (3 s); it is dormant again only once that is out.
+  (1.5 s), then the eruption, burning `sim.geyser.burnSeconds` (5 s since the 2026-11-13 playtest; 3 s before); it is dormant again only once that is out.
 - **Dormant it is ground**: no collider, so the solver lets anything stand on it and avoidance never steers round it.
   Only the eruption is avoided.
 - **The eruption is ordinary fire**: `GeyserConfig.eruption` is `FireConfig.forBlast(radius)` - the fire a blast of the

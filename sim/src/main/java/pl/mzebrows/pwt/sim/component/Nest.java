@@ -50,6 +50,12 @@ public final class Nest implements Component, Pool.Poolable {
      */
     public int leftBehindTicks;
 
+    /**
+     * How many creatures its broods have put on the field - its death brood aside. Once it reaches {@code
+     * sim.nest.activeBrood} the nest is passive and its period is {@code sim.nest.passiveSlowdown} times as long (G0093).
+     */
+    public int hatched;
+
     /** What its health was last tick, so a system can tell it has been hit without reading damage. */
     public int watchedHealth;
 
@@ -122,6 +128,7 @@ public final class Nest implements Component, Pool.Poolable {
         rouseRadius = 0f;
         awake = false;
         leftBehindTicks = 0;
+        hatched = 0;
         watchedHealth = 0;
         broodsDealt = 0L;
     }
