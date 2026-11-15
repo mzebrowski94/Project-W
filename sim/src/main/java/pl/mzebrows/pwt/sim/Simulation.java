@@ -75,6 +75,7 @@ import pl.mzebrows.pwt.sim.system.motion.HopSystem;
 import pl.mzebrows.pwt.sim.system.motion.MovementSystem;
 import pl.mzebrows.pwt.sim.system.motion.NavigationSystem;
 import pl.mzebrows.pwt.sim.system.motion.PositionHistorySystem;
+import pl.mzebrows.pwt.sim.system.motion.SlitherSystem;
 import pl.mzebrows.pwt.sim.system.motion.StunSystem;
 import pl.mzebrows.pwt.sim.system.motion.TrooperMoveSystem;
 import pl.mzebrows.pwt.sim.system.motion.WanderSystem;
@@ -224,6 +225,8 @@ public final class Simulation {
         // After everything that chooses a course; before the dodge, which overwrites it.
         engine.addSystem(new HopSystem());
         engine.addSystem(new DodgeSystem());
+        // Last of what steers, so a slithering strain's course is its own whatever else asked (G0087).
+        engine.addSystem(new SlitherSystem(streams.of(RngStream.SLITHER), solid, config.tickSeconds()));
         engine.addSystem(new DriveSystem(map, config.ground(), modifiers));
         engine.addSystem(
                 new EnemyLeapSystem(streams.of(RngStream.LEAP), config.tickSeconds(), solid, config.door(), modifiers));

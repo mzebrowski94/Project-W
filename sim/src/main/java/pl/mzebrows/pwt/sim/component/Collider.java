@@ -50,6 +50,12 @@ public final class Collider implements Component, Pool.Poolable {
     public boolean throughBodies;
 
     /**
+     * Passing through bodies, still touches them: a contact is reported with whatever it overlaps, and a shot along
+     * its way hits it - the desert snake (G0087), whose head bites what it passes through. Off for a slung rider.
+     */
+    public boolean touchesThrough;
+
+    /**
      * The chance a man it could catch gives it room, for ground (G0076). One - always - for everything but an
      * alien's toxic blood; decided once per man per {@link #spatter}, so he goes round all of it or none of it.
      */
@@ -67,6 +73,7 @@ public final class Collider implements Component, Pool.Poolable {
         this.stopsShots = true;
         this.swept = false;
         this.throughBodies = false;
+        this.touchesThrough = false;
         this.heeded = 1f;
         this.spatter = Handle.NOBODY;
         return this;
@@ -105,6 +112,7 @@ public final class Collider implements Component, Pool.Poolable {
         stopsShots = false;
         swept = false;
         throughBodies = false;
+        touchesThrough = false;
         heeded = 1f;
         spatter = Handle.NOBODY;
     }

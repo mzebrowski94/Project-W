@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Slither;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.Side;
 
@@ -75,6 +76,7 @@ public final class WorldRenderer implements Disposable {
     private static final ComponentMapper<Armour> ARMOUR = ComponentMapper.getFor(Armour.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
+    private static final ComponentMapper<Slither> SLITHER = ComponentMapper.getFor(Slither.class);
 
     /** Where a cosmetic lead writes the facing it draws; reused, so it costs nothing per frame. */
     private final float[] ahead = new float[2];
@@ -93,6 +95,8 @@ public final class WorldRenderer implements Disposable {
     private static final int CIRCLE_SEGMENTS = 16;
 
     private static final int HEXAGON_SEGMENTS = 6;
+
+    private static final int PENTAGON_CORNERS = 5;
 
     /** A tree's foliage is several bodies wide; sixteen sides read as a polygon at that size. */
     private static final int FOLIAGE_SEGMENTS = 28;
@@ -203,6 +207,9 @@ public final class WorldRenderer implements Disposable {
                 // grenade on its way read as up in the air.
                 drawShadow(x, y, body.radius);
             }
+            if (SLITHER.has(entity) && SLITHER.get(entity).enabled) {
+                drawParts(entity, x, y, body.radius, tint(appearance));
+            }
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {
                 shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
@@ -212,6 +219,8 @@ public final class WorldRenderer implements Disposable {
                 drawShells(x, y, body.radius, appearance);
             } else if (appearance.look == Look.OBSTACLE) {
                 drawBoulder(x, y, body.radius, tint(appearance));
+            } else if (appearance.look == Look.STONE) {
+                drawStone(x, y, body.radius, tint(appearance));
             } else if (appearance.streaks()) {
                 // Drawn back to where it says it came from, with a head on it so a beam that has
                 // just been fired is still something rather than a zero-length line. The far end is
@@ -310,6 +319,65 @@ public final class WorldRenderer implements Disposable {
             shapes.setColor(brightened(SCRATCH.set(base), boulderMark.lightAt(step)));
             shapes.circle(x - offset, y + offset, boulderMark.radiusAt(radius, step), HEXAGON_SEGMENTS);
         }
+    }
+
+    /**
+     * The parts trailing a slithering head (G0087), tail first so each lies under the one in front, as many as it has
+     * left - one fewer for every part's worth of health lost. Moved by the head's interpolation, which is near enough
+     * for parts that follow it.
+     */
+    private void drawParts(Entity entity, float x, float y, float headRadius, Color base) {
+        Slither slither = SLITHER.get(entity);
+        Position head = POSITION.get(entity);
+        float shiftX = x - head.x;
+        float shiftY = y - head.y;
+        shapes.setColor(darkened(SCRATCH.set(base), 0.15f));
+        for (int part = slither.partsLeft - 1; part >= 1; part--) {
+            shapes.circle(
+                    slither.partX(part) + shiftX,
+                    slither.partY(part) + shiftY,
+                    slither.radiusOf(part, headRadius),
+                    CIRCLE_SEGMENTS);
+        }
+    }
+
+    /**
+     * A stone: a pentagon of rock, outlined darker and lit from the north-west as a boulder is, turned by where it
+     * stands so a field of them is not a field of the same stone. Static, so the turn never changes.
+     */
+    private void drawStone(float x, float y, float radius, Color base) {
+        float turn = turnOf(x, y);
+        shapes.setColor(darkened(SCRATCH.set(base), 0.3f));
+        pentagon(x, y, radius + 0.5f, turn);
+        shapes.setColor(base);
+        pentagon(x, y, radius, turn);
+        for (int step = 1; step <= boulderMark.steps(); step++) {
+            float offset = boulderMark.offsetAt(radius, step);
+            shapes.setColor(brightened(SCRATCH.set(base), boulderMark.lightAt(step)));
+            pentagon(x - offset, y + offset, boulderMark.radiusAt(radius, step), turn);
+        }
+    }
+
+    /** A filled regular pentagon, its first corner {@code turn} radians round from east. */
+    private void pentagon(float x, float y, float radius, float turn) {
+        float step = (float) (Math.PI * 2.0 / PENTAGON_CORNERS);
+        float fromX = x + (float) Math.cos(turn) * radius;
+        float fromY = y + (float) Math.sin(turn) * radius;
+        for (int corner = 1; corner <= PENTAGON_CORNERS; corner++) {
+            float angle = turn + step * corner;
+            float toX = x + (float) Math.cos(angle) * radius;
+            float toY = y + (float) Math.sin(angle) * radius;
+            shapes.triangle(x, y, fromX, fromY, toX, toY);
+            fromX = toX;
+            fromY = toY;
+        }
+    }
+
+    /** A turn in {@code [0, 2pi)} that depends only on where something stands - a look, never read by the simulation. */
+    private static float turnOf(float x, float y) {
+        int hash = Float.floatToIntBits(x) * 0x9E3779B1 ^ Float.floatToIntBits(y) * 0x85EBCA77;
+        hash ^= hash >>> 15;
+        return (hash & 0xFFFF) / 65536f * (float) (Math.PI * 2.0);
     }
 
     /**

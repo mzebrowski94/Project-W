@@ -116,6 +116,7 @@ final class MissionScenario implements Scenario {
                 case Placed.Barrel barrel -> simulation.spawnBarrel(barrel.x(), barrel.y());
                 case Placed.Boulder boulder -> simulation.spawnObstacle(boulder.x(), boulder.y());
                 case Placed.Tree tree -> simulation.spawnObstacle(tree.x(), tree.y(), tree.trunk(), Look.TREE);
+                case Placed.Stone stone -> simulation.spawnObstacle(stone.x(), stone.y(), stone.radius(), Look.STONE);
                 case Placed.Rabbit rabbit -> simulation.spawnRabbit(rabbit.x(), rabbit.y());
                 case Placed.Turret turret -> simulation.spawnTurret(turret.x(), turret.y());
                 case Placed.Mine mine -> simulation.spawnMine(mine.x(), mine.y());

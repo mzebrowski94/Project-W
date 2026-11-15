@@ -49,6 +49,7 @@ import pl.mzebrows.pwt.sim.def.ShakeDef;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.SlingDef;
+import pl.mzebrows.pwt.sim.def.SlitherDef;
 import pl.mzebrows.pwt.sim.def.TrooperGrenadeDef;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -1002,6 +1003,8 @@ public final class AlphaWorlds {
                         .put(UnitKind.SLUDGER, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.SLUDGER))
                         // Brute-like, carrying nothing: the fixtures about its riders load them (G0074).
                         .put(UnitKind.SLINGER, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.SLINGER))
+                        // A plain strain that does not slither: the fixtures about one switch it on (G0087).
+                        .put(UnitKind.SNAKE, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.SNAKE))
                         .build(),
                 onShipped(
                                 PickupKind.class,
@@ -1633,7 +1636,8 @@ public final class AlphaWorlds {
                         TURRET_CREW_RADIUS,
                         TURRET_QUIET_SECONDS,
                         WeaponKind.TURRET_GUN),
-                new SimConfig.ObstacleConfig(OBSTACLE_RADIUS, 0, OBSTACLE_RADIUS, OBSTACLE_RADIUS),
+                new SimConfig.ObstacleConfig(
+                        OBSTACLE_RADIUS, 0, OBSTACLE_RADIUS, OBSTACLE_RADIUS, OBSTACLE_RADIUS, OBSTACLE_RADIUS),
                 new SimConfig.CollisionConfig(3),
                 new DraftDef(DRAFT_OPTIONS, 1, 1, 1, List.of(0, TIER_TWO_FROM)),
                 stats(),
@@ -1845,6 +1849,7 @@ public final class AlphaWorlds {
                 BarrageDef.off(),
                 SlingDef.off(),
                 FuseDef.off(),
+                SlitherDef.off(),
                 0,
                 true,
                 noChances(),

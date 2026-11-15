@@ -265,6 +265,7 @@ public record SimConfig(
      */
     public float largestRadius() {
         float largest = Math.max(commander.radius(), Math.max(obstacle.radius(), obstacle.trunkMax()));
+        largest = Math.max(largest, obstacle.stoneMax());
         largest = Math.max(largest, trooper.radius());
         largest = Math.max(largest, melee.radius());
         largest = Math.max(largest, grenade.radius());
@@ -1413,14 +1414,31 @@ public record SimConfig(
      * @param count how many boulders the scenario spawns
      * @param trunkMin the thinnest a tree's trunk is, its radius in world units (G0072)
      * @param trunkMax the thickest
+     * @param stoneMin the smallest a stone is, its radius in world units - a trooper's
+     * @param stoneMax the biggest, five times that; drawn towards the small end, so most are pebbles
      */
     @With
-    public record ObstacleConfig(float radius, int count, float trunkMin, float trunkMax) {
+    public record ObstacleConfig(
+            float radius, int count, float trunkMin, float trunkMax, float stoneMin, float stoneMax) {
         public ObstacleConfig {
             Require.positive("obstacle radius", radius);
             Require.notNegative("obstacle count", count);
             Require.positive("obstacle trunkMin", trunkMin);
             Require.atLeast("obstacle trunkMax", trunkMax, trunkMin, "a trunk cannot be thickest below its thinnest");
+            Require.positive("obstacle stoneMin", stoneMin);
+            Require.atLeast("obstacle stoneMax", stoneMax, stoneMin, "a stone cannot be biggest below its smallest");
+        }
+
+        /**
+         * How big one stone is, drawn: the square of an even draw across the range, so the small end is the common
+         * one and a stone five men wide is the rare one.
+         */
+        public float stone(Randomness rng) {
+            if (stoneMin == stoneMax) {
+                return stoneMin;
+            }
+            float u = rng.nextFloat(0f, 1f);
+            return stoneMin + (stoneMax - stoneMin) * u * u;
         }
 
         /** How thick one tree's trunk is, drawn. */

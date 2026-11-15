@@ -96,5 +96,12 @@ public enum UnitKind {
      * A slinger whose riders are leeches, slung onto whoever it hunts rather than past him (G0083). The same body and
      * the same answer as the slinger; what it leaves is a man with a clock on him rather than a runner behind him.
      */
-    LEECH_SLINGER
+    LEECH_SLINGER,
+    /**
+     * The desert snake (G0087): a head and three parts behind it, going on and on through the desert in wide arcs and
+     * through whoever stands in its way - its head wounds every man it passes through. It never hunts and never
+     * stops. What to read is where it is bending; what to do is step out of its way, or shoot it down a part at a
+     * time, the last of it its head.
+     */
+    SNAKE
 }

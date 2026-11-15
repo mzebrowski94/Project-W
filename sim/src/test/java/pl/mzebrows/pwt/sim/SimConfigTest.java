@@ -101,7 +101,8 @@ class SimConfigTest {
         float frog = leeway(config, UnitKind.FROG);
 
         for (UnitKind kind : UnitKind.values()) {
-            if (kind != UnitKind.FROG) {
+            // A strain that slithers never hunts, so it has nobody to give up on (G0087).
+            if (kind != UnitKind.FROG && !config.unit(kind).slither().enabled()) {
                 assertThat(frog)
                         .as("a frog must give up sooner than a %s", kind)
                         .isLessThan(leeway(config, kind));
@@ -119,7 +120,8 @@ class SimConfigTest {
         float frog = leeway(config, UnitKind.FROG, world, modifiers);
 
         for (UnitKind kind : UnitKind.values()) {
-            if (kind != UnitKind.FROG) {
+            // A strain that slithers never hunts, so it has nobody to give up on (G0087).
+            if (kind != UnitKind.FROG && !config.unit(kind).slither().enabled()) {
                 assertThat(frog)
                         .as("a frog must give up sooner than a %s", kind)
                         .isLessThan(leeway(config, kind, world, modifiers));

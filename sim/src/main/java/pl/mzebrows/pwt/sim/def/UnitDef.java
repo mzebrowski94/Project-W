@@ -37,6 +37,8 @@ import org.jspecify.annotations.Nullable;
  * @param barrage the cycle of patterns it shoots, if it is a boss (G0048)
  * @param sling the riders it carries and slings at whoever it hunts, if any (G0074)
  * @param fuse how long it lasts on the field before it goes off of itself, if it does (G0083)
+ * @param slither whether it slithers - goes on in wide arcs, through bodies, in parts that its health is shared
+ *     between (G0087) - and how
  * @param deathSlicks how many circles of venom it leaves where it dies, whatever kills it (G0076), shaped by the
  *     shared blood block; zero leaves none, and the swarm's toxic blood adds to it
  * @param shockable whether shock builds on it at all (G0059): false for the boss, whose barrage a stun
@@ -73,6 +75,7 @@ public record UnitDef(
         BarrageDef barrage,
         SlingDef sling,
         FuseDef fuse,
+        SlitherDef slither,
         int deathSlicks,
         boolean shockable,
         Chances chances,

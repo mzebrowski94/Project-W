@@ -26,8 +26,9 @@ class ProvingRowsTest {
         }
 
         assertThat(seen).startsWith(UnitKind.values()).endsWith(UnitKind.GRUNT);
+        UnitKind[] kinds = UnitKind.values();
         assertThat(rows.step(ProvingSetup.first(), ProvingRows.Row.STRAIN, -1).strain())
-                .isEqualTo(UnitKind.LEECH_SLINGER);
+                .isEqualTo(kinds[kinds.length - 1]);
     }
 
     @Test

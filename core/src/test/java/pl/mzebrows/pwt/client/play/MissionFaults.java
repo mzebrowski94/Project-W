@@ -331,6 +331,7 @@ final class MissionFaults {
             case Placed.Barrel _ -> config.pickup(PickupKind.BARREL).radius();
             case Placed.Boulder _ -> config.obstacle().radius();
             case Placed.Tree tree -> tree.trunk();
+            case Placed.Stone stone -> stone.radius();
             case Placed.Rabbit _ -> config.pickup(PickupKind.RABBIT).radius();
             case Placed.Turret _ -> config.turret().radius();
             case Placed.Mine _ -> config.mine().radius();

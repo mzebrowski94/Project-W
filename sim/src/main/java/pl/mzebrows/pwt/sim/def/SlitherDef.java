@@ -1,0 +1,71 @@
+package pl.mzebrows.pwt.sim.def;
+
+import lombok.With;
+
+/**
+ * How a strain that slithers moves and what it is made of (G0087): the desert snake's.
+ *
+ * <p>A <strong>slither</strong> never stops and never hunts. It goes on along its heading, bending in a wide arc one
+ * way or the other for a while, then another, and turns hard only where the way ahead is shut - rock, the edge of the
+ * field, or something it has run up against. Too far from where it was put down, it bends back towards it. It passes
+ * through every body but scenery, and what its head touches on the way it bites as its claws would.
+ *
+ * <p>It is in <strong>parts</strong>, the head first and the rest trailing behind it, each a little smaller, and its
+ * health is shared out between them: every part's worth lost takes the last part off, so the head is the last to go.
+ * Only the head is a body; the parts behind it are drawn, never hit (provisional, for review).
+ *
+ * @param parts how many parts it is, the head among them. Zero never slithers, which is every strain but one; at
+ *     most {@link #MOST}
+ * @param partScale how big each part behind the head is beside the one in front of it, as a fraction
+ * @param spacing how far apart two parts' middles are, as a fraction of the two radii added together
+ * @param turnDegrees how fast it bends in the open, in degrees a second - small, so it goes round in wide arcs
+ * @param tightTurnDegrees how fast it turns where the way ahead is shut, in degrees a second
+ * @param lookAhead how far ahead of its head it looks for the way being shut, in world units
+ * @param roam how far from where it was put down it goes before it bends back, in world units
+ * @param bendMinSeconds the shortest one bend lasts before it picks another
+ * @param bendMaxSeconds the longest
+ * @param harm what its head does to a man it passes through
+ */
+@With
+public record SlitherDef(
+        int parts,
+        float partScale,
+        float spacing,
+        float turnDegrees,
+        float tightTurnDegrees,
+        float lookAhead,
+        float roam,
+        float bendMinSeconds,
+        float bendMaxSeconds,
+        Harm harm) {
+
+    /** The most parts a strain may be in - a snapshot carries each part as a field of its own. */
+    public static final int MOST = 4;
+
+    public SlitherDef {
+        Require.notNegative("slither parts", parts);
+        if (parts > MOST) {
+            throw new IllegalArgumentException("a strain slithers in at most " + MOST + " parts, was " + parts);
+        }
+        Require.positive("slither partScale", partScale);
+        Require.positive("slither spacing", spacing);
+        Require.notNegative("slither turnDegrees", turnDegrees);
+        Require.atLeast(
+                "slither tightTurnDegrees", tightTurnDegrees, turnDegrees, "it turns no slower where it has no room");
+        Require.notNegative("slither lookAhead", lookAhead);
+        Require.notNegative("slither roam", roam);
+        Require.notNegative("slither bendMinSeconds", bendMinSeconds);
+        Require.atLeast(
+                "slither bendMaxSeconds", bendMaxSeconds, bendMinSeconds, "a bend cannot last longest below shortest");
+    }
+
+    /** Never slithers. What every strain but the snake declares. */
+    public static SlitherDef off() {
+        return new SlitherDef(0, 1f, 1f, 0f, 0f, 0f, 0f, 0f, 0f, Harm.KILL);
+    }
+
+    /** Whether it slithers at all. */
+    public boolean enabled() {
+        return parts > 0;
+    }
+}

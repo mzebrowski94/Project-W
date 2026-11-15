@@ -45,6 +45,8 @@ public enum Look {
     SLINGER,
     /** A small magenta body, off the spitter's purple, flashing its fuse as it runs out (G0083). */
     LEECH,
+    /** A sand-coloured head, its facing a spike, and the parts trailing it each smaller, one fewer a part lost (G0087). */
+    SNAKE,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */
@@ -140,6 +142,8 @@ public enum Look {
      * A tree: a brown trunk that stands as a boulder does, under foliage drawn over everything beneath it (G0072).
      */
     TREE,
+    /** A stone: a brown pentagon of rock, a pebble to a man's height and more, that stands as a boulder does. */
+    STONE,
     /** Alien food growing on the field. */
     MUSHROOM,
     /** Alien food that transforms whatever eats it. */

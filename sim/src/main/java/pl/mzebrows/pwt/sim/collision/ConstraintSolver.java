@@ -115,6 +115,16 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
         Collider firstCollider = COLLIDER.get(a);
         Collider secondCollider = COLLIDER.get(b);
         if (firstCollider.throughBodies || secondCollider.throughBodies) {
+            Collider through = firstCollider.throughBodies ? firstCollider : secondCollider;
+            Collider other = firstCollider.throughBodies ? secondCollider : firstCollider;
+            if (through.touchesThrough && !other.throughBodies) {
+                if (other.swept) {
+                    // A shot along its way hits it, as it hits anything (G0087).
+                    touchAlongThePath(a, b, firstCollider == other);
+                    return;
+                }
+                touchThrough(a, b);
+            }
             offSceneryOnly(a, b, firstCollider, secondCollider);
             return;
         }
@@ -136,6 +146,24 @@ public final class ConstraintSolver implements SpatialGrid.PairVisitor {
         }
         if (firstCollider.solid && secondCollider.solid) {
             separate(a, b, firstCollider, secondCollider, dx, dy, (float) Math.sqrt(distanceSquared), contact);
+        }
+    }
+
+    /**
+     * Reports a contact between a body that passes through bodies but touches them (G0087) and what it overlaps, on
+     * the first pass only - nothing is separated, so the passes after it have nothing to add.
+     */
+    private void touchThrough(Entity a, Entity b) {
+        if (!reportContacts) {
+            return;
+        }
+        Position first = POSITION.get(a);
+        Position second = POSITION.get(b);
+        float dx = second.x - first.x;
+        float dy = second.y - first.y;
+        float contact = BODY.get(a).radius + BODY.get(b).radius;
+        if (dx * dx + dy * dy < contact * contact) {
+            listener.onContact(a, b);
         }
     }
 

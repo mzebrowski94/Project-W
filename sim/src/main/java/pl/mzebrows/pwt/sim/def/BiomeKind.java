@@ -20,5 +20,10 @@ public enum BiomeKind {
     /** Straight slabs of rock on sand, corridors through them, brutes and spitters and ants in the corridors. */
     CUT,
     /** Mire with islands of reeds, frogs ruining the ground and ants on it: where walking round something costs. */
-    FEN
+    FEN,
+    /**
+     * Open sand with few obstacles - stones from a man's size to five times it, and patches of mud that slow whoever
+     * wades them - runners and sludgers on it, and the snake going through all of it (G0087).
+     */
+    DESERT
 }

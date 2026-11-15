@@ -40,6 +40,9 @@ public sealed interface Placed {
     /** A tree: a trunk of this radius that stands as a boulder does, under its foliage (G0072). */
     record Tree(float x, float y, float trunk, int biome) implements Placed {}
 
+    /** A stone: rock of this radius, drawn as a pentagon, that stands as a boulder does. */
+    record Stone(float x, float y, float radius, int biome) implements Placed {}
+
     /** A rabbit, food that runs. */
     record Rabbit(float x, float y, int biome) implements Placed {}
 

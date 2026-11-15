@@ -59,7 +59,13 @@ public enum Terrain {
      * the inside of a house is drawn apart from the ground outside it (pillar 5). Laid on a house's inside and
      * its doorways; its doorsteps keep the biome's base.
      */
-    FLOOR(true);
+    FLOOR(true),
+
+    /**
+     * Deep mud, the desert's: passable, and slow to cross as a {@link #THICKET} is - what it costs is asked of
+     * {@code sim} in the same way. Its own constant so it is drawn as mud rather than as undergrowth (pillar 5).
+     */
+    MUD(true);
 
     private final boolean passable;
 

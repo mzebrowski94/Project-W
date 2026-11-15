@@ -97,7 +97,13 @@ public enum RngStream {
      * Where the grenade caches a taken point lays fall round it (G0078). Its own, so taking a point never moves where
      * a reinforcement lands, and laying none draws nothing.
      */
-    CACHE(0x5D3A_8F21_C76E_B419L);
+    CACHE(0x5D3A_8F21_C76E_B419L),
+
+    /**
+     * Which way a snake bends next and for how long (G0087). Its own, so a snake on the field never moves where
+     * anything else wanders, and a level without one draws nothing.
+     */
+    SLITHER(0x3E91_C7A5_0D6B_F248L);
 
     private final long salt;
 

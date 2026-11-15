@@ -33,6 +33,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Shield;
+import pl.mzebrows.pwt.sim.component.Slither;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Taking;
@@ -65,6 +66,8 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<Projectile> PROJECTILE = ComponentMapper.getFor(Projectile.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<ContactDamage> CONTACT_DAMAGE = ComponentMapper.getFor(ContactDamage.class);
+    private static final ComponentMapper<Slither> SLITHER = ComponentMapper.getFor(Slither.class);
+    private static final ComponentMapper<Handle> HANDLE = ComponentMapper.getFor(Handle.class);
     private static final ComponentMapper<Damage> DAMAGE = ComponentMapper.getFor(Damage.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
@@ -431,6 +434,12 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         boolean staggering = attack.victimInvulnerableTicks > 0;
         if (staggering && owed.staggered()) {
             // Already staggered this tick: no second blow, and no cooldown spent.
+            return;
+        }
+        if (SLITHER.has(attacker)
+                && HANDLE.has(target)
+                && !SLITHER.get(attacker).bite(Handles.of(target))) {
+            // Its head is still passing through him from the last bite: once a pass (G0087).
             return;
         }
         attack.remainingTicks = attack.cooldownTicks;
