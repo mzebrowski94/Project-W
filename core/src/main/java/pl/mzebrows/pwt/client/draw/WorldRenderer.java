@@ -21,9 +21,11 @@ import pl.mzebrows.pwt.sim.component.Armour;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Facing;
+import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.Side;
 
 /**
  * Draws the simulation as coloured circles.
@@ -38,7 +40,7 @@ import pl.mzebrows.pwt.sim.def.Look;
  * he learns how far his voice carries rather than guessing at it (pillar 5).
  *
  * <p>Which way an entity is pointing is drawn as a spoke out of its centre, for anything that
- * publishes a facing. That is a tell rather than decoration: a trooper only engages what is inside
+ * publishes a facing - a creature's as a spike ({@link FacingMark}). That is a tell rather than decoration: a trooper only engages what is inside
  * its arc, so the player has to be able to see where its front is (G0015).
  *
  * <p>What an entity is doing is drawn as a shift in its colour rather than as a different colour per
@@ -72,6 +74,7 @@ public final class WorldRenderer implements Disposable {
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
     private static final ComponentMapper<Armour> ARMOUR = ComponentMapper.getFor(Armour.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
 
     /** Where a cosmetic lead writes the facing it draws; reused, so it costs nothing per frame. */
     private final float[] ahead = new float[2];
@@ -231,7 +234,19 @@ public final class WorldRenderer implements Disposable {
                 }
                 shapes.setColor(brightened(tint(appearance), facingMark.tint()));
                 float reach = facingMark.lengthFor(body.radius);
-                shapes.rectLine(x, y, x + facingX * reach, y + facingY * reach, facingMark.widthFor(body.radius));
+                if (alien(entity)) {
+                    // A spike rather than a spoke: broad across the centre, sharp at the same reach.
+                    float half = facingMark.spikeFor(body.radius) * 0.5f;
+                    shapes.triangle(
+                            x - facingY * half,
+                            y + facingX * half,
+                            x + facingY * half,
+                            y - facingX * half,
+                            x + facingX * reach,
+                            y + facingY * reach);
+                } else {
+                    shapes.rectLine(x, y, x + facingX * reach, y + facingY * reach, facingMark.widthFor(body.radius));
+                }
             }
             if (appearance.charge > 0f) {
                 // A charge that names a look of its own is drawn in that colour; everything else is
@@ -659,6 +674,11 @@ public final class WorldRenderer implements Disposable {
     /** Whether its armour is on its back rather than its head, so the back is the segment drawn hard (G0073). */
     private static boolean hardBehind(Entity entity) {
         return ARMOUR.has(entity) && ARMOUR.get(entity).enabled && ARMOUR.get(entity).centreCosine < 0f;
+    }
+
+    /** The swarm's side: its facing is drawn as a spike, the squad's as a spoke. */
+    private static boolean alien(Entity entity) {
+        return FACTION.has(entity) && FACTION.get(entity).side == Side.ALIEN;
     }
 
     private static boolean faces(Entity entity) {
