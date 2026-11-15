@@ -15,8 +15,10 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.RallyPoint;
 import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
@@ -26,7 +28,9 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  *
  * <p><strong>How many is capped, and the cap is the point</strong> (pillar 3): the field holds the
  * squad plus its headroom and upgrades, and <strong>every commander on it is one of those men</strong>
- * (G0055) - whatever his slot; one waiting to come back is not on it. A crate's men go onto it <strong>one a tick</strong> while it
+ * (G0055) - whatever his slot; one waiting to come back is not on it. A commander waiting on an empty
+ * reserve is paid for first: as many of a crate's men as there are such commanders go into the reserve,
+ * not onto the field. The rest of a crate's men go onto it <strong>one a tick</strong> while it
  * has room, and into the reserve after that - past the reserve's own most they are wasted. Every
  * {@code sim.reserve.musterSeconds} a muster calls a few men out of the reserve, as many as the field
  * has room for; a full field leaves them where they are.
@@ -40,6 +44,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 public final class ReinforcementSystem extends EntitySystem {
 
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
+    private static final ComponentMapper<Respawning> PENDING = ComponentMapper.getFor(Respawning.class);
 
     private final SimConfig config;
     private final TileMap map;
@@ -51,6 +56,7 @@ public final class ReinforcementSystem extends EntitySystem {
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> men = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> tickets = new ImmutableArray<>(new Array<>());
 
     public ReinforcementSystem(SimConfig config, TileMap map, Spawner spawner, Modifiers modifiers, Rng rng) {
         this.config = config;
@@ -67,6 +73,8 @@ public final class ReinforcementSystem extends EntitySystem {
         men = engine.getEntitiesFor(Life.onTheField());
         points = engine.getEntitiesFor(
                 Family.all(ControlPoint.class, Position.class).get());
+        tickets = engine.getEntitiesFor(
+                Family.all(Respawning.class).exclude(Dead.class).get());
     }
 
     @Override
@@ -77,6 +85,7 @@ public final class ReinforcementSystem extends EntitySystem {
                 level.pendingReinforcements = 0;
                 continue;
             }
+            owe(level);
             int room = squadMost(config, modifiers) - men.size();
             room -= deliver(level, room);
             muster(level, room);
@@ -90,6 +99,28 @@ public final class ReinforcementSystem extends EntitySystem {
     public static int squadMost(SimConfig config, Modifiers modifiers) {
         return config.trooper().squadSize()
                 + modifiers.squadHeadroom(config.trooper().squadGrowth());
+    }
+
+    /**
+     * A crate's men into the reserve first, as many as there are commanders waiting on an empty one: a
+     * player is heard before a trooper, so the room a waiting commander left is not given to the crate,
+     * and {@code RespawnSystem} pays his ticket from the reserve the next tick.
+     */
+    private void owe(Level level) {
+        if (level.pendingReinforcements <= 0) {
+            return;
+        }
+        int waiting = 0;
+        for (int i = 0; i < tickets.size(); i++) {
+            if (!PENDING.get(tickets.get(i)).paid) {
+                waiting++;
+            }
+        }
+        int owed = Math.min(level.pendingReinforcements, waiting - level.reserve);
+        if (owed > 0) {
+            bank(level, owed);
+            level.pendingReinforcements -= owed;
+        }
     }
 
     /** One of a crate's men onto the field while it has room; the rest of the crate into the reserve. */
