@@ -182,6 +182,25 @@ class SnakeTest {
         assertThat(snake.getComponent(Health.class).current).isLessThan(whole);
     }
 
+    /** Nothing holds it still: a stun, a recoil or a clinch lands on it and it goes on as before (G0087). */
+    @Test
+    void goesOnThroughAStun() {
+        Simulation simulation = new Simulation(straight());
+        Entity snake = facingEast(simulation, 20f, MIDDLE);
+        Position at = snake.getComponent(Position.class);
+        simulation.step();
+        pl.mzebrows.pwt.sim.component.Stunned stunned = snake.getComponent(pl.mzebrows.pwt.sim.component.Stunned.class);
+        stunned.daze(ticksIn(1f));
+        stunned.apply(ticksIn(1f), 0f);
+        stunned.clinch(ticksIn(1f));
+        float fromX = at.x;
+
+        steps(simulation, ticksIn(0.5f));
+
+        assertThat(stunned.active()).isFalse();
+        assertThat(at.x - fromX).isGreaterThan(SPEED * 0.45f);
+    }
+
     /** Nothing slows it: wading mud it keeps its pace (G0087). */
     @Test
     void keepsItsPaceInMud() {

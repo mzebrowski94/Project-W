@@ -69,7 +69,7 @@ class ShockTest {
         assertThat(enemy.getComponent(Shock.class).charge).isGreaterThan(0f);
     }
 
-    /** In proportion to the radius, as a bloat is: a body twice as wide takes twice the bolts. */
+    /** By its size: a body twice as wide - the fixture's largest - takes the fixture's growth, twice the bolts. */
     @Test
     void takesMoreBoltsToStunABiggerBody() {
         Simulation simulation = new Simulation(

@@ -13,7 +13,8 @@ to five times it - and muddy patches that slow as grass does; sludgers and runne
 head and three smaller parts that moves on through the biome, through units, wounding a man its head passes through,
 turning in wide arcs unless space is short, its health in four parts lost from the tail, the head last.
 
-**Constraint.**
+**Constraint.** **Amends G0059** (shock scales by the body's area, from the smallest body to the largest).
+
 
 - **The desert** is a biome as data (G0008, G0068): sand, mud in blobs, no crags or outcrops or boulders - its rock is
   its **stones**, a furniture line (`stonesMin/Max`, zero in every other biome) each a size drawn from its own stream,
@@ -22,7 +23,7 @@ turning in wide arcs unless space is short, its health in four parts lost from t
 - **Mud** is a terrain of its own (`Terrain.MUD`, appended so nothing else renumbers) carrying a thicket's two factors:
   the same decision as undergrowth, drawn as wet ground rather than a hatch.
 - **The snake slithers** (`SlitherDef`, on every strain, off at zero parts): it decides its whole course, writing
-  its steering last of what steers and committed by `DriveSystem` - so a pace slows it and a stun holds it. In the open
+  its steering last of what steers and committed by `DriveSystem` - and nothing slows it or holds it still. In the open
   it bends one way, the other or straight on, for a time drawn from `RngStream.SLITHER`, at a small turn; where its
   way is shut - rock or a shut door within `lookAhead`, the edge of its biome, or scenery it ran up against - it turns
   hard a quarter round towards whichever side is open. Past `roam` from home it bends back. **It latches nothing as the
@@ -39,9 +40,14 @@ turning in wide arcs unless space is short, its health in four parts lost from t
   and drawn so: see-through (`graphic.slither.*`, 40%) with a denser core, the head whole.
 - **The desert is crowded** (asked for 2026-11-15): 16-20 runners and 2-3 of their holes, 3-4 snakes, 2-3 sludgers.
   To fit its room on hard (G0070) it is the one biome dealt wider, 62-70 columns against 50-58.
-- **The pulse rifle does 12 a bolt, stunning after 2 hits** (were 10 and 3; asked for a little more damage): at 11 or
-  12 with three hits an easy runner died on the bolt that would have stunned it, breaking "the pulse rifle stuns before
-  it kills" - so the stun came down a hit with the damage.
+- **The pulse rifle does 12 a bolt** (was 10; asked for a little more damage), and **its stun is by the size of the
+  body** (asked for 2026-11-15; **amends G0059**, which scaled it by the radius from the grunt): by area, from
+  `stunAfterHits` (2) at `sim.shock.smallestRadius` to `growth` (5) times that at `largestRadius` - 2 bolts at a leech,
+  about 3 at a grunt, 10 at the giants. "The pulse rifle stuns before it kills" now holds for whatever it does not kill
+  in three bolts anyway: the easy tier's runner, 32 as it arrives, dies on the third, and no stun of two bolts or more
+  comes sooner.
+- **Nothing holds a snake still** (asked for 2026-11-15): `Stunned.immune`, set with a slither - no stun, recoil or
+  clinch lands on it, so it never stops in place; it takes no shock.
 
 **Rejected alternatives.**
 
@@ -53,6 +59,6 @@ turning in wide arcs unless space is short, its health in four parts lost from t
   tile.
 - *Mire for the mud* - mire costs nothing to cross, and changing it would change the fen.
 
-**Do not build.** a snake that chases a man past one go through him, or stops; a snake something slows; a snake pushed by or pushing bodies; a bite every tick it is inside a
+**Do not build.** a snake a stun, recoil or clinch holds; a snake that chases a man past one go through him, or stops; a snake something slows; a snake pushed by or pushing bodies; a bite every tick it is inside a
 man; stones in any biome but the desert without a decision; mud that differs from a thicket's numbers without a
 decision.

@@ -670,8 +670,11 @@ public final class AlphaWorlds {
     /** Long enough to fire bolts into while it runs, short enough to wait out. */
     public static final float PULSE_STUN_SECONDS = 0.5f;
 
-    /** An ordinary body is the one the pulse rifle's hits are quoted against. */
+    /** An ordinary body is the one the pulse rifle's hits are quoted against: the smallest. */
     public static final float SHOCK_REFERENCE_RADIUS = ENEMY_RADIUS;
+
+    /** One twice as wide takes this many times its bolts - and nothing wider takes more. */
+    public static final float SHOCK_GROWTH = 2f;
 
     /** From full, two seconds to nothing. */
     public static final float SHOCK_DRAIN_PER_SECOND = 0.5f;
@@ -1570,7 +1573,8 @@ public final class AlphaWorlds {
                         BLOAT_SETTLE_PER_SECOND,
                         BLOAT_BLAST_FACTOR,
                         BLOAT_HOLD),
-                new SimConfig.ShockConfig(SHOCK_REFERENCE_RADIUS, SHOCK_DRAIN_PER_SECOND),
+                new SimConfig.ShockConfig(
+                        SHOCK_REFERENCE_RADIUS, SHOCK_REFERENCE_RADIUS * 2f, SHOCK_GROWTH, SHOCK_DRAIN_PER_SECOND),
                 new SimConfig.GrenadeConfig(
                         GRENADE_COOLDOWN,
                         GRENADE_SPEED,

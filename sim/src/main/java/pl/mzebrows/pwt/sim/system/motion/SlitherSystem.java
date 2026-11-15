@@ -30,8 +30,8 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * Drives a strain that slithers (G0087): on and on, never stopping, in wide arcs.
  *
  * <p><strong>It decides the whole of its course</strong>, so it writes its steering last of everything that steers
- * and {@code DriveSystem} reads it as any other answer (G0010): a stun still holds it, and a pace slows it unless it
- * is unslowed. It latches nothing as the swarm does; <strong>from time to time it picks a man</strong> in its biome
+ * and {@code DriveSystem} reads it as any other answer (G0010). Nothing holds a slither still - no stun lands on it
+ * - and a pace slows it only if it is not unslowed. It latches nothing as the swarm does; <strong>from time to time it picks a man</strong> in its biome
  * and turns onto him to go through him once, then goes back to bending about.
  *
  * <p><strong>In the open it bends</strong> one way or the other, or goes straight on, for a while drawn from the
