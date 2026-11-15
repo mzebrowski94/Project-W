@@ -103,7 +103,13 @@ public enum RngStream {
      * How long each geyser lies quiet before it fills again, keyed per geyser and per cycle (G0089) - never advanced,
      * so a geyser's rhythm is its own and retuning it moves nothing else.
      */
-    GEYSER(0x8A5D_3C17_E96B_24F3L);
+    GEYSER(0x8A5D_3C17_E96B_24F3L),
+
+    /**
+     * Which way a snake bends next and for how long (G0095). Its own, so a snake on the field never moves where
+     * anything else wanders, and a level without one draws nothing.
+     */
+    SLITHER(0x3E91_C7A5_0D6B_F248L);
 
     private final long salt;
 

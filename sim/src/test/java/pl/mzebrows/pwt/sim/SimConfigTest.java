@@ -101,7 +101,8 @@ class SimConfigTest {
         float frog = leeway(config, UnitKind.FROG);
 
         for (UnitKind kind : UnitKind.values()) {
-            if (kind != UnitKind.FROG) {
+            // A strain that slithers never hunts, so it has nobody to give up on (G0095).
+            if (kind != UnitKind.FROG && !config.unit(kind).slither().enabled()) {
                 assertThat(frog)
                         .as("a frog must give up sooner than a %s", kind)
                         .isLessThan(leeway(config, kind));
@@ -119,7 +120,8 @@ class SimConfigTest {
         float frog = leeway(config, UnitKind.FROG, world, modifiers);
 
         for (UnitKind kind : UnitKind.values()) {
-            if (kind != UnitKind.FROG) {
+            // A strain that slithers never hunts, so it has nobody to give up on (G0095).
+            if (kind != UnitKind.FROG && !config.unit(kind).slither().enabled()) {
                 assertThat(frog)
                         .as("a frog must give up sooner than a %s", kind)
                         .isLessThan(leeway(config, kind, world, modifiers));
@@ -210,9 +212,12 @@ class SimConfigTest {
         }
     }
 
+    /** What the pulse rifle kills in this many bolts or fewer it kills rather than holds: no stun owed (G0095). */
+    private static final int KILLED_NOT_HELD = 3;
+
     /**
-     * <strong>The pulse rifle stuns before it kills.</strong> What the gun is for is holding something
-     * still for the squad, so a trigger held on any strain shock builds on - every bolt landing, the
+     * <strong>The pulse rifle stuns before it kills</strong> - anything it does not kill in three bolts anyway. What
+     * the gun is for is holding something still for the squad, so a trigger held on any strain shock builds on - every bolt landing, the
      * shock draining between them as it does in play - fills it before the bolts have emptied its
      * health. Read through the one {@code Shock} the game builds and drains, at the gun's own cadence.
      */
@@ -227,6 +232,10 @@ class SimConfigTest {
                 continue;
             }
             int boltsToKill = (config.healthOf(kind) + gun.damage() - 1) / gun.damage();
+            if (boltsToKill <= KILLED_NOT_HELD) {
+                // Dead in three bolts or fewer - the easy tier's runner since 2026-11-15 (G0095): nothing to hold.
+                continue;
+            }
             float worth = config.shock().perHitAgainst(config.unit(kind).radius(), gun.shockPerHit());
             Shock shock = new Shock();
             int bolts = 1;
@@ -239,6 +248,30 @@ class SimConfigTest {
                     .as("a held pulse rifle must stun the %s before it kills it", kind)
                     .isLessThan(boltsToKill);
         }
+    }
+
+    /**
+     * <strong>The pulse rifle stuns by the size of the body</strong>: about two bolts at the smallest, the leech, to
+     * about ten at the largest it stuns, the giants - and more for every step up in between.
+     */
+    @Test
+    void stunsASmallBodyInAFewBoltsAndABigOneInManyMore() {
+        SimConfig config = SimConfig.defaults();
+        WeaponDef gun = config.weapon(WeaponKind.PULSE);
+
+        float leech =
+                1f / config.shock().perHitAgainst(config.unit(UnitKind.LEECH).radius(), gun.shockPerHit());
+        float grunt =
+                1f / config.shock().perHitAgainst(config.unit(UnitKind.GRUNT).radius(), gun.shockPerHit());
+        float brute =
+                1f / config.shock().perHitAgainst(config.unit(UnitKind.BRUTE).radius(), gun.shockPerHit());
+        float searer =
+                1f / config.shock().perHitAgainst(config.unit(UnitKind.SEARER).radius(), gun.shockPerHit());
+
+        assertThat(leech).isCloseTo(2f, org.assertj.core.data.Offset.offset(0.01f));
+        assertThat(grunt).isGreaterThan(leech).isLessThan(brute);
+        assertThat(brute).isLessThan(searer);
+        assertThat(searer).isCloseTo(10f, org.assertj.core.data.Offset.offset(0.01f));
     }
 
     /** A deal adds to a card the deck already holds; dealing crates into crates would deal them forever. */

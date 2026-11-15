@@ -160,6 +160,20 @@ class StripTest {
         }
     }
 
+    /**
+     * A ridge's face rock a row in from the border, with the row next to the border left open beside a pass, was a
+     * slot a tile high under the border (found by the mission sweep, 2026-11-15). These seeds laid one, at the
+     * bottom and the top.
+     */
+    @Test
+    void leavesNoSlotWhereARidgesFaceMeetsTheBorder() {
+        for (long seed : new long[] {3204, 6759}) {
+            assertThat(StripFaults.clearance(lay(ORDER, seed), RULES))
+                    .as("seed %d", seed)
+                    .isEmpty();
+        }
+    }
+
     @Test
     void leavesTheFinalesWestEdgeStraight() {
         for (long seed = 0; seed < SEEDS; seed++) {

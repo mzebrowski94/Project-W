@@ -69,6 +69,7 @@ import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.SlicksOnDeath;
 import pl.mzebrows.pwt.sim.component.Sling;
+import pl.mzebrows.pwt.sim.component.Slither;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
@@ -95,6 +96,7 @@ import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.SlickDef;
+import pl.mzebrows.pwt.sim.def.SlitherDef;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -445,6 +447,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Barrage.class));
         // Empty on every strain but the one that carries riders (G0074).
         entity.add(engine.createComponent(Sling.class));
+        // Off on every strain but the snake (G0095); home is where it was put down, an individual's fact.
+        entity.add(engine.createComponent(Slither.class).home(x, y));
         // Inert until a barrage that roars winds up; read by the view, never the simulation.
         entity.add(engine.createComponent(Shake.class));
         entity.add(engine.createComponent(Weapon.class));
@@ -582,6 +586,17 @@ public final class Spawner {
                         ticks(def.sling().landingSeconds()));
         // A strain that never walks is scenery to the solver: what it meets is pushed out of its way (G0048).
         entity.getComponent(Collider.class).movable = !def.rooted();
+        SlitherDef slither = def.slither();
+        entity.getComponent(Slither.class).set(slither, config.tickSeconds());
+        // A slither never stops: nothing holds it still (G0095).
+        entity.getComponent(Stunned.class).immuneIf(slither.enabled());
+        if (slither.enabled()) {
+            // Through every body but scenery, still touching what it passes through, its head biting as it goes and
+            // a man it passes through taking what the slither declares rather than a claw's kill (G0095).
+            entity.getComponent(Collider.class).throughBodies = true;
+            entity.getComponent(Collider.class).touchesThrough = true;
+            entity.getComponent(ContactDamage.class).harming(slither.harm());
+        }
         entity.getComponent(Ranged.class)
                 .set(
                         def.ranged().enabled(),

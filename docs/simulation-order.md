@@ -11,34 +11,34 @@ row's reason. A new constraint is a row here and a row there.
 
 | # | System | # | System |
 |---|---|---|---|
-| 1 | `PositionHistorySystem` | 29 | `DamageSystem` |
-| 2 | `CooldownSystem` | 30 | `ShockSystem` |
-| 3 | `DragSystem` | 31 | `ActionSystem` |
-| 4 | `CommanderControlSystem` | 32 | `CrateSystem` |
-| 5 | `MeleeSystem` | 33 | `AidSystem` |
-| 6 | `TurretSystem` | 34 | `DoorSystem` |
-| 7 | `PerceptionSystem` | 35 | `CasualtySystem` |
-| 8 | `NavigationSystem` | 36 | `DyingSystem` |
-| 9 | `WeaveSystem` | 37 | `RespawnSystem` |
-| 10 | `GripSystem` | 38 | `ProjectileBoundsSystem` |
-| 11 | `SquadOrderSystem` | 39 | `BloatSystem` |
-| 12 | `TrooperMindSystem` | 40 | `GeyserSystem` |
-| 13 | `TrooperMoveSystem` | 41 | `MineSystem` |
-| 14 | `TrooperCombatSystem` | 42 | `BlastSystem` |
-| 15 | `WanderSystem` | 43 | `SlickSystem` |
-| 16 | `AvoidanceSystem` | 44 | `ReinforcementSystem` |
-| 17 | `EnemyRangedSystem` | 45 | `WaveSystem` |
-| 18 | `HopSystem` | 46 | `NestSystem` |
-| 19 | `DodgeSystem` | 47 | `LairSystem` |
-| 20 | `DriveSystem` | 48 | `BarrageSystem` |
-| 21 | `EnemyLeapSystem` | 49 | `SlingSystem` |
-| 22 | `StunSystem` | 50 | `ControlPointSystem` |
-| 23 | `MovementSystem` | 51 | `UpgradeSystem` |
-| 24 | `StrikeSystem` | 52 | `ObjectiveSystem` |
-| 25 | `CollisionSystem` | 53 | `FacingSystem` |
-| 26 | `GrenadeSystem` | 54 | `AppearanceSystem` |
-| 27 | `PickupSystem` | 55 | `ReaperSystem` |
-| 28 | `EvolutionSystem` |  |  |
+| 1 | `PositionHistorySystem` | 29 | `EvolutionSystem` |
+| 2 | `CooldownSystem` | 30 | `DamageSystem` |
+| 3 | `DragSystem` | 31 | `ShockSystem` |
+| 4 | `CommanderControlSystem` | 32 | `ActionSystem` |
+| 5 | `MeleeSystem` | 33 | `CrateSystem` |
+| 6 | `TurretSystem` | 34 | `AidSystem` |
+| 7 | `PerceptionSystem` | 35 | `DoorSystem` |
+| 8 | `NavigationSystem` | 36 | `CasualtySystem` |
+| 9 | `WeaveSystem` | 37 | `DyingSystem` |
+| 10 | `GripSystem` | 38 | `RespawnSystem` |
+| 11 | `SquadOrderSystem` | 39 | `ProjectileBoundsSystem` |
+| 12 | `TrooperMindSystem` | 40 | `BloatSystem` |
+| 13 | `TrooperMoveSystem` | 41 | `GeyserSystem` |
+| 14 | `TrooperCombatSystem` | 42 | `MineSystem` |
+| 15 | `WanderSystem` | 43 | `BlastSystem` |
+| 16 | `AvoidanceSystem` | 44 | `SlickSystem` |
+| 17 | `EnemyRangedSystem` | 45 | `ReinforcementSystem` |
+| 18 | `HopSystem` | 46 | `WaveSystem` |
+| 19 | `DodgeSystem` | 47 | `NestSystem` |
+| 20 | `SlitherSystem` | 48 | `LairSystem` |
+| 21 | `DriveSystem` | 49 | `BarrageSystem` |
+| 22 | `EnemyLeapSystem` | 50 | `SlingSystem` |
+| 23 | `StunSystem` | 51 | `ControlPointSystem` |
+| 24 | `MovementSystem` | 52 | `UpgradeSystem` |
+| 25 | `StrikeSystem` | 53 | `ObjectiveSystem` |
+| 26 | `CollisionSystem` | 54 | `FacingSystem` |
+| 27 | `GrenadeSystem` | 55 | `AppearanceSystem` |
+| 28 | `PickupSystem` | 56 | `ReaperSystem` |
 
 Before system 1, `step(PlayerInputs)` copies each slot's `CommanderInput` into that commander's
 `Intent`. That is the only way input enters the simulation, and it is also **the one place a relative
@@ -74,51 +74,52 @@ against the order above on 2026-09-13 and hold.
 |---|---|
 | Input reaches `Intent` **before any system runs** | Input is one tick's worth of what the player asked for, and nothing else may enter the simulation. |
 | The leash is inside `CommanderControlSystem` (4), not a system of its own | That system owns a commander's velocity, and two systems writing one velocity is how a unit ends up travelling somewhere neither asked for. The middle of the commanders is worked out once in its `update`, before any of them is driven, so the first one leashed and the last one are leashed to the same place. |
-| `RespawnSystem` (37) reads the commanders and the control points | The commanders only to judge the level lost (every one out, nobody in reserve); the points only to answer *where* - the rally point (G0055). *When* and *whether* are still read off the reaction on the dying unit. |
-| `RespawnSystem` (37) **before** `ReinforcementSystem` (44) | Both draw on the reserve (G0055), and a commander is paid for first: a returning player takes the last man in reserve rather than a muster that falls on the same tick. |
-| Pickups (27) resolve **before** damage (29) | A grunt shot to a sliver that reaches a flower first gets up whole and takes that tick's damage as the thing it has become. |
-| `EvolutionSystem` (28) after pickups, before damage | Turns what a unit has eaten into what it becomes, in time for the damage to land on the new strain. |
-| `DyingSystem` (36) after `DamageSystem` (29) | Marks a body that has lain out its throes; damage decides who is dying. |
-| Reactions - `RespawnSystem` (37) - run **while the dead are still there** | They react to a body that has not been removed yet. |
-| `WaveSystem` (45) **before** `ObjectiveSystem` (52) | A level whose last wave lands this tick must not read as complete for the tick before the aliens appear. It sits with the other systems that are about the level rather than about anything standing in it, at the end of the tick. |
-| `NestSystem` (46) **after** the death chain (29-43) and **before** `ReaperSystem` (55) | A destroyed nest empties the last of itself while its body is still on the field - the same window, and the same reason, as respawning and blasts. One system earlier and the brood would be owed to a tick that had already gone; one later and there would be nothing left to react to. |
-| `NestSystem` (46) **before** `ObjectiveSystem` (52) | The same reason `WaveSystem` is: a level whose last nest dies this tick must not read as clear for the tick before its brood appears. |
-| `LairSystem` (47) **after** the death chain (29-43) and **before** `ObjectiveSystem` (52) | The reason `WaveSystem` and `NestSystem` sit there: a boss that rises this tick counts against the level on this tick, and a lair is level state like the schedule beside it (G0048). It reads where the commanders ended up, which is after the solver. |
-| `BarrageSystem` (48) **after** `PerceptionSystem` (7) | Whom a boss shoots at is what perception wrote this tick (G0026), the same rule as every other alien gun. It sits late, after `LairSystem` rather than with `EnemyRangedSystem` (17), because it owes no desired velocity to anything and a boss that rises this tick has its first salvo counted from the next one. A salvo fired here first moves on the next tick: one tick against patterns timed in tenths of a second. |
-| `SlingSystem` (49) **after** `PerceptionSystem` (7) and the death chain (29-43), **before** `ObjectiveSystem` (52) and `ReaperSystem` (55) | Whom a slinger slings at is what perception wrote this tick (G0026). It sits beside `BarrageSystem` for its reasons - a wind-up and a rest, no desired velocity owed (its stand is `Pace`'s), and a stun declared this tick breaks a wind-up this tick - and in the nests' window for theirs: a slinger killed this tick spills its riders while its body is on the field, and they count against the level this tick (G0074). A rider slung here first moves on the next tick. |
-| `UpgradeSystem` (51) **after** `WaveSystem` (45), `BarrageSystem` (48) and `ControlPointSystem` (50) | A point taken, a boss felled or a hold wave cleared this tick earns its draft this tick (G0049). Those three publish the facts - `ControlPoint.captured`, `Level.bossesDown`, `Waves.cleared` - and this counts them. |
-| `UpgradeSystem` (51) **after** every system that reads `Modifiers` | The ledger changes once per tick, at the end of it, so every reader in a tick sees the same ledger and a pick takes effect from the next tick: one position and one writer, at the cost of 17 ms nobody can see (ADR 0017). `SystemOrderTest` finds the readers by the `Modifiers` their constructors are handed, so a new one is held to this without being listed. |
-| `ReaperSystem` **last** (55) | Nothing else in the simulation removes an entity; `onlyTheReaperRemovesEntities` fails the build if it tries. |
-| `FacingSystem` (53) **after** every aim and move has settled - `CollisionSystem` (25) is the last of them | A facing is where the thing ended the tick looking. `PerceptionSystem` (7) reads it on the next tick, so the arc the game notices within is exactly the one the renderer drew (G0015, pillar 5). |
-| Drivers write *desired* velocity; `DriveSystem` (20) commits it once and clears it | Several systems may have an opinion without knowing the others exist. A unit no system spoke for stands still, and no driver needs a halt-everything branch (G0010). |
+| `RespawnSystem` (38) reads the commanders and the control points | The commanders only to judge the level lost (every one out, nobody in reserve); the points only to answer *where* - the rally point (G0055). *When* and *whether* are still read off the reaction on the dying unit. |
+| `RespawnSystem` (38) **before** `ReinforcementSystem` (45) | Both draw on the reserve (G0055), and a commander is paid for first: a returning player takes the last man in reserve rather than a muster that falls on the same tick. |
+| Pickups (28) resolve **before** damage (30) | A grunt shot to a sliver that reaches a flower first gets up whole and takes that tick's damage as the thing it has become. |
+| `EvolutionSystem` (29) after pickups, before damage | Turns what a unit has eaten into what it becomes, in time for the damage to land on the new strain. |
+| `DyingSystem` (37) after `DamageSystem` (30) | Marks a body that has lain out its throes; damage decides who is dying. |
+| Reactions - `RespawnSystem` (38) - run **while the dead are still there** | They react to a body that has not been removed yet. |
+| `WaveSystem` (46) **before** `ObjectiveSystem` (53) | A level whose last wave lands this tick must not read as complete for the tick before the aliens appear. It sits with the other systems that are about the level rather than about anything standing in it, at the end of the tick. |
+| `NestSystem` (47) **after** the death chain (30-44) and **before** `ReaperSystem` (56) | A destroyed nest empties the last of itself while its body is still on the field - the same window, and the same reason, as respawning and blasts. One system earlier and the brood would be owed to a tick that had already gone; one later and there would be nothing left to react to. |
+| `NestSystem` (47) **before** `ObjectiveSystem` (53) | The same reason `WaveSystem` is: a level whose last nest dies this tick must not read as clear for the tick before its brood appears. |
+| `LairSystem` (48) **after** the death chain (30-44) and **before** `ObjectiveSystem` (53) | The reason `WaveSystem` and `NestSystem` sit there: a boss that rises this tick counts against the level on this tick, and a lair is level state like the schedule beside it (G0048). It reads where the commanders ended up, which is after the solver. |
+| `BarrageSystem` (49) **after** `PerceptionSystem` (7) | Whom a boss shoots at is what perception wrote this tick (G0026), the same rule as every other alien gun. It sits late, after `LairSystem` rather than with `EnemyRangedSystem` (17), because it owes no desired velocity to anything and a boss that rises this tick has its first salvo counted from the next one. A salvo fired here first moves on the next tick: one tick against patterns timed in tenths of a second. |
+| `SlingSystem` (50) **after** `PerceptionSystem` (7) and the death chain (30-44), **before** `ObjectiveSystem` (53) and `ReaperSystem` (56) | Whom a slinger slings at is what perception wrote this tick (G0026). It sits beside `BarrageSystem` for its reasons - a wind-up and a rest, no desired velocity owed (its stand is `Pace`'s), and a stun declared this tick breaks a wind-up this tick - and in the nests' window for theirs: a slinger killed this tick spills its riders while its body is on the field, and they count against the level this tick (G0074). A rider slung here first moves on the next tick. |
+| `UpgradeSystem` (52) **after** `WaveSystem` (46), `BarrageSystem` (49) and `ControlPointSystem` (51) | A point taken, a boss felled or a hold wave cleared this tick earns its draft this tick (G0049). Those three publish the facts - `ControlPoint.captured`, `Level.bossesDown`, `Waves.cleared` - and this counts them. |
+| `UpgradeSystem` (52) **after** every system that reads `Modifiers` | The ledger changes once per tick, at the end of it, so every reader in a tick sees the same ledger and a pick takes effect from the next tick: one position and one writer, at the cost of 17 ms nobody can see (ADR 0017). `SystemOrderTest` finds the readers by the `Modifiers` their constructors are handed, so a new one is held to this without being listed. |
+| `ReaperSystem` **last** (56) | Nothing else in the simulation removes an entity; `onlyTheReaperRemovesEntities` fails the build if it tries. |
+| `FacingSystem` (54) **after** every aim and move has settled - `CollisionSystem` (26) is the last of them | A facing is where the thing ended the tick looking. `PerceptionSystem` (7) reads it on the next tick, so the arc the game notices within is exactly the one the renderer drew (G0015, pillar 5). |
+| Drivers write *desired* velocity; `DriveSystem` (21) commits it once and clears it | Several systems may have an opinion without knowing the others exist. A unit no system spoke for stands still, and no driver needs a halt-everything branch (G0010). |
 | `GripSystem` (10) **after** the course setters (7-9), **before** the squad block (11-15) and `AvoidanceSystem` (16) | A creature with a man in its jaws is carrying him off, not hunting, so it overwrites the course navigation wrote - and avoidance still bends that, so a carry goes round rock and ruined ground like any other walk. It moves the man in its jaws by velocity, which the squad block and `DriveSystem` then leave alone because he is held: it is the only thing that moves him (G0045). |
 | `WeaveSystem` (9) **after** `NavigationSystem` (8) and **before** `AvoidanceSystem` (16) | It bends the course navigation has just written, and avoidance keeps the last word about it - a weave that could steer a creature into rock would stop being a weave the moment a level had walls in it. Its phase advances with ground covered rather than with the clock, which is why it reads the desired velocity before anything has moved. |
 | `AvoidanceSystem` (16) **before** `DodgeSystem` (19) | A dodge bent around a rock would not be the same dodge twice, and G0012 promises it is. A cornered rabbit sidesteps into a wall - what being cornered should cost it. |
 | `AvoidanceSystem` (16) after every system that sets a course (7-15) | It can only do its job by seeing what the unit intended before adjusting it. |
-| `EnemyLeapSystem` (21) **after** `PerceptionSystem` (7) | Who it throws itself at is read off its own `Perception`, which perception wrote this tick (G0026). Asking the question a second time here is how every leaper in a level ended up aimed at the first commander standing - the second player was never leapt at, and neither was a trooper. |
-| `EnemyLeapSystem` (21) **after** `DriveSystem` (20), overwriting velocity outright | A leap is committed, not one opinion among several. |
-| `StunSystem` (22) after every driver, **before** `MovementSystem` (23) | It owns the velocity of anything held still. A driver zeroing a stunned unit's velocity itself would silently delete knockback, so `DriveSystem` leaves a held unit alone rather than writing a zero. |
+| `EnemyLeapSystem` (22) **after** `PerceptionSystem` (7) | Who it throws itself at is read off its own `Perception`, which perception wrote this tick (G0026). Asking the question a second time here is how every leaper in a level ended up aimed at the first commander standing - the second player was never leapt at, and neither was a trooper. |
+| `EnemyLeapSystem` (22) **after** `DriveSystem` (21), overwriting velocity outright | A leap is committed, not one opinion among several. |
+| `StunSystem` (23) after every driver, **before** `MovementSystem` (24) | It owns the velocity of anything held still. A driver zeroing a stunned unit's velocity itself would silently delete knockback, so `DriveSystem` leaves a held unit alone rather than writing a zero. |
 | `TurretSystem` (6) after `CommanderControlSystem` (4) and `MeleeSystem` (5), **before** `PerceptionSystem` (7) | A gun on a mount is a pair of hands like his own: it reads the intent that arrived this tick, and a shot it fires is in the world before anything looks around - the same window a melee sweep is spawned in. It is also the only thing that writes the position of a man who is aboard, so it must run before everything that would otherwise drive him. |
-| `GrenadeSystem` (26) **immediately after** `CollisionSystem` (25) | A bounce is recorded by the solver and answered here, with nothing having moved in between. One system later and a grenade would be answering last tick's contact against this tick's course. |
+| `GrenadeSystem` (27) **immediately after** `CollisionSystem` (26) | A bounce is recorded by the solver and answered here, with nothing having moved in between. One system later and a grenade would be answering last tick's contact against this tick's course. |
 | `HopSystem` (18) after everything that chooses a course (7-17), **before** `DodgeSystem` (19) | A gait paces a course rather than choosing one, so everything with an opinion about where the creature is going - including `EnemyRangedSystem` planting a shooter - has to have spoken first. Before the dodge because a dodge overwrites it outright: a sidestep from a shot it saw coming is a commitment and must not land in the middle of a sit. It scales the *desired* velocity rather than writing one, so `DriveSystem` is still the only thing that commits one (G0010). |
-| `SlickSystem` (43) **immediately after** `BlastSystem` (42), inside the death-reaction window | Everything that leaves something behind does so by dying (G0018), so a shot that burst on a wall, one that burst on a man and one that ran out of flight all arrive here the same way. Unlike a blast it owes no damage of its own: what it leaves is ordinary bodies carrying ordinary blows, so a circle laid this tick catches what walks into it from the next one - which is what makes it a place rather than an event. |
-| `BlastSystem` (42) after `RespawnSystem` (37), inside the death-reaction window | A blast is what a death leaves behind, so it has to run while the dead are still on the field - the same window, and the same reason, as respawning. |
-| `BlastSystem` (42) after `DamageSystem` (29), **knowingly** | A blast owes damage that therefore lands on the following tick. That delay is not a defect: it is what makes a row of barrels go off as a cascade, one link per tick, instead of as one flat bang. |
-| `MineSystem` (41) after the solver (25) and **immediately before** `BlastSystem` (42) | "Near enough to set one off" has to mean where things actually ended up, and a fuse that runs out this tick has to reach the death-reaction window on this tick rather than being owed to the next one. It spawns nothing itself: a mine explodes by dying, through the one reaction (G0018). |
-| `GeyserSystem` (40) inside the death window, **before** `SlickSystem` (43) and before `MineSystem` (41) (G0089, provisional, for review) | An eruption is a carrier of the geyser's fire born dead, so its fire arrives through the one reaction every fire does (G0018, G0035): marked here, laid by `SlickSystem` this tick, reaped this tick. After it the carrier would be reaped unread and the fire lost. Before the mine rather than between the blast and the slicks, because the mine must stay immediately before the blast and the slicks immediately after it. Like any slick, the fire catches from the next tick. |
-| `ControlPointSystem` (50) is the only thing that puts a **post** down mid-level | Taking ground the level says is held afterwards is the same event this system already decides, so a second system watching for it would be a second place the rule can drift. It runs before `ObjectiveSystem` (52), so the post exists on the tick it is asked about - and **after** `WaveSystem` (45), so a schedule armed this tick sends its first wave on the next one, which is a tick against a clock measured in seconds. |
+| `SlitherSystem` (20) after everything that chooses a course (7-19), **before** `DriveSystem` (21) | A slithering strain's course is wholly its own - it never stops or dodges, and the man it now and then turns onto is its own pick - so it speaks last and overwrites whatever else asked, and `DriveSystem` still commits it through `Pace` and leaves it alone while it is held (G0095). It reads its parts' spacing from where its head ended last tick, after the solver. |
+| `SlickSystem` (44) **immediately after** `BlastSystem` (43), inside the death-reaction window | Everything that leaves something behind does so by dying (G0018), so a shot that burst on a wall, one that burst on a man and one that ran out of flight all arrive here the same way. Unlike a blast it owes no damage of its own: what it leaves is ordinary bodies carrying ordinary blows, so a circle laid this tick catches what walks into it from the next one - which is what makes it a place rather than an event. |
+| `BlastSystem` (43) after `RespawnSystem` (38), inside the death-reaction window | A blast is what a death leaves behind, so it has to run while the dead are still on the field - the same window, and the same reason, as respawning. |
+| `BlastSystem` (43) after `DamageSystem` (30), **knowingly** | A blast owes damage that therefore lands on the following tick. That delay is not a defect: it is what makes a row of barrels go off as a cascade, one link per tick, instead of as one flat bang. |
+| `MineSystem` (42) after the solver (26) and **immediately before** `BlastSystem` (43) | "Near enough to set one off" has to mean where things actually ended up, and a fuse that runs out this tick has to reach the death-reaction window on this tick rather than being owed to the next one. It spawns nothing itself: a mine explodes by dying, through the one reaction (G0018). |
+| `GeyserSystem` (41) inside the death window, **before** `SlickSystem` (44) and before `MineSystem` (42) (G0089, provisional, for review) | An eruption is a carrier of the geyser's fire born dead, so its fire arrives through the one reaction every fire does (G0018, G0035): marked here, laid by `SlickSystem` this tick, reaped this tick. After it the carrier would be reaped unread and the fire lost. Before the mine rather than between the blast and the slicks, because the mine must stay immediately before the blast and the slicks immediately after it. Like any slick, the fire catches from the next tick. |
+| `ControlPointSystem` (51) is the only thing that puts a **post** down mid-level | Taking ground the level says is held afterwards is the same event this system already decides, so a second system watching for it would be a second place the rule can drift. It runs before `ObjectiveSystem` (53), so the post exists on the tick it is asked about - and **after** `WaveSystem` (46), so a schedule armed this tick sends its first wave on the next one, which is a tick against a clock measured in seconds. |
 | `DragSystem` (3) **before** `CommanderControlSystem` (4) | It publishes which way the load lies; the system that owns his velocity is the only one that may constrain it. Two systems writing one velocity is how a unit travels somewhere neither asked for. |
-| `EnemyRangedSystem` (17) after `AvoidanceSystem` (16), before `DriveSystem` (20) | Planting a shooter has to beat the course avoidance has just bent, and a desired velocity is spent on the tick it is written. |
-| `ActionSystem` (31) and `AidSystem` (33) **after** `DamageSystem` (29) | A man who goes down this tick must be on offer this tick. Decided any earlier and the prompt is permanently one tick behind the body hitting the ground. It also reads positions the solver has already settled, so arm's length means where things ended up. |
+| `EnemyRangedSystem` (17) after `AvoidanceSystem` (16), before `DriveSystem` (21) | Planting a shooter has to beat the course avoidance has just bent, and a desired velocity is spent on the tick it is written. |
+| `ActionSystem` (32) and `AidSystem` (34) **after** `DamageSystem` (30) | A man who goes down this tick must be on offer this tick. Decided any earlier and the prompt is permanently one tick behind the body hitting the ground. It also reads positions the solver has already settled, so arm's length means where things ended up. |
 | `CrateSystem` **after** `ActionSystem` and `DamageSystem` (G0056) | The key opens a crate and this deals it, so a crate opened this tick is dealt and shown this tick; and a man wounded or put down this tick has his crate shut this tick, never a tick later with the cards still up. |
-| `ActionSystem` (31) and `AidSystem` (33) **before** `CasualtySystem` (35) | A man picked up on the tick his clock would have run out is picked up rather than buried. |
-| `ReinforcementSystem` (44) after the solver (25) and after the death chain (29-43) | A man who arrives this tick is neither counted among the dead this tick nor swept by this tick's reaper, and the room on the field is counted after this tick's deaths. It sits with the systems that are about the level rather than about anything standing in it. |
-| `DoorSystem` (34) **after** `ActionSystem` (31), `TrooperMoveSystem` (13) and `DamageSystem` (29) | It counts the work on a door (G0069): a commander's hands are put to it by the action key, the one trooper it goes to is one whose way it shut this tick, and a wound on either loses the work - so all three have spoken. After damage too, so a door broken this tick stops being a wall from here on. It is the one place outside the start of a tick that re-derives `Solid` (ADR 0022). |
-| `CasualtySystem` (35) between damage (29) and dying (36) | Damage decides who goes down; this decides who stayed down too long; `DyingSystem` takes the body away. All three end at the same `Deaths.kill`, so a bleed-out leaves exactly the corpse a bullet would have. |
-| `ProjectileBoundsSystem` (38) **before** the death reactions (39-43), not after them | A shot that runs out of flight, flies into rock or leaves the arena ends by *dying* like every other end (G0018), so it has to be marked while the reactions can still see it. Registered after the death chain - which is where it sat until 2026-09-20 - it was marked dead past that window and reaped on the same tick, which silently deleted the blast and the spatter every **miss** should have left. A shot that hit something is marked by the solver's contact long before this and is unaffected. |
-| `BloatSystem` (39) after the damage chain (29-37) and **before** `BlastSystem` (42) | The same two reasons `MineSystem` has: this tick's hits are already on the component, and a body that fills this tick has to reach the death-reaction window on this tick rather than being owed to the next one. It spawns nothing itself - a body pumped full explodes by dying, through the one reaction (G0018) - and it is the only thing outside `DyingSystem` that touches the throes clock, which it holds open while a corpse still has charge on it. |
-| `ShockSystem` (30) **immediately after** `DamageSystem` (29) (G0059) | Damage builds the shock and lands the stun it fills to; this drains what no hit built this tick, so it has to see this tick's hits on the component - before it, a body the trigger is held on would drain on the very tick a bolt landed. Straight after, so nothing between them reads a shock half-settled. |
-| `DriveSystem` (20) scales what it commits by `Pace`, and `CommanderControlSystem` (4) scales his speed by the same | Two callers rather than one place in the pipeline, because the commander's velocity is owned by his own control system (G0010's named exception) and ground the player was exempt from is the opposite of what a thicket is for. Scaling the speed rather than the finished velocity is what keeps hauling honest: a man dragging a barrel through undergrowth is capped off the speed he actually has. |
+| `ActionSystem` (32) and `AidSystem` (34) **before** `CasualtySystem` (36) | A man picked up on the tick his clock would have run out is picked up rather than buried. |
+| `ReinforcementSystem` (45) after the solver (26) and after the death chain (30-44) | A man who arrives this tick is neither counted among the dead this tick nor swept by this tick's reaper, and the room on the field is counted after this tick's deaths. It sits with the systems that are about the level rather than about anything standing in it. |
+| `DoorSystem` (35) **after** `ActionSystem` (32), `TrooperMoveSystem` (13) and `DamageSystem` (30) | It counts the work on a door (G0069): a commander's hands are put to it by the action key, the one trooper it goes to is one whose way it shut this tick, and a wound on either loses the work - so all three have spoken. After damage too, so a door broken this tick stops being a wall from here on. It is the one place outside the start of a tick that re-derives `Solid` (ADR 0022). |
+| `CasualtySystem` (36) between damage (30) and dying (37) | Damage decides who goes down; this decides who stayed down too long; `DyingSystem` takes the body away. All three end at the same `Deaths.kill`, so a bleed-out leaves exactly the corpse a bullet would have. |
+| `ProjectileBoundsSystem` (39) **before** the death reactions (40-44), not after them | A shot that runs out of flight, flies into rock or leaves the arena ends by *dying* like every other end (G0018), so it has to be marked while the reactions can still see it. Registered after the death chain - which is where it sat until 2026-09-20 - it was marked dead past that window and reaped on the same tick, which silently deleted the blast and the spatter every **miss** should have left. A shot that hit something is marked by the solver's contact long before this and is unaffected. |
+| `BloatSystem` (40) after the damage chain (30-38) and **before** `BlastSystem` (43) | The same two reasons `MineSystem` has: this tick's hits are already on the component, and a body that fills this tick has to reach the death-reaction window on this tick rather than being owed to the next one. It spawns nothing itself - a body pumped full explodes by dying, through the one reaction (G0018) - and it is the only thing outside `DyingSystem` that touches the throes clock, which it holds open while a corpse still has charge on it. |
+| `ShockSystem` (31) **immediately after** `DamageSystem` (30) (G0059) | Damage builds the shock and lands the stun it fills to; this drains what no hit built this tick, so it has to see this tick's hits on the component - before it, a body the trigger is held on would drain on the very tick a bolt landed. Straight after, so nothing between them reads a shock half-settled. |
+| `DriveSystem` (21) scales what it commits by `Pace`, and `CommanderControlSystem` (4) scales his speed by the same | Two callers rather than one place in the pipeline, because the commander's velocity is owned by his own control system (G0010's named exception) and ground the player was exempt from is the opposite of what a thicket is for. Scaling the speed rather than the finished velocity is what keeps hauling honest: a man dragging a barrel through undergrowth is capped off the speed he actually has. |
 
 ## Positions that surprise
 
@@ -131,19 +132,19 @@ Worth naming, because a reasonable guess puts each of these somewhere else.
   so a swing spawned this tick is already in the world when enemies look around.
 - **`WanderSystem` (15) runs after the trooper block**, not with the other drivers near the top. It is
   the fallback: it ambles whatever nothing else spoke for.
-- **`StrikeSystem` (24) sits between movement (23) and collision (25)** - a strike advances along its
+- **`StrikeSystem` (25) sits between movement (24) and collision (26)** - a strike advances along its
   arc with everything else, then contacts resolve once.
-- **`BlastSystem` (42) runs after everything that could have killed something**, not near the collision it looks like it belongs with. It is a death reaction first and a damage source second, and it reads the two families in that order.
-- **`ProjectileBoundsSystem` (38) runs in the death chain**, not with collision (25) where it looks
+- **`BlastSystem` (43) runs after everything that could have killed something**, not near the collision it looks like it belongs with. It is a death reaction first and a damage source second, and it reads the two families in that order.
+- **`ProjectileBoundsSystem` (39) runs in the death chain**, not with collision (26) where it looks
   like it belongs and not after the reactions, where it used to be. It is the system that ends a
   shot nothing stopped, and ending is dying.
 - **A trooper's grenade leaves his hand in `TrooperCombatSystem` (14)**, before the solver and before
   `GrenadeSystem`, where the commander's does (G0051). It is simply in the air a little sooner in the
   tick than his: `MovementSystem` moves it this tick and `GrenadeSystem` spends its distance, as for
   any grenade already flying. Nothing reads which system threw it.
-- **`CrateSystem` (32) straight after `ActionSystem` (31)** (G0056): the key opens a crate, and this
+- **`CrateSystem` (33) straight after `ActionSystem` (32)** (G0056): the key opens a crate, and this
   deals what it holds on the same tick, so the cards are in the top bar on the frame after the press.
-- **`ReinforcementSystem` (44) is nowhere near `PickupSystem` (27)**, though a supply drop is what
+- **`ReinforcementSystem` (45) is nowhere near `PickupSystem` (28)**, though a supply drop is what
   starts it. The pickup writes a count on the level entity and this reads it at the end of the
   tick, which is the point of a level-scope grant: the two halves do not have to be adjacent,
   and the far half gets to run once the field has stopped moving.

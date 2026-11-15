@@ -234,6 +234,40 @@ class ReserveTest {
     }
 
     /**
+     * A crate fetched while he waits on an empty reserve pays for him first: its man goes into the
+     * reserve rather than onto the room he left, so a player is heard before a trooper.
+     */
+    @Test
+    void bringsHimBackWithACratesManWhileHeWaitsOnAnEmptyReserve() {
+        Simulation simulation = new Simulation(reserveOf(0));
+        simulation.spawnCommander(20f, 20f, 0);
+        kill(simulation.spawnCommander(50f, 50f, 1));
+        steps(simulation, RETURN);
+
+        simulation.level().pendingReinforcements = 1;
+        steps(simulation, RETURN);
+
+        assertThat(count(simulation, Commander.class)).isEqualTo(2);
+        assertThat(count(simulation, Trooper.class)).isZero();
+        assertThat(simulation.level().reserve).isZero();
+    }
+
+    /** Only as many of the crate as the waiting tickets are owed: the rest still lands. */
+    @Test
+    void landsTheRestOfTheCrateOnceTheWaitingCommanderIsPaidFor() {
+        Simulation simulation = new Simulation(reserveOf(0));
+        simulation.spawnCommander(20f, 20f, 0);
+        kill(simulation.spawnCommander(50f, 50f, 1));
+        steps(simulation, RETURN);
+
+        simulation.level().pendingReinforcements = 3;
+        steps(simulation, RETURN);
+
+        assertThat(count(simulation, Commander.class)).isEqualTo(2);
+        assertThat(count(simulation, Trooper.class)).isEqualTo(2);
+    }
+
+    /**
      * A commander is paid for the moment he is gone, not when he comes back: the last man in reserve
      * brings a player back rather than going to a muster that falls while he waits.
      */

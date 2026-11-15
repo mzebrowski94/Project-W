@@ -25,5 +25,10 @@ public enum BiomeKind {
      * Ash with pools of lava nothing stands on, geysers among them and magma spitters whose spit leaves fire (G0091,
      * provisional, for review): where the ground itself is the danger - read it, and time it.
      */
-    CALDERA
+    CALDERA,
+    /**
+     * Open sand with few obstacles - stones from a man's size to five times it, and patches of mud that slow whoever
+     * wades them - runners and sludgers on it, and the snake going through all of it (G0095).
+     */
+    DESERT
 }

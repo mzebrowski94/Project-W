@@ -44,6 +44,21 @@ public final class Stunned implements Component, Pool.Poolable {
     /** How long the declared stun running now was when it landed, in ticks: what the view shrinks its mark over. */
     public int dazeTicks;
 
+    /**
+     * True for a body nothing holds still - a slither, which never stops (G0095): no stun, recoil or clinch lands on it.
+     * Configuration, set with its strain.
+     */
+    public boolean immune;
+
+    /** Says whether nothing may hold it still, returning this component, for fluent spawning. */
+    public Stunned immuneIf(boolean nothingHoldsIt) {
+        this.immune = nothingHoldsIt;
+        if (nothingHoldsIt) {
+            remainingTicks = 0;
+        }
+        return this;
+    }
+
     /** True if this entity may not act right now. */
     public boolean active() {
         return remainingTicks > 0;
@@ -51,6 +66,9 @@ public final class Stunned implements Component, Pool.Poolable {
 
     /** Holds it still for at least this long, never shortening a stun already running. */
     public void apply(int ticks, float decay) {
+        if (immune) {
+            return;
+        }
         if (ticks > remainingTicks) {
             remainingTicks = ticks;
         }
@@ -61,7 +79,7 @@ public final class Stunned implements Component, Pool.Poolable {
 
     /** Holds it still for at least this long, as a stun rather than a recoil. */
     public void daze(int ticks) {
-        if (ticks <= 0) {
+        if (ticks <= 0 || immune) {
             return;
         }
         if (ticks >= remainingTicks) {
@@ -93,6 +111,9 @@ public final class Stunned implements Component, Pool.Poolable {
      * supposed to have closed it.
      */
     public void clinch(int ticks) {
+        if (immune) {
+            return;
+        }
         if (ticks > remainingTicks) {
             remainingTicks = ticks;
         }
@@ -107,5 +128,6 @@ public final class Stunned implements Component, Pool.Poolable {
         grappling = false;
         dazed = false;
         dazeTicks = 0;
+        immune = false;
     }
 }

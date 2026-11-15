@@ -78,6 +78,7 @@ public final class Components {
                     Slick.class,
                     Sling.class,
                     SlicksOnDeath.class,
+                    Slither.class,
                     Slowed.class,
                     Speed.class,
                     Steering.class,

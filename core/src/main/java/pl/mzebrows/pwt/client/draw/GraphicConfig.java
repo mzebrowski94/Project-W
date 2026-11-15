@@ -62,6 +62,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param shadow how to draw the shadow under whatever is off the ground - a slung rider, a thrown grenade (G0077)
  * @param pop how to draw a take by touch rising off the taker (G0078)
  * @param geyser how to draw a geyser filling: its fire mark, pulsing (G0089)
+ * @param slither how to draw the parts trailing a slithering head (G0095)
  * @param camera how the view follows what it is watching, and how far out it may sit
  */
 public record GraphicConfig(
@@ -104,6 +105,7 @@ public record GraphicConfig(
         ShadowMark shadow,
         PopMark pop,
         GeyserMark geyser,
+        SlitherMark slither,
         CameraDirector.Settings camera) {
 
     /** How a colour is written: red, green and blue in hex, and alpha after them if it is not opaque. */

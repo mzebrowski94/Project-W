@@ -54,6 +54,9 @@ public final class Strip {
     /** Bounds the notch fill, which converges in two or three. */
     private static final int NOTCH_ROUNDS = 16;
 
+    /** Bounds the face widening; a strip with a slot takes one round, rarely two. */
+    private static final int WIDEN_ROUNDS = 8;
+
     private final StripRules rules;
     private final List<BiomeGround> grounds;
     private final List<TileRect> rects;
@@ -73,6 +76,9 @@ public final class Strip {
 
     private final boolean[] apron;
     private final boolean[] carved;
+    /** Per tile: rock a ridge's face laid, which a slot under the clearance may give back ({@link #widenFaces}). */
+    private final boolean[] faced;
+
     private final List<List<Integer>> ends;
 
     /** The row the last ridge's first pass came out on, or -1 before the first ridge. */
@@ -88,6 +94,7 @@ public final class Strip {
         this.owner = new int[cols];
         this.apron = new boolean[cols * rules.rows()];
         this.carved = new boolean[cols * rules.rows()];
+        this.faced = new boolean[cols * rules.rows()];
         this.ends = new ArrayList<>();
         for (int p = 0; p < grounds.size(); p++) {
             ends.add(new ArrayList<>());
@@ -202,6 +209,7 @@ public final class Strip {
         strip.fillNotches();
         strip.regions(at);
         strip.coats(at);
+        strip.widenFaces();
         strip.floors();
         strip.seal();
         strip.houses.sort(Comparator.comparingInt(house -> house.walls().col()));
@@ -370,6 +378,7 @@ public final class Strip {
             int depth = Math.min(rough, (int) (walk[r] * FACE_STRETCH));
             for (int d = 1; d <= depth; d++) {
                 map.set(edge + dir * d, r, Terrain.ROCK);
+                faced[r * cols + edge + dir * d] = true;
             }
         }
     }
@@ -508,6 +517,70 @@ public final class Strip {
                 return;
             }
         }
+    }
+
+    /**
+     * A run of open ground shorter than the clearance between two rocks, along a row or down a column, gives back
+     * the face rock that bounds it - never the core's, the border's, a notch's or a coat's. What a pass's bend leaves
+     * of a face a row in from the border is such a slot. Last of what lays rock, after the coats, so only a strip that
+     * would be left with a slot is laid any differently. Giving a tile back lengthens the run being mended but can open
+     * one across it - rock either side of the tile on the other axis - so a tile that would is kept, and the slot is
+     * left for the strip sweep to report rather than traded for another.
+     */
+    private void widenFaces() {
+        for (int round = 0; round < WIDEN_ROUNDS; round++) {
+            if (widenFacesAlong(1, 0) + widenFacesAlong(0, 1) == 0) {
+                return;
+            }
+        }
+    }
+
+    private int widenFacesAlong(int dc, int dr) {
+        int widened = 0;
+        for (int r = 0; r < rules.rows(); r++) {
+            for (int c = 0; c < cols; c++) {
+                if (rock(c, r) || !rock(c - dc, r - dr)) {
+                    continue;
+                }
+                int run = 0;
+                while (run < rules.clearance() && !rock(c + run * dc, r + run * dr)) {
+                    run++;
+                }
+                if (run >= rules.clearance()) {
+                    continue;
+                }
+                if (unface(c - dc, r - dr, dr, dc) || unface(c + run * dc, r + run * dr, dr, dc)) {
+                    widened++;
+                }
+            }
+        }
+        return widened;
+    }
+
+    /**
+     * Lays a face's rock back as its biome's base, unless that leaves a run under the clearance through it along
+     * {@code (dc, dr)} - the axis across the one being mended. False for anything that is not face rock, or is kept.
+     */
+    private boolean unface(int col, int row, int dc, int dr) {
+        if (col < 0 || row < 0 || col >= cols || row >= rules.rows() || !faced[row * cols + col]) {
+            return false;
+        }
+        int across = 1 + openFrom(col - dc, row - dr, -dc, -dr) + openFrom(col + dc, row + dr, dc, dr);
+        if (across < rules.clearance()) {
+            return false;
+        }
+        faced[row * cols + col] = false;
+        map.set(col, row, grounds.get(owner[col]).base());
+        return true;
+    }
+
+    /** How many open tiles from here in a direction, up to the clearance. */
+    private int openFrom(int col, int row, int dc, int dr) {
+        int open = 0;
+        while (open < rules.clearance() && !rock(col + open * dc, row + open * dr)) {
+            open++;
+        }
+        return open;
     }
 
     // ---- biomes ----

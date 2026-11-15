@@ -61,6 +61,8 @@ final class Placement {
     private static final long TURRETS = 0x4E2B_97D3_1A6C_F085L;
     private static final long GEYSERS = 0xA71C_3E95_D28B_640FL;
     private static final long GEYSER_SIZES = 0x3F6B_C150_8E2D_97A4L;
+    private static final long STONES = 0x93A7_5C1E_D24B_806FL;
+    private static final long STONE_SIZES = 0x2B6E_F193_7A0D_C54BL;
 
     private final SimConfig config;
     private final PlacementRules rules;
@@ -197,6 +199,8 @@ final class Placement {
             int turrets = furniture.turrets(counted);
             // After turrets, for their reason: a biome with none draws every other count as it did before (G0089).
             int geysers = furniture.geysers(counted);
+            // Drawn after that, for the same reason: a biome with no stones draws everything as it did before them.
+            int stones = furniture.stones(counted);
 
             points(pointCount, attempt.derive(POINTS));
             houseStock(stock, attempt.derive(STOCK));
@@ -209,6 +213,7 @@ final class Placement {
             barrels(barrels, attempt.derive(BARRELS));
             boulders(boulders, attempt.derive(BOULDERS));
             trees(trees, stream.derive(TREES_BY_NEST), attempt.derive(TREES));
+            stones(stones, attempt.derive(STONES), attempt.derive(STONE_SIZES));
             rabbits(rabbits, attempt.derive(RABBITS));
             return this;
         }
@@ -490,6 +495,20 @@ final class Placement {
             return scatter.scatter(area, 1, trunk, (x, y) -> put(new Placed.Tree(x, y, trunk, position)));
         }
 
+        /**
+         * Stones anywhere, as boulders stand: {@code rockMargin} off rock and off everything else (G0042). Each one's
+         * size from a stream of its own, so the count and the sizes are drawn apart.
+         */
+        private void stones(int count, Randomness rng, Randomness sizes) {
+            Scatter scatter = scatter(rng, rules.rockMargin()).keepingOffRock(rules.rockMargin());
+            int got = 0;
+            for (int k = 0; k < count; k++) {
+                float radius = config.obstacle().stone(sizes);
+                got += scatter.scatter(rect, 1, radius, (x, y) -> put(new Placed.Stone(x, y, radius, position)));
+            }
+            shortOf("stones", count, got);
+        }
+
         /** Rabbits anywhere off the start. */
         private void rabbits(int count, Randomness rng) {
             int got = scatter(rng, 0f)
@@ -631,6 +650,7 @@ final class Placement {
             case Placed.Boulder _ -> config.obstacle().radius();
             case Placed.Tree tree -> tree.trunk();
             case Placed.Geyser geyser -> geyser.radius();
+            case Placed.Stone stone -> stone.radius();
             case Placed.Rabbit _ -> config.pickup(PickupKind.RABBIT).radius();
             case Placed.Hold _ -> config.controlPoint().radius();
             case Placed.Turret _ -> config.turret().radius();

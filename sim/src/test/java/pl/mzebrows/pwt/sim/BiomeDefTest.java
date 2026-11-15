@@ -103,6 +103,8 @@ class BiomeDefTest {
                 furniture.treesMax(),
                 furniture.treesByNestMin(),
                 furniture.treesByNestMax(),
+                furniture.stonesMin(),
+                furniture.stonesMax(),
                 furniture.turretsMin(),
                 furniture.turretsMax(),
                 furniture.geysersMin(),

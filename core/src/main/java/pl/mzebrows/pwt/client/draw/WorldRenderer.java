@@ -21,9 +21,12 @@ import pl.mzebrows.pwt.sim.component.Armour;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Facing;
+import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Slither;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.sim.def.Side;
 
 /**
  * Draws the simulation as coloured circles.
@@ -38,7 +41,7 @@ import pl.mzebrows.pwt.sim.def.Look;
  * he learns how far his voice carries rather than guessing at it (pillar 5).
  *
  * <p>Which way an entity is pointing is drawn as a spoke out of its centre, for anything that
- * publishes a facing. That is a tell rather than decoration: a trooper only engages what is inside
+ * publishes a facing - a creature's as a spike ({@link FacingMark}). That is a tell rather than decoration: a trooper only engages what is inside
  * its arc, so the player has to be able to see where its front is (G0015).
  *
  * <p>What an entity is doing is drawn as a shift in its colour rather than as a different colour per
@@ -72,6 +75,8 @@ public final class WorldRenderer implements Disposable {
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
     private static final ComponentMapper<Armour> ARMOUR = ComponentMapper.getFor(Armour.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
+    private static final ComponentMapper<Slither> SLITHER = ComponentMapper.getFor(Slither.class);
 
     /** Where a cosmetic lead writes the facing it draws; reused, so it costs nothing per frame. */
     private final float[] ahead = new float[2];
@@ -90,6 +95,21 @@ public final class WorldRenderer implements Disposable {
     private static final int CIRCLE_SEGMENTS = 16;
 
     private static final int HEXAGON_SEGMENTS = 6;
+
+    private static final int PENTAGON_CORNERS = 5;
+
+    /** A unit pentagon's corners, the first due east: turned per stone by one sine and one cosine, not five of each. */
+    private static final float[] PENTAGON_X = new float[PENTAGON_CORNERS];
+
+    private static final float[] PENTAGON_Y = new float[PENTAGON_CORNERS];
+
+    static {
+        for (int corner = 0; corner < PENTAGON_CORNERS; corner++) {
+            double angle = Math.PI * 2.0 * corner / PENTAGON_CORNERS;
+            PENTAGON_X[corner] = (float) Math.cos(angle);
+            PENTAGON_Y[corner] = (float) Math.sin(angle);
+        }
+    }
 
     /** A tree's foliage is several bodies wide; sixteen sides read as a polygon at that size. */
     private static final int FOLIAGE_SEGMENTS = 28;
@@ -124,6 +144,7 @@ public final class WorldRenderer implements Disposable {
     private final ShadowMark shadowMark;
     private final PopMark popMark;
     private final GeyserMark geyserMark;
+    private final SlitherMark slitherMark;
 
     /** The client's own clock, for the post's and a geyser's pulse alone - a look, never read back by the simulation. */
     private float pulseSeconds;
@@ -201,6 +222,9 @@ public final class WorldRenderer implements Disposable {
                 // grenade on its way read as up in the air.
                 drawShadow(x, y, body.radius);
             }
+            if (SLITHER.has(entity) && SLITHER.get(entity).enabled) {
+                drawParts(entity, x, y, body.radius, tint(appearance));
+            }
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {
                 shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
@@ -210,6 +234,8 @@ public final class WorldRenderer implements Disposable {
                 drawShells(x, y, body.radius, appearance);
             } else if (appearance.look == Look.OBSTACLE) {
                 drawBoulder(x, y, body.radius, tint(appearance));
+            } else if (appearance.look == Look.STONE) {
+                drawStone(x, y, body.radius, tint(appearance));
             } else if (appearance.streaks()) {
                 // Drawn back to where it says it came from, with a head on it so a beam that has
                 // just been fired is still something rather than a zero-length line. The far end is
@@ -232,7 +258,19 @@ public final class WorldRenderer implements Disposable {
                 }
                 shapes.setColor(brightened(tint(appearance), facingMark.tint()));
                 float reach = facingMark.lengthFor(body.radius);
-                shapes.rectLine(x, y, x + facingX * reach, y + facingY * reach, facingMark.widthFor(body.radius));
+                if (alien(entity)) {
+                    // A spike rather than a spoke: broad across the centre, sharp at the same reach.
+                    float half = facingMark.spikeFor(body.radius) * 0.5f;
+                    shapes.triangle(
+                            x - facingY * half,
+                            y + facingX * half,
+                            x + facingY * half,
+                            y - facingX * half,
+                            x + facingX * reach,
+                            y + facingY * reach);
+                } else {
+                    shapes.rectLine(x, y, x + facingX * reach, y + facingY * reach, facingMark.widthFor(body.radius));
+                }
             }
             if (appearance.charge > 0f) {
                 // A charge that names a look of its own is drawn in that colour; everything else is
@@ -296,6 +334,72 @@ public final class WorldRenderer implements Disposable {
             shapes.setColor(brightened(SCRATCH.set(base), boulderMark.lightAt(step)));
             shapes.circle(x - offset, y + offset, boulderMark.radiusAt(radius, step), HEXAGON_SEGMENTS);
         }
+    }
+
+    /**
+     * The parts trailing a slithering head (G0095), tail first so each lies under the one in front, as many as it has
+     * left - one fewer for every part's worth of health lost - each see-through with a denser core ({@link
+     * SlitherMark}). Moved by the head's interpolation, which is near enough
+     * for parts that follow it.
+     */
+    private void drawParts(Entity entity, float x, float y, float headRadius, Color base) {
+        Slither slither = SLITHER.get(entity);
+        Position head = POSITION.get(entity);
+        float shiftX = x - head.x;
+        float shiftY = y - head.y;
+        for (int part = slither.partsLeft - 1; part >= 1; part--) {
+            float partX = slither.partX(part) + shiftX;
+            float partY = slither.partY(part) + shiftY;
+            float radius = slither.radiusOf(part, headRadius);
+            SCRATCH.set(base);
+            SCRATCH.a = slitherMark.alpha();
+            shapes.setColor(SCRATCH);
+            shapes.circle(partX, partY, radius, CIRCLE_SEGMENTS);
+            SCRATCH.set(base);
+            SCRATCH.a = slitherMark.coreAlpha();
+            shapes.setColor(SCRATCH);
+            shapes.circle(partX, partY, radius * slitherMark.coreScale(), CIRCLE_SEGMENTS);
+        }
+    }
+
+    /**
+     * A stone: a pentagon of rock, outlined darker and lit from the north-west as a boulder is, turned by where it
+     * stands so a field of them is not a field of the same stone. Static, so the turn never changes.
+     */
+    private void drawStone(float x, float y, float radius, Color base) {
+        float turn = turnOf(x, y);
+        float cos = (float) Math.cos(turn);
+        float sin = (float) Math.sin(turn);
+        shapes.setColor(darkened(SCRATCH.set(base), 0.3f));
+        pentagon(x, y, radius + 0.5f, cos, sin);
+        shapes.setColor(base);
+        pentagon(x, y, radius, cos, sin);
+        for (int step = 1; step <= boulderMark.steps(); step++) {
+            float offset = boulderMark.offsetAt(radius, step);
+            shapes.setColor(brightened(SCRATCH.set(base), boulderMark.lightAt(step)));
+            pentagon(x - offset, y + offset, boulderMark.radiusAt(radius, step), cos, sin);
+        }
+    }
+
+    /** A filled regular pentagon, its first corner turned from east by the angle whose cosine and sine these are. */
+    private void pentagon(float x, float y, float radius, float cos, float sin) {
+        float fromX = x + cos * radius;
+        float fromY = y + sin * radius;
+        for (int corner = 1; corner <= PENTAGON_CORNERS; corner++) {
+            int k = corner % PENTAGON_CORNERS;
+            float toX = x + (PENTAGON_X[k] * cos - PENTAGON_Y[k] * sin) * radius;
+            float toY = y + (PENTAGON_X[k] * sin + PENTAGON_Y[k] * cos) * radius;
+            shapes.triangle(x, y, fromX, fromY, toX, toY);
+            fromX = toX;
+            fromY = toY;
+        }
+    }
+
+    /** A turn in {@code [0, 2pi)} that depends only on where something stands - a look, never read by the simulation. */
+    private static float turnOf(float x, float y) {
+        int hash = Float.floatToIntBits(x) * 0x9E3779B1 ^ Float.floatToIntBits(y) * 0x85EBCA77;
+        hash ^= hash >>> 15;
+        return (hash & 0xFFFF) / 65536f * (float) (Math.PI * 2.0);
     }
 
     /**
@@ -670,6 +774,11 @@ public final class WorldRenderer implements Disposable {
     /** Whether its armour is on its back rather than its head, so the back is the segment drawn hard (G0073). */
     private static boolean hardBehind(Entity entity) {
         return ARMOUR.has(entity) && ARMOUR.get(entity).enabled && ARMOUR.get(entity).centreCosine < 0f;
+    }
+
+    /** The swarm's side: its facing is drawn as a spike, the squad's as a spoke. */
+    private static boolean alien(Entity entity) {
+        return FACTION.has(entity) && FACTION.get(entity).side == Side.ALIEN;
     }
 
     private static boolean faces(Entity entity) {

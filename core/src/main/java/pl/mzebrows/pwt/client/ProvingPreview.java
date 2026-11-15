@@ -62,7 +62,8 @@ final class ProvingPreview implements Disposable {
                 graphic.sling(),
                 graphic.shadow(),
                 graphic.pop(),
-                graphic.geyser());
+                graphic.geyser(),
+                graphic.slither());
         this.terrain = new TerrainRenderer(viewport, graphic.terrainPalette(), graphic.groundDetail());
     }
 

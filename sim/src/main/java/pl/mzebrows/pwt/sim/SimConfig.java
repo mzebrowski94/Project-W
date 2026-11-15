@@ -268,6 +268,7 @@ public record SimConfig(
      */
     public float largestRadius() {
         float largest = Math.max(commander.radius(), Math.max(obstacle.radius(), obstacle.trunkMax()));
+        largest = Math.max(largest, obstacle.stoneMax());
         largest = Math.max(largest, trooper.radius());
         largest = Math.max(largest, melee.radius());
         largest = Math.max(largest, grenade.radius());
@@ -940,24 +941,45 @@ public record SimConfig(
     /**
      * What a gun's shots build on a body until it is stunned (G0059), and what comes off it again.
      *
-     * <p>One block for every unit: what differs between strains is already the body's radius, as with
-     * {@link BloatConfig}.
+     * <p>One block for every unit: what differs between strains is already the body's size, as with
+     * {@link BloatConfig}. <strong>By the size of the body</strong> - its area, the radius squared - from the gun's
+     * {@code stunAfterHits} against the smallest body to {@code growth} times that against the largest, along a straight
+     * line in between and no further either way: the pulse rifle's 2 at a leech, 10 at a giant.
      *
-     * @param referenceRadius the body a gun's {@code stunAfterHits} is quoted against, in world units; a
-     *     bigger body takes proportionally more hits
+     * @param smallestRadius the body a gun's {@code stunAfterHits} is quoted against, in world units: the fewest hits
+     * @param largestRadius the body that takes {@code growth} times as many; anything wider takes no more
+     * @param growth how many times the smallest body's hits the largest takes; one is the same for every body
      * @param drainPerSecond how much of a full shock comes off per second on a tick nothing builds it
      */
     @With
-    public record ShockConfig(float referenceRadius, float drainPerSecond) {
+    public record ShockConfig(float smallestRadius, float largestRadius, float growth, float drainPerSecond) {
 
         public ShockConfig {
-            Require.positive("shock referenceRadius", referenceRadius);
+            Require.positive("shock smallestRadius", smallestRadius);
+            Require.atLeast(
+                    "shock largestRadius",
+                    largestRadius,
+                    smallestRadius,
+                    "the largest body cannot be below the smallest");
+            Require.atLeast("shock growth", growth, 1f, "a bigger body never takes fewer hits");
             Require.notNegative("shock drainPerSecond", drainPerSecond);
         }
 
-        /** What one shot is worth against a body of this size: in proportion to the radius, not the area. */
+        /** How many times the smallest body's hits a body of this radius takes: one to {@code growth}, by its area. */
+        public float hitsFactor(float bodyRadius) {
+            float smallest = smallestRadius * smallestRadius;
+            float span = largestRadius * largestRadius - smallest;
+            if (span <= 0f) {
+                return 1f;
+            }
+            float along = (bodyRadius * bodyRadius - smallest) / span;
+            along = along < 0f ? 0f : (along > 1f ? 1f : along);
+            return 1f + (growth - 1f) * along;
+        }
+
+        /** What one shot is worth against a body of this size. The one place a body's size is read for shock. */
         public float perHitAgainst(float bodyRadius, float perHit) {
-            return bodyRadius <= 0f ? perHit : perHit * referenceRadius / bodyRadius;
+            return perHit / hitsFactor(bodyRadius);
         }
     }
 
@@ -1499,14 +1521,31 @@ public record SimConfig(
      * @param count how many boulders the scenario spawns
      * @param trunkMin the thinnest a tree's trunk is, its radius in world units (G0072)
      * @param trunkMax the thickest
+     * @param stoneMin the smallest a stone is, its radius in world units - a trooper's
+     * @param stoneMax the biggest, five times that; drawn towards the small end, so most are pebbles
      */
     @With
-    public record ObstacleConfig(float radius, int count, float trunkMin, float trunkMax) {
+    public record ObstacleConfig(
+            float radius, int count, float trunkMin, float trunkMax, float stoneMin, float stoneMax) {
         public ObstacleConfig {
             Require.positive("obstacle radius", radius);
             Require.notNegative("obstacle count", count);
             Require.positive("obstacle trunkMin", trunkMin);
             Require.atLeast("obstacle trunkMax", trunkMax, trunkMin, "a trunk cannot be thickest below its thinnest");
+            Require.positive("obstacle stoneMin", stoneMin);
+            Require.atLeast("obstacle stoneMax", stoneMax, stoneMin, "a stone cannot be biggest below its smallest");
+        }
+
+        /**
+         * How big one stone is, drawn: the square of an even draw across the range, so the small end is the common
+         * one and a stone five men wide is the rare one.
+         */
+        public float stone(Randomness rng) {
+            if (stoneMin == stoneMax) {
+                return stoneMin;
+            }
+            float u = rng.nextFloat(0f, 1f);
+            return stoneMin + (stoneMax - stoneMin) * u * u;
         }
 
         /** How thick one tree's trunk is, drawn. */

@@ -102,5 +102,12 @@ public enum UnitKind {
      * body and the same way of fighting, so what to read is the ring it wears and the ground its shots leave burning;
      * what to do is what a spitter asks - get to it - without walking through what it has already spat.
      */
-    MAGMA_SPITTER
+    MAGMA_SPITTER,
+    /**
+     * The desert snake (G0095): a head and three parts behind it, going on and on through the desert in wide arcs and
+     * through whoever stands in its way - its head wounds every man it passes through - and now and then turning onto
+     * a man it picked to go through him. Nothing slows it and it never stops. What to read is where it is bending and
+     * whom it has turned onto; what to do is step out of its way, or shoot it down a part at a time, the head last.
+     */
+    SNAKE
 }

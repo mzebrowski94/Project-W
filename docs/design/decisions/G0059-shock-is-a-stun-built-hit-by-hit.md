@@ -1,6 +1,6 @@
 # G0059: Shock is a stun built hit by hit, and the boss takes none
 
-**Status.** accepted
+**Status.** amended by G0095: shock scales by the body's area, from the smallest body to the largest
 
 **Trigger.** Giving a gun a stun that needs several hits, changing what shock does while a stun runs, or
 letting the boss be stunned.

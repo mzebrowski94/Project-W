@@ -85,3 +85,4 @@ changed. Git carries the diff.
   says so, and why a solid ground is never a patch. Wrong: step 3's "the cut alone has geysers"; fixed. Slow: the
   2000-seed sweep, red on the known badlands/anthill faults, printed no codes - finding one that dealt the new biome
   first took a throwaway test; `MissionSweepTest` now prints its summary, with the fault count, before the verdict.
+- 2026-11-15, run (the desert, G0095): missing - a furniture line that stands something (stones) touches `Placed`, `MissionScenario`, `Placement.radius`, `MissionFaults` and `BiomeDefTest`; a new ground is an appended `Terrain`, its colour and its ground factors. Both added to steps 2-3. Slow: nothing new. Wrong: nothing - but the 2000-seed sweep already faults on the base (62 badland/anthill room faults, the same before and after the desert), so a green big sweep was not reachable this run.

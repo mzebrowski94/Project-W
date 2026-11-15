@@ -65,6 +65,7 @@ import pl.mzebrows.pwt.sim.system.motion.HopSystem;
 import pl.mzebrows.pwt.sim.system.motion.MovementSystem;
 import pl.mzebrows.pwt.sim.system.motion.NavigationSystem;
 import pl.mzebrows.pwt.sim.system.motion.PositionHistorySystem;
+import pl.mzebrows.pwt.sim.system.motion.SlitherSystem;
 import pl.mzebrows.pwt.sim.system.motion.StunSystem;
 import pl.mzebrows.pwt.sim.system.motion.TrooperMoveSystem;
 import pl.mzebrows.pwt.sim.system.motion.WanderSystem;
@@ -189,6 +190,8 @@ class SystemOrderTest {
                 new Before(AvoidanceSystem.class, EnemyRangedSystem.class, "planting a shooter beats the bent course"));
         rows.add(new Before(EnemyRangedSystem.class, HopSystem.class, "a gait paces a course, it does not choose one"));
         rows.add(new Before(HopSystem.class, DodgeSystem.class, "a sidestep must not land in the middle of a sit"));
+        rows.add(new Before(DodgeSystem.class, SlitherSystem.class, "a slither's course is wholly its own (G0095)"));
+        rows.add(new Before(SlitherSystem.class, DriveSystem.class, "a slither's course is committed like any other"));
         rows.add(new Before(
                 AvoidanceSystem.class, DodgeSystem.class, "a dodge bent round a rock is not the same dodge (G0012)"));
         rows.add(new Before(

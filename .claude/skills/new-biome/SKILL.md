@@ -37,6 +37,7 @@ are the one exception**, counted, because a house is a place.
 | Coat | Keys | Reach for it when |
 |---|---|---|
 | base | `base`, `fallback` | always |
+| a new ground | a `Terrain` constant **appended** (so no other renumbers), `graphic.terrain.<name>`, and `sim.ground.<name>.*` if it slows | ground the pool has no terrain for - the desert's mud (G0095) |
 | houses | `houses.min`, `houses.max` | a place worth taking - "a quarry with a base in it". 0-2; leave the block out for none. Size and doorways are the strip's (`sim.mission.ground.houses.*`). Every doorway gets a shut door at populate (G0069): a house's stock is behind three seconds of work, and a hunter that chases a man in will siege it - count that into how busy the biome is |
 | patches | `patches=rect\|blob <terrain\|neighbour> density sizeMin sizeMax; ...` | `rect` for small patches of colour, `blob` for ground worth going round (thicket). `neighbour` takes the nearer biome's base, or `fallback` |
 | crags | `crags.density`, `crags.smoothing`, `crags.terrain` | irregular masses; more smoothing, fewer and bigger. `terrain` is `rock`, or `lava` for pools nothing stands on (the caldera, G0091) - any solid terrain, laid with the crag repairs, which is why a solid ground is never a patch (`PatchGround` refuses it). Leave the block out for none |
@@ -78,7 +79,10 @@ meanwhile. The HTML prototype is for looks only.
   has them, G0082), `geysersMin/Max` (0 for none - the cut and the caldera have them, G0089, G0091), and
   `furniture.pickups=pickup <kind> min max; ...`.
   Never scaled. **Every block carries every furniture key**, zeros included: a new furniture line is a key in all of
-  them. A furniture thing with a size of its own (a tree's trunk) is drawn from its own stream in its pass, never on
+  them. A new line that stands something is also a `Placed` record, a case in `MissionScenario.populate`, in
+  `Placement.radius` and in `MissionFaults`' radius, a pass in `Placement.Biome.place` and its count drawn **after**
+  every other (so a biome with none draws as before) - the desert's stones (G0095) are the pattern. `BiomeDefTest`
+  builds a `Furniture` positionally. A furniture thing with a size of its own (a tree's trunk) is drawn from its own stream in its pass, never on
   the block; a count tied to another pass (trees by each nest) is drawn from the biome's stream, nest by nest, so a
   biome placed again keeps its counts (G0070).
 - A nest wakes only for somebody **in its own biome** within `wakeRadius` (G0062); a biome never counts on its

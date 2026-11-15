@@ -19,6 +19,8 @@ import pl.mzebrows.pwt.map.Randomness;
  * @param treesMax the most
  * @param treesByNestMin the fewest of them stood within {@code treeReach} of each nest, before the rest go anywhere
  * @param treesByNestMax the most
+ * @param stonesMin the fewest stones, rock from a man's size to five times it (the desert's): zero in every other biome
+ * @param stonesMax the most
  * @param turretsMin the fewest turrets, each by a point (G0082): zero in every biome but the plain
  * @param turretsMax the most
  * @param geysersMin the fewest geysers, ground that erupts in fire (G0089): zero in every biome but the cut
@@ -38,6 +40,8 @@ public record Furniture(
         int treesMax,
         int treesByNestMin,
         int treesByNestMax,
+        int stonesMin,
+        int stonesMax,
         int turretsMin,
         int turretsMax,
         int geysersMin,
@@ -54,6 +58,7 @@ public record Furniture(
         range("boulders", bouldersMin, bouldersMax);
         range("trees", treesMin, treesMax);
         range("trees by a nest", treesByNestMin, treesByNestMax);
+        range("stones", stonesMin, stonesMax);
         range("turrets", turretsMin, turretsMax);
         range("geysers", geysersMin, geysersMax);
         pickups = List.copyOf(pickups);
@@ -87,6 +92,11 @@ public record Furniture(
     /** How many trees stand by one nest, drawn. */
     public int treesByNest(Randomness rng) {
         return between(rng, treesByNestMin, treesByNestMax);
+    }
+
+    /** How many stones, drawn. */
+    public int stones(Randomness rng) {
+        return between(rng, stonesMin, stonesMax);
     }
 
     /** How many turrets, drawn. */

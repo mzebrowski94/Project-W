@@ -67,7 +67,13 @@ public enum Terrain {
      * constant so it is drawn as what it is, glowing (pillar 5). Laid as the caldera's crags, so its pools are repaired
      * as rock's are and never close a pass.
      */
-    LAVA(false);
+    LAVA(false),
+
+    /**
+     * Deep mud, the desert's: passable, and slow to cross as a {@link #THICKET} is - what it costs is asked of
+     * {@code sim} in the same way. Its own constant so it is drawn as mud rather than as undergrowth (pillar 5).
+     */
+    MUD(true);
 
     private final boolean passable;
 
