@@ -586,17 +586,7 @@ public final class Spawner {
         // A strain that never walks is scenery to the solver: what it meets is pushed out of its way (G0048).
         entity.getComponent(Collider.class).movable = !def.rooted();
         SlitherDef slither = def.slither();
-        entity.getComponent(Slither.class)
-                .set(
-                        slither.parts(),
-                        slither.partScale(),
-                        slither.spacing(),
-                        (float) StrictMath.toRadians(slither.turnDegrees()) * config.tickSeconds(),
-                        (float) StrictMath.toRadians(slither.tightTurnDegrees()) * config.tickSeconds(),
-                        slither.lookAhead(),
-                        slither.roam(),
-                        ticks(slither.bendMinSeconds()),
-                        ticks(slither.bendMaxSeconds()));
+        entity.getComponent(Slither.class).set(slither, config.tickSeconds());
         if (slither.enabled()) {
             // Through every body but scenery, still touching what it passes through, its head biting as it goes and
             // a man it passes through taking what the slither declares rather than a claw's kill (G0087).

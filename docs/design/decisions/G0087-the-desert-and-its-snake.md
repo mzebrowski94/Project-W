@@ -2,7 +2,7 @@
 
 **Status.** accepted
 
-**Trigger.** Adding a biome with stones or mud; a creature that passes through bodies and still bites; a creature
+**Trigger.** Adding a biome with stones or mud; a biome dealt wider than the rest; a creature that passes through bodies and still bites; a creature
 in parts that lose their health one at a time; a creature that never stops or never hunts; a shot at a snake's tail.
 
 **Enforced by.** `SnakeTest`; `MissionSweepTest` (the desert's roster and stones fit their room on every tier);
@@ -25,24 +25,34 @@ turning in wide arcs unless space is short, its health in four parts lost from t
   its steering last of what steers and committed by `DriveSystem` - so a pace slows it and a stun holds it. In the open
   it bends one way, the other or straight on, for a time drawn from `RngStream.SLITHER`, at a small turn; where its
   way is shut - rock or a shut door within `lookAhead`, the edge of its biome, or scenery it ran up against - it turns
-  hard a quarter round towards whichever side is open. Past `roam` from home it bends back. **It never hunts.**
+  hard a quarter round towards whichever side is open. Past `roam` from home it bends back. **It latches nothing as the
+  swarm does, but from time to time it picks a man** (asked for 2026-11-15): every `huntMinSeconds`-`huntMaxSeconds`,
+  drawn, the nearest man on his feet in its own biome within `huntRange`, and it turns onto him at `huntTurnDegrees` to
+  go through him once - until its head has bitten him, he is down or gone, or `huntSeconds` run out. A way that is
+  shut still turns it first. **Nothing slows it** (`unslowed`, read by `Pace`): no beam, glue or mud.
 - **It passes through every body but scenery** and still touches what it passes through (`Collider.touchesThrough`
   beside G0074's `throughBodies`): its head bites with the harm the slither declares (`WOUND`), **once a pass** - a man
   still inside its head from the last bite is not bitten again however short his grace (bite slots on `Slither`,
   freed once he is clear). A shot along its way hits it.
 - **Its health is shared between its parts**, rounded up, so one part's worth lost takes the last part off and the
-  head goes last. **Only the head is a body**: the parts behind it are drawn, never hit - the cheap version, for review.
+  head goes last. **Only the head is a body**: the parts behind it are drawn, never hit - the cheap version, for review -
+  and drawn so: see-through (`graphic.slither.*`, 40%) with a denser core, the head whole.
+- **The desert is crowded** (asked for 2026-11-15): 16-20 runners and 2-3 of their holes, 3-4 snakes, 2-3 sludgers.
+  To fit its room on hard (G0070) it is the one biome dealt wider, 62-70 columns against 50-58.
+- **The pulse rifle does 12 a bolt, stunning after 2 hits** (were 10 and 3; asked for a little more damage): at 11 or
+  12 with three hits an easy runner died on the bolt that would have stunned it, breaking "the pulse rifle stuns before
+  it kills" - so the stun came down a hit with the damage.
 
 **Rejected alternatives.**
 
 - *A part per entity, each a body that passes its damage to the head* - every part shootable, but a second entity
   kind tied by handles and damage forwarded across them; left until a playtest says shooting the tail matters.
-- *A snake that hunts* - the ask is a thing that moves on through the biome; one that came for you would be a grunt
-  with a tail.
+- *A snake that hunts as the swarm does* - latching and chasing a man until he is far off; it goes through one man once
+  and goes back to its own way, so it is still a thing that moves on through the biome.
 - *Stones as rock tiles* - the grid lays a level out and nothing else (G0009), and a pentagon five men wide is not a
   tile.
 - *Mire for the mud* - mire costs nothing to cross, and changing it would change the fen.
 
-**Do not build.** a snake that hunts or stops; a snake pushed by or pushing bodies; a bite every tick it is inside a
+**Do not build.** a snake that chases a man past one go through him, or stops; a snake something slows; a snake pushed by or pushing bodies; a bite every tick it is inside a
 man; stones in any biome but the desert without a decision; mud that differs from a thicket's numbers without a
 decision.

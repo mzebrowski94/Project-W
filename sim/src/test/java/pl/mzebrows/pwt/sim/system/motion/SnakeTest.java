@@ -43,6 +43,10 @@ class SnakeTest {
     /** Well inside its roam, so a test of its arcs is not a test of it going home. */
     private static final float ROAM = ARENA;
 
+    private static final float HUNT_RANGE = 40f;
+    private static final float HUNT_DEGREES = 120f;
+    private static final float CHASE_SECONDS = 4f;
+
     @Test
     void neverStopsInTheOpen() {
         Simulation simulation = new Simulation(snakes());
@@ -178,6 +182,50 @@ class SnakeTest {
         assertThat(snake.getComponent(Health.class).current).isLessThan(whole);
     }
 
+    /** Nothing slows it: wading mud it keeps its pace (G0087). */
+    @Test
+    void keepsItsPaceInMud() {
+        TileMap mud = AlphaWorlds.ground()
+                .rect(0, 0, AlphaWorlds.ARENA_TILES, AlphaWorlds.ARENA_TILES, Terrain.MUD)
+                .build();
+        SimConfig config = straight();
+        Simulation simulation = new Simulation(
+                config.withGround(
+                        config.ground().map(Terrain.MUD, ground -> new pl.mzebrows.pwt.sim.def.GroundDef(0.4f, 0.4f))),
+                mud);
+        Entity snake = facingEast(simulation, 20f, MIDDLE);
+        Position at = snake.getComponent(Position.class);
+        simulation.step();
+        float fromX = at.x;
+
+        steps(simulation, ticksIn(1f));
+
+        assertThat(at.x - fromX).isGreaterThan(SPEED * 0.9f);
+    }
+
+    /** Now and then it picks a man off its line and goes through him once, then goes back to its own way. */
+    @Test
+    void picksAManOffItsLineAndGoesThroughHim() {
+        Simulation simulation = new Simulation(hunting());
+        Entity trooper = simulation.spawnTrooper(MIDDLE, MIDDLE + 15f);
+        facingEast(simulation, 20f, MIDDLE);
+
+        steps(simulation, ticksIn(4f));
+
+        assertThat(trooper.getComponent(Vitality.class).wounds).isEqualTo(1);
+    }
+
+    @Test
+    void picksNobodyOutsideItsRange() {
+        Simulation simulation = new Simulation(hunting());
+        Entity trooper = simulation.spawnTrooper(ARENA - 5f, ARENA - 5f);
+        facingEast(simulation, 10f, 10f);
+
+        steps(simulation, ticksIn(1f));
+
+        assertThat(trooper.getComponent(Vitality.class).wounds).isZero();
+    }
+
     /** Each part's worth of health lost takes the last part off; the head is the last to go. */
     @Test
     void losesAPartFromTheTailForEveryPartsWorthOfHealthLost() {
@@ -232,7 +280,16 @@ class SnakeTest {
         return slithering(0f);
     }
 
+    /** One that picks a man straight away and goes on picking, for the tests of its charge. */
+    private static SimConfig hunting() {
+        return slithering(0f, TICK);
+    }
+
     private static SimConfig slithering(float turnDegrees) {
+        return slithering(turnDegrees, 0f);
+    }
+
+    private static SimConfig slithering(float turnDegrees, float huntSeconds) {
         return config().withUnit(
                         UnitKind.SNAKE,
                         snake -> snake.withSpeed(SPEED)
@@ -252,6 +309,12 @@ class SnakeTest {
                                         ROAM,
                                         1f,
                                         2f,
-                                        Harm.WOUND)));
+                                        Harm.WOUND,
+                                        true,
+                                        huntSeconds,
+                                        huntSeconds,
+                                        HUNT_RANGE,
+                                        HUNT_DEGREES,
+                                        CHASE_SECONDS)));
     }
 }

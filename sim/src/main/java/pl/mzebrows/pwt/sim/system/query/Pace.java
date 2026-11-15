@@ -8,6 +8,7 @@ import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Sling;
+import pl.mzebrows.pwt.sim.component.Slither;
 import pl.mzebrows.pwt.sim.component.Slowed;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -45,6 +46,7 @@ public final class Pace {
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Barrage> BARRAGE = ComponentMapper.getFor(Barrage.class);
     private static final ComponentMapper<Sling> SLING = ComponentMapper.getFor(Sling.class);
+    private static final ComponentMapper<Slither> SLITHER = ComponentMapper.getFor(Slither.class);
 
     private Pace() {}
 
@@ -55,6 +57,10 @@ public final class Pace {
      * being a rule every mover has to opt into.
      */
     public static float of(Entity entity, TileMap map, Defs<Terrain, GroundDef> ground) {
+        if (SLITHER.has(entity) && SLITHER.get(entity).unslowed) {
+            // A slither keeps its pace: no beam, glue or mud slows it (G0087).
+            return 1f;
+        }
         float pace = SLOWED.has(entity) ? SLOWED.get(entity).factor() : 1f;
         if (VITALITY.has(entity)) {
             // A wound is the third way to be slow, and the same answer (G0053).

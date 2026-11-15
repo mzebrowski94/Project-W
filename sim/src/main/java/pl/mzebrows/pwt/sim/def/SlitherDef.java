@@ -5,10 +5,15 @@ import lombok.With;
 /**
  * How a strain that slithers moves and what it is made of (G0087): the desert snake's.
  *
- * <p>A <strong>slither</strong> never stops and never hunts. It goes on along its heading, bending in a wide arc one
+ * <p>A <strong>slither</strong> never stops. It goes on along its heading, bending in a wide arc one
  * way or the other for a while, then another, and turns hard only where the way ahead is shut - rock, the edge of the
  * field, or something it has run up against. Too far from where it was put down, it bends back towards it. It passes
  * through every body but scenery, and what its head touches on the way it bites as its claws would.
+ * It never hunts as the swarm does - nothing latches.
+ *
+ * <p>From time to time it <strong>picks a man</strong> - the nearest on the player's side in its own biome within
+ * {@code huntRange} - and turns onto him to go through him once, then goes back to bending about until it picks
+ * again; nothing slows it if it is {@code unslowed}.
  *
  * <p>It is in <strong>parts</strong>, the head first and the rest trailing behind it, each a little smaller, and its
  * health is shared out between them: every part's worth lost takes the last part off, so the head is the last to go.
@@ -25,6 +30,13 @@ import lombok.With;
  * @param bendMinSeconds the shortest one bend lasts before it picks another
  * @param bendMaxSeconds the longest
  * @param harm what its head does to a man it passes through
+ * @param unslowed whether nothing slows it - no beam, no glue, no mud: a slither keeps its pace
+ * @param huntMinSeconds the shortest it goes between picking a man to go through, once it has gone through one or
+ *     given up on him. Zero never picks one
+ * @param huntMaxSeconds the longest
+ * @param huntRange how far off a man may be, in its own biome, for it to pick him, in world units
+ * @param huntTurnDegrees how fast it turns onto the man it picked, in degrees a second
+ * @param huntSeconds how long it goes for him before it gives up and goes back to bending about
  */
 @With
 public record SlitherDef(
@@ -37,7 +49,13 @@ public record SlitherDef(
         float roam,
         float bendMinSeconds,
         float bendMaxSeconds,
-        Harm harm) {
+        Harm harm,
+        boolean unslowed,
+        float huntMinSeconds,
+        float huntMaxSeconds,
+        float huntRange,
+        float huntTurnDegrees,
+        float huntSeconds) {
 
     /** The most parts a strain may be in - a snapshot carries each part as a field of its own. */
     public static final int MOST = 4;
@@ -57,11 +75,22 @@ public record SlitherDef(
         Require.notNegative("slither bendMinSeconds", bendMinSeconds);
         Require.atLeast(
                 "slither bendMaxSeconds", bendMaxSeconds, bendMinSeconds, "a bend cannot last longest below shortest");
+        Require.notNegative("slither huntMinSeconds", huntMinSeconds);
+        Require.atLeast(
+                "slither huntMaxSeconds", huntMaxSeconds, huntMinSeconds, "a wait cannot last longest below shortest");
+        Require.notNegative("slither huntRange", huntRange);
+        Require.notNegative("slither huntTurnDegrees", huntTurnDegrees);
+        Require.notNegative("slither huntSeconds", huntSeconds);
+    }
+
+    /** Whether it picks a man to go through from time to time. */
+    public boolean hunts() {
+        return huntMinSeconds > 0f && huntRange > 0f && huntSeconds > 0f;
     }
 
     /** Never slithers. What every strain but the snake declares. */
     public static SlitherDef off() {
-        return new SlitherDef(0, 1f, 1f, 0f, 0f, 0f, 0f, 0f, 0f, Harm.KILL);
+        return new SlitherDef(0, 1f, 1f, 0f, 0f, 0f, 0f, 0f, 0f, Harm.KILL, false, 0f, 0f, 0f, 0f, 0f);
     }
 
     /** Whether it slithers at all. */

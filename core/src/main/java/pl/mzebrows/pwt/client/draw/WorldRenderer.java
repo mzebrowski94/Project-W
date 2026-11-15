@@ -130,6 +130,7 @@ public final class WorldRenderer implements Disposable {
     private final SlingMark slingMark;
     private final ShadowMark shadowMark;
     private final PopMark popMark;
+    private final SlitherMark slitherMark;
 
     /** The client's own clock, for the post's pulse alone - a look, never read back by the simulation. */
     private float pulseSeconds;
@@ -323,7 +324,8 @@ public final class WorldRenderer implements Disposable {
 
     /**
      * The parts trailing a slithering head (G0087), tail first so each lies under the one in front, as many as it has
-     * left - one fewer for every part's worth of health lost. Moved by the head's interpolation, which is near enough
+     * left - one fewer for every part's worth of health lost - each see-through with a denser core ({@link
+     * SlitherMark}). Moved by the head's interpolation, which is near enough
      * for parts that follow it.
      */
     private void drawParts(Entity entity, float x, float y, float headRadius, Color base) {
@@ -331,13 +333,18 @@ public final class WorldRenderer implements Disposable {
         Position head = POSITION.get(entity);
         float shiftX = x - head.x;
         float shiftY = y - head.y;
-        shapes.setColor(darkened(SCRATCH.set(base), 0.15f));
         for (int part = slither.partsLeft - 1; part >= 1; part--) {
-            shapes.circle(
-                    slither.partX(part) + shiftX,
-                    slither.partY(part) + shiftY,
-                    slither.radiusOf(part, headRadius),
-                    CIRCLE_SEGMENTS);
+            float partX = slither.partX(part) + shiftX;
+            float partY = slither.partY(part) + shiftY;
+            float radius = slither.radiusOf(part, headRadius);
+            SCRATCH.set(base);
+            SCRATCH.a = slitherMark.alpha();
+            shapes.setColor(SCRATCH);
+            shapes.circle(partX, partY, radius, CIRCLE_SEGMENTS);
+            SCRATCH.set(base);
+            SCRATCH.a = slitherMark.coreAlpha();
+            shapes.setColor(SCRATCH);
+            shapes.circle(partX, partY, radius * slitherMark.coreScale(), CIRCLE_SEGMENTS);
         }
     }
 

@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.component;
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
 import pl.mzebrows.pwt.sim.def.SlitherDef;
+import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * A strain that slithers (G0087): its heading, the bend it is in, and where the parts trailing its head lie.
@@ -38,6 +39,33 @@ public final class Slither implements Component, Pool.Poolable {
     public float tightCos;
 
     public float tightSin;
+
+    /** One tick's turn onto the man it picked, the same way. */
+    public float huntCos;
+
+    public float huntSin;
+
+    /** Whether nothing slows it - a beam, glue, mud (G0087). Read by {@code Pace}. */
+    public boolean unslowed;
+
+    /** Whether it picks a man to go through from time to time. */
+    public boolean hunts;
+
+    /** How long it goes between picking a man, drawn between these; how far off he may be; how long it goes for him. */
+    public int huntMinTicks;
+
+    public int huntMaxTicks;
+    public float huntRange;
+    public int huntTicks;
+
+    /** The man it is going for, by handle, or nobody. */
+    public long prey = Handle.NOBODY;
+
+    /** Ticks left of going for him before it gives up. */
+    public int preyTicks;
+
+    /** Ticks left before it picks a man again; below zero, not yet drawn. */
+    public int waitTicks;
 
     /** How many ticks of turning hard take it a quarter of the way round: one shut look turns it that far. */
     public int tightSpan;
@@ -98,35 +126,41 @@ public final class Slither implements Component, Pool.Poolable {
     public float part3X;
     public float part3Y;
 
-    /** Sets the configuration and lays every part on its home, for spawning and evolving alike. */
-    public Slither set(
-            int newParts,
-            float newPartScale,
-            float newSpacing,
-            float newTurnPerTick,
-            float newTightTurnPerTick,
-            float newLookAhead,
-            float newRoam,
-            int newBendMinTicks,
-            int newBendMaxTicks) {
-        this.enabled = newParts > 0;
-        this.parts = newParts;
-        this.partsLeft = newParts;
-        this.partScale = newPartScale;
-        this.spacing = newSpacing;
-        this.turnCos = (float) StrictMath.cos(newTurnPerTick);
-        this.turnSin = (float) StrictMath.sin(newTurnPerTick);
-        this.tightCos = (float) StrictMath.cos(newTightTurnPerTick);
-        this.tightSin = (float) StrictMath.sin(newTightTurnPerTick);
-        this.tightSpan = newTightTurnPerTick > 0f ? (int) Math.ceil(StrictMath.PI * 0.5 / newTightTurnPerTick) : 0;
-        this.lookAhead = newLookAhead;
-        this.roam = newRoam;
-        this.bendMinTicks = newBendMinTicks;
-        this.bendMaxTicks = newBendMaxTicks;
+    /** Sets the configuration from the strain's definition, for spawning and evolving alike. */
+    public Slither set(SlitherDef def, float tickSeconds) {
+        this.enabled = def.enabled();
+        this.parts = def.parts();
+        this.partsLeft = def.parts();
+        this.partScale = def.partScale();
+        this.spacing = def.spacing();
+        float turn = (float) StrictMath.toRadians(def.turnDegrees()) * tickSeconds;
+        float tight = (float) StrictMath.toRadians(def.tightTurnDegrees()) * tickSeconds;
+        float hunt = (float) StrictMath.toRadians(def.huntTurnDegrees()) * tickSeconds;
+        this.turnCos = (float) StrictMath.cos(turn);
+        this.turnSin = (float) StrictMath.sin(turn);
+        this.tightCos = (float) StrictMath.cos(tight);
+        this.tightSin = (float) StrictMath.sin(tight);
+        this.huntCos = (float) StrictMath.cos(hunt);
+        this.huntSin = (float) StrictMath.sin(hunt);
+        this.tightSpan = tight > 0f ? (int) Math.ceil(StrictMath.PI * 0.5 / tight) : 0;
+        this.lookAhead = def.lookAhead();
+        this.roam = def.roam();
+        this.bendMinTicks = Ticks.of(def.bendMinSeconds(), tickSeconds);
+        this.bendMaxTicks = Ticks.of(def.bendMaxSeconds(), tickSeconds);
+        this.unslowed = def.unslowed();
+        this.hunts = def.enabled() && def.hunts();
+        this.huntMinTicks = Ticks.of(def.huntMinSeconds(), tickSeconds);
+        this.huntMaxTicks = Ticks.of(def.huntMaxSeconds(), tickSeconds);
+        this.huntRange = def.huntRange();
+        this.huntTicks = Ticks.of(def.huntSeconds(), tickSeconds);
         this.bend = 0;
         this.bendTicks = 0;
         this.tightTicks = 0;
         this.tightSide = 1;
+        this.prey = Handle.NOBODY;
+        this.preyTicks = 0;
+        // The first wait is drawn on its first tick, so a snake put down never goes for a man at once.
+        this.waitTicks = -1;
         this.bitten0 = Handle.NOBODY;
         this.bitten1 = Handle.NOBODY;
         this.bitten2 = Handle.NOBODY;
@@ -250,6 +284,17 @@ public final class Slither implements Component, Pool.Poolable {
         tightCos = 0f;
         tightSin = 0f;
         tightSpan = 0;
+        huntCos = 0f;
+        huntSin = 0f;
+        unslowed = false;
+        hunts = false;
+        huntMinTicks = 0;
+        huntMaxTicks = 0;
+        huntRange = 0f;
+        huntTicks = 0;
+        prey = Handle.NOBODY;
+        preyTicks = 0;
+        waitTicks = 0;
         lookAhead = 0f;
         roam = 0f;
         bendMinTicks = 0;

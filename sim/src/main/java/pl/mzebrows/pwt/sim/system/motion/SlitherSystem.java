@@ -7,12 +7,14 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Facing;
+import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -20,6 +22,7 @@ import pl.mzebrows.pwt.sim.component.Slither;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.SlitherDef;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 
@@ -27,8 +30,9 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * Drives a strain that slithers (G0087): on and on, never stopping, in wide arcs.
  *
  * <p><strong>It decides the whole of its course</strong>, so it writes its steering last of everything that steers
- * and {@code DriveSystem} reads it as any other answer (G0010): a pace still slows it, a stun still holds it. It never
- * hunts: what it passes through is what was in its way.
+ * and {@code DriveSystem} reads it as any other answer (G0010): a stun still holds it, and a pace slows it unless it
+ * is unslowed. It latches nothing as the swarm does; <strong>from time to time it picks a man</strong> in its biome
+ * and turns onto him to go through him once, then goes back to bending about.
  *
  * <p><strong>In the open it bends</strong> one way or the other, or goes straight on, for a while drawn from the
  * strain's range, then picks again - slowly, so it goes round in wide arcs. <strong>Where its way is shut</strong> -
@@ -64,6 +68,7 @@ public final class SlitherSystem extends EntitySystem {
 
     private ImmutableArray<Entity> slithering = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> men = new ImmutableArray<>(new Array<>());
 
     public SlitherSystem(Rng rng, Solid solid, float tickSeconds) {
         this.rng = rng;
@@ -78,6 +83,8 @@ public final class SlitherSystem extends EntitySystem {
                 engine.getEntitiesFor(Family.all(Slither.class, Position.class, Body.class, Speed.class, Steering.class)
                         .get());
         handled = engine.getEntitiesFor(Family.all(Handle.class).get());
+        men = engine.getEntitiesFor(Family.all(Vitality.class, Position.class, Faction.class, Handle.class)
+                .get());
     }
 
     @Override
@@ -182,9 +189,12 @@ public final class SlitherSystem extends EntitySystem {
             slither.tightSide = openSide(at, radius, slither);
             slither.tightTicks = slither.tightSpan;
         }
+        Entity prey = slither.hunts ? prey(at, slither) : null;
         if (slither.tightTicks > 0) {
             slither.tightTicks--;
             turn(slither, slither.tightSide, slither.tightCos, slither.tightSin);
+        } else if (prey != null) {
+            onto(slither, at, POSITION.get(prey));
         } else {
             turn(slither, bendOf(at, slither), slither.turnCos, slither.turnSin);
         }
@@ -192,6 +202,99 @@ public final class SlitherSystem extends EntitySystem {
         slither.lastY = at.y;
         float speed = SPEED.get(entity).value;
         STEERING.get(entity).set(slither.headingX * speed, slither.headingY * speed);
+    }
+
+    /**
+     * The man it is going for this tick, or null (G0087). It goes for one until its head has bitten him, he is down or
+     * gone, or its time runs out; then it waits a drawn while and picks again - the nearest man on his feet in its own
+     * biome within its range, or, with nobody there, waits again.
+     */
+    private @Nullable Entity prey(Position at, Slither slither) {
+        if (slither.prey != Handles.NOBODY) {
+            Entity man = Handles.resolve(handled, slither.prey);
+            slither.preyTicks--;
+            if (man != null && Drivers.huntable(man) && slither.preyTicks > 0 && !bitHim(slither)) {
+                return man;
+            }
+            slither.prey = Handles.NOBODY;
+            wait(slither);
+            return null;
+        }
+        if (slither.waitTicks < 0) {
+            wait(slither);
+        }
+        if (slither.waitTicks > 0) {
+            slither.waitTicks--;
+            return null;
+        }
+        Entity man = nearest(at, slither);
+        if (man == null) {
+            wait(slither);
+            return null;
+        }
+        slither.prey = Handles.of(man);
+        slither.preyTicks = slither.huntTicks;
+        return man;
+    }
+
+    private static boolean bitHim(Slither slither) {
+        for (int slot = 0; slot < SlitherDef.MOST; slot++) {
+            if (slither.bitten(slot) == slither.prey) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void wait(Slither slither) {
+        slither.waitTicks = slither.huntMinTicks + rng.nextInt(slither.huntMaxTicks - slither.huntMinTicks + 1);
+    }
+
+    /**
+     * The nearest man on his feet in its home biome within its range. A scan once per pick, every few seconds a snake,
+     * not a pair loop a tick: the player's side is a handful of men (as {@code Drivers.nearestLivingTarget}).
+     */
+    private @Nullable Entity nearest(Position at, Slither slither) {
+        int home = map.biomeAt(slither.homeX, slither.homeY);
+        float best = slither.huntRange * slither.huntRange;
+        Entity nearest = null;
+        for (int i = 0; i < men.size(); i++) {
+            Entity man = men.get(i);
+            if (!Drivers.huntable(man)) {
+                continue;
+            }
+            Position where = POSITION.get(man);
+            if (map.biomeAt(where.x, where.y) != home) {
+                continue;
+            }
+            float dx = where.x - at.x;
+            float dy = where.y - at.y;
+            float distance = dx * dx + dy * dy;
+            if (distance <= best) {
+                best = distance;
+                nearest = man;
+            }
+        }
+        return nearest;
+    }
+
+    /** Turns onto him at its hunting turn, straight at him once one tick's turn would take it past him. */
+    private static void onto(Slither slither, Position at, Position him) {
+        float toX = him.x - at.x;
+        float toY = him.y - at.y;
+        float distance = (float) Math.sqrt(toX * toX + toY * toY);
+        if (distance <= EPSILON) {
+            return;
+        }
+        toX /= distance;
+        toY /= distance;
+        if (slither.headingX * toX + slither.headingY * toY >= slither.huntCos) {
+            slither.headingX = toX;
+            slither.headingY = toY;
+            return;
+        }
+        int side = slither.headingX * toY - slither.headingY * toX >= 0f ? 1 : -1;
+        turn(slither, side, slither.huntCos, slither.huntSin);
     }
 
     /** Rock, a shut door or the edge of its biome within its look ahead. */
