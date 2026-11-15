@@ -72,3 +72,4 @@ changed. Git carries the diff.
   every seed; `sim.mission.placement.pointKeepOff` 50 -> 60 to stay above the point's `aggroRadius`, now 58 - measured: 66 left
   nests unplaced on 6 seeds, 74 on 15. Nothing wrong or missing; slow: finding the largest keep-off that fits is a
   sweep per guess.
+- 2026-11-15, run (the desert, G0087): missing - a furniture line that stands something (stones) touches `Placed`, `MissionScenario`, `Placement.radius`, `MissionFaults` and `BiomeDefTest`; a new ground is an appended `Terrain`, its colour and its ground factors. Both added to steps 2-3. Slow: nothing new. Wrong: nothing - but the 2000-seed sweep already faults on the base (62 badland/anthill room faults, the same before and after the desert), so a green big sweep was not reachable this run.
