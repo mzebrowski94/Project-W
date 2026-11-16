@@ -588,7 +588,7 @@ public final class Spawner {
         entity.getComponent(Collider.class).movable = !def.rooted();
         SlitherDef slither = def.slither();
         entity.getComponent(Slither.class).set(slither, config.tickSeconds());
-        // A slither never stops: nothing holds it still (G0095).
+        // A slither stops for a declared stun and nothing else: no blow holds it still (G0095).
         entity.getComponent(Stunned.class).immuneIf(slither.enabled());
         if (slither.enabled()) {
             // Through every body but scenery, still touching what it passes through, its head biting as it goes and

@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system.motion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.PULSE_STUN_AFTER_HITS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TICK;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -19,14 +20,17 @@ import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Slither;
+import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PerceptionDef;
+import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.SlitherDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 
 /**
- * The desert snake (G0095): it never stops, goes round in wide arcs, turns hard only where its way is shut, passes
+ * The desert snake (G0095): it never stops but for a declared stun, goes round in wide arcs, turns hard only where its way is shut, passes
  * through whoever stands in its way and wounds him with its head, and comes apart a part at a time from the tail.
  */
 class SnakeTest {
@@ -35,8 +39,11 @@ class SnakeTest {
     private static final float TURN_DEGREES = 40f;
     private static final float TIGHT_DEGREES = 220f;
     private static final float LOOK_AHEAD = 8f;
-    private static final int PARTS = 4;
-    private static final int HEALTH = 400;
+    /** As many as a strain may be in, so every part a snapshot carries is laid and read here. */
+    private static final int PARTS = SlitherDef.MOST;
+
+    /** A whole number a part. */
+    private static final int HEALTH = 60 * PARTS;
 
     private static final float MIDDLE = ARENA * 0.5f;
 
@@ -46,6 +53,18 @@ class SnakeTest {
     private static final float HUNT_RANGE = 40f;
     private static final float HUNT_DEGREES = 120f;
     private static final float CHASE_SECONDS = 4f;
+
+    private static final float STUN_SECONDS = 1f;
+    private static final int HALF_THE_STUN = ticksIn(STUN_SECONDS * 0.5f);
+    private static final float MOST_OF_HALF_A_SECONDS_WAY = SPEED * 0.45f;
+
+    /** Where a snake with the whole field east of it starts. */
+    private static final float WEST = 20f;
+
+    private static final float BEHIND_IT = 4f;
+
+    /** Long enough for a bolt fired that far behind it to catch it up and land. */
+    private static final int UNTIL_A_BOLT_LANDS = 10;
 
     @Test
     void neverStopsInTheOpen() {
@@ -182,23 +201,87 @@ class SnakeTest {
         assertThat(snake.getComponent(Health.class).current).isLessThan(whole);
     }
 
-    /** Nothing holds it still: a stun, a recoil or a clinch lands on it and it goes on as before (G0095). */
     @Test
-    void goesOnThroughAStun() {
+    void goesOnThroughAStaggerAndAClinch() {
         Simulation simulation = new Simulation(straight());
-        Entity snake = facingEast(simulation, 20f, MIDDLE);
+        Entity snake = facingEast(simulation, WEST, MIDDLE);
         Position at = snake.getComponent(Position.class);
         simulation.step();
-        pl.mzebrows.pwt.sim.component.Stunned stunned = snake.getComponent(pl.mzebrows.pwt.sim.component.Stunned.class);
-        stunned.daze(ticksIn(1f));
-        stunned.apply(ticksIn(1f), 0f);
-        stunned.clinch(ticksIn(1f));
+        Stunned stunned = snake.getComponent(Stunned.class);
+        stunned.apply(ticksIn(STUN_SECONDS), 0f);
+        stunned.clinch(ticksIn(STUN_SECONDS));
         float fromX = at.x;
 
-        steps(simulation, ticksIn(0.5f));
+        steps(simulation, HALF_THE_STUN);
 
         assertThat(stunned.active()).isFalse();
-        assertThat(at.x - fromX).isGreaterThan(SPEED * 0.45f);
+        assertThat(at.x - fromX).isGreaterThan(MOST_OF_HALF_A_SECONDS_WAY);
+    }
+
+    @Test
+    void isHeldStillByADeclaredStun() {
+        Simulation simulation = new Simulation(straight());
+        Entity snake = facingEast(simulation, WEST, MIDDLE);
+        Position at = snake.getComponent(Position.class);
+        simulation.step();
+        Stunned stunned = stun(snake);
+        float fromX = at.x;
+
+        steps(simulation, HALF_THE_STUN);
+
+        assertThat(stunned.active()).isTrue();
+        assertThat(at.x - fromX).isLessThan(SPEED * TICK * 2f);
+    }
+
+    @Test
+    void goesOnOnceTheStunRunsOut() {
+        Simulation simulation = new Simulation(straight());
+        Entity snake = facingEast(simulation, WEST, MIDDLE);
+        Position at = snake.getComponent(Position.class);
+        simulation.step();
+        stun(snake);
+        float fromX = at.x;
+
+        steps(simulation, ticksIn(STUN_SECONDS + 0.5f));
+
+        assertThat(at.x - fromX).isBetween(MOST_OF_HALF_A_SECONDS_WAY, SPEED * STUN_SECONDS);
+    }
+
+    @Test
+    void isStunnedByThePulseRiflesShock() {
+        Simulation simulation = new Simulation(straight());
+        Entity snake = facingEast(simulation, WEST, MIDDLE);
+        for (int bolt = 0; bolt < PULSE_STUN_AFTER_HITS; bolt++) {
+            simulation.spawnProjectile(WEST - BEHIND_IT, MIDDLE, 1f, 0f, WeaponKind.PULSE, Side.PLAYER);
+        }
+
+        steps(simulation, UNTIL_A_BOLT_LANDS);
+
+        assertThat(snake.getComponent(Stunned.class).active()).isTrue();
+    }
+
+    @Test
+    void bitesNobodyStoodInItsHeadWhileItIsStunned() {
+        Simulation simulation = new Simulation(straight());
+        Entity snake = facingEast(simulation, MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + 1f, MIDDLE);
+        stun(snake);
+
+        steps(simulation, HALF_THE_STUN);
+
+        assertThat(trooper.getComponent(Vitality.class).wounds).isZero();
+    }
+
+    @Test
+    void bitesAManStillInItsHeadOnceTheStunRunsOut() {
+        Simulation simulation = new Simulation(straight());
+        Entity snake = facingEast(simulation, MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + 1f, MIDDLE);
+        stun(snake);
+
+        steps(simulation, ticksIn(STUN_SECONDS) + HALF_THE_STUN);
+
+        assertThat(trooper.getComponent(Vitality.class).wounds).isEqualTo(1);
     }
 
     /** Nothing slows it: wading mud it keeps its pace (G0095). */
@@ -258,7 +341,7 @@ class SnakeTest {
         hit(simulation, snake, part);
         assertThat(slither.partsLeft).isEqualTo(PARTS - 1);
 
-        hit(simulation, snake, part * 2);
+        hit(simulation, snake, part * (PARTS - 2));
         assertThat(slither.partsLeft).isEqualTo(1);
     }
 
@@ -272,15 +355,24 @@ class SnakeTest {
 
         steps(simulation, ticksIn(1.5f));
 
-        assertThat(slither.partX(1)).isLessThan(head.x);
-        assertThat(slither.partX(2)).isLessThan(slither.partX(1));
-        assertThat(slither.partX(3)).isLessThan(slither.partX(2));
+        float lead = head.x;
+        for (int part = 1; part < PARTS; part++) {
+            assertThat(slither.partX(part)).as("part %d", part).isLessThan(lead);
+            lead = slither.partX(part);
+        }
     }
 
     private static Entity facingEast(Simulation simulation, float x, float y) {
         Entity snake = simulation.spawnUnit(UnitKind.SNAKE, x, y);
         snake.getComponent(pl.mzebrows.pwt.sim.component.Facing.class).face(1f, 0f);
         return snake;
+    }
+
+    /** A declared stun on it, as the pulse rifle's shock lands one. */
+    private static Stunned stun(Entity snake) {
+        Stunned stunned = snake.getComponent(Stunned.class);
+        stunned.daze(ticksIn(STUN_SECONDS));
+        return stunned;
     }
 
     private static void hit(Simulation simulation, Entity snake, int amount) {

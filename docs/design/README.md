@@ -70,9 +70,9 @@ do not treat one as taken when adding a game binding. None of them is on the pad
 | Mouse | Right stick | Aim | built - G0002. The stick sends a direction; the mouse sends a place |
 | Left mouse | `X` / `Square`, or `RT` / `R2` | Fire | built |
 | Right mouse | `LT` / `L2` | Melee strike | built |
-| `Q` | `B` / `Circle` | Throw a grenade - spends one of his grenades; with none left, nothing (G0077) | built - G0019, G0077 |
+| `Q` | `RB` / `R1` | Throw a grenade - spends one of his grenades; with none left, nothing (G0077) | built - G0019, G0077 |
 | `E` | `A` / `Cross` | Act on what is in reach - stabilise a casualty, get on or off a turret, open a crate, open a shut door (held) | built - G0021, G0024, G0056, G0069 |
-| `F` | `RB` / `R1` | Take hold of a load, or let go of it | built - G0021 |
+| `F` | `B` / `Circle` | Take hold of a load, or let go of it | built - G0021 |
 | `1` | D-pad up | Squad order: follow me | built - scaffolding, see below |
 | `2` | D-pad right | Squad order: forward | built - scaffolding, see below |
 | `3` | D-pad down | Squad order: defence | built - scaffolding, see below |
@@ -110,11 +110,6 @@ claim them.
 
 Deliberately undecided. **Ask rather than inventing an answer** - a guess here becomes a
 contradiction three features later.
-
-- **Do the keep's post barrels stay within the boss's reach?** `sim.weapon.spew.projectileRange` went from 32 to
-  55 after the 2026-11-13 playtest, so the boss's ring, spiral and fan now reach the barrels round the keep's post,
-  about 40 units west of him (`sim.finale.keep.hold.barrels`). At 32 they were out of reach on purpose. Either they
-  go off as part of the fight, or they move out past 55 - play it first.
 
 - **What does the view do with a player it cannot frame?** The leash was tried at the width of the
   view, which is what pillar 4 asks for, and it played badly - being stopped by an invisible wall

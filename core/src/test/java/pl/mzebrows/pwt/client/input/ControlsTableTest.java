@@ -29,7 +29,8 @@ class ControlsTableTest {
                 .anyMatch(line -> line.matches("AIM +MOUSE +RIGHT STICK"))
                 .anyMatch(line -> line.matches("FIRE +LEFT MOUSE +X/RT"))
                 .anyMatch(line -> line.matches("STRIKE +RIGHT MOUSE +LT"))
-                .anyMatch(line -> line.matches("GRENADE +Q +B"))
+                .anyMatch(line -> line.matches("GRENADE +Q +RB"))
+                .anyMatch(line -> line.matches("DRAG A LOAD +F +B"))
                 .anyMatch(line -> line.matches("ORDER: FOLLOW ME +1 +D-PAD UP"))
                 .anyMatch(line -> line.matches("UPGRADES +C +Y"))
                 .anyMatch(line -> line.matches("SHUT A CRATE +X +D-PAD DOWN"))
@@ -40,10 +41,10 @@ class ControlsTableTest {
     @Test
     void showsAReboundKeyAsWhatItNowIs() {
         ControlsConfig rebound = ControlsConfig.FILE
-                .read("controls.key.grenade=G\ncontrols.pad.grenade=R1\n")
+                .read("controls.key.grenade=G\ncontrols.pad.grenade=EAST\n")
                 .config();
 
-        assertThat(ControlsTable.lines(rebound, WORDS, false)).anyMatch(line -> line.matches("GRENADE +G +RB"));
+        assertThat(ControlsTable.lines(rebound, WORDS, false)).anyMatch(line -> line.matches("GRENADE +G +B"));
     }
 
     @Test
@@ -51,7 +52,8 @@ class ControlsTableTest {
         List<String> lines = ControlsTable.lines(ControlsConfig.defaults(), WORDS, true);
 
         assertThat(lines)
-                .anyMatch(line -> line.matches("GRENADE +Q +CIRCLE"))
+                .anyMatch(line -> line.matches("GRENADE +Q +R1"))
+                .anyMatch(line -> line.matches("DRAG A LOAD +F +CIRCLE"))
                 .anyMatch(line -> line.matches("FIRE +LEFT MOUSE +SQUARE/R2"));
     }
 

@@ -5,7 +5,7 @@ import lombok.With;
 /**
  * How a strain that slithers moves and what it is made of (G0095): the desert snake's.
  *
- * <p>A <strong>slither</strong> never stops. It goes on along its heading, bending in a wide arc one
+ * <p>A <strong>slither</strong> never stops of itself - only a declared stun holds it. It goes on along its heading, bending in a wide arc one
  * way or the other for a while, then another, and turns hard only where the way ahead is shut - rock, the edge of the
  * field, or something it has run up against. Too far from where it was put down, it bends back towards it. It passes
  * through every body but scenery, and what its head touches on the way it bites as its claws would.
@@ -61,7 +61,7 @@ public record SlitherDef(
         float huntSeconds) {
 
     /** The most parts a strain may be in - a snapshot carries each part as a field of its own. */
-    public static final int MOST = 4;
+    public static final int MOST = 7;
 
     public SlitherDef {
         Require.notNegative("slither parts", parts);

@@ -23,15 +23,14 @@ import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Vitality;
-import pl.mzebrows.pwt.sim.def.SlitherDef;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
- * Drives a strain that slithers (G0095): on and on, never stopping, in wide arcs.
+ * Drives a strain that slithers (G0095): on and on in wide arcs, stopping only for a declared stun.
  *
  * <p><strong>It decides the whole of its course</strong>, so it writes its steering last of everything that steers
- * and {@code DriveSystem} reads it as any other answer (G0010). Nothing holds a slither still - no stun lands on it
- * - and a pace slows it only if it is not unslowed. It latches nothing as the swarm does; <strong>from time to time it picks a man</strong> in its biome
+ * and {@code DriveSystem} reads it as any other answer (G0010). No blow holds a slither still - only a declared stun,
+ * for which it steers nothing and its hunt's clock waits - and a pace slows it only if it is not unslowed. It latches nothing as the swarm does; <strong>from time to time it picks a man</strong> in its biome
  * and turns onto him to go through him once, then goes back to bending about.
  *
  * <p><strong>In the open it bends</strong> one way or the other, or goes straight on, for a while drawn from the
@@ -106,7 +105,7 @@ public final class SlitherSystem extends EntitySystem {
     private void release(Entity entity, Slither slither) {
         Position head = POSITION.get(entity);
         float headRadius = BODY.get(entity).radius;
-        for (int slot = 0; slot < SlitherDef.MOST; slot++) {
+        for (int slot = 0; slot < Slither.BITES; slot++) {
             long handle = slither.bitten(slot);
             if (handle == Handles.NOBODY) {
                 continue;
@@ -235,7 +234,7 @@ public final class SlitherSystem extends EntitySystem {
     }
 
     private static boolean bitHim(Slither slither) {
-        for (int slot = 0; slot < SlitherDef.MOST; slot++) {
+        for (int slot = 0; slot < Slither.BITES; slot++) {
             if (slither.bitten(slot) == slither.prey) {
                 return true;
             }

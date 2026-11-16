@@ -4,10 +4,11 @@ import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
 
 /**
- * What a unit can notice, and whether it has noticed.
+ * What a unit can notice, whether it has noticed, and the man it is after (G0097).
  *
- * <p>{@code aggro} is one latched boolean: hunting, or not. <strong>Nothing here refers to what it
- * noticed</strong> - the target is re-resolved every tick as a place (G0010, G0016). Carried
+ * <p>{@code aggro} is one latched boolean: hunting, or not. <strong>Who it hunts is asked again every
+ * tick and published as a place</strong> (G0010, G0016); {@link #kept} names the man that was, by handle,
+ * for one reader only - the question itself, which leans towards him by the switch margin (G0097). Carried
  * permanently, never added mid-tick.
  */
 public final class Perception implements Component, Pool.Poolable {
@@ -51,6 +52,14 @@ public final class Perception implements Component, Pool.Poolable {
     public float targetX;
 
     public float targetY;
+
+    /**
+     * The man it is after, by handle: the one it keeps until another is nearer by the switch margin or he goes down
+     * (G0097). Nobody until it has hunted somebody, and stale once it stops - which is why the one reader, {@code
+     * PerceptionSystem}, hands it to {@code Drivers.nearestLivingTarget} only while {@link #aggro}. Everything else
+     * reads the place above.
+     */
+    public long kept = Handle.NOBODY;
 
     /**
      * True while this unit is on its way to somewhere it was provoked from - shot at, struck, or
@@ -114,10 +123,9 @@ public final class Perception implements Component, Pool.Poolable {
         return aggro || provoked || foraging || marching;
     }
 
-    /**
-     * Remembers where it is hunting.
-     */
-    public void hunt(float x, float y) {
+    /** Remembers who it is hunting, and where he is. */
+    public void hunt(long who, float x, float y) {
+        this.kept = who;
         this.targetX = x;
         this.targetY = y;
     }
@@ -174,6 +182,7 @@ public final class Perception implements Component, Pool.Poolable {
         aggro = false;
         targetX = 0f;
         targetY = 0f;
+        kept = Handle.NOBODY;
         provoked = false;
         provokedX = 0f;
         provokedY = 0f;

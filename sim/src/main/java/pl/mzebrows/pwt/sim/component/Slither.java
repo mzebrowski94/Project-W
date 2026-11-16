@@ -11,9 +11,12 @@ import pl.mzebrows.pwt.sim.def.Ticks;
  * <p>The configuration half is per strain, written with it by {@code applyStrain}; the rest is {@code
  * SlitherSystem}'s. Each part behind the head is a pair of fields rather than an array, because a snapshot carries
  * scalars - which is why a strain is in at most {@link SlitherDef#MOST} parts. Part zero is the head, which is the
- * entity's own position and body; parts one to three are drawn, never hit.
+ * entity's own position and body; parts one to six are drawn, never hit.
  */
 public final class Slither implements Component, Pool.Poolable {
+
+    /** How many men its head can be passing through at once and bite each once a pass: the bite slots below. */
+    public static final int BITES = 4;
 
     /** Whether this strain slithers at all. */
     public boolean enabled;
@@ -128,6 +131,12 @@ public final class Slither implements Component, Pool.Poolable {
     public float part2Y;
     public float part3X;
     public float part3Y;
+    public float part4X;
+    public float part4Y;
+    public float part5X;
+    public float part5Y;
+    public float part6X;
+    public float part6Y;
 
     /** Sets the configuration from the strain's definition, for spawning and evolving alike. */
     public Slither set(SlitherDef def, float tickSeconds) {
@@ -187,12 +196,19 @@ public final class Slither implements Component, Pool.Poolable {
         this.part2Y = y;
         this.part3X = x;
         this.part3Y = y;
+        this.part4X = x;
+        this.part4Y = y;
+        this.part5X = x;
+        this.part5Y = y;
+        this.part6X = x;
+        this.part6Y = y;
         return this;
     }
 
     /**
      * Whether its head may bite this man now - not while it is still passing through him from the last bite - and, if
-     * so, that it has. With every slot taken it bites anyway: four men inside one head at once is a crowd, not a pass.
+     * so, that it has. With every slot taken it bites anyway: {@link #BITES} men inside one head at once is a crowd, not a
+     * pass.
      */
     public boolean bite(long handle) {
         if (!enabled) {
@@ -213,7 +229,7 @@ public final class Slither implements Component, Pool.Poolable {
         return true;
     }
 
-    /** Who is in bite slot {@code index}, zero to three. */
+    /** Who is in bite slot {@code index}, zero to {@link #BITES} less one. */
     public long bitten(int index) {
         return switch (index) {
             case 0 -> bitten0;
@@ -233,12 +249,15 @@ public final class Slither implements Component, Pool.Poolable {
         }
     }
 
-    /** Where part {@code index} lies, one to three. */
+    /** Where part {@code index} lies, one to six. */
     public float partX(int index) {
         return switch (index) {
             case 1 -> part1X;
             case 2 -> part2X;
-            default -> part3X;
+            case 3 -> part3X;
+            case 4 -> part4X;
+            case 5 -> part5X;
+            default -> part6X;
         };
     }
 
@@ -246,11 +265,14 @@ public final class Slither implements Component, Pool.Poolable {
         return switch (index) {
             case 1 -> part1Y;
             case 2 -> part2Y;
-            default -> part3Y;
+            case 3 -> part3Y;
+            case 4 -> part4Y;
+            case 5 -> part5Y;
+            default -> part6Y;
         };
     }
 
-    /** Lays part {@code index}, one to three. */
+    /** Lays part {@code index}, one to six. */
     public void lay(int index, float x, float y) {
         switch (index) {
             case 1 -> {
@@ -261,9 +283,21 @@ public final class Slither implements Component, Pool.Poolable {
                 part2X = x;
                 part2Y = y;
             }
-            default -> {
+            case 3 -> {
                 part3X = x;
                 part3Y = y;
+            }
+            case 4 -> {
+                part4X = x;
+                part4Y = y;
+            }
+            case 5 -> {
+                part5X = x;
+                part5Y = y;
+            }
+            default -> {
+                part6X = x;
+                part6Y = y;
             }
         }
     }
@@ -325,5 +359,11 @@ public final class Slither implements Component, Pool.Poolable {
         part2Y = 0f;
         part3X = 0f;
         part3Y = 0f;
+        part4X = 0f;
+        part4Y = 0f;
+        part5X = 0f;
+        part5Y = 0f;
+        part6X = 0f;
+        part6Y = 0f;
     }
 }

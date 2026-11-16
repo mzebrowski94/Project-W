@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.collision.Solid;
@@ -33,7 +34,9 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  * Decides, once a tick, which units are hunting somebody, and who that somebody is.
  *
  * <p><strong>Whoever on the player's side is nearest</strong> (G0026), published as a place on
- * {@code Perception}; everything downstream reads it and never asks again.
+ * {@code Perception}; everything downstream reads it and never asks again. <strong>It keeps the man it is
+ * after</strong> until another is nearer by the switch margin (G0097): his handle goes back into the question, and
+ * only while it is hunting - a man it never noticed is not kept.
  *
  * <p><strong>Its target going down releases it, whatever its switches say</strong>, and it may notice
  * somebody else on the same tick. <strong>The hysteresis is the mechanic</strong>: it notices at one
@@ -52,6 +55,9 @@ public final class PerceptionSystem extends EntitySystem {
     private final Solid map;
     private final float loiterRadius;
 
+    /** How much nearer another man must be before a hunter leaves the one it is after (G0097). Zero is off. */
+    private final float switchMargin;
+
     /** What the adaptations held make of both ranges (ADR 0017). */
     private final Modifiers modifiers;
 
@@ -64,6 +70,7 @@ public final class PerceptionSystem extends EntitySystem {
         this.pickupDefs = config.pickups();
         this.map = map;
         this.loiterRadius = config.controlPoint().loiterRadius();
+        this.switchMargin = config.switchMargin();
         this.modifiers = modifiers;
     }
 
@@ -89,8 +96,9 @@ public final class PerceptionSystem extends EntitySystem {
             }
             Perception perception = PERCEPTION.get(watcher);
             Position position = POSITION.get(watcher);
-            // Nearest, asked again every tick (G0026).
-            @Nullable Entity quarry = Drivers.nearestLivingTarget(sides, position);
+            // Asked again every tick (G0026): the nearest, leaning towards the man it is after (G0097).
+            long after = perception.aggro ? perception.kept : Handles.NOBODY;
+            @Nullable Entity quarry = Drivers.nearestLivingTarget(sides, position, after, switchMargin);
             @Nullable Position target = quarry == null ? null : POSITION.get(quarry);
             if (target == null) {
                 // Nobody left to hunt. This outranks every switch below it.
@@ -105,8 +113,8 @@ public final class PerceptionSystem extends EntitySystem {
             } else {
                 perception.aggro = notices(watcher, perception, position, target);
             }
-            if (perception.aggro && target != null) {
-                perception.hunt(target.x, target.y);
+            if (perception.aggro && quarry != null && target != null) {
+                perception.hunt(Handles.of(quarry), target.x, target.y);
                 // Somebody in front of it outranks a grudge, which is dropped for good.
                 perception.provoked = false;
             } else if (perception.provoked

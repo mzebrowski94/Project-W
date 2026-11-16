@@ -1,6 +1,12 @@
 package pl.mzebrows.pwt.sim.system.creature;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.DETECTION_RANGE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.LOSE_RANGE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.SECONDARY_RANGE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.everyStrain;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.shootingStraight;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -15,6 +21,7 @@ import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.Harm;
+import pl.mzebrows.pwt.sim.def.PerceptionDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
@@ -42,6 +49,18 @@ class AlienTargetingTest {
 
     /** Long enough to see which way it set off, short enough that it has not arrived. */
     private static final int WATCH = 12;
+
+    /** How much nearer another man must be before a hunter leaves the one it is after, as the game ships it (G0097). */
+    private static final float SWITCH_MARGIN = 0.25f;
+
+    /** Nearer than the man it is after, by less than the margin. */
+    private static final float A_LITTLE_NEARER = 0.9f;
+
+    /** Nearer by well over the margin. */
+    private static final float FAR_NEARER = 0.5f;
+
+    /** How far inside a creature's range a man stands to be in it, and how far past it to be out of it. */
+    private static final float INSIDE = 2f;
 
     @Test
     void comesForWhoeverIsNearestRatherThanForTheCommander() {
@@ -139,6 +158,112 @@ class AlienTargetingTest {
         steps(simulation, ticksIn(1.5f));
 
         assertThat(unhurt(trooper)).isFalse();
+    }
+
+    /** A creature between two men is not pulled about: the one it is after stays the one it is after (G0097). */
+    @Test
+    void keepsTheManItIsAfterWhenAnotherComesOnlyALittleNearer() {
+        Simulation simulation = keeping();
+        Entity kept = simulation.spawnCommander(EAST, LANE, 0);
+        Entity other = simulation.spawnCommander(WEST, LANE, 1);
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, MIDDLE, LANE);
+        simulation.step();
+        float from = at(grunt).x;
+
+        standAcrossFrom(kept, grunt, other, A_LITTLE_NEARER);
+        steps(simulation, WATCH);
+
+        assertThat(at(grunt).x).isGreaterThan(from);
+    }
+
+    @Test
+    void leavesTheManItIsAfterForAnotherNearerByTheSwitchMargin() {
+        Simulation simulation = keeping();
+        Entity kept = simulation.spawnCommander(EAST, LANE, 0);
+        Entity other = simulation.spawnCommander(WEST, LANE, 1);
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, MIDDLE, LANE);
+        simulation.step();
+        float from = at(grunt).x;
+
+        standAcrossFrom(kept, grunt, other, FAR_NEARER);
+        steps(simulation, WATCH);
+
+        assertThat(at(grunt).x).isLessThan(from);
+    }
+
+    /** Zero is off: the nearest, asked afresh every tick, whoever it was after (G0026). */
+    @Test
+    void goesForWhoeverIsNearestAtOnceWithTheSwitchMarginOff() {
+        Simulation simulation = new Simulation(config().withSwitchMargin(0f));
+        Entity kept = simulation.spawnCommander(EAST, LANE, 0);
+        Entity other = simulation.spawnCommander(WEST, LANE, 1);
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, MIDDLE, LANE);
+        simulation.step();
+        float from = at(grunt).x;
+
+        standAcrossFrom(kept, grunt, other, A_LITTLE_NEARER);
+        steps(simulation, WATCH);
+
+        assertThat(at(grunt).x).isLessThan(from);
+    }
+
+    /** A margin, never a latch: the man it kept going down releases it at once, however far off the next one is. */
+    @Test
+    void leavesTheManItKeptTheMomentHeGoesDownHoweverFarOffTheNextIs() {
+        Simulation simulation = keeping();
+        Entity kept = simulation.spawnCommander(EAST, LANE, 0);
+        simulation.spawnCommander(WEST, LANE, 1);
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, MIDDLE, LANE);
+        simulation.step();
+        float from = at(grunt).x;
+
+        putDown(kept);
+        steps(simulation, WATCH);
+
+        assertThat(at(grunt).x).isLessThan(from);
+    }
+
+    /**
+     * Only a man it is hunting is kept. One it gave up on, back just outside its range, holds it off nobody who comes
+     * inside it - nearer than him by less than the margin or not.
+     */
+    @Test
+    void isNotHeldToAManItGaveUpOn() {
+        Simulation simulation = new Simulation(everyStrain(
+                config().withSwitchMargin(SWITCH_MARGIN),
+                strain -> strain.withPerception(
+                        PerceptionDef.allRound(false, true, DETECTION_RANGE, LOSE_RANGE, SECONDARY_RANGE))));
+        Entity lost = simulation.spawnCommander(MIDDLE + DETECTION_RANGE - INSIDE, LANE, 0);
+        Entity other = simulation.spawnCommander(WEST, LANE, 1);
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, MIDDLE, LANE);
+        simulation.step();
+        at(lost).set(at(grunt).x + LOSE_RANGE + INSIDE, LANE);
+        simulation.step();
+        float from = at(grunt).x;
+
+        at(lost).set(from + DETECTION_RANGE + INSIDE, LANE);
+        at(other).set(from - DETECTION_RANGE + INSIDE, LANE);
+        steps(simulation, WATCH);
+
+        assertThat(at(grunt).x).isLessThan(from);
+    }
+
+    /** It leans towards the man it is after and no further: the margin is a fraction below one, never a latch. */
+    @Test
+    void refusesASwitchMarginThatWouldBeALatch() {
+        assertThatThrownBy(() -> config().withSwitchMargin(1f))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("switchMargin");
+    }
+
+    private static Simulation keeping() {
+        return new Simulation(config().withSwitchMargin(SWITCH_MARGIN));
+    }
+
+    /** Stands a man the other side of the creature from the one it is after, at this fraction of his distance. */
+    private static void standAcrossFrom(Entity kept, Entity creature, Entity man, float fraction) {
+        float away = at(kept).x - at(creature).x;
+        at(man).set(at(creature).x - away * fraction, LANE);
     }
 
     private static Position at(Entity entity) {

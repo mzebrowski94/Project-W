@@ -45,15 +45,15 @@ public final class Stunned implements Component, Pool.Poolable {
     public int dazeTicks;
 
     /**
-     * True for a body nothing holds still - a slither, which never stops (G0095): no stun, recoil or clinch lands on it.
-     * Configuration, set with its strain.
+     * True for a body no blow holds still - a slither (G0095): no stagger, kick or clinch lands on it, and only a
+     * stun a source declared ({@link #daze}) stops it. Configuration, set with its strain.
      */
     public boolean immune;
 
-    /** Says whether nothing may hold it still, returning this component, for fluent spawning. */
-    public Stunned immuneIf(boolean nothingHoldsIt) {
-        this.immune = nothingHoldsIt;
-        if (nothingHoldsIt) {
+    /** Says whether only a declared stun may hold it still, returning this component, for fluent spawning. */
+    public Stunned immuneIf(boolean onlyAStunHoldsIt) {
+        this.immune = onlyAStunHoldsIt;
+        if (onlyAStunHoldsIt) {
             remainingTicks = 0;
         }
         return this;
@@ -64,29 +64,37 @@ public final class Stunned implements Component, Pool.Poolable {
         return remainingTicks > 0;
     }
 
-    /** Holds it still for at least this long, never shortening a stun already running. */
+    /** Holds it still for at least this long, never shortening a stun already running. A blow's hold: none on the immune. */
     public void apply(int ticks, float decay) {
         if (immune) {
             return;
         }
-        if (ticks > remainingTicks) {
-            remainingTicks = ticks;
-        }
+        hold(ticks);
         if (decay > 0f) {
             knockbackDecay = decay;
         }
     }
 
-    /** Holds it still for at least this long, as a stun rather than a recoil. */
+    /**
+     * Holds it still for at least this long, as a stun rather than a recoil - the one hold that lands on a body
+     * immune to a blow's (G0095).
+     */
     public void daze(int ticks) {
-        if (ticks <= 0 || immune) {
+        if (ticks <= 0) {
             return;
         }
         if (ticks >= remainingTicks) {
             dazeTicks = ticks;
         }
-        apply(ticks, 0f);
+        hold(ticks);
         dazed = true;
+    }
+
+    /** At least this long, whatever is holding it. */
+    private void hold(int ticks) {
+        if (ticks > remainingTicks) {
+            remainingTicks = ticks;
+        }
     }
 
     /** How much of a declared stun is left, in {@code [0, 1]}; zero with none running. */
@@ -114,9 +122,7 @@ public final class Stunned implements Component, Pool.Poolable {
         if (immune) {
             return;
         }
-        if (ticks > remainingTicks) {
-            remainingTicks = ticks;
-        }
+        hold(ticks);
         knockbackDecay = 0f;
         grappling = true;
     }

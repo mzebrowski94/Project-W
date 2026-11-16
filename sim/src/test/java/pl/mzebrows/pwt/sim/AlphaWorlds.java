@@ -1568,6 +1568,8 @@ public final class AlphaWorlds {
                 MUZZLE_GAP,
                 thickets(),
                 noChances(),
+                // Off: a test about anything else has its creatures go for whoever is nearest, tick by tick.
+                0f,
                 new SimConfig.MeleeConfig(
                         MELEE_COOLDOWN,
                         0f,

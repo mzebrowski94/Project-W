@@ -68,6 +68,9 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  *     the index of everything the AI leaves to the dice. A strain carries its own copy, resolved
  *     against this one when the config is built, so retune a behaviour with {@link #withChance}
  *     rather than by replacing this table on its own
+ * @param switchMargin how much nearer another man must be, as a fraction of the distance to the man an alien is
+ *     after, before it leaves him for that one (G0097). Zero is off - nearest, asked afresh every tick; below one,
+ *     because at one it would be a latch
  * @param melee the commander's hand strike
  * @param blast what an explosion does, wherever it came from
  * @param fire what an explosion leaves burning behind it, wherever it came from
@@ -116,6 +119,7 @@ public record SimConfig(
         float muzzleGap,
         Defs<Terrain, GroundDef> ground,
         @ConfigKey("ai.chance") Chances chances,
+        @ConfigKey("ai.switchMargin") float switchMargin,
         MeleeConfig melee,
         BlastConfig blast,
         FireConfig fire,
@@ -155,6 +159,12 @@ public record SimConfig(
         Require.positive("tickSeconds", tickSeconds);
         Require.atLeastOne("maxTicksPerFrame", maxTicksPerFrame);
         Require.notNegative("muzzleGap", muzzleGap);
+        Require.notNegative("switchMargin", switchMargin);
+        if (switchMargin >= 1f) {
+            throw new IllegalArgumentException(
+                    "switchMargin is a fraction of the distance below 1 - at 1 it is a latch (G0097), was "
+                            + switchMargin);
+        }
         if (melee.clinchCarrySpeed() > 0f) {
             Require.atLeast(
                     "melee carry distance",

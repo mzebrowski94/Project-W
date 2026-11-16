@@ -274,6 +274,22 @@ class SimConfigTest {
         assertThat(searer).isCloseTo(10f, org.assertj.core.data.Offset.offset(0.01f));
     }
 
+    @Test
+    void buildsShockOnTheSnakeAsOnAGrunt() {
+        SimConfig config = SimConfig.defaults();
+        WeaponDef gun = config.weapon(WeaponKind.PULSE);
+
+        float snake =
+                1f / config.shock().perHitAgainst(config.unit(UnitKind.SNAKE).radius(), gun.shockPerHit());
+        float grunt =
+                1f / config.shock().perHitAgainst(config.unit(UnitKind.GRUNT).radius(), gun.shockPerHit());
+
+        assertThat(config.unit(UnitKind.SNAKE).shockable())
+                .as("only a declared stun holds the snake (G0095), so it must take the shock that declares one")
+                .isTrue();
+        assertThat(snake).isCloseTo(grunt, org.assertj.core.data.Offset.offset(0.01f));
+    }
+
     /** A deal adds to a card the deck already holds; dealing crates into crates would deal them forever. */
     @Test
     void refusesADealOfACacheTheArmouryDeckDoesNotHold() {

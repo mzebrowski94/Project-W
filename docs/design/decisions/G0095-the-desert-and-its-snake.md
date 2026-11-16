@@ -3,7 +3,8 @@
 **Status.** accepted
 
 **Trigger.** Adding a biome with stones or mud; a biome dealt wider than the rest; a creature that passes through bodies and still bites; a creature
-in parts that lose their health one at a time; a creature that never stops or never hunts; a shot at a snake's tail.
+in parts that lose their health one at a time; a creature that never stops or never hunts; a shot at a snake's tail;
+what may hold a snake still.
 
 **Enforced by.** `SnakeTest`; `MissionSweepTest` (the desert's roster and stones fit their room on every tier);
 `MissionTest` (it is dealt); `SystemOrderTest` (`SlitherSystem` after the course setters, before `DriveSystem`).
@@ -23,7 +24,8 @@ turning in wide arcs unless space is short, its health in four parts lost from t
 - **Mud** is a terrain of its own (`Terrain.MUD`, appended so nothing else renumbers) carrying a thicket's two factors:
   the same decision as undergrowth, drawn as wet ground rather than a hatch.
 - **The snake slithers** (`SlitherDef`, on every strain, off at zero parts): it decides its whole course, writing
-  its steering last of what steers and committed by `DriveSystem` - and nothing slows it or holds it still. In the open
+  its steering last of what steers and committed by `DriveSystem` - and nothing slows it, and only a declared stun
+  holds it still. In the open
   it bends one way, the other or straight on, for a time drawn from `RngStream.SLITHER`, at a small turn; where its
   way is shut - rock or a shut door within `lookAhead`, the edge of its biome, or scenery it ran up against - it turns
   hard a quarter round towards whichever side is open. Past `roam` from home it bends back. **It latches nothing as the
@@ -47,8 +49,12 @@ turning in wide arcs unless space is short, its health in four parts lost from t
   about 3 at a grunt, 10 at the giants. "The pulse rifle stuns before it kills" now holds for whatever it does not kill
   in three bolts anyway: the easy tier's runner, 32 as it arrives, dies on the third, and no stun of two bolts or more
   comes sooner.
-- **Nothing holds a snake still** (asked for 2026-11-15): `Stunned.immune`, set with a slither - no stun, recoil or
-  clinch lands on it, so it never stops in place; it takes no shock.
+- **Only a declared stun holds a snake still** (amended 2026-11-15, asked for by Mateusz the same day; it was *nothing
+  holds it*, and it took no shock): `Stunned.immune`, set with a slither, turns away a blow's hold - no stagger,
+  kick or clinch lands on it - and lets a declared stun through. It is `shockable`, so the pulse rifle's shock
+  builds on it as on a grunt, its head's size - 3.3 bolts' worth, so the fourth fills it - for the gun's stun of a
+  second, in which it stops where it is and bites nobody: a stunned thing lands no blow. A man still in its head when
+  the stun runs out is bitten then. Holding something still for the squad is what that gun is for (G0059).
 
 **Rejected alternatives.**
 
@@ -60,6 +66,7 @@ turning in wide arcs unless space is short, its health in four parts lost from t
   tile.
 - *Mire for the mud* - mire costs nothing to cross, and changing it would change the fen.
 
-**Do not build.** a snake a stun, recoil or clinch holds; a snake that chases a man past one go through him, or stops; a snake something slows; a snake pushed by or pushing bodies; a bite every tick it is inside a
+**Do not build.** a snake a stagger, kick or clinch holds; a snake a declared stun does not hold, or that bites while
+stunned; a snake that chases a man past one go through him, or stops of itself; a snake something slows; a snake pushed by or pushing bodies; a bite every tick it is inside a
 man; stones in any biome but the desert without a decision; mud that differs from a thicket's numbers without a
 decision.

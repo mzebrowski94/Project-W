@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.component.Crew;
@@ -93,15 +94,28 @@ public final class Drivers {
     }
 
     /**
-     * The nearest thing on the player's side still on its feet, or null if there is nothing left.
+     * The thing on the player's side an alien comes for, or null if there is nothing left: the nearest still on its
+     * feet - unless it is already after one, which it keeps until another is nearer by the switch margin (G0097).
      *
      * <p><strong>The single writer for who an alien comes for</strong> (G0026). A man who is down is
-     * not on the list. Ties go to the first spawned. A scan, not a grid query: the player's side is a
-     * handful of entities.
+     * not on the list, kept or not: his going down releases it at once. Ties go to the first spawned. A scan, not a
+     * grid query: the player's side is a handful of entities.
+     *
+     * <p><strong>A margin, never a latch</strong>: the question is asked again every tick, and {@code kept} only says
+     * whom the answer leans towards. A handle that names nobody on the list - never aimed, down, gone - leans it
+     * towards nobody.
+     *
+     * @param kept the handle of the man it is after, or {@link Handles#NOBODY}
+     * @param switchMargin how much nearer another must be to take it off him, as a fraction of the distance to him.
+     *     Zero is off: the nearest, whoever it was after
      */
-    public static @Nullable Entity nearestLivingTarget(ImmutableArray<Entity> candidates, Position from) {
+    public static @Nullable Entity nearestLivingTarget(
+            ImmutableArray<Entity> candidates, Position from, long kept, float switchMargin) {
+        boolean keeping = switchMargin > 0f && kept != Handles.NOBODY;
         @Nullable Entity nearest = null;
         float nearestDistance = Float.MAX_VALUE;
+        @Nullable Entity keptMan = null;
+        float keptDistance = 0f;
         for (int i = 0; i < candidates.size(); i++) {
             Entity candidate = candidates.get(i);
             if (!huntable(candidate)) {
@@ -115,8 +129,18 @@ public final class Drivers {
                 nearestDistance = distance;
                 nearest = candidate;
             }
+            if (keeping && Handles.of(candidate) == kept) {
+                keptMan = candidate;
+                keptDistance = distance;
+            }
         }
-        return nearest;
+        if (keptMan == null) {
+            return nearest;
+        }
+        // Distances are squared, so the fraction of his distance another must be inside is squared too. Nearest
+        // himself, he is no nearer than himself, and kept.
+        float inside = 1f - switchMargin;
+        return nearestDistance < keptDistance * inside * inside ? nearest : keptMan;
     }
 
     /**
