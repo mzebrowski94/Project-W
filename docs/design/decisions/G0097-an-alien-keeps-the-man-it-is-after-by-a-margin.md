@@ -1,6 +1,6 @@
 # G0097: An alien keeps the man it is after until another is nearer by a margin
 
-**Status.** accepted
+**Status.** amended by G0096: the worm keeps the man it is after only in its own biome
 
 **Trigger.** Anything that changes who an alien hunts once it is hunting; a creature seen turning back and forth
 between two men, or one that will not come off a man; touching `Drivers.nearestLivingTarget` or `Perception.kept`.
@@ -40,7 +40,7 @@ inside 15 - **or he goes down**, which releases it at once as it always did (G00
   walks at straight once it has a clear path to him. Accepted, and not yet played: a creature may walk a route to one
   man while it faces another.
 
-**Scope.** Aliens only - whatever carries a `Perception`. Not what a trooper shoots at (his **threat**, re-chosen every
+**Scope.** Aliens only - whatever carries a `Perception`, the worm among them, kept to its own biome by a parameter of the same place (G0096). Not what a trooper shoots at (his **threat**, re-chosen every
 tick), not the man a snake picks (G0095), not which men wake a nest, and not food.
 
 **DO NOT BUILD** - rejected, and likely to be re-proposed.

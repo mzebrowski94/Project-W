@@ -109,5 +109,12 @@ public enum UnitKind {
      * a man it picked to go through him. Nothing slows it and it never stops. What to read is where it is bending and
      * whom it has turned onto; what to do is step out of its way, or shoot it down a part at a time, the head last.
      */
-    SNAKE
+    SNAKE,
+    /**
+     * The desert worm (G0096): a shadow under the ground nothing can hurt, always coming for the nearest man in its own
+     * biome, that surfaces under him - a maw closing on where he stood - and wounds whoever is still inside when it
+     * snaps. What to read is the ring opening round your feet; what to do is keep walking, then shoot it while it stands
+     * in its hole.
+     */
+    WORM
 }

@@ -39,6 +39,8 @@ import org.jspecify.annotations.Nullable;
  * @param fuse how long it lasts on the field before it goes off of itself, if it does (G0083)
  * @param slither whether it slithers - goes on in wide arcs, through bodies, in parts that its health is shared
  *     between (G0095) - and how
+ * @param burrow whether it burrows - a shadow under the ground nothing can hurt, that surfaces under a man and snaps
+ *     its maw shut (G0096) - and how
  * @param deathSlicks how many circles of venom it leaves where it dies, whatever kills it (G0076), shaped by the
  *     shared blood block; zero leaves none, and the swarm's toxic blood adds to it
  * @param shockable whether shock builds on it at all (G0059): false for the boss, whose barrage a stun
@@ -76,6 +78,7 @@ public record UnitDef(
         SlingDef sling,
         FuseDef fuse,
         SlitherDef slither,
+        BurrowDef burrow,
         int deathSlicks,
         boolean shockable,
         Chances chances,
@@ -100,6 +103,10 @@ public record UnitDef(
             // A barrage puts each pattern's gun in the one pair of hands a unit has.
             throw new IllegalArgumentException(
                     "a strain with a barrage does not also shoot: the two would share one gun");
+        }
+        if (slither.enabled() && burrow.enabled()) {
+            // Each decides the whole of its course; two would fight over one heading.
+            throw new IllegalArgumentException("a strain that burrows does not also slither: both steer it whole");
         }
     }
 

@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.system.combat.Guns;
 import pl.mzebrows.pwt.sim.system.query.Aim;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
@@ -185,7 +186,7 @@ public final class TurretSystem extends EntitySystem {
         float nearestDistance = Float.MAX_VALUE;
         for (int i = 0; i < quarry.size(); i++) {
             Entity candidate = quarry.get(i);
-            if (Life.dying(candidate)) {
+            if (Life.dying(candidate) || Drivers.burrowed(candidate)) {
                 continue;
             }
             Position where = POSITION.get(candidate);

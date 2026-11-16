@@ -49,6 +49,11 @@ public enum Look {
     MAGMA_SPITTER,
     /** A sand-coloured head, its facing a spike, and the parts trailing it each smaller, one fewer a part lost (G0095). */
     SNAKE,
+    /**
+     * A worm (G0096): under the ground a see-through black shadow, fainter while it rests; up, its body in its hole
+     * and, while it comes up, the maw - a ring of teeth pointing inwards, shrinking onto it, one fewer a tooth lost.
+     */
+    WORM,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */

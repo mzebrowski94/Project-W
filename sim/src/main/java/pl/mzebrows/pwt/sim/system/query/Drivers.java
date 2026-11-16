@@ -4,9 +4,11 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.utils.ImmutableArray;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Players;
+import pl.mzebrows.pwt.sim.component.Burrow;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -23,12 +25,16 @@ import pl.mzebrows.pwt.sim.def.Side;
  */
 public final class Drivers {
 
+    /** Any biome at all: where every strain but the worm hunts (G0096). */
+    public static final int ANY_BIOME = -1;
+
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Drag> DRAG = ComponentMapper.getFor(Drag.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
     private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
+    private static final ComponentMapper<Burrow> BURROW = ComponentMapper.getFor(Burrow.class);
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
 
     private Drivers() {}
@@ -108,9 +114,11 @@ public final class Drivers {
      * @param kept the handle of the man it is after, or {@link Handles#NOBODY}
      * @param switchMargin how much nearer another must be to take it off him, as a fraction of the distance to him.
      *     Zero is off: the nearest, whoever it was after
+     * @param biome the only biome a man may stand in to be on the list - a worm's own (G0096) - or {@link #ANY_BIOME}
+     * @param map what says which biome a man stands in
      */
     public static @Nullable Entity nearestLivingTarget(
-            ImmutableArray<Entity> candidates, Position from, long kept, float switchMargin) {
+            ImmutableArray<Entity> candidates, Position from, long kept, float switchMargin, int biome, TileMap map) {
         boolean keeping = switchMargin > 0f && kept != Handles.NOBODY;
         @Nullable Entity nearest = null;
         float nearestDistance = Float.MAX_VALUE;
@@ -122,6 +130,10 @@ public final class Drivers {
                 continue;
             }
             Position where = POSITION.get(candidate);
+            if (biome != ANY_BIOME && map.biomeAt(where.x, where.y) != biome) {
+                // Out of its biome he is not on the list, kept or not: his leaving it releases it at once.
+                continue;
+            }
             float toX = where.x - from.x;
             float toY = where.y - from.y;
             float distance = toX * toX + toY * toY;
@@ -154,5 +166,13 @@ public final class Drivers {
             return false;
         }
         return !Life.down(entity) && FACTION.get(entity).side == Side.PLAYER;
+    }
+
+    /**
+     * Whether it is a worm under the ground (G0096): no blow lands on it, nothing fires at it or throws at it, and
+     * nothing it passes beneath goes off.
+     */
+    public static boolean burrowed(Entity entity) {
+        return BURROW.has(entity) && BURROW.get(entity).burrowed();
     }
 }

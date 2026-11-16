@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.def.Whole;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 
 /**
@@ -131,12 +132,7 @@ public final class SlitherSystem extends EntitySystem {
             return;
         }
         Health health = HEALTH.get(entity);
-        if (health.max <= 0 || health.current <= 0) {
-            slither.partsLeft = 1;
-            return;
-        }
-        int left = (health.current * slither.parts + health.max - 1) / health.max;
-        slither.partsLeft = Math.max(1, Math.min(slither.parts, left));
+        slither.partsLeft = Whole.piecesLeft(health.current, health.max, slither.parts);
     }
 
     /** Each part kept its spacing behind the one in front of it, pulled straight along the line between them. */
@@ -243,7 +239,7 @@ public final class SlitherSystem extends EntitySystem {
     }
 
     private void wait(Slither slither) {
-        slither.waitTicks = slither.huntMinTicks + rng.nextInt(slither.huntMaxTicks - slither.huntMinTicks + 1);
+        slither.waitTicks = Meander.drawSpan(rng, slither.huntMinTicks, slither.huntMaxTicks);
     }
 
     /**
@@ -350,15 +346,12 @@ public final class SlitherSystem extends EntitySystem {
 
     /** Back towards home past its roam; otherwise the bend it is in, picking another once that runs out. */
     private int bendOf(Position at, Slither slither) {
-        float awayX = at.x - slither.homeX;
-        float awayY = at.y - slither.homeY;
-        if (awayX * awayX + awayY * awayY > slither.roam * slither.roam) {
-            float side = towardsHome(at, slither);
-            return side >= 0f ? 1 : -1;
+        if (Meander.pastRoam(at.x, at.y, slither.homeX, slither.homeY, slither.roam)) {
+            return towardsHome(at, slither) >= 0f ? 1 : -1;
         }
         if (slither.bendTicks <= 0) {
-            slither.bend = rng.nextInt(3) - 1;
-            slither.bendTicks = slither.bendMinTicks + rng.nextInt(slither.bendMaxTicks - slither.bendMinTicks + 1);
+            slither.bend = Meander.drawBend(rng);
+            slither.bendTicks = Meander.drawSpan(rng, slither.bendMinTicks, slither.bendMaxTicks);
         }
         slither.bendTicks--;
         return slither.bend;
@@ -366,9 +359,7 @@ public final class SlitherSystem extends EntitySystem {
 
     /** Which side home lies on: above zero to the left of its heading, below to the right. */
     private static float towardsHome(Position at, Slither slither) {
-        float toX = slither.homeX - at.x;
-        float toY = slither.homeY - at.y;
-        return slither.headingX * toY - slither.headingY * toX;
+        return Meander.towardsHome(at.x, at.y, slither.homeX, slither.homeY, slither.headingX, slither.headingY);
     }
 
     /** Turns its heading one tick's worth towards {@code side}: 1 left, -1 right, 0 not at all. */
@@ -376,16 +367,15 @@ public final class SlitherSystem extends EntitySystem {
         if (side == 0) {
             return;
         }
-        float s = side * sin;
-        float x = slither.headingX * cos - slither.headingY * s;
-        float y = slither.headingX * s + slither.headingY * cos;
+        float x = Meander.turnedX(slither.headingX, slither.headingY, side, cos, sin);
+        float y = Meander.turnedY(slither.headingX, slither.headingY, side, cos, sin);
         slither.headingX = x;
         slither.headingY = y;
         normalise(slither);
     }
 
     private static void normalise(Slither slither) {
-        float length = (float) Math.sqrt(slither.headingX * slither.headingX + slither.headingY * slither.headingY);
+        float length = Meander.length(slither.headingX, slither.headingY);
         if (length > EPSILON) {
             slither.headingX /= length;
             slither.headingY /= length;

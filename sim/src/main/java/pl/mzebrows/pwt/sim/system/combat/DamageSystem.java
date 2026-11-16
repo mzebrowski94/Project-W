@@ -37,6 +37,7 @@ import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.death.Deaths;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
@@ -131,6 +132,10 @@ public final class DamageSystem extends IteratingSystem {
         }
         if (LEAP.has(entity) && LEAP.get(entity).slung()) {
             // A rider in the air: nothing lands on it, a blast included (G0074).
+            return;
+        }
+        if (Drivers.burrowed(entity)) {
+            // A worm under the ground: nothing lands on it, shock included (G0096).
             return;
         }
         if (damage.hasSource && PERCEPTION.has(entity)) {

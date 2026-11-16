@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.Whole;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
@@ -220,8 +221,8 @@ final class TrooperFight {
         float allRoundSquared = trooper.allRoundRange * trooper.allRoundRange;
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
-            if (Life.dying(enemy)) {
-                // A body is not a target.
+            if (Life.dying(enemy) || Drivers.burrowed(enemy)) {
+                // A body is not a target, nor a worm under the ground (G0096).
                 continue;
             }
             boolean isKept =

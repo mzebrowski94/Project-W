@@ -60,9 +60,15 @@ trait has a field.
 
 - `UnitKind` and a `sim.unit.<strain>` block in `units.properties`; copy `frog`, whose comments explain
   each sub-block. A sub-block left out is off.
+- Name: `ui.strain.<KIND>` in `assets/i18n/ui.properties` - the proving-ground menu and an adaptation's card
+  read it; `TextFitTest.namesEveryStrain` fails the build without it.
 - It is on the field only where a scenario puts it, in `sim/.../scenario/`: `spawnUnit`, a nest of it, or
-  an entry in a wave schedule. A scenario's change to every strain (`for (UnitKind kind : ...)`) reaches
-  it on its own.
+  an entry in a wave schedule, or a line in a biome's `roster` in `biomes.properties` for a mission. A scenario's
+  change to every strain (`for (UnitKind kind : ...)`) reaches it on its own - and that cuts both ways: the
+  mission and every Adventure put each strain down **unaware** (`withAlwaysAggressive(false)`), so a strain that
+  hunts with no detection range of its own never notices anyone there, though the proving grounds, on the shipped
+  numbers, look fine. Test the new strain in a mission (`Scenarios.world(Scenarios.mission(...))`, as
+  `MissionTest.sendsAWormAfterACommanderInItsBiome`), not only in a fixture.
 
 ### Upgrade or adaptation
 

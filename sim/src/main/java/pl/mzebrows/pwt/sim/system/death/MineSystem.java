@@ -14,6 +14,7 @@ import pl.mzebrows.pwt.sim.component.Grip;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
@@ -117,7 +118,8 @@ public final class MineSystem extends EntitySystem {
     private boolean anythingHostileNear(Position at, float radius) {
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
-            if (Life.dying(enemy)) {
+            if (Life.dying(enemy) || Drivers.burrowed(enemy)) {
+                // A worm passes beneath a mine as beneath everything (G0096).
                 continue;
             }
             if (Sight.withinRange(at.x, at.y, POSITION.get(enemy).x, POSITION.get(enemy).y, radius)) {

@@ -49,4 +49,17 @@ public final class Whole {
         long scaled = (once * another * 2 + HUNDRED_SQUARED) / (2 * HUNDRED_SQUARED);
         return (int) Math.max(1L, Math.min(Integer.MAX_VALUE, scaled));
     }
+
+    /**
+     * How many of {@code pieces} are left for {@code current} of {@code max} shared out between them, rounded up, never
+     * fewer than one nor more than all: a snake's parts and a worm's teeth (G0095, G0096) - the last piece goes with the
+     * last point. Nothing left, or no whole to share, is one.
+     */
+    public static int piecesLeft(int current, int max, int pieces) {
+        if (max <= 0 || current <= 0) {
+            return Math.min(1, pieces);
+        }
+        long left = ((long) current * pieces + max - 1) / max;
+        return (int) Math.max(Math.min(1, pieces), Math.min(pieces, left));
+    }
 }

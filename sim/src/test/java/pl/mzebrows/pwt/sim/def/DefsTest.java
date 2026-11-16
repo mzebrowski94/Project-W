@@ -63,7 +63,8 @@ class DefsTest {
                         strain(RADIUS, Look.LEECH),
                         strain(RADIUS * 2f, Look.SLINGER),
                         strain(RADIUS, Look.MAGMA_SPITTER),
-                        strain(RADIUS, Look.SNAKE));
+                        strain(RADIUS, Look.SNAKE),
+                        strain(RADIUS, Look.WORM));
     }
 
     @Test
@@ -88,6 +89,7 @@ class DefsTest {
                 .put(UnitKind.LEECH_SLINGER, strain(RADIUS * 2f, Look.SLINGER))
                 .put(UnitKind.MAGMA_SPITTER, strain(RADIUS, Look.MAGMA_SPITTER))
                 .put(UnitKind.SNAKE, strain(RADIUS, Look.SNAKE))
+                .put(UnitKind.WORM, strain(RADIUS, Look.WORM))
                 .build();
     }
 
@@ -120,6 +122,7 @@ class DefsTest {
                 SlingDef.off(),
                 FuseDef.off(),
                 SlitherDef.off(),
+                BurrowDef.off(),
                 0,
                 true,
                 Chances.none(),

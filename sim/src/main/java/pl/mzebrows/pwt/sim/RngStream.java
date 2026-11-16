@@ -109,7 +109,13 @@ public enum RngStream {
      * Which way a snake bends next and for how long (G0095). Its own, so a snake on the field never moves where
      * anything else wanders, and a level without one draws nothing.
      */
-    SLITHER(0x3E91_C7A5_0D6B_F248L);
+    SLITHER(0x3E91_C7A5_0D6B_F248L),
+
+    /**
+     * Which way a worm bends while it has nobody to come for, and how long it rests between surfacings (G0096). Its
+     * own, so a worm moves nothing else's draws.
+     */
+    BURROW(0x6C1F_A2D8_47E3_B95DL);
 
     private final long salt;
 

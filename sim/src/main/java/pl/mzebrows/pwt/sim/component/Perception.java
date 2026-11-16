@@ -62,6 +62,16 @@ public final class Perception implements Component, Pool.Poolable {
     public long kept = Handle.NOBODY;
 
     /**
+     * Whether it comes only for a man in the biome it was put down in - the worm (G0096) - and where that was. Every
+     * other strain comes for whoever is nearest wherever he stands.
+     */
+    public boolean ownBiome;
+
+    public float homeX;
+
+    public float homeY;
+
+    /**
      * True while this unit is on its way to somewhere it was provoked from - shot at, struck, or
      * stood next to a point being taken off it.
      *
@@ -115,6 +125,14 @@ public final class Perception implements Component, Pool.Poolable {
         this.arcCosine = newArcCosine;
         this.requiresClearLine = newRequiresClearLine;
         this.allRoundRange = newAllRoundRange;
+        return this;
+    }
+
+    /** Keeps it to the biome of this place, where it was put down (G0096), returning this component. */
+    public Perception keptTo(float x, float y) {
+        this.ownBiome = true;
+        this.homeX = x;
+        this.homeY = y;
         return this;
     }
 
@@ -183,6 +201,9 @@ public final class Perception implements Component, Pool.Poolable {
         targetX = 0f;
         targetY = 0f;
         kept = Handle.NOBODY;
+        ownBiome = false;
+        homeX = 0f;
+        homeY = 0f;
         provoked = false;
         provokedX = 0f;
         provokedY = 0f;

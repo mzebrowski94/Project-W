@@ -22,6 +22,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.WaveLine;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Burrow;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Door;
@@ -31,6 +32,7 @@ import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Turret;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Arrival;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.FinaleKind;
@@ -447,6 +449,36 @@ class MissionTest {
 
         assertThat(bosses(simulation)).hasSize(1);
         assertThat(bosses(simulation).getFirst().getComponent(Facing.class).x).isNegative();
+    }
+
+    /**
+     * A mission puts every strain down unaware (G0063), and the worm's biome is its range (G0096): a commander who
+     * stands in the desert beside one is gone after and bitten, as on the proving ground.
+     */
+    @Test
+    void sendsAWormAfterACommanderInItsBiome() {
+        Simulation simulation = Scenarios.world(
+                Scenarios.mission(TierKind.MEDIUM), SimConfig.defaults().withSeed(0L));
+        Entity worm = null;
+        for (Entity unit :
+                simulation.engine().getEntitiesFor(Family.all(Burrow.class).get())) {
+            if (unit.getComponent(Burrow.class).enabled) {
+                worm = unit;
+            }
+        }
+        assertThat(worm).as("seed 0's mission deals a desert with a worm in it").isNotNull();
+        Entity commander = simulation
+                .engine()
+                .getEntitiesFor(Family.all(Commander.class).get())
+                .first();
+        Position at = worm.getComponent(Position.class);
+        commander.getComponent(Position.class).set(at.x + 10f, at.y);
+
+        for (int tick = 0; tick < 600 && commander.getComponent(Vitality.class).wounds == 0; tick++) {
+            simulation.step();
+        }
+
+        assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
     }
 
     /** The tier moves how many come in a wave and nothing else of the finale: not its layout, timing or mouths. */

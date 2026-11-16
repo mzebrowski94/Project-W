@@ -98,12 +98,16 @@ public final class PerceptionSystem extends EntitySystem {
             Position position = POSITION.get(watcher);
             // Asked again every tick (G0026): the nearest, leaning towards the man it is after (G0097).
             long after = perception.aggro ? perception.kept : Handles.NOBODY;
-            @Nullable Entity quarry = Drivers.nearestLivingTarget(sides, position, after, switchMargin);
+            int biome = perception.ownBiome ? map.map().biomeAt(perception.homeX, perception.homeY) : Drivers.ANY_BIOME;
+            @Nullable
+            Entity quarry = Drivers.nearestLivingTarget(sides, position, after, switchMargin, biome, map.map());
             @Nullable Position target = quarry == null ? null : POSITION.get(quarry);
             if (target == null) {
                 // Nobody left to hunt. This outranks every switch below it.
                 perception.aggro = false;
-            } else if (perception.alwaysAggressive) {
+            } else if (perception.alwaysAggressive || perception.ownBiome) {
+                // Kept to its biome, the biome is its range (G0096): a man in it is noticed, put down unaware or not -
+                // the list above holds nobody else.
                 perception.aggro = true;
             } else if (perception.aggro && !perception.losesInterest) {
                 perception.aggro = true;

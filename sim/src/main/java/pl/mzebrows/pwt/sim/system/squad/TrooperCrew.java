@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.system.commander.Crews;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Reach;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 
@@ -121,7 +122,7 @@ final class TrooperCrew {
     private boolean somethingToShootFrom(Position where, float range) {
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
-            if (Life.dying(enemy)) {
+            if (Life.dying(enemy) || Drivers.burrowed(enemy)) {
                 continue;
             }
             Position standing = POSITION.get(enemy);

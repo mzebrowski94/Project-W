@@ -594,12 +594,19 @@ class SimConfigTest {
     /** How much further than the range it noticed you at a strain will keep hunting you. */
     private static float leeway(SimConfig config, UnitKind kind) {
         PerceptionDef perception = config.unit(kind).perception();
+        if (!perception.losesInterest()) {
+            // It never gives up on a man at all - the worm, in its biome (G0096): no leeway is longer.
+            return Float.MAX_VALUE;
+        }
         return perception.loseRange() - perception.detectionRange();
     }
 
     /** The same for one of the strain standing in {@code world}, both ranges folded as the game reads them. */
     private static float leeway(SimConfig config, UnitKind kind, Simulation world, Modifiers modifiers) {
         PerceptionDef perception = config.unit(kind).perception();
+        if (!perception.losesInterest()) {
+            return Float.MAX_VALUE;
+        }
         Entity unit = world.spawnUnit(kind, 10f, 10f);
         return modifiers.loseRange(unit, perception.loseRange())
                 - modifiers.detectionRange(unit, perception.detectionRange());

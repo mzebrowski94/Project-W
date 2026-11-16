@@ -169,6 +169,7 @@ class GraphicConfigTest {
                         d.pop(),
                         d.geyser(),
                         d.slither(),
+                        d.burrow(),
                         d.camera()))
                 .isInstanceOf(IllegalArgumentException.class);
     }

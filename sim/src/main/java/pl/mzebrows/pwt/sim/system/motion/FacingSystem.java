@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.systems.IteratingSystem;
 import pl.mzebrows.pwt.sim.component.Barrage;
+import pl.mzebrows.pwt.sim.component.Burrow;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -30,6 +31,7 @@ import pl.mzebrows.pwt.sim.component.Velocity;
 public final class FacingSystem extends IteratingSystem {
 
     private static final ComponentMapper<Barrage> BARRAGE = ComponentMapper.getFor(Barrage.class);
+    private static final ComponentMapper<Burrow> BURROW = ComponentMapper.getFor(Burrow.class);
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
@@ -65,6 +67,12 @@ public final class FacingSystem extends IteratingSystem {
         if (RANGED.has(entity) && RANGED.get(entity).aiming()) {
             Ranged ranged = RANGED.get(entity);
             facing.face(ranged.aimX, ranged.aimY);
+            return;
+        }
+        if (BURROW.has(entity) && BURROW.get(entity).looking()) {
+            // A worm up in its hole faces where it looks, not the way it is not going (G0096).
+            Burrow burrow = BURROW.get(entity);
+            facing.face(burrow.lookX, burrow.lookY);
             return;
         }
         if (BARRAGE.has(entity) && BARRAGE.get(entity).aiming()) {

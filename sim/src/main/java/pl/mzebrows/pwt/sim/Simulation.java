@@ -69,6 +69,7 @@ import pl.mzebrows.pwt.sim.system.level.ObjectiveSystem;
 import pl.mzebrows.pwt.sim.system.level.ReinforcementSystem;
 import pl.mzebrows.pwt.sim.system.level.WaveSystem;
 import pl.mzebrows.pwt.sim.system.motion.AvoidanceSystem;
+import pl.mzebrows.pwt.sim.system.motion.BurrowSystem;
 import pl.mzebrows.pwt.sim.system.motion.DodgeSystem;
 import pl.mzebrows.pwt.sim.system.motion.DriveSystem;
 import pl.mzebrows.pwt.sim.system.motion.FacingSystem;
@@ -228,6 +229,8 @@ public final class Simulation {
         engine.addSystem(new DodgeSystem());
         // Last of what steers, so a slithering strain's course is its own whatever else asked (G0095).
         engine.addSystem(new SlitherSystem(streams.of(RngStream.SLITHER), solid, config.tickSeconds()));
+        // Beside it, last of what steers too: a burrowing strain's course is its own as well (G0096).
+        engine.addSystem(new BurrowSystem(streams.of(RngStream.BURROW), solid, config.tickSeconds()));
         engine.addSystem(new DriveSystem(map, config.ground(), modifiers));
         engine.addSystem(
                 new EnemyLeapSystem(streams.of(RngStream.LEAP), config.tickSeconds(), solid, config.door(), modifiers));

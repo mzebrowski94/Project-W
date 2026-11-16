@@ -28,6 +28,7 @@ import pl.mzebrows.pwt.sim.def.ArmourDef;
 import pl.mzebrows.pwt.sim.def.ArmouryDef;
 import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.BarrageDef;
+import pl.mzebrows.pwt.sim.def.BurrowDef;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
@@ -1026,6 +1027,7 @@ public final class AlphaWorlds {
                         .put(UnitKind.SLINGER, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.SLINGER))
                         // A plain strain that does not slither: the fixtures about one switch it on (G0095).
                         .put(UnitKind.SNAKE, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.SNAKE))
+                        .put(UnitKind.WORM, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.WORM))
                         .build(),
                 onShipped(
                                 PickupKind.class,
@@ -1883,10 +1885,19 @@ public final class AlphaWorlds {
                 SlingDef.off(),
                 FuseDef.off(),
                 SlitherDef.off(),
+                BurrowDef.off(),
                 0,
                 true,
                 noChances(),
                 look);
+    }
+
+    /**
+     * A worm's burrow at the shipped numbers (G0096), resting the shortest of its range every time so a test can count
+     * on it. Not in the fixture's own worm, which burrows not at all, like every other fixture strain.
+     */
+    public static BurrowDef burrowing() {
+        return new BurrowDef(12, 7f, 240f, 40f, ARENA, 1.5f, 4f, 2f, 0.9f, 3f, 1.5f, 15f, 15f, Harm.WOUND);
     }
 
     /** The same change applied to every strain, for a fixture that wants all of them to behave alike. */

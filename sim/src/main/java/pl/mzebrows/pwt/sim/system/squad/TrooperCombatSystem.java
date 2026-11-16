@@ -376,7 +376,7 @@ public final class TrooperCombatSystem extends EntitySystem {
         int count = 0;
         for (int i = 0; i < aliens.size(); i++) {
             Entity alien = aliens.get(i);
-            if (Life.down(alien)) {
+            if (Life.down(alien) || Drivers.burrowed(alien)) {
                 continue;
             }
             Position where = POSITION.get(alien);

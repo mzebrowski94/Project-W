@@ -15,6 +15,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.unhurt;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Crew;
@@ -254,6 +255,37 @@ class AlienTargetingTest {
         assertThatThrownBy(() -> config().withSwitchMargin(1f))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("switchMargin");
+    }
+
+    /** A worm comes for the nearest man in its own biome, never for a nearer one across its edge (G0096). */
+    @Test
+    void comesOnlyForAManInItsOwnBiomeWhenItKeepsToIt() {
+        Simulation simulation = new Simulation(
+                config().withUnit(UnitKind.WORM, worm -> worm.withBurrow(AlphaWorlds.burrowing())),
+                AlphaWorlds.twoBiomes());
+        float westOfTheEdge = AlphaWorlds.ARENA * 0.5f - 20f;
+        simulation.spawnCommander(westOfTheEdge + 25f, LANE, 0);
+        simulation.spawnCommander(westOfTheEdge - 28f, LANE, 1);
+        Entity worm = simulation.spawnUnit(UnitKind.WORM, westOfTheEdge, LANE);
+
+        // Long enough for it to turn round onto him: it turns at a rate, never on the spot.
+        steps(simulation, ticksIn(2f));
+
+        assertThat(at(worm).x).isLessThan(westOfTheEdge);
+    }
+
+    /** Every other strain comes for whoever is nearest, whatever biome he stands in. */
+    @Test
+    void comesForTheNearestManAcrossABiomesEdgeWhenItDoesNotKeepToIt() {
+        Simulation simulation = new Simulation(config(), AlphaWorlds.twoBiomes());
+        float westOfTheEdge = AlphaWorlds.ARENA * 0.5f - 20f;
+        simulation.spawnCommander(westOfTheEdge + 25f, LANE, 0);
+        simulation.spawnCommander(westOfTheEdge - 28f, LANE, 1);
+        Entity grunt = simulation.spawnUnit(UnitKind.GRUNT, westOfTheEdge, LANE);
+
+        steps(simulation, WATCH);
+
+        assertThat(at(grunt).x).isGreaterThan(westOfTheEdge);
     }
 
     private static Simulation keeping() {

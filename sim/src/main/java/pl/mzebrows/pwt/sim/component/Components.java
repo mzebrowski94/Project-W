@@ -28,6 +28,7 @@ public final class Components {
                     BlastsOnDeath.class,
                     Bloat.class,
                     Body.class,
+                    Burrow.class,
                     Collider.class,
                     Commander.class,
                     ContactDamage.class,

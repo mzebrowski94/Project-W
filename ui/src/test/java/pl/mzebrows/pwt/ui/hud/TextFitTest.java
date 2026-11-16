@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import pl.mzebrows.pwt.sim.Players;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
@@ -69,6 +70,16 @@ class TextFitTest {
     @CsvSource({"0, 0", "7, 7", "999, 999", "1000, 999+", "123456, 999+", "-3, 0"})
     void showsACountAboveNineHundredAndNinetyNineAsNineHundredAndNinetyNinePlus(int value, String shown) {
         assertThat(TextFit.count(value)).isEqualTo(shown);
+    }
+
+    /** The proving-ground menu and an adaptation's card name a strain by it; nothing else would notice one missing. */
+    @Test
+    void namesEveryStrain() {
+        for (UnitKind kind : UnitKind.values()) {
+            assertThat(STRINGS.getProperty("ui.strain." + kind.name()))
+                    .as("ui.strain.%s", kind)
+                    .isNotBlank();
+        }
     }
 
     @Test

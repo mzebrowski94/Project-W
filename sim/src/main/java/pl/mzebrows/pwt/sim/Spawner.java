@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
 import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Burrow;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
@@ -90,6 +91,7 @@ import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.component.Weave;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.BurrowDef;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupDef;
@@ -449,6 +451,8 @@ public final class Spawner {
         entity.add(engine.createComponent(Sling.class));
         // Off on every strain but the snake (G0095); home is where it was put down, an individual's fact.
         entity.add(engine.createComponent(Slither.class).home(x, y));
+        // Off on every strain but the worm (G0096); home, as a snake's, an individual's fact.
+        entity.add(engine.createComponent(Burrow.class).home(x, y));
         // Inert until a barrage that roars winds up; read by the view, never the simulation.
         entity.add(engine.createComponent(Shake.class));
         entity.add(engine.createComponent(Weapon.class));
@@ -588,8 +592,20 @@ public final class Spawner {
         entity.getComponent(Collider.class).movable = !def.rooted();
         SlitherDef slither = def.slither();
         entity.getComponent(Slither.class).set(slither, config.tickSeconds());
-        // A slither stops for a declared stun and nothing else: no blow holds it still (G0095).
-        entity.getComponent(Stunned.class).immuneIf(slither.enabled());
+        BurrowDef burrow = def.burrow();
+        entity.getComponent(Burrow.class).set(burrow, config.tickSeconds());
+        // A slither or a burrow stops for a declared stun and nothing else: no blow holds it still (G0095, G0096).
+        entity.getComponent(Stunned.class).immuneIf(slither.enabled() || burrow.enabled());
+        if (burrow.enabled()) {
+            // It comes for a man in its own biome only (G0096): the biome of where it was put down.
+            Position at = entity.getComponent(Position.class);
+            entity.getComponent(Perception.class).keptTo(at.x, at.y);
+            // Under the ground from the first tick: nothing it meets meets it, rock included (G0096).
+            Collider collider = entity.getComponent(Collider.class);
+            collider.present = false;
+            collider.avoided = false;
+            collider.movable = false;
+        }
         if (slither.enabled()) {
             // Through every body but scenery, still touching what it passes through, its head biting as it goes and
             // a man it passes through taking what the slither declares rather than a claw's kill (G0095).

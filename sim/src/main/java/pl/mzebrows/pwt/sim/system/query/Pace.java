@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.component.Barrage;
+import pl.mzebrows.pwt.sim.component.Burrow;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Sling;
@@ -46,6 +47,7 @@ public final class Pace {
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Barrage> BARRAGE = ComponentMapper.getFor(Barrage.class);
     private static final ComponentMapper<Sling> SLING = ComponentMapper.getFor(Sling.class);
+    private static final ComponentMapper<Burrow> BURROW = ComponentMapper.getFor(Burrow.class);
     private static final ComponentMapper<Slither> SLITHER = ComponentMapper.getFor(Slither.class);
 
     private Pace() {}
@@ -59,6 +61,10 @@ public final class Pace {
     public static float of(Entity entity, TileMap map, Defs<Terrain, GroundDef> ground) {
         if (SLITHER.has(entity) && SLITHER.get(entity).unslowed) {
             // A slither keeps its pace: no beam, glue or mud slows it (G0095).
+            return 1f;
+        }
+        if (BURROW.has(entity) && BURROW.get(entity).enabled) {
+            // Nor does a worm, under the ground or coming up (G0096).
             return 1f;
         }
         float pace = SLOWED.has(entity) ? SLOWED.get(entity).factor() : 1f;

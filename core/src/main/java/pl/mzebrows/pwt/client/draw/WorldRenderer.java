@@ -15,10 +15,12 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.Log;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Armour;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Burrow;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -77,6 +79,7 @@ public final class WorldRenderer implements Disposable {
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Slither> SLITHER = ComponentMapper.getFor(Slither.class);
+    private static final ComponentMapper<Burrow> BURROW = ComponentMapper.getFor(Burrow.class);
 
     /** Where a cosmetic lead writes the facing it draws; reused, so it costs nothing per frame. */
     private final float[] ahead = new float[2];
@@ -145,6 +148,7 @@ public final class WorldRenderer implements Disposable {
     private final PopMark popMark;
     private final GeyserMark geyserMark;
     private final SlitherMark slitherMark;
+    private final BurrowMark burrowMark;
 
     /** The client's own clock, for the post's and a geyser's pulse alone - a look, never read back by the simulation. */
     private float pulseSeconds;
@@ -225,6 +229,11 @@ public final class WorldRenderer implements Disposable {
             if (SLITHER.has(entity) && SLITHER.get(entity).enabled) {
                 drawParts(entity, x, y, body.radius, tint(appearance));
             }
+            if (BURROW.has(entity) && BURROW.get(entity).burrowed()) {
+                // Under the ground it is its shadow and nothing else (G0096, pillar 4).
+                drawBurrowShadow(x, y, body.radius, BURROW.get(entity));
+                continue;
+            }
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {
                 shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
@@ -303,6 +312,10 @@ public final class WorldRenderer implements Disposable {
             }
             if (appearance.wounds > 0) {
                 drawWounds(x, y, body.radius, appearance.wounds);
+            }
+            if (BURROW.has(entity) && BURROW.get(entity).enabled && !Life.dying(entity)) {
+                // Up: its maw's teeth, closing on the place it came up at, or round its hole (G0096).
+                drawMaw(entity, body.radius, appearance);
             }
             if (appearance.daze > 0f) {
                 // A declared stun, shrinking onto the body as it is spent (G0053, G0071).
@@ -703,6 +716,56 @@ public final class WorldRenderer implements Disposable {
             SCRATCH.a = popMark.alpha() * left;
             shapes.setColor(SCRATCH);
             shapes.circle(x, risen, crateMark.dotFor(radius), CIRCLE_SEGMENTS);
+        }
+    }
+
+    /** A worm under the ground: a see-through black disc its size, fainter while it rests (G0096). */
+    private void drawBurrowShadow(float x, float y, float radius, Burrow burrow) {
+        SCRATCH.set(shadowMark.color());
+        SCRATCH.a = burrow.restTicks > 0 ? burrowMark.restAlpha() : burrowMark.shadowAlpha();
+        shapes.setColor(SCRATCH);
+        shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
+    }
+
+    /**
+     * A worm's maw: a ring on the place it came up at, as wide as its maw has left to close - from its {@code mawScale}
+     * times its body down to its body at the snap - with its teeth pointing inwards, as many as it has left. Drawn on
+     * the maw's place rather than the body's, which steers onto it.
+     */
+    private void drawMaw(Entity entity, float radius, Appearance appearance) {
+        Burrow burrow = BURROW.get(entity);
+        float ring = radius * (1f + (burrow.mawScale - 1f) * burrow.mawLeft());
+        float cx = burrow.mawX;
+        float cy = burrow.mawY;
+        SCRATCH.set(tint(appearance));
+        SCRATCH.a = burrowMark.ringAlpha();
+        shapes.setColor(SCRATCH);
+        float width = burrowMark.ringWidth();
+        for (int segment = 0; segment < CIRCLE_SEGMENTS; segment++) {
+            double from = Math.PI * 2.0 * segment / CIRCLE_SEGMENTS;
+            double to = Math.PI * 2.0 * (segment + 1) / CIRCLE_SEGMENTS;
+            shapes.rectLine(
+                    cx + ring * (float) Math.cos(from),
+                    cy + ring * (float) Math.sin(from),
+                    cx + ring * (float) Math.cos(to),
+                    cy + ring * (float) Math.sin(to),
+                    width);
+        }
+        float halfWidth = burrowMark.toothWidth() * radius * 0.5f;
+        float length = burrowMark.toothLength() * radius;
+        for (int tooth = 0; tooth < burrow.teethLeft; tooth++) {
+            double angle = Math.PI * 2.0 * tooth / burrow.teeth;
+            float outX = (float) Math.cos(angle);
+            float outY = (float) Math.sin(angle);
+            float baseX = cx + outX * ring;
+            float baseY = cy + outY * ring;
+            shapes.triangle(
+                    baseX - outY * halfWidth,
+                    baseY + outX * halfWidth,
+                    baseX + outY * halfWidth,
+                    baseY - outX * halfWidth,
+                    baseX - outX * length,
+                    baseY - outY * length);
         }
     }
 
