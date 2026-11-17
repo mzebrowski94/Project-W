@@ -122,7 +122,7 @@ public final class UiFlow {
             case RESTART -> restart(page);
             case LEAVE -> leave(page);
             case CHOOSE ->
-                page == UiPage.PROVING_GROUND || page == UiPage.PROVING_UPGRADES
+                page == UiPage.PROVING_GROUND || page == UiPage.PROVING_UPGRADES || page == UiPage.CONTROLS
                         ? new UiEffect(UiEffect.Kind.CHOOSE, intent.index())
                         : UiEffect.NONE;
             case PROVE -> page == UiPage.PROVING_GROUND ? UiEffect.PROVE : UiEffect.NONE;

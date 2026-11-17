@@ -3,9 +3,11 @@
  * the colours that say what a thing is and what it is doing, the camera and the rendering tunables.
  *
  * <p>Ports: {@link pl.mzebrows.pwt.client.draw.GraphicConfig} (every rendering tunable, the painters' style
- * among them) and {@link pl.mzebrows.pwt.client.draw.Palette} (a thing's colour, a player's among them).
- * Entries, for the root: {@code WorldRenderer}, {@code TerrainRenderer}, {@code CameraDirector}, {@code
- * Drawn}, {@code LocalAim}, {@code LetterboxViewport}. The marks, {@code StateTint}, {@code TerrainPalette}
+ * among them), {@link pl.mzebrows.pwt.client.draw.Palette} (a thing's colour, a player's among them), {@link
+ * pl.mzebrows.pwt.client.draw.Drawn} (where a thing is drawn this frame) and {@link
+ * pl.mzebrows.pwt.client.draw.ActionMark} (how the action's brackets stand round a thing) - the last two so a
+ * prompt sits over what is drawn (G0098). Entries, for the root: {@code WorldRenderer}, {@code TerrainRenderer},
+ * {@code ActionBrackets}, {@code CameraDirector}, {@code Drawn}, {@code LocalAim}, {@code LetterboxViewport}. The marks, {@code StateTint}, {@code TerrainPalette}
  * and {@code GroundDetail} stay inside: only {@code GraphicConfig} builds them and only the renderers read
  * them.
  *

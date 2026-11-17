@@ -25,7 +25,7 @@ record disagree, the record wins until Mateusz supersedes it.
 | D8 | Q3: which font? | **monogram** (datagoblin, CC0), built from its glyph table - Latin-1, Latin Extended-A (Polish), Cyrillic. | `assets/ui/fonts/monogram/`, `UiFont`; `graphic.ui.fontSize` 9 (cap 7 + descender 2), `leading` 3 (accents above a capital). Bars 53 / 41 UI px; 1080p view 640 x 266. `PixelFont` stays the fallback. |
 | D9 | Gate B (2026-09-26): Q10, Q33. | **Name the gun in the panel** (for now). **An empty quarter stays black; a disconnected player's panel is grey** and says OFFLINE. | Offline an unplugged pad is detected; a remote player's disconnection is not published to peers yet - a net change, not built. |
 | D10 | Q15: remote players in the bottom bar? | **Everybody while there are four players or fewer, local and online**; with more, this machine's seats. A compact **roll call** view for big games is future work (section 19); a placeholder swaps in on `` ` ``. | `PanelAssignment`; *roll call* in the glossary (not *roster*: G0017). |
-| D11 | Q22: is every hostile blow decisive? | **Not decided.** The interface acts as if an outcome is either lethal (KIA) or non-lethal (DOWN); no health bar, no invariant test yet. | Revisit if a chipping blow appears. |
+| D11 | Q22: is every hostile blow decisive? | **Not decided.** The interface acts as if an outcome is either lethal (REDEPLOY) or non-lethal (DOWN); no health bar, no invariant test yet. | Revisit if a chipping blow appears. |
 | D12 | Q24: a reticle for pad players? | **Yes, a fixed distance along his aim** (`graphic.hud.reticle.padDistance` 24 world units) - and both reticles, the keyboard's included, **off by default** (`graphic.hud.reticle.keyboard`, `.pads`). | With the keyboard's off the system pointer shows. |
 | D13 | Q30: who owns the top bar's right block? | **A reserved slot** (`UI:hud/top/aside`), content open; the dev overlay sits in it in the alpha. | - |
 | D14 | Stage 4: pages as scene2d widgets (6.1)? | **No - painted on the UI canvas like the bars.** `MenuLayout` (ui) places lines and hit-tests the pointer; `MenuPainter` (core) draws. | The pages are short columns in the interface's own pixel font; widgets would only wrap them, and the decisions stay testable without a display. The skin-file restyle of 6.1 becomes `graphic.properties` colours for now. Revisit for the campaign list's scrolling (stage 5) or Options (stage 10) if either needs real widgets. |
@@ -374,8 +374,8 @@ every UI duration and amplitude is read through, so reduced motion is one number
 | Scrim in / out | "the world is frozen / live again" | `graphic.ui.motion.scrimSeconds` (0.08 s) |
 | Focus move | "this is selected" | instant ring; nothing slides between entries |
 | Terminal typing | "this just happened" | normal and low dispatches at `charsPerSecond`; **high ones appear at once** (8.4) |
-| Panel alarm | "you, specifically, must act" - entering DOWN, KIA or OVERHEAT | frame flash + 1 UI px shake, ≤ `graphic.hud.panel.alarmSeconds` (0.15 s) |
-| Alert pulse | "act on this now": DOWN, OVERHEAT, KIA | `graphic.hud.alert.pulseHz` (2), refused above 3 by config validation (C34) |
+| Panel alarm | "you, specifically, must act" - entering DOWN, REDEPLOY, PINNED or OVERHEAT | frame flash + 1 UI px shake, ≤ `graphic.hud.panel.alarmSeconds` (0.15 s) |
+| Alert pulse | "act on this now": DOWN, OVERHEAT, REDEPLOY, PINNED | `graphic.hud.alert.pulseHz` (2), refused above 3 by config validation (C34) |
 | Goal completed | "that part is done" | two pulses on the rising edge, then still |
 
 Rules that make the table safe:
@@ -438,7 +438,7 @@ so the HUD stands out by **place** and **treatment** instead:
   `commander.6` exactly and its mission green sat beside `commander.2`; both are gone.
 - A world meaning keeps its world colour: the panel's heat bar uses `graphic.color.heat` / `.overheat`.
 - **Alert** (`graphic.hud.color.alert`) is red, used only inside the bars, only as inverse video
-  (black text on a red block, 5.7:1 - white on it would fail 4.5:1), only for DOWN, OVERHEAT and KIA,
+  (black text on a red block, 5.7:1 - white on it would fail 4.5:1), only for DOWN, OVERHEAT, REDEPLOY and PINNED,
   pulsing at ≤ 3 Hz. Nothing UI-red is ever drawn over the view: red there is an enemy.
 
 ### 7.1 Top bar (mock-up `game_hud_top.png`)
@@ -486,7 +486,7 @@ layout to fit and test - four panels is the only case; one player is three quart
 
 ```
 ┌─ P1 cyan ─────────────────────┬─ P2 amber ────────────────────┬─ P3 green ────────────────────┬─ P4 pink ─────────────────────┐
-│┌──────┐ P1                    │┌──────┐ P2 [DOWN ▮▮▮▮▯▯▯▯▯]   │┌──────┐ P3 [KIA 1.2]          │┌──────┐ P4 ABOARD             │
+│┌──────┐ P1                    │┌──────┐ P2 [DOWN ▮▮▮▮▯▯▯▯▯]   │┌──────┐ P3 [REDEPLOY 1.2]     │┌──────┐ P4 ABOARD             │
 ││ face │ RAILGUN ▮▮▮▮▮▮▯▯▯▯    ││ face │ SHOTGUN ▮▯▯▯▯▯▯▯▯▯    ││ face │ FLAMER [OVERHEAT]     ││ face │ TURRET ▮▮▮▯▯▯▯▯▯▯     │
 │└──────┘ ☠123  ⚑2  +2          │└──────┘ ☠  7  ⚑0  +1          │└──────┘ ☠ 45  ⚑1  +0          │└──────┘ ☠  0  ⚑0  +3          │
 └───────────────────────────────┴───────────────────────────────┴───────────────────────────────┴───────────────────────────────┘
@@ -502,7 +502,7 @@ unlimited (alpha-phase row). What it does show:
 | - | Frame | 1 UI px in his commander colour, inside the quarter's padding | colour variant |
 | - | Portrait | 32 x 32 (10.5); a block in his colour until stage 8 | posture, fired, overheated |
 | 1 | Label | `P{slot+1}` in his colour: a colour **and** a word (7.4) | slot |
-| 1 | **Status** | **empty while he stands** - quiet until it matters, and always in the same place when it does. `DOWN` and his bleed-out as a draining bar (the fraction the world's ring shows); `KIA` and the seconds to his respawn; `ABOARD` on a turret. `DOWN` and `KIA` in alert. | posture, charge, respawn seconds |
+| 1 | **Status** | **empty while he stands** - quiet until it matters, and always in the same place when it does. `DOWN` and his bleed-out as a draining bar (the fraction the world's ring shows); `REDEPLOY` and the seconds to his respawn (`NO RESERVE` while nobody is in reserve); `PINNED` while an ant's jaws hold him; `STUNNED` and what is left of a declared stun as a draining bar; `ABOARD` on a turret - worst news first, in that order after `REDEPLOY` and `DOWN` (`PanelStatus`). `DOWN`, `REDEPLOY` and `PINNED` in alert. | posture, charge, respawn seconds, pin, stun |
 | 2 | **Weapon** | the gun's name (`ui.weapon.*`, ≤ 7 characters) and a heat bar in the world's heat colours; while overheated the bar becomes `OVERHEAT` in alert - same place, same width. Aboard: the turret's gun and its heat (G0025: heat belongs to the gun). | weapon kind, heat, overheated |
 | 3 | Tally | three icons and numbers, dim: kills (skull), goals (flag), stabilised (a **green plus** - never a red cross, a protected emblem); `999+` above 999. The mock-up's words (`KILL COUNT:` ...) are in the pause menu, where there is room and time to read them. | tally |
 
@@ -516,7 +516,7 @@ have a 6-px advance (Q3):
 | Portrait + gap | 32 + 4 |
 | Text column | 116 = 19 characters |
 | Rows | 3 x 8 + 2 x 2 leading = 28 of the 32 inside the padding |
-| Row 1, worst | `P8 KIA 1.2` = 10 characters (60); `P2 DOWN` = 42 + a bleed-out bar of the rest |
+| Row 1, worst | `P8 REDEPLOY 1.5` = 15 characters (90), `P8 STUNNED` = 10 + a stun bar of at least 4; `P2 DOWN` = 42 + a bleed-out bar of the rest. With every word 30% longer the worst is still 19 |
 | Row 2, worst | `SIDEARM` = 42 + 6 + a 68-px heat bar; `OVERHEAT` (48) in the bar's place |
 | Row 3, worst | 3 x (icon 7 + 1 + `999+` 24) + 2 gaps of 6 = 108 |
 
@@ -524,7 +524,7 @@ have a 6-px advance (Q3):
   of 120 and everything else fits. That is the whole degradation rule (`PanelLayout`): portrait only
   in a quarter at least 160 wide. Label, status, weapon and tally are never dropped.
 - **Alarm, not hurt.** There is no chip damage to react to - a hit downs or kills him - so feedback
-  is for the **transition**: entering DOWN, KIA or OVERHEAT flashes his frame and shakes it by one
+  is for the **transition**: entering DOWN, REDEPLOY, PINNED or OVERHEAT flashes his frame and shakes it by one
   UI px (6.4) as the status field turns alert. No full-screen vignette: the screen is shared (section 2).
 - With no commander standing, the tally shows the life that just ended until the new one starts -
   the readout keeps the last value while `Respawning` is pending, then zeroes on the new commander.
@@ -550,7 +550,7 @@ have a 6-px advance (Q3):
 | Need | Rule | Where |
 |---|---|---|
 | Read it on a small screen | The legibility floor (7.3). At `s = 2` - 720p, 768p, the Steam Deck - text passes Valve's review. | `ScreenLayout`, font (Q3) |
-| Never colour alone | His panel carries `P1`-`P8` as text; states carry a word (`DOWN`, `KIA`, `OVERHEAT`) and a shape (the bar changes form); a goal done is a word. **Measured**: simulated at full severity (Machado 2009, ΔE in CIELAB), commander colours 2 and 3 (amber, green) are 3 apart under deuteranopia - the same colour - and 6 and 7 are 5 apart under protanopia; under about 10, on a small moving circle, it is a guess. The world half - a mark over each man - is Q23. | 7.2, Q23 |
+| Never colour alone | His panel carries `P1`-`P8` as text; states carry a word (`DOWN`, `REDEPLOY`, `PINNED`, `OVERHEAT`) and a shape (the bar changes form); a goal done is a word. **Measured**: simulated at full severity (Machado 2009, ΔE in CIELAB), commander colours 2 and 3 (amber, green) are 3 apart under deuteranopia - the same colour - and 6 and 7 are 5 apart under protanopia; under about 10, on a small moving circle, it is a guess. The world half - a mark over each man - is Q23. | 7.2, Q23 |
 | Size | `graphic.ui.scale` (0 = auto), 5.2 | `ScreenLayout` |
 | Motion | `graphic.ui.motionScale` (0 = none): every UI motion reads it (6.4). `graphic.camera.shakeScale` already does the same for the camera. | 6.4 |
 | Flashes | `graphic.ui.flashScale` (0 = none: a flash becomes a steady change). Nothing flashes more than three times a second - the WCAG 2.3.1 threshold - and config validation refuses a pulse above it. | 6.4 |
@@ -893,7 +893,7 @@ None of these exist yet. Each stage adds the ones it needs and lists them in its
 | `graphic.hud.goal.minHoldSeconds` | `1.0` | Least time a goal text stays before it may change. |
 | `graphic.hud.color.text`, `.textDim`, `.alert`, `.overlayFrame`, `.bar` | `e8e8e8ff`, `8a8a8aff`, `ff3030ff`, `e02020ff`, `000000ff` | 7.0. Under `graphic.hud.color`, not `graphic.color`, which is keyed by `Look`. Player colours and heat colours are **not** repeated here - the world's keys are read. |
 | `graphic.hud.panel.alarmSeconds` / `alarmShake` | `0.15` / `1` | Frame flash and shake (UI px) as he goes down, dies or overheats. |
-| `graphic.hud.alert.pulseHz` | `2` | DOWN / OVERHEAT / KIA pulse. Validation refuses above 3. |
+| `graphic.hud.alert.pulseHz` | `2` | DOWN / OVERHEAT / REDEPLOY / PINNED pulse. Validation refuses above 3. |
 | `graphic.hud.portrait.size` | `32` | UI px. Feeds the bottom bar's height. |
 | `graphic.hud.portrait.blinkSeconds`, `.glowAt` | `3.5`, `0.5` | Face timing. |
 | `graphic.hud.reticle.size` | `9` | Reticle texels, drawn at `s`. |
@@ -1038,7 +1038,7 @@ means Mateusz answers it at that gate. Q22 onwards were added by the review.
 | Q1 | 2 gate A | View aspect: a **range** (the review's proposal, 1.6-2.39: 16:9 unchanged, 16:10 and the Deck get a taller view) or pinned (2.39 war film, or about 3:1 as the mock-ups' bar heights imply)? Keep 90 world units tall and see further sideways, or keep 160 wide? | `1.6`-`2.39`, `virtualHeight 90`. All single keys. |
 | Q2 | 2 gate A | Small scenarios on 160-wide maps will show ground beyond the map edge. Widen their maps (content), or accept? | Accept and draw it as out-of-bounds ground. |
 | Q3 | 2 gate A | Which font? Must be monospace, OFL or CC0 with its licence committed beside it, capitals ≥ 6 px and digits / lowercase ≥ 5 px at native size (7.3), cover Latin Extended-A - Polish is the first translation anyone will ask for - and advance at most 6 px, which the four-panel budget of 7.2 is built on. | Built-in font until chosen. |
-| Q4 | 10 | Where do a player's settings live once they are editable - a user file beside the game, or `Preferences`? Never the shipped `assets/*.properties`. **Every accessibility option waits on this.** | Placeholder page. |
+| Q4 | 10 | Where do a player's settings live once they are editable - a user file beside the game, or `Preferences`? Never the shipped `assets/*.properties`. **Every accessibility option waits on this.** | Placeholder page. **Partly answered 2026-11-17:** the first setting, the CONTROLS page's PROMPTS switch, is kept in `Preferences` of its own (`pl.mzebrows.pwt.settings`, `LocalSettings`); a setting that overrides a shipped default is still open. |
 | Q5 | 5 | Does anything show behind the main menu - a scenario running as a backdrop, or black? | Black. |
 | Q6 | 5 | Joining by room code with only a pad: an on-screen character picker, or keyboard only? Valve's Deck review requires controller-only text entry. | **Changed:** a four-slot letter picker (up/down letter, left/right slot) - the code is short and its alphabet small. Sessions heard on the network stay one press away. |
 | Q7 | 4 | Offline, does losing window focus pause? (Online it cannot stop everyone for one player's alt-tab.) | **Changed to yes, offline**: an alt-tab mid-fight otherwise kills him (pillar 2 makes that a real loss). No online. |
@@ -1139,7 +1139,7 @@ questions the first checklist did not have. An answer that needs Mateusz points 
 |---|---|---|---|
 | C19 | What is UI animation for? | To say something changed. Every motion in the table of 6.4 names what it says; one that says nothing is not built. | 6.4 |
 | C20 | How long do transitions take? | Pages ≤ 0.12 s, scrim 0.08 s, focus instant - and input never waits: a press mid-transition finishes it. | 6.4 |
-| C21 | How does the HUD react to impacts? | A hit downs or kills him - there is no chip damage to react to - so the reaction is to the transition: his panel's frame flashes and shakes one UI px, the portrait goes down, DOWN, OVERHEAT and KIA pulse in alert. No full-screen red (C6). A hit flash on his sprite needs a fact: Q28. | 6.4, 7.2, Q28 |
+| C21 | How does the HUD react to impacts? | A hit downs or kills him - there is no chip damage to react to - so the reaction is to the transition: his panel's frame flashes and shakes one UI px, the portrait goes down, DOWN, OVERHEAT, REDEPLOY and PINNED pulse in alert. No full-screen red (C6). A hit flash on his sprite needs a fact: Q28. | 6.4, 7.2, Q28 |
 | C22 | *(added)* Does juice survive pause and replay? | World animation on simulation time (freezes, replays identically); UI animation on frame time; neither touches `sim`. | 2, 10.4 |
 | C23 | *(added)* Does juice cost glance value? | Where it would, it goes: a high dispatch appears at once instead of typing. | 8.4 |
 | C24 | *(added)* Does the log stay honest under a burst? | Coalescing, priorities, and stale low-priority news dropped before it is shown. | 8.4 |

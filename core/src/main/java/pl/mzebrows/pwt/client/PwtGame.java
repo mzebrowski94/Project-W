@@ -51,6 +51,7 @@ public final class PwtGame extends Game implements GameContext {
     private ProvingSetup provingSetup = ProvingSetup.first();
     private final MissionChoices missions = new MissionChoices(Clock.systemUTC(), new SecureRandom()::nextLong);
     private @Nullable MissionRecords missionRecords;
+    private @Nullable LocalSettings settings;
 
     private @Nullable Screen pendingScreen;
 
@@ -203,6 +204,17 @@ public final class PwtGame extends Game implements GameContext {
             // Read on first use, once the application - and so its preferences - exists.
             read = LocalMissionRecords.load();
             missionRecords = read;
+        }
+        return read;
+    }
+
+    @Override
+    public LocalSettings settings() {
+        LocalSettings read = settings;
+        if (read == null) {
+            // Read on first use, once the application - and so its preferences - exists.
+            read = LocalSettings.load();
+            settings = read;
         }
         return read;
     }

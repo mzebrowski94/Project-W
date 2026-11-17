@@ -11,11 +11,14 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.willing;
 
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Order;
@@ -57,6 +60,20 @@ class AidTest {
 
         assertThat(down.getComponent(Vitality.class).begun).isFalse();
         assertThat(down.getComponent(Dying.class).begun).isFalse();
+    }
+
+    /** A trooper's hands name what they are on as the commander's do, so the field means one thing (G0098). */
+    @Test
+    void namesTheManHeIsPickingUpAsTheSubject() {
+        Simulation simulation = new Simulation(willing(AiChance.AID_A_TROOPER));
+        Entity down = simulation.spawnTrooper(MIDDLE, MIDDLE);
+        Entity helper = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
+
+        wound(down);
+        steps(simulation, LONG_ENOUGH_TO_WORK / 2);
+
+        assertThat(helper.getComponent(Action.class).available).isEqualTo(ActionKind.STABILISE);
+        assertThat(helper.getComponent(Action.class).subject).isEqualTo(Handles.of(down));
     }
 
     @Test

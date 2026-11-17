@@ -56,6 +56,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param heat how to draw how hot the gun a unit is holding has become
  * @param door how to draw a door being opened (G0069)
  * @param post how to draw a post, round the point it was taken from
+ * @param flag how to draw a control point once it is taken: its pole, its flag and its ring
  * @param tree how to draw a tree's foliage over its trunk (G0072)
  * @param boulder how to shade a boulder
  * @param sling how to draw a slinger's riders on its back (G0074)
@@ -64,6 +65,9 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param geyser how to draw a geyser filling: its fire mark, pulsing (G0089)
  * @param slither how to draw the parts trailing a slithering head (G0095)
  * @param burrow how to draw a worm: its shadow under the ground and its maw's teeth up (G0096)
+ * @param action how to draw the action key's brackets and its prompt (G0098)
+ * @param actionMark the colour of the brackets on what the action key would act on, and of its prompt's frame
+ * @param pickupMark the colour of the ticks on a pickup worth something to a commander near it
  * @param camera how the view follows what it is watching, and how far out it may sit
  */
 public record GraphicConfig(
@@ -98,6 +102,7 @@ public record GraphicConfig(
         HeatMark heat,
         DoorMark door,
         PostMark post,
+        FlagMark flag,
         BurstMark burst,
         DazeMark daze,
         TreeMark tree,
@@ -108,6 +113,9 @@ public record GraphicConfig(
         GeyserMark geyser,
         SlitherMark slither,
         BurrowMark burrow,
+        ActionMark action,
+        @ConfigKey("color.actionMark") Color actionMark,
+        @ConfigKey("color.pickupMark") Color pickupMark,
         CameraDirector.Settings camera) {
 
     /** How a colour is written: red, green and blue in hex, and alpha after them if it is not opaque. */
@@ -258,8 +266,11 @@ public record GraphicConfig(
         }
     }
 
-    /** The upgrade tell: how much it glows and lifts, both shares, and how fast it pulses. */
-    public record Upgrade(float glow, float lift, float pulseHz) {
+    /**
+     * The upgrade tell: how much it glows and lifts, both shares, and how fast it pulses; and how long the prompt over
+     * a commander who has just earned a draft stays (G0098).
+     */
+    public record Upgrade(float glow, float lift, float pulseHz, float promptSeconds) {
 
         public Upgrade {
             if (!(pulseHz >= 0f && pulseHz <= MAX_PULSE_HZ)) {
@@ -269,6 +280,9 @@ public record GraphicConfig(
             if (!(glow >= 0f && glow <= 1f && lift >= 0f && lift <= 1f)) {
                 throw new IllegalArgumentException(
                         "the upgrade tell's glow and lift are shares: " + glow + ", " + lift);
+            }
+            if (promptSeconds < 0f) {
+                throw new IllegalArgumentException("the upgrade prompt's seconds are not negative: " + promptSeconds);
             }
         }
     }

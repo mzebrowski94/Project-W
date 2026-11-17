@@ -94,6 +94,7 @@ Player one plays on keyboard and mouse, everyone else on a gamepad. The full lis
 | 🏃 | Move | `WASD` or arrows | Left stick |
 | 🆙 | **Upgrades** - open the cards you have earned, then pick one | **`C`**, then `1`-`3` | **`Y` / `Triangle`**, then d-pad |
 | 🎯 | Aim and fire | Mouse, left button | Right stick, `RT` / `R2` |
+| 🗡️ | Hand strike | Mouse, right button | Right stick, `LT` / `L2` |
 | 💣 | Throw a grenade | `Q` | `RB` / `R1` |
 | ✋ | Act: open a crate or door, stabilise a man, man a turret | `E` | `A` / `Cross` |
 | 📣 | Squad orders: follow me, forward, defend, cancel | `1`-`4` | D-pad |

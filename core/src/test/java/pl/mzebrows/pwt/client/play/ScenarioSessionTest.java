@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.client.hud.ActionPrompts;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
@@ -23,11 +23,10 @@ import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
-import pl.mzebrows.pwt.ui.hud.DispatchKind;
-import pl.mzebrows.pwt.ui.hud.DispatchSink;
+import pl.mzebrows.pwt.ui.hud.PromptKind;
+import pl.mzebrows.pwt.ui.hud.Prompts;
 import pl.mzebrows.pwt.ui.hud.Readout;
 import pl.mzebrows.pwt.ui.hud.ReadoutWriter;
-import pl.mzebrows.pwt.ui.hud.Reporters;
 
 /**
  * The harness state machine, tested with no window and no GL context. Everything the alpha-phase
@@ -418,68 +417,50 @@ class ScenarioSessionTest {
     }
 
     /**
-     * Scaffolding for the console prompt: the action is said when it changes and not otherwise. Saying
-     * it every frame is the failure this exists to prevent - a line per frame is a flood, not a prompt,
-     * and the player would stop reading it.
+     * The prompt the screen draws (G0098): a man going down within reach is prompted over himself, by the handle
+     * the simulation named - the whole path from a tick to what the interface says.
      */
     @Test
-    void promptsAnActionWhenOneComesWithinReach() {
+    void promptsTheHoldOverAManWhoGoesDownWithinReach() {
         ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
         Narration narration = new Narration(session);
         session.advance(TICK, NOBODY);
         narration.frame();
+        assertThat(narration.prompts.kind(0)).isEqualTo(PromptKind.NONE);
 
         putTheTrooperDown(session);
         session.advance(TICK, NOBODY);
         narration.frame();
 
-        assertThat(narration.readout.player(0).action).isEqualTo(ActionKind.STABILISE);
-        assertThat(narration.console).containsExactly("action: " + ActionKind.STABILISE);
+        Entity trooper = session.simulation()
+                .engine()
+                .getEntitiesFor(Family.all(Trooper.class).get())
+                .get(0);
+        assertThat(narration.prompts.kind(0)).isEqualTo(PromptKind.ACTION);
+        assertThat(narration.prompts.action(0)).isEqualTo(ActionKind.STABILISE);
+        assertThat(narration.prompts.anchor(0)).isEqualTo(Handles.of(trooper));
+        assertThat(narration.prompts.hold(0)).isTrue();
     }
 
-    @Test
-    void promptsNothingWhileTheAvailableActionHasNotChanged() {
-        ScenarioSession session = new ScenarioSession(new CommanderAndTrooper(), SimConfig.defaults());
-        Narration narration = new Narration(session);
-        narration.frame();
-        putTheTrooperDown(session);
-        session.advance(TICK, NOBODY);
-        narration.frame();
-
-        session.advance(TICK, NOBODY);
-        narration.frame();
-
-        assertThat(narration.console).hasSize(1);
-    }
-
-    /** What the screen does each frame after the ticks: read the world, then let the reporters compare. */
-    private static final class Narration implements DispatchSink {
+    /** What the screen does each frame after the ticks: read the world, then choose each player's prompt. */
+    private static final class Narration {
 
         final Readout readout = new Readout();
-        final List<String> lines = new ArrayList<>();
-        final List<String> console = new ArrayList<>();
+        final Prompts prompts = new Prompts(4f);
         private final ScenarioSession session;
         private final ReadoutWriter writer = new ReadoutWriter();
-        private final Reporters reporters;
 
         Narration(ScenarioSession session) {
             this.session = session;
-            this.reporters = new Reporters(List.of(new ActionPrompts(slot -> true, console::add)));
         }
 
         void frame() {
             writer.fill(session.simulation(), "", "", readout);
-            reporters.report(readout, this);
+            prompts.update(readout, Narration::everybody, TICK);
         }
 
-        @Override
-        public void offer(DispatchKind kind, int slot, int a, int b) {
-            lines.add(kind.name());
-        }
-
-        @Override
-        public void reset() {
-            lines.clear();
+        private static boolean everybody(int slot) {
+            return slot >= 0;
         }
     }
 

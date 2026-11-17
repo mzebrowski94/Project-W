@@ -27,13 +27,13 @@ import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.component.Weapon;
-import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.combat.Grants;
+import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
 
@@ -180,7 +180,14 @@ public final class ReadoutWriter {
         player.weapon = WEAPON.has(entity) ? WEAPON.get(entity).kind : WeaponKind.SIDEARM;
         player.heat = appearance.heat;
         player.overheated = appearance.overheated;
-        player.action = ACTION.has(entity) ? ACTION.get(entity).available : ActionKind.NONE;
+        player.self = Handles.of(entity);
+        if (ACTION.has(entity)) {
+            Action action = ACTION.get(entity);
+            player.action = action.available;
+            player.subject = action.subject;
+            player.progress = action.progress;
+        }
+        player.pinned = Drivers.gripped(entity);
         if (TALLY.has(entity)) {
             Tally tally = TALLY.get(entity);
             player.kills = tally.kills;
@@ -211,7 +218,10 @@ public final class ReadoutWriter {
         player.shielded = appearance.shield > 0f;
         player.invulnerable =
                 INVULNERABLE.has(entity) && INVULNERABLE.get(entity).active();
-        player.stunned = appearance.state == Appearance.State.STUNNED;
+        // A declared stun only, never a stagger (G0053), and read from its own fraction rather than the state:
+        // a leech's cling outranks the stun there and holds nothing still.
+        player.stunLeft = appearance.daze;
+        player.stunned = appearance.daze > 0f;
         if (player.posture == Posture.ABOARD && CREW.has(entity)) {
             aboard(CREW.get(entity).station, player);
         }

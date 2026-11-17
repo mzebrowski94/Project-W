@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.client.hud;
 
 import com.badlogic.gdx.graphics.Color;
 import java.util.List;
+import java.util.function.IntUnaryOperator;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.ui.hud.TextFit;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
@@ -119,6 +120,40 @@ public final class MenuPainter {
         return page(
                 view,
                 anchor,
+                head,
+                entries,
+                enabled,
+                selected,
+                scroll,
+                visible,
+                foot,
+                MenuPainter::dimFoot,
+                hint,
+                offsetX,
+                alpha);
+    }
+
+    /**
+     * The same, the first {@code footBright.applyAsInt(line)} characters of each foot line drawn bright and
+     * the rest dim - a table whose headings and first column the eye runs down.
+     */
+    public Rect page(
+            Rect view,
+            MenuLayout.Anchor anchor,
+            List<String> head,
+            List<String> entries,
+            boolean[] enabled,
+            int selected,
+            int scroll,
+            int visible,
+            List<String> foot,
+            IntUnaryOperator footBright,
+            String hint,
+            int offsetX,
+            float alpha) {
+        return page(
+                view,
+                anchor,
                 graphic.ui().page().columns(),
                 head,
                 entries,
@@ -127,6 +162,7 @@ public final class MenuPainter {
                 scroll,
                 visible,
                 foot,
+                footBright,
                 hint,
                 offsetX,
                 alpha);
@@ -144,6 +180,38 @@ public final class MenuPainter {
             int scroll,
             int visible,
             List<String> foot,
+            String hint,
+            int offsetX,
+            float alpha) {
+        return page(
+                view,
+                anchor,
+                columns,
+                head,
+                entries,
+                enabled,
+                selected,
+                scroll,
+                visible,
+                foot,
+                MenuPainter::dimFoot,
+                hint,
+                offsetX,
+                alpha);
+    }
+
+    private Rect page(
+            Rect view,
+            MenuLayout.Anchor anchor,
+            int columns,
+            List<String> head,
+            List<String> entries,
+            boolean[] enabled,
+            int selected,
+            int scroll,
+            int visible,
+            List<String> foot,
+            IntUnaryOperator footBright,
             String hint,
             int offsetX,
             float alpha) {
@@ -193,7 +261,15 @@ public final class MenuPainter {
         }
         line++;
         for (int i = 0; i < foot.size(); i++, line++) {
-            hud.text(TextFit.fit(foot.get(i), fits), x, layout.lineTop(panel, line), dim);
+            String words = TextFit.fit(foot.get(i), fits);
+            int bright = Math.clamp(footBright.applyAsInt(i), 0, words.length());
+            int top = layout.lineTop(panel, line);
+            if (bright > 0) {
+                hud.text(words.substring(0, bright), x, top, text);
+            }
+            if (bright < words.length()) {
+                hud.text(words.substring(bright), x + bright * UiFont.ADVANCE, top, dim);
+            }
         }
         hud.text(TextFit.fit(hint, fits), x, layout.lineTop(panel, line), dim);
         hud.endCanvas();
@@ -205,6 +281,11 @@ public final class MenuPainter {
         int pitch = metrics.fontSize() + metrics.leading();
         int room = (view.height() - 3 * metrics.padding()) / pitch - firstEntryLine(head) - footLines - 2;
         return Math.max(1, Math.min(entries, room));
+    }
+
+    /** A foot dim from end to end, as every page's but the controls page's is. */
+    private static int dimFoot(int line) {
+        return 0;
     }
 
     private static Color faded(Color into, Color from, float alpha) {

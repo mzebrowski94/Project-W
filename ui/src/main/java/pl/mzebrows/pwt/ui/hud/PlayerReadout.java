@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.ui.hud;
 
 import java.util.Arrays;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.PickupKind;
@@ -46,13 +47,16 @@ public final class PlayerReadout {
 
     public int grenadeMost;
 
-    /** Whether a shield is in front of him, and whether something has stunned him (G0053). */
+    /** Whether a shield is in front of him (G0053). */
     public boolean shielded;
 
     /** Whether nothing can hurt him for now - the protection a respawn or a revive gives him. */
     public boolean invulnerable;
 
+    /** Whether a stun a source declared holds him (G0053) - never a stagger - and how much of it is left, in {@code [0, 1]}. */
     public boolean stunned;
+
+    public float stunLeft;
 
     /** Seconds until he is back, while he is respawning. */
     public float respawnSeconds;
@@ -65,6 +69,21 @@ public final class PlayerReadout {
 
     /** What the action key would do for him right now. */
     public ActionKind action = ActionKind.NONE;
+
+    /**
+     * The handle of what the action key would act on - the simulation's choice, never the interface's (G0098) -
+     * and {@link Handles#NOBODY} while nothing is on offer.
+     */
+    public long subject = Handles.NOBODY;
+
+    /** How far through a hold he is, in {@code [0, 1]}: a man being put back on his feet. */
+    public float progress;
+
+    /** His commander's own handle, for what is drawn over him - a strike or an upgrade prompt. */
+    public long self = Handles.NOBODY;
+
+    /** Whether something holds him still in its jaws (G0045) - a pin, never a leech's cling (G0083). */
+    public boolean pinned;
 
     /**
      * His tally for this life (G0044) - kills, goals, men stabilised; the life that just ended while he
@@ -120,10 +139,15 @@ public final class PlayerReadout {
         shielded = false;
         invulnerable = false;
         stunned = false;
+        stunLeft = 0f;
         respawnSeconds = 0f;
         respawnWaiting = false;
         variant = 0;
         action = ActionKind.NONE;
+        subject = Handles.NOBODY;
+        progress = 0f;
+        self = Handles.NOBODY;
+        pinned = false;
         kills = 0;
         goals = 0;
         stabilised = 0;
@@ -147,10 +171,15 @@ public final class PlayerReadout {
         shielded = other.shielded;
         invulnerable = other.invulnerable;
         stunned = other.stunned;
+        stunLeft = other.stunLeft;
         respawnSeconds = other.respawnSeconds;
         respawnWaiting = other.respawnWaiting;
         variant = other.variant;
         action = other.action;
+        subject = other.subject;
+        progress = other.progress;
+        self = other.self;
+        pinned = other.pinned;
         kills = other.kills;
         goals = other.goals;
         stabilised = other.stabilised;

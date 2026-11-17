@@ -1,6 +1,6 @@
 # G0021: One action key, and the game chooses what it does
 
-**Status.** amended by G0056: opening a crate is on the list the key chooses from
+**Status.** amended by G0056: opening a crate is on the list the key chooses from; amended by G0098: the subject is published by handle for the interface to mark
 
 **Trigger.** Adding an action the commander performs on something near him, or proposing any way for
 the player to pick between two of them.
@@ -47,3 +47,10 @@ tap the key on every pass, which is the same as not charging for it.
 **Revisit when** a third action exists whose subject genuinely overlaps another's within one reach -
 at that point "nearest wins" starts being wrong often rather than rarely, and the answer is probably
 a priority per kind rather than a menu.
+
+## Amended by G0098
+
+**The subject is named, by handle.** `Action.subject` carries the handle of what the key would act on - chosen
+here, by the rule above - so the interface can bracket it without choosing again. *Nothing is named* was written
+against an `Entity` held across ticks; a handle is never reused (ADR 0016), so naming by handle keeps what that rule
+protected. The simulation still acts on the kind alone and re-decides both every tick.

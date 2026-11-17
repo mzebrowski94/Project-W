@@ -68,6 +68,40 @@ class PanelAlarmsTest {
     }
 
     @Test
+    void callsADyingMansAlarmRedeploy() {
+        Readout readout = standing();
+        readout.player(0).posture = Posture.DYING;
+
+        assertThat(PanelAlarms.of(readout.player(0))).isEqualTo(PanelAlarms.Alarm.REDEPLOY);
+    }
+
+    @Test
+    void flashesWhenAnAntPinsHim() {
+        Readout readout = standing();
+        PanelAlarms alarms = alarms(1f, 1f);
+        alarms.update(readout, FRAME);
+
+        readout.player(0).pinned = true;
+        alarms.update(readout, FRAME);
+
+        assertThat(PanelAlarms.of(readout.player(0))).isEqualTo(PanelAlarms.Alarm.PINNED);
+        assertThat(alarms.flashing(0)).isTrue();
+    }
+
+    @Test
+    void staysQuietWhenHeIsStunned() {
+        Readout readout = standing();
+        PanelAlarms alarms = alarms(1f, 1f);
+        alarms.update(readout, FRAME);
+
+        readout.player(0).stunned = true;
+        alarms.update(readout, FRAME);
+
+        assertThat(PanelAlarms.of(readout.player(0))).isEqualTo(PanelAlarms.Alarm.NONE);
+        assertThat(alarms.flashing(0)).isFalse();
+    }
+
+    @Test
     void staysSilentOnTheFrameAWorldArrives() {
         Readout readout = standing();
         readout.player(0).posture = Posture.CASUALTY;

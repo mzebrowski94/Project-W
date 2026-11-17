@@ -139,6 +139,7 @@ public final class WorldRenderer implements Disposable {
     private final CrateMark crateMark;
     private final DoorMark doorMark;
     private final PostMark postMark;
+    private final FlagMark flagMark;
     private final BurstMark burstMark;
     private final DazeMark dazeMark;
     private final TreeMark treeMark;
@@ -150,7 +151,13 @@ public final class WorldRenderer implements Disposable {
     private final SlitherMark slitherMark;
     private final BurrowMark burrowMark;
 
-    /** The client's own clock, for the post's and a geyser's pulse alone - a look, never read back by the simulation. */
+    /** How far anything drawn on the client's clock moves - a taken point's flag; zero holds it still. */
+    private final float motionScale;
+
+    /**
+     * The client's own clock, for the post's and a geyser's pulse and a taken point's flag alone - a look, never read
+     * back by the simulation.
+     */
     private float pulseSeconds;
 
     private final ShapeRenderer shapes = new ShapeRenderer();
@@ -177,6 +184,14 @@ public final class WorldRenderer implements Disposable {
      * rather than the world's - the cosmetic lead (ADR 0012); null draws the world as it is.
      */
     public void render(float alpha, @Nullable LocalAim lead) {
+        render(alpha, lead, null);
+    }
+
+    /**
+     * The same, with the action key's brackets for this machine's commanders (G0098) drawn over everything on the
+     * ground and under the trees, which still hide what is beneath them (G0072).
+     */
+    public void render(float alpha, @Nullable LocalAim lead, @Nullable ActionBrackets brackets) {
         if (disposed) {
             // Belt and braces. Drawing with a disposed ShapeRenderer writes to freed GL memory and
             // takes the JVM down with an access violation and no stack trace, so this turns the
@@ -281,7 +296,10 @@ public final class WorldRenderer implements Disposable {
                     shapes.rectLine(x, y, x + facingX * reach, y + facingY * reach, facingMark.widthFor(body.radius));
                 }
             }
-            if (appearance.charge > 0f) {
+            if (FlagMark.flies(appearance)) {
+                // Taken, not nearly taken (pillar 5): a ring and a flag in place of the full core.
+                drawFlag(x, y, body.radius);
+            } else if (appearance.charge > 0f) {
                 // A charge that names a look of its own is drawn in that colour; everything else is
                 // the body's own colour brightened, which is what the mark has always been. The
                 // simulation says what the charge is and the palette says what that looks like
@@ -324,6 +342,9 @@ public final class WorldRenderer implements Disposable {
                 shapes.setColor(SCRATCH);
                 shapes.circle(x, y, dazeMark.radiusFor(body.radius, appearance.daze), CIRCLE_SEGMENTS);
             }
+        }
+        if (brackets != null) {
+            brackets.draw(shapes, alpha);
         }
         shapes.end();
         drawRings();
@@ -579,13 +600,42 @@ public final class WorldRenderer implements Disposable {
     private void drawPost(float x, float y, float radius) {
         tinted.set(palette.colorFor(Look.POST)).lerp(postMark.light(), postMark.lightAt(pulseSeconds));
         shapes.setColor(tinted);
-        float ring = postMark.ringFor(radius);
-        float width = postMark.widthFor(radius);
+        drawOutline(x, y, postMark.ringFor(radius), postMark.widthFor(radius), postMark.segments());
+    }
+
+    /**
+     * A taken control point: a static ring just inside its edge, and at its middle a pole flying a small flag that
+     * waves on the client's clock, pinned at the pole - in strips, each two triangles, so it bends.
+     */
+    private void drawFlag(float x, float y, float radius) {
+        shapes.setColor(flagMark.color());
+        drawOutline(x, y, flagMark.ringFor(radius), flagMark.edgeFor(radius), flagMark.segments());
+        float poleWidth = flagMark.poleWidthFor(radius);
+        float top = y + flagMark.poleHeightFor(radius);
+        float hang = flagMark.heightFor(radius);
+        float strip = flagMark.widthFor(radius) / flagMark.slices();
+        float fromX = x + poleWidth * 0.5f;
+        float fromTop = top;
+        for (int at = 1; at <= flagMark.slices(); at++) {
+            float toX = fromX + strip;
+            float toTop = top + flagMark.liftAt(at, radius, pulseSeconds, motionScale);
+            shapes.triangle(fromX, fromTop, toX, toTop, toX, toTop - hang);
+            shapes.triangle(fromX, fromTop, toX, toTop - hang, fromX, fromTop - hang);
+            fromX = toX;
+            fromTop = toTop;
+        }
+        shapes.setColor(flagMark.pole());
+        shapes.rect(x - poleWidth * 0.5f, y, poleWidth, top - y);
+    }
+
+    /** A circle outline in the current colour, in straight pieces, because the renderer's own arc is a pie slice. */
+    private void drawOutline(float x, float y, float ring, float width, int segments) {
         float fromX = x + ring;
         float fromY = y;
-        for (int step = 1; step <= postMark.segments(); step++) {
-            float toX = x + MathUtils.cosDeg(postMark.angleAt(step)) * ring;
-            float toY = y + MathUtils.sinDeg(postMark.angleAt(step)) * ring;
+        for (int step = 1; step <= segments; step++) {
+            float angle = step * 360f / segments;
+            float toX = x + MathUtils.cosDeg(angle) * ring;
+            float toY = y + MathUtils.sinDeg(angle) * ring;
             shapes.rectLine(fromX, fromY, toX, toY, width);
             fromX = toX;
             fromY = toY;

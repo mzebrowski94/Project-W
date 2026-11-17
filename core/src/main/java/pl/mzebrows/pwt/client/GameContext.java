@@ -71,6 +71,9 @@ public interface GameContext {
     /** What this machine remembers of the dailies it has won: a ✓ and a best time each (G0067). */
     MissionRecords missionRecords();
 
+    /** What the player has set on this computer - whether the prompts show - kept between runs. */
+    LocalSettings settings();
+
     /** Asks for a screen change. It happens once the current frame has finished drawing. */
     void queueScreen(Screen next);
 }

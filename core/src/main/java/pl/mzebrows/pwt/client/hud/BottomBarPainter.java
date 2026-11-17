@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.ui.hud.PanelAlarms;
 import pl.mzebrows.pwt.ui.hud.PanelAssignment;
 import pl.mzebrows.pwt.ui.hud.PanelLayout;
+import pl.mzebrows.pwt.ui.hud.PanelStatus;
 import pl.mzebrows.pwt.ui.hud.PlayerReadout;
 import pl.mzebrows.pwt.ui.hud.Posture;
 import pl.mzebrows.pwt.ui.hud.Readout;
@@ -30,17 +31,15 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
  * there are four or fewer, this machine's seats otherwise. A quarter nobody holds stays black; a player
  * whose pad or link is gone is drawn grey and says OFFLINE.
  *
- * <p>Status is empty while he stands: quiet until it matters, and always in the same place when it
- * does. DOWN, KIA and OVERHEAT are the only red, drawn as black text on it (plan 7.0). While his slot
+ * <p>Status ({@link PanelStatus}) is empty while he stands: quiet until it matters, and always in the same place
+ * when it does. DOWN, REDEPLOY, PINNED and OVERHEAT are the only red, drawn as black text on it (plan 7.0); STUNNED
+ * is plain, with what is left of the stun as a bar in the neutral text colour. While his slot
  * holds upgrade drafts, the tell ({@code UI:hud/bottom/upgrade}) says so at the row's right end, in his
  * colour, with the key that opens them.
  */
 public final class BottomBarPainter {
 
     private static final int HEAT_BAR_WIDTH = 68;
-
-    /** Columns a bleed-out bar keeps however much the tell wants. */
-    private static final int MIN_BLEED_COLUMNS = 4;
 
     private static final float DIM_ALERT = 0.55f;
 
@@ -60,14 +59,15 @@ public final class BottomBarPainter {
     private final String shieldText;
     private final String stunnedText;
     private final String down;
-    private final String kiaTemplate;
-    private final String kiaWaiting;
+    private final String pinned;
+    private final String redeployTemplate;
+    private final String noReserve;
     private final String aboard;
     private final String overheat;
     private final String offline;
     private final String rollCall;
-    private final String[] kia = new String[Players.MAX];
-    private final int[] kiaTenths = new int[Players.MAX];
+    private final String[] redeploy = new String[Players.MAX];
+    private final int[] redeployTenths = new int[Players.MAX];
     private final int[][] tallyShown = new int[Players.MAX][3];
     private final String[][] tallyText = new String[Players.MAX][3];
     private final Color dimAlert;
@@ -98,16 +98,17 @@ public final class BottomBarPainter {
         this.weaponColumns = longest;
         for (int slot = 0; slot < Players.MAX; slot++) {
             labels[slot] = strings.format("ui.hud.player", slot + 1);
-            kia[slot] = "";
-            kiaTenths[slot] = -1;
+            redeploy[slot] = "";
+            redeployTenths[slot] = -1;
             Arrays.fill(tallyShown[slot], -1);
             Arrays.fill(tallyText[slot], "");
         }
         this.down = strings.get("ui.hud.down");
         this.shieldText = strings.get("ui.hud.shield");
         this.stunnedText = strings.get("ui.hud.stunned");
-        this.kiaTemplate = strings.get("ui.hud.kia");
-        this.kiaWaiting = strings.get("ui.hud.kiaNoReserve");
+        this.pinned = strings.get("ui.hud.pinned");
+        this.redeployTemplate = strings.get("ui.hud.redeploy");
+        this.noReserve = strings.get("ui.hud.noReserve");
         this.aboard = strings.get("ui.hud.aboard");
         this.overheat = strings.get("ui.hud.overheat");
         this.offline = strings.get("ui.hud.offline");
@@ -199,26 +200,35 @@ public final class BottomBarPainter {
                     own,
                     connected ? alarms.swell(graphic.hud().upgrade().pulseHz()) : 0f);
         }
-        switch (player.posture) {
-            case CASUALTY -> {
-                inverse(down, statusX, row, alert);
-                int barX = statusX + (down.length() + 1) * UiFont.ADVANCE;
-                int barRight = upgrade.isEmpty() ? textRight : tellX - UiFont.ADVANCE;
-                bar(
-                        barX,
+        int barRight = upgrade.isEmpty() ? textRight : tellX - UiFont.ADVANCE;
+        PanelStatus status = PanelStatus.of(player);
+        switch (status) {
+            case REDEPLOY -> word(status, redeployText(slot, player), statusX, row, alert, text);
+            case DOWN -> {
+                word(status, down, statusX, row, alert, text);
+                barAfter(
+                        down,
+                        statusX,
                         row,
-                        barRight - barX,
+                        barRight,
                         player.bleedOut,
                         graphic.hud().color().alert());
             }
-            case DYING -> inverse(kiaText(slot, -1f), statusX, row, alert);
-            case RESPAWNING -> inverse(respawnText(slot, player), statusX, row, alert);
+            case PINNED -> word(status, pinned, statusX, row, alert, text);
+            case STUNNED -> {
+                if (!connected) {
+                    hud.text(offline, statusX, row, text);
+                } else {
+                    word(status, stunnedText, statusX, row, alert, text);
+                    barAfter(stunnedText, statusX, row, barRight, player.stunLeft, text);
+                }
+            }
             case ABOARD -> hud.text(connected ? aboard : offline, statusX, row, text);
-            default -> {
+            case NONE -> {
                 if (!connected) {
                     hud.text(offline, statusX, row, text);
                 } else if (player.posture == Posture.STANDING) {
-                    standing(player, statusX, row, alert);
+                    standing(player, statusX, row);
                 }
             }
         }
@@ -254,29 +264,25 @@ public final class BottomBarPainter {
         }
     }
 
-    /** Columns row 1's status takes after the label, a bleed-out bar's least width included. */
+    /** Columns row 1's status takes after the label, a bar's least width included. */
     private int statusColumns(int slot, PlayerReadout player, boolean connected) {
-        return switch (player.posture) {
-            case CASUALTY -> down.length() + 1 + MIN_BLEED_COLUMNS;
-            case DYING -> kiaText(slot, -1f).length();
-            case RESPAWNING -> respawnText(slot, player).length();
+        return switch (PanelStatus.of(player)) {
+            case REDEPLOY -> redeployText(slot, player).length();
+            case DOWN -> down.length() + 1 + PanelLayout.LEAST_BAR_COLUMNS;
+            case PINNED -> pinned.length();
+            case STUNNED -> connected ? stunnedText.length() + 1 + PanelLayout.LEAST_BAR_COLUMNS : offline.length();
             case ABOARD -> connected ? aboard.length() : offline.length();
-            default -> connected ? standingColumns(player) : offline.length();
+            case NONE -> connected ? standingColumns(player) : offline.length();
         };
     }
 
-    /** Row 1 while he stands: his wounds, then a shield in front of him, then a stun he is under (G0053). */
-    private void standing(PlayerReadout player, int x, int row, Color alert) {
+    /** Row 1 while he stands free: his wounds, then a shield in front of him (G0053). */
+    private void standing(PlayerReadout player, int x, int row) {
         wounds(player, x, row);
         int after = x + player.maxWounds * UiFont.ADVANCE;
         if (player.shielded) {
             after += UiFont.ADVANCE;
             hud.text(shieldText, after, row, palette.colorFor(Look.COMMANDER, player.variant));
-            after += shieldText.length() * UiFont.ADVANCE;
-        }
-        if (player.stunned) {
-            after += UiFont.ADVANCE;
-            inverse(stunnedText, after, row, alert);
         }
     }
 
@@ -285,9 +291,6 @@ public final class BottomBarPainter {
         int columns = player.maxWounds;
         if (player.shielded) {
             columns += 1 + shieldText.length();
-        }
-        if (player.stunned) {
-            columns += 1 + stunnedText.length();
         }
         return columns;
     }
@@ -426,21 +429,42 @@ public final class BottomBarPainter {
         hud.endCanvas();
     }
 
-    /** KIA and the seconds to his return - or that there is nobody in reserve to return as (G0055). */
-    private String respawnText(int slot, PlayerReadout player) {
-        return player.respawnWaiting ? kiaWaiting : kiaText(slot, player.respawnSeconds);
+    /**
+     * {@code REDEPLOY} alone while he is dying, with the seconds to his return once he is gone - or that there is
+     * nobody in reserve to return as (G0055).
+     */
+    private String redeployText(int slot, PlayerReadout player) {
+        if (player.posture == Posture.RESPAWNING && player.respawnWaiting) {
+            return noReserve;
+        }
+        return redeployIn(slot, player.posture == Posture.RESPAWNING ? player.respawnSeconds : -1f);
     }
 
-    /** {@code KIA} and the seconds to his return, formatted only when the tenth changes. */
-    private String kiaText(int slot, float seconds) {
+    /** {@code REDEPLOY} and these seconds - none when negative - formatted only when the tenth changes. */
+    private String redeployIn(int slot, float seconds) {
         int tenths = seconds < 0f ? -1 : (int) Math.ceil(seconds * 10f);
-        if (tenths != kiaTenths[slot] || kia[slot].isEmpty()) {
-            kiaTenths[slot] = tenths;
-            kia[slot] = tenths < 0
-                    ? kiaTemplate.replace("{0}", "").trim()
-                    : kiaTemplate.replace("{0}", String.format(Locale.ROOT, "%.1f", tenths / 10f));
+        if (tenths != redeployTenths[slot] || redeploy[slot].isEmpty()) {
+            redeployTenths[slot] = tenths;
+            redeploy[slot] = tenths < 0
+                    ? redeployTemplate.replace("{0}", "").trim()
+                    : redeployTemplate.replace("{0}", String.format(Locale.ROOT, "%.1f", tenths / 10f));
         }
-        return kia[slot];
+        return redeploy[slot];
+    }
+
+    /** A status's word: in alert when the status is one ({@link PanelStatus#alert()}), plain otherwise. */
+    private void word(PanelStatus status, String word, int x, int top, Color alert, Color plain) {
+        if (status.alert()) {
+            inverse(word, x, top, alert);
+        } else {
+            hud.text(word, x, top, plain);
+        }
+    }
+
+    /** A status's draining bar, after its word and up to {@code right}. */
+    private void barAfter(String word, int x, int top, int right, float fill, Color color) {
+        int barX = x + (word.length() + 1) * UiFont.ADVANCE;
+        bar(barX, top, right - barX, fill, color);
     }
 
     /** Black text on the alert colour: the only way alert red is ever drawn. */

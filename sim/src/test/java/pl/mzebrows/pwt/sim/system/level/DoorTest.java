@@ -15,6 +15,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.walledAtADoorway;
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -109,6 +110,17 @@ class DoorTest {
     }
 
     @Test
+    void namesTheShutDoorAsTheSubject() {
+        Simulation simulation = on(walledAtADoorway());
+        Entity door = simulation.spawnDoor(DOORWAY);
+        Entity commander = simulation.spawnCommander(DOORWAY_MIDDLE_X, AT_THE_DOOR);
+
+        simulation.step();
+
+        assertThat(commander.getComponent(Action.class).subject).isEqualTo(Handles.of(door));
+    }
+
+    @Test
     void opensOnTheActionKeyHeldAtItForOpenSeconds() {
         Simulation simulation = on(walledAtADoorway());
         simulation.spawnDoor(DOORWAY);
@@ -186,6 +198,22 @@ class DoorTest {
         simulation.step();
 
         assertThat(commander.getComponent(Action.class).available).isEqualTo(ActionKind.STABILISE);
+    }
+
+    /** The subject follows the offer the tie gave him, never the door it passed over. */
+    @Test
+    void namesTheManDownBesideHimRatherThanADoorAsNear() {
+        Simulation simulation = on(walledAtADoorway());
+        simulation.spawnDoor(DOORWAY);
+        Entity commander = simulation.spawnCommander(DOORWAY_MIDDLE_X, AT_THE_DOOR);
+        Entity trooper = simulation.spawnTrooper(DOORWAY_MIDDLE_X, AT_THE_DOOR - 5f);
+        trooper.getComponent(Damage.class).land(0, Harm.DOWN);
+        simulation.step();
+
+        trooper.getComponent(Position.class).set(DOORWAY_MIDDLE_X, AT_THE_DOOR - 2f - TROOPER_RADIUS);
+        simulation.step();
+
+        assertThat(commander.getComponent(Action.class).subject).isEqualTo(Handles.of(trooper));
     }
 
     @Test

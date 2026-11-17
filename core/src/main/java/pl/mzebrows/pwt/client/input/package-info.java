@@ -5,8 +5,10 @@
  *
  * <p>Ports: {@link pl.mzebrows.pwt.client.input.ControlsConfig} (the bindings, which the hints name),
  * {@link pl.mzebrows.pwt.client.input.PlayerSeats} (who is sitting where, which the hints and the play key
- * by), {@link pl.mzebrows.pwt.client.input.PadLabels} (what a pad's button is called) and {@link
- * pl.mzebrows.pwt.client.input.KeyCode} (a key, as the file and the hints name it). Entries, for the root:
+ * by), {@link pl.mzebrows.pwt.client.input.PadLabels} (what a pad's button is called), {@link
+ * pl.mzebrows.pwt.client.input.KeyCode} (a key, as the file and the hints name it) and {@link
+ * pl.mzebrows.pwt.client.input.MouseButton} (a mouse button, as the file and the prompts name it). Entries, for
+ * the root:
  * {@code InputReader}, {@code NavInputReader}, {@code GdxGamepads}, {@code ChosenGamepads}, {@code
  * GamepadSource}, {@code PadPolicy}, {@code KeyHolds}, {@code KeyPresses}, {@code PageControls}.
  *

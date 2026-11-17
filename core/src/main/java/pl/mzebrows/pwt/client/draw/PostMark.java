@@ -43,9 +43,4 @@ public record PostMark(float width, int segments, Color light, float pulseHz) {
     public float lightAt(float seconds) {
         return 0.5f - 0.5f * (float) Math.cos(seconds * pulseHz * 2f * Math.PI);
     }
-
-    /** The angle, in degrees, where piece {@code step} ends. */
-    public float angleAt(int step) {
-        return step * 360f / segments;
-    }
 }

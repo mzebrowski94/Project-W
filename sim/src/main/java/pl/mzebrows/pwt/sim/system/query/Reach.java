@@ -64,7 +64,7 @@ public final class Reach {
         float nearestGap = Float.MAX_VALUE;
         for (int i = 0; i < doors.size(); i++) {
             Entity door = doors.get(i);
-            if (DOOR.get(door).open || DEAD.has(door)) {
+            if (!offers(door, ActionKind.OPEN_DOOR)) {
                 continue;
             }
             float gap = doorGap(man, door, tileSize);
@@ -91,14 +91,18 @@ public final class Reach {
         return (float) Math.sqrt(toX * toX + toY * toY) - BODY.get(man).radius - BODY.get(other).radius;
     }
 
-    /** Whether this is something the action could be done to now: a casualty, an empty gun, a shut crate. */
-    private static boolean offers(Entity candidate, ActionKind offer) {
+    /**
+     * Whether this is something the action could be done to now: a casualty, an empty gun, a shut crate, a shut
+     * door. Public because the interface asks it too, to bracket faintly what else the key could act on (G0098) -
+     * whether, never which: which one the key means is {@code ActionSystem}'s alone.
+     */
+    public static boolean offers(Entity candidate, ActionKind offer) {
         return switch (offer) {
             case STABILISE -> Life.casualty(candidate);
             case MAN_TURRET -> !TURRET.get(candidate).crewed;
             case OPEN_CRATE -> !CRATE.get(candidate).open() && !DEAD.has(candidate);
-            case NONE, LEAVE_TURRET, OPEN_DOOR ->
-                throw new IllegalArgumentException("nothing is reached for to " + offer);
+            case OPEN_DOOR -> !DOOR.get(candidate).open && !DEAD.has(candidate);
+            case NONE, LEAVE_TURRET -> throw new IllegalArgumentException("nothing is reached for to " + offer);
         };
     }
 }

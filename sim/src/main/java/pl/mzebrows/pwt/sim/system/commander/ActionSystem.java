@@ -8,6 +8,7 @@ import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
@@ -15,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Crate;
+import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Level;
@@ -70,6 +72,7 @@ public final class ActionSystem extends EntitySystem {
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
+    private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
 
     private final float reviveInvulnerableSeconds;
     private final Modifiers modifiers;
@@ -127,7 +130,7 @@ public final class ActionSystem extends EntitySystem {
             boolean pressed = acting && !action.wasHeld;
             action.wasHeld = acting;
             if (Drivers.aboard(commander)) {
-                offer(action, ActionKind.LEAVE_TURRET);
+                offer(action, ActionKind.LEAVE_TURRET, CREW.get(commander).station);
                 if (pressed) {
                     Crews.leave(stations, commander);
                 }
@@ -140,47 +143,48 @@ public final class ActionSystem extends EntitySystem {
                 continue;
             }
             @Nullable Entity station = Reach.nearest(stations, commander, action.reach, ActionKind.MAN_TURRET);
-            @Nullable Entity subject = Reach.nearest(casualties, commander, action.reach, ActionKind.STABILISE);
+            @Nullable Entity casualty = Reach.nearest(casualties, commander, action.reach, ActionKind.STABILISE);
             @Nullable Entity crate = Reach.nearest(crates, commander, action.reach, ActionKind.OPEN_CRATE);
             @Nullable Entity door = Reach.nearestDoor(doors, commander, action.reach, tileSize);
             if (door != null
-                    && Reach.doorGap(commander, door, tileSize) < nearestGap(commander, station, crate, subject)) {
+                    && Reach.doorGap(commander, door, tileSize) < nearestGap(commander, station, crate, casualty)) {
                 // The bar is the door's, drawn over it; nothing fills on him.
-                offer(action, ActionKind.OPEN_DOOR);
+                offer(action, ActionKind.OPEN_DOOR, Handles.of(door));
                 if (acting) {
                     putHandsTo(commander, DOOR.get(door));
                 }
                 continue;
             }
             if (station != null
-                    && nearer(commander, station, subject)
+                    && nearer(commander, station, casualty)
                     && (crate == null || Reach.gap(commander, station) <= Reach.gap(commander, crate))) {
-                offer(action, ActionKind.MAN_TURRET);
+                offer(action, ActionKind.MAN_TURRET, Handles.of(station));
                 if (pressed) {
                     Crews.board(commander, station);
                 }
                 continue;
             }
-            if (crate != null && (subject == null || Reach.gap(commander, crate) <= Reach.gap(commander, subject))) {
-                offer(action, ActionKind.OPEN_CRATE);
+            if (crate != null && (casualty == null || Reach.gap(commander, crate) <= Reach.gap(commander, casualty))) {
+                offer(action, ActionKind.OPEN_CRATE, Handles.of(crate));
                 opening[slot] |= pressed;
                 continue;
             }
-            if (subject == null) {
+            if (casualty == null) {
                 action.idle();
                 continue;
             }
             action.available = ActionKind.STABILISE;
+            action.subject = Handles.of(casualty);
             if (acting) {
-                if (Aid.work(modifiers, commander, subject, deltaTime, reviveInvulnerableSeconds)
+                if (Aid.work(modifiers, commander, casualty, deltaTime, reviveInvulnerableSeconds)
                         && TALLY.has(commander)) {
                     // A stabilise is a stabilise, whoever he put back on his feet (G0044).
                     TALLY.get(commander).stabilised++;
                 }
             } else {
-                Aid.letGo(subject);
+                Aid.letGo(casualty);
             }
-            action.progress = Aid.progress(subject);
+            action.progress = Aid.progress(casualty);
         }
         openCrates(tick);
     }
@@ -217,7 +221,7 @@ public final class ActionSystem extends EntitySystem {
 
     /** How near the nearest of the other offers is, surface to surface; none at all is as far as can be. */
     private static float nearestGap(
-            Entity commander, @Nullable Entity station, @Nullable Entity crate, @Nullable Entity subject) {
+            Entity commander, @Nullable Entity station, @Nullable Entity crate, @Nullable Entity casualty) {
         float nearest = Float.MAX_VALUE;
         if (station != null) {
             nearest = Math.min(nearest, Reach.gap(commander, station));
@@ -225,8 +229,8 @@ public final class ActionSystem extends EntitySystem {
         if (crate != null) {
             nearest = Math.min(nearest, Reach.gap(commander, crate));
         }
-        if (subject != null) {
-            nearest = Math.min(nearest, Reach.gap(commander, subject));
+        if (casualty != null) {
+            nearest = Math.min(nearest, Reach.gap(commander, casualty));
         }
         return nearest;
     }
@@ -238,13 +242,17 @@ public final class ActionSystem extends EntitySystem {
      * lying against a turret is the moment the player most wants the key to mean one specific thing,
      * and getting on the gun is the reversible half of the pair.
      */
-    private static boolean nearer(Entity commander, Entity station, @Nullable Entity subject) {
-        return subject == null || Reach.gap(commander, station) <= Reach.gap(commander, subject);
+    private static boolean nearer(Entity commander, Entity station, @Nullable Entity casualty) {
+        return casualty == null || Reach.gap(commander, station) <= Reach.gap(commander, casualty);
     }
 
-    /** Puts an offer on the table with no work behind it - getting on and off a gun is instant. */
-    private static void offer(Action action, ActionKind kind) {
+    /**
+     * Puts an offer on the table, naming what it is made on for the interface to bracket (G0098), with no work
+     * behind it on him - getting on and off a gun is instant, and a door's bar is the door's.
+     */
+    private static void offer(Action action, ActionKind kind, long subject) {
         action.available = kind;
+        action.subject = subject;
         action.progress = 0f;
     }
 }

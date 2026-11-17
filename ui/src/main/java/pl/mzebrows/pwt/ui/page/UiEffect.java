@@ -25,7 +25,7 @@ public record UiEffect(Kind kind, int index) {
         RESTART,
         /** Leave the level, or stop connecting, for the main menu. */
         LEAVE,
-        /** Step one choice row of the proving ground forward. */
+        /** Step one choice row of the proving ground forward, or flip the controls page's PROMPTS switch. */
         CHOOSE,
         /** Fight the proving ground's setup (G0060). */
         PROVE,

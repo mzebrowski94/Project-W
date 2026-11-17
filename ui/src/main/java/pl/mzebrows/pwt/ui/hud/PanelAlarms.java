@@ -6,7 +6,7 @@ import pl.mzebrows.pwt.sim.Players;
  * When a player's panel raises the alarm, and how its alert pulses.
  *
  * <p>A commander has no chip damage to react to - a hostile blow downs or kills him - so the panel
- * reacts to the <b>transition</b>: entering DOWN, KIA or OVERHEAT flashes his frame and shakes it for a
+ * reacts to the <b>transition</b>: entering a {@link PanelStatus} in alert - DOWN, REDEPLOY, PINNED - or OVERHEAT flashes his frame and shakes it for a
  * moment, and the status turns alert. Staying in the state does not raise it again; nothing moves when
  * nothing changed (plan 6.4). A new world is silent: whatever state its players are in, they did not
  * just enter it here.
@@ -19,7 +19,8 @@ public final class PanelAlarms {
     public enum Alarm {
         NONE,
         DOWN,
-        KIA,
+        REDEPLOY,
+        PINNED,
         OVERHEAT
     }
 
@@ -54,11 +55,14 @@ public final class PanelAlarms {
 
     /** What a player's panel is alarmed about right now. */
     public static Alarm of(PlayerReadout player) {
-        return switch (player.posture) {
-            case CASUALTY -> Alarm.DOWN;
-            case DYING, RESPAWNING -> Alarm.KIA;
-            case STANDING, ABOARD -> player.overheated ? Alarm.OVERHEAT : Alarm.NONE;
-            case ABSENT -> Alarm.NONE;
+        PanelStatus status = PanelStatus.of(player);
+        if (!status.alert()) {
+            return player.posture.present() && player.overheated ? Alarm.OVERHEAT : Alarm.NONE;
+        }
+        return switch (status) {
+            case DOWN -> Alarm.DOWN;
+            case REDEPLOY -> Alarm.REDEPLOY;
+            default -> Alarm.PINNED;
         };
     }
 

@@ -7,6 +7,7 @@ import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.utils.ScreenUtils;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.IntUnaryOperator;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.config.BuildVersion;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
@@ -101,6 +102,12 @@ public final class MenuScreen extends ScreenAdapter {
     private final List<String> head = new ArrayList<>(2);
     private final List<String> labels = new ArrayList<>();
     private final List<String> foot = new ArrayList<>(DESCRIPTION_LINES);
+
+    /** The controls page's table, under its entries, as written when the page opened; null before it first is. */
+    private @Nullable ControlsTable controls;
+
+    /** How much of each foot line is bright: on the controls page the table's headings and actions, else none. */
+    private final IntUnaryOperator footBright = this::brightInFoot;
 
     /** Why the player is back here, if the game he was in ended without him asking; empty otherwise. */
     private String notice;
@@ -235,6 +242,7 @@ public final class MenuScreen extends ScreenAdapter {
                 page.scroll(),
                 visible,
                 foot,
+                footBright,
                 picker == null ? hints.selectAndBack(modality) : hints.picker(modality, "ui.missions.pickHint"),
                 motion.offsetX(),
                 motion.alpha());
@@ -378,6 +386,9 @@ public final class MenuScreen extends ScreenAdapter {
         if (isProving(top) && (nav.left || nav.right)) {
             step(top, page.index(), nav.right ? 1 : -1);
         }
+        if (top == UiPage.CONTROLS && (nav.left || nav.right) && page.index() == MenuTree.CONTROLS_PROMPTS) {
+            flipPrompts();
+        }
         if (isMissions(top) && (nav.left || nav.right) && page.index() == MenuTree.MISSION_RANDOM) {
             missions.stepRandomTier(nav.right ? 1 : -1);
             relabelMissions();
@@ -449,7 +460,13 @@ public final class MenuScreen extends ScreenAdapter {
             case HOST -> {
                 return !host(effect.index());
             }
-            case CHOOSE -> step(flow.top(), effect.index(), 1);
+            case CHOOSE -> {
+                if (flow.top() == UiPage.CONTROLS) {
+                    flipPrompts();
+                } else {
+                    step(flow.top(), effect.index(), 1);
+                }
+            }
             case PROVE -> {
                 prove();
                 return false;
@@ -525,12 +542,15 @@ public final class MenuScreen extends ScreenAdapter {
             if (top == UiPage.MAIN && !notice.isEmpty()) {
                 painter.addWrapped(head, notice, BODY_LINES);
             }
-            if (top == UiPage.CONTROLS) {
-                // In the words of the pad last pressed, as the hints are; Xbox's where none was.
-                head.addAll(ControlsTable.lines(context.controlsConfig(), strings::get, modality.playStation()));
-            }
             if (top == UiPage.PROVING_GROUND) {
                 relabel(top);
+            } else if (top == UiPage.CONTROLS) {
+                // Under the entries, in the words of the pad last pressed, as the hints are; Xbox's where none was.
+                ControlsTable table = ControlsTable.of(context.controlsConfig(), strings::get, modality.playStation());
+                controls = table;
+                foot.clear();
+                foot.addAll(table.lines());
+                relabelControls();
             } else if (isMissions(top)) {
                 relabelMissions();
             } else {
@@ -583,6 +603,28 @@ public final class MenuScreen extends ScreenAdapter {
                 labels.add(label);
             }
         }
+    }
+
+    private int brightInFoot(int line) {
+        ControlsTable table = controls;
+        return table == null || flow.top() != UiPage.CONTROLS ? 0 : table.bright(line);
+    }
+
+    /** The controls page's entries: the PROMPTS switch with its ON or OFF, then BACK. */
+    private void relabelControls() {
+        labels.clear();
+        for (MenuEntry entry : MenuTree.page(UiPage.CONTROLS).entries()) {
+            labels.add(strings.get(entry.labelKey()));
+        }
+        String state = strings.get(context.settings().prompts() ? "ui.controls.on" : "ui.controls.off");
+        labels.set(MenuTree.CONTROLS_PROMPTS, strings.format("ui.controls.prompts", state));
+    }
+
+    /** Switches the in-world prompts on this computer, kept at once, and writes the switch again. */
+    private void flipPrompts() {
+        LocalSettings settings = context.settings();
+        settings.prompts(!settings.prompts());
+        relabelControls();
     }
 
     /** A count that cannot be chosen - a rooted strain's - is dimmed and passed over. */
@@ -685,6 +727,10 @@ public final class MenuScreen extends ScreenAdapter {
         UiPage top = flow.top();
         if (isMissions(top)) {
             describeMission();
+            return;
+        }
+        if (top == UiPage.CONTROLS) {
+            // Its foot is its table, written as the page opened.
             return;
         }
         if (!isScenarioList(top)) {

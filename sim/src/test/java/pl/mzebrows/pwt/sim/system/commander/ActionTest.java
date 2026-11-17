@@ -11,11 +11,13 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 import com.badlogic.ashley.core.Entity;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Harm;
@@ -56,6 +58,33 @@ class ActionTest {
         simulation.step(STILL);
 
         assertThat(commander.getComponent(Action.class).available).isEqualTo(ActionKind.STABILISE);
+    }
+
+    /** The interface brackets what the key would act on, so the simulation names it - by handle (ADR 0016). */
+    @Test
+    void namesTheManDownBesideHimAsTheSubject() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
+
+        putDown(trooper);
+        simulation.step(STILL);
+
+        assertThat(commander.getComponent(Action.class).subject).isEqualTo(Handles.of(trooper));
+    }
+
+    @Test
+    void namesNobodyWhenThereIsNothingToDo() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity trooper = simulation.spawnTrooper(MIDDLE + BESIDE, MIDDLE);
+
+        putDown(trooper);
+        simulation.step(STILL);
+        trooper.getComponent(Position.class).set(MIDDLE + ACTION_REACH * 4f, MIDDLE);
+        simulation.step(STILL);
+
+        assertThat(commander.getComponent(Action.class).subject).isEqualTo(Handles.NOBODY);
     }
 
     @Test

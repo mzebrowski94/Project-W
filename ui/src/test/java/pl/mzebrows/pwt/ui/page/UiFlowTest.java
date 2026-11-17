@@ -61,7 +61,7 @@ class UiFlowTest {
 
     /** A choice row's confirm steps it; the screen holds the setup, the flow only says which row. */
     @Test
-    void stepsAChoiceOnlyOnTheProvingGroundsPages() {
+    void stepsAChoiceOnlyOnTheProvingGroundsPagesAndTheControlsPage() {
         UiFlow flow = new UiFlow(UiPage.MAIN);
 
         assertThat(flow.apply(UiIntent.choose(2))).isEqualTo(UiEffect.NONE);
@@ -69,6 +69,10 @@ class UiFlowTest {
         assertThat(flow.apply(UiIntent.choose(2))).isEqualTo(new UiEffect(UiEffect.Kind.CHOOSE, 2));
         flow.apply(UiIntent.open(UiPage.PROVING_UPGRADES));
         assertThat(flow.apply(UiIntent.choose(5))).isEqualTo(new UiEffect(UiEffect.Kind.CHOOSE, 5));
+
+        UiFlow controls = new UiFlow(UiPage.MAIN);
+        controls.apply(UiIntent.open(UiPage.CONTROLS));
+        assertThat(controls.apply(UiIntent.choose(0))).isEqualTo(new UiEffect(UiEffect.Kind.CHOOSE, 0));
     }
 
     @Test

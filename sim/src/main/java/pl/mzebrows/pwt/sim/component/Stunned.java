@@ -77,13 +77,16 @@ public final class Stunned implements Component, Pool.Poolable {
 
     /**
      * Holds it still for at least this long, as a stun rather than a recoil - the one hold that lands on a body
-     * immune to a blow's (G0095).
+     * immune to a blow's (G0095). A stun shorter than a stagger already running makes the whole hold a stun, and
+     * its mark drains over all of it.
      */
     public void daze(int ticks) {
         if (ticks <= 0) {
             return;
         }
-        if (ticks >= remainingTicks) {
+        if (!dazed) {
+            dazeTicks = Math.max(ticks, remainingTicks);
+        } else if (ticks >= remainingTicks) {
             dazeTicks = ticks;
         }
         hold(ticks);

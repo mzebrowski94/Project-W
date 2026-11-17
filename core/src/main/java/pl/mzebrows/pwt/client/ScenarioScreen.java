@@ -16,7 +16,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.IntPredicate;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.draw.ActionBrackets;
 import pl.mzebrows.pwt.client.draw.CameraDirector;
 import pl.mzebrows.pwt.client.draw.Drawn;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
@@ -25,7 +27,7 @@ import pl.mzebrows.pwt.client.draw.LocalAim;
 import pl.mzebrows.pwt.client.draw.Palette;
 import pl.mzebrows.pwt.client.draw.TerrainRenderer;
 import pl.mzebrows.pwt.client.draw.WorldRenderer;
-import pl.mzebrows.pwt.client.hud.ActionPrompts;
+import pl.mzebrows.pwt.client.hud.ActionChips;
 import pl.mzebrows.pwt.client.hud.BottomBarPainter;
 import pl.mzebrows.pwt.client.hud.CrateHints;
 import pl.mzebrows.pwt.client.hud.DebugOverlay;
@@ -33,6 +35,7 @@ import pl.mzebrows.pwt.client.hud.DispatchText;
 import pl.mzebrows.pwt.client.hud.DraftHints;
 import pl.mzebrows.pwt.client.hud.HeldUpgradesPainter;
 import pl.mzebrows.pwt.client.hud.Hud;
+import pl.mzebrows.pwt.client.hud.PromptKeys;
 import pl.mzebrows.pwt.client.hud.ToastPainter;
 import pl.mzebrows.pwt.client.hud.TopBarPainter;
 import pl.mzebrows.pwt.client.hud.UiStrings;
@@ -64,6 +67,7 @@ import pl.mzebrows.pwt.ui.hud.PanelAlarms;
 import pl.mzebrows.pwt.ui.hud.PanelAssignment;
 import pl.mzebrows.pwt.ui.hud.PlayerReporter;
 import pl.mzebrows.pwt.ui.hud.Posture;
+import pl.mzebrows.pwt.ui.hud.Prompts;
 import pl.mzebrows.pwt.ui.hud.Readout;
 import pl.mzebrows.pwt.ui.hud.ReadoutWriter;
 import pl.mzebrows.pwt.ui.hud.Reporters;
@@ -128,10 +132,7 @@ public final class ScenarioScreen extends ScreenAdapter {
     /** Where the reporters file: the terminal and the toast. */
     private final DispatchSink dispatches;
 
-    /**
-     * Everything that narrates the level: the terminal's reporters, one per fact, and the console's
-     * action prompt. This list is the whole registry (plan 8.5).
-     */
+    /** Everything that narrates the level: the terminal's reporters, one per fact. This list is the whole registry (plan 8.5). */
     private final Reporters reporters;
 
     private final PanelAlarms alarms;
@@ -194,6 +195,21 @@ public final class ScenarioScreen extends ScreenAdapter {
 
     private final DraftHints draftHints;
 
+    /** Whether a slot is played on this machine; held once, so asking it allocates nothing. */
+    private final IntPredicate localSlot;
+
+    /** Each local commander's one prompt, and the brackets and chips that show it (G0098). */
+    private final Prompts prompts;
+
+    private final ActionBrackets brackets;
+
+    private final ActionChips chips;
+
+    /** By seat, the keys its prompt names; by slot, the seat's for a slot played here, else null. */
+    private final PromptKeys[] seatKeys = new PromptKeys[PlayerSeats.SEATS];
+
+    private final @Nullable PromptKeys[] slotKeys = new PromptKeys[Players.MAX];
+
     /** By slot, what that player presses to open his drafts; empty for a slot not played here. */
     private final String[] draftKeys = new String[Players.MAX];
 
@@ -234,10 +250,23 @@ public final class ScenarioScreen extends ScreenAdapter {
         this.reporters = new Reporters(List.of(
                 new PlayerReporter(),
                 new SquadReporter(graphicConfig.hud().terminal().fewTroopers()),
-                new UpgradeReporter(),
-                new ActionPrompts(play::local, Log::info)));
+                new UpgradeReporter()));
         this.draftHints = new DraftHints(context.controlsConfig());
         this.crateHints = new CrateHints(context.controlsConfig());
+        this.localSlot = play::local;
+        this.prompts = new Prompts(graphicConfig.hud().upgrade().promptSeconds());
+        this.brackets = new ActionBrackets(
+                graphicConfig.action(),
+                graphicConfig.tree(),
+                graphicConfig.actionMark(),
+                graphicConfig.pickupMark(),
+                readout,
+                localSlot);
+        this.chips = new ActionChips(
+                context.hud(), strings, graphicConfig, graphicConfig.layout().metrics(), palette);
+        for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
+            seatKeys[seat] = new PromptKeys(context.controlsConfig());
+        }
         this.alarms = new PanelAlarms(
                 graphicConfig.hud().panel().alarmSeconds(),
                 graphicConfig.hud().panel().alarmShake(),
@@ -274,6 +303,7 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().crate(),
                 context.graphicConfig().door(),
                 context.graphicConfig().post(),
+                context.graphicConfig().flag(),
                 context.graphicConfig().burst(),
                 context.graphicConfig().daze(),
                 context.graphicConfig().tree(),
@@ -283,7 +313,8 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().pop(),
                 context.graphicConfig().geyser(),
                 context.graphicConfig().slither(),
-                context.graphicConfig().burrow());
+                context.graphicConfig().burrow(),
+                context.graphicConfig().ui().motionScale());
         terrain = new TerrainRenderer(
                 viewport,
                 context.graphicConfig().terrainPalette(),
@@ -427,10 +458,12 @@ public final class ScenarioScreen extends ScreenAdapter {
         }
         alarms.update(readout, delta);
         seatPanels();
+        prompts.update(readout, localSlot, delta);
+        promptKeys();
 
         clearLetterbox();
         terrain.render();
-        renderer.render(play.renderAlpha(), play.cosmeticLead() ? localAim : null);
+        renderer.render(play.renderAlpha(), play.cosmeticLead() ? localAim : null, brackets);
         OverlayMode mode = play.overlayMode();
         List<String> lines = mode == OverlayMode.OFF
                 ? List.of()
@@ -471,6 +504,10 @@ public final class ScenarioScreen extends ScreenAdapter {
             bottomBar.renderRollCall(layout);
         } else {
             bottomBar.render(layout, readout, seating, connected, alarms, draftKeys);
+        }
+        // PROMPTS off hides the chips and nothing else: brackets and statuses are state, not instructions (G0098).
+        if (!menus.coversView() && context.settings().prompts()) {
+            chips.draw(layout, viewport, prompts, readout, slotKeys, brackets, play.renderAlpha(), delta);
         }
         menus.draw(layout, play);
         if (!menus.coversView()) {
@@ -564,6 +601,21 @@ public final class ScenarioScreen extends ScreenAdapter {
         seating.update(readout, slotOfSeat);
     }
 
+    /** Names each local seat's keys for its prompt, in its own device's words, and files them by slot. */
+    private void promptKeys() {
+        Arrays.fill(slotKeys, null);
+        for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
+            int slot = play.slotOf(seat);
+            if (slot < 0
+                    || slot >= Players.MAX
+                    || (seat != PlayerSeats.KEYBOARD_SLOT && !input.seats().taken(seat))) {
+                continue;
+            }
+            seatKeys[seat].follow(seat, input.playStation(seat));
+            slotKeys[slot] = seatKeys[seat];
+        }
+    }
+
     private boolean onALocalPad(int slot) {
         for (int seat = PlayerSeats.KEYBOARD_SLOT + 1; seat < PlayerSeats.SEATS; seat++) {
             if (play.slotOf(seat) == slot && input.seats().taken(seat)) {
@@ -630,6 +682,8 @@ public final class ScenarioScreen extends ScreenAdapter {
         if (bound != current) {
             renderer.bind(current);
             terrain.bind(current.map());
+            brackets.bind(current);
+            chips.bind(current);
             focused = current.engine().getEntitiesFor(FOCUSED);
             shaken = current.engine().getEntitiesFor(SHAKEN);
             commanders = current.engine().getEntitiesFor(COMMANDERS);

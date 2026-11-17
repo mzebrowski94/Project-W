@@ -55,6 +55,7 @@ final class ProvingPreview implements Disposable {
                 graphic.crate(),
                 graphic.door(),
                 graphic.post(),
+                graphic.flag(),
                 graphic.burst(),
                 graphic.daze(),
                 graphic.tree(),
@@ -64,7 +65,8 @@ final class ProvingPreview implements Disposable {
                 graphic.pop(),
                 graphic.geyser(),
                 graphic.slither(),
-                graphic.burrow());
+                graphic.burrow(),
+                graphic.ui().motionScale());
         this.terrain = new TerrainRenderer(viewport, graphic.terrainPalette(), graphic.groundDetail());
     }
 

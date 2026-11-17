@@ -50,9 +50,8 @@ public final class PadLabels {
     /**
      * One line telling a player what his pad does, in his pad's own labels.
      *
-     * <p>Alpha-phase scaffolding of exactly the kind the action prompt is: a player who has just
-     * plugged a pad in has nowhere on screen to read its controls, and the console is at least
-     * somewhere. It is also what keeps the two label sets honest - a binding added without a label
+     * <p>Alpha-phase scaffolding: a player who has just plugged a pad in has nowhere on screen to read
+     * its controls, and the console is at least somewhere. It is also what keeps the two label sets honest - a binding added without a label
      * shows up here as a dash rather than staying invisible until somebody builds a HUD.
      */
     public static String briefing(ControlsConfig.Pad pad, boolean playStation) {

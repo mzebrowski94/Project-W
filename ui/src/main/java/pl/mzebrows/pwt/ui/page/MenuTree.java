@@ -21,6 +21,9 @@ public final class MenuTree {
     /** The missions page's ENTER CODE, after RANDOM. */
     public static final int MISSION_CODE = MISSION_RANDOM + 1;
 
+    /** The controls page's PROMPTS switch, its first entry. */
+    public static final int CONTROLS_PROMPTS = 0;
+
     private static final Map<UiPage, MenuPage> PAGES = new EnumMap<>(UiPage.class);
 
     /** The result of a mission: COPY CODE between RETRY and MENU (G0066). */
@@ -70,8 +73,15 @@ public final class MenuTree {
                                 back()),
                         0));
         PAGES.put(UiPage.CAMPAIGN, new MenuPage("ui.campaign.title", "ui.campaign.closed", List.of(back()), 0));
-        // Its table of bindings is the screen's to write, from the bindings themselves.
-        PAGES.put(UiPage.CONTROLS, new MenuPage("ui.controls.title", "", List.of(back()), 0));
+        // Its table of bindings is the screen's to write, from the bindings themselves, and so is the
+        // switch's ON or OFF; the switch is the one thing on the page that changes anything.
+        PAGES.put(
+                UiPage.CONTROLS,
+                new MenuPage(
+                        "ui.controls.title",
+                        "",
+                        List.of(entry("prompts", "ui.controls.prompts", UiIntent.choose(CONTROLS_PROMPTS)), back()),
+                        0));
         PAGES.put(UiPage.OPTIONS, new MenuPage("ui.options.title", "ui.options.body", List.of(back()), 0));
         PAGES.put(
                 UiPage.EXIT_CONFIRM,

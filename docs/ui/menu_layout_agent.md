@@ -46,7 +46,7 @@ keeps in shot).
 | 1.4 OPTIONS / 1.4.1 placeholder | `UI:main/options` | Settings live in `assets/*.properties` in the alpha. |
 | 1.5 EXIT | `UI:main/exit` | A confirm modal, so Back pressed once too often never quits. |
 | - | `UI:connecting`, `UI:play`, `UI:play/pause`, `UI:play/leave`, `UI:play/result` | Not in the outline; needed to get into and out of a level. `UI:play/result` was the blocked `UI:play/game-over` until G0066. |
-| - | `UI:main/controls` | Not in the outline; added 2026-11-13 by request: what every key and pad button does, shown and not changed. |
+| - | `UI:main/controls` | Not in the outline; added 2026-11-13 by request: what every key and pad button does, shown and not changed. The PROMPTS switch added 2026-11-17 (visibility stage 5) - the one thing on it that changes anything. |
 | - | `UI:main/missions`, `UI:main/online/host/missions` | Built 2026-10-05 (missions ticket 08, G0065, stage 9): the day's three missions, RANDOM and ENTER CODE; the same page opened from HOST GAME hosts what it starts. |
 
 ## 3. Page and modal table
@@ -253,19 +253,39 @@ colour or character choice (G0028, G0038); capacity as a setting (G0038).
 
 ### `UI:main/controls`
 
-Title `ui.controls.title = CONTROLS`. Under it a table, a line an action, three columns each as wide as its
-longest word (`ControlsTable`, tested): `ui.controls.action = ACTION`, `ui.controls.keyboard = KEYBOARD`,
-`ui.controls.pad = GAMEPAD`. Every row is read from the bindings (`ControlsConfig`), so a key rebound in
-`controls.properties` shows as what it now is; a pad's buttons are called what the pad last pressed calls
-them (`PadLabels`), Xbox's where none was. Rows, in order: move (two lines - the keys, then their aliases),
-aim, fire, strike, grenade, act, drag a load, the four orders, upgrades (the draft), shut a crate, zoom out,
-pause - `ui.controls.*`, mouse buttons as `ui.controls.mouse.*`. One entry, `back`.
+Title `ui.controls.title = CONTROLS`. Entries, top to bottom:
+
+| Entry | Label | Intent | Enabled |
+|---|---|---|---|
+| `prompts` | `ui.controls.prompts = PROMPTS: {state}`, the state `ui.controls.on = ON` or `ui.controls.off = OFF` | `CHOOSE(0)` - flips it; left/right flip it too | always - first entry, default selection |
+| `back` | `ui.common.back = BACK` | `BACK` | always |
+
+**PROMPTS** says whether the in-world **prompts** show on this computer - the chips over the subject saying
+which button and what it does (visibility stage 2). Only the prompts: never the brackets, never a status. On
+by default, one for the machine and never one a seat. Kept at once in libGDX preferences of their own,
+`pl.mzebrows.pwt.settings` (`LocalSettings`, `GameContext.settings()`), beside the mission records'. **The
+first player setting kept in a user file**, which answers the plan's Q4 for a switch with no shipped default to
+override: `Preferences`, never the shipped `assets/*.properties`. Where a setting that does override a shipped
+default goes - rebinding, Options' - is still open. Flipping it is the one thing this page changes.
+
+Under the entries, the table, a line an action, three columns each as wide as its longest heading or binding
+(`ControlsTable`, tested): `ui.controls.action = ACTION`, `ui.controls.keyboard = KEYBOARD`,
+`ui.controls.pad = GAMEPAD`. Under the headings a note, dim: `ui.controls.keyboard.note = PLAYER 1` under
+KEYBOARD and `ui.controls.pad.note = PLAYERS 2+` under GAMEPAD - the keyboard is player one's and every other
+player is a pad (alpha-phase 1.a). Each note is cut to its column and never widens it. The headings and the
+action column are drawn in the bright text colour (`graphic.hud.color.text`), the bindings and the note in the
+dim one (`textDim`), so the eye runs down the actions and stops at a binding. Every row is read from the
+bindings (`ControlsConfig`), so a key rebound in `controls.properties` shows as what it now is; a pad's buttons
+are called what the pad last pressed calls them (`PadLabels`), Xbox's where none was. Rows, in order: move (two
+lines - the keys, then their aliases), aim, fire, strike, grenade, act, drag a load, the four orders, upgrades
+(the draft), shut a crate, zoom out, pause - `ui.controls.*`, mouse buttons as `ui.controls.mouse.*`. It fits a
+page in the pseudo-locale (section 8).
 
 Not on it: the roll call's key (a placeholder), what the order keys do while a draft or a crate is open (the
 top bar's own hints say), the harness keys, and how a page is driven (every page's hint line says).
 
-Do not build: rebinding from this page - a player's bindings belong in a user file that does not exist yet,
-as Options' settings do.
+Do not build: rebinding from this page - where a player's bindings would be kept, over the shipped ones, is not
+decided, as Options' settings are not.
 
 ### `UI:main/options` - placeholder
 
@@ -273,7 +293,8 @@ Title `ui.options.title = OPTIONS`. Body `ui.options.body = Settings live in ass
 during the alpha.` One entry, `back`.
 
 Do not build now: widgets that write to `assets/*.properties` - those are shipped defaults, and a
-player's settings belong in a user file that does not exist yet (open question in the plan).
+player's settings belong in a user file (open question in the plan, Q4; partly answered by `UI:main/controls`'s
+PROMPTS, kept in `Preferences`).
 
 ### `UI:main/exit` - modal
 
@@ -412,7 +433,7 @@ buttons are named by position (ADR 0011); what the player is told to press comes
 | Back | `Esc`, `Backspace` | right click | `EAST` (B / Circle) | pages, modals |
 | Jump to entry | `1`-`9` | - | - | scenario lists |
 | Paste a code | `Ctrl+V` | - | - | the code line of `UI:main/missions` (built); of `UI:main/online/join` (planned) |
-| Step a choice row | `A`/`D`, left/right arrows | left click on `<` or `>` | d-pad left/right, left stick | `UI:main/proving-ground`, `.../upgrades`, `UI:main/missions` (RANDOM's tier) |
+| Step a choice row | `A`/`D`, left/right arrows | left click on `<` or `>` | d-pad left/right, left stick | `UI:main/proving-ground`, `.../upgrades`, `UI:main/missions` (RANDOM's tier), `UI:main/controls` (PROMPTS - a click on it flips it, as confirm does) |
 | Page tabs (future Options) | `Q` / `E` | - | `L1` / `R1` | pages with tabs |
 | Swap panels / roll call | `` ` `` | - | - | `UI:play` |
 | Pause | `Esc` | - | `START` | `UI:play` |
@@ -465,12 +486,13 @@ the look of the selection.
 | `UI:hud/top/crate` | `HudSlot.CRATE` | the whole top bar, instead of mission, goal, terminal and aside, while a crate is open (G0056) - one crate or one draft per machine; opened by the action key on a crate within reach, in the world, and followed here (`CrateBar`) | on the left the opener's portrait block and `ui.hud.player`; across the rest the crate's cards (`DraftLayout`, up to four), each framed - the highlighted one in his colour - with the gun's `ui.weapon.*` or `ui.crate.*`, what taking it does (`ui.crate.effect.*`) or, for one he would be turned down for, dimmed with `ui.crate.refused.*` (why: no wound, grenades full), and a hint (`ui.crate.take`, `ui.draft.choose`). Opening pauses a solo game with no banner, as a draft does (D2); the terminal holds its queue while it is open | built (G0056) |
 | `UI:hud/bottom/panel` | `HudSlot.PLAYER_PANEL` | bottom bar: four fixed quarters of the view's span. With four players or fewer in the game, local and online, everybody has one - this machine's seats first, then the rest by slot; with more, this machine's seats only, each in its seat's quarter (`PanelAssignment`). A player keeps his quarter while he is in the game; a quarter nobody holds stays black | frame in that player's commander colour, with `ui.hud.player = P{n}` in it; grey with `ui.hud.offline = OFFLINE` while his pad is unplugged or his link is gone (the host seals a dropped link as away, G0052) | built |
 | `UI:hud/bottom/portrait` | `HudSlot.PORTRAIT` | inside each player panel, left; dropped in a quarter under 160 UI px (4:3) | animated portrait (plan section 10.5), 32 x 32; a block in his colour until stage 8 | built as a block in his colour; frames planned (stage 8) |
-| `UI:hud/bottom/status` | `HudSlot.STATUS` | inside each player panel, row 1, after the label | while he stands: a narrow diamond per wound he can carry, filled in `graphic.hud.color.wound` for each he carries, hollow and dim for the rest (G0053), then his shield and stun; `ui.hud.down = DOWN` with his bleed-out as a draining bar; `ui.hud.kia = KIA {seconds}`, or `ui.hud.kiaNoReserve = KIA NO RESERVE` while nobody is in reserve to bring him back (G0055); `ui.hud.aboard = ABOARD`. `DOWN` and `KIA` in alert. No health bar: an outcome is non-lethal (DOWN) or lethal (KIA) (plan D11) | built |
+| `UI:hud/bottom/status` | `HudSlot.STATUS` | inside each player panel, row 1, after the label | while he stands: a narrow diamond per wound he can carry, filled in `graphic.hud.color.wound` for each he carries, hollow and dim for the rest (G0053), then his shield. Otherwise one word, worst news first (`PanelStatus`): `ui.hud.redeploy = REDEPLOY {seconds}` - the word alone while he is dying - or `ui.hud.noReserve = NO RESERVE` while nobody is in reserve to bring him back (G0055); `ui.hud.down = DOWN` with his bleed-out as a draining bar; `ui.hud.pinned = PINNED` while an ant's jaws hold him (G0045), the `STRIKE` chip over him its prompt - a leech's cling shows nothing, here or over him; `ui.hud.stunned = STUNNED` with what is left of a declared stun (G0053) as a draining bar in `graphic.hud.color.text` - a stagger shows nothing; `ui.hud.aboard = ABOARD`. Each replaces his wounds and shield. `REDEPLOY`, `NO RESERVE`, `DOWN` and `PINNED` in alert, and entering one fires the panel alarm; `STUNNED` passes by itself and does not. Widths: `P8 REDEPLOY 9.9`, and `P8 STUNNED` with a 4-column bar, fit the 19-column text with every word 30% longer (`TextFitTest`). No health bar: an outcome is non-lethal (DOWN) or lethal (REDEPLOY) (plan D11) | built |
 | `UI:hud/bottom/weapon` | `HudSlot.WEAPON` | inside each player panel, row 2 | `ui.weapon.*` name (≤ 7 characters) and a heat bar in the world's heat colours; while overheated `ui.hud.overheat = OVERHEAT` in alert in the bar's place. At the row's right end a grenade per one he can carry, filled in `graphic.color.grenade` for each he has, hollow and dim for the rest, all dim while he is down (G0077) - the heat bar shortens for them and `OVERHEAT` is cut to what is left | built |
 | `UI:hud/bottom/tally` | `HudSlot.TALLY` | inside each player panel, row 3, dim | three icons and per-life numbers - kills, goals, stabilised - `999+` above 999; the labelled form (`ui.hud.kills = KILL COUNT:`, `ui.hud.goals = MISSION GOALS:`, `ui.hud.stabilised = UNITS HEALED:`) is on `UI:play/pause` | built in the panel (`TallyIcon`, G0044); the pause menu's labelled form planned |
 | `UI:hud/bottom/upgrade` | `HudSlot.UPGRADE_TELL` | inside each player panel, row 1, right end, in his colour | while his slot holds drafts: `ui.hud.upgrade = UPGRADE {key}`, `ui.hud.upgrades = UPGRADE x{n} {key}`, or beside a status `ui.hud.upgradeBrief = +{n} {key}` (`UpgradeTell`), lit so it is not overlooked - a backing in his colour at `graphic.hud.upgrade.glow`, text breathing towards white by `.lift` at `.pulseHz`, held still with flashes off; never over the status, and a bleed-out bar shortens for it | built (upgrades S5) |
 | `UI:hud/view/paused` | `HudSlot.PAUSED` | over the view, top, over a light scrim | `ui.hud.paused = PAUSED` and `ui.hud.pausedHint = {key}: MENU`, while paused with no menu open on this machine | built |
 | `UI:hud/view/toast` | `HudSlot.TOAST` | over the view, top, where the paused banner goes; held and not drawn while a menu or the banner is up here | an upgrade earned, passed on or taken, or the swarm adapting - the terminal's own words (`ui.dispatch.DRAFT_EARNED`, `.DRAFT_PASSED`, `.UPGRADE_TAKEN`, `.SWARM_ADAPTS`) - framed and written in that player's colour (the text colour while he is the only player) or `graphic.hud.color.swarm`, typed with a cursor at `graphic.hud.toast.charsPerSecond`, held `.holdSeconds` once typed, then gone; one at a time, `.queue` waiting (`Toast`, `ToastPainter`) | built |
+| `UI:hud/view/prompt` | `HudSlot.PROMPT` | over the view, on the UI canvas, `graphic.action.chip.lift` UI px above the brackets of what it is about, kept inside the view; for this machine's players only | one **prompt** per local commander, chosen by `Prompts` (G0098) in this order: the strike, over him, while he is pinned (an ant's pin; a leech's cling gets none); else what the action key would do, over its **subject** - the readout's `subject` handle, the simulation's own choice; else `UPGRADE`, over him, for `graphic.hud.upgrade.promptSeconds` after he earns a draft. `ui.prompt.press = [{key}] {verb}` or, for a hold (stabilise, a door), `ui.prompt.hold = HOLD [{key}] {verb}` with a one-pixel fill along its foot in `graphic.color.actionMark` as the work is done; the verb is `ui.action.*`; the key in his seat's words (`PromptKeys`: seat 0 the keyboard, its mouse buttons `LMB`/`RMB`; every other seat a pad, through `PadLabels`). Neutral text on a backing in the bars' colour at `graphic.action.chip.alpha`, easing to `.occludedAlpha` over `.fadeSeconds` while an alien body is under it - one a tree's foliage hides does not count (G0072). `LEAVE`, while he is aboard, smaller and dim. Framed in his colour while more than one player is in the game; several over one thing stack, lowest slot nearest it. Hidden while a menu covers the view. In the world beneath, drawn under the trees (G0072): corner **brackets** in `graphic.color.actionMark` on each local commander's subject - round a doorway's rectangle for a door, never a ring - faint ones (`graphic.action.faintAlpha`) on what else the key could act on within `graphic.action.noticeDistance` of a commander free to act (`Reach.offers`), and smaller ticks in `graphic.color.pickupMark` on a touch pickup worth something to such a commander near it (`Grants.worthTo`) | built (G0098 stage 2) |
 | `UI:hud/bottom/roll-call` | `HudSlot.ROLL_CALL` | bottom bar, instead of the panels, swapped by `controls.key.rollCall` (`` ` ``); `graphic.hud.rollCall` opens a level on it | one compact row per player - colour, status, tally - for games of more than four. `ui.hud.rollCall = ROLL CALL - PLACEHOLDER` for now | placeholder; design open (plan section 19) |
 | `UI:hud/view/reticle` | `HudSlot.RETICLE` | over everything: the keyboard player's at the pointer's screen position, a pad player's `graphic.hud.reticle.padDistance` world units along his aim | the player's reticle, in his colour, outlined (plan 7.5). Each off by default (`graphic.hud.reticle.keyboard`, `.pads`); with the keyboard's off, the system pointer shows | built |
 
@@ -481,7 +503,8 @@ budget (7.2) holds label, status, weapon and tally in a 19-character text column
 
 Do not build: a minimap anywhere (G0008); the action prompt in the terminal (it belongs beside the
 commander - G0021 and the alpha-phase row); anything drawn over the view in `UI:play` except modals,
-the scrim, the paused banner, the toast, the reticle and world-space marks; a full-screen effect for one
+the scrim, the paused banner, the toast, the prompts, the reticle and world-space marks; a prompt or a bracket
+in red, a ring as the action's highlight, or a subject chosen by facing (G0098); a full-screen effect for one
 player's state - the screen may be shared (plan section 2).
 
 ## 8. Text rules (all pages and slots)
@@ -532,6 +555,8 @@ The rules are the plan's (sections 6.4, 6.5, 7.0, 7.4); what every page and slot
 - Everything that moves or flashes reads `graphic.ui.motionScale` / `graphic.ui.flashScale`; 0 turns
   it off. Nothing flashes more than three times a second.
 - HUD text is neutral. A player's colour marks only him (his frame, his label, his reticle). Alert red
-  is for DOWN, OVERHEAT and KIA, inside the bars, as black text on red. Nothing UI-red over the view.
+  is for DOWN, OVERHEAT, REDEPLOY and PINNED, inside the bars, as black text on red. Nothing UI-red over the view.
 - Never colour alone: every state has a word or a shape as well.
-- Hints show the glyphs of the device the player last used.
+- Hints show the glyphs of the device the player last used. A prompt shows its seat's (G0098): seat 0 is the keyboard and
+  every other seat its pad, with no switching while a level runs.
+- The in-world prompts can be switched off (`UI:main/controls`, PROMPTS); nothing else that shows state can.

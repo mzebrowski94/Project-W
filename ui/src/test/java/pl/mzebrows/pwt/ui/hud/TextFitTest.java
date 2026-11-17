@@ -95,12 +95,17 @@ class TextFitTest {
     @Test
     void fitsTheWorstStatusBesideTheWorstLabelInOnePanel() {
         String label = STRINGS.getProperty("ui.hud.player").replace("{0}", Integer.toString(Players.MAX));
-        String kia = STRINGS.getProperty("ui.hud.kia").replace("{0}", "9.9");
-        String longest = longestOf(kia, STRINGS.getProperty("ui.hud.down"), STRINGS.getProperty("ui.hud.aboard"));
 
-        assertThat((label + " " + longest).length()).isLessThanOrEqualTo(PanelLayout.TEXT_COLUMNS);
+        assertThat(label.length() + 1 + worstStatusColumns(0)).isLessThanOrEqualTo(PanelLayout.TEXT_COLUMNS);
         assertThat(STRINGS.getProperty("ui.hud.overheat").length() + WEAPON_COLUMNS + 1)
                 .isLessThanOrEqualTo(PanelLayout.TEXT_COLUMNS);
+    }
+
+    @Test
+    void fitsEveryStatusBesideTheWorstLabelInALanguageThirtyPercentLonger() {
+        String label = STRINGS.getProperty("ui.hud.player").replace("{0}", Integer.toString(Players.MAX));
+
+        assertThat(label.length() + 1 + worstStatusColumns(3)).isLessThanOrEqualTo(PanelLayout.TEXT_COLUMNS);
     }
 
     @Test
@@ -170,11 +175,10 @@ class TextFitTest {
                 STRINGS.getProperty("ui.hud.upgrades"),
                 STRINGS.getProperty("ui.hud.upgradeBrief"));
         String label = STRINGS.getProperty("ui.hud.player").replace("{0}", Integer.toString(Players.MAX));
-        String kia = STRINGS.getProperty("ui.hud.kia").replace("{0}", "9.9");
         int beside = PanelLayout.TEXT_COLUMNS - label.length() - 2;
 
         assertThat(tell.text(9, "C", beside)).isEqualTo("UPGRADE x9 C");
-        assertThat(tell.text(9, "Y", beside - kia.length())).isEqualTo("+9 Y");
+        assertThat(tell.text(9, "Y", beside - worstStatusColumns(0))).isEqualTo("+9");
     }
 
     @Test
@@ -209,6 +213,32 @@ class TextFitTest {
             longest = longestOf(longest, scenario.name());
         }
         return longest;
+    }
+
+    /**
+     * Columns the widest status takes after the label, each word grown by {@code tenths} tenths of its length and
+     * rounded up, and a bar's least width after a status that carries one.
+     */
+    private static int worstStatusColumns(int tenths) {
+        int worst = 0;
+        String[] words = {
+            STRINGS.getProperty("ui.hud.redeploy").replace("{0}", "9.9"),
+            STRINGS.getProperty("ui.hud.noReserve"),
+            STRINGS.getProperty("ui.hud.pinned"),
+            STRINGS.getProperty("ui.hud.aboard"),
+            STRINGS.getProperty("ui.hud.offline")
+        };
+        for (String word : words) {
+            worst = Math.max(worst, grown(word, tenths));
+        }
+        for (String barred : new String[] {STRINGS.getProperty("ui.hud.down"), STRINGS.getProperty("ui.hud.stunned")}) {
+            worst = Math.max(worst, grown(barred, tenths) + 1 + PanelLayout.LEAST_BAR_COLUMNS);
+        }
+        return worst;
+    }
+
+    private static int grown(String word, int tenths) {
+        return word.length() + (word.length() * tenths + 9) / 10;
     }
 
     private static String longestOf(String... texts) {

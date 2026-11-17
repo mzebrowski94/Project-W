@@ -257,7 +257,7 @@ each named in `package-info.java`; the ports are also `ClientArchitectureTest.PO
 
 | Package | What it is | Ports | libGDX |
 |---|---|---|---|
-| `client` (root) | `PwtGame`, `GameContext`, the three screens and what only they use (`PlayMenus`, `HarnessControls`, `ProvingPreview`), `LocalMachineId` | `Log`, `Assets`, `LaunchOptions` | anything |
+| `client` (root) | `PwtGame`, `GameContext`, the three screens and what only they use (`PlayMenus`, `HarnessControls`, `ProvingPreview`), `LocalMachineId` | `Log`, `Assets`, `LaunchOptions`, `LocalSettings` | anything |
 | `input` | Devices read once a frame, the bindings (`ControlsConfig`), the seats, the controls that turn presses into input | `ControlsConfig`, `PlayerSeats`, `PadLabels`, `KeyCode` | no drawing |
 | `draw` | The field: renderers, marks, palettes, the camera, the rendering tunables (`GraphicConfig`) | `GraphicConfig`, `Palette` | no devices |
 | `hud` | Screen space: the canvas, the bars and pages, the fonts, every word the player reads | - | no devices |

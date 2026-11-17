@@ -16,8 +16,10 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
+import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Respawning;
+import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Upgrades;
@@ -146,17 +148,60 @@ class ReadoutWriterTest {
     }
 
     @Test
-    void publishesAShieldInFrontOfHimAndAStunHeIsUnder() {
+    void publishesAShieldInFrontOfHim() {
         Simulation world = world();
         Entity commander = world.spawnCommander(40f, 40f, 0);
         commander.getComponent(Appearance.class).shield = 0.5f;
-        commander.getComponent(Appearance.class).state = Appearance.State.STUNNED;
 
         PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
 
         assertThat(player.shielded).isTrue();
-        assertThat(player.stunned).isTrue();
         assertThat(player.posture).isEqualTo(Posture.STANDING);
+    }
+
+    @Test
+    void publishesADeclaredStunAndWhatIsLeftOfIt() {
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 0);
+        commander.getComponent(Stunned.class).daze(40);
+        world.step();
+
+        PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
+
+        assertThat(player.stunned).isTrue();
+        assertThat(player.stunLeft).isGreaterThan(0.5f).isLessThan(1f);
+        assertThat(player.posture).isEqualTo(Posture.STANDING);
+    }
+
+    @Test
+    void saysNothingOfAStagger() {
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 0);
+        commander.getComponent(Stunned.class).apply(40, 0f);
+        world.step();
+
+        PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
+
+        assertThat(player.stunned).isFalse();
+        assertThat(player.stunLeft).isZero();
+    }
+
+    @Test
+    void publishesADeclaredStunOnAManALeechClingsTo() {
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 0);
+        Entity leech = world.spawnEnemy(41f, 40f);
+        commander.getComponent(Stunned.class).daze(40);
+        world.step();
+        Gripped cling = commander.getComponent(Gripped.class);
+        cling.by = Handles.of(leech);
+        cling.pinned = false;
+        commander.getComponent(Appearance.class).state = Appearance.State.GRIPPED;
+
+        PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
+
+        assertThat(player.stunned).isTrue();
+        assertThat(player.pinned).isFalse();
     }
 
     @Test
@@ -477,6 +522,77 @@ class ReadoutWriterTest {
         assertThat(player.crateRefused[0]).isTrue();
         assertThat(player.crateRefused[1]).isFalse();
         assertThat(readout.player(1).crateCount).isZero();
+    }
+
+    /** G0098: the readout carries what the simulation chose, by handle, and the commander's own. */
+    @Test
+    void carriesTheSubjectOfHisActionAndHisOwnHandle() {
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 0);
+        Entity turret = world.spawnTurret(42f, 40f);
+        world.spawnCommander(90f, 90f, 1);
+        world.step();
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        assertThat(readout.player(0).subject).isEqualTo(Handles.of(turret));
+        assertThat(readout.player(0).self).isEqualTo(Handles.of(commander));
+        assertThat(readout.player(1).subject).isEqualTo(Handles.NOBODY);
+    }
+
+    @Test
+    void carriesHowFarThroughAHoldHeIs() {
+        Simulation world = world();
+        world.spawnCommander(40f, 40f, 0);
+        Entity casualty = world.spawnTrooper(42f, 40f);
+        Vitality down = casualty.getComponent(Vitality.class);
+        down.bleedOutTicks = 600;
+        down.begin();
+        casualty.getComponent(Appearance.class).state = Appearance.State.CASUALTY;
+        world.step(CommanderInput.IDLE.acting(true));
+        world.step(CommanderInput.IDLE.acting(true));
+
+        PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
+
+        assertThat(player.subject).isEqualTo(Handles.of(casualty));
+        assertThat(player.progress).isGreaterThan(0f);
+    }
+
+    /** The ant pins; a leech only clings, and a cling asks nothing of the strike key (G0083). */
+    @Test
+    void carriesAPinAndNotACling() {
+        Simulation world = world();
+        Entity pinned = world.spawnCommander(40f, 40f, 0);
+        Entity clung = world.spawnCommander(60f, 40f, 1);
+        Entity ant = world.spawnEnemy(41f, 40f);
+        Gripped jaws = pinned.getComponent(Gripped.class);
+        jaws.by = Handles.of(ant);
+        jaws.pinned = true;
+        Gripped leech = clung.getComponent(Gripped.class);
+        leech.by = Handles.of(ant);
+        leech.pinned = false;
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        assertThat(readout.player(0).pinned).isTrue();
+        assertThat(readout.player(1).pinned).isFalse();
+    }
+
+    @Test
+    void copiesTheSubjectAndThePinIntoAnotherReadout() {
+        Readout from = new Readout();
+        from.player(2).subject = 17L;
+        from.player(2).self = 5L;
+        from.player(2).progress = 0.5f;
+        from.player(2).pinned = true;
+
+        Readout to = new Readout();
+        to.copyFrom(from);
+
+        assertThat(to.player(2).subject).isEqualTo(17L);
+        assertThat(to.player(2).self).isEqualTo(5L);
+        assertThat(to.player(2).progress).isEqualTo(0.5f);
+        assertThat(to.player(2).pinned).isTrue();
     }
 
     private static Readout fill(ReadoutWriter writer, Simulation world) {

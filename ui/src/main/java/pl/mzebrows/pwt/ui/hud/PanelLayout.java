@@ -20,10 +20,14 @@ public record PanelLayout(int padding, int portrait, int advance) {
 
     /**
      * Columns the text needs beside the portrait: the widest row, three tally counts with their icons,
-     * rounded up - {@code SIDEARM} and a heat bar, {@code P8 KIA 1.2} and a bleed-out bar fit inside it. His grenades
+     * rounded up - {@code SIDEARM} and a heat bar, {@code P8 REDEPLOY 9.9}, and {@code P8 STUNNED} with a bar of its least
+     * width, fit inside it, and still do with every word 30% longer. His grenades
      * take the gun row's right end (G0077): the heat bar shortens for them, and OVERHEAT is cut to what is left.
      */
     public static final int TEXT_COLUMNS = 19;
+
+    /** Columns a status's bar - a bleed-out, a stun - keeps however much the upgrade tell wants. */
+    public static final int LEAST_BAR_COLUMNS = 4;
 
     /** Left edge of a seat's quarter. */
     public int quarterX(int seat, int viewX, int viewWidth) {

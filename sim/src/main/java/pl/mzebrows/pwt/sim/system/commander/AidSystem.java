@@ -7,6 +7,7 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
@@ -85,6 +86,7 @@ public final class AidSystem extends EntitySystem {
                 continue;
             }
             action.available = ActionKind.STABILISE;
+            action.subject = Handles.of(subject);
             Aid.work(modifiers, helper, subject, deltaTime, reviveInvulnerableSeconds);
             action.progress = Aid.progress(subject);
         }

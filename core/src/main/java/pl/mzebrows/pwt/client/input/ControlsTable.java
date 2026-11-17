@@ -4,30 +4,42 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.UnaryOperator;
+import pl.mzebrows.pwt.ui.hud.TextFit;
 
 /**
  * What the controls page shows ({@code UI:main/controls}): every action a player has in a level, the key
- * or mouse button it is on and the pad's button for it, a line each under a line of headings - three
- * columns, each as wide as its longest word.
+ * or mouse button it is on and the pad's button for it, a line each under a line of headings and a note
+ * whose players each column is (1.a) - three columns, each as wide as its longest heading or binding.
  *
  * <p>Written from the bindings themselves, so a rebound key shows as what it now is and the page cannot
  * say one thing while the file says another. A pad's buttons are called what that pad calls them ({@link
  * PadLabels}). It shows; it changes nothing.
+ *
+ * @param lines the table's lines in capitals: the headings, the note, then a line an action
+ * @param actionColumns how wide the action column is, in characters, the gap after it left out
  */
-public final class ControlsTable {
+public record ControlsTable(List<String> lines, int actionColumns) {
 
     /** Spaces between one column and the next. */
     private static final int GAP = 2;
 
-    private ControlsTable() {}
+    /** The first line: what each column is. */
+    private static final int HEADINGS = 0;
+
+    /** The line under the headings: whose the keyboard is, and whose the pads are. */
+    private static final int NOTE = HEADINGS + 1;
+
+    public ControlsTable {
+        lines = List.copyOf(lines);
+    }
 
     /**
-     * The table's lines, the headings first, in capitals.
+     * The table for these bindings, in these words.
      *
      * @param words the interface's words by key - {@code ui.controls.*}
      * @param playStation whether the pad's buttons are called what a PlayStation pad calls them
      */
-    public static List<String> lines(ControlsConfig controls, UnaryOperator<String> words, boolean playStation) {
+    public static ControlsTable of(ControlsConfig controls, UnaryOperator<String> words, boolean playStation) {
         ControlsConfig.Keys key = controls.key();
         ControlsConfig.Pad pad = controls.pad();
         List<String[]> rows = new ArrayList<>();
@@ -92,7 +104,18 @@ public final class ControlsTable {
         rows.add(row(words, "zoom", keys(key.zoom()), pad.zoom(), pad.zoomTrigger(), playStation));
         // In a level the key that goes back a page opens the pause menu.
         rows.add(row(words, "pause", keys(controls.ui().key().back()), pad.pause(), pad.pauseTrigger(), playStation));
-        return aligned(rows);
+        return aligned(rows, words.apply("ui.controls.keyboard.note"), words.apply("ui.controls.pad.note"));
+    }
+
+    /**
+     * How many of a line's first characters are drawn in the bright text colour, the rest dim: the headings
+     * whole, the note none of it, an action's line its action.
+     */
+    public int bright(int line) {
+        if (line == HEADINGS) {
+            return lines.get(HEADINGS).length();
+        }
+        return line == NOTE ? 0 : Math.min(actionColumns, lines.get(line).length());
     }
 
     private static String[] row(
@@ -123,19 +146,23 @@ public final class ControlsTable {
         return names.toString();
     }
 
-    private static List<String> aligned(List<String[]> rows) {
+    /** The rows in columns, and under the headings the notes - each cut to its column, which it never widens. */
+    private static ControlsTable aligned(List<String[]> rows, String keyboardNote, String padNote) {
         int action = 0;
         int keyboard = 0;
+        int gamepad = 0;
         for (String[] row : rows) {
             action = Math.max(action, row[0].length());
             keyboard = Math.max(keyboard, row[1].length());
+            gamepad = Math.max(gamepad, row[2].length());
         }
+        rows.add(NOTE, cells("", TextFit.fit(keyboardNote, keyboard), TextFit.fit(padNote, gamepad)));
         List<String> lines = new ArrayList<>(rows.size());
         for (String[] row : rows) {
             String line = pad(row[0], action + GAP) + pad(row[1], keyboard + GAP) + row[2];
             lines.add(line.stripTrailing().toUpperCase(Locale.ROOT));
         }
-        return lines;
+        return new ControlsTable(lines, action);
     }
 
     private static String pad(String text, int width) {

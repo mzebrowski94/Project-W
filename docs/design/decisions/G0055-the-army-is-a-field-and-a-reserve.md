@@ -41,7 +41,8 @@ may raise:
   is empty. Latched - a crate a trooper reaches afterwards does not bring it back. The goal line says
   MISSION FAILED; like MISSION COMPLETED, there is no end screen yet.
 - **Both counts are on the HUD** - `ARMY 12/16 RES 20`, centred on the top bar's first line - and a
-  commander waiting on an empty reserve says `KIA NO RESERVE`. The muster's countdown is not shown:
+  commander waiting on an empty reserve says `NO RESERVE` (it read `KIA NO RESERVE` until the visibility
+  pass, G0098, made the word `REDEPLOY`). The muster's countdown is not shown:
   the aside's room is for upgrades, and it is a steady clock, not a number to track.
 
 **Why a reserve now, when G0030 refused one.** G0030's objection was pillar 5: a balance the player

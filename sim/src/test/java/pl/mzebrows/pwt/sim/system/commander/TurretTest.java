@@ -17,6 +17,7 @@ import com.badlogic.ashley.utils.ImmutableArray;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -65,6 +66,31 @@ class TurretTest {
         simulation.step(STILL);
 
         assertThat(commander.getComponent(Action.class).available).isEqualTo(ActionKind.MAN_TURRET);
+    }
+
+    @Test
+    void namesTheTurretBesideHimAsTheSubject() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity turret = simulation.spawnTurret(MIDDLE + BESIDE, MIDDLE);
+
+        simulation.step(STILL);
+
+        assertThat(commander.getComponent(Action.class).subject).isEqualTo(Handles.of(turret));
+    }
+
+    /** Aboard, getting off is the only offer, and it is made on the gun he is on. */
+    @Test
+    void namesTheTurretHeIsOnAsTheSubject() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity turret = simulation.spawnTurret(MIDDLE + BESIDE, MIDDLE);
+
+        simulation.step(PRESSING);
+        simulation.step(STILL);
+
+        assertThat(commander.getComponent(Action.class).available).isEqualTo(ActionKind.LEAVE_TURRET);
+        assertThat(commander.getComponent(Action.class).subject).isEqualTo(Handles.of(turret));
     }
 
     @Test

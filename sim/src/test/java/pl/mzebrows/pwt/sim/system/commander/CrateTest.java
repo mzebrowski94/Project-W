@@ -14,6 +14,7 @@ import java.util.EnumMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
@@ -57,6 +58,31 @@ class CrateTest {
         simulation.step(STILL);
 
         assertThat(commander.getComponent(Action.class).available).isEqualTo(ActionKind.OPEN_CRATE);
+    }
+
+    @Test
+    void namesTheCrateBesideHimAsTheSubject() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity crate = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
+
+        simulation.step(STILL);
+
+        assertThat(commander.getComponent(Action.class).subject).isEqualTo(Handles.of(crate));
+    }
+
+    /** A crate he has open has the key's next press, in the top bar - nothing in the world is on offer. */
+    @Test
+    void namesNobodyWhileHeHasTheCrateOpen() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity crate = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
+
+        simulation.step(ACT);
+        simulation.step(STILL);
+
+        assertThat(crate(crate).open()).as("open, and still within his reach").isTrue();
+        assertThat(commander.getComponent(Action.class).subject).isEqualTo(Handles.NOBODY);
     }
 
     /** Nothing is taken from a crate by walking onto it: it is opened, not claimed. */

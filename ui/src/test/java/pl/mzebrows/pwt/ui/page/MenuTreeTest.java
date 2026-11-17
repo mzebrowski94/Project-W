@@ -91,12 +91,22 @@ class MenuTreeTest {
     /** A page that only tells the player something leaves by its one entry. */
     @Test
     void offersOnlyBackOnAPageThatOnlyTells() {
-        for (UiPage telling : new UiPage[] {UiPage.CAMPAIGN, UiPage.CONTROLS, UiPage.OPTIONS}) {
+        for (UiPage telling : new UiPage[] {UiPage.CAMPAIGN, UiPage.OPTIONS}) {
             assertThat(MenuTree.page(telling).entries())
                     .as(telling.id())
                     .extracting(MenuEntry::intent)
                     .containsExactly(UiIntent.BACK);
         }
+    }
+
+    /** The controls page changes one thing: the PROMPTS switch, first and selected, above BACK. */
+    @Test
+    void offersThePromptsSwitchSelectedThenBackOnTheControlsPage() {
+        MenuPage page = MenuTree.page(UiPage.CONTROLS);
+
+        assertThat(page.entries()).extracting(MenuEntry::id).containsExactly("prompts", "back");
+        assertThat(page.entries()).extracting(MenuEntry::intent).containsExactly(UiIntent.choose(0), UiIntent.BACK);
+        assertThat(page.defaultSelection()).isZero();
     }
 
     @Test

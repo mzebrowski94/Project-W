@@ -21,7 +21,10 @@ public record UiIntent(Kind kind, UiPage page, int index) {
         RESUME,
         RESTART,
         LEAVE,
-        /** Step a choice row of the proving ground forward - its confirm; left and right step it too. */
+        /**
+         * Step a choice row of the proving ground forward, or flip the controls page's PROMPTS switch - its
+         * confirm; left and right step it too.
+         */
         CHOOSE,
         /** Fight the proving ground's setup (G0060). */
         PROVE,
@@ -49,7 +52,10 @@ public record UiIntent(Kind kind, UiPage page, int index) {
         return new UiIntent(Kind.START, UiPage.PLAY, scenario);
     }
 
-    /** A choice row: on the proving ground its place in {@code ProvingRows.Row}, on its upgrades page the kind's. */
+    /**
+     * A choice row: on the proving ground its place in {@code ProvingRows.Row}, on its upgrades page the kind's,
+     * on the controls page its entry - the PROMPTS switch.
+     */
     public static UiIntent choose(int row) {
         return new UiIntent(Kind.CHOOSE, UiPage.PLAY, row);
     }

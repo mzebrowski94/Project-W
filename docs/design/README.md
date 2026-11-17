@@ -95,6 +95,11 @@ left stick move the selection, repeating while held; `Enter`/`Space` and `A`/`Cr
 context is spent**: whatever is held when a menu opens or closes, or a level starts, does nothing in the
 game until it has been let go once. Bindings: `controls.ui.*` in `controls.properties`.
 
+The CONTROLS page (`UI:main/controls`) shows this table from the bindings, its keyboard column noted
+`PLAYER 1` and its pad column `PLAYERS 2+`, and changes nothing in it - rebinding from it is not built. Its one
+switch, PROMPTS, says whether the in-world prompts show on this computer: confirm, a click or left/right flips
+it, kept in the machine's preferences, on by default.
+
 Plugging a pad in **is** joining, and unplugging is not leaving (G0028). There is no binding for
 either and there is not going to be one.
 

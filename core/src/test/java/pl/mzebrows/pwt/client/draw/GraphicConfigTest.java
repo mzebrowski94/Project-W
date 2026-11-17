@@ -72,6 +72,33 @@ class GraphicConfigTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    /** G0098: the action's marks have their own distance and colours, and a prompt its own see-through backing. */
+    @Test
+    void readsTheActionsMarksAndThePrompt() {
+        GraphicConfig config = GraphicConfig.load();
+
+        assertThat(config.action().noticeDistance()).isPositive();
+        assertThat(config.action().chip().occludedAlpha())
+                .isLessThan(config.action().chip().alpha());
+        assertThat(config.actionMark()).isNotEqualTo(config.pickupMark());
+        assertThat(config.hud().upgrade().promptSeconds()).isPositive();
+        assertThat(config.action().tick()).isLessThan(config.action().corner());
+    }
+
+    /** Zero means off, as everywhere: no notice distance brackets nothing faintly. */
+    @Test
+    void readsANoticeDistanceOfZeroAsOff() {
+        ActionMark off = GraphicConfig.FILE
+                .read("graphic.action.noticeDistance=0\n")
+                .config()
+                .action();
+
+        assertThat(off.notices()).isFalse();
+        assertThatThrownBy(() -> new ActionMark(
+                        -1f, 0.5f, 0.3f, 0.3f, 0.4f, 0.4f, 0.2f, 0.2f, new ActionMark.Chip(0.6f, 0.25f, 0.15f, 2)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     @Test
     void refusesAnAlertThatPulsesFasterThanThreeTimesASecond() {
         assertThatThrownBy(() -> new GraphicConfig.Alert(3.5f)).isInstanceOf(IllegalArgumentException.class);
@@ -160,6 +187,7 @@ class GraphicConfigTest {
                         d.heat(),
                         d.door(),
                         d.post(),
+                        d.flag(),
                         d.burst(),
                         d.daze(),
                         d.tree(),
@@ -170,6 +198,9 @@ class GraphicConfigTest {
                         d.geyser(),
                         d.slither(),
                         d.burrow(),
+                        d.action(),
+                        d.actionMark(),
+                        d.pickupMark(),
                         d.camera()))
                 .isInstanceOf(IllegalArgumentException.class);
     }

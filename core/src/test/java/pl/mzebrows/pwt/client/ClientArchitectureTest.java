@@ -83,7 +83,8 @@ final class ClientArchitectureTest {
             CLIENT + ".Assets",
             CLIENT + ".LaunchOptions",
             CLIENT + ".LocalMachineId",
-            CLIENT + ".LocalMissionRecords");
+            CLIENT + ".LocalMissionRecords",
+            CLIENT + ".LocalSettings");
 
     /**
      * The classes a layer may use from another layer or from the root (ADR 0021). Each is named in its own
@@ -96,6 +97,8 @@ final class ClientArchitectureTest {
             CLIENT + ".Assets",
             // Which copy of the game this is; an online session names its log after it.
             CLIENT + ".LaunchOptions",
+            // What the player has set on this computer, which the prompts read.
+            CLIENT + ".LocalSettings",
             // The bindings, which the hints name.
             CLIENT + ".input.ControlsConfig",
             // Who sits where on this machine, which the hints and the play key by.
@@ -104,10 +107,16 @@ final class ClientArchitectureTest {
             CLIENT + ".input.PadLabels",
             // A key, as the file and the hints name it.
             CLIENT + ".input.KeyCode",
+            // A mouse button, as the file and the prompts name it.
+            CLIENT + ".input.MouseButton",
             // The rendering tunables, every painter's style among them.
             CLIENT + ".draw.GraphicConfig",
             // A thing's colour, a player's among them.
             CLIENT + ".draw.Palette",
+            // Where a thing is drawn this frame, which a prompt over it must agree with (G0098).
+            CLIENT + ".draw.Drawn",
+            // How the action's brackets stand round a thing, which its prompt sits above (G0098).
+            CLIENT + ".draw.ActionMark",
             // How much of the dev overlay is on, which lays the top bar out.
             CLIENT + ".play.OverlayMode",
             // The one way to read a config file.
