@@ -70,3 +70,7 @@ desktop.ini
 ## the build. Do not let it be settled by whoever next hits a missing texture.
 /assets/atlas/
 /assets/assets.txt
+
+## Agent output: raw review reports and skill drafts, kept on the author's machine. Their findings live
+## in docs/backlog.md and .scratch/; the prompt that writes here is .claude/commands/module-review.md.
+/Claude outputs/

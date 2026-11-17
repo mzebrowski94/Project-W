@@ -1,10 +1,10 @@
-# Prompt: critical review of one Project-W module
-
-Copy everything below the line into a new session. Replace `<MODULE>` with `map`, `net`, `ui` or `core`.
-The prompt was built from the `sim` review of 2026-09-26/27 (`Claude outputs/sim-review.md`). Each check
-below is something that review actually found in `sim`, stated so it can be looked for anywhere.
-
 ---
+description: Critical review of one Project-W module - map, net, ui or core
+argument-hint: <module>
+---
+
+Built from the `sim` review of 2026-09-26/27. Each check below is something that review actually found in
+`sim`, stated so it can be looked for anywhere. `<MODULE>` below is `$ARGUMENTS`.
 
 Act as a senior 2D-engine and gamedev engineer doing a **critical review of the `<MODULE>` module**, with
 an eye for junior and mid-level mistakes. We are in the alpha phase and can change anything. Four domains:

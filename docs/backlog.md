@@ -5,8 +5,8 @@ gameplay: a stand-in for a mechanic belongs in `design/alpha-phase.md` (*Still s
 design question in `design/README.md`.
 
 An entry is removed when it is done, or rejected in an ADR. Taking one on is a normal session: agree, plan,
-tests first. Origin: the `sim` review of 2026-09-26/27 (`Claude outputs/sim-review.md`, item numbers in
-brackets), the `net` review, and the new-systems review (`Claude outputs/new-systems-review.md`).
+tests first. Origin: the `sim` review of 2026-09-26/27, the `net` review and the new-systems review; item
+numbers in brackets refer to those reports, which are not kept in the repository.
 
 ## Performance
 

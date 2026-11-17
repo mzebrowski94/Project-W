@@ -10,7 +10,7 @@ A session runs in one of three places. The commands are the same in all of them 
 
 | | **Desktop** | **Cowork** | **Cloud** |
 |---|---|---|---|
-| What it is | Claude Code desktop on Mateusz's Windows machine | A Linux VM with `D:` mounted, reached through `device_bash` | Claude Code on the web: a fresh Linux clone |
+| What it is | Claude Code desktop on Mateusz's Windows machine | A Linux VM with the Windows drive mounted, reached through `device_bash` | Claude Code on the web: a fresh Linux clone |
 | How to tell | `uname -s` starts `MINGW` (Git Bash) | the device shell; the repo is under a mount | `CLAUDE_CODE_REMOTE=true` |
 | Gradle | `gradle.sh` hands over to `./gradlew` with the machine's JDK 25 | `gradle.sh` bootstraps JDK and Gradle into `ai/toolchain`, through the proxy | as Cowork, provisioned by the session-start hook |
 | Build output | `~/.pwt/out/<module>/build/`; a linked worktree `~/.pwt/out/wt/<folder>/<module>/build/` | same | same |
@@ -124,7 +124,7 @@ build output differs. Re-read a file before editing rather than trusting an earl
 **`git --no-optional-locks status --porcelain`**, and the same flag for `diff`, in every environment.
 
 The flag tells git not to take `index.lock` for the optional index refresh. In Cowork that lock is a
-hazard: removing it needs delete rights on `D:`, which reset between sessions, so a status run without
+hazard: removing it needs delete rights on the mount, which reset between sessions, so a status run without
 them strands a zero-byte lock that makes Mateusz's own `git add` fail with "another git process seems
 to be running". Elsewhere the flag costs nothing, and one habit beats three.
 
@@ -172,13 +172,13 @@ Only things actually hit. Add what you hit; delete what stops happening.
 | `cannot find symbol: com.badlogic.gdx.utils.ImmutableArray` | It is Ashley's, not libGDX's. | `com.badlogic.ashley.utils.ImmutableArray`. |
 | A dependency's "latest" is a milestone (AssertJ resolved `4.0.0-M1`) | Maven metadata `<latest>` includes pre-releases. | Pin the newest stable in `gradle.properties`. |
 | `ArchitectureTest` reports violations inside itself | Build outputs relocated, no longer matching `.../build/classes/java/test/`; ArchUnit's `DoNotIncludeTests` silently stops excluding test classes. | Keep the `/build/` segment in any relocated output path - `gradle.sh` does, in every branch. |
-| `cp: ... .pwt/gradle-home ...: No space left on device` while seeding the cache (Cowork) | The device shell's `/sessions` disk, where `$HOME` lives, is shared with every earlier session and full (9.8 GB, 0 free). Hit 2026-09-29. `/tmp` is on another disk with room, and persists between calls. | `HOME=/tmp/pwthome .claude/scripts/verify.sh`. Every call must pass the same `HOME`, or the build starts cold. |
+| `cp: ... .pwt/gradle-home ...: No space left on device` while seeding the cache (Cowork) | The device shell's `/sessions` disk, where `$HOME` lives, is shared with every earlier session and full. Hit 2026-09-29. `/tmp` is on another disk with room, and persists between calls. | `HOME=/tmp/pwthome .claude/scripts/verify.sh`. Every call must pass the same `HOME`, or the build starts cold. |
 | Lombok `sun.misc.Unsafe` warning | Unavoidable on JDK 25. | Ignore; `verify.sh` filters it. |
 | `Could not create service of type FileHasher ... java.io.IOException: Input/output error`, and `rm` on `.gradle/**` says `Permission denied` (Cowork) | IntelliJ or a Windows `gradlew` daemon holds `<project>/.gradle`'s lock files, which the sandbox VM may not touch. Reads like a corrupt cache; is not one. | Nothing to do: `gradle.sh` passes `--project-cache-dir`. If it reappears, check that flag is still there before deleting anything. |
 | An input that is "just pressed" is ignored at random | A frame shorter than one tick runs **zero** simulation steps, so a one-frame input reaches no tick. Above 60 Hz that is most frames. | Latch it until a tick spends it, as `ScenarioSession.pendingOrder` does. Anything read with `isKeyJustPressed` and handed to `advance()` has this. |
 | `error: warnings found and -Werror specified` | A real warning. Most often a javadoc orphaned by inserting a method *above* the one it documented. | Fix it. Do not disable the check - eight warnings accumulated in one session before anyone noticed. |
 | `.claude/scripts/verify.sh: Permission denied` (Cloud) | The scripts were committed as `100644` from Windows, so a Linux clone cannot execute them. Hit 2026-09-26; now committed as `100755`, and `verify.sh` calls `gradle.sh` through `bash`. | Run `bash .claude/scripts/verify.sh`. The session-start hook also restores the bit. |
-| `sandbox-helper: no Plan9 drive shares mounted under /mnt/.virtiofs-root/shared` (Cowork) | The device shell cannot mount `D:` at all. Hit 2026-09-11, attributed to a Windows update of 2026-09-08; fixed on Mateusz's side 2026-09-12. | Nothing in the build can run. Say so and fall back to the file tools - see below. |
+| `sandbox-helper: no Plan9 drive shares mounted under /mnt/.virtiofs-root/shared` (Cowork) | The device shell cannot mount the Windows drive at all. Hit 2026-09-11, attributed to a Windows update of 2026-09-08; fixed on Mateusz's side 2026-09-12. | Nothing in the build can run. Say so and fall back to the file tools - see below. |
 | IntelliJ or the command line says `Unable to create '.git/index.lock': File exists. Another git process seems to be running` (Cowork) | **A `git` command run from the sandbox left its lock behind** - see *Reading git state*. Hit 2026-09-17. | Delete `.git/index.lock` (needs delete permission), then **always** `git --no-optional-locks ...` for anything read-only. |
 | A `--tests 'Class.method'` run reports the whole class, and IntelliJ's `<project>/*/build` changes under it (Desktop) | `./gradlew` called directly: it builds into IntelliJ's output, not `~/.pwt/out` (ADR 0006). Hit 2026-11-11. Through `gradle.sh` the same filter runs the one method. | `.claude/scripts/gradle.sh`, never `./gradlew`, in every environment. |
 | An `invariants/*.md` (or any doc) left empty or cut short (Desktop) | An inline Python or shell script that read a whole file and rewrote it failed between the two. Hit 2026-11-11; `DecisionRecordsTest.keepsATableOfInvariantsInEveryFileOfThem` now catches an empty invariants file. | Change docs with the Edit tool, one exact replacement at a time. A file clean at HEAD comes back with `git restore -- <path>` - see the friction below. |
@@ -255,7 +255,7 @@ Named so it is not re-discovered every session. None of it blocks work; each is 
 - **Delete permission resets every Cowork session**, and can drop mid-session when the bridge
   reconnects. `verify.sh` probes for it and without it compiles, lints and tests anyway, reporting
   formatting instead of applying it. It *is* a hard blocker for renaming or deleting a file. Spotless
-  is the only thing in the whole build that deletes anything on `D:` (verified by syscall trace,
+  is the only thing in the whole build that deletes anything on the mount (verified by syscall trace,
   2026-09-07).
 - **Computer-use access lapses between sessions.** Re-approve when Claude needs to run or look at the
   game.
@@ -264,7 +264,7 @@ Named so it is not re-discovered every session. None of it blocks work; each is 
 - **Auto mode denies `git restore`** (Desktop), and `git show HEAD:<path> > <path>` with it, even for a
   file that is clean at HEAD. Closed 2026-11-11 for docs and tickets by `Bash(git restore -- docs/*)` and
   `Bash(git restore -- .scratch/*)` in `.claude/settings.json`; anywhere else Claude still hands it over.
-- **In Cowork the repo lives on `D:`, a Windows mount** - the ~175x write penalty above. Worked around in
+- **In Cowork the repo lives on a Windows mount** - the ~175x write penalty above. Worked around in
   `gradle.sh`.
 
 Checked and closed: nothing in the test suite needs Docker or Testcontainers, and nothing will - the
