@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system.motion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.BRUTE_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_LOCK;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_ACTIVE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_LOCK;
@@ -15,14 +16,17 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
@@ -53,6 +57,9 @@ class StunTest {
 
     private static final float TOLERANCE = 1e-4f;
 
+    /** Whoever a hold built by hand is clinched with: any handle will do. */
+    private static final long PARTNER = 7L;
+
     /**
      * A fatal blow tangles the two of them together - that is the clinch, and both are committed.
      *
@@ -66,10 +73,44 @@ class StunTest {
         Stunned stunned = new Stunned();
         stunned.apply(AlphaWorlds.ticksIn(1f), 60f);
 
-        stunned.clinch(AlphaWorlds.ticksIn(1f));
+        stunned.clinch(AlphaWorlds.ticksIn(1f), PARTNER);
 
         assertThat(stunned.knockbackDecay).isZero();
         assertThat(stunned.grappling).isTrue();
+    }
+
+    /** The renderer devours by it (G0099); a pooled hold must not come back naming whoever it last held. */
+    @Test
+    void forgetsThePartnerWhenReset() {
+        Stunned stunned = new Stunned();
+        stunned.clinch(AlphaWorlds.ticksIn(1f), PARTNER);
+
+        stunned.reset();
+
+        assertThat(stunned.partner).isEqualTo(Handles.NOBODY);
+    }
+
+    /** No clinch lands on a body no blow holds (G0095), so it is clinched with nobody either. */
+    @Test
+    void namesNoPartnerOnABodyNoBlowHolds() {
+        Stunned stunned = new Stunned().immuneIf(true);
+
+        stunned.clinch(AlphaWorlds.ticksIn(1f), PARTNER);
+
+        assertThat(stunned.partner).isEqualTo(Handles.NOBODY);
+    }
+
+    /** Each party to a clinch names the other by handle, so the renderer never pairs them itself (G0099). */
+    @Test
+    void namesEachPartyThePartnerItIsClinchedWith() {
+        Simulation simulation = AlphaWorlds.simulation();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+        Entity enemy = simulation.spawnEnemy(50f, 50f);
+
+        simulation.step();
+
+        assertThat(commander.getComponent(Stunned.class).partner).isEqualTo(Handles.of(enemy));
+        assertThat(enemy.getComponent(Stunned.class).partner).isEqualTo(Handles.of(commander));
     }
 
     @Test
@@ -83,6 +124,23 @@ class StunTest {
         assertThat(commander.getComponent(Stunned.class).active()).isTrue();
         assertThat(enemy.getComponent(Stunned.class).active()).isTrue();
         assertThat(enemy.getComponent(Stunned.class).grappling).isTrue();
+    }
+
+    /**
+     * Only a clinch is devoured (G0099): the winner of one, shot dead while his victim still lies there, died in no
+     * clinch of his own and names nobody.
+     */
+    @Test
+    void forgetsThePartnerOfOneKilledOutsideAClinch() {
+        Simulation simulation = AlphaWorlds.simulation();
+        simulation.spawnCommander(50f, 50f);
+        Entity enemy = simulation.spawnEnemy(50f, 50f);
+        simulation.step();
+
+        enemy.getComponent(Damage.class).land(ENEMY_HEALTH, Harm.KILL);
+        simulation.step();
+
+        assertThat(enemy.getComponent(Stunned.class).partner).isEqualTo(Handles.NOBODY);
     }
 
     /**
@@ -100,6 +158,7 @@ class StunTest {
         assertThat(brute.getComponent(Stunned.class).active()).isTrue();
         assertThat(brute.getComponent(Stunned.class).grappling).isFalse();
         assertThat(commander.getComponent(Stunned.class).active()).isFalse();
+        assertThat(brute.getComponent(Stunned.class).partner).isEqualTo(Handles.NOBODY);
     }
 
     @Test

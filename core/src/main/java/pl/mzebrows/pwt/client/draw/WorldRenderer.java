@@ -15,6 +15,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.Log;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -24,9 +25,11 @@ import pl.mzebrows.pwt.sim.component.Burrow;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Slither;
+import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.Side;
 
@@ -80,6 +83,9 @@ public final class WorldRenderer implements Disposable {
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Slither> SLITHER = ComponentMapper.getFor(Slither.class);
     private static final ComponentMapper<Burrow> BURROW = ComponentMapper.getFor(Burrow.class);
+    private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
+
+    private static final Family HANDLED = Family.all(Handle.class).get();
 
     /** Where a cosmetic lead writes the facing it draws; reused, so it costs nothing per frame. */
     private final float[] ahead = new float[2];
@@ -150,6 +156,7 @@ public final class WorldRenderer implements Disposable {
     private final GeyserMark geyserMark;
     private final SlitherMark slitherMark;
     private final BurrowMark burrowMark;
+    private final DevourMark devourMark;
 
     /** How far anything drawn on the client's clock moves - a taken point's flag; zero holds it still. */
     private final float motionScale;
@@ -170,12 +177,27 @@ public final class WorldRenderer implements Disposable {
 
     private ImmutableArray<Entity> squared = new ImmutableArray<>(new Array<>());
 
+    /** Every entity with a handle, to find a clinch's partner by (G0099). */
+    private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
+
+    /** How long one tick of the bound world is: what a devour's sway counts its phase in. */
+    private float tickSeconds;
+
+    /** What {@link #devour} worked out for the entity being drawn: its radius's scale and how far it is swayed. */
+    private float devourScale;
+
+    private float swayX;
+
+    private float swayY;
+
     private boolean disposed;
 
     /** Points the renderer at a world. Call again after a restart - a new simulation is a new engine. */
     public void bind(Simulation simulation) {
         drawable = simulation.engine().getEntitiesFor(DRAWABLE);
         squared = simulation.engine().getEntitiesFor(SQUARED);
+        handled = simulation.engine().getEntitiesFor(HANDLED);
+        tickSeconds = simulation.config().tickSeconds();
     }
 
     /**
@@ -211,7 +233,6 @@ public final class WorldRenderer implements Disposable {
             Entity entity = drawable.get(i);
             Position position = POSITION.get(entity);
             PreviousPosition previous = PREVIOUS.get(entity);
-            Body body = BODY.get(entity);
             Appearance appearance = APPEARANCE.get(entity);
             if (ground(appearance.look) || appearance.look == Look.TREE) {
                 // Ground is already drawn, underneath everything; a tree is drawn last, over everything (G0072).
@@ -222,11 +243,13 @@ public final class WorldRenderer implements Disposable {
                 // thing he is in, which says for itself that somebody is on it.
                 continue;
             }
-            float x = Drawn.x(position, previous, alpha);
-            float y = Drawn.y(position, previous, alpha);
+            devour(entity, alpha);
+            float x = Drawn.x(position, previous, alpha) + swayX;
+            float y = Drawn.y(position, previous, alpha) + swayY;
+            float radius = BODY.get(entity).radius * devourScale;
             if (appearance.pop > 0f) {
                 // A take by touch, rising off the taker and fading (G0078): its look and nothing on it.
-                drawPop(x, y, body.radius, appearance);
+                drawPop(x, y, radius, appearance);
                 continue;
             }
             if (appearance.burst > 0f) {
@@ -239,39 +262,39 @@ public final class WorldRenderer implements Disposable {
             if (appearance.state == Appearance.State.SLUNG || appearance.look == Look.GRENADE) {
                 // Off the ground (G0074, G0077): its shadow stays below it, so a slung rider nothing can hurt and a
                 // grenade on its way read as up in the air.
-                drawShadow(x, y, body.radius);
+                drawShadow(x, y, radius);
             }
             if (SLITHER.has(entity) && SLITHER.get(entity).enabled) {
-                drawParts(entity, x, y, body.radius, tint(appearance));
+                drawParts(entity, x, y, radius, tint(appearance));
             }
             if (BURROW.has(entity) && BURROW.get(entity).burrowed()) {
                 // Under the ground it is its shadow and nothing else (G0096, pillar 4).
-                drawBurrowShadow(x, y, body.radius, BURROW.get(entity));
+                drawBurrowShadow(x, y, radius, BURROW.get(entity));
                 continue;
             }
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {
-                shapes.rect(x - body.radius, y - body.radius, body.radius * 2f, body.radius * 2f);
+                shapes.rect(x - radius, y - radius, radius * 2f, radius * 2f);
             } else if (segmented(appearance.look) && faces(entity)) {
-                drawSegments(x, y, body.radius, FACING.get(entity), hardBehind(entity), appearance);
+                drawSegments(x, y, radius, FACING.get(entity), hardBehind(entity), appearance);
             } else if (shelled(appearance.look)) {
-                drawShells(x, y, body.radius, appearance);
+                drawShells(x, y, radius, appearance);
             } else if (appearance.look == Look.OBSTACLE) {
-                drawBoulder(x, y, body.radius, tint(appearance));
+                drawBoulder(x, y, radius, tint(appearance));
             } else if (appearance.look == Look.STONE) {
-                drawStone(x, y, body.radius, tint(appearance));
+                drawStone(x, y, radius, tint(appearance));
             } else if (appearance.streaks()) {
                 // Drawn back to where it says it came from, with a head on it so a beam that has
                 // just been fired is still something rather than a zero-length line. The far end is
                 // a fixed point in the world and is not interpolated; the head is, like everything
                 // else, so the line lengthens as smoothly as the shot moves.
-                shapes.rectLine(appearance.trailX, appearance.trailY, x, y, body.radius * 2f);
-                shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
+                shapes.rectLine(appearance.trailX, appearance.trailY, x, y, radius * 2f);
+                shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
             } else {
-                shapes.circle(x, y, body.radius, CIRCLE_SEGMENTS);
+                shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
             }
             if (appearance.riders > 0 && faces(entity)) {
-                drawRiders(x, y, body.radius, FACING.get(entity), appearance);
+                drawRiders(x, y, radius, FACING.get(entity), appearance);
             }
             if (FACING.has(entity) && (FACING.get(entity).x != 0f || FACING.get(entity).y != 0f)) {
                 float facingX = FACING.get(entity).x;
@@ -281,10 +304,10 @@ public final class WorldRenderer implements Disposable {
                     facingY = ahead[1];
                 }
                 shapes.setColor(brightened(tint(appearance), facingMark.tint()));
-                float reach = facingMark.lengthFor(body.radius);
+                float reach = facingMark.lengthFor(radius);
                 if (alien(entity)) {
                     // A spike rather than a spoke: broad across the centre, sharp at the same reach.
-                    float half = facingMark.spikeFor(body.radius) * 0.5f;
+                    float half = facingMark.spikeFor(radius) * 0.5f;
                     shapes.triangle(
                             x - facingY * half,
                             y + facingX * half,
@@ -293,12 +316,12 @@ public final class WorldRenderer implements Disposable {
                             x + facingX * reach,
                             y + facingY * reach);
                 } else {
-                    shapes.rectLine(x, y, x + facingX * reach, y + facingY * reach, facingMark.widthFor(body.radius));
+                    shapes.rectLine(x, y, x + facingX * reach, y + facingY * reach, facingMark.widthFor(radius));
                 }
             }
             if (FlagMark.flies(appearance)) {
                 // Taken, not nearly taken (pillar 5): a ring and a flag in place of the full core.
-                drawFlag(x, y, body.radius);
+                drawFlag(x, y, radius);
             } else if (appearance.charge > 0f) {
                 // A charge that names a look of its own is drawn in that colour; everything else is
                 // the body's own colour brightened, which is what the mark has always been. The
@@ -312,35 +335,35 @@ public final class WorldRenderer implements Disposable {
                     Color ring = SCRATCH.set(palette.colorFor(Look.BLOAT));
                     ring.a = bloatMark.alpha();
                     shapes.setColor(ring);
-                    shapes.circle(x, y, bloatMark.radiusFor(body.radius, appearance.charge), CIRCLE_SEGMENTS);
+                    shapes.circle(x, y, bloatMark.radiusFor(radius, appearance.charge), CIRCLE_SEGMENTS);
                 } else {
                     shapes.setColor(
                             appearance.chargeLook == Look.NONE
                                     ? brightened(tint(appearance), chargeMark.tint())
                                     : palette.colorFor(appearance.chargeLook));
-                    shapes.circle(x, y, chargeMark.radiusFor(body.radius, appearance.charge), CIRCLE_SEGMENTS);
+                    shapes.circle(x, y, chargeMark.radiusFor(radius, appearance.charge), CIRCLE_SEGMENTS);
                 }
             }
             if (appearance.heat > 0f) {
-                drawHeat(x, y, body.radius, appearance);
+                drawHeat(x, y, radius, appearance);
             }
             if (dotted(appearance.look)) {
                 shapes.setColor(crateMark.color());
-                shapes.circle(x, y, crateMark.dotFor(body.radius), CIRCLE_SEGMENTS);
+                shapes.circle(x, y, crateMark.dotFor(radius), CIRCLE_SEGMENTS);
             }
             if (appearance.wounds > 0) {
-                drawWounds(x, y, body.radius, appearance.wounds);
+                drawWounds(x, y, radius, appearance.wounds);
             }
             if (BURROW.has(entity) && BURROW.get(entity).enabled && !Life.dying(entity)) {
                 // Up: its maw's teeth, closing on the place it came up at, or round its hole (G0096).
-                drawMaw(entity, body.radius, appearance);
+                drawMaw(entity, radius, appearance);
             }
             if (appearance.daze > 0f) {
                 // A declared stun, shrinking onto the body as it is spent (G0053, G0071).
                 SCRATCH.set(dazeMark.color());
                 SCRATCH.a = dazeMark.alpha();
                 shapes.setColor(SCRATCH);
-                shapes.circle(x, y, dazeMark.radiusFor(body.radius, appearance.daze), CIRCLE_SEGMENTS);
+                shapes.circle(x, y, dazeMark.radiusFor(radius, appearance.daze), CIRCLE_SEGMENTS);
             }
         }
         if (brackets != null) {
@@ -350,6 +373,60 @@ public final class WorldRenderer implements Disposable {
         drawRings();
         drawTrees();
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    /**
+     * A clinch ending on screen (G0099), for the entity about to be drawn: the one it killed shrinks over his own
+     * death throes, and while the winner is still in his lock both are drawn swayed together from side to side, across
+     * the line joining them. The partner is the one the clinch named by handle - never one found here - and both of
+     * the pair are drawn from the same numbers: the winner's lock, the loser's throes, the line from loser to winner. Neither is a clinch's
+     * partner once it is off the field, so a body long gone devours nothing. A look only: the bodies are where the
+     * simulation has them.
+     */
+    private void devour(Entity entity, float alpha) {
+        devourScale = 1f;
+        swayX = 0f;
+        swayY = 0f;
+        if (!STUNNED.has(entity) || STUNNED.get(entity).partner == Handles.NOBODY) {
+            return;
+        }
+        @Nullable Entity partner = Handles.resolve(handled, STUNNED.get(entity).partner);
+        if (partner == null || !STUNNED.has(partner) || STUNNED.get(partner).partner != Handles.of(entity)) {
+            // Half a clinch is none: a body no blow holds was never clinched (G0095), so neither is devoured.
+            return;
+        }
+        boolean down = Life.dying(entity);
+        if (down) {
+            devourScale = devourMark.scaleFor(APPEARANCE.get(entity).throes);
+        }
+        if (down == Life.dying(partner) || !BODY.has(partner)) {
+            // Both standing is no clinch's end; both down leaves nobody to sway with.
+            return;
+        }
+        Entity winner = down ? partner : entity;
+        Entity loser = down ? entity : partner;
+        Stunned lock = STUNNED.get(winner);
+        if (!lock.grappling || !lock.active()) {
+            return;
+        }
+        Position from = POSITION.get(loser);
+        Position to = POSITION.get(winner);
+        float alongX = to.x - from.x;
+        float alongY = to.y - from.y;
+        float apart = (float) Math.sqrt(alongX * alongX + alongY * alongY);
+        if (apart <= 0f) {
+            return;
+        }
+        float sway = devourMark.swayFor(
+                BODY.get(loser).radius,
+                APPEARANCE.get(loser).throes,
+                lock.remainingTicks,
+                alpha,
+                tickSeconds,
+                motionScale);
+        // Square to the line, the same way round for both of them.
+        swayX = -alongY / apart * sway;
+        swayY = alongX / apart * sway;
     }
 
     /**

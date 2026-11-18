@@ -35,7 +35,7 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
 /**
  * Each local commander's **prompt** (G0098), on the UI canvas above what it is about: the key in his device's words
- * and the verb - {@code [E] OPEN}, {@code HOLD [E] STABILISE}, filling as the work is done - on a see-through backing
+ * and the verb - {@code [E] OPEN}, {@code HOLD [E] STABILISE}, {@code [C] UPGRADE x2}, filling as the work is done - on a see-through backing
  * that thins while an alien body is under it, so the fight shows through. Leaving a gun is smaller and dim. With more
  * than one player in the game each is framed in its player's colour; several on one thing stack, lowest slot
  * nearest it. Neutral text, never red over the view (section 10).
@@ -69,6 +69,7 @@ public final class ActionChips {
     private final PromptKind[] saidKind = new PromptKind[SLOTS];
     private final ActionKind[] saidAction = new ActionKind[SLOTS];
     private final String[] saidKey = new String[SLOTS];
+    private final int[] saidCount = new int[SLOTS];
 
     /** Scratch for projecting into the view; overwritten before every read. */
     private final Vector2 point = new Vector2();
@@ -216,16 +217,24 @@ public final class ActionChips {
                 && point.y <= view.y() + view.height();
     }
 
-    /** What this slot's prompt says, built again only when the key, the kind or the action has changed. */
+    /**
+     * What this slot's prompt says, built again only when the key, the kind, the action or the drafts it counts have
+     * changed.
+     */
     private String line(int slot, Prompts prompts, String key) {
         PromptKind kind = prompts.kind(slot);
         ActionKind action = prompts.action(slot);
-        if (kind != saidKind[slot] || action != saidAction[slot] || !key.equals(saidKey[slot])) {
+        int count = prompts.count(slot);
+        if (kind != saidKind[slot]
+                || action != saidAction[slot]
+                || count != saidCount[slot]
+                || !key.equals(saidKey[slot])) {
             saidKind[slot] = kind;
             saidAction[slot] = action;
+            saidCount[slot] = count;
             saidKey[slot] = key;
-            lines[slot] = strings.format(
-                    prompts.hold(slot) ? "ui.prompt.hold" : "ui.prompt.press", key, strings.get(prompts.verb(slot)));
+            String verb = count > 0 ? strings.format(prompts.verb(slot), count) : strings.get(prompts.verb(slot));
+            lines[slot] = strings.format(prompts.hold(slot) ? "ui.prompt.hold" : "ui.prompt.press", key, verb);
         }
         return lines[slot];
     }

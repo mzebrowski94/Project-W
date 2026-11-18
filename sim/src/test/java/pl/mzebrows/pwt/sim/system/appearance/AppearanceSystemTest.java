@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.system.appearance;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_HEALTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LEAP_HESITATION;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.LOSE_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_LOCK;
@@ -13,6 +14,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.watching;
 
 import com.badlogic.ashley.core.Entity;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -29,6 +31,9 @@ import pl.mzebrows.pwt.sim.def.Harm;
  * would be worse than showing nothing, because the player would have learned to trust it.
  */
 class AppearanceSystemTest {
+
+    /** Ticks into a body's throes, short of their end. */
+    private static final int LATER = 7;
 
     @Test
     void showsAUnitThatHasNotNoticedHimAsUnaware() {
@@ -129,6 +134,35 @@ class AppearanceSystemTest {
 
         assertThat(enemy.getComponent(Stunned.class).active()).isFalse();
         assertThat(state(enemy)).isEqualTo(Appearance.State.DYING);
+    }
+
+    /** How far through its death throes a body is, read down like every other clock - what a devour shrinks over (G0099). */
+    @Test
+    void publishesHowMuchOfItsThroesIsLeft() {
+        Simulation simulation = simulation();
+        Entity enemy = simulation.spawnEnemy(70f, 50f);
+        enemy.getComponent(Damage.class).land(ENEMY_HEALTH, Harm.KILL);
+        simulation.step();
+        float first = throes(enemy);
+
+        steps(simulation, LATER);
+
+        assertThat(first).isGreaterThan(0f).isLessThanOrEqualTo(1f);
+        assertThat(throes(enemy)).isCloseTo(first - (float) LATER / ticksIn(ENEMY_THROES), Offset.offset(1e-4f));
+    }
+
+    @Test
+    void publishesNoThroesForTheLiving() {
+        Simulation simulation = simulation();
+        Entity enemy = simulation.spawnEnemy(70f, 50f);
+
+        simulation.step();
+
+        assertThat(throes(enemy)).isZero();
+    }
+
+    private static float throes(Entity entity) {
+        return entity.getComponent(Appearance.class).throes;
     }
 
     private static Appearance.State state(Entity entity) {

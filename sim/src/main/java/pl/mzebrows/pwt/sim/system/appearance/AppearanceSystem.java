@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Door;
+import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
 import pl.mzebrows.pwt.sim.component.Geyser;
 import pl.mzebrows.pwt.sim.component.Gripped;
@@ -94,6 +95,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Sling> SLING = ComponentMapper.getFor(Sling.class);
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
+    private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
 
     private final Defs<UnitKind, UnitDef> units;
     private final Defs<PickupKind, PickupDef> pickups;
@@ -159,6 +161,7 @@ public final class AppearanceSystem extends IteratingSystem {
         appearance.burst = bursting ? BARRAGE.get(entity).burstReach : 0f;
         appearance.burstFade = bursting ? BARRAGE.get(entity).burstFade() : 0f;
         appearance.daze = STUNNED.has(entity) ? STUNNED.get(entity).dazeLeft() : 0f;
+        appearance.throes = DYING.has(entity) ? DYING.get(entity).left() : 0f;
         // A take by touch, rising and fading as it runs out (G0078).
         appearance.pop = POP.has(entity) ? POP.get(entity).left() : 0f;
         publishRiders(entity, appearance);

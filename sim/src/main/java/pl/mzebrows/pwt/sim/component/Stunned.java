@@ -36,6 +36,12 @@ public final class Stunned implements Component, Pool.Poolable {
     public boolean grappling;
 
     /**
+     * The other party to the clinch, by handle (ADR 0016): set where the clinch is made, never by a shove. Nothing
+     * in the simulation reads it; the renderer devours by it (G0099) and never pairs touching grapplers itself.
+     */
+    public long partner = Handle.NOBODY;
+
+    /**
      * True when this hold is a stun a source declared rather than the recoil of a blow - the one the
      * renderer draws as its own state (G0053). Cleared when the hold runs out.
      */
@@ -120,14 +126,17 @@ public final class Stunned implements Component, Pool.Poolable {
      * whatever he was doing when he swung, so a commander who killed a leaper while backing away slid
      * out from under the body he had just been clinched to - the gap reopening under a freeze that was
      * supposed to have closed it.
+     *
+     * @param with the other party's handle, or {@link Handle#NOBODY} when it is no longer on the field
      */
-    public void clinch(int ticks) {
+    public void clinch(int ticks, long with) {
         if (immune) {
             return;
         }
         hold(ticks);
         knockbackDecay = 0f;
         grappling = true;
+        partner = with;
     }
 
     @Override
@@ -135,6 +144,7 @@ public final class Stunned implements Component, Pool.Poolable {
         remainingTicks = 0;
         knockbackDecay = 0f;
         grappling = false;
+        partner = Handle.NOBODY;
         dazed = false;
         dazeTicks = 0;
         immune = false;

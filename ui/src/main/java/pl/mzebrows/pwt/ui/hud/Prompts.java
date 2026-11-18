@@ -77,11 +77,14 @@ public final class Prompts {
         return anchors[slot];
     }
 
-    /** The i18n key of what the prompt says the key does - a constant, so a frame never builds a string. */
+    /**
+     * The i18n key of what the prompt says the key does - a constant, so a frame never builds a string. A key for a
+     * prompt with a {@link #count} takes it as its one argument.
+     */
     public String verb(int slot) {
         return switch (kinds[slot]) {
             case STRIKE -> "ui.action.STRIKE";
-            case UPGRADE -> "ui.action.UPGRADE";
+            case UPGRADE -> count(slot) > 0 ? "ui.action.UPGRADES" : "ui.action.UPGRADE";
             case ACTION, NONE ->
                 switch (actions[slot]) {
                     case NONE -> "ui.action.NONE";
@@ -92,6 +95,14 @@ public final class Prompts {
                     case OPEN_DOOR -> "ui.action.OPEN_DOOR";
                 };
         };
+    }
+
+    /**
+     * How many drafts the upgrade prompt says he holds - {@code UPGRADE x2}, as his panel's tell does (G0098) - once
+     * he holds more than one; zero for a prompt that names no number, which is every other.
+     */
+    public int count(int slot) {
+        return kinds[slot] == PromptKind.UPGRADE && drafts[slot] > 1 ? drafts[slot] : 0;
     }
 
     /** Whether the key must be held rather than pressed - putting a man on his feet, opening a door. */

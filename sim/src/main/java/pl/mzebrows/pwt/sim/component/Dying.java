@@ -48,6 +48,14 @@ public final class Dying implements Component, Pool.Poolable {
         return begun && remainingTicks > 0;
     }
 
+    /** How much of the throes is left, in {@code [0, 1]}; zero before they begin and once they are spent. */
+    public float left() {
+        if (!active() || throesTicks <= 0) {
+            return 0f;
+        }
+        return Math.min(1f, remainingTicks / (float) throesTicks);
+    }
+
     /** True once the body has lain there long enough to be taken away. */
     public boolean spent() {
         return begun && remainingTicks <= 0;

@@ -126,6 +126,38 @@ class PromptsTest {
         assertThat(prompts.kind(0)).isEqualTo(PromptKind.UPGRADE);
     }
 
+    /** Once he holds more than one, the prompt says how many, as his panel's tell does (G0098): UPGRADE x2. */
+    @Test
+    void countsHisDraftsOnTheUpgradePromptOnceHeHoldsMoreThanOne() {
+        PlayerReadout player = standing(0, 10L);
+        prompts.update(readout, EVERYBODY, FRAME);
+        player.drafts = 1;
+        prompts.update(readout, EVERYBODY, FRAME);
+
+        assertThat(prompts.verb(0)).isEqualTo("ui.action.UPGRADE");
+        assertThat(prompts.count(0)).isZero();
+
+        player.drafts = 2;
+        prompts.update(readout, EVERYBODY, FRAME);
+
+        assertThat(prompts.verb(0)).isEqualTo("ui.action.UPGRADES");
+        assertThat(prompts.count(0)).isEqualTo(2);
+    }
+
+    @Test
+    void countsNothingOnAPromptThatIsNotTheUpgrade() {
+        PlayerReadout player = standing(0, 10L);
+        prompts.update(readout, EVERYBODY, FRAME);
+        player.drafts = 2;
+        player.action = ActionKind.OPEN_CRATE;
+        player.subject = 20L;
+
+        prompts.update(readout, EVERYBODY, FRAME);
+
+        assertThat(prompts.verb(0)).isEqualTo("ui.action.OPEN_CRATE");
+        assertThat(prompts.count(0)).isZero();
+    }
+
     @Test
     void stopsPromptingTheUpgradeOnceHeHasTakenIt() {
         PlayerReadout player = standing(0, 10L);

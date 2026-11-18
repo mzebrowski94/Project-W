@@ -14,6 +14,7 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Damage;
@@ -209,7 +210,7 @@ class SnakeTest {
         simulation.step();
         Stunned stunned = snake.getComponent(Stunned.class);
         stunned.apply(ticksIn(STUN_SECONDS), 0f);
-        stunned.clinch(ticksIn(STUN_SECONDS));
+        stunned.clinch(ticksIn(STUN_SECONDS), Handles.NOBODY);
         float fromX = at.x;
 
         steps(simulation, HALF_THE_STUN);

@@ -320,13 +320,17 @@ public final class DamageSystem extends IteratingSystem {
             float carrySpeed,
             float carryDecay) {
         if (ticks <= 0) {
+            // A death in no clinch: whoever he once won one against is not his to be devoured with (G0099).
+            if (STUNNED.has(target)) {
+                STUNNED.get(target).partner = Handles.NOBODY;
+            }
             return;
         }
         if (attacker != null && STUNNED.has(attacker)) {
-            STUNNED.get(attacker).clinch(ticks);
+            STUNNED.get(attacker).clinch(ticks, Handles.of(target));
         }
         if (STUNNED.has(target)) {
-            STUNNED.get(target).clinch(ticks);
+            STUNNED.get(target).clinch(ticks, attacker == null ? Handles.NOBODY : Handles.of(attacker));
         }
         carry(target, attacker, travelX, travelY, carrySpeed, carryDecay);
     }

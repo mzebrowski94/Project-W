@@ -198,6 +198,7 @@ class GraphicConfigTest {
                         d.geyser(),
                         d.slither(),
                         d.burrow(),
+                        d.devour(),
                         d.action(),
                         d.actionMark(),
                         d.pickupMark(),

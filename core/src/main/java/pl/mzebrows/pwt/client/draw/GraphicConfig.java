@@ -65,6 +65,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param geyser how to draw a geyser filling: its fire mark, pulsing (G0089)
  * @param slither how to draw the parts trailing a slithering head (G0095)
  * @param burrow how to draw a worm: its shadow under the ground and its maw's teeth up (G0096)
+ * @param devour how to draw a clinch ending: the one killed shrinking, the pair swayed (G0099)
  * @param action how to draw the action key's brackets and its prompt (G0098)
  * @param actionMark the colour of the brackets on what the action key would act on, and of its prompt's frame
  * @param pickupMark the colour of the ticks on a pickup worth something to a commander near it
@@ -113,6 +114,7 @@ public record GraphicConfig(
         GeyserMark geyser,
         SlitherMark slither,
         BurrowMark burrow,
+        DevourMark devour,
         ActionMark action,
         @ConfigKey("color.actionMark") Color actionMark,
         @ConfigKey("color.pickupMark") Color pickupMark,

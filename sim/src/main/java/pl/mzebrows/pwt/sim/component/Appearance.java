@@ -163,6 +163,12 @@ public final class Appearance implements Component, Pool.Poolable {
     public float daze;
 
     /**
+     * How much of its death throes a body has left, in {@code [0, 1]}; zero for the living. Where the dying
+     * animation plays - a devour shrinks the one a clinch killed over it (G0099).
+     */
+    public float throes;
+
+    /**
      * How much of a shield is left in front of him, in {@code [0, 1]} (G0053): one for a shield that
      * lasts until it is hit, running down for one that runs out on its own, zero for none.
      */
@@ -245,6 +251,7 @@ public final class Appearance implements Component, Pool.Poolable {
         burstFade = 0f;
         pop = 0f;
         daze = 0f;
+        throes = 0f;
         shield = 0f;
         riders = 0;
         riderLook = Look.NONE;
