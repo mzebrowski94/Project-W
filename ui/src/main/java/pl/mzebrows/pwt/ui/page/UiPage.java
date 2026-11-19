@@ -23,6 +23,8 @@ public enum UiPage {
     PLAY("UI:play", Kind.STATE, null),
     PAUSE("UI:play/pause", Kind.MODAL, PLAY),
     LEAVE_CONFIRM("UI:play/leave", Kind.MODAL, PAUSE),
+    /** {@link #CONTROLS} over the pause menu: the bindings where the player is stuck on one, and PROMPTS. */
+    PAUSE_CONTROLS("UI:play/pause/controls", Kind.MODAL, PAUSE),
     /** How a level with an objective ended, opened by the flow after the hold, never by an entry (G0066). */
     RESULT("UI:play/result", Kind.MODAL, PLAY);
 

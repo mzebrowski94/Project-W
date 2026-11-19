@@ -194,6 +194,23 @@ class UiFlowTest {
         assertThat(flow.top()).isEqualTo(UiPage.PLAY);
     }
 
+    /** The controls over the pause step back to it, flip PROMPTS, and a pad's START still resumes from them. */
+    @Test
+    void opensTheControlsFromThePauseMenuAndComesBackToIt() {
+        UiFlow flow = playing(true);
+        flow.apply(UiIntent.PAUSE);
+        flow.apply(UiIntent.open(UiPage.PAUSE_CONTROLS));
+
+        assertThat(flow.top()).isEqualTo(UiPage.PAUSE_CONTROLS);
+        assertThat(flow.menuOpen()).isTrue();
+        assertThat(flow.apply(UiIntent.choose(0))).isEqualTo(new UiEffect(UiEffect.Kind.CHOOSE, 0));
+        flow.apply(UiIntent.BACK);
+        assertThat(flow.top()).isEqualTo(UiPage.PAUSE);
+        flow.apply(UiIntent.open(UiPage.PAUSE_CONTROLS));
+        assertThat(flow.apply(UiIntent.RESUME)).isEqualTo(UiEffect.REQUEST_RESUME);
+        assertThat(flow.top()).isEqualTo(UiPage.PLAY);
+    }
+
     @Test
     void leavesOnlyThroughTheConfirm() {
         UiFlow flow = playing(true);

@@ -18,8 +18,11 @@ public final class MenuTree {
     /** The missions page's RANDOM, after one daily per tier in {@link TierKind} order. */
     public static final int MISSION_RANDOM = TierKind.values().length;
 
-    /** The missions page's ENTER CODE, after RANDOM. */
+    /** The missions page's ENTER CODE, after RANDOM: what every entry above writes into. */
     public static final int MISSION_CODE = MISSION_RANDOM + 1;
+
+    /** The missions page's START MISSION, after ENTER CODE: the one entry that starts anything. */
+    public static final int MISSION_START = MISSION_CODE + 1;
 
     /** The controls page's PROMPTS switch, its first entry. */
     public static final int CONTROLS_PROMPTS = 0;
@@ -75,13 +78,13 @@ public final class MenuTree {
         PAGES.put(UiPage.CAMPAIGN, new MenuPage("ui.campaign.title", "ui.campaign.closed", List.of(back()), 0));
         // Its table of bindings is the screen's to write, from the bindings themselves, and so is the
         // switch's ON or OFF; the switch is the one thing on the page that changes anything.
-        PAGES.put(
-                UiPage.CONTROLS,
-                new MenuPage(
-                        "ui.controls.title",
-                        "",
-                        List.of(entry("prompts", "ui.controls.prompts", UiIntent.choose(CONTROLS_PROMPTS)), back()),
-                        0));
+        MenuPage controls = new MenuPage(
+                "ui.controls.title",
+                "",
+                List.of(entry("prompts", "ui.controls.prompts", UiIntent.choose(CONTROLS_PROMPTS)), back()),
+                0);
+        PAGES.put(UiPage.CONTROLS, controls);
+        PAGES.put(UiPage.PAUSE_CONTROLS, controls);
         PAGES.put(UiPage.OPTIONS, new MenuPage("ui.options.title", "ui.options.body", List.of(back()), 0));
         PAGES.put(
                 UiPage.EXIT_CONFIRM,
@@ -100,6 +103,7 @@ public final class MenuTree {
                         List.of(
                                 entry("resume", "ui.pause.resume", UiIntent.RESUME),
                                 entry("restart", "ui.pause.restart", UiIntent.RESTART),
+                                entry("controls", "ui.main.controls", UiIntent.open(UiPage.PAUSE_CONTROLS)),
                                 entry("leave", "ui.pause.leave", UiIntent.open(UiPage.LEAVE_CONFIRM))),
                         0));
         PAGES.put(
@@ -132,8 +136,9 @@ public final class MenuTree {
     }
 
     /**
-     * The day's three missions, one a tier, then RANDOM and ENTER CODE; MEDIUM selected. Its title takes the
-     * date, which the screen fills in.
+     * The day's three missions, one a tier, then RANDOM and ENTER CODE - each writes into the code line - and
+     * START MISSION, which starts what it holds; MEDIUM selected. Its title takes the date, which the screen
+     * fills in.
      */
     private static MenuPage missions() {
         List<MenuEntry> entries = new ArrayList<>();
@@ -146,6 +151,7 @@ public final class MenuTree {
         }
         entries.add(entry("random", "ui.missions.random", UiIntent.mission(MISSION_RANDOM)));
         entries.add(entry("code", "ui.missions.code", UiIntent.mission(MISSION_CODE)));
+        entries.add(entry("start", "ui.missions.start", UiIntent.mission(MISSION_START)));
         entries.add(back());
         return new MenuPage("ui.missions.title", "", entries, medium);
     }

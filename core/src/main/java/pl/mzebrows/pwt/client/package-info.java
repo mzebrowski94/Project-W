@@ -1,6 +1,7 @@
 /**
  * The libGDX application (ADR 0021): {@code PwtGame}, what a screen may ask of it, the three screens and
- * what only they use - a level's pages ({@code PlayMenus}), the harness keys ({@code HarnessControls}) and the proving
+ * what only they use - a level's pages ({@code PlayMenus}), the controls page's words ({@code ControlsPage}), the harness keys
+ * ({@code HarnessControls}) and the proving
  * ground's window ({@code ProvingPreview}).
  * Depends on the sim, never the reverse.
  *

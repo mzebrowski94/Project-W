@@ -77,6 +77,7 @@ final class ClientArchitectureTest {
             CLIENT + ".JoinScreen",
             CLIENT + ".ScenarioScreen",
             CLIENT + ".PlayMenus",
+            CLIENT + ".ControlsPage",
             CLIENT + ".ProvingPreview",
             CLIENT + ".HarnessControls",
             CLIENT + ".Log",

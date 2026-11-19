@@ -8,10 +8,16 @@ import pl.mzebrows.pwt.sim.def.TierKind;
 class MenuTreeTest {
 
     @Test
-    void offersResumeRestartAndLeaveOnThePauseMenuInThatOrder() {
+    void offersResumeRestartControlsAndLeaveOnThePauseMenuInThatOrder() {
         assertThat(MenuTree.page(UiPage.PAUSE).entries())
                 .extracting(MenuEntry::id)
-                .containsExactly("resume", "restart", "leave");
+                .containsExactly("resume", "restart", "controls", "leave");
+    }
+
+    /** The bindings are read where the player is stuck on one: the main menu's page, over the pause. */
+    @Test
+    void offersThePauseControlsTheMainControlsPagesEntries() {
+        assertThat(MenuTree.page(UiPage.PAUSE_CONTROLS)).isEqualTo(MenuTree.page(UiPage.CONTROLS));
     }
 
     /** RETRY selected: the next attempt is one press away (G0066). */
@@ -109,14 +115,15 @@ class MenuTreeTest {
         assertThat(page.defaultSelection()).isZero();
     }
 
+    /** Each entry above START writes into the code line; START MISSION alone starts anything. */
     @Test
-    void offersTheThreeDailiesThenRandomThenACodeWithMediumSelected() {
+    void offersTheThreeDailiesThenRandomThenACodeThenStartWithMediumSelected() {
         for (UiPage missions : new UiPage[] {UiPage.MISSIONS, UiPage.HOST_MISSIONS}) {
             MenuPage page = MenuTree.page(missions);
 
             assertThat(page.entries())
                     .extracting(MenuEntry::id)
-                    .containsExactly("easy", "medium", "hard", "random", "code", "back");
+                    .containsExactly("easy", "medium", "hard", "random", "code", "start", "back");
             assertThat(page.entries().get(page.defaultSelection()).id()).isEqualTo("medium");
             TierKind[] tiers = TierKind.values();
             for (int i = 0; i < tiers.length; i++) {
@@ -124,6 +131,8 @@ class MenuTreeTest {
             }
             assertThat(page.entries().get(MenuTree.MISSION_RANDOM).id()).isEqualTo("random");
             assertThat(page.entries().get(MenuTree.MISSION_CODE).id()).isEqualTo("code");
+            assertThat(page.entries().get(MenuTree.MISSION_START).intent())
+                    .isEqualTo(UiIntent.mission(MenuTree.MISSION_START));
         }
     }
 

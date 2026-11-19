@@ -9,13 +9,15 @@ import pl.mzebrows.pwt.ui.nav.CodePicker;
 
 /**
  * What the DAILY MISSIONS page decides (missions ticket 08, G0065): the day's three dailies, RANDOM's tier
- * and its draw, the code line and the picker - which mission each entry starts. Kept for the whole run, so
- * RANDOM's tier and the last code played outlive the page; kept out of the screen so it is tested without a
- * window.
+ * and its draw, the code line and the picker. <b>Every entry writes into the code line and START MISSION
+ * starts what it holds</b>: a daily its code, RANDOM a fresh draw, and the line itself whatever is typed,
+ * pasted or picked over it. Kept for the whole run, so RANDOM's tier and the last code played outlive the
+ * page; kept out of the screen so it is tested without a window.
  *
  * <p>The date is read when the page opens, in UTC, and kept until it opens again: a daily keeps the day it
- * was started on. <b>A code that fails its check starts nothing</b>, and what is said about it never names
- * the character that is wrong - showing the right check would let a typo through.
+ * was started on. <b>A code that fails its check starts nothing</b>, and is refused the moment its eighth
+ * character lands; what is said about it never names the character that is wrong - showing the right check
+ * would let a typo through.
  */
 public final class MissionChoices {
 
@@ -29,6 +31,16 @@ public final class MissionChoices {
 
     private static final TierKind[] TIERS = TierKind.values();
 
+    /** Where the code in the line came from, as the line says beside it. */
+    public enum Origin {
+        /** One of the three of the page's day, however it arrived (G0065). */
+        DAILY,
+        /** RANDOM's last draw, untouched. */
+        RANDOM,
+        /** Anything else - a code typed, pasted, picked or changed by hand. */
+        CUSTOM
+    }
+
     private final Clock clock;
     private final LongSupplier draws;
     private final StringBuilder typed = new StringBuilder();
@@ -36,6 +48,10 @@ public final class MissionChoices {
     private @Nullable LocalDate day;
     private TierKind randomTier = TierKind.MEDIUM;
     private @Nullable MissionCode lastPlayed;
+
+    /** RANDOM's last draw, or null before the first: the line holding it is RANDOM, not CUSTOM. */
+    private @Nullable MissionCode drawn;
+
     private String problem = "";
 
     /**
@@ -47,11 +63,23 @@ public final class MissionChoices {
         this.draws = draws;
     }
 
-    /** The page opens: the date is read now, and the code line starts empty. */
+    /** The page opens from the menu: the date is read now, and the code line starts empty - nothing chosen. */
     public void open() {
         day = LocalDate.now(clock);
         typed.setLength(0);
         problem = "";
+    }
+
+    /**
+     * The page opens again on the way back from a mission it started: the date is read now, and the line
+     * holds what was played, so playing it again is START.
+     */
+    public void reopen() {
+        open();
+        MissionCode played = lastPlayed;
+        if (played != null) {
+            typed.append(played.text());
+        }
     }
 
     /** The day the page opened on - today, if it has not opened this run. */
@@ -90,10 +118,22 @@ public final class MissionChoices {
         return new MissionCode(randomTier, Math.floorMod(draws.getAsLong(), MissionCode.SEEDS));
     }
 
+    /** A daily chosen: its code in the line, in place of what was there. */
+    public void chooseDaily(TierKind tier) {
+        replaceTyped(daily(tier).text());
+    }
+
+    /** RANDOM chosen: a fresh draw on its tier in the line, in place of what was there. */
+    public void drawRandom() {
+        MissionCode fresh = random();
+        drawn = fresh;
+        replaceTyped(fresh.text());
+    }
+
     /**
-     * One typed character, into the next of a code's eight places. Backspace deletes; a letter or a digit is
-     * kept, in capitals - but in the first place only a tier's letter, any other refused with {@link
-     * #FIRST_LETTER}. The dash is the line's own and a space is read past, so neither is kept; Enter arrives
+     * One typed character, into the next of a code's eight places - over a whole line, the first of a new code.
+     * Backspace deletes; a letter or a digit is kept, in capitals - but in the first place only a tier's letter,
+     * any other refused with {@link #FIRST_LETTER} and the line kept. The dash is the line's own and a space is read past, so neither is kept; Enter arrives
      * typed as well, and is no character of a code.
      *
      * @return whether the key was for the line - kept or refused - and so takes the selection there
@@ -104,20 +144,24 @@ public final class MissionChoices {
                 return false;
             }
             typed.setLength(typed.length() - 1);
-            problem = "";
+            check();
             return true;
         }
         if (!codey(c)) {
             return false;
         }
         char upper = Character.toUpperCase(c);
-        if (typed.isEmpty() && MissionCode.tierOf(upper) == null) {
+        boolean starts = typed.isEmpty() || typed.length() == MissionCode.LENGTH;
+        if (starts && MissionCode.tierOf(upper) == null) {
             problem = FIRST_LETTER;
             return true;
         }
+        if (typed.length() == MissionCode.LENGTH) {
+            typed.setLength(0);
+        }
         if (typed.length() < MissionCode.LENGTH) {
             typed.append(upper);
-            problem = "";
+            check();
         }
         return true;
     }
@@ -135,16 +179,15 @@ public final class MissionChoices {
             problem = FIRST_LETTER;
             return;
         }
-        typed.setLength(0);
-        typed.append(letters, 0, Math.min(letters.length(), MissionCode.LENGTH));
-        problem = "";
+        replaceTyped(letters);
     }
 
-    /** Replaces the code line with what the picker shows, whose first place is always a tier's. */
+    /** Replaces the code line - with what the picker shows, a daily, a draw - whose first place is a tier's. */
     public void replaceTyped(String text) {
         String letters = letters(text);
         typed.setLength(0);
         typed.append(letters, 0, Math.min(letters.length(), MissionCode.LENGTH));
+        check();
     }
 
     /** The code's characters typed so far, in capitals, with no dash. */
@@ -178,31 +221,52 @@ public final class MissionChoices {
     }
 
     /**
-     * What is wrong, as a key: {@link #REFUSED} for the last {@link #choose}, {@link #FIRST_LETTER} for the last
-     * first letter - or nothing.
+     * What is wrong, as a key: {@link #REFUSED} while the line holds a whole code that fails its check, {@link
+     * #FIRST_LETTER} for the last first letter - or nothing.
      */
     public String problem() {
         return problem;
     }
 
-    /** The mission the code line names, or null - with {@link #problem()} saying so when something was typed. */
-    public @Nullable MissionCode choose() {
-        if (typed.toString().isBlank()) {
+    /** The mission the code line names, or null while it is not whole or fails its check. */
+    public @Nullable MissionCode code() {
+        return typed.length() == MissionCode.LENGTH ? MissionCode.parse(typed.toString()) : null;
+    }
+
+    /** Where the line's code came from, or null while the line names no mission. */
+    public @Nullable Origin origin() {
+        MissionCode code = code();
+        if (code == null) {
             return null;
         }
-        MissionCode code = MissionCode.parse(typed.toString());
-        problem = code == null ? REFUSED : "";
-        return code;
+        if (code.equals(daily(code.tier()))) {
+            return Origin.DAILY;
+        }
+        return code.equals(drawn) ? Origin.RANDOM : Origin.CUSTOM;
     }
 
     /**
-     * The pad's picker, opened on the last code played this run, else today's MEDIUM daily - so a code close
-     * to a known one is a few presses away.
+     * The picker, opened on what the line holds - the places not typed yet at their alphabet's first - else, on
+     * an empty line, the last code played this run, else today's MEDIUM daily: a code close to a known one is a
+     * few presses away.
      */
     public CodePicker openPicker() {
+        if (!typed.isEmpty()) {
+            StringBuilder shown = new StringBuilder(typed);
+            while (shown.length() < MissionCode.LENGTH) {
+                shown.append('_');
+            }
+            picker.show(shown.toString());
+            return picker;
+        }
         MissionCode start = lastPlayed;
         picker.show((start == null ? daily(TierKind.MEDIUM) : start).text());
         return picker;
+    }
+
+    /** The line was changed: a whole code that fails its check is refused at once; anything else is not. */
+    private void check() {
+        problem = typed.length() == MissionCode.LENGTH && code() == null ? REFUSED : "";
     }
 
     private static boolean codey(char c) {

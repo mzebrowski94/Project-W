@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.IntUnaryOperator;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.client.hud.Hud;
@@ -43,8 +44,10 @@ import pl.mzebrows.pwt.ui.page.UiIntent;
 import pl.mzebrows.pwt.ui.page.UiPage;
 
 /**
- * A level's pages: the pause menu, the leave confirm and the result over the view, the paused banner, and
- * the connecting panel before an online world has arrived ({@code UI:play...}, {@code UI:connecting}).
+ * A level's pages: the pause menu, the leave confirm, the controls and the result over the view, the paused
+ * banner, and the connecting panel before an online world has arrived ({@code UI:play...}, {@code
+ * UI:connecting}). The controls are the main menu's page - PROMPTS and the bindings - centred on the whole UI
+ * canvas, because the table is taller than the view between the bars.
  *
  * <p>What a press does is {@link UiFlow}'s, where things are is {@code MenuLayout}'s, and the selection is
  * {@link PageControls}'; this carries out the flow's effects on the {@link ScenarioPlay} and draws.
@@ -72,6 +75,12 @@ final class PlayMenus {
     private final List<String> labels = new ArrayList<>(4);
     private final List<String> foot = new ArrayList<>(2);
     private final List<String> connecting = new ArrayList<>(1);
+
+    /** The controls over the pause: their switch and, under their entries, their table of bindings. */
+    private final ControlsPage controls;
+
+    /** On the controls page, how much of each foot line is bright: the table's headings and actions. */
+    private final IntUnaryOperator tableBright = this::brightInTable;
 
     private UiPage shown = UiPage.PLAY;
     private Rect panel = Rect.EMPTY;
@@ -124,8 +133,10 @@ final class PlayMenus {
             ControlsConfig controls,
             UiStrings strings,
             GamepadSource pads,
-            MissionRecords records) {
+            MissionRecords records,
+            LocalSettings settings) {
         this.graphic = graphic;
+        this.controls = new ControlsPage(controls, settings, strings);
         this.records = records;
         this.strings = strings;
         this.hints = new PageHints(controls, strings);
@@ -200,7 +211,7 @@ final class PlayMenus {
                 carryOut(flow.apply(UiIntent.PAUSE), play, players);
             }
         } else {
-            navigate(play, players, layout.view());
+            navigate(play, players, area(layout));
         }
         follow(play);
         scrim = approach(scrim, target(), frameSeconds);
@@ -229,16 +240,18 @@ final class PlayMenus {
         painter.scrim(view, scrim);
         if (flow.menuOpen()) {
             List<String> under = foot(play);
+            Rect area = area(layout);
             panel = painter.page(
-                    view,
-                    MenuLayout.Anchor.DOCKED_LEFT,
+                    area,
+                    flow.top() == UiPage.PAUSE_CONTROLS ? MenuLayout.Anchor.CENTRED : MenuLayout.Anchor.DOCKED_LEFT,
                     head,
                     labels,
                     page.enabled(),
                     page.shown(modality),
                     page.scroll(),
-                    painter.visibleEntries(view, head, labels.size(), under.size()),
+                    painter.visibleEntries(area, head, labels.size(), under.size()),
                     under,
+                    tableBright,
                     hints.selectAndBack(modality),
                     motion.offsetX(),
                     motion.alpha());
@@ -274,9 +287,12 @@ final class PlayMenus {
         return flow.menuOpen() || (flow.showsPausedBanner() && !quiet);
     }
 
-    /** Whether the pause menu itself is the page on show - not the leave confirm over it. */
-    boolean showsPausePage() {
-        return flow.menuOpen() && flow.top() == UiPage.PAUSE;
+    /**
+     * Whether the page on show is one the side's upgrades are listed beside: the pause menu itself - not
+     * what is opened over it - and the result.
+     */
+    boolean showsUpgradesBeside() {
+        return flow.menuOpen() && (flow.top() == UiPage.PAUSE || flow.top() == UiPage.RESULT);
     }
 
     /** Where the page's panel rests - not where its arrival has it this frame - for what keeps clear of it. */
@@ -308,9 +324,15 @@ final class PlayMenus {
         return top == UiPage.RESULT ? MenuTree.result(mission != null) : MenuTree.page(top);
     }
 
-    private void navigate(ScenarioPlay play, PlayerInputs players, Rect view) {
+    private void navigate(ScenarioPlay play, PlayerInputs players, Rect area) {
         List<MenuEntry> entries = content(flow.top()).entries();
-        int visible = painter.visibleEntries(view, head, entries.size(), foot.size());
+        int visible =
+                painter.visibleEntries(area, head, entries.size(), foot(play).size());
+        if (flow.top() == UiPage.PAUSE_CONTROLS
+                && (nav.left || nav.right)
+                && page.index() == MenuTree.CONTROLS_PROMPTS) {
+            flipPrompts();
+        }
         int chosen = page.handle(nav, painter.layout(), panel, MenuPainter.firstEntryLine(head), visible);
         if (chosen >= 0) {
             carryOut(flow.apply(entries.get(chosen).intent()), play, players);
@@ -362,11 +384,27 @@ final class PlayMenus {
         for (MenuEntry entry : content.entries()) {
             labels.add(strings.get(entry.labelKey()));
         }
+        if (top == UiPage.PAUSE_CONTROLS) {
+            controls.open(modality.playStation(), labels);
+        }
         page.reset(
                 content.entries().size(),
                 memory.get(top, content.defaultSelection(), content.entries().size()));
         refreshEnabled(content.entries());
         page.settle();
+    }
+
+    private void flipPrompts() {
+        controls.flip(labels);
+    }
+
+    private int brightInTable(int line) {
+        return flow.top() == UiPage.PAUSE_CONTROLS ? controls.bright(line) : 0;
+    }
+
+    /** The controls page over the whole canvas - its table is taller than the view - the rest over the view. */
+    private Rect area(ScreenLayout layout) {
+        return flow.top() == UiPage.PAUSE_CONTROLS ? layout.canvas() : layout.view();
     }
 
     private void refreshEnabled(List<MenuEntry> entries) {
@@ -416,6 +454,9 @@ final class PlayMenus {
      * and the time are seen during play - and while this machine hosts, the room code and addresses.
      */
     private List<String> foot(ScenarioPlay play) {
+        if (flow.top() == UiPage.PAUSE_CONTROLS) {
+            return controls.table();
+        }
         boolean pause = flow.top() == UiPage.PAUSE;
         String invitation = pause ? play.invitation() : null;
         Simulation world = play.simulation();
@@ -450,6 +491,7 @@ final class PlayMenus {
             case REQUEST_PAUSE -> play.setPaused(true);
             case REQUEST_RESUME -> play.setPaused(false);
             case RESTART -> play.apply(HarnessCommand.RESTART, players);
+            case CHOOSE -> flipPrompts();
             case LEAVE -> play.apply(HarnessCommand.LEAVE, players);
             case COPY_CODE -> {
                 MissionCode played = mission;

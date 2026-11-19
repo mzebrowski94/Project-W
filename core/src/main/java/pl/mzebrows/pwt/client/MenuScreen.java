@@ -15,7 +15,6 @@ import pl.mzebrows.pwt.client.hud.Hud;
 import pl.mzebrows.pwt.client.hud.MenuPainter;
 import pl.mzebrows.pwt.client.hud.PageHints;
 import pl.mzebrows.pwt.client.hud.UiStrings;
-import pl.mzebrows.pwt.client.input.ControlsTable;
 import pl.mzebrows.pwt.client.input.KeyHolds;
 import pl.mzebrows.pwt.client.input.KeyPresses;
 import pl.mzebrows.pwt.client.input.NavInputReader;
@@ -56,8 +55,9 @@ import pl.mzebrows.pwt.ui.page.UiPage;
  * then says it is not open yet, and hosting hosts missions only.
  *
  * <p>What a press does is {@link UiFlow}'s and the selection is {@link PageControls}'; this turns the
- * flow's effects into screens and draws. MAIN opens on DAILY MISSIONS, and that page on MEDIUM: a daily
- * is two confirms away (missions ticket 08). What the missions page starts is {@link MissionChoices}'.
+ * flow's effects into screens and draws. MAIN opens on DAILY MISSIONS, and that page on MEDIUM with nothing
+ * chosen: a daily is MEDIUM, then START MISSION (missions ticket 08). Every entry of the missions page writes
+ * into its code line and START MISSION starts what it holds - {@link MissionChoices}'.
  */
 public final class MenuScreen extends ScreenAdapter {
 
@@ -68,8 +68,8 @@ public final class MenuScreen extends ScreenAdapter {
     /** Spaces between a choice row's label and its value. */
     private static final int CHOICE_GAP = 2;
 
-    /** Lines under the missions page's list: the selected daily's code, and why a code started nothing. */
-    private static final int MISSION_FOOT = 2;
+    /** Lines under the missions page's list: why the code line names no mission. */
+    private static final int MISSION_FOOT = 1;
 
     private final GameContext context;
     private final UiStrings strings = UiStrings.load();
@@ -96,6 +96,12 @@ public final class MenuScreen extends ScreenAdapter {
     /** A key typed a character since the last frame: the selection goes to the code line. */
     private boolean typed;
 
+    /**
+     * The menu was opened on the missions page on the way back from a mission it started: that first opening
+     * keeps what was played in the code line and START selected. Spent by it.
+     */
+    private boolean backFromMission;
+
     private final PageMotion motion;
     private final KeyPresses keys = keycode -> Gdx.input.isKeyJustPressed(keycode);
     private final KeyHolds held = keycode -> Gdx.input.isKeyPressed(keycode);
@@ -103,8 +109,8 @@ public final class MenuScreen extends ScreenAdapter {
     private final List<String> labels = new ArrayList<>();
     private final List<String> foot = new ArrayList<>(DESCRIPTION_LINES);
 
-    /** The controls page's table, under its entries, as written when the page opened; null before it first is. */
-    private @Nullable ControlsTable controls;
+    /** The controls page: its switch and, under its entries, its table of bindings. */
+    private final ControlsPage controls;
 
     /** How much of each foot line is bright: on the controls page the table's headings and actions, else none. */
     private final IntUnaryOperator footBright = this::brightInFoot;
@@ -131,8 +137,8 @@ public final class MenuScreen extends ScreenAdapter {
     private UiPage shown = UiPage.PLAY;
     private int describedFor = -1;
 
-    /** The missions page's problem as last written under it. */
-    private String describedProblem = "";
+    /** The missions page's problem as last written under it; null until it is written on this opening. */
+    private @Nullable String describedProblem;
 
     private Rect panel = Rect.EMPTY;
 
@@ -164,6 +170,8 @@ public final class MenuScreen extends ScreenAdapter {
                 graphic.ui().motionScale());
         this.rows = new ProvingRows(context.simConfig());
         this.scenarios = graphic.ui().page().scenarios() ? Scenarios.all() : List.of();
+        this.controls = new ControlsPage(context.controlsConfig(), context.settings(), strings);
+        this.backFromMission = isMissions(start);
         openDown(start);
     }
 
@@ -372,7 +380,7 @@ public final class MenuScreen extends ScreenAdapter {
         if (isMissions(top)) {
             typeAndPaste();
             if (picker != null) {
-                return pick(top);
+                return pick();
             }
         }
         if (isScenarioList(top)) {
@@ -506,6 +514,7 @@ public final class MenuScreen extends ScreenAdapter {
         panel = Rect.EMPTY;
         side = Rect.EMPTY;
         describedFor = -1;
+        describedProblem = null;
         head.clear();
         labels.clear();
         int defaultSelection = 0;
@@ -530,7 +539,11 @@ public final class MenuScreen extends ScreenAdapter {
             MenuPage content = MenuTree.page(top);
             if (isMissions(top)) {
                 // The date is read as the page opens, and a daily started from it keeps that day (G0065).
-                missions.open();
+                if (backFromMission) {
+                    missions.reopen();
+                } else {
+                    missions.open();
+                }
                 picker = null;
                 head.add(strings.format(content.titleKey(), missions.day()));
             } else if (!content.titleKey().isEmpty()) {
@@ -545,12 +558,9 @@ public final class MenuScreen extends ScreenAdapter {
             if (top == UiPage.PROVING_GROUND) {
                 relabel(top);
             } else if (top == UiPage.CONTROLS) {
-                // Under the entries, in the words of the pad last pressed, as the hints are; Xbox's where none was.
-                ControlsTable table = ControlsTable.of(context.controlsConfig(), strings::get, modality.playStation());
-                controls = table;
+                controls.open(modality.playStation(), labels);
                 foot.clear();
-                foot.addAll(table.lines());
-                relabelControls();
+                foot.addAll(controls.table());
             } else if (isMissions(top)) {
                 relabelMissions();
             } else {
@@ -560,12 +570,16 @@ public final class MenuScreen extends ScreenAdapter {
             }
             defaultSelection = content.defaultSelection();
         }
-        int remembered = top == UiPage.EXIT_CONFIRM
-                ? defaultSelection
-                : context.selections().get(top, defaultSelection, labels.size());
+        // The missions page opened from the menu has nothing chosen, so it opens on MEDIUM; back from a
+        // mission, on where it was started from.
+        boolean fresh = top == UiPage.EXIT_CONFIRM || (isMissions(top) && !backFromMission);
+        int remembered = fresh ? defaultSelection : context.selections().get(top, defaultSelection, labels.size());
+        backFromMission = false;
         page.reset(labels.size(), remembered);
         if (top == UiPage.PROVING_GROUND) {
             lockRows();
+        } else if (isMissions(top)) {
+            enableStart();
         }
     }
 
@@ -606,25 +620,11 @@ public final class MenuScreen extends ScreenAdapter {
     }
 
     private int brightInFoot(int line) {
-        ControlsTable table = controls;
-        return table == null || flow.top() != UiPage.CONTROLS ? 0 : table.bright(line);
+        return flow.top() == UiPage.CONTROLS ? controls.bright(line) : 0;
     }
 
-    /** The controls page's entries: the PROMPTS switch with its ON or OFF, then BACK. */
-    private void relabelControls() {
-        labels.clear();
-        for (MenuEntry entry : MenuTree.page(UiPage.CONTROLS).entries()) {
-            labels.add(strings.get(entry.labelKey()));
-        }
-        String state = strings.get(context.settings().prompts() ? "ui.controls.on" : "ui.controls.off");
-        labels.set(MenuTree.CONTROLS_PROMPTS, strings.format("ui.controls.prompts", state));
-    }
-
-    /** Switches the in-world prompts on this computer, kept at once, and writes the switch again. */
     private void flipPrompts() {
-        LocalSettings settings = context.settings();
-        settings.prompts(!settings.prompts());
-        relabelControls();
+        controls.flip(labels);
     }
 
     /** A count that cannot be chosen - a rooted strain's - is dimmed and passed over. */
@@ -766,23 +766,16 @@ public final class MenuScreen extends ScreenAdapter {
     }
 
     /**
-     * Under the missions page's list, always two lines so the panel keeps its height: the selected daily's
-     * code - the one place a code shows before it is played - and why a code started nothing.
+     * Under the missions page's list, always a line so the panel keeps its height: why the code line names no
+     * mission - refused the moment its eighth character lands - or nothing.
      */
     private void describeMission() {
-        int selected = page.index();
         String problem = missions.problem();
-        if (selected == describedFor && problem.equals(describedProblem)) {
+        if (problem.equals(describedProblem)) {
             return;
         }
-        describedFor = selected;
         describedProblem = problem;
         foot.clear();
-        TierKind[] tiers = TierKind.values();
-        foot.add(
-                selected < tiers.length
-                        ? strings.format("ui.missions.selectedCode", missions.daily(tiers[selected]))
-                        : "");
         foot.add(problem.isEmpty() ? "" : strings.format(problem, MissionChoices.tierLetters()));
         while (foot.size() < MISSION_FOOT) {
             foot.add("");
@@ -821,10 +814,21 @@ public final class MenuScreen extends ScreenAdapter {
         }
     }
 
+    /**
+     * The code line: what it holds and, once that names a mission, its tier and where it came from - {@code
+     * MEDIUM DAILY}, {@code HARD RANDOM}, {@code EASY CUSTOM}.
+     */
     private String codeLine() {
         CodePicker picking = picker;
         if (picking == null) {
-            return missions.line();
+            MissionCode code = missions.code();
+            MissionChoices.Origin origin = missions.origin();
+            return code == null || origin == null
+                    ? missions.line()
+                    : missions.line()
+                            + "  "
+                            + strings.format(
+                                    "ui.missions.origin", tierName(code.tier()), strings.get("ui.missions." + origin));
         }
         TierKind tier = MissionCode.tierOf(picking.code().charAt(0));
         return picking.shown(MissionCode.LENGTH / 2) + (tier == null ? "" : "  " + tierName(tier));
@@ -850,13 +854,19 @@ public final class MenuScreen extends ScreenAdapter {
             page.jump(MenuTree.MISSION_CODE);
         }
         relabelMissions();
+        enableStart();
+    }
+
+    /** START MISSION can be confirmed only while the code line names a mission; dimmed and passed over else. */
+    private void enableStart() {
+        page.enabled()[MenuTree.MISSION_START] = missions.code() != null;
     }
 
     /**
-     * The pad's code picker: left and right choose the slot, up and down the letter, confirm starts the code
-     * or says it is none and stays open on it, back closes it. False when the screen is being left.
+     * The code picker: left and right choose the slot, up and down the letter, confirm puts what it shows in
+     * the code line - refused there at once if it is none - and back closes it, the line as it was.
      */
-    private boolean pick(UiPage top) {
+    private boolean pick() {
         CodePicker picking = picker;
         if (picking == null) {
             return true;
@@ -877,12 +887,10 @@ public final class MenuScreen extends ScreenAdapter {
             picker = null;
         } else if (nav.confirm) {
             missions.replaceTyped(picking.code());
-            MissionCode code = missions.choose();
-            if (code != null) {
-                return !play(code, top == UiPage.HOST_MISSIONS);
-            }
+            picker = null;
         }
         relabelMissions();
+        enableStart();
         return true;
     }
 
@@ -898,27 +906,26 @@ public final class MenuScreen extends ScreenAdapter {
     }
 
     /**
-     * Plays what an entry of the missions page names: a daily, a fresh RANDOM, or the code line - which with
-     * nothing typed, or on a pad, opens the picker instead. False when the screen is being left.
+     * What an entry of the missions page does: a daily writes its code into the code line, RANDOM a fresh
+     * draw, and START MISSION plays what the line names. Confirm on the code line, from any device, always
+     * opens the picker on it - editing; the picker's own confirm then takes the code. False when the screen is
+     * being left.
      */
     private boolean mission(int entry, boolean hosted) {
         TierKind[] tiers = TierKind.values();
-        MissionCode code;
         if (entry < tiers.length) {
-            code = missions.daily(tiers[entry]);
+            missions.chooseDaily(tiers[entry]);
         } else if (entry == MenuTree.MISSION_RANDOM) {
-            code = missions.random();
-        } else if (missions.typed().isBlank() || modality.padHints()) {
+            missions.drawRandom();
+        } else if (entry == MenuTree.MISSION_CODE) {
             picker = missions.openPicker();
-            relabelMissions();
-            return true;
         } else {
-            code = missions.choose();
-            if (code == null) {
-                return true;
-            }
+            MissionCode code = missions.code();
+            return code == null || !play(code, hosted);
         }
-        return !play(code, hosted);
+        relabelMissions();
+        enableStart();
+        return true;
     }
 
     /**

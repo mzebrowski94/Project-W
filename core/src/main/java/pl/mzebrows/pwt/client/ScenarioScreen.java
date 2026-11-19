@@ -329,7 +329,8 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.controlsConfig(),
                 strings,
                 context.gamepads(),
-                context.missionRecords());
+                context.missionRecords(),
+                context.settings());
         // The press that started the level - Enter, Space, a click, SOUTH - is spent, not fired.
         input.spendHeldPresses();
         bound = null;
@@ -514,7 +515,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         if (!menus.coversView()) {
             toastPainter.draw(layout.view(), toast);
         }
-        if (menus.showsPausePage()) {
+        if (menus.showsUpgradesBeside()) {
             heldUpgrades.draw(layout.view(), menus.pagePanel(), readout, menus.pageAlpha());
             heldUpgrades.wheel(wheelNotches, menus.pointerX(), menus.pointerY());
             heldUpgrades.glide(

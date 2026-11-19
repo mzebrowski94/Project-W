@@ -15,8 +15,9 @@ import pl.mzebrows.pwt.ui.page.MenuLayout;
 import pl.mzebrows.pwt.ui.page.ScrollList;
 
 /**
- * Every upgrade the side holds, beside the pause menu ({@code UI:play/pause}): the aside in the
- * top bar has room for a few, and a paused player has time to read them all. One row each - a personal
+ * Every upgrade the side holds, beside the pause menu ({@code UI:play/pause}) and the result ({@code
+ * UI:play/result}): the aside in the top bar has room for a few, and a paused player has time to read them
+ * all - and at the end, what the level was won or lost with. One row each - a personal
  * one named for its holder and in his colour, an adaptation in the swarm's - with its rank in words and as pips, docked to the right of
  * the view over the same scrim.
  *
@@ -75,9 +76,9 @@ public final class HeldUpgradesPainter {
     }
 
     /**
-     * Draws the list, as opaque as the pause page's arrival has it.
+     * Draws the list, as opaque as the page's arrival has it.
      *
-     * @param page where the pause menu's panel rests, which the list keeps clear of
+     * @param page where the page's panel rests - the pause menu's or the result's - which the list keeps clear of
      */
     public void draw(Rect view, Rect page, Readout readout, float alpha) {
         if (readout.upgradeRevision != built) {

@@ -47,7 +47,8 @@ keeps in shot).
 | 1.5 EXIT | `UI:main/exit` | A confirm modal, so Back pressed once too often never quits. |
 | - | `UI:connecting`, `UI:play`, `UI:play/pause`, `UI:play/leave`, `UI:play/result` | Not in the outline; needed to get into and out of a level. `UI:play/result` was the blocked `UI:play/game-over` until G0066. |
 | - | `UI:main/controls` | Not in the outline; added 2026-11-13 by request: what every key and pad button does, shown and not changed. The PROMPTS switch added 2026-11-17 (visibility stage 5) - the one thing on it that changes anything. |
-| - | `UI:main/missions`, `UI:main/online/host/missions` | Built 2026-10-05 (missions ticket 08, G0065, stage 9): the day's three missions, RANDOM and ENTER CODE; the same page opened from HOST GAME hosts what it starts. |
+| - | `UI:main/missions`, `UI:main/online/host/missions` | Built 2026-10-05 (missions ticket 08, G0065, stage 9): the day's three missions, RANDOM and ENTER CODE; the same page opened from HOST GAME hosts what it starts. Reworked 2026-11-19 by request: every entry writes into the code line and one START MISSION starts it; a refused code said as its last character lands. |
+| - | `UI:play/pause/controls` | Not in the outline; added 2026-11-19 by request: `UI:main/controls` reachable from the pause menu. |
 
 ## 3. Page and modal table
 
@@ -69,6 +70,7 @@ keeps in shot).
 | `UI:play` | state | - | `UiPage.PLAY` | `ScenarioScreen` | built |
 | `UI:play/pause` | modal | `UI:play` | `UiPage.PAUSE` | `PlayMenus` | built |
 | `UI:play/leave` | modal | `UI:play/pause` | `UiPage.LEAVE_CONFIRM` | `PlayMenus` | built |
+| `UI:play/pause/controls` | modal | `UI:play/pause` | `UiPage.PAUSE_CONTROLS` | `PlayMenus` + `ControlsTable` | built |
 | `UI:play/result` | modal | `UI:play` | `UiPage.RESULT` | `PlayMenus` | built (G0066, G0067) |
 
 `MenuScreen` stays the one libGDX `Screen` for every `UI:main...` page: pages are a stack inside it,
@@ -169,41 +171,49 @@ round again. Neither panel scrolls - the catalogue fits the canvas.
 
 ### `UI:main/missions`
 
-Missions ticket 08 (G0065, G0066), built in missions stage 9. Title `ui.missions.title = DAILY MISSIONS {date}
-UTC`, the date ISO (`2026-10-05`), read when the page opens (`MissionChoices.open`, a UTC `Clock`, in `core`); a
-daily keeps the day it was started on. What each entry starts is `MissionChoices` (tested); the page is
-`MenuScreen`'s. Entries, top to bottom:
+Missions ticket 08 (G0065, G0066), built in missions stage 9; reworked 2026-11-19. Title `ui.missions.title =
+DAILY MISSIONS {date} UTC`, the date ISO (`2026-10-05`), read when the page opens (`MissionChoices.open`, a UTC
+`Clock`, in `core`); a daily keeps the day it was started on. **Every entry above START MISSION writes into the
+code line, and START MISSION starts what it holds** - one way to start, whatever was chosen. What each entry
+does is `MissionChoices` (tested); the page is `MenuScreen`'s. Entries, top to bottom:
 
 | Entry | Label | Value | Intent |
 |---|---|---|---|
-| `easy`, `medium`, `hard` | `ui.tier.*` - one per `TierKind`, in order | `ui.missions.won = ✓ {m:ss.t}`, the best time, once that day's daily is won on this machine (`MissionRecords`, G0067), else nothing | `MISSION(daily)` - starts at once |
-| `random` | `ui.missions.random = RANDOM` | a choice row `< MEDIUM >`, `ui.tier.*`, left and right step it; remembered for the run, first MEDIUM | `MISSION(random)` - a seed drawn uniformly from [0, 25^6) with the client's own randomness, a new one each confirm |
-| `code` | `ui.missions.code = ENTER CODE` | the code line in a code's shape, `MJGF-6___` - the dash there from the start, never typed | opens the picker, or starts what is typed |
+| `easy`, `medium`, `hard` | `ui.tier.*` - one per `TierKind`, in order | `ui.missions.won = ✓ {m:ss.t}`, the best time, once that day's daily is won on this machine (`MissionRecords`, G0067), else nothing | `MISSION(daily)` - that daily's code into the line, in place of what was there; the selection stays |
+| `random` | `ui.missions.random = RANDOM` | a choice row `< MEDIUM >`, `ui.tier.*`, left and right step it; remembered for the run, first MEDIUM. Stepping it leaves the line alone | `MISSION(random)` - a seed drawn uniformly from [0, 25^6) with the client's own randomness into the line, a new one each confirm; the selection stays |
+| `code` | `ui.missions.code = ENTER CODE` | the code line in a code's shape, `MJGF-6___` - the dash there from the start, never typed - and once it names a mission, `ui.missions.origin = {tier} {origin}`: `MEDIUM DAILY`, `HARD RANDOM`, `EASY CUSTOM` | opens the picker on the line - editing - from any device; the picker's own confirm takes the code |
+| `start` | `ui.missions.start = START MISSION` | | `MISSION(start)` - plays what the line names; dimmed and passed over while it names none |
 | `back` | `ui.common.back = BACK` | | `BACK` |
 
-Under the list, the selected daily's code: `ui.missions.selectedCode = CODE {code}` - the only place a code
-is shown before it is played. Default selection: the entry last played from here, else `medium`.
+**Where the code came from** (`MissionChoices.Origin`), said beside it: `ui.missions.DAILY` when it is one of
+the page's day's three, however it arrived; `ui.missions.RANDOM` when it is RANDOM's last draw untouched;
+`ui.missions.CUSTOM` for anything else - typed, pasted, picked, or a daily or a draw changed by hand (a
+**custom mission**). Opened from the menu, the line is empty and `medium` selected - nothing chosen yet. Back
+from a mission started here, the line holds what was played and START MISSION is selected, so playing it
+again is one confirm (`MissionChoices.reopen`).
 
 **ENTER CODE** works as join's code line: a keyboard (and the Steam keyboard, STEAM+X) types into it at any
-time, forgiven as the room code is - any case, spaces and dashes ignored - into a code's eight places, no more,
-and `Ctrl+V` pastes a whole code in the line's place. **The first place takes only a tier's letter**: any
+time, forgiven as the room code is - any case, spaces and dashes ignored - into a code's eight places, no more:
+a key typed over a whole line - a daily's, a draw's - starts a new code in its place. `Ctrl+V` pastes a whole code in the line's place. **The first place takes only a tier's letter**: any
 other, typed or starting a paste, is refused as it arrives and the line says `ui.missions.badTier = A MISSION CODE
-STARTS WITH {E/M/H}` - the tiers, never the check (`MissionChoices`). With a pad,
-confirm opens an eight-slot `CodePicker`, a dash drawn after the fourth: **slot one cycles only the tiers'
-letters** (an alphabet per slot), the rest the room code's alphabet. It opens on the last code played this
-run, else today's MEDIUM daily, so a code close to a known one is a few presses. Beside it, the tier's name
-once the first slot holds one; under the page `ui.missions.pickHint = {confirm}: START  {back}: DONE  D-PAD:
-EDIT`. Typing a character, or a paste, moves the selection to the code line and closes the picker. Confirm on a
-code that fails its check shows `ui.missions.badCode = NOT A MISSION CODE` on the second line under the list and
-starts nothing; the picker stays open on what was entered, with no hint which character
-is wrong - showing the right check would let a typo through (G0065).
+STARTS WITH {E/M/H}` - the tiers, never the check (`MissionChoices`); over a whole line the line is kept. Confirm on
+the line, from any device, always opens an eight-slot `CodePicker` - editing - a dash drawn after the fourth, and
+a second confirm takes what it shows: **slot one cycles only the tiers' letters** (an alphabet per slot), the rest the room code's
+alphabet. It opens on what the line holds, the places not typed yet at their alphabet's first, else the last
+code played this run, else today's MEDIUM daily, so a code close to a known one is a few presses. Beside it, the tier's name once the first slot holds one; under the page `ui.missions.pickHint =
+{confirm}: DONE  {back}: CANCEL  D-PAD: EDIT` - confirm puts what it shows in the line and closes it, back
+closes it with the line as it was. Typing a character, or a paste, moves the selection to the code line and
+closes the picker. **A code that fails its check is refused the moment its eighth character lands** - typed,
+pasted, or put there by the picker's DONE: `ui.missions.badCode = NOT A MISSION CODE` on the line under the list,
+and START MISSION dimmed, until the line changes. Nothing is checked while the picker is open, and nothing says
+which character is wrong - a check shown as each slot turns, or the right check, would correct a typo (G0065).
 
 **A code is a daily when it equals one of the three dailies of the day the page opened**, however it
 arrived - typed, pasted or picked; a machine that joined one, or never opened the page, looks on its own day and
 the day either side (`MissionCode.dailyNear`). What is remembered of it is missions ticket 09.
 
 From `UI:main/online/host` the same page opens **in host mode** as `UI:main/online/host/missions`: the same
-entries, and every start hosts instead (`HOST_MISSION`), as the host list is the campaign list with a different
+entries, and START MISSION hosts instead (`HOST_MISSION`), as the host list is the campaign list with a different
 confirm. Its own id, so leaving a hosted mission comes back to it and Back climbs to HOST GAME.
 
 Do not build: a daily's code on every row; a countdown to the next day; "this mission on another tier"
@@ -328,6 +338,7 @@ machine). Drawn docked to the left third of the view over a scrim (plan 6.5); th
 |---|---|---|---|
 | `resume` | `ui.pause.resume = RESUME` | `RESUME` (sends `HarnessCommand.PAUSE` through `ScenarioPlay.apply`) | always |
 | `restart` | `ui.pause.restart = RESTART` | `RESTART` (`HarnessCommand.RESTART`) | offline, or this machine is the host |
+| `controls` | `ui.main.controls = CONTROLS` | `OPEN(PAUSE_CONTROLS)` | always |
 | `leave` | `ui.pause.leave = LEAVE TO MENU` | `OPEN(LEAVE_CONFIRM)` | always |
 
 Beside it, docked to the right of the view over the same scrim (`MenuLayout.beside`,
@@ -347,6 +358,15 @@ the code or the time (missions stage 9).
 Online it also shows `ui.pause.room = ROOM {code}` and the addresses, from `Invitation`, while this
 machine hosts. Back = `RESUME`. The press that resumes is spent: it does not fire, act or throw on
 the first tick of play (plan 6.2, `ReleaseLatch`).
+
+### `UI:play/pause/controls` - modal
+
+`UI:main/controls` over the pause menu: the same title, entries (PROMPTS, BACK), table and words (`MenuTree`,
+`ControlsTable`), and the same PROMPTS switch, kept at once (`LocalSettings`) - the bindings where the player is
+stuck on one. **Centred on the whole UI canvas, over the bars**, not docked over the view as the pause menu is:
+the table is taller than the view between the bars. The upgrades list beside the pause menu is not drawn under
+it. BACK returns to the pause menu; the pad's pause button resumes from it, as from the leave confirm; it closes
+with the pause menu whenever anybody resumes. Do not build: rebinding here, as on `UI:main/controls`.
 
 ### `UI:play/leave` - modal
 
@@ -375,6 +395,9 @@ beats the remembered one, or is that daily's first win on this machine (G0067); 
 | `retry` | `ui.result.retry = RETRY` | `RESTART` - the same scenario and seed | offline, or this machine is the host - default selection |
 | `copy` | `ui.result.copy = COPY CODE` | `COPY_CODE` - the code to the clipboard (libGDX `Clipboard`) | a mission only (`MenuTree.result`) |
 | `menu` | `ui.result.menu = MENU` | `LEAVE`; as host through `UI:play/leave` | always |
+
+Beside it, the side's upgrades and the swarm's adaptations, as beside the pause menu - the same list, scroll and
+placing (`HeldUpgradesPainter`): what the level was won or lost with.
 
 Back does nothing here - a lost level does not close by an accidental press. MENU returns to the page the
 level was started from (section 5). It closes on RETRY, and on its own when the world it judged is replaced
@@ -407,12 +430,18 @@ carried out by the screen that owns the page, through `GameContext.queueScreen` 
 | `UI:play/pause`, `UI:play/leave` | anybody resumed | `UI:play` | - (derived) |
 | `UI:play/pause` | `RESTART` | `UI:play` | `play.apply(HarnessCommand.RESTART, ...)` |
 | `UI:play/pause` | `OPEN(LEAVE_CONFIRM)` | `UI:play/leave` | - |
+| `UI:play/pause` | `OPEN(PAUSE_CONTROLS)` | `UI:play/pause/controls` | - |
+| `UI:play/pause/controls` | `CHOOSE(0)` | stay | PROMPTS flipped, kept at once |
+| `UI:play/pause/controls` | `BACK` | `UI:play/pause` | - |
+| `UI:play/pause/controls` | `RESUME` (pad pause button) | `UI:play` at once | `play.setPaused(false)` |
 | `UI:play/leave` | `LEAVE` | the page the level was started from, as `UI:play/result`'s MENU | `queueScreen(new MenuScreen(ctx, "", back))`; the screen's `hide()` closes the play |
 | `UI:play` | `play.ended() != null` | `UI:main` | `queueScreen(new MenuScreen(ctx, reason))` - built today |
 | `UI:main/online/host` | `OPEN(HOST_MISSIONS)` | `UI:main/online/host/missions` pushed | - |
-| `UI:main/missions` | `MISSION(m)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(Scenarios.mission(tier), seed), MISSIONS))` |
-| `UI:main/online/host/missions` | `MISSION(m)` -> `HOST_MISSION(m)` | `UI:play` | `OnlineSession.host(...)` with `SessionSetup("mission <tier>", seed)`; on failure `UI:main` with the notice |
-| `UI:main/missions`, `.../host/missions` | code refused | stay | `ui.missions.badCode`, the picker open on what was entered |
+| `UI:main/missions`, `.../host/missions` | `MISSION(daily)`, `MISSION(random)` | stay | the daily's code, or a fresh draw, into the code line |
+| `UI:main/missions`, `.../host/missions` | `MISSION(code)` | stay | the picker opened on the line |
+| `UI:main/missions` | `MISSION(start)`, the line naming a mission | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(Scenarios.mission(tier), seed), MISSIONS))` |
+| `UI:main/online/host/missions` | `MISSION(start)` -> `HOST_MISSION(start)` | `UI:play` | `OnlineSession.host(...)` with `SessionSetup("mission <tier>", seed)`; on failure `UI:main` with the notice |
+| `UI:main/missions`, `.../host/missions` | the line's eighth character lands and the code fails its check | stay | `ui.missions.badCode` under the list, START MISSION dimmed |
 | `UI:play` | first outcome + `graphic.ui.resultHoldSeconds` | `UI:play/result` | - (derived, `UiFlow.observeResult`) |
 | `UI:play/result` | `RESTART` | `UI:play` | `play.apply(HarnessCommand.RESTART, ...)` - host or offline |
 | `UI:play/result` | `COPY_CODE` | stay | the mission code to the clipboard |
@@ -433,7 +462,7 @@ buttons are named by position (ADR 0011); what the player is told to press comes
 | Back | `Esc`, `Backspace` | right click | `EAST` (B / Circle) | pages, modals |
 | Jump to entry | `1`-`9` | - | - | scenario lists |
 | Paste a code | `Ctrl+V` | - | - | the code line of `UI:main/missions` (built); of `UI:main/online/join` (planned) |
-| Step a choice row | `A`/`D`, left/right arrows | left click on `<` or `>` | d-pad left/right, left stick | `UI:main/proving-ground`, `.../upgrades`, `UI:main/missions` (RANDOM's tier), `UI:main/controls` (PROMPTS - a click on it flips it, as confirm does) |
+| Step a choice row | `A`/`D`, left/right arrows | left click on `<` or `>` | d-pad left/right, left stick | `UI:main/proving-ground`, `.../upgrades`, `UI:main/missions` (RANDOM's tier), `UI:main/controls` and `UI:play/pause/controls` (PROMPTS - a click on it flips it, as confirm does) |
 | Page tabs (future Options) | `Q` / `E` | - | `L1` / `R1` | pages with tabs |
 | Swap panels / roll call | `` ` `` | - | - | `UI:play` |
 | Pause | `Esc` | - | `START` | `UI:play` |

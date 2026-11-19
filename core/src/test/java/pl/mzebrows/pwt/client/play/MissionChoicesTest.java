@@ -13,10 +13,18 @@ import pl.mzebrows.pwt.net.lan.RoomCode;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.ui.nav.CodePicker;
 
-/** The DAILY MISSIONS page's choices (missions ticket 08, G0065): which code each of its entries starts. */
+/**
+ * The DAILY MISSIONS page's choices (missions ticket 08, G0065): what each entry writes into the code line, and
+ * what START MISSION would start from it.
+ */
 class MissionChoicesTest {
 
     private static final LocalDate DAY = LocalDate.of(2026, 10, 5);
+
+    /** A code, as text, and the same with its check character wrong. */
+    private static final String TEXT = new MissionCode(TierKind.MEDIUM, 31_337L).text();
+
+    private static final String TYPO = TEXT.substring(0, MissionCode.LENGTH - 1) + (TEXT.endsWith("A") ? "C" : "A");
 
     private final MovableClock clock = new MovableClock(DAY.atTime(23, 59).toInstant(ZoneOffset.UTC));
     private long drawn = 1_000L;
@@ -74,7 +82,7 @@ class MissionChoicesTest {
 
         type(" " + code.toString().toLowerCase(Locale.ROOT) + " ");
 
-        assertThat(choices.choose()).isEqualTo(code);
+        assertThat(choices.code()).isEqualTo(code);
         assertThat(choices.problem()).isEmpty();
     }
 
@@ -86,7 +94,7 @@ class MissionChoicesTest {
 
         choices.paste(" " + code + " ");
 
-        assertThat(choices.choose()).isEqualTo(code);
+        assertThat(choices.code()).isEqualTo(code);
     }
 
     @Test
@@ -137,13 +145,13 @@ class MissionChoicesTest {
     /** A typo starts nothing and the words never say which character is wrong (G0065). */
     @Test
     void refusesATypoInTheSameWordsWhereverItIs() {
-        String text = new MissionCode(TierKind.MEDIUM, 31_337L).text();
+        String text = TEXT;
         for (int at = 0; at < text.length(); at++) {
             char wrong = RoomCode.ALPHABET.charAt(
                     (RoomCode.ALPHABET.indexOf(text.charAt(at)) + 1) % RoomCode.ALPHABET.length());
             choices.replaceTyped(text.substring(0, at) + wrong + text.substring(at + 1));
 
-            assertThat(choices.choose()).isNull();
+            assertThat(choices.code()).isNull();
             assertThat(choices.problem()).isEqualTo(MissionChoices.REFUSED);
         }
     }
@@ -168,23 +176,20 @@ class MissionChoicesTest {
     /** The refusal stays only until the player types again: it is about what he typed, not about him. */
     @Test
     void forgetsTheRefusalOnTheNextKey() {
-        String text = new MissionCode(TierKind.MEDIUM, 31_337L).text();
-        String typo = text.substring(0, MissionCode.LENGTH - 1) + (text.endsWith("A") ? "C" : "A");
-        type(typo);
-        choices.choose();
+        type(TYPO);
 
         choices.type('\b');
 
         assertThat(choices.problem()).isEmpty();
-        assertThat(choices.typed()).isEqualTo(text.substring(0, MissionCode.LENGTH - 1));
+        assertThat(choices.typed()).isEqualTo(TEXT.substring(0, MissionCode.LENGTH - 1));
     }
 
-    /** An empty line is no typo: the screen opens the picker there, and nothing is said. */
+    /** An empty line is no typo, nor is one still being typed: nothing is said. */
     @Test
     void startsNothingAndSaysNothingForAnEmptyLine() {
         type("  ");
 
-        assertThat(choices.choose()).isNull();
+        assertThat(choices.code()).isNull();
         assertThat(choices.problem()).isEmpty();
     }
 
@@ -222,6 +227,159 @@ class MissionChoicesTest {
         assertThat(daily).isNotNull();
         assertThat(choices.dailyDay(daily)).isEqualTo(DAY);
         assertThat(choices.dailyDay(new MissionCode(TierKind.EASY, 7L))).isNull();
+    }
+
+    /** Choosing a daily puts its code in the line, to be started - or changed - from there. */
+    @Test
+    void writesADailysCodeIntoTheLineWhenItIsChosen() {
+        choices.open();
+
+        choices.chooseDaily(TierKind.HARD);
+
+        assertThat(choices.typed()).isEqualTo(choices.daily(TierKind.HARD).text());
+        assertThat(choices.code()).isEqualTo(choices.daily(TierKind.HARD));
+        assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.DAILY);
+    }
+
+    /** RANDOM confirmed again draws again: the line holds a fresh code on RANDOM's tier each time. */
+    @Test
+    void writesAFreshRandomIntoTheLineEachTimeItIsDrawn() {
+        choices.open();
+        choices.stepRandomTier(-1);
+
+        choices.drawRandom();
+        MissionCode first = choices.code();
+        choices.drawRandom();
+        MissionCode second = choices.code();
+
+        assertThat(first).isNotNull();
+        assertThat(second).isNotNull();
+        assertThat(second.tier()).isEqualTo(TierKind.EASY);
+        assertThat(second).isNotEqualTo(first);
+        assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.RANDOM);
+    }
+
+    /**
+     * A code changed by hand is a custom mission - unless it lands on one of the day's dailies, which it is
+     * however it arrived (G0065).
+     */
+    @Test
+    void callsACodeChangedByHandCustomUnlessItIsADaily() {
+        choices.open();
+        choices.drawRandom();
+
+        choices.replaceTyped(new MissionCode(TierKind.EASY, 7L).text());
+        assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.CUSTOM);
+
+        choices.replaceTyped("");
+        type(choices.daily(TierKind.EASY).toString());
+        assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.DAILY);
+    }
+
+    /** A line that names no mission has no origin to show. */
+    @Test
+    void namesNoOriginForALineThatIsNoCode() {
+        choices.open();
+        type("MJG");
+
+        assertThat(choices.code()).isNull();
+        assertThat(choices.origin()).isNull();
+    }
+
+    /** The refusal comes the moment the eighth character lands - not on START, and not before it. */
+    @Test
+    void refusesATypoTheMomentItsLastCharacterLands() {
+
+        type(TYPO.substring(0, MissionCode.LENGTH - 1));
+        assertThat(choices.problem()).isEmpty();
+        choices.type(TYPO.charAt(MissionCode.LENGTH - 1));
+
+        assertThat(choices.problem()).isEqualTo(MissionChoices.REFUSED);
+    }
+
+    /** A whole typo pasted or picked in is refused as it lands, as a typed one is. */
+    @Test
+    void refusesAPastedOrPickedTypoAsItLands() {
+
+        choices.paste(TYPO);
+        assertThat(choices.problem()).isEqualTo(MissionChoices.REFUSED);
+
+        choices.replaceTyped(TEXT);
+        assertThat(choices.problem()).isEmpty();
+        choices.replaceTyped(TYPO);
+        assertThat(choices.problem()).isEqualTo(MissionChoices.REFUSED);
+    }
+
+    /** Opened from the menu nothing is chosen; back from a level, the mission just played is in the line. */
+    @Test
+    void opensEmptyFromTheMenuAndOnTheMissionPlayedComingBackFromIt() {
+        MissionCode played = new MissionCode(TierKind.HARD, 5L);
+        choices.played(played);
+
+        choices.open();
+        assertThat(choices.typed()).isEmpty();
+
+        choices.reopen();
+        assertThat(choices.code()).isEqualTo(played);
+        assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.CUSTOM);
+    }
+
+    /** RANDOM's draw played and come back to is still RANDOM: the line is what was drawn. */
+    @Test
+    void callsTheRandomPlayedRandomComingBackFromIt() {
+        choices.open();
+        choices.drawRandom();
+        MissionCode drawnCode = choices.code();
+        assertThat(drawnCode).isNotNull();
+        choices.played(drawnCode);
+
+        choices.reopen();
+
+        assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.RANDOM);
+    }
+
+    /** The picker opens on what the line holds once it is whole, so changing a chosen code is a few presses. */
+    @Test
+    void opensThePickerOnTheLinesCodeOnceItIsWhole() {
+        choices.open();
+        choices.chooseDaily(TierKind.EASY);
+
+        assertThat(choices.openPicker().code())
+                .isEqualTo(choices.daily(TierKind.EASY).text());
+    }
+
+    /** A key typed over a whole line starts a new code: the old one is replaced, not silently kept. */
+    @Test
+    void startsANewCodeWhenAKeyIsTypedOverAWholeLine() {
+        choices.open();
+        choices.chooseDaily(TierKind.EASY);
+
+        choices.type('h');
+
+        assertThat(choices.typed()).isEqualTo("H");
+    }
+
+    /** Over a whole line, a first letter no tier has is refused as it is anywhere, and the line kept. */
+    @Test
+    void keepsAWholeLineWhenTheKeyTypedOverItStartsNoCode() {
+        choices.open();
+        choices.chooseDaily(TierKind.EASY);
+
+        choices.type('x');
+
+        assertThat(choices.code()).isEqualTo(choices.daily(TierKind.EASY));
+        assertThat(choices.problem()).isEqualTo(MissionChoices.FIRST_LETTER);
+    }
+
+    /** The picker opens on what was typed so far, the places still empty at their alphabet's first. */
+    @Test
+    void opensThePickerOnAPartlyTypedLine() {
+        choices.open();
+        type("hk3");
+
+        String shown = choices.openPicker().code();
+
+        assertThat(shown).startsWith("HK3").hasSize(MissionCode.LENGTH);
     }
 
     private void type(String text) {

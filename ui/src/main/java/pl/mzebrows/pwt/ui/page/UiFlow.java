@@ -122,7 +122,10 @@ public final class UiFlow {
             case RESTART -> restart(page);
             case LEAVE -> leave(page);
             case CHOOSE ->
-                page == UiPage.PROVING_GROUND || page == UiPage.PROVING_UPGRADES || page == UiPage.CONTROLS
+                page == UiPage.PROVING_GROUND
+                                || page == UiPage.PROVING_UPGRADES
+                                || page == UiPage.CONTROLS
+                                || page == UiPage.PAUSE_CONTROLS
                         ? new UiEffect(UiEffect.Kind.CHOOSE, intent.index())
                         : UiEffect.NONE;
             case PROVE -> page == UiPage.PROVING_GROUND ? UiEffect.PROVE : UiEffect.NONE;
@@ -181,9 +184,9 @@ public final class UiFlow {
         return ask ? UiEffect.REQUEST_RESUME : UiEffect.NONE;
     }
 
-    /** The pause menu, or the leave confirm opened from it - not from the result. */
+    /** The pause menu, or a page opened from it - the leave confirm, the controls - not from the result. */
     private boolean overThePause(UiPage page) {
-        return size > 1 && stack[1] == UiPage.PAUSE && (page == UiPage.PAUSE || page == UiPage.LEAVE_CONFIRM);
+        return size > 1 && stack[1] == UiPage.PAUSE && (page == UiPage.PAUSE || page.parent() == UiPage.PAUSE);
     }
 
     /** From the result, the host is asked first: his leaving ends the session for everybody (G0066). */
