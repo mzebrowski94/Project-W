@@ -20,6 +20,10 @@ final class Room {
     private final byte[] sessionConfig;
     private final long openedAtNanos;
     private final Set<Integer> links = new LinkedHashSet<>();
+    private final String openedBy;
+    private int wrongPasswords;
+    private long wrongWindowStartNanos;
+    private long lockedUntilNanos;
 
     Room(
             RoomCode code,
@@ -28,7 +32,8 @@ final class Room {
             String buildVersion,
             long hostKey,
             byte[] sessionConfig,
-            long openedAtNanos) {
+            long openedAtNanos,
+            String openedBy) {
         this.code = code;
         this.password = password;
         this.buildId = buildId;
@@ -36,6 +41,36 @@ final class Room {
         this.hostKey = hostKey;
         this.sessionConfig = sessionConfig.clone();
         this.openedAtNanos = openedAtNanos;
+        this.openedBy = openedBy;
+    }
+
+    /** The address the host's link came from: the one whose room count this room is in. */
+    String openedBy() {
+        return openedBy;
+    }
+
+    /** Whether the room is turning new machines away at {@code now}. */
+    boolean locked(long now) {
+        return now < lockedUntilNanos;
+    }
+
+    /**
+     * Records a wrong password; true when this one is the cap-th in the window and the room is now locked.
+     * The window and the lock are the same length (one key, {@code roomLockSeconds}); the window opens with
+     * the first wrong password after the last window expired.
+     */
+    boolean heardWrongPassword(long now, int max, long windowNanos) {
+        if (wrongPasswords == 0 || now - wrongWindowStartNanos >= windowNanos) {
+            wrongPasswords = 0;
+            wrongWindowStartNanos = now;
+        }
+        wrongPasswords++;
+        if (wrongPasswords >= max) {
+            wrongPasswords = 0;
+            lockedUntilNanos = now + windowNanos;
+            return true;
+        }
+        return false;
     }
 
     RoomCode code() {
