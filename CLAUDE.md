@@ -85,13 +85,14 @@ component holding an `Entity` - is left to `verify.sh`.
 | `core` | The libGDX application: rendering, input, assets, screens, config loading. |
 | `ui` | What the player is shown and how he moves through it, as data (ADR 0015): screen layout, pages, navigation, the HUD readout, poses. No drawing, no devices, no `net`; reads `sim`, never writes it. |
 | `net` | Networking (ADR 0012): the transport port and its Netty adapter, the in-memory test network, the connection log, LAN discovery, and the lockstep session on top - sequencer, peer, wire format. No libGDX; Netty only inside `net.netty`. |
+| `relay` | The machine online sessions meet through (ADR 0023, G0103): the door a link passes, and the rooms. Depends on `net`; no libGDX, no Netty of its own, nothing of `sim` or `map`. `core` and `lwjgl3` never see it. |
 | `lwjgl3` | Desktop launcher. |
 
-`lwjgl3` -> `core` -> {`ui`, `net`} -> `sim` -> `map`, one way; `sim` never sees `net` or `ui`, and `ui`
+`lwjgl3` -> `core` -> {`ui`, `net`} -> `sim` -> `map`, one way, and `relay` -> `net`; `sim` never sees `net` or `ui`, and `ui`
 and `net` never see each other. `ArchitectureTest` fails the build if `sim` reaches for rendering, the
 wall clock, unseeded randomness or hash iteration order; `MapArchitectureTest` does the same for `map`,
 which may not reach for those *or* for an entity; `NetArchitectureTest` keeps libGDX out of `net`, Netty
-inside its adapter and the clock behind `Clock`; `UiArchitectureTest` keeps drawing, devices and `net`
+inside its adapter and the clock behind `Clock`; `RelayArchitectureTest` does the same for `relay` and keeps `sim` and `map` out of it; `UiArchitectureTest` keeps drawing, devices and `net`
 out of `ui`, and stops it writing a component or stepping the simulation. Enforced, not remembered.
 
 **`map` owns the field; `sim` owns what stands on it and what happens over time** (ADR 0009). Pure

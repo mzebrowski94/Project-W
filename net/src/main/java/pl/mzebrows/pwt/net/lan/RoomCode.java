@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.net.lan;
 
 import java.util.Locale;
+import java.util.random.RandomGenerator;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -25,6 +26,15 @@ public record RoomCode(String text) {
                 throw new IllegalArgumentException("no room code has a " + text.charAt(i) + " in it");
             }
         }
+    }
+
+    /** A code drawn at random - the relay's, from the ones no live room has (G0103). */
+    public static RoomCode random(RandomGenerator random) {
+        char[] code = new char[LENGTH];
+        for (int i = 0; i < LENGTH; i++) {
+            code[i] = ALPHABET.charAt(random.nextInt(ALPHABET.length()));
+        }
+        return new RoomCode(new String(code));
     }
 
     /** The code a session with this id goes by. */

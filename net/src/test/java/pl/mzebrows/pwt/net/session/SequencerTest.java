@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.net.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -63,7 +64,7 @@ class SequencerTest {
                             .putInt(1)
                             .putByte(0)
                             .putByte(Msg.EVENT_ORDER)
-                            .putInt(Bundle.orderCode(Order.FORWARD))
+                            .putInt(InputCodec.orderCode(Order.FORWARD))
                             .putByte(0));
             frame(host);
         }
@@ -84,7 +85,7 @@ class SequencerTest {
                             .putInt(2)
                             .putByte(0)
                             .putByte(Msg.EVENT_ORDER)
-                            .putInt(Bundle.orderCode(Order.DEFENCE))
+                            .putInt(InputCodec.orderCode(Order.DEFENCE))
                             .putByte(0));
             frame(host);
         }
@@ -96,12 +97,12 @@ class SequencerTest {
                         .putInt(1)
                         .putByte(0)
                         .putByte(Msg.EVENT_ORDER)
-                        .putInt(Bundle.orderCode(Order.FORWARD))
+                        .putInt(InputCodec.orderCode(Order.FORWARD))
                         .putByte(0)
                         .putInt(2)
                         .putByte(0)
                         .putByte(Msg.EVENT_ORDER)
-                        .putInt(Bundle.orderCode(Order.DEFENCE))
+                        .putInt(InputCodec.orderCode(Order.DEFENCE))
                         .putByte(0));
         for (int frame = 0; frame < 5; frame++) {
             frame(host);
@@ -123,8 +124,8 @@ class SequencerTest {
         }
 
         assertThat(ticksWithPick(UpgradeKind.MARKSMEN)).hasSize(1);
-        assertThat(sealed.get(ticksWithPick(UpgradeKind.MARKSMEN).get(0)).pickOf(0))
-                .isEqualTo(UpgradeKind.MARKSMEN);
+        assertThat(sealed.get(ticksWithPick(UpgradeKind.MARKSMEN).get(0)).eventValue(0, Msg.EVENT_PICK))
+                .isEqualTo(5);
     }
 
     /** One of each type per slot per tick: an order and a pick given together both land on the same tick. */
@@ -181,8 +182,34 @@ class SequencerTest {
         }
 
         assertThat(sealed.values())
-                .allSatisfy(bundle -> assertThat(bundle.pickOf(0)).isNull());
+                .allSatisfy(
+                        bundle -> assertThat(bundle.hasEvent(0, Msg.EVENT_PICK)).isFalse());
         assertThat(ticksWithOrder(Order.FORWARD)).isEmpty();
+    }
+
+    /** The sequencer seals what it cannot read: an order no game has, and held bytes no peer would write. */
+    @Test
+    void sealsEventsAndHeldBytesWithoutReadingThem() {
+        RawPeer host = startedHost();
+        int tag = sequencer.sealedTick() + 3;
+        WireWriter odd = input(tag, CommanderInput.IDLE);
+        odd.putByte(1).putInt(1).putByte(0).putByte(Msg.EVENT_ORDER).putInt(200).putByte(0);
+        host.send(Delivery.UNRELIABLE, odd);
+
+        for (int frame = 0; frame < 10; frame++) {
+            frame(host);
+        }
+
+        assertThat(sealed.values())
+                .anySatisfy(bundle -> assertThat(
+                                bundle.hasEvent(0, Msg.EVENT_ORDER) && bundle.eventValue(0, Msg.EVENT_ORDER) == 200)
+                        .isTrue());
+    }
+
+    @Test
+    void refusesAnEventValueThatDoesNotFitItsBytes() {
+        assertThatThrownBy(() -> Bundle.checkEvent(Msg.EVENT_ORDER, 256, 0)).isInstanceOf(WireException.class);
+        Bundle.checkEvent(Msg.EVENT_PICK, 70_000, 0);
     }
 
     @Test
@@ -536,7 +563,7 @@ class SequencerTest {
                 .putByte(1)
                 .putByte(0);
         out.putInt(tag).putByte(1);
-        Bundle.writeHeld(out, held);
+        InputCodec.writeHeld(out, held);
         return out;
     }
 
@@ -578,7 +605,7 @@ class SequencerTest {
         return message.putInt(seq)
                 .putByte(0)
                 .putByte(Msg.EVENT_ORDER)
-                .putInt(Bundle.orderCode(order))
+                .putInt(InputCodec.orderCode(order))
                 .putByte(0);
     }
 
@@ -587,13 +614,14 @@ class SequencerTest {
                 .putByte(0)
                 .putByte(Msg.EVENT_PICK)
                 .putInt(serial)
-                .putByte(Bundle.pickCode(kind));
+                .putByte(InputCodec.pickCode(kind));
     }
 
     private List<Integer> ticksWithPick(UpgradeKind kind) {
         List<Integer> ticks = new ArrayList<>();
         for (Map.Entry<Integer, Bundle> entry : sealed.entrySet()) {
-            if (entry.getValue().pickOf(0) == kind) {
+            if (entry.getValue().hasEvent(0, Msg.EVENT_PICK)
+                    && InputCodec.pickFromCode(entry.getValue().eventExtra(0, Msg.EVENT_PICK)) == kind) {
                 ticks.add(entry.getKey());
             }
         }
@@ -603,7 +631,8 @@ class SequencerTest {
     private List<Integer> ticksWithOrder(Order order) {
         List<Integer> ticks = new ArrayList<>();
         for (Map.Entry<Integer, Bundle> entry : sealed.entrySet()) {
-            if (entry.getValue().orderOf(0) == order) {
+            if (entry.getValue().hasEvent(0, Msg.EVENT_ORDER)
+                    && InputCodec.orderFromCode(entry.getValue().eventValue(0, Msg.EVENT_ORDER)) == order) {
                 ticks.add(entry.getKey());
             }
         }
@@ -614,7 +643,7 @@ class SequencerTest {
         Bundle bundle = sealed.get(tick);
         assertThat(bundle).as("tick %d sealed", tick).isNotNull();
         PlayerInputs inputs = new PlayerInputs(Players.MAX);
-        bundle.applyTo(inputs);
+        new InputCodec(Players.MAX).applyTo(bundle, inputs);
         return inputs.get(slot);
     }
 

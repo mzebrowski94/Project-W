@@ -1,0 +1,9 @@
+eclipse.project.name = appName + '-relay'
+
+// The relay (ADR 0023): the door and the rooms online sessions meet through. Headless - no libGDX, and
+// RelayArchitectureTest keeps it so, with Netty inside net.netty and nothing of sim but the config plumbing.
+dependencies {
+  api project(':net')
+
+  testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
+}

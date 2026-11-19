@@ -111,6 +111,7 @@ class NettySessionTest {
                 new NetConfig.LogConfig("unused", "INFO", 1024, 0),
                 shipped.pacing(),
                 shipped.session(),
-                shipped.lan());
+                shipped.lan(),
+                shipped.relay());
     }
 }

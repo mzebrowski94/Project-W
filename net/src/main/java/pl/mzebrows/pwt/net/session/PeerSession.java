@@ -130,6 +130,7 @@ public final class PeerSession implements AutoCloseable {
     private @Nullable SessionSetup setup;
     private @Nullable Simulation world;
     private Bundle bundle = new Bundle(0);
+    private InputCodec codec = new InputCodec(0);
     private PlayerInputs inputs = new PlayerInputs(1);
     private int generation;
     private boolean paused;
@@ -546,7 +547,7 @@ public final class PeerSession implements AutoCloseable {
             world = current;
             log.info("peer", "event=restart tick=" + next);
         }
-        bundle.applyTo(inputs);
+        codec.applyTo(bundle, inputs);
         current.step(inputs);
         tick = next;
         produce(local);
@@ -586,17 +587,17 @@ public final class PeerSession implements AutoCloseable {
             }
             Order order = local.orderOf(seat);
             if (order != null) {
-                queue(slotOfSeat[seat], Msg.EVENT_ORDER, Bundle.orderCode(order), 0);
+                queue(slotOfSeat[seat], Msg.EVENT_ORDER, InputCodec.orderCode(order), 0);
             }
             UpgradeKind picked = local.pickOf(seat);
             if (picked != null) {
-                queue(slotOfSeat[seat], Msg.EVENT_PICK, local.pickSerialOf(seat), Bundle.pickCode(picked));
+                queue(slotOfSeat[seat], Msg.EVENT_PICK, local.pickSerialOf(seat), InputCodec.pickCode(picked));
             }
             PickupKind taken = local.crateTakeOf(seat);
             if (taken != null) {
-                queue(slotOfSeat[seat], Msg.EVENT_CRATE, Bundle.crateCode(taken), 0);
+                queue(slotOfSeat[seat], Msg.EVENT_CRATE, InputCodec.crateCode(taken), 0);
             } else if (local.closesCrate(seat)) {
-                queue(slotOfSeat[seat], Msg.EVENT_CRATE, Bundle.CRATE_CLOSE, 0);
+                queue(slotOfSeat[seat], Msg.EVENT_CRATE, InputCodec.CRATE_CLOSE, 0);
             }
         }
     }
@@ -647,7 +648,7 @@ public final class PeerSession implements AutoCloseable {
             for (int seat = 0; seat < slotOfSeat.length; seat++) {
                 if (slotOfSeat[seat] >= 0) {
                     int at = t & (OWN - 1);
-                    Bundle.writeHeld(out, ownTick[seat][at] == t ? own[seat][at] : CommanderInput.IDLE);
+                    InputCodec.writeHeld(out, ownTick[seat][at] == t ? own[seat][at] : CommanderInput.IDLE);
                 }
             }
         }
@@ -840,6 +841,7 @@ public final class PeerSession implements AutoCloseable {
         SessionSetup built = new SessionSetup(config, scenario, seed);
         setup = built;
         bundle = new Bundle(capacity);
+        codec = new InputCodec(capacity);
         inputs = new PlayerInputs(capacity);
         int size = Integer.highestOneBit(Math.max(2 * checksumTicks + 2 * pacing.leadMaxTicks() + 64, 64) * 2 - 1);
         ringMask = size - 1;

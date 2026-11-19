@@ -20,4 +20,6 @@ rootProject.name = 'Project-W'
 //          no devices, no net. Reads sim, never writes it.
 // core   - libGDX application: rendering, input, assets, screens. Depends on ui, net and sim.
 // lwjgl3 - desktop launcher.
-include 'map', 'sim', 'net', 'ui', 'core', 'lwjgl3'
+// relay  - the machine online sessions meet through (ADR 0023): door and rooms. Headless, depends on net;
+//          core and lwjgl3 never see it.
+include 'map', 'sim', 'net', 'relay', 'ui', 'core', 'lwjgl3'

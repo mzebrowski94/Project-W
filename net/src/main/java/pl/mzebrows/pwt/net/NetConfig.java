@@ -26,6 +26,7 @@ import pl.mzebrows.pwt.sim.ConfigKey;
  * @param pacing how this machine paces its part of a session - local config
  * @param session what every peer of a session agrees on, the host's holding for all - session config
  * @param lan how sessions on the local network are found
+ * @param relay what the relay's door reads - relay scope (ADR 0018), read only where the relay runs
  */
 public record NetConfig(
         int port,
@@ -39,7 +40,8 @@ public record NetConfig(
         LogConfig log,
         Pacing pacing,
         Session session,
-        Lan lan) {
+        Lan lan,
+        Relay relay) {
 
     private static final String ROOT = "net";
 
@@ -84,7 +86,8 @@ public record NetConfig(
                 log,
                 pacing,
                 session,
-                lan);
+                lan,
+                relay);
     }
 
     /** The same config with another log setup. */
@@ -101,7 +104,8 @@ public record NetConfig(
                 newLog,
                 pacing,
                 session,
-                lan);
+                lan,
+                relay);
     }
 
     /**
@@ -192,7 +196,8 @@ public record NetConfig(
                 log,
                 pacing,
                 newSession,
-                lan);
+                lan,
+                relay);
     }
 
     /** The same config with other pacing. */
@@ -209,7 +214,8 @@ public record NetConfig(
                 log,
                 newPacing,
                 session,
-                lan);
+                lan,
+                relay);
     }
 
     /**
@@ -301,6 +307,37 @@ public record NetConfig(
             require(port > 0 && port < 65_536, "lan.port", port);
             require(announceMillis > 0, "lan.announceMillis", announceMillis);
             require(forgetMillis > announceMillis, "lan.forgetMillis", forgetMillis);
+        }
+    }
+
+    /** The same config with other relay limits. */
+    public NetConfig with(Relay newRelay) {
+        return new NetConfig(
+                port,
+                portSearch,
+                connectTimeoutMillis,
+                linkTimeoutMillis,
+                heartbeatMillis,
+                maxDatagramBytes,
+                conditions,
+                latencySteps,
+                log,
+                pacing,
+                session,
+                lan,
+                newRelay);
+    }
+
+    /**
+     * What the relay's door reads (G0103). Relay scope (ADR 0018): the operator's own, read where the relay
+     * runs and never sent - the stages after the door add the keys that meter links and rooms.
+     *
+     * @param roomsMax how many rooms the relay holds at once; a host who opens one more is refused
+     */
+    public record Relay(int roomsMax) {
+
+        public Relay {
+            require(roomsMax >= 1, "relay.roomsMax", roomsMax);
         }
     }
 

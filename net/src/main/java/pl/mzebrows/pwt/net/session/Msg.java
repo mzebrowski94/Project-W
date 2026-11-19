@@ -50,9 +50,12 @@ final class Msg {
 
     /**
      * A crate's event (G0056): the value is the code of the pickup taken from the crate the slot has open,
-     * or {@link Bundle#CRATE_CLOSE} for shutting it.
+     * or {@code InputCodec.CRATE_CLOSE} for shutting it.
      */
     static final int EVENT_CRATE = 3;
+
+    /** How many input event types there are: {@code EVENT_ORDER} to {@code EVENT_CRATE}. */
+    static final int EVENT_TYPES = 3;
 
     /** The bytes one input event takes on the wire. */
     static final int EVENT_BYTES = 4 + 1 + 1 + 4 + 1;
