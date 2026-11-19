@@ -106,6 +106,7 @@ public final class DesyncReport {
         List<byte[]> bundles = dump.bundles();
         long[] hashes = new long[bundles.size()];
         Bundle bundle = new Bundle(world.capacity());
+        InputCodec codec = new InputCodec(world.capacity());
         PlayerInputs inputs = new PlayerInputs(world.capacity());
         WireReader in = new WireReader();
         for (int i = 0; i < bundles.size(); i++) {
@@ -114,7 +115,7 @@ public final class DesyncReport {
             if (bundle.restart()) {
                 world = worlds.fresh(dump.setup());
             }
-            bundle.applyTo(inputs);
+            codec.applyTo(bundle, inputs);
             world.step(inputs);
             if (roundTripEveryTick) {
                 Simulation rebuilt = worlds.blank(dump.setup());

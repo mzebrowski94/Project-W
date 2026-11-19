@@ -107,6 +107,13 @@ final class WireReader {
         return new String(getBytes(maxBytes), StandardCharsets.UTF_8);
     }
 
+    /** Copies the next {@code count} bytes into {@code target} at {@code at}. */
+    void copyTo(byte[] target, int at, int count) {
+        need(count);
+        System.arraycopy(bytes, this.at, target, at, count);
+        this.at += count;
+    }
+
     /** Steps over bytes the caller has no use for, still checking they are there. */
     void skip(int count) {
         need(count);

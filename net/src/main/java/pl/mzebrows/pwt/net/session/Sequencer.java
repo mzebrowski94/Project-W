@@ -10,7 +10,6 @@ import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.transport.Delivery;
 import pl.mzebrows.pwt.net.transport.Transport;
 import pl.mzebrows.pwt.net.transport.TransportListener;
-import pl.mzebrows.pwt.sim.CommanderInput;
 
 /**
  * The session's clock and nothing else (ADR 0012): every tick it seals what each slot is holding, and
@@ -75,8 +74,10 @@ public final class Sequencer implements AutoCloseable {
     /** Which peer each slot belongs to, or -1. */
     private final int[] owner;
 
-    private final CommanderInput[] lastHeld;
-    private final CommanderInput[][] ahead;
+    /** By slot, the held bytes it last sealed: opaque, repeated for a slot whose input is late (ADR 0023). */
+    private final byte[][] lastHeld;
+
+    private final byte[][][] ahead;
     private final int[][] aheadTick;
     private final boolean[] joinWanted;
 
@@ -154,9 +155,8 @@ public final class Sequencer implements AutoCloseable {
         this.longestRoundTripNanos = 2L * pacing.leadMaxTicks() * tickNanos;
         owner = new int[capacity];
         Arrays.fill(owner, -1);
-        lastHeld = new CommanderInput[capacity];
-        Arrays.fill(lastHeld, CommanderInput.IDLE);
-        ahead = new CommanderInput[capacity][AHEAD];
+        lastHeld = new byte[capacity][Bundle.HELD_BYTES];
+        ahead = new byte[capacity][AHEAD][Bundle.HELD_BYTES];
         aheadTick = new int[capacity][AHEAD];
         for (int[] ticks : aheadTick) {
             Arrays.fill(ticks, -1);
@@ -316,19 +316,16 @@ public final class Sequencer implements AutoCloseable {
             if (owner[slot] < 0) {
                 continue;
             }
-            CommanderInput held;
             if (aheadTick[slot][index] == tick) {
-                held = ahead[slot][index];
+                System.arraycopy(ahead[slot][index], 0, lastHeld[slot], 0, Bundle.HELD_BYTES);
             } else {
-                held = lastHeld[slot];
                 Peer peer = peerWithId(owner[slot]);
                 if (peer != null && peer.state != PeerState.DORMANT) {
                     peer.repeats++;
                     peer.repeated++;
                 }
             }
-            lastHeld[slot] = held;
-            sealing.hold(slot, held);
+            sealing.hold(slot, lastHeld[slot], 0);
             if (joinWanted[slot]) {
                 sealing.join(slot, owner[slot]);
                 joinWanted[slot] = false;
@@ -506,7 +503,7 @@ public final class Sequencer implements AutoCloseable {
         peer.state = PeerState.DORMANT;
         for (int slot = 0; slot < capacity; slot++) {
             if (owner[slot] == peer.id) {
-                lastHeld[slot] = CommanderInput.IDLE;
+                Arrays.fill(lastHeld[slot], (byte) 0);
                 Arrays.fill(aheadTick[slot], -1);
                 if (!joinWanted[slot]) {
                     goAway(slot);
@@ -708,7 +705,7 @@ public final class Sequencer implements AutoCloseable {
                     continue;
                 }
                 int index = tick & (AHEAD - 1);
-                ahead[slot][index] = Bundle.readHeld(in, lastHeld[slot]);
+                in.copyTo(ahead[slot][index], 0, Bundle.HELD_BYTES);
                 aheadTick[slot][index] = tick;
             }
         }
@@ -722,17 +719,8 @@ public final class Sequencer implements AutoCloseable {
             if (slot >= capacity) {
                 throw new WireException("slot " + slot + " in a session of " + capacity);
             }
-            // Read whole before anything is held, so a malformed event is refused rather than sealed.
-            switch (type) {
-                case Msg.EVENT_ORDER -> Bundle.orderFromCode(value);
-                case Msg.EVENT_PICK -> Bundle.pickFromCode(extra);
-                case Msg.EVENT_CRATE -> {
-                    if (value != Bundle.CRATE_CLOSE) {
-                        Bundle.crateFromCode(value);
-                    }
-                }
-                default -> throw new WireException("no input event of type " + type);
-            }
+            // Only what fits a bundle is checked; what it means is for the peers (ADR 0023).
+            Bundle.checkEvent(type, value, extra);
             peer.hold(seq, slot, type, value, extra);
         }
         in.expectEnd();
@@ -863,7 +851,7 @@ public final class Sequencer implements AutoCloseable {
             }
             if (slot >= 0) {
                 owner[slot] = peer.id;
-                lastHeld[slot] = CommanderInput.IDLE;
+                Arrays.fill(lastHeld[slot], (byte) 0);
                 Arrays.fill(aheadTick[slot], -1);
                 joinWanted[slot] = true;
                 peer.slotOfSeat[seat] = slot;
@@ -943,7 +931,7 @@ public final class Sequencer implements AutoCloseable {
         for (int slot = 0; slot < capacity; slot++) {
             if (owner[slot] == peer.id && peer.id >= 0) {
                 owner[slot] = -1;
-                lastHeld[slot] = CommanderInput.IDLE;
+                Arrays.fill(lastHeld[slot], (byte) 0);
                 // The unplugged pad of G0038: the commander stays, and the draft rotation passes him by.
                 if (!joinWanted[slot]) {
                     goAway(slot);
@@ -1120,22 +1108,10 @@ public final class Sequencer implements AutoCloseable {
                 }
                 int slot = eventSlot[next];
                 if (owners[slot] == id) {
-                    if (eventType[next] == Msg.EVENT_PICK) {
-                        if (bundle.pickOf(slot) != null) {
-                            return;
-                        }
-                        bundle.pick(slot, eventValue[next], Bundle.pickFromCode(eventExtra[next]));
-                    } else if (eventType[next] == Msg.EVENT_CRATE) {
-                        if (bundle.hasCrateEvent(slot)) {
-                            return;
-                        }
-                        bundle.crate(slot, eventValue[next]);
-                    } else {
-                        if (bundle.orderOf(slot) != null) {
-                            return;
-                        }
-                        bundle.order(slot, Bundle.orderFromCode(eventValue[next]));
+                    if (bundle.hasEvent(slot, eventType[next])) {
+                        return;
                     }
+                    bundle.event(slot, eventType[next], eventValue[next], eventExtra[next]);
                 }
                 eventsApplied++;
                 eventCount--;

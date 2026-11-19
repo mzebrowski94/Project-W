@@ -1,88 +1,69 @@
 package pl.mzebrows.pwt.net.session;
 
 import java.util.Arrays;
-import org.jspecify.annotations.Nullable;
-import pl.mzebrows.pwt.sim.CommanderInput;
-import pl.mzebrows.pwt.sim.PlayerInputs;
-import pl.mzebrows.pwt.sim.def.Order;
-import pl.mzebrows.pwt.sim.def.PickupKind;
-import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * One sealed tick (ADR 0012, "tick bundle"): what every seated slot is holding, the input events the
  * sequencer stamped on it, and the session's own - a restart, a switch of invulnerability. Every peer
  * steps its world with exactly this, which is the whole of lockstep.
  *
- * <p><strong>Held input crosses the wire the same for everyone</strong> - aim as a float's raw bits,
- * movement as a whole number of sixteen-thousandths of a push - so the host's own input, which goes
- * through the same encoding, can never round differently from anybody else's. A value that is not a
- * finite number becomes zero: a stick reporting NaN would otherwise put NaN into a position on every peer
- * at once.
+ * <p><strong>Blind to the game</strong> (ADR 0023): held input is {@link #HELD_BYTES} bytes the sequencer
+ * stores and repeats without reading, and an event is a type, a slot, a value and an extra - numbers the
+ * peers, and only the peers, give a meaning ({@link InputCodec}). Nothing here names a game type, so a
+ * relay that has never heard of one can seal, store and resend a session.
  *
- * <p>Mutable and reused, for the reason {@link PlayerInputs} is: one is decoded per tick. A slot's held
- * input is only rebuilt when its bits have changed, so an idle or steady player allocates nothing.
+ * <p>Mutable and reused: one is sealed or read per tick, and nothing in it allocates.
  *
  * <p>Layout: tick (int); flags (byte: 1 restart, 2 switches invulnerability, 4 invulnerable); held
- * count, then per slot its number and 13 bytes (two pushes as shorts, two aims as floats, then a byte of
- * buttons); order count,
- * then per order a slot and an order; join count, then per join a slot and the machine it sits at (int);
- * pick count, then per pick a slot, the
- * draft's serial (int) and the kind taken; presence count, then per change a slot and whether it goes
- * away (1) or comes back (0); crate count, then per event a slot and the pickup taken (its code) or
- * {@link #CRATE_CLOSE}.
+ * count, then per slot its number and its {@link #HELD_BYTES} bytes; order count, then per order a slot
+ * and its value (byte); join count, then per join a slot and the machine it sits at (int); pick count,
+ * then per pick a slot, its value (int) and its extra (byte); presence count, then per change a slot and
+ * whether it goes away (1) or comes back (0); crate count, then per event a slot and its value (byte).
+ * Which sections an event type has is {@link Msg#EVENT_ORDER}, {@link Msg#EVENT_PICK},
+ * {@link Msg#EVENT_CRATE}.
  */
 final class Bundle {
 
     /** The bytes one slot's held input takes, its slot number not included. */
     static final int HELD_BYTES = 13;
 
-    /**
-     * Movement goes as a whole number of sixteen-thousandths of a push: two bytes rather than four, and a
-     * full push, its halves and its quarters stay exact.
-     */
-    private static final float PUSH_STEPS = 16_384f;
-
     /** Ahead of the seats in a bundle: its tick, its flags, and how many seats hold input. */
     private static final int HEADER_BYTES = 6;
 
     private static final int SEAT_BYTES = 1 + HELD_BYTES;
 
-    /** Where each field of a seat's held input starts, and how long it is: two pushes, two aims, buttons. */
+    /**
+     * Where each stretch of a seat's held bytes starts, and how long it is. A datagram's second bundle on
+     * resends only the stretches that differ from the one before it - compared as bytes, whatever they
+     * mean.
+     */
     private static final int[] FIELD_AT = {0, 2, 4, 8, 12};
 
     private static final int[] FIELD_BYTES = {2, 2, 4, 4, 1};
 
     private static final int ALL_FIELDS = (1 << FIELD_AT.length) - 1;
 
-    /** A changed seat's slot and which of its fields follow share a byte: the slot is the low three bits. */
+    /** A changed seat's slot and which of its stretches follow share a byte: the slot is the low three bits. */
     private static final int SLOT_BITS = 3;
 
     private static final int SLOT_MASK = (1 << SLOT_BITS) - 1;
-
-    private static final Order[] ORDERS = Order.values();
-
-    private static final UpgradeKind[] KINDS = UpgradeKind.values();
-
-    private static final PickupKind[] PICKUPS = PickupKind.values();
-
-    /** A crate's event that takes nothing and shuts it (G0056). */
-    static final int CRATE_CLOSE = 0;
 
     private static final int RESTART = 1;
     private static final int SWITCHES_INVULNERABILITY = 2;
     private static final int INVULNERABLE = 4;
 
-    private final CommanderInput[] held;
+    private final byte[][] held;
     private final boolean[] present;
-    private final @Nullable Order[] orders;
+
+    /** By event type (one of {@code Msg.EVENT_*}), then slot. */
+    private final boolean[][] hasEvent;
+
+    private final int[][] eventValue;
+    private final int[][] eventExtra;
     private final boolean[] joins;
     private final int[] joinMachines;
-    private final @Nullable UpgradeKind[] picks;
-    private final int[] pickSerials;
     private final boolean[] goesAway;
     private final boolean[] comesBack;
-    private final @Nullable PickupKind[] crateTakes;
-    private final boolean[] crateCloses;
 
     private int tick;
     private boolean restart;
@@ -90,17 +71,15 @@ final class Bundle {
     private boolean invulnerable;
 
     Bundle(int capacity) {
-        held = new CommanderInput[capacity];
+        held = new byte[capacity][HELD_BYTES];
         present = new boolean[capacity];
-        orders = new Order[capacity];
+        hasEvent = new boolean[Msg.EVENT_TYPES + 1][capacity];
+        eventValue = new int[Msg.EVENT_TYPES + 1][capacity];
+        eventExtra = new int[Msg.EVENT_TYPES + 1][capacity];
         joins = new boolean[capacity];
         joinMachines = new int[capacity];
-        picks = new UpgradeKind[capacity];
-        pickSerials = new int[capacity];
         goesAway = new boolean[capacity];
         comesBack = new boolean[capacity];
-        crateTakes = new PickupKind[capacity];
-        crateCloses = new boolean[capacity];
         clear(-1);
     }
 
@@ -116,44 +95,85 @@ final class Bundle {
         return restart;
     }
 
-    /** Empties this for a new tick. Held input is kept as the reference the next decode compares against. */
+    boolean switchesInvulnerability() {
+        return switchesInvulnerability;
+    }
+
+    boolean invulnerable() {
+        return invulnerable;
+    }
+
+    /** Empties this for a new tick. */
     Bundle clear(int newTick) {
         tick = newTick;
         restart = false;
         switchesInvulnerability = false;
         invulnerable = false;
         for (int slot = 0; slot < held.length; slot++) {
-            if (held[slot] == null) {
-                held[slot] = CommanderInput.IDLE;
-            }
             present[slot] = false;
-            orders[slot] = null;
+            for (int type = 1; type <= Msg.EVENT_TYPES; type++) {
+                hasEvent[type][slot] = false;
+                eventValue[type][slot] = 0;
+                eventExtra[type][slot] = 0;
+            }
             joins[slot] = false;
             joinMachines[slot] = 0;
-            picks[slot] = null;
-            pickSerials[slot] = 0;
             goesAway[slot] = false;
             comesBack[slot] = false;
-            crateTakes[slot] = null;
-            crateCloses[slot] = false;
         }
         return this;
     }
 
-    Bundle hold(int slot, CommanderInput input) {
-        held[slot] = input;
+    /** This slot holds these {@link #HELD_BYTES} bytes this tick: copied from {@code source} at {@code at}. */
+    Bundle hold(int slot, byte[] source, int at) {
+        System.arraycopy(source, at, held[slot], 0, HELD_BYTES);
         present[slot] = true;
         return this;
     }
 
-    Bundle order(int slot, Order order) {
-        orders[slot] = order;
+    boolean holds(int slot) {
+        return present[slot];
+    }
+
+    /** The bytes this slot holds - the bundle's own, not a copy. */
+    byte[] heldBytes(int slot) {
+        return held[slot];
+    }
+
+    /** This slot has an event of this type: one of each type a slot a tick. */
+    Bundle event(int slot, int type, int value, int extra) {
+        hasEvent[type][slot] = true;
+        eventValue[type][slot] = value;
+        eventExtra[type][slot] = extra;
         return this;
     }
 
-    @Nullable
-    Order orderOf(int slot) {
-        return orders[slot];
+    boolean hasEvent(int slot, int type) {
+        return hasEvent[type][slot];
+    }
+
+    int eventValue(int slot, int type) {
+        return eventValue[type][slot];
+    }
+
+    int eventExtra(int slot, int type) {
+        return eventExtra[type][slot];
+    }
+
+    /**
+     * Refuses an event no bundle could carry: a type nobody has, or a value that does not fit the bytes its
+     * type gives it. What it means is not asked - that is for the peers.
+     */
+    static void checkEvent(int type, int value, int extra) {
+        if (type < 1 || type > Msg.EVENT_TYPES) {
+            throw new WireException("no input event of type " + type);
+        }
+        if (type != Msg.EVENT_PICK && (value < 0 || value > 255)) {
+            throw new WireException("an event value of " + value + " in a byte");
+        }
+        if (extra < 0 || extra > 255) {
+            throw new WireException("an event extra of " + extra + " in a byte");
+        }
     }
 
     /** A player takes this slot, sitting at this machine - the peer that holds it (G0056). */
@@ -163,16 +183,12 @@ final class Bundle {
         return this;
     }
 
-    /** This slot takes the card of this kind from the draft with this serial (G0049). */
-    Bundle pick(int slot, int serial, UpgradeKind kind) {
-        picks[slot] = kind;
-        pickSerials[slot] = serial;
-        return this;
+    boolean joins(int slot) {
+        return joins[slot];
     }
 
-    @Nullable
-    UpgradeKind pickOf(int slot) {
-        return picks[slot];
+    int joinMachine(int slot) {
+        return joinMachines[slot];
     }
 
     /** This slot's link dropped: it is away from this tick (G0052). */
@@ -181,25 +197,18 @@ final class Bundle {
         return this;
     }
 
+    boolean goesAway(int slot) {
+        return goesAway[slot];
+    }
+
     /** This slot's machine is back and re-seated: present again from this tick (G0052). */
     Bundle back(int slot) {
         comesBack[slot] = true;
         return this;
     }
 
-    /** This slot's crate event (G0056): a pickup taken from the crate he has open, or {@link #CRATE_CLOSE}. */
-    Bundle crate(int slot, int code) {
-        if (code == CRATE_CLOSE) {
-            crateCloses[slot] = true;
-        } else {
-            crateTakes[slot] = crateFromCode(code);
-        }
-        return this;
-    }
-
-    /** Whether this slot has a crate event this tick already: one a tick, as every other event. */
-    boolean hasCrateEvent(int slot) {
-        return crateTakes[slot] != null || crateCloses[slot];
+    boolean comesBack(int slot) {
+        return comesBack[slot];
     }
 
     Bundle restarting() {
@@ -213,40 +222,6 @@ final class Bundle {
         return this;
     }
 
-    /** Hands this tick to a world: clears {@code inputs} and fills it from this bundle. */
-    void applyTo(PlayerInputs inputs) {
-        inputs.clear();
-        for (int slot = 0; slot < held.length; slot++) {
-            if (present[slot]) {
-                inputs.set(slot, held[slot]);
-            }
-            inputs.order(slot, orders[slot]);
-            if (joins[slot]) {
-                inputs.join(slot, joinMachines[slot]);
-            }
-            UpgradeKind picked = picks[slot];
-            if (picked != null) {
-                inputs.pick(slot, pickSerials[slot], picked);
-            }
-            if (goesAway[slot]) {
-                inputs.away(slot);
-            }
-            if (comesBack[slot]) {
-                inputs.back(slot);
-            }
-            PickupKind taken = crateTakes[slot];
-            if (taken != null) {
-                inputs.takeFromCrate(slot, taken);
-            }
-            if (crateCloses[slot]) {
-                inputs.closeCrate(slot);
-            }
-        }
-        if (switchesInvulnerability) {
-            inputs.switchInvulnerability(invulnerable);
-        }
-    }
-
     void write(WireWriter out) {
         out.putInt(tick);
         out.putByte((restart ? RESTART : 0)
@@ -256,37 +231,17 @@ final class Bundle {
         for (int slot = 0; slot < held.length; slot++) {
             if (present[slot]) {
                 out.putByte(slot);
-                writeHeld(out, held[slot]);
+                out.putRaw(held[slot], 0, HELD_BYTES);
             }
         }
-        int orderCount = 0;
-        for (Order order : orders) {
-            orderCount += order == null ? 0 : 1;
-        }
-        out.putByte(orderCount);
-        for (int slot = 0; slot < orders.length; slot++) {
-            Order order = orders[slot];
-            if (order != null) {
-                out.putByte(slot).putByte(orderCode(order));
-            }
-        }
+        writeEvents(out, Msg.EVENT_ORDER);
         out.putByte(count(joins));
         for (int slot = 0; slot < joins.length; slot++) {
             if (joins[slot]) {
                 out.putByte(slot).putInt(joinMachines[slot]);
             }
         }
-        int pickCount = 0;
-        for (UpgradeKind picked : picks) {
-            pickCount += picked == null ? 0 : 1;
-        }
-        out.putByte(pickCount);
-        for (int slot = 0; slot < picks.length; slot++) {
-            UpgradeKind picked = picks[slot];
-            if (picked != null) {
-                out.putByte(slot).putInt(pickSerials[slot]).putByte(pickCode(picked));
-            }
-        }
+        writeEvents(out, Msg.EVENT_PICK);
         out.putByte(count(goesAway) + count(comesBack));
         for (int slot = 0; slot < goesAway.length; slot++) {
             if (goesAway[slot]) {
@@ -296,17 +251,19 @@ final class Bundle {
                 out.putByte(slot).putByte(0);
             }
         }
-        int crateCount = 0;
-        for (int slot = 0; slot < crateTakes.length; slot++) {
-            crateCount += hasCrateEvent(slot) ? 1 : 0;
-        }
-        out.putByte(crateCount);
-        for (int slot = 0; slot < crateTakes.length; slot++) {
-            PickupKind taken = crateTakes[slot];
-            if (taken != null) {
-                out.putByte(slot).putByte(crateCode(taken));
-            } else if (crateCloses[slot]) {
-                out.putByte(slot).putByte(CRATE_CLOSE);
+        writeEvents(out, Msg.EVENT_CRATE);
+    }
+
+    private void writeEvents(WireWriter out, int type) {
+        out.putByte(count(hasEvent[type]));
+        for (int slot = 0; slot < held.length; slot++) {
+            if (hasEvent[type][slot]) {
+                out.putByte(slot);
+                if (type == Msg.EVENT_PICK) {
+                    out.putInt(eventValue[type][slot]).putByte(eventExtra[type][slot]);
+                } else {
+                    out.putByte(eventValue[type][slot]);
+                }
             }
         }
     }
@@ -321,25 +278,17 @@ final class Bundle {
         int heldCount = in.getByte();
         for (int i = 0; i < heldCount; i++) {
             int slot = slot(in.getByte());
-            hold(slot, readHeld(in, held[slot]));
+            in.copyTo(held[slot], 0, HELD_BYTES);
+            present[slot] = true;
         }
-        int orderCount = in.getByte();
-        for (int i = 0; i < orderCount; i++) {
-            int slot = slot(in.getByte());
-            orders[slot] = orderFromCode(in.getByte());
-        }
+        readEvents(in, Msg.EVENT_ORDER);
         int joinCount = in.getByte();
         for (int i = 0; i < joinCount; i++) {
             int slot = slot(in.getByte());
             joins[slot] = true;
             joinMachines[slot] = in.getInt();
         }
-        int pickCount = in.getByte();
-        for (int i = 0; i < pickCount; i++) {
-            int slot = slot(in.getByte());
-            pickSerials[slot] = in.getInt();
-            picks[slot] = pickFromCode(in.getByte());
-        }
+        readEvents(in, Msg.EVENT_PICK);
         int presenceCount = in.getByte();
         for (int i = 0; i < presenceCount; i++) {
             int slot = slot(in.getByte());
@@ -349,18 +298,27 @@ final class Bundle {
                 comesBack[slot] = true;
             }
         }
-        int crateCount = in.getByte();
-        for (int i = 0; i < crateCount; i++) {
-            int slot = slot(in.getByte());
-            crate(slot, in.getByte());
-        }
+        readEvents(in, Msg.EVENT_CRATE);
         return this;
     }
 
+    private void readEvents(WireReader in, int type) {
+        int count = in.getByte();
+        for (int i = 0; i < count; i++) {
+            int slot = slot(in.getByte());
+            if (type == Msg.EVENT_PICK) {
+                int value = in.getInt();
+                event(slot, type, value, in.getByte());
+            } else {
+                event(slot, type, in.getByte(), 0);
+            }
+        }
+    }
+
     /**
-     * Steps over one bundle where the reader stands, checking every slot and order in it without
-     * building anything, and returns its tick. How a peer files a bundle away to play later: kept as the
-     * bytes it came in, decoded once, when it is played.
+     * Steps over one bundle where the reader stands, checking every slot in it without building anything,
+     * and returns its tick. How a peer files a bundle away to play later: kept as the bytes it came in,
+     * decoded once, when it is played.
      */
     static int skip(WireReader in, int capacity) {
         int tick = in.getInt();
@@ -460,111 +418,26 @@ final class Bundle {
         return -1;
     }
 
-    /** Steps over a bundle's orders, joins, picks, presence and crates, checking each. */
+    /** Steps over a bundle's orders, joins, picks, presence and crates, checking each slot. */
     private static void skipEvents(WireReader in, int capacity) {
-        int orderCount = in.getByte();
-        for (int i = 0; i < orderCount; i++) {
-            checkSlot(in.getByte(), capacity);
-            orderFromCode(in.getByte());
-        }
-        int joinCount = in.getByte();
-        for (int i = 0; i < joinCount; i++) {
-            checkSlot(in.getByte(), capacity);
-            in.getInt();
-        }
-        int pickCount = in.getByte();
-        for (int i = 0; i < pickCount; i++) {
-            checkSlot(in.getByte(), capacity);
-            in.getInt();
-            pickFromCode(in.getByte());
-        }
+        skipSection(in, capacity, 1);
+        skipSection(in, capacity, 4);
+        skipSection(in, capacity, 5);
         int presenceCount = in.getByte();
         for (int i = 0; i < presenceCount; i++) {
             checkSlot(in.getByte(), capacity);
             awayFromCode(in.getByte());
         }
-        int crateCount = in.getByte();
-        for (int i = 0; i < crateCount; i++) {
+        skipSection(in, capacity, 1);
+    }
+
+    /** A count, then that many of a slot and {@code bodyBytes} more. */
+    private static void skipSection(WireReader in, int capacity, int bodyBytes) {
+        int count = in.getByte();
+        for (int i = 0; i < count; i++) {
             checkSlot(in.getByte(), capacity);
-            int code = in.getByte();
-            if (code != CRATE_CLOSE) {
-                crateFromCode(code);
-            }
+            in.skip(bodyBytes);
         }
-    }
-
-    /** Writes one slot's held input: its pushes in sixteen-thousandths, its aim as raw bits, its buttons. */
-    static void writeHeld(WireWriter out, CommanderInput input) {
-        out.putShort(push(input.moveX()))
-                .putShort(push(input.moveY()))
-                .putInt(Float.floatToRawIntBits(input.aimX()))
-                .putInt(Float.floatToRawIntBits(input.aimY()))
-                .putByte(buttons(input));
-    }
-
-    /** Reads one slot's held input, handing back {@code previous} itself when nothing has changed. */
-    static CommanderInput readHeld(WireReader in, CommanderInput previous) {
-        float moveX = pushFrom(in.getShort());
-        float moveY = pushFrom(in.getShort());
-        float aimX = finite(Float.intBitsToFloat(in.getInt()));
-        float aimY = finite(Float.intBitsToFloat(in.getInt()));
-        int buttons = in.getByte();
-        if (buttons > 63) {
-            throw new WireException("button bits " + buttons + " name buttons nobody has");
-        }
-        if (same(previous, moveX, moveY, aimX, aimY, buttons)) {
-            return previous;
-        }
-        if (same(CommanderInput.IDLE, moveX, moveY, aimX, aimY, buttons)) {
-            return CommanderInput.IDLE;
-        }
-        return new CommanderInput(
-                moveX,
-                moveY,
-                aimX,
-                aimY,
-                (buttons & 1) != 0,
-                (buttons & 2) != 0,
-                (buttons & 4) != 0,
-                (buttons & 8) != 0,
-                (buttons & 16) != 0,
-                (buttons & 32) != 0);
-    }
-
-    @SuppressWarnings("EnumOrdinal") // both ends run the same build - the handshake refuses anything else
-    static int orderCode(Order order) {
-        return order.ordinal() + 1;
-    }
-
-    static Order orderFromCode(int code) {
-        if (code < 1 || code > ORDERS.length) {
-            throw new WireException("no order " + code);
-        }
-        return ORDERS[code - 1];
-    }
-
-    @SuppressWarnings("EnumOrdinal") // both ends run the same build - the handshake refuses anything else
-    static int pickCode(UpgradeKind kind) {
-        return kind.ordinal() + 1;
-    }
-
-    static UpgradeKind pickFromCode(int code) {
-        if (code < 1 || code > KINDS.length) {
-            throw new WireException("no upgrade " + code);
-        }
-        return KINDS[code - 1];
-    }
-
-    @SuppressWarnings("EnumOrdinal") // both ends run the same build - the handshake refuses anything else
-    static int crateCode(PickupKind kind) {
-        return kind.ordinal() + 1;
-    }
-
-    static PickupKind crateFromCode(int code) {
-        if (code < 1 || code > PICKUPS.length) {
-            throw new WireException("no pickup " + code);
-        }
-        return PICKUPS[code - 1];
     }
 
     /** Whether a presence change is a slot going away rather than coming back. */
@@ -584,39 +457,6 @@ final class Bundle {
             throw new WireException("slot " + slot + " in a session of " + capacity);
         }
         return slot;
-    }
-
-    private static boolean same(CommanderInput input, float moveX, float moveY, float aimX, float aimY, int buttons) {
-        return Float.floatToRawIntBits(input.moveX()) == Float.floatToRawIntBits(moveX)
-                && Float.floatToRawIntBits(input.moveY()) == Float.floatToRawIntBits(moveY)
-                && Float.floatToRawIntBits(input.aimX()) == Float.floatToRawIntBits(aimX)
-                && Float.floatToRawIntBits(input.aimY()) == Float.floatToRawIntBits(aimY)
-                && buttons(input) == buttons;
-    }
-
-    private static int buttons(CommanderInput input) {
-        return (input.firing() ? 1 : 0)
-                | (input.striking() ? 2 : 0)
-                | (input.throwing() ? 4 : 0)
-                | (input.acting() ? 8 : 0)
-                | (input.dragging() ? 16 : 0)
-                | (input.aimRelative() ? 32 : 0);
-    }
-
-    private static int push(float move) {
-        float within = Float.isFinite(move) ? Math.max(-1f, Math.min(1f, move)) : 0f;
-        return Math.round(within * PUSH_STEPS);
-    }
-
-    private static float pushFrom(int steps) {
-        if (steps < -PUSH_STEPS || steps > PUSH_STEPS) {
-            throw new WireException("a push of " + steps + " steps, past a whole one");
-        }
-        return steps / PUSH_STEPS;
-    }
-
-    private static float finite(float value) {
-        return Float.isFinite(value) ? value : 0f;
     }
 
     private static int count(boolean[] flags) {
