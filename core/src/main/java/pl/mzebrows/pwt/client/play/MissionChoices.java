@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.function.LongSupplier;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.sim.MissionConfig;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.ui.nav.CodePicker;
 
@@ -44,9 +45,14 @@ public final class MissionChoices {
     private final Clock clock;
     private final LongSupplier draws;
     private final StringBuilder typed = new StringBuilder();
-    private final CodePicker picker = new CodePicker(MissionCode.alphabets());
+    private final MissionConfig mission;
+    private final CodePicker picker;
     private @Nullable LocalDate day;
     private TierKind randomTier = TierKind.MEDIUM;
+
+    /** The missions page's length row: how many biomes RANDOM draws at, and what the line's code holds when it holds one. */
+    private int length;
+
     private @Nullable MissionCode lastPlayed;
 
     /** RANDOM's last draw, or null before the first: the line holding it is RANDOM, not CUSTOM. */
@@ -57,15 +63,20 @@ public final class MissionChoices {
     /**
      * @param clock where today is read, in UTC
      * @param draws the client's own randomness, for RANDOM's seeds - never the simulation's
+     * @param mission the lengths a mission may be, and the default - a daily's - the length row starts at (G0102)
      */
-    public MissionChoices(Clock clock, LongSupplier draws) {
+    public MissionChoices(Clock clock, LongSupplier draws, MissionConfig mission) {
         this.clock = clock;
         this.draws = draws;
+        this.mission = mission;
+        this.length = mission.biomes();
+        this.picker = new CodePicker(MissionCode.alphabets(mission));
     }
 
     /** The page opens from the menu: the date is read now, and the code line starts empty - nothing chosen. */
     public void open() {
         day = LocalDate.now(clock);
+        length = mission.biomes();
         typed.setLength(0);
         problem = "";
     }
@@ -79,6 +90,7 @@ public final class MissionChoices {
         MissionCode played = lastPlayed;
         if (played != null) {
             typed.append(played.text());
+            length = played.length();
         }
     }
 
@@ -89,7 +101,7 @@ public final class MissionChoices {
     }
 
     public MissionCode daily(TierKind tier) {
-        return MissionCode.daily(day().toEpochDay(), tier);
+        return MissionCode.daily(day().toEpochDay(), tier, mission.biomes());
     }
 
     /**
@@ -97,7 +109,7 @@ public final class MissionChoices {
      * else one of the day either side's, as a machine that joined someone else's daily finds it.
      */
     public @Nullable LocalDate dailyDay(MissionCode code) {
-        return code.dailyNear(day());
+        return code.dailyNear(day(), mission.biomes());
     }
 
     public TierKind randomTier() {
@@ -113,12 +125,30 @@ public final class MissionChoices {
         randomTier = TIERS[Math.floorMod(at + Integer.signum(direction), TIERS.length)];
     }
 
-    /** A mission on RANDOM's tier, its seed drawn afresh: a new one each time. */
-    public MissionCode random() {
-        return new MissionCode(randomTier, Math.floorMod(draws.getAsLong(), MissionCode.SEEDS));
+    /** How many biomes the length row shows, and RANDOM draws at (G0102). */
+    public int length() {
+        return length;
     }
 
-    /** A daily chosen: its code in the line, in place of what was there. */
+    /**
+     * The length row stepped, left or right and round. When the line holds a whole code it is written afresh at the
+     * new length - the same tier and seed, another mission, so a daily becomes a custom one; else the row alone moves.
+     */
+    public void stepLength(int direction) {
+        int span = mission.biomesMax() - mission.biomesMin() + 1;
+        length = mission.biomesMin() + Math.floorMod(length - mission.biomesMin() + Integer.signum(direction), span);
+        MissionCode held = code();
+        if (held != null) {
+            replaceTyped(new MissionCode(held.tier(), length, held.seed()).text());
+        }
+    }
+
+    /** A mission on RANDOM's tier at the row's length, its seed drawn afresh: a new one each time. */
+    public MissionCode random() {
+        return new MissionCode(randomTier, length, Math.floorMod(draws.getAsLong(), MissionCode.SEEDS));
+    }
+
+    /** A daily chosen: its code in the line, in place of what was there, and the length row at its default (G0102). */
     public void chooseDaily(TierKind tier) {
         replaceTyped(daily(tier).text());
     }
@@ -212,10 +242,10 @@ public final class MissionChoices {
 
     /** The tiers' letters, for {@link #FIRST_LETTER}'s words: {@code E/M/H}. */
     public static String tierLetters() {
-        String letters = MissionCode.alphabets().getFirst();
-        StringBuilder text = new StringBuilder(2 * letters.length());
-        for (int i = 0; i < letters.length(); i++) {
-            text.append(i == 0 ? "" : "/").append(letters.charAt(i));
+        TierKind[] tiers = TIERS;
+        StringBuilder text = new StringBuilder(2 * tiers.length);
+        for (int i = 0; i < tiers.length; i++) {
+            text.append(i == 0 ? "" : "/").append(MissionCode.letter(tiers[i]));
         }
         return text.toString();
     }
@@ -230,7 +260,11 @@ public final class MissionChoices {
 
     /** The mission the code line names, or null while it is not whole or fails its check. */
     public @Nullable MissionCode code() {
-        return typed.length() == MissionCode.LENGTH ? MissionCode.parse(typed.toString()) : null;
+        if (typed.length() != MissionCode.LENGTH) {
+            return null;
+        }
+        MissionCode parsed = MissionCode.parse(typed.toString());
+        return parsed != null && mission.hasLength(parsed.length()) ? parsed : null;
     }
 
     /** Where the line's code came from, or null while the line names no mission. */
@@ -266,7 +300,11 @@ public final class MissionChoices {
 
     /** The line was changed: a whole code that fails its check is refused at once; anything else is not. */
     private void check() {
-        problem = typed.length() == MissionCode.LENGTH && code() == null ? REFUSED : "";
+        MissionCode held = code();
+        problem = typed.length() == MissionCode.LENGTH && held == null ? REFUSED : "";
+        if (held != null) {
+            length = held.length();
+        }
     }
 
     private static boolean codey(char c) {

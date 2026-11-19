@@ -180,8 +180,9 @@ does is `MissionChoices` (tested); the page is `MenuScreen`'s. Entries, top to b
 | Entry | Label | Value | Intent |
 |---|---|---|---|
 | `easy`, `medium`, `hard` | `ui.tier.*` - one per `TierKind`, in order | `ui.missions.won = ✓ {m:ss.t}`, the best time, once that day's daily is won on this machine (`MissionRecords`, G0067), else nothing | `MISSION(daily)` - that daily's code into the line, in place of what was there; the selection stays |
-| `random` | `ui.missions.random = RANDOM` | a choice row `< MEDIUM >`, `ui.tier.*`, left and right step it; remembered for the run, first MEDIUM. Stepping it leaves the line alone | `MISSION(random)` - a seed drawn uniformly from [0, 25^6) with the client's own randomness into the line, a new one each confirm; the selection stays |
-| `code` | `ui.missions.code = ENTER CODE` | the code line in a code's shape, `MJGF-6___` - the dash there from the start, never typed - and once it names a mission, `ui.missions.origin = {tier} {origin}`: `MEDIUM DAILY`, `HARD RANDOM`, `EASY CUSTOM` | opens the picker on the line - editing - from any device; the picker's own confirm takes the code |
+| `random` | `ui.missions.random = RANDOM` | a choice row `< MEDIUM >`, `ui.tier.*`, left and right step it; remembered for the run, first MEDIUM. Stepping it leaves the line alone | `MISSION(random)` - a seed drawn uniformly from [0, 25^5) with the client's own randomness, at the length row's length, into the line, a new one each confirm; the selection stays |
+| `length` | `ui.missions.length = LENGTH` | a choice row `< 6 BIOMES >` (`ui.missions.biomes = {n} BIOMES`), left and right step it from `sim.mission.biomesMin` to `biomesMax` and round; starts at `sim.mission.biomes` (6) and goes back to it when a daily is chosen or the page opens (G0102). Stepping it with a whole code in the line **rewrites the line at the new length** - same tier and seed, so a daily becomes a **custom mission**; with no code in the line it moves the row alone. A code typed, pasted or picked moves the row to its length | `MISSION(length)` - confirm steps it up one; a click on `<` steps it down, anywhere else on the row up. Offline and in host mode alike |
+| `code` | `ui.missions.code = ENTER CODE` | the code line in a code's shape, `MJGF-6___` - the dash there from the start, never typed - and once it names a mission, `ui.missions.origin = {tier}  {n} BIOMES  {origin}`: `MEDIUM  6 BIOMES  DAILY`, `HARD  4 BIOMES  RANDOM`, `EASY  9 BIOMES  CUSTOM` - the length said in words wherever a code is shown: here, the picker, the pause page, the result and the top bar | opens the picker on the line - editing - from any device; the picker's own confirm takes the code |
 | `start` | `ui.missions.start = START MISSION` | | `MISSION(start)` - plays what the line names; dimmed and passed over while it names none |
 | `back` | `ui.common.back = BACK` | | `BACK` |
 
@@ -193,12 +194,12 @@ from a mission started here, the line holds what was played and START MISSION is
 again is one confirm (`MissionChoices.reopen`).
 
 **ENTER CODE** works as join's code line: a keyboard (and the Steam keyboard, STEAM+X) types into it at any
-time, forgiven as the room code is - any case, spaces and dashes ignored - into a code's eight places, no more:
+time, forgiven as the room code is - any case, spaces and dashes ignored - into a code's eight places, no more (a code whose length character is none a mission may have is refused like a failed check):
 a key typed over a whole line - a daily's, a draw's - starts a new code in its place. `Ctrl+V` pastes a whole code in the line's place. **The first place takes only a tier's letter**: any
 other, typed or starting a paste, is refused as it arrives and the line says `ui.missions.badTier = A MISSION CODE
 STARTS WITH {E/M/H}` - the tiers, never the check (`MissionChoices`); over a whole line the line is kept. Confirm on
 the line, from any device, always opens an eight-slot `CodePicker` - editing - a dash drawn after the fourth, and
-a second confirm takes what it shows: **slot one cycles only the tiers' letters** (an alphabet per slot), the rest the room code's
+a second confirm takes what it shows: **slot one cycles only the tiers' letters** (an alphabet per slot), **slot two only the characters of the lengths a mission may be** (`MissionCode.alphabets`), the rest the room code's
 alphabet. It opens on what the line holds, the places not typed yet at their alphabet's first, else the last
 code played this run, else today's MEDIUM daily, so a code close to a known one is a few presses. Beside it, the tier's name once the first slot holds one; under the page `ui.missions.pickHint =
 {confirm}: DONE  {back}: CANCEL  D-PAD: EDIT` - confirm puts what it shows in the line and closes it, back
@@ -438,9 +439,10 @@ carried out by the screen that owns the page, through `GameContext.queueScreen` 
 | `UI:play` | `play.ended() != null` | `UI:main` | `queueScreen(new MenuScreen(ctx, reason))` - built today |
 | `UI:main/online/host` | `OPEN(HOST_MISSIONS)` | `UI:main/online/host/missions` pushed | - |
 | `UI:main/missions`, `.../host/missions` | `MISSION(daily)`, `MISSION(random)` | stay | the daily's code, or a fresh draw, into the code line |
+| `UI:main/missions`, `.../host/missions` | `MISSION(length)` | stay | the row stepped; the line rewritten at the new length if it holds a code |
 | `UI:main/missions`, `.../host/missions` | `MISSION(code)` | stay | the picker opened on the line |
 | `UI:main/missions` | `MISSION(start)`, the line naming a mission | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(Scenarios.mission(tier), seed), MISSIONS))` |
-| `UI:main/online/host/missions` | `MISSION(start)` -> `HOST_MISSION(start)` | `UI:play` | `OnlineSession.host(...)` with `SessionSetup("mission <tier>", seed)`; on failure `UI:main` with the notice |
+| `UI:main/online/host/missions` | `MISSION(start)` -> `HOST_MISSION(start)` | `UI:play` | `OnlineSession.host(...)` with `SessionSetup("mission <tier> <length>", seed)`; on failure `UI:main` with the notice |
 | `UI:main/missions`, `.../host/missions` | the line's eighth character lands and the code fails its check | stay | `ui.missions.badCode` under the list, START MISSION dimmed |
 | `UI:play` | first outcome + `graphic.ui.resultHoldSeconds` | `UI:play/result` | - (derived, `UiFlow.observeResult`) |
 | `UI:play/result` | `RESTART` | `UI:play` | `play.apply(HarnessCommand.RESTART, ...)` - host or offline |

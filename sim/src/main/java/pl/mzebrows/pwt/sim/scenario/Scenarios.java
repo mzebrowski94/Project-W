@@ -60,12 +60,18 @@ public final class Scenarios {
      * everything else.
      */
     public static Scenario mission(TierKind tier) {
-        return new MissionScenario(tier);
+        return new MissionScenario(tier, MissionScenario.CONFIGURED);
+    }
+
+    /** A mission on one tier and {@code length} biomes long (G0102): refused when the world is built if the config has no such length. */
+    public static Scenario mission(TierKind tier, int length) {
+        return new MissionScenario(tier, length);
     }
 
     /**
-     * The registered scenario with this name, or a mission by its form, {@code mission <tier>} - how an online
-     * session names the one it plays (ADR 0012, G0065). A mission's seed travels as the session's.
+     * The registered scenario with this name, or a mission by its form, {@code mission <tier>} or {@code mission
+     * <tier> <length>} - how an online session names the one it plays (ADR 0012, G0065, G0102). A mission's seed
+     * travels as the session's.
      *
      * @throws IllegalArgumentException if there is none; peers on one build know the same scenarios
      */
@@ -76,8 +82,16 @@ public final class Scenarios {
             }
         }
         for (TierKind tier : TierKind.values()) {
-            if (MissionScenario.nameOf(tier).equals(name)) {
+            String prefix = MissionScenario.nameOf(tier, MissionScenario.CONFIGURED);
+            if (prefix.equals(name)) {
                 return mission(tier);
+            }
+            if (name.startsWith(prefix + " ")) {
+                try {
+                    return mission(tier, Integer.parseInt(name.substring(prefix.length() + 1)));
+                } catch (NumberFormatException e) {
+                    break;
+                }
             }
         }
         throw new IllegalArgumentException("no scenario named \"" + name + "\"");

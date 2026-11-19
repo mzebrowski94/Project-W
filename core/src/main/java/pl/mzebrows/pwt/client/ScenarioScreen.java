@@ -371,14 +371,18 @@ public final class ScenarioScreen extends ScreenAdapter {
         String scenario = play.scenarioName();
         MissionCode mission = scenario == null
                 ? null
-                : MissionCode.of(scenario, world.config().seed());
+                : MissionCode.of(
+                        scenario,
+                        world.config().seed(),
+                        world.config().mission().biomes());
         LocalDate day = mission == null ? null : context.missions().dailyDay(mission);
         menus.mission(mission, day);
         if (mission == null) {
             missionLine = scenario == null ? "" : scenario;
             return;
         }
-        String tier = strings.get("ui.tier." + mission.tier());
+        String tier = strings.get("ui.tier." + mission.tier()) + "  "
+                + strings.format("ui.missions.biomes", mission.length());
         missionLine = day == null ? tier : strings.format("ui.hud.missionDaily", tier);
     }
 

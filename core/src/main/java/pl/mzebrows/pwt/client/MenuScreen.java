@@ -401,6 +401,10 @@ public final class MenuScreen extends ScreenAdapter {
             missions.stepRandomTier(nav.right ? 1 : -1);
             relabelMissions();
         }
+        if (isMissions(top) && (nav.left || nav.right) && page.index() == MenuTree.MISSION_LENGTH) {
+            missions.stepLength(nav.right ? 1 : -1);
+            relabelMissions();
+        }
         int chosen;
         if (top == UiPage.PROVING_UPGRADES) {
             // Two panels, one list: the pointer is found here, and the controls see no panel of their own.
@@ -426,12 +430,20 @@ public final class MenuScreen extends ScreenAdapter {
         }
         if (chosen == MenuTree.MISSION_RANDOM && nav.pointerPressed && isMissions(top)) {
             // RANDOM's confirm starts; a click on either of its arrows steps its tier instead.
-            int arrow = randomArrowUnder(nav.pointerX);
+            int arrow = arrowUnder(nav.pointerX, tierName(missions.randomTier()).length());
             if (arrow != 0) {
                 missions.stepRandomTier(arrow);
                 relabelMissions();
                 return true;
             }
+        }
+        if (chosen == MenuTree.MISSION_LENGTH && nav.pointerPressed && isMissions(top)) {
+            // The length row's confirm steps it up; a click on its left arrow steps it down.
+            int arrow = arrowUnder(nav.pointerX, biomesText().length());
+            missions.stepLength(arrow == 0 ? 1 : arrow);
+            relabelMissions();
+            enableStart();
+            return true;
         }
         if (chosen >= 0) {
             return carryOut(flow.apply(intentFor(top, chosen)));
@@ -806,6 +818,8 @@ public final class MenuScreen extends ScreenAdapter {
                                 LevelTime.text(best, context.simConfig().tickSeconds())));
             } else if (i == MenuTree.MISSION_RANDOM) {
                 labels.add(choice(label, tierName(missions.randomTier())));
+            } else if (i == MenuTree.MISSION_LENGTH) {
+                labels.add(choice(label, biomesText()));
             } else if (i == MenuTree.MISSION_CODE) {
                 labels.add(pad(label) + codeLine());
             } else {
@@ -814,9 +828,18 @@ public final class MenuScreen extends ScreenAdapter {
         }
     }
 
+    /** The length row's value: {@code 6 BIOMES}. */
+    private String biomesText() {
+        return biomes(missions.length());
+    }
+
+    private String biomes(int length) {
+        return strings.format("ui.missions.biomes", length);
+    }
+
     /**
-     * The code line: what it holds and, once that names a mission, its tier and where it came from - {@code
-     * MEDIUM DAILY}, {@code HARD RANDOM}, {@code EASY CUSTOM}.
+     * The code line: what it holds and, once that names a mission, its tier, its length and where it came from -
+     * {@code MEDIUM  6 BIOMES  DAILY}, {@code HARD  4 BIOMES  RANDOM}, {@code EASY  9 BIOMES  CUSTOM}.
      */
     private String codeLine() {
         CodePicker picking = picker;
@@ -828,10 +851,18 @@ public final class MenuScreen extends ScreenAdapter {
                     : missions.line()
                             + "  "
                             + strings.format(
-                                    "ui.missions.origin", tierName(code.tier()), strings.get("ui.missions." + origin));
+                                    "ui.missions.origin",
+                                    tierName(code.tier()),
+                                    strings.get("ui.missions." + origin),
+                                    biomes(code.length()));
         }
         TierKind tier = MissionCode.tierOf(picking.code().charAt(0));
-        return picking.shown(MissionCode.LENGTH / 2) + (tier == null ? "" : "  " + tierName(tier));
+        int length = picking.code().length() > 1
+                ? MissionCode.lengthOf(picking.code().charAt(1))
+                : -1;
+        return picking.shown(MissionCode.LENGTH / 2)
+                + (tier == null ? "" : "  " + tierName(tier))
+                + (tier == null || length < 1 ? "" : "  " + biomes(length));
     }
 
     private String tierName(TierKind tier) {
@@ -894,13 +925,12 @@ public final class MenuScreen extends ScreenAdapter {
         return true;
     }
 
-    /** Which arrow of RANDOM's {@code < TIER >} the pointer is on: -1, +1, or 0 for neither. */
-    private int randomArrowUnder(int pointerX) {
+    /** Which arrow of a choice row's {@code < VALUE >} the pointer is on: -1, +1, or 0 for neither. */
+    private int arrowUnder(int pointerX, int value) {
         if (onBackArrow(pointerX, panel)) {
             return -1;
         }
         MenuLayout menu = painter.layout();
-        int value = tierName(missions.randomTier()).length();
         int arrow = menu.lineX(panel) + (labelWidth + CHOICE_GAP + 2 + value) * menu.advance();
         return pointerX >= arrow && pointerX < arrow + 2 * menu.advance() ? 1 : 0;
     }
@@ -917,6 +947,8 @@ public final class MenuScreen extends ScreenAdapter {
             missions.chooseDaily(tiers[entry]);
         } else if (entry == MenuTree.MISSION_RANDOM) {
             missions.drawRandom();
+        } else if (entry == MenuTree.MISSION_LENGTH) {
+            missions.stepLength(1);
         } else if (entry == MenuTree.MISSION_CODE) {
             picker = missions.openPicker();
         } else {

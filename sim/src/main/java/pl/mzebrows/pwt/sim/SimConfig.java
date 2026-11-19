@@ -173,10 +173,6 @@ public record SimConfig(
                     "a clinch that stops short of the commander leaves the freeze playing across a gap");
         }
         UpgradeDef.checkCatalogue(draft, stats, upgrades, pickups);
-        if (BiomeKind.values().length < mission.biomes()) {
-            throw new IllegalArgumentException("a mission deals " + mission.biomes()
-                    + " biomes, none twice, from a pool of " + BiomeKind.values().length);
-        }
         BiomeDef.checkStock(biomes, pickups);
     }
 

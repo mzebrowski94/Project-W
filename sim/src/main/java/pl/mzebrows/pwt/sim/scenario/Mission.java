@@ -120,8 +120,9 @@ public record Mission(
     }
 
     /**
-     * The biomes {@code config.seed()} deals, west to east: none twice and never two of one base side by side. A
-     * dead end deals again from where the stream has got to.
+     * The biomes {@code config.seed()} deals, west to east, from a bag: none comes a second time before every biome of
+     * the pool has come once, and never two of one base side by side. Up to the pool's size that is none twice. A
+     * dead end deals again from where the stream has got to (G0102).
      */
     public static List<BiomeKind> deal(SimConfig config) {
         return deal(config.biomes(), config.mission().biomes(), mission(config).derive(ORDER));
@@ -240,6 +241,10 @@ public record Mission(
             List<BiomeKind> left = new ArrayList<>(List.of(BiomeKind.values()));
             List<BiomeKind> order = new ArrayList<>();
             while (order.size() < count) {
+                if (left.isEmpty()) {
+                    // The whole pool has come once: a fresh bag, so a biome comes again only now (G0102).
+                    left.addAll(List.of(BiomeKind.values()));
+                }
                 List<BiomeKind> fit = new ArrayList<>();
                 for (BiomeKind kind : left) {
                     if (order.isEmpty() || base(pool, kind) != base(pool, order.getLast())) {

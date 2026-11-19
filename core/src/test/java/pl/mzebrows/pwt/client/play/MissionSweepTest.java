@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.MissionConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.FinaleKind;
@@ -55,6 +56,9 @@ class MissionSweepTest {
     /** Whole worlds built to measure a build against its budget, the median taken. */
     private static final int BUILDS = 16;
 
+    /** Seeds swept at each end of the lengths: a long strip costs a dozen times a short one. */
+    private static final int LONG_SEEDS = BIG ? 200 : 12;
+
     /** A mission's whole world built, at the median, in milliseconds (missions ticket 11). */
     private static final double BUDGET_MS = 100.0;
 
@@ -80,7 +84,7 @@ class MissionSweepTest {
                 Mission built = Mission.build(config, tier);
                 nanos += System.nanoTime() - start;
 
-                String code = new MissionCode(tier, seed).toString();
+                String code = new MissionCode(tier, 6, seed).toString();
                 for (String fault : MissionFaults.all(built, config)) {
                     faults.add(code + ": " + fault);
                 }
@@ -103,8 +107,8 @@ class MissionSweepTest {
             }
             List<String> first = codes.get(mission.order().getFirst());
             if (first.size() < CODES) {
-                first.add(new MissionCode(TierKind.MEDIUM, seed) + "|" + new MissionCode(TierKind.HARD, seed) + " "
-                        + mission.finale().kind().name().toLowerCase(Locale.ROOT));
+                first.add(new MissionCode(TierKind.MEDIUM, 6, seed) + "|" + new MissionCode(TierKind.HARD, 6, seed)
+                        + " " + mission.finale().kind().name().toLowerCase(Locale.ROOT));
             }
         }
 
@@ -117,6 +121,36 @@ class MissionSweepTest {
                         String.join("\n", faults) + "\n" + faults.size() + " faults in " + seeds.size() + " seeds")
                 .isEmpty();
         assertThat(endings).as("every finale, layout and flip swept").containsAll(everyEnding());
+    }
+
+    /**
+     * A strip of the shortest and the longest length holds every rule a six-biome one does - biomes met again are laid
+     * and placed afresh (G0102) - and a mission's world builds at the longest within a generous budget.
+     */
+    @Test
+    void holdsTheShortestAndTheLongestMissionToTheRules() {
+        MissionConfig lengths = SimConfig.defaults().mission();
+        List<String> faults = new ArrayList<>();
+        double worstMillis = 0;
+        for (int length : new int[] {lengths.biomesMin(), lengths.biomesMax()}) {
+            for (int i = 0; i < LONG_SEEDS; i++) {
+                long seed = seed(i);
+                SimConfig config = Scenarios.mission(TIER, length)
+                        .configure(SimConfig.defaults().withSeed(seed));
+                Mission built = Mission.build(config, TIER);
+                for (String fault : MissionFaults.all(built, config)) {
+                    faults.add(new MissionCode(TIER, length, seed) + ": " + fault);
+                }
+                assertThat(built.order()).hasSize(length);
+                long start = System.nanoTime();
+                Scenarios.world(
+                        Scenarios.mission(TIER, length), SimConfig.defaults().withSeed(seed));
+                worstMillis = Math.max(worstMillis, (System.nanoTime() - start) / 1e6);
+            }
+        }
+        System.out.printf(Locale.ROOT, "Longest mission build %.1f ms worst of %d%n", worstMillis, LONG_SEEDS);
+
+        assertThat(faults).withFailMessage(() -> String.join("\n", faults)).isEmpty();
     }
 
     /** What a player waits for: a mission's whole world, its config, map, simulation and contents. */

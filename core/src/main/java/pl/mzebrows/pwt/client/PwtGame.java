@@ -49,7 +49,7 @@ public final class PwtGame extends Game implements GameContext {
 
     private final SelectionMemory selections = new SelectionMemory();
     private ProvingSetup provingSetup = ProvingSetup.first();
-    private final MissionChoices missions = new MissionChoices(Clock.systemUTC(), new SecureRandom()::nextLong);
+    private MissionChoices missions;
     private @Nullable MissionRecords missionRecords;
     private @Nullable LocalSettings settings;
 
@@ -69,6 +69,7 @@ public final class PwtGame extends Game implements GameContext {
         }
         SimConfigLoader.Loaded loaded = SimConfigLoader.loaded();
         simConfig = loaded.config();
+        missions = new MissionChoices(Clock.systemUTC(), new SecureRandom()::nextLong, simConfig.mission());
         worldConfigText = loaded.shipped();
         Log.debug("Simulation config: " + simConfig);
         netConfig = NetConfigLoader.load();
@@ -82,6 +83,13 @@ public final class PwtGame extends Game implements GameContext {
         hud = new Hud(graphicConfig.layout(), graphicConfig.hud().reticle().size(), pointer);
         hud.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         MissionCode mission = launchOptions.mission();
+        if (mission != null && !simConfig.mission().hasLength(mission.length())) {
+            Log.error(
+                    "Command line: ignored --mission " + mission + ": no mission is " + mission.length()
+                            + " biomes long",
+                    null);
+            mission = null;
+        }
         if (mission == null) {
             setScreen(new MenuScreen(this));
         } else {

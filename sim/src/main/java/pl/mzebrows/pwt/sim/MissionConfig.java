@@ -16,12 +16,14 @@ import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
  * tier</strong> - {@link #apply} folds one into the config a mission's world is built from, and {@link #pressure}
  * scales the counts its biomes are dealt - so no system learns what a tier is.
  *
- * @param rampPercent how much a biome's creature counts rise for each position it stands at in the march, as
- *     a whole percentage: the first biome is at none, the fourth at three times this. Zero is no ramp. The
- *     finale is not ramped
+ * @param rampTopPercent what a biome's creature counts are scaled to at the last biome before the finale, as a
+ *     whole percentage: the first biome stands at 100 and those between are evenly spaced, whatever the march's
+ *     length (G0102). 100 is no ramp. The finale is not ramped
  * @param tiers every tier, by kind
- * @param biomes how many biomes a mission deals before its finale, the same on every tier; the pool holds at
- *     least this many
+ * @param biomes how many biomes a mission deals before its finale, the same on every tier: the default length - a
+ *     daily's - and, in a mission's config, the length it was asked for (G0102)
+ * @param biomesMin the shortest length a mission may be chosen at
+ * @param biomesMax the longest; the pool may be smaller, and a biome comes again (G0102)
  * @param ground the strip every mission is laid in: its height, ridges, passes and houses (missions tickets 03, 12,
  *     13)
  * @param placement where what a biome counts is put down (G0068)
@@ -30,9 +32,11 @@ import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
  */
 @With
 public record MissionConfig(
-        int rampPercent,
+        int rampTopPercent,
         @ConfigKey("tier") Defs<TierKind, TierDef> tiers,
         int biomes,
+        int biomesMin,
+        int biomesMax,
         StripRules ground,
         PlacementRules placement,
         @ConfigKey("finale.approachColumns") int approachColumns) {
@@ -40,18 +44,31 @@ public record MissionConfig(
     private static final int WHOLE = 100;
 
     public MissionConfig {
-        Require.notNegative("mission rampPercent", rampPercent);
-        Require.atLeastOne("mission biomes", biomes);
+        Require.atLeast("mission rampTopPercent", rampTopPercent, WHOLE, "the ramp never eases below its first biome");
+        Require.atLeastOne("mission biomesMin", biomesMin);
+        Require.atLeast("mission biomesMax", biomesMax, biomesMin, "a length range holds at least one length");
+        if (biomes < biomesMin || biomes > biomesMax) {
+            throw new IllegalArgumentException(
+                    "mission biomes is " + biomes + ", outside the lengths " + biomesMin + " to " + biomesMax);
+        }
         Require.atLeastOne("mission finale approachColumns", approachColumns);
     }
 
+    /** Whether a mission may be this many biomes long: the one reading of {@code biomesMin} and {@code biomesMax}. */
+    public boolean hasLength(int length) {
+        return length >= biomesMin && length <= biomesMax;
+    }
+
     /**
-     * How hard the swarm presses on this tier in the biome at this position of the march - the first is zero.
-     * Every count a biome's roster deals goes through it, and nothing else scales one.
+     * How hard the swarm presses on this tier in the biome at this position of the march - the first is zero. The
+     * ramp spans the march: x1.0 at the first biome and {@code rampTopPercent} at the last, whatever {@code
+     * biomes} is (G0102). Every count a biome's roster deals goes through it, and nothing else scales one.
      */
     public Pressure pressure(TierKind tier, int position) {
         Require.notNegative("mission position", position);
-        return new Pressure(tiers.of(tier).enemyPercent(), WHOLE + rampPercent * position);
+        int last = biomes - 1;
+        int ramped = last == 0 ? WHOLE : WHOLE + (rampTopPercent - WHOLE) * Math.min(position, last) / last;
+        return new Pressure(tiers.of(tier).enemyPercent(), ramped);
     }
 
     /**

@@ -278,7 +278,7 @@ final class ArchitectureTest {
             .orShould()
             .callMethod(MissionConfig.class, "tiers")
             .orShould()
-            .callMethod(MissionConfig.class, "rampPercent")
+            .callMethod(MissionConfig.class, "rampTopPercent")
             .because("a tier is read in one place, MissionConfig, and folded into the config a world is built from"
                     + " (G0063): no system learns what a tier is, and its percents meet a whole quantity only in"
                     + " Whole");

@@ -22,13 +22,16 @@ class MissionChoicesTest {
     private static final LocalDate DAY = LocalDate.of(2026, 10, 5);
 
     /** A code, as text, and the same with its check character wrong. */
-    private static final String TEXT = new MissionCode(TierKind.MEDIUM, 31_337L).text();
+    private static final String TEXT = new MissionCode(TierKind.MEDIUM, 6, 31_337L).text();
 
     private static final String TYPO = TEXT.substring(0, MissionCode.LENGTH - 1) + (TEXT.endsWith("A") ? "C" : "A");
 
     private final MovableClock clock = new MovableClock(DAY.atTime(23, 59).toInstant(ZoneOffset.UTC));
     private long drawn = 1_000L;
-    private final MissionChoices choices = new MissionChoices(clock, () -> drawn += 7_919L);
+    private final MissionChoices choices = new MissionChoices(
+            clock,
+            () -> drawn += 7_919L,
+            pl.mzebrows.pwt.sim.SimConfig.defaults().mission());
 
     @Test
     void offersTheThreeDailiesOfTheDayThePageOpenedOn() {
@@ -36,7 +39,7 @@ class MissionChoicesTest {
 
         assertThat(choices.day()).isEqualTo(DAY);
         for (TierKind tier : TierKind.values()) {
-            assertThat(choices.daily(tier)).isEqualTo(MissionCode.daily(DAY.toEpochDay(), tier));
+            assertThat(choices.daily(tier)).isEqualTo(MissionCode.daily(DAY.toEpochDay(), tier, 6));
         }
     }
 
@@ -51,6 +54,69 @@ class MissionChoicesTest {
         assertThat(choices.daily(TierKind.HARD)).isEqualTo(before);
         choices.open();
         assertThat(choices.day()).isEqualTo(DAY.plusDays(1));
+    }
+
+    /** The row starts at the default, RANDOM draws at it, and a daily is always at it (G0102). */
+    @Test
+    void drawsAtTheLengthTheRowShowsAndPutsItBackWhenADailyIsChosen() {
+        choices.open();
+        assertThat(choices.length()).isEqualTo(6);
+
+        choices.stepLength(1);
+        choices.stepLength(1);
+        assertThat(choices.length()).isEqualTo(8);
+        choices.drawRandom();
+        assertThat(choices.code().length()).isEqualTo(8);
+        assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.RANDOM);
+
+        choices.chooseDaily(TierKind.HARD);
+        assertThat(choices.length()).isEqualTo(6);
+        assertThat(choices.code()).isEqualTo(choices.daily(TierKind.HARD));
+    }
+
+    /** Changing the length with a daily in the line is another mission - a custom one - at the same seed. */
+    @Test
+    void makesACustomMissionOfADailyWhoseLengthIsChanged() {
+        choices.open();
+        choices.chooseDaily(TierKind.EASY);
+        MissionCode daily = choices.code();
+
+        choices.stepLength(-1);
+
+        assertThat(choices.code().length()).isEqualTo(5);
+        assertThat(choices.code().seed()).isEqualTo(daily.seed());
+        assertThat(choices.code().tier()).isEqualTo(daily.tier());
+        assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.CUSTOM);
+    }
+
+    @Test
+    void stepsTheLengthRoundBetweenItsLimitsAndFollowsACodeTyped() {
+        var lengths = pl.mzebrows.pwt.sim.SimConfig.defaults().mission();
+        choices.open();
+
+        for (int i = 0; i < lengths.biomesMax() - lengths.biomesMin() + 1; i++) {
+            choices.stepLength(1);
+        }
+        assertThat(choices.length()).isEqualTo(6);
+        choices.stepLength(-1);
+        choices.stepLength(-1);
+        choices.stepLength(-1);
+        assertThat(choices.length()).isEqualTo(lengths.biomesMin());
+        choices.stepLength(-1);
+        assertThat(choices.length()).isEqualTo(lengths.biomesMax());
+        choices.replaceTyped(new MissionCode(TierKind.HARD, 4, 5L).text());
+        assertThat(choices.length()).isEqualTo(4);
+    }
+
+    /** A code that checks out but is a length no mission may be is refused like any other (G0102). */
+    @Test
+    void refusesACodeOfALengthNoMissionMayBe() {
+        choices.open();
+
+        choices.replaceTyped(new MissionCode(TierKind.HARD, 2, 5L).text());
+
+        assertThat(choices.code()).isNull();
+        assertThat(choices.problem()).isEqualTo(MissionChoices.REFUSED);
     }
 
     @Test
@@ -78,7 +144,7 @@ class MissionChoicesTest {
 
     @Test
     void startsWhatIsTypedHoweverItIsTyped() {
-        MissionCode code = new MissionCode(TierKind.EASY, 123_456L);
+        MissionCode code = new MissionCode(TierKind.EASY, 6, 123_456L);
 
         type(" " + code.toString().toLowerCase(Locale.ROOT) + " ");
 
@@ -89,7 +155,7 @@ class MissionChoicesTest {
     /** A paste is a whole code: it takes the line's place rather than adding to what is there. */
     @Test
     void startsAPastedCodeInPlaceOfWhatWasTyped() {
-        MissionCode code = new MissionCode(TierKind.HARD, 99L);
+        MissionCode code = new MissionCode(TierKind.HARD, 6, 99L);
         type("ea");
 
         choices.paste(" " + code + " ");
@@ -101,7 +167,7 @@ class MissionChoicesTest {
     void refusesAPasteThatStartsWithNoTiersLetterAndKeepsTheLine() {
         type("ea");
 
-        choices.paste("code " + new MissionCode(TierKind.HARD, 99L));
+        choices.paste("code " + new MissionCode(TierKind.HARD, 6, 99L));
 
         assertThat(choices.typed()).isEqualTo("EA");
         assertThat(choices.problem()).isEqualTo(MissionChoices.FIRST_LETTER);
@@ -199,7 +265,7 @@ class MissionChoicesTest {
         assertThat(choices.openPicker().code())
                 .isEqualTo(choices.daily(TierKind.MEDIUM).text());
 
-        MissionCode played = new MissionCode(TierKind.HARD, 5L);
+        MissionCode played = new MissionCode(TierKind.HARD, 6, 5L);
         choices.played(played);
 
         assertThat(choices.openPicker().code()).isEqualTo(played.text());
@@ -226,7 +292,7 @@ class MissionChoicesTest {
 
         assertThat(daily).isNotNull();
         assertThat(choices.dailyDay(daily)).isEqualTo(DAY);
-        assertThat(choices.dailyDay(new MissionCode(TierKind.EASY, 7L))).isNull();
+        assertThat(choices.dailyDay(new MissionCode(TierKind.EASY, 6, 7L))).isNull();
     }
 
     /** Choosing a daily puts its code in the line, to be started - or changed - from there. */
@@ -268,7 +334,7 @@ class MissionChoicesTest {
         choices.open();
         choices.drawRandom();
 
-        choices.replaceTyped(new MissionCode(TierKind.EASY, 7L).text());
+        choices.replaceTyped(new MissionCode(TierKind.EASY, 6, 7L).text());
         assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.CUSTOM);
 
         choices.replaceTyped("");
@@ -313,7 +379,7 @@ class MissionChoicesTest {
     /** Opened from the menu nothing is chosen; back from a level, the mission just played is in the line. */
     @Test
     void opensEmptyFromTheMenuAndOnTheMissionPlayedComingBackFromIt() {
-        MissionCode played = new MissionCode(TierKind.HARD, 5L);
+        MissionCode played = new MissionCode(TierKind.HARD, 6, 5L);
         choices.played(played);
 
         choices.open();

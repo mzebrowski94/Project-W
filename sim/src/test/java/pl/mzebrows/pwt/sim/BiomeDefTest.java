@@ -81,12 +81,12 @@ class BiomeDefTest {
     }
 
     @Test
-    void refusesAMissionThatDealsMoreBiomesThanThePoolHolds() {
+    void refusesADefaultLengthOutsideTheLengthsAMissionMayBe() {
         SimConfig shipped = SimConfig.defaults();
 
-        assertThatThrownBy(() -> shipped.withMission(shipped.mission().withBiomes(BiomeKind.values().length + 1)))
+        assertThatThrownBy(() -> shipped.mission().withBiomes(shipped.mission().biomesMax() + 1))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("from a pool of");
+                .hasMessageContaining("outside the lengths");
     }
 
     private static Furniture stocking(Furniture furniture, PickupKind kind) {

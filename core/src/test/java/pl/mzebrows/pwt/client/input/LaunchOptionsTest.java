@@ -11,7 +11,7 @@ import pl.mzebrows.pwt.sim.def.TierKind;
 
 class LaunchOptionsTest {
 
-    private static final MissionCode MISSION = new MissionCode(TierKind.HARD, 31_337L);
+    private static final MissionCode MISSION = new MissionCode(TierKind.HARD, 6, 31_337L);
 
     @Test
     void startsAsCopyZeroReadingEveryPad() {

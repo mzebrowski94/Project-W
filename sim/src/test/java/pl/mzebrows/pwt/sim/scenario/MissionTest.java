@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 import com.badlogic.ashley.core.Entity;
@@ -68,6 +69,46 @@ class MissionTest {
                         .isNotEqualTo(base(shipped, order.get(p - 1)));
             }
         }
+    }
+
+    /** Past the pool the bag is dealt again: no biome twice before every one has come, none twice side by side (G0102). */
+    @Test
+    void dealsFromABagWhenTheLengthRunsPastThePool() {
+        SimConfig shipped = SimConfig.defaults();
+        int pool = BiomeKind.values().length;
+        int length = shipped.mission().biomesMax();
+        SimConfig config = shipped.withMission(shipped.mission().withBiomes(length));
+        for (long seed = 0; seed < SEEDS; seed++) {
+            List<BiomeKind> order = Mission.deal(config.withSeed(seed));
+
+            assertThat(order).as("seed %d", seed).hasSize(length);
+            for (int from = 0; from < length; from += pool) {
+                List<BiomeKind> bag = order.subList(from, Math.min(from + pool, length));
+                assertThat(bag).as("seed %d bag from %d", seed, from).doesNotHaveDuplicates();
+            }
+            for (int p = 1; p < length; p++) {
+                assertThat(base(shipped, order.get(p)))
+                        .as("seed %d, positions %d and %d", seed, p - 1, p)
+                        .isNotEqualTo(base(shipped, order.get(p - 1)));
+            }
+        }
+    }
+
+    /** A length chosen is a strip of that many biomes, and a session names it so (G0102). */
+    @Test
+    void laysAsManyBiomesAsItsLengthAndNamesItForASession() {
+        for (int length : new int[] {3, 9, 15}) {
+            Scenario named =
+                    Scenarios.named(Scenarios.mission(TierKind.HARD, length).name());
+
+            assertThat(named.name()).isEqualTo("mission hard " + length);
+            Mission mission = Mission.build(named.configure(SimConfig.defaults().withSeed(4L)), TierKind.HARD);
+            assertThat(mission.order()).hasSize(length);
+            assertThat(mission.laid().biomes()).hasSize(length + 1);
+            assertThat(mission.shortfalls()).isEmpty();
+        }
+        assertThatThrownBy(() -> Scenarios.mission(TierKind.HARD, 2).configure(SimConfig.defaults()))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     /** A biome the deal can never place at some position is one that fails the build, not a quiet hole. */

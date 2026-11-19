@@ -116,10 +116,10 @@ class MissionRecordsTest {
      */
     @Test
     void aJoinerFilesADailyStartedTheDayBeforeItsOwnUnderThatDay() {
-        MissionCode hosts = MissionCode.daily(DAY.toEpochDay(), TierKind.HARD);
+        MissionCode hosts = MissionCode.daily(DAY.toEpochDay(), TierKind.HARD, 6);
         MissionRecords records = MissionRecords.read(store);
 
-        records.offer(hosts.dailyNear(DAY.plusDays(1)), hosts.tier(), 41_237L);
+        records.offer(hosts.dailyNear(DAY.plusDays(1), 6), hosts.tier(), 41_237L);
 
         assertThat(kept).containsOnlyKeys("20261005.H");
     }

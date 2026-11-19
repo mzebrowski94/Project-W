@@ -5,15 +5,20 @@ import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.lan.RoomCode;
+import pl.mzebrows.pwt.sim.MissionConfig;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
 /**
- * What names a mission (G0065): eight characters of the room code's alphabet, shown {@code HK3X-Q7RA} - the
- * tier's letter, six characters of mission seed in base 25, and one that checks the seven before it. The
- * mission seed is the simulation's seed; the tier moves the swarm's numbers and never the map.
+ * What names a mission (G0065, G0102): eight characters of the room code's alphabet, shown {@code HK3X-Q7RA} - the
+ * tier's letter, the mission's length (the alphabet's place of that number), five characters of mission seed in base
+ * 25, and one that checks the seven before it. The mission seed is the simulation's seed; the tier moves the swarm's
+ * numbers and never the map; the length is how many biomes it marches through.
+ *
+ * <p>Whether a length is one a mission may be is the config's to say ({@code MissionConfig.hasLength}), not the
+ * code's: a code that reads here is refused where the config is known.
  *
  * <p>The check is a weighted sum mod 25, with weights 1 2 3 4 6 7 8 - none divisible by 5, nor the difference
  * between any two neighbours - so every single wrong character and every swapped neighbour pair fails it. A
@@ -23,18 +28,22 @@ import pl.mzebrows.pwt.sim.scenario.Scenarios;
  * ({@link #daily}): every machine deals the same three, and they differ by tier.
  *
  * @param tier how hard the mission is; its letter is the first of its name
+ * @param length how many biomes it marches through before its finale, at most the alphabet's last place
  * @param seed the mission seed, in {@code [0, SEEDS)}
  */
-public record MissionCode(TierKind tier, long seed) {
+public record MissionCode(TierKind tier, int length, long seed) {
 
     /** Characters in a code, the tier's and the check's included. */
     public static final int LENGTH = 8;
 
-    private static final int SEED_LENGTH = LENGTH - 2;
+    /** Where the length's character stands: after the tier's letter. */
+    private static final int LENGTH_AT = 1;
+
+    private static final int SEED_LENGTH = LENGTH - 3;
 
     private static final int BASE = RoomCode.ALPHABET.length();
 
-    /** How many mission seeds there are a tier: six characters' worth. */
+    /** How many mission seeds there are a tier and length: five characters' worth. */
     public static final long SEEDS = seeds();
 
     private static final int[] WEIGHTS = {1, 2, 3, 4, 6, 7, 8};
@@ -45,6 +54,10 @@ public record MissionCode(TierKind tier, long seed) {
     private static final int DAYS_EITHER_SIDE = 1;
 
     public MissionCode {
+        if (length < 1 || length >= RoomCode.ALPHABET.length()) {
+            throw new IllegalArgumentException(
+                    "a mission length is 1 to " + (RoomCode.ALPHABET.length() - 1) + " biomes, not " + length);
+        }
         if (seed < 0 || seed >= SEEDS) {
             throw new IllegalArgumentException("a mission seed is 0 to " + (SEEDS - 1) + ", not " + seed);
         }
@@ -52,7 +65,8 @@ public record MissionCode(TierKind tier, long seed) {
 
     /**
      * What a player typed, as a mission - any case, spaces and dashes ignored - or null if it is none: the
-     * wrong length, a character the alphabet lacks, a letter no tier has, or a check that fails.
+     * wrong length, a character the alphabet lacks, a letter no tier has, a length character that is the
+     * alphabet's first, or a check that fails.
      */
     public static @Nullable MissionCode parse(String typed) {
         String letters = RoomCode.letters(typed, LENGTH);
@@ -60,38 +74,57 @@ public record MissionCode(TierKind tier, long seed) {
             return null;
         }
         long seed = 0L;
-        for (int i = 1; i <= SEED_LENGTH; i++) {
+        for (int i = LENGTH_AT + 1; i <= LENGTH_AT + SEED_LENGTH; i++) {
             seed = seed * BASE + RoomCode.ALPHABET.indexOf(letters.charAt(i));
         }
         TierKind tier = tierOf(letters.charAt(0));
-        return tier == null ? null : new MissionCode(tier, seed);
+        int length = lengthOf(letters.charAt(LENGTH_AT));
+        return tier == null || length < 1 ? null : new MissionCode(tier, length, seed);
     }
 
     /**
      * The day's daily on this tier (G0065): the day mixed with the tier's letter, the way a stream is derived
-     * from a seed, onto a mission seed. The same on every machine and every run.
+     * from a seed, onto a mission seed. The same on every machine and every run. A daily is always the default
+     * length (G0102).
      *
      * @param epochDay the UTC day, as {@link LocalDate#toEpochDay()}
+     * @param length the default length, {@code sim.mission.biomes}
      */
-    public static MissionCode daily(long epochDay, TierKind tier) {
+    public static MissionCode daily(long epochDay, TierKind tier, int length) {
         return new MissionCode(
-                tier, Math.floorMod(new Rng(epochDay).derive(letter(tier)).nextLong(), SEEDS));
+                tier,
+                length,
+                Math.floorMod(new Rng(epochDay).derive(letter(tier)).nextLong(), SEEDS));
     }
 
     /**
      * The mission a session plays, from what it names and its seed: a mission when the scenario is a tier's
-     * ({@code mission <tier>}), null for any other scenario.
+     * ({@code mission <tier> <length>}, or {@code mission <tier>} for {@code configured} biomes), null for any other
+     * scenario.
      */
-    public static @Nullable MissionCode of(String scenarioName, long seed) {
+    public static @Nullable MissionCode of(String scenarioName, long seed, int configured) {
         if (seed < 0 || seed >= SEEDS) {
             return null;
         }
         for (TierKind tier : TierKind.values()) {
-            if (Scenarios.mission(tier).name().equals(scenarioName)) {
-                return new MissionCode(tier, seed);
+            String prefix = Scenarios.mission(tier).name();
+            if (prefix.equals(scenarioName)) {
+                return new MissionCode(tier, configured, seed);
+            }
+            if (scenarioName.startsWith(prefix + " ")) {
+                try {
+                    return new MissionCode(tier, Integer.parseInt(scenarioName.substring(prefix.length() + 1)), seed);
+                } catch (IllegalArgumentException e) {
+                    return null;
+                }
             }
         }
         return null;
+    }
+
+    /** The length a code's length character stands for, or -1 if it is none of the alphabet's. */
+    public static int lengthOf(char character) {
+        return RoomCode.ALPHABET.indexOf(character);
     }
 
     /** The tier whose letter this is in a code, or null if no tier's. */
@@ -105,17 +138,22 @@ public record MissionCode(TierKind tier, long seed) {
     }
 
     /**
-     * What each character of a code may be, slot by slot, for a picker: the tiers' letters first, then the
-     * room code's alphabet - so a picked code is always of some tier.
+     * What each character of a code may be, slot by slot, for a picker: the tiers' letters first, then the lengths
+     * {@code mission} allows, then the room code's alphabet - so a picked code is always of some tier and length.
      */
-    public static List<String> alphabets() {
+    public static List<String> alphabets(MissionConfig mission) {
         StringBuilder tiers = new StringBuilder();
         for (TierKind tier : TierKind.values()) {
             tiers.append(letter(tier));
         }
+        StringBuilder lengths = new StringBuilder();
+        for (int length = mission.biomesMin(); length <= mission.biomesMax(); length++) {
+            lengths.append(RoomCode.ALPHABET.charAt(length));
+        }
         List<String> alphabets = new ArrayList<>(LENGTH);
         alphabets.add(tiers.toString());
-        for (int i = 1; i < LENGTH; i++) {
+        alphabets.add(lengths.toString());
+        for (int i = LENGTH_AT + 1; i < LENGTH; i++) {
             alphabets.add(RoomCode.ALPHABET);
         }
         return List.copyOf(alphabets);
@@ -124,30 +162,33 @@ public record MissionCode(TierKind tier, long seed) {
     /**
      * The day this is the daily of, looked for on {@code around} first and then the day either side - or
      * null if it is no daily of those. Where a daily was started, {@code around} is the day its page opened.
+     *
+     * @param dailyLength the default length, a daily's
      */
-    public @Nullable LocalDate dailyNear(LocalDate around) {
+    public @Nullable LocalDate dailyNear(LocalDate around, int dailyLength) {
         for (int i = 0; i <= 2 * DAYS_EITHER_SIDE; i++) {
             // 0, -1, +1: the day itself before its neighbours.
             int offset = (i + 1) / 2 * (i % 2 == 1 ? -1 : 1);
             LocalDate day = around.plusDays(offset);
-            if (equals(daily(day.toEpochDay(), tier))) {
+            if (equals(daily(day.toEpochDay(), tier, dailyLength))) {
                 return day;
             }
         }
         return null;
     }
 
-    /** What a session plays this mission as: {@code mission <tier>}, built from {@link #seed} as its seed (G0065). */
+    /** What a session plays this mission as: {@code mission <tier> <length>}, built from {@link #seed} as its seed. */
     public Scenario scenario() {
-        return Scenarios.mission(tier);
+        return Scenarios.mission(tier, length);
     }
 
     /** The eight characters, with no dash. */
     public String text() {
         char[] code = new char[LENGTH];
         code[0] = letter(tier);
+        code[LENGTH_AT] = RoomCode.ALPHABET.charAt(length);
         long rest = seed;
-        for (int i = SEED_LENGTH; i >= 1; i--) {
+        for (int i = LENGTH_AT + SEED_LENGTH; i > LENGTH_AT; i--) {
             code[i] = RoomCode.ALPHABET.charAt((int) (rest % BASE));
             rest /= BASE;
         }

@@ -442,7 +442,11 @@ final class PlayMenus {
             head.add(strings.get("ui.result.best"));
         }
         head.add(strings.format("ui.result.points", pointsTaken, pointsTotal));
-        head.add(strings.format("ui.result.code", played, strings.get("ui.tier." + played.tier())));
+        head.add(strings.format(
+                "ui.result.code",
+                played,
+                strings.get("ui.tier." + played.tier()),
+                strings.format("ui.missions.biomes", played.length())));
         LocalDate day = missionDay;
         if (day != null) {
             head.add(strings.format("ui.result.daily", day));
@@ -473,7 +477,8 @@ final class PlayMenus {
                     "ui.pause.mission",
                     played,
                     strings.get("ui.tier." + played.tier()),
-                    LevelTime.text(tick, tickSeconds)));
+                    LevelTime.text(tick, tickSeconds),
+                    strings.format("ui.missions.biomes", played.length())));
         }
         if (invitation != null) {
             painter.addWrapped(foot, invitation, 2);

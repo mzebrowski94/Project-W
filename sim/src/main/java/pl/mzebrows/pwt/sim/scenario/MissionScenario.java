@@ -29,27 +29,36 @@ import pl.mzebrows.pwt.sim.def.Wave;
  */
 final class MissionScenario implements Scenario {
 
+    /** The length that says the config's own, {@code sim.mission.biomes}: the name then has no length in it. */
+    static final int CONFIGURED = 0;
+
     private final TierKind tier;
+    private final int length;
 
     private @Nullable Mission built;
 
-    MissionScenario(TierKind tier) {
+    MissionScenario(TierKind tier, int length) {
         this.tier = tier;
+        this.length = length;
     }
 
-    /** What a mission on this tier is called, to a session and to the lobby. */
-    static String nameOf(TierKind tier) {
-        return "mission " + tier.name().toLowerCase(Locale.ROOT);
+    /**
+     * What a mission on this tier and length is called, to a session: {@code mission hard 4}, or {@code mission hard}
+     * for the config's own length (G0102). The length travels here, beside the seed the session already carries.
+     */
+    static String nameOf(TierKind tier, int length) {
+        String name = "mission " + tier.name().toLowerCase(Locale.ROOT);
+        return length == CONFIGURED ? name : name + " " + length;
     }
 
     @Override
     public String name() {
-        return nameOf(tier);
+        return nameOf(tier, length);
     }
 
     @Override
     public String description() {
-        return "Four biomes dealt from the mission seed, each populated by rules, and a finale to hold, on "
+        return "Biomes dealt from the mission seed, each populated by rules, and a finale to hold, on "
                 + tier.name().toLowerCase(Locale.ROOT) + ".";
     }
 
@@ -60,6 +69,14 @@ final class MissionScenario implements Scenario {
     @Override
     public SimConfig configure(SimConfig base) {
         SimConfig config = base.mission().apply(tier, base);
+        if (length != CONFIGURED) {
+            if (!config.mission().hasLength(length)) {
+                throw new IllegalArgumentException(
+                        "a mission is " + config.mission().biomesMin() + " to "
+                                + config.mission().biomesMax() + " biomes long, not " + length);
+            }
+            config = config.withMission(config.mission().withBiomes(length));
+        }
         for (UnitKind kind : UnitKind.values()) {
             config = config.withUnit(
                     kind, strain -> strain.withPerception(strain.perception().withAlwaysAggressive(false)));

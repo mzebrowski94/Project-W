@@ -21,7 +21,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
  */
 class MissionConfigTest {
 
-    private static final int RAMP = 10;
+    private static final int RAMP_TOP = 150;
 
     private static final int HARD_ENEMIES = 125;
 
@@ -39,7 +39,9 @@ class MissionConfigTest {
 
     private static final int COUNT = 40;
 
-    private static final int LAST_POSITION = 3;
+    private static final int LAST_POSITION = 5;
+
+    private static final int LENGTH = 6;
 
     @Test
     void foldsATiersHealthIntoEveryStrainAndNestOnTopOfTheSwarms() {
@@ -89,7 +91,38 @@ class MissionConfigTest {
 
         assertThat(mission.pressure(TierKind.HARD, 0).scale(COUNT)).isEqualTo(Whole.percentOf(COUNT, HARD_ENEMIES));
         assertThat(mission.pressure(TierKind.HARD, LAST_POSITION).scale(COUNT))
-                .isEqualTo(Whole.percentOf(COUNT, HARD_ENEMIES, 100 + RAMP * LAST_POSITION));
+                .isEqualTo(Whole.percentOf(COUNT, HARD_ENEMIES, RAMP_TOP));
+    }
+
+    /** The last biome is as hard at every length, those between evenly spaced (G0102). */
+    @Test
+    void spansTheRampOverTheMarchWhateverItsLength() {
+        MissionConfig mission = mission();
+
+        for (int length = mission.biomesMin(); length <= mission.biomesMax(); length++) {
+            MissionConfig of = mission.withBiomes(length);
+
+            assertThat(of.pressure(TierKind.MEDIUM, 0).rampedPercent()).isEqualTo(100);
+            assertThat(of.pressure(TierKind.MEDIUM, length - 1).rampedPercent()).isEqualTo(RAMP_TOP);
+            for (int p = 1; p < length; p++) {
+                assertThat(of.pressure(TierKind.MEDIUM, p).rampedPercent())
+                        .as("length %d position %d", length, p)
+                        .isGreaterThanOrEqualTo(
+                                of.pressure(TierKind.MEDIUM, p - 1).rampedPercent());
+            }
+        }
+        assertThat(mission.withBiomes(LENGTH).pressure(TierKind.MEDIUM, 1).rampedPercent())
+                .isEqualTo(110);
+    }
+
+    @Test
+    void knowsWhichLengthsAMissionMayBe() {
+        MissionConfig mission = mission();
+
+        assertThat(mission.hasLength(mission.biomesMin() - 1)).isFalse();
+        assertThat(mission.hasLength(mission.biomesMin())).isTrue();
+        assertThat(mission.hasLength(mission.biomesMax())).isTrue();
+        assertThat(mission.hasLength(mission.biomesMax() + 1)).isFalse();
     }
 
     /** A roster line that may be empty stays one that may be empty, and one that may not stays one that may not. */
@@ -134,7 +167,7 @@ class MissionConfigTest {
     private static MissionConfig mission() {
         return SimConfig.defaults()
                 .mission()
-                .withRampPercent(RAMP)
+                .withRampTopPercent(RAMP_TOP)
                 .withTiers(Defs.<TierKind, TierDef>builder(TierKind.class)
                         .put(TierKind.EASY, new TierDef(75, 85, 130, 0f, 0))
                         .put(TierKind.MEDIUM, new TierDef(100, 100, 100, 240f, 4))

@@ -18,8 +18,14 @@ public final class MenuTree {
     /** The missions page's RANDOM, after one daily per tier in {@link TierKind} order. */
     public static final int MISSION_RANDOM = TierKind.values().length;
 
-    /** The missions page's ENTER CODE, after RANDOM: what every entry above writes into. */
-    public static final int MISSION_CODE = MISSION_RANDOM + 1;
+    /**
+     * The missions page's length row, after RANDOM: a choice row `< 6 BIOMES >` whose left and right step how many
+     * biomes a mission has (G0102). It writes into the code line like the entries above it, and RANDOM draws at it.
+     */
+    public static final int MISSION_LENGTH = MISSION_RANDOM + 1;
+
+    /** The missions page's ENTER CODE, after the length row: what every entry above writes into. */
+    public static final int MISSION_CODE = MISSION_LENGTH + 1;
 
     /** The missions page's START MISSION, after ENTER CODE: the one entry that starts anything. */
     public static final int MISSION_START = MISSION_CODE + 1;
@@ -136,7 +142,7 @@ public final class MenuTree {
     }
 
     /**
-     * The day's three missions, one a tier, then RANDOM and ENTER CODE - each writes into the code line - and
+     * The day's three missions, one a tier, then RANDOM, the length row and ENTER CODE - each writes into the code line - and
      * START MISSION, which starts what it holds; MEDIUM selected. Its title takes the date, which the screen
      * fills in.
      */
@@ -150,6 +156,7 @@ public final class MenuTree {
             medium = tier == TierKind.MEDIUM ? i : medium;
         }
         entries.add(entry("random", "ui.missions.random", UiIntent.mission(MISSION_RANDOM)));
+        entries.add(entry("length", "ui.missions.length", UiIntent.mission(MISSION_LENGTH)));
         entries.add(entry("code", "ui.missions.code", UiIntent.mission(MISSION_CODE)));
         entries.add(entry("start", "ui.missions.start", UiIntent.mission(MISSION_START)));
         entries.add(back());

@@ -5,7 +5,19 @@
 **Trigger.** Changing how many biomes a mission marches through, how they are dealt or how the ramp rises over them;
 what a mission code holds.
 
-**Enforced by.** Nothing yet - not built; the tests are named here when it is.
+**Enforced by.** `MissionCodeTest.holdsItsLengthAndNamesAnotherMissionAtAnother`, `.refusesALengthNoCharacterCanHold`;
+`MissionConfigTest.spansTheRampOverTheMarchWhateverItsLength`, `.knowsWhichLengthsAMissionMayBe`;
+`MissionTest.dealsFromABagWhenTheLengthRunsPastThePool`, `.laysAsManyBiomesAsItsLengthAndNamesItForASession`;
+`MissionChoicesTest` (the row: `.drawsAtTheLengthTheRowShowsAndPutsItBackWhenADailyIsChosen`,
+`.makesACustomMissionOfADailyWhoseLengthIsChanged`, `.refusesACodeOfALengthNoMissionMayBe`); `MenuTreeTest`;
+`MissionSweepTest.holdsTheShortestAndTheLongestMissionToTheRules` (3 and 15 biomes).
+
+**Built provisionally, for review (AFK run):** the session's scenario name carries the length - `mission hard 4`, and
+`mission hard` for the config's own - rather than a field on `SessionSetup` (turned down: a record field, which
+changes the wire format for one number the name already carries); `MissionCode.parse` reads any length the alphabet
+can hold and `MissionConfig.hasLength` refuses the rest where the config is known, rather than the code knowing
+3 and 15; the length row wraps at its ends like RANDOM's tier. The sweep at 15 biomes: 12 seeds a length in about a
+second; a 15-biome world builds in about 110 ms worst.
 
 **Asked for** by Mateusz, 2026-11-19, with the briefing (G0101): the number of biomes a mission has, chosen before it
 starts, from three to fifteen, a biome coming again when the pool runs short.
