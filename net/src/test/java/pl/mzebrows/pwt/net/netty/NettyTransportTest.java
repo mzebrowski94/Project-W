@@ -231,7 +231,8 @@ class NettyTransportTest {
                 shipped.pacing(),
                 shipped.session(),
                 shipped.lan(),
-                shipped.relay());
+                shipped.relay(),
+                shipped.rejoin());
     }
 
     private static void pollUntil(BooleanSupplier done, Ends ends) {

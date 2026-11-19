@@ -435,15 +435,15 @@ public final class OnlineSession implements ScenarioPlay {
 
     /**
      * Why this machine is out of the session, once it is: refused at the door, or the link closed - the
-     * host leaving closes it for everyone. Reconnecting is for later, with the relay; for now the game goes
-     * back to the menu and says why (G0038).
+     * host leaving closes it for everyone. A dropped link is not that while the peer is coming back (G0105): it is
+     * {@code RECONNECTING}, shown by {@link #connection()} (a line of its own for the HUD is stage 6's and 8's).
      */
     @Override
     public @Nullable String ended() {
         return switch (peer.state()) {
             case REFUSED -> "refused by " + where + ": " + peer.refusal();
             case CLOSED -> "the game at " + where + " is over: " + reason(peer.closedBecause());
-            case CONNECTING, JOINING, BRIEFING, PLAYING -> null;
+            case CONNECTING, JOINING, BRIEFING, PLAYING, RECONNECTING -> null;
         };
     }
 
@@ -464,6 +464,7 @@ public final class OnlineSession implements ScenarioPlay {
     public String connection() {
         return switch (peer.state()) {
             case CONNECTING -> "connecting to " + where + " ...";
+            case RECONNECTING -> "lost the link to " + where + ", coming back ...";
             case JOINING -> "joined " + where + ", waiting for the world ...";
             case BRIEFING -> "joined " + where + ", on the briefing";
             case REFUSED -> "refused by " + where + ": " + peer.refusal();

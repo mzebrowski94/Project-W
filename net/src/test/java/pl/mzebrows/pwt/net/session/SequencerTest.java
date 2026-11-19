@@ -7,11 +7,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeMap;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.net.NetConfig;
+import pl.mzebrows.pwt.net.door.Door;
 import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.loopback.LoopbackNetwork;
 import pl.mzebrows.pwt.net.transport.Delivery;
@@ -30,6 +32,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 class SequencerTest {
 
     private static final long FRAME = 16_666_667L;
+    private static final long TOKEN_SEED = 5L;
 
     private final NetConfig config = NetConfig.defaults();
     private final LoopbackNetwork network = new LoopbackNetwork(config);
@@ -39,7 +42,8 @@ class SequencerTest {
             NetLog.silent(64),
             Players.MAX,
             SessionHarness.HOST_KEY,
-            BuildId.current());
+            BuildId.current(),
+            new Random(TOKEN_SEED));
     private final int port = sequencer.listen(config.port(), 0);
     private final Map<Integer, Bundle> sealed = new TreeMap<>();
     private long now;
@@ -409,6 +413,177 @@ class SequencerTest {
         assertThat(host.closedBecause).isNull();
     }
 
+    /** Frames enough for a window to pass, and one more second. */
+    private int framesOfTheWindowAndMore() {
+        return (int) ((config.rejoin().windowSeconds() + 1) * 1_000_000_000L / FRAME) + 60;
+    }
+
+    @Test
+    void givesEachMachineATokenFromTheInjectedRandomOverItsOwnLinkAlone() {
+        RawPeer host = startedHost();
+        RawPeer joiner = joined("joiner", host);
+        byte[] both = new byte[2 * Msg.TOKEN_BYTES];
+        new Random(TOKEN_SEED).nextBytes(both);
+
+        assertThat(tokenOf(host)).containsExactly(Arrays.copyOfRange(both, 0, Msg.TOKEN_BYTES));
+        assertThat(tokenOf(joiner)).containsExactly(Arrays.copyOfRange(both, Msg.TOKEN_BYTES, both.length));
+        for (int frame = 0; frame < 60; frame++) {
+            frame(host, joiner);
+        }
+        assertThat(heard(joiner, tokenOf(host)))
+                .as("the host's token, said to the joiner")
+                .isFalse();
+        assertThat(heard(host, tokenOf(joiner)))
+                .as("the joiner's token, said to the host")
+                .isFalse();
+    }
+
+    @Test
+    void putsAMachineBackInItsSlotWithAFreshWorldWhenItShowsItsTokenWithinTheWindow() {
+        RawPeer host = startedHost();
+        RawPeer joiner = joined("joiner", host);
+        joiner.send(Delivery.UNRELIABLE, loadedInput(1, snapshotTickSentTo(joiner)));
+        frame(host, joiner);
+        int slot = slotsGiven(joiner).getFirst();
+        byte[] token = tokenOf(joiner);
+        joiner.transport.disconnect(joiner.link, "blip");
+        for (int frame = 0; frame < 120; frame++) {
+            frame(host);
+        }
+        assertThat(sealed.values()).as("the commander stands idle").anyMatch(bundle -> bundle.goesAway(slot));
+
+        RawPeer back = rejoined("back", token, host);
+
+        assertThat(messagesOfType(back, Msg.WELCOME)).hasSize(1);
+        assertThat(tokenOf(back)).as("the same machine, the same token").containsExactly(token);
+        assertThat(slotsGiven(back)).as("its own slot, not the lowest free one").containsExactly(slot);
+        assertThat(messagesOfType(back, Msg.SNAPSHOT))
+                .as("a world from the host's")
+                .hasSize(1);
+        back.send(Delivery.UNRELIABLE, loadedInput(1, snapshotTickSentTo(back)));
+        for (int frame = 0; frame < 5; frame++) {
+            frame(host, back);
+        }
+        assertThat(sealed.values())
+                .as("and the commander is back once it has it")
+                .anyMatch(b -> b.comesBack(slot));
+    }
+
+    @Test
+    void turnsAwayAStrangersTokenAndTellsItToJoinAgain() {
+        RawPeer host = startedHost();
+        RawPeer stranger = new RawPeer(network.endpoint("stranger"), port);
+        frame(host, stranger);
+
+        stranger.send(Delivery.RELIABLE, rejoin(new byte[Msg.TOKEN_BYTES]));
+        frame(host, stranger);
+        frame(host, stranger);
+
+        assertThat(messagesOfType(stranger, Msg.WELCOME)).isEmpty();
+        assertThat(refusalTo(stranger)).isEqualTo(Door.GIVEN_UP);
+        assertThat(stranger.closedBecause).contains("refused");
+    }
+
+    @Test
+    void freesTheSeatsWhenTheWindowEndsAndRefusesTheTokenAfterIt() {
+        RawPeer host = startedHost();
+        RawPeer joiner = joined("joiner", host);
+        int slot = slotsGiven(joiner).getFirst();
+        byte[] token = tokenOf(joiner);
+        joiner.transport.disconnect(joiner.link, "blip");
+        for (int frame = 0; frame < framesOfTheWindowAndMore() / 2; frame++) {
+            frame(host);
+        }
+        RawPeer early = new RawPeer(network.endpoint("early"), port);
+        early.send(Delivery.RELIABLE, hello("early"));
+        early.send(Delivery.RELIABLE, new WireWriter(8).putByte(Msg.SEAT).putByte(0));
+        frame(host, early);
+        answerSnapshots(host);
+        frame(host, early);
+        assertThat(slotsGiven(early))
+                .as("the seat is kept, a newcomer takes another")
+                .isNotEqualTo(List.of(slot));
+        for (int frame = 0; frame < framesOfTheWindowAndMore(); frame++) {
+            frame(host);
+        }
+
+        RawPeer late = new RawPeer(network.endpoint("late"), port);
+        late.send(Delivery.RELIABLE, rejoin(token));
+        frame(host, late);
+        frame(host, late);
+
+        assertThat(refusalTo(late)).isEqualTo(Door.GIVEN_UP);
+        RawPeer next = joined("next", host);
+        assertThat(slotsGiven(next))
+                .as("the lowest free slot, its commander standing")
+                .containsExactly(slot);
+    }
+
+    @Test
+    void closesTheFirstLinkWhenASecondShowsTheSameToken() {
+        RawPeer host = startedHost();
+        RawPeer joiner = joined("joiner", host);
+        int slot = slotsGiven(joiner).getFirst();
+
+        RawPeer second = rejoined("second", tokenOf(joiner), host);
+        frame(host, joiner, second);
+
+        assertThat(joiner.closedBecause).contains("replaced");
+        assertThat(slotsGiven(second)).containsExactly(slot);
+        assertThat(messagesOfType(second, Msg.SNAPSHOT)).hasSize(1);
+    }
+
+    @Test
+    void freesTheSeatsAtOnceOfAMachineThatLeavesOnPurpose() {
+        RawPeer host = startedHost();
+        RawPeer joiner = joined("joiner", host);
+        int slot = slotsGiven(joiner).getFirst();
+
+        joiner.send(Delivery.RELIABLE, new WireWriter(2).putByte(Msg.LEAVE));
+        frame(host, joiner);
+        joiner.transport.disconnect(joiner.link, "bye");
+        frame(host);
+
+        assertThat(slotsGiven(joined("next", host))).containsExactly(slot);
+    }
+
+    @Test
+    void keepsTheSessionForTheHostsWindowAndAsksAnotherMachineForTheWorldOnItsReturn() {
+        RawPeer host = startedHost();
+        RawPeer friend = joined("friend", host);
+        friend.send(Delivery.UNRELIABLE, loadedInput(1, snapshotTickSentTo(friend)));
+        byte[] token = tokenOf(host);
+        host.transport.disconnect(host.link, "blip");
+        for (int frame = 0; frame < 100; frame++) {
+            frame(friend);
+        }
+        assertThat(friend.closedBecause).as("the session waits").isNull();
+
+        RawPeer back = new RawPeer(network.endpoint("hostAgain"), port);
+        back.send(Delivery.RELIABLE, rejoin(token));
+        frame(friend, back);
+        frame(friend, back);
+
+        assertThat(messagesOfType(back, Msg.WELCOME)).hasSize(1);
+        assertThat(messagesOfType(friend, Msg.SNAPSHOT_WANTED))
+                .as("the world comes from the machine playing")
+                .hasSize(1);
+    }
+
+    @Test
+    void endsTheSessionWhenTheHostDoesNotComeBackInTime() {
+        RawPeer host = startedHost();
+        RawPeer friend = joined("friend", host);
+        host.transport.disconnect(host.link, "blip");
+
+        for (int frame = 0; frame < framesOfTheWindowAndMore(); frame++) {
+            frame(friend);
+        }
+
+        assertThat(friend.closedBecause).contains("the host left the game");
+        assertThat(messagesOfType(friend, Msg.ENDED)).hasSize(1);
+    }
+
     /** A raw host that has said hello, been welcomed and seated in slot 0. */
     private RawPeer startedHost() {
         RawPeer host = new RawPeer(network.endpoint("host"), port);
@@ -543,6 +718,55 @@ class SequencerTest {
             }
         }
         return margins;
+    }
+
+    private static byte[] tokenOf(RawPeer peer) {
+        byte[] welcome = messagesOfType(peer, Msg.WELCOME).getFirst();
+        return Arrays.copyOfRange(welcome, welcome.length - 4 - Msg.TOKEN_BYTES, welcome.length - 4);
+    }
+
+    /** Whether any message the peer was sent holds these bytes. */
+    private static boolean heard(RawPeer peer, byte[] bytes) {
+        for (byte[] message : peer.seen) {
+            for (int at = 0; at + bytes.length <= message.length; at++) {
+                if (Arrays.equals(Arrays.copyOfRange(message, at, at + bytes.length), bytes)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static String refusalTo(RawPeer peer) {
+        byte[] refused = messagesOfType(peer, Msg.REFUSED).getFirst();
+        return new WireReader().wrap(refused, 1, refused.length - 1).getString(Msg.MAX_TEXT);
+    }
+
+    private static WireWriter hello(String machine) {
+        return new WireWriter(64)
+                .putByte(Msg.HELLO)
+                .putInt(Msg.PROTOCOL)
+                .putString(BuildId.current())
+                .putLong(0L)
+                .putString(machine);
+    }
+
+    private static WireWriter rejoin(byte[] token) {
+        WireWriter out = new WireWriter(64);
+        Msg.putRejoin(out, BuildId.current(), "back", token);
+        return out;
+    }
+
+    /** A new link that shows a token, with the host answering the world the sequencer asks of it. */
+    private RawPeer rejoined(String name, byte[] token, RawPeer host) {
+        RawPeer back = new RawPeer(network.endpoint(name), port);
+        frame(host, back);
+        back.send(Delivery.RELIABLE, rejoin(token));
+        for (int frame = 0; frame < 3; frame++) {
+            frame(host, back);
+            answerSnapshots(host);
+        }
+        return back;
     }
 
     private static List<byte[]> messagesOfType(RawPeer peer, int type) {

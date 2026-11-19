@@ -15,7 +15,7 @@ import pl.mzebrows.pwt.net.NetConfig;
 final class Msg {
 
     /** Bumped whenever a message changes shape. The build id catches that too; this names it in the log. */
-    static final int PROTOCOL = 7;
+    static final int PROTOCOL = 8;
 
     // Peer to sequencer.
     static final int HELLO = 1;
@@ -35,6 +35,15 @@ final class Msg {
 
     /** What the host shows on the briefing - its code line, as text - for everyone to see. Opaque to the sequencer. */
     static final int NOTE = 11;
+
+    /**
+     * A machine whose link dropped asks to be put back (G0105): in place of a hello, the protocol, the build and the
+     * machine's id as in one, then the token its welcome gave it.
+     */
+    static final int REJOIN = 12;
+
+    /** This machine is leaving on purpose: its seats are freed at once, with no window. Nothing follows the number. */
+    static final int LEAVE = 13;
 
     // Sequencer to peer.
     static final int WELCOME = 20;
@@ -58,6 +67,12 @@ final class Msg {
 
     /** The host's {@link #NOTE}, kept and passed on, to every machine as it changes and to one that arrives. */
     static final int NOTED = 32;
+
+    /** The session is over, and this is why: a machine told so does not try to come back (G0105). */
+    static final int ENDED = 33;
+
+    /** The bytes a rejoin token is, handed in the welcome (G0105). */
+    static final int TOKEN_BYTES = 16;
 
     /** The most bytes a note may be. */
     static final int MAX_NOTE = 64;
@@ -117,6 +132,37 @@ final class Msg {
 
     /** The most bytes a START's setup may be: a scenario's name, a seed and a config. */
     static final int MAX_START = MAX_CONFIG + MAX_TEXT + 16;
+
+    /**
+     * A welcome: who the machine is to the session, how big the session is, whether a mission is under way and the
+     * setup it began with, then - over this link only, never to another peer - the machine's rejoin token and how many
+     * seconds its seats are kept if the link drops (G0105).
+     */
+    static void putWelcome(
+            WireWriter out,
+            int peer,
+            int capacity,
+            boolean started,
+            NetConfig.Session session,
+            long tickNanos,
+            byte[] setup,
+            byte[] token,
+            int windowSeconds) {
+        out.reset().putByte(WELCOME).putInt(peer).putByte(capacity).putByte(started ? 1 : 0);
+        putSession(out, session);
+        out.putLong(tickNanos).putPacked(setup, 0, setup.length);
+        out.putBytes(token).putInt(windowSeconds);
+    }
+
+    /** A rejoin: what {@link #REJOIN} says. */
+    static void putRejoin(WireWriter out, String build, String machine, byte[] token) {
+        out.reset()
+                .putByte(REJOIN)
+                .putInt(PROTOCOL)
+                .putString(build)
+                .putString(machine)
+                .putBytes(token);
+    }
 
     /** Writes the session config into a welcome: every component, in order (ADR 0018). */
     static void putSession(WireWriter out, NetConfig.Session session) {

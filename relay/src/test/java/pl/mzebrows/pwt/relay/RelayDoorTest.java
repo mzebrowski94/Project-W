@@ -12,7 +12,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import pl.mzebrows.pwt.net.Clock;
 import pl.mzebrows.pwt.net.ManualClock;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.door.Door;
@@ -34,7 +33,7 @@ class RelayDoorTest {
 
     private final NetConfig net = NetConfig.defaults();
     private LoopbackNetwork network = new LoopbackNetwork(net);
-    private final Clock clock = new ManualClock();
+    private final ManualClock clock = new ManualClock();
     private final List<Machine> machines = new ArrayList<>();
     private NetLog log;
     private Transport relayTransport;
@@ -180,6 +179,8 @@ class RelayDoorTest {
         String code = ((Door.Opened) host.last()).code();
 
         host.transport.disconnect(host.link, "gone");
+        relay.poll();
+        clock.advanceMillis(net.rejoin().windowSeconds() * 1_000L);
         relay.poll();
 
         assertThat(relay.roomCount()).isZero();

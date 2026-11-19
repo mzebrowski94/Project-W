@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * The door's wire: the first message of a link to the relay is {@link Open} (a host) or {@link Join} (anybody
  * else), and the relay answers {@link Opened}, {@link Accepted} or {@link Refused}. Numbers from 40 up, so
- * nothing here is mistaken for a session message (1-28); big-endian, strings as a length and UTF-8. Control
+ * nothing here is mistaken for a session message (1-33); big-endian, strings as a length and UTF-8. Control
  * traffic, sent once per link and never per tick.
  *
  * <p>Provisional, for review (AFK run): the door has a wire of its own in {@code net}, not a share of the
@@ -22,6 +22,12 @@ public final class Door {
     public static final int ACCEPTED = 43;
     public static final int REFUSED = 44;
 
+    /** A machine whose link dropped asking back into the room it was in (G0105). */
+    public static final int REJOIN = 45;
+
+    /** Why a machine that asks back into a room it was in is turned away: its place is no longer held (G0105). */
+    public static final String GIVEN_UP = "your place in the room was given up - join again";
+
     /** What every refusal text starts with. */
     public static final String REFUSAL_PREFIX = "refused by the relay: ";
 
@@ -34,7 +40,7 @@ public final class Door {
     private Door() {}
 
     /** One message of the door. */
-    public sealed interface Message permits Open, Join, Opened, Accepted, Refused {}
+    public sealed interface Message permits Open, Join, Rejoin, Opened, Accepted, Refused {}
 
     /**
      * A host asking for a room.
@@ -53,6 +59,12 @@ public final class Door {
      * @param password as typed, or empty for none
      */
     public record Join(String code, String password, String buildId, String buildVersion) implements Message {}
+
+    /**
+     * A machine that was in a room asking back into it, with no password: the proof is the token it will show the room's
+     * sequencer next, which the relay never sees (G0105).
+     */
+    public record Rejoin(String code) implements Message {}
 
     /** The relay's answer to an {@link Open}: the room's code. */
     public record Opened(String code) implements Message {}
@@ -99,6 +111,7 @@ public final class Door {
                 }
                 yield done(out);
             }
+            case Rejoin rejoin -> text(REJOIN, rejoin.code());
             case Opened opened -> text(OPENED, opened.code());
             case Accepted accepted -> text(ACCEPTED, accepted.code());
             case Refused refused -> text(REFUSED, refused.text());
@@ -129,6 +142,7 @@ public final class Door {
                             yield new Open(id, version, hostKey, config, string(in));
                         }
                         case JOIN -> new Join(string(in), string(in), string(in), string(in));
+                        case REJOIN -> new Rejoin(string(in));
                         case OPENED -> new Opened(string(in));
                         case ACCEPTED -> new Accepted(string(in));
                         case REFUSED -> new Refused(string(in));

@@ -118,6 +118,7 @@ class NettyRelayTest {
                 shipped.pacing(),
                 shipped.session(),
                 shipped.lan(),
-                shipped.relay());
+                shipped.relay(),
+                shipped.rejoin());
     }
 }

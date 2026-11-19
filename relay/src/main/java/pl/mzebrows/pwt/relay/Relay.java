@@ -144,6 +144,12 @@ public final class Relay {
                 continue;
             }
             Sequencer sequencer = room.sequencer();
+            if (room.hostNeverCame(now, sequencer.rejoinWindowNanos(), sequencer.hostWelcomed())) {
+                it.remove();
+                log.info("relay", "event=room-empty code=" + room.code());
+                finish(room, "the host left the game");
+                continue;
+            }
             if (!room.sealLateWarned() && sequencer.sealLateMostNanos() > sealLateWarnNanos) {
                 room.warnedSealLate();
                 log.warn(
@@ -309,6 +315,7 @@ public final class Relay {
         switch (message) {
             case Door.Open open -> open(link, open);
             case Door.Join join -> join(link, join);
+            case Door.Rejoin rejoin -> rejoin(link, rejoin);
             default -> {
                 log.warn("relay", "event=bad-door link=" + link + " why=\"a reply sent to the relay\"");
                 transport.disconnect(link, "not a door message");
@@ -390,7 +397,8 @@ public final class Relay {
             return;
         }
         String code = room.code().text();
-        // A room's lock turns away a new machine, whatever it knows. Stage 7's held-token return skips this check.
+        // A room's lock turns away a new machine, whatever it knows. A machine coming back by its token does not come
+        // here.
         if (room.locked(clock.nanos())) {
             refuse(link, "room " + code + " is not taking machines for a moment", "room-locked");
             return;
@@ -421,6 +429,24 @@ public final class Relay {
         }
         log.info("relay", "event=joined code=" + code + " link=" + link + " links=" + (room.linkCount() + 1));
         send(link, new Door.Accepted(code));
+        admit(room, link);
+    }
+
+    /**
+     * A machine whose link dropped asks back into its room (G0105). The relay cannot know the token - the sequencer
+     * holds it - so the room's code is all the door asks: no password, no lock, no capacity (the machine may still be
+     * linked on a link the relay has not noticed is dead). What stands in the way of a stranger is the sequencer,
+     * which turns away a link whose token it does not hold and tells it to join again.
+     */
+    private void rejoin(int link, Door.Rejoin rejoin) {
+        RoomCode parsed = RoomCode.parse(rejoin.code());
+        Room room = parsed == null ? null : rooms.get(parsed.text());
+        if (room == null) {
+            refuse(link, Door.GIVEN_UP, "no-room");
+            return;
+        }
+        log.info("relay", "event=rejoined code=" + room.code() + " link=" + link + " links=" + (room.linkCount() + 1));
+        send(link, new Door.Accepted(room.code().text()));
         admit(room, link);
     }
 
@@ -463,13 +489,12 @@ public final class Relay {
         }
         room.remove(link);
         log.info("relay", "event=link-left code=" + room.code() + " link=" + link + " reason=\"" + reason + "\"");
+        // The sequencer keeps the seats of a machine whose link dropped for the rejoin window (G0105), the host's
+        // among them: the room ends when the sequencer ends (the host's window passed), not with the link.
         if (link == room.hostLink()) {
-            // Until a new host can take over (G0104), the host's link leaving ends the room, as it ends a LAN session.
-            rooms.remove(room.code().text());
-            finish(room, null);
-        } else {
-            room.view().closed(link, reason);
+            room.hostLinkClosed(clock.nanos());
         }
+        room.view().closed(link, reason);
     }
 
     private final class Listener implements TransportListener {

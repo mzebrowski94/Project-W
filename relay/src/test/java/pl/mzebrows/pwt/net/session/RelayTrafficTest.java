@@ -141,6 +141,7 @@ class RelayTrafficTest {
 
         host.leave();
         relay.poll();
+        quietFor(windowMillis() + 1_000);
 
         assertThat(relay.roomCount()).isZero();
         assertThat(written()).contains("event=room-closed").contains("sealLateMostMs=");
@@ -159,6 +160,10 @@ class RelayTrafficTest {
 
         host.leave();
         relay.poll();
+        assertThat(relay.roomCount())
+                .as("the host's seats are kept for its window")
+                .isEqualTo(1);
+        quietFor(windowMillis() + 1_000);
         guest.hear();
 
         assertThat(relay.roomCount()).isZero();
@@ -174,6 +179,10 @@ class RelayTrafficTest {
 
         assertThat(host.last).isInstanceOf(Door.Refused.class);
         assertThat(relay.roomCount()).isZero();
+    }
+
+    private long windowMillis() {
+        return net.rejoin().windowSeconds() * 1_000L;
     }
 
     private void quietFor(long millis) {

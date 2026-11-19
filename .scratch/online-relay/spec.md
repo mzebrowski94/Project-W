@@ -114,7 +114,7 @@ stage wants a record - none is promised). ADR 0024 is spare.
 - `Relay` does not listen; the caller hands it a listening `Transport`. `RelayMain` is left to stage 5 (needs Netty, `SystemClock`, `SecureRandom`, a file).
 - `Room.MACHINES_MAX` (8) is held to `Players.MAX` by `RelayDoorTest`, since the relay may not read `sim`. *Turned down: a config key.*
 - Only `net.relay.roomsMax` (32) is added; a host past it is refused `refused by the relay: no room is free`. A bad password at OPEN is refused likewise. The client keys `net.relay.host`/`port` wait for stage 6, which reads them.
-- A room closes at once when its last link leaves (stage 7 replaces that with the rejoin window).
+- A room closes at once when its last link leaves (stage 7 replaced that: a room closes when its sequencer ends - the host's window passed - see *Stage 7 notes*).
 
 ## Stage 5 notes - provisional, for review (AFK run)
 
@@ -157,3 +157,19 @@ Built in `relay` (`Relay`, `Room`, `Address`), keys in `NetConfig.Relay` and `as
 | `emptyRoomSeconds` | no | stage 7: a room closes at once when its last link leaves, so no room is empty and open |
 
 The address is read from `TransportListener.opened`'s `remote` text (after any `/`, port stripped), so no port change: loopback tests pick it with the endpoint name. Counters are memory only; idle addresses are swept once a second at most from `poll()`.
+
+## Stage 7 notes - provisional, for review (AFK run)
+
+Built in `Sequencer` (so a LAN session has it too), `PeerSession`, `Door`/`DoorClient`, `Relay`. Records: G0105 (*As built*). Protocol 8.
+
+| Choice | Turned down |
+|---|---|
+| `Door.Rejoin(code)`: the relay admits on the room's code alone (no password, no lock, no capacity); the sequencer checks the token | a token table at the relay (breaks ADR 0023's blindness) |
+| `LEAVE` (peer closing on purpose) frees seats at once; `ENDED` tells a machine the session is over so it does not retry | every close a drop |
+| the window travels in the welcome; `net.rejoin.windowSeconds` read once, in `Sequencer` | the client reading its own copy of the key |
+| snapshot on return: from the host, else any playing machine (the returning host's case) | host-only |
+| no `emptyRoomSeconds`: a room ends when its sequencer ends (host's window gone); a room whose host never said hello, one window after its link closed | a second key |
+| briefing: seats kept for the window, free after it | kept until the start |
+| client: `PeerSession.State.RECONNECTING`, retry every `net.rejoin.retryMillis` (1000, client scope) for the told window; `OnlineSession.connection()` says `lost the link to ..., coming back ...` (a literal, like its neighbours; the HUD line is stage 6's/8's) | an i18n line (none of the neighbouring states has one) |
+
+Left: a host returning with nobody else playing waits for a snapshot nobody can give (stage 8 hands the session over); the sequencer's refusal on the relay reaches the client without the `refused by the relay:` prefix (the door's own refusal, for a room that is gone, has it).

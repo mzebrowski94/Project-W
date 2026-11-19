@@ -17,7 +17,7 @@ import pl.mzebrows.pwt.sim.CommanderInput;
 class WireGoldenTest {
 
     /** What {@link Msg#PROTOCOL} was when the bytes in this file were written. Bump both together. */
-    private static final int PROTOCOL_OF_THESE_BYTES = 7;
+    private static final int PROTOCOL_OF_THESE_BYTES = 8;
 
     private final WireWriter out = new WireWriter(64);
     private final WireReader in = new WireReader();
@@ -43,6 +43,8 @@ class WireGoldenTest {
         numbers.put("START", Msg.START);
         numbers.put("TO_BRIEFING", Msg.TO_BRIEFING);
         numbers.put("NOTE", Msg.NOTE);
+        numbers.put("REJOIN", Msg.REJOIN);
+        numbers.put("LEAVE", Msg.LEAVE);
         numbers.put("WELCOME", Msg.WELCOME);
         numbers.put("REFUSED", Msg.REFUSED);
         numbers.put("BUNDLES", Msg.BUNDLES);
@@ -56,6 +58,7 @@ class WireGoldenTest {
         numbers.put("BRIEFING", Msg.BRIEFING);
         numbers.put("PLAYERS", Msg.PLAYERS);
         numbers.put("NOTED", Msg.NOTED);
+        numbers.put("ENDED", Msg.ENDED);
 
         assertThat(numbers)
                 .containsExactly(
@@ -70,6 +73,8 @@ class WireGoldenTest {
                         Map.entry("START", 9),
                         Map.entry("TO_BRIEFING", 10),
                         Map.entry("NOTE", 11),
+                        Map.entry("REJOIN", 12),
+                        Map.entry("LEAVE", 13),
                         Map.entry("WELCOME", 20),
                         Map.entry("REFUSED", 21),
                         Map.entry("BUNDLES", 22),
@@ -82,7 +87,9 @@ class WireGoldenTest {
                         Map.entry("STARTED", 29),
                         Map.entry("BRIEFING", 30),
                         Map.entry("PLAYERS", 31),
-                        Map.entry("NOTED", 32));
+                        Map.entry("NOTED", 32),
+                        Map.entry("ENDED", 33));
+        assertThat(Msg.TOKEN_BYTES).isEqualTo(16);
         assertThat(new int[] {Msg.EVENT_ORDER, Msg.EVENT_PICK, Msg.EVENT_CRATE}).containsExactly(1, 2, 3);
         assertThat(Msg.EVENT_BYTES).isEqualTo(11);
         assertThat(Msg.NO_SLOT).isEqualTo(255);
@@ -117,6 +124,43 @@ class WireGoldenTest {
         Msg.putSession(out, new NetConfig.Session(30));
 
         assertThat(out.toBytes()).containsExactly(bytes(0, 0, 0, 30));
+    }
+
+    @Test
+    void writesAWelcomeWithTheMachinesTokenAndHowLongItsSeatsAreKept() {
+        byte[] token = new byte[Msg.TOKEN_BYTES];
+        for (int i = 0; i < token.length; i++) {
+            token[i] = (byte) (i + 1);
+        }
+
+        Msg.putWelcome(out, 2, 8, false, new NetConfig.Session(30), 0L, new byte[0], token, 30);
+
+        byte[] written = out.toBytes();
+        assertThat(written)
+                .startsWith(bytes(20, 0, 0, 0, 2, 8, 0, 0, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 0))
+                .endsWith(bytes(0, 0, 0, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 0, 0, 0, 30));
+        assertThat(written).hasSize(1 + 4 + 1 + 1 + 4 + 8 + packedEmptyLength() + 4 + 16 + 4);
+    }
+
+    @Test
+    void writesARejoinAsAHelloWithTheTokenInPlaceOfAKey() {
+        byte[] token = new byte[Msg.TOKEN_BYTES];
+        for (int i = 0; i < token.length; i++) {
+            token[i] = (byte) (i + 1);
+        }
+
+        Msg.putRejoin(out, "b1", "m", token);
+
+        assertThat(out.toBytes())
+                .containsExactly(bytes(
+                        12, 0, 0, 0, 8, 0, 0, 0, 2, 'b', '1', 0, 0, 0, 1, 'm', 0, 0, 0, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                        10, 11, 12, 13, 14, 15, 16));
+    }
+
+    private int packedEmptyLength() {
+        WireWriter packed = new WireWriter(16);
+        packed.putPacked(new byte[0], 0, 0);
+        return packed.size();
     }
 
     @Test

@@ -1,10 +1,14 @@
 package pl.mzebrows.pwt.net.session;
 
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.random.RandomGenerator;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.NetConfig;
+import pl.mzebrows.pwt.net.door.Door;
 import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.transport.Delivery;
 import pl.mzebrows.pwt.net.transport.Transport;
@@ -47,6 +51,9 @@ public final class Sequencer implements AutoCloseable {
     /** How often a session on its briefing looks up from waiting: nothing is sealed, a link is only heard. */
     private static final long BRIEFING_NANOS = 16_666_667L;
 
+    /** What a machine is told when it comes back by a token the sequencer no longer holds (G0105). */
+    static final String GIVEN_UP = Door.GIVEN_UP;
+
     private final Transport transport;
     private final NetConfig.Pacing pacing;
     private final NetConfig.Session session;
@@ -54,6 +61,25 @@ public final class Sequencer implements AutoCloseable {
     private final NetLog log;
     private final String build;
     private final long hostKey;
+    private final RandomGenerator random;
+
+    /** How long a dropped machine's seats are kept for it (G0105): the one place the key is read. */
+    private final long windowNanos;
+
+    private final int windowSeconds;
+
+    /**
+     * Machines whose link dropped and whose seats are kept until they come back by their token or the window
+     * ends (G0105), in the order they dropped. A list walked by index, once a pump.
+     */
+    private final List<Peer> held = new ArrayList<>();
+
+    /** The session is over: its peers were told and its transport let go. */
+    private boolean ended;
+
+    /** Whether the host's peer has said its hello: what a relay reads to tell a room whose host never arrived. */
+    private volatile boolean hostWelcomed;
+
     /** The world's tick, as the START said; zero while the session is on its briefing. */
     private long tickNanos;
 
@@ -152,7 +178,22 @@ public final class Sequencer implements AutoCloseable {
      * @param build this build's id; a peer with another is refused
      */
     public Sequencer(Transport transport, NetConfig config, NetLog log, int capacity, long hostKey, String build) {
+        this(transport, config, log, capacity, hostKey, build, new SecureRandom());
+    }
+
+    /** @param random where the rejoin tokens come from: a secure one in play, a seeded one in a test (G0105) */
+    public Sequencer(
+            Transport transport,
+            NetConfig config,
+            NetLog log,
+            int capacity,
+            long hostKey,
+            String build,
+            RandomGenerator random) {
         this.transport = transport;
+        this.random = random;
+        this.windowSeconds = config.rejoin().windowSeconds();
+        this.windowNanos = windowSeconds * 1_000_000_000L;
         this.pacing = config.pacing();
         this.session = config.session();
         this.maxDatagramBytes = config.maxDatagramBytes();
@@ -217,6 +258,16 @@ public final class Sequencer implements AutoCloseable {
         return hostKey;
     }
 
+    /** How long a dropped machine's seats are kept, in nanoseconds: the one reading of the key, told to whoever asks. */
+    public long rejoinWindowNanos() {
+        return windowNanos;
+    }
+
+    /** Whether a peer has been welcomed as the host: false until its hello, true for good. Safe from any thread. */
+    public boolean hostWelcomed() {
+        return hostWelcomed;
+    }
+
     /** The last tick sealed, or -1 before the host's peer has started the session. */
     public int sealedTick() {
         return sealed;
@@ -258,7 +309,14 @@ public final class Sequencer implements AutoCloseable {
     /** Hears every peer, seals every tick that is due, and sends every peer what it has not got yet. */
     public void pump(long nowNanos) {
         now = nowNanos;
+        if (ended) {
+            return;
+        }
         transport.poll(listener);
+        giveUpOnThoseGone();
+        if (ended) {
+            return;
+        }
         askForSnapshots();
         int sealedNow = 0;
         if (started && !paused) {
@@ -291,9 +349,19 @@ public final class Sequencer implements AutoCloseable {
      * players looking at a world that will never move again.
      */
     public void end(String reason) {
-        for (int i = 0; i < peers.size(); i++) {
-            transport.disconnect(peers.get(i).link, reason);
+        if (ended) {
+            return;
         }
+        ended = true;
+        out.reset().putByte(Msg.ENDED).putString(reason);
+        for (int i = 0; i < peers.size(); i++) {
+            Peer peer = peers.get(i);
+            if (peer.id >= 0) {
+                transport.send(peer.link, Delivery.RELIABLE, out.array(), 0, out.size());
+            }
+            transport.disconnect(peer.link, reason);
+        }
+        held.clear();
         transport.close();
     }
 
@@ -317,7 +385,7 @@ public final class Sequencer implements AutoCloseable {
             Arrays.fill(backWanted, false);
             for (int slot = 0; slot < capacity; slot++) {
                 Peer holder = owner[slot] < 0 ? null : peerWithId(owner[slot]);
-                if (holder != null && holder.state == PeerState.DORMANT) {
+                if (holder == null || holder.state == PeerState.DORMANT) {
                     goAway(slot);
                 }
             }
@@ -467,25 +535,46 @@ public final class Sequencer implements AutoCloseable {
     }
 
     private void askForSnapshots() {
-        Peer host = host();
-        if (host == null || host.state != PeerState.PLAYING) {
-            return;
-        }
         for (int i = 0; i < peers.size(); i++) {
             Peer peer = peers.get(i);
             if (peer.wantsSnapshot && !peer.snapshotAsked) {
+                Peer source = snapshotSource(peer);
+                if (source == null) {
+                    continue;
+                }
                 out.reset().putByte(Msg.SNAPSHOT_WANTED).putInt(peer.id);
-                transport.send(host.link, Delivery.RELIABLE, out.array(), 0, out.size());
+                transport.send(source.link, Delivery.RELIABLE, out.array(), 0, out.size());
                 peer.snapshotAsked = true;
-                log.debug("sequencer", "event=snapshot-asked for=" + peer.id + " from=" + host.id);
+                peer.snapshotFrom = source.id;
+                log.debug("sequencer", "event=snapshot-asked for=" + peer.id + " from=" + source.id);
             }
         }
+    }
+
+    /**
+     * Who takes the snapshot a peer is to drop in with: the host, once it is playing. When the host's link is down
+     * within its window (G0105), or it is the one coming back, any machine that is playing - every world is the
+     * same at a tick - and nobody while there is none.
+     */
+    private @Nullable Peer snapshotSource(Peer target) {
+        Peer host = host();
+        if (host != null && host != target) {
+            return host.state == PeerState.PLAYING ? host : null;
+        }
+        for (int i = 0; i < peers.size(); i++) {
+            Peer other = peers.get(i);
+            if (other != target && other.id >= 0 && other.state == PeerState.PLAYING) {
+                return other;
+            }
+        }
+        return null;
     }
 
     private void heal(Peer peer) {
         peer.state = PeerState.JOINING;
         peer.wantsSnapshot = true;
         peer.snapshotAsked = false;
+        peer.snapshotFrom = -1;
     }
 
     /**
@@ -494,13 +583,16 @@ public final class Sequencer implements AutoCloseable {
      * would only have been thrown away, and waited for again (the second Hamachi playtest).
      */
     private void loaded(Peer peer) {
-        if (peer.state == PeerState.DORMANT) {
+        if (peer.state == PeerState.DORMANT || peer.returning) {
             for (int slot = 0; slot < capacity; slot++) {
                 if (owner[slot] == peer.id) {
                     comeBack(slot);
                 }
             }
-            log.info("sequencer", "event=awake peer=" + peer.id + " machine=" + peer.machine);
+            log.info(
+                    "sequencer",
+                    "event=" + (peer.returning ? "back" : "awake") + " peer=" + peer.id + " machine=" + peer.machine);
+            peer.returning = false;
         }
         peer.state = PeerState.PLAYING;
         peer.catchUpTo = sealed;
@@ -594,7 +686,7 @@ public final class Sequencer implements AutoCloseable {
     }
 
     private void received(Peer peer, int type) {
-        if (peer.id < 0 && type != Msg.HELLO) {
+        if (peer.id < 0 && type != Msg.HELLO && type != Msg.REJOIN) {
             throw new WireException("message " + type + " before hello");
         }
         if (type != Msg.INPUT && type != Msg.CHECKSUM) {
@@ -602,6 +694,11 @@ public final class Sequencer implements AutoCloseable {
         }
         switch (type) {
             case Msg.HELLO -> hello(peer);
+            case Msg.REJOIN -> rejoin(peer);
+            case Msg.LEAVE -> {
+                in.expectEnd();
+                peer.leaving = true;
+            }
             case Msg.INPUT -> input(peer);
             case Msg.CHECKSUM -> checksum(peer);
             case Msg.SNAPSHOT_TAKEN -> snapshotTaken(peer);
@@ -641,10 +738,30 @@ public final class Sequencer implements AutoCloseable {
         }
         peer.id = nextPeerId++;
         peer.machine = machine;
-        peer.host = key == hostKey && host() == null;
-        out.reset().putByte(Msg.WELCOME).putInt(peer.id).putByte(capacity).putByte(started ? 1 : 0);
-        Msg.putSession(out, session);
-        out.putLong(tickNanos).putPacked(startBytes, 0, startBytes.length);
+        peer.host = key == hostKey && host() == null && !holdingHost();
+        hostWelcomed |= peer.host;
+        // Sixteen bytes only this machine and this sequencer know: what proves a returning link is this one (G0105).
+        peer.token = new byte[Msg.TOKEN_BYTES];
+        random.nextBytes(peer.token);
+        welcome(peer);
+    }
+
+    private boolean holdingHost() {
+        for (int i = 0; i < held.size(); i++) {
+            if (held.get(i).host) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Tells a machine it is in: the welcome, its token with it, the briefing's players and note. */
+    private void welcome(Peer peer) {
+        byte[] token = peer.token;
+        if (token == null) {
+            throw new IllegalStateException("a welcome with no token for peer " + peer.id);
+        }
+        Msg.putWelcome(out, peer.id, capacity, started, session, tickNanos, startBytes, token, windowSeconds);
         transport.send(peer.link, Delivery.RELIABLE, out.array(), 0, out.size());
         int welcomeBytes = out.size();
         if (started) {
@@ -659,6 +776,122 @@ public final class Sequencer implements AutoCloseable {
                         + " setupBytes=" + startBytes.length + " wireBytes=" + welcomeBytes);
         sendPlayers();
         sendNote(peer);
+    }
+
+    /**
+     * A machine whose link dropped asks to be put back (G0105). The token is the proof: it names a machine the
+     * sequencer holds - dropped within its window, or still linked on a link the machine has lost without the other
+     * end knowing - and a link that shows one is that machine. Its old link, if any, is closed. Its seats were kept;
+     * a world comes by the drop-in path, and its commanders come back when it has built it.
+     */
+    private void rejoin(Peer peer) {
+        int protocol = in.getInt();
+        if (protocol != Msg.PROTOCOL) {
+            if (peer.id < 0) {
+                refuse(peer, "protocol " + protocol + ", the host speaks " + Msg.PROTOCOL);
+            }
+            return;
+        }
+        String theirBuild = in.getString(Msg.MAX_TEXT);
+        String machine = in.getString(MachineId.MAX_LENGTH);
+        byte[] token = in.getBytes(Msg.TOKEN_BYTES);
+        in.expectEnd();
+        if (!MachineId.valid(machine)) {
+            throw new WireException("a machine id that cannot be logged as it came");
+        }
+        if (peer.id >= 0) {
+            return;
+        }
+        if (!theirBuild.equals(build) || build.equals(BuildId.UNKNOWN)) {
+            refuse(peer, "build " + theirBuild + ", the host runs " + build);
+            return;
+        }
+        Peer old = holderOf(token);
+        if (old == null) {
+            log.info("sequencer", "event=rejoin-refused link=" + peer.link + " machine=" + machine);
+            refuse(peer, GIVEN_UP);
+            return;
+        }
+        if (!held.remove(old)) {
+            peers.remove(old);
+            transport.disconnect(old.link, "replaced by a new link");
+            for (int i = 0; i < peers.size(); i++) {
+                if (peers.get(i).snapshotFrom == old.id) {
+                    peers.get(i).snapshotAsked = false;
+                }
+            }
+        }
+        peer.id = old.id;
+        peer.machine = old.machine;
+        peer.host = old.host;
+        peer.token = old.token;
+        peer.returning = true;
+        for (int seat = 0; seat < capacity; seat++) {
+            int slot = old.slotOfSeat[seat];
+            peer.slotOfSeat[seat] = slot >= 0 && owner[slot] == old.id ? slot : -1;
+        }
+        for (int slot = 0; slot < capacity; slot++) {
+            if (started && owner[slot] == peer.id) {
+                // Its world is thrown away and comes again from a snapshot: its commanders wait idle till then.
+                Arrays.fill(lastHeld[slot], (byte) 0);
+                Arrays.fill(aheadTick[slot], -1);
+                if (!away[slot]) {
+                    goAway(slot);
+                }
+            }
+        }
+        welcome(peer);
+        for (int seat = 0; seat < capacity; seat++) {
+            if (peer.slotOfSeat[seat] >= 0) {
+                out.reset().putByte(Msg.SLOT).putByte(seat).putByte(peer.slotOfSeat[seat]);
+                transport.send(peer.link, Delivery.RELIABLE, out.array(), 0, out.size());
+            }
+        }
+        log.info(
+                "sequencer",
+                "event=rejoined peer=" + peer.id + " machine=" + peer.machine + " link=" + peer.link + " host="
+                        + peer.host);
+    }
+
+    private @Nullable Peer holderOf(byte[] token) {
+        for (int i = 0; i < peers.size(); i++) {
+            Peer each = peers.get(i);
+            if (each.token != null && MessageDigest.isEqual(each.token, token)) {
+                return each;
+            }
+        }
+        for (int i = 0; i < held.size(); i++) {
+            Peer each = held.get(i);
+            if (each.token != null && MessageDigest.isEqual(each.token, token)) {
+                return each;
+            }
+        }
+        return null;
+    }
+
+    /** The seats of a machine that did not come back in its window are free, as a pad unplugged for good (G0105). */
+    private void giveUpOnThoseGone() {
+        for (int i = held.size() - 1; i >= 0; i--) {
+            Peer gone = held.get(i);
+            if (now - gone.heldUntilNanos < 0) {
+                continue;
+            }
+            held.remove(i);
+            for (int slot = 0; slot < capacity; slot++) {
+                if (owner[slot] == gone.id) {
+                    owner[slot] = -1;
+                    joinWanted[slot] = false;
+                    Arrays.fill(lastHeld[slot], (byte) 0);
+                    holderMachine[slot] = "";
+                }
+            }
+            log.info("sequencer", "event=gave-up peer=" + gone.id + " machine=" + gone.machine + " host=" + gone.host);
+            if (gone.host) {
+                end("the host left the game");
+                return;
+            }
+            sendPlayers();
+        }
     }
 
     /**
@@ -993,7 +1226,7 @@ public final class Sequencer implements AutoCloseable {
         in.skip(length);
         in.expectEnd();
         Peer target = peerWithId(forPeer);
-        if (!from.host || target == null || !target.wantsSnapshot) {
+        if (target == null || !target.wantsSnapshot || target.snapshotFrom != from.id) {
             return;
         }
         if (tick > sealed || sealed - tick >= history.length - 1) {
@@ -1117,6 +1350,40 @@ public final class Sequencer implements AutoCloseable {
     }
 
     private void left(Peer peer, String reason) {
+        for (int i = 0; i < peers.size(); i++) {
+            Peer each = peers.get(i);
+            if (each.snapshotFrom == peer.id && peer.id >= 0) {
+                each.snapshotAsked = false;
+            }
+        }
+        if (peer.host && peer.leaving) {
+            // The host chose to go: nothing to wait for, and nobody to hand the session to yet (G0038).
+            end("the host left the game");
+            return;
+        }
+        boolean keep = peer.id >= 0 && !peer.leaving && windowNanos > 0 && peer.token != null;
+        if (keep) {
+            // Its seats are kept for the window and its commanders stand idle (G0052): it may be back (G0105).
+            peer.heldUntilNanos = now + windowNanos;
+            held.add(peer);
+            for (int slot = 0; started && slot < capacity; slot++) {
+                if (owner[slot] == peer.id) {
+                    Arrays.fill(lastHeld[slot], (byte) 0);
+                    Arrays.fill(aheadTick[slot], -1);
+                    if (!away[slot]) {
+                        goAway(slot);
+                    }
+                }
+            }
+            log.info(
+                    "sequencer",
+                    "event=held peer=" + peer.id + " machine=" + peer.machine + " link=" + peer.link + " host="
+                            + peer.host + " seconds=" + windowSeconds + " reason=\"" + reason + "\"");
+            if (!started) {
+                sendPlayers();
+            }
+            return;
+        }
         if (!started) {
             // On the briefing a slot stays with the machine that took it, shown offline: it is put on the field
             // away, as a mission leaves a commander (G0038), if the host starts without it back.
@@ -1198,6 +1465,22 @@ public final class Sequencer implements AutoCloseable {
         String machine = "-";
 
         boolean host;
+
+        /** What proves a link is this machine's (G0105): sixteen bytes, set at its welcome, told to nobody else. */
+        byte @Nullable [] token;
+
+        /** It said it is leaving on purpose: no window for its seats. */
+        boolean leaving;
+
+        /** It came back by its token and is waiting for a world: its commanders stand away until it has built it. */
+        boolean returning;
+
+        /** When a dropped machine's seats are given up, on the sequencer's clock; set while it is held. */
+        long heldUntilNanos;
+
+        /** The peer asked for the snapshot this one is waiting for, or -1. */
+        int snapshotFrom = -1;
+
         PeerState state = PeerState.HELLO;
         int acked = -1;
 

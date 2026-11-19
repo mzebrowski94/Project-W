@@ -62,6 +62,11 @@ public final class PeerSession implements AutoCloseable {
         /** Welcomed to a session still on its briefing: no world, no mission - the host has not started one (G0101). */
         BRIEFING,
         PLAYING,
+        /**
+         * The link dropped and this machine is trying to come back to its seats (G0105): it shows what it had, plays
+         * nothing, and gives up when the window the sequencer told it has passed.
+         */
+        RECONNECTING,
         /** The sequencer said no; {@link #refusal()} says why. */
         REFUSED
     }
@@ -130,6 +135,31 @@ public final class PeerSession implements AutoCloseable {
 
     private @Nullable String closedBecause;
     private int link = -1;
+
+    /** Where the link goes, kept to open it again when it drops (G0105). */
+    private String connectHost = "";
+
+    private int connectPort;
+
+    /** The room this link is in, as the door said, for a door to be asked into it again; null on a LAN session. */
+    private @Nullable String roomCode;
+
+    /**
+     * What the sequencer gave this machine in its welcome to prove it is the one that left (G0105). Memory only: a
+     * game started again has none and joins as new. Null before the welcome, and once the session is over.
+     */
+    private byte @Nullable [] token;
+
+    /** How many seconds the sequencer keeps this machine's seats, as its welcome said: how long to go on trying. */
+    private int windowSeconds;
+
+    private final long retryNanos;
+
+    /** Whether the link being opened is a try at coming back: what it says first is a rejoin, not a hello. */
+    private boolean rejoining;
+
+    private long retryUntilNanos;
+    private long nextTryNanos;
     private long hostKey;
     private int peerId = -1;
     private int capacity;
@@ -284,6 +314,7 @@ public final class PeerSession implements AutoCloseable {
         this.build = build;
         this.machineId = machineId;
         this.statsNanos = config.log().statsSeconds() * 1_000_000_000L;
+        this.retryNanos = config.rejoin().retryMillis() * 1_000_000L;
         this.out = new WireWriter(Math.max(2048, config.maxDatagramBytes()));
         this.lead = pacing.leadMinTicks();
         Arrays.fill(slotOfSeat, -1);
@@ -306,6 +337,8 @@ public final class PeerSession implements AutoCloseable {
     public void connect(String host, int port, long key, @Nullable DoorClient door) {
         hostKey = key;
         this.door = door;
+        connectHost = host;
+        connectPort = port;
         state = State.CONNECTING;
         link = transport.connect(host, port);
         log.info("peer", "event=connecting to=" + host + ":" + port);
@@ -345,6 +378,10 @@ public final class PeerSession implements AutoCloseable {
         }
         timeFrame(elapsed);
         transport.poll(listener);
+        if (state == State.RECONNECTING) {
+            retry(nowNanos);
+            return false;
+        }
         Simulation current = world;
         if (state != State.PLAYING || current == null) {
             return false;
@@ -593,10 +630,48 @@ public final class PeerSession implements AutoCloseable {
         return peerId;
     }
 
+    /** The int is this session's link, or -1 while it has none: what a test drops. */
+    int link() {
+        return link;
+    }
+
+    /** Whether this machine holds a token to come back with, and so would try to (G0105). */
+    boolean canComeBack() {
+        return token != null;
+    }
+
+    /**
+     * Leaves on purpose: the sequencer is told, so it frees this machine's seats at once and does not keep them for
+     * a window (G0105). Whatever is lost on the way is the window's to settle.
+     */
     @Override
     public void close() {
+        if (token != null && link >= 0 && peerId >= 0 && state != State.RECONNECTING && state != State.CLOSED) {
+            sendControl(out.reset().putByte(Msg.LEAVE));
+        }
+        token = null;
         transport.close();
         state = State.CLOSED;
+    }
+
+    /** While the link is down: opens it again every retry, until the window the sequencer gave has passed. */
+    private void retry(long nowNanos) {
+        if (nowNanos - retryUntilNanos >= 0) {
+            token = null;
+            state = State.CLOSED;
+            closedBecause = "the link did not come back in " + windowSeconds + " seconds";
+            log.warn("peer", "event=gave-up seconds=" + windowSeconds);
+            return;
+        }
+        if (link >= 0 || nowNanos - nextTryNanos < 0) {
+            return;
+        }
+        nextTryNanos = nowNanos + retryNanos;
+        rejoining = true;
+        String room = roomCode;
+        door = room == null ? null : DoorClient.rejoin(room);
+        link = transport.connect(connectHost, connectPort);
+        log.info("peer", "event=reconnecting to=" + connectHost + ":" + connectPort);
     }
 
     private void step(PlayerInputs local) {
@@ -824,8 +899,15 @@ public final class PeerSession implements AutoCloseable {
             case Msg.WELCOME -> welcome();
             case Msg.REFUSED -> {
                 refusal = in.getString(Msg.MAX_TEXT);
+                token = null;
                 state = State.REFUSED;
                 log.warn("peer", "event=refused reason=\"" + refusal + "\"");
+            }
+            case Msg.ENDED -> {
+                // The session is over, not the link: there is nothing to come back to.
+                closedBecause = in.getString(Msg.MAX_TEXT);
+                in.expectEnd();
+                token = null;
             }
             case Msg.STARTED -> started();
             case Msg.BRIEFING -> briefing();
@@ -906,9 +988,30 @@ public final class PeerSession implements AutoCloseable {
         checksumTicks = Msg.getSession(in).checksumTicks();
         long nanos = in.getLong();
         byte[] mission = in.getPacked(Msg.MAX_START);
+        byte[] heardToken = in.getBytes(Msg.TOKEN_BYTES);
+        int window = in.getInt();
         in.expectEnd();
         if (capacity < 1 || capacity > Players.MAX || (started && nanos <= 0)) {
             throw new WireException("a session of " + capacity + " slots at " + nanos + " ns a tick");
+        }
+        if (heardToken.length != Msg.TOKEN_BYTES || window < 0 || window > NetConfig.Rejoin.MOST_WINDOW_SECONDS) {
+            throw new WireException("a token of " + heardToken.length + " bytes, kept " + window + " seconds");
+        }
+        token = heardToken;
+        windowSeconds = window;
+        boolean back = rejoining;
+        rejoining = false;
+        retryUntilNanos = 0L;
+        if (back) {
+            // What this machine was playing is as old as the link was down: it is thrown away when a snapshot
+            // of the sequencer's session comes (or the briefing, if the session has gone back to it) (G0105).
+            resetMission();
+            generation = 0;
+            paused = false;
+            if (!started) {
+                world = null;
+                setup = null;
+            }
         }
         bundle = new Bundle(capacity);
         codec = new InputCodec(capacity);
@@ -1152,7 +1255,7 @@ public final class PeerSession implements AutoCloseable {
     }
 
     private void sendControl(WireWriter message) {
-        if (link < 0 || peerId < 0) {
+        if (link < 0 || peerId < 0 || state == State.RECONNECTING) {
             return;
         }
         transport.send(link, Delivery.RELIABLE, message.array(), 0, message.size());
@@ -1216,6 +1319,13 @@ public final class PeerSession implements AutoCloseable {
 
     /** The session's hello: who this peer is and which build, the first thing a sequencer hears of it. */
     private void hello(String remote) {
+        byte[] proof = token;
+        if (rejoining && proof != null) {
+            Msg.putRejoin(out, build, machineId, proof);
+            transport.send(link, Delivery.RELIABLE, out.array(), 0, out.size());
+            log.info("peer", "event=rejoin remote=" + remote + " build=" + build + " machine=" + machineId);
+            return;
+        }
         out.reset()
                 .putByte(Msg.HELLO)
                 .putInt(Msg.PROTOCOL)
@@ -1236,10 +1346,12 @@ public final class PeerSession implements AutoCloseable {
             return;
         }
         if (asking.state() == DoorClient.State.IN) {
-            log.info("peer", "event=door-in code=" + asking.code());
+            roomCode = asking.code();
+            log.info("peer", "event=door-in code=" + roomCode);
             hello("relay");
         } else if (asking.state() == DoorClient.State.REFUSED) {
             refusal = asking.refusal();
+            token = null;
             state = State.REFUSED;
             log.warn("peer", "event=refused reason=\"" + refusal + "\"");
         }
@@ -1285,7 +1397,17 @@ public final class PeerSession implements AutoCloseable {
             if (closed != link) {
                 return;
             }
-            if (state != State.REFUSED) {
+            link = -1;
+            boolean welcomed = state == State.JOINING || state == State.BRIEFING || state == State.PLAYING;
+            if (token != null && windowSeconds > 0 && (welcomed || state == State.RECONNECTING)) {
+                // An unplugged pad, and the way back (G0105): the seats are kept for the window, and it is tried
+                // from the next frame on, for as long.
+                if (state != State.RECONNECTING) {
+                    retryUntilNanos = lastPumpNanos + windowSeconds * 1_000_000_000L;
+                    nextTryNanos = lastPumpNanos;
+                }
+                state = State.RECONNECTING;
+            } else if (state != State.REFUSED) {
                 state = State.CLOSED;
             }
             closedBecause = reason;

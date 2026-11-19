@@ -5,10 +5,24 @@
 **Trigger.** Reconnecting after a dropped link; how a machine proves it is the one that left; how long a place is kept;
 whether a crashed game counts as coming back; what the room's password asks again.
 
-**Enforced by.** Nothing yet - not built; the tests are named here when it is (`.scratch/online-relay/spec.md`, stage 7).
+**Enforced by.** `SequencerTest` (`givesEachMachineATokenFromTheInjectedRandomOverItsOwnLinkAlone`, `putsAMachineBackInItsSlotWithAFreshWorldWhenItShowsItsTokenWithinTheWindow`, `turnsAwayAStrangersTokenAndTellsItToJoinAgain`, `freesTheSeatsWhenTheWindowEndsAndRefusesTheTokenAfterIt`, `closesTheFirstLinkWhenASecondShowsTheSameToken`, `freesTheSeatsAtOnceOfAMachineThatLeavesOnPurpose`, `keepsTheSessionForTheHostsWindowAndAsksAnotherMachineForTheWorldOnItsReturn`, `endsTheSessionWhenTheHostDoesNotComeBackInTime`); `SessionTest` and `RelaySessionTest` (`bringsAMachineBackToItsSlotWithTheHostsWorldAfterABlip` - the world it is sent has the host's hash -, `keepsTheSessionAndPutsTheHostBackWhenItsLinkBlipsWithinTheWindow`, `freesTheSeatWhenTheWindowEndsAndTurnsTheLateMachineAwayToJoinAgain`); `RelayLimitsTest` (`aMachineComingBackIsLetInWithoutThePasswordEvenWhileTheRoomIsLocked`, `turnsAwayAMachineComingBackToARoomThatIsGone`); `RelayTrafficTest` (a room outlives its host's link for the window and closes after it); `WireGoldenTest` (the welcome with its token, the rejoin).
 
 **Provisional, for review (AFK run).** Decided by the orchestrator while Mateusz was away; each choice names the
 alternative turned down. Nothing in it breaks a pillar.
+
+**As built (provisional, for review - AFK run).** Each with what it turned down. (1) The relay's door lets a rejoin in on the
+room's code alone (`Door.Rejoin`: no password, no lock, no capacity); the *sequencer* checks the token and refuses a stranger with
+`your place in the room was given up - join again`. *Turned down: a token table at the relay* - it would have to read the session's welcome,
+which ADR 0023 keeps blind. (2) A machine that leaves on purpose says so (`LEAVE`, sent by `PeerSession.close()`); a link closing with no word is a
+drop. A session that ends says so (`ENDED`), so a machine told it is over does not retry. *Turned down: every close a drop* - every ended session
+would be retried for the window. A host that leaves on purpose ends the session at once. (3) The window is told to every machine in its welcome,
+beside the token, so the machine retries for the sequencer's own length. *Turned down: the client reading the key itself* - a relay and a copy
+could disagree. (4) The token is the same on a return (not rotated per link). (5) A returning machine's snapshot comes from the host, or - when the host is
+the one returning, or its link is down - from any machine that is playing; a host returning alone has nobody to ask and waits (stage 8, G0104).
+(6) A room closes when its sequencer ends, which is when the host's window passes: no `net.relay.emptyRoomSeconds`, the window is reused. A room whose
+host never said hello closes a window after its link closed. (7) On the briefing the same window holds the seats; when it ends they are free
+(they were kept until the start). The by-machine-id retake of G0101 stays, for a game started again. (8) `windowSeconds` zero keeps nothing and retries
+nothing.
 
 **Amends G0038**, whose "a machine that comes back is put back in the slots it left" this makes concrete.
 

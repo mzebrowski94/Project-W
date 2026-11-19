@@ -27,6 +27,7 @@ import pl.mzebrows.pwt.sim.ConfigKey;
  * @param session what every peer of a session agrees on, the host's holding for all - session config
  * @param lan how sessions on the local network are found
  * @param relay what the relay's door reads - relay scope (ADR 0018), read only where the relay runs
+ * @param rejoin how a machine whose link dropped comes back (G0105): the window is the sequencer's, the retry the machine's
  */
 public record NetConfig(
         int port,
@@ -41,7 +42,8 @@ public record NetConfig(
         Pacing pacing,
         Session session,
         Lan lan,
-        Relay relay) {
+        Relay relay,
+        Rejoin rejoin) {
 
     private static final String ROOT = "net";
 
@@ -97,7 +99,8 @@ public record NetConfig(
                 pacing,
                 session,
                 lan,
-                relay);
+                relay,
+                rejoin);
     }
 
     /** The same config with another log setup. */
@@ -115,7 +118,8 @@ public record NetConfig(
                 pacing,
                 session,
                 lan,
-                relay);
+                relay,
+                rejoin);
     }
 
     /**
@@ -207,7 +211,8 @@ public record NetConfig(
                 pacing,
                 newSession,
                 lan,
-                relay);
+                relay,
+                rejoin);
     }
 
     /** The same config with other pacing. */
@@ -225,7 +230,8 @@ public record NetConfig(
                 newPacing,
                 session,
                 lan,
-                relay);
+                relay,
+                rejoin);
     }
 
     /**
@@ -335,7 +341,8 @@ public record NetConfig(
                 pacing,
                 session,
                 lan,
-                newRelay);
+                newRelay,
+                rejoin);
     }
 
     /**
@@ -384,6 +391,45 @@ public record NetConfig(
             require(bytesPerSecondPerLink >= 1, "relay.bytesPerSecondPerLink", bytesPerSecondPerLink);
             require(idleRoomMinutes >= 1, "relay.idleRoomMinutes", idleRoomMinutes);
             require(sealLateWarnMs >= 1, "relay.sealLateWarnMs", sealLateWarnMs);
+        }
+    }
+
+    /** The same config with another rejoin window or retry. */
+    public NetConfig with(Rejoin newRejoin) {
+        return new NetConfig(
+                port,
+                portSearch,
+                connectTimeoutMillis,
+                linkTimeoutMillis,
+                heartbeatMillis,
+                maxDatagramBytes,
+                conditions,
+                latencySteps,
+                log,
+                pacing,
+                session,
+                lan,
+                relay,
+                newRejoin);
+    }
+
+    /**
+     * Coming back after a dropped link (G0105). Two scopes in one record, each read in one place: the window is the
+     * sequencer's (wherever it runs: the relay, or the host's machine) and is told to every machine in its welcome; the
+     * retry is the client's own.
+     *
+     * @param windowSeconds how long a dropped machine's seats are kept for it, and how long the machine tries to come
+     *     back; zero keeps none (seats are freed at once and nothing is retried) - sequencer scope
+     * @param retryMillis how long a machine whose link dropped waits between two tries at the connection - client scope
+     */
+    public record Rejoin(int windowSeconds, int retryMillis) {
+
+        /** The longest window a sequencer keeps seats for, however it is configured. */
+        public static final int MOST_WINDOW_SECONDS = 600;
+
+        public Rejoin {
+            require(windowSeconds >= 0 && windowSeconds <= MOST_WINDOW_SECONDS, "rejoin.windowSeconds", windowSeconds);
+            require(retryMillis >= 1, "rejoin.retryMillis", retryMillis);
         }
     }
 

@@ -41,6 +41,11 @@ public final class DoorClient {
         return new DoorClient(new Door.Join(code, password, buildId, buildVersion));
     }
 
+    /** A machine whose link dropped, asking back into the room of this code: no password, the token goes to the sequencer (G0105). */
+    public static DoorClient rejoin(String code) {
+        return new DoorClient(new Door.Rejoin(code));
+    }
+
     /** What to send when the link opens. */
     public byte[] first() {
         return first.clone();

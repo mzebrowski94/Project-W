@@ -190,7 +190,7 @@ final class SessionHarness implements AutoCloseable {
             session.connect("relay", port, key, DoorClient.join(roomCode(), "", build, "test"));
         }
         session.seat(0);
-        Machine machine = new Machine(name, session, phase);
+        Machine machine = new Machine(name, session, phase, end);
         machines.add(machine);
         return machine;
     }
@@ -270,6 +270,11 @@ final class SessionHarness implements AutoCloseable {
         return sequencer().paused();
     }
 
+    /** This machine's link is cut, as a cable pulled: its game goes on, and tries to come back (G0105). */
+    void dropLink(Machine machine) {
+        machine.end.disconnect(machine.session.link(), "blip");
+    }
+
     /** This machine's link drops: it closes, and plays no further part. */
     void leave(Machine machine) {
         machine.session.close();
@@ -347,6 +352,9 @@ final class SessionHarness implements AutoCloseable {
         final PlayerInputs local = new PlayerInputs(Players.MAX);
         final int phase;
 
+        /** The machine's end of the network: what a link of it is cut on. */
+        final Transport end;
+
         /** Frames this machine's game will not run at all - a window being dragged, a pause for GC. */
         int frozenFrames;
 
@@ -367,8 +375,9 @@ final class SessionHarness implements AutoCloseable {
             pickKind = kind;
         }
 
-        Machine(String name, PeerSession session, int phase) {
+        Machine(String name, PeerSession session, int phase, Transport end) {
             this.name = name;
+            this.end = end;
             this.session = session;
             this.phase = phase;
         }

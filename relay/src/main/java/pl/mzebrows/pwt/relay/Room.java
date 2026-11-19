@@ -29,6 +29,7 @@ final class Room {
     private @Nullable Sequencer sequencer;
     private @Nullable SequencerThread thread;
     private int hostLink = -1;
+    private long hostGoneAtNanos = -1L;
     private boolean sealLateWarned;
     private boolean ended;
     private int wrongPasswords;
@@ -80,6 +81,21 @@ final class Room {
 
     int hostLink() {
         return hostLink;
+    }
+
+    /** The host's link closed: from now on a room whose host never said hello is ended when the window has passed. */
+    void hostLinkClosed(long now) {
+        if (hostGoneAtNanos < 0) {
+            hostGoneAtNanos = now;
+        }
+    }
+
+    /**
+     * Whether the host's link closed before its peer was ever welcomed and the rejoin window has passed since: no
+     * token was given, so nobody can come back to it, and no sequencer end will say so.
+     */
+    boolean hostNeverCame(long now, long windowNanos, boolean hostWelcomed) {
+        return !hostWelcomed && hostGoneAtNanos >= 0 && now - hostGoneAtNanos >= windowNanos;
     }
 
     /** Whether the sequencer has been told to end: closed, or ended on its own. */

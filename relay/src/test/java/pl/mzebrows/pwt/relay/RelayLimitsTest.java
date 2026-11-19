@@ -93,6 +93,8 @@ class RelayLimitsTest {
         assertThat(other.last()).isInstanceOf(Door.Opened.class);
 
         hosts.get(0).leave();
+        clock.advanceMillis(net.rejoin().windowSeconds() * 1_000L);
+        relay.poll();
         Machine again = machine("a");
         again.say(open());
         assertThat(again.last()).isInstanceOf(Door.Opened.class);
@@ -195,6 +197,32 @@ class RelayLimitsTest {
         Machine after = machine("after");
         after.say(new Door.Join(code, "ACDE", BUILD, VERSION));
         assertThat(after.last()).isEqualTo(new Door.Accepted(code));
+    }
+
+    @Test
+    void aMachineComingBackIsLetInWithoutThePasswordEvenWhileTheRoomIsLocked() {
+        String code = openRoom("ACDE");
+        for (int i = 0; i < limits.wrongPasswordsPerRoomMax(); i++) {
+            machine("w" + i).say(new Door.Join(code, "AAAA", BUILD, VERSION));
+        }
+        Machine stranger = machine("stranger");
+        stranger.say(new Door.Join(code, "ACDE", BUILD, VERSION));
+        assertThat(stranger.last()).as("a new machine finds the room locked").isInstanceOf(Door.Refused.class);
+
+        Machine back = machine("friend");
+        back.say(new Door.Rejoin(code));
+
+        assertThat(back.last()).isEqualTo(new Door.Accepted(code));
+        assertThat(back.closed).isFalse();
+    }
+
+    @Test
+    void turnsAwayAMachineComingBackToARoomThatIsGone() {
+        Machine back = machine("friend");
+        back.say(new Door.Rejoin("QQQQ"));
+
+        assertThat(back.last()).isEqualTo(Door.refusal("your place in the room was given up - join again"));
+        assertThat(back.closed).isTrue();
     }
 
     @Test

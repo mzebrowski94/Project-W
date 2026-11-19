@@ -1084,4 +1084,65 @@ class SessionTest {
                         .get())
                 .size();
     }
+
+    @Test
+    void bringsAMachineBackToItsSlotWithTheHostsWorldAfterABlip() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 3L, PERFECT)) {
+            session.host();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(200);
+            int slot = friend.session.slotOf(0);
+
+            session.dropLink(friend);
+            session.run(1);
+            assertThat(friend.session.state()).isEqualTo(PeerSession.State.RECONNECTING);
+            session.run(300);
+
+            assertThat(friend.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(friend.session.slotOf(0)).isEqualTo(slot);
+            session.agreedHash();
+        }
+    }
+
+    @Test
+    void keepsTheSessionAndPutsTheHostBackWhenItsLinkBlipsWithinTheWindow() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 3L, PERFECT)) {
+            Machine host = session.host();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(200);
+
+            session.dropLink(host);
+            session.run(120);
+            assertThat(friend.session.state())
+                    .as("the session waits for its host")
+                    .isEqualTo(PeerSession.State.PLAYING);
+            session.run(300);
+
+            assertThat(host.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(host.session.slotOf(0)).isZero();
+            session.agreedHash();
+        }
+    }
+
+    @Test
+    void freesTheSeatWhenTheWindowEndsAndTurnsTheLateMachineAwayToJoinAgain() {
+        NetConfig brief = NetConfig.defaults().with(new NetConfig.Rejoin(2, 200));
+        try (SessionHarness session = new SessionHarness(brief, "Skirmish", 3L, PERFECT)) {
+            session.host();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(200);
+            int slot = friend.session.slotOf(0);
+
+            session.dropLink(friend);
+            friend.frozenFrames = 400;
+            session.run(300);
+            Machine newcomer = session.join("newcomer", PERFECT);
+            session.run(200);
+            assertThat(newcomer.session.slotOf(0)).as("the lowest free slot").isEqualTo(slot);
+
+            session.run(400);
+            assertThat(friend.session.state()).isEqualTo(PeerSession.State.REFUSED);
+            assertThat(friend.session.refusal()).contains("your place in the room was given up - join again");
+        }
+    }
 }
