@@ -368,6 +368,8 @@ public final class Relay {
         // The pacing is this relay's own; the session config is the host's (ADR 0018, ADR 0023).
         Sequencer sequencer =
                 new Sequencer(room.view(), net.with(session), log, MACHINES_MAX, open.hostKey(), open.buildId());
+        // The sequencer is here, not on the host's machine: it outlives him, and hands the session on (G0104).
+        sequencer.handsOver(true);
         room.sequence(
                 sequencer,
                 sequencing == Sequencing.THREADED ? new SequencerThread(sequencer, clock, log).start() : null,

@@ -45,7 +45,7 @@ class SequencerTest {
             BuildId.current(),
             new Random(TOKEN_SEED));
     private final int port = sequencer.listen(config.port(), 0);
-    private final Map<Integer, Bundle> sealed = new TreeMap<>();
+    private final TreeMap<Integer, Bundle> sealed = new TreeMap<>();
     private long now;
     private int snapshotsAnswered;
 
@@ -582,6 +582,152 @@ class SequencerTest {
 
         assertThat(friend.closedBecause).contains("the host left the game");
         assertThat(messagesOfType(friend, Msg.ENDED)).hasSize(1);
+    }
+
+    @Test
+    void handsTheHostToTheOldestLinkedPeerAndSealsItInTheTickStreamWhenTheWindowEnds() {
+        sequencer.handsOver(true);
+        RawPeer host = startedHost();
+        RawPeer first = joined("first", host);
+        RawPeer second = joined("second", host);
+        first.send(Delivery.UNRELIABLE, loadedInput(1, snapshotTickSentTo(first)));
+        second.send(Delivery.UNRELIABLE, loadedInput(1, snapshotTickSentTo(second)));
+        frame(first, second);
+        host.transport.disconnect(host.link, "blip");
+
+        framesAcking(framesOfTheWindowAndMore(), first, second);
+
+        assertThat(first.closedBecause).isNull();
+        assertThat(second.closedBecause).isNull();
+        Bundle changed =
+                sealed.values().stream().filter(Bundle::hostChanged).findFirst().orElseThrow();
+        assertThat(changed.hostPeer()).as("peer 1 came in before peer 2").isEqualTo(1);
+        assertThat(sealed.values().stream().filter(Bundle::hostChanged))
+                .as("sealed once")
+                .hasSize(1);
+    }
+
+    @Test
+    void movesTheRightToRestartToTheNewHostAndKeepsItFromTheOthers() {
+        sequencer.handsOver(true);
+        RawPeer host = startedHost();
+        RawPeer first = joined("first", host);
+        RawPeer second = joined("second", host);
+        first.send(Delivery.UNRELIABLE, loadedInput(1, snapshotTickSentTo(first)));
+        second.send(Delivery.UNRELIABLE, loadedInput(1, snapshotTickSentTo(second)));
+        frame(first, second);
+        host.transport.disconnect(host.link, "blip");
+        framesAcking(framesOfTheWindowAndMore(), first, second);
+        int before = sequencer.sealedTick();
+
+        second.send(Delivery.RELIABLE, new WireWriter(4).putByte(Msg.RESTART));
+        for (int frame = 0; frame < 5; frame++) {
+            frame(first, second);
+        }
+        assertThat(sealed.tailMap(before + 1).values().stream().filter(Bundle::restart))
+                .isEmpty();
+
+        first.send(Delivery.RELIABLE, new WireWriter(4).putByte(Msg.RESTART));
+        for (int frame = 0; frame < 5; frame++) {
+            frame(first, second);
+        }
+        assertThat(sealed.tailMap(before + 1).values().stream().filter(Bundle::restart))
+                .hasSize(1);
+    }
+
+    @Test
+    void tellsAMachineWelcomedAfterTheHandOverWhoTheHostIsAndDoesNotLetTheOldKeyTakeItBack() {
+        sequencer.handsOver(true);
+        RawPeer host = startedHost();
+        RawPeer first = joined("first", host);
+        host.transport.disconnect(host.link, "blip");
+        framesAcking(framesOfTheWindowAndMore(), first);
+
+        RawPeer late = new RawPeer(network.endpoint("late"), port);
+        frame(first, late);
+        late.send(
+                Delivery.RELIABLE,
+                new WireWriter(64)
+                        .putByte(Msg.HELLO)
+                        .putInt(Msg.PROTOCOL)
+                        .putString(BuildId.current())
+                        .putLong(SessionHarness.HOST_KEY)
+                        .putString("oldhost"));
+        for (int frame = 0; frame < 5; frame++) {
+            frame(first, late);
+            answerSnapshots(first);
+        }
+
+        List<byte[]> told = messagesOfType(late, Msg.HOST);
+        assertThat(told).hasSize(1);
+        assertThat(new WireReader().wrap(told.get(0), 1, told.get(0).length - 1).getInt())
+                .isEqualTo(1);
+        late.send(Delivery.RELIABLE, new WireWriter(4).putByte(Msg.RESTART));
+        int before = sequencer.sealedTick();
+        for (int frame = 0; frame < 5; frame++) {
+            frame(first, late);
+        }
+        assertThat(sealed.tailMap(before + 1).values().stream().filter(Bundle::restart))
+                .isEmpty();
+    }
+
+    @Test
+    void endsTheSessionAtOnceForAHostWhoLeavesOnPurposeWhateverHandsOver() {
+        sequencer.handsOver(true);
+        RawPeer host = startedHost();
+        RawPeer friend = joined("friend", host);
+        host.send(Delivery.RELIABLE, new WireWriter(4).putByte(Msg.LEAVE));
+        host.transport.disconnect(host.link, "leaving");
+
+        for (int frame = 0; frame < 10; frame++) {
+            frame(friend);
+        }
+
+        assertThat(friend.closedBecause).contains("the host left the game");
+        assertThat(messagesOfType(friend, Msg.HOST)).as("no new host was named").hasSize(1);
+    }
+
+    @Test
+    void endsTheSessionWhenTheHostIsGoneAndNobodyIsLinkedToTakeOver() {
+        sequencer.handsOver(true);
+        RawPeer host = startedHost();
+        host.transport.disconnect(host.link, "gone");
+
+        for (int frame = 0; frame < framesOfTheWindowAndMore(); frame++) {
+            frame();
+        }
+
+        int stopped = sequencer.sealedTick();
+        for (int frame = 0; frame < 60; frame++) {
+            frame();
+        }
+        assertThat(sequencer.sealedTick())
+                .as("the session ended: no more ticks")
+                .isEqualTo(stopped);
+    }
+
+    @Test
+    void keepsTheHostsOwnMachinesSessionEndingWithHimWhenItDoesNotHandOver() {
+        RawPeer host = startedHost();
+        RawPeer friend = joined("friend", host);
+        host.transport.disconnect(host.link, "gone");
+
+        for (int frame = 0; frame < framesOfTheWindowAndMore(); frame++) {
+            frame(friend);
+        }
+
+        assertThat(friend.closedBecause).contains("the host left the game");
+        assertThat(sealed.values().stream().filter(Bundle::hostChanged)).isEmpty();
+    }
+
+    /** Runs these frames with every peer answering the sequencer's ticks, as machines that are playing do. */
+    private void framesAcking(int frames, RawPeer... peers) {
+        for (int frame = 0; frame < frames; frame++) {
+            for (RawPeer peer : peers) {
+                peer.send(Delivery.UNRELIABLE, loadedInput(1, sequencer.sealedTick()));
+            }
+            frame(peers);
+        }
     }
 
     /** A raw host that has said hello, been welcomed and seated in slot 0. */

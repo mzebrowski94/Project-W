@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.config.BuildVersion;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.client.draw.Palette;
+import pl.mzebrows.pwt.client.hud.DispatchText;
 import pl.mzebrows.pwt.client.hud.Hud;
 import pl.mzebrows.pwt.client.hud.MenuPainter;
 import pl.mzebrows.pwt.client.hud.PageHints;
@@ -26,6 +27,7 @@ import pl.mzebrows.pwt.client.play.MissionChoices;
 import pl.mzebrows.pwt.client.play.MissionCode;
 import pl.mzebrows.pwt.client.play.MissionRecords;
 import pl.mzebrows.pwt.client.play.OnlineSession;
+import pl.mzebrows.pwt.client.play.ScenarioPlay;
 import pl.mzebrows.pwt.client.play.ScenarioSession;
 import pl.mzebrows.pwt.net.lan.RoomCode;
 import pl.mzebrows.pwt.net.session.SessionSetup;
@@ -1447,7 +1449,8 @@ public final class MenuScreen extends ScreenAdapter {
         boolean host = open.hosts();
         List<Briefing.Row> rows = Briefing.rows(open.players());
         String line = host ? missions.problem() : open.note();
-        String signature = line + "|" + rows;
+        ScenarioPlay.Host handedTo = open.handedOverHost();
+        String signature = line + "|" + rows + "|" + handedTo;
         if (signature.equals(describedBriefing)) {
             return;
         }
@@ -1458,6 +1461,9 @@ public final class MenuScreen extends ScreenAdapter {
         } else {
             foot.add(hostsMission(line));
             foot.add(strings.get("ui.briefing.waiting"));
+        }
+        if (handedTo != null) {
+            foot.add(strings.format("ui.host.is", DispatchText.hostName(strings, handedTo.slot(), handedTo.peer())));
         }
         foot.add("");
         playersFrom = foot.size();

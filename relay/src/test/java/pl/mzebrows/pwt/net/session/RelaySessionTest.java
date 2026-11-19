@@ -246,4 +246,191 @@ class RelaySessionTest {
             assertThat(friend.session.refusal()).contains("your place in the room was given up - join again");
         }
     }
+
+    private static final NetConfig TWO_SECOND_WINDOW = NetConfig.defaults().with(new NetConfig.Rejoin(2, 200));
+
+    /** The host's link is cut and his machine never answers: his window passes, 300 frames being 5 s of a 2 s window. */
+    private static void loseTheHost(SessionHarness session, Machine host) {
+        session.dropLink(host);
+        host.frozenFrames = 10_000;
+        session.machines.remove(host);
+        session.run(300);
+    }
+
+    @Test
+    void handsTheSessionToThePeerLongestInTheRoomWhenTheHostsLinkIsGonePastTheWindow() {
+        try (SessionHarness session = new SessionHarness(TWO_SECOND_WINDOW, "Skirmish", 3L, PERFECT, RelayFront::new)) {
+            Machine host = session.host();
+            Machine second = session.join("second", PERFECT);
+            Machine third = session.join("third", PERFECT);
+            session.run(200);
+            assertThat(second.session.hostPeer())
+                    .as("who the host is, told from the first")
+                    .isZero();
+            assertThat(second.session.hosting()).isFalse();
+
+            loseTheHost(session, host);
+
+            assertThat(second.session.hosting()).as("the next oldest").isTrue();
+            assertThat(third.session.hosting()).isFalse();
+            assertThat(third.session.hostPeer()).isEqualTo(second.session.peerId());
+            assertThat(third.session.hostSlot()).isEqualTo(second.session.slotOf(0));
+            assertThat(session.sequencer().desyncs()).isZero();
+            session.agreedHash();
+        }
+    }
+
+    @Test
+    void tellsEveryMachineOfTheNewHostOnTheSameTick() {
+        try (SessionHarness session = new SessionHarness(TWO_SECOND_WINDOW, "Skirmish", 3L, PERFECT, RelayFront::new)) {
+            Machine host = session.host();
+            Machine second = session.join("second", PERFECT);
+            Machine third = session.join("third", PERFECT);
+            session.run(200);
+
+            loseTheHost(session, host);
+
+            assertThat(second.session.hostChanges()).isEqualTo(1);
+            assertThat(third.session.hostChanges()).isEqualTo(1);
+            assertThat(second.session.hostChangedAt())
+                    .as("a tick of the mission")
+                    .isPositive();
+            assertThat(third.session.hostChangedAt()).isEqualTo(second.session.hostChangedAt());
+        }
+    }
+
+    @Test
+    void letsTheNewHostRestartTheMissionAndRefusesTheOthers() {
+        try (SessionHarness session = new SessionHarness(TWO_SECOND_WINDOW, "Skirmish", 3L, PERFECT, RelayFront::new)) {
+            Machine host = session.host();
+            Machine second = session.join("second", PERFECT);
+            Machine third = session.join("third", PERFECT);
+            session.run(200);
+            loseTheHost(session, host);
+
+            Simulation before = SessionHarness.world(third);
+            third.session.restart();
+            session.run(30);
+            assertThat(SessionHarness.world(third))
+                    .as("a peer's restart is ignored")
+                    .isSameAs(before);
+
+            second.session.restart();
+            session.run(30);
+            assertThat(SessionHarness.world(third))
+                    .as("the new host's restart is sealed")
+                    .isNotSameAs(before);
+            session.agreedHash();
+        }
+    }
+
+    @Test
+    void servesAJoinerTheWorldFromTheNewHost() {
+        try (SessionHarness session = new SessionHarness(TWO_SECOND_WINDOW, "Skirmish", 3L, PERFECT, RelayFront::new)) {
+            Machine host = session.host();
+            session.join("second", PERFECT);
+            session.run(200);
+            loseTheHost(session, host);
+
+            Machine late = session.join("late", PERFECT);
+            session.run(300);
+
+            assertThat(late.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(late.session.hostPeer()).isEqualTo(1);
+            assertThat(session.sequencer().desyncs()).isZero();
+            session.agreedHash();
+        }
+    }
+
+    @Test
+    void handsTheBriefingOverAndLetsOnlyTheNewHostStartTheMission() {
+        try (SessionHarness session = new SessionHarness(TWO_SECOND_WINDOW, "Skirmish", 3L, PERFECT, RelayFront::new)) {
+            Machine host = session.hostOnBriefing();
+            Machine second = session.join("second", PERFECT);
+            Machine third = session.join("third", PERFECT);
+            session.run(60);
+            session.dropLink(host);
+            host.frozenFrames = 10_000;
+            session.machines.remove(host);
+            session.run(300);
+
+            assertThat(second.session.hosting()).isTrue();
+            assertThat(third.session.hostPeer()).isEqualTo(second.session.peerId());
+            assertThat(third.session.players().get(0).host())
+                    .as("the briefing lists him first")
+                    .isTrue();
+            assertThat(third.session.players().get(0).slot()).isEqualTo(second.session.slotOf(0));
+
+            second.session.note("DAILY");
+            session.run(10);
+            assertThat(third.session.note()).isEqualTo("DAILY");
+
+            Machine old = session.join("oldhost", PERFECT);
+            session.run(30);
+            old.session.start(session.setup, 1f / 60f);
+            third.session.start(session.setup, 1f / 60f);
+            session.run(30);
+            assertThat(second.session.state())
+                    .as("neither a peer's START began it")
+                    .isEqualTo(PeerSession.State.BRIEFING);
+
+            second.session.start(session.setup, 1f / 60f);
+            session.run(60);
+            assertThat(third.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(old.session.state()).isEqualTo(PeerSession.State.PLAYING);
+        }
+    }
+
+    @Test
+    void doesNotGiveTheSessionBackToTheOldHostWhoComesBackAPeer() {
+        try (SessionHarness session = new SessionHarness(TWO_SECOND_WINDOW, "Skirmish", 3L, PERFECT, RelayFront::new)) {
+            Machine host = session.host();
+            Machine second = session.join("second", PERFECT);
+            session.run(200);
+            session.dropLink(host);
+            host.frozenFrames = 400;
+            session.run(300);
+            assertThat(second.session.hosting()).isTrue();
+
+            session.run(300);
+            assertThat(host.session.state()).as("his token is gone").isEqualTo(PeerSession.State.REFUSED);
+
+            Machine again = session.join("oldhost", PERFECT);
+            session.run(300);
+            assertThat(again.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(again.session.hosting()).isFalse();
+            assertThat(again.session.hostPeer()).isEqualTo(second.session.peerId());
+        }
+    }
+
+    @Test
+    void endsTheRoomForEveryoneWhenTheHostLeavesOnPurposeEvenWithPeersToTakeOver() {
+        try (SessionHarness session = new SessionHarness(TWO_SECOND_WINDOW, "Skirmish", 3L, PERFECT, RelayFront::new)) {
+            Machine host = session.host();
+            Machine second = session.join("second", PERFECT);
+            Machine third = session.join("third", PERFECT);
+            session.run(200);
+
+            session.leave(host);
+            session.run(300);
+
+            assertThat(second.session.state()).isEqualTo(PeerSession.State.CLOSED);
+            assertThat(third.session.state()).isEqualTo(PeerSession.State.CLOSED);
+            assertThat(third.session.closedBecause()).contains("the host left the game");
+        }
+    }
+
+    @Test
+    void closesTheRoomWhenTheHostIsGoneAndNobodyIsLeftToTakeOver() {
+        try (SessionHarness session = new SessionHarness(TWO_SECOND_WINDOW, "Skirmish", 3L, PERFECT, RelayFront::new)) {
+            Machine host = session.host();
+            session.run(100);
+            session.dropLink(host);
+            host.frozenFrames = 400;
+            session.run(300);
+            session.run(300);
+
+            assertThat(host.session.state()).as("the room is gone").isNotEqualTo(PeerSession.State.PLAYING);
+        }
+    }
 }

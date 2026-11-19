@@ -37,9 +37,15 @@ public final class DispatchText implements DispatchWords {
                                 + RankText.roman(dispatch.b());
                     case SWARM_ADAPTS ->
                         strings.get("ui.adapted." + UPGRADES[clamp(dispatch.a(), UPGRADES.length)].name());
+                    case HOST_CHANGED -> dispatch.slot() < 0 ? hostName(strings, -1, dispatch.a()) + " " : "";
                     default -> "";
                 };
         return strings.format(dispatch.kind().key(), player, dispatch.a(), dispatch.b(), name);
+    }
+
+    /** A host as the players read him: his slot, {@code P3}, or when he holds none his peer number, {@code PEER 2} (G0104). */
+    public static String hostName(UiStrings strings, int slot, int peer) {
+        return slot >= 0 ? strings.format("ui.hud.player", slot + 1) : strings.format("ui.hud.peer", peer);
     }
 
     private static int clamp(int index, int length) {

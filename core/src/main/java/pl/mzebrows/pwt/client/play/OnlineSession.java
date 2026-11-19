@@ -99,6 +99,11 @@ public final class OnlineSession implements ScenarioPlay {
     private int lagStep = -1;
     private @Nullable Order lastOrder;
 
+    /** The host as {@link #handedOverHost} last named him, and how many changes of host the banner has said (G0104). */
+    private @Nullable Host hostKnown;
+
+    private int hostChangesTold;
+
     /**
      * @param sequencer the sequencer thread this copy runs, if it hosts
      * @param lag what the peer's link is wrapped in, if its lag can be stepped
@@ -451,12 +456,40 @@ public final class OnlineSession implements ScenarioPlay {
 
     /** Whether this copy hosts the session: the briefing's entries are its, and its Back ends the session. */
     public boolean hosts() {
-        return invitation != null || briefed;
+        return peer.hostPeer() >= 0 ? peer.hosting() : invitation != null || briefed;
     }
 
     @Override
     public boolean briefed() {
-        return briefed;
+        // A joiner made host by a hand-over (G0104) holds the briefing the session was opened on, as the host did.
+        return briefed || (relayed && peer.hostChanges() > 0 && peer.hosting());
+    }
+
+    @Override
+    public @Nullable Host handedOverHost() {
+        if (peer.hostChanges() == 0) {
+            return null;
+        }
+        Host known = hostKnown;
+        if (known == null || known.peer() != peer.hostPeer() || known.slot() != peer.hostSlot()) {
+            known = new Host(peer.hostSlot(), peer.hostPeer());
+            hostKnown = known;
+        }
+        return known;
+    }
+
+    @Override
+    public @Nullable Host takeHostChange() {
+        if (peer.hostChanges() == hostChangesTold) {
+            return null;
+        }
+        hostChangesTold = peer.hostChanges();
+        return handedOverHost();
+    }
+
+    @Override
+    public boolean reconnecting() {
+        return peer.state() == PeerSession.State.RECONNECTING;
     }
 
     /** The players on the briefing, the host's machine first then by slot, as the page shows them. */
@@ -573,7 +606,7 @@ public final class OnlineSession implements ScenarioPlay {
 
     @Override
     public boolean canRestart() {
-        return invitation != null;
+        return peer.hostPeer() >= 0 ? peer.hosting() : invitation != null;
     }
 
     @Override
@@ -604,7 +637,7 @@ public final class OnlineSession implements ScenarioPlay {
     /**
      * Why this machine is out of the session, once it is: refused at the door, or the link closed - the
      * host leaving closes it for everyone. A dropped link is not that while the peer is coming back (G0105): it is
-     * {@code RECONNECTING}, shown by {@link #connection()} (a line of its own for the HUD is stage 6's and 8's).
+     * {@code RECONNECTING}, shown by {@link #connection()} and, in words of its own, by {@link #reconnecting()}.
      */
     @Override
     public @Nullable String ended() {

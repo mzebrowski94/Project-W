@@ -62,6 +62,24 @@ public interface ScenarioPlay extends SeatedPlay, AutoCloseable {
         return false;
     }
 
+    /** Who the host is, as a banner or a line names him: the lowest slot he holds or -1, and his peer number (G0104). */
+    record Host(int slot, int peer) {}
+
+    /** The host, once he has changed under this machine; null before, and always offline. */
+    default @Nullable Host handedOverHost() {
+        return null;
+    }
+
+    /** The host the first time this is asked after he changed, then null until he changes again: what the banner says once. */
+    default @Nullable Host takeHostChange() {
+        return null;
+    }
+
+    /** Whether this machine's link is down and it is trying to come back (G0105). */
+    default boolean reconnecting() {
+        return false;
+    }
+
     /** Takes every machine in the session back to its briefing, the session kept. The host's to ask for. */
     default void toBriefing() {}
 

@@ -29,7 +29,9 @@ public enum DispatchKind {
     /** A draft was owed and the pool had nothing left to deal. */
     NOTHING_LEFT(Priority.LOW, Coalesce.NEWEST),
     /** The swarm took an adaptation (ADR 0017): its kind as the first number, its new rank as the second. */
-    SWARM_ADAPTS(Priority.NORMAL, Coalesce.NONE);
+    SWARM_ADAPTS(Priority.NORMAL, Coalesce.NONE),
+    /** The host changed (G0104): the new host's slot as the player, his peer number as the first number. */
+    HOST_CHANGED(Priority.HIGH, Coalesce.NONE);
 
     /**
      * How much a line matters. A high one is an alarm: it is shown at once, never dropped for being
@@ -93,6 +95,10 @@ public enum DispatchKind {
      * swarm adapting.
      */
     boolean toasts() {
-        return this == DRAFT_EARNED || this == DRAFT_PASSED || this == UPGRADE_TAKEN || this == SWARM_ADAPTS;
+        return this == DRAFT_EARNED
+                || this == DRAFT_PASSED
+                || this == UPGRADE_TAKEN
+                || this == SWARM_ADAPTS
+                || this == HOST_CHANGED;
     }
 }

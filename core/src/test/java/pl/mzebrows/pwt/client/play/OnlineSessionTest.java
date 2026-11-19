@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.net.session.Sequencer;
 import pl.mzebrows.pwt.net.session.SessionSetup;
 import pl.mzebrows.pwt.net.session.WorldFactory;
 import pl.mzebrows.pwt.net.transport.ConditionedTransport;
+import pl.mzebrows.pwt.net.transport.Transport;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
@@ -277,6 +278,56 @@ class OnlineSessionTest {
             frames(own, 120, chief, friend);
             assertThat(friend.simulation()).isNotNull();
         }
+    }
+
+    /** G0104: the host's link gone past the window hands the session on; the new host's copy takes the host's entries. */
+    @Test
+    void makesTheNewHostsCopyTheHostAndTellsTheOthersWhoHeIs() {
+        NetConfig brief = NetConfig.defaults().with(new NetConfig.Rejoin(2, 200));
+        LoopbackNetwork net = new LoopbackNetwork(brief);
+        Sequencer own =
+                new Sequencer(net.endpoint("room"), brief, NetLog.silent(64), Players.MAX, KEY, BuildId.current());
+        own.handsOver(true);
+        own.listen(brief.port(), 0);
+        Transport chiefEnd = net.endpoint("chief");
+        try (own;
+                OnlineSession chief = inRoom(chiefEnd, KEY, "chief");
+                OnlineSession friend = inRoom(net.endpoint("friend"), 0L, "friend");
+                OnlineSession other = inRoom(net.endpoint("other"), 0L, "other")) {
+            frames(own, 90, chief, friend, other);
+            assertThat(chief.hosts()).isTrue();
+            assertThat(friend.hosts()).isFalse();
+            assertThat(friend.canRestart()).isFalse();
+            assertThat(other.handedOverHost()).as("nothing has changed yet").isNull();
+            assertThat(other.takeHostChange()).isNull();
+
+            chiefEnd.close();
+            frames(own, 300, friend, other);
+
+            assertThat(friend.hosts()).isTrue();
+            assertThat(friend.canRestart()).isTrue();
+            assertThat(friend.briefed())
+                    .as("the briefing the room opened on is his now")
+                    .isTrue();
+            assertThat(other.hosts()).isFalse();
+            assertThat(other.handedOverHost()).isEqualTo(new ScenarioPlay.Host(1, 1));
+            assertThat(other.takeHostChange()).as("the banner says it once").isEqualTo(new ScenarioPlay.Host(1, 1));
+            assertThat(other.takeHostChange()).isNull();
+            assertThat(friend.players().get(0).host()).isTrue();
+
+            friend.startMission(new SessionSetup(SimConfigLoader.text(), "Skirmish", 5L), 1f / 60f);
+            frames(own, 120, friend, other);
+            assertThat(other.simulation()).isNotNull();
+        }
+    }
+
+    private OnlineSession inRoom(Transport end, long key, String name) {
+        NetConfig brief = NetConfig.defaults().with(new NetConfig.Rejoin(2, 200));
+        PeerSession session =
+                new PeerSession(end, brief, NetLog.silent(64), new ScenarioWorlds(), null, BuildId.current(), name);
+        session.connect("room", brief.port(), key);
+        return new OnlineSession(
+                session, null, null, List.of(), NetLog.silent(64), clock, "room", null, key != 0L, true, "");
     }
 
     /** A sequencer of its own, listening, with nothing started - a session on its briefing. */

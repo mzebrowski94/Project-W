@@ -6,10 +6,28 @@
 or turn on invulnerability; which peer the others are checked against and sent a snapshot by; anything that says "the
 host" and means a machine.
 
-**Enforced by.** Nothing yet - not built; the tests are named here when it is (`.scratch/online-relay/spec.md`, stage 8).
+**Enforced by.** `SequencerTest` (`handsTheHostToTheOldestLinkedPeerAndSealsItInTheTickStreamWhenTheWindowEnds`, `movesTheRightToRestartToTheNewHostAndKeepsItFromTheOthers`, `tellsAMachineWelcomedAfterTheHandOverWhoTheHostIsAndDoesNotLetTheOldKeyTakeItBack`, `endsTheSessionAtOnceForAHostWhoLeavesOnPurposeWhateverHandsOver`, `endsTheSessionWhenTheHostIsGoneAndNobodyIsLinkedToTakeOver`, `keepsTheHostsOwnMachinesSessionEndingWithHimWhenItDoesNotHandOver`); `RelaySessionTest` (`handsTheSessionToThePeerLongestInTheRoomWhenTheHostsLinkIsGonePastTheWindow`, `tellsEveryMachineOfTheNewHostOnTheSameTick`, `letsTheNewHostRestartTheMissionAndRefusesTheOthers`, `servesAJoinerTheWorldFromTheNewHost`, `handsTheBriefingOverAndLetsOnlyTheNewHostStartTheMission`, `doesNotGiveTheSessionBackToTheOldHostWhoComesBackAPeer`, `endsTheRoomForEveryoneWhenTheHostLeavesOnPurposeEvenWithPeersToTakeOver`, `closesTheRoomWhenTheHostIsGoneAndNobodyIsLeftToTakeOver`); `SessionTest` (`endsAnUnroomedSessionWithItsHostWhoseLinkIsGonePastTheWindow`, `handsAnUnroomedSessionOverWhenItsSequencerIsToldTo`); `RelayTrafficTest` (the room kept for its links, ended by a host who leaves on purpose, ended with nobody to take over); `WireGoldenTest` (`writesAHostChangeAsTheLastSectionOfATick`, `readsAHostChangeBackAndStepsOverItInAWholeTick`, `writesWhoTheHostIsAsHisPeerNumberAndLowestSlot`); `OnlineSessionTest` (`makesTheNewHostsCopyTheHostAndTellsTheOthersWhoHeIs`); `DispatchTextTest` (the banner's words).
 
 **Provisional, for review (AFK run).** Decided by the orchestrator while Mateusz was away; each choice below names the
 alternative turned down. Nothing in it breaks a pillar.
+
+**As built (provisional, for review - AFK run).** Each with what it turned down. (1) The sequencer hands over only when told:
+`Sequencer.handsOver(true)`, set by the relay's room and left off on the host's own machine, so a session without a room ends
+with its host as before. *Turned down: a constructor argument* - two public constructors and every test would change for one flag.
+(2) The new host is the lowest peer number among the linked, one that can already serve a world (playing, or on the briefing)
+before one that cannot; nobody linked ends the session. A window of zero hands over at once. (3) Everybody learns it as the
+last section of a sealed tick (`Bundle`: whether the host changed, his peer number, his lowest slot) when a mission runs and is
+not paused, so every machine playing sees it on one tick (`PeerSession.hostChangedAt`); otherwise - the briefing, a pause, a
+machine still loading - as a reliable `Msg.HOST` at once. `Msg.HOST` also tells every machine who the host is when it is
+welcomed, so a joiner after a hand-over knows. Protocol 9. *Turned down: only the reliable message* - the banner would
+reach machines on different ticks. (4) The host key no longer makes anybody host once a hand-over has happened. (5) The
+banner is a terminal line and a toast (`DispatchKind.HOST_CHANGED`, `P3 IS THE HOST` in slot 3's colour; `PEER 2 IS
+THE HOST` for a host who holds no slot); the briefing and the pause page add `HOST P3` once the host has changed;
+`OnlineSession.hosts()`, `canRestart()` and, in a room, `briefed()` follow the sequencer's word, so the new host's copy shows the
+host's entries. (6) Slot zero's keyboard stays the host's *keyboard seat* in the sequencer (it is held for whoever is host
+when he seats), so after the old host's slots are freed only the new host can take slot 0: not special in play, slightly
+so in seating. (7) The LAN announcement of a roomed session stays with the old host's machine; it does not move.
+*Turned down for (6) and (7): a rework of seating and of the beacon* - neither is needed for the session to go on.
 
 **Amends G0038** - its "until then the host leaving ends the session" holds only for a session without a room.
 

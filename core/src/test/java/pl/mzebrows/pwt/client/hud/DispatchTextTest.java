@@ -36,6 +36,14 @@ class DispatchTextTest {
     }
 
     @Test
+    void namesTheNewHostByHisSlotOrHisPeerNumberWhenHeHoldsNone() {
+        assertThat(said(DispatchKind.HOST_CHANGED, 2, 3, 0)).isEqualTo("P3 IS THE HOST");
+        assertThat(said(DispatchKind.HOST_CHANGED, -1, 4, 0)).isEqualTo("PEER 4 IS THE HOST");
+        assertThat(DispatchText.hostName(STRINGS, 0, 9)).isEqualTo("P1");
+        assertThat(DispatchText.hostName(STRINGS, -1, 9)).isEqualTo("PEER 9");
+    }
+
+    @Test
     void namesThePlayerOnlyWhenTheLineIsAboutOne() {
         assertThat(said(DispatchKind.COMMANDER_DOWN, 1, 0, 0)).isEqualTo("P2 COMMANDER DOWN");
         assertThat(said(DispatchKind.COMMANDER_DOWN, -1, 0, 0)).isEqualTo("COMMANDER DOWN");

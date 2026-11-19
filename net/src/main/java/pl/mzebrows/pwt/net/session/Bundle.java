@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.net.session;
 
 import java.util.Arrays;
+import org.jspecify.annotations.Nullable;
 
 /**
  * One sealed tick (ADR 0012, "tick bundle"): what every seated slot is holding, the input events the
@@ -18,7 +19,9 @@ import java.util.Arrays;
  * count, then per slot its number and its {@link #HELD_BYTES} bytes; order count, then per order a slot
  * and its value (byte); join count, then per join a slot and the machine it sits at (int); pick count,
  * then per pick a slot, its value (int) and its extra (byte); presence count, then per change a slot and
- * whether it goes away (1) or comes back (0); crate count, then per event a slot and its value (byte).
+ * whether it goes away (1) or comes back (0); crate count, then per event a slot and its value (byte); last,
+ * whether the host changed (0 or 1) and if so the new host's peer number (int) and the lowest slot it holds (byte,
+ * {@link Msg#NO_SLOT} for none) - the one event a sequencer seals about itself rather than about a slot (G0104).
  * Which sections an event type has is {@link Msg#EVENT_ORDER}, {@link Msg#EVENT_PICK},
  * {@link Msg#EVENT_CRATE}.
  */
@@ -66,6 +69,9 @@ final class Bundle {
     private final boolean[] comesBack;
 
     private int tick;
+    private boolean hostChanged;
+    private int hostPeer;
+    private int hostSlot;
     private boolean restart;
     private boolean switchesInvulnerability;
     private boolean invulnerable;
@@ -106,6 +112,9 @@ final class Bundle {
     /** Empties this for a new tick. */
     Bundle clear(int newTick) {
         tick = newTick;
+        hostChanged = false;
+        hostPeer = 0;
+        hostSlot = 0;
         restart = false;
         switchesInvulnerability = false;
         invulnerable = false;
@@ -211,6 +220,26 @@ final class Bundle {
         return comesBack[slot];
     }
 
+    /** The host is this peer from this tick, holding this slot or {@link Msg#NO_SLOT}: every machine learns it at once (G0104). */
+    Bundle hostChange(int peer, int slot) {
+        hostChanged = true;
+        hostPeer = peer;
+        hostSlot = slot;
+        return this;
+    }
+
+    boolean hostChanged() {
+        return hostChanged;
+    }
+
+    int hostPeer() {
+        return hostPeer;
+    }
+
+    int hostSlot() {
+        return hostSlot;
+    }
+
     Bundle restarting() {
         restart = true;
         return this;
@@ -252,6 +281,10 @@ final class Bundle {
             }
         }
         writeEvents(out, Msg.EVENT_CRATE);
+        out.putByte(hostChanged ? 1 : 0);
+        if (hostChanged) {
+            out.putInt(hostPeer).putByte(hostSlot);
+        }
     }
 
     private void writeEvents(WireWriter out, int type) {
@@ -299,6 +332,7 @@ final class Bundle {
             }
         }
         readEvents(in, Msg.EVENT_CRATE);
+        skipHostChange(in, this);
         return this;
     }
 
@@ -429,6 +463,22 @@ final class Bundle {
             awayFromCode(in.getByte());
         }
         skipSection(in, capacity, 1);
+        skipHostChange(in, null);
+    }
+
+    /** Reads the host change at the end of a bundle into {@code into}, or steps over it when that is null. */
+    private static void skipHostChange(WireReader in, @Nullable Bundle into) {
+        int changed = in.getByte();
+        if (changed > 1) {
+            throw new WireException("host change " + changed + " is neither none nor one");
+        }
+        if (changed == 1) {
+            int peer = in.getInt();
+            int slot = in.getByte();
+            if (into != null) {
+                into.hostChange(peer, slot);
+            }
+        }
     }
 
     /** A count, then that many of a slot and {@code bodyBytes} more. */

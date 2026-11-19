@@ -17,7 +17,7 @@ import pl.mzebrows.pwt.sim.CommanderInput;
 class WireGoldenTest {
 
     /** What {@link Msg#PROTOCOL} was when the bytes in this file were written. Bump both together. */
-    private static final int PROTOCOL_OF_THESE_BYTES = 8;
+    private static final int PROTOCOL_OF_THESE_BYTES = 9;
 
     private final WireWriter out = new WireWriter(64);
     private final WireReader in = new WireReader();
@@ -59,6 +59,7 @@ class WireGoldenTest {
         numbers.put("PLAYERS", Msg.PLAYERS);
         numbers.put("NOTED", Msg.NOTED);
         numbers.put("ENDED", Msg.ENDED);
+        numbers.put("HOST", Msg.HOST);
 
         assertThat(numbers)
                 .containsExactly(
@@ -88,7 +89,8 @@ class WireGoldenTest {
                         Map.entry("BRIEFING", 30),
                         Map.entry("PLAYERS", 31),
                         Map.entry("NOTED", 32),
-                        Map.entry("ENDED", 33));
+                        Map.entry("ENDED", 33),
+                        Map.entry("HOST", 34));
         assertThat(Msg.TOKEN_BYTES).isEqualTo(16);
         assertThat(new int[] {Msg.EVENT_ORDER, Msg.EVENT_PICK, Msg.EVENT_CRATE}).containsExactly(1, 2, 3);
         assertThat(Msg.EVENT_BYTES).isEqualTo(11);
@@ -153,8 +155,17 @@ class WireGoldenTest {
 
         assertThat(out.toBytes())
                 .containsExactly(bytes(
-                        12, 0, 0, 0, 8, 0, 0, 0, 2, 'b', '1', 0, 0, 0, 1, 'm', 0, 0, 0, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                        12, 0, 0, 0, 9, 0, 0, 0, 2, 'b', '1', 0, 0, 0, 1, 'm', 0, 0, 0, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9,
                         10, 11, 12, 13, 14, 15, 16));
+    }
+
+    @Test
+    void writesWhoTheHostIsAsHisPeerNumberAndLowestSlot() {
+        Msg.putHost(out, 0x01020304, 2);
+        assertThat(out.toBytes()).containsExactly(bytes(34, 1, 2, 3, 4, 2));
+
+        Msg.putHost(out.reset(), 5, -1);
+        assertThat(out.toBytes()).containsExactly(bytes(34, 0, 0, 0, 5, 255));
     }
 
     private int packedEmptyLength() {
@@ -179,7 +190,8 @@ class WireGoldenTest {
         // The seat's byte says nothing of its held input changed: its slot, no fields.
         assertThat(out.toBytes())
                 .containsExactly(bytes(
-                        0, 0, 0, 7, 7, 1, 1, 1, 2, 3, 1, 4, 1, 2, 3, 4, 1, 5, 0, 0, 1, 2, 9, 2, 6, 1, 7, 0, 1, 0, 0));
+                        0, 0, 0, 7, 7, 1, 1, 1, 2, 3, 1, 4, 1, 2, 3, 4, 1, 5, 0, 0, 1, 2, 9, 2, 6, 1, 7, 0, 1, 0, 0,
+                        0));
     }
 
     @Test
@@ -194,7 +206,36 @@ class WireGoldenTest {
         assertThat(out.toBytes())
                 .containsExactly(bytes(
                         0, 0, 0, 7, 7, 1, 0xF9, 0x20, 0x00, 0xC0, 0x00, 0x3F, 0x80, 0, 0, 0x40, 0, 0, 0, 9, 1, 2, 3, 1,
-                        4, 1, 2, 3, 4, 1, 5, 0, 0, 1, 2, 9, 2, 6, 1, 7, 0, 1, 0, 0));
+                        4, 1, 2, 3, 4, 1, 5, 0, 0, 1, 2, 9, 2, 6, 1, 7, 0, 1, 0, 0, 0));
+    }
+
+    @Test
+    void writesAHostChangeAsTheLastSectionOfATick() {
+        Bundle bundle = new Bundle(8).clear(9).hostChange(0x01020304, 3);
+        out.reset();
+        bundle.write(out);
+
+        // The tick, no flags, no held, then empty orders, joins, picks, presence and crates, then the new host.
+        assertThat(out.toBytes()).containsExactly(bytes(0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 3, 4, 3));
+    }
+
+    @Test
+    void readsAHostChangeBackAndStepsOverItInAWholeTick() {
+        Bundle bundle = new Bundle(8).clear(9).event(2, Msg.EVENT_ORDER, 3, 0).hostChange(5, Msg.NO_SLOT);
+        out.reset();
+        bundle.write(out);
+        out.putByte(77);
+        byte[] written = out.toBytes();
+
+        Bundle read = new Bundle(8).read(in.wrap(written, 0, written.length));
+        assertThat(read.hostChanged()).isTrue();
+        assertThat(read.hostPeer()).isEqualTo(5);
+        assertThat(read.hostSlot()).isEqualTo(Msg.NO_SLOT);
+        assertThat(in.getByte()).as("the reader stands at the next message").isEqualTo(77);
+
+        in.wrap(written, 0, written.length);
+        assertThat(Bundle.skip(in, 8)).isEqualTo(9);
+        assertThat(in.getByte()).isEqualTo(77);
     }
 
     @Test
@@ -223,7 +264,8 @@ class WireGoldenTest {
             1, 4, 1, 2, 3, 4, // joins: slot 4, machine
             1, 5, 0, 0, 1, 2, 9, // picks: slot 5, serial 258, extra 9
             2, 6, 1, 7, 0, // presence: slot 6 away, slot 7 back
-            1, 0, 0); // crates: slot 0, value 0
+            1, 0, 0, // crates: slot 0, value 0
+            0); // host change: none
 
     private static CommanderInput heldInput() {
         return new CommanderInput(0.5f, -1f, 1f, 2f, true, false).acting(true);

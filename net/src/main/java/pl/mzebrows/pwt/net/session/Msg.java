@@ -15,7 +15,7 @@ import pl.mzebrows.pwt.net.NetConfig;
 final class Msg {
 
     /** Bumped whenever a message changes shape. The build id catches that too; this names it in the log. */
-    static final int PROTOCOL = 8;
+    static final int PROTOCOL = 9;
 
     // Peer to sequencer.
     static final int HELLO = 1;
@@ -70,6 +70,19 @@ final class Msg {
 
     /** The session is over, and this is why: a machine told so does not try to come back (G0105). */
     static final int ENDED = 33;
+
+    /**
+     * Who the host is, told to a machine that is not playing a running mission - on the briefing, loading, paused - and
+     * to every machine that is welcomed: the host's peer number (int), then the lowest slot it holds (byte,
+     * {@link #NO_SLOT} for none). A machine playing hears it as the sealed tick's last section instead, on one tick
+     * (G0104).
+     */
+    static final int HOST = 34;
+
+    /** Writes {@link #HOST}: the host's peer number and the lowest slot he holds, or -1 for none. */
+    static WireWriter putHost(WireWriter out, int peer, int slot) {
+        return out.putByte(HOST).putInt(peer).putByte(slot < 0 ? NO_SLOT : slot);
+    }
 
     /** The bytes a rejoin token is, handed in the welcome (G0105). */
     static final int TOKEN_BYTES = 16;

@@ -173,6 +173,16 @@ public final class PeerSession implements AutoCloseable {
     private long startWantedNanos;
     private List<BriefingPlayer> players = List.of();
     private String note = "";
+
+    /** Who the sequencer last said the host is - its peer number, and the lowest slot it holds - or -1 before it has (G0104). */
+    private int hostPeer = -1;
+
+    private int hostSlot = -1;
+
+    /** How many times the host has changed under this machine, and the tick it last did on, or -1 when told off a tick. */
+    private int hostChanges;
+
+    private int hostChangedAt = -1;
     private Bundle bundle = new Bundle(0);
     private InputCodec codec = new InputCodec(0);
     private PlayerInputs inputs = new PlayerInputs(1);
@@ -511,6 +521,31 @@ public final class PeerSession implements AutoCloseable {
         sendControl(out.reset().putByte(Msg.NOTE).putBytes(text.getBytes(StandardCharsets.UTF_8)));
     }
 
+    /** The peer number of the host as the sequencer last said, or -1 before it has: the host is a peer (G0104). */
+    public int hostPeer() {
+        return hostPeer;
+    }
+
+    /** The lowest slot the host holds, or -1: none, or not told yet. What the banner names him by. */
+    public int hostSlot() {
+        return hostSlot;
+    }
+
+    /** Whether this machine is the host now: it was made so, or it is the one the session opened with. */
+    public boolean hosting() {
+        return peerId >= 0 && peerId == hostPeer;
+    }
+
+    /** How many times the host has changed since this machine first heard who he was. */
+    public int hostChanges() {
+        return hostChanges;
+    }
+
+    /** The tick the host last changed on - the same on every machine playing - or -1: none yet, or told off a tick. */
+    public int hostChangedAt() {
+        return hostChangedAt;
+    }
+
     /** What the host last put on the briefing; empty until he has. */
     public String note() {
         return note;
@@ -694,6 +729,9 @@ public final class PeerSession implements AutoCloseable {
             current = worlds.fresh(built);
             world = current;
             log.info("peer", "event=restart tick=" + next);
+        }
+        if (bundle.hostChanged()) {
+            heardHost(bundle.hostPeer(), bundle.hostSlot(), next);
         }
         codec.applyTo(bundle, inputs);
         current.step(inputs);
@@ -918,6 +956,12 @@ public final class PeerSession implements AutoCloseable {
             case Msg.STARTED -> started();
             case Msg.BRIEFING -> briefing();
             case Msg.PLAYERS -> heardPlayers();
+            case Msg.HOST -> {
+                int host = in.getInt();
+                int slot = in.getByte();
+                in.expectEnd();
+                heardHost(host, slot, -1);
+            }
             case Msg.NOTED -> {
                 note = new String(in.getBytes(Msg.MAX_NOTE), StandardCharsets.UTF_8);
                 in.expectEnd();
@@ -1082,6 +1126,21 @@ public final class PeerSession implements AutoCloseable {
         generation++;
         state = State.BRIEFING;
         log.info("peer", "event=briefing");
+    }
+
+    /** The host is this peer, holding this slot or {@link Msg#NO_SLOT}; told on {@code atTick}, or -1 when not on one (G0104). */
+    private void heardHost(int host, int slot, int atTick) {
+        if (host < 0 || (slot != Msg.NO_SLOT && slot >= Players.MAX)) {
+            throw new WireException("host peer " + host + " at slot " + slot);
+        }
+        boolean changed = hostPeer >= 0 && host != hostPeer;
+        hostPeer = host;
+        hostSlot = slot == Msg.NO_SLOT ? -1 : slot;
+        if (changed) {
+            hostChanges++;
+            hostChangedAt = atTick;
+            log.info("peer", "event=host-changed host=" + host + " slot=" + hostSlot + " tick=" + atTick);
+        }
     }
 
     private void heardPlayers() {

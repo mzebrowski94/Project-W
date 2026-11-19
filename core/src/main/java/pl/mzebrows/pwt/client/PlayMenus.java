@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.function.IntUnaryOperator;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
+import pl.mzebrows.pwt.client.hud.DispatchText;
 import pl.mzebrows.pwt.client.hud.Hud;
 import pl.mzebrows.pwt.client.hud.MenuPainter;
 import pl.mzebrows.pwt.client.hud.PageHints;
@@ -87,6 +88,8 @@ final class PlayMenus {
     private float scrim;
     private boolean focusLost;
     private @Nullable String footFor;
+
+    private ScenarioPlay.@Nullable Host footHost;
 
     /** The pause in force is a solo draft's (G0049): no banner and no scrim over the game being chosen for. */
     private boolean quiet;
@@ -361,6 +364,7 @@ final class PlayMenus {
         shown = top;
         panel = Rect.EMPTY;
         footFor = null;
+        footHost = null;
         if (top == UiPage.PLAY) {
             return;
         }
@@ -466,11 +470,13 @@ final class PlayMenus {
         Simulation world = play.simulation();
         MissionCode played = mission;
         long tick = pause && played != null && world != null ? world.tick() : -1;
-        if (tick == missionFootTick && Objects.equals(invitation, footFor)) {
+        ScenarioPlay.Host host = pause ? play.handedOverHost() : null;
+        if (tick == missionFootTick && Objects.equals(invitation, footFor) && Objects.equals(host, footHost)) {
             return foot;
         }
         missionFootTick = tick;
         footFor = invitation;
+        footHost = host;
         foot.clear();
         if (tick >= 0 && played != null) {
             foot.add(strings.format(
@@ -482,6 +488,9 @@ final class PlayMenus {
         }
         if (invitation != null) {
             painter.addWrapped(foot, invitation, 2);
+        }
+        if (host != null) {
+            foot.add(strings.format("ui.host.is", DispatchText.hostName(strings, host.slot(), host.peer())));
         }
         return foot;
     }

@@ -184,3 +184,17 @@ Built in `Sequencer` (so a LAN session has it too), `PeerSession`, `Door`/`DoorC
 | client: `PeerSession.State.RECONNECTING`, retry every `net.rejoin.retryMillis` (1000, client scope) for the told window; `OnlineSession.connection()` says `lost the link to ..., coming back ...` (a literal, like its neighbours; the HUD line is stage 6's/8's) | an i18n line (none of the neighbouring states has one) |
 
 Left: a host returning with nobody else playing waits for a snapshot nobody can give (stage 8 hands the session over); the sequencer's refusal on the relay reaches the client without the `refused by the relay:` prefix (the door's own refusal, for a room that is gone, has it).
+
+## Stage 8 notes - provisional, for review (AFK run)
+
+Built in `Sequencer` (blind: the host is a peer number), `Bundle`, `Msg` (protocol 9, `HOST` 34), `PeerSession`, `Relay` (turns it on), `OnlineSession`, the HUD terminal/toast and the briefing and pause lines. Records: G0104 (*As built*), ADR 0023's golden list.
+
+| Choice | Turned down |
+|---|---|
+| `Sequencer.handsOver(boolean)`, on from the relay's room, off on the host's machine | a constructor argument |
+| host change = last section of a sealed tick while a mission runs unpaused, `Msg.HOST` otherwise (briefing, pause, loading machines) and at every welcome | the reliable message alone (machines on different ticks) |
+| successor = lowest peer number linked that can serve a world, else lowest linked | best link; a vote (G0104) |
+| banner = `DispatchKind.HOST_CHANGED` terminal line and toast, named by slot or `PEER n` | a drawn overlay with its own painter |
+| `ui.reconnecting` i18n line, drawn as the connecting panel over a stale world | a HUD strip |
+
+Left: the LAN announcement of a roomed session does not follow the host; slot zero's keyboard seat is still the host's in the sequencer (see G0104, *As built* 6, 7). The new host's briefing page is the existing host page driven by `OnlineSession.hosts()`; not played by a person.

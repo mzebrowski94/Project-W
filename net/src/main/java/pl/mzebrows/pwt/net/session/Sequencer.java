@@ -74,6 +74,21 @@ public final class Sequencer implements AutoCloseable {
      */
     private final List<Peer> held = new ArrayList<>();
 
+    /**
+     * Whether the host's link gone past its window hands the session to another peer (G0104) rather than ending it:
+     * true for a room on a relay, whose sequencer outlives the host's machine; false for the host's own machine,
+     * where the sequencer goes with him.
+     */
+    private boolean handsOver;
+
+    /** The new host a tick is yet to seal, or -1: his peer number, and the lowest slot he holds (G0104). */
+    private int hostChangePeer = -1;
+
+    private int hostChangeSlot;
+
+    /** The host has been handed to another peer at least once: the host's key no longer makes anybody host (G0104). */
+    private boolean handedOver;
+
     /** The session is over: its peers were told and its transport let go. */
     private boolean ended;
 
@@ -244,7 +259,11 @@ public final class Sequencer implements AutoCloseable {
                 + capacity * 2
                 // A crate's event per slot (G0056): its number and what it takes, or a close.
                 + 1
-                + capacity * 2;
+                + capacity * 2
+                // Whether the host changed, and to whom (G0104).
+                + 1
+                + 4
+                + 1;
     }
 
     /** Starts listening for peers; returns the port it got. */
@@ -256,6 +275,14 @@ public final class Sequencer implements AutoCloseable {
 
     public long hostKey() {
         return hostKey;
+    }
+
+    /**
+     * Says whether the host's link gone past its window hands the session to the peer longest in the room (G0104), or
+     * ends it. Off unless a room on a relay turns it on: a session on the host's own machine ends with him.
+     */
+    public void handsOver(boolean on) {
+        handsOver = on;
     }
 
     /** How long a dropped machine's seats are kept, in nanoseconds: the one reading of the key, told to whoever asks. */
@@ -423,6 +450,10 @@ public final class Sequencer implements AutoCloseable {
         if (invulnerabilityChanged) {
             sealing.switchInvulnerability(invulnerable);
             invulnerabilityChanged = false;
+        }
+        if (hostChangePeer >= 0) {
+            sealing.hostChange(hostChangePeer, hostChangeSlot);
+            hostChangePeer = -1;
         }
         for (int i = 0; i < peers.size(); i++) {
             Peer peer = peers.get(i);
@@ -738,12 +769,15 @@ public final class Sequencer implements AutoCloseable {
         }
         peer.id = nextPeerId++;
         peer.machine = machine;
-        peer.host = key == hostKey && host() == null && !holdingHost();
+        peer.host = key == hostKey && host() == null && !holdingHost() && !handedOver;
         hostWelcomed |= peer.host;
         // Sixteen bytes only this machine and this sequencer know: what proves a returning link is this one (G0105).
         peer.token = new byte[Msg.TOKEN_BYTES];
         random.nextBytes(peer.token);
         welcome(peer);
+        if (peer.host) {
+            sendHost(null);
+        }
     }
 
     private boolean holdingHost() {
@@ -776,6 +810,9 @@ public final class Sequencer implements AutoCloseable {
                         + " setupBytes=" + startBytes.length + " wireBytes=" + welcomeBytes);
         sendPlayers();
         sendNote(peer);
+        if (!peer.host) {
+            sendHost(peer);
+        }
     }
 
     /**
@@ -841,6 +878,9 @@ public final class Sequencer implements AutoCloseable {
             }
         }
         welcome(peer);
+        if (peer.host) {
+            sendHost(peer);
+        }
         for (int seat = 0; seat < capacity; seat++) {
             if (peer.slotOfSeat[seat] >= 0) {
                 out.reset().putByte(Msg.SLOT).putByte(seat).putByte(peer.slotOfSeat[seat]);
@@ -886,11 +926,97 @@ public final class Sequencer implements AutoCloseable {
                 }
             }
             log.info("sequencer", "event=gave-up peer=" + gone.id + " machine=" + gone.machine + " host=" + gone.host);
-            if (gone.host) {
+            if (gone.host && !handOver(gone)) {
                 end("the host left the game");
                 return;
             }
             sendPlayers();
+        }
+    }
+
+    /**
+     * The host's window is over and he is not back (G0104): the peer longest in the room - the lowest number among
+     * those linked, one that can already serve a world before one that cannot - is the host from here, and every
+     * machine is told on one tick (sealed, while a mission runs) or at once (nothing is sealed to carry it). Nothing is
+     * copied: every world is the same. False when the session does not hand over, or nobody is linked to take it.
+     */
+    private boolean handOver(Peer gone) {
+        if (!handsOver) {
+            return false;
+        }
+        Peer next = null;
+        for (int i = 0; i < peers.size(); i++) {
+            Peer each = peers.get(i);
+            if (each.id < 0 || each.leaving || each == gone) {
+                continue;
+            }
+            if (next == null
+                    || (serves(each) && !serves(next))
+                    || (serves(each) == serves(next) && each.id < next.id)) {
+                next = each;
+            }
+        }
+        if (next == null) {
+            return false;
+        }
+        gone.host = false;
+        next.host = true;
+        handedOver = true;
+        int slot = lowestSlotOf(next.id);
+        log.info(
+                "sequencer",
+                "event=host-changed from=" + gone.id + " to=" + next.id + " machine=" + next.machine + " slot=" + slot);
+        if (started && !paused) {
+            hostChangePeer = next.id;
+            hostChangeSlot = slot < 0 ? Msg.NO_SLOT : slot;
+        }
+        sendHost(null);
+        return true;
+    }
+
+    /** A hand-over no tick has carried yet goes to every machine now: the session paused or went back to its briefing. */
+    private void flushHostChange() {
+        if (hostChangePeer >= 0) {
+            hostChangePeer = -1;
+            sendHost(null);
+        }
+    }
+
+    /** Whether the peer has a world a joiner can be sent: it is playing, or there is no world yet to send. */
+    private boolean serves(Peer peer) {
+        return peer.state == PeerState.PLAYING || (!started && peer.state == PeerState.BRIEFING);
+    }
+
+    /** The lowest slot this peer holds, or -1. */
+    private int lowestSlotOf(int peerId) {
+        for (int slot = 0; slot < capacity; slot++) {
+            if (owner[slot] == peerId) {
+                return slot;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Tells who the host is: one welcomed peer, or all of them - except those playing a mission that is running, who
+     * hear it in the tick the sequencer seals (G0104). Nothing is sent while there is no host.
+     */
+    private void sendHost(@Nullable Peer only) {
+        Peer host = host();
+        if (host == null) {
+            return;
+        }
+        int slot = lowestSlotOf(host.id);
+        Msg.putHost(out.reset(), host.id, slot);
+        for (int i = 0; i < peers.size(); i++) {
+            Peer each = peers.get(i);
+            if (each.id < 0 || (only != null && each != only)) {
+                continue;
+            }
+            if (only == null && hostChangePeer >= 0 && each.state == PeerState.PLAYING) {
+                continue;
+            }
+            transport.send(each.link, Delivery.RELIABLE, out.array(), 0, out.size());
         }
     }
 
@@ -951,6 +1077,7 @@ public final class Sequencer implements AutoCloseable {
         started = false;
         paused = false;
         pauseReason = Msg.PAUSE_BY_PLAYER;
+        flushHostChange();
         sealed = -1;
         restartWanted = false;
         invulnerable = false;
@@ -1307,6 +1434,7 @@ public final class Sequencer implements AutoCloseable {
     private void setPaused(boolean on, int reason, int by) {
         paused = on;
         pauseReason = reason;
+        flushHostChange();
         if (!paused) {
             nextSealNanos = now + tickNanos;
         }
@@ -1383,6 +1511,10 @@ public final class Sequencer implements AutoCloseable {
                 sendPlayers();
             }
             return;
+        }
+        if (peer.host && peer.id >= 0) {
+            // No window to wait out (a key of zero): the hand-over is now, if this session has one (G0104).
+            handOver(peer);
         }
         if (!started) {
             // On the briefing a slot stays with the machine that took it, shown offline: it is put on the field

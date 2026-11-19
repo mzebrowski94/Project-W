@@ -1145,4 +1145,41 @@ class SessionTest {
             assertThat(friend.session.refusal()).contains("your place in the room was given up - join again");
         }
     }
+
+    @Test
+    void endsAnUnroomedSessionWithItsHostWhoseLinkIsGonePastTheWindow() {
+        NetConfig brief = NetConfig.defaults().with(new NetConfig.Rejoin(2, 200));
+        try (SessionHarness session = new SessionHarness(brief, "Skirmish", 3L, PERFECT)) {
+            Machine host = session.host();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(200);
+
+            session.dropLink(host);
+            host.frozenFrames = 10_000;
+            session.run(300);
+
+            assertThat(friend.session.state()).isEqualTo(PeerSession.State.CLOSED);
+            assertThat(friend.session.closedBecause()).contains("the host left the game");
+        }
+    }
+
+    @Test
+    void handsAnUnroomedSessionOverWhenItsSequencerIsToldTo() {
+        NetConfig brief = NetConfig.defaults().with(new NetConfig.Rejoin(2, 200));
+        try (SessionHarness session = new SessionHarness(brief, "Skirmish", 3L, PERFECT)) {
+            session.sequencer().handsOver(true);
+            Machine host = session.host();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(200);
+
+            session.dropLink(host);
+            host.frozenFrames = 10_000;
+            session.machines.remove(host);
+            session.run(300);
+
+            assertThat(friend.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(friend.session.hosting()).isTrue();
+            assertThat(friend.session.hostChanges()).isEqualTo(1);
+        }
+    }
 }

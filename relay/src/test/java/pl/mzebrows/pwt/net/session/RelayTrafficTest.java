@@ -148,7 +148,7 @@ class RelayTrafficTest {
     }
 
     @Test
-    void endsTheRoomAndTellsItsLinksWhenTheHostsLinkGoes() {
+    void keepsTheRoomForItsLinksWhenTheHostsLinkIsGonePastTheWindowAndAnotherCanTakeOver() {
         Raw host = raw("a");
         String code = host.door(open());
         host.send(Delivery.RELIABLE, hello(KEY));
@@ -166,8 +166,42 @@ class RelayTrafficTest {
         quietFor(windowMillis() + 1_000);
         guest.hear();
 
+        assertThat(relay.roomCount()).as("the guest is the host now (G0104)").isEqualTo(1);
+        assertThat(guest.closedFor).isNull();
+    }
+
+    @Test
+    void endsTheRoomAndTellsItsLinksWhenTheHostLeavesOnPurpose() {
+        Raw host = raw("a");
+        String code = host.door(open());
+        host.send(Delivery.RELIABLE, hello(KEY));
+        Raw guest = raw("b");
+        guest.door(new Door.Join(code, "", BUILD, VERSION));
+        guest.send(Delivery.RELIABLE, hello(0L));
+        relay.poll();
+        assertThat(relay.linksIn(code)).isEqualTo(2);
+
+        host.send(Delivery.RELIABLE, new WireWriter(4).putByte(Msg.LEAVE).toBytes());
+        host.leave();
+        quietFor(2_000);
+        guest.hear();
+
         assertThat(relay.roomCount()).isZero();
         assertThat(guest.closedFor).contains("the host left the game");
+    }
+
+    @Test
+    void endsTheRoomWhenTheHostsLinkIsGonePastTheWindowAndNobodyElseIsThere() {
+        Raw host = raw("a");
+        host.door(open());
+        host.send(Delivery.RELIABLE, hello(KEY));
+        relay.poll();
+
+        host.leave();
+        relay.poll();
+        quietFor(windowMillis() + 1_000);
+
+        assertThat(relay.roomCount()).isZero();
     }
 
     @Test

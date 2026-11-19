@@ -61,6 +61,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.def.Look;
+import pl.mzebrows.pwt.ui.hud.DispatchKind;
 import pl.mzebrows.pwt.ui.hud.DispatchSink;
 import pl.mzebrows.pwt.ui.hud.GoalLine;
 import pl.mzebrows.pwt.ui.hud.PanelAlarms;
@@ -446,7 +447,7 @@ public final class ScenarioScreen extends ScreenAdapter {
             // Online, before the world has arrived: connecting, joining, or turned away.
             context.hud().showSystemCursor();
             ScreenUtils.clear(context.graphicConfig().hud().color().bar());
-            String connection = play.connection();
+            String connection = play.reconnecting() ? strings.get("ui.reconnecting") : play.connection();
             menus.drawConnecting(layout, connection == null ? "..." : connection);
             return;
         }
@@ -463,6 +464,11 @@ public final class ScenarioScreen extends ScreenAdapter {
         topBarSeats.follow(readout, menus.menuOpen(), play);
         goalLine.update(readout, delta);
         reporters.report(readout, dispatches);
+        ScenarioPlay.Host newHost = play.takeHostChange();
+        if (newHost != null) {
+            // Every machine says it, on the tick it was sealed on: the commander's colour is the slot's (G0104).
+            dispatches.offer(DispatchKind.HOST_CHANGED, newHost.slot(), newHost.peer(), 0);
+        }
         if (!topBarSeats.draft().open() && !topBarSeats.crate().open()) {
             // The terminal holds its queue while the draft hides it, so a line said meanwhile types out
             // after it rather than ageing out unseen.
@@ -526,6 +532,9 @@ public final class ScenarioScreen extends ScreenAdapter {
             chips.draw(layout, viewport, prompts, readout, slotKeys, brackets, play.renderAlpha(), delta);
         }
         menus.draw(layout, play);
+        if (play.reconnecting()) {
+            menus.drawConnecting(layout, strings.get("ui.reconnecting"));
+        }
         if (!menus.coversView()) {
             toastPainter.draw(layout.view(), toast);
         }
