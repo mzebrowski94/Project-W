@@ -17,7 +17,7 @@ import pl.mzebrows.pwt.sim.CommanderInput;
 class WireGoldenTest {
 
     /** What {@link Msg#PROTOCOL} was when the bytes in this file were written. Bump both together. */
-    private static final int PROTOCOL_OF_THESE_BYTES = 6;
+    private static final int PROTOCOL_OF_THESE_BYTES = 7;
 
     private final WireWriter out = new WireWriter(64);
     private final WireReader in = new WireReader();
@@ -40,6 +40,9 @@ class WireGoldenTest {
         numbers.put("PAUSE", Msg.PAUSE);
         numbers.put("RESTART", Msg.RESTART);
         numbers.put("GOD_MODE", Msg.GOD_MODE);
+        numbers.put("START", Msg.START);
+        numbers.put("TO_BRIEFING", Msg.TO_BRIEFING);
+        numbers.put("NOTE", Msg.NOTE);
         numbers.put("WELCOME", Msg.WELCOME);
         numbers.put("REFUSED", Msg.REFUSED);
         numbers.put("BUNDLES", Msg.BUNDLES);
@@ -49,6 +52,10 @@ class WireGoldenTest {
         numbers.put("DESYNC", Msg.DESYNC);
         numbers.put("SNAPSHOT_WANTED", Msg.SNAPSHOT_WANTED);
         numbers.put("DUMP_WANTED", Msg.DUMP_WANTED);
+        numbers.put("STARTED", Msg.STARTED);
+        numbers.put("BRIEFING", Msg.BRIEFING);
+        numbers.put("PLAYERS", Msg.PLAYERS);
+        numbers.put("NOTED", Msg.NOTED);
 
         assertThat(numbers)
                 .containsExactly(
@@ -60,6 +67,9 @@ class WireGoldenTest {
                         Map.entry("PAUSE", 6),
                         Map.entry("RESTART", 7),
                         Map.entry("GOD_MODE", 8),
+                        Map.entry("START", 9),
+                        Map.entry("TO_BRIEFING", 10),
+                        Map.entry("NOTE", 11),
                         Map.entry("WELCOME", 20),
                         Map.entry("REFUSED", 21),
                         Map.entry("BUNDLES", 22),
@@ -68,7 +78,11 @@ class WireGoldenTest {
                         Map.entry("PAUSED", 25),
                         Map.entry("DESYNC", 26),
                         Map.entry("SNAPSHOT_WANTED", 27),
-                        Map.entry("DUMP_WANTED", 28));
+                        Map.entry("DUMP_WANTED", 28),
+                        Map.entry("STARTED", 29),
+                        Map.entry("BRIEFING", 30),
+                        Map.entry("PLAYERS", 31),
+                        Map.entry("NOTED", 32));
         assertThat(new int[] {Msg.EVENT_ORDER, Msg.EVENT_PICK, Msg.EVENT_CRATE}).containsExactly(1, 2, 3);
         assertThat(Msg.EVENT_BYTES).isEqualTo(11);
         assertThat(Msg.NO_SLOT).isEqualTo(255);

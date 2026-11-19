@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.client.config.SimConfigLoader;
 import pl.mzebrows.pwt.client.input.PlayerSeats;
@@ -25,6 +26,7 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
+import pl.mzebrows.pwt.ui.page.Briefing;
 
 /**
  * Two copies of the game in one test: the host's {@link OnlineSession} and a joining one, over the
@@ -38,15 +40,8 @@ class OnlineSessionTest {
     private final ManualClock clock = new ManualClock();
     private final NetConfig config = NetConfig.defaults();
     private final LoopbackNetwork network = new LoopbackNetwork(config);
-    private final Sequencer sequencer = new Sequencer(
-            network.endpoint("host"),
-            config,
-            NetLog.silent(64),
-            new SessionSetup(SimConfigLoader.text(), "Skirmish", 5L),
-            Players.MAX,
-            1f / 60f,
-            KEY,
-            BuildId.current());
+    private final Sequencer sequencer =
+            new Sequencer(network.endpoint("host"), config, NetLog.silent(64), Players.MAX, KEY, BuildId.current());
     private final int port = sequencer.listen(config.port(), 0);
     private final ConditionedTransport lag =
             new ConditionedTransport(network.endpoint("joiner"), NetConfig.Conditions.NONE, clock);
@@ -58,10 +53,16 @@ class OnlineSessionTest {
             NetLog.silent(64),
             clock,
             "host, port " + port,
-            null);
+            null,
+            false);
     private final OnlineSession joiner = new OnlineSession(
-            peer(lag, 0L), null, lag, List.of(0, 25, 50), NetLog.silent(64), clock, "host:" + port, null);
+            peer(lag, 0L), null, lag, List.of(0, 25, 50), NetLog.silent(64), clock, "host:" + port, null, false);
     private final PlayerInputs walking = new PlayerInputs(Players.MAX);
+
+    @BeforeEach
+    void start() {
+        host.startMission(new SessionSetup(SimConfigLoader.text(), "Skirmish", 5L), 1f / 60f);
+    }
 
     @AfterEach
     void close() {
@@ -163,7 +164,7 @@ class OnlineSessionTest {
                 network.endpoint("stranger"), config, NetLog.silent(64), new ScenarioWorlds(), null, "old", "old");
         old.connect("host", port, 0L);
         try (OnlineSession stranger =
-                new OnlineSession(old, null, null, List.of(), NetLog.silent(64), clock, "host:" + port, null)) {
+                new OnlineSession(old, null, null, List.of(), NetLog.silent(64), clock, "host:" + port, null, false)) {
             for (int i = 0; i < 10; i++) {
                 frames(1);
                 stranger.advance(1f / 60f, walking);
@@ -191,18 +192,10 @@ class OnlineSessionTest {
     void deliversAPickMadeBeforeTheSessionIsPlaying() {
         SessionSetup setup = new SessionSetup(SimConfigLoader.text(), "Skirmish", 7L);
         Simulation shown = TAKEN_POINTS.fresh(setup);
-        shown.step(new PlayerInputs(Players.MAX));
         int serial = shown.upgradeView().oldestDraftOf(0);
         UpgradeKind kind = Objects.requireNonNull(shown.upgradeView().cardOf(serial, 0));
         try (Sequencer solo = new Sequencer(
-                        network.endpoint("solo"),
-                        config,
-                        NetLog.silent(64),
-                        setup,
-                        Players.MAX,
-                        1f / 60f,
-                        KEY,
-                        BuildId.current());
+                        network.endpoint("solo"), config, NetLog.silent(64), Players.MAX, KEY, BuildId.current());
                 OnlineSession alone = new OnlineSession(
                         peer(network.endpoint("alone"), "solo", solo.listen(config.port(), 0), KEY, TAKEN_POINTS),
                         null,
@@ -211,7 +204,9 @@ class OnlineSessionTest {
                         NetLog.silent(64),
                         clock,
                         "alone",
-                        null)) {
+                        null,
+                        false)) {
+            alone.startMission(setup, 1f / 60f);
 
             alone.pick(PlayerSeats.KEYBOARD_SLOT, serial, kind);
             for (int i = 0; i < 120; i++) {
@@ -223,6 +218,89 @@ class OnlineSessionTest {
             UpgradeView view = world(alone).upgradeView();
             assertThat(view.heldCount()).as("cards taken").isEqualTo(1);
             assertThat(view.heldKind(0)).isEqualTo(kind);
+        }
+    }
+
+    /** G0101: a session opened on its briefing has no world until the host starts one, and everyone lands on it. */
+    @Test
+    void landsOnTheBriefingAndPlaysTheMissionOnceTheHostStartsIt() {
+        try (Sequencer own = listening();
+                OnlineSession chief = briefed("briefing-host", KEY, "chief");
+                OnlineSession friend = briefed("briefing-host", 0L, "friend")) {
+            frames(own, 90, chief, friend);
+
+            assertThat(chief.onBriefing()).isTrue();
+            assertThat(friend.onBriefing()).isTrue();
+            assertThat(friend.simulation()).isNull();
+            assertThat(friend.connection()).contains("on the briefing");
+            assertThat(friend.ended()).isNull();
+            assertThat(friend.players())
+                    .extracting(Briefing.Player::machine, Briefing.Player::host, Briefing.Player::online)
+                    .containsExactly(
+                            org.assertj.core.groups.Tuple.tuple("chief", true, true),
+                            org.assertj.core.groups.Tuple.tuple("friend", false, true));
+
+            chief.note("MJGF-6ABCD");
+            frames(own, 30, chief, friend);
+            assertThat(friend.note()).isEqualTo("MJGF-6ABCD");
+            chief.startMission(new SessionSetup(SimConfigLoader.text(), "Skirmish", 5L), 1f / 60f);
+            frames(own, 120, chief, friend);
+
+            assertThat(friend.scenarioName()).isEqualTo("Skirmish");
+            assertThat(chief.simulation()).isNotNull();
+            assertThat(friend.simulation()).isNotNull();
+            assertThat(friend.onBriefing()).isFalse();
+            assertThat(chief.briefed()).isTrue();
+            assertThat(friend.briefed()).isFalse();
+        }
+    }
+
+    @Test
+    void takesEveryMachineBackToTheBriefingWhenTheHostAsksAndKeepsTheSession() {
+        try (Sequencer own = listening();
+                OnlineSession chief = briefed("briefing-host", KEY, "chief");
+                OnlineSession friend = briefed("briefing-host", 0L, "friend")) {
+            frames(own, 30, chief, friend);
+            chief.startMission(new SessionSetup(SimConfigLoader.text(), "Skirmish", 5L), 1f / 60f);
+            frames(own, 120, chief, friend);
+
+            chief.toBriefing();
+            frames(own, 30, chief, friend);
+
+            assertThat(chief.onBriefing()).isTrue();
+            assertThat(friend.onBriefing()).isTrue();
+            assertThat(friend.simulation()).isNull();
+            assertThat(friend.ended()).as("a joiner's session is kept").isNull();
+            assertThat(friend.players()).hasSize(2);
+
+            chief.startMission(new SessionSetup(SimConfigLoader.text(), "Skirmish", 9L), 1f / 60f);
+            frames(own, 120, chief, friend);
+            assertThat(friend.simulation()).isNotNull();
+        }
+    }
+
+    /** A sequencer of its own, listening, with nothing started - a session on its briefing. */
+    private Sequencer listening() {
+        Sequencer own = new Sequencer(
+                network.endpoint("briefing-host"), config, NetLog.silent(64), Players.MAX, KEY, BuildId.current());
+        own.listen(config.port(), 0);
+        return own;
+    }
+
+    private OnlineSession briefed(String hostName, long key, String name) {
+        PeerSession session = new PeerSession(
+                network.endpoint(name), config, NetLog.silent(64), new ScenarioWorlds(), null, BuildId.current(), name);
+        session.connect(hostName, config.port(), key);
+        return new OnlineSession(session, null, null, List.of(), NetLog.silent(64), clock, hostName, null, key != 0L);
+    }
+
+    private void frames(Sequencer own, int count, OnlineSession... sessions) {
+        for (int i = 0; i < count; i++) {
+            clock.advanceNanos(FRAME);
+            own.pump(clock.nanos());
+            for (OnlineSession each : sessions) {
+                each.advance(1f / 60f, walking);
+            }
         }
     }
 
@@ -269,6 +347,9 @@ class OnlineSessionTest {
             for (int i = 0; i < 2; i++) {
                 world.spawnControlPoint(30f + 10f * i, 30f).getComponent(ControlPoint.class).captured = true;
             }
+            // Dealt before the first tick is sealed: a mission is started from a briefing, so a pick made at once
+            // reaches the sequencer before that tick, where it used to reach it a few ticks in.
+            world.step(new PlayerInputs(Players.MAX));
             return world;
         }
 

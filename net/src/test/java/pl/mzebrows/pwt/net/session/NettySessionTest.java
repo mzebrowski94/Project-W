@@ -29,21 +29,14 @@ class NettySessionTest {
 
     @Test
     void playsOneWorldOnTwoPeersOverUdpAndTcp() {
-        Sequencer sequencer = new Sequencer(
-                transport(),
-                config,
-                log,
-                new SessionSetup("", "Skirmish", 3L),
-                Players.MAX,
-                1f / 60f,
-                HOST_KEY,
-                BuildId.current());
+        Sequencer sequencer = new Sequencer(transport(), config, log, Players.MAX, HOST_KEY, BuildId.current());
         int port = sequencer.listen(config.port(), config.portSearch());
         try (SequencerThread thread = new SequencerThread(sequencer, SystemClock.INSTANCE, log).start();
                 PeerSession host = peer();
                 PeerSession joiner = peer()) {
             host.connect("127.0.0.1", port, HOST_KEY);
             host.seat(0);
+            host.start(new SessionSetup("", "Skirmish", 3L), 1f / 60f);
             joiner.connect("127.0.0.1", port, 0L);
             joiner.seat(0);
             PlayerInputs local = new PlayerInputs(Players.MAX);

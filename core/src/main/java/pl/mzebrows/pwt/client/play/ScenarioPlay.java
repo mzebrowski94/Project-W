@@ -54,6 +54,17 @@ public interface ScenarioPlay extends SeatedPlay, AutoCloseable {
         }
     }
 
+    /**
+     * Whether this machine hosts a session that has a briefing: leaving a mission by the result's MENU takes every
+     * machine back to it instead of ending the session (G0101).
+     */
+    default boolean briefed() {
+        return false;
+    }
+
+    /** Takes every machine in the session back to its briefing, the session kept. The host's to ask for. */
+    default void toBriefing() {}
+
     /** Carries out one harness command. {@code local} is what the players are holding, for a single step. */
     void apply(HarnessCommand command, PlayerInputs local);
 

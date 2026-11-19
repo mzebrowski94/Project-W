@@ -2,7 +2,9 @@ package pl.mzebrows.pwt.client.hud;
 
 import com.badlogic.gdx.graphics.Color;
 import java.util.List;
+import java.util.function.IntFunction;
 import java.util.function.IntUnaryOperator;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.ui.hud.TextFit;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
@@ -28,6 +30,10 @@ public final class MenuPainter {
     private final Color text = new Color();
     private final Color dim = new Color();
     private final Color bar = new Color();
+    private final Color tinted = new Color();
+
+    /** A foot line's own colour, or null for the page's: the briefing's players in their commanders' (G0101). */
+    private IntFunction<@Nullable Color> footInk = line -> null;
 
     public MenuPainter(Hud hud, GraphicConfig graphic, HudMetrics metrics) {
         this.hud = hud;
@@ -264,6 +270,11 @@ public final class MenuPainter {
             String words = TextFit.fit(foot.get(i), fits);
             int bright = Math.clamp(footBright.applyAsInt(i), 0, words.length());
             int top = layout.lineTop(panel, line);
+            Color ink = footInk.apply(i);
+            if (ink != null) {
+                hud.text(words, x, top, faded(tinted, ink, alpha));
+                continue;
+            }
             if (bright > 0) {
                 hud.text(words.substring(0, bright), x, top, text);
             }
@@ -290,6 +301,11 @@ public final class MenuPainter {
 
     private static Color faded(Color into, Color from, float alpha) {
         return into.set(from.r, from.g, from.b, from.a * alpha);
+    }
+
+    /** Draws the foot lines this says a colour for in it, from now on; the rest as the page's. */
+    public void footInk(IntFunction<@Nullable Color> ink) {
+        this.footInk = ink;
     }
 
     /** The line the first entry is on - a blank line under the head - for finding what the pointer is over. */

@@ -1,6 +1,5 @@
 package pl.mzebrows.pwt.net.session;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -45,15 +44,28 @@ public final class Sequencer implements AutoCloseable {
     /** How many checksum ticks back the host's hashes are remembered, waiting for slower peers'. */
     private static final int HASHES = 16;
 
+    /** How often a session on its briefing looks up from waiting: nothing is sealed, a link is only heard. */
+    private static final long BRIEFING_NANOS = 16_666_667L;
+
     private final Transport transport;
     private final NetConfig.Pacing pacing;
     private final NetConfig.Session session;
     private final int maxDatagramBytes;
     private final NetLog log;
-    private final SessionSetup setup;
     private final String build;
     private final long hostKey;
-    private final long tickNanos;
+    /** The world's tick, as the START said; zero while the session is on its briefing. */
+    private long tickNanos;
+
+    /** What the START carried, opaque, for a machine that arrives after it; empty on the briefing. */
+    private byte[] startBytes = new byte[0];
+
+    /** What the host last put on the briefing: opaque, kept for a machine that arrives (G0101). */
+    private byte[] note = new byte[0];
+
+    /** By slot, the machine that took it: kept while the session is on its briefing, for a players and a return. */
+    private final String[] holderMachine;
+
     private final int capacity;
     private final long statsNanos;
 
@@ -61,7 +73,7 @@ public final class Sequencer implements AutoCloseable {
      * The longest round trip a session can be played over - the lead that has to cover it stops at
      * leadMaxTicks each way. A peer slower than that to answer is not on a slow link but not listening.
      */
-    private final long longestRoundTripNanos;
+    private long longestRoundTripNanos;
 
     /**
      * Every link, in the order it opened. A list walked by index, because it is walked every tick and an
@@ -126,34 +138,23 @@ public final class Sequencer implements AutoCloseable {
     private long lateMostNanos;
 
     /**
-     * @param setup what every peer builds its world from - the host's world config, scenario and seed
      * @param capacity how many slots the session has; the ceiling is {@code Players.MAX}
-     * @param tickSeconds the world's tick, from the host's config - bundles are sealed at this rate
      * @param hostKey what the host's own peer says in its hello, to be known as the host
      * @param build this build's id; a peer with another is refused
      */
-    public Sequencer(
-            Transport transport,
-            NetConfig config,
-            NetLog log,
-            SessionSetup setup,
-            int capacity,
-            float tickSeconds,
-            long hostKey,
-            String build) {
+    public Sequencer(Transport transport, NetConfig config, NetLog log, int capacity, long hostKey, String build) {
         this.transport = transport;
         this.pacing = config.pacing();
         this.session = config.session();
         this.maxDatagramBytes = config.maxDatagramBytes();
         this.log = log;
-        this.setup = setup;
         this.build = build;
         this.hostKey = hostKey;
-        this.tickNanos = Math.round(tickSeconds * 1e9);
         this.capacity = capacity;
         this.statsNanos = config.log().statsSeconds() * 1_000_000_000L;
-        this.longestRoundTripNanos = 2L * pacing.leadMaxTicks() * tickNanos;
         owner = new int[capacity];
+        holderMachine = new String[capacity];
+        Arrays.fill(holderMachine, "");
         Arrays.fill(owner, -1);
         lastHeld = new byte[capacity][Bundle.HELD_BYTES];
         ahead = new byte[capacity][AHEAD][Bundle.HELD_BYTES];
@@ -199,10 +200,7 @@ public final class Sequencer implements AutoCloseable {
     /** Starts listening for peers; returns the port it got. */
     public int listen(int firstPort, int search) {
         int port = transport.listen(firstPort, search);
-        log.info(
-                "sequencer",
-                "event=listening port=" + port + " build=" + build + " scenario=\"" + setup.scenario() + "\" seed="
-                        + setup.seed() + " capacity=" + capacity);
+        log.info("sequencer", "event=listening port=" + port + " build=" + build + " capacity=" + capacity);
         return port;
     }
 
@@ -232,7 +230,7 @@ public final class Sequencer implements AutoCloseable {
 
     /** When the next tick is due, for the thread driving this to sleep until. */
     public long nextDeadlineNanos() {
-        return started && !paused ? nextSealNanos : now + tickNanos;
+        return started && !paused ? nextSealNanos : now + (started ? tickNanos : BRIEFING_NANOS);
     }
 
     /** Hears every peer, seals every tick that is due, and sends every peer what it has not got yet. */
@@ -585,6 +583,9 @@ public final class Sequencer implements AutoCloseable {
             case Msg.PAUSE -> pause(peer);
             case Msg.RESTART -> restart(peer);
             case Msg.GOD_MODE -> godMode(peer);
+            case Msg.START -> start(peer);
+            case Msg.TO_BRIEFING -> toBriefing(peer);
+            case Msg.NOTE -> noted(peer);
             default -> throw new WireException("no message " + type);
         }
     }
@@ -615,31 +616,177 @@ public final class Sequencer implements AutoCloseable {
         peer.id = nextPeerId++;
         peer.machine = machine;
         peer.host = key == hostKey && host() == null;
-        boolean fresh = !started && peer.host;
-        byte[] config = setup.configText().getBytes(StandardCharsets.UTF_8);
-        out.reset()
-                .putByte(Msg.WELCOME)
-                .putInt(peer.id)
-                .putByte(capacity)
-                .putByte(fresh ? 1 : 0)
-                .putLong(tickNanos);
+        out.reset().putByte(Msg.WELCOME).putInt(peer.id).putByte(capacity).putByte(started ? 1 : 0);
         Msg.putSession(out, session);
-        out.putString(setup.scenario()).putLong(setup.seed()).putPacked(config, 0, config.length);
+        out.putLong(tickNanos).putPacked(startBytes, 0, startBytes.length);
         transport.send(peer.link, Delivery.RELIABLE, out.array(), 0, out.size());
         int welcomeBytes = out.size();
-        if (fresh) {
-            started = true;
-            peer.state = PeerState.PLAYING;
-            nextSealNanos = now + tickNanos;
-            nextStatsNanos = now + statsNanos;
-        } else {
+        if (started) {
             heal(peer);
+        } else {
+            peer.state = PeerState.BRIEFING;
         }
         log.info(
                 "sequencer",
                 "event=welcome peer=" + peer.id + " machine=" + peer.machine + " link=" + peer.link + " host="
-                        + peer.host + " fresh=" + fresh
-                        + " configBytes=" + config.length + " wireBytes=" + welcomeBytes);
+                        + peer.host + " started=" + started
+                        + " setupBytes=" + startBytes.length + " wireBytes=" + welcomeBytes);
+        sendPlayers();
+        sendNote(peer);
+    }
+
+    /**
+     * The host starts the mission (G0101): every machine on the briefing is told, with the setup as the host sent
+     * it - bytes this class never reads - and the first tick seals with every slot taken so far joining it. A
+     * slot whose machine has gone is put on the field away, as a mission leaves a commander (G0038).
+     */
+    private void start(Peer peer) {
+        long nanos = in.getLong();
+        byte[] setup = in.getPacked(Msg.MAX_START);
+        in.expectEnd();
+        if (!peer.host || started) {
+            log.warn("sequencer", "event=refused-start peer=" + peer.id + " started=" + started);
+            return;
+        }
+        if (nanos <= 0) {
+            throw new WireException("a tick of " + nanos + " ns");
+        }
+        tickNanos = nanos;
+        longestRoundTripNanos = 2L * pacing.leadMaxTicks() * tickNanos;
+        startBytes = setup;
+        for (int slot = 0; slot < capacity; slot++) {
+            if (owner[slot] >= 0) {
+                joinWanted[slot] = true;
+                if (peerWithId(owner[slot]) == null) {
+                    goAway(slot);
+                }
+            }
+        }
+        started = true;
+        nextSealNanos = now + tickNanos;
+        nextStatsNanos = now + statsNanos;
+        out.reset().putByte(Msg.STARTED).putLong(tickNanos).putPacked(setup, 0, setup.length);
+        for (int i = 0; i < peers.size(); i++) {
+            Peer each = peers.get(i);
+            if (each.state == PeerState.BRIEFING) {
+                transport.send(each.link, Delivery.RELIABLE, out.array(), 0, out.size());
+                each.state = PeerState.PLAYING;
+                each.inputGapNanos = tickNanos;
+                each.catchUpTo = -1;
+            }
+        }
+        log.info("sequencer", "event=started peer=" + peer.id + " tickNs=" + tickNanos + " setupBytes=" + setup.length);
+    }
+
+    /**
+     * The host takes the session back to its briefing (G0101): nothing more is sealed, every machine drops its world,
+     * and the slots stay with the machines that hold them. Each peer's generation moves on, so what was in flight from
+     * the mission is told from what comes of the next.
+     */
+    private void toBriefing(Peer peer) {
+        in.expectEnd();
+        if (!peer.host || !started) {
+            log.warn("sequencer", "event=refused-briefing peer=" + peer.id + " started=" + started);
+            return;
+        }
+        started = false;
+        paused = false;
+        pauseReason = Msg.PAUSE_BY_PLAYER;
+        sealed = -1;
+        restartWanted = false;
+        invulnerable = false;
+        invulnerabilityChanged = false;
+        dumpedTick = -1;
+        lateMostNanos = 0L;
+        startBytes = new byte[0];
+        Arrays.fill(historyTick, -1);
+        Arrays.fill(historyLength, 0);
+        Arrays.fill(hostHashTick, -1);
+        for (int slot = 0; slot < capacity; slot++) {
+            away[slot] = false;
+            awayWanted[slot] = false;
+            backWanted[slot] = false;
+            joinWanted[slot] = false;
+            Arrays.fill(lastHeld[slot], (byte) 0);
+            Arrays.fill(aheadTick[slot], -1);
+        }
+        out.reset().putByte(Msg.BRIEFING);
+        for (int i = 0; i < peers.size(); i++) {
+            Peer each = peers.get(i);
+            if (each.id < 0) {
+                continue;
+            }
+            each.state = PeerState.BRIEFING;
+            each.generation++;
+            each.acked = -1;
+            each.eventCount = 0;
+            each.eventsApplied = 0;
+            each.wantsSnapshot = false;
+            each.snapshotAsked = false;
+            each.catchUpTo = -1;
+            each.newestHeard = -1;
+            each.margin = Msg.NO_MARGIN;
+            each.roundTripNanos = 0L;
+            Arrays.fill(each.sentTick, -1);
+            Arrays.fill(each.waitingTick, -1);
+            transport.send(each.link, Delivery.RELIABLE, out.array(), 0, out.size());
+        }
+        log.info("sequencer", "event=briefing peer=" + peer.id);
+        sendPlayers();
+    }
+
+    /**
+     * Tells every welcomed machine who holds which slot, while the session is on its briefing: per slot held, its
+     * number, whether the holder is the host and whether its link is up, and the machine it plays from.
+     */
+    private void sendPlayers() {
+        if (started) {
+            return;
+        }
+        out.reset().putByte(Msg.PLAYERS);
+        int count = 0;
+        for (int slot = 0; slot < capacity; slot++) {
+            count += owner[slot] >= 0 ? 1 : 0;
+        }
+        out.putByte(count);
+        for (int slot = 0; slot < capacity; slot++) {
+            if (owner[slot] < 0) {
+                continue;
+            }
+            Peer holder = peerWithId(owner[slot]);
+            out.putByte(slot)
+                    .putByte((holder != null && holder.host ? Msg.PLAYER_HOST : 0)
+                            | (holder != null ? Msg.PLAYER_ONLINE : 0))
+                    .putString(holderMachine[slot]);
+        }
+        for (int i = 0; i < peers.size(); i++) {
+            Peer each = peers.get(i);
+            if (each.id >= 0) {
+                transport.send(each.link, Delivery.RELIABLE, out.array(), 0, out.size());
+            }
+        }
+    }
+
+    /** The host's note for the briefing, passed to every machine on it, as it is. */
+    private void noted(Peer peer) {
+        byte[] heard = in.getBytes(Msg.MAX_NOTE);
+        in.expectEnd();
+        if (!peer.host) {
+            return;
+        }
+        note = heard;
+        sendNote(null);
+    }
+
+    /** The note to one welcomed peer, or to all of them. */
+    private void sendNote(@Nullable Peer only) {
+        out.reset().putByte(Msg.NOTED).putBytes(note);
+        for (int i = 0; i < peers.size(); i++) {
+            Peer each = peers.get(i);
+            if (each.id >= 0 && (only == null || each == only)) {
+                transport.send(each.link, Delivery.RELIABLE, out.array(), 0, out.size());
+            }
+        }
     }
 
     private void refuse(Peer peer, String reason) {
@@ -721,7 +868,9 @@ public final class Sequencer implements AutoCloseable {
             }
             // Only what fits a bundle is checked; what it means is for the peers (ADR 0023).
             Bundle.checkEvent(type, value, extra);
-            peer.hold(seq, slot, type, value, extra);
+            if (current) {
+                peer.hold(seq, slot, type, value, extra);
+            }
         }
         in.expectEnd();
     }
@@ -844,6 +993,12 @@ public final class Sequencer implements AutoCloseable {
             // Slot zero is the host's keyboard, held for it: it is the commander a scenario starts with,
             // and the host plays from the first tick (G0038) - whoever's hello happened to arrive first.
             boolean hostsKeyboard = peer.host && seat == 0;
+            for (int kept = 0; !started && kept < capacity && slot < 0; kept++) {
+                // A machine that blinked on the briefing takes its slot back rather than another beside it.
+                if (owner[kept] >= 0 && peerWithId(owner[kept]) == null && holderMachine[kept].equals(peer.machine)) {
+                    slot = kept;
+                }
+            }
             for (int free = hostsKeyboard ? 0 : 1; free < capacity && slot < 0; free++) {
                 if (owner[free] < 0) {
                     slot = free;
@@ -851,6 +1006,7 @@ public final class Sequencer implements AutoCloseable {
             }
             if (slot >= 0) {
                 owner[slot] = peer.id;
+                holderMachine[slot] = peer.machine;
                 Arrays.fill(lastHeld[slot], (byte) 0);
                 Arrays.fill(aheadTick[slot], -1);
                 joinWanted[slot] = true;
@@ -866,6 +1022,7 @@ public final class Sequencer implements AutoCloseable {
         }
         out.reset().putByte(Msg.SLOT).putByte(seat).putByte(slot < 0 ? Msg.NO_SLOT : slot);
         transport.send(peer.link, Delivery.RELIABLE, out.array(), 0, out.size());
+        sendPlayers();
     }
 
     private void pause(Peer peer) {
@@ -908,7 +1065,7 @@ public final class Sequencer implements AutoCloseable {
 
     private void restart(Peer peer) {
         in.expectEnd();
-        if (!peer.host) {
+        if (!peer.host || !started) {
             log.warn("sequencer", "event=refused-restart peer=" + peer.id);
             return;
         }
@@ -928,6 +1085,16 @@ public final class Sequencer implements AutoCloseable {
     }
 
     private void left(Peer peer, String reason) {
+        if (!started) {
+            // On the briefing a slot stays with the machine that took it, shown offline: it is put on the field
+            // away, as a mission leaves a commander (G0038), if the host starts without it back.
+            log.info(
+                    "sequencer",
+                    "event=left peer=" + peer.id + " machine=" + peer.machine + " link=" + peer.link + " reason=\""
+                            + reason + "\"");
+            sendPlayers();
+            return;
+        }
         for (int slot = 0; slot < capacity; slot++) {
             if (owner[slot] == peer.id && peer.id >= 0) {
                 owner[slot] = -1;
@@ -977,6 +1144,8 @@ public final class Sequencer implements AutoCloseable {
     private enum PeerState {
         /** Linked, not yet welcomed. */
         HELLO,
+        /** Welcomed to a session still on its briefing: nothing is sent it until the host starts the mission. */
+        BRIEFING,
         /** Waiting for the host to snapshot its world: a drop-in, or a heal. */
         JOINING,
         /** Sent a snapshot and building it; sent no ticks until its first input about that world. */

@@ -47,7 +47,7 @@ keeps in shot).
 | 1.5 EXIT | `UI:main/exit` | A confirm modal, so Back pressed once too often never quits. |
 | - | `UI:connecting`, `UI:play`, `UI:play/pause`, `UI:play/leave`, `UI:play/result` | Not in the outline; needed to get into and out of a level. `UI:play/result` was the blocked `UI:play/game-over` until G0066. |
 | - | `UI:main/controls` | Not in the outline; added 2026-11-13 by request: what every key and pad button does, shown and not changed. The PROMPTS switch added 2026-11-17 (visibility stage 5) - the one thing on it that changes anything. |
-| - | `UI:main/missions`, `UI:main/online/host/missions` | Built 2026-10-05 (missions ticket 08, G0065, stage 9): the day's three missions, RANDOM and ENTER CODE; the same page opened from HOST GAME hosts what it starts. Reworked 2026-11-19 by request: every entry writes into the code line and one START MISSION starts it; a refused code said as its last character lands. |
+| - | `UI:main/missions`, `UI:briefing` | Built 2026-10-05 (missions ticket 08, G0065, stage 9): the day's three missions, RANDOM and ENTER CODE; the same page is a hosted session's briefing (G0101). Reworked 2026-11-19 by request: every entry writes into the code line and one START MISSION starts it; a refused code said as its last character lands. |
 | - | `UI:play/pause/controls` | Not in the outline; added 2026-11-19 by request: `UI:main/controls` reachable from the pause menu. |
 
 ## 3. Page and modal table
@@ -62,7 +62,8 @@ keeps in shot).
 | `UI:main/online` | page | `UI:main` | `UiPage.ONLINE` | `MenuScreen` | built |
 | `UI:main/online/join` | page | `UI:main/online` | `UiPage.ONLINE_JOIN` | `JoinScreen` / `JoinChoices` / `CodePicker` | built (on the canvas; the pad's letter picker) |
 | `UI:main/online/host` | page | `UI:main/online` | `UiPage.ONLINE_HOST` | `MenuScreen` + scenario list | built |
-| `UI:main/online/host/missions` | page | `UI:main/online/host` | `UiPage.HOST_MISSIONS` | `MenuScreen` + `MissionChoices` + `CodePicker` | built - `UI:main/missions` in host mode |
+| `UI:briefing` | page | `UI:main/online/host` | `UiPage.BRIEFING` | `MenuScreen` + `MissionChoices` + `CodePicker` + `Briefing` | built - `UI:main/missions` in host mode, with the room and its players (G0101); a joiner sees it too |
+| `UI:briefing/leave` | modal | `UI:briefing` | `UiPage.BRIEFING_LEAVE` | `MenuScreen` | built - the host's Back while somebody has joined |
 | `UI:main/controls` | page | `UI:main` | `UiPage.CONTROLS` | `MenuScreen` + `ControlsTable` | built |
 | `UI:main/options` | page | `UI:main` | `UiPage.OPTIONS` | `MenuScreen` | placeholder |
 | `UI:main/exit` | modal | `UI:main` | `UiPage.EXIT_CONFIRM` | `MenuScreen` | built |
@@ -213,9 +214,7 @@ which character is wrong - a check shown as each slot turns, or the right check,
 arrived - typed, pasted or picked; a machine that joined one, or never opened the page, looks on its own day and
 the day either side (`MissionCode.dailyNear`). What is remembered of it is missions ticket 09.
 
-From `UI:main/online/host` the same page opens **in host mode** as `UI:main/online/host/missions`: the same
-entries, and START MISSION hosts instead (`HOST_MISSION`), as the host list is the campaign list with a different
-confirm. Its own id, so leaving a hosted mission comes back to it and Back climbs to HOST GAME.
+In a hosted session the same page is **`UI:briefing`** (below): the same entries, START MISSION the session's start.
 
 Do not build: a daily's code on every row; a countdown to the next day; "this mission on another tier"
 (deferred, G0066); a hint at which character of a refused code is wrong; correcting a refused code (G0065).
@@ -244,23 +243,59 @@ changes the letter, left/right the slot, confirm joins, Back closes it (plan Q6)
 review fails a game whose text entry needs a keyboard. A keyboard types straight into the code line;
 while it does, only the arrows move the selection and only `Esc` goes back.
 
-Do not build: a player list, a ready button, choosing a slot, colour or character (G0038); a
+A machine that joins lands on `UI:briefing` when the session is on its briefing, and drops into the level when a mission is
+under way (G0101, G0038).
+
+Do not build: a ready button, choosing a slot, colour or character (G0038, G0101); a
 password.
 
 ### `UI:main/online/host`
 
 While `graphic.ui.page.scenarios` is off, as it ships, only the first entry below is listed.
 
-Title `ui.host.title = HOST GAME`. A first entry `ui.host.missions = DAILY MISSIONS` opening
-`UI:main/online/host/missions`, the missions page in host mode; a mission travels as `SessionSetup("mission
-<tier>", seed)` (G0065). Then the same scenario list widget as `UI:main/campaign` with a different confirm - its
-number keys still jump to the scenarios: `HOST(scenarioIndex)`, which calls `OnlineSession.host(...)` and goes straight to
-`UI:play`. The host is playing from the first frame; friends drop in (G0038). The room code reaches
-the player as a terminal dispatch when hosting starts (plan section 8.3) and on `UI:play/pause`, not
-only in the dev overlay (retires the alpha-phase scaffolding row about the room code).
+Title `ui.host.title = HOST GAME`. A first entry `ui.host.open = OPEN` opens the session on this network - the host
+listening, announcing, its own peer in, no world and no mission yet - and shows `UI:briefing` (G0101); on failure the
+page stays and shows the notice. The relay's `< INTERNET / THIS NETWORK >` row and password line are G0103's, built with the
+client's relay keys, and are not here yet. Then the same scenario list widget as `UI:main/campaign` with a different
+confirm - its number keys still jump to the scenarios: `HOST(scenarioIndex)`, which calls `OnlineSession.host(...)` and goes
+straight to `UI:play` - the developer's list, the one hosted session with no briefing. The host is playing from the first
+frame; friends drop in (G0038). The room code reaches the player as a terminal dispatch when hosting starts (plan section
+8.3) and on `UI:play/pause`, not only in the dev overlay (retires the alpha-phase scaffolding row about the room code).
 
-Do not build: a waiting room, a host start button, a ready screen, a player list with kick, a slot,
-colour or character choice (G0028, G0038); capacity as a setting (G0038).
+Do not build: a ready screen, kicking a player, a slot, colour or character choice (G0028, G0038, G0101); capacity as a
+setting (G0038). (G0101 retired the host start button and the player list: they are the briefing's.)
+
+### `UI:briefing`
+
+G0101. A hosted session opens on it, before its first tick and again after every mission; it is the missions page in host
+mode. Title `ui.briefing.title = MISSION BRIEFING`, then `ui.briefing.room = ROOM {code}` on the host's machine (the room
+code the session is announced under); the entries are `UI:main/missions`' exactly (a daily per tier, RANDOM, the length row,
+ENTER CODE, START MISSION, BACK), each writing into the code line, and **START MISSION is the host's start**: enabled whenever
+the line names a mission (`Briefing.startEnabled`), it sends the mission as a `SessionSetup` - world config text, scenario,
+seed - with the tick rate of that config, and every seated slot is on the field at the first tick (`Sequencer`'s START; not
+through the join). BACK ends the session, through `UI:briefing/leave` (`ui.leave.bodyHost`) when another machine is in it. The
+host's code line is shown to every machine as it changes (`PeerSession.note`).
+
+Under the entries, **the players**, one row per slot in its commander's colour - `ui.briefing.player = P{n}  {machine}`, the
+host's machine first, then by slot, `ui.briefing.offline = OFFLINE` (dim) while its link is gone and the slot kept (`Briefing.rows`,
+`PeerSession.players`). A row is never an entry: nothing on it can be selected.
+
+**A joiner sees the same page and changes nothing**: its entries are only BACK (`MenuTree.briefing(false)`), its head the title,
+under the list the host's code line as `ui.briefing.line = {code}  {tier}  {n} BIOMES` (`ui.briefing.none` before he has
+one), `ui.briefing.waiting = WAITING FOR THE HOST`, then the players. His BACK or MENU leaves only him. A pad plugged in on
+the briefing takes its slot once a mission is under way, as it does anywhere (drop-in); the briefing seats the keyboard only.
+
+After a mission the session goes back to this page: the host's MENU on the result (`UiEffect.TO_BRIEFING`) takes every machine
+back, the session kept; RETRY stays the same setup straight into play (G0066). Leaving through the pause menu still ends the
+session for the host (`UI:play/leave`).
+
+Do not build: a ready button, kicking a player, a joiner choosing a slot, colour or character, a vote on the mission, a
+second page after this one, a briefing offline (G0101).
+
+### `UI:briefing/leave` - modal
+
+Body `ui.leave.bodyHost = Leaving ends the session for everyone.`; entries `stay` (default, `BACK`) and `leave` (`LEAVE`). Opened by
+the host's BACK from the briefing when another machine is in the session; alone, BACK ends it at once.
 
 ### `UI:main/controls`
 
@@ -421,8 +456,13 @@ carried out by the screen that owns the page, through `GameContext.queueScreen` 
 | `UI:main/campaign` | `START(i)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(...)))` |
 | `UI:main/proving-ground`, `.../upgrades` | `CHOOSE(r)` | - | the screen steps row `r` of its setup forward |
 | `UI:main/proving-ground` | `PROVE` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(Scenarios.provingGround(setup), ...)))`; leaving comes back to `UI:main/proving-ground` |
-| `UI:main/online/host` | `HOST(i)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, OnlineSession.host(...)))`; on failure stay and show the notice |
+| `UI:main/online/host` | `HOST(-1)` (OPEN) | `UI:briefing` pushed | `OnlineSession.open(...)`; on failure stay and show the notice |
+| `UI:main/online/host` | `HOST(i)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, OnlineSession.host(...)))` - the developer's list, no briefing; on failure stay and show the notice |
 | `UI:main/online/join` | `JOIN(c)` | `UI:connecting` | `OnlineSession.join(...)` |
+| `UI:connecting` | the session is on its briefing | `UI:briefing` | `queueScreen(new MenuScreen(ctx, "", session))`; the session is kept |
+| `UI:briefing` | the host starts a mission | `UI:play` | `queueScreen(new ScenarioScreen(ctx, session, ...))` - on every machine on it |
+| `UI:briefing` | `LEAVE` (BACK; the host's after `UI:briefing/leave` if another machine is in) | `UI:main/online/host` as host, `UI:main` as joiner | the session closed |
+| `UI:play/result` | `TO_BRIEFING` (the host's MENU) | `UI:briefing`, on every machine | `play.toBriefing()`; the others follow the session |
 | `UI:connecting` | world arrives | `UI:play` | - |
 | `UI:connecting` | `BACK` / ended | `UI:main` | `queueScreen(new MenuScreen(ctx, reason))` |
 | `UI:play` | `PAUSE` (Esc, pad START) | `UI:play/pause` at once | `play.setPaused(true)` unless already paused; this machine's commanders on neutral input until it lands |
@@ -437,17 +477,17 @@ carried out by the screen that owns the page, through `GameContext.queueScreen` 
 | `UI:play/pause/controls` | `RESUME` (pad pause button) | `UI:play` at once | `play.setPaused(false)` |
 | `UI:play/leave` | `LEAVE` | the page the level was started from, as `UI:play/result`'s MENU | `queueScreen(new MenuScreen(ctx, "", back))`; the screen's `hide()` closes the play |
 | `UI:play` | `play.ended() != null` | `UI:main` | `queueScreen(new MenuScreen(ctx, reason))` - built today |
-| `UI:main/online/host` | `OPEN(HOST_MISSIONS)` | `UI:main/online/host/missions` pushed | - |
-| `UI:main/missions`, `.../host/missions` | `MISSION(daily)`, `MISSION(random)` | stay | the daily's code, or a fresh draw, into the code line |
-| `UI:main/missions`, `.../host/missions` | `MISSION(length)` | stay | the row stepped; the line rewritten at the new length if it holds a code |
-| `UI:main/missions`, `.../host/missions` | `MISSION(code)` | stay | the picker opened on the line |
+| `UI:main/online/host` | `OPEN(BRIEFING)` | `UI:briefing` pushed | after `OnlineSession.open` |
+| `UI:main/missions`, `UI:briefing` | `MISSION(daily)`, `MISSION(random)` | stay | the daily's code, or a fresh draw, into the code line |
+| `UI:main/missions`, `UI:briefing` | `MISSION(length)` | stay | the row stepped; the line rewritten at the new length if it holds a code |
+| `UI:main/missions`, `UI:briefing` | `MISSION(code)` | stay | the picker opened on the line |
 | `UI:main/missions` | `MISSION(start)`, the line naming a mission | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(Scenarios.mission(tier), seed), MISSIONS))` |
-| `UI:main/online/host/missions` | `MISSION(start)` -> `HOST_MISSION(start)` | `UI:play` | `OnlineSession.host(...)` with `SessionSetup("mission <tier> <length>", seed)`; on failure `UI:main` with the notice |
-| `UI:main/missions`, `.../host/missions` | the line's eighth character lands and the code fails its check | stay | `ui.missions.badCode` under the list, START MISSION dimmed |
+| `UI:briefing` | `BRIEFED_MISSION(start)`, the host, the line naming a mission | stay, then `UI:play` when the world is built | `OnlineSession.startMission` with `SessionSetup("mission <tier> <length>", seed)` |
+| `UI:main/missions`, `UI:briefing` | the line's eighth character lands and the code fails its check | stay | `ui.missions.badCode` under the list, START MISSION dimmed |
 | `UI:play` | first outcome + `graphic.ui.resultHoldSeconds` | `UI:play/result` | - (derived, `UiFlow.observeResult`) |
 | `UI:play/result` | `RESTART` | `UI:play` | `play.apply(HarnessCommand.RESTART, ...)` - host or offline |
 | `UI:play/result` | `COPY_CODE` | stay | the mission code to the clipboard |
-| `UI:play/result` | `LEAVE` | the page the level was started from - `UI:main/missions`, `UI:main/online/host/missions`, `UI:main/campaign`, `UI:main/online/host`, `UI:main/proving-ground` - with what was played selected; a joined machine `UI:main` | `queueScreen(new MenuScreen(ctx, "", back))`; as host via `UI:play/leave` |
+| `UI:play/result` | `LEAVE` | the page the level was started from - `UI:main/missions`, `UI:main/campaign`, `UI:main/online/host`, `UI:main/proving-ground` - with what was played selected; a joined machine `UI:main` | `queueScreen(new MenuScreen(ctx, "", back))`; as host via `UI:play/leave` |
 
 A screen never switches itself mid-frame: every `queueScreen` in this table is already the deferred
 swap (`PwtGame.queueScreen`).

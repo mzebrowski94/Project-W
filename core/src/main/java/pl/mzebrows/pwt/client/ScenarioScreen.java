@@ -114,6 +114,9 @@ public final class ScenarioScreen extends ScreenAdapter {
     /** The menu page leaving this level goes back to: the one it was started from (G0066). */
     private final UiPage back;
 
+    /** The session went back to its briefing and the menu has it now: this screen no longer closes it (G0101). */
+    private boolean handedOver;
+
     private final LetterboxViewport viewport = new LetterboxViewport();
     private final LocalAim localAim = new LocalAim();
     private final DebugOverlay overlay;
@@ -425,6 +428,12 @@ public final class ScenarioScreen extends ScreenAdapter {
             context.queueScreen(new MenuScreen(context, "", back));
         }
         play.advance(delta, players);
+        if (!handedOver && play instanceof OnlineSession online && online.onBriefing()) {
+            // The host took every machine back to the briefing, or this machine joined a session still on it.
+            handedOver = true;
+            context.queueScreen(new MenuScreen(context, "", online));
+            return;
+        }
         String ended = play.ended();
         if (ended != null) {
             // Online, the game cannot go on: the host has left, the link has dropped, the host said no.
@@ -682,7 +691,9 @@ public final class ScenarioScreen extends ScreenAdapter {
         context.hud().showSystemCursor();
         renderer.dispose();
         terrain.dispose();
-        play.close();
+        if (!handedOver) {
+            play.close();
+        }
     }
 
     private void rebindIfRestarted(Simulation current) {

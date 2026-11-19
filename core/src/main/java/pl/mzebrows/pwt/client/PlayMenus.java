@@ -198,7 +198,7 @@ final class PlayMenus {
         tickSeconds = readout.tickSeconds;
         pointsTaken = readout.pointsTaken;
         pointsTotal = readout.pointsTotal;
-        flow.observeResult(readout.resultDue(graphic.ui().resultHoldSeconds()), hosting(play));
+        flow.observeResult(readout.resultDue(graphic.ui().resultHoldSeconds()), hosting(play), play.briefed());
 
         boolean lostAPad = input.seats().nextNewlyUnplugged() >= 0;
         if ((focusLost || lostAPad) && !play.online() && flow.top() == UiPage.PLAY) {
@@ -498,6 +498,7 @@ final class PlayMenus {
             case RESTART -> play.apply(HarnessCommand.RESTART, players);
             case CHOOSE -> flipPrompts();
             case LEAVE -> play.apply(HarnessCommand.LEAVE, players);
+            case TO_BRIEFING -> play.toBriefing();
             case COPY_CODE -> {
                 MissionCode played = mission;
                 if (played != null) {

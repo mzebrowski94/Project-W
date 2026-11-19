@@ -85,18 +85,61 @@ class UiFlowTest {
                 .isEqualTo(new UiEffect(UiEffect.Kind.MISSION, MenuTree.MISSION_RANDOM));
     }
 
-    /** From HOST GAME the same page hosts what it starts, and Back climbs out to hosting. */
+    /** The host's briefing starts what it starts; a joiner's starts nothing (G0101). */
     @Test
-    void hostsAMissionFromTheMissionsPageOpenedFromHosting() {
+    void startsAMissionFromTheBriefingForTheHostAndForNobodyElse() {
+        UiFlow host = briefing(true, false);
+        assertThat(host.top()).isEqualTo(UiPage.BRIEFING);
+        assertThat(host.apply(UiIntent.mission(1))).isEqualTo(new UiEffect(UiEffect.Kind.BRIEFED_MISSION, 1));
+
+        UiFlow joiner = briefing(false, true);
+        assertThat(joiner.apply(UiIntent.mission(1))).isEqualTo(UiEffect.NONE);
+    }
+
+    @Test
+    void endsTheSessionAtOnceOnBackFromABriefingNobodyJoinedAndAsksFirstWhenSomebodyHas() {
+        UiFlow alone = briefing(true, false);
+        assertThat(alone.apply(UiIntent.BACK)).isEqualTo(UiEffect.LEAVE);
+
+        UiFlow crowded = briefing(true, true);
+        assertThat(crowded.apply(UiIntent.BACK)).isEqualTo(UiEffect.NONE);
+        assertThat(crowded.top()).isEqualTo(UiPage.BRIEFING_LEAVE);
+        assertThat(crowded.apply(UiIntent.BACK)).isEqualTo(UiEffect.NONE);
+        assertThat(crowded.top()).as("stay").isEqualTo(UiPage.BRIEFING);
+        crowded.apply(UiIntent.BACK);
+        assertThat(crowded.apply(UiIntent.LEAVE)).isEqualTo(UiEffect.LEAVE);
+    }
+
+    @Test
+    void letsAJoinerLeaveFromTheBriefingWithoutAsking() {
+        UiFlow joiner = briefing(false, true);
+
+        assertThat(joiner.apply(UiIntent.BACK)).isEqualTo(UiEffect.LEAVE);
+    }
+
+    /** The host's MENU on a briefed session's result takes the machines back; a joiner's leaves only him (G0101). */
+    @Test
+    void takesTheMachinesBackToTheBriefingFromTheHostsResultAndAsksNothing() {
+        UiFlow host = new UiFlow(UiPage.PLAY);
+        host.observe(false, true);
+        host.observeResult(true, true, true);
+
+        assertThat(host.top()).isEqualTo(UiPage.RESULT);
+        assertThat(host.apply(UiIntent.LEAVE)).isEqualTo(UiEffect.TO_BRIEFING);
+
+        UiFlow joiner = new UiFlow(UiPage.PLAY);
+        joiner.observe(false, false);
+        joiner.observeResult(true, false, true);
+        assertThat(joiner.apply(UiIntent.LEAVE)).isEqualTo(UiEffect.LEAVE);
+    }
+
+    private static UiFlow briefing(boolean host, boolean anybodyJoined) {
         UiFlow flow = new UiFlow(UiPage.MAIN);
         flow.apply(UiIntent.open(UiPage.ONLINE));
         flow.apply(UiIntent.open(UiPage.ONLINE_HOST));
-        flow.apply(UiIntent.open(UiPage.HOST_MISSIONS));
-
-        assertThat(flow.top()).isEqualTo(UiPage.HOST_MISSIONS);
-        assertThat(flow.apply(UiIntent.mission(1))).isEqualTo(new UiEffect(UiEffect.Kind.HOST_MISSION, 1));
-        flow.apply(UiIntent.BACK);
-        assertThat(flow.top()).isEqualTo(UiPage.ONLINE_HOST);
+        flow.apply(UiIntent.open(UiPage.BRIEFING));
+        flow.observeBriefing(host, anybodyJoined);
+        return flow;
     }
 
     @Test

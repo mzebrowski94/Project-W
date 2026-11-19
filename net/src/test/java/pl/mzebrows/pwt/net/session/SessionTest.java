@@ -439,7 +439,7 @@ class SessionTest {
 
         String written = Files.readString(Objects.requireNonNull(log.file()), StandardCharsets.UTF_8);
         assertThat(written)
-                .containsPattern("event=welcome peer=1 .* configBytes=\\d+ wireBytes=\\d+")
+                .containsPattern("event=welcome peer=1 .* setupBytes=\\d+ wireBytes=\\d+")
                 .containsPattern("event=snapshot-sent peer=1 tick=\\d+ bytes=\\d+ wireBytes=\\d+ generation=1")
                 .containsPattern("event=loaded peer=1 generation=1 ms=\\d+ behind=\\d+")
                 .containsPattern("event=caught-up peer=1 generation=1 ms=\\d+");
@@ -556,7 +556,9 @@ class SessionTest {
     @Test
     void findsAMachineKnockedOutOfStepDumpsItAndPutsItBack(@TempDir Path dumps) throws IOException {
         try (SessionHarness session = new SessionHarness("Skirmish", 13L, PERFECT)) {
-            session.join("host", PERFECT, SessionHarness.HOST_KEY, dumps, BuildId.current(), 0);
+            session.join("host", PERFECT, SessionHarness.HOST_KEY, dumps, BuildId.current(), 0)
+                    .session
+                    .start(session.setup, 1f / 60f);
             Machine knocked = session.join("knocked", PERFECT, 0L, dumps, BuildId.current(), 37);
             session.run(200);
 
@@ -922,5 +924,163 @@ class SessionTest {
             }
         }
         return ranks;
+    }
+
+    // The briefing (G0101): a hosted session is open before its first tick.
+
+    @Test
+    void waitsOnItsBriefingWithNoWorldUntilTheHostStartsAndThenPutsEverySeatedSlotOnTheField() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 3L, PERFECT)) {
+            Machine host = session.hostOnBriefing();
+            Machine friend = session.join("friend", PERFECT);
+
+            session.run(120);
+
+            assertThat(host.session.state()).isEqualTo(PeerSession.State.BRIEFING);
+            assertThat(friend.session.state()).isEqualTo(PeerSession.State.BRIEFING);
+            assertThat(friend.session.simulation()).isNull();
+            assertThat(session.sequencer.sealedTick()).isEqualTo(-1);
+            assertThat(friend.session.players())
+                    .extracting(BriefingPlayer::slot, BriefingPlayer::machine, BriefingPlayer::host)
+                    .containsExactly(
+                            org.assertj.core.groups.Tuple.tuple(0, "host", true),
+                            org.assertj.core.groups.Tuple.tuple(1, "friend", false));
+
+            host.session.start(session.setup, 1f / 60f);
+            session.run(20);
+
+            assertThat(host.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(friend.session.tick()).as("the first ticks").isBetween(0, 30);
+            assertThat(friend.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(commanders(friend))
+                    .as("on the field at the first ticks, not dropped in later: tick %d", friend.session.tick())
+                    .isEqualTo(2);
+            session.run(300);
+            session.agreedHash();
+        }
+    }
+
+    @Test
+    void aMachineArrivingAfterTheStartDropsInAndOneBeforeLandsOnTheBriefing() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 3L, PERFECT)) {
+            Machine host = session.hostOnBriefing();
+            session.run(30);
+            Machine early = session.join("early", PERFECT);
+            session.run(30);
+            assertThat(early.session.state()).isEqualTo(PeerSession.State.BRIEFING);
+
+            host.session.start(session.setup, 1f / 60f);
+            session.run(120);
+            Machine late = session.join("late", PERFECT);
+            session.run(300);
+
+            assertThat(late.session.state()).isEqualTo(PeerSession.State.PLAYING);
+            assertThat(late.session.slotOf(0)).isEqualTo(2);
+            session.agreedHash();
+            assertThat(commanders(late)).isEqualTo(3);
+        }
+    }
+
+    @Test
+    void goesBackToItsBriefingWithTheSlotsKeptAndStartsAnotherMission() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 3L, PERFECT)) {
+            Machine host = session.host();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(200);
+
+            host.session.toBriefing();
+            session.run(30);
+
+            assertThat(host.session.state()).isEqualTo(PeerSession.State.BRIEFING);
+            assertThat(friend.session.state()).isEqualTo(PeerSession.State.BRIEFING);
+            assertThat(friend.session.simulation()).isNull();
+            assertThat(friend.session.setup()).isNull();
+            assertThat(friend.session.slotOf(0)).as("his slot is kept").isEqualTo(1);
+            assertThat(host.session.players()).hasSize(2);
+
+            Machine newcomer = session.join("newcomer", PERFECT);
+            session.run(30);
+            assertThat(newcomer.session.state()).as("lands on the briefing").isEqualTo(PeerSession.State.BRIEFING);
+
+            host.session.start(new SessionSetup("", "Skirmish", 9L), 1f / 60f);
+            session.run(300);
+            session.agreedHash();
+            assertThat(commanders(newcomer)).isEqualTo(3);
+            assertThat(friend.session.setup().seed()).isEqualTo(9L);
+        }
+    }
+
+    @Test
+    void showsAMachineWhoseLinkIsGoneOfflineAndGivesItsSlotBackWhenItReturnsBeforeTheStart() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 3L, PERFECT)) {
+            Machine host = session.hostOnBriefing();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(60);
+
+            session.leave(friend);
+            session.run(30);
+            assertThat(host.session.players())
+                    .extracting(BriefingPlayer::machine, BriefingPlayer::online)
+                    .containsExactly(
+                            org.assertj.core.groups.Tuple.tuple("host", true),
+                            org.assertj.core.groups.Tuple.tuple("friend", false));
+
+            Machine back = session.join("friend", PERFECT);
+            session.run(60);
+            assertThat(back.session.slotOf(0)).isEqualTo(1);
+            assertThat(host.session.players()).hasSize(2).allMatch(BriefingPlayer::online);
+
+            host.session.start(session.setup, 1f / 60f);
+            session.run(120);
+            session.agreedHash();
+        }
+    }
+
+    @Test
+    void putsAMachineThatIsStillGoneOnTheFieldAwayWhenTheHostStarts() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 3L, PERFECT)) {
+            Machine host = session.hostOnBriefing();
+            Machine friend = session.join("friend", PERFECT);
+            session.run(60);
+            session.leave(friend);
+            session.run(30);
+
+            host.session.start(session.setup, 1f / 60f);
+            session.run(120);
+
+            assertThat(commanders(host)).isEqualTo(2);
+            Presence presence = SessionHarness.world(host)
+                    .engine()
+                    .getEntitiesFor(Family.all(Presence.class).get())
+                    .first()
+                    .getComponent(Presence.class);
+            assertThat(presence.isAway(1)).isTrue();
+        }
+    }
+
+    @Test
+    void showsEveryMachineOnTheBriefingWhatTheHostPutThereAndOnlyTheHost() {
+        try (SessionHarness session = new SessionHarness("Skirmish", 3L, PERFECT)) {
+            Machine host = session.hostOnBriefing();
+            Machine early = session.join("early", PERFECT);
+            session.run(30);
+
+            host.session.note("MJGF-6ABCD");
+            early.session.note("not the host's to say");
+            session.run(30);
+            Machine late = session.join("late", PERFECT);
+            session.run(30);
+
+            assertThat(early.session.note()).isEqualTo("MJGF-6ABCD");
+            assertThat(late.session.note()).as("a machine that arrives is told").isEqualTo("MJGF-6ABCD");
+        }
+    }
+
+    private static int commanders(Machine machine) {
+        return SessionHarness.world(machine)
+                .engine()
+                .getEntitiesFor(Family.all(pl.mzebrows.pwt.sim.component.Commander.class)
+                        .get())
+                .size();
     }
 }

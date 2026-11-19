@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.utils.ScreenUtils;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.function.IntUnaryOperator;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.config.BuildVersion;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
+import pl.mzebrows.pwt.client.draw.Palette;
 import pl.mzebrows.pwt.client.hud.Hud;
 import pl.mzebrows.pwt.client.hud.MenuPainter;
 import pl.mzebrows.pwt.client.hud.PageHints;
@@ -24,7 +26,11 @@ import pl.mzebrows.pwt.client.play.MissionCode;
 import pl.mzebrows.pwt.client.play.MissionRecords;
 import pl.mzebrows.pwt.client.play.OnlineSession;
 import pl.mzebrows.pwt.client.play.ScenarioSession;
+import pl.mzebrows.pwt.net.session.SessionSetup;
+import pl.mzebrows.pwt.sim.PlayerInputs;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.scenario.ProvingSetup;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
@@ -36,6 +42,7 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 import pl.mzebrows.pwt.ui.nav.CodePicker;
 import pl.mzebrows.pwt.ui.nav.InputModality;
 import pl.mzebrows.pwt.ui.nav.NavInput;
+import pl.mzebrows.pwt.ui.page.Briefing;
 import pl.mzebrows.pwt.ui.page.MenuEntry;
 import pl.mzebrows.pwt.ui.page.MenuLayout;
 import pl.mzebrows.pwt.ui.page.MenuPage;
@@ -82,6 +89,7 @@ public final class MenuScreen extends ScreenAdapter {
     private final PageControls page = new PageControls();
     private final PageHints hints;
     private final MenuPainter painter;
+    private final Palette palette;
     /** One reader for every page: on the missions page W, A, S, D and Backspace are the code line's text. */
     private final NavInputReader reader;
 
@@ -134,6 +142,24 @@ public final class MenuScreen extends ScreenAdapter {
 
     private final List<String> swarmHead = new ArrayList<>(1);
 
+    /** The session a briefing is of, once one is open - hosted from HOST GAME, or joined - and until it is left or handed to a level. */
+    private @Nullable OnlineSession online;
+
+    /** The session has gone to a level: this screen no longer closes it. */
+    private boolean handedOver;
+
+    /** What the session is given each frame while it is on its briefing: nobody holds anything there. */
+    private final PlayerInputs idle = new PlayerInputs(Players.MAX);
+
+    /** The briefing's foot as last written, and the players among its lines, from which line. */
+    private @Nullable String describedBriefing;
+
+    private List<Briefing.Row> briefingRows = List.of();
+    private int playersFrom = -1;
+
+    /** The code line as the host last said it to the session; null until he has. */
+    private @Nullable String sentNote;
+
     private UiPage shown = UiPage.PLAY;
     private int describedFor = -1;
 
@@ -156,6 +182,19 @@ public final class MenuScreen extends ScreenAdapter {
      * have - back from joining, the online page; back from a level, the page it was started from (G0066).
      */
     public MenuScreen(GameContext context, String notice, UiPage start) {
+        this(context, notice, start, null);
+    }
+
+    /**
+     * The briefing of a session that is already open (G0101): a joiner's first sight of it, or the host's and every
+     * joiner's after a mission. The screen closes the session when it is left.
+     */
+    public MenuScreen(GameContext context, String notice, OnlineSession session) {
+        this(context, notice, UiPage.BRIEFING, session);
+    }
+
+    private MenuScreen(GameContext context, String notice, UiPage start, @Nullable OnlineSession session) {
+        this.online = session;
         this.context = context;
         this.notice = notice;
         GraphicConfig graphic = context.graphicConfig();
@@ -171,7 +210,9 @@ public final class MenuScreen extends ScreenAdapter {
         this.rows = new ProvingRows(context.simConfig());
         this.scenarios = graphic.ui().page().scenarios() ? Scenarios.all() : List.of();
         this.controls = new ControlsPage(context.controlsConfig(), context.settings(), strings);
-        this.backFromMission = isMissions(start);
+        this.backFromMission = start == UiPage.BRIEFING || isMissions(start);
+        palette = graphic.palette();
+        painter.footInk(this::footInk);
         openDown(start);
     }
 
@@ -202,6 +243,9 @@ public final class MenuScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
+        if (online != null && !runSession(delta)) {
+            return;
+        }
         ScreenLayout layout = context.hud().layout();
         reader.typing(isMissions(flow.top()));
         reader.read(nav, delta, true, false, keys, held, layout);
@@ -459,8 +503,9 @@ public final class MenuScreen extends ScreenAdapter {
             return UiIntent.start(entry);
         }
         return switch (top) {
-            case ONLINE_HOST ->
-                entry < listOffset(top) ? UiIntent.open(UiPage.HOST_MISSIONS) : UiIntent.host(entry - 1);
+            case ONLINE_HOST -> entry < listOffset(top) ? UiIntent.OPEN_SESSION : UiIntent.host(entry - 1);
+            case BRIEFING ->
+                MenuTree.briefing(hostsBriefing()).entries().get(entry).intent();
             case PROVING_UPGRADES -> entry < rows.upgrades().size() ? UiIntent.choose(entry) : UiIntent.BACK;
             default -> MenuTree.page(top).entries().get(entry).intent();
         };
@@ -478,7 +523,10 @@ public final class MenuScreen extends ScreenAdapter {
                 return false;
             }
             case HOST -> {
-                return !host(effect.index());
+                return effect.index() < 0 ? openSession() : !host(effect.index());
+            }
+            case LEAVE -> {
+                return !leaveBriefing();
             }
             case CHOOSE -> {
                 if (flow.top() == UiPage.CONTROLS) {
@@ -491,8 +539,8 @@ public final class MenuScreen extends ScreenAdapter {
                 prove();
                 return false;
             }
-            case MISSION, HOST_MISSION -> {
-                return mission(effect.index(), effect.kind() == UiEffect.Kind.HOST_MISSION);
+            case MISSION, BRIEFED_MISSION -> {
+                return mission(effect.index(), effect.kind() == UiEffect.Kind.BRIEFED_MISSION);
             }
             default -> {
                 // Page changes are the flow's own; nothing else arises on the main menu.
@@ -527,13 +575,14 @@ public final class MenuScreen extends ScreenAdapter {
         side = Rect.EMPTY;
         describedFor = -1;
         describedProblem = null;
+        describedBriefing = null;
         head.clear();
         labels.clear();
         int defaultSelection = 0;
         if (isScenarioList(top)) {
             head.add(strings.get(top == UiPage.CAMPAIGN ? "ui.campaign.title" : "ui.host.title"));
             if (top == UiPage.ONLINE_HOST) {
-                labels.add(strings.get("ui.host.missions"));
+                labels.add(strings.get("ui.host.open"));
             }
             for (Scenario scenario : scenarios) {
                 labels.add(scenario.name());
@@ -548,7 +597,7 @@ public final class MenuScreen extends ScreenAdapter {
             swarmHead.add(strings.get("ui.provingUpgrades.swarm"));
             relabel(top);
         } else {
-            MenuPage content = MenuTree.page(top);
+            MenuPage content = top == UiPage.BRIEFING ? MenuTree.briefing(hostsBriefing()) : MenuTree.page(top);
             if (isMissions(top)) {
                 // The date is read as the page opens, and a daily started from it keeps that day (G0065).
                 if (backFromMission) {
@@ -560,6 +609,9 @@ public final class MenuScreen extends ScreenAdapter {
                 head.add(strings.format(content.titleKey(), missions.day()));
             } else if (!content.titleKey().isEmpty()) {
                 head.add(strings.get(content.titleKey()));
+            }
+            if (top == UiPage.BRIEFING && online != null && !online.roomCode().isEmpty()) {
+                head.add(strings.format("ui.briefing.room", online.roomCode()));
             }
             if (!content.bodyKey().isEmpty()) {
                 painter.addWrapped(head, strings.get(content.bodyKey()), BODY_LINES);
@@ -737,6 +789,10 @@ public final class MenuScreen extends ScreenAdapter {
      */
     private void describe() {
         UiPage top = flow.top();
+        if (top == UiPage.BRIEFING) {
+            describeBriefing();
+            return;
+        }
         if (isMissions(top)) {
             describeMission();
             return;
@@ -773,8 +829,8 @@ public final class MenuScreen extends ScreenAdapter {
         return page == UiPage.ONLINE_HOST ? 1 : 0;
     }
 
-    private static boolean isMissions(UiPage page) {
-        return page == UiPage.MISSIONS || page == UiPage.HOST_MISSIONS;
+    private boolean isMissions(UiPage page) {
+        return page == UiPage.MISSIONS || (page == UiPage.BRIEFING && hostsBriefing());
     }
 
     /**
@@ -890,7 +946,9 @@ public final class MenuScreen extends ScreenAdapter {
 
     /** START MISSION can be confirmed only while the code line names a mission; dimmed and passed over else. */
     private void enableStart() {
-        page.enabled()[MenuTree.MISSION_START] = missions.code() != null;
+        page.enabled()[MenuTree.MISSION_START] = flow.top() == UiPage.BRIEFING
+                ? Briefing.startEnabled(hostsBriefing(), missions.code() != null)
+                : missions.code() != null;
     }
 
     /**
@@ -969,8 +1027,14 @@ public final class MenuScreen extends ScreenAdapter {
         missions.played(code);
         context.selections().set(from, page.index());
         SimConfig config = context.simConfig().withSeed(code.seed());
-        if (hosted) {
-            return host(code.scenario(), config, from);
+        OnlineSession briefing = online;
+        if (hosted && briefing != null) {
+            // The session is open already: every machine on its briefing builds this and plays from the first tick.
+            Log.info("Starting mission " + code + " for the session");
+            briefing.startMission(
+                    new SessionSetup(context.worldConfigText(), code.scenario().name(), code.seed()),
+                    config.tickSeconds());
+            return true;
         }
         Log.info("Starting mission " + code);
         context.queueScreen(new ScenarioScreen(context, new ScenarioSession(code.scenario(), config), from));
@@ -1019,10 +1083,136 @@ public final class MenuScreen extends ScreenAdapter {
         }
     }
 
+    /** Whether this machine hosts the session the briefing is of: its entries choose, and its Back ends the session. */
+    private boolean hostsBriefing() {
+        OnlineSession open = online;
+        return open != null && open.hosts();
+    }
+
+    /**
+     * One frame of the session a briefing is of: heard, and the host's code line said. False when the screen is being
+     * left - the session ended under it, or the mission began and a level has it now.
+     */
+    private boolean runSession(float delta) {
+        OnlineSession open = online;
+        if (open == null) {
+            return true;
+        }
+        open.advance(delta, idle);
+        String ended = open.ended();
+        if (ended != null) {
+            Log.info(ended);
+            online = null;
+            open.close();
+            context.queueScreen(new MenuScreen(context, ended));
+            return false;
+        }
+        if (open.simulation() != null) {
+            handedOver = true;
+            context.queueScreen(new ScenarioScreen(context, open, open.hosts() ? UiPage.ONLINE_HOST : UiPage.MAIN));
+            return false;
+        }
+        flow.observeBriefing(open.hosts(), Briefing.anybodyJoined(open.players()));
+        if (open.hosts() && open.welcomed() && !missions.line().equals(sentNote)) {
+            sentNote = missions.line();
+            open.note(sentNote);
+        }
+        return true;
+    }
+
+    /** HOST GAME's OPEN: the session opens now, before a mission is chosen, and the briefing shows (G0101). */
+    private boolean openSession() {
+        try {
+            online = OnlineSession.open(context.netConfig(), context.launchOptions(), LocalMachineId.load());
+        } catch (RuntimeException e) {
+            Log.error("Could not open a session", e);
+            notice = "Could not open a session: " + e.getMessage();
+            while (flow.top() != UiPage.MAIN) {
+                flow.apply(UiIntent.BACK);
+            }
+            return true;
+        }
+        flow.apply(UiIntent.open(UiPage.BRIEFING));
+        return true;
+    }
+
+    /** Leaves the briefing: the host ends the session, a joiner leaves it. True when the screen is being left. */
+    private boolean leaveBriefing() {
+        OnlineSession open = online;
+        if (open == null) {
+            return false;
+        }
+        boolean host = open.hosts();
+        online = null;
+        open.close();
+        context.queueScreen(host ? new MenuScreen(context, "", UiPage.ONLINE_HOST) : new MenuScreen(context));
+        return true;
+    }
+
+    /**
+     * Under the briefing's list: for the host why the code line names no mission, for a joiner what the host's does
+     * and that he waits - then the players, a row each, in their commanders' colours (G0101).
+     */
+    private void describeBriefing() {
+        OnlineSession open = online;
+        if (open == null) {
+            return;
+        }
+        boolean host = open.hosts();
+        List<Briefing.Row> rows = Briefing.rows(open.players());
+        String line = host ? missions.problem() : open.note();
+        String signature = line + "|" + rows;
+        if (signature.equals(describedBriefing)) {
+            return;
+        }
+        describedBriefing = signature;
+        foot.clear();
+        if (host) {
+            foot.add(line.isEmpty() ? "" : strings.format(line, MissionChoices.tierLetters()));
+        } else {
+            foot.add(hostsMission(line));
+            foot.add(strings.get("ui.briefing.waiting"));
+        }
+        foot.add("");
+        playersFrom = foot.size();
+        briefingRows = rows;
+        for (Briefing.Row row : rows) {
+            String who = strings.format("ui.briefing.player", row.slot() + 1, row.machine());
+            foot.add(row.online() ? who : who + "  " + strings.get("ui.briefing.offline"));
+        }
+    }
+
+    /** The host's code line as a joiner reads it: the code, its tier and its length. */
+    private String hostsMission(String line) {
+        if (line.isEmpty()) {
+            return strings.get("ui.briefing.none");
+        }
+        MissionCode code = MissionCode.parse(line);
+        return code == null
+                ? line
+                : strings.format("ui.briefing.line", code.toString(), tierName(code.tier()), biomes(code.length()));
+    }
+
+    /** A player's row in its commander's colour while he is on; dim - the page's own - once his link is gone. */
+    private @Nullable Color footInk(int line) {
+        if (flow.top() != UiPage.BRIEFING || playersFrom < 0 || line < playersFrom) {
+            return null;
+        }
+        int at = line - playersFrom;
+        if (at >= briefingRows.size() || !briefingRows.get(at).online()) {
+            return null;
+        }
+        return palette.colorFor(Look.COMMANDER, briefingRows.get(at).slot());
+    }
+
     @Override
     public void hide() {
         Gdx.input.setInputProcessor(null);
         context.hud().showSystemCursor();
         closePreview();
+        OnlineSession open = online;
+        if (open != null && !handedOver) {
+            open.close();
+        }
     }
 }

@@ -17,16 +17,18 @@ final class Invitation implements AutoCloseable {
     private final LanBeacon beacon;
     private final long session;
     private final int port;
-    private final String scenario;
     private final String machine;
     private final String line;
     private int players = -1;
+    private String announced = "";
 
-    Invitation(LanBeacon beacon, long session, int port, String scenario, String machine, List<String> addresses) {
+    /** What a session says it plays while it is on its briefing and has chosen nothing. */
+    static final String BRIEFING = "briefing";
+
+    Invitation(LanBeacon beacon, long session, int port, String machine, List<String> addresses) {
         this.beacon = beacon;
         this.session = session;
         this.port = port;
-        this.scenario = scenario;
         this.machine = machine;
         this.line = "room " + code() + "   join at "
                 + (addresses.isEmpty() ? "this PC only" : String.join(", ", addresses)) + "   port " + port;
@@ -36,10 +38,14 @@ final class Invitation implements AutoCloseable {
         return RoomCode.of(session);
     }
 
-    /** Announces the session, saying how many players it has now - a new announcement only when that changes. */
-    void pump(int standing) {
-        if (standing != players) {
+    /**
+     * Announces the session, saying what it plays and how many players it has now - a new announcement only when
+     * either changes.
+     */
+    void pump(int standing, String scenario) {
+        if (standing != players || !scenario.equals(announced)) {
             players = standing;
+            announced = scenario;
             beacon.announce(new LanAnnouncement(
                     session, code(), BuildId.current(), port, scenario, machine, standing, Players.MAX));
         }

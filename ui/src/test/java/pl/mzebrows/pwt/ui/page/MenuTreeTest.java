@@ -118,7 +118,7 @@ class MenuTreeTest {
     /** Each entry above START writes into the code line; START MISSION alone starts anything. */
     @Test
     void offersTheThreeDailiesThenRandomThenItsLengthThenACodeThenStartWithMediumSelected() {
-        for (UiPage missions : new UiPage[] {UiPage.MISSIONS, UiPage.HOST_MISSIONS}) {
+        for (UiPage missions : new UiPage[] {UiPage.MISSIONS, UiPage.BRIEFING}) {
             MenuPage page = MenuTree.page(missions);
 
             assertThat(page.entries())

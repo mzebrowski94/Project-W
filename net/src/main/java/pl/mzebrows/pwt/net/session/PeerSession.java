@@ -58,6 +58,8 @@ public final class PeerSession implements AutoCloseable {
         CONNECTING,
         /** Welcomed, and waiting for the snapshot to drop in with. */
         JOINING,
+        /** Welcomed to a session still on its briefing: no world, no mission - the host has not started one (G0101). */
+        BRIEFING,
         PLAYING,
         /** The sequencer said no; {@link #refusal()} says why. */
         REFUSED
@@ -129,6 +131,13 @@ public final class PeerSession implements AutoCloseable {
     private long tickNanos;
     private @Nullable SessionSetup setup;
     private @Nullable Simulation world;
+
+    /** The mission the host asked to start, held until this peer has been welcomed and can say so. */
+    private @Nullable SessionSetup startWanted;
+
+    private long startWantedNanos;
+    private List<BriefingPlayer> players = List.of();
+    private String note = "";
     private Bundle bundle = new Bundle(0);
     private InputCodec codec = new InputCodec(0);
     private PlayerInputs inputs = new PlayerInputs(1);
@@ -421,6 +430,44 @@ public final class PeerSession implements AutoCloseable {
         }
     }
 
+    /**
+     * Starts the mission (G0101): the host's to ask for, as {@link #restart()} is; the sequencer ignores anyone else.
+     * Every machine on the briefing builds this setup's world and plays from its first tick, the slots taken so far
+     * on the field. Asked before the welcome, it is sent with it.
+     *
+     * @param tickSeconds the world's own tick, from the setup's config - the session is sealed at this rate
+     */
+    public void start(SessionSetup mission, float tickSeconds) {
+        startWanted = mission;
+        startWantedNanos = Math.round(tickSeconds * 1e9);
+        sendStart();
+    }
+
+    /** Takes the session back to its briefing, every machine's world dropped (G0101). The host's to ask for. */
+    public void toBriefing() {
+        sendControl(out.reset().putByte(Msg.TO_BRIEFING));
+    }
+
+    /** Puts this on every machine's briefing: the host's mission line, as text of at most {@link Msg#MAX_NOTE} bytes. */
+    public void note(String text) {
+        sendControl(out.reset().putByte(Msg.NOTE).putBytes(text.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    /** What the host last put on the briefing; empty until he has. */
+    public String note() {
+        return note;
+    }
+
+    private void sendStart() {
+        SessionSetup mission = startWanted;
+        if (mission == null || peerId < 0 || state != State.BRIEFING) {
+            return;
+        }
+        byte[] bytes = mission.toBytes();
+        sendControl(out.reset().putByte(Msg.START).putLong(startWantedNanos).putPacked(bytes, 0, bytes.length));
+        startWanted = null;
+    }
+
     /** Pauses or resumes the whole session. Anybody may (G0038). */
     public void pause(boolean on) {
         sendControl(out.reset().putByte(Msg.PAUSE).putByte(on ? 1 : 0).putByte(Msg.PAUSE_BY_PLAYER));
@@ -458,9 +505,14 @@ public final class PeerSession implements AutoCloseable {
         return closedBecause;
     }
 
-    /** What the host said this session plays - its config, scenario and seed - or null before the welcome. */
+    /** What the host said this mission plays - its config, scenario and seed - or null on the briefing. */
     public @Nullable SessionSetup setup() {
         return setup;
+    }
+
+    /** Who holds each slot while the session is on its briefing - the host's machine first, then by slot (G0101). */
+    public List<BriefingPlayer> players() {
+        return players;
     }
 
     /** The world as of the last tick played, or null before there is one. Replaced on a restart or a heal. */
@@ -760,6 +812,13 @@ public final class PeerSession implements AutoCloseable {
                 state = State.REFUSED;
                 log.warn("peer", "event=refused reason=\"" + refusal + "\"");
             }
+            case Msg.STARTED -> started();
+            case Msg.BRIEFING -> briefing();
+            case Msg.PLAYERS -> heardPlayers();
+            case Msg.NOTED -> {
+                note = new String(in.getBytes(Msg.MAX_NOTE), StandardCharsets.UTF_8);
+                in.expectEnd();
+            }
             case Msg.BUNDLES -> bundles();
             case Msg.SNAPSHOT -> snapshot();
             case Msg.SLOT -> {
@@ -828,18 +887,14 @@ public final class PeerSession implements AutoCloseable {
     private void welcome() {
         peerId = in.getInt();
         capacity = in.getByte();
-        boolean fresh = in.getByte() != 0;
-        tickNanos = in.getLong();
+        boolean started = in.getByte() != 0;
         checksumTicks = Msg.getSession(in).checksumTicks();
-        String scenario = in.getString(Msg.MAX_TEXT);
-        long seed = in.getLong();
-        String config = new String(in.getPacked(Msg.MAX_CONFIG), StandardCharsets.UTF_8);
+        long nanos = in.getLong();
+        byte[] mission = in.getPacked(Msg.MAX_START);
         in.expectEnd();
-        if (capacity < 1 || capacity > Players.MAX || tickNanos <= 0) {
-            throw new WireException("a session of " + capacity + " slots at " + tickNanos + " ns a tick");
+        if (capacity < 1 || capacity > Players.MAX || (started && nanos <= 0)) {
+            throw new WireException("a session of " + capacity + " slots at " + nanos + " ns a tick");
         }
-        SessionSetup built = new SessionSetup(config, scenario, seed);
-        setup = built;
         bundle = new Bundle(capacity);
         codec = new InputCodec(capacity);
         inputs = new PlayerInputs(capacity);
@@ -851,24 +906,117 @@ public final class PeerSession implements AutoCloseable {
         Arrays.fill(ringTick, -1);
         log.info(
                 "peer",
-                "event=welcome peer=" + peerId + " fresh=" + fresh + " scenario=\"" + scenario + "\" seed=" + seed
-                        + " capacity=" + capacity + " configBytes=" + config.length());
-        if (fresh) {
-            Simulation first = worlds.fresh(built);
-            warmCodec(first);
-            world = first;
-            tick = -1;
-            contiguous = -1;
-            builtAt = -1;
-            state = State.PLAYING;
-        } else {
+                "event=welcome peer=" + peerId + " started=" + started + " capacity=" + capacity + " setupBytes="
+                        + mission.length);
+        if (started) {
+            // A mission under way: its world comes as a snapshot of the host's, from the tick it has reached.
+            tickNanos = nanos;
+            setup = SessionSetup.fromBytes(mission);
             state = State.JOINING;
+        } else {
+            state = State.BRIEFING;
         }
         for (int seat = 0; seat < seatWanted.length; seat++) {
             if (seatWanted[seat]) {
                 sendSeat(seat);
             }
         }
+        sendStart();
+    }
+
+    /** The host started the mission: this machine builds its world from the first tick (G0101). */
+    private void started() {
+        long nanos = in.getLong();
+        byte[] mission = in.getPacked(Msg.MAX_START);
+        in.expectEnd();
+        if (state != State.BRIEFING) {
+            return;
+        }
+        if (nanos <= 0) {
+            throw new WireException("a tick of " + nanos + " ns");
+        }
+        tickNanos = nanos;
+        SessionSetup built = SessionSetup.fromBytes(mission);
+        setup = built;
+        resetMission();
+        Simulation first = worlds.fresh(built);
+        warmCodec(first);
+        world = first;
+        state = State.PLAYING;
+        log.info("peer", "event=started scenario=\"" + built.scenario() + "\" seed=" + built.seed());
+    }
+
+    /** The host took the session back to its briefing: this machine drops its world and waits (G0101). */
+    private void briefing() {
+        in.expectEnd();
+        if (state == State.BRIEFING) {
+            return;
+        }
+        resetMission();
+        world = null;
+        setup = null;
+        generation++;
+        state = State.BRIEFING;
+        log.info("peer", "event=briefing");
+    }
+
+    private void heardPlayers() {
+        int count = in.getByte();
+        if (count > capacity) {
+            throw new WireException(count + " players in a session of " + capacity);
+        }
+        List<BriefingPlayer> heard = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            int slot = in.getByte();
+            int flags = in.getByte();
+            String machine = in.getString(MachineId.MAX_LENGTH);
+            if (slot >= capacity) {
+                throw new WireException("slot " + slot + " in a session of " + capacity);
+            }
+            heard.add(new BriefingPlayer(
+                    slot, machine, (flags & Msg.PLAYER_HOST) != 0, (flags & Msg.PLAYER_ONLINE) != 0));
+        }
+        in.expectEnd();
+        // The host's machine first, then by slot: the order they came in is by slot already.
+        List<BriefingPlayer> ordered = new ArrayList<>(count);
+        for (BriefingPlayer player : heard) {
+            if (player.host()) {
+                ordered.add(player);
+            }
+        }
+        for (BriefingPlayer player : heard) {
+            if (!player.host()) {
+                ordered.add(player);
+            }
+        }
+        players = List.copyOf(ordered);
+    }
+
+    /** Everything a world's ticks left behind: the ring, the clock, the queued events, the keyframes. */
+    private void resetMission() {
+        Arrays.fill(ringTick, -1);
+        Arrays.fill(keyTick, -1);
+        Arrays.fill(keyBytes, null);
+        keyNext = 0;
+        for (int[] ticks : ownTick) {
+            Arrays.fill(ticks, -1);
+        }
+        newestTag = -1;
+        tick = -1;
+        contiguous = -1;
+        builtAt = -1;
+        accumulator = 0L;
+        paused = false;
+        pausedForDraft = false;
+        cushion = 0;
+        cushioned = 0;
+        starved = 0;
+        dryNanos = 0L;
+        calmNanos = 0L;
+        eventCount = 0;
+        nextEventSeq = 1;
+        eventsAcked = 0;
+        lastInputNanos = 0L;
     }
 
     private void bundles() {

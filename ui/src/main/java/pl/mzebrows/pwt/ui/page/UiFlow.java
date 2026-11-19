@@ -20,7 +20,7 @@ package pl.mzebrows.pwt.ui.page;
  */
 public final class UiFlow {
 
-    private static final int DEPTH = 4;
+    private static final int DEPTH = 5;
 
     private final UiPage[] stack = new UiPage[DEPTH];
     private int size;
@@ -33,6 +33,15 @@ public final class UiFlow {
 
     /** Leaving ends the session for everybody else: this machine hosts one. */
     private boolean hosting;
+
+    /** This machine hosts the session the briefing is of: its entries start a mission, and Back ends the session. */
+    private boolean briefingHost;
+
+    /** Somebody else is in the session the briefing is of: leaving it as host asks first. */
+    private boolean briefingJoined;
+
+    /** This machine hosts a session that has a briefing, which its MENU goes back to. */
+    private boolean briefedHost;
 
     /** The result for the outcome now due has been opened: closing it must not open it again. */
     private boolean resultOpened;
@@ -84,13 +93,33 @@ public final class UiFlow {
     }
 
     /**
+     * Follows the session a briefing is of (G0101). Call once a frame while the briefing is the page.
+     *
+     * @param host this machine hosts it
+     * @param anybodyJoined another machine is in it
+     */
+    public void observeBriefing(boolean host, boolean anybodyJoined) {
+        briefingHost = host;
+        briefingJoined = anybodyJoined;
+    }
+
+    /**
      * Follows the level's outcome. Call once a frame, after {@link #observe}.
      *
      * @param due the level is won or lost and the hold has run out
      * @param hostingSession this machine hosts an online session, so leaving it ends it for everybody
      */
     public void observeResult(boolean due, boolean hostingSession) {
+        observeResult(due, hostingSession, false);
+    }
+
+    /**
+     * The same, saying whether the session this machine hosts has a briefing: its MENU from the result then takes
+     * every machine back to it, and asks nothing (G0101).
+     */
+    public void observeResult(boolean due, boolean hostingSession, boolean briefed) {
         hosting = hostingSession;
+        briefedHost = hostingSession && briefed;
         if (stack[0] != UiPage.PLAY) {
             return;
         }
@@ -134,11 +163,11 @@ public final class UiFlow {
         };
     }
 
-    /** The missions page plays what it starts; opened from hosting, it hosts it. */
-    private static UiEffect mission(UiPage page, int entry) {
+    /** The missions page plays what it starts; the briefing starts it for the session - from the host only. */
+    private UiEffect mission(UiPage page, int entry) {
         return switch (page) {
             case MISSIONS -> new UiEffect(UiEffect.Kind.MISSION, entry);
-            case HOST_MISSIONS -> new UiEffect(UiEffect.Kind.HOST_MISSION, entry);
+            case BRIEFING -> briefingHost ? new UiEffect(UiEffect.Kind.BRIEFED_MISSION, entry) : UiEffect.NONE;
             default -> UiEffect.NONE;
         };
     }
@@ -156,6 +185,7 @@ public final class UiFlow {
             case MAIN -> UiEffect.SELECT_EXIT;
             case PLAY -> UiEffect.NONE;
             case CONNECTING -> UiEffect.LEAVE;
+            case BRIEFING -> briefingHost && briefingJoined ? ask() : UiEffect.LEAVE;
             case PAUSE -> resume();
             case RESULT -> UiEffect.NONE;
             default -> {
@@ -163,6 +193,12 @@ public final class UiFlow {
                 yield UiEffect.NONE;
             }
         };
+    }
+
+    /** The host's Back from a briefing others are on: ends the session for them, so it asks. */
+    private UiEffect ask() {
+        stack[size++] = UiPage.BRIEFING_LEAVE;
+        return UiEffect.NONE;
     }
 
     private UiEffect pause(UiPage page) {
@@ -191,11 +227,18 @@ public final class UiFlow {
 
     /** From the result, the host is asked first: his leaving ends the session for everybody (G0066). */
     private UiEffect leave(UiPage page) {
+        if (page == UiPage.RESULT && briefedHost) {
+            size = 1;
+            return UiEffect.TO_BRIEFING;
+        }
         if (page == UiPage.RESULT && hosting) {
             stack[size++] = UiPage.LEAVE_CONFIRM;
             return UiEffect.NONE;
         }
-        return page == UiPage.LEAVE_CONFIRM || page == UiPage.CONNECTING || page == UiPage.RESULT
+        return page == UiPage.LEAVE_CONFIRM
+                        || page == UiPage.BRIEFING_LEAVE
+                        || page == UiPage.CONNECTING
+                        || page == UiPage.RESULT
                 ? UiEffect.LEAVE
                 : UiEffect.NONE;
     }

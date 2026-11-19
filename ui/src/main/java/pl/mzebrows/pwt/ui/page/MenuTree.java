@@ -53,9 +53,17 @@ public final class MenuTree {
                                 entry("options", "ui.main.options", UiIntent.open(UiPage.OPTIONS)),
                                 entry("exit", "ui.main.exit", UiIntent.open(UiPage.EXIT_CONFIRM))),
                         0));
-        MenuPage missions = missions();
-        PAGES.put(UiPage.MISSIONS, missions);
-        PAGES.put(UiPage.HOST_MISSIONS, missions);
+        PAGES.put(UiPage.MISSIONS, missions("ui.missions.title"));
+        PAGES.put(UiPage.BRIEFING, missions("ui.briefing.title"));
+        PAGES.put(
+                UiPage.BRIEFING_LEAVE,
+                new MenuPage(
+                        "",
+                        "ui.leave.bodyHost",
+                        List.of(
+                                entry("stay", "ui.common.no", UiIntent.BACK),
+                                entry("leave", "ui.common.yes", UiIntent.LEAVE)),
+                        0));
         PAGES.put(
                 UiPage.PROVING_GROUND,
                 new MenuPage(
@@ -146,7 +154,7 @@ public final class MenuTree {
      * START MISSION, which starts what it holds; MEDIUM selected. Its title takes the date, which the screen
      * fills in.
      */
-    private static MenuPage missions() {
+    private static MenuPage missions(String titleKey) {
         List<MenuEntry> entries = new ArrayList<>();
         int medium = 0;
         TierKind[] tiers = TierKind.values();
@@ -160,7 +168,15 @@ public final class MenuTree {
         entries.add(entry("code", "ui.missions.code", UiIntent.mission(MISSION_CODE)));
         entries.add(entry("start", "ui.missions.start", UiIntent.mission(MISSION_START)));
         entries.add(back());
-        return new MenuPage("ui.missions.title", "", entries, medium);
+        return new MenuPage(titleKey, "", entries, medium);
+    }
+
+    /** What a joiner is shown of the briefing: nothing to choose, only the way out (G0101). */
+    private static final MenuPage BRIEFING_JOINER = new MenuPage("ui.briefing.title", "", List.of(back()), 0);
+
+    /** The briefing's entries: the missions page's for the host, a joiner's only BACK. */
+    public static MenuPage briefing(boolean host) {
+        return host ? page(UiPage.BRIEFING) : BRIEFING_JOINER;
     }
 
     private MenuTree() {}

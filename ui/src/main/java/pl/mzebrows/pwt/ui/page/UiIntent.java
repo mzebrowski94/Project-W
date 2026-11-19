@@ -65,6 +65,9 @@ public record UiIntent(Kind kind, UiPage page, int index) {
         return new UiIntent(Kind.MISSION, UiPage.PLAY, entry);
     }
 
+    /** What HOST GAME's OPEN means: open the session on its briefing, before any mission is chosen (G0101). */
+    public static final UiIntent OPEN_SESSION = new UiIntent(Kind.HOST, UiPage.PLAY, -1);
+
     public static UiIntent host(int scenario) {
         return new UiIntent(Kind.HOST, UiPage.PLAY, scenario);
     }

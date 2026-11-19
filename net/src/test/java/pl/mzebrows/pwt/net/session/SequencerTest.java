@@ -37,9 +37,7 @@ class SequencerTest {
             network.endpoint("host"),
             config,
             NetLog.silent(64),
-            new SessionSetup("", "Skirmish", 1L),
             Players.MAX,
-            1f / 60f,
             SessionHarness.HOST_KEY,
             BuildId.current());
     private final int port = sequencer.listen(config.port(), 0);
@@ -424,6 +422,10 @@ class SequencerTest {
                         .putLong(SessionHarness.HOST_KEY)
                         .putString("raw"));
         host.send(Delivery.RELIABLE, new WireWriter(8).putByte(Msg.SEAT).putByte(0));
+        byte[] setup = new SessionSetup("", "Skirmish", 1L).toBytes();
+        host.send(
+                Delivery.RELIABLE,
+                new WireWriter(64).putByte(Msg.START).putLong(FRAME).putPacked(setup, 0, setup.length));
         for (int frame = 0; frame < 3; frame++) {
             frame(host);
         }

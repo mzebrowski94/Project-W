@@ -39,6 +39,10 @@ final class SessionHarness implements AutoCloseable {
     final LoopbackNetwork network;
     final Sequencer sequencer;
     final int port;
+
+    /** What the host starts the mission with. */
+    final SessionSetup setup;
+
     final List<Machine> machines = new ArrayList<>();
 
     /** The largest snapshot a machine joining from now on sends - lowered for a world too big to send. */
@@ -67,21 +71,21 @@ final class SessionHarness implements AutoCloseable {
     SessionHarness(NetConfig config, String scenario, long seed, Conditions atTheHost, NetLog sequencerLog) {
         this.config = config;
         network = new LoopbackNetwork(config);
+        this.setup = new SessionSetup("", scenario, seed);
         Transport hostEnd = new Counted(conditioned(network.endpoint("host"), atTheHost));
-        sequencer = new Sequencer(
-                hostEnd,
-                config,
-                sequencerLog,
-                new SessionSetup("", scenario, seed),
-                Players.MAX,
-                1f / 60f,
-                HOST_KEY,
-                BuildId.current());
+        sequencer = new Sequencer(hostEnd, config, sequencerLog, Players.MAX, HOST_KEY, BuildId.current());
         port = sequencer.listen(config.port(), 0);
     }
 
     /** The host's own peer: on the host's machine, over a perfect link, knowing the key. */
     Machine host() {
+        Machine host = hostOnBriefing();
+        host.session.start(setup, 1f / 60f);
+        return host;
+    }
+
+    /** The host's peer, with the mission not started: the session is on its briefing (G0101). */
+    Machine hostOnBriefing() {
         return join("host", Conditions.NONE, HOST_KEY, null, BuildId.current(), 0);
     }
 

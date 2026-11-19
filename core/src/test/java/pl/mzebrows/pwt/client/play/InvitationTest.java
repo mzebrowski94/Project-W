@@ -30,8 +30,8 @@ class InvitationTest {
                 List.of(new InetSocketAddress(InetAddress.getLoopbackAddress(), LAN.port())));
         try (LanListener listener = new LanListener(LAN, clock, NetLog.silent(64));
                 Invitation invitation =
-                        new Invitation(beacon, 42L, 47_100, "Defend", "KOMPUTER", List.of("192.168.1.5", "25.1.2.3"))) {
-            invitation.pump(2);
+                        new Invitation(beacon, 42L, 47_100, "KOMPUTER", List.of("192.168.1.5", "25.1.2.3"))) {
+            invitation.pump(2, "Defend");
             for (int i = 0; i < 100 && listener.heard().isEmpty(); i++) {
                 LockSupport.parkNanos(10_000_000L);
                 listener.poll();

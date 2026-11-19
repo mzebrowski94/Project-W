@@ -15,7 +15,7 @@ import pl.mzebrows.pwt.net.NetConfig;
 final class Msg {
 
     /** Bumped whenever a message changes shape. The build id catches that too; this names it in the log. */
-    static final int PROTOCOL = 6;
+    static final int PROTOCOL = 7;
 
     // Peer to sequencer.
     static final int HELLO = 1;
@@ -27,6 +27,15 @@ final class Msg {
     static final int RESTART = 7;
     static final int GOD_MODE = 8;
 
+    /** The host starts the mission: its tick in nanoseconds, then its setup as opaque bytes (G0101). */
+    static final int START = 9;
+
+    /** The host takes the session back to its briefing (G0101). Nothing follows the number. */
+    static final int TO_BRIEFING = 10;
+
+    /** What the host shows on the briefing - its code line, as text - for everyone to see. Opaque to the sequencer. */
+    static final int NOTE = 11;
+
     // Sequencer to peer.
     static final int WELCOME = 20;
     static final int REFUSED = 21;
@@ -37,6 +46,27 @@ final class Msg {
     static final int DESYNC = 26;
     static final int SNAPSHOT_WANTED = 27;
     static final int DUMP_WANTED = 28;
+
+    /** A mission has started: its tick in nanoseconds, then its setup as opaque bytes - the START, as the host sent it. */
+    static final int STARTED = 29;
+
+    /** The session is back on its briefing: every machine drops its world. Nothing follows the number. */
+    static final int BRIEFING = 30;
+
+    /** Who holds each slot, while the session is on its briefing: a count, then per holder its slot, flags and machine. */
+    static final int PLAYERS = 31;
+
+    /** The host's {@link #NOTE}, kept and passed on, to every machine as it changes and to one that arrives. */
+    static final int NOTED = 32;
+
+    /** The most bytes a note may be. */
+    static final int MAX_NOTE = 64;
+
+    /** A players entry's flag: the holder is the host. */
+    static final int PLAYER_HOST = 1;
+
+    /** A players entry's flag: the holder's link is up. */
+    static final int PLAYER_ONLINE = 2;
 
     /**
      * An input event's type: what the rest of it means. An event on the wire is its number
@@ -84,6 +114,9 @@ final class Msg {
 
     /** The longest config a host ships, unpacked. {@code assets/sim/*.properties} without their comments are about 26 KB. */
     static final int MAX_CONFIG = 1024 * 1024;
+
+    /** The most bytes a START's setup may be: a scenario's name, a seed and a config. */
+    static final int MAX_START = MAX_CONFIG + MAX_TEXT + 16;
 
     /** Writes the session config into a welcome: every component, in order (ADR 0018). */
     static void putSession(WireWriter out, NetConfig.Session session) {

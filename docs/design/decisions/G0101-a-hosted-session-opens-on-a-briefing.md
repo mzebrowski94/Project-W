@@ -6,7 +6,12 @@
 GAME pages; what the host's MENU does after a mission; a ready button, a kick, or anything a joiner chooses before he
 plays.
 
-**Enforced by.** Nothing yet - not built; the tests are named here when it is.
+**Enforced by.** `SessionTest` (a session waits on its briefing with no world, its players listed host first; START puts every
+seated slot on the field at the first tick; a machine arriving after START drops in and one before lands on the briefing;
+the session goes back to its briefing, slots kept; a machine whose link is gone stays a row, offline, and takes its slot back),
+`OnlineSessionTest` (landing, START, back to the briefing, the host's line shown to a joiner), `BriefingPageTest` and
+`UiFlowTest` (rows, START's enablement, a joiner changing nothing, the leave confirm, the host's MENU). Built on the LAN;
+not tested: how the page is drawn, and a pad plugged in while the briefing shows (it takes its slot once play begins).
 
 **Asked for** by Mateusz, 2026-11-19, at the close of the relay's rooms ticket: a page before the first tick with the
 players who have joined and the mission's options, the host starting the game, and drop-in still open mid-game.

@@ -13,8 +13,13 @@ public enum UiPage {
     ONLINE("UI:main/online", Kind.PAGE, MAIN),
     ONLINE_JOIN("UI:main/online/join", Kind.PAGE, ONLINE),
     ONLINE_HOST("UI:main/online/host", Kind.PAGE, ONLINE),
-    /** {@link #MISSIONS} opened from hosting: the same page, and everything it starts is hosted. */
-    HOST_MISSIONS("UI:main/online/host/missions", Kind.PAGE, ONLINE_HOST),
+    /**
+     * A hosted session before its first tick and between its missions (G0101): the missions page in host mode, the room
+     * at its head and its players beside the entries. A joiner is shown the same and changes nothing.
+     */
+    BRIEFING("UI:briefing", Kind.PAGE, ONLINE_HOST),
+    /** Leaving the briefing as the host while somebody has joined: it ends the session for everyone. */
+    BRIEFING_LEAVE("UI:briefing/leave", Kind.MODAL, BRIEFING),
     /** What every key and pad button does, read from the bindings; nothing is changed there. */
     CONTROLS("UI:main/controls", Kind.PAGE, MAIN),
     OPTIONS("UI:main/options", Kind.PAGE, MAIN),
