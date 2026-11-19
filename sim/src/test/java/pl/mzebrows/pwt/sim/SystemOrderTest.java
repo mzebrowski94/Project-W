@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.system.combat.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.combat.CooldownSystem;
 import pl.mzebrows.pwt.sim.system.combat.DamageSystem;
 import pl.mzebrows.pwt.sim.system.combat.GrenadeSystem;
+import pl.mzebrows.pwt.sim.system.combat.LimpetSystem;
 import pl.mzebrows.pwt.sim.system.combat.PickupSystem;
 import pl.mzebrows.pwt.sim.system.combat.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.combat.ShockSystem;
@@ -121,6 +122,11 @@ class SystemOrderTest {
     @Test
     void answersABounceTheSystemAfterTheSolverRecordsIt() {
         assertImmediatelyAfter(GrenadeSystem.class, CollisionSystem.class);
+    }
+
+    @Test
+    void sticksALimpetStraightAfterTheGrenadesBounceIsAnswered() {
+        assertImmediatelyAfter(LimpetSystem.class, GrenadeSystem.class);
     }
 
     @Test

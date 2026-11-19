@@ -98,5 +98,11 @@ public enum WeaponKind {
      * What a magma spitter fires (G0091): a spit that goes off where it stops in a blast smaller than a charged
      * spit's, so it leaves fire (G0035). No pickup grants it.
      */
-    MAGMA_SPIT
+    MAGMA_SPIT,
+    /**
+     * Throws a limpet rather than firing a shot (G0100): one out at a time, set off by his next press. It sticks to
+     * the first rock, door, scenery or alien it touches, calibrates there, and goes off small before that and big
+     * after - the only gun whose blast is his to time. Every throw runs it to the stop, a reload.
+     */
+    DETONATOR
 }

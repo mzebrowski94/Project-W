@@ -28,6 +28,7 @@ import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
+import pl.mzebrows.pwt.sim.component.Limpet;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
@@ -78,6 +79,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<Leap> LEAP = ComponentMapper.getFor(Leap.class);
     private static final ComponentMapper<Taking> TAKING = ComponentMapper.getFor(Taking.class);
     private static final ComponentMapper<Thrown> THROWN = ComponentMapper.getFor(Thrown.class);
+    private static final ComponentMapper<Limpet> LIMPET = ComponentMapper.getFor(Limpet.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
     private static final ComponentMapper<Armour> ARMOUR = ComponentMapper.getFor(Armour.class);
     private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
@@ -141,6 +143,10 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
 
     @Override
     public void onContact(Entity a, Entity b) {
+        if (LIMPET.has(a) || LIMPET.has(b)) {
+            stick(a, b);
+            return;
+        }
         if (THROWN.has(a) || THROWN.has(b)) {
             bounce(a, b);
             return;
@@ -184,6 +190,54 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         if (THROWN.has(b) && prop(a)) {
             comeOff(b, POSITION.get(a));
         }
+    }
+
+    /**
+     * Notes what a limpet in flight has touched, for {@code LimpetSystem} to stick it to (G0100), and stops there - a
+     * limpet lands no blow and takes none, so shots and claws pass through it.
+     */
+    private static void stick(Entity a, Entity b) {
+        if (LIMPET.has(a)) {
+            touch(a, b);
+        }
+        if (LIMPET.has(b)) {
+            touch(b, a);
+        }
+    }
+
+    /**
+     * It sticks to <strong>scenery</strong>, as a grenade comes off it, and to <strong>anything alive of another
+     * side</strong>; it passes through its own side - his men and his own turret - a body in its throes, another limpet, and anything not solid - a
+     * shot, ruined ground, a pickup lying on the floor, a rider in the air.
+     */
+    private static void touch(Entity limpet, Entity other) {
+        Limpet thrown = LIMPET.get(limpet);
+        if (thrown.stuck || thrown.touched || LIMPET.has(other) || ownSide(thrown.side, other)) {
+            return;
+        }
+        if (!prop(other) && !foe(thrown.side, other)) {
+            return;
+        }
+        Position at = POSITION.get(other);
+        thrown.touch(HANDLE.has(other) ? HANDLE.get(other).id : Handle.NOBODY, at.x, at.y);
+    }
+
+    /** On this side, which is somebody's: his men, and scenery that is his too - his own turret. */
+    private static boolean ownSide(Side side, Entity other) {
+        return side != Side.NEUTRAL && FACTION.has(other) && FACTION.get(other).side == side;
+    }
+
+    /** Something alive, solid and on its feet, of a side other than {@code side} and other than nobody's. */
+    private static boolean foe(Side side, Entity other) {
+        if (!FACTION.has(other) || !COLLIDER.has(other) || inert(other)) {
+            return false;
+        }
+        Collider collider = COLLIDER.get(other);
+        if (!collider.solid || collider.throughBodies) {
+            return false;
+        }
+        Side theirs = FACTION.get(other).side;
+        return theirs != Side.NEUTRAL && theirs != side;
     }
 
     private static void comeOff(Entity thrown, Position surface) {

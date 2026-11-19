@@ -59,6 +59,7 @@ public final class Components {
                     Lair.class,
                     Leap.class,
                     Level.class,
+                    Limpet.class,
                     Melee.class,
                     Mine.class,
                     Nest.class,

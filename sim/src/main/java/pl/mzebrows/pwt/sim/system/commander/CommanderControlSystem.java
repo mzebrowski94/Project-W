@@ -12,11 +12,13 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
+import pl.mzebrows.pwt.sim.component.Limpet;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.component.Speed;
@@ -26,6 +28,7 @@ import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.system.combat.Guns;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
+import pl.mzebrows.pwt.sim.system.query.Limpets;
 import pl.mzebrows.pwt.sim.system.query.Pace;
 
 /**
@@ -54,11 +57,14 @@ public final class CommanderControlSystem extends IteratingSystem {
     private static final ComponentMapper<Drag> DRAG = ComponentMapper.getFor(Drag.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
+    private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
 
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
     private static final float EPSILON = 1e-4f;
 
     private final Guns guns;
+
+    private final Spawner spawner;
 
     private final float leashRadius;
 
@@ -88,9 +94,12 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
+    private ImmutableArray<Entity> limpets = new ImmutableArray<>(new Array<>());
+
     /** @param capacity how many slots the game holds - the most machines its commanders can sit at */
-    public CommanderControlSystem(SimConfig config, TileMap map, Guns guns, int capacity) {
+    public CommanderControlSystem(SimConfig config, TileMap map, Guns guns, Spawner spawner, int capacity) {
         this.guns = guns;
+        this.spawner = spawner;
         super(Family.all(
                         Commander.class,
                         Intent.class,
@@ -114,6 +123,7 @@ public final class CommanderControlSystem extends IteratingSystem {
     public void addedToEngine(Engine engine) {
         super.addedToEngine(engine);
         levels = engine.getEntitiesFor(Family.all(Presence.class).get());
+        limpets = engine.getEntitiesFor(Family.all(Limpet.class).get());
     }
 
     /**
@@ -272,8 +282,24 @@ public final class CommanderControlSystem extends IteratingSystem {
         velocity.set(x, y);
     }
 
-    /** The cooldown itself is counted down by {@code CooldownSystem}, before this runs. */
+    /**
+     * The cooldown itself is counted down by {@code CooldownSystem}, before this runs.
+     *
+     * <p><strong>A gun that throws a limpet acts once a press</strong> (G0100): a press with a limpet of his out sets
+     * it off - by dying, ready bar or not, for setting one off is no pull - and a press with none out throws one if the
+     * gun is ready. Holding the trigger does neither again.
+     */
     private void fire(Entity entity, Intent intent) {
+        if (WEAPON.get(entity).limpet.enabled()) {
+            if (!intent.firePressed) {
+                return;
+            }
+            Entity out = Limpets.outOf(limpets, entity);
+            if (out != null) {
+                spawner.markDead(out);
+                return;
+            }
+        }
         if (!intent.firing || !guns.ready(entity)) {
             return;
         }

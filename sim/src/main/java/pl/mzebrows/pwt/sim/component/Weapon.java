@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.component;
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
 import pl.mzebrows.pwt.sim.def.Harm;
+import pl.mzebrows.pwt.sim.def.LimpetDef;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.Ticks;
@@ -125,6 +126,13 @@ public final class Weapon implements Component, Pool.Poolable {
     public float heatResumeBelow;
 
     /**
+     * What it throws instead of a shot, if it throws a limpet (G0100); {@link LimpetDef#off()} for every gun but one.
+     *
+     * <p>The immutable record itself, as {@link #slicks} is.
+     */
+    public LimpetDef limpet = LimpetDef.off();
+
+    /**
      * Which of the two it fires from next. Runtime state, like the cooldown, and meaningless on a
      * gun with one muzzle - where the offset is zero and both sides are the same point.
      */
@@ -166,6 +174,7 @@ public final class Weapon implements Component, Pool.Poolable {
         this.heatPerShot = def.heat().perShot();
         this.heatCoolPerSecond = def.heat().coolPerSecond();
         this.heatResumeBelow = def.heat().resumeBelow();
+        this.limpet = def.limpet();
         this.nextMuzzleRight = true;
         return this;
     }
@@ -210,6 +219,7 @@ public final class Weapon implements Component, Pool.Poolable {
         heatPerShot = 0f;
         heatCoolPerSecond = 0f;
         heatResumeBelow = 0f;
+        limpet = LimpetDef.off();
         nextMuzzleRight = true;
     }
 }

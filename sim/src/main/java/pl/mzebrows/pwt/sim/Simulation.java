@@ -33,6 +33,7 @@ import pl.mzebrows.pwt.sim.system.combat.CooldownSystem;
 import pl.mzebrows.pwt.sim.system.combat.DamageSystem;
 import pl.mzebrows.pwt.sim.system.combat.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.combat.Guns;
+import pl.mzebrows.pwt.sim.system.combat.LimpetSystem;
 import pl.mzebrows.pwt.sim.system.combat.PickupSystem;
 import pl.mzebrows.pwt.sim.system.combat.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.combat.ShockSystem;
@@ -201,7 +202,7 @@ public final class Simulation {
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new DragSystem());
-        engine.addSystem(new CommanderControlSystem(config, map, guns, capacity));
+        engine.addSystem(new CommanderControlSystem(config, map, guns, spawner, capacity));
         engine.addSystem(new MeleeSystem(spawner));
         // After the commander's hands, before anything looks around.
         engine.addSystem(new TurretSystem(solid, guns));
@@ -239,6 +240,9 @@ public final class Simulation {
         engine.addSystem(new StrikeSystem(spawner));
         engine.addSystem(new CollisionSystem(config, solid, spawner, odds));
         engine.addSystem(new GrenadeSystem(solid, spawner, throwing));
+        // Straight after the grenade, for the grenade's reason - a limpet's contact is the solver's, answered with
+        // nothing moved in between - and inside the death window, so one that dies here goes off this tick (G0100).
+        engine.addSystem(new LimpetSystem(solid, spawner));
         engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(config, spawner, modifiers));

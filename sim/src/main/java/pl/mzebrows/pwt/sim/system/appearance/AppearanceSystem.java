@@ -27,6 +27,7 @@ import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Level;
+import pl.mzebrows.pwt.sim.component.Limpet;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Perception;
@@ -51,6 +52,7 @@ import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.system.query.Limpets;
 
 /**
  * Publishes what each entity is doing, so the renderer can show it without asking (G0003, pillar 5).
@@ -96,6 +98,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
+    private static final ComponentMapper<Limpet> LIMPET = ComponentMapper.getFor(Limpet.class);
 
     private final Defs<UnitKind, UnitDef> units;
     private final Defs<PickupKind, PickupDef> pickups;
@@ -110,6 +113,8 @@ public final class AppearanceSystem extends IteratingSystem {
     private float shineSeconds;
 
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
+
+    private ImmutableArray<Entity> limpets = new ImmutableArray<>(new Array<>());
 
     /**
      * How much of a nest's core is showing before its clock has started, as a fraction.
@@ -128,6 +133,7 @@ public final class AppearanceSystem extends IteratingSystem {
     public void addedToEngine(Engine engine) {
         super.addedToEngine(engine);
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
+        limpets = engine.getEntitiesFor(Family.all(Limpet.class).get());
     }
 
     @Override
@@ -153,6 +159,10 @@ public final class AppearanceSystem extends IteratingSystem {
         boolean showsHeat = HEAT.has(entity) && !TROOPER.has(entity);
         appearance.heat = showsHeat ? HEAT.get(entity).value : 0f;
         appearance.overheated = showsHeat && HEAT.get(entity).locked;
+        // A limpet of his out: his next press sets it off (G0100). Asked only of a man holding a gun that throws one.
+        appearance.detonating =
+                WEAPON.has(entity) && WEAPON.get(entity).limpet.enabled() && Limpets.outOf(limpets, entity) != null;
+        appearance.spin = LIMPET.has(entity) ? LIMPET.get(entity).flown : 0f;
         // How many wounds a man on his feet is carrying, one mark each (G0053, pillar 5).
         appearance.wounds = VITALITY.has(entity) && VITALITY.get(entity).wounded() ? VITALITY.get(entity).wounds : 0;
         appearance.shield = SHIELD.has(entity) ? SHIELD.get(entity).fraction() : 0f;
@@ -256,6 +266,14 @@ public final class AppearanceSystem extends IteratingSystem {
         if (BLAST.has(entity)) {
             // A blast burning out, read backwards.
             appearance.charge = BLAST.get(entity).fade();
+            return;
+        }
+        if (LIMPET.has(entity)) {
+            // Calibrating, the door's green ring, filling; calibrated, the red dot the client ticks (G0100). Nothing
+            // in the air: it calibrates only once it has stuck.
+            Limpet limpet = LIMPET.get(entity);
+            appearance.chargeLook = limpet.calibrated ? Look.CALIBRATED : Look.MENDING;
+            appearance.charge = limpet.calibration();
             return;
         }
         if (MINE.has(entity)) {

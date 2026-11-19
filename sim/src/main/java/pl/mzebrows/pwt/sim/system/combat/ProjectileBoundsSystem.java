@@ -63,9 +63,6 @@ public final class ProjectileBoundsSystem extends EntitySystem {
     private static final ComponentMapper<ContactDamage> BLOW = ComponentMapper.getFor(ContactDamage.class);
     private static final ComponentMapper<Damage> DAMAGE = ComponentMapper.getFor(Damage.class);
 
-    /** How far short of the face a shot is put, so the point it ends on is on the open side of it. */
-    private static final float SHORT_OF_THE_FACE = 1e-3f;
-
     private final Spawner spawner;
     private final Solid map;
     private final float width;
@@ -144,37 +141,11 @@ public final class ProjectileBoundsSystem extends EntitySystem {
         return true;
     }
 
-    /**
-     * Puts a shot that has flown into rock back where its path met the face. It is walked from where it
-     * stood last tick - or, for one fired with its muzzle already in the wall, from a tile further back
-     * along its line, which is inside whoever fired it. Left where it is when no open ground lies behind.
-     */
+    /** Puts a shot that has flown into rock back where its path met the face ({@link Bounce#toTheFace}). */
     private void backToTheFace(Entity projectile, Position position) {
         if (!PREVIOUS.has(projectile) || !VELOCITY.has(projectile)) {
             return;
         }
-        Velocity velocity = VELOCITY.get(projectile);
-        float speed = (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
-        if (speed <= 0f) {
-            return;
-        }
-        float directionX = velocity.x / speed;
-        float directionY = velocity.y / speed;
-        PreviousPosition previous = PREVIOUS.get(projectile);
-        float fromX = previous.x;
-        float fromY = previous.y;
-        if (!map.passableAt(fromX, fromY)) {
-            fromX -= directionX * map.map().tileSize();
-            fromY -= directionY * map.map().tileSize();
-        }
-        float spanX = position.x - fromX;
-        float spanY = position.y - fromY;
-        float open = map.passableFraction(fromX, fromY, position.x, position.y);
-        if (open <= 0f) {
-            return;
-        }
-        position.set(
-                fromX + spanX * open - directionX * SHORT_OF_THE_FACE,
-                fromY + spanY * open - directionY * SHORT_OF_THE_FACE);
+        Bounce.toTheFace(map, position, PREVIOUS.get(projectile), VELOCITY.get(projectile));
     }
 }

@@ -49,6 +49,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Level;
+import pl.mzebrows.pwt.sim.component.Limpet;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Nest;
@@ -93,6 +94,7 @@ import pl.mzebrows.pwt.sim.component.Weave;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.BurrowDef;
 import pl.mzebrows.pwt.sim.def.Harm;
+import pl.mzebrows.pwt.sim.def.LimpetDef;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
@@ -1141,6 +1143,44 @@ public final class Spawner {
             entity.add(engine.createComponent(SlicksOnDeath.class).set(slicks));
         }
         entity.add(engine.createComponent(Appearance.class).set(look));
+        admit(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a limpet thrown by {@code owner} from a gun that throws one (G0100), flying the gun's own speed and reach.
+     *
+     * <p><strong>On nobody's side</strong>, as a mine is, so nothing hunts it and a blast catches it - it carries one
+     * point of health for that and nothing else: non-solid and stopping no shot, so shots and claws pass through it.
+     * The side it was thrown from is on the limpet, which is what it passes through. It explodes by dying (G0018),
+     * small until it has calibrated; {@code credit} is the slot what that kills counts for.
+     */
+    public Entity spawnLimpet(
+            float x, float y, float directionX, float directionY, Weapon weapon, long owner, Side side, int credit) {
+        LimpetDef limpet = weapon.limpet;
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Limpet.class)
+                .set(
+                        owner,
+                        side,
+                        weapon.projectileRange,
+                        ticks(limpet.calibrateSeconds()),
+                        limpet.calibratedBlastRadius(),
+                        limpet.calibratedBlastHarm()));
+        entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Velocity.class)
+                .set(directionX * weapon.projectileSpeed, directionY * weapon.projectileSpeed));
+        entity.add(engine.createComponent(Body.class).set(weapon.projectileRadius));
+        entity.add(engine.createComponent(Collider.class).set(false, true).stopsShots(false));
+        entity.add(engine.createComponent(Health.class).set(1));
+        entity.add(engine.createComponent(Damage.class));
+        entity.add(engine.createComponent(BlastsOnDeath.class)
+                .set(limpet.blastRadius(), limpet.blastRadius())
+                .harming(limpet.blastHarm())
+                .credited(credit));
+        entity.add(engine.createComponent(Appearance.class).set(Look.LIMPET));
         admit(entity);
         return entity;
     }

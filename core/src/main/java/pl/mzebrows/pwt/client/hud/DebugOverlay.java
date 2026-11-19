@@ -65,7 +65,7 @@ public final class DebugOverlay {
                 + count(simulation, Obstacle.class));
         lines.add("entities " + simulation.engine().getEntities().size());
         lines.add("last order " + (lastOrder == null ? "-" : lastOrder.name().toLowerCase(Locale.ROOT)));
-        lines.add("1 follow 2 forward 3 defence 4 cancel  P pause . step R restart G god F1 F2 lead F3 lag ESC menu");
+        lines.add("1 follow 2 forward 3 defence 4 cancel  P pause . step G god F1 F2 lead F3 lag ESC menu");
         return lines;
     }
 

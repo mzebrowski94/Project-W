@@ -131,6 +131,13 @@ public enum Look {
     STRIKE,
     /** Something thrown that bounces and goes off where it stops. */
     GRENADE,
+    /**
+     * A limpet (G0100): a small mud-green rectangle, turning as it flies, that sticks where it lands. Its calibrating
+     * is the {@link #MENDING} ring on it; calibrated, it ticks with the {@link #CALIBRATED} dot.
+     */
+    LIMPET,
+    /** The red dot a calibrated limpet ticks with (G0100), on the charge channel: its big blast is ready. */
+    CALIBRATED,
     /** The circle an explosion makes lethal, for a moment. */
     BLAST,
     /**
@@ -173,6 +180,7 @@ public enum Look {
     ARMOURY_BAZOOKA,
     ARMOURY_PULSE,
     ARMOURY_DISC,
+    ARMOURY_DETONATOR,
     /** A grenade cache (G0077): never on the field, only a card in a crate - its look is the card's colour. */
     ARMOURY_GRENADES,
     /**

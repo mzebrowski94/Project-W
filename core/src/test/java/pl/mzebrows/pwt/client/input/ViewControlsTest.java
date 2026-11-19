@@ -34,10 +34,8 @@ class ViewControlsTest {
     /** The harness keys are dev tools and must not double as game bindings. */
     @Test
     void ignoresTheHarnessKeys() {
-        assertThat(zoomToggled(keycode -> keycode == Input.Keys.P
-                        || keycode == Input.Keys.R
-                        || keycode == Input.Keys.G
-                        || keycode == Input.Keys.F1))
+        assertThat(zoomToggled(
+                        keycode -> keycode == Input.Keys.P || keycode == Input.Keys.G || keycode == Input.Keys.F1))
                 .isFalse();
     }
 }

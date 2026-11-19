@@ -115,6 +115,7 @@ public record GraphicConfig(
         SlitherMark slither,
         BurrowMark burrow,
         DevourMark devour,
+        LimpetMark limpet,
         ActionMark action,
         @ConfigKey("color.actionMark") Color actionMark,
         @ConfigKey("color.pickupMark") Color pickupMark,

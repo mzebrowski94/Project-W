@@ -31,6 +31,9 @@ public final class PlayerReadout {
 
     public boolean overheated;
 
+    /** Whether he has a limpet out, so his next press sets it off (G0100): DETONATE where OVERHEAT would be. */
+    public boolean detonating;
+
     /** How much of his bleed-out is left while he is a casualty, in {@code [0, 1]}. */
     public float bleedOut;
 
@@ -131,6 +134,7 @@ public final class PlayerReadout {
         weapon = WeaponKind.SIDEARM;
         heat = 0f;
         overheated = false;
+        detonating = false;
         bleedOut = 0f;
         wounds = 0;
         maxWounds = 0;
@@ -163,6 +167,7 @@ public final class PlayerReadout {
         weapon = other.weapon;
         heat = other.heat;
         overheated = other.overheated;
+        detonating = other.detonating;
         bleedOut = other.bleedOut;
         wounds = other.wounds;
         maxWounds = other.maxWounds;

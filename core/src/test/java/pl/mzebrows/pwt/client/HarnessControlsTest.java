@@ -49,7 +49,6 @@ class HarnessControlsTest {
         return Stream.of(
                 Arguments.of("p", Input.Keys.P, HarnessCommand.PAUSE),
                 Arguments.of("period", Input.Keys.PERIOD, HarnessCommand.STEP),
-                Arguments.of("r", Input.Keys.R, HarnessCommand.RESTART),
                 Arguments.of("f1", Input.Keys.F1, HarnessCommand.TOGGLE_OVERLAY),
                 Arguments.of("g", Input.Keys.G, HarnessCommand.TOGGLE_GOD_MODE),
                 Arguments.of("f5", Input.Keys.F5, HarnessCommand.TAKE_FIRST_CARD),

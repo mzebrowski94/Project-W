@@ -1,6 +1,6 @@
 # G0019: The grenade is a fixed throw
 
-**Status.** amended by G0077: he carries his grenades as a count
+**Status.** amended by G0077: he carries his grenades as a count; amended by G0100: the detonator's limpet sticks where its throw ends rather than blasting there
 
 **Trigger.** Adding or changing anything thrown, or proposing that a throw land where the player is
 pointing.

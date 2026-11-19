@@ -21,7 +21,8 @@ public final class HarnessControls {
      *
      * <p>{@code Esc} is not one of them any more: in a level it opens the pause menu, whose LEAVE asks
      * first ({@code UI:play/leave}). {@code P} still pauses without a menu, so single-stepping with
-     * {@code .} sees the world.
+     * {@code .} sees the world. <strong>No key restarts</strong>: a restart is the pause menu's RESTART, so a stray
+     * press never throws a level away.
      */
     public static List<HarnessCommand> poll(KeyPresses keys) {
         List<HarnessCommand> commands = new ArrayList<>(2);
@@ -30,9 +31,6 @@ public final class HarnessControls {
         }
         if (keys.justPressed(Input.Keys.PERIOD)) {
             commands.add(HarnessCommand.STEP);
-        }
-        if (keys.justPressed(Input.Keys.R)) {
-            commands.add(HarnessCommand.RESTART);
         }
         if (keys.justPressed(Input.Keys.F1)) {
             commands.add(HarnessCommand.TOGGLE_OVERLAY);

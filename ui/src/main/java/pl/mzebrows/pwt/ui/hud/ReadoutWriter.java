@@ -180,6 +180,7 @@ public final class ReadoutWriter {
         player.weapon = WEAPON.has(entity) ? WEAPON.get(entity).kind : WeaponKind.SIDEARM;
         player.heat = appearance.heat;
         player.overheated = appearance.overheated;
+        player.detonating = appearance.detonating;
         player.self = Handles.of(entity);
         if (ACTION.has(entity)) {
             Action action = ACTION.get(entity);

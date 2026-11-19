@@ -64,6 +64,7 @@ public final class BottomBarPainter {
     private final String noReserve;
     private final String aboard;
     private final String overheat;
+    private final String detonate;
     private final String offline;
     private final String rollCall;
     private final String[] redeploy = new String[Players.MAX];
@@ -111,6 +112,7 @@ public final class BottomBarPainter {
         this.noReserve = strings.get("ui.hud.noReserve");
         this.aboard = strings.get("ui.hud.aboard");
         this.overheat = strings.get("ui.hud.overheat");
+        this.detonate = strings.get("ui.hud.detonate");
         this.offline = strings.get("ui.hud.offline");
         this.rollCall = strings.get("ui.hud.rollCall");
         this.dimAlert = new Color(graphic.hud().color().alert()).mul(DIM_ALERT, DIM_ALERT, DIM_ALERT, 1f);
@@ -238,7 +240,14 @@ public final class BottomBarPainter {
             hud.text(weapons.getOrDefault(player.weapon, ""), textX, row, text);
             int heatX = textX + (weaponColumns + 1) * UiFont.ADVANCE;
             int heatRight = grenades(player, textRight, row, palette.colorFor(Look.GRENADE));
-            if (player.overheated) {
+            if (player.detonating) {
+                // His next press sets his limpet off (G0100): the word, on the heat's colour - news, not an alarm.
+                inverse(
+                        TextFit.fit(detonate, TextFit.columns(heatRight - heatX, UiFont.ADVANCE)),
+                        heatX,
+                        row,
+                        palette.colorFor(Look.HEAT));
+            } else if (player.overheated) {
                 inverse(TextFit.fit(overheat, TextFit.columns(heatRight - heatX, UiFont.ADVANCE)), heatX, row, alert);
             } else {
                 bar(
@@ -467,9 +476,9 @@ public final class BottomBarPainter {
         bar(barX, top, right - barX, fill, color);
     }
 
-    /** Black text on the alert colour: the only way alert red is ever drawn. */
-    private void inverse(String text, int x, int top, Color alert) {
-        hud.fill(x - 1, top - metrics.fontSize(), text.length() * UiFont.ADVANCE + 1, metrics.fontSize() + 1, alert);
+    /** Black text on a colour: the alert's - the only way alert red is ever drawn - or the heat's, for DETONATE. */
+    private void inverse(String text, int x, int top, Color fill) {
+        hud.fill(x - 1, top - metrics.fontSize(), text.length() * UiFont.ADVANCE + 1, metrics.fontSize() + 1, fill);
         hud.text(text, x, top, graphic.hud().color().bar());
     }
 

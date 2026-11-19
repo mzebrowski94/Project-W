@@ -157,6 +157,7 @@ public final class WorldRenderer implements Disposable {
     private final SlitherMark slitherMark;
     private final BurrowMark burrowMark;
     private final DevourMark devourMark;
+    private final LimpetMark limpetMark;
 
     /** How far anything drawn on the client's clock moves - a taken point's flag; zero holds it still. */
     private final float motionScale;
@@ -270,6 +271,10 @@ public final class WorldRenderer implements Disposable {
             if (BURROW.has(entity) && BURROW.get(entity).burrowed()) {
                 // Under the ground it is its shadow and nothing else (G0096, pillar 4).
                 drawBurrowShadow(x, y, radius, BURROW.get(entity));
+                continue;
+            }
+            if (appearance.look == Look.LIMPET) {
+                drawLimpet(x, y, radius, appearance);
                 continue;
             }
             shapes.setColor(tint(appearance));
@@ -654,7 +659,7 @@ public final class WorldRenderer implements Disposable {
     }
 
     /**
-     * A loading circle on a door: as much of a ring as it is through, clockwise from straight up. Straight pieces,
+     * A loading circle on a door, or on a limpet calibrating (G0100): as much of a ring as it is through, clockwise from straight up. Straight pieces,
      * because the renderer's own arc is a pie slice.
      */
     private void drawLoading(float x, float y, float pitch, Color color, float fraction) {
@@ -671,6 +676,37 @@ public final class WorldRenderer implements Disposable {
             fromX = toX;
             fromY = toY;
         }
+    }
+
+    /**
+     * A limpet (G0100): a rectangle turned by how far it has flown, then the door's loading circle on it while it
+     * calibrates, or the red dot ticking once it has.
+     */
+    private void drawLimpet(float x, float y, float radius, Appearance appearance) {
+        shapes.setColor(tint(appearance));
+        float length = radius * limpetMark.length();
+        float breadth = radius * limpetMark.breadth();
+        shapes.rect(
+                x - length * 0.5f,
+                y - breadth * 0.5f,
+                length * 0.5f,
+                breadth * 0.5f,
+                length,
+                breadth,
+                1f,
+                1f,
+                limpetMark.angleFor(appearance.spin));
+        if (appearance.charge <= 0f) {
+            return;
+        }
+        if (appearance.chargeLook == Look.CALIBRATED) {
+            if (limpetMark.litAt(pulseSeconds)) {
+                shapes.setColor(palette.colorFor(Look.CALIBRATED));
+                shapes.circle(x, y, radius * limpetMark.dot(), CIRCLE_SEGMENTS);
+            }
+            return;
+        }
+        drawLoading(x, y, radius * limpetMark.ringPitch(), palette.colorFor(appearance.chargeLook), appearance.charge);
     }
 
     /** A post: an outline just round the point it stands on, pulsing between its dark green and a light one. */

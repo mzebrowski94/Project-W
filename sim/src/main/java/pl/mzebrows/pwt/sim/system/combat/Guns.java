@@ -7,6 +7,7 @@ import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Shake;
@@ -45,6 +46,7 @@ public final class Guns {
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
     private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
+    private static final ComponentMapper<Handle> HANDLE = ComponentMapper.getFor(Handle.class);
 
     private final Spawner spawner;
     private final Modifiers modifiers;
@@ -138,6 +140,19 @@ public final class Guns {
                 directionY = aimX * sin + aimY * cos;
             }
             Muzzle.next(at.x, at.y, bodyRadius, weapon, muzzleGap, directionX, directionY, muzzle);
+            if (weapon.limpet.enabled()) {
+                // A gun that throws a limpet throws it from the same muzzle a shot leaves by (G0100).
+                spawner.spawnLimpet(
+                        muzzle[0],
+                        muzzle[1],
+                        directionX,
+                        directionY,
+                        weapon,
+                        HANDLE.has(firer) ? HANDLE.get(firer).id : Handle.NOBODY,
+                        FACTION.get(firer).side,
+                        credit);
+                continue;
+            }
             spawner.spawnProjectile(
                     muzzle[0],
                     muzzle[1],

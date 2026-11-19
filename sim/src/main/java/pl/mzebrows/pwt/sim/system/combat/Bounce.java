@@ -11,7 +11,40 @@ import pl.mzebrows.pwt.sim.component.Velocity;
  */
 final class Bounce {
 
+    /** How far short of the face something is put, so the point it ends on is on the open side of it. */
+    private static final float SHORT_OF_THE_FACE = 1e-3f;
+
     private Bounce() {}
+
+    /**
+     * Puts something that has flown into rock back where its path met the face: a shot that ends there, a limpet
+     * that sticks there (G0100). It is walked from where it stood last tick - or, for one fired with its muzzle
+     * already in the wall, from a tile further back along its line, which is inside whoever fired it. Left where it
+     * is when no open ground lies behind, or when it is not moving.
+     */
+    static void toTheFace(Solid map, Position position, PreviousPosition previous, Velocity velocity) {
+        float speed = (float) Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+        if (speed <= 0f) {
+            return;
+        }
+        float directionX = velocity.x / speed;
+        float directionY = velocity.y / speed;
+        float fromX = previous.x;
+        float fromY = previous.y;
+        if (!map.passableAt(fromX, fromY)) {
+            fromX -= directionX * map.map().tileSize();
+            fromY -= directionY * map.map().tileSize();
+        }
+        float spanX = position.x - fromX;
+        float spanY = position.y - fromY;
+        float open = map.passableFraction(fromX, fromY, position.x, position.y);
+        if (open <= 0f) {
+            return;
+        }
+        position.set(
+                fromX + spanX * open - directionX * SHORT_OF_THE_FACE,
+                fromY + spanY * open - directionY * SHORT_OF_THE_FACE);
+    }
 
     /**
      * Mirrors a course about a surface whose outward unit normal is given, and <strong>only while it is
@@ -69,7 +102,7 @@ final class Bounce {
     }
 
     /** Guards against an arena narrower than the thing bouncing around inside it. */
-    private static float clamp(float value, float min, float max) {
+    static float clamp(float value, float min, float max) {
         if (min >= max) {
             return (min + max) * 0.5f;
         }

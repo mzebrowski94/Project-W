@@ -58,6 +58,8 @@ import lombok.With;
  *     the shot still goes out at its reach, counted along every leg it flew
  * @param type its weapon type, for whatever names more than one gun at once;
  *     {@link WeaponType#NONE} for every gun no man carries
+ * @param limpet what it throws instead of a shot, if it throws a limpet (G0100); {@link LimpetDef#off()} for every
+ *     gun but the detonator
  */
 @With
 public record WeaponDef(
@@ -88,7 +90,8 @@ public record WeaponDef(
         int stunAfterHits,
         ShakeDef shake,
         int bounces,
-        WeaponType type) {
+        WeaponType type,
+        LimpetDef limpet) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;
@@ -128,6 +131,72 @@ public record WeaponDef(
         if (slowFactor > 1f) {
             throw new IllegalArgumentException("a gun may slow what it hits and may not speed it up");
         }
+        if (limpet.enabled() && (blastRadius > 0f || pellets > 1 || bounces > 0 || pierceIntervalSeconds > 0f)) {
+            throw new IllegalArgumentException(
+                    "a gun that throws a limpet throws one and nothing else: no blastRadius, pellets, bounces or pierce");
+        }
+    }
+
+    /** Every gun but the detonator: the same, throwing no limpet. */
+    public WeaponDef(
+            float cooldownSeconds,
+            float projectileSpeed,
+            float projectileRadius,
+            float projectileRange,
+            int damage,
+            int pellets,
+            float spreadDegrees,
+            Look projectileLook,
+            float blastRadius,
+            SlickDef slicks,
+            HeatDef heat,
+            float muzzleOffset,
+            float pierceIntervalSeconds,
+            float slowFactor,
+            float slowSeconds,
+            float selfSlowFactor,
+            float selfSlowSeconds,
+            float trailLength,
+            float bloatPerShot,
+            float stunSeconds,
+            Harm harm,
+            Harm blastHarm,
+            float recoilSpeed,
+            float recoilSeconds,
+            int stunAfterHits,
+            ShakeDef shake,
+            int bounces,
+            WeaponType type) {
+        this(
+                cooldownSeconds,
+                projectileSpeed,
+                projectileRadius,
+                projectileRange,
+                damage,
+                pellets,
+                spreadDegrees,
+                projectileLook,
+                blastRadius,
+                slicks,
+                heat,
+                muzzleOffset,
+                pierceIntervalSeconds,
+                slowFactor,
+                slowSeconds,
+                selfSlowFactor,
+                selfSlowSeconds,
+                trailLength,
+                bloatPerShot,
+                stunSeconds,
+                harm,
+                blastHarm,
+                recoilSpeed,
+                recoilSeconds,
+                stunAfterHits,
+                shake,
+                bounces,
+                type,
+                LimpetDef.off());
     }
 
     /** True if what this gun hits keeps less of its speed for a while afterwards. */

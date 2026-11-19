@@ -125,6 +125,18 @@ public final class Appearance implements Component, Pool.Poolable {
     public boolean overheated;
 
     /**
+     * Whether this man has a limpet out (G0100): his next press sets it off rather than throwing, which his panel
+     * says - the fire key meaning something else is a state he must be able to see (pillar 5).
+     */
+    public boolean detonating;
+
+    /**
+     * How far a thing drawn turning has flown, in world units - a limpet in the air, which stops turning once it
+     * sticks. Zero for everything else. A look: the client turns it by so much a unit.
+     */
+    public float spin;
+
+    /**
      * Which of a look's several appearances this one wears. Zero is the ordinary one.
      *
      * <p>Each player's commander wears a different one (pillar 5, G0003). A look with no such variant
@@ -246,6 +258,8 @@ public final class Appearance implements Component, Pool.Poolable {
         charged = false;
         heat = 0f;
         overheated = false;
+        detonating = false;
+        spin = 0f;
         wounds = 0;
         burst = 0f;
         burstFade = 0f;

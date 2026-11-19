@@ -23,6 +23,14 @@ public final class Intent implements Component, Pool.Poolable {
     public float aimY;
     public boolean firing;
 
+    /**
+     * Whether the fire input went down this tick: held now and not held the tick before. What a gun that acts once a
+     * press reads - the detonator throws on one and sets its limpet off on the next (G0100) - so a trigger still held
+     * from the throw sets nothing off. Derived where the tick's input is copied in, from the {@link #firing} it
+     * replaces.
+     */
+    public boolean firePressed;
+
     /** Whether the melee input is held this tick. The swing itself is rate-limited by {@link Melee}. */
     public boolean striking;
 
@@ -74,6 +82,7 @@ public final class Intent implements Component, Pool.Poolable {
         this.moveY = newMoveY;
         this.aimX = newAimX;
         this.aimY = newAimY;
+        this.firePressed = newFiring && !this.firing;
         this.firing = newFiring;
         this.striking = newStriking;
         this.throwing = newThrowing;
@@ -99,6 +108,7 @@ public final class Intent implements Component, Pool.Poolable {
         aimX = 0f;
         aimY = 0f;
         firing = false;
+        firePressed = false;
         striking = false;
         throwing = false;
         acting = false;

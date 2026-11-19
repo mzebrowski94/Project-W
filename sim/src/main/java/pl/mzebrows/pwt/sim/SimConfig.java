@@ -313,6 +313,8 @@ public record SimConfig(
         largest = Math.max(largest, mine.blastRadius());
         for (WeaponDef gun : weapons.values()) {
             largest = Math.max(largest, gun.blastRadius());
+            // A limpet's circles are its gun's too, the calibrated one the wider (G0100).
+            largest = Math.max(largest, gun.limpet().calibratedBlastRadius());
         }
         return largest;
     }

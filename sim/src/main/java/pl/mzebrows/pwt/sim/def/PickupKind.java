@@ -67,5 +67,7 @@ public enum PickupKind {
      * a crate, never walked onto - and turned down while he carries his most, as a medkit is for a man with no
      * wound.
      */
-    ARMOURY_GRENADES
+    ARMOURY_GRENADES,
+    /** A weapons cache holding the detonator (G0100), dealt into crates like every other found gun. */
+    ARMOURY_DETONATOR
 }
