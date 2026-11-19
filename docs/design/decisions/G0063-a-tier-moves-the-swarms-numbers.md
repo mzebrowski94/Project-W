@@ -1,6 +1,6 @@
 # G0063: A tier moves the swarm's numbers, never what a blow does to a man
 
-**Status.** accepted
+**Status.** amended by G0102: the ramp spans the march, whatever its length
 
 **Trigger.** Adding or changing what a mission's tier scales; proposing a tier number for damage, for the
 squad, the reserve, crates or medkits; changing `sim.melee.damage`, a strain's health or

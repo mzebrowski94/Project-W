@@ -1,6 +1,6 @@
 # G0066: A level ends on its first outcome, and the result screen says what it was
 
-**Status.** accepted
+**Status.** amended by G0101: the host's MENU takes a hosted session back to its briefing
 
 **Trigger.** Anything that changes what happens when a level is won or lost, whether an outcome can be undone,
 what the result screen shows or offers, or where leaving a level returns the player to.

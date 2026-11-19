@@ -1,6 +1,6 @@
 # G0065: A mission is named by its code, and the tier never moves the map
 
-**Status.** accepted
+**Status.** amended by G0102: the code holds the mission's length and five characters of seed
 
 **Trigger.** Changing what a mission code holds or how it is checked; letting a tier change a mission's layout;
 reading the date anywhere but the client; carrying a mission online as anything but `SessionSetup`'s scenario

@@ -1,6 +1,6 @@
 # G0038: An online player is a slot the host hands out, and joining over the network is plugging a pad in
 
-**Status.** amended by G0052: a dropped link also marks the slot away; amended by G0056: the leash holds together only the commanders at one machine
+**Status.** amended by G0052: a dropped link also marks the slot away; amended by G0056: the leash holds together only the commanders at one machine; amended by G0101: a hosted session opens on a briefing, and the host starts its first tick
 
 **Trigger.** Anything that seats, identifies or counts players across machines; a host or join screen;
 the player capacity; anything that assumes a machine has one player on it, or that a game has four.
@@ -54,8 +54,8 @@ any one machine seats four.
 
 **DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-**No:** *A lobby, a ready screen or a start button on the host.* G0028's reason holds, and drop-in already
-answers what a lobby is for: nobody has to wait for anybody.
+**Reversed by G0101:** *A lobby, a ready screen or a start button on the host.* A hosted session opens on a briefing and
+the host starts its first tick; a ready button and a kick stay rejected there, and drop-in is unchanged after it.
 
 **No:** *A joining player choosing his slot, colour or character.* A slot is where he was put, not a thing
 he owns; a choice is a screen, and pillar 3 has no screens between the player and the fight.
