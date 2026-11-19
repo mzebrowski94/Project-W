@@ -5,11 +5,15 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.random.RandomGenerator;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.Clock;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.door.Door;
 import pl.mzebrows.pwt.net.lan.RoomCode;
 import pl.mzebrows.pwt.net.log.NetLog;
+import pl.mzebrows.pwt.net.session.RoomWire;
+import pl.mzebrows.pwt.net.session.Sequencer;
+import pl.mzebrows.pwt.net.session.SequencerThread;
 import pl.mzebrows.pwt.net.transport.Delivery;
 import pl.mzebrows.pwt.net.transport.Transport;
 import pl.mzebrows.pwt.net.transport.TransportListener;
@@ -21,7 +25,14 @@ import pl.mzebrows.pwt.net.transport.TransportListener;
  *
  * <p>This is the door. The first message of a link is an {@link Door.Open} (a host) or a {@link Door.Join}
  * (anybody else); the relay answers with the room's code, an acceptance, or a refusal after which it closes the
- * link. What a link in a room says is not read yet - the room's sequencer is stage 5's.
+ * link. After the door a link is a link to a sequencer (ADR 0023): the room's, built over a {@link RoomTransport}
+ * that is the room's view of this relay's one listener, so the sequencer knows nothing of rooms. The host's link
+ * is the one that opened the room; when it goes the room is over and every link is told why, as a host-run
+ * session ends. The relay reads no message in a room but to count it (and to see that a snapshot is not).
+ *
+ * <p>And what traffic needs: per link, a byte meter (inbound, snapshots not counted); per room, the idle close
+ * (nothing but acknowledgements for {@code idleRoomMinutes}) and the late-seal warning. Their keys are read here
+ * and nowhere else.
  *
  * <p>And the door's limits (stage 9, G0109): per address, how many links and rooms, how many refusals before it
  * is ignored, how long a new link may stay silent; per room, how many wrong passwords before it turns new machines
@@ -41,8 +52,11 @@ public final class Relay {
     private final Transport transport;
     private final Clock clock;
     private final NetLog log;
+    private final NetConfig net;
     private final NetConfig.Relay config;
+    private final Sequencing sequencing;
     private final RandomGenerator random;
+    private final Map<Integer, ByteBucket> buckets = new HashMap<>();
     private final Map<String, Room> rooms = new LinkedHashMap<>();
     private final Map<Integer, Room> roomOfLink = new HashMap<>();
     private final TransportListener listener = new Listener();
@@ -55,17 +69,44 @@ public final class Relay {
     private final long refusalWindowNanos;
     private final long silenceNanos;
     private final long roomLockNanos;
+    private final long idleRoomNanos;
+    private final long sealLateWarnNanos;
     private long sweptAtNanos;
 
+    /** Who pumps a room's sequencer. */
+    public enum Sequencing {
+        /** A {@code SequencerThread} per room: the process. */
+        THREADED,
+        /** {@link #poll()} pumps every room's sequencer, with the relay's clock: a test under a manual clock. */
+        PUMPED
+    }
+
+    /** A relay whose sequencers {@link #poll()} pumps. */
+    public Relay(Transport transport, Clock clock, NetLog log, NetConfig net, RandomGenerator random) {
+        this(transport, clock, log, net, random, Sequencing.PUMPED);
+    }
+
     /**
+     * @param net the relay's own config: its limits, and the pacing every room's sequencer is built with (the
+     *     host sends none, ADR 0023)
      * @param random where codes come from: a secure one in the process, a seeded one in a test
      */
-    public Relay(Transport transport, Clock clock, NetLog log, NetConfig.Relay config, RandomGenerator random) {
+    public Relay(
+            Transport transport,
+            Clock clock,
+            NetLog log,
+            NetConfig net,
+            RandomGenerator random,
+            Sequencing sequencing) {
         this.transport = transport;
         this.clock = clock;
         this.log = log;
-        this.config = config;
+        this.net = net;
+        this.config = net.relay();
+        this.sequencing = sequencing;
         this.random = random;
+        this.idleRoomNanos = config.idleRoomMinutes() * 60L * 1_000_000_000L;
+        this.sealLateWarnNanos = config.sealLateWarnMs() * 1_000_000L;
         this.helloTimeoutNanos = seconds(config.helloTimeoutSeconds());
         this.refusalWindowNanos = seconds(config.refusalWindowSeconds());
         this.silenceNanos = seconds(config.silenceSeconds());
@@ -80,8 +121,99 @@ public final class Relay {
     public void poll() {
         transport.poll(listener);
         long now = clock.nanos();
+        tendRooms(now);
         dropSilentLinks(now);
         forgetAddresses(now);
+    }
+
+    /**
+     * Each room: pumps its sequencer when this relay does, puts on the wire what the sequencer sent, closes a room
+     * whose sequencer ended or that has gone idle, and says so when its seals run late.
+     */
+    private void tendRooms(long now) {
+        Iterator<Room> it = rooms.values().iterator();
+        while (it.hasNext()) {
+            Room room = it.next();
+            if (sequencing == Sequencing.PUMPED && !room.ended()) {
+                room.sequencer().pump(now);
+            }
+            if (room.view().drainTo(transport)) {
+                room.end();
+                it.remove();
+                finish(room, null);
+                continue;
+            }
+            Sequencer sequencer = room.sequencer();
+            if (!room.sealLateWarned() && sequencer.sealLateMostNanos() > sealLateWarnNanos) {
+                room.warnedSealLate();
+                log.warn(
+                        "relay",
+                        "event=seal-late code=" + room.code() + " sealLateMostMs=" + sealLateMostMs(room) + " warnMs="
+                                + config.sealLateWarnMs());
+            }
+            if (now - Math.max(room.openedAtNanos(), sequencer.lastActiveNanos()) >= idleRoomNanos) {
+                it.remove();
+                log.info("relay", "event=room-idle code=" + room.code() + " minutes=" + config.idleRoomMinutes());
+                finish(room, "the room was idle");
+            }
+        }
+    }
+
+    private static long sealLateMostMs(Room room) {
+        return room.sequencer().sealLateMostNanos() / 1_000_000L;
+    }
+
+    /**
+     * A room is over: its sequencer stopped, its links told why ({@code reason}, or the sequencer's own "the host left
+     * the game" when null), and what the relay holds for it let go. The caller has taken it out of the relay's rooms.
+     */
+    private void finish(Room room, @Nullable String reason) {
+        if (!room.ended()) {
+            room.end();
+            SequencerThread thread = room.thread();
+            if (thread != null) {
+                thread.close();
+            } else {
+                room.sequencer().close();
+            }
+        }
+        if (reason == null) {
+            room.view().drainTo(transport);
+        } else {
+            for (int link : room.links()) {
+                transport.disconnect(link, reason);
+            }
+            room.view().discardOutbound();
+        }
+        for (int link : room.links()) {
+            roomOfLink.remove(link);
+            buckets.remove(link);
+        }
+        Address owner = addresses.get(room.openedBy());
+        if (owner != null) {
+            owner.rooms--;
+        }
+        log.info(
+                "relay",
+                "event=room-closed code=" + room.code() + " sealLateMostMs=" + sealLateMostMs(room) + " reason=\""
+                        + (reason == null ? "the host left the game" : reason) + "\"");
+    }
+
+    /** Ends every room, telling its links the relay is stopping, and lets go of the transport. */
+    public void close() {
+        Iterator<Room> it = rooms.values().iterator();
+        while (it.hasNext()) {
+            Room room = it.next();
+            it.remove();
+            finish(room, "the relay stopped");
+        }
+        transport.close();
+    }
+
+    /** The sequencer of the room with this code, or null - for a test to read what a room's session is doing. */
+    public @Nullable Sequencer sequencerOf(String code) {
+        Room room = rooms.get(code);
+        return room == null ? null : room.sequencer();
     }
 
     /** A link that has not said a word by the hello timeout is dropped; the oldest are first, so it stops at the first live one. */
@@ -149,13 +281,20 @@ public final class Relay {
         return room == null ? 0 : room.linkCount();
     }
 
-    private void received(int link, byte[] data, int offset, int length) {
+    private void received(int link, Delivery delivery, byte[] data, int offset, int length) {
         if (!addressOfLink.containsKey(link)) {
             return; // closed unanswered, or never opened: nothing it says is read
         }
         silentLinks.remove(link);
-        if (roomOfLink.containsKey(link)) {
-            log.debug("relay", "event=ignored link=" + link + " why=\"no sequencer yet\"");
+        Room inRoom = roomOfLink.get(link);
+        if (inRoom != null) {
+            ByteBucket bucket = buckets.get(link);
+            if (bucket != null && !RoomWire.isSnapshot(data, offset, length) && !bucket.take(length, clock.nanos())) {
+                log.warn("relay", "event=over-rate link=" + link + " code=" + inRoom.code());
+                transport.disconnect(link, "sending more than the relay takes");
+                return;
+            }
+            inRoom.view().received(link, delivery, data, offset, length);
             return;
         }
         Door.Message message;
@@ -187,6 +326,13 @@ public final class Relay {
                 return;
             }
         }
+        NetConfig.Session session;
+        try {
+            session = RoomWire.sessionConfig(open.sessionConfig());
+        } catch (IllegalArgumentException e) {
+            refuse(link, "this relay cannot read that session config", "bad-config");
+            return;
+        }
         Address address = addresses.get(addressOfLink.get(link));
         if (address != null && address.rooms >= config.roomsPerAddressMax()) {
             refuse(link, "this address has all the rooms it may open", "rooms-per-address");
@@ -212,14 +358,28 @@ public final class Relay {
         if (address != null) {
             address.rooms++;
         }
-        room.add(link);
+        // The pacing is this relay's own; the session config is the host's (ADR 0018, ADR 0023).
+        Sequencer sequencer =
+                new Sequencer(room.view(), net.with(session), log, MACHINES_MAX, open.hostKey(), open.buildId());
+        room.sequence(
+                sequencer,
+                sequencing == Sequencing.THREADED ? new SequencerThread(sequencer, clock, log).start() : null,
+                link);
         rooms.put(code.text(), room);
-        roomOfLink.put(link, room);
         log.info(
                 "relay",
                 "event=room-opened code=" + code + " link=" + link + " password=" + (password == null ? "no" : "yes")
                         + " build=" + room.buildId() + " version=" + room.buildVersion());
         send(link, new Door.Opened(code.text()));
+        admit(room, link);
+    }
+
+    /** A link the door has let into a room is, from now on, a link to the room's sequencer. */
+    private void admit(Room room, int link) {
+        room.add(link);
+        roomOfLink.put(link, room);
+        buckets.put(link, new ByteBucket(config.bytesPerSecondPerLink(), clock.nanos()));
+        room.view().opened(link, addressOfLink.getOrDefault(link, ""));
     }
 
     private void join(int link, Door.Join join) {
@@ -259,10 +419,9 @@ public final class Relay {
             refuse(link, "room " + code + " is full", "full");
             return;
         }
-        room.add(link);
-        roomOfLink.put(link, room);
-        log.info("relay", "event=joined code=" + code + " link=" + link + " links=" + room.linkCount());
+        log.info("relay", "event=joined code=" + code + " link=" + link + " links=" + (room.linkCount() + 1));
         send(link, new Door.Accepted(code));
+        admit(room, link);
     }
 
     private void refuse(int link, String reason, String tag) {
@@ -297,21 +456,19 @@ public final class Relay {
                 address.links--;
             }
         }
+        buckets.remove(link);
         Room room = roomOfLink.remove(link);
         if (room == null) {
             return;
         }
-        // Provisional, for review (AFK run): until stage 7's rejoin window, a room with no link left closes at
-        // once, so a relay with no sequencer yet does not fill with rooms nobody is in.
-        boolean empty = room.remove(link);
+        room.remove(link);
         log.info("relay", "event=link-left code=" + room.code() + " link=" + link + " reason=\"" + reason + "\"");
-        if (empty) {
+        if (link == room.hostLink()) {
+            // Until a new host can take over (G0104), the host's link leaving ends the room, as it ends a LAN session.
             rooms.remove(room.code().text());
-            Address owner = addresses.get(room.openedBy());
-            if (owner != null) {
-                owner.rooms--;
-            }
-            log.info("relay", "event=room-closed code=" + room.code());
+            finish(room, null);
+        } else {
+            room.view().closed(link, reason);
         }
     }
 
@@ -324,7 +481,7 @@ public final class Relay {
 
         @Override
         public void received(int link, Delivery delivery, byte[] data, int offset, int length) {
-            Relay.this.received(link, data, offset, length);
+            Relay.this.received(link, delivery, data, offset, length);
         }
 
         @Override

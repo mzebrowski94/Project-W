@@ -137,6 +137,15 @@ public final class Sequencer implements AutoCloseable {
      */
     private long lateMostNanos;
 
+    /** The latest any tick was sealed after its time, ever: what a relay's operator reads (ADR 0023's revisit). */
+    private volatile long lateMostEverNanos;
+
+    /**
+     * When something happened that was not an acknowledgement: a message other than input and checksums, an
+     * input event, or held input that changed. What a relay reads to close a room nobody is playing in.
+     */
+    private volatile long activeNanos;
+
     /**
      * @param capacity how many slots the session has; the ceiling is {@code Players.MAX}
      * @param hostKey what the host's own peer says in its hello, to be known as the host
@@ -222,6 +231,19 @@ public final class Sequencer implements AutoCloseable {
         return desyncs;
     }
 
+    /** The latest any tick was sealed after its time, in nanoseconds, since this sequencer began; safe from any thread. */
+    public long sealLateMostNanos() {
+        return lateMostEverNanos;
+    }
+
+    /**
+     * When this session last had anything but acknowledgements said to it, on the clock that pumps it; zero
+     * until then. Safe from any thread.
+     */
+    public long lastActiveNanos() {
+        return activeNanos;
+    }
+
     /** How many ticks have been sealed with this peer's input repeated because it came too late, in all. */
     int repeatedFor(int peerId) {
         Peer peer = peerWithId(peerId);
@@ -242,6 +264,7 @@ public final class Sequencer implements AutoCloseable {
         if (started && !paused) {
             while (nowNanos - nextSealNanos >= 0 && sealedNow < pacing.catchUpTicks()) {
                 lateMostNanos = Math.max(lateMostNanos, nowNanos - nextSealNanos);
+                lateMostEverNanos = Math.max(lateMostEverNanos, nowNanos - nextSealNanos);
                 seal();
                 nextSealNanos += tickNanos;
                 sealedNow++;
@@ -574,6 +597,9 @@ public final class Sequencer implements AutoCloseable {
         if (peer.id < 0 && type != Msg.HELLO) {
             throw new WireException("message " + type + " before hello");
         }
+        if (type != Msg.INPUT && type != Msg.CHECKSUM) {
+            activeNanos = now;
+        }
         switch (type) {
             case Msg.HELLO -> hello(peer);
             case Msg.INPUT -> input(peer);
@@ -854,9 +880,15 @@ public final class Sequencer implements AutoCloseable {
                 int index = tick & (AHEAD - 1);
                 in.copyTo(ahead[slot][index], 0, Bundle.HELD_BYTES);
                 aheadTick[slot][index] = tick;
+                if (!Arrays.equals(ahead[slot][index], lastHeld[slot])) {
+                    activeNanos = now;
+                }
             }
         }
         int eventCount = in.getByte();
+        if (eventCount > 0) {
+            activeNanos = now;
+        }
         for (int i = 0; i < eventCount; i++) {
             int seq = in.getInt();
             int slot = in.getByte();

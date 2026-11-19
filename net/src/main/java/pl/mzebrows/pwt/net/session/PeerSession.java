@@ -9,6 +9,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.Clock;
 import pl.mzebrows.pwt.net.NetConfig;
+import pl.mzebrows.pwt.net.door.DoorClient;
 import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.transport.Delivery;
 import pl.mzebrows.pwt.net.transport.Transport;
@@ -123,6 +124,10 @@ public final class PeerSession implements AutoCloseable {
 
     private State state = State.CLOSED;
     private @Nullable String refusal;
+
+    /** The request to a relay's door this link opens with, or null for a link straight to a sequencer. */
+    private @Nullable DoorClient door;
+
     private @Nullable String closedBecause;
     private int link = -1;
     private long hostKey;
@@ -290,7 +295,17 @@ public final class PeerSession implements AutoCloseable {
 
     /** Opens a link to a sequencer. {@code hostKey} is the sequencer's own for the host's peer, 0 for anyone else. */
     public void connect(String host, int port, long key) {
+        connect(host, port, key, null);
+    }
+
+    /**
+     * Opens a link to a relay (ADR 0023): the first thing said on it is {@code door}'s request, and the session's
+     * hello follows once the door has let this machine in. A refusal at the door is this session's {@link
+     * State#REFUSED}, its text {@link #refusal()}.
+     */
+    public void connect(String host, int port, long key, @Nullable DoorClient door) {
         hostKey = key;
+        this.door = door;
         state = State.CONNECTING;
         link = transport.connect(host, port);
         log.info("peer", "event=connecting to=" + host + ":" + port);
@@ -1199,25 +1214,61 @@ public final class PeerSession implements AutoCloseable {
         return -1;
     }
 
+    /** The session's hello: who this peer is and which build, the first thing a sequencer hears of it. */
+    private void hello(String remote) {
+        out.reset()
+                .putByte(Msg.HELLO)
+                .putInt(Msg.PROTOCOL)
+                .putString(build)
+                .putLong(hostKey)
+                .putString(machineId);
+        transport.send(link, Delivery.RELIABLE, out.array(), 0, out.size());
+        log.info("peer", "event=hello remote=" + remote + " build=" + build + " machine=" + machineId);
+    }
+
+    /** What the relay answered at the door: in, and the hello goes; or refused, and the text is kept. */
+    private void heardAtTheDoor(DoorClient asking, byte[] data, int offset, int length) {
+        try {
+            asking.hear(data, offset, length);
+        } catch (IllegalArgumentException e) {
+            log.error("peer", "event=malformed reason=\"" + e.getMessage() + "\"", e);
+            transport.disconnect(link, "malformed: " + e.getMessage());
+            return;
+        }
+        if (asking.state() == DoorClient.State.IN) {
+            log.info("peer", "event=door-in code=" + asking.code());
+            hello("relay");
+        } else if (asking.state() == DoorClient.State.REFUSED) {
+            refusal = asking.refusal();
+            state = State.REFUSED;
+            log.warn("peer", "event=refused reason=\"" + refusal + "\"");
+        }
+    }
+
     private final class Listener implements TransportListener {
         @Override
         public void opened(int opened, String remote) {
             if (opened != link) {
                 return;
             }
-            out.reset()
-                    .putByte(Msg.HELLO)
-                    .putInt(Msg.PROTOCOL)
-                    .putString(build)
-                    .putLong(hostKey)
-                    .putString(machineId);
-            transport.send(link, Delivery.RELIABLE, out.array(), 0, out.size());
-            log.info("peer", "event=hello remote=" + remote + " build=" + build + " machine=" + machineId);
+            DoorClient asking = door;
+            if (asking != null) {
+                byte[] first = asking.first();
+                transport.send(link, Delivery.RELIABLE, first, 0, first.length);
+                log.info("peer", "event=door remote=" + remote);
+                return;
+            }
+            hello(remote);
         }
 
         @Override
         public void received(int from, Delivery delivery, byte[] data, int offset, int length) {
             if (from != link) {
+                return;
+            }
+            DoorClient asking = door;
+            if (asking != null && asking.state() == DoorClient.State.WAITING) {
+                heardAtTheDoor(asking, data, offset, length);
                 return;
             }
             try {

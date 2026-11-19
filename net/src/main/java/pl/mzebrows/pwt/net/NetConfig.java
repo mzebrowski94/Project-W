@@ -67,6 +67,16 @@ public record NetConfig(
     public static final ConfigFile<NetConfig> FILE = new ConfigFile<>(
             "network.properties", NetConfig.class, ROOT, ShippedNetConfig.TEXT, ConfigBinder.Conversions.none());
 
+    /**
+     * A file's text bound over what ships, for a process with no loader of its own (the relay): every problem the
+     * text had goes to {@code problems}, and the shipped value stands for each.
+     */
+    public static NetConfig read(String text, java.util.function.Consumer<String> problems) {
+        ConfigFile.Parsed<NetConfig> parsed = FILE.read(text);
+        parsed.problems().forEach(problems);
+        return parsed.config();
+    }
+
     /** What ships: {@code assets/network.properties}, compiled in. What every test runs. */
     public static NetConfig defaults() {
         return FILE.defaults();
@@ -341,6 +351,11 @@ public record NetConfig(
      * @param silenceSeconds how long an address that collected its refusals is ignored: its links are closed unanswered
      * @param wrongPasswordsPerRoomMax wrong passwords a room may hear in a window; the last of them locks the room
      * @param roomLockSeconds how long a room turns new machines away, and how long a window of wrong passwords runs
+     * @param bytesPerSecondPerLink how many bytes a second one link may send the relay, snapshots not counted; a
+     *     link over it is dropped. A burst of one second's worth is allowed
+     * @param idleRoomMinutes how long a room may go with nothing said in it but acknowledgements before it closes
+     * @param sealLateWarnMs how late, in milliseconds, a room's sequencer may seal a tick before the relay says so
+     *     in its log - half a tick, at 60 Hz (ADR 0023's revisit)
      */
     public record Relay(
             int roomsMax,
@@ -351,7 +366,10 @@ public record NetConfig(
             int refusalWindowSeconds,
             int silenceSeconds,
             int wrongPasswordsPerRoomMax,
-            int roomLockSeconds) {
+            int roomLockSeconds,
+            int bytesPerSecondPerLink,
+            int idleRoomMinutes,
+            int sealLateWarnMs) {
 
         public Relay {
             require(roomsMax >= 1, "relay.roomsMax", roomsMax);
@@ -363,6 +381,9 @@ public record NetConfig(
             require(silenceSeconds >= 1, "relay.silenceSeconds", silenceSeconds);
             require(wrongPasswordsPerRoomMax >= 1, "relay.wrongPasswordsPerRoomMax", wrongPasswordsPerRoomMax);
             require(roomLockSeconds >= 1, "relay.roomLockSeconds", roomLockSeconds);
+            require(bytesPerSecondPerLink >= 1, "relay.bytesPerSecondPerLink", bytesPerSecondPerLink);
+            require(idleRoomMinutes >= 1, "relay.idleRoomMinutes", idleRoomMinutes);
+            require(sealLateWarnMs >= 1, "relay.sealLateWarnMs", sealLateWarnMs);
         }
     }
 

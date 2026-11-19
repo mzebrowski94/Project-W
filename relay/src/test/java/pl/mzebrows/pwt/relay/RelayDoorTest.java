@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.door.Door;
 import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.loopback.LoopbackNetwork;
+import pl.mzebrows.pwt.net.session.RoomWire;
 import pl.mzebrows.pwt.net.transport.Delivery;
 import pl.mzebrows.pwt.net.transport.Transport;
 import pl.mzebrows.pwt.net.transport.TransportListener;
@@ -41,10 +42,10 @@ class RelayDoorTest {
 
     @BeforeEach
     void startRelay() {
-        start(net.relay(), new java.util.SplittableRandom(7));
+        start(net, new java.util.SplittableRandom(7));
     }
 
-    private void start(NetConfig.Relay config, RandomGenerator random) {
+    private void start(NetConfig config, RandomGenerator random) {
         network = new LoopbackNetwork(net);
         log = NetLog.open(new NetConfig.LogConfig(dir.toString(), "FINE", 64, 0), "relay");
         relayTransport = network.endpoint("relay");
@@ -147,7 +148,7 @@ class RelayDoorTest {
         };
         log.close();
         machines.clear();
-        start(net.relay(), stuck);
+        start(net, stuck);
 
         String first = openRoom("");
         String second = openRoom("");
@@ -193,9 +194,9 @@ class RelayDoorTest {
         assertThat(machine.closed).isTrue();
     }
 
-    private NetConfig.Relay withRoomsMax(int roomsMax) {
+    private NetConfig withRoomsMax(int roomsMax) {
         NetConfig.Relay base = net.relay();
-        return new NetConfig.Relay(
+        return net.with(new NetConfig.Relay(
                 roomsMax,
                 base.roomsPerAddressMax(),
                 base.linksPerAddressMax(),
@@ -204,7 +205,10 @@ class RelayDoorTest {
                 base.refusalWindowSeconds(),
                 base.silenceSeconds(),
                 base.wrongPasswordsPerRoomMax(),
-                base.roomLockSeconds());
+                base.roomLockSeconds(),
+                base.bytesPerSecondPerLink(),
+                base.idleRoomMinutes(),
+                base.sealLateWarnMs()));
     }
 
     private String openRoom(String password) {
@@ -214,7 +218,8 @@ class RelayDoorTest {
     }
 
     private static Door.Open open(String password) {
-        return new Door.Open(BUILD, VERSION, 42L, new byte[] {1, 2, 3}, password);
+        return new Door.Open(
+                BUILD, VERSION, 42L, RoomWire.sessionConfig(NetConfig.defaults().session()), password);
     }
 
     private static Door.Join join(String code, String password) {

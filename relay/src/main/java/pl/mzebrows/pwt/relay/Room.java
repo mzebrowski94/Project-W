@@ -4,11 +4,15 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.lan.RoomCode;
+import pl.mzebrows.pwt.net.session.Sequencer;
+import pl.mzebrows.pwt.net.session.SequencerThread;
 
 /**
  * The relay's record of one session (G0103): its code, its password if it has one, the build it runs and
  * its links. The password lives here, in memory, and nowhere else - no {@code toString}, no log line.
- * No sequencer yet (stage 5): a room after the door only keeps its links.
+ * And its sequencer (ADR 0023), over a {@link RoomTransport} that is this room's view of the relay's links: a
+ * {@link SequencerThread} in the process, a sequencer the relay pumps in a test. The host's link is the one that
+ * opened the room; when it goes the room is over.
  */
 final class Room {
 
@@ -21,6 +25,12 @@ final class Room {
     private final long openedAtNanos;
     private final Set<Integer> links = new LinkedHashSet<>();
     private final String openedBy;
+    private final RoomTransport view = new RoomTransport();
+    private @Nullable Sequencer sequencer;
+    private @Nullable SequencerThread thread;
+    private int hostLink = -1;
+    private boolean sealLateWarned;
+    private boolean ended;
     private int wrongPasswords;
     private long wrongWindowStartNanos;
     private long lockedUntilNanos;
@@ -42,6 +52,52 @@ final class Room {
         this.sessionConfig = sessionConfig.clone();
         this.openedAtNanos = openedAtNanos;
         this.openedBy = openedBy;
+    }
+
+    /** Gives the room its sequencer, built over {@link #view()}, and says which link is the host's. */
+    void sequence(Sequencer built, @Nullable SequencerThread running, int host) {
+        this.sequencer = built;
+        this.thread = running;
+        this.hostLink = host;
+    }
+
+    RoomTransport view() {
+        return view;
+    }
+
+    Sequencer sequencer() {
+        Sequencer built = sequencer;
+        if (built == null) {
+            throw new IllegalStateException("room " + code + " has no sequencer yet");
+        }
+        return built;
+    }
+
+    @Nullable
+    SequencerThread thread() {
+        return thread;
+    }
+
+    int hostLink() {
+        return hostLink;
+    }
+
+    /** Whether the sequencer has been told to end: closed, or ended on its own. */
+    boolean ended() {
+        return ended;
+    }
+
+    void end() {
+        ended = true;
+    }
+
+    /** Whether the late-seal warning has been given: said once, on the pass. */
+    boolean sealLateWarned() {
+        return sealLateWarned;
+    }
+
+    void warnedSealLate() {
+        sealLateWarned = true;
     }
 
     /** The address the host's link came from: the one whose room count this room is in. */
@@ -112,6 +168,16 @@ final class Room {
 
     void add(int link) {
         links.add(link);
+    }
+
+    /** The links in the room now, as a fresh array. */
+    int[] links() {
+        int[] result = new int[links.size()];
+        int i = 0;
+        for (int link : links) {
+            result[i++] = link;
+        }
+        return result;
     }
 
     /** Takes a link out; true when that was the last one. */

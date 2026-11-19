@@ -9,6 +9,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.ManualClock;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.NetConfig.Conditions;
+import pl.mzebrows.pwt.net.door.DoorClient;
 import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.loopback.LoopbackNetwork;
 import pl.mzebrows.pwt.net.transport.ConditionedTransport;
@@ -37,8 +38,19 @@ final class SessionHarness implements AutoCloseable {
     final ManualClock clock = new ManualClock();
     final NetConfig config;
     final LoopbackNetwork network;
-    final Sequencer sequencer;
     final int port;
+
+    /** The sequencer on the host's machine - null in a session through a relay, whose rooms hold theirs. */
+    private final @Nullable Sequencer direct;
+
+    /** The relay a session through one is played on: the harness only pumps it. Null in a session without a room. */
+    private final @Nullable Front front;
+
+    /** What every machine of a session through a relay is conditioned by unless it says otherwise. */
+    private final Conditions everyLink;
+
+    /** The host's door, once there is one: where the room's code comes from. */
+    private @Nullable DoorClient hostDoor;
 
     /** What the host starts the mission with. */
     final SessionSetup setup;
@@ -72,9 +84,65 @@ final class SessionHarness implements AutoCloseable {
         this.config = config;
         network = new LoopbackNetwork(config);
         this.setup = new SessionSetup("", scenario, seed);
+        this.front = null;
+        this.everyLink = Conditions.NONE;
         Transport hostEnd = new Counted(conditioned(network.endpoint("host"), atTheHost));
-        sequencer = new Sequencer(hostEnd, config, sequencerLog, Players.MAX, HOST_KEY, BuildId.current());
-        port = sequencer.listen(config.port(), 0);
+        Sequencer built = new Sequencer(hostEnd, config, sequencerLog, Players.MAX, HOST_KEY, BuildId.current());
+        direct = built;
+        port = built.listen(config.port(), 0);
+    }
+
+    /**
+     * A session through a relay (ADR 0023): the sequencer is the room's, on the relay {@code relay} builds over
+     * the end this gives it, and every machine - the host's peer too - reaches it through the door, over a link
+     * conditioned by {@code everyLink} unless the machine's own conditions say otherwise.
+     */
+    SessionHarness(NetConfig config, String scenario, long seed, Conditions everyLink, FrontFactory relay) {
+        this.config = config;
+        network = new LoopbackNetwork(config);
+        this.setup = new SessionSetup("", scenario, seed);
+        this.direct = null;
+        this.everyLink = everyLink;
+        Transport relayEnd = new Counted(network.endpoint("relay"));
+        port = relayEnd.listen(config.port(), 0);
+        this.front = relay.on(relayEnd, clock, config);
+    }
+
+    /** A relay a session can be played through: it is pumped with the session, and finds a room's sequencer by its code. */
+    interface Front extends AutoCloseable {
+
+        void pump(long nowNanos);
+
+        @Nullable
+        Sequencer sequencerOf(String code);
+
+        @Override
+        void close();
+    }
+
+    /** Builds the relay on the transport it is to listen on. */
+    interface FrontFactory {
+
+        Front on(Transport relayEnd, ManualClock clock, NetConfig config);
+    }
+
+    /** The sequencer of the session: the host's own, or the room's on the relay once the host has opened it. */
+    Sequencer sequencer() {
+        Sequencer direct = this.direct;
+        if (direct != null) {
+            return direct;
+        }
+        DoorClient door = hostDoor;
+        assertThat(door).as("a host has asked for a room").isNotNull();
+        String code = door.code();
+        assertThat(code).as("the relay has opened the room").isNotNull();
+        Front relay = front;
+        if (relay == null) {
+            throw new IllegalStateException("neither a host's sequencer nor a relay");
+        }
+        Sequencer room = relay.sequencerOf(code);
+        assertThat(room).as("room %s is open", code).isNotNull();
+        return room;
     }
 
     /** The host's own peer: on the host's machine, over a perfect link, knowing the key. */
@@ -110,13 +178,35 @@ final class SessionHarness implements AutoCloseable {
             String build,
             int phase,
             NetConfig own) {
-        Transport end = conditioned(network.endpoint(name), conditions);
+        Transport end = conditioned(network.endpoint(name), conditions.any() ? conditions : everyLink);
         PeerSession session = new PeerSession(end, own, peerLog, new TestWorlds(), dumpDir, build, name, snapshotLimit);
-        session.connect("host", port, key);
+        if (front == null) {
+            session.connect("host", port, key);
+        } else if (key != 0L) {
+            DoorClient door = DoorClient.open(build, "test", key, RoomWire.sessionConfig(config.session()), "");
+            hostDoor = door;
+            session.connect("relay", port, key, door);
+        } else {
+            session.connect("relay", port, key, DoorClient.join(roomCode(), "", build, "test"));
+        }
         session.seat(0);
         Machine machine = new Machine(name, session, phase);
         machines.add(machine);
         return machine;
+    }
+
+    /** The room's code, once the host's door has been answered: frames run until it has. */
+    private String roomCode() {
+        DoorClient door = hostDoor;
+        assertThat(door).as("the host connects first").isNotNull();
+        for (int i = 0; i < 300 && door.state() == DoorClient.State.WAITING; i++) {
+            run(1);
+        }
+        String code = door.code();
+        assertThat(code)
+                .as("the relay's answer to the host: %s", door.refusal())
+                .isNotNull();
+        return code;
     }
 
     /** Runs this many frames. */
@@ -124,7 +214,11 @@ final class SessionHarness implements AutoCloseable {
         for (int i = 0; i < frames; i++) {
             clock.advanceNanos(frameNanos);
             long now = clock.nanos();
-            sequencer.pump(now);
+            if (front != null) {
+                front.pump(now);
+            } else {
+                sequencer().pump(now);
+            }
             for (Machine machine : machines) {
                 if (machine.frozenFrames > 0) {
                     machine.frozenFrames--;
@@ -150,10 +244,10 @@ final class SessionHarness implements AutoCloseable {
         for (int i = 0; i < 600 && !allCaughtUp(); i++) {
             run(1);
         }
-        assertThat(sequencer.sealedTick()).as("ticks sealed").isPositive();
-        assertThat(sequencer.paused()).as("paused").isTrue();
+        assertThat(sequencer().sealedTick()).as("ticks sealed").isPositive();
+        assertThat(sequencer().paused()).as("paused").isTrue();
         assertThat(allCaughtUp())
-                .as("every machine at tick %d", sequencer.sealedTick())
+                .as("every machine at tick %d", sequencer().sealedTick())
                 .isTrue();
         long reference = WorldCodec.hash(world(machines.get(0)));
         for (Machine machine : machines) {
@@ -169,11 +263,11 @@ final class SessionHarness implements AutoCloseable {
     private boolean allCaughtUp() {
         for (Machine machine : machines) {
             if (machine.session.state() != PeerSession.State.PLAYING
-                    || machine.session.tick() != sequencer.sealedTick()) {
+                    || machine.session.tick() != sequencer().sealedTick()) {
                 return false;
             }
         }
-        return sequencer.paused();
+        return sequencer().paused();
     }
 
     /** This machine's link drops: it closes, and plays no further part. */
@@ -197,7 +291,11 @@ final class SessionHarness implements AutoCloseable {
         for (Machine machine : machines) {
             machine.session.close();
         }
-        sequencer.close();
+        if (front != null) {
+            front.close();
+        } else {
+            sequencer().close();
+        }
     }
 
     /** The host's end of the network, counting what it sends. */

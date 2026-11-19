@@ -56,7 +56,7 @@ class SessionTest {
             assertThat(host.session.slotOf(0)).isZero();
             assertThat(friend.session.slotOf(0)).isEqualTo(1);
             assertThat(other.session.slotOf(0)).isEqualTo(2);
-            assertThat(session.sequencer.desyncs()).isZero();
+            assertThat(session.sequencer().desyncs()).isZero();
             assertThat(host.session.lead()).isEqualTo(session.config.pacing().leadMinTicks());
         }
     }
@@ -89,7 +89,7 @@ class SessionTest {
             session.run(1200);
             session.agreedHash();
 
-            assertThat(session.sequencer.desyncs()).isZero();
+            assertThat(session.sequencer().desyncs()).isZero();
             assertThat(far.session.lead())
                     .as("a peer 40 ms away plays further ahead than the host")
                     .isGreaterThan(host.session.lead())
@@ -135,14 +135,14 @@ class SessionTest {
             Machine slow = session.join("slow", STEADY_40_MS);
             slow.cadence = cadence;
             session.run(600);
-            int before = session.sequencer.repeatedFor(slow.session.peerId());
+            int before = session.sequencer().repeatedFor(slow.session.peerId());
 
             session.run(600);
 
-            assertThat(session.sequencer.repeatedFor(slow.session.peerId()) - before)
+            assertThat(session.sequencer().repeatedFor(slow.session.peerId()) - before)
                     .as("its ticks sealed with a repeated input, of 600")
                     .isZero();
-            assertThat(session.sequencer.sealedTick() - slow.session.tick() - slow.session.cushion())
+            assertThat(session.sequencer().sealedTick() - slow.session.tick() - slow.session.cushion())
                     .as("ticks it is behind, beyond those it keeps in hand")
                     .isLessThanOrEqualTo(12);
         }
@@ -293,12 +293,13 @@ class SessionTest {
             while (late.session.state() != PeerSession.State.PLAYING) {
                 session.run(1);
             }
-            assertThat(session.sequencer.sealedTick() - late.session.tick())
+            assertThat(session.sequencer().sealedTick() - late.session.tick())
                     .as("ticks behind once it has built its world")
                     .isGreaterThan(200);
 
             int frames = 0;
-            while (session.sequencer.sealedTick() - late.session.tick() > 8 + late.session.cushion() && frames < 1000) {
+            while (session.sequencer().sealedTick() - late.session.tick() > 8 + late.session.cushion()
+                    && frames < 1000) {
                 session.run(1);
                 frames++;
             }
@@ -366,14 +367,14 @@ class SessionTest {
 
             session.run(1800);
 
-            assertThat(session.sequencer.sealedTick() - far.session.tick())
+            assertThat(session.sequencer().sealedTick() - far.session.tick())
                     .as("ticks the far machine is behind")
                     .isLessThanOrEqualTo(24);
             assertThat(far.session.lead())
                     .as("the far machine's input delay")
                     .isLessThan(session.config.pacing().leadMaxTicks());
             session.agreedHash();
-            assertThat(session.sequencer.desyncs()).isZero();
+            assertThat(session.sequencer().desyncs()).isZero();
         }
     }
 
@@ -393,7 +394,7 @@ class SessionTest {
 
             assertThat(late.session.state()).isEqualTo(PeerSession.State.PLAYING);
             session.agreedHash();
-            assertThat(session.sequencer.desyncs()).isZero();
+            assertThat(session.sequencer().desyncs()).isZero();
         }
     }
 
@@ -414,7 +415,7 @@ class SessionTest {
             stalled.frozenFrames = 400;
             session.run(400 + 180);
 
-            assertThat(session.sequencer.sealedTick() - stalled.session.tick())
+            assertThat(session.sequencer().sealedTick() - stalled.session.tick())
                     .as("ticks behind three seconds after a stall of nearly seven")
                     .isLessThanOrEqualTo(session.config.pacing().bufferTicks() + 2);
         }
@@ -492,7 +493,7 @@ class SessionTest {
             assertThat(awayWhileStopped).as("away while its game is stopped").isTrue();
             assertThat(stopping.session.closedBecause()).as("let go because").isNull();
             assertThat(stopping.session.state()).isEqualTo(PeerSession.State.PLAYING);
-            assertThat(session.sequencer.sealedTick() - stopping.session.tick())
+            assertThat(session.sequencer().sealedTick() - stopping.session.tick())
                     .as("ticks behind ten seconds after its game ran again")
                     .isLessThanOrEqualTo(8);
             assertThat(presence(host).isAway(slot)).as("away once back").isFalse();
@@ -549,7 +550,7 @@ class SessionTest {
             assertThat(late.session.state()).isEqualTo(PeerSession.State.PLAYING);
             assertThat(late.session.slotOf(0)).isEqualTo(1);
             assertThat(agreed).isEqualTo(pl.mzebrows.pwt.sim.WorldCodec.hash(SessionHarness.world(late)));
-            assertThat(session.sequencer.desyncs()).isZero();
+            assertThat(session.sequencer().desyncs()).isZero();
         }
     }
 
@@ -568,7 +569,7 @@ class SessionTest {
             session.run(200);
             session.agreedHash();
 
-            assertThat(session.sequencer.desyncs()).isEqualTo(1);
+            assertThat(session.sequencer().desyncs()).isEqualTo(1);
             List<Path> written;
             try (Stream<Path> files = Files.list(dumps)) {
                 written = files.filter(file -> file.toString().endsWith(".bin"))
@@ -607,7 +608,7 @@ class SessionTest {
             world.step(new PlayerInputs(world.capacity()));
             session.run(200);
 
-            assertThat(session.sequencer.desyncs()).isEqualTo(1);
+            assertThat(session.sequencer().desyncs()).isEqualTo(1);
         }
     }
 
@@ -633,13 +634,13 @@ class SessionTest {
 
             friend.session.pause(true);
             session.run(10);
-            int pausedAt = session.sequencer.sealedTick();
+            int pausedAt = session.sequencer().sealedTick();
             session.run(60);
-            assertThat(session.sequencer.sealedTick()).isEqualTo(pausedAt);
+            assertThat(session.sequencer().sealedTick()).isEqualTo(pausedAt);
             assertThat(host.session.paused()).isTrue();
             friend.session.pause(false);
             session.run(10);
-            assertThat(session.sequencer.sealedTick()).isGreaterThan(pausedAt);
+            assertThat(session.sequencer().sealedTick()).isGreaterThan(pausedAt);
 
             Simulation before = SessionHarness.world(host);
             friend.session.restart();
@@ -654,7 +655,7 @@ class SessionTest {
             session.agreedHash();
             assertThat(SessionHarness.world(host)).isNotSameAs(before);
             assertThat(SessionHarness.world(friend).commanderInvulnerable()).isTrue();
-            assertThat(session.sequencer.desyncs()).isZero();
+            assertThat(session.sequencer().desyncs()).isZero();
         }
     }
 
@@ -721,7 +722,7 @@ class SessionTest {
                         .as("%s holds %s", machine.name, kind)
                         .isPositive();
             }
-            assertThat(session.sequencer.desyncs()).isZero();
+            assertThat(session.sequencer().desyncs()).isZero();
         }
     }
 
@@ -751,7 +752,7 @@ class SessionTest {
 
             assertThat(agreed).isEqualTo(pl.mzebrows.pwt.sim.WorldCodec.hash(SessionHarness.world(late)));
             assertThat(view(late).heldCount()).isEqualTo(view(host).heldCount()).isPositive();
-            assertThat(session.sequencer.desyncs()).isZero();
+            assertThat(session.sequencer().desyncs()).isZero();
         }
     }
 
@@ -786,7 +787,7 @@ class SessionTest {
                         .as("%s sees slot 1 back", machine.name)
                         .isFalse();
             }
-            assertThat(session.sequencer.desyncs()).isZero();
+            assertThat(session.sequencer().desyncs()).isZero();
         }
     }
 
@@ -808,7 +809,7 @@ class SessionTest {
                         .as("%s holds nothing", machine.name)
                         .isZero();
             }
-            assertThat(session.sequencer.desyncs()).isZero();
+            assertThat(session.sequencer().desyncs()).isZero();
         }
     }
 
@@ -939,7 +940,7 @@ class SessionTest {
             assertThat(host.session.state()).isEqualTo(PeerSession.State.BRIEFING);
             assertThat(friend.session.state()).isEqualTo(PeerSession.State.BRIEFING);
             assertThat(friend.session.simulation()).isNull();
-            assertThat(session.sequencer.sealedTick()).isEqualTo(-1);
+            assertThat(session.sequencer().sealedTick()).isEqualTo(-1);
             assertThat(friend.session.players())
                     .extracting(BriefingPlayer::slot, BriefingPlayer::machine, BriefingPlayer::host)
                     .containsExactly(

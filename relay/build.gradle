@@ -2,8 +2,21 @@ eclipse.project.name = appName + '-relay'
 
 // The relay (ADR 0023): the door and the rooms online sessions meet through. Headless - no libGDX, and
 // RelayArchitectureTest keeps it so, with Netty inside net.netty and nothing of sim but the config plumbing.
+// The relay as a process: `./gradlew :relay:run [--args=path/to/overrides.properties]`.
+tasks.register('run', JavaExec) {
+  group = 'application'
+  description = 'Runs the relay: Netty on net.port, a thread per room.'
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'pl.mzebrows.pwt.relay.RelayMain'
+}
+
+// The session tests of a room play whole sessions through the relay with net's own harness.
+evaluationDependsOn(':net')
+def netTests = project(':net').sourceSets.test.output
+
 dependencies {
   api project(':net')
+  testImplementation netTests
 
   testImplementation "com.tngtech.archunit:archunit-junit5:$archunitVersion"
 }

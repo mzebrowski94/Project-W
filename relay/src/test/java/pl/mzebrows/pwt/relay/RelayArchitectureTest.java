@@ -27,6 +27,15 @@ final class RelayArchitectureTest {
                     + " handed a Transport and never builds one");
 
     @ArchTest
+    static final ArchRule onlyTheProcessNamesTheNettyAdapter = noClasses()
+            .that()
+            .doNotHaveSimpleName("RelayMain")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("pl.mzebrows.pwt.net.netty..")
+            .because("the relay is handed a Transport; the one class that builds a real one is the process's");
+
+    @ArchTest
     static final ArchRule theRelayReadsTheClockThroughTheClockPort = noClasses()
             .should()
             .callMethod(System.class, "nanoTime")

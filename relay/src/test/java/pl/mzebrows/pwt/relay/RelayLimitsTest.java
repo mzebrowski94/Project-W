@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.door.Door;
 import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.loopback.LoopbackNetwork;
+import pl.mzebrows.pwt.net.session.RoomWire;
 import pl.mzebrows.pwt.net.transport.Delivery;
 import pl.mzebrows.pwt.net.transport.Transport;
 import pl.mzebrows.pwt.net.transport.TransportListener;
@@ -42,7 +43,7 @@ class RelayLimitsTest {
         log = NetLog.open(new NetConfig.LogConfig(dir.toString(), "FINE", 64, 0), "relay");
         Transport transport = network.endpoint("relay");
         transport.listen(24_741, 0);
-        relay = new Relay(transport, clock, log, limits, new java.util.SplittableRandom(7));
+        relay = new Relay(transport, clock, log, net, new java.util.SplittableRandom(7));
     }
 
     @AfterEach
@@ -249,12 +250,13 @@ class RelayLimitsTest {
 
     private String openRoom(String password) {
         Machine host = machine("host");
-        host.say(new Door.Open(BUILD, VERSION, 42L, new byte[] {1}, password));
+        host.say(new Door.Open(BUILD, VERSION, 42L, RoomWire.sessionConfig(net.session()), password));
         return ((Door.Opened) host.last()).code();
     }
 
     private static Door.Open open() {
-        return new Door.Open(BUILD, VERSION, 42L, new byte[] {1}, "");
+        return new Door.Open(
+                BUILD, VERSION, 42L, RoomWire.sessionConfig(NetConfig.defaults().session()), "");
     }
 
     private static Door.Join join(String code) {
