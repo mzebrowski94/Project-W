@@ -7,6 +7,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import java.util.ArrayList;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.config.BuildVersion;
 import pl.mzebrows.pwt.client.hud.MenuPainter;
 import pl.mzebrows.pwt.client.hud.PageHints;
 import pl.mzebrows.pwt.client.hud.UiStrings;
@@ -16,11 +17,15 @@ import pl.mzebrows.pwt.client.input.NavInputReader;
 import pl.mzebrows.pwt.client.input.PageControls;
 import pl.mzebrows.pwt.client.play.JoinChoices;
 import pl.mzebrows.pwt.client.play.OnlineSession;
+import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.SystemClock;
+import pl.mzebrows.pwt.net.door.Door;
 import pl.mzebrows.pwt.net.lan.LanListener;
 import pl.mzebrows.pwt.net.lan.RoomCode;
 import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.session.BuildId;
+import pl.mzebrows.pwt.sim.PlayerInputs;
+import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.ui.layout.Rect;
 import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 import pl.mzebrows.pwt.ui.nav.CodePicker;
@@ -43,7 +48,7 @@ public final class JoinScreen extends ScreenAdapter {
 
     private final GameContext context;
     private final UiStrings strings = UiStrings.load();
-    private final JoinChoices choices = new JoinChoices(BuildId.current());
+    private final JoinChoices choices;
     private final CodePicker picker = new CodePicker(RoomCode.ALPHABET, RoomCode.LENGTH);
     private final NavInput nav = new NavInput();
     private final InputModality modality = new InputModality();
@@ -59,11 +64,29 @@ public final class JoinScreen extends ScreenAdapter {
 
     private @Nullable LanListener listener;
     private boolean picking;
+
+    /** A room asked of the relay: the page waits for its door's answer before it lets go of the player (G0103). */
+    private @Nullable OnlineSession asking;
+
+    /** The session was handed to the scenario screen, which closes it. */
+    private boolean handedOver;
+
+    /** What a session is given each frame while it waits at the door: nobody holds anything. */
+    private static final PlayerInputs IDLE = new PlayerInputs(Players.MAX);
+
+    private int linesShown = -1;
+
+    /** The room that is being asked for, as the page names it while it waits. */
+    private String askedRoom = "";
+
     private int sessionsShown = -1;
     private Rect panel = Rect.EMPTY;
 
     public JoinScreen(GameContext context) {
         this.context = context;
+        NetConfig.Relay relay = context.netConfig().relay();
+        this.choices = new JoinChoices(
+                BuildId.current(), relay.set() ? new JoinChoices.Relay(relay.host(), relay.port()) : null);
         this.hints = new PageHints(context.controlsConfig(), strings);
         this.painter = new MenuPainter(
                 context.hud(),
@@ -92,11 +115,19 @@ public final class JoinScreen extends ScreenAdapter {
             heard.poll();
             choices.heard(heard.heard());
         }
+        if (asking != null && !waitForTheDoor(delta)) {
+            return;
+        }
         ScreenLayout layout = context.hud().layout();
         reader.read(nav, delta, true, false, keys, held, layout);
         modality.update(nav);
         rebuild(heard != null && heard.listening());
-        if (picking ? pick() : choose(layout)) {
+        if (asking != null) {
+            // Nothing is chosen while the relay answers; Back gives the attempt up.
+            if (nav.back || nav.pointerSecondary) {
+                giveUp();
+            }
+        } else if (picking ? pick() : choose(layout)) {
             return;
         }
         if (modality.showsPointer()) {
@@ -126,6 +157,12 @@ public final class JoinScreen extends ScreenAdapter {
         int visible = painter.visibleEntries(layout.canvas(), head, lines.size(), foot.size());
         int chosen = page.handle(nav, painter.layout(), panel, MenuPainter.firstEntryLine(head), visible);
         if (chosen == PageControls.BACK) {
+            if (choices.asking() != null) {
+                // Out of the password line, to the code line again.
+                choices.cancelPassword();
+                picking = false;
+                return false;
+            }
             context.queueScreen(new MenuScreen(context, "", UiPage.ONLINE));
             return true;
         }
@@ -133,6 +170,20 @@ public final class JoinScreen extends ScreenAdapter {
             return false;
         }
         int codeLine = choices.sessions().size();
+        if (choices.asking() != null && chosen > codeLine) {
+            // The password line, under the code line.
+            if (choices.typedPassword().isEmpty() || modality.padHints()) {
+                picking = true;
+                choices.replaceTyped(picker.code());
+                return false;
+            }
+            return join();
+        }
+        if (choices.asking() != null && chosen == codeLine) {
+            // Back to the code: the page stops asking.
+            choices.cancelPassword();
+            return false;
+        }
         if (chosen < codeLine) {
             choices.replaceTyped("");
             choices.select(chosen);
@@ -175,6 +226,9 @@ public final class JoinScreen extends ScreenAdapter {
             return false;
         }
         Log.info("Joining " + target.description());
+        if (target.relayed()) {
+            return ask(target);
+        }
         context.queueScreen(new ScenarioScreen(
                 context,
                 OnlineSession.join(
@@ -185,6 +239,75 @@ public final class JoinScreen extends ScreenAdapter {
                         target.port(),
                         LocalMachineId.load())));
         return true;
+    }
+
+    /** Asks the relay's door into a room: the page waits for the answer. False if the attempt could not be made. */
+    private boolean ask(JoinChoices.Target target) {
+        try {
+            asking = OnlineSession.joinThroughRelay(
+                    context.netConfig(),
+                    context.launchOptions(),
+                    context.netConfig().latencySteps(),
+                    target.room(),
+                    target.password(),
+                    LocalMachineId.load(),
+                    BuildVersion.current());
+        } catch (RuntimeException e) {
+            Log.error("Could not reach the relay", e);
+            context.queueScreen(new MenuScreen(context, OnlineSession.UNREACHABLE));
+            return true;
+        }
+        askedRoom = target.room();
+        picking = false;
+        return false;
+    }
+
+    /**
+     * One frame of the door's answer. Let in, the player goes on to the session. A refusal for want of a password opens
+     * the password line - once: a password that was given and is wrong is the relay's other refusal, as any other
+     * refusal - and the player goes back to the menu with what the relay said (G0103). False when the screen is left.
+     */
+    private boolean waitForTheDoor(float delta) {
+        OnlineSession door = asking;
+        if (door == null) {
+            return true;
+        }
+        door.advance(delta, IDLE);
+        String refusal = door.relayRefusal();
+        if (refusal != null) {
+            asking = null;
+            door.close();
+            if (choices.asking() == null
+                    && refusal.equals(Door.REFUSAL_PREFIX + "room " + askedRoom + " has a password")) {
+                choices.askPassword(askedRoom);
+                picking = false;
+                return true;
+            }
+            Log.info(refusal);
+            context.queueScreen(new MenuScreen(context, refusal));
+            return false;
+        }
+        if (door.relayUnreachable()) {
+            asking = null;
+            door.close();
+            context.queueScreen(new MenuScreen(context, OnlineSession.UNREACHABLE));
+            return false;
+        }
+        if (door.relayAnswered()) {
+            asking = null;
+            handedOver = true;
+            context.queueScreen(new ScenarioScreen(context, door));
+            return false;
+        }
+        return true;
+    }
+
+    private void giveUp() {
+        OnlineSession door = asking;
+        asking = null;
+        if (door != null) {
+            door.close();
+        }
     }
 
     /** The page's words: one line per session heard, then the code line; what went wrong under them. */
@@ -199,21 +322,37 @@ public final class JoinScreen extends ScreenAdapter {
             lines.add(describe(session));
         }
         lines.add(
-                picking
+                picking && choices.asking() == null
                         ? strings.format("ui.join.picking", picker.shown(0))
                         : strings.format("ui.join.typed", choices.typed() + "_"));
+        if (choices.asking() != null) {
+            lines.add(
+                    picking
+                            ? strings.format("ui.join.passwordPicking", picker.shown(0))
+                            : strings.format("ui.join.password", choices.typedPassword() + "_"));
+        }
         foot.clear();
+        if (choices.asking() != null) {
+            painter.addWrapped(foot, strings.format("ui.join.passwordAsked", choices.asking()), 2);
+        }
+        if (asking != null) {
+            painter.addWrapped(foot, strings.format("ui.join.connecting", askedRoom), 2);
+        }
         if (sessions.isEmpty()) {
             painter.addWrapped(foot, strings.get("ui.join.nothing"), 2);
         }
         if (!choices.problem().isEmpty()) {
             painter.addWrapped(foot, choices.problem(), 2);
         }
-        if (sessions.size() != sessionsShown) {
-            // The list grew or shrank as sessions were heard: keep the code line where the player was.
+        if (sessions.size() != sessionsShown || lines.size() != linesShown) {
+            // The list grew or shrank as sessions were heard, or the password line came or went: keep the player on
+            // the code line - or put him on the password line when it is asked for.
             boolean onCode = sessionsShown >= 0 && page.index() >= sessionsShown;
-            page.reset(lines.size(), onCode ? lines.size() - 1 : Math.min(page.index(), lines.size() - 1));
+            page.reset(
+                    lines.size(),
+                    onCode || choices.asking() != null ? lines.size() - 1 : Math.min(page.index(), lines.size() - 1));
             sessionsShown = sessions.size();
+            linesShown = lines.size();
         }
     }
 
@@ -234,6 +373,9 @@ public final class JoinScreen extends ScreenAdapter {
         if (heard != null) {
             heard.close();
             listener = null;
+        }
+        if (!handedOver) {
+            giveUp();
         }
     }
 }

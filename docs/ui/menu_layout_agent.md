@@ -41,8 +41,8 @@ keeps in shot).
 | 1.1 CAMPAIGN / 1.1.1 current scenarios | `UI:main/campaign` | Lists `Scenarios.ALL`, the whole registry (alpha-phase.md). |
 | 1.2 ARENA / 1.2.1 placeholder | `UI:main/proving-ground`, `UI:main/proving-ground/upgrades` | Renamed 2026-09-25: *arena* is taken by the glossary. Built 2026-10-03 (G0060). |
 | 1.3 PLAY ONLINE | `UI:main/online` | |
-| 1.3.1 JOIN GAME / 1.3.1.1 | `UI:main/online/join` | The existing `JoinScreen`; restyled later. |
-| 1.3.2 HOST GAME / 1.3.2.1 | `UI:main/online/host` | A scenario list whose confirm hosts. No lobby (G0038). |
+| 1.3.1 JOIN GAME / 1.3.1.1 | `UI:main/online/join` | The existing `JoinScreen`; restyled later. A room on the relay and its password line, G0103 (stage 6). |
+| 1.3.2 HOST GAME / 1.3.2.1 | `UI:main/online/host` | WHERE, PASSWORD, OPEN, then the developer's scenario list whose confirm hosts. No lobby (G0038). |
 | 1.4 OPTIONS / 1.4.1 placeholder | `UI:main/options` | Settings live in `assets/*.properties` in the alpha. |
 | 1.5 EXIT | `UI:main/exit` | A confirm modal, so Back pressed once too often never quits. |
 | - | `UI:connecting`, `UI:play`, `UI:play/pause`, `UI:play/leave`, `UI:play/result` | Not in the outline; needed to get into and out of a level. `UI:play/result` was the blocked `UI:play/game-over` until G0066. |
@@ -246,17 +246,42 @@ while it does, only the arrows move the selection and only `Esc` goes back.
 A machine that joins lands on `UI:briefing` when the session is on its briefing, and drops into the level when a mission is
 under way (G0101, G0038).
 
-Do not build: a ready button, choosing a slot, colour or character (G0038, G0101); a
-password.
+**Through the relay** (G0103; `net.relay.host` set - without it a code not heard here says so, as before). A code
+typed or picked that a session heard on this network carries joins that session; a roomed one (the announcement says
+`roomed`) joins through the relay with the password the announcement carries, never typed. Any other four characters go to
+the relay, with no password. The page then waits - `ui.join.connecting`, Back gives it up - for the relay's door
+(`OnlineSession.joinThroughRelay`): let in, the player goes on as from any join; `refused by the relay: room ACDE has a
+password` adds a **PASSWORD line** under the code line (`ui.join.password = PASSWORD: {0}`, `ui.join.passwordAsked` in the
+foot, selection on it), entered as the code line is - a keyboard types into it, a pad's `CodePicker` opens on confirm, the same
+forgiving read (`PasswordLine`) - and confirming asks again, **once**: a refusal after a password was given, and every other
+refusal, leaves the page for `UI:main` showing `refused by the relay: <reason>` (`MenuScreen`'s notice); `THE RELAY CANNOT BE
+REACHED` the same. Back on the password line goes back to the code line. The password is held for the attempt only: not stored,
+not kept for the machine run (coming back is a token's, G0105).
+
+Do not build: a ready button, choosing a slot, colour or character (G0038, G0101); a list of rooms, typing the relay's address
+here (G0103).
 
 ### `UI:main/online/host`
 
 While `graphic.ui.page.scenarios` is off, as it ships, only the first entry below is listed.
 
-Title `ui.host.title = HOST GAME`. A first entry `ui.host.open = OPEN` opens the session on this network - the host
-listening, announcing, its own peer in, no world and no mission yet - and shows `UI:briefing` (G0101); on failure the
-page stays and shows the notice. The relay's `< INTERNET / THIS NETWORK >` row and password line are G0103's, built with the
-client's relay keys, and are not here yet. Then the same scenario list widget as `UI:main/campaign` with a different
+Title `ui.host.title = HOST GAME`. Three entries first (G0101, G0103; `HostChoices`, tested):
+
+| Entry | Label | Intent | Enabled |
+|---|---|---|---|
+| `where` | `ui.host.where = WHERE`, a choice row `< THIS NETWORK >` / `< INTERNET >` (`ui.host.thisNetwork`, `ui.host.internet`) | `CHOOSE(0)`: confirm, left or right flips it; a click anywhere on the row | always. **INTERNET cannot be picked while `net.relay.host` is empty**: the row stays on THIS NETWORK and says `ui.host.noRelay = INTERNET: NO RELAY SET` after its value. Opens on THIS NETWORK |
+| `password` | `ui.host.password = PASSWORD`, then the line: `ui.host.passwordNone = NONE` while blank, else its characters; `ui.host.passwordOff = -` on this network | `CHOOSE(1)`: confirm opens the pad's `CodePicker` on it (up/down the letter, left/right the slot, confirm sets it, Back closes it); a keyboard types straight into it at any time; left or right (outside the picker) clears it | on the internet only; dim and passed over on this network. Four characters of the room code's alphabet, read the forgiving way (any case, spaces and dashes ignored), or none; remembered in local preferences (`LocalSettings.hostPassword`), shown again when the page next opens |
+| `open` | `ui.host.open = OPEN` | `HOST(-1)` | always; selected on opening |
+
+OPEN on this network opens the session on this network - the host listening, announcing, its own peer in, no world and no
+mission yet - and shows `UI:briefing` (G0101); on failure the page stays and shows the notice. OPEN on the internet connects to
+the relay as the host (`OnlineSession.openThroughRelay`: the door's OPEN, the password, the session config) and waits for its code,
+the page up and `ui.host.connecting` under the rows (Back gives it up; nothing else is chosen meanwhile). Let in, the briefing opens
+with the relay's code - and the password - at its head, and the session is announced to this network too, under the relay's code
+with its password, so a machine on the host's network joins through the relay without typing it. **Failure leaves HOST GAME up** with the
+reason under the rows - `THE RELAY CANNOT BE REACHED`, or `refused by the relay: <reason>` - and no fallback to the LAN (G0103). A
+password half typed is told (`a password is four characters of the room code's alphabet, or none`) and nothing is asked. Then the
+same scenario list widget as `UI:main/campaign` with a different
 confirm - its number keys still jump to the scenarios: `HOST(scenarioIndex)`, which calls `OnlineSession.host(...)` and goes
 straight to `UI:play` - the developer's list, the one hosted session with no briefing. The host is playing from the first
 frame; friends drop in (G0038). The room code reaches the player as a terminal dispatch when hosting starts (plan section
@@ -269,7 +294,8 @@ setting (G0038). (G0101 retired the host start button and the player list: they 
 
 G0101. A hosted session opens on it, before its first tick and again after every mission; it is the missions page in host
 mode. Title `ui.briefing.title = MISSION BRIEFING`, then `ui.briefing.room = ROOM {code}` on the host's machine (the room
-code the session is announced under); the entries are `UI:main/missions`' exactly (a daily per tier, RANDOM, the length row,
+code the session is announced under; in a session with a room on the relay, the relay's code, and on every machine in it, a joiner's
+too - `ui.briefing.roomPassword = ROOM {code}   PASSWORD {password}` when it has one, G0103); the entries are `UI:main/missions`' exactly (a daily per tier, RANDOM, the length row,
 ENTER CODE, START MISSION, BACK), each writing into the code line, and **START MISSION is the host's start**: enabled whenever
 the line names a mission (`Briefing.startEnabled`), it sends the mission as a `SessionSetup` - world config text, scenario,
 seed - with the tick rate of that config, and every seated slot is on the field at the first tick (`Sequencer`'s START; not
@@ -456,9 +482,12 @@ carried out by the screen that owns the page, through `GameContext.queueScreen` 
 | `UI:main/campaign` | `START(i)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(...)))` |
 | `UI:main/proving-ground`, `.../upgrades` | `CHOOSE(r)` | - | the screen steps row `r` of its setup forward |
 | `UI:main/proving-ground` | `PROVE` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, new ScenarioSession(Scenarios.provingGround(setup), ...)))`; leaving comes back to `UI:main/proving-ground` |
-| `UI:main/online/host` | `HOST(-1)` (OPEN) | `UI:briefing` pushed | `OnlineSession.open(...)`; on failure stay and show the notice |
+| `UI:main/online/host` | `CHOOSE(0)`, `CHOOSE(1)` | stay | WHERE flipped, or the password's picker opened (`MenuScreen.chooseHost`) |
+| `UI:main/online/host` | `HOST(-1)` (OPEN), THIS NETWORK | `UI:briefing` pushed | `OnlineSession.open(...)`; on failure stay and show the notice |
+| `UI:main/online/host` | `HOST(-1)` (OPEN), INTERNET | stay while the relay answers, then `UI:briefing` pushed | `OnlineSession.openThroughRelay(...)`; refused or unreachable: stay and say why under the rows |
 | `UI:main/online/host` | `HOST(i)` | `UI:play` | `queueScreen(new ScenarioScreen(ctx, OnlineSession.host(...)))` - the developer's list, no briefing; on failure stay and show the notice |
-| `UI:main/online/join` | `JOIN(c)` | `UI:connecting` | `OnlineSession.join(...)` |
+| `UI:main/online/join` | `JOIN(c)`, an address or a session heard | `UI:connecting` | `OnlineSession.join(...)` |
+| `UI:main/online/join` | `JOIN(c)`, a room (heard and roomed, or any other code with a relay set) | stay while the relay answers, then `UI:connecting` | `OnlineSession.joinThroughRelay(...)`; `room X has a password`: the PASSWORD line opens and stays; any other refusal, `UI:main` with its text |
 | `UI:connecting` | the session is on its briefing | `UI:briefing` | `queueScreen(new MenuScreen(ctx, "", session))`; the session is kept |
 | `UI:briefing` | the host starts a mission | `UI:play` | `queueScreen(new ScenarioScreen(ctx, session, ...))` - on every machine on it |
 | `UI:briefing` | `LEAVE` (BACK; the host's after `UI:briefing/leave` if another machine is in) | `UI:main/online/host` as host, `UI:main` as joiner | the session closed |

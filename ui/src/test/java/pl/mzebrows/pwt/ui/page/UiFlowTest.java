@@ -143,6 +143,18 @@ class UiFlowTest {
     }
 
     @Test
+    void stepsHostGamesChoiceRowsOnlyOnHostGame() {
+        UiFlow flow = new UiFlow(UiPage.MAIN);
+        flow.apply(UiIntent.open(UiPage.ONLINE));
+
+        assertThat(flow.apply(UiIntent.choose(0))).isEqualTo(UiEffect.NONE);
+        flow.apply(UiIntent.open(UiPage.ONLINE_HOST));
+        assertThat(flow.apply(UiIntent.choose(0))).isEqualTo(new UiEffect(UiEffect.Kind.CHOOSE, 0));
+        assertThat(flow.apply(UiIntent.choose(1))).isEqualTo(new UiEffect(UiEffect.Kind.CHOOSE, 1));
+        assertThat(flow.top()).isEqualTo(UiPage.ONLINE_HOST);
+    }
+
+    @Test
     void provesTheSetupOnlyFromTheProvingGround() {
         UiFlow flow = new UiFlow(UiPage.MAIN);
 

@@ -15,6 +15,10 @@ import java.nio.charset.StandardCharsets;
  * @param build the host's build id: a joiner shows a session it could not join rather than hiding it
  * @param gamePort the port the host's sequencer listens on
  * @param host a name for the host's machine, for the list
+ * @param roomed the session has a room on the relay (G0103): {@code code} is the relay's, and a machine joins through
+ *     the relay rather than at the address heard - {@code gamePort} is then the relay's and means nothing to a joiner
+ * @param password the room's password as the host set it - four characters of the room code's alphabet - or empty for
+ *     none; only a roomed session has one. Carried so a machine on the host's network joins without typing it (G0103)
  */
 public record LanAnnouncement(
         long session,
@@ -24,24 +28,42 @@ public record LanAnnouncement(
         String scenario,
         String host,
         int players,
-        int capacity) {
+        int capacity,
+        boolean roomed,
+        String password) {
 
-    /** "PWL1". */
-    private static final int MAGIC = 0x5057_4C31;
+    /** "PWL2": the announcement that says whether its session has a room, and its password. */
+    private static final int MAGIC = 0x5057_4C32;
 
     /** The longest any text in an announcement may be, in bytes. */
     static final int MAX_TEXT = 64;
 
     /** The largest an announcement can be. */
-    static final int MAX_BYTES = 4 + 8 + RoomCode.LENGTH + 4 + 3 * (2 + MAX_TEXT) + 2;
+    static final int MAX_BYTES = 4 + 8 + RoomCode.LENGTH + 4 + 3 * (2 + MAX_TEXT) + 2 + 1 + 2 + RoomCode.LENGTH;
 
     public LanAnnouncement {
         if (gamePort <= 0 || gamePort > 65_535 || players < 0 || capacity < 1 || capacity > 255) {
             throw new IllegalArgumentException("an announcement of port " + gamePort + ", " + players + "/" + capacity);
         }
+        if (!password.isEmpty() && (!roomed || RoomCode.letters(password, RoomCode.LENGTH) == null)) {
+            throw new IllegalArgumentException("a password of an announcement that has no room, or is not a password");
+        }
         build = clip(build);
         scenario = clip(scenario);
         host = clip(host);
+    }
+
+    /** A session of this network only: no room, no password. */
+    public LanAnnouncement(
+            long session,
+            RoomCode code,
+            String build,
+            int gamePort,
+            String scenario,
+            String host,
+            int players,
+            int capacity) {
+        this(session, code, build, gamePort, scenario, host, players, capacity, false, "");
     }
 
     /** The bytes that go on the wire. */
@@ -53,6 +75,8 @@ public record LanAnnouncement(
         put(into, scenario);
         put(into, host);
         into.put((byte) Math.min(players, 255)).put((byte) capacity);
+        into.put((byte) (roomed ? 1 : 0));
+        put(into, password);
         return into.flip();
     }
 
@@ -75,6 +99,8 @@ public record LanAnnouncement(
             String host = text(from);
             int players = from.get() & 0xFF;
             int capacity = from.get() & 0xFF;
+            boolean roomed = from.get() != 0;
+            String password = text(from);
             if (from.hasRemaining()) {
                 throw new IllegalArgumentException(from.remaining() + " bytes after an announcement");
             }
@@ -86,7 +112,9 @@ public record LanAnnouncement(
                     scenario,
                     host,
                     players,
-                    capacity);
+                    capacity,
+                    roomed,
+                    password);
         } catch (BufferUnderflowException e) {
             throw new IllegalArgumentException("an announcement that ends early", e);
         }

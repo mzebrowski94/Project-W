@@ -32,6 +32,32 @@ class LanDiscoveryTest {
     }
 
     @Test
+    void carriesWhetherASessionHasARoomAndItsPasswordWhole() {
+        LanAnnouncement roomed = new LanAnnouncement(
+                7L, new RoomCode("ACDE"), "d8d4", 24_741, "Skirmish", "komputer", 2, 8, true, "KJ34");
+
+        LanAnnouncement read = LanAnnouncement.decode(roomed.encode(ByteBuffer.allocate(LanAnnouncement.MAX_BYTES)));
+
+        assertThat(read).isEqualTo(roomed);
+        assertThat(read.roomed()).isTrue();
+        assertThat(read.password()).isEqualTo("KJ34");
+        assertThat(announcement(7L, "Skirmish").roomed())
+                .as("a session of the network is no room")
+                .isFalse();
+        assertThat(announcement(7L, "Skirmish").password()).isEmpty();
+    }
+
+    @Test
+    void refusesAPasswordThatIsNoPasswordOrBelongsToNoRoom() {
+        RoomCode code = new RoomCode("ACDE");
+
+        assertThatThrownBy(() -> new LanAnnouncement(7L, code, "d8d4", 24_741, "x", "k", 1, 8, true, "KJ3"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new LanAnnouncement(7L, code, "d8d4", 47_100, "x", "k", 1, 8, false, "KJ34"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void cutsANameTooLongToCarry() {
         LanAnnouncement long_ = announcement(7L, "x".repeat(200));
 

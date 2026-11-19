@@ -209,7 +209,9 @@ class RelayDoorTest {
                 base.roomLockSeconds(),
                 base.bytesPerSecondPerLink(),
                 base.idleRoomMinutes(),
-                base.sealLateWarnMs()));
+                base.sealLateWarnMs(),
+                base.host(),
+                base.port()));
     }
 
     private String openRoom(String password) {

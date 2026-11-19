@@ -10,7 +10,9 @@ plays.
 seated slot on the field at the first tick; a machine arriving after START drops in and one before lands on the briefing;
 the session goes back to its briefing, slots kept; a machine whose link is gone stays a row, offline, and takes its slot back),
 `OnlineSessionTest` (landing, START, back to the briefing, the host's line shown to a joiner), `BriefingPageTest` and
-`UiFlowTest` (rows, START's enablement, a joiner changing nothing, the leave confirm, the host's MENU). Built on the LAN;
+`UiFlowTest` (rows, START's enablement, a joiner changing nothing, the leave confirm, the host's MENU, HOST GAME's choice rows),
+`HostChoicesTest` and `OnlineSessionRelayTest` (HOST GAME's WHERE and PASSWORD, the relay's code at the briefing's head). Built on the LAN
+and through the relay;
 not tested: how the page is drawn, and a pad plugged in while the briefing shows (it takes its slot once play begins).
 
 **Asked for** by Mateusz, 2026-11-19, at the close of the relay's rooms ticket: a page before the first tick with the

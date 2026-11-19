@@ -324,6 +324,12 @@ public final class PeerSession implements AutoCloseable {
         Arrays.fill(keyTick, -1);
     }
 
+    /** The code of the room the relay let this machine into, or null: no relay, or its door has not answered yes. */
+    public @Nullable String room() {
+        DoorClient asking = door;
+        return asking == null ? null : asking.code();
+    }
+
     /** Opens a link to a sequencer. {@code hostKey} is the sequencer's own for the host's peer, 0 for anyone else. */
     public void connect(String host, int port, long key) {
         connect(host, port, key, null);

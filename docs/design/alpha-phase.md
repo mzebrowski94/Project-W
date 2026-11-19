@@ -80,6 +80,10 @@ the overlay's line under the last order says where you are connected, your input
 milliseconds, the simulated lag, and `WAITING FOR THE HOST` when ticks stop arriving; a hosting copy's
 next line is its room code and the addresses a friend can type; its pause menu shows them too.
 
+Through a relay (G0103): start one (`./gradlew :relay:run`), set `net.relay.host=127.0.0.1` in a local `network.properties` override, and
+HOST GAME offers WHERE `< INTERNET >` and a PASSWORD line; JOIN GAME takes the relay's code - with the password when the room has one - and a
+copy on the host's network that hears the room announced joins it without typing the password. Without the key the page says `NO RELAY SET`.
+
 Launch options, for more than one copy on a PC and for a mission:
 
 | Option | Does |

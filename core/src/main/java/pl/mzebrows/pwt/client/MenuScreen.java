@@ -21,11 +21,13 @@ import pl.mzebrows.pwt.client.input.KeyHolds;
 import pl.mzebrows.pwt.client.input.KeyPresses;
 import pl.mzebrows.pwt.client.input.NavInputReader;
 import pl.mzebrows.pwt.client.input.PageControls;
+import pl.mzebrows.pwt.client.play.HostChoices;
 import pl.mzebrows.pwt.client.play.MissionChoices;
 import pl.mzebrows.pwt.client.play.MissionCode;
 import pl.mzebrows.pwt.client.play.MissionRecords;
 import pl.mzebrows.pwt.client.play.OnlineSession;
 import pl.mzebrows.pwt.client.play.ScenarioSession;
+import pl.mzebrows.pwt.net.lan.RoomCode;
 import pl.mzebrows.pwt.net.session.SessionSetup;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
@@ -75,6 +77,12 @@ public final class MenuScreen extends ScreenAdapter {
     /** Spaces between a choice row's label and its value. */
     private static final int CHOICE_GAP = 2;
 
+    /** HOST GAME's rows before the scenarios: WHERE, PASSWORD, OPEN (G0101). */
+    private static final int HOST_WHERE = 0;
+
+    private static final int HOST_PASSWORD = 1;
+    private static final int HOST_ROWS = 3;
+
     /** Lines under the missions page's list: why the code line names no mission. */
     private static final int MISSION_FOOT = 1;
 
@@ -103,6 +111,23 @@ public final class MenuScreen extends ScreenAdapter {
 
     /** A key typed a character since the last frame: the selection goes to the code line. */
     private boolean typed;
+
+    /** HOST GAME's choices, made as the page first opens; null until then. */
+    private @Nullable HostChoices hostChoices;
+
+    /** HOST GAME's password, while a pad is picking it a letter at a time. */
+    private @Nullable CodePicker passwordPicker;
+
+    /** A key typed a character into HOST GAME's password line since the last frame. */
+    private boolean typedPassword;
+
+    /** The room being asked of the relay from HOST GAME: null until OPEN asks, and again once it is answered. */
+    private @Nullable OnlineSession opening;
+
+    /** What HOST GAME says under its rows: why OPEN did not open, or that it is asking; set at the row it was said on. */
+    private String hostStatus = "";
+
+    private int hostStatusAt = -1;
 
     /**
      * The menu was opened on the missions page on the way back from a mission it started: that first opening
@@ -153,6 +178,9 @@ public final class MenuScreen extends ScreenAdapter {
 
     /** The briefing's foot as last written, and the players among its lines, from which line. */
     private @Nullable String describedBriefing;
+
+    /** HOST GAME's foot as last written - its status and selection - or null once it must be written again. */
+    private @Nullable String describedHost;
 
     private List<Briefing.Row> briefingRows = List.of();
     private int playersFrom = -1;
@@ -231,6 +259,15 @@ public final class MenuScreen extends ScreenAdapter {
         Gdx.input.setInputProcessor(new InputAdapter() {
             @Override
             public boolean keyTyped(char character) {
+                if (flow.top() == UiPage.ONLINE_HOST
+                        && opening == null
+                        && hostChoices().passwordEnabled()) {
+                    // The password line takes a keyboard at any time, as the code line does.
+                    String was = hostChoices().typedPassword();
+                    hostChoices().type(character);
+                    typedPassword |= !was.equals(hostChoices().typedPassword());
+                    return true;
+                }
                 if (!isMissions(flow.top())) {
                     return false;
                 }
@@ -245,6 +282,9 @@ public final class MenuScreen extends ScreenAdapter {
     public void render(float delta) {
         if (online != null && !runSession(delta)) {
             return;
+        }
+        if (opening != null) {
+            pollOpening(delta);
         }
         ScreenLayout layout = context.hud().layout();
         reader.typing(isMissions(flow.top()));
@@ -295,7 +335,9 @@ public final class MenuScreen extends ScreenAdapter {
                 visible,
                 foot,
                 footBright,
-                picker == null ? hints.selectAndBack(modality) : hints.picker(modality, "ui.missions.pickHint"),
+                picker == null && passwordPicker == null
+                        ? hints.selectAndBack(modality)
+                        : hints.picker(modality, "ui.missions.pickHint"),
                 motion.offsetX(),
                 motion.alpha());
         if (top == UiPage.PROVING_GROUND) {
@@ -427,6 +469,9 @@ public final class MenuScreen extends ScreenAdapter {
                 return pick();
             }
         }
+        if (top == UiPage.ONLINE_HOST && !hostInput()) {
+            return true;
+        }
         if (isScenarioList(top)) {
             int first = listOffset(top);
             for (int i = 0; i < scenarios.size() && i < MAX_NUMBER_KEYS; i++) {
@@ -503,7 +548,10 @@ public final class MenuScreen extends ScreenAdapter {
             return UiIntent.start(entry);
         }
         return switch (top) {
-            case ONLINE_HOST -> entry < listOffset(top) ? UiIntent.OPEN_SESSION : UiIntent.host(entry - 1);
+            case ONLINE_HOST ->
+                entry <= HOST_PASSWORD
+                        ? UiIntent.choose(entry)
+                        : entry < listOffset(top) ? UiIntent.OPEN_SESSION : UiIntent.host(entry - listOffset(top));
             case BRIEFING ->
                 MenuTree.briefing(hostsBriefing()).entries().get(entry).intent();
             case PROVING_UPGRADES -> entry < rows.upgrades().size() ? UiIntent.choose(entry) : UiIntent.BACK;
@@ -531,6 +579,8 @@ public final class MenuScreen extends ScreenAdapter {
             case CHOOSE -> {
                 if (flow.top() == UiPage.CONTROLS) {
                     flipPrompts();
+                } else if (flow.top() == UiPage.ONLINE_HOST) {
+                    chooseHost(effect.index());
                 } else {
                     step(flow.top(), effect.index(), 1);
                 }
@@ -574,6 +624,8 @@ public final class MenuScreen extends ScreenAdapter {
         panel = Rect.EMPTY;
         side = Rect.EMPTY;
         describedFor = -1;
+        describedHost = null;
+        hostStatus = "";
         describedProblem = null;
         describedBriefing = null;
         head.clear();
@@ -582,14 +634,16 @@ public final class MenuScreen extends ScreenAdapter {
         if (isScenarioList(top)) {
             head.add(strings.get(top == UiPage.CAMPAIGN ? "ui.campaign.title" : "ui.host.title"));
             if (top == UiPage.ONLINE_HOST) {
-                labels.add(strings.get("ui.host.open"));
+                passwordPicker = null;
+                relabelHost();
+            } else {
+                for (Scenario scenario : scenarios) {
+                    labels.add(scenario.name());
+                }
             }
-            for (Scenario scenario : scenarios) {
-                labels.add(scenario.name());
-            }
-            // Hosting opens where the campaign was: the scenario played last is the likeliest to host.
+            // Hosting opens where the campaign was: the scenario played last is the likeliest to host - or on OPEN.
             defaultSelection = scenarios.isEmpty()
-                    ? 0
+                    ? Math.max(0, listOffset(top) - 1)
                     : listOffset(top) + context.selections().get(UiPage.CAMPAIGN, 0, scenarios.size());
         } else if (top == UiPage.PROVING_UPGRADES) {
             head.add(strings.get("ui.provingUpgrades.title"));
@@ -611,7 +665,10 @@ public final class MenuScreen extends ScreenAdapter {
                 head.add(strings.get(content.titleKey()));
             }
             if (top == UiPage.BRIEFING && online != null && !online.roomCode().isEmpty()) {
-                head.add(strings.format("ui.briefing.room", online.roomCode()));
+                head.add(
+                        online.roomPassword().isEmpty()
+                                ? strings.format("ui.briefing.room", online.roomCode())
+                                : strings.format("ui.briefing.roomPassword", online.roomCode(), online.roomPassword()));
             }
             if (!content.bodyKey().isEmpty()) {
                 painter.addWrapped(head, strings.get(content.bodyKey()), BODY_LINES);
@@ -644,6 +701,8 @@ public final class MenuScreen extends ScreenAdapter {
             lockRows();
         } else if (isMissions(top)) {
             enableStart();
+        } else if (top == UiPage.ONLINE_HOST) {
+            enableHost();
         }
     }
 
@@ -703,6 +762,14 @@ public final class MenuScreen extends ScreenAdapter {
         if (!isChoice(top, entry)) {
             return;
         }
+        if (top == UiPage.ONLINE_HOST) {
+            hostChoices().step();
+            hostStatus = "";
+            describedHost = null;
+            relabelHost();
+            enableHost();
+            return;
+        }
         ProvingSetup setup = context.provingSetup();
         context.provingSetup(
                 top == UiPage.PROVING_UPGRADES
@@ -715,6 +782,9 @@ public final class MenuScreen extends ScreenAdapter {
     }
 
     private boolean isChoice(UiPage top, int entry) {
+        if (top == UiPage.ONLINE_HOST) {
+            return entry == HOST_WHERE;
+        }
         if (top == UiPage.PROVING_GROUND) {
             return entry >= 0 && entry < ProvingRows.ROWS.size();
         }
@@ -801,6 +871,10 @@ public final class MenuScreen extends ScreenAdapter {
             // Its foot is its table, written as the page opened.
             return;
         }
+        if (top == UiPage.ONLINE_HOST) {
+            describeHost();
+            return;
+        }
         if (!isScenarioList(top)) {
             foot.clear();
             return;
@@ -826,7 +900,7 @@ public final class MenuScreen extends ScreenAdapter {
 
     /** Entries before a scenario list's scenarios: hosting's DAILY MISSIONS. */
     private static int listOffset(UiPage page) {
-        return page == UiPage.ONLINE_HOST ? 1 : 0;
+        return page == UiPage.ONLINE_HOST ? HOST_ROWS : 0;
     }
 
     private boolean isMissions(UiPage page) {
@@ -1122,6 +1196,10 @@ public final class MenuScreen extends ScreenAdapter {
 
     /** HOST GAME's OPEN: the session opens now, before a mission is chosen, and the briefing shows (G0101). */
     private boolean openSession() {
+        if (hostChoices().internet()) {
+            openRoom();
+            return true;
+        }
         try {
             online = OnlineSession.open(context.netConfig(), context.launchOptions(), LocalMachineId.load());
         } catch (RuntimeException e) {
@@ -1134,6 +1212,214 @@ public final class MenuScreen extends ScreenAdapter {
         }
         flow.apply(UiIntent.open(UiPage.BRIEFING));
         return true;
+    }
+
+    private HostChoices hostChoices() {
+        HostChoices choices = hostChoices;
+        if (choices == null) {
+            choices = new HostChoices(
+                    context.netConfig().relay().set(), context.settings().hostPassword());
+            hostChoices = choices;
+        }
+        return choices;
+    }
+
+    /**
+     * HOST GAME's rows: WHERE as a choice row - the internet is not offered while no relay is set, and says so -, the
+     * PASSWORD line (dim and passed over on this network), OPEN, then the developer's scenarios.
+     */
+    private void relabelHost() {
+        HostChoices choices = hostChoices();
+        labels.clear();
+        String where = strings.get("ui.host.where");
+        String password = strings.get("ui.host.password");
+        labelWidth = Math.max(where.length(), password.length());
+        labels.add(choice(where, strings.get(choices.internet() ? "ui.host.internet" : "ui.host.thisNetwork"))
+                + (choices.relaySet() ? "" : "   " + strings.get("ui.host.noRelay")));
+        CodePicker picking = passwordPicker;
+        String typedPassword = choices.typedPassword();
+        labels.add(pad(password)
+                + (!choices.passwordEnabled()
+                        ? strings.get("ui.host.passwordOff")
+                        : picking != null
+                                ? picking.shown(0)
+                                : typedPassword.isEmpty() ? strings.get("ui.host.passwordNone") : typedPassword));
+        labels.add(strings.get("ui.host.open"));
+        for (Scenario scenario : scenarios) {
+            labels.add(scenario.name());
+        }
+    }
+
+    /** The password line is live on the internet only; dimmed and passed over otherwise. */
+    private void enableHost() {
+        page.enabled()[HOST_PASSWORD] = hostChoices().passwordEnabled() && opening == null;
+        page.settle();
+    }
+
+    /**
+     * HOST GAME's own input: a key typed into the password line takes the selection to it; a pad's picker has the
+     * frame while it is open; left and right flip WHERE, or clear the password. While the relay is asked for a room
+     * nothing is chosen - Back gives it up. False when the frame is spent.
+     */
+    private boolean hostInput() {
+        if (opening != null) {
+            if (nav.back || nav.pointerSecondary) {
+                giveUpOpening();
+            }
+            return false;
+        }
+        if (typedPassword) {
+            typedPassword = false;
+            passwordPicker = null;
+            hostStatus = "";
+            describedHost = null;
+            page.jump(HOST_PASSWORD);
+            relabelHost();
+        }
+        CodePicker picking = passwordPicker;
+        if (picking != null) {
+            if (nav.left) {
+                picking.left();
+            }
+            if (nav.right) {
+                picking.right();
+            }
+            if (nav.up) {
+                picking.up();
+            }
+            if (nav.down) {
+                picking.down();
+            }
+            if (nav.back || nav.pointerSecondary) {
+                passwordPicker = null;
+            } else if (nav.confirm) {
+                hostChoices().replacePassword(picking.code());
+                passwordPicker = null;
+            }
+            relabelHost();
+            return false;
+        }
+        if ((nav.left || nav.right) && page.index() == HOST_WHERE) {
+            step(UiPage.ONLINE_HOST, HOST_WHERE, 1);
+        } else if ((nav.left || nav.right)
+                && page.index() == HOST_PASSWORD
+                && hostChoices().passwordEnabled()) {
+            hostChoices().replacePassword("");
+            relabelHost();
+        }
+        return true;
+    }
+
+    /** A confirm on a HOST GAME choice row: WHERE flips, PASSWORD opens the picker - on the line as it stands. */
+    private void chooseHost(int row) {
+        if (row == HOST_WHERE) {
+            step(UiPage.ONLINE_HOST, HOST_WHERE, 1);
+        } else if (row == HOST_PASSWORD && hostChoices().passwordEnabled()) {
+            String typedPassword = hostChoices().typedPassword();
+            CodePicker picking = new CodePicker(RoomCode.ALPHABET, RoomCode.LENGTH);
+            picking.show(typedPassword.length() == RoomCode.LENGTH ? typedPassword : RoomCode.ALPHABET.substring(0, 4));
+            passwordPicker = picking;
+            relabelHost();
+        }
+    }
+
+    /** Under HOST GAME's rows: what OPEN has to say, else what the selected scenario is for - two lines always. */
+    private void describeHost() {
+        int selected = page.index();
+        if (!hostStatus.isEmpty() && selected != hostStatusAt) {
+            hostStatus = "";
+        }
+        String wanted = hostStatus + "|" + selected;
+        if (wanted.equals(describedHost)) {
+            return;
+        }
+        describedHost = wanted;
+        foot.clear();
+        if (!hostStatus.isEmpty()) {
+            painter.addWrapped(foot, hostStatus, DESCRIPTION_LINES);
+        } else if (selected >= listOffset(UiPage.ONLINE_HOST)) {
+            painter.addWrapped(
+                    foot,
+                    scenarios.get(selected - listOffset(UiPage.ONLINE_HOST)).description(),
+                    DESCRIPTION_LINES);
+        }
+        while (foot.size() < DESCRIPTION_LINES) {
+            foot.add("");
+        }
+    }
+
+    private void saying(String status) {
+        hostStatus = status;
+        hostStatusAt = page.index();
+        describedHost = null;
+    }
+
+    /**
+     * OPEN on the internet (G0101, G0103): asks the relay for a room with the password. The page stays up and says it
+     * is asking; the answer is {@link #pollOpening}'s. A password half typed is told, and nothing is asked.
+     */
+    private void openRoom() {
+        HostChoices choices = hostChoices();
+        String password = choices.password();
+        if (password == null) {
+            page.jump(HOST_PASSWORD);
+            saying(choices.problem());
+            return;
+        }
+        context.settings().hostPassword(password);
+        try {
+            opening = OnlineSession.openThroughRelay(
+                    context.netConfig(),
+                    context.launchOptions(),
+                    LocalMachineId.load(),
+                    BuildVersion.current(),
+                    password);
+        } catch (RuntimeException e) {
+            Log.error("Could not reach the relay", e);
+            saying(OnlineSession.UNREACHABLE);
+            return;
+        }
+        saying(strings.get("ui.host.connecting"));
+        enableHost();
+    }
+
+    /**
+     * One frame of the room being asked for: refused or unreachable, HOST GAME stays up and says why - no fallback to
+     * the LAN (G0103); let in, the briefing opens with the relay's code at its head.
+     */
+    private void pollOpening(float delta) {
+        OnlineSession asking = opening;
+        if (asking == null) {
+            return;
+        }
+        asking.advance(delta, idle);
+        String refusal = asking.relayRefusal();
+        String failure =
+                refusal != null ? refusal : asking.relayUnreachable() ? OnlineSession.UNREACHABLE : asking.ended();
+        if (failure != null) {
+            Log.info(failure);
+            opening = null;
+            asking.close();
+            saying(failure);
+            enableHost();
+        } else if (asking.relayAnswered()) {
+            opening = null;
+            online = asking;
+            hostStatus = "";
+            flow.apply(UiIntent.open(UiPage.BRIEFING));
+        }
+    }
+
+    /** Back while the relay is asked: the attempt is dropped and the page is as it was. */
+    private void giveUpOpening() {
+        OnlineSession asking = opening;
+        opening = null;
+        if (asking != null) {
+            asking.close();
+        }
+        hostStatus = "";
+        describedHost = null;
+        enableHost();
     }
 
     /** Leaves the briefing: the host ends the session, a joiner leaves it. True when the screen is being left. */
@@ -1213,6 +1499,11 @@ public final class MenuScreen extends ScreenAdapter {
         OnlineSession open = online;
         if (open != null && !handedOver) {
             open.close();
+        }
+        OnlineSession asking = opening;
+        if (asking != null) {
+            asking.close();
+            opening = null;
         }
     }
 }

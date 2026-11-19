@@ -18,10 +18,14 @@ public final class LocalSettings {
 
     private static final String PROMPTS = "prompts";
 
+    private static final String HOST_PASSWORD = "hostPassword";
+
     private final @Nullable Preferences preferences;
 
     /** What this run set, when there are no preferences to keep it in: a test, or a store that failed to open. */
     private boolean unsavedPrompts = true;
+
+    private String unsavedHostPassword = "";
 
     private LocalSettings(@Nullable Preferences preferences) {
         this.preferences = preferences;
@@ -71,6 +75,31 @@ public final class LocalSettings {
             kept.flush();
         } catch (RuntimeException e) {
             Log.error("Setting " + PROMPTS + " not saved", e);
+        }
+    }
+
+    /**
+     * The password HOST GAME asked for last, as it was typed - four characters of the room code's alphabet, or
+     * empty for none: what the line shows again the next time the page opens (G0101). A game password, not a
+     * credential (G0103), so it is kept as plain text beside the other settings.
+     */
+    public String hostPassword() {
+        Preferences kept = preferences;
+        return kept == null ? unsavedHostPassword : kept.getString(HOST_PASSWORD, "");
+    }
+
+    /** Keeps the password HOST GAME asked for, at once - a failed write logged, the run's value kept anyway. */
+    public void hostPassword(String password) {
+        unsavedHostPassword = password;
+        Preferences kept = preferences;
+        if (kept == null) {
+            return;
+        }
+        try {
+            kept.putString(HOST_PASSWORD, password);
+            kept.flush();
+        } catch (RuntimeException e) {
+            Log.error("Setting " + HOST_PASSWORD + " not saved", e);
         }
     }
 }
