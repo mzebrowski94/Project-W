@@ -5,11 +5,7 @@
 **Trigger.** Building the relay or traffic through it; changing `Sequencer`, `Bundle` or `Msg`; anything that makes
 the sequencer read a game type; moving the reference world or the snapshot source; choosing where the relay runs.
 
-**Enforced by.** `RelayArchitectureTest` (stage 3): the relay module reaches no libGDX, no Netty, no `sim` or `map`, no raw clock. The rest is not built (`.scratch/online-relay/spec.md`, stages 3-5); due with the build: an architecture test that the sequencer, the wire format
-it reads and the relay module reach nothing in `pl.mzebrows.pwt.sim`; golden bytes for every message type, so a
-layout change without a `Msg.PROTOCOL` bump fails (the backlog's "`Msg.PROTOCOL` is not kept", brought back here); a
-session test with the sequencer behind an in-process relay over `LoopbackNetwork`, the host's peer one link among
-the others.
+**Enforced by.** `NetArchitectureTest.theSequencerAndTheWireAreBlindToTheGame` (the sequencer, its thread, the bundle and the wire reach nothing in `pl.mzebrows.pwt.sim` but the config plumbing, nor the peer's `InputCodec`), `WireGoldenTest.theBytesBelowAreOfTheProtocolInForce`, `.numbersEveryMessageTypeAsItWasSent`, `.writesASealedTickInEveryOfItsSections` (golden bytes beside the protocol number, so a layout change without a `Msg.PROTOCOL` bump fails), `SequencerTest.sealsEventsAndHeldBytesWithoutReadingThem`; `RelayArchitectureTest` (the relay module reaches no libGDX, no Netty, no `sim` or `map`, no raw clock). Still due: a session test with the sequencer behind an in-process relay over `LoopbackNetwork`, the host's peer one link among the others (`.scratch/online-relay/spec.md`, stage 5).
 
 **Provisional, for review (AFK run).** Agreed with Mateusz 2026-11-19 in ticket 05; the numbers it leaves to the build (a sealing ceiling per relay CPU) are the AFK run's. One clarification is the run's: the fence below allows the config plumbing (`ConfigBinder`, `ConfigFile`, `ConfigKey`, used only by `NetConfig`) and nothing else of `sim`; those carry no game type, and a change to them never moves `Msg.PROTOCOL`.
 

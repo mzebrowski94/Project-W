@@ -122,3 +122,10 @@ Two copies on one computer through a local relay (`docs/design/alpha-phase.md`, 
 HOST GAME, INTERNET, a password; JOIN with the code from the second copy, once with a wrong password and once right; start a mission from the
 briefing; drop the second copy's link (F3's lag step, or close it fast and reopen within thirty seconds) and see it come back to its slots;
 close the host copy's window, wait out the window, see who is host. A pause from the second copy. Feel of the 3-tick lead for both.
+
+## Stage 4 notes - provisional, for review (AFK run)
+
+- Blind side kept in `net.session` (fenced by class name in `NetArchitectureTest`), typed side is `InputCodec`; turned down: a `net.session.wire` package (every wire class public, a large diff).
+- A sequencer no longer refuses an order, card or pickup code that names nothing: it seals it, and every peer ignores it alike (`InputCodec` returns null). Turned down: a code table in the sequencer. Out-of-range pushes and button bits are clamped or masked at the peer instead of refused.
+- Event values must fit their wire bytes (`Bundle.checkEvent`); the wire is byte-identical, `Msg.PROTOCOL` stays 6.
+- `WireGoldenTest` pins message numbers, primitives, held bytes, session config and the bundle (whole and changed); the messages built inline in `PeerSession`/`Sequencer` (HELLO, WELCOME, ...) are not yet golden - a captured-session golden is left for stage 3's relay harness.

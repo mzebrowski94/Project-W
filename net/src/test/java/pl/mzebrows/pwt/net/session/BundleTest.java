@@ -26,8 +26,8 @@ class BundleTest {
                 .acting(true)
                 .aimingRelatively();
 
-        Bundle.writeHeld(out.reset(), odd);
-        CommanderInput read = Bundle.readHeld(in.wrap(out.array(), 0, out.size()), CommanderInput.IDLE);
+        InputCodec.writeHeld(out.reset(), odd);
+        CommanderInput read = InputCodec.readHeld(out.array(), 0, CommanderInput.IDLE);
 
         assertThat(read.moveX()).isCloseTo(0.70710677f, within(1f / 16384));
         assertThat(read.moveY()).isEqualTo(-1f);
@@ -42,10 +42,9 @@ class BundleTest {
     @Test
     void carriesAFullPushAndItsHalvesExactly() {
         for (float push : new float[] {1f, -1f, 0.5f, -0.75f, 0.25f, 0f}) {
-            Bundle.writeHeld(out.reset(), new CommanderInput(push, push, 0f, 0f, false, false));
+            InputCodec.writeHeld(out.reset(), new CommanderInput(push, push, 0f, 0f, false, false));
 
-            assertThat(Bundle.readHeld(in.wrap(out.array(), 0, out.size()), CommanderInput.IDLE)
-                            .moveX())
+            assertThat(InputCodec.readHeld(out.array(), 0, CommanderInput.IDLE).moveX())
                     .isEqualTo(push);
         }
     }
@@ -105,13 +104,19 @@ class BundleTest {
         assertThat(Players.MAX).isLessThanOrEqualTo(8);
     }
 
+    private static byte[] held(CommanderInput input) {
+        WireWriter written = new WireWriter(Bundle.HELD_BYTES);
+        InputCodec.writeHeld(written, input);
+        return written.toBytes();
+    }
+
     private static byte[] bundle(int tick, @Nullable CommanderInput slot0, CommanderInput slot1) {
         Bundle bundle = new Bundle(Players.MAX);
         bundle.clear(tick);
         if (slot0 != null) {
-            bundle.hold(0, slot0);
+            bundle.hold(0, held(slot0), 0);
         }
-        bundle.hold(1, slot1);
+        bundle.hold(1, held(slot1), 0);
         bundle.join(2, 1);
         WireWriter written = new WireWriter(64);
         bundle.write(written);
@@ -120,7 +125,7 @@ class BundleTest {
 
     /**
      * Every component of a held input, one at a time. The wire lists its fields by hand, so a button
-     * added to {@code CommanderInput} and not to {@link Bundle} would never reach any peer, the host's
+     * added to {@code CommanderInput} and not to {@link InputCodec} would never reach any peer, the host's
      * own included - no desync, only a feature that does nothing online.
      */
     @Test
@@ -138,8 +143,8 @@ class BundleTest {
             }
             CommanderInput sent = canonical.newInstance(values);
 
-            Bundle.writeHeld(out.reset(), sent);
-            CommanderInput read = Bundle.readHeld(in.wrap(out.array(), 0, out.size()), CommanderInput.IDLE);
+            InputCodec.writeHeld(out.reset(), sent);
+            CommanderInput read = InputCodec.readHeld(out.array(), 0, CommanderInput.IDLE);
 
             assertThat(read).as(components[changed].getName()).isEqualTo(sent);
         }
@@ -147,30 +152,44 @@ class BundleTest {
 
     @Test
     void turnsANumberThatIsNotFiniteIntoZero() {
-        Bundle.writeHeld(out.reset(), new CommanderInput(Float.NaN, Float.POSITIVE_INFINITY, 3f, 4f, false, false));
+        InputCodec.writeHeld(out.reset(), new CommanderInput(Float.NaN, Float.POSITIVE_INFINITY, 3f, 4f, false, false));
 
-        CommanderInput read = Bundle.readHeld(in.wrap(out.array(), 0, out.size()), CommanderInput.IDLE);
+        CommanderInput read = InputCodec.readHeld(out.array(), 0, CommanderInput.IDLE);
 
         assertThat(read.moveX()).isZero();
         assertThat(read.moveY()).isZero();
         assertThat(read.aimX()).isEqualTo(3f);
     }
 
+    /** What no peer writes is dropped the same on every machine - a sequencer that cannot read it cannot refuse it. */
+    @Test
+    void dropsButtonsAndPushesNobodyHas() {
+        byte[] bytes = new byte[Bundle.HELD_BYTES];
+        bytes[0] = 0x7F;
+        bytes[12] = (byte) 0xC1;
+
+        CommanderInput read = InputCodec.readHeld(bytes, 0, CommanderInput.IDLE);
+
+        assertThat(read.moveX()).isEqualTo(1f);
+        assertThat(read.firing()).isTrue();
+        assertThat(read.striking()).isFalse();
+    }
+
     @Test
     void handsBackTheSameInputWhenNothingHasChanged() {
         CommanderInput steady = new CommanderInput(0.5f, 0.25f, 10f, 20f, true, false);
-        Bundle.writeHeld(out.reset(), new CommanderInput(0.5f, 0.25f, 10f, 20f, true, false));
+        InputCodec.writeHeld(out.reset(), new CommanderInput(0.5f, 0.25f, 10f, 20f, true, false));
 
-        assertThat(Bundle.readHeld(in.wrap(out.array(), 0, out.size()), steady)).isSameAs(steady);
+        assertThat(InputCodec.readHeld(out.array(), 0, steady)).isSameAs(steady);
     }
 
     @Test
     void carriesATickWholeAndHandsItToAWorld() {
         Bundle sent = new Bundle(8).clear(42);
         CommanderInput moving = new CommanderInput(1f, 0f, 5f, 5f, true, false);
-        sent.hold(0, moving)
-                .hold(5, CommanderInput.IDLE)
-                .order(5, Order.DEFENCE)
+        sent.hold(0, held(moving), 0)
+                .hold(5, held(CommanderInput.IDLE), 0)
+                .event(5, Msg.EVENT_ORDER, InputCodec.orderCode(Order.DEFENCE), 0)
                 .join(7, 3)
                 .restarting();
         sent.switchInvulnerability(true);
@@ -181,7 +200,7 @@ class BundleTest {
         assertThat(in.remaining()).isZero();
         Bundle received = new Bundle(8).read(in.wrap(out.array(), 0, length));
         PlayerInputs inputs = new PlayerInputs(8);
-        received.applyTo(inputs);
+        new InputCodec(8).applyTo(received, inputs);
 
         assertThat(received.tick()).isEqualTo(42);
         assertThat(received.restart()).isTrue();
@@ -200,7 +219,7 @@ class BundleTest {
     void carriesPicksAndPresenceAndHandsThemToAWorld() {
         Bundle sent = new Bundle(8)
                 .clear(9)
-                .pick(2, 17, UpgradeKind.FIREPOWER)
+                .event(2, Msg.EVENT_PICK, 17, InputCodec.pickCode(UpgradeKind.FIREPOWER))
                 .away(3)
                 .back(6);
         sent.write(out.reset());
@@ -209,7 +228,7 @@ class BundleTest {
         assertThat(Bundle.skip(in.wrap(out.array(), 0, length), 8)).isEqualTo(9);
         assertThat(in.remaining()).isZero();
         PlayerInputs inputs = new PlayerInputs(8);
-        new Bundle(8).read(in.wrap(out.array(), 0, length)).applyTo(inputs);
+        new InputCodec(8).applyTo(new Bundle(8).read(in.wrap(out.array(), 0, length)), inputs);
 
         assertThat(inputs.pickOf(2)).isEqualTo(UpgradeKind.FIREPOWER);
         assertThat(inputs.pickSerialOf(2)).isEqualTo(17);
@@ -225,15 +244,15 @@ class BundleTest {
     void carriesCrateEventsAndHandsThemToAWorld() {
         Bundle sent = new Bundle(8)
                 .clear(4)
-                .crate(1, Bundle.crateCode(PickupKind.ARMOURY_FLAMER))
-                .crate(5, Bundle.CRATE_CLOSE);
+                .event(1, Msg.EVENT_CRATE, InputCodec.crateCode(PickupKind.ARMOURY_FLAMER), 0)
+                .event(5, Msg.EVENT_CRATE, InputCodec.CRATE_CLOSE, 0);
         sent.write(out.reset());
         int length = out.size();
 
         assertThat(Bundle.skip(in.wrap(out.array(), 0, length), 8)).isEqualTo(4);
         assertThat(in.remaining()).isZero();
         PlayerInputs inputs = new PlayerInputs(8);
-        new Bundle(8).read(in.wrap(out.array(), 0, length)).applyTo(inputs);
+        new InputCodec(8).applyTo(new Bundle(8).read(in.wrap(out.array(), 0, length)), inputs);
 
         assertThat(inputs.crateTakeOf(1)).isEqualTo(PickupKind.ARMOURY_FLAMER);
         assertThat(inputs.closesCrate(1)).isFalse();
@@ -242,9 +261,8 @@ class BundleTest {
     }
 
     @Test
-    void refusesAPickupNobodyCanTakeFromACrate() {
-        assertThatThrownBy(() -> Bundle.crateFromCode(PickupKind.values().length + 1))
-                .isInstanceOf(WireException.class);
+    void ignoresAPickupNobodyCanTakeFromACrate() {
+        assertThat(InputCodec.crateFromCode(PickupKind.values().length + 1)).isNull();
     }
 
     /** The history a sequencer keeps is sized by this: a tick with everything in it must fit. */
@@ -253,11 +271,11 @@ class BundleTest {
         Bundle full = new Bundle(8).clear(1).restarting();
         full.switchInvulnerability(true);
         for (int slot = 0; slot < 8; slot++) {
-            full.hold(slot, new CommanderInput(1f, 1f, 1f, 1f, true, true))
-                    .order(slot, Order.FORWARD)
+            full.hold(slot, held(new CommanderInput(1f, 1f, 1f, 1f, true, true)), 0)
+                    .event(slot, Msg.EVENT_ORDER, InputCodec.orderCode(Order.FORWARD), 0)
                     .join(slot, Integer.MAX_VALUE)
-                    .pick(slot, Integer.MAX_VALUE, UpgradeKind.EXPLOSIVES)
-                    .crate(slot, Bundle.crateCode(PickupKind.MEDKIT));
+                    .event(slot, Msg.EVENT_PICK, Integer.MAX_VALUE, InputCodec.pickCode(UpgradeKind.EXPLOSIVES))
+                    .event(slot, Msg.EVENT_CRATE, InputCodec.crateCode(PickupKind.MEDKIT), 0);
             if (slot % 2 == 0) {
                 full.away(slot);
             } else {
@@ -272,15 +290,14 @@ class BundleTest {
     }
 
     @Test
-    void refusesAnUpgradeNobodyCanTake() {
-        assertThatThrownBy(() -> Bundle.pickFromCode(0)).isInstanceOf(WireException.class);
-        assertThatThrownBy(() -> Bundle.pickFromCode(UpgradeKind.values().length + 1))
-                .isInstanceOf(WireException.class);
+    void ignoresAnUpgradeNobodyCanTake() {
+        assertThat(InputCodec.pickFromCode(0)).isNull();
+        assertThat(InputCodec.pickFromCode(UpgradeKind.values().length + 1)).isNull();
     }
 
     @Test
     void refusesASlotTheSessionDoesNotHave() {
-        new Bundle(8).clear(1).hold(7, CommanderInput.IDLE).write(out.reset());
+        new Bundle(8).clear(1).hold(7, held(CommanderInput.IDLE), 0).write(out.reset());
 
         assertThatThrownBy(() -> new Bundle(4).read(in.wrap(out.array(), 0, out.size())))
                 .isInstanceOf(WireException.class)
@@ -291,7 +308,7 @@ class BundleTest {
 
     @Test
     void refusesABundleThatEndsEarly() {
-        new Bundle(8).clear(1).hold(2, CommanderInput.IDLE).write(out.reset());
+        new Bundle(8).clear(1).hold(2, held(CommanderInput.IDLE), 0).write(out.reset());
 
         assertThatThrownBy(() -> new Bundle(8).read(in.wrap(out.array(), 0, out.size() - 3)))
                 .isInstanceOf(WireException.class)
@@ -299,9 +316,8 @@ class BundleTest {
     }
 
     @Test
-    void refusesAnOrderNobodyCanGive() {
-        assertThatThrownBy(() -> Bundle.orderFromCode(0)).isInstanceOf(WireException.class);
-        assertThatThrownBy(() -> Bundle.orderFromCode(Order.values().length + 1))
-                .isInstanceOf(WireException.class);
+    void ignoresAnOrderNobodyCanGive() {
+        assertThat(InputCodec.orderFromCode(0)).isNull();
+        assertThat(InputCodec.orderFromCode(Order.values().length + 1)).isNull();
     }
 }
