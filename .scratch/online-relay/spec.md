@@ -129,3 +129,19 @@ close the host copy's window, wait out the window, see who is host. A pause from
 - A sequencer no longer refuses an order, card or pickup code that names nothing: it seals it, and every peer ignores it alike (`InputCodec` returns null). Turned down: a code table in the sequencer. Out-of-range pushes and button bits are clamped or masked at the peer instead of refused.
 - Event values must fit their wire bytes (`Bundle.checkEvent`); the wire is byte-identical, `Msg.PROTOCOL` stays 6.
 - `WireGoldenTest` pins message numbers, primitives, held bytes, session config and the bundle (whole and changed); the messages built inline in `PeerSession`/`Sequencer` (HELLO, WELCOME, ...) are not yet golden - a captured-session golden is left for stage 3's relay harness.
+
+## Stage 9 notes - provisional, for review (AFK run)
+
+Built in `relay` (`Relay`, `Room`, `Address`), keys in `NetConfig.Relay` and `assets/network.properties`, tests in `RelayLimitsTest`:
+
+| Key | Built | Note |
+|---|---|---|
+| `roomsPerAddressMax` 3 | yes | host past it refused (counts as a refusal) |
+| `linksPerAddressMax` 8 | yes | link past it closed unanswered, not counted as a refusal. *Turned down: a refusal text (costs a send and feeds the silence).* |
+| `helloTimeoutSeconds` 5 | yes | checked in `poll()`; a link is silent until its first message of any kind |
+| `refusalsPerAddressMax` / `refusalWindowSeconds` / `silenceSeconds` 10 / 60 / 120 | yes | fixed window from the first refusal; the cap-th refusal is answered and starts the silence. Garbage door messages count too. *Turned down: a sliding window.* |
+| `wrongPasswordsPerRoomMax` / `roomLockSeconds` 5 / 60 | yes | one seconds key is both the window and the lock; lock refusal text `room XXXX is not taking machines for a moment`. Stage 7's held-token return must skip `Room.locked` (noted in `Relay`). *Turned down: a separate window key.* |
+| `bytesPerSecondPerLink`, `idleRoomMinutes`, `sealLateWarnMs` | no | stage 5 (traffic, sequencer); no key until a reader exists (ADR 0018) |
+| `emptyRoomSeconds` | no | stage 7: a room closes at once when its last link leaves, so no room is empty and open |
+
+The address is read from `TransportListener.opened`'s `remote` text (after any `/`, port stripped), so no port change: loopback tests pick it with the endpoint name. Counters are memory only; idle addresses are swept once a second at most from `poll()`.

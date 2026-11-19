@@ -8,7 +8,10 @@ package pl.mzebrows.pwt.net.transport;
  */
 public interface TransportListener {
 
-    /** A link is open: both kinds of message can now cross it. {@code remote} is for the log. */
+    /**
+     * A link is open: both kinds of message can now cross it. {@code remote} is for the log - and for the relay,
+     * which reads the address from it: the text after any {@code /}, without a trailing {@code :port}.
+     */
     void opened(int link, String remote);
 
     /**

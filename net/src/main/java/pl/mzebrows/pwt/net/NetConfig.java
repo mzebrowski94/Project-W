@@ -333,11 +333,36 @@ public record NetConfig(
      * runs and never sent - the stages after the door add the keys that meter links and rooms.
      *
      * @param roomsMax how many rooms the relay holds at once; a host who opens one more is refused
+     * @param roomsPerAddressMax how many rooms one address may have open; a host past it is refused
+     * @param linksPerAddressMax how many links one address may hold; a link past it is closed unanswered
+     * @param helloTimeoutSeconds how long a new link may stay silent before it is dropped
+     * @param refusalsPerAddressMax refusals an address may collect in a window; the last of them starts its silence
+     * @param refusalWindowSeconds how long a window of refusals runs from the first
+     * @param silenceSeconds how long an address that collected its refusals is ignored: its links are closed unanswered
+     * @param wrongPasswordsPerRoomMax wrong passwords a room may hear in a window; the last of them locks the room
+     * @param roomLockSeconds how long a room turns new machines away, and how long a window of wrong passwords runs
      */
-    public record Relay(int roomsMax) {
+    public record Relay(
+            int roomsMax,
+            int roomsPerAddressMax,
+            int linksPerAddressMax,
+            int helloTimeoutSeconds,
+            int refusalsPerAddressMax,
+            int refusalWindowSeconds,
+            int silenceSeconds,
+            int wrongPasswordsPerRoomMax,
+            int roomLockSeconds) {
 
         public Relay {
             require(roomsMax >= 1, "relay.roomsMax", roomsMax);
+            require(roomsPerAddressMax >= 1, "relay.roomsPerAddressMax", roomsPerAddressMax);
+            require(linksPerAddressMax >= 1, "relay.linksPerAddressMax", linksPerAddressMax);
+            require(helloTimeoutSeconds >= 1, "relay.helloTimeoutSeconds", helloTimeoutSeconds);
+            require(refusalsPerAddressMax >= 1, "relay.refusalsPerAddressMax", refusalsPerAddressMax);
+            require(refusalWindowSeconds >= 1, "relay.refusalWindowSeconds", refusalWindowSeconds);
+            require(silenceSeconds >= 1, "relay.silenceSeconds", silenceSeconds);
+            require(wrongPasswordsPerRoomMax >= 1, "relay.wrongPasswordsPerRoomMax", wrongPasswordsPerRoomMax);
+            require(roomLockSeconds >= 1, "relay.roomLockSeconds", roomLockSeconds);
         }
     }
 

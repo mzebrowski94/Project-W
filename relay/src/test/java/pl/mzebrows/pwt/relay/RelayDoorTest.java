@@ -160,7 +160,7 @@ class RelayDoorTest {
     @Test
     void refusesARoomPastRoomsMaxAndABadPassword() {
         log.close();
-        start(new NetConfig.Relay(1), new java.util.SplittableRandom(1));
+        start(withRoomsMax(1), new java.util.SplittableRandom(1));
         Machine bad = machine();
         bad.say(open("0000"));
         openRoom("");
@@ -191,6 +191,20 @@ class RelayDoorTest {
         machine.send(new byte[] {99, 1, 2});
 
         assertThat(machine.closed).isTrue();
+    }
+
+    private NetConfig.Relay withRoomsMax(int roomsMax) {
+        NetConfig.Relay base = net.relay();
+        return new NetConfig.Relay(
+                roomsMax,
+                base.roomsPerAddressMax(),
+                base.linksPerAddressMax(),
+                base.helloTimeoutSeconds(),
+                base.refusalsPerAddressMax(),
+                base.refusalWindowSeconds(),
+                base.silenceSeconds(),
+                base.wrongPasswordsPerRoomMax(),
+                base.roomLockSeconds());
     }
 
     private String openRoom(String password) {
