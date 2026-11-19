@@ -1,23 +1,17 @@
-<!-- Draft from "Where the sequencer runs" (issues/05), agreed with Mateusz 2026-11-19. At the write-up stage it goes to
-docs/adr/0023-a-session-with-a-room-is-sequenced-on-the-relay.md with: Status `accepted`; ADR 0012's status (record and
-index) gaining "; amended by ADR 0023: a session with a room is sequenced on the relay, blind to its input"; and an
-index row - Decision: "A session with a room has its sequencer on the relay, one per room, blind to input: it depends
-on the protocol version, not the build; the host's peer stays the reference world and the snapshot source."
-Do not build: "a plain relay to the host's sequencer; a relay serving only its own build; several relay builds side
-by side; a world on the relay; two sequencers for one session; the host sending the sequencer's pacing keys". -->
-
 # 0023: A session with a room is sequenced on the relay, blind to its input
 
-**Status.** draft - accepted when written into `docs/adr/` at the write-up stage
+**Status.** accepted
 
 **Trigger.** Building the relay or traffic through it; changing `Sequencer`, `Bundle` or `Msg`; anything that makes
 the sequencer read a game type; moving the reference world or the snapshot source; choosing where the relay runs.
 
-**Enforced by.** Nothing yet - not built; due with the build: an architecture test that the sequencer, the wire format
+**Enforced by.** Nothing yet - not built (`.scratch/online-relay/spec.md`, stages 3-5); due with the build: an architecture test that the sequencer, the wire format
 it reads and the relay module reach nothing in `pl.mzebrows.pwt.sim`; golden bytes for every message type, so a
 layout change without a `Msg.PROTOCOL` bump fails (the backlog's "`Msg.PROTOCOL` is not kept", brought back here); a
 session test with the sequencer behind an in-process relay over `LoopbackNetwork`, the host's peer one link among
 the others.
+
+**Provisional, for review (AFK run).** Agreed with Mateusz 2026-11-19 in ticket 05; the numbers it leaves to the build (a sealing ceiling per relay CPU) are the AFK run's. One clarification is the run's: the fence below allows the config plumbing (`ConfigBinder`, `ConfigFile`, `ConfigKey`, used only by `NetConfig`) and nothing else of `sim`; those carry no game type, and a change to them never moves `Msg.PROTOCOL`.
 
 **Amends ADR 0012.** "The sequencer runs on the host's machine today; nothing in it needs to" becomes: it runs on the
 relay for a session with a room, and on the host's machine for a session without one. The build id still has to

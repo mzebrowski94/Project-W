@@ -36,7 +36,7 @@ ADR 0012's **Do not build** still holds: no mesh, no state replication, no waiti
 ## Answer
 
 Grilled with Mateusz, 2026-11-19. Every recommendation accepted except the platform, which is his pick. Draft:
-[../adr-0023-draft.md](../adr-0023-draft.md), amending ADR 0012.
+[ADR 0023](../../../docs/adr/0023-a-session-with-a-room-is-sequenced-on-the-relay.md), amending ADR 0012.
 
 **Shape 2: a session with a room is sequenced on the relay.** A session without a room keeps the sequencer on the
 host's machine. It is the same `Sequencer`, one `SequencerThread` per room, and it lives as long as the room. Direct

@@ -1,7 +1,7 @@
 # Coming back after a dropped link
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 04, 05
 
 ## Question
@@ -22,3 +22,11 @@ relay". How does a machine prove it is the one that left, and what does coming b
 - The host coming back after a migration (ticket 06): is he a host again, or a peer?
 
 Amends G0038. Draft the words.
+
+## Answer
+
+**Provisional, for review (AFK run, 2026-11-19).** Written as [G0105](../../../docs/design/decisions/G0105-a-machine-comes-back-by-a-token-within-a-window.md).
+Sixteen random bytes handed over the welcoming link, kept in memory only; a restarted game is a new machine; the window is
+`net.rejoin.windowSeconds` (30); no password again; a snapshot by the drop-in path and the slots it left; the sequencer notices (so a LAN
+session has it too); a second link with a token replaces the first; a returning host is a peer. Turned down: the machine id as proof; a token
+on disk (two copies share preferences, G0067); holding slots until the session ends.

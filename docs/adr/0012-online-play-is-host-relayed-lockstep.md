@@ -1,6 +1,6 @@
 # 0012: Online play is host-relayed lockstep, over a transport port of our own
 
-**Status.** amended by ADR 0016: another entity is named by its Handle, never by an Entity field; amended by ADR 0018: every config key has one scope, and the host sends its session config too
+**Status.** amended by ADR 0016: another entity is named by its Handle, never by an Entity field; amended by ADR 0018: every config key has one scope, and the host sends its session config too; amended by ADR 0023: a session with a room is sequenced on the relay, blind to its input
 
 **Trigger.** Anything that crosses the network; how a tick's inputs reach `Simulation.step` during a
 session; proposing state replication, prediction, rollback or a different transport library.

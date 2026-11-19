@@ -1,7 +1,7 @@
 # A new host when the host leaves
 
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 05
 
 ## Question
@@ -23,3 +23,10 @@ everyone. With a server, how does the session carry on?
   (ticket 07).
 
 Amends G0038. Draft the words.
+
+## Answer
+
+**Provisional, for review (AFK run, 2026-11-19).** Written as [G0104](../../../docs/design/decisions/G0104-when-the-hosts-link-is-gone-for-good-the-oldest-peer-becomes-host.md).
+The peer longest in the room becomes host when the rejoin window ends; the sequencer decides and seals it as an event; host powers, the
+world the others are checked against and the snapshot source move; slot zero is not special; the old host returns a peer; a host who ends it
+still ends it (G0101). Turned down: any leaving hands over; at once, not after the window; best link; a vote; lowest slot.
