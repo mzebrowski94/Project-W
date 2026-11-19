@@ -356,6 +356,10 @@ public record NetConfig(
      * @param idleRoomMinutes how long a room may go with nothing said in it but acknowledgements before it closes
      * @param sealLateWarnMs how late, in milliseconds, a room's sequencer may seal a tick before the relay says so
      *     in its log - half a tick, at 60 Hz (ADR 0023's revisit)
+     * @param host where the relay runs, for a copy of the game to reach: client scope (ADR 0018), read by the host
+     *     and join pages; empty - as shipped - means no relay is set, and the pages offer none (G0101, G0103)
+     * @param port the port the relay listens on, for both TCP and UDP: read by the relay to listen, and by a client
+     *     to reach it
      */
     public record Relay(
             int roomsMax,
@@ -369,7 +373,9 @@ public record NetConfig(
             int roomLockSeconds,
             int bytesPerSecondPerLink,
             int idleRoomMinutes,
-            int sealLateWarnMs) {
+            int sealLateWarnMs,
+            String host,
+            int port) {
 
         public Relay {
             require(roomsMax >= 1, "relay.roomsMax", roomsMax);
@@ -384,6 +390,13 @@ public record NetConfig(
             require(bytesPerSecondPerLink >= 1, "relay.bytesPerSecondPerLink", bytesPerSecondPerLink);
             require(idleRoomMinutes >= 1, "relay.idleRoomMinutes", idleRoomMinutes);
             require(sealLateWarnMs >= 1, "relay.sealLateWarnMs", sealLateWarnMs);
+            require(port > 0 && port < 65_536, "relay.port", port);
+            host = host.strip();
+        }
+
+        /** Whether a relay is set: the host and join pages offer the internet only then. */
+        public boolean set() {
+            return !host.isEmpty();
         }
     }
 

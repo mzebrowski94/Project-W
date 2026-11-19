@@ -5,7 +5,15 @@
 **Trigger.** Hosting or joining a session over the internet; a room code or a password; what the relay refuses a
 machine before it forwards anything; a session's code on a network that also hears it announced.
 
-**Enforced by.** Nothing yet - not built; the tests are named here when it is (`.scratch/online-relay/spec.md`, stages 3 and 6).
+**Enforced by.** `RelayDoorTest` and `RelayLimitsTest` (the door: the code drawn from the free ones, each refusal text, the password
+never in the log, the abuse limits), `HostChoicesTest` (the internet cannot be picked with no relay key, the password's forgiving
+read and its blank), `JoinChoicesTest` (a code heard on the network wins, any other goes to the relay, a roomed announcement joins
+through the relay with its password, the PASSWORD line is asked and read once), `OnlineSessionRelayTest` (the door's refusal
+reaches the player whole, the relay's code and the password become the room's line, THE RELAY CANNOT BE REACHED),
+`LanDiscoveryTest` (the announcement carries roomed and the password), `NetConfigRelayTest` (the client's keys, empty as
+shipped) and `UiFlowTest` (HOST GAME's choice rows). The door against a real relay from a client is tested in the `relay` module
+(`RelayTrafficTest`); `core` does not see `relay`, so no test runs `OnlineSession` against it. Not tested: how the pages are
+drawn, and the pad's pickers.
 
 **Asked for** by Mateusz, 2026-11-19, in the relay's rooms ticket: rooms reached by code only, an optional password
 the host sets, separate from the code. The text below is the agreed text, amended by "Where the sequencer runs"

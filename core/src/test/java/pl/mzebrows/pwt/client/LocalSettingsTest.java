@@ -17,4 +17,13 @@ class LocalSettingsTest {
         settings.prompts(true);
         assertThat(settings.prompts()).isTrue();
     }
+
+    @Test
+    void remembersTheHostPasswordForTheRunAndStartsWithNone() {
+        LocalSettings settings = LocalSettings.unsaved();
+
+        assertThat(settings.hostPassword()).isEmpty();
+        settings.hostPassword("KJ34");
+        assertThat(settings.hostPassword()).isEqualTo("KJ34");
+    }
 }

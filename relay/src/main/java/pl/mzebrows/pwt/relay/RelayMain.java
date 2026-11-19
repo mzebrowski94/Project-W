@@ -13,7 +13,7 @@ import pl.mzebrows.pwt.net.netty.NettyTransport;
 import pl.mzebrows.pwt.net.transport.Transport;
 
 /**
- * The relay as a process, and nothing else: Netty on {@code net.port}, the system clock, a secure random, and
+ * The relay as a process, and nothing else: Netty on {@code net.relay.port}, the system clock, a secure random, and
  * {@code network.properties} as it ships - or, as the one argument, a file of lines that override it, so an
  * operator tunes the relay without a build. A thread per room runs its sequencer; this thread polls the door
  * every millisecond. The only class of this module that names the Netty adapter ({@code RelayArchitectureTest}).
@@ -30,7 +30,7 @@ public final class RelayMain {
                         System.err.println("[relay] network.properties: " + problem + " (the shipped value stands)"));
         NetLog log = NetLog.open(config.log(), "relay");
         Transport transport = new NettyTransport(config, SystemClock.INSTANCE, log, "relay");
-        int port = transport.listen(config.port(), 0);
+        int port = transport.listen(config.relay().port(), 0);
         log.info("relay", "event=listening port=" + port);
         System.out.println("[relay] listening on " + port + ", TCP and UDP");
         Relay relay =

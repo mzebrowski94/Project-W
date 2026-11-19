@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.client.play;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.lan.LanListener;
 import pl.mzebrows.pwt.net.lan.RoomCode;
@@ -18,12 +19,32 @@ import pl.mzebrows.pwt.net.lan.RoomCode;
  */
 public final class JoinChoices {
 
-    /** Where Enter would connect, and how to say so. */
-    public record Target(String host, int port, String description) {}
+    /**
+     * Where Enter would connect, and how to say so. A target with a {@code room} is reached through the relay (G0103):
+     * {@code host} and {@code port} are the relay's, and the door is asked into that room with {@code password}.
+     */
+    public record Target(String host, int port, String description, String room, String password) {
+
+        /** A session at an address: no room. */
+        public Target(String host, int port, String description) {
+            this(host, port, description, "", "");
+        }
+
+        /** Whether it is reached through the relay. */
+        public boolean relayed() {
+            return !room.isEmpty();
+        }
+    }
+
+    /** Where the relay is, as {@code net.relay.host} and {@code net.relay.port} say. */
+    public record Relay(String host, int port) {}
 
     static final int MAX_TYPED = 64;
 
     private final String ownBuild;
+    private final @Nullable Relay relay;
+    private final PasswordLine password = new PasswordLine("");
+    private @Nullable String asking;
     private final StringBuilder typed = new StringBuilder();
     private List<LanListener.Heard> sessions = List.of();
     private int selected;
@@ -31,7 +52,43 @@ public final class JoinChoices {
 
     /** @param ownBuild this copy's build id: a session running another is shown, and refused here */
     public JoinChoices(String ownBuild) {
+        this(ownBuild, null);
+    }
+
+    /**
+     * @param ownBuild this copy's build id: a session running another is shown, and refused here
+     * @param relay where the relay is, or null when none is set: a room code not heard on the network then goes nowhere
+     */
+    public JoinChoices(String ownBuild, @Nullable Relay relay) {
         this.ownBuild = ownBuild;
+        this.relay = relay;
+    }
+
+    /**
+     * The relay refused this room for want of a password: the page asks for one, and what is typed now goes into it
+     * (G0103). One try - a wrong one is the relay's other refusal and ends the attempt.
+     */
+    public void askPassword(String room) {
+        asking = room;
+        password.replace("");
+        problem = "";
+    }
+
+    /** The room whose password the page is asking for, or null. */
+    public @Nullable String asking() {
+        return asking;
+    }
+
+    /** Gives up the password line: what is typed is the code or address again. */
+    public void cancelPassword() {
+        asking = null;
+        password.replace("");
+        problem = "";
+    }
+
+    /** What has been typed into the password line. */
+    public String typedPassword() {
+        return password.text();
     }
 
     /** The sessions heard lately, in the order they were first heard. The highlight stays in range. */
@@ -52,6 +109,11 @@ public final class JoinChoices {
      * is, so nothing a keyboard could not have typed gets in.
      */
     public void replaceTyped(String text) {
+        if (asking != null) {
+            problem = "";
+            password.replace(text);
+            return;
+        }
         typed.setLength(0);
         for (int i = 0; i < text.length(); i++) {
             type(text.charAt(i));
@@ -76,6 +138,10 @@ public final class JoinChoices {
      */
     public void type(char c) {
         problem = "";
+        if (asking != null) {
+            password.type(c);
+            return;
+        }
         if (c == '\b') {
             if (!typed.isEmpty()) {
                 typed.setLength(typed.length() - 1);
@@ -118,6 +184,15 @@ public final class JoinChoices {
 
     /** What Enter joins, or null - with {@link #problem()} saying why. */
     public @Nullable Target choose(int defaultPort) {
+        String room = asking;
+        if (room != null) {
+            String read = password.read();
+            if (read == null || read.isEmpty()) {
+                problem = PasswordLine.REQUIRED;
+                return null;
+            }
+            return through(room, read);
+        }
         String text = typed.toString().trim();
         if (text.isEmpty()) {
             if (sessions.isEmpty()) {
@@ -134,6 +209,10 @@ public final class JoinChoices {
                 }
             }
             if (text.indexOf('.') < 0 && text.indexOf(':') < 0) {
+                if (relay != null) {
+                    // Not heard here: a room on the relay, if there is one (G0103).
+                    return through(code.text(), "");
+                }
                 problem = "no session with room " + code + " heard on this network - try its address";
                 return null;
             }
@@ -148,10 +227,25 @@ public final class JoinChoices {
                     + " - the same build on both machines, or no game";
             return null;
         }
+        if (session.announcement().roomed()) {
+            // A room on the relay: it announces its password to its own network, so nobody types it here (G0103).
+            if (relay == null) {
+                problem = "room " + session.announcement().code()
+                        + " is on the relay, and no relay is set - net.relay.host in network.properties";
+                return null;
+            }
+            return through(
+                    session.announcement().code().text(), session.announcement().password());
+        }
         return new Target(
                 session.address(),
                 session.announcement().gamePort(),
                 "room " + session.announcement().code() + " at " + session.address());
+    }
+
+    private Target through(String room, String withPassword) {
+        Relay at = Objects.requireNonNull(relay);
+        return new Target(at.host(), at.port(), "room " + room + " through the relay", room, withPassword);
     }
 
     private @Nullable Target address(String text, int defaultPort) {

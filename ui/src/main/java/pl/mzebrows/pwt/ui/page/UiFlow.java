@@ -153,6 +153,7 @@ public final class UiFlow {
             case CHOOSE ->
                 page == UiPage.PROVING_GROUND
                                 || page == UiPage.PROVING_UPGRADES
+                                || page == UiPage.ONLINE_HOST
                                 || page == UiPage.CONTROLS
                                 || page == UiPage.PAUSE_CONTROLS
                         ? new UiEffect(UiEffect.Kind.CHOOSE, intent.index())

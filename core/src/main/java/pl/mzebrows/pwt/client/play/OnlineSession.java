@@ -14,13 +14,17 @@ import pl.mzebrows.pwt.net.Clock;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.NetConfig.Conditions;
 import pl.mzebrows.pwt.net.SystemClock;
+import pl.mzebrows.pwt.net.door.Door;
+import pl.mzebrows.pwt.net.door.DoorClient;
 import pl.mzebrows.pwt.net.lan.LanAddresses;
 import pl.mzebrows.pwt.net.lan.LanBeacon;
+import pl.mzebrows.pwt.net.lan.RoomCode;
 import pl.mzebrows.pwt.net.log.NetLog;
 import pl.mzebrows.pwt.net.netty.NettyTransport;
 import pl.mzebrows.pwt.net.session.BriefingPlayer;
 import pl.mzebrows.pwt.net.session.BuildId;
 import pl.mzebrows.pwt.net.session.PeerSession;
+import pl.mzebrows.pwt.net.session.RoomWire;
 import pl.mzebrows.pwt.net.session.Sequencer;
 import pl.mzebrows.pwt.net.session.SequencerThread;
 import pl.mzebrows.pwt.net.session.SessionSetup;
@@ -61,8 +65,16 @@ public final class OnlineSession implements ScenarioPlay {
     private final List<Integer> lagSteps;
     private final NetLog log;
     private final Clock clock;
-    private final String where;
+    private String where;
     private final @Nullable Invitation invitation;
+
+    /** This copy reaches its session through a room on the relay (G0103), and the password the room has - or was joined with. */
+    private final boolean relayed;
+
+    private final String password;
+
+    /** The relay has named the room, and {@link #where} says so. */
+    private boolean roomNamed;
 
     /** This copy opened the session on a briefing, and its host takes the machines back to it after a mission. */
     private final boolean briefed;
@@ -104,6 +116,27 @@ public final class OnlineSession implements ScenarioPlay {
             String where,
             @Nullable Invitation invitation,
             boolean briefed) {
+        this(peer, sequencer, lag, lagSteps, log, clock, where, invitation, briefed, false, "");
+    }
+
+    /**
+     * @param relayed the session is a room on the relay: its code is the relay's, and there is no sequencer here
+     * @param password the room's password - the host's, or the one this machine joined with; empty for none
+     */
+    OnlineSession(
+            PeerSession peer,
+            @Nullable SequencerThread sequencer,
+            @Nullable ConditionedTransport lag,
+            List<Integer> lagSteps,
+            NetLog log,
+            Clock clock,
+            String where,
+            @Nullable Invitation invitation,
+            boolean briefed,
+            boolean relayed,
+            String password) {
+        this.relayed = relayed;
+        this.password = password;
         this.peer = peer;
         this.sequencer = sequencer;
         this.lag = lag;
@@ -212,12 +245,100 @@ public final class OnlineSession implements ScenarioPlay {
         return new OnlineSession(peer, null, lag, lagSteps, log, clock, host + ":" + port, null, false);
     }
 
+    /**
+     * Opens a session on its briefing as a room on the relay (G0103): connects to the relay's door as the host and asks
+     * for a room with {@code password}. The relay answers a few frames later - {@link #relayAnswered}, {@link
+     * #relayRefusal}, {@link #relayUnreachable} - and nothing is announced or hosted on this machine until it has. There
+     * is no sequencer here: the room's is on the relay, and this machine's peer is one of its links, the host's.
+     *
+     * @param version this copy's build version, which the relay names in its refusals
+     * @param password four characters of the room code's alphabet, or empty for none
+     * @param machine this computer's {@code MachineId}, as the application keeps it
+     * @throws RuntimeException if the relay's address could not be used; nothing is left open
+     */
+    public static OnlineSession openThroughRelay(
+            NetConfig net, LaunchOptions options, String machine, String version, String password) {
+        Clock clock = SystemClock.INSTANCE;
+        NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-host");
+        long key = new SecureRandom().nextLong() | 1L;
+        PeerSession peer = new PeerSession(
+                new NettyTransport(net, clock, log, "peer"),
+                net,
+                log,
+                new ScenarioWorlds(),
+                dumps(net),
+                BuildId.current(),
+                machine);
+        try {
+            peer.connect(
+                    net.relay().host(),
+                    net.relay().port(),
+                    key,
+                    DoorClient.open(BuildId.current(), version, key, RoomWire.sessionConfig(net.session()), password));
+        } catch (RuntimeException e) {
+            peer.close();
+            log.close();
+            throw e;
+        }
+        Invitation invitation = Invitation.roomed(
+                new LanBeacon(
+                        net.lan(),
+                        clock,
+                        log,
+                        LanAddresses.beaconTargets(net.lan().port())),
+                new SecureRandom().nextLong(),
+                net.relay().port(),
+                machineName(options));
+        Log.info("opening a room at the relay " + net.relay().host() + ":"
+                + net.relay().port() + ", build " + BuildId.current() + ", machine " + machine);
+        return new OnlineSession(
+                peer, null, null, List.of(), log, clock, "the relay", invitation, true, true, password);
+    }
+
+    /**
+     * Joins the room of this code through the relay (G0103), over the configured simulated lag. The relay's answer comes
+     * a few frames later, as {@link #openThroughRelay}'s does.
+     *
+     * @param password what the door is told: from the announcement, or typed on the page; empty for none
+     */
+    public static OnlineSession joinThroughRelay(
+            NetConfig net,
+            LaunchOptions options,
+            List<Integer> lagSteps,
+            String room,
+            String password,
+            String machine,
+            String version) {
+        Clock clock = SystemClock.INSTANCE;
+        NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-join");
+        ConditionedTransport lag =
+                new ConditionedTransport(new NettyTransport(net, clock, log, "peer"), net.conditions(), clock);
+        PeerSession peer = new PeerSession(lag, net, log, new ScenarioWorlds(), dumps(net), BuildId.current(), machine);
+        try {
+            peer.connect(
+                    net.relay().host(),
+                    net.relay().port(),
+                    0L,
+                    DoorClient.join(room, password, BuildId.current(), version));
+        } catch (RuntimeException e) {
+            peer.close();
+            log.close();
+            throw e;
+        }
+        Log.info("joining room " + room + " through the relay " + net.relay().host() + ":"
+                + net.relay().port() + ", build " + BuildId.current() + ", machine " + machine);
+        return new OnlineSession(peer, null, lag, lagSteps, log, clock, "room " + room, null, false, true, password);
+    }
+
     /** This machine as the join list shows it: its name on Windows, then which copy it is. */
     private static String machineName(LaunchOptions options) {
         String name = System.getenv("COMPUTERNAME");
         return (name == null || name.isBlank() ? "host" : name)
                 + (options.instanceGiven() ? " #" + options.instance() : "");
     }
+
+    /** What a machine that could not reach the relay is told. */
+    public static final String UNREACHABLE = "THE RELAY CANNOT BE REACHED";
 
     /** Where a hosting copy's own peer connects: its sequencer, on this machine. */
     static final String LOCAL = "127.0.0.1";
@@ -289,6 +410,14 @@ public final class OnlineSession implements ScenarioPlay {
         }
         Invitation hosting = invitation;
         Simulation world = peer.simulation();
+        String room = peer.room();
+        if (relayed && room != null && !roomNamed) {
+            roomNamed = true;
+            where = "room " + room;
+            if (hosting != null) {
+                hosting.opened(new RoomCode(room), password);
+            }
+        }
         if (hosting != null) {
             String playing = scenarioName();
             hosting.pump(
@@ -307,6 +436,10 @@ public final class OnlineSession implements ScenarioPlay {
     /** What a hosting copy tells its players so their friends can join: its room code and addresses. */
     @Override
     public @Nullable String invitation() {
+        if (relayed) {
+            String room = peer.room();
+            return room == null ? null : Invitation.roomLine(room, password);
+        }
         Invitation hosting = invitation;
         return hosting == null ? null : hosting.line();
     }
@@ -343,8 +476,43 @@ public final class OnlineSession implements ScenarioPlay {
 
     /** The room code the host announces under, as it is read out; empty on a machine that joined. */
     public String roomCode() {
+        if (relayed) {
+            String room = peer.room();
+            return room == null ? "" : room;
+        }
         Invitation hosting = invitation;
         return hosting == null ? "" : hosting.code().toString();
+    }
+
+    /** The room's password as this machine knows it - the host's, or the one it joined with - or empty: none, or no room. */
+    public String roomPassword() {
+        return relayed ? password : "";
+    }
+
+    /** Whether this session is a room on the relay. */
+    public boolean relayed() {
+        return relayed;
+    }
+
+    /** Whether the relay's door has let this machine in: the room has its code. */
+    public boolean relayAnswered() {
+        return relayed && peer.room() != null;
+    }
+
+    /** The relay's door's refusal, whole - {@code refused by the relay: room ACDE has a password} - or null. */
+    public @Nullable String relayRefusal() {
+        String refusal = peer.refusal();
+        return relayed
+                        && peer.state() == PeerSession.State.REFUSED
+                        && refusal != null
+                        && refusal.startsWith(Door.REFUSAL_PREFIX)
+                ? refusal
+                : null;
+    }
+
+    /** Whether the link to the relay closed before its door answered: it could not be reached, or would not answer. */
+    public boolean relayUnreachable() {
+        return relayed && peer.room() == null && peer.state() == PeerSession.State.CLOSED;
     }
 
     /** Starts the mission for every machine on the briefing, the slots taken so far on the field at the first tick. */
@@ -440,6 +608,13 @@ public final class OnlineSession implements ScenarioPlay {
      */
     @Override
     public @Nullable String ended() {
+        if (relayUnreachable()) {
+            return UNREACHABLE;
+        }
+        String doorsRefusal = relayRefusal();
+        if (doorsRefusal != null) {
+            return doorsRefusal;
+        }
         return switch (peer.state()) {
             case REFUSED -> "refused by " + where + ": " + peer.refusal();
             case CLOSED -> "the game at " + where + " is over: " + reason(peer.closedBecause());
