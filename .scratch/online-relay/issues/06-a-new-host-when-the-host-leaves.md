@@ -16,8 +16,9 @@ everyone. With a server, how does the session carry on?
   (G0038), the source of a drop-in snapshot. Which of these move to the new host, and which go to the server?
 - Slot zero is "the host's keyboard, held for it" (G0038). What happens to it, and to the old host's
   commanders (G0038: a dropped link is an unplugged pad and the commanders stay)?
-- If the sequencer stays on a peer (ticket 05 shape 1), how the sealed history and the pending events move to
-  the new one without a tick sealed twice or lost.
+- ~~If the sequencer stays on a peer, how the sealed history and the pending events move.~~ Moot: "Where the sequencer
+  runs" put it on the relay for a session with a room (ADR 0023 draft), so nothing sealed moves; a session without a
+  room still ends with its host.
 - What every machine is told and shown when the host changes, and what the old host sees if he comes back
   (ticket 07).
 

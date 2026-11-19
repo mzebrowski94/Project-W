@@ -20,7 +20,7 @@ can stop after any of them. Ready to hand to `implement` -> `new-system` session
   - **Rooms.** Reached **by code only**: the server publishes no list of rooms.
   - **Passwords.** A room may carry a password the host sets, **separate from the code**. The code stays
     a name that grants nothing (G0038), and the server checks the password before it forwards anything.
-  - **Topology.** Where the sequencer runs is decided in a ticket, after research.
+  - **Topology.** Settled in "Where the sequencer runs": on the relay for a session with a room (ADR 0023 draft).
 - In scope: reconnecting after a dropped link, host migration, abuse limits. Host migration is what makes the
   topology ticket matter: with the sequencer on the host's machine, nobody is left to seal ticks when he goes.
 - Standing structure to respect: ADR 0012 (lockstep, star through the sequencer, `Transport` is a port, build
@@ -46,9 +46,9 @@ can stop after any of them. Ready to hand to `implement` -> `new-system` session
 | [Lockstep over a stream](issues/02-lockstep-over-a-stream.md) | research | resolved | - |
 | [Direct paths between peers](issues/03-direct-paths-between-peers.md) | research | resolved | - |
 | [Rooms, codes and passwords](issues/04-rooms-codes-and-passwords.md) | grilling | resolved | - |
-| [Where the sequencer runs](issues/05-where-the-sequencer-runs.md) | grilling | **open - frontier** | - |
-| [A new host when the host leaves](issues/06-a-new-host-when-the-host-leaves.md) | grilling | open | Where the sequencer runs |
-| [Coming back after a dropped link](issues/07-coming-back-after-a-dropped-link.md) | grilling | open | Where the sequencer runs |
+| [Where the sequencer runs](issues/05-where-the-sequencer-runs.md) | grilling | resolved | - |
+| [A new host when the host leaves](issues/06-a-new-host-when-the-host-leaves.md) | grilling | **open - frontier** | - |
+| [Coming back after a dropped link](issues/07-coming-back-after-a-dropped-link.md) | grilling | **open - frontier** | - |
 
 ## Decisions so far
 
@@ -56,15 +56,16 @@ can stop after any of them. Ready to hand to `implement` -> `new-system` session
 - [Where a game server can run](issues/01-where-a-game-server-can-run.md): UDP reaches Fly.io (dedicated IPv4) and any VPS (Hetzner, OVH, Oracle free); Railway and Koyeb give raw TCP only; Render forces WebSocket and drops it on every deploy; at ~2.3 GB/hour full, egress dominates, so a EUR 5 VPS (20 TB/unlimited) or Fly ($0.02/GB) is cheapest.
 - [Lockstep over a stream](issues/02-lockstep-over-a-stream.md): a stream is correct but each lost segment stalls ticks ~1.25 RTT about once a second at 1-2 % loss, so it suits pillar 1 only below ~30 ms RTT (or near-lossless lines) and above ~45 ms costs lost input via `spikeTicks`; UDP stays the main path, a WebSocket `Transport` (two connections per link so snapshots never block ticks) is only the fallback, and QUIC needs UDP anyway.
 - [Rooms, codes and passwords](issues/04-rooms-codes-and-passwords.md): a room is the relay's record of one session, opened only when the host asks, before the first tick or hosting fails; the relay hands out the session's one four-character code; an optional four-character password in the code's alphabet, set when hosting, asked once and only at the relay's door, held in memory unlogged; five refusals before forwarding; the G0038 amendment's words agreed.
+- [Where the sequencer runs](issues/05-where-the-sequencer-runs.md): a session with a room is sequenced on the relay (one `SequencerThread` per room, living as long as the room), one without stays on the host's machine; 3 ticks for everybody in one region instead of host 2 / joiner ~4; the sequencer becomes blind to input, so the relay depends on `Msg.PROTOCOL`, not the build, and a room runs its host's build; the host's peer stays reference world and snapshot source; LAN machines of a roomed session join through the relay, handed the password; platform picked, unnamed in the repository; WebSocket deferred. Draft: [ADR 0023](adr-0023-draft.md).
 
 ## Not yet specified
 
 - **Abuse limits.** Whatever keeps a public server alive: rooms per address, a throttle on code and password
-  guesses per room and per address (four-character codes are guessable by design, rooms ticket), room caps, a ceiling on bytes per peer, idle rooms reaped. Depends on the
-  topology (what the server can tell apart) and on the platform (what it already rate-limits).
-- **Which builds the server serves.** The build id must match at the handshake (ADR 0012). If the server runs
-  the sequencer, every game build may force a server deploy, or the server has to carry several builds. A plain
-  relay may not care. This may fold into the topology ticket or need one of its own.
+  guesses per room and per address (four-character codes are guessable by design, rooms ticket), room caps, a ceiling on bytes per peer, idle rooms reaped. The relay
+  runs each room's sequencer, so it can tell links, slots and ticks apart and meter them; a shared public address
+  and a CPU that may be throttled (ADR 0023 draft) mean it rate-limits for itself and caps rooms by what one CPU seals on time.
+- **Which builds the relay serves**: settled by "Where the sequencer runs" - any build of the protocol version it
+  speaks; a room runs its host's build.
 - **The client side.** Reshaped by the briefing (G0101): HOST GAME becomes how a session opens - `< INTERNET / THIS
   NETWORK >`, a password line for the internet only, picked as a code is, and OPEN, which opens the room and the
   **briefing** (`UI:main/online/host/missions` becomes `UI:briefing`, with the room code and password at its head and
@@ -83,7 +84,8 @@ can stop after any of them. Ready to hand to `implement` -> `new-system` session
 ## Out of scope
 
 - **Server operations**: the deploy runbook, health checks, dashboards, and reading the server's logs in
-  production. Not chosen for this effort (2026-11-19). The platform is still chosen here.
+  production. Not chosen for this effort (2026-11-19). The platform was chosen in "Where the sequencer runs", and
+  the repository names only what the relay needs of one, never the provider.
 - **A public list of rooms**: rooms are reached by code only (2026-11-19).
 - **Accounts, logins, friends lists, skill-based matchmaking and chat**: none was asked for. (A page before the
   first tick is G0101's briefing.)

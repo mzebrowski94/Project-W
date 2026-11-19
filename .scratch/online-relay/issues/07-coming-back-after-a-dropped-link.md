@@ -16,7 +16,8 @@ relay". How does a machine prove it is the one that left, and what does coming b
   standing meanwhile (G0038).
 - What crosses on return: a fresh snapshot by the drop-in path (ADR 0012), with the same load and catch-up
   bounds as a join.
-- Who notices the drop and who restores the seats: the server, the sequencer, or the host (depends on ticket 05).
+- Who notices the drop and who restores the seats: the sequencer, which runs on the relay for a session with a room
+  ("Where the sequencer runs", ADR 0023 draft) - and on the host's machine for one without.
 - Whether a game that crashed and was restarted counts as coming back, or only a link that blipped.
 - The host coming back after a migration (ticket 06): is he a host again, or a peer?
 

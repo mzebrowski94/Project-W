@@ -49,7 +49,7 @@ fails and says why - no quiet fallback to LAN. How the Host page offers it is th
 **Password.** Four characters of the room-code alphabet, read the same forgiving way (case, spaces, dashes),
 entered like the code on keyboard or pad, shown beside the code. The host types it when hosting, blank is none,
 remembered in local preferences; fixed for the room's life, kept through a change of host. Asked only at the
-relay's door - a LAN join skips it. Asked once per machine: coming back is proven by whatever "Coming back
+relay's door - a machine on the host's network is handed it by the host's announcement and never types it (amended by "Where the sequencer runs": that machine joins through the relay too). Asked once per machine: coming back is proven by whatever "Coming back
 after a dropped link" settles, never by retyping it. Held in the relay's memory only, never on disk, never
 logged (`NetLog` writes `password=yes|no`), not hashed, sent in the clear - a game password, not a credential.
 
@@ -71,12 +71,12 @@ away, G0038); the sequencer's build check stays as the second line.
 >   code the host makes up. A host who asks for a room waits for the relay's code before the session's first
 >   tick; if the relay cannot be reached or refuses, hosting fails and says why - no quiet fallback.
 > - **The relay hands out the code, and a session has one** - drawn at random from the free codes, no
->   quarantine. A session with a room announces the relay's code to its own network too; on the Join screen a
+>   quarantine. A session with a room announces the relay's code and its password to its own network too; on the Join screen a
 >   code heard on the network wins, otherwise it goes to the relay. Still four characters, still naming and
 >   granting nothing: there is no list of rooms, so a room that cares has a password.
 > - **The password lets a machine in; the code only says which room.** Four characters of the code's
 >   alphabet, read the same forgiving way, set by the host when hosting and kept for the room's life, through a
->   change of host. Asked only at the relay's door - a machine on the host's network joins without it - and
+>   change of host. Asked only at the relay's door - a machine on the host's network joins without typing it, handed it by the announcement - and
 >   once per machine: coming back is proven otherwise. A game password, not a credential: held in the relay's
 >   memory only, never on disk, never logged, not hashed, sent in the clear.
 > - **The relay refuses before it forwards anything**: no room, a missing or a wrong password, another build
@@ -87,6 +87,10 @@ away, G0038); the sequencer's build check stays as the second line.
 > **No:** *A list of rooms.* **No:** *Changing the password mid-session* - without a way to remove someone it
 > buys nothing. **No:** *A free-form password* - voice, pads and reused real passwords. **No:** *Hosting online
 > quietly falling back to the LAN.*
+
+*Amended by "Where the sequencer runs" (2026-11-19, Mateusz): a machine on the host's network joins a session with a
+room through the relay, so the announcement carries the password and that machine "joins without typing it" rather
+than "without it". The quoted text above is the agreed text, amended.*
 
 **Raised at the close, not settled here:** Mateusz asked for a page before the first tick listing the players
 and the game's options (the number of biomes), with the host starting the game, drop-in still allowed
