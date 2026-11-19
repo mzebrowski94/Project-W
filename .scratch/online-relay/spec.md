@@ -108,6 +108,14 @@ settles named. A stage that stays red is left on its branch with a note in its t
 Decision-record numbers: **G0106** is spare for stage 1, **G0107** for stage 2, **G0108** for stage 6, **G0109** for stage 9 (the limits, if a
 stage wants a record - none is promised). ADR 0024 is spare.
 
+## Stage 3 notes (AFK run, provisional, for review)
+
+- The door's wire is `net.door.Door` (types 40-44), not the session's package-private `Msg`: the client in `core` cannot see `relay`, and stage 4 owns `Msg`. *Turned down: the five types in `Msg`.*
+- `Relay` does not listen; the caller hands it a listening `Transport`. `RelayMain` is left to stage 5 (needs Netty, `SystemClock`, `SecureRandom`, a file).
+- `Room.MACHINES_MAX` (8) is held to `Players.MAX` by `RelayDoorTest`, since the relay may not read `sim`. *Turned down: a config key.*
+- Only `net.relay.roomsMax` (32) is added; a host past it is refused `refused by the relay: no room is free`. A bad password at OPEN is refused likewise. The client keys `net.relay.host`/`port` wait for stage 6, which reads them.
+- A room closes at once when its last link leaves (stage 7 replaces that with the rejoin window).
+
 ## What to play (Mateusz, on the desktop - only he runs the game)
 
 Two copies on one computer through a local relay (`docs/design/alpha-phase.md`, *Playing online*, then the relay's address in `network.properties`):

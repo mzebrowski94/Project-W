@@ -5,7 +5,7 @@
 **Trigger.** Building the relay or traffic through it; changing `Sequencer`, `Bundle` or `Msg`; anything that makes
 the sequencer read a game type; moving the reference world or the snapshot source; choosing where the relay runs.
 
-**Enforced by.** Nothing yet - not built (`.scratch/online-relay/spec.md`, stages 3-5); due with the build: an architecture test that the sequencer, the wire format
+**Enforced by.** `RelayArchitectureTest` (stage 3): the relay module reaches no libGDX, no Netty, no `sim` or `map`, no raw clock. The rest is not built (`.scratch/online-relay/spec.md`, stages 3-5); due with the build: an architecture test that the sequencer, the wire format
 it reads and the relay module reach nothing in `pl.mzebrows.pwt.sim`; golden bytes for every message type, so a
 layout change without a `Msg.PROTOCOL` bump fails (the backlog's "`Msg.PROTOCOL` is not kept", brought back here); a
 session test with the sequencer behind an in-process relay over `LoopbackNetwork`, the host's peer one link among
