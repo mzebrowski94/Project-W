@@ -62,6 +62,18 @@ class FlowFieldTest {
         assertThat(field.reaches(FAR_SIDE_COL, GAP_ROW)).isFalse();
     }
 
+    /** A broad body stands against the edge, on a tile too tight for its middle, and still has a way to go. */
+    @Test
+    void givesADirectionToABodyStandingOnATileTooTightForIt() {
+        FlowField field = FlowField.over(open(), BROAD);
+        field.rebuildFor(GOAL_COL, GAP_ROW);
+        float[] direction = new float[2];
+
+        assertThat(field.reaches(0, GAP_ROW)).isFalse();
+        assertThat(field.reachesFrom(TILE - 0.1f, centre(GAP_ROW))).isTrue();
+        assertThat(field.directionAt(TILE - 0.1f, centre(GAP_ROW), direction)).isTrue();
+    }
+
     @Test
     void reportsNoDirectionWhereItCannotReachTheGoal() {
         FlowField field = FlowField.over(walled(), BROAD);

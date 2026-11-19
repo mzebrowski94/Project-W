@@ -15,16 +15,21 @@ import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.BlastsOnDeath;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Dead;
+import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Limpet;
+import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.system.level.Rouse;
 
 /**
  * Flies what a detonator throws, sticks it, carries it, calibrates it, and sets it off when what it hangs on is gone
  * (G0100).
+ *
+ * <p><strong>Sticking is loud, once</strong>: the enemy within {@code rouseRadius} goes to look at the place.
  *
  * <p><strong>In the air</strong> it spends its reach as a grenade spends its throw - along the aim, never to the aim
  * point (G0019) - and ends where it <strong>sticks</strong>: on what contact resolution says it touched this tick, at
@@ -61,6 +66,9 @@ public final class LimpetSystem extends EntitySystem {
 
     private ImmutableArray<Entity> limpets = new ImmutableArray<>(new Array<>());
 
+    /** Every enemy that can be called to a place. */
+    private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
+
     /** Every entity with a handle, for finding a limpet's owner and what it rides. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
@@ -82,6 +90,8 @@ public final class LimpetSystem extends EntitySystem {
                         BlastsOnDeath.class)
                 .get());
         handled = engine.getEntitiesFor(Family.all(Handle.class).get());
+        watchers = engine.getEntitiesFor(
+                Family.all(Enemy.class, Perception.class, Position.class).get());
     }
 
     @Override
@@ -98,6 +108,11 @@ public final class LimpetSystem extends EntitySystem {
             }
             if (!limpet.stuck) {
                 fly(entity, limpet, deltaTime);
+                if (limpet.stuck) {
+                    // Once, the tick it sticks: whatever is within earshot goes to see what landed (G0016).
+                    Position at = POSITION.get(entity);
+                    Rouse.within(watchers, at.x, at.y, limpet.rouseRadius);
+                }
             } else if (!hangOn(entity, limpet)) {
                 spawner.markDead(entity);
                 continue;

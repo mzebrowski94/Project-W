@@ -87,6 +87,17 @@ public final class NavigationSystem extends EntitySystem {
     private int floodedOver;
 
     /**
+     * One field per strain over the ground as it is now, pointed at the place the first provoked unit of that strain
+     * is walking to this tick (G0016): a cry's place is shared by everything that heard it, so one field serves them.
+     * A unit walking to another place goes straight, as it always did.
+     */
+    private final FlowField[] places;
+
+    /** The tile each place field is claimed for this tick, or {@code -1}: scratch, cleared every update. */
+    @NotState("scratch: cleared at the start of every update")
+    private final int[] placeClaim;
+
+    /**
      * One field per strain pointed at the post, built once: the post never moves.
      */
     private final FlowField[] marches;
@@ -116,11 +127,15 @@ public final class NavigationSystem extends EntitySystem {
         this.fields = new FlowField[UnitKind.values().length];
         this.sieges = new FlowField[UnitKind.values().length];
         this.marches = new FlowField[UnitKind.values().length];
+        this.places = new FlowField[UnitKind.values().length];
+        this.placeClaim = new int[UnitKind.values().length];
         for (UnitKind kind : UnitKind.values()) {
             fields[kind.ordinal()] =
                     FlowField.over(map, solid, config.unit(kind).radius());
             sieges[kind.ordinal()] = FlowField.over(map, config.unit(kind).radius());
             marches[kind.ordinal()] = FlowField.over(map, config.unit(kind).radius());
+            places[kind.ordinal()] =
+                    FlowField.over(map, solid, config.unit(kind).radius());
         }
     }
 
@@ -143,7 +158,11 @@ public final class NavigationSystem extends EntitySystem {
             for (FlowField field : fields) {
                 field.invalidate();
             }
+            for (FlowField field : places) {
+                field.invalidate();
+            }
         }
+        Arrays.fill(placeClaim, -1);
         for (int i = 0; i < enemies.size(); i++) {
             Entity enemy = enemies.get(i);
             Perception perception = PERCEPTION.get(enemy);
@@ -154,7 +173,7 @@ public final class NavigationSystem extends EntitySystem {
             // provocation (G0016), or up to its firing range once. Then it holds.
             boolean rooted = RANGED.has(enemy) && RANGED.get(enemy).enabled && RANGED.get(enemy).holdsGround;
             if (!perception.aggro && perception.provoked) {
-                towards(enemy, perception.provokedX, perception.provokedY);
+                toAPlace(enemy, perception.provokedX, perception.provokedY);
                 continue;
             }
             if (!perception.aggro && perception.foraging) {
@@ -188,7 +207,7 @@ public final class NavigationSystem extends EntitySystem {
             int kind = STRAIN.get(enemy).kind.ordinal();
             FlowField field = fields[kind];
             field.rebuildFor(goalCols, goalRows, goals);
-            if (!field.reaches(map.colAt(position.x), map.rowAt(position.y))) {
+            if (!field.reachesFrom(position.x, position.y)) {
                 field = sieges[kind];
                 field.rebuildFor(goalCols, goalRows, goals);
             }
@@ -283,11 +302,39 @@ public final class NavigationSystem extends EntitySystem {
     }
 
     /**
-     * Straight at a place something is cross about (G0016).
+     * To a place something is cross about (G0016): straight when nothing is in the way, otherwise round it.
      *
-     * <p><strong>No flow field</strong>: each provoked unit has its own goal, so a field would be a grid
-     * pass per unit. Accepted limit: provoked from beyond a wall, it mills at the wall.
+     * <p><strong>One field per strain per tick</strong>: the first unit of a strain to ask claims it for its place and
+     * every other that wants the same tile reads it - a cry is one place for everything that heard it. A unit with a
+     * place of its own, or one the field cannot reach it from, goes straight and may mill at a wall; that is the
+     * limit left, and it is a rare one.
      */
+    private void toAPlace(Entity enemy, float x, float y) {
+        Position position = POSITION.get(enemy);
+        float radius = BODY.get(enemy).radius;
+        hunted.set(x, y);
+        if (within(position, hunted, map.tileSize()) || solid.isClearPath(position.x, position.y, x, y, radius)) {
+            towards(enemy, x, y);
+            return;
+        }
+        int kind = STRAIN.get(enemy).kind.ordinal();
+        int tile = map.rowAt(y) * map.cols() + map.colAt(x);
+        if (placeClaim[kind] == -1) {
+            placeClaim[kind] = tile;
+            places[kind].rebuildFor(map.colAt(x), map.rowAt(y));
+        }
+        FlowField field = places[kind];
+        if (placeClaim[kind] == tile
+                && field.reachesFrom(position.x, position.y)
+                && field.directionAt(position.x, position.y, direction)) {
+            float speed = SPEED.get(enemy).value;
+            STEERING.get(enemy).set(direction[0] * speed, direction[1] * speed);
+            return;
+        }
+        towards(enemy, x, y);
+    }
+
+    /** Straight at a place, with nothing to say about what is between. */
     private static void towards(Entity enemy, float x, float y) {
         Position position = POSITION.get(enemy);
         float towardsX = x - position.x;

@@ -43,6 +43,7 @@ no grenade. It throws a **limpet**.
   is stuck to dies or leaves the field** - an alien killed, a door opened or broken, a barrel gone up. Going down keeps
   it; a man down cannot fire, so he cannot set it off until he is up. Shots and claws pass through it: it lands no
   blow and takes none, and a blast alone reaches it.
+- **Sticking is a cry** (2026-11-19, Mateusz). The tick it sticks - on rock, a door, scenery, an alien or the ground - every enemy within `limpet.rouseRadius` is roused to the place (`Rouse`, G0016): it goes to look, and hunts nobody it has not noticed. Once, never while it waits. A thrown limpet is a decoy.
 - **Named by handle.** A limpet names its owner and what it is stuck to by handle (ADR 0016), and is found with
   `Handles.resolve` every tick; nothing holds an `Entity`.
 

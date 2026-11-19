@@ -1166,7 +1166,8 @@ public final class Spawner {
                         weapon.projectileRange,
                         ticks(limpet.calibrateSeconds()),
                         limpet.calibratedBlastRadius(),
-                        limpet.calibratedBlastHarm()));
+                        limpet.calibratedBlastHarm(),
+                        limpet.rouseRadius()));
         entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));

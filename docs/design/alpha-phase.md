@@ -183,8 +183,10 @@ Behaviour that looks like design and is not. Each line names what replaces it.
   the levels that will find out**: each sends about a hundred aliens in a dozen-odd waves, and if the
   squad is losing, sixty of them can be standing at once. Watch the frame time on `F1` there before
   reaching for a profiler anywhere else.
-- **A provoked unit walks straight at what provoked it, and so does anything hunting somebody who is
-  not the commander.** No flow field for either: routes are one grid pass per goal, and each of those
+- **A provoked unit walks straight at what provoked it unless a wall is in the way**, when it is routed by one field
+  per strain for the first place asked each tick (a cry is one place, so a rouse is routed); a unit with a place of
+  its own still goes straight. And so does anything hunting somebody who is
+  not the commander. No flow field for either: routes are one grid pass per goal, and each of those
   units has a goal of its own - the per-unit cost a flow field exists to avoid. One that sets off from
   behind a wall walks into the wall and mills about. At the ranges a fight happens at that is rare; it
   stops being acceptable the moment something can be summoned from across the level.

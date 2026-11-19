@@ -13,6 +13,8 @@ import lombok.With;
  * @param blastHarm what that circle does to a man (G0053)
  * @param calibratedBlastRadius the circle it leaves set off once calibrated
  * @param calibratedBlastHarm what that one does to a man
+ * @param rouseRadius how far the cry of its sticking carries: everything of the other side within it goes to see what
+ *     stuck, once (G0016). Zero is off
  */
 @With
 public record LimpetDef(
@@ -20,12 +22,14 @@ public record LimpetDef(
         float blastRadius,
         Harm blastHarm,
         float calibratedBlastRadius,
-        Harm calibratedBlastHarm) {
+        Harm calibratedBlastHarm,
+        float rouseRadius) {
 
     public LimpetDef {
         Require.notNegative("limpet calibrateSeconds", calibrateSeconds);
         Require.notNegative("limpet blastRadius", blastRadius);
         Require.notNegative("limpet calibratedBlastRadius", calibratedBlastRadius);
+        Require.notNegative("limpet rouseRadius", rouseRadius);
         if (blastRadius > 0f && calibratedBlastRadius < blastRadius) {
             throw new IllegalArgumentException(
                     "a calibrated limpet goes off bigger, never smaller: calibratedBlastRadius " + calibratedBlastRadius
@@ -35,7 +39,7 @@ public record LimpetDef(
 
     /** A gun that throws no limpet. What every gun but the detonator declares. */
     public static LimpetDef off() {
-        return new LimpetDef(0f, 0f, Harm.DOWN, 0f, Harm.DOWN);
+        return new LimpetDef(0f, 0f, Harm.DOWN, 0f, Harm.DOWN, 0f);
     }
 
     /** Whether this gun throws a limpet at all. */

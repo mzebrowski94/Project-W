@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -97,6 +98,18 @@ class NavigationSystemTest {
         steps(simulation, LONG_ENOUGH_TO_ROUND_THE_CORNER);
 
         assertThat(enemy.getComponent(Position.class).y).isLessThan(centre(LANE_ROW - 2));
+    }
+
+    /** A cry is a place across rock: the way round is walked, not the rock milled at (G0016). */
+    @Test
+    void walksAnEnemyRousedFromBeyondAWallRoundItRatherThanIntoIt() {
+        Simulation simulation = on(walledWithAGapAtTheTop());
+        Entity enemy = simulation.spawnEnemy(centre(WALL_COL - 3), centre(LANE_ROW));
+        enemy.getComponent(Perception.class).rouseAt(centre(WALL_COL + 4), centre(LANE_ROW));
+
+        steps(simulation, LONG_ENOUGH_TO_ROUND_THE_CORNER);
+
+        assertThat(enemy.getComponent(Position.class).x).isGreaterThan(centre(WALL_COL));
     }
 
     @Test

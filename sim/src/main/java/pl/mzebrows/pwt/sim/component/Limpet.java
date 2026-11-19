@@ -73,6 +73,9 @@ public final class Limpet implements Component, Pool.Poolable {
 
     public Harm calibratedBlastHarm = Harm.DOWN;
 
+    /** How far the cry of its sticking carries, in world units; zero is silent. */
+    public float rouseRadius;
+
     /** Sets the throw and returns this component, for fluent spawning. */
     public Limpet set(
             long newOwner,
@@ -80,7 +83,8 @@ public final class Limpet implements Component, Pool.Poolable {
             float range,
             int newCalibrateTicks,
             float newCalibratedBlastRadius,
-            Harm newCalibratedBlastHarm) {
+            Harm newCalibratedBlastHarm,
+            float newRouseRadius) {
         this.owner = newOwner;
         this.side = newSide;
         this.remainingDistance = range;
@@ -101,6 +105,7 @@ public final class Limpet implements Component, Pool.Poolable {
         this.calibrated = false;
         this.calibratedBlastRadius = newCalibratedBlastRadius;
         this.calibratedBlastHarm = newCalibratedBlastHarm;
+        this.rouseRadius = newRouseRadius;
         return this;
     }
 
@@ -148,5 +153,6 @@ public final class Limpet implements Component, Pool.Poolable {
         calibrated = false;
         calibratedBlastRadius = 0f;
         calibratedBlastHarm = Harm.DOWN;
+        rouseRadius = 0f;
     }
 }

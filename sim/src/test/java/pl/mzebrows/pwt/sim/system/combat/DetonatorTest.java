@@ -16,6 +16,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.walledAtADoorway;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.watching;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
@@ -33,6 +34,7 @@ import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Heat;
 import pl.mzebrows.pwt.sim.component.Limpet;
+import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Harm;
@@ -88,6 +90,26 @@ class DetonatorTest {
         steps(simulation, 2, RELEASE);
 
         assertWentOff(simulation);
+    }
+
+    // ---- its cry ----
+
+    @Test
+    void callsWhatIsInEarshotToWhereItStuckAndNoOneFurther() {
+        Simulation simulation = watching();
+        holding(simulation);
+        Entity near = simulation.spawnEnemy(X + 34f, Y + 12f);
+        Entity far = simulation.spawnEnemy(5f, Y);
+
+        simulation.step(PRESS);
+        steps(simulation, ticksIn(2f), RELEASE);
+
+        Entity limpet = limpet(simulation);
+        assertThat(limpet).isNotNull();
+        Position landed = limpet.getComponent(Position.class);
+        assertThat(near.getComponent(Perception.class).provokedX).isCloseTo(landed.x, within(TOUCHING));
+        assertThat(near.getComponent(Perception.class).roused).isTrue();
+        assertThat(far.getComponent(Perception.class).provoked).isFalse();
     }
 
     // ---- where it sticks ----

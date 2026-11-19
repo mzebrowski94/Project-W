@@ -6,7 +6,7 @@
 #
 # Without paths it stages everything git does not ignore. It refuses, and changes nothing, when:
 #   - this is not a cloud session (CLAUDE_CODE_REMOTE != true) - locally, Mateusz commits;
-#   - the branch is not claude/* - never main, never somebody else's branch;
+#   - the branch is not claude/* or ccr-* - never main, never somebody else's branch;
 #   - there is no message, or nothing to commit.
 # It never amends, rebases or force-pushes. Mateusz merges the branch into main himself.
 set -euo pipefail
@@ -22,7 +22,7 @@ fail() {
 [[ "${CLAUDE_CODE_REMOTE:-}" == "true" ]] || fail "not a cloud session - Mateusz commits locally (CLAUDE.md)."
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-[[ "$BRANCH" == claude/* ]] || fail "branch '$BRANCH' is not a claude/* branch - refusing."
+[[ "$BRANCH" == claude/* || "$BRANCH" == ccr-* ]] || fail "branch '$BRANCH' is not a claude/* or ccr-* branch - refusing."
 
 MESSAGE_ARGS=()
 PATHS=()

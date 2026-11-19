@@ -12,7 +12,7 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * Sending everything within earshot to see who is at a place, in one place, for everything that
  * shouts.
  *
- * <p>Two things do: a control point somebody has started taking, and a nest somebody is hitting.
+ * <p>Three things do: a control point somebody has started taking, a nest somebody is hitting, and a limpet that has stuck.
  * Both mean the same thing to a creature - <strong>there is trouble over there</strong> - and a
  * provocation is a place rather than a target (G0016), so neither of them needs to know who caused
  * it. The same argument {@link Drivers} and {@link Guns} make for their own questions: two copies of
@@ -23,7 +23,7 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * pin everything within earshot to the place for ever and override any other grudge it had, and once
  * is all it takes for them to come and look. Deciding what counts as one event is the caller's.
  */
-final class Rouse {
+public final class Rouse {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
@@ -37,7 +37,7 @@ final class Rouse {
      * - the codebase's usual way of saying "not for me". Anything held still is skipped: a stunned
      * creature or one on the ground is not going anywhere about it.
      */
-    static void within(ImmutableArray<Entity> watchers, float x, float y, float radius) {
+    public static void within(ImmutableArray<Entity> watchers, float x, float y, float radius) {
         if (radius <= 0f) {
             return;
         }

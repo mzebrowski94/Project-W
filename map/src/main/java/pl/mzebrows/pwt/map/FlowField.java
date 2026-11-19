@@ -179,6 +179,22 @@ public final class FlowField {
     }
 
     /**
+     * Whether the field has a direction to give at this world point: any of the four tile centres round it that
+     * {@link #directionAt} blends is reached.
+     *
+     * <p>A body stands wherever its circle fits, not only where one fits at a tile's centre, so a large one is often
+     * on a tile the field calls too tight. Asking about that tile alone said "no way" for it; this asks what the
+     * direction will actually be read from.
+     */
+    public boolean reachesFrom(float worldX, float worldY) {
+        float inTilesX = worldX / map.tileSize() - 0.5f;
+        float inTilesY = worldY / map.tileSize() - 0.5f;
+        int col = (int) Math.floor(inTilesX);
+        int row = (int) Math.floor(inTilesY);
+        return reaches(col, row) || reaches(col + 1, row) || reaches(col, row + 1) || reaches(col + 1, row + 1);
+    }
+
+    /**
      * How many tiles of walking it is from this tile to the goal, or {@code -1} if a body this size
      * cannot get there at all.
      *
