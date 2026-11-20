@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.fail;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import java.io.IOException;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -198,6 +199,28 @@ class NettyTransportTest {
         assertThat(written).contains("event=opened").doesNotContain("cat=stats");
     }
 
+    /** Postman pointed at the game port: its request read as a frame length was a 1.3 GB frame and a cryptic error. */
+    @Test
+    void namesAWebRequestSentToTheGamePortForWhatItIs(@TempDir Path dir) throws IOException {
+        NetLog hostLog = NetLog.open(new NetConfig.LogConfig(dir.toString(), "INFO", 1024, 0), "host");
+        NettyTransport host = new NettyTransport(config(), SystemClock.INSTANCE, hostLog, "host");
+        transports.add(host);
+        host.listen(47_380, 0);
+        RecordingListener atHost = new RecordingListener();
+
+        try (Socket web = new Socket(java.net.InetAddress.getLoopbackAddress(), 47_380)) {
+            web.getOutputStream()
+                    .write("POST /probe HTTP/1.1\r\nHost: relay\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+            web.getOutputStream().flush();
+            pollUntil(() -> web.isClosed() || readsEnd(web), host, atHost);
+        }
+        hostLog.close();
+
+        String written = Files.readString(Objects.requireNonNull(hostLog.file()), StandardCharsets.UTF_8);
+        assertThat(written).contains("event=http-on-game-port").doesNotContain("TooLongFrameException");
+        assertThat(atHost.of("opened")).isEmpty();
+    }
+
     private Ends open(int port) {
         NettyTransport host = transport();
         NettyTransport joiner = transport();
@@ -233,6 +256,18 @@ class NettyTransportTest {
                 shipped.lan(),
                 shipped.relay(),
                 shipped.rejoin());
+    }
+
+    /** Whether the far end has closed this socket: a read sees the end of the stream. */
+    private static boolean readsEnd(Socket socket) {
+        try {
+            socket.setSoTimeout(5);
+            return socket.getInputStream().read() < 0;
+        } catch (java.net.SocketTimeoutException e) {
+            return false;
+        } catch (IOException e) {
+            return true;
+        }
     }
 
     private static void pollUntil(BooleanSupplier done, Ends ends) {

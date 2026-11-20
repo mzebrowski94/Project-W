@@ -8,6 +8,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -29,6 +30,7 @@ import java.security.SecureRandom;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -515,6 +517,9 @@ public final class NettyTransport implements Transport {
     }
 
     private void framed(SocketChannel channel, boolean accepted) {
+        if (accepted) {
+            channel.pipeline().addLast(new NotTheGame());
+        }
         channel.pipeline()
                 .addLast(new LengthFieldBasedFrameDecoder(Transport.MAX_MESSAGE_BYTES + 1, 0, 4, 0, 4))
                 .addLast(new LengthFieldPrepender(4))
@@ -543,6 +548,50 @@ public final class NettyTransport implements Transport {
         }
         return value;
     }
+
+    /**
+     * Looks at the first bytes an accepted connection sends: a game's start with a frame length, a web request with
+     * a method in ASCII - curl or Postman pointed at the game port rather than the relay's diagnostics. That one is
+     * named in the log for what it is and closed, rather than read as a frame four hundred megabytes long.
+     */
+    private final class NotTheGame extends ChannelInboundHandlerAdapter {
+
+        @Override
+        public void channelRead(ChannelHandlerContext context, Object message) throws Exception {
+            context.pipeline().remove(this);
+            if (message instanceof ByteBuf bytes && isHttp(bytes)) {
+                log.warn(
+                        "tcp",
+                        "event=http-on-game-port remote=" + context.channel().remoteAddress()
+                                + " hint=\"this port speaks the game's protocol only; send HTTP to"
+                                + " net.relay.diagnosticPort\"");
+                bytes.release();
+                context.close();
+                return;
+            }
+            context.fireChannelRead(message);
+        }
+    }
+
+    /** Whether a connection's first bytes are an HTTP method and a space. */
+    static boolean isHttp(ByteBuf bytes) {
+        int at = bytes.readerIndex();
+        int length = Math.min(bytes.readableBytes(), 8);
+        StringBuilder start = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            start.append((char) (bytes.getByte(at + i) & 0xFF));
+        }
+        String text = start.toString();
+        for (String method : HTTP_METHODS) {
+            if (text.startsWith(method + " ")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static final List<String> HTTP_METHODS =
+            List.of("GET", "POST", "PUT", "HEAD", "DELETE", "PATCH", "OPTIONS");
 
     /** TCP frames, copied off the event loop onto the queue. */
     private final class FrameHandler extends SimpleChannelInboundHandler<ByteBuf> {

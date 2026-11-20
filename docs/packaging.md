@@ -85,6 +85,11 @@ connection through (host, port or a firewall); one with `accepted` and then `clo
 got TCP through but not UDP - open the port for UDP as well. The game's own console prints the client's side of the same
 steps, and the reason its link closed.
 
+**In Docker**, publish the port for UDP too - Docker publishes TCP only unless told: `-p 24741:24741/tcp -p 24741:24741/udp`
+(compose: `"24741:24741/tcp"` and `"24741:24741/udp"`), and the diagnostics port beside them. If the relay's log names every
+machine as the bridge's gateway (`remote=/172.x.0.1`), every player shares one address and its limits - 8 links, 3 rooms,
+10 refusals before all of them are silenced; `network_mode: host` gives the relay the real addresses.
+
 ### Diagnostics over HTTP
 
 Set `net.relay.diagnosticPort` (zero, as shipped, is off) in the overrides file - `net.relay.diagnosticPort=24742` - and
@@ -92,7 +97,7 @@ open that TCP port to yourself only: it names the addresses of the machines that
 
 | Request | What it says |
 |---|---|
-| `GET http://<relay>:24742/status` | build, ports, uptime, the rooms and links open now, and `you` - your address as the relay saw it |
+| `GET http://<relay>:24742/status` (the diagnostics port - HTTP sent to 24741 is logged `event=http-on-game-port` and closed) | build, ports, uptime, the rooms and links open now, and `you` - your address as the relay saw it |
 | `GET http://<relay>:24742/log?lines=200` | the tail of this run's log file, handshake steps and close reasons included |
 | `POST http://<relay>:24742/probe` | the relay dials its own door on `127.0.0.1`, opens a room and joins it from a second link, and says how far each step got and in how many ms; `?host=<address>` dials another address instead, e.g. the server's public one |
 
