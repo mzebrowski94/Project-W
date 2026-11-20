@@ -154,6 +154,7 @@ public final class UiFlow {
                 page == UiPage.PROVING_GROUND
                                 || page == UiPage.PROVING_UPGRADES
                                 || page == UiPage.ONLINE_HOST
+                                || page == UiPage.ONLINE
                                 || page == UiPage.CONTROLS
                                 || page == UiPage.PAUSE_CONTROLS
                         ? new UiEffect(UiEffect.Kind.CHOOSE, intent.index())

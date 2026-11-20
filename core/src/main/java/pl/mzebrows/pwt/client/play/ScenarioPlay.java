@@ -1,5 +1,6 @@
 package pl.mzebrows.pwt.client.play;
 
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.input.PlayerSeats;
 import pl.mzebrows.pwt.sim.PlayerInputs;
@@ -8,6 +9,7 @@ import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.ui.hud.SeatedPlay;
+import pl.mzebrows.pwt.ui.page.Briefing;
 
 /**
  * What the scenario screen plays through: offline, a world stepped on this machine ({@link
@@ -73,6 +75,14 @@ public interface ScenarioPlay extends SeatedPlay, AutoCloseable {
     /** The host the first time this is asked after he changed, then null until he changes again: what the banner says once. */
     default @Nullable Host takeHostChange() {
         return null;
+    }
+
+    /**
+     * Who is in the session, as the pause menu lists them - slot, which is the commander's colour, and the machine's
+     * nickname. Empty offline, where every seat is this machine's own.
+     */
+    default List<Briefing.Player> players() {
+        return List.of();
     }
 
     /** Whether this machine's link is down and it is trying to come back (G0105). */

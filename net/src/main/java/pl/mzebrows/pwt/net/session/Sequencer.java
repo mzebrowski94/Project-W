@@ -769,6 +769,7 @@ public final class Sequencer implements AutoCloseable {
         }
         peer.id = nextPeerId++;
         peer.machine = machine;
+        log.info("sequencer", "event=welcomed peer=" + peer.id + " machine=" + machine + " link=" + peer.link);
         peer.host = key == hostKey && host() == null && !holdingHost() && !handedOver;
         hostWelcomed |= peer.host;
         // Sixteen bytes only this machine and this sequencer know: what proves a returning link is this one (G0105).

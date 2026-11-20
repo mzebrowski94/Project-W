@@ -225,6 +225,9 @@ Title `ui.online.title = PLAY ONLINE`.
 
 | Entry | Label | Intent | Enabled |
 |---|---|---|---|
+| `nickname` | `ui.online.nickname = NICKNAME` | `CHOOSE(0)` | always; a line a keyboard types into (the machine id's alphabet, 16), kept on leaving the page |
+| `serverIp` | `ui.online.serverIp = SERVER IP` | `CHOOSE(1)` | always; a line (host name or address), from `net.relay.host` until the player changes it, then kept in settings |
+| `serverPort` | `ui.online.serverPort = SERVER PORT` | `CHOOSE(2)` | always; digits, from `net.relay.port` likewise; empty or not a port keeps the property's |
 | `join` | `ui.online.join = JOIN GAME` | `OPEN(ONLINE_JOIN)` | always |
 | `host` | `ui.online.host = HOST GAME` | `OPEN(ONLINE_HOST)` | always |
 | `back` | `ui.common.back = BACK` | `BACK` | always |

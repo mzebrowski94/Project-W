@@ -405,6 +405,25 @@ public record NetConfig(
         public boolean set() {
             return !host.isEmpty();
         }
+
+        /** The same relay settings reached at another address: what the player typed on the online page. */
+        public Relay at(String newHost, int newPort) {
+            return new Relay(
+                    roomsMax,
+                    roomsPerAddressMax,
+                    linksPerAddressMax,
+                    helloTimeoutSeconds,
+                    refusalsPerAddressMax,
+                    refusalWindowSeconds,
+                    silenceSeconds,
+                    wrongPasswordsPerRoomMax,
+                    roomLockSeconds,
+                    bytesPerSecondPerLink,
+                    idleRoomMinutes,
+                    sealLateWarnMs,
+                    newHost,
+                    newPort);
+        }
     }
 
     /** The same config with another rejoin window or retry. */

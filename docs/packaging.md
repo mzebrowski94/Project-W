@@ -57,6 +57,28 @@ Claude's sandbox cannot produce the Windows zip; `./gradlew` on the Windows side
 | Memory | `-Xmx1G` under `roast.vmArgs`. |
 | Icon | `lwjgl3/icons/logo.png` (the exe) and the `libgdx*.png` in `lwjgl3/src/main/resources` (the window). |
 
+## The relay as a jar
+
+The relay (`relay` module) is a headless process; one jar carries it with everything it needs:
+
+```
+.\gradlew :relay:relayJar
+```
+
+Result: `pwt-relay.jar` under `relay/build/libs/` (in this checkout's build output - `.claude/scripts/gradle.sh` redirects
+it to `~/.pwt/out/`). Copy it to the server and run it there with Java 25:
+
+```
+java -jar pwt-relay.jar [overrides.properties] [port]
+```
+
+Both arguments are optional and may come in either order; a bare number is the port and beats `net.relay.port`.
+
+The optional file holds `key=value` lines of `assets/network.properties` to override (`net.relay.port`, the limits, `net.log.dir`);
+nothing else needs shipping. Open the port - 24741 by default - for **TCP and UDP**. It prints a banner and echoes what rooms
+and links do to the console; the full log is `logs/net/relay-<time>.log` beside where it was started. The jar's build id must
+match the players' builds - rebuild and redeploy it with each game build that changes `map`, `sim` or the session protocol.
+
 ## Not done yet
 
 - **Not signed.** Windows SmartScreen shows "Windows protected your PC" on first run; *More info ->

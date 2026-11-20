@@ -30,6 +30,15 @@ public final class MenuTree {
     /** The missions page's START MISSION, after ENTER CODE: the one entry that starts anything. */
     public static final int MISSION_START = MISSION_CODE + 1;
 
+    /** The online page's text rows, before JOIN GAME: the nickname, the relay's address and its port. */
+    public static final int ONLINE_NICKNAME = 0;
+
+    public static final int ONLINE_SERVER_IP = 1;
+    public static final int ONLINE_SERVER_PORT = 2;
+
+    /** How many rows of the online page are lines to type into; the page opens on the one after them. */
+    public static final int ONLINE_ROWS = 3;
+
     /** The controls page's PROMPTS switch, its first entry. */
     public static final int CONTROLS_PROMPTS = 0;
 
@@ -85,10 +94,13 @@ public final class MenuTree {
                         "ui.online.title",
                         "",
                         List.of(
+                                entry("nickname", "ui.online.nickname", UiIntent.choose(ONLINE_NICKNAME)),
+                                entry("serverIp", "ui.online.serverIp", UiIntent.choose(ONLINE_SERVER_IP)),
+                                entry("serverPort", "ui.online.serverPort", UiIntent.choose(ONLINE_SERVER_PORT)),
                                 entry("join", "ui.online.join", UiIntent.open(UiPage.ONLINE_JOIN)),
                                 entry("host", "ui.online.host", UiIntent.open(UiPage.ONLINE_HOST)),
                                 back()),
-                        0));
+                        ONLINE_ROWS));
         PAGES.put(UiPage.CAMPAIGN, new MenuPage("ui.campaign.title", "ui.campaign.closed", List.of(back()), 0));
         // Its table of bindings is the screen's to write, from the bindings themselves, and so is the
         // switch's ON or OFF; the switch is the one thing on the page that changes anything.

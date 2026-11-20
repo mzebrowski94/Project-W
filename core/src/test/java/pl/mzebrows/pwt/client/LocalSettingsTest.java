@@ -25,5 +25,10 @@ class LocalSettingsTest {
         assertThat(settings.hostPassword()).isEmpty();
         settings.hostPassword("KJ34");
         assertThat(settings.hostPassword()).isEqualTo("KJ34");
+        assertThat(settings.relayHost()).isNull();
+        assertThat(settings.relayPort()).isNull();
+        settings.relay("relay.example.org", "");
+        assertThat(settings.relayHost()).isEqualTo("relay.example.org");
+        assertThat(settings.relayPort()).isNull();
     }
 }

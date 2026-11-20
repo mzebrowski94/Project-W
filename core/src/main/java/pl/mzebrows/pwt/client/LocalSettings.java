@@ -20,12 +20,20 @@ public final class LocalSettings {
 
     private static final String HOST_PASSWORD = "hostPassword";
 
+    private static final String RELAY_HOST = "relayHost";
+
+    private static final String RELAY_PORT = "relayPort";
+
     private final @Nullable Preferences preferences;
 
     /** What this run set, when there are no preferences to keep it in: a test, or a store that failed to open. */
     private boolean unsavedPrompts = true;
 
     private String unsavedHostPassword = "";
+
+    private @Nullable String unsavedRelayHost;
+
+    private @Nullable String unsavedRelayPort;
 
     private LocalSettings(@Nullable Preferences preferences) {
         this.preferences = preferences;
@@ -100,6 +108,39 @@ public final class LocalSettings {
             kept.flush();
         } catch (RuntimeException e) {
             Log.error("Setting " + HOST_PASSWORD + " not saved", e);
+        }
+    }
+
+    /**
+     * The relay address the player typed on the online page, or null while they never did - then {@code
+     * net.relay.host} stands. Empty is an answer too: a relay the player cleared.
+     */
+    public @Nullable String relayHost() {
+        Preferences kept = preferences;
+        return kept == null ? unsavedRelayHost : kept.contains(RELAY_HOST) ? kept.getString(RELAY_HOST) : null;
+    }
+
+    /** The relay port the player typed, as typed (digits), or null while they never did or left it empty. */
+    public @Nullable String relayPort() {
+        Preferences kept = preferences;
+        String port = kept == null ? unsavedRelayPort : kept.contains(RELAY_PORT) ? kept.getString(RELAY_PORT) : null;
+        return port == null || port.isEmpty() ? null : port;
+    }
+
+    /** Keeps the relay address the player typed, at once - a failed write logged, the run's value kept anyway. */
+    public void relay(String host, String port) {
+        unsavedRelayHost = host;
+        unsavedRelayPort = port;
+        Preferences kept = preferences;
+        if (kept == null) {
+            return;
+        }
+        try {
+            kept.putString(RELAY_HOST, host);
+            kept.putString(RELAY_PORT, port);
+            kept.flush();
+        } catch (RuntimeException e) {
+            Log.error("Settings " + RELAY_HOST + " and " + RELAY_PORT + " not saved", e);
         }
     }
 }

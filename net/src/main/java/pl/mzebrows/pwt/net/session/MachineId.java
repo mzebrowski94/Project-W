@@ -12,8 +12,8 @@ import org.jspecify.annotations.Nullable;
  */
 public final class MachineId {
 
-    /** The longest one a hello may carry. */
-    static final int MAX_LENGTH = 16;
+    /** The longest one a hello may carry - and so the longest nickname (the player's own name for his machine). */
+    public static final int MAX_LENGTH = 16;
 
     /** Letters and digits nobody misreads for another: no 0 and o, no 1, l and i. */
     private static final String LETTERS = "abcdefghjkmnpqrstuvwxyz23456789";

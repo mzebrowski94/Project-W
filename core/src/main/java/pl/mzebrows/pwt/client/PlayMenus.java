@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.client;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,7 @@ import pl.mzebrows.pwt.client.play.MissionRecords;
 import pl.mzebrows.pwt.client.play.ScenarioPlay;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.ui.hud.LevelTime;
 import pl.mzebrows.pwt.ui.hud.Readout;
 import pl.mzebrows.pwt.ui.layout.HudMetrics;
@@ -34,6 +36,7 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 import pl.mzebrows.pwt.ui.nav.InputModality;
 import pl.mzebrows.pwt.ui.nav.NavInput;
 import pl.mzebrows.pwt.ui.nav.SelectionMemory;
+import pl.mzebrows.pwt.ui.page.Briefing;
 import pl.mzebrows.pwt.ui.page.MenuEntry;
 import pl.mzebrows.pwt.ui.page.MenuLayout;
 import pl.mzebrows.pwt.ui.page.MenuPage;
@@ -91,6 +94,11 @@ final class PlayMenus {
 
     private ScenarioPlay.@Nullable Host footHost;
 
+    /** The players the pause page's foot lists, as last written, and the foot line the first of them is on (-1: none). */
+    private List<Briefing.Row> footPlayers = List.of();
+
+    private int playersFrom = -1;
+
     /** The pause in force is a solo draft's (G0049): no banner and no scrim over the game being chosen for. */
     private boolean quiet;
 
@@ -144,6 +152,7 @@ final class PlayMenus {
         this.strings = strings;
         this.hints = new PageHints(controls, strings);
         this.painter = new MenuPainter(hud, graphic, metrics);
+        painter.footInk(this::footInk);
         this.reader = new NavInputReader(controls.ui(), pads);
         this.motion = new PageMotion(
                 graphic.ui().motion().pageSeconds(),
@@ -471,13 +480,19 @@ final class PlayMenus {
         MissionCode played = mission;
         long tick = pause && played != null && world != null ? world.tick() : -1;
         ScenarioPlay.Host host = pause ? play.handedOverHost() : null;
-        if (tick == missionFootTick && Objects.equals(invitation, footFor) && Objects.equals(host, footHost)) {
+        List<Briefing.Row> players = pause && play.online() ? Briefing.rows(play.players()) : List.of();
+        if (tick == missionFootTick
+                && Objects.equals(invitation, footFor)
+                && Objects.equals(host, footHost)
+                && players.equals(footPlayers)) {
             return foot;
         }
         missionFootTick = tick;
         footFor = invitation;
         footHost = host;
+        footPlayers = players;
         foot.clear();
+        playersFrom = -1;
         if (tick >= 0 && played != null) {
             foot.add(strings.format(
                     "ui.pause.mission",
@@ -492,7 +507,27 @@ final class PlayMenus {
         if (host != null) {
             foot.add(strings.format("ui.host.is", DispatchText.hostName(strings, host.slot(), host.peer())));
         }
+        if (!players.isEmpty()) {
+            // Who is who: each in the colour of their commander, so the colour on the field has a name.
+            foot.add("");
+            foot.add(strings.get("ui.pause.players"));
+            playersFrom = foot.size();
+            for (Briefing.Row row : players) {
+                String who = strings.format("ui.briefing.player", row.slot() + 1, row.machine());
+                foot.add(row.online() ? who : who + "  " + strings.get("ui.briefing.offline"));
+            }
+        }
         return foot;
+    }
+
+    /** A player's row in their commander's colour while they are on; the page's dim - once their link is gone. */
+    private @Nullable Color footInk(int line) {
+        int at = line - playersFrom;
+        if (flow.top() != UiPage.PAUSE || playersFrom < 0 || at < 0 || at >= footPlayers.size()) {
+            return null;
+        }
+        Briefing.Row row = footPlayers.get(at);
+        return row.online() ? graphic.palette().colorFor(Look.COMMANDER, row.slot()) : null;
     }
 
     /** This machine hosts an online session: leaving ends it for everybody. */

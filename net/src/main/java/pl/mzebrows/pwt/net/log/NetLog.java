@@ -15,6 +15,7 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import java.util.logging.StreamHandler;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.NetConfig.LogConfig;
 
@@ -62,6 +63,15 @@ public final class NetLog implements AutoCloseable {
      * a game that cannot log still plays.
      */
     public static NetLog open(LogConfig config, String instance) {
+        return open(config, instance, false);
+    }
+
+    /**
+     * As {@link #open(LogConfig, String)}, and with {@code echo} the lines that say what a link or a room did - the
+     * relay's and the sequencer's, INFO and up - go to standard output too, for an operator watching a console. The
+     * per-second numbers and the per-message detail stay in the file only.
+     */
+    public static NetLog open(LogConfig config, String instance, boolean echo) {
         Level level = level(config.level());
         Logger logger = Logger.getAnonymousLogger();
         logger.setUseParentHandlers(false);
@@ -77,11 +87,36 @@ public final class NetLog implements AutoCloseable {
             handler.setFormatter(new LineFormatter(instance));
             handler.setEncoding("UTF-8");
             logger.addHandler(handler);
+            if (echo) {
+                logger.addHandler(echoHandler(instance));
+            }
             return new NetLog(instance, logger, handler, config.traceSize(), file);
         } catch (IOException | RuntimeException e) {
             System.err.println("[net] could not open a log in " + config.dir() + ": " + e);
             return new NetLog(instance, logger, null, config.traceSize(), null);
         }
+    }
+
+    /** Standard output, one line per record in the file's own format, of the categories an operator reads. */
+    private static Handler echoHandler(String instance) {
+        StreamHandler echo = new StreamHandler(System.out, new LineFormatter(instance)) {
+            @Override
+            public synchronized void publish(LogRecord record) {
+                String message = record.getMessage();
+                if (message != null && (message.startsWith("cat=relay ") || message.startsWith("cat=sequencer "))) {
+                    super.publish(record);
+                    flush();
+                }
+            }
+
+            // Standard output is not this handler's to close.
+            @Override
+            public synchronized void close() {
+                flush();
+            }
+        };
+        echo.setLevel(Level.INFO);
+        return echo;
     }
 
     /** A log that writes nothing, for tests that are not about the log. Its traces still record. */
@@ -152,7 +187,12 @@ public final class NetLog implements AutoCloseable {
             foreign.removeHandler(handler);
         }
         adopted.clear();
-        logger.removeHandler(handler);
+        for (Handler each : logger.getHandlers()) {
+            logger.removeHandler(each);
+            if (!each.equals(handler)) {
+                each.close();
+            }
+        }
         handler.close();
     }
 

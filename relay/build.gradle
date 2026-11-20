@@ -10,6 +10,24 @@ tasks.register('run', JavaExec) {
   mainClass = 'pl.mzebrows.pwt.relay.RelayMain'
 }
 
+// The relay as one file to copy to a server: `./gradlew :relay:relayJar`, then `java -jar pwt-relay.jar [overrides.properties]`.
+// Its own classes, net, sim and map, Netty - every runtime dependency - and the generated build id, in one jar.
+tasks.register('relayJar', Jar) {
+  group = 'build'
+  description = 'Builds build/libs/pwt-relay.jar, the relay with everything it needs to run.'
+  archiveFileName = 'pwt-relay.jar'
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+  manifest {
+    attributes 'Main-Class': 'pl.mzebrows.pwt.relay.RelayMain', 'Multi-Release': 'true'
+  }
+  from sourceSets.main.output
+  from {
+    configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+  }
+  // Signatures and module descriptors of the libraries it unpacks would make the one jar refuse to start.
+  exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/MANIFEST.MF', 'module-info.class'
+}
+
 // The session tests of a room play whole sessions through the relay with net's own harness.
 evaluationDependsOn(':net')
 def netTests = project(':net').sourceSets.test.output

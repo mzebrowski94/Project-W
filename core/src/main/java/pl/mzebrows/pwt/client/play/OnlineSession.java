@@ -493,6 +493,7 @@ public final class OnlineSession implements ScenarioPlay {
     }
 
     /** The players on the briefing, the host's machine first then by slot, as the page shows them. */
+    @Override
     public List<Briefing.Player> players() {
         List<BriefingPlayer> heard = peer.players();
         List<Briefing.Player> players = new ArrayList<>(heard.size());

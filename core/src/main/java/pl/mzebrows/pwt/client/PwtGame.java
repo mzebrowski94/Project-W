@@ -162,7 +162,21 @@ public final class PwtGame extends Game implements GameContext {
 
     @Override
     public NetConfig netConfig() {
-        return netConfig;
+        NetConfig.Relay relay = netConfig.relay();
+        LocalSettings kept = settings();
+        String typedHost = kept.relayHost();
+        String typedPort = kept.relayPort();
+        String host = typedHost == null ? relay.host() : typedHost;
+        int port = relay.port();
+        if (typedPort != null) {
+            try {
+                int parsed = Integer.parseInt(typedPort);
+                port = parsed > 0 && parsed < 65_536 ? parsed : port;
+            } catch (NumberFormatException e) {
+                // Not a port: the property's stands.
+            }
+        }
+        return host.equals(relay.host()) && port == relay.port() ? netConfig : netConfig.with(relay.at(host, port));
     }
 
     @Override

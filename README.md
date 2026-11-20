@@ -37,7 +37,7 @@ Some practices I used in this project:
 > [!NOTE]
 > **This is Alpha version.** The game logic come first, current art stays as placeholder.\
 > **Couch co-op.** Up to four players on one machine.\
-> **Online.** Up to eight players over LAN, or a virtual LAN such as ZeroTier/Hamachi. No internet matchmaking yet.\
+> **Online.** Up to eight players over LAN, a virtual LAN such as ZeroTier/Hamachi, or the internet through a relay you run yourself. No matchmaking service.\
 > **Full gamepad support.** See [Controls](#controls).
 
 You are a commander, and you are standing on the field. You have a gun, a handful of grenades and a squad
@@ -74,8 +74,8 @@ nests, too big to walk and with no need to.
 - **Daily missions.** Three a day, one per difficulty tier, generated from a seed: a march through
   several biomes to a finale. Every mission has an eight-character code you can send to a friend.
 - **A proving ground.** Pick an enemy, a gun and some upgrades, and see how it plays.
-- **Co-op on one screen or several.** Four on a couch, eight over LAN, joining through a game list or a
-  room code.
+- **Co-op on one screen or several.** Four on a couch, eight over LAN or through a relay on the internet,
+  joining through a game list or a room code.
 - **The same game on every machine.** The simulation is deterministic, so online play sends only
   inputs - and any bug can be replayed.
 
@@ -113,6 +113,30 @@ Requires JDK 25. Gradle comes from the wrapper.
 ./gradlew spotlessApply build     # format, compile, lint and test everything - the full check
 ./gradlew lwjgl3:packageWinX64    # Windows build with Java bundled, in dist/
 ```
+
+### The relay
+
+The relay is the headless server that internet games meet through (ADR 0023). Players type its address on the
+PLAY ONLINE page (SERVER IP, SERVER PORT) - no config file to edit.
+
+```
+./gradlew :relay:run                           # run it from source on the port in network.properties
+./gradlew :relay:run --args="24800"            # ... on another port
+./gradlew :relay:test                          # run the relay's tests
+./gradlew :relay:relayJar                      # build relay/build/libs/pwt-relay.jar, everything included
+```
+
+Deploy: copy the jar to the server (Java 25), open the port for **TCP and UDP** (24741 by default), and run
+
+```
+java -jar pwt-relay.jar                        # port 24741, settings as shipped
+java -jar pwt-relay.jar 24800                  # another port
+java -jar pwt-relay.jar relay.properties 24800 # override lines for network.properties keys, and a port - both optional
+```
+
+It prints a banner with its build id and limits, echoes rooms and links to the console and writes the full log to
+`logs/net/`. Redeploy it with every game build that changes `map`, `sim` or the session protocol - the build ids must
+match. Details: [`docs/packaging.md`](docs/packaging.md#the-relay-as-a-jar).
 
 Modules depend one way: `lwjgl3` -> `core` -> {`ui`, `net`} -> `sim` -> `map`. How agents work in this
 repository starts at [`CLAUDE.md`](CLAUDE.md); everything else is in [`docs/`](docs/).

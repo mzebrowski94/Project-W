@@ -17,6 +17,17 @@ final class LocalMachineId {
 
     private LocalMachineId() {}
 
+    /** Keeps a nickname the player chose as this computer's id. Anything {@link MachineId#valid} refuses is not kept. */
+    static void save(String nickname) {
+        Application app = Gdx.app;
+        if (app == null || !MachineId.valid(nickname)) {
+            return;
+        }
+        Preferences preferences = app.getPreferences(PREFERENCES);
+        preferences.putString(KEY, nickname);
+        preferences.flush();
+    }
+
     static String load() {
         Application app = Gdx.app;
         if (app == null) {

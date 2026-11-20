@@ -26,9 +26,11 @@ import pl.mzebrows.pwt.client.play.HostChoices;
 import pl.mzebrows.pwt.client.play.MissionChoices;
 import pl.mzebrows.pwt.client.play.MissionCode;
 import pl.mzebrows.pwt.client.play.MissionRecords;
+import pl.mzebrows.pwt.client.play.OnlineChoices;
 import pl.mzebrows.pwt.client.play.OnlineSession;
 import pl.mzebrows.pwt.client.play.ScenarioPlay;
 import pl.mzebrows.pwt.client.play.ScenarioSession;
+import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.lan.RoomCode;
 import pl.mzebrows.pwt.net.session.SessionSetup;
 import pl.mzebrows.pwt.sim.PlayerInputs;
@@ -122,6 +124,9 @@ public final class MenuScreen extends ScreenAdapter {
 
     /** A key typed a character into HOST GAME's password line since the last frame. */
     private boolean typedPassword;
+
+    /** The online page's lines to type into - nickname, server ip, server port - made as the page first opens. */
+    private @Nullable OnlineChoices onlineChoices;
 
     /** The room being asked of the relay from HOST GAME: null until OPEN asks, and again once it is answered. */
     private @Nullable OnlineSession opening;
@@ -261,6 +266,11 @@ public final class MenuScreen extends ScreenAdapter {
         Gdx.input.setInputProcessor(new InputAdapter() {
             @Override
             public boolean keyTyped(char character) {
+                if (onlineTyping()) {
+                    // The online page's lines take a keyboard whenever one of them is the selected row.
+                    onlineChoices().type(OnlineChoices.row(page.index()), character);
+                    return true;
+                }
                 if (flow.top() == UiPage.ONLINE_HOST
                         && opening == null
                         && hostChoices().passwordEnabled()) {
@@ -289,7 +299,7 @@ public final class MenuScreen extends ScreenAdapter {
             pollOpening(delta);
         }
         ScreenLayout layout = context.hud().layout();
-        reader.typing(isMissions(flow.top()));
+        reader.typing(isMissions(flow.top()) || onlineTyping());
         reader.read(nav, delta, true, false, keys, held, layout);
         modality.update(nav);
         if (nav.any()) {
@@ -474,6 +484,10 @@ public final class MenuScreen extends ScreenAdapter {
         if (top == UiPage.ONLINE_HOST && !hostInput()) {
             return true;
         }
+        if (top == UiPage.ONLINE) {
+            // The lines show what was typed and where the caret is; a few short strings, only while this page is up.
+            relabelOnline();
+        }
         if (isScenarioList(top)) {
             int first = listOffset(top);
             for (int i = 0; i < scenarios.size() && i < MAX_NUMBER_KEYS; i++) {
@@ -583,6 +597,9 @@ public final class MenuScreen extends ScreenAdapter {
                     flipPrompts();
                 } else if (flow.top() == UiPage.ONLINE_HOST) {
                     chooseHost(effect.index());
+                } else if (flow.top() == UiPage.ONLINE) {
+                    // Confirm on a line is done with it: on to the next row.
+                    page.jump(Math.min(effect.index() + 1, MenuTree.ONLINE_ROWS));
                 } else {
                     step(flow.top(), effect.index(), 1);
                 }
@@ -606,6 +623,9 @@ public final class MenuScreen extends ScreenAdapter {
         UiPage top = flow.top();
         if (top == shown) {
             return;
+        }
+        if (shown == UiPage.ONLINE) {
+            commitOnline();
         }
         if (shown != UiPage.PLAY && shown != UiPage.EXIT_CONFIRM) {
             context.selections().set(shown, page.index());
@@ -686,6 +706,8 @@ public final class MenuScreen extends ScreenAdapter {
                 foot.addAll(controls.table());
             } else if (isMissions(top)) {
                 relabelMissions();
+            } else if (top == UiPage.ONLINE) {
+                relabelOnline();
             } else {
                 for (MenuEntry entry : content.entries()) {
                     labels.add(strings.get(entry.labelKey()));
@@ -1214,6 +1236,70 @@ public final class MenuScreen extends ScreenAdapter {
         }
         flow.apply(UiIntent.open(UiPage.BRIEFING));
         return true;
+    }
+
+    /** The online page's lines, from what this machine has kept and the relay as the config stands. */
+    private OnlineChoices onlineChoices() {
+        OnlineChoices choices = onlineChoices;
+        if (choices == null) {
+            NetConfig.Relay relay = context.netConfig().relay();
+            choices = new OnlineChoices(LocalMachineId.load(), relay.host(), Integer.toString(relay.port()));
+            onlineChoices = choices;
+        }
+        return choices;
+    }
+
+    /** Whether the selected row of the online page is a line a keyboard types into. */
+    private boolean onlineTyping() {
+        return flow.top() == UiPage.ONLINE && page.index() < MenuTree.ONLINE_ROWS;
+    }
+
+    /**
+     * The online page's rows: the three lines as label and what is typed - the selected one with a caret - then JOIN
+     * GAME, HOST GAME and BACK as their words. The selection stays; only the words change.
+     */
+    private void relabelOnline() {
+        OnlineChoices choices = onlineChoices();
+        List<MenuEntry> entries = MenuTree.page(UiPage.ONLINE).entries();
+        labelWidth = 0;
+        for (int i = 0; i < MenuTree.ONLINE_ROWS; i++) {
+            labelWidth =
+                    Math.max(labelWidth, strings.get(entries.get(i).labelKey()).length());
+        }
+        labels.clear();
+        for (int i = 0; i < entries.size(); i++) {
+            String label = strings.get(entries.get(i).labelKey());
+            if (i >= MenuTree.ONLINE_ROWS) {
+                labels.add(label);
+                continue;
+            }
+            String typed = choices.text(OnlineChoices.row(i));
+            boolean selected = page.index() == i;
+            String shown = selected ? typed + "_" : typed.isEmpty() ? strings.get("ui.online.notSet") : typed;
+            labels.add(pad(label) + shown);
+        }
+    }
+
+    /**
+     * Leaving the online page keeps what was typed on it: the nickname as this machine's id, and a relay address that
+     * differs from the config's as the player's own. A relay that changed may change what HOST GAME can offer.
+     */
+    private void commitOnline() {
+        OnlineChoices choices = onlineChoices;
+        if (choices == null) {
+            return;
+        }
+        onlineChoices = null;
+        LocalMachineId.save(choices.nickname());
+        NetConfig.Relay relay = context.netConfig().relay();
+        String port = choices.port();
+        if (!choices.host().equals(relay.host()) || (port != null && !port.equals(Integer.toString(relay.port())))) {
+            context.settings().relay(choices.host(), port == null ? "" : port);
+        }
+        HostChoices hosting = hostChoices;
+        if (hosting != null && hosting.relaySet() != context.netConfig().relay().set()) {
+            hostChoices = null;
+        }
     }
 
     private HostChoices hostChoices() {

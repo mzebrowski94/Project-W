@@ -377,7 +377,8 @@ public final class Relay {
         rooms.put(code.text(), room);
         log.info(
                 "relay",
-                "event=room-opened code=" + code + " link=" + link + " password=" + (password == null ? "no" : "yes")
+                "event=room-opened code=" + code + " link=" + link + " address=" + addressOfLink.getOrDefault(link, "?")
+                        + " password=" + (password == null ? "no" : "yes")
                         + " build=" + room.buildId() + " version=" + room.buildVersion());
         send(link, new Door.Opened(code.text()));
         admit(room, link);
@@ -429,7 +430,10 @@ public final class Relay {
             refuse(link, "room " + code + " is full", "full");
             return;
         }
-        log.info("relay", "event=joined code=" + code + " link=" + link + " links=" + (room.linkCount() + 1));
+        log.info(
+                "relay",
+                "event=joined code=" + code + " link=" + link + " address=" + addressOfLink.getOrDefault(link, "?")
+                        + " links=" + (room.linkCount() + 1));
         send(link, new Door.Accepted(code));
         admit(room, link);
     }
@@ -447,7 +451,10 @@ public final class Relay {
             refuse(link, Door.GIVEN_UP, "no-room");
             return;
         }
-        log.info("relay", "event=rejoined code=" + room.code() + " link=" + link + " links=" + (room.linkCount() + 1));
+        log.info(
+                "relay",
+                "event=rejoined code=" + room.code() + " link=" + link + " address="
+                        + addressOfLink.getOrDefault(link, "?") + " links=" + (room.linkCount() + 1));
         send(link, new Door.Accepted(room.code().text()));
         admit(room, link);
     }
@@ -490,7 +497,10 @@ public final class Relay {
             return;
         }
         room.remove(link);
-        log.info("relay", "event=link-left code=" + room.code() + " link=" + link + " reason=\"" + reason + "\"");
+        log.info(
+                "relay",
+                "event=link-left code=" + room.code() + " link=" + link + " address=" + (text == null ? "?" : text)
+                        + " links=" + room.linkCount() + " reason=\"" + reason + "\"");
         // The sequencer keeps the seats of a machine whose link dropped for the rejoin window (G0105), the host's
         // among them: the room ends when the sequencer ends (the host's window passed), not with the link.
         if (link == room.hostLink()) {
