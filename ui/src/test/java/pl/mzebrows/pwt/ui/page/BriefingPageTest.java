@@ -64,6 +64,7 @@ class BriefingPageTest {
         assertThat(Briefing.waiting(true)).isFalse();
         assertThat(host.entries())
                 .extracting(MenuEntry::id)
-                .containsExactly("easy", "medium", "hard", "random", "length", "code", "start", "back");
+                .containsExactly(
+                        "easy", "medium", "hard", "random", "length", "health", "count", "code", "start", "back");
     }
 }

@@ -24,6 +24,9 @@ import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
  *     daily's - and, in a mission's config, the length it was asked for (G0102)
  * @param biomesMin the shortest length a mission may be chosen at
  * @param biomesMax the longest; the pool may be smaller, and a biome comes again (G0102)
+ * @param strengthMinPercent the weakest a host may make a mission's health or count, as a whole percentage (G0106)
+ * @param strengthMaxPercent the strongest
+ * @param strengthStepPercent what a percentage moves by from the weakest: the only values a host may choose
  * @param ground the strip every mission is laid in: its height, ridges, passes and houses (missions tickets 03, 12,
  *     13)
  * @param placement where what a biome counts is put down (G0068)
@@ -37,6 +40,9 @@ public record MissionConfig(
         int biomes,
         int biomesMin,
         int biomesMax,
+        int strengthMinPercent,
+        int strengthMaxPercent,
+        int strengthStepPercent,
         StripRules ground,
         PlacementRules placement,
         @ConfigKey("finale.approachColumns") int approachColumns) {
@@ -52,6 +58,32 @@ public record MissionConfig(
                     "mission biomes is " + biomes + ", outside the lengths " + biomesMin + " to " + biomesMax);
         }
         Require.atLeastOne("mission finale approachColumns", approachColumns);
+        Require.atLeastOne("mission strengthMinPercent", strengthMinPercent);
+        Require.atLeast(
+                "mission strengthMaxPercent",
+                strengthMaxPercent,
+                strengthMinPercent,
+                "a strength range holds at least one percentage");
+        Require.atLeastOne("mission strengthStepPercent", strengthStepPercent);
+        if ((strengthMaxPercent - strengthMinPercent) % strengthStepPercent != 0
+                || !hasStrengthPercent(WHOLE, strengthMinPercent, strengthMaxPercent, strengthStepPercent)) {
+            throw new IllegalArgumentException("mission strength " + strengthMinPercent + " to " + strengthMaxPercent
+                    + " by " + strengthStepPercent + " must end on its maximum and include a hundred");
+        }
+    }
+
+    private static boolean hasStrengthPercent(int percent, int min, int max, int step) {
+        return percent >= min && percent <= max && (percent - min) % step == 0;
+    }
+
+    /** Whether a host may choose this percentage for a mission's health or count: the one reading of the strength range. */
+    public boolean hasStrengthPercent(int percent) {
+        return hasStrengthPercent(percent, strengthMinPercent, strengthMaxPercent, strengthStepPercent);
+    }
+
+    /** Whether a host may choose this strength: both its percentages. */
+    public boolean hasStrength(Strength strength) {
+        return hasStrengthPercent(strength.healthPercent()) && hasStrengthPercent(strength.countPercent());
     }
 
     /** Whether a mission may be this many biomes long: the one reading of {@code biomesMin} and {@code biomesMax}. */
@@ -97,8 +129,21 @@ public record MissionConfig(
      * on every tier. Applied once, to a config no tier has been applied to.
      */
     public SimConfig apply(TierKind tier, SimConfig config) {
+        return apply(tier, Strength.NORMAL, config);
+    }
+
+    /**
+     * {@link #apply(TierKind, SimConfig)} with the strength a host gave the mission (G0106): its health on top of the
+     * tier's, and its count left for {@link Pressure#times} to meet the counts - the one place that reads it. The
+     * strength is not the tier's: no relational guarantee of {@code SimConfigTest} is held at one that is not
+     * {@link Strength#NORMAL}.
+     */
+    public SimConfig apply(TierKind tier, Strength strength, SimConfig config) {
         TierDef def = tiers.of(tier);
-        return config.withSwarm(config.swarm().withTierPercent(def.healthPercent()))
+        return config.withSwarm(config.swarm()
+                        .withTierPercent(def.healthPercent())
+                        .withStrengthHealthPercent(strength.healthPercent())
+                        .withStrengthCountPercent(strength.countPercent()))
                 .withNest(config.nest()
                         .withPeriodSeconds(config.nest().periodSeconds() * def.nestPeriodPercent() / WHOLE))
                 .withAdaptation(new AdaptationDef(
@@ -111,11 +156,21 @@ public record MissionConfig(
      * A tier's count and a position's ramp, both as whole percentages, meeting a count once in {@link Whole}
      * (G0054): never rounded in turn, and a count above zero never scaled to none.
      */
-    public record Pressure(int enemyPercent, int rampedPercent) {
+    public record Pressure(int enemyPercent, int rampedPercent, int strengthPercent) {
+
+        /** A tier's and a ramp's pressure, with no strength on it. */
+        public Pressure(int enemyPercent, int rampedPercent) {
+            this(enemyPercent, rampedPercent, WHOLE);
+        }
+
+        /** The same pressure under a mission's strength (G0106): its count percentage meets the other two once. */
+        public Pressure times(int percent) {
+            return new Pressure(enemyPercent, rampedPercent, percent);
+        }
 
         /** This many creatures, as the pressure deals them. */
         public int scale(int count) {
-            return Whole.percentOf(count, enemyPercent, rampedPercent);
+            return Whole.percentOf(count, enemyPercent, rampedPercent, strengthPercent);
         }
     }
 }

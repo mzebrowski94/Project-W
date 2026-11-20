@@ -8,6 +8,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.Strength;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Waves;
@@ -34,12 +35,14 @@ final class MissionScenario implements Scenario {
 
     private final TierKind tier;
     private final int length;
+    private final Strength strength;
 
     private @Nullable Mission built;
 
-    MissionScenario(TierKind tier, int length) {
+    MissionScenario(TierKind tier, int length, Strength strength) {
         this.tier = tier;
         this.length = length;
+        this.strength = strength;
     }
 
     /**
@@ -47,13 +50,12 @@ final class MissionScenario implements Scenario {
      * for the config's own length (G0102). The length travels here, beside the seed the session already carries.
      */
     static String nameOf(TierKind tier, int length) {
-        String name = "mission " + tier.name().toLowerCase(Locale.ROOT);
-        return length == CONFIGURED ? name : name + " " + length;
+        return new MissionName(tier, length, Strength.NORMAL).text();
     }
 
     @Override
     public String name() {
-        return nameOf(tier, length);
+        return new MissionName(tier, length, strength).text();
     }
 
     @Override
@@ -68,7 +70,13 @@ final class MissionScenario implements Scenario {
      */
     @Override
     public SimConfig configure(SimConfig base) {
-        SimConfig config = base.mission().apply(tier, base);
+        if (!base.mission().hasStrength(strength)) {
+            throw new IllegalArgumentException("a mission's health and count are "
+                    + base.mission().strengthMinPercent() + " to "
+                    + base.mission().strengthMaxPercent() + " per cent in steps of "
+                    + base.mission().strengthStepPercent() + ", not " + strength);
+        }
+        SimConfig config = base.mission().apply(tier, strength, base);
         if (length != CONFIGURED) {
             if (!config.mission().hasLength(length)) {
                 throw new IllegalArgumentException(

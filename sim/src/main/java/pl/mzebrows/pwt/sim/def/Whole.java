@@ -51,6 +51,23 @@ public final class Whole {
     }
 
     /**
+     * Three percentages of {@code base}, rounded once: 125, 115 and 150 of 150 is 324. The tier's, the swarm's and a
+     * mission strength's meet a whole number here, never in turn (G0054, G0106).
+     */
+    public static int percentOf(int base, int percent, int another, int third) {
+        if (base <= 0 || percent <= 0 || another <= 0 || third <= 0) {
+            return 0;
+        }
+        long once = (long) base * percent * another;
+        long cube = HUNDRED_SQUARED * HUNDRED;
+        if (once > (Long.MAX_VALUE - cube) / (2L * third)) {
+            return Integer.MAX_VALUE;
+        }
+        long scaled = (once * third * 2 + cube) / (2 * cube);
+        return (int) Math.max(1L, Math.min(Integer.MAX_VALUE, scaled));
+    }
+
+    /**
      * How many of {@code pieces} are left for {@code current} of {@code max} shared out between them, rounded up, never
      * fewer than one nor more than all: a snake's parts and a worm's teeth (G0095, G0096) - the last piece goes with the
      * last point. Nothing left, or no whole to share, is one.

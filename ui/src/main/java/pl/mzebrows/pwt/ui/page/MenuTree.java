@@ -24,8 +24,16 @@ public final class MenuTree {
      */
     public static final int MISSION_LENGTH = MISSION_RANDOM + 1;
 
-    /** The missions page's ENTER CODE, after the length row: what every entry above writes into. */
-    public static final int MISSION_CODE = MISSION_LENGTH + 1;
+    /**
+     * The missions page's two strength rows, after the length row: `< ENEMY HEALTH 150% >` and `< ENEMY COUNT 200% >`
+     * (G0106). They are the host's, beside the code, and write nothing into it.
+     */
+    public static final int MISSION_HEALTH = MISSION_LENGTH + 1;
+
+    public static final int MISSION_COUNT = MISSION_HEALTH + 1;
+
+    /** The missions page's ENTER CODE, after the strength rows: what every entry above writes into. */
+    public static final int MISSION_CODE = MISSION_COUNT + 1;
 
     /** The missions page's START MISSION, after ENTER CODE: the one entry that starts anything. */
     public static final int MISSION_START = MISSION_CODE + 1;
@@ -177,6 +185,8 @@ public final class MenuTree {
         }
         entries.add(entry("random", "ui.missions.random", UiIntent.mission(MISSION_RANDOM)));
         entries.add(entry("length", "ui.missions.length", UiIntent.mission(MISSION_LENGTH)));
+        entries.add(entry("health", "ui.missions.health", UiIntent.mission(MISSION_HEALTH)));
+        entries.add(entry("count", "ui.missions.count", UiIntent.mission(MISSION_COUNT)));
         entries.add(entry("code", "ui.missions.code", UiIntent.mission(MISSION_CODE)));
         entries.add(entry("start", "ui.missions.start", UiIntent.mission(MISSION_START)));
         entries.add(back());

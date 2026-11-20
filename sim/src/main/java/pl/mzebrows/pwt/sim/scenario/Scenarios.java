@@ -6,6 +6,7 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.RngStream;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.Strength;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -60,12 +61,17 @@ public final class Scenarios {
      * everything else.
      */
     public static Scenario mission(TierKind tier) {
-        return new MissionScenario(tier, MissionScenario.CONFIGURED);
+        return new MissionScenario(tier, MissionScenario.CONFIGURED, Strength.NORMAL);
     }
 
     /** A mission on one tier and {@code length} biomes long (G0102): refused when the world is built if the config has no such length. */
     public static Scenario mission(TierKind tier, int length) {
-        return new MissionScenario(tier, length);
+        return new MissionScenario(tier, length, Strength.NORMAL);
+    }
+
+    /** A mission with the strength its host gave it (G0106): refused when the world is built if the config has no such one. */
+    public static Scenario mission(TierKind tier, int length, Strength strength) {
+        return new MissionScenario(tier, length, strength);
     }
 
     /**
@@ -81,18 +87,9 @@ public final class Scenarios {
                 return scenario;
             }
         }
-        for (TierKind tier : TierKind.values()) {
-            String prefix = MissionScenario.nameOf(tier, MissionScenario.CONFIGURED);
-            if (prefix.equals(name)) {
-                return mission(tier);
-            }
-            if (name.startsWith(prefix + " ")) {
-                try {
-                    return mission(tier, Integer.parseInt(name.substring(prefix.length() + 1)));
-                } catch (NumberFormatException e) {
-                    break;
-                }
-            }
+        MissionName mission = MissionName.parse(name);
+        if (mission != null) {
+            return mission(mission.tier(), mission.length(), mission.strength());
         }
         throw new IllegalArgumentException("no scenario named \"" + name + "\"");
     }

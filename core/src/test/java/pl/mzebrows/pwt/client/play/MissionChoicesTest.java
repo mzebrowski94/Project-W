@@ -10,6 +10,7 @@ import java.time.ZoneOffset;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.net.lan.RoomCode;
+import pl.mzebrows.pwt.sim.Strength;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.ui.nav.CodePicker;
 
@@ -32,6 +33,56 @@ class MissionChoicesTest {
             clock,
             () -> drawn += 7_919L,
             pl.mzebrows.pwt.sim.SimConfig.defaults().mission());
+
+    @Test
+    void stepsTheStrengthRowsRoundTheirRangeAndLeavesTheCodeAlone() {
+        choices.open();
+        choices.drawRandom();
+        String line = choices.typed();
+
+        assertThat(choices.strength()).isEqualTo(Strength.NORMAL);
+        choices.stepHealth(1);
+        choices.stepCount(-1);
+        assertThat(choices.strength()).isEqualTo(new Strength(150, 50));
+        choices.stepCount(-1);
+        assertThat(choices.strength().countPercent()).isEqualTo(300);
+        for (int i = 0; i < 6; i++) {
+            choices.stepHealth(1);
+        }
+        assertThat(choices.strength().healthPercent()).isEqualTo(150);
+        assertThat(choices.typed()).isEqualTo(line);
+    }
+
+    @Test
+    void aDailyIsAlwaysAtANormalStrengthAndItsNoteSaysNothingMore() {
+        choices.open();
+        choices.stepHealth(1);
+        choices.chooseDaily(TierKind.EASY);
+
+        assertThat(choices.strength()).isEqualTo(Strength.NORMAL);
+        assertThat(choices.note()).isEqualTo(choices.line());
+    }
+
+    @Test
+    void theNoteCarriesAStrengthThatIsNotNormalForTheJoinersToReadBack() {
+        choices.open();
+        choices.chooseDaily(TierKind.HARD);
+        choices.stepHealth(1);
+        choices.stepCount(1);
+
+        assertThat(choices.note()).isEqualTo(choices.line() + " h150 c150");
+        assertThat(MissionCode.strengthOf("mission easy h150 c150")).isEqualTo(new Strength(150, 150));
+        assertThat(MissionCode.strengthOf("mission hard 4")).isEqualTo(Strength.NORMAL);
+        assertThat(MissionCode.strengthOf("crowd")).isEqualTo(Strength.NORMAL);
+    }
+
+    @Test
+    void aMissionCodeIsReadFromANameThatCarriesAStrength() {
+        MissionCode code = MissionCode.of("mission hard 4 h150 c200", 5L, 6);
+
+        assertThat(code).isEqualTo(new MissionCode(TierKind.HARD, 4, 5L));
+        assertThat(code.scenario(new Strength(150, 200)).name()).isEqualTo("mission hard 4 h150 c200");
+    }
 
     @Test
     void offersTheThreeDailiesOfTheDayThePageOpenedOn() {

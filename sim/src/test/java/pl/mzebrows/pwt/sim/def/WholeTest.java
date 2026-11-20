@@ -15,6 +15,13 @@ class WholeTest {
         assertThat(Whole.percentOf(base, percent)).isEqualTo(whole);
     }
 
+    /** Three percents meet the base once: 150 at 125, 115 and 150 is 323.4 (G0106). */
+    @ParameterizedTest
+    @CsvSource({"150, 125, 115, 150, 323", "150, 125, 115, 100, 216", "10, 100, 50, 50, 3", "1, 50, 50, 50, 1"})
+    void multipliesThreePercentsBeforeRoundingOnce(int base, int percent, int another, int third, int whole) {
+        assertThat(Whole.percentOf(base, percent, another, third)).isEqualTo(whole);
+    }
+
     /** No percentage turns a blow that did something into one that does nothing. */
     @Test
     void neverRoundsSomethingDownToNothing() {

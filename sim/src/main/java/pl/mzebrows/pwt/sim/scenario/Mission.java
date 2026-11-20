@@ -165,7 +165,7 @@ public record Mission(
                     p,
                     dealt,
                     def,
-                    config.mission().pressure(tier, p),
+                    config.mission().pressure(tier, p).times(config.swarm().strengthCountPercent()),
                     config.mission().pressures(p),
                     p == order.size() - 1,
                     placing.derive(p));
@@ -198,7 +198,11 @@ public record Mission(
             List<Wave.Lot> lots = new ArrayList<>();
             for (String mouth : line.mouthNames()) {
                 lots.add(new Wave.Lot(
-                        line.count(counting, config.mission().finale(tier)),
+                        line.count(
+                                counting,
+                                config.mission()
+                                        .finale(tier)
+                                        .times(config.swarm().strengthCountPercent())),
                         hold.mouth(mouth).from(anchor)));
             }
             waves.add(new Wave(line.afterSeconds(), line.strain(), lots));

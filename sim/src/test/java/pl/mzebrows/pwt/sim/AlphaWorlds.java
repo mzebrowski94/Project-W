@@ -1678,7 +1678,7 @@ public final class AlphaWorlds {
                 stats(),
                 upgrades(),
                 new AdaptationDef(0f, 0, 0),
-                new SimConfig.SwarmConfig(100, 100),
+                new SimConfig.SwarmConfig(100, 100, 100, 100),
                 SimConfig.defaults().mission(),
                 SimConfig.defaults().biomes(),
                 SimConfig.defaults().finales(),

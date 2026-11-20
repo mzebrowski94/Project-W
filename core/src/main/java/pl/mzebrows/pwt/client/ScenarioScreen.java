@@ -54,6 +54,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.Strength;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Focus;
@@ -379,14 +380,21 @@ public final class ScenarioScreen extends ScreenAdapter {
                         scenario,
                         world.config().seed(),
                         world.config().mission().biomes());
-        LocalDate day = mission == null ? null : context.missions().dailyDay(mission);
-        menus.mission(mission, day);
+        Strength strength = scenario == null ? Strength.NORMAL : MissionCode.strengthOf(scenario);
+        // A daily played at another strength is not the day's: no best time is kept for it (G0106).
+        LocalDate day = mission == null || !strength.normal()
+                ? null
+                : context.missions().dailyDay(mission);
+        menus.mission(mission, day, strength);
         if (mission == null) {
             missionLine = scenario == null ? "" : scenario;
             return;
         }
         String tier = strings.get("ui.tier." + mission.tier()) + "  "
                 + strings.format("ui.missions.biomes", mission.length());
+        if (!strength.normal()) {
+            tier += "  " + strings.format("ui.briefing.strength", strength.healthPercent(), strength.countPercent());
+        }
         missionLine = day == null ? tier : strings.format("ui.hud.missionDaily", tier);
     }
 

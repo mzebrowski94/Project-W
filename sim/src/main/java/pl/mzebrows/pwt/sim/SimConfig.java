@@ -187,12 +187,14 @@ public record SimConfig(
      * a check on the shipped numbers all see the same number.
      */
     public int healthOf(UnitKind kind) {
-        return Whole.percentOf(units.of(kind).health(), swarm.healthPercent(), swarm.tierPercent());
+        return Whole.percentOf(
+                units.of(kind).health(), swarm.healthPercent(), swarm.tierPercent(), swarm.strengthHealthPercent());
     }
 
     /** How much health a nest arrives with: its own, scaled by the swarm's factors, as a strain's is. */
     public int nestHealth() {
-        return Whole.percentOf(nest.health(), swarm.healthPercent(), swarm.tierPercent());
+        return Whole.percentOf(
+                nest.health(), swarm.healthPercent(), swarm.tierPercent(), swarm.strengthHealthPercent());
     }
 
     /** The definition of one kind of pickup. */
@@ -1420,13 +1422,19 @@ public record SimConfig(
      *     hit points have ({@link Whole})
      * @param tierPercent the same, for a mission's tier, on top of {@code healthPercent} and rounded with it
      *     once (G0063). A hundred off a mission; a mission's comes from {@link MissionConfig#apply}
+     * @param strengthHealthPercent the same, for the strength a host gave the mission (G0106): a hundred off a
+     *     mission, and a mission's comes from {@link MissionConfig#apply}
+     * @param strengthCountPercent how many creatures a mission deals, as a whole percentage on top of its tier's and
+     *     its ramp's (G0106): a hundred off a mission. Read by the mission's placement and finale waves alone
      */
     @With
-    public record SwarmConfig(int healthPercent, int tierPercent) {
+    public record SwarmConfig(int healthPercent, int tierPercent, int strengthHealthPercent, int strengthCountPercent) {
 
         public SwarmConfig {
             Require.atLeastOne("swarm healthPercent", healthPercent);
             Require.atLeastOne("swarm tierPercent", tierPercent);
+            Require.atLeastOne("swarm strengthHealthPercent", strengthHealthPercent);
+            Require.atLeastOne("swarm strengthCountPercent", strengthCountPercent);
         }
     }
 

@@ -36,6 +36,7 @@ import pl.mzebrows.pwt.net.session.SessionSetup;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.Strength;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.scenario.ProvingSetup;
@@ -510,6 +511,14 @@ public final class MenuScreen extends ScreenAdapter {
             missions.stepLength(nav.right ? 1 : -1);
             relabelMissions();
         }
+        if (isMissions(top) && (nav.left || nav.right) && page.index() == MenuTree.MISSION_HEALTH) {
+            missions.stepHealth(nav.right ? 1 : -1);
+            relabelMissions();
+        }
+        if (isMissions(top) && (nav.left || nav.right) && page.index() == MenuTree.MISSION_COUNT) {
+            missions.stepCount(nav.right ? 1 : -1);
+            relabelMissions();
+        }
         int chosen;
         if (top == UiPage.PROVING_UPGRADES) {
             // Two panels, one list: the pointer is found here, and the controls see no panel of their own.
@@ -548,6 +557,26 @@ public final class MenuScreen extends ScreenAdapter {
             missions.stepLength(arrow == 0 ? 1 : arrow);
             relabelMissions();
             enableStart();
+            return true;
+        }
+        if ((chosen == MenuTree.MISSION_HEALTH || chosen == MenuTree.MISSION_COUNT)
+                && nav.pointerPressed
+                && isMissions(top)) {
+            // The strength rows' confirm steps them up; a click on a left arrow steps them down.
+            boolean health = chosen == MenuTree.MISSION_HEALTH;
+            int arrow = arrowUnder(
+                    nav.pointerX,
+                    percentText(
+                                    health
+                                            ? missions.strength().healthPercent()
+                                            : missions.strength().countPercent())
+                            .length());
+            if (health) {
+                missions.stepHealth(arrow == 0 ? 1 : arrow);
+            } else {
+                missions.stepCount(arrow == 0 ? 1 : arrow);
+            }
+            relabelMissions();
             return true;
         }
         if (chosen >= 0) {
@@ -974,12 +1003,21 @@ public final class MenuScreen extends ScreenAdapter {
                 labels.add(choice(label, tierName(missions.randomTier())));
             } else if (i == MenuTree.MISSION_LENGTH) {
                 labels.add(choice(label, biomesText()));
+            } else if (i == MenuTree.MISSION_HEALTH) {
+                labels.add(choice(label, percentText(missions.strength().healthPercent())));
+            } else if (i == MenuTree.MISSION_COUNT) {
+                labels.add(choice(label, percentText(missions.strength().countPercent())));
             } else if (i == MenuTree.MISSION_CODE) {
                 labels.add(pad(label) + codeLine());
             } else {
                 labels.add(label);
             }
         }
+    }
+
+    /** A strength row's value: {@code 150%}. */
+    private String percentText(int percent) {
+        return strings.format("ui.missions.percent", percent);
     }
 
     /** The length row's value: {@code 6 BIOMES}. */
@@ -1105,6 +1143,10 @@ public final class MenuScreen extends ScreenAdapter {
             missions.drawRandom();
         } else if (entry == MenuTree.MISSION_LENGTH) {
             missions.stepLength(1);
+        } else if (entry == MenuTree.MISSION_HEALTH) {
+            missions.stepHealth(1);
+        } else if (entry == MenuTree.MISSION_COUNT) {
+            missions.stepCount(1);
         } else if (entry == MenuTree.MISSION_CODE) {
             picker = missions.openPicker();
         } else {
@@ -1125,17 +1167,19 @@ public final class MenuScreen extends ScreenAdapter {
         missions.played(code);
         context.selections().set(from, page.index());
         SimConfig config = context.simConfig().withSeed(code.seed());
+        Strength strength = missions.strength();
         OnlineSession briefing = online;
         if (hosted && briefing != null) {
             // The session is open already: every machine on its briefing builds this and plays from the first tick.
             Log.info("Starting mission " + code + " for the session");
             briefing.startMission(
-                    new SessionSetup(context.worldConfigText(), code.scenario().name(), code.seed()),
+                    new SessionSetup(
+                            context.worldConfigText(), code.scenario(strength).name(), code.seed()),
                     config.tickSeconds());
             return true;
         }
         Log.info("Starting mission " + code);
-        context.queueScreen(new ScenarioScreen(context, new ScenarioSession(code.scenario(), config), from));
+        context.queueScreen(new ScenarioScreen(context, new ScenarioSession(code.scenario(strength), config), from));
         return true;
     }
 
@@ -1211,8 +1255,8 @@ public final class MenuScreen extends ScreenAdapter {
             return false;
         }
         flow.observeBriefing(open.hosts(), Briefing.anybodyJoined(open.players()));
-        if (open.hosts() && open.welcomed() && !missions.line().equals(sentNote)) {
-            sentNote = missions.line();
+        if (open.hosts() && open.welcomed() && !missions.note().equals(sentNote)) {
+            sentNote = missions.note();
             open.note(sentNote);
         }
         return true;
@@ -1565,10 +1609,20 @@ public final class MenuScreen extends ScreenAdapter {
         if (line.isEmpty()) {
             return strings.get("ui.briefing.none");
         }
-        MissionCode code = MissionCode.parse(line);
-        return code == null
-                ? line
-                : strings.format("ui.briefing.line", code.toString(), tierName(code.tier()), biomes(code.length()));
+        // The host's note is the code, then - when he changed them - the strength words (MissionChoices.note).
+        int space = line.indexOf(' ');
+        MissionCode code = MissionCode.parse(space < 0 ? line : line.substring(0, space));
+        if (code == null) {
+            return line;
+        }
+        String named =
+                strings.format("ui.briefing.line", code.toString(), tierName(code.tier()), biomes(code.length()));
+        Strength strength =
+                space < 0 ? Strength.NORMAL : MissionCode.strengthOf("mission easy" + line.substring(space));
+        return strength.normal()
+                ? named
+                : named + "  "
+                        + strings.format("ui.briefing.strength", strength.healthPercent(), strength.countPercent());
     }
 
     /** A player's row in its commander's colour while he is on; dim - the page's own - once his link is gone. */

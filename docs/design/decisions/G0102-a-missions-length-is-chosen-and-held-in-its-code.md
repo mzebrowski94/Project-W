@@ -1,6 +1,6 @@
 # G0102: A mission's length is chosen and held in its code, and the ramp spans the march
 
-**Status.** accepted
+**Status.** amended by G0106: a host's strength sits beside the code, never in it
 
 **Trigger.** Changing how many biomes a mission marches through, how they are dealt or how the ramp rises over them;
 what a mission code holds.

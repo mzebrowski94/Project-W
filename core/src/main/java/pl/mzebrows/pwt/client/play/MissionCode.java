@@ -7,7 +7,9 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.lan.RoomCode;
 import pl.mzebrows.pwt.sim.MissionConfig;
 import pl.mzebrows.pwt.sim.Rng;
+import pl.mzebrows.pwt.sim.Strength;
 import pl.mzebrows.pwt.sim.def.TierKind;
+import pl.mzebrows.pwt.sim.scenario.MissionName;
 import pl.mzebrows.pwt.sim.scenario.Scenario;
 import pl.mzebrows.pwt.sim.scenario.Scenarios;
 
@@ -106,20 +108,21 @@ public record MissionCode(TierKind tier, int length, long seed) {
         if (seed < 0 || seed >= SEEDS) {
             return null;
         }
-        for (TierKind tier : TierKind.values()) {
-            String prefix = Scenarios.mission(tier).name();
-            if (prefix.equals(scenarioName)) {
-                return new MissionCode(tier, configured, seed);
-            }
-            if (scenarioName.startsWith(prefix + " ")) {
-                try {
-                    return new MissionCode(tier, Integer.parseInt(scenarioName.substring(prefix.length() + 1)), seed);
-                } catch (IllegalArgumentException e) {
-                    return null;
-                }
-            }
+        MissionName name = MissionName.parse(scenarioName);
+        if (name == null) {
+            return null;
         }
-        return null;
+        try {
+            return new MissionCode(name.tier(), name.configured() ? configured : name.length(), seed);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** The strength a session's scenario name carries (G0106): normal for any that names none, a mission's or not. */
+    public static Strength strengthOf(String scenarioName) {
+        MissionName name = MissionName.parse(scenarioName);
+        return name == null ? Strength.NORMAL : name.strength();
     }
 
     /** The length a code's length character stands for, or -1 if it is none of the alphabet's. */
@@ -180,6 +183,11 @@ public record MissionCode(TierKind tier, int length, long seed) {
     /** What a session plays this mission as: {@code mission <tier> <length>}, built from {@link #seed} as its seed. */
     public Scenario scenario() {
         return Scenarios.mission(tier, length);
+    }
+
+    /** The mission with the strength its host gave it (G0106). */
+    public Scenario scenario(Strength strength) {
+        return Scenarios.mission(tier, length, strength);
     }
 
     /** The eight characters, with no dash. */

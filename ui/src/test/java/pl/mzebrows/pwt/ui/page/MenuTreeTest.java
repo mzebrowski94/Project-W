@@ -123,7 +123,8 @@ class MenuTreeTest {
 
             assertThat(page.entries())
                     .extracting(MenuEntry::id)
-                    .containsExactly("easy", "medium", "hard", "random", "length", "code", "start", "back");
+                    .containsExactly(
+                            "easy", "medium", "hard", "random", "length", "health", "count", "code", "start", "back");
             assertThat(page.entries().get(page.defaultSelection()).id()).isEqualTo("medium");
             TierKind[] tiers = TierKind.values();
             for (int i = 0; i < tiers.length; i++) {
@@ -133,6 +134,9 @@ class MenuTreeTest {
             assertThat(page.entries().get(MenuTree.MISSION_LENGTH).id()).isEqualTo("length");
             assertThat(page.entries().get(MenuTree.MISSION_LENGTH).intent())
                     .isEqualTo(UiIntent.mission(MenuTree.MISSION_LENGTH));
+            assertThat(page.entries().get(MenuTree.MISSION_HEALTH).id()).isEqualTo("health");
+            assertThat(page.entries().get(MenuTree.MISSION_COUNT).intent())
+                    .isEqualTo(UiIntent.mission(MenuTree.MISSION_COUNT));
             assertThat(page.entries().get(MenuTree.MISSION_CODE).id()).isEqualTo("code");
             assertThat(page.entries().get(MenuTree.MISSION_START).intent())
                     .isEqualTo(UiIntent.mission(MenuTree.MISSION_START));

@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.function.LongSupplier;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.MissionConfig;
+import pl.mzebrows.pwt.sim.Strength;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.ui.nav.CodePicker;
 
@@ -55,6 +56,13 @@ public final class MissionChoices {
 
     private @Nullable MissionCode lastPlayed;
 
+    /** The strength rows' values (G0106): beside the code, never in it. A daily is always at a hundred. */
+    private int healthPercent = Strength.NORMAL.healthPercent();
+
+    private int countPercent = Strength.NORMAL.countPercent();
+
+    private Strength lastStrength = Strength.NORMAL;
+
     /** RANDOM's last draw, or null before the first: the line holding it is RANDOM, not CUSTOM. */
     private @Nullable MissionCode drawn;
 
@@ -77,6 +85,8 @@ public final class MissionChoices {
     public void open() {
         day = LocalDate.now(clock);
         length = mission.biomes();
+        healthPercent = Strength.NORMAL.healthPercent();
+        countPercent = Strength.NORMAL.countPercent();
         typed.setLength(0);
         problem = "";
     }
@@ -91,6 +101,8 @@ public final class MissionChoices {
         if (played != null) {
             typed.append(played.text());
             length = played.length();
+            healthPercent = lastStrength.healthPercent();
+            countPercent = lastStrength.countPercent();
         }
     }
 
@@ -143,6 +155,37 @@ public final class MissionChoices {
         }
     }
 
+    /** The strength the rows show: what a mission started now is played with (G0106). */
+    public Strength strength() {
+        return new Strength(healthPercent, countPercent);
+    }
+
+    /** The enemy health row stepped, left or right and round the strength range (G0106). */
+    public void stepHealth(int direction) {
+        healthPercent = stepped(healthPercent, direction);
+    }
+
+    /** The enemy count row stepped, left or right and round the strength range (G0106). */
+    public void stepCount(int direction) {
+        countPercent = stepped(countPercent, direction);
+    }
+
+    private int stepped(int percent, int direction) {
+        int step = mission.strengthStepPercent();
+        int places = (mission.strengthMaxPercent() - mission.strengthMinPercent()) / step + 1;
+        int at = (percent - mission.strengthMinPercent()) / step;
+        return mission.strengthMinPercent() + Math.floorMod(at + Integer.signum(direction), places) * step;
+    }
+
+    /** What the host tells the session the briefing is of: the code's line, and the strength after it when not normal. */
+    public String note() {
+        Strength held = strength();
+        if (held.normal()) {
+            return line();
+        }
+        return line() + " h" + held.healthPercent() + " c" + held.countPercent();
+    }
+
     /** A mission on RANDOM's tier at the row's length, its seed drawn afresh: a new one each time. */
     public MissionCode random() {
         return new MissionCode(randomTier, length, Math.floorMod(draws.getAsLong(), MissionCode.SEEDS));
@@ -150,6 +193,8 @@ public final class MissionChoices {
 
     /** A daily chosen: its code in the line, in place of what was there, and the length row at its default (G0102). */
     public void chooseDaily(TierKind tier) {
+        healthPercent = Strength.NORMAL.healthPercent();
+        countPercent = Strength.NORMAL.countPercent();
         replaceTyped(daily(tier).text());
     }
 
@@ -325,5 +370,6 @@ public final class MissionChoices {
     /** A mission was started from the page, however it was chosen. */
     public void played(MissionCode code) {
         lastPlayed = code;
+        lastStrength = strength();
     }
 }
