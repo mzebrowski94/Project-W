@@ -181,9 +181,18 @@ public record MissionConfig(
             return new Pressure(enemyPercent, rampedPercent, percent);
         }
 
-        /** This many creatures, as the pressure deals them. */
+        /** This many nests, as the pressure deals them: every percentage met once, and a line of one never none. */
         public int scale(int count) {
             return Whole.percentOf(count, enemyPercent, rampedPercent, strengthPercent);
+        }
+
+        /**
+         * This many creatures with no nest - a pack's line, a wave's mouth (G0106): the tier's and the ramp's share
+         * rounded as {@code Whole} has it, then the host's count laid on and rounded down, so a lower count can take a
+         * rare strain out. At a hundred it is {@link #scale}. A finale's lair - its boss - is no count and never here.
+         */
+        public int scaleLoose(int count) {
+            return Whole.percentOfDown(Whole.percentOf(count, enemyPercent, rampedPercent), strengthPercent);
         }
     }
 }

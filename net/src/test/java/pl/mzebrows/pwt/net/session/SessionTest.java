@@ -1018,7 +1018,7 @@ class SessionTest {
             Machine friend = session.join("friend", PERFECT);
             session.run(60);
 
-            session.leave(friend);
+            session.vanish(friend);
             session.run(30);
             assertThat(host.session.players())
                     .extracting(BriefingPlayer::machine, BriefingPlayer::online)
@@ -1043,7 +1043,7 @@ class SessionTest {
             Machine host = session.hostOnBriefing();
             Machine friend = session.join("friend", PERFECT);
             session.run(60);
-            session.leave(friend);
+            session.vanish(friend);
             session.run(30);
 
             host.session.start(session.setup, 1f / 60f);

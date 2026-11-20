@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.Stock;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * Puts down what each biome of a mission counts, by rules and never by places (G0068): ordered {@link Scatter}
@@ -132,10 +133,8 @@ final class Placement {
             Randomness stream,
             Randomness attempt) {
         for (MissionConfig.Pressure pressure : every) {
-            if (!new Biome(position, kind, def, last, stream, attempt)
-                    .place(pressure)
-                    .shortfalls
-                    .isEmpty()) {
+            Biome tried = new Biome(position, kind, def, last, stream, attempt).place(pressure);
+            if (!tried.shortfalls.isEmpty() || tried.crowded) {
                 return false;
             }
         }
@@ -166,6 +165,9 @@ final class Placement {
         private final List<Placed> nests = new ArrayList<>();
         private final List<float[]> anchors = new ArrayList<>();
         private final List<String> shortfalls = new ArrayList<>();
+
+        /** A pack found no room of its own and joined others: what a host's count may do, never a tier's (G0106). */
+        private boolean crowded;
 
         Biome(int position, BiomeKind kind, BiomeDef def, boolean last, Randomness stream, Randomness attempt) {
             this.position = position;
@@ -317,21 +319,50 @@ final class Placement {
                         anchor[1] = y;
                         anchoring.reserve(x, y, rules.packApart());
                     });
-                    if (found == 0) {
-                        shortOf("pack of " + loose.strain(), size, 0);
-                        continue;
+                    int got = 0;
+                    if (found > 0) {
+                        anchors.add(anchor);
+                        got = members.scatterNearest(
+                                TileRect.around(map, anchor[0], anchor[1], spread),
+                                anchor[0],
+                                anchor[1],
+                                size,
+                                radius,
+                                (x, y) -> put(new Placed.Loose(loose.strain(), x, y, position)));
                     }
-                    anchors.add(anchor);
-                    int got = members.scatterNearest(
-                            TileRect.around(map, anchor[0], anchor[1], spread),
-                            anchor[0],
-                            anchor[1],
-                            size,
-                            radius,
-                            (x, y) -> put(new Placed.Loose(loose.strain(), x, y, position)));
+                    if (got < size) {
+                        crowded = true;
+                        got += joinPacks(members, loose.strain(), size - got, radius, spread, rng);
+                    }
                     shortOf("pack of " + loose.strain(), size, got);
                 }
             }
+        }
+
+        /**
+         * What a pack the biome has no room for does: its creatures join the packs already down, round each in turn
+         * from one drawn, so a crowded biome has bigger encounters rather than creatures missing from its roster's
+         * last lines (G0106). Draws nothing while every pack finds room - the counts a tier deals never come here.
+         *
+         * @return how many were put down
+         */
+        private int joinPacks(Scatter members, UnitKind strain, int count, float radius, float spread, Randomness rng) {
+            if (anchors.isEmpty()) {
+                return 0;
+            }
+            int first = rng.nextInt(anchors.size());
+            int got = 0;
+            for (int k = 0; k < anchors.size() && got < count; k++) {
+                float[] at = anchors.get((first + k) % anchors.size());
+                got += members.scatterNearest(
+                        TileRect.around(map, at[0], at[1], spread),
+                        at[0],
+                        at[1],
+                        count - got,
+                        radius,
+                        (x, y) -> put(new Placed.Loose(strain, x, y, position)));
+            }
+            return got;
         }
 
         /** Crates the houses did not take, each within {@code pointReach} of a point: the reward where the fight is. */

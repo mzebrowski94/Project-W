@@ -117,14 +117,35 @@ class RelayLimitsTest {
     }
 
     @Test
-    void aLinkThatHasSpokenIsNotDroppedForSilenceAfterwards() {
+    void aLinkLetInByTheDoorThatSaysNothingToItsRoomIsDroppedAtTheHelloTimeout() {
         Machine host = machine("a");
         host.say(open());
-        clock.advanceMillis(limits.helloTimeoutSeconds() * 1000L * 10);
+        long timeout = limits.helloTimeoutSeconds() * 1000L;
+
+        clock.advanceMillis(timeout - 1);
         relay.poll();
         host.hear();
-
         assertThat(host.closed).isFalse();
+
+        clock.advanceMillis(1);
+        relay.poll();
+        host.hear();
+        assertThat(host.closed).isTrue();
+    }
+
+    @Test
+    void refusesAJoinWithACodeTooLongToRepeatWithoutStopping() {
+        Machine tooLong = machine("a");
+        tooLong.say(new Door.Join("Q".repeat(Door.MAX_TEXT_BYTES), "", BUILD, VERSION));
+        Machine otherBuild = machine("b");
+        String code = openRoom("");
+        otherBuild.say(new Door.Join(code, "", "other", "v".repeat(Door.MAX_TEXT_BYTES)));
+
+        assertThat(tooLong.last()).isInstanceOf(Door.Refused.class);
+        assertThat(otherBuild.last()).isInstanceOf(Door.Refused.class);
+        Machine next = machine("c");
+        next.say(new Door.Join(code, "", BUILD, VERSION));
+        assertThat(next.last()).isEqualTo(new Door.Accepted(code));
     }
 
     @Test

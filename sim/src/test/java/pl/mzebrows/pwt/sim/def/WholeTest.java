@@ -28,6 +28,13 @@ class WholeTest {
         assertThat(Whole.percentOf(1, 10)).isEqualTo(1);
     }
 
+    /** A host's count laid on creatures that walk in rounds down, and may take a line to none (G0106). */
+    @ParameterizedTest
+    @CsvSource({"1, 50, 0", "3, 50, 1", "1, 150, 1", "3, 150, 4", "5, 300, 15", "7, 100, 7", "0, 300, 0"})
+    void roundsAHostsShareDown(int base, int percent, int whole) {
+        assertThat(Whole.percentOfDown(base, percent)).isEqualTo(whole);
+    }
+
     @Test
     void leavesNothingAsNothing() {
         assertThat(Whole.percentOf(0, 200)).isZero();

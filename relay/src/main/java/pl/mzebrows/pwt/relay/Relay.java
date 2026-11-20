@@ -1,9 +1,11 @@
 package pl.mzebrows.pwt.relay;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.random.RandomGenerator;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.Clock;
@@ -27,8 +29,9 @@ import pl.mzebrows.pwt.net.transport.TransportListener;
  * (anybody else); the relay answers with the room's code, an acceptance, or a refusal after which it closes the
  * link. After the door a link is a link to a sequencer (ADR 0023): the room's, built over a {@link RoomTransport}
  * that is the room's view of this relay's one listener, so the sequencer knows nothing of rooms. The host's link
- * is the one that opened the room; when it goes the room is over and every link is told why, as a host-run
- * session ends. The relay reads no message in a room but to count it (and to see that a snapshot is not).
+ * is the one that opened the room; when it goes the sequencer holds his seats for the rejoin window (G0105) and
+ * then hands the session on (G0104), and the room is over only when its sequencer ends. The relay reads no message in a room but to count it (and to see that a snapshot is not, and that a
+ * link let in to come back says so first).
  *
  * <p>And what traffic needs: per link, a byte meter (inbound, snapshots not counted); per room, the idle close
  * (nothing but acknowledgements for {@code idleRoomMinutes}) and the late-seal warning. Their keys are read here
@@ -37,9 +40,7 @@ import pl.mzebrows.pwt.net.transport.TransportListener;
  * <p>And the door's limits (stage 9, G0109): per address, how many links and rooms, how many refusals before it
  * is ignored, how long a new link may stay silent; per room, how many wrong passwords before it turns new machines
  * away. Every number is read in this class and nowhere else. A room's lock is a rule for a <em>new</em> machine:
- * stage 7's held-token return must skip it. Left for later stages: bytes per link and the idle room (they need
- * the sequencer's traffic), and an empty room's life (a room closes the moment its last link leaves until the
- * rejoin window exists).
+ * a held-token return skips it.
  */
 public final class Relay {
 
@@ -62,8 +63,14 @@ public final class Relay {
     private final TransportListener listener = new Listener();
     private final Map<String, Address> addresses = new HashMap<>();
     private final Map<Integer, String> addressOfLink = new HashMap<>();
-    /** Links that have not said anything yet, oldest first, with when they opened. */
+    /**
+     * Links that have not said anything yet, oldest first, with when they opened - and links the door has just let
+     * into a room, with when it did, until they say their first word to the room's sequencer.
+     */
     private final Map<Integer, Long> silentLinks = new LinkedHashMap<>();
+
+    /** Links let in by a {@link Door.Rejoin} that have not yet said anything to the room: the first must be a return. */
+    private final Set<Integer> comingBack = new HashSet<>();
 
     private final long helloTimeoutNanos;
     private final long refusalWindowNanos;
@@ -138,9 +145,8 @@ public final class Relay {
                 room.sequencer().pump(now);
             }
             if (room.view().drainTo(transport)) {
-                room.end();
                 it.remove();
-                finish(room, null);
+                finish(room, null); // the sequencer ended on its own: its thread is still to be stopped
                 continue;
             }
             Sequencer sequencer = room.sequencer();
@@ -172,24 +178,26 @@ public final class Relay {
     /**
      * A room is over: its sequencer stopped, its links told why ({@code reason}, or the sequencer's own "the host left
      * the game" when null), and what the relay holds for it let go. The caller has taken it out of the relay's rooms.
+     * The reason goes as the session's end, not only as the link's close, so a machine does not take an idle or a
+     * stopped room for a dropped link and try to come back to it for the whole window.
      */
     private void finish(Room room, @Nullable String reason) {
         if (!room.ended()) {
             room.end();
             SequencerThread thread = room.thread();
             if (thread != null) {
-                thread.close();
-            } else {
+                thread.close(reason == null ? "" : reason);
+            } else if (reason == null) {
                 room.sequencer().close();
+            } else {
+                room.sequencer().end(reason);
             }
         }
-        if (reason == null) {
-            room.view().drainTo(transport);
-        } else {
+        room.view().drainTo(transport);
+        if (reason != null) {
             for (int link : room.links()) {
-                transport.disconnect(link, reason);
+                transport.disconnect(link, reason); // any the sequencer did not tell: its thread did not stop in time
             }
-            room.view().discardOutbound();
         }
         for (int link : room.links()) {
             roomOfLink.remove(link);
@@ -294,6 +302,12 @@ public final class Relay {
         silentLinks.remove(link);
         Room inRoom = roomOfLink.get(link);
         if (inRoom != null) {
+            if (comingBack.remove(link) && !RoomWire.isRejoin(data, offset, length)) {
+                log.warn("relay", "event=not-coming-back link=" + link + " code=" + inRoom.code());
+                transport.disconnect(link, "a link let in to come back did not come back");
+                countRefusal(link);
+                return;
+            }
             ByteBucket bucket = buckets.get(link);
             if (bucket != null && !RoomWire.isSnapshot(data, offset, length) && !bucket.take(length, clock.nanos())) {
                 log.warn("relay", "event=over-rate link=" + link + " code=" + inRoom.code());
@@ -384,8 +398,12 @@ public final class Relay {
         admit(room, link);
     }
 
-    /** A link the door has let into a room is, from now on, a link to the room's sequencer. */
+    /**
+     * A link the door has let into a room is, from now on, a link to the room's sequencer - and has the hello timeout
+     * again to say its hello there, or it would hold a place in the room without ever being a machine in it.
+     */
     private void admit(Room room, int link) {
+        silentLinks.put(link, clock.nanos());
         room.add(link);
         roomOfLink.put(link, room);
         buckets.put(link, new ByteBucket(config.bytesPerSecondPerLink(), clock.nanos()));
@@ -456,6 +474,7 @@ public final class Relay {
                 "event=rejoined code=" + room.code() + " link=" + link + " address="
                         + addressOfLink.getOrDefault(link, "?") + " links=" + (room.linkCount() + 1));
         send(link, new Door.Accepted(room.code().text()));
+        comingBack.add(link);
         admit(room, link);
     }
 
@@ -486,6 +505,7 @@ public final class Relay {
         String text = addressOfLink.remove(link);
         if (text != null) {
             silentLinks.remove(link);
+            comingBack.remove(link);
             Address address = addresses.get(text);
             if (address != null) {
                 address.links--;

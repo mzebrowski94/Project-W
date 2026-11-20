@@ -75,9 +75,21 @@ public final class Door {
     /** The relay's refusal, whole: {@link #REFUSAL_PREFIX} and the reason. The link is closed after it. */
     public record Refused(String text) implements Message {}
 
-    /** The text of a refusal for a reason. */
+    /**
+     * The text of a refusal for a reason, cut to {@link #MAX_TEXT_BYTES} at a character's edge: a reason may repeat
+     * what a machine sent, and a refusal that cannot be sent would stop the relay.
+     */
     public static Refused refusal(String reason) {
-        return new Refused(REFUSAL_PREFIX + reason);
+        String text = REFUSAL_PREFIX + reason;
+        byte[] body = text.getBytes(StandardCharsets.UTF_8);
+        if (body.length <= MAX_TEXT_BYTES) {
+            return new Refused(text);
+        }
+        int end = MAX_TEXT_BYTES;
+        while (end > 0 && (body[end] & 0xC0) == 0x80) {
+            end--; // the first byte left out continues a character: leave that whole character out
+        }
+        return new Refused(new String(body, 0, end, StandardCharsets.UTF_8));
     }
 
     public static byte[] encode(Message message) {

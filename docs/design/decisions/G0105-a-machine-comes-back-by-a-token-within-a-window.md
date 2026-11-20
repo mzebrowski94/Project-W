@@ -52,7 +52,8 @@ nothing.
   the simulation.
 - **A second link with a held token replaces the first**: the old one is closed. One machine, one link.
 - **The host coming back** after a hand-over (G0104) is a peer.
-- **A machine that left on purpose has no window**: its seats are freed at once, as the leave it is.
+- **A machine that left on purpose has no window**: its seats are freed at once, as the leave it is - on the briefing
+  too, where a dropped link keeps its slot shown offline for its return.
 
 **Why.** A dropped link is almost always followed by it coming back (G0038), and a token only the machine and the
 sequencer know is the smallest thing that cannot be copied from what the other peers can see.

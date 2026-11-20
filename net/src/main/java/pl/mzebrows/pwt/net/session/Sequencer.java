@@ -575,6 +575,7 @@ public final class Sequencer implements AutoCloseable {
                 }
                 out.reset().putByte(Msg.SNAPSHOT_WANTED).putInt(peer.id);
                 transport.send(source.link, Delivery.RELIABLE, out.array(), 0, out.size());
+                source.snapshotsOwed++;
                 peer.snapshotAsked = true;
                 peer.snapshotFrom = source.id;
                 log.debug("sequencer", "event=snapshot-asked for=" + peer.id + " from=" + source.id);
@@ -1353,6 +1354,11 @@ public final class Sequencer implements AutoCloseable {
         int start = in.position();
         in.skip(length);
         in.expectEnd();
+        if (from.snapshotsOwed == 0) {
+            // A world is the one message a relay lets past its byte meter, on the word that it was asked for.
+            throw new WireException("a snapshot nobody asked for");
+        }
+        from.snapshotsOwed--;
         Peer target = peerWithId(forPeer);
         if (target == null || !target.wantsSnapshot || target.snapshotFrom != from.id) {
             return;
@@ -1519,7 +1525,16 @@ public final class Sequencer implements AutoCloseable {
         }
         if (!started) {
             // On the briefing a slot stays with the machine that took it, shown offline: it is put on the field
-            // away, as a mission leaves a commander (G0038), if the host starts without it back.
+            // away, as a mission leaves a commander (G0038), if the host starts without it back. A machine that
+            // left on purpose is not coming back: its slot is free at once (G0105).
+            for (int slot = 0; peer.leaving && slot < capacity; slot++) {
+                if (owner[slot] == peer.id && peer.id >= 0) {
+                    owner[slot] = -1;
+                    joinWanted[slot] = false;
+                    Arrays.fill(lastHeld[slot], (byte) 0);
+                    holderMachine[slot] = "";
+                }
+            }
             log.info(
                     "sequencer",
                     "event=left peer=" + peer.id + " machine=" + peer.machine + " link=" + peer.link + " reason=\""
@@ -1613,6 +1628,9 @@ public final class Sequencer implements AutoCloseable {
 
         /** The peer asked for the snapshot this one is waiting for, or -1. */
         int snapshotFrom = -1;
+
+        /** Snapshots this peer has been asked for and not yet sent: one it sends past them is not a world but abuse. */
+        int snapshotsOwed;
 
         PeerState state = PeerState.HELLO;
         int acked = -1;

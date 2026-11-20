@@ -181,13 +181,21 @@ public final class MissionChoices {
     /**
      * CUSTOM pressed (G0106): off to on or on to off, starting off. On, the mission the line holds - else the last one
      * played, else a fresh draw - becomes the one the host edits: its length and strength rows may be changed, the
-     * strength starting at a hundred per cent. Off, the strength goes back to a hundred and the rows are locked again.
+     * strength starting at a hundred per cent. Off, the length and the strength go back to their defaults - the code
+     * the line holds rewritten at the default length, its tier and seed kept - and the rows are locked again.
      */
     public void toggleCustom() {
         if (custom) {
             custom = false;
             healthPercent = Strength.NORMAL.healthPercent();
             countPercent = Strength.NORMAL.countPercent();
+            length = mission.biomes();
+            MissionCode held = code();
+            if (held != null && held.length() != length) {
+                rewriting = true;
+                replaceTyped(new MissionCode(held.tier(), length, held.seed()).text());
+                rewriting = false;
+            }
             return;
         }
         MissionCode base = code();

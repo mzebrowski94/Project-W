@@ -44,7 +44,7 @@ public record WaveLine(float afterSeconds, UnitKind strain, int countMin, int co
         return List.of(mouths.split("\\" + AND, -1));
     }
 
-    /** How many come from one mouth: drawn between the fewest and the most, then scaled by the pressure, rounded once. */
+    /** How many come from one mouth: drawn between the fewest and the most, then scaled as a loose line is. */
     public int count(Randomness rng, MissionConfig.Pressure pressure) {
         return Roster.count(countMin, countMax, rng, pressure);
     }

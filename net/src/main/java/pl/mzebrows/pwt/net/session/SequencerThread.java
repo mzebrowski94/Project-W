@@ -23,6 +23,9 @@ public final class SequencerThread implements AutoCloseable {
     private volatile boolean running = true;
     private volatile @Nullable Throwable failure;
 
+    /** Why its session ends when it is closed, or empty for the sequencer's own words: told to every machine in it. */
+    private volatile String endReason = "";
+
     public SequencerThread(Sequencer sequencer, Clock clock, NetLog log) {
         this.sequencer = sequencer;
         this.clock = clock;
@@ -43,6 +46,15 @@ public final class SequencerThread implements AutoCloseable {
 
     @Override
     public void close() {
+        close("");
+    }
+
+    /**
+     * Stops the thread, its session ended with {@code reason} - a relay's "the room was idle" - told to every machine
+     * in it, so none of them takes it for a dropped link and tries to come back; empty, the sequencer's own words.
+     */
+    public void close(String reason) {
+        endReason = reason;
         running = false;
         LockSupport.unpark(thread);
         try {
@@ -62,7 +74,12 @@ public final class SequencerThread implements AutoCloseable {
                     LockSupport.parkNanos(wait);
                 }
             }
-            sequencer.close();
+            String reason = endReason;
+            if (reason.isEmpty()) {
+                sequencer.close();
+            } else {
+                sequencer.end(reason);
+            }
         } catch (RuntimeException | Error e) {
             failure = e;
             log.error("sequencer", "event=failed", e);

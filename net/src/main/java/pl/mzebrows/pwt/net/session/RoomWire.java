@@ -43,4 +43,12 @@ public final class RoomWire {
     public static boolean isSnapshot(byte[] data, int offset, int length) {
         return length > 0 && data[offset] == Msg.SNAPSHOT_TAKEN;
     }
+
+    /**
+     * Whether this message, the first a link let in to come back says to its room, is the return that shows its
+     * token: anything else - a hello above all - is a stranger who knew only the code (G0105).
+     */
+    public static boolean isRejoin(byte[] data, int offset, int length) {
+        return length > 0 && data[offset] == Msg.REJOIN;
+    }
 }

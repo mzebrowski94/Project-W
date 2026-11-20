@@ -275,7 +275,17 @@ final class SessionHarness implements AutoCloseable {
         machine.end.disconnect(machine.session.link(), "blip");
     }
 
-    /** This machine's link drops: it closes, and plays no further part. */
+    /**
+     * This machine's link goes with no word, and its game with it - a process killed: its place is held for the
+     * window as for any dropped link (G0105), and it plays no further part.
+     */
+    void vanish(Machine machine) {
+        machine.end.disconnect(machine.session.link(), "gone");
+        machine.session.close();
+        machines.remove(machine);
+    }
+
+    /** This machine leaves on purpose: it closes, saying so, and plays no further part. */
     void leave(Machine machine) {
         machine.session.close();
         machines.remove(machine);

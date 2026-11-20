@@ -5,6 +5,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.SystemClock;
@@ -22,6 +25,12 @@ import pl.mzebrows.pwt.net.transport.Transport;
  * beats {@code net.relay.port}. The only class of this module that names the Netty adapter ({@code RelayArchitectureTest}).
  */
 public final class RelayMain {
+
+    /** How often the door is polled: what a link's first word waits for at most. */
+    private static final long POLL_NANOS = 1_000_000L;
+
+    /** How long a stop waits for every room to be told: a sequencer thread stops within a millisecond. */
+    private static final long SHUTDOWN_WAIT_SECONDS = 5L;
 
     private RelayMain() {}
 
@@ -60,10 +69,29 @@ public final class RelayMain {
         log.info("relay", "event=listening port=" + port + " build=" + BuildId.current());
         Relay relay =
                 new Relay(transport, SystemClock.INSTANCE, log, config, new SecureRandom(), Relay.Sequencing.THREADED);
-        Runtime.getRuntime().addShutdownHook(new Thread(transport::close, "pwt-relay-shutdown"));
-        while (true) {
-            relay.poll();
-            LockSupport.parkNanos(1_000_000L);
+        // Stopped, the relay ends every room on this thread - the one that polls it - telling each machine the relay
+        // stopped rather than leaving it to try to come back for its window; the hook waits for that, a while.
+        AtomicBoolean stopping = new AtomicBoolean();
+        CountDownLatch closed = new CountDownLatch(1);
+        Runtime.getRuntime()
+                .addShutdownHook(new Thread(
+                        () -> {
+                            stopping.set(true);
+                            try {
+                                closed.await(SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        },
+                        "pwt-relay-shutdown"));
+        try {
+            while (!stopping.get()) {
+                relay.poll();
+                LockSupport.parkNanos(POLL_NANOS);
+            }
+            relay.close();
+        } finally {
+            closed.countDown();
         }
     }
 }

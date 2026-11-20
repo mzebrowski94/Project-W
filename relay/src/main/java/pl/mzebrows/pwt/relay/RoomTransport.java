@@ -84,11 +84,6 @@ final class RoomTransport implements Transport {
         return ended;
     }
 
-    /** The relay, on its thread: forgets what the sequencer has said that was not yet sent. */
-    void discardOutbound() {
-        outbound.clear();
-    }
-
     @Override
     public int listen(int firstPort, int search) {
         throw new UnsupportedOperationException("a room's links are the relay's, which listens");

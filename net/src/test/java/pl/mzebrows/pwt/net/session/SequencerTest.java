@@ -300,6 +300,27 @@ class SequencerTest {
     }
 
     @Test
+    void dropsAPeerThatSendsASnapshotNobodyAskedItFor() {
+        RawPeer host = startedHost();
+        RawPeer joiner = joined("guest", host);
+
+        joiner.send(
+                Delivery.RELIABLE,
+                new WireWriter(64)
+                        .putByte(Msg.SNAPSHOT_TAKEN)
+                        .putInt(0)
+                        .putInt(sequencer.sealedTick())
+                        .putBytes(new byte[] {1, 2, 3}));
+        frame(host, joiner);
+        frame(host, joiner);
+
+        assertThat(joiner.closedBecause).contains("malformed");
+        assertThat(host.closedBecause)
+                .as("the host answered the one it was asked for")
+                .isNull();
+    }
+
+    @Test
     void tellsEveryPeerWhyWhenTheSessionEnds() {
         RawPeer host = startedHost();
         RawPeer friend = new RawPeer(network.endpoint("friend"), port);
@@ -545,6 +566,41 @@ class SequencerTest {
         frame(host);
 
         assertThat(slotsGiven(joined("next", host))).containsExactly(slot);
+    }
+
+    @Test
+    void freesTheSlotAtOnceOfAMachineThatLeavesTheBriefingOnPurpose() {
+        RawPeer host = new RawPeer(network.endpoint("host"), port);
+        frame(host);
+        host.send(
+                Delivery.RELIABLE,
+                new WireWriter(64)
+                        .putByte(Msg.HELLO)
+                        .putInt(Msg.PROTOCOL)
+                        .putString(BuildId.current())
+                        .putLong(SessionHarness.HOST_KEY)
+                        .putString("host"));
+        host.send(Delivery.RELIABLE, new WireWriter(8).putByte(Msg.SEAT).putByte(0));
+        RawPeer guest = new RawPeer(network.endpoint("guest"), port);
+        frame(host, guest);
+        guest.send(Delivery.RELIABLE, hello("guest"));
+        guest.send(Delivery.RELIABLE, new WireWriter(8).putByte(Msg.SEAT).putByte(0));
+        frame(host, guest);
+        int slot = slotsGiven(guest).getFirst();
+
+        guest.send(Delivery.RELIABLE, new WireWriter(2).putByte(Msg.LEAVE));
+        frame(host, guest);
+        guest.transport.disconnect(guest.link, "bye");
+        frame(host);
+        RawPeer next = new RawPeer(network.endpoint("next"), port);
+        frame(host, next);
+        next.send(Delivery.RELIABLE, hello("next"));
+        next.send(Delivery.RELIABLE, new WireWriter(8).putByte(Msg.SEAT).putByte(0));
+        frame(host, next);
+
+        assertThat(slotsGiven(next))
+                .as("the slot it left, not one beside it (G0105)")
+                .containsExactly(slot);
     }
 
     @Test

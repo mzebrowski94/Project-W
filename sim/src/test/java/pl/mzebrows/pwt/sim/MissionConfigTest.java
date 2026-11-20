@@ -134,6 +134,24 @@ class MissionConfigTest {
         assertThat(mission.pressure(TierKind.HARD, LAST_POSITION).scale(0)).isZero();
     }
 
+    /**
+     * A host's count on creatures with no nest is laid on what the tier and the ramp dealt and rounded down (G0106): a
+     * line of one may go, and at a hundred nothing moves. A nest's line keeps the one rounding and is never none.
+     */
+    @Test
+    void laysAHostsCountOnLooseCreaturesRoundedDownAndOnNestsAsBefore() {
+        MissionConfig mission = mission();
+        MissionConfig.Pressure medium = mission.pressure(TierKind.MEDIUM, 0);
+
+        assertThat(medium.times(50).scaleLoose(1)).isZero();
+        assertThat(medium.times(150).scaleLoose(3)).isEqualTo(4);
+        assertThat(medium.times(100).scaleLoose(COUNT)).isEqualTo(medium.scale(COUNT));
+        assertThat(mission.pressure(TierKind.EASY, 0).times(100).scaleLoose(1))
+                .as("the tier's own rounding stands")
+                .isEqualTo(1);
+        assertThat(medium.times(50).scale(1)).as("a nest").isEqualTo(1);
+    }
+
     @Test
     void refusesAPositionBeforeTheFirst() {
         MissionConfig mission = mission();

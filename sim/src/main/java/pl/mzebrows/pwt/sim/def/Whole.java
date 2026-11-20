@@ -68,6 +68,18 @@ public final class Whole {
     }
 
     /**
+     * {@code percent} per cent of {@code base}, rounded <em>down</em> - the one exception to the rule above, for a host's
+     * count laid on creatures that walk in (G0106): a share he asked for is never more than he asked, and a line of one
+     * at 50 is none. 1 at 150 is 1, 3 at 150 is 4, anything at a hundred is itself.
+     */
+    public static int percentOfDown(int base, int percent) {
+        if (base <= 0 || percent <= 0) {
+            return 0;
+        }
+        return (int) Math.min(Integer.MAX_VALUE, (long) base * percent / HUNDRED);
+    }
+
+    /**
      * How many of {@code pieces} are left for {@code current} of {@code max} shared out between them, rounded up, never
      * fewer than one nor more than all: a snake's parts and a worm's teeth (G0095, G0096) - the last piece goes with the
      * last point. Nothing left, or no whole to share, is one.

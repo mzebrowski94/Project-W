@@ -61,6 +61,46 @@ class MissionStrengthTest {
     }
 
     @Test
+    void putsDownEveryLooseCreatureAMoreNumerousMissionDealsWhenItsBiomesRunOutOfRoomForPacks() {
+        List<String> missing = new ArrayList<>();
+        for (int percent = 150; percent <= 300; percent += 50) {
+            for (long seed = 1; seed <= 10; seed++) {
+                SimConfig config = Scenarios.mission(TierKind.MEDIUM, 0, new Strength(100, percent))
+                        .configure(SimConfig.defaults().withSeed(seed));
+                for (String shortfall : Mission.build(config, TierKind.MEDIUM).shortfalls()) {
+                    if (shortfall.contains("pack of")) {
+                        missing.add(percent + "% seed " + seed + ": " + shortfall);
+                    }
+                }
+            }
+        }
+
+        assertThat(missing)
+                .as("a fen's searers and thumpers come last in its roster")
+                .isEmpty();
+    }
+
+    @Test
+    void halfTheCountDealsAtMostHalfTheLooseCreaturesAndTheSameLairBossAndAll() {
+        for (long seed = 1; seed <= 10; seed++) {
+            SimConfig usual = Scenarios.mission(TierKind.MEDIUM, 0, Strength.NORMAL)
+                    .configure(SimConfig.defaults().withSeed(seed));
+            SimConfig half = Scenarios.mission(TierKind.MEDIUM, 0, new Strength(100, 50))
+                    .configure(SimConfig.defaults().withSeed(seed));
+            SimConfig triple = Scenarios.mission(TierKind.MEDIUM, 0, new Strength(100, 300))
+                    .configure(SimConfig.defaults().withSeed(seed));
+            Mission normal = Mission.build(usual, TierKind.MEDIUM);
+
+            assertThat(creatures(Mission.build(half, TierKind.MEDIUM)))
+                    .as("seed %d: a line of one may go at 50%%", seed)
+                    .isLessThanOrEqualTo(creatures(normal) / 2);
+            assertThat(Mission.build(triple, TierKind.MEDIUM).finale().lair())
+                    .as("seed %d: the lair - the boss - is never counted", seed)
+                    .isEqualTo(normal.finale().lair());
+        }
+    }
+
+    @Test
     void moreHealthIsFoldedIntoEveryStrainAndNest() {
         SimConfig usual = configured(Strength.NORMAL);
         SimConfig tough = configured(new Strength(200, 100));

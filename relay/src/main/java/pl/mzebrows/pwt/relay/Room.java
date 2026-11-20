@@ -12,7 +12,7 @@ import pl.mzebrows.pwt.net.session.SequencerThread;
  * its links. The password lives here, in memory, and nowhere else - no {@code toString}, no log line.
  * And its sequencer (ADR 0023), over a {@link RoomTransport} that is this room's view of the relay's links: a
  * {@link SequencerThread} in the process, a sequencer the relay pumps in a test. The host's link is the one that
- * opened the room; when it goes the room is over.
+ * opened the room; the room is over when its sequencer ends, not when that link goes (G0104, G0105).
  */
 final class Room {
 

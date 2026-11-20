@@ -19,17 +19,20 @@ public sealed interface Roster {
     /** The most, before the pressure. */
     int max();
 
-    /** How many: drawn between the fewest and the most, then scaled by the tier and the ramp, rounded once. */
-    default int count(Randomness rng, MissionConfig.Pressure pressure) {
-        return count(min(), max(), rng, pressure);
-    }
+    /** How many: drawn between the fewest and the most, then scaled by the pressure - a nest's way or a loose one's. */
+    int count(Randomness rng, MissionConfig.Pressure pressure);
 
     /**
-     * How many of a range the swarm deals: drawn between the fewest and the most, then scaled once. The one place a
-     * creature count is drawn - a roster line's, and a finale's wave's (G0064).
+     * How many of a range of creatures with no nest the swarm deals: drawn between the fewest and the most, then
+     * scaled by {@link MissionConfig.Pressure#scaleLoose}. The one place such a count is drawn - a loose line's, and a
+     * finale's wave's (G0064).
      */
     static int count(int min, int max, Randomness rng, MissionConfig.Pressure pressure) {
-        return pressure.scale(min + rng.nextInt(max - min + 1));
+        return pressure.scaleLoose(drawn(min, max, rng));
+    }
+
+    private static int drawn(int min, int max, Randomness rng) {
+        return min + rng.nextInt(max - min + 1);
     }
 
     /** Creatures put down unaware, in packs round anchors (G0068). */
@@ -37,12 +40,22 @@ public sealed interface Roster {
         public Loose {
             range("loose " + strain, min, max);
         }
+
+        @Override
+        public int count(Randomness rng, MissionConfig.Pressure pressure) {
+            return Roster.count(min, max, rng, pressure);
+        }
     }
 
     /** Holes in the ground that keep sending that strain out once woken (G0062). */
     record Nest(UnitKind strain, int min, int max) implements Roster {
         public Nest {
             range("nest " + strain, min, max);
+        }
+
+        @Override
+        public int count(Randomness rng, MissionConfig.Pressure pressure) {
+            return pressure.scale(drawn(min, max, rng));
         }
     }
 

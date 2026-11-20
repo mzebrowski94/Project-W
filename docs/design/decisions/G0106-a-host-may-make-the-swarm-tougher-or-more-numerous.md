@@ -27,15 +27,22 @@ what the code names: the **map** - the biomes, the ground, the points - and not 
   note says it in words to a joiner on the briefing. A name with none is as it was.
 - **One fold, one rounding.** `MissionConfig.apply(tier, strength, config)` puts health into `SwarmConfig`
   (`strengthHealthPercent`, read by `SimConfig.healthOf` and `nestHealth`); count is `strengthCountPercent`, read where
-  a mission's placement and its finale's waves are scaled (`Pressure.times`). A percentage meeting a whole number
-  meets the tier's and the ramp's in `Whole.percentOf`, once.
+  a mission's placement and its finale's waves are scaled (`Pressure.times`). Health, and a nest's line, meet the tier's
+  and the ramp's in `Whole.percentOf`, once. A count of creatures with no nest - a loose line, a wave's mouth - is the
+  tier's and the ramp's share rounded as before, then the host's count laid on and **rounded down**
+  (`Pressure.scaleLoose`, `Whole.percentOfDown`; Mateusz 2026-11-20): so 50 % takes a line of one searer or thumper out,
+  where the nearest-and-never-none rule kept it, and 150 % of one is still one. At 100 % nothing moves. A finale's
+  lair - the keep's boss among its nests - is placed, not counted, and no strength touches it.
 - **The map is the code's.** The placement attempt is chosen by what fits every *tier*, as before, without the strength: the
-  ground, the order, the points stay where the code puts them at any strength. Past what the room holds creatures are
-  not placed (a shortfall, as before) - at 300 % on hard the biome says so in its shortfalls and stands fewer than asked.
+  ground, the order, the points stay where the code puts them at any strength. A loose pack the biome has no room for
+  joins the packs already down - bigger encounters, never a strain missing because its roster line came last (a fen's
+  searers and thumpers did, Mateusz 2026-11-20). An attempt where a pack had to join is no fit, so the attempt a tier
+  picks is as before. Nests are not joined: past the room for holes a biome stands fewer than asked, in its shortfalls.
 - **CUSTOM unlocks them.** The missions page has a CUSTOM entry after RANDOM, a switch that starts OFF and that each press
   turns ON or OFF. On, it takes the code the line holds - else the last one played, else a fresh draw - and only then
   do the length, health and count rows change; otherwise they are dim and passed over. It is session only: a daily, a
-  RANDOM, a typed, pasted or picked code puts it, the strength and the length back. While it is off the rows show
+  RANDOM, a typed, pasted or picked code puts it, the strength and the length back - and so does turning it
+  OFF, the line's code rewritten at the default length with its tier and seed. While it is off the rows show
   the tier's own percentages (`MissionConfig.healthPercentOf`/`countPercentOf`): easy 85 % health and 75 % count, medium
   100 and 100, hard 115 and 125. Turning it on puts both rows at 100 %, the strength, laid on the tier's; words
   elsewhere say the strength.

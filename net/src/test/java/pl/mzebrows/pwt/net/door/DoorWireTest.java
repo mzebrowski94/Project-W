@@ -35,6 +35,19 @@ class DoorWireTest {
     }
 
     @Test
+    void cutsARefusalToWhatTheDoorCarriesWithoutSplittingACharacter() {
+        String reason = "no room " + "ż".repeat(Door.MAX_TEXT_BYTES);
+
+        Door.Refused refused = Door.refusal(reason);
+        byte[] bytes = Door.encode(refused);
+
+        assertThat(refused.text().getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                .hasSizeLessThanOrEqualTo(Door.MAX_TEXT_BYTES);
+        assertThat(refused.text()).startsWith(Door.REFUSAL_PREFIX + "no room ż").doesNotContain("�");
+        assertThat(Door.read(bytes, 0, bytes.length)).isEqualTo(refused);
+    }
+
+    @Test
     void refusesWhatIsNotExactlyOneMessage() {
         byte[] ok = Door.encode(new Door.Opened("ACDE"));
         byte[] longer = java.util.Arrays.copyOf(ok, ok.length + 1);

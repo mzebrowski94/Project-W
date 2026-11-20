@@ -134,6 +134,28 @@ class MissionChoicesTest {
     }
 
     @Test
+    void turningCustomOffPutsTheLengthAndTheStrengthBackAtTheirDefaults() {
+        choices.open();
+        choices.chooseDaily(TierKind.MEDIUM);
+        choices.toggleCustom();
+        choices.stepLength(1);
+        choices.stepLength(1);
+        choices.stepHealth(1);
+        choices.stepCount(1);
+
+        choices.toggleCustom();
+
+        assertThat(choices.custom()).isFalse();
+        assertThat(choices.length()).isEqualTo(6);
+        assertThat(choices.strength()).isEqualTo(Strength.NORMAL);
+        assertThat(choices.code())
+                .as("the same tier and seed at the default length")
+                .isEqualTo(choices.daily(TierKind.MEDIUM));
+        assertThat(choices.shownHealth()).isEqualTo(100);
+        assertThat(choices.shownCount()).isEqualTo(100);
+    }
+
+    @Test
     void changesNeitherLengthNorStrengthUntilCustomIsOn() {
         choices.open();
         choices.chooseDaily(TierKind.MEDIUM);
