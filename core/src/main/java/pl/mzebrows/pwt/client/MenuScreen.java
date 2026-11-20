@@ -566,10 +566,7 @@ public final class MenuScreen extends ScreenAdapter {
             boolean health = chosen == MenuTree.MISSION_HEALTH;
             int arrow = arrowUnder(
                     nav.pointerX,
-                    percentText(
-                                    health
-                                            ? missions.strength().healthPercent()
-                                            : missions.strength().countPercent())
+                    percentText(health ? missions.shownHealth() : missions.shownCount())
                             .length());
             if (health) {
                 missions.stepHealth(arrow == 0 ? 1 : arrow);
@@ -1003,16 +1000,26 @@ public final class MenuScreen extends ScreenAdapter {
                 labels.add(choice(label, tierName(missions.randomTier())));
             } else if (i == MenuTree.MISSION_LENGTH) {
                 labels.add(choice(label, biomesText()));
+            } else if (i == MenuTree.MISSION_CUSTOM) {
+                labels.add(missions.custom() ? pad(label) + strings.get("ui.missions.customOn") : label);
             } else if (i == MenuTree.MISSION_HEALTH) {
-                labels.add(choice(label, percentText(missions.strength().healthPercent())));
+                labels.add(choice(label, percentText(missions.shownHealth())));
             } else if (i == MenuTree.MISSION_COUNT) {
-                labels.add(choice(label, percentText(missions.strength().countPercent())));
+                labels.add(choice(label, percentText(missions.shownCount())));
             } else if (i == MenuTree.MISSION_CODE) {
                 labels.add(pad(label) + codeLine());
             } else {
                 labels.add(label);
             }
         }
+    }
+
+    /** What a strength on this tier says in words: the percentages it comes to (G0106), {@code HEALTH 128%  COUNT 75%}. */
+    private String strengthWords(TierKind tier, Strength strength) {
+        return strings.format(
+                "ui.briefing.strength",
+                context.simConfig().mission().healthPercentOf(tier, strength),
+                context.simConfig().mission().countPercentOf(tier, strength));
     }
 
     /** A strength row's value: {@code 150%}. */
@@ -1082,6 +1089,10 @@ public final class MenuScreen extends ScreenAdapter {
 
     /** START MISSION can be confirmed only while the code line names a mission; dimmed and passed over else. */
     private void enableStart() {
+        // The length and strength rows are CUSTOM's: dim and passed over until it is on (G0106).
+        page.enabled()[MenuTree.MISSION_LENGTH] = missions.custom();
+        page.enabled()[MenuTree.MISSION_HEALTH] = missions.custom();
+        page.enabled()[MenuTree.MISSION_COUNT] = missions.custom();
         page.enabled()[MenuTree.MISSION_START] = flow.top() == UiPage.BRIEFING
                 ? Briefing.startEnabled(hostsBriefing(), missions.code() != null)
                 : missions.code() != null;
@@ -1141,6 +1152,8 @@ public final class MenuScreen extends ScreenAdapter {
             missions.chooseDaily(tiers[entry]);
         } else if (entry == MenuTree.MISSION_RANDOM) {
             missions.drawRandom();
+        } else if (entry == MenuTree.MISSION_CUSTOM) {
+            missions.chooseCustom();
         } else if (entry == MenuTree.MISSION_LENGTH) {
             missions.stepLength(1);
         } else if (entry == MenuTree.MISSION_HEALTH) {
@@ -1619,10 +1632,7 @@ public final class MenuScreen extends ScreenAdapter {
                 strings.format("ui.briefing.line", code.toString(), tierName(code.tier()), biomes(code.length()));
         Strength strength =
                 space < 0 ? Strength.NORMAL : MissionCode.strengthOf("mission easy" + line.substring(space));
-        return strength.normal()
-                ? named
-                : named + "  "
-                        + strings.format("ui.briefing.strength", strength.healthPercent(), strength.countPercent());
+        return strength.normal() ? named : named + "  " + strengthWords(code.tier(), strength);
     }
 
     /** A player's row in its commander's colour while he is on; dim - the page's own - once his link is gone. */

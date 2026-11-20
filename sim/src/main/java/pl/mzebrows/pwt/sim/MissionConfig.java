@@ -81,6 +81,19 @@ public record MissionConfig(
         return hasStrengthPercent(percent, strengthMinPercent, strengthMaxPercent, strengthStepPercent);
     }
 
+    /**
+     * What a strength comes to on this tier, as the whole percentage of a medium mission's health a host is shown
+     * (G0106): the tier's and the strength's, meeting once. Hard at a hundred is 115; easy at 150 is 128.
+     */
+    public int healthPercentOf(TierKind tier, Strength strength) {
+        return Whole.percentOf(WHOLE, tiers.of(tier).healthPercent(), strength.healthPercent());
+    }
+
+    /** The same for how many creatures: easy at a hundred is 75, hard at 200 is 250. */
+    public int countPercentOf(TierKind tier, Strength strength) {
+        return Whole.percentOf(WHOLE, tiers.of(tier).enemyPercent(), strength.countPercent());
+    }
+
     /** Whether a host may choose this strength: both its percentages. */
     public boolean hasStrength(Strength strength) {
         return hasStrengthPercent(strength.healthPercent()) && hasStrengthPercent(strength.countPercent());

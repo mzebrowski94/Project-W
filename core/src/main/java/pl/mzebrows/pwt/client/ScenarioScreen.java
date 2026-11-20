@@ -385,15 +385,21 @@ public final class ScenarioScreen extends ScreenAdapter {
         LocalDate day = mission == null || !strength.normal()
                 ? null
                 : context.missions().dailyDay(mission);
-        menus.mission(mission, day, strength);
+        String strengthWords = mission == null || strength.normal()
+                ? ""
+                : strings.format(
+                        "ui.briefing.strength",
+                        world.config().mission().healthPercentOf(mission.tier(), strength),
+                        world.config().mission().countPercentOf(mission.tier(), strength));
+        menus.mission(mission, day, strengthWords);
         if (mission == null) {
             missionLine = scenario == null ? "" : scenario;
             return;
         }
         String tier = strings.get("ui.tier." + mission.tier()) + "  "
                 + strings.format("ui.missions.biomes", mission.length());
-        if (!strength.normal()) {
-            tier += "  " + strings.format("ui.briefing.strength", strength.healthPercent(), strength.countPercent());
+        if (!strengthWords.isEmpty()) {
+            tier += "  " + strengthWords;
         }
         missionLine = day == null ? tier : strings.format("ui.hud.missionDaily", tier);
     }

@@ -27,7 +27,6 @@ import pl.mzebrows.pwt.client.play.MissionRecords;
 import pl.mzebrows.pwt.client.play.ScenarioPlay;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.Strength;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.ui.hud.LevelTime;
 import pl.mzebrows.pwt.ui.hud.Readout;
@@ -120,7 +119,7 @@ final class PlayMenus {
     private @Nullable MissionCode mission;
 
     /** What the host made the swarm (G0106): shown on the pause page when it is not the tier's own. */
-    private Strength missionStrength = Strength.NORMAL;
+    private String missionStrength = "";
 
     /** The day it is the daily of, or null if it is none. */
     private @Nullable LocalDate missionDay;
@@ -165,9 +164,9 @@ final class PlayMenus {
     }
 
     /** The level is this mission - a daily of {@code day}, or of none - or, for null, no mission at all. */
-    void mission(@Nullable MissionCode code, @Nullable LocalDate day, Strength strength) {
+    void mission(@Nullable MissionCode code, @Nullable LocalDate day, String strengthWords) {
         mission = code;
-        missionStrength = strength;
+        missionStrength = strengthWords;
         missionDay = day;
         missionFootTick = -1;
     }
@@ -505,9 +504,8 @@ final class PlayMenus {
                     strings.get("ui.tier." + played.tier()),
                     LevelTime.text(tick, tickSeconds),
                     strings.format("ui.missions.biomes", played.length())));
-            if (!missionStrength.normal()) {
-                foot.add(strings.format(
-                        "ui.briefing.strength", missionStrength.healthPercent(), missionStrength.countPercent()));
+            if (!missionStrength.isEmpty()) {
+                foot.add(missionStrength);
             }
         }
         if (invitation != null) {

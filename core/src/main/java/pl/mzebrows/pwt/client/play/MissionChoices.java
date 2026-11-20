@@ -63,6 +63,17 @@ public final class MissionChoices {
 
     private Strength lastStrength = Strength.NORMAL;
 
+    /**
+     * CUSTOM is on (G0106): the length and the strength rows are the host's to change, on the code the line holds.
+     * Session only - choosing a daily, drawing a RANDOM or changing the code any other way puts everything back.
+     */
+    private boolean custom;
+
+    private boolean lastCustom;
+
+    /** The line is being rewritten by CUSTOM itself, which keeps it on. */
+    private boolean rewriting;
+
     /** RANDOM's last draw, or null before the first: the line holding it is RANDOM, not CUSTOM. */
     private @Nullable MissionCode drawn;
 
@@ -87,6 +98,7 @@ public final class MissionChoices {
         length = mission.biomes();
         healthPercent = Strength.NORMAL.healthPercent();
         countPercent = Strength.NORMAL.countPercent();
+        custom = false;
         typed.setLength(0);
         problem = "";
     }
@@ -103,6 +115,7 @@ public final class MissionChoices {
             length = played.length();
             healthPercent = lastStrength.healthPercent();
             countPercent = lastStrength.countPercent();
+            custom = lastCustom;
         }
     }
 
@@ -147,12 +160,57 @@ public final class MissionChoices {
      * new length - the same tier and seed, another mission, so a daily becomes a custom one; else the row alone moves.
      */
     public void stepLength(int direction) {
+        if (!custom) {
+            return;
+        }
         int span = mission.biomesMax() - mission.biomesMin() + 1;
         length = mission.biomesMin() + Math.floorMod(length - mission.biomesMin() + Integer.signum(direction), span);
         MissionCode held = code();
         if (held != null) {
+            rewriting = true;
             replaceTyped(new MissionCode(held.tier(), length, held.seed()).text());
+            rewriting = false;
         }
+    }
+
+    /** Whether CUSTOM is on: the length and strength rows may be changed. */
+    public boolean custom() {
+        return custom;
+    }
+
+    /**
+     * CUSTOM chosen (G0106): the mission the line holds - else the last one played, else a fresh draw - becomes the
+     * one the host edits. A level of its own for this session: its length and strength may now be changed, and the
+     * strength starts as it was.
+     */
+    public void chooseCustom() {
+        MissionCode base = code();
+        if (base == null) {
+            base = lastPlayed != null ? lastPlayed : random();
+        }
+        Strength kept = strength();
+        rewriting = true;
+        replaceTyped(base.text());
+        rewriting = false;
+        custom = true;
+        healthPercent = kept.healthPercent();
+        countPercent = kept.countPercent();
+    }
+
+    /** The tier the rows speak of: the line's code's, else RANDOM's. */
+    public TierKind shownTier() {
+        MissionCode held = code();
+        return held == null ? randomTier : held.tier();
+    }
+
+    /** The enemy health the row shows, as a percentage of a medium mission's: the tier's and the strength's together. */
+    public int shownHealth() {
+        return mission.healthPercentOf(shownTier(), strength());
+    }
+
+    /** The enemy count the row shows, the same way. */
+    public int shownCount() {
+        return mission.countPercentOf(shownTier(), strength());
     }
 
     /** The strength the rows show: what a mission started now is played with (G0106). */
@@ -162,11 +220,17 @@ public final class MissionChoices {
 
     /** The enemy health row stepped, left or right and round the strength range (G0106). */
     public void stepHealth(int direction) {
+        if (!custom) {
+            return;
+        }
         healthPercent = stepped(healthPercent, direction);
     }
 
     /** The enemy count row stepped, left or right and round the strength range (G0106). */
     public void stepCount(int direction) {
+        if (!custom) {
+            return;
+        }
         countPercent = stepped(countPercent, direction);
     }
 
@@ -188,13 +252,11 @@ public final class MissionChoices {
 
     /** A mission on RANDOM's tier at the row's length, its seed drawn afresh: a new one each time. */
     public MissionCode random() {
-        return new MissionCode(randomTier, length, Math.floorMod(draws.getAsLong(), MissionCode.SEEDS));
+        return new MissionCode(randomTier, mission.biomes(), Math.floorMod(draws.getAsLong(), MissionCode.SEEDS));
     }
 
     /** A daily chosen: its code in the line, in place of what was there, and the length row at its default (G0102). */
     public void chooseDaily(TierKind tier) {
-        healthPercent = Strength.NORMAL.healthPercent();
-        countPercent = Strength.NORMAL.countPercent();
         replaceTyped(daily(tier).text());
     }
 
@@ -259,6 +321,11 @@ public final class MissionChoices {
 
     /** Replaces the code line - with what the picker shows, a daily, a draw - whose first place is a tier's. */
     public void replaceTyped(String text) {
+        if (!rewriting) {
+            custom = false;
+            healthPercent = Strength.NORMAL.healthPercent();
+            countPercent = Strength.NORMAL.countPercent();
+        }
         String letters = letters(text);
         typed.setLength(0);
         typed.append(letters, 0, Math.min(letters.length(), MissionCode.LENGTH));
@@ -371,5 +438,6 @@ public final class MissionChoices {
     public void played(MissionCode code) {
         lastPlayed = code;
         lastStrength = strength();
+        lastCustom = custom;
     }
 }

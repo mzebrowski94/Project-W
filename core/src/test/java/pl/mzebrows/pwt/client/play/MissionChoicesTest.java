@@ -38,6 +38,7 @@ class MissionChoicesTest {
     void stepsTheStrengthRowsRoundTheirRangeAndLeavesTheCodeAlone() {
         choices.open();
         choices.drawRandom();
+        choices.chooseCustom();
         String line = choices.typed();
 
         assertThat(choices.strength()).isEqualTo(Strength.NORMAL);
@@ -56,9 +57,11 @@ class MissionChoicesTest {
     @Test
     void aDailyIsAlwaysAtANormalStrengthAndItsNoteSaysNothingMore() {
         choices.open();
+        choices.chooseCustom();
         choices.stepHealth(1);
         choices.chooseDaily(TierKind.EASY);
 
+        assertThat(choices.custom()).isFalse();
         assertThat(choices.strength()).isEqualTo(Strength.NORMAL);
         assertThat(choices.note()).isEqualTo(choices.line());
     }
@@ -67,6 +70,7 @@ class MissionChoicesTest {
     void theNoteCarriesAStrengthThatIsNotNormalForTheJoinersToReadBack() {
         choices.open();
         choices.chooseDaily(TierKind.HARD);
+        choices.chooseCustom();
         choices.stepHealth(1);
         choices.stepCount(1);
 
@@ -107,22 +111,74 @@ class MissionChoicesTest {
         assertThat(choices.day()).isEqualTo(DAY.plusDays(1));
     }
 
-    /** The row starts at the default, RANDOM draws at it, and a daily is always at it (G0102). */
+    /** The row starts at the default and a daily or a RANDOM puts custom, and the length, back to it (G0102, G0106). */
     @Test
-    void drawsAtTheLengthTheRowShowsAndPutsItBackWhenADailyIsChosen() {
+    void putsTheLengthBackWhenADailyOrARandomIsChosen() {
         choices.open();
         assertThat(choices.length()).isEqualTo(6);
 
+        choices.chooseCustom();
         choices.stepLength(1);
         choices.stepLength(1);
         assertThat(choices.length()).isEqualTo(8);
         choices.drawRandom();
-        assertThat(choices.code().length()).isEqualTo(8);
+        assertThat(choices.custom()).isFalse();
+        assertThat(choices.code().length()).isEqualTo(6);
         assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.RANDOM);
 
+        choices.chooseCustom();
+        choices.stepLength(1);
         choices.chooseDaily(TierKind.HARD);
         assertThat(choices.length()).isEqualTo(6);
         assertThat(choices.code()).isEqualTo(choices.daily(TierKind.HARD));
+    }
+
+    @Test
+    void changesNeitherLengthNorStrengthUntilCustomIsOn() {
+        choices.open();
+        choices.chooseDaily(TierKind.MEDIUM);
+
+        choices.stepLength(1);
+        choices.stepHealth(1);
+        choices.stepCount(1);
+
+        assertThat(choices.length()).isEqualTo(6);
+        assertThat(choices.strength()).isEqualTo(Strength.NORMAL);
+    }
+
+    @Test
+    void showsTheTiersOwnPercentagesAndCustomStartsFromThem() {
+        choices.open();
+
+        choices.chooseDaily(TierKind.EASY);
+        assertThat(choices.shownHealth()).isEqualTo(85);
+        assertThat(choices.shownCount()).isEqualTo(75);
+        choices.chooseDaily(TierKind.MEDIUM);
+        assertThat(choices.shownHealth()).isEqualTo(100);
+        choices.chooseDaily(TierKind.HARD);
+        assertThat(choices.shownHealth()).isEqualTo(115);
+        assertThat(choices.shownCount()).isEqualTo(125);
+
+        MissionCode hard = choices.code();
+        choices.chooseCustom();
+        assertThat(choices.code()).isEqualTo(hard);
+        choices.stepHealth(1);
+        assertThat(choices.shownHealth()).isEqualTo(173);
+    }
+
+    @Test
+    void customOfARandomKeepsItsCodeAndAnEmptyLineDrawsOne() {
+        choices.open();
+        choices.drawRandom();
+        MissionCode drawn = choices.code();
+
+        choices.chooseCustom();
+        assertThat(choices.code()).isEqualTo(drawn);
+
+        choices.open();
+        choices.chooseCustom();
+        assertThat(choices.code()).isNotNull();
+        assertThat(choices.custom()).isTrue();
     }
 
     /** Changing the length with a daily in the line is another mission - a custom one - at the same seed. */
@@ -132,6 +188,7 @@ class MissionChoicesTest {
         choices.chooseDaily(TierKind.EASY);
         MissionCode daily = choices.code();
 
+        choices.chooseCustom();
         choices.stepLength(-1);
 
         assertThat(choices.code().length()).isEqualTo(5);
@@ -144,6 +201,7 @@ class MissionChoicesTest {
     void stepsTheLengthRoundBetweenItsLimitsAndFollowsACodeTyped() {
         var lengths = pl.mzebrows.pwt.sim.SimConfig.defaults().mission();
         choices.open();
+        choices.chooseCustom();
 
         for (int i = 0; i < lengths.biomesMax() - lengths.biomesMin() + 1; i++) {
             choices.stepLength(1);

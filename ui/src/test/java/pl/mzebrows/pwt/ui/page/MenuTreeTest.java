@@ -124,7 +124,8 @@ class MenuTreeTest {
             assertThat(page.entries())
                     .extracting(MenuEntry::id)
                     .containsExactly(
-                            "easy", "medium", "hard", "random", "length", "health", "count", "code", "start", "back");
+                            "easy", "medium", "hard", "random", "custom", "length", "health", "count", "code", "start",
+                            "back");
             assertThat(page.entries().get(page.defaultSelection()).id()).isEqualTo("medium");
             TierKind[] tiers = TierKind.values();
             for (int i = 0; i < tiers.length; i++) {

@@ -8,7 +8,7 @@ what a mission code holds.
 **Enforced by.** `MissionCodeTest.holdsItsLengthAndNamesAnotherMissionAtAnother`, `.refusesALengthNoCharacterCanHold`;
 `MissionConfigTest.spansTheRampOverTheMarchWhateverItsLength`, `.knowsWhichLengthsAMissionMayBe`;
 `MissionTest.dealsFromABagWhenTheLengthRunsPastThePool`, `.laysAsManyBiomesAsItsLengthAndNamesItForASession`;
-`MissionChoicesTest` (the row: `.drawsAtTheLengthTheRowShowsAndPutsItBackWhenADailyIsChosen`,
+`MissionChoicesTest` (the row: `.putsTheLengthBackWhenADailyOrARandomIsChosen`,
 `.makesACustomMissionOfADailyWhoseLengthIsChanged`, `.refusesACodeOfALengthNoMissionMayBe`); `MenuTreeTest`;
 `MissionSweepTest.holdsTheShortestAndTheLongestMissionToTheRules` (3 and 15 biomes).
 

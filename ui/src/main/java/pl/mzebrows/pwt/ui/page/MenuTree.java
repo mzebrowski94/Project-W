@@ -19,10 +19,16 @@ public final class MenuTree {
     public static final int MISSION_RANDOM = TierKind.values().length;
 
     /**
-     * The missions page's length row, after RANDOM: a choice row `< 6 BIOMES >` whose left and right step how many
+     * The missions page's CUSTOM, after RANDOM (G0106): the level of the host's own, on the code the line holds. The
+     * length and strength rows below it are passed over until it is on.
+     */
+    public static final int MISSION_CUSTOM = MISSION_RANDOM + 1;
+
+    /**
+     * The missions page's length row, after CUSTOM: a choice row `< 6 BIOMES >` whose left and right step how many
      * biomes a mission has (G0102). It writes into the code line like the entries above it, and RANDOM draws at it.
      */
-    public static final int MISSION_LENGTH = MISSION_RANDOM + 1;
+    public static final int MISSION_LENGTH = MISSION_CUSTOM + 1;
 
     /**
      * The missions page's two strength rows, after the length row: `< ENEMY HEALTH 150% >` and `< ENEMY COUNT 200% >`
@@ -184,6 +190,7 @@ public final class MenuTree {
             medium = tier == TierKind.MEDIUM ? i : medium;
         }
         entries.add(entry("random", "ui.missions.random", UiIntent.mission(MISSION_RANDOM)));
+        entries.add(entry("custom", "ui.missions.custom", UiIntent.mission(MISSION_CUSTOM)));
         entries.add(entry("length", "ui.missions.length", UiIntent.mission(MISSION_LENGTH)));
         entries.add(entry("health", "ui.missions.health", UiIntent.mission(MISSION_HEALTH)));
         entries.add(entry("count", "ui.missions.count", UiIntent.mission(MISSION_COUNT)));
