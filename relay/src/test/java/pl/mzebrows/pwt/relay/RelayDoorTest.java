@@ -211,7 +211,8 @@ class RelayDoorTest {
                 base.idleRoomMinutes(),
                 base.sealLateWarnMs(),
                 base.host(),
-                base.port()));
+                base.port(),
+                base.diagnosticPort()));
     }
 
     private String openRoom(String password) {

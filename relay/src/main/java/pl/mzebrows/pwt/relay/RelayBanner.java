@@ -19,9 +19,16 @@ final class RelayBanner {
      * @param javaVersion the runtime the relay runs on
      * @param logFile where this run's log is written, or empty when it could not be opened
      * @param overrides the file of override lines it was started with, or empty for none
+     * @param diagnosticPort the port the HTTP diagnostics serve on, or zero for none
      */
     static List<String> lines(
-            NetConfig config, int port, String buildId, String javaVersion, String logFile, String overrides) {
+            NetConfig config,
+            int port,
+            String buildId,
+            String javaVersion,
+            String logFile,
+            String overrides,
+            int diagnosticPort) {
         NetConfig.Relay relay = config.relay();
         return List.of(
                 "============================================================",
@@ -43,6 +50,10 @@ final class RelayBanner {
                 " passwords     " + relay.wrongPasswordsPerRoomMax() + " wrong lock a room for "
                         + relay.roomLockSeconds() + " s",
                 " rejoin        " + config.rejoin().windowSeconds() + " s window",
+                " diagnostics   "
+                        + (diagnosticPort == 0
+                                ? "off (net.relay.diagnosticPort)"
+                                : "http port " + diagnosticPort + ": GET /status, GET /log?lines=200, POST /probe"),
                 "============================================================");
     }
 }

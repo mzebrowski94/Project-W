@@ -267,7 +267,7 @@ public final class NettyTransport implements Transport {
                 link.state = State.HANDSHAKING;
                 link.lastHeard = now;
                 byChannel.put(connected.channel(), link);
-                log.debug("link", "link=" + link.id + " event=tcp-connected");
+                log.info("link", "link=" + link.id + " event=tcp-connected remote=" + link.remote + " next=hello");
             }
             case ConnectFailed failed -> {
                 Link link = links.get(failed.link());
@@ -315,7 +315,7 @@ public final class NettyTransport implements Transport {
         hello[0] = TCP_HELLO;
         putLong(hello, 1, token);
         writeTcp(link, hello);
-        log.info("link", "link=" + id + " event=accepted remote=" + link.remote);
+        log.info("link", "link=" + id + " event=accepted remote=" + link.remote + " next=udp-bind from the joiner");
     }
 
     private void frame(TcpFrame frame, TransportListener listener) {
@@ -331,7 +331,10 @@ public final class NettyTransport implements Transport {
                     link.token = getLong(data, 1);
                     byToken.put(link.token, link);
                     link.nextBind = frame.at();
-                    log.debug("link", "link=" + link.id + " event=hello");
+                    log.info(
+                            "link",
+                            "link=" + link.id + " event=hello udp-to=" + link.remote
+                                    + " next=udp-bind (the far end must hear our datagrams)");
                 }
             }
             case TCP_BOUND -> {

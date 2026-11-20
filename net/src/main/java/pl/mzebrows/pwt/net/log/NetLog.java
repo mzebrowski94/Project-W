@@ -67,9 +67,10 @@ public final class NetLog implements AutoCloseable {
     }
 
     /**
-     * As {@link #open(LogConfig, String)}, and with {@code echo} the lines that say what a link or a room did - the
-     * relay's and the sequencer's, INFO and up - go to standard output too, for an operator watching a console. The
-     * per-second numbers and the per-message detail stay in the file only.
+     * As {@link #open(LogConfig, String)}, and with {@code echo} the lines that say what a link, a room or a session
+     * did - {@link #ECHOED}, at the log's own level - go to standard output too, for someone watching a console: a
+     * handshake that stalls shows there as well as in the file. The per-second numbers and the per-message trace stay
+     * in the file only.
      */
     public static NetLog open(LogConfig config, String instance, boolean echo) {
         Level level = level(config.level());
@@ -88,7 +89,7 @@ public final class NetLog implements AutoCloseable {
             handler.setEncoding("UTF-8");
             logger.addHandler(handler);
             if (echo) {
-                logger.addHandler(echoHandler(instance));
+                logger.addHandler(echoHandler(instance, level));
             }
             return new NetLog(instance, logger, handler, config.traceSize(), file);
         } catch (IOException | RuntimeException e) {
@@ -97,13 +98,19 @@ public final class NetLog implements AutoCloseable {
         }
     }
 
+    /**
+     * The categories echoed to a console: the relay's and the sequencer's, a session's peer, and the transport's link
+     * steps, ports and socket errors - what tells a link that never opened from a room that refused it.
+     */
+    static final List<String> ECHOED =
+            List.of("relay", "sequencer", "peer", "link", "listen", "tcp", "udp", "transport", "diagnostics");
+
     /** Standard output, one line per record in the file's own format, of the categories an operator reads. */
-    private static Handler echoHandler(String instance) {
+    private static Handler echoHandler(String instance, Level level) {
         StreamHandler echo = new StreamHandler(System.out, new LineFormatter(instance)) {
             @Override
             public synchronized void publish(LogRecord record) {
-                String message = record.getMessage();
-                if (message != null && (message.startsWith("cat=relay ") || message.startsWith("cat=sequencer "))) {
+                if (echoed(record.getMessage())) {
                     super.publish(record);
                     flush();
                 }
@@ -115,8 +122,16 @@ public final class NetLog implements AutoCloseable {
                 flush();
             }
         };
-        echo.setLevel(Level.INFO);
+        echo.setLevel(level);
         return echo;
+    }
+
+    static boolean echoed(@Nullable String message) {
+        if (message == null || !message.startsWith("cat=")) {
+            return false;
+        }
+        int space = message.indexOf(' ');
+        return ECHOED.contains(message.substring("cat=".length(), space < 0 ? message.length() : space));
     }
 
     /** A log that writes nothing, for tests that are not about the log. Its traces still record. */

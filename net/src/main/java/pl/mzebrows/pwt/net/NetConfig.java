@@ -367,6 +367,8 @@ public record NetConfig(
      *     and join pages; empty - as shipped - means no relay is set, and the pages offer none (G0101, G0103)
      * @param port the port the relay listens on, for both TCP and UDP: read by the relay to listen, and by a client
      *     to reach it
+     * @param diagnosticPort the TCP port of the relay's HTTP diagnostics - status, log tail, a probe of the door -
+     *     for an operator with a tool like curl or Postman; zero, as shipped, is off. Relay scope
      */
     public record Relay(
             int roomsMax,
@@ -382,7 +384,8 @@ public record NetConfig(
             int idleRoomMinutes,
             int sealLateWarnMs,
             String host,
-            int port) {
+            int port,
+            int diagnosticPort) {
 
         public Relay {
             require(roomsMax >= 1, "relay.roomsMax", roomsMax);
@@ -398,6 +401,7 @@ public record NetConfig(
             require(idleRoomMinutes >= 1, "relay.idleRoomMinutes", idleRoomMinutes);
             require(sealLateWarnMs >= 1, "relay.sealLateWarnMs", sealLateWarnMs);
             require(port > 0 && port < 65_536, "relay.port", port);
+            require(diagnosticPort >= 0 && diagnosticPort < 65_536, "relay.diagnosticPort", diagnosticPort);
             host = host.strip();
         }
 
@@ -422,7 +426,8 @@ public record NetConfig(
                     idleRoomMinutes,
                     sealLateWarnMs,
                     newHost,
-                    newPort);
+                    newPort,
+                    diagnosticPort);
         }
     }
 

@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.random.RandomGenerator;
@@ -270,7 +271,7 @@ public final class Relay {
         Address address = addresses.computeIfAbsent(text, key -> new Address());
         long now = clock.nanos();
         if (address.silent(now)) {
-            log.debug("relay", "event=ignored link=" + link + " address=" + text + " why=silence");
+            log.info("relay", "event=ignored link=" + link + " address=" + text + " why=silence");
             transport.disconnect(link, "ignored");
             return;
         }
@@ -282,11 +283,26 @@ public final class Relay {
         address.links++;
         addressOfLink.put(link, text);
         silentLinks.put(link, now);
-        log.debug("relay", "event=link link=" + link + " address=" + text);
+        log.info("relay", "event=link link=" + link + " address=" + text + " next=door");
     }
 
     public int roomCount() {
         return rooms.size();
+    }
+
+    /** The codes of the rooms open now, oldest first - for the diagnostics, never per tick. */
+    public List<String> roomCodes() {
+        return List.copyOf(rooms.keySet());
+    }
+
+    /** Links open now, at the door or in a room. */
+    public int linkCount() {
+        return addressOfLink.size();
+    }
+
+    /** Links open now that are still at the door: no room yet. */
+    public int linksAtTheDoor() {
+        return addressOfLink.size() - roomOfLink.size();
     }
 
     /** How many links the room of this code holds, or zero for no such room. */
@@ -514,6 +530,9 @@ public final class Relay {
         buckets.remove(link);
         Room room = roomOfLink.remove(link);
         if (room == null) {
+            if (text != null) {
+                log.info("relay", "event=link-closed link=" + link + " address=" + text + " reason=\"" + reason + "\"");
+            }
             return;
         }
         room.remove(link);

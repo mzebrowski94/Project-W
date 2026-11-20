@@ -18,6 +18,16 @@ class NetLogTest {
     Path dir;
 
     @Test
+    void echoesALinksStepsToTheConsoleButNotItsNumbers() {
+        assertThat(NetLog.echoed("cat=link link=1 event=closed reason=\"timeout: udp unreachable\""))
+                .isTrue();
+        assertThat(NetLog.echoed("cat=relay event=room-opened code=ACDE")).isTrue();
+        assertThat(NetLog.echoed("cat=stats link=1 rtt=3.0ms")).isFalse();
+        assertThat(NetLog.echoed("cat=trace tr=peer link=1 event=dump-end")).isFalse();
+        assertThat(NetLog.echoed("cat=linked")).isFalse();
+    }
+
+    @Test
     void writesOneKeyValueLinePerEvent() throws IOException {
         try (NetLog log = NetLog.open(config("INFO"), "host")) {
             log.info("link", "link=3 event=opened remote=127.0.0.1:50123");

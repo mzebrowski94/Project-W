@@ -83,6 +83,7 @@ public final class OnlineSession implements ScenarioPlay {
     private boolean cosmeticLead = true;
     private boolean leaving;
     private boolean toldStepIsOffline;
+    private boolean toldUnreachable;
 
     /**
      * Cards taken and crate choices on this machine, by seat, offered to the session every frame until it
@@ -197,7 +198,7 @@ public final class OnlineSession implements ScenarioPlay {
 
     private static OnlineSession create(NetConfig net, LaunchOptions options, String machine, boolean briefed) {
         Clock clock = SystemClock.INSTANCE;
-        NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-host");
+        NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-host", true);
         long key = new SecureRandom().nextLong() | 1L;
         Sequencer sequencer = new Sequencer(
                 new NettyTransport(net, clock, log, "sequencer"), net, log, Players.MAX, key, BuildId.current());
@@ -241,7 +242,7 @@ public final class OnlineSession implements ScenarioPlay {
     public static OnlineSession join(
             NetConfig net, LaunchOptions options, List<Integer> lagSteps, String host, int port, String machine) {
         Clock clock = SystemClock.INSTANCE;
-        NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-join");
+        NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-join", true);
         ConditionedTransport lag =
                 new ConditionedTransport(new NettyTransport(net, clock, log, "peer"), net.conditions(), clock);
         PeerSession peer = new PeerSession(lag, net, log, new ScenarioWorlds(), dumps(net), BuildId.current(), machine);
@@ -264,7 +265,7 @@ public final class OnlineSession implements ScenarioPlay {
     public static OnlineSession openThroughRelay(
             NetConfig net, LaunchOptions options, String machine, String version, String password) {
         Clock clock = SystemClock.INSTANCE;
-        NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-host");
+        NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-host", true);
         long key = new SecureRandom().nextLong() | 1L;
         PeerSession peer = new PeerSession(
                 new NettyTransport(net, clock, log, "peer"),
@@ -315,7 +316,7 @@ public final class OnlineSession implements ScenarioPlay {
             String machine,
             String version) {
         Clock clock = SystemClock.INSTANCE;
-        NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-join");
+        NetLog log = NetLog.open(net.log(), machine + "-" + options.logName() + "-join", true);
         ConditionedTransport lag =
                 new ConditionedTransport(new NettyTransport(net, clock, log, "peer"), net.conditions(), clock);
         PeerSession peer = new PeerSession(lag, net, log, new ScenarioWorlds(), dumps(net), BuildId.current(), machine);
@@ -412,6 +413,14 @@ public final class OnlineSession implements ScenarioPlay {
         held.offer(local, seated);
         if (peer.pump(clock, local)) {
             held.taken();
+        }
+        if (!toldUnreachable && relayUnreachable()) {
+            toldUnreachable = true;
+            Path file = log.file();
+            Log.error(
+                    "the link to the relay closed before its door answered: " + peer.closedBecause()
+                            + " - connection log " + (file == null ? "(none)" : file),
+                    null);
         }
         Invitation hosting = invitation;
         Simulation world = peer.simulation();

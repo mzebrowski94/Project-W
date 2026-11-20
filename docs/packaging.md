@@ -79,6 +79,26 @@ nothing else needs shipping. Open the port - 24741 by default - for **TCP and UD
 and links do to the console; the full log is `logs/net/relay-<time>.log` beside where it was started. The jar's build id must
 match the players' builds - rebuild and redeploy it with each game build that changes `map`, `sim` or the session protocol.
 
+The console shows every link's handshake steps too (`cat=link`: `accepted`, `udp-bound`, `closed reason=...`). A client
+that says THE RELAY CANNOT BE REACHED while the relay console shows no `cat=link event=accepted` never got a TCP
+connection through (host, port or a firewall); one with `accepted` and then `closed reason="timeout: udp unreachable"`
+got TCP through but not UDP - open the port for UDP as well. The game's own console prints the client's side of the same
+steps, and the reason its link closed.
+
+### Diagnostics over HTTP
+
+Set `net.relay.diagnosticPort` (zero, as shipped, is off) in the overrides file - `net.relay.diagnosticPort=24742` - and
+open that TCP port to yourself only: it names the addresses of the machines that connected. Then, from curl or Postman:
+
+| Request | What it says |
+|---|---|
+| `GET http://<relay>:24742/status` | build, ports, uptime, the rooms and links open now, and `you` - your address as the relay saw it |
+| `GET http://<relay>:24742/log?lines=200` | the tail of this run's log file, handshake steps and close reasons included |
+| `POST http://<relay>:24742/probe` | the relay dials its own door on `127.0.0.1`, opens a room and joins it from a second link, and says how far each step got and in how many ms; `?host=<address>` dials another address instead, e.g. the server's public one |
+
+A probe's room closes by itself after `net.rejoin.windowSeconds`, and counts toward `net.relay.roomsPerAddressMax` for
+`127.0.0.1` until it does.
+
 ## Not done yet
 
 - **Not signed.** Windows SmartScreen shows "Windows protected your PC" on first run; *More info ->

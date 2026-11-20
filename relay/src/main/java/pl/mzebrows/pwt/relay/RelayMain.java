@@ -9,6 +9,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.net.SystemClock;
 import pl.mzebrows.pwt.net.log.NetLog;
@@ -22,7 +23,8 @@ import pl.mzebrows.pwt.net.transport.Transport;
  * operator tunes the relay without a build. A thread per room runs its sequencer; this thread polls the door
  * every millisecond. It prints a banner of what it runs with, and echoes what rooms and links do to the console as
  * well as the log file. Arguments, in any order and both optional: a file of override lines, and a port that
- * beats {@code net.relay.port}. The only class of this module that names the Netty adapter ({@code RelayArchitectureTest}).
+ * beats {@code net.relay.port}. With {@code net.relay.diagnosticPort} set it serves {@link RelayDiagnostics} too,
+ * answered on this thread after each poll. The only class of this module that names the Netty adapter ({@code RelayArchitectureTest}).
  */
 public final class RelayMain {
 
@@ -55,6 +57,7 @@ public final class RelayMain {
         NetLog log = NetLog.open(config.log(), "relay", true);
         Transport transport = new NettyTransport(config, SystemClock.INSTANCE, log, "relay");
         int port = transport.listen(config.relay().port(), 0);
+        RelayDiagnostics diagnostics = diagnostics(config, port, log);
         Path file = log.file();
         RelayBanner.lines(
                         config,
@@ -64,7 +67,8 @@ public final class RelayMain {
                         file == null ? "" : file.toString(),
                         overrides.isEmpty()
                                 ? ""
-                                : Path.of(overrides).toAbsolutePath().toString())
+                                : Path.of(overrides).toAbsolutePath().toString(),
+                        diagnostics == null ? 0 : diagnostics.port())
                 .forEach(System.out::println);
         log.info("relay", "event=listening port=" + port + " build=" + BuildId.current());
         Relay relay =
@@ -87,11 +91,39 @@ public final class RelayMain {
         try {
             while (!stopping.get()) {
                 relay.poll();
+                if (diagnostics != null) {
+                    diagnostics.serve(relay);
+                }
                 LockSupport.parkNanos(POLL_NANOS);
             }
             relay.close();
         } finally {
+            if (diagnostics != null) {
+                diagnostics.close();
+            }
             closed.countDown();
+        }
+    }
+
+    /** The HTTP diagnostics on {@code net.relay.diagnosticPort}, or null when it is zero or cannot be bound. */
+    private static @Nullable RelayDiagnostics diagnostics(NetConfig config, int port, NetLog log) {
+        int diagnosticPort = config.relay().diagnosticPort();
+        if (diagnosticPort == 0) {
+            return null;
+        }
+        try {
+            return RelayDiagnostics.start(
+                    diagnosticPort,
+                    port,
+                    () -> new NettyTransport(config, SystemClock.INSTANCE, log, "probe"),
+                    config,
+                    SystemClock.INSTANCE,
+                    log,
+                    BuildId.current());
+        } catch (IOException e) {
+            log.error("diagnostics", "event=failed port=" + diagnosticPort, e);
+            System.err.println("[relay] diagnostics could not listen on port " + diagnosticPort + ": " + e);
+            return null;
         }
     }
 }
