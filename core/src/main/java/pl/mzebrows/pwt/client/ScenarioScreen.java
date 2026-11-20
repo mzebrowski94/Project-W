@@ -387,10 +387,7 @@ public final class ScenarioScreen extends ScreenAdapter {
                 : context.missions().dailyDay(mission);
         String strengthWords = mission == null || strength.normal()
                 ? ""
-                : strings.format(
-                        "ui.briefing.strength",
-                        world.config().mission().healthPercentOf(mission.tier(), strength),
-                        world.config().mission().countPercentOf(mission.tier(), strength));
+                : strings.format("ui.briefing.strength", strength.healthPercent(), strength.countPercent());
         menus.mission(mission, day, strengthWords);
         if (mission == null) {
             missionLine = scenario == null ? "" : scenario;

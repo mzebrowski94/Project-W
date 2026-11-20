@@ -179,22 +179,27 @@ public final class MissionChoices {
     }
 
     /**
-     * CUSTOM chosen (G0106): the mission the line holds - else the last one played, else a fresh draw - becomes the
-     * one the host edits. A level of its own for this session: its length and strength may now be changed, and the
-     * strength starts as it was.
+     * CUSTOM pressed (G0106): off to on or on to off, starting off. On, the mission the line holds - else the last one
+     * played, else a fresh draw - becomes the one the host edits: its length and strength rows may be changed, the
+     * strength starting at a hundred per cent. Off, the strength goes back to a hundred and the rows are locked again.
      */
-    public void chooseCustom() {
+    public void toggleCustom() {
+        if (custom) {
+            custom = false;
+            healthPercent = Strength.NORMAL.healthPercent();
+            countPercent = Strength.NORMAL.countPercent();
+            return;
+        }
         MissionCode base = code();
         if (base == null) {
             base = lastPlayed != null ? lastPlayed : random();
         }
-        Strength kept = strength();
         rewriting = true;
         replaceTyped(base.text());
         rewriting = false;
         custom = true;
-        healthPercent = kept.healthPercent();
-        countPercent = kept.countPercent();
+        healthPercent = Strength.NORMAL.healthPercent();
+        countPercent = Strength.NORMAL.countPercent();
     }
 
     /** The tier the rows speak of: the line's code's, else RANDOM's. */
@@ -203,14 +208,17 @@ public final class MissionChoices {
         return held == null ? randomTier : held.tier();
     }
 
-    /** The enemy health the row shows, as a percentage of a medium mission's: the tier's and the strength's together. */
+    /**
+     * The enemy health the row shows: the tier's own percentage while CUSTOM is off - easy 85, hard 115 - and, once it
+     * is on, the strength the host has stepped it to, which starts at a hundred and is laid on the tier's.
+     */
     public int shownHealth() {
-        return mission.healthPercentOf(shownTier(), strength());
+        return custom ? healthPercent : mission.healthPercentOf(shownTier(), Strength.NORMAL);
     }
 
     /** The enemy count the row shows, the same way. */
     public int shownCount() {
-        return mission.countPercentOf(shownTier(), strength());
+        return custom ? countPercent : mission.countPercentOf(shownTier(), Strength.NORMAL);
     }
 
     /** The strength the rows show: what a mission started now is played with (G0106). */

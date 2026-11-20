@@ -32,12 +32,13 @@ what the code names: the **map** - the biomes, the ground, the points - and not 
 - **The map is the code's.** The placement attempt is chosen by what fits every *tier*, as before, without the strength: the
   ground, the order, the points stay where the code puts them at any strength. Past what the room holds creatures are
   not placed (a shortfall, as before) - at 300 % on hard the biome says so in its shortfalls and stands fewer than asked.
-- **CUSTOM unlocks them.** The missions page has a CUSTOM entry after RANDOM: it takes the code the line holds - else the last
-  one played, else a fresh draw - and only while it is on do the length, health and count rows change; otherwise
-  they are dim and passed over. It is session only: a daily, a RANDOM, a typed, pasted or picked code puts it, the strength
-  and the length back. The rows show what a strength comes to on the tier of the code in the line
-  (`MissionConfig.healthPercentOf`/`countPercentOf`): easy 85 % health and 75 % count, medium 100 and 100, hard 115 and
-  125 - and, stepped in CUSTOM, the tier's times the strength (hard at 150 shows 173 %). Words elsewhere say the same.
+- **CUSTOM unlocks them.** The missions page has a CUSTOM entry after RANDOM, a switch that starts OFF and that each press
+  turns ON or OFF. On, it takes the code the line holds - else the last one played, else a fresh draw - and only then
+  do the length, health and count rows change; otherwise they are dim and passed over. It is session only: a daily, a
+  RANDOM, a typed, pasted or picked code puts it, the strength and the length back. While it is off the rows show
+  the tier's own percentages (`MissionConfig.healthPercentOf`/`countPercentOf`): easy 85 % health and 75 % count, medium
+  100 and 100, hard 115 and 125. Turning it on puts both rows at 100 %, the strength, laid on the tier's; words
+  elsewhere say the strength.
 - **A daily is a hundred and a hundred.** Choosing one puts both rows there; a daily played at another strength keeps
   no best time (G0067). The pause page and the top bar say the strength in words when it is not normal (pillar 5).
 - **No relational guarantee is held off a hundred.** G0063's "what a player learns holds at every tier" holds for the

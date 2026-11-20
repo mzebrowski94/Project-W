@@ -1001,7 +1001,8 @@ public final class MenuScreen extends ScreenAdapter {
             } else if (i == MenuTree.MISSION_LENGTH) {
                 labels.add(choice(label, biomesText()));
             } else if (i == MenuTree.MISSION_CUSTOM) {
-                labels.add(missions.custom() ? pad(label) + strings.get("ui.missions.customOn") : label);
+                labels.add(
+                        pad(label) + strings.get(missions.custom() ? "ui.missions.customOn" : "ui.missions.customOff"));
             } else if (i == MenuTree.MISSION_HEALTH) {
                 labels.add(choice(label, percentText(missions.shownHealth())));
             } else if (i == MenuTree.MISSION_COUNT) {
@@ -1014,12 +1015,9 @@ public final class MenuScreen extends ScreenAdapter {
         }
     }
 
-    /** What a strength on this tier says in words: the percentages it comes to (G0106), {@code HEALTH 128%  COUNT 75%}. */
-    private String strengthWords(TierKind tier, Strength strength) {
-        return strings.format(
-                "ui.briefing.strength",
-                context.simConfig().mission().healthPercentOf(tier, strength),
-                context.simConfig().mission().countPercentOf(tier, strength));
+    /** What a strength says in words (G0106): {@code HEALTH 150%  COUNT 200%}. */
+    private String strengthWords(Strength strength) {
+        return strings.format("ui.briefing.strength", strength.healthPercent(), strength.countPercent());
     }
 
     /** A strength row's value: {@code 150%}. */
@@ -1153,7 +1151,7 @@ public final class MenuScreen extends ScreenAdapter {
         } else if (entry == MenuTree.MISSION_RANDOM) {
             missions.drawRandom();
         } else if (entry == MenuTree.MISSION_CUSTOM) {
-            missions.chooseCustom();
+            missions.toggleCustom();
         } else if (entry == MenuTree.MISSION_LENGTH) {
             missions.stepLength(1);
         } else if (entry == MenuTree.MISSION_HEALTH) {
@@ -1632,7 +1630,7 @@ public final class MenuScreen extends ScreenAdapter {
                 strings.format("ui.briefing.line", code.toString(), tierName(code.tier()), biomes(code.length()));
         Strength strength =
                 space < 0 ? Strength.NORMAL : MissionCode.strengthOf("mission easy" + line.substring(space));
-        return strength.normal() ? named : named + "  " + strengthWords(code.tier(), strength);
+        return strength.normal() ? named : named + "  " + strengthWords(strength);
     }
 
     /** A player's row in its commander's colour while he is on; dim - the page's own - once his link is gone. */

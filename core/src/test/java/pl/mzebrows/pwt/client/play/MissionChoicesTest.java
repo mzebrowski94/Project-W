@@ -38,7 +38,7 @@ class MissionChoicesTest {
     void stepsTheStrengthRowsRoundTheirRangeAndLeavesTheCodeAlone() {
         choices.open();
         choices.drawRandom();
-        choices.chooseCustom();
+        choices.toggleCustom();
         String line = choices.typed();
 
         assertThat(choices.strength()).isEqualTo(Strength.NORMAL);
@@ -57,7 +57,7 @@ class MissionChoicesTest {
     @Test
     void aDailyIsAlwaysAtANormalStrengthAndItsNoteSaysNothingMore() {
         choices.open();
-        choices.chooseCustom();
+        choices.toggleCustom();
         choices.stepHealth(1);
         choices.chooseDaily(TierKind.EASY);
 
@@ -70,7 +70,7 @@ class MissionChoicesTest {
     void theNoteCarriesAStrengthThatIsNotNormalForTheJoinersToReadBack() {
         choices.open();
         choices.chooseDaily(TierKind.HARD);
-        choices.chooseCustom();
+        choices.toggleCustom();
         choices.stepHealth(1);
         choices.stepCount(1);
 
@@ -117,7 +117,7 @@ class MissionChoicesTest {
         choices.open();
         assertThat(choices.length()).isEqualTo(6);
 
-        choices.chooseCustom();
+        choices.toggleCustom();
         choices.stepLength(1);
         choices.stepLength(1);
         assertThat(choices.length()).isEqualTo(8);
@@ -126,7 +126,7 @@ class MissionChoicesTest {
         assertThat(choices.code().length()).isEqualTo(6);
         assertThat(choices.origin()).isEqualTo(MissionChoices.Origin.RANDOM);
 
-        choices.chooseCustom();
+        choices.toggleCustom();
         choices.stepLength(1);
         choices.chooseDaily(TierKind.HARD);
         assertThat(choices.length()).isEqualTo(6);
@@ -160,10 +160,29 @@ class MissionChoicesTest {
         assertThat(choices.shownCount()).isEqualTo(125);
 
         MissionCode hard = choices.code();
-        choices.chooseCustom();
+        choices.toggleCustom();
         assertThat(choices.code()).isEqualTo(hard);
+        assertThat(choices.custom()).isTrue();
+        assertThat(choices.shownHealth()).isEqualTo(100);
+        assertThat(choices.shownCount()).isEqualTo(100);
         choices.stepHealth(1);
-        assertThat(choices.shownHealth()).isEqualTo(173);
+        assertThat(choices.shownHealth()).isEqualTo(150);
+    }
+
+    @Test
+    void customStartsOffAndIsSwitchedOnAndOffByPressingIt() {
+        choices.open();
+        assertThat(choices.custom()).isFalse();
+
+        choices.chooseDaily(TierKind.HARD);
+        choices.toggleCustom();
+        choices.stepCount(1);
+        assertThat(choices.custom()).isTrue();
+
+        choices.toggleCustom();
+        assertThat(choices.custom()).isFalse();
+        assertThat(choices.strength()).isEqualTo(Strength.NORMAL);
+        assertThat(choices.shownCount()).isEqualTo(125);
     }
 
     @Test
@@ -172,11 +191,11 @@ class MissionChoicesTest {
         choices.drawRandom();
         MissionCode drawn = choices.code();
 
-        choices.chooseCustom();
+        choices.toggleCustom();
         assertThat(choices.code()).isEqualTo(drawn);
 
         choices.open();
-        choices.chooseCustom();
+        choices.toggleCustom();
         assertThat(choices.code()).isNotNull();
         assertThat(choices.custom()).isTrue();
     }
@@ -188,7 +207,7 @@ class MissionChoicesTest {
         choices.chooseDaily(TierKind.EASY);
         MissionCode daily = choices.code();
 
-        choices.chooseCustom();
+        choices.toggleCustom();
         choices.stepLength(-1);
 
         assertThat(choices.code().length()).isEqualTo(5);
@@ -201,7 +220,7 @@ class MissionChoicesTest {
     void stepsTheLengthRoundBetweenItsLimitsAndFollowsACodeTyped() {
         var lengths = pl.mzebrows.pwt.sim.SimConfig.defaults().mission();
         choices.open();
-        choices.chooseCustom();
+        choices.toggleCustom();
 
         for (int i = 0; i < lengths.biomesMax() - lengths.biomesMin() + 1; i++) {
             choices.stepLength(1);
