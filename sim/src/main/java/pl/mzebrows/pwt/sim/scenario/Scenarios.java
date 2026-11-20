@@ -30,7 +30,8 @@ public final class Scenarios {
             new FeedingGroundScenario(),
             new DemolitionScenario(),
             new CasualtyScenario(),
-            new CrowdScenario());
+            new CrowdScenario(),
+            new FullHouseScenario());
 
     private Scenarios() {}
 

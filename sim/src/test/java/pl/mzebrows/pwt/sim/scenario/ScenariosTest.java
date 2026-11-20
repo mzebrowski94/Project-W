@@ -47,14 +47,23 @@ class ScenariosTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("scenarios")
-    void spawnsExactlyOneCommander(String name, Scenario scenario) {
+    void spawnsOneCommanderForTheKeyboardAndNoSlotTwice(String name, Scenario scenario) {
         Simulation simulation = simulationFor(scenario);
+        ImmutableArray<Entity> commanders =
+                simulation.engine().getEntitiesFor(Family.all(Commander.class).get());
 
-        assertThat(simulation
-                        .engine()
-                        .getEntitiesFor(Family.all(Commander.class).get()))
-                .as("scenario %s must spawn a commander for the player to control", name)
-                .hasSize(1);
+        assertThat(slotsOf(commanders))
+                .as("scenario %s must spawn a commander for the player to control, one per slot", name)
+                .contains(0)
+                .doesNotHaveDuplicates();
+    }
+
+    private static int[] slotsOf(ImmutableArray<Entity> commanders) {
+        int[] slots = new int[commanders.size()];
+        for (int i = 0; i < slots.length; i++) {
+            slots[i] = commanders.get(i).getComponent(Commander.class).slot;
+        }
+        return slots;
     }
 
     @ParameterizedTest(name = "{0}")
