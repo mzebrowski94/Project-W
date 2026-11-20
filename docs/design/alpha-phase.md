@@ -34,7 +34,7 @@ A scenario is one arena, built to make a system visible. Everything needed to ad
 use it in tests too rather than constructing a `Simulation` and populating it by hand.
 
 `ScenariosTest` applies to every registered scenario automatically: each must describe itself, spawn
-exactly one commander, and survive 300 ticks. `SimulationDeterminismTest` replays each one twice and
+a commander in slot 0 and no slot twice (`Full House` seats all eight), and survive 300 ticks. `SimulationDeterminismTest` replays each one twice and
 requires identical results, so a scenario cannot introduce non-reproducible spawning.
 
 **Scenarios are content, not design.** Numbers in one are chosen to make a system visible, not to
