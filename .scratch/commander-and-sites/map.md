@@ -54,3 +54,4 @@ redeploy, sites and crates, the mainframe, the jaguar, the rift, spires and the 
 ## Decisions so far
 
 - 2026-11-22: the whole of [spec.md](spec.md), grilled with Mateusz.
+- 2026-11-22, ticket 01 (resolved, merged): `--scenario` resolved by `Scenarios.looselyNamed` in sim (registry only, exact `named` kept for online); mission-versus-scenario conflict caught in `LaunchOptions`; commander gold, `.1` white, trooper blue unchanged. Provisional.

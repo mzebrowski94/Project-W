@@ -1,7 +1,7 @@
 # `--scenario`, Full House and the commander colours
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: none
 Spec: [spec.md](../spec.md) sections 2 and 3
@@ -111,3 +111,25 @@ That shows eight commanders, with gold and white the first two.
 - `alpha-phase.md` says how to open a scenario directly.
 - `verify.sh` is green and the branch is committed.
 - The final message names the colour keys, with lines, so Mateusz can retune them himself.
+
+## Answer
+
+Built (merged into integration):
+- **Full House** cherry-picked from `6a1bdcc` alone. `de972c0` not taken: `graphic.ui.page.scenarios=false` stays, the menus list no scenarios.
+- **`Scenarios.looselyNamed(String)`** (sim): matches only `Scenarios.ALL`, ignoring case, spaces, hyphens and underscores; null when nothing matches; never resolves `mission <tier>` or the proving ground. `Scenarios.named` unchanged (exact). `Scenarios.typedName(Scenario)` gives the lower-case-hyphen form the error lists.
+- **`LaunchOptions.scenario`** (`@Nullable String`, from `--scenario=`): empty value is a problem; beside `--mission` the mission is kept and the scenario is a problem. No `sim` lookup in `LaunchOptions`.
+- **`PwtGame.create()`**: mission as before; else a resolved scenario opens as `ScenarioScreen(..., UiPage.CAMPAIGN)`; else the menu. Unknown name logs `ignored --scenario=X: no scenario is called that; there are adventure, adventure-2, ...`.
+- **Docs**: `docs/design/alpha-phase.md` *Opening a scenario directly* (flag, loose match, menus stay off, gradle command, IntelliJ run configuration in prose). Gradle's `run` already passes `--args`.
+- **Tests**: three cases in `LaunchOptionsTest`; `ScenariosLooselyNamedTest`.
+
+Provisional decisions (AFK run, for review):
+- Lookup lives in `Scenarios` (sim), beside the registry. Turned down: a private helper in `PwtGame` - untestable without libGDX, away from `ALL`.
+- Mission-versus-scenario conflict caught in `LaunchOptions.parse`. A `--mission` later refused for a bad length still drops the scenario - accepted edge case.
+- Problem wording: `ignored --scenario: no scenario named`; `ignored --scenario=X: --mission was given too, and the mission is played`; unknown names listed in lower-case-hyphen form (`full-house`) rather than stripped (`fullhouse`), easier to read and type.
+
+Keys (`assets/graphic.properties`):
+- `graphic.color.commander=ffd76eff` (line 15): gold, was `6ee7ffff`.
+- `graphic.color.commander.1=eef4ffff` (line 22): white, was `ffd76eff`.
+- `graphic.color.trooper=4fb8d8ff` (line 32): unchanged; both comments rewritten.
+
+Judge by: `./gradlew lwjgl3:run --args="--scenario=full-house"` - eight commanders, the first two gold and white.
