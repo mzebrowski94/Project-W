@@ -22,6 +22,7 @@ import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.ApproachDef;
 import pl.mzebrows.pwt.sim.def.ArmourDef;
@@ -59,6 +60,8 @@ import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.WeaponType;
 import pl.mzebrows.pwt.sim.def.WeaveDef;
+import pl.mzebrows.pwt.sim.def.WorkedSiteDef;
+import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
 import pl.mzebrows.pwt.sim.system.upgrade.DraftDef;
 import pl.mzebrows.pwt.sim.system.upgrade.Effect;
@@ -763,6 +766,31 @@ public final class AlphaWorlds {
 
     /** The shipped thresholds (G0110): one crate a taken site for one or two players, two from three, three from six. */
     public static final List<Integer> SITE_CRATES_BY_PLAYERS = List.of(1, 3, 6, 10);
+
+    /** A mainframe as big as the shipped one, and quick to download, so a test runs in a few seconds (G0111). */
+    public static final float MAINFRAME_RADIUS = 2.4f;
+
+    public static final float MAINFRAME_WORK_SECONDS = 1f;
+
+    public static final float MAINFRAME_ROUSE_RADIUS = 26f;
+
+    public static final int MAINFRAME_CHANCE = 50;
+
+    /** Every worked site (G0111): the mainframe, small numbers. */
+    public static Defs<WorkedSiteKind, WorkedSiteDef> workedSites() {
+        return Defs.<WorkedSiteKind, WorkedSiteDef>builder(WorkedSiteKind.class)
+                .put(
+                        WorkedSiteKind.MAINFRAME,
+                        new WorkedSiteDef(
+                                MAINFRAME_RADIUS,
+                                MAINFRAME_WORK_SECONDS,
+                                MAINFRAME_ROUSE_RADIUS,
+                                MAINFRAME_CHANCE,
+                                true,
+                                ActionKind.DOWNLOAD,
+                                Look.MAINFRAME))
+                .build();
+    }
 
     /** What one crate is worth. Three, as the shipped one is. */
     public static final int CRATE_TROOPERS = 3;
@@ -1695,6 +1723,7 @@ public final class AlphaWorlds {
                         POINT_GRENADE_CACHES,
                         POINT_MEDKIT_CHANCE),
                 new SimConfig.SiteConfig(SITE_CRATES_BY_PLAYERS),
+                workedSites(),
                 new SimConfig.TurretConfig(
                         TURRET_RADIUS,
                         TURRET_HEALTH,

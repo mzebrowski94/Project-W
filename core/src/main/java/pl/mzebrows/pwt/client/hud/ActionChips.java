@@ -36,7 +36,8 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
 /**
  * Each local commander's **prompt** (G0098), on the UI canvas above what it is about: the key in his device's words
- * and the verb - {@code [E] OPEN}, {@code HOLD [E] STABILISE}, {@code [C] UPGRADE x2}, {@code [F] REDEPLOY} over his
+ * and the verb - {@code [E] OPEN}, {@code HOLD [E] STABILISE}, {@code HOLD [E] DOWNLOAD} and then {@code DECRYPTING…}
+ * while he works it (G0111), {@code [C] UPGRADE x2}, {@code [F] REDEPLOY} over his
  * down mark (G0109), filling as the work is done - on a see-through backing
  * that thins while an alien body is under it, so the fight shows through. Leaving a gun is smaller and dim. With more
  * than one player in the game each is framed in its player's colour; several on one thing stack, lowest slot
@@ -73,6 +74,7 @@ public final class ActionChips {
     private final ActionKind[] saidAction = new ActionKind[SLOTS];
     private final String[] saidKey = new String[SLOTS];
     private final int[] saidCount = new int[SLOTS];
+    private final boolean[] saidWorking = new boolean[SLOTS];
 
     /** Scratch for projecting into the view; overwritten before every read. */
     private final Vector2 point = new Vector2();
@@ -231,16 +233,22 @@ public final class ActionChips {
         PromptKind kind = prompts.kind(slot);
         ActionKind action = prompts.action(slot);
         int count = prompts.count(slot);
+        boolean working = prompts.working(slot);
         if (kind != saidKind[slot]
                 || action != saidAction[slot]
                 || count != saidCount[slot]
+                || working != saidWorking[slot]
                 || !key.equals(saidKey[slot])) {
             saidKind[slot] = kind;
             saidAction[slot] = action;
             saidCount[slot] = count;
+            saidWorking[slot] = working;
             saidKey[slot] = key;
             String verb = count > 0 ? strings.format(prompts.verb(slot), count) : strings.get(prompts.verb(slot));
-            lines[slot] = strings.format(prompts.hold(slot) ? "ui.prompt.hold" : "ui.prompt.press", key, verb);
+            // Working a site, it says what is being done and nothing of the key: DECRYPTING… (G0111).
+            lines[slot] = working
+                    ? verb
+                    : strings.format(prompts.hold(slot) ? "ui.prompt.hold" : "ui.prompt.press", key, verb);
         }
         return lines[slot];
     }

@@ -32,6 +32,8 @@ import pl.mzebrows.pwt.sim.def.WanderDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.Whole;
+import pl.mzebrows.pwt.sim.def.WorkedSiteDef;
+import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
 import pl.mzebrows.pwt.sim.system.upgrade.DraftDef;
 import pl.mzebrows.pwt.sim.system.upgrade.Stat;
@@ -86,6 +88,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * @param nest the holes in the ground that keep sending more out
  * @param controlPoint what it takes to hold a point, and how far taking one carries
  * @param site what a taken site leaves besides what a point always has (G0110)
+ * @param workedSites every site taken by work held at it, by kind (G0111): a {@code sim.site.<kind>} block each
  * @param turret the gun on a mount that a man gets on
  * @param obstacle the static circles that block movement
  * @param collision how hard the constraint solver works
@@ -138,6 +141,7 @@ public record SimConfig(
         NestConfig nest,
         ControlPointConfig controlPoint,
         SiteConfig site,
+        @ConfigKey("site") Defs<WorkedSiteKind, WorkedSiteDef> workedSites,
         TurretConfig turret,
         ObstacleConfig obstacle,
         CollisionConfig collision,
@@ -197,6 +201,11 @@ public record SimConfig(
     public int nestHealth() {
         return Whole.percentOf(
                 nest.health(), swarm.healthPercent(), swarm.tierPercent(), swarm.strengthHealthPercent());
+    }
+
+    /** The definition of one kind of worked site (G0111). */
+    public WorkedSiteDef workedSite(WorkedSiteKind kind) {
+        return workedSites.of(kind);
     }
 
     /** The definition of one kind of pickup. */

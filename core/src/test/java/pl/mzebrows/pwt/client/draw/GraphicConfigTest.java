@@ -238,6 +238,7 @@ class GraphicConfigTest {
                         d.door(),
                         d.post(),
                         d.flag(),
+                        d.mainframe(),
                         d.burst(),
                         d.daze(),
                         d.tree(),

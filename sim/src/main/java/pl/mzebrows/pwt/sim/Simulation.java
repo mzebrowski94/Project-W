@@ -29,6 +29,7 @@ import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 import pl.mzebrows.pwt.sim.system.appearance.AppearanceSystem;
 import pl.mzebrows.pwt.sim.system.combat.CollisionSystem;
 import pl.mzebrows.pwt.sim.system.combat.CooldownSystem;
@@ -73,6 +74,7 @@ import pl.mzebrows.pwt.sim.system.level.NestSystem;
 import pl.mzebrows.pwt.sim.system.level.ObjectiveSystem;
 import pl.mzebrows.pwt.sim.system.level.ReinforcementSystem;
 import pl.mzebrows.pwt.sim.system.level.WaveSystem;
+import pl.mzebrows.pwt.sim.system.level.WorkedSiteSystem;
 import pl.mzebrows.pwt.sim.system.motion.AvoidanceSystem;
 import pl.mzebrows.pwt.sim.system.motion.BurrowSystem;
 import pl.mzebrows.pwt.sim.system.motion.DodgeSystem;
@@ -268,6 +270,9 @@ public final class Simulation {
         // After the hands that work a door this tick and the damage that breaks it, so a door opened or broken
         // this tick is open ground from here on (G0069, ADR 0022).
         engine.addSystem(new DoorSystem(solid, spawner));
+        // Straight after the door, worked on its rules (G0111): after the hands put to it this tick and the damage that
+        // wounds whoever was at it; before the objectives and the draft, so a site taken this tick counts this tick.
+        engine.addSystem(new WorkedSiteSystem(config, map, spawner, streams.of(RngStream.CACHE), capacity));
         engine.addSystem(new CasualtySystem(config, spawner, modifiers));
         engine.addSystem(new DyingSystem(spawner));
         // Where a man from the reserve is put down, whether he is a returning commander or a muster's
@@ -302,7 +307,8 @@ public final class Simulation {
         // the nests': riders spilled this tick are on the field, and count, this tick (G0074).
         engine.addSystem(new SlingSystem(config, map, spawner, streams.of(RngStream.SLING)));
         engine.addSystem(new ControlPointSystem(config, map, spawner, streams.of(RngStream.CACHE), capacity));
-        // After every source of a draft (42, 45, 46), so what was earned this tick is dealt this tick; and
+        // After every source of a draft (43, 46, 47, and the sites taken at 38 and 54), so what was earned this tick is
+        // dealt this tick; and
         // after every reader of Modifiers, so the ledger changes once, at the end, for every reader alike.
         engine.addSystem(
                 new UpgradeSystem(config, streams.of(RngStream.DRAFT), streams.of(RngStream.ADAPTATION), capacity));
@@ -518,6 +524,11 @@ public final class Simulation {
     /** Spawns a shut door in a doorway of this map (G0069). */
     public Entity spawnDoor(TileRect doorway) {
         return spawner.spawnDoor(doorway, map.tileSize());
+    }
+
+    /** Spawns a site of this kind taken by work held at it (G0111): a mainframe. */
+    public Entity spawnWorkedSite(WorkedSiteKind kind, float x, float y) {
+        return spawner.spawnWorkedSite(kind, x, y);
     }
 
     /** Spawns ground a squad takes by standing on it. Spawn these before whatever stands on them. */

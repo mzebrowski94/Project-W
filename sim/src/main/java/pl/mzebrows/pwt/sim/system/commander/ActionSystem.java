@@ -22,9 +22,11 @@ import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Reach;
@@ -35,7 +37,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  *
  * <p><strong>One key, and the game chooses what it means.</strong> Whatever is within arm's length
  * is what is on offer, nearest first; there is nothing to select. A tie goes to the gun, then the crate,
- * then the casualty, and only then to a shut door (G0069). A crate is the one thing the key opens a choice on - what to take from it, in the
+ * then the casualty, then a worked site, and only then to a shut door (G0069, G0111). A crate is the one thing the key opens a choice on - what to take from it, in the
  * top bar - and that choice is {@code CrateSystem}'s (G0056). That is pillar 1 -
  * anything that makes the player stop and pick belongs in a different game - and it is why the
  * available action is published on {@link Action} for the interface to show rather than assembled by
@@ -75,6 +77,7 @@ public final class ActionSystem extends EntitySystem {
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
     private static final ComponentMapper<Dash> DASH = ComponentMapper.getFor(Dash.class);
+    private static final ComponentMapper<WorkedSite> WORKED = ComponentMapper.getFor(WorkedSite.class);
 
     private final float reviveInvulnerableSeconds;
     private final Modifiers modifiers;
@@ -95,6 +98,7 @@ public final class ActionSystem extends EntitySystem {
     private ImmutableArray<Entity> crates = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> worked = new ImmutableArray<>(new Array<>());
 
     /**
      * @param tileSize the map's tile, which a doorway is counted in
@@ -120,6 +124,8 @@ public final class ActionSystem extends EntitySystem {
                 Family.all(Crate.class, Position.class, Body.class).get());
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
         doors = engine.getEntitiesFor(Family.all(Door.class).get());
+        worked = engine.getEntitiesFor(Family.all(WorkedSite.class, Site.class, Position.class, Body.class)
+                .get());
     }
 
     @Override
@@ -150,6 +156,19 @@ public final class ActionSystem extends EntitySystem {
             @Nullable Entity casualty = Reach.nearest(casualties, commander, action.reach, ActionKind.STABILISE);
             @Nullable Entity crate = Reach.nearest(crates, commander, action.reach, ActionKind.OPEN_CRATE);
             @Nullable Entity door = Reach.nearestDoor(doors, commander, action.reach, tileSize);
+            @Nullable Entity site = Reach.nearestWorkedSite(worked, commander, action.reach);
+            if (site != null
+                    && Reach.gap(commander, site) < nearestGap(commander, station, crate, casualty)
+                    && (door == null || Reach.gap(commander, site) <= Reach.doorGap(commander, door, tileSize))) {
+                // The bar is the site's, and everyone's (G0111); his chip reads it, so it is his progress too.
+                WorkedSite work = WORKED.get(site);
+                offer(action, work.action, Handles.of(site));
+                if (working) {
+                    putHandsTo(commander, work);
+                    action.progress = work.progress();
+                }
+                continue;
+            }
             if (door != null
                     && Reach.doorGap(commander, door, tileSize) < nearestGap(commander, station, crate, casualty)) {
                 // The bar is the door's, drawn over it; nothing fills on him.
@@ -226,6 +245,18 @@ public final class ActionSystem extends EntitySystem {
             return;
         }
         door.worked = true;
+    }
+
+    /**
+     * A tick of his hands on a worked site: work for {@code WorkedSiteSystem} to count, or - on the tick a wound lands
+     * on him - every tick of it lost (G0111), as at a door.
+     */
+    private static void putHandsTo(Entity commander, WorkedSite site) {
+        if (VITALITY.has(commander) && VITALITY.get(commander).woundedThisTick()) {
+            site.workedTicks = 0;
+            return;
+        }
+        site.worked = true;
     }
 
     /** How near the nearest of the other offers is, surface to surface; none at all is as far as can be. */

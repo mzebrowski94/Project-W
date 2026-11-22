@@ -13,20 +13,24 @@ import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.NotState;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
+import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.query.Compass;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
- * The level's points: holding one that is taken, walking to the nearest one that is not, and splitting
- * the watch between the men standing on one. The half of {@link TrooperMindSystem}'s cascade below the
+ * The level's points - and its worked sites, walked to and stood round as points are (G0111): holding one that is
+ * taken, walking to the nearest one that is not, and splitting the watch between the men standing on one. At a worked
+ * site the men stand at arm's length of it; which one of them works it is {@code WorkedSiteSystem}'s. The half of {@link TrooperMindSystem}'s cascade below the
  * errands, and above roaming.
  *
  * <p><strong>Nearest means nearest by route</strong> (2.e): each point owns a flow field built for a
@@ -52,6 +56,8 @@ final class TrooperObjective {
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
     private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+    private static final ComponentMapper<Site> SITE = ComponentMapper.getFor(Site.class);
+    private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
 
     /** How far inside a point counts as standing on it, as a fraction of its radius. */
     private static final float INSIDE_THE_EDGE = 0.7f;
@@ -64,6 +70,9 @@ final class TrooperObjective {
     private final float rallyRadius;
     private final float postRingRadius;
     private final int captureCrowd;
+
+    /** How far past a worked site's edge a man counts as at it: his body and his arm's length (G0111). */
+    private final float atAWorkedSite;
 
     /** Where a crowd's spare man with no next point wanders round it. */
     private final TrooperRoam roam;
@@ -130,6 +139,7 @@ final class TrooperObjective {
         this.rallyRadius = config.trooper().rallyRadius();
         this.postRingRadius = config.trooper().postRingRadius();
         this.captureCrowd = config.trooper().captureCrowd();
+        this.atAWorkedSite = config.trooper().radius() + config.action().reach();
         this.roam = roam;
     }
 
@@ -137,8 +147,10 @@ final class TrooperObjective {
     void bind(Engine engine) {
         troopers =
                 engine.getEntitiesFor(Family.all(Trooper.class, Position.class).get());
-        points = engine.getEntitiesFor(
-                Family.all(ControlPoint.class, Position.class).get());
+        // A worked site is walked to and stood round as a point is (G0111): one family, spawn order.
+        points = engine.getEntitiesFor(Family.one(ControlPoint.class, WorkedSite.class)
+                .all(Position.class)
+                .get());
         commanders = engine.getEntitiesFor(
                 Family.all(Commander.class, Position.class).get());
         doors = engine.getEntitiesFor(Family.all(Door.class, Handle.class).get());
@@ -256,8 +268,7 @@ final class TrooperObjective {
                 if (nextAfter[nearest] < 0) {
                     // Nowhere further to go: round this one, as a squad with nothing left to take roams.
                     Position where = POSITION.get(points.get(nearest));
-                    roam.exploresAround(
-                            trooper, at, where.x, where.y, POINT.get(points.get(nearest)).radius, TileMap.NO_BIOME);
+                    roam.exploresAround(trooper, at, where.x, where.y, radiusOf(points.get(nearest)), TileMap.NO_BIOME);
                     return true;
                 }
                 nearest = nextAfter[nearest];
@@ -294,7 +305,7 @@ final class TrooperObjective {
         }
         for (int p = 0; p < points.size(); p++) {
             Entity point = points.get(p);
-            if (Handles.of(point) == trooper.sentAhead && !POINT.get(point).captured) {
+            if (Handles.of(point) == trooper.sentAhead && !taken(point)) {
                 return p;
             }
         }
@@ -393,9 +404,9 @@ final class TrooperObjective {
      */
     private int pointBeingTakenUnder(Position at) {
         for (int p = 0; p < points.size(); p++) {
-            ControlPoint point = POINT.get(points.get(p));
-            Position where = POSITION.get(points.get(p));
-            if (!point.captured && Sight.withinRange(at.x, at.y, where.x, where.y, point.radius)) {
+            Entity point = points.get(p);
+            Position where = POSITION.get(point);
+            if (!taken(point) && Sight.withinRange(at.x, at.y, where.x, where.y, radiusOf(point))) {
                 return p;
             }
         }
@@ -419,10 +430,34 @@ final class TrooperObjective {
      * held afterwards that has been taken, on the ring rather than inside the point at all (G0061).
      */
     private boolean standingOn(Entity point, Position at) {
-        ControlPoint held = POINT.get(point);
         Position where = POSITION.get(point);
-        float reach = held.holdsAfterwards && held.captured ? postRingRadius : held.radius * INSIDE_THE_EDGE;
+        float reach;
+        if (!POINT.has(point)) {
+            // At arm's length of its edge, short of it, so the man who works it can reach it (G0111).
+            reach = BODY.get(point).radius + atAWorkedSite * INSIDE_THE_EDGE;
+        } else {
+            ControlPoint held = POINT.get(point);
+            reach = held.holdsAfterwards && held.captured ? postRingRadius : held.radius * INSIDE_THE_EDGE;
+        }
         return Sight.withinRange(at.x, at.y, where.x, where.y, reach);
+    }
+
+    /**
+     * How far from its middle a man counts as on a site, the measure a crowd is counted by: a point's radius, or for a
+     * worked site its edge and a man's arm's length past it (G0111).
+     */
+    private float radiusOf(Entity point) {
+        return POINT.has(point) ? POINT.get(point).radius : BODY.get(point).radius + atAWorkedSite;
+    }
+
+    /** Whether a site has been taken, whatever its kind. */
+    private static boolean taken(Entity point) {
+        return POINT.has(point) ? POINT.get(point).captured : SITE.get(point).taken;
+    }
+
+    /** Whether a site is ground held afterwards (G0061) - a point the finale names; never a worked site. */
+    private static boolean holdsAfterwards(Entity point) {
+        return POINT.has(point) && POINT.get(point).holdsAfterwards;
     }
 
     /**
@@ -535,7 +570,7 @@ final class TrooperObjective {
     int takenPointUnder(Position at) {
         for (int p = 0; p < points.size(); p++) {
             Entity point = points.get(p);
-            if (POINT.get(point).captured && standingOn(point, at)) {
+            if (taken(point) && standingOn(point, at)) {
                 return p;
             }
         }
@@ -557,8 +592,8 @@ final class TrooperObjective {
         int nearest = -1;
         int shortest = Integer.MAX_VALUE;
         for (int i = 0; i < points.size(); i++) {
-            ControlPoint point = POINT.get(points.get(i));
-            if (i == passOver || point.captured || (point.holdsAfterwards && !aCommanderInBiomeOf(points.get(i)))) {
+            Entity point = points.get(i);
+            if (i == passOver || taken(point) || (holdsAfterwards(point) && !aCommanderInBiomeOf(point))) {
                 continue;
             }
             int steps = routes[i].stepsTo(col, row);
@@ -576,8 +611,8 @@ final class TrooperObjective {
      */
     private int heldPoint() {
         for (int i = 0; i < points.size(); i++) {
-            ControlPoint point = POINT.get(points.get(i));
-            if (point.captured && point.holdsAfterwards) {
+            Entity point = points.get(i);
+            if (taken(point) && holdsAfterwards(point)) {
                 return i;
             }
         }
@@ -592,8 +627,8 @@ final class TrooperObjective {
      */
     private boolean patrolsTheWayIn(Trooper trooper, Position at) {
         for (int i = 0; i < points.size(); i++) {
-            ControlPoint point = POINT.get(points.get(i));
-            if (point.captured || !point.holdsAfterwards || wayInCol[i] < 0) {
+            Entity point = points.get(i);
+            if (taken(point) || !holdsAfterwards(point) || wayInCol[i] < 0) {
                 continue;
             }
             Position where = POSITION.get(points.get(i));
@@ -624,7 +659,7 @@ final class TrooperObjective {
             routes[i] = field;
             wayInCol[i] = -1;
             wayInRow[i] = -1;
-            if (POINT.get(points.get(i)).holdsAfterwards) {
+            if (holdsAfterwards(points.get(i))) {
                 findWayIn(i, field, map.biomeAt(where.x, where.y));
             }
         }

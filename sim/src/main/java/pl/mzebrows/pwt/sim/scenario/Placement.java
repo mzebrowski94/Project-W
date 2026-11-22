@@ -21,10 +21,12 @@ import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WorkedSiteDef;
+import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 
 /**
  * Puts down what each biome of a mission counts, by rules and never by places (G0068): ordered {@link Scatter}
- * passes, the most constrained first - sites, what a house holds, nests, packs, turrets by points, geysers, medkits and
+ * passes, the most constrained first - sites (a worked site in its house first, G0111), what a house holds, nests, packs, turrets by points, geysers, medkits and
  * food,
  * barrels, boulders, trees, rabbits. Each pass keeps off what went down before it by its radii, crow-flies, and off every
  * tile the strip kept: the start, aprons, doorsteps, and every house's inside but for its stock. The last biome keeps
@@ -43,6 +45,9 @@ final class Placement {
 
     /** Which of a biome's site bands another kind of site takes, a bit a band: none, until one does (G0110). */
     private static final long NO_OTHER_SITES = 0L;
+
+    /** A chance is dealt as a whole per cent. */
+    private static final int PERCENT = 100;
 
     /** How many times a biome is placed before what would not fit is reported. */
     private static final int ATTEMPTS = 32;
@@ -66,6 +71,7 @@ final class Placement {
     private static final long GEYSER_SIZES = 0x3F6B_C150_8E2D_97A4L;
     private static final long STONES = 0x93A7_5C1E_D24B_806FL;
     private static final long STONE_SIZES = 0x2B6E_F193_7A0D_C54BL;
+    private static final long WORKED = 0xC4E1_3B87_5F20_9AD6L;
 
     private final SimConfig config;
     private final PlacementRules rules;
@@ -164,6 +170,10 @@ final class Placement {
 
         private final List<Placed> here = new ArrayList<>();
         private final List<Placed> points = new ArrayList<>();
+
+        /** The worked sites, which a nest and a geyser keep off as they keep off a point (G0111); no gun stands by one. */
+        private final List<Placed> worked = new ArrayList<>();
+
         private final List<Placed> nests = new ArrayList<>();
         private final List<float[]> anchors = new ArrayList<>();
         private final List<String> shortfalls = new ArrayList<>();
@@ -206,7 +216,10 @@ final class Placement {
             // Drawn after that, for the same reason: a biome with no stones draws everything as it did before them.
             int stones = furniture.stones(counted);
 
-            sites(sites, NO_OTHER_SITES, attempt.derive(POINTS));
+            // Drawn from the biome's own stream, never the attempt's: whether it has a mainframe, in which house and
+            // against
+            // which wall is the same on every attempt and every tier (G0111).
+            sites(sites, housedSites(sites, stream.derive(WORKED)), attempt.derive(POINTS));
             houseStock(stock, attempt.derive(STOCK));
             unhoused(stock);
             nests(creatures, attempt.derive(NESTS));
@@ -231,6 +244,11 @@ final class Placement {
          */
         private void sites(int count, long others, Randomness rng) {
             Scatter scatter = scatter(rng, 0f);
+            for (Placed site : worked) {
+                // A worked site already standing in its band keeps the points of the others as far off as they keep
+                // each other (G0111).
+                scatter.reserve(site.x(), site.y(), rules.pointApart());
+            }
             float radius = config.controlPoint().radius();
             List<TileRect> bands = bands(count);
             for (int b = 0; b < bands.size(); b++) {
@@ -245,13 +263,108 @@ final class Placement {
             }
         }
 
+        /**
+         * The worked sites that stand in a house (G0111), each on its own chance - at most one of a kind a biome - in a
+         * house of this biome, never a gatehouse, against a wall and clear of its doorways; and the bit of the band
+         * each stands in, which a control point then leaves to it. Put down here, first of everything.
+         */
+        private long housedSites(int count, Randomness rng) {
+            List<House> houses = new ArrayList<>();
+            for (House house : laid.houses()) {
+                if (inThisBiome(house)) {
+                    houses.add(house);
+                }
+            }
+            long taken = NO_OTHER_SITES;
+            if (houses.isEmpty()) {
+                return taken;
+            }
+            List<TileRect> bands = bands(count);
+            // Kind after kind from the one stream, so a kind added after the last deals the earlier ones as before.
+            for (WorkedSiteKind site : WorkedSiteKind.values()) {
+                WorkedSiteDef def = config.workedSite(site);
+                if (!def.housed() || rng.nextInt(PERCENT) >= def.chance()) {
+                    continue;
+                }
+                House house = houses.get(rng.nextInt(houses.size()));
+                List<float[]> spots = againstAWall(house, def.radius());
+                if (spots.isEmpty()) {
+                    continue;
+                }
+                float[] at = spots.get(rng.nextInt(spots.size()));
+                int band = bandOf(bands, map.colAt(at[0]));
+                if (band < 0 || (taken & (1L << band)) != 0) {
+                    continue;
+                }
+                taken |= 1L << band;
+                put(new Placed.Worked(site, at[0], at[1], position));
+            }
+            return taken;
+        }
+
+        /**
+         * Where a worked site this wide can stand inside a house: against one of its walls, at the middle of a tile
+         * beside it and clear of the wall - and clear of every doorway by its body and a man's width, so it never stands
+         * in a way in (G0111).
+         */
+        private List<float[]> againstAWall(House house, float radius) {
+            TileRect inside = house.inside();
+            List<float[]> spots = new ArrayList<>();
+            for (int col = inside.col(); col < inside.endCol(); col++) {
+                spots.add(new float[] {map.tileCentreX(col), map.tileCentreY(inside.row())});
+                spots.add(new float[] {map.tileCentreX(col), map.tileCentreY(inside.endRow() - 1)});
+            }
+            for (int row = inside.row() + 1; row < inside.endRow() - 1; row++) {
+                spots.add(new float[] {map.tileCentreX(inside.col()), map.tileCentreY(row)});
+                spots.add(new float[] {map.tileCentreX(inside.endCol() - 1), map.tileCentreY(row)});
+            }
+            float clear = radius + config.trooper().radius() * 2f;
+            // On the tile beside the wall and clear of it, as everything put down is (G0042): a body under half a tile.
+            spots.removeIf(
+                    spot -> !map.isClear(spot[0], spot[1], radius) || nearADoorway(house, spot[0], spot[1], clear));
+            return spots;
+        }
+
+        /** Whether a place is within {@code clear} of any tile of any of the house's doorways. */
+        private boolean nearADoorway(House house, float x, float y, float clear) {
+            float tile = map.tileSize();
+            for (TileRect doorway : house.doorways()) {
+                float outX = Math.max(Math.max(doorway.col() * tile - x, 0f), x - doorway.endCol() * tile);
+                float outY = Math.max(Math.max(doorway.row() * tile - y, 0f), y - doorway.endRow() * tile);
+                if (outX * outX + outY * outY < clear * clear) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /** Which band a column falls in, or {@code -1}. */
+        private int bandOf(List<TileRect> bands, int col) {
+            for (int b = 0; b < bands.size(); b++) {
+                if (col >= bands.get(b).col() && col < bands.get(b).endCol()) {
+                    return b;
+                }
+            }
+            return -1;
+        }
+
+        /** Whether a house stands wholly inside this biome: a biome's own, never a gatehouse in a ridge. */
+        private boolean inThisBiome(House house) {
+            TileRect walls = house.walls();
+            return rect.contains(walls.col(), walls.row()) && rect.contains(walls.endCol() - 1, walls.endRow() - 1);
+        }
+
         /** What a house holds: crates first, then whatever else is not food, up to {@code houseStock} a house. */
         private void houseStock(int[] stock, Randomness rng) {
             Scatter scatter = new Scatter(map, rng, 0f, 0f);
+            // Round a worked site standing in a house: the stock is laid about it, never on it (G0111).
+            for (Placed standing : here) {
+                if (standing instanceof Placed.Worked) {
+                    scatter.reserve(standing.x(), standing.y(), radius(standing));
+                }
+            }
             for (House house : laid.houses()) {
-                TileRect walls = house.walls();
-                if (!rect.contains(walls.col(), walls.row())
-                        || !rect.contains(walls.endCol() - 1, walls.endRow() - 1)) {
+                if (!inThisBiome(house)) {
                     continue;
                 }
                 for (int room = rules.houseStock(); room > 0; room--) {
@@ -278,6 +391,10 @@ final class Placement {
             keepOffTheWatch(scatter, 0f);
             for (Placed point : points) {
                 scatter.reserve(point.x(), point.y(), rules.pointKeepOff());
+            }
+            for (Placed site : worked) {
+                // Starting a download is as loud as starting a capture (G0111).
+                scatter.reserve(site.x(), site.y(), rules.pointKeepOff());
             }
             for (Placed stocked : here) {
                 if (stocked instanceof Placed.Pickup) {
@@ -414,6 +531,9 @@ final class Placement {
             keepOffEntries(scatter, rules.geyserKeepOff());
             for (Placed point : points) {
                 scatter.reserve(point.x(), point.y(), rules.geyserKeepOff());
+            }
+            for (Placed site : worked) {
+                scatter.reserve(site.x(), site.y(), rules.geyserKeepOff());
             }
             for (Placed nest : nests) {
                 scatter.reserve(nest.x(), nest.y(), rules.geyserKeepOff());
@@ -566,6 +686,8 @@ final class Placement {
             here.add(thing);
             if (thing instanceof Placed.Point) {
                 points.add(thing);
+            } else if (thing instanceof Placed.Worked) {
+                worked.add(thing);
             }
         }
 
@@ -686,6 +808,7 @@ final class Placement {
             case Placed.Hold _ -> config.controlPoint().radius();
             case Placed.Turret _ -> config.turret().radius();
             case Placed.Mine _ -> config.mine().radius();
+            case Placed.Worked worked -> config.workedSite(worked.kind()).radius();
         };
     }
 

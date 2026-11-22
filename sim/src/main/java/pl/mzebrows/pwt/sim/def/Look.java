@@ -59,6 +59,11 @@ public enum Look {
     /** Ground a level says you must hold, and the other side walks at. */
     POST,
     /**
+     * A mainframe (G0111): a big dark-grey cabinet with a black screen - a red X on it until it is downloaded, a
+     * green tick after. Drawn from its body and its site's state, never a field of its own.
+     */
+    MAINFRAME,
+    /**
      * A hole in the ground that keeps sending more of one strain out of it.
      *
      * <p>What comes out of it is named on the charge channel, in that strain's colour.

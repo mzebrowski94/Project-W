@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Strip;
@@ -34,6 +35,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.Arrival;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.FinaleKind;
@@ -54,6 +56,57 @@ class MissionTest {
 
     /** Deals are cheap: enough of them that a biome the deal can never place at a position is seen to be missing. */
     private static final int DEALS = 512;
+
+    /** Enough missions for some hundreds of biomes with a house, so the share is a few points either side. */
+    private static final int MAINFRAME_SEEDS = 120;
+
+    private static final int SHIPPED_MAINFRAME_CHANCE = 50;
+
+    private static final float MAINFRAME_TOLERANCE = 0.1f;
+
+    /**
+     * G0111: a biome that lays a house of its own stands a mainframe in one on about the shipped chance, in place of
+     * one of its points - and a biome with no house of its own never does.
+     */
+    @Test
+    void standsAMainframeInAboutHalfTheBiomesThatLayAHouse() {
+        int housed = 0;
+        int withAMainframe = 0;
+        for (long seed = 0; seed < MAINFRAME_SEEDS; seed++) {
+            Mission mission = Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM);
+            for (int p = 0; p < mission.order().size(); p++) {
+                int position = p;
+                boolean house = mission.laid().houses().stream()
+                        .anyMatch(h -> ownHouse(mission.laid().biomes().get(position), h));
+                long mainframes = mission.placed().stream()
+                        .filter(placed -> placed.biome() == position && placed instanceof Placed.Worked)
+                        .count();
+                assertThat(mainframes).as("seed %d biome %d", seed, p).isLessThanOrEqualTo(house ? 1L : 0L);
+                housed += house ? 1 : 0;
+                withAMainframe += (int) mainframes;
+            }
+        }
+
+        assertThat(withAMainframe / (float) housed)
+                .isCloseTo(SHIPPED_MAINFRAME_CHANCE / 100f, Offset.offset(MAINFRAME_TOLERANCE));
+    }
+
+    @Test
+    void spawnsAMissionsMainframeAsAWorkedSite() {
+        long seed = 0;
+        while (Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM).placed().stream()
+                .noneMatch(placed -> placed instanceof Placed.Worked)) {
+            seed++;
+        }
+
+        Simulation world = Scenarios.world(
+                Scenarios.mission(TierKind.MEDIUM), SimConfig.defaults().withSeed(seed));
+
+        assertThat(world.engine()
+                        .getEntitiesFor(Family.all(WorkedSite.class).get())
+                        .size())
+                .isPositive();
+    }
 
     @Test
     void dealsItsBiomesNoneTwiceAndNeverTwoOfOneBaseSideBySide() {
@@ -221,14 +274,15 @@ class MissionTest {
     }
 
     @Test
-    void putsBetweenItsFewestAndMostControlPointsInEveryBiome() {
+    void putsBetweenItsFewestAndMostSitesInEveryBiome() {
         SimConfig shipped = SimConfig.defaults();
         for (long seed = 0; seed < 8; seed++) {
             Mission mission = Mission.build(shipped.withSeed(seed), TierKind.MEDIUM);
             for (int p = 0; p < mission.order().size(); p++) {
                 int position = p;
                 long points = mission.placed().stream()
-                        .filter(placed -> placed instanceof Placed.Point && placed.biome() == position)
+                        .filter(placed -> (placed instanceof Placed.Point || placed instanceof Placed.Worked)
+                                && placed.biome() == position)
                         .count();
                 var furniture = shipped.biomes().of(mission.order().get(p)).furniture();
 
@@ -713,5 +767,11 @@ class MissionTest {
             tiles[i] = map.terrainAtTile(i % map.cols(), i / map.cols());
         }
         return tiles;
+    }
+
+    /** Whether a house stands wholly inside a biome: its own, never a gatehouse in a ridge. */
+    private static boolean ownHouse(TileRect biome, House house) {
+        TileRect walls = house.walls();
+        return biome.contains(walls.col(), walls.row()) && biome.contains(walls.endCol() - 1, walls.endRow() - 1);
     }
 }

@@ -95,6 +95,7 @@ public final class Prompts {
                     case LEAVE_TURRET -> "ui.action.LEAVE_TURRET";
                     case OPEN_CRATE -> "ui.action.OPEN_CRATE";
                     case OPEN_DOOR -> "ui.action.OPEN_DOOR";
+                    case DOWNLOAD -> working(slot) ? "ui.action.DOWNLOAD.working" : "ui.action.DOWNLOAD";
                 };
         };
     }
@@ -107,10 +108,23 @@ public final class Prompts {
         return kinds[slot] == PromptKind.UPGRADE && drafts[slot] > 1 ? drafts[slot] : 0;
     }
 
-    /** Whether the key must be held rather than pressed - putting a man on his feet, opening a door. */
+    /**
+     * Whether the key must be held rather than pressed - putting a man on his feet, opening a door, working a site
+     * (G0111).
+     */
     public boolean hold(int slot) {
         return kinds[slot] == PromptKind.ACTION
-                && (actions[slot] == ActionKind.STABILISE || actions[slot] == ActionKind.OPEN_DOOR);
+                && (actions[slot] == ActionKind.STABILISE
+                        || actions[slot] == ActionKind.OPEN_DOOR
+                        || actions[slot].worksASite());
+    }
+
+    /**
+     * Whether he is working a site this frame (G0111): the prompt then says what is being done - {@code DECRYPTING…}
+     * with its fill - rather than which key does it. Any worked site's action, with work under way.
+     */
+    public boolean working(int slot) {
+        return kinds[slot] == PromptKind.ACTION && actions[slot].worksASite() && fills[slot] > 0f;
     }
 
     /** How far through the hold he is, from the readout he was chosen from. */

@@ -1,6 +1,6 @@
 # G0068: A biome is populated by rules in order, never by coordinates
 
-**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has; amended by G0082: turrets by points; amended by G0089: geysers, kept off points, nests and ways in; amended by G0110: a biome counts sites, and crates are only its houses' stock
+**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has; amended by G0082: turrets by points; amended by G0089: geysers, kept off points, nests and ways in; amended by G0110: a biome counts sites, and crates are only its houses' stock; amended by G0111: a worked site in its house first
 
 **Trigger.** Changing where anything a biome's roster or furniture counts is put down, the order it goes down in,
 what a house holds, or what happens when a rule cannot be met.
@@ -70,3 +70,10 @@ A pass after the turrets and before the medkits and food puts a biome's geysers,
 `geyserKeepOff` off every point, nest and way into the biome, the start among them, and off everything already
 standing by its own radius drawn from the pass's stream; the passes after keep off it, so no barrel stands in its
 fire. Only the cut asks for any (3-5). Provisional, for review.
+
+## Amended by G0111
+
+A biome's worked sites - a mainframe - are put down first of all, before its points: on their own chance from the
+biome's own stream, in a house of the biome, on a tile beside a wall and clear of its doorways; each takes the column
+band it stands in, and the points keep `pointApart` off it, nests `pointKeepOff` and geysers `geyserKeepOff`. The
+house's stock is laid round it.

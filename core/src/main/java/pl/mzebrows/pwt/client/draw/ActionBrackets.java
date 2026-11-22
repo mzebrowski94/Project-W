@@ -26,8 +26,10 @@ import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Vitality;
+import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -74,6 +76,9 @@ public final class ActionBrackets implements ChipCover {
     private static final Family CRATES = Family.all(Crate.class, Position.class, PreviousPosition.class, Body.class)
             .get();
     private static final Family DOORS = Family.all(Door.class).get();
+    private static final Family WORKED_SITES = Family.all(
+                    WorkedSite.class, Site.class, Position.class, PreviousPosition.class, Body.class)
+            .get();
     private static final Family BODIES = Family.all(Faction.class, Position.class, PreviousPosition.class, Body.class)
             .get();
     private static final Family LOOKS =
@@ -101,6 +106,7 @@ public final class ActionBrackets implements ChipCover {
     private ImmutableArray<Entity> turrets = empty();
     private ImmutableArray<Entity> crates = empty();
     private ImmutableArray<Entity> doors = empty();
+    private ImmutableArray<Entity> workedSites = empty();
     private ImmutableArray<Entity> pickups = empty();
     private ImmutableArray<Entity> bodies = empty();
     private ImmutableArray<Entity> looks = empty();
@@ -134,6 +140,7 @@ public final class ActionBrackets implements ChipCover {
         turrets = world.engine().getEntitiesFor(TURRETS);
         crates = world.engine().getEntitiesFor(CRATES);
         doors = world.engine().getEntitiesFor(DOORS);
+        workedSites = world.engine().getEntitiesFor(WORKED_SITES);
         pickups = world.engine().getEntitiesFor(PICKUPS);
         bodies = world.engine().getEntitiesFor(BODIES);
         looks = world.engine().getEntitiesFor(LOOKS);
@@ -152,6 +159,7 @@ public final class ActionBrackets implements ChipCover {
             faint(shapes, turrets, ActionKind.MAN_TURRET, alpha);
             faint(shapes, crates, ActionKind.OPEN_CRATE, alpha);
             faint(shapes, doors, ActionKind.OPEN_DOOR, alpha);
+            faint(shapes, workedSites, ActionKind.DOWNLOAD, alpha);
             ticks(shapes, alpha);
         }
         for (int slot = 0; slot < Players.MAX; slot++) {

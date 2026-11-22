@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.scenario;
 
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 
 /**
  * One thing a mission's placement put down (G0068) or its finale's set piece stands (G0064), where, and in which
@@ -59,4 +60,7 @@ public sealed interface Placed {
 
     /** A mine, a finale's, which only the other side sets off. */
     record Mine(float x, float y, int biome) implements Placed {}
+
+    /** A worked site of this kind (G0111): a mainframe, standing in a house against a wall. A site, as a point is. */
+    record Worked(WorkedSiteKind kind, float x, float y, int biome) implements Placed {}
 }

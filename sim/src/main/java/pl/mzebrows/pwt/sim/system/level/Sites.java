@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Tally;
+import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Whole;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
@@ -67,6 +68,7 @@ final class Sites {
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> seatedCommanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> lying = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> worked = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> returning = new ImmutableArray<>(new Array<>());
 
     /**
@@ -96,6 +98,8 @@ final class Sites {
         lying = engine.getEntitiesFor(
                 Family.all(Pickup.class, Position.class, Body.class).get());
         returning = engine.getEntitiesFor(Family.all(Respawning.class).get());
+        worked = engine.getEntitiesFor(
+                Family.all(WorkedSite.class, Position.class, Body.class).get());
     }
 
     /**
@@ -151,6 +155,12 @@ final class Sites {
         for (int i = 0; i < pointsOnTheField.size(); i++) {
             Position other = POSITION.get(pointsOnTheField.get(i));
             scatter.reserve(other.x, other.y, points.radius());
+        }
+        // Off every worked site's body, so nothing a mainframe leaves lies inside the mainframe (G0111).
+        for (int i = 0; i < worked.size(); i++) {
+            Entity standing = worked.get(i);
+            Position where = POSITION.get(standing);
+            scatter.reserve(where.x, where.y, BODY.get(standing).radius);
         }
         // Off what already lies there - the point's supply drops share this ring - so nothing lands on anything.
         for (int i = 0; i < lying.size(); i++) {

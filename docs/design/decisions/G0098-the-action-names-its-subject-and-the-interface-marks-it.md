@@ -1,6 +1,6 @@
 # G0098: The action names its subject, and the interface marks it
 
-**Status.** amended by G0109: the down mark is the one red mark over the view
+**Status.** amended by G0109: the down mark is the one red mark over the view; amended by G0111: a prompt says what is being done while a site is worked
 
 **Trigger.** Drawing anything on what the action key would act on; proposing to let the player pick among
 things in reach; making a touch pickup a key press; putting a mark or a prompt over the view.
@@ -62,3 +62,7 @@ no body to put one round. Brackets.
 
 **Revisit when** a subject must be marked that is not an entity, or the key's list gains a kind whose subject is
 something other than the nearest of its kind.
+
+*Amended by G0111:* while a commander works a site - a mainframe downloaded - his prompt says what is being done,
+`DECRYPTING…` with its fill, rather than which key does it. Still this machine's own. The objective ring round every
+site not yet taken is no highlight of the subject: it is on every untaken site for every player.

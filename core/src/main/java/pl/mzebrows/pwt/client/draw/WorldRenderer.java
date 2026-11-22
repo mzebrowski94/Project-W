@@ -28,6 +28,7 @@ import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Slither;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -84,6 +85,7 @@ public final class WorldRenderer implements Disposable {
     private static final ComponentMapper<Slither> SLITHER = ComponentMapper.getFor(Slither.class);
     private static final ComponentMapper<Burrow> BURROW = ComponentMapper.getFor(Burrow.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
+    private static final ComponentMapper<Site> SITE = ComponentMapper.getFor(Site.class);
 
     private static final Family HANDLED = Family.all(Handle.class).get();
 
@@ -149,6 +151,7 @@ public final class WorldRenderer implements Disposable {
     private final DoorMark doorMark;
     private final PostMark postMark;
     private final FlagMark flagMark;
+    private final MainframeMark mainframeMark;
     private final BurstMark burstMark;
     private final DazeMark dazeMark;
     private final TreeMark treeMark;
@@ -316,6 +319,9 @@ public final class WorldRenderer implements Disposable {
                 drawBoulder(x, y, radius, tint(appearance));
             } else if (appearance.look == Look.STONE) {
                 drawStone(x, y, radius, tint(appearance));
+            } else if (appearance.look == Look.MAINFRAME) {
+                drawMainframe(entity, x, y, radius, appearance);
+                continue;
             } else if (appearance.streaks()) {
                 // Drawn back to where it says it came from, with a head on it so a beam that has
                 // just been fired is still something rather than a zero-length line. The far end is
@@ -774,6 +780,37 @@ public final class WorldRenderer implements Disposable {
             return;
         }
         drawLoading(x, y, radius * limpetMark.ringPitch(), palette.colorFor(appearance.chargeLook), appearance.charge);
+    }
+
+    /**
+     * A mainframe (G0111): its cabinet, its black screen, and on the screen a red X - or a green tick once its site is
+     * taken. Its download is the door's loading circle over it. Read off its site and its charge, never a field of its
+     * own.
+     */
+    private void drawMainframe(Entity entity, float x, float y, float radius, Appearance appearance) {
+        float halfWidth = mainframeMark.widthFor(radius) * 0.5f;
+        float halfHeight = mainframeMark.heightFor(radius) * 0.5f;
+        shapes.setColor(tint(appearance));
+        shapes.rect(x - halfWidth, y - halfHeight, halfWidth * 2f, halfHeight * 2f);
+        float screenX = mainframeMark.screenWidthFor(radius) * 0.5f;
+        float screenY = mainframeMark.screenHeightFor(radius) * 0.5f;
+        shapes.setColor(mainframeMark.screen());
+        shapes.rect(x - screenX, y - screenY, screenX * 2f, screenY * 2f);
+        float stroke = mainframeMark.strokeFor(radius);
+        float markX = screenX * 0.6f;
+        float markY = screenY * 0.6f;
+        if (SITE.has(entity) && SITE.get(entity).taken) {
+            shapes.setColor(mainframeMark.done());
+            shapes.rectLine(x - markX, y, x - markX * 0.3f, y - markY, stroke);
+            shapes.rectLine(x - markX * 0.3f, y - markY, x + markX, y + markY, stroke);
+            return;
+        }
+        shapes.setColor(mainframeMark.locked());
+        shapes.rectLine(x - markX, y - markY, x + markX, y + markY, stroke);
+        shapes.rectLine(x - markX, y + markY, x + markX, y - markY, stroke);
+        if (appearance.charge > 0f) {
+            drawLoading(x, y, radius * 2f, palette.colorFor(appearance.chargeLook), appearance.charge);
+        }
     }
 
     /** A post: an outline just round the point it stands on, pulsing between its dark green and a light one. */

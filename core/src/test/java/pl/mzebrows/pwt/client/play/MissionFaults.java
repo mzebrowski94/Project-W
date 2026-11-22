@@ -4,16 +4,19 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.StripFaults;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.Furniture;
 import pl.mzebrows.pwt.sim.PlacementRules;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Arrival;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Wave;
+import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 import pl.mzebrows.pwt.sim.scenario.Mission;
 import pl.mzebrows.pwt.sim.scenario.Placed;
 
@@ -39,6 +42,7 @@ final class MissionFaults {
         faults.addAll(start(mission, config.mission().placement()));
         faults.addAll(nests(mission, config.mission().placement()));
         faults.addAll(bands(mission, config));
+        faults.addAll(sites(mission, config));
         faults.addAll(crates(mission, config));
         faults.addAll(trees(mission, config));
         faults.addAll(geysers(mission, config.mission().placement()));
@@ -126,7 +130,7 @@ final class MissionFaults {
         boolean[] reached = Maps.reachableFrom(map, start.col(), start.row());
         List<String> faults = new ArrayList<>();
         for (Placed placed : mission.placed()) {
-            if (placed instanceof Placed.Point || placed instanceof Placed.Pickup) {
+            if (site(placed) || placed instanceof Placed.Pickup) {
                 int col = map.colAt(placed.x());
                 int row = map.rowAt(placed.y());
                 if (!map.inBounds(col, row) || !reached[row * map.cols() + col]) {
@@ -144,7 +148,8 @@ final class MissionFaults {
         for (Placed placed : mission.placed()) {
             int col = map.colAt(placed.x());
             int row = map.rowAt(placed.y());
-            boolean stock = placed instanceof Placed.Pickup && inAHouse(mission, col, row);
+            boolean stock =
+                    (placed instanceof Placed.Pickup || placed instanceof Placed.Worked) && inAHouse(mission, col, row);
             if (mission.laid().kept(col, row) && !stock) {
                 faults.add(placed + " stands on kept ground at (" + col + "," + row + ")");
             }
@@ -203,7 +208,7 @@ final class MissionFaults {
                     continue;
                 }
                 float apart = between(nest, other);
-                if (other instanceof Placed.Point && apart < rules.pointKeepOff()) {
+                if (site(other) && apart < rules.pointKeepOff()) {
                     faults.add(nest + " is " + (int) apart + " from " + other);
                 } else if (other instanceof Placed.Nest && apart < rules.nestApart()) {
                     faults.add(nest + " is " + (int) apart + " from " + other);
@@ -225,7 +230,7 @@ final class MissionFaults {
         for (int p = 0; p < mission.order().size(); p++) {
             List<Placed> points = new ArrayList<>();
             for (Placed placed : mission.placed()) {
-                if (placed instanceof Placed.Point && placed.biome() == p) {
+                if (site(placed) && placed.biome() == p) {
                     points.add(placed);
                 }
             }
@@ -261,6 +266,58 @@ final class MissionFaults {
                                 + points.get(j));
                     }
                 }
+            }
+        }
+        return faults;
+    }
+
+    /**
+     * Every biome has as many sites as its furniture deals - control points and worked sites together - and at most one
+     * worked site of each kind; every worked site that stands in a house is inside one of this biome's houses, never a
+     * gatehouse, and its body a man's width clear of every doorway, so it never blocks a way in (G0111).
+     */
+    static List<String> sites(Mission mission, SimConfig config) {
+        TileMap map = mission.laid().map();
+        List<String> faults = new ArrayList<>();
+        float man = config.trooper().radius() * 2f;
+        for (int p = 0; p < mission.order().size(); p++) {
+            int sites = 0;
+            Set<WorkedSiteKind> kinds = new HashSet<>();
+            for (Placed placed : mission.placed()) {
+                if (placed.biome() != p || !site(placed)) {
+                    continue;
+                }
+                sites++;
+                if (!(placed instanceof Placed.Worked worked)) {
+                    continue;
+                }
+                if (!kinds.add(worked.kind())) {
+                    faults.add("biome " + p + " has a second " + worked.kind());
+                }
+                if (!config.workedSite(worked.kind()).housed()) {
+                    continue;
+                }
+                House house = houseAt(mission, map.colAt(worked.x()), map.rowAt(worked.y()));
+                TileRect rect = mission.laid().biomes().get(p);
+                if (house == null
+                        || !rect.contains(house.walls().col(), house.walls().row())
+                        || !rect.contains(
+                                house.walls().endCol() - 1, house.walls().endRow() - 1)) {
+                    faults.add(worked + " is not in a house of its biome");
+                    continue;
+                }
+                float clear = config.workedSite(worked.kind()).radius() + man;
+                for (TileRect doorway : house.doorways()) {
+                    if (distance(map, doorway, worked) < clear) {
+                        faults.add(worked + " is " + (int) distance(map, doorway, worked) + " from the doorway at "
+                                + doorway);
+                    }
+                }
+            }
+            Furniture furniture = config.biomes().of(mission.order().get(p)).furniture();
+            if (sites < furniture.sitesMin() || sites > furniture.sitesMax()) {
+                faults.add("biome " + p + " has " + sites + " sites, not " + furniture.sitesMin() + ".."
+                        + furniture.sitesMax());
             }
         }
         return faults;
@@ -355,7 +412,7 @@ final class MissionFaults {
                 }
             }
             for (Placed other : mission.placed()) {
-                boolean kept = other instanceof Placed.Point || other instanceof Placed.Nest;
+                boolean kept = site(other) || other instanceof Placed.Nest;
                 if (kept && other.biome() == geyser.biome() && between(geyser, other) < rules.geyserKeepOff()) {
                     faults.add(geyser + " is " + (int) between(geyser, other) + " from " + other);
                 }
@@ -379,7 +436,13 @@ final class MissionFaults {
             case Placed.Rabbit _ -> config.pickup(PickupKind.RABBIT).radius();
             case Placed.Turret _ -> config.turret().radius();
             case Placed.Mine _ -> config.mine().radius();
+            case Placed.Worked worked -> config.workedSite(worked.kind()).radius();
         };
+    }
+
+    /** A site of a biome, whatever its kind (G0110): a control point or a worked site in a point's place. */
+    private static boolean site(Placed placed) {
+        return placed instanceof Placed.Point || placed instanceof Placed.Worked;
     }
 
     private static TileRect start(Mission mission) {
@@ -387,12 +450,16 @@ final class MissionFaults {
     }
 
     private static boolean inAHouse(Mission mission, int col, int row) {
+        return houseAt(mission, col, row) != null;
+    }
+
+    private static @Nullable House houseAt(Mission mission, int col, int row) {
         for (House house : mission.laid().houses()) {
             if (house.inside().contains(col, row)) {
-                return true;
+                return house;
             }
         }
-        return false;
+        return null;
     }
 
     /** From a thing to the nearest point of a rect of tiles, in world units. */

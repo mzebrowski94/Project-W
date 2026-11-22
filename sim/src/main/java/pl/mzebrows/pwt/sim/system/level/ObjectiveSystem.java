@@ -14,7 +14,9 @@ import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Post;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Waves;
+import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.Objective;
 
 /**
@@ -28,6 +30,7 @@ public final class ObjectiveSystem extends EntitySystem {
 
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
+    private static final ComponentMapper<Site> SITE = ComponentMapper.getFor(Site.class);
     private static final ComponentMapper<Lair> LAIR = ComponentMapper.getFor(Lair.class);
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
     private static final ComponentMapper<Post> POST = ComponentMapper.getFor(Post.class);
@@ -42,7 +45,8 @@ public final class ObjectiveSystem extends EntitySystem {
     public void addedToEngine(Engine engine) {
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
         enemies = engine.getEntitiesFor(Family.all(Enemy.class, Position.class).get());
-        points = engine.getEntitiesFor(Family.all(ControlPoint.class).get());
+        points = engine.getEntitiesFor(
+                Family.one(ControlPoint.class, WorkedSite.class).get());
         posts = engine.getEntitiesFor(Family.all(Post.class, Position.class).get());
     }
 
@@ -125,13 +129,18 @@ public final class ObjectiveSystem extends EntitySystem {
         return true;
     }
 
-    /** Every point taken - and a map with no points on it has not taken them all. */
+    /**
+     * Every point taken, and every worked site with them (G0111): a site is ground the level asks you to take, whatever
+     * its kind - and a map with none on it has not taken them all.
+     */
     private boolean everyPointTaken() {
         if (points.size() == 0) {
             return false;
         }
         for (int i = 0; i < points.size(); i++) {
-            if (!POINT.get(points.get(i)).captured) {
+            Entity point = points.get(i);
+            boolean taken = POINT.has(point) ? POINT.get(point).captured : SITE.get(point).taken;
+            if (!taken) {
                 return false;
             }
         }
