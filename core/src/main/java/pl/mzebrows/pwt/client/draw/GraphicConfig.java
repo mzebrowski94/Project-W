@@ -67,6 +67,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param burrow how to draw a worm: its shadow under the ground and its maw's teeth up (G0096)
  * @param devour how to draw a clinch ending: the one killed shrinking, the pair swayed (G0099)
  * @param dash how to draw a dash: its thrusters and the puff it leaves (G0107)
+ * @param border how to draw the rim every commander has
  * @param action how to draw the action key's brackets and its prompt (G0098)
  * @param actionMark the colour of the brackets on what the action key would act on, and of its prompt's frame
  * @param pickupMark the colour of the ticks on a pickup worth something to a commander near it
@@ -118,6 +119,7 @@ public record GraphicConfig(
         DevourMark devour,
         LimpetMark limpet,
         DashMark dash,
+        BorderMark border,
         ActionMark action,
         @ConfigKey("color.actionMark") Color actionMark,
         @ConfigKey("color.pickupMark") Color pickupMark,

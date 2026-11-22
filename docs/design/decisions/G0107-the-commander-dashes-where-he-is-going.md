@@ -21,7 +21,7 @@ putting something on the pad's B; Rocketman, Pantera or any other upgrade on the
 
 **Constraint.**
 
-- **A dash is a fixed-duration burst of velocity** - `sim.commander.dash.distance` (15, three tiles) over
+- **A dash is a fixed-duration burst of velocity** - `sim.commander.dash.distance` (7.5, a tile and a half; 15 until Mateusz's retune of 2026-11-22) over
   `durationSeconds` (0.15), its speed the distance over exactly the ticks it lasts. It goes through the ordinary
   movement and collision path: rock, fissures, walls, shut doors, ice and bodies stop it, and it never crosses
   impassable ground.
@@ -37,7 +37,7 @@ putting something on the pad's B; Rocketman, Pantera or any other upgrade on the
   rather than his walk's.
 - **A dash ends work in hand**: a stabilise or a door being opened loses its work, as letting go loses it.
 - **Slowing ground, per tick**: every tick of a dash spent on ground that slows him - a terrain's `playerFactor`
-  below one (thicket, mud), or a slow done to him (`Slowed`: glue) - goes at `slowFactor` (0.5) of its speed. Fire
+  below one (thicket, mud), or a slow done to him (`Slowed`: glue) - goes at `slowFactor` (0.7; 0.5 until the 2026-11-22 retune) of its speed. Fire
   is no slow. A wound does not shorten a dash. The ground is read through `Pace`, the one place that knows it.
 - **Inputs**: `Space` or left Shift on the keyboard; `EAST` (B / Circle) on the pad. **The pad lost "take hold / let
   go"**: `controls.pad.drag=NONE`, the keyboard's `F` alone hauls. A back paddle is mapped to B in the pad's own

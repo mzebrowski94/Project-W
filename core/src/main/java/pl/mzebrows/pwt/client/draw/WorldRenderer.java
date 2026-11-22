@@ -159,6 +159,7 @@ public final class WorldRenderer implements Disposable {
     private final DevourMark devourMark;
     private final LimpetMark limpetMark;
     private final DashMark dashMark;
+    private final BorderMark borderMark;
 
     /** How far anything drawn on the client's clock moves - a taken point's flag; zero holds it still. */
     private final float motionScale;
@@ -286,6 +287,11 @@ public final class WorldRenderer implements Disposable {
             if (appearance.dashX != 0f || appearance.dashY != 0f) {
                 // Behind his shoulders and under him, so the jets read as on his back (G0107).
                 drawThrusters(x, y, radius, appearance);
+            }
+            if (borderMark.drawn() && COMMANDER.has(entity)) {
+                // Under his body, so only a thin ring of it shows: every commander, whatever his slot's colour.
+                shapes.setColor(borderMark.color());
+                shapes.circle(x, y, radius + borderMark.width(), CIRCLE_SEGMENTS);
             }
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {

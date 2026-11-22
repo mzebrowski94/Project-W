@@ -74,6 +74,17 @@ class GraphicConfigTest {
         assertThatThrownBy(() -> new DashMark.Puff(1f, 0.5f, 0.5f)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    /** Every commander's rim is drawn, thin, in a light colour; a negative width is refused. */
+    @Test
+    void readsACommandersRim() {
+        BorderMark border = GraphicConfig.load().border();
+
+        assertThat(border.drawn()).isTrue();
+        assertThat(border.width()).isLessThan(1f);
+        assertThat(border.color()).isEqualTo(Color.valueOf("f8fafcff"));
+        assertThatThrownBy(() -> new BorderMark(-0.1f, Color.WHITE)).isInstanceOf(IllegalArgumentException.class);
+    }
+
     /** One shadow for whatever is off the ground - a slung rider, a thrown grenade (G0077) - and it is seen. */
     @Test
     void readsOneShadowForEverythingOffTheGround() {
@@ -215,6 +226,7 @@ class GraphicConfigTest {
                         d.devour(),
                         d.limpet(),
                         d.dash(),
+                        d.border(),
                         d.action(),
                         d.actionMark(),
                         d.pickupMark(),

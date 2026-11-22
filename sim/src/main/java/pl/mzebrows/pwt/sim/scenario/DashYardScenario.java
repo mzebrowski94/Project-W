@@ -15,7 +15,7 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * Open sand to dash about on (G0107), and the things that change a dash: glue and a thicket to halve it, a wall to
  * stop it, and a handful of grunts at the far side to dash away from. No squad, so the read is the commander alone.
  *
- * <p>What to look at: three tiles in a blink along the way he walks, never his aim; with the stick let go, the way he
+ * <p>What to look at: a tile and a half in a blink along the way he walks, never his aim; with the stick let go, the way he
  * last walked. The thrusters on his back while it runs, the puff where it began, and only a puff on a press with no
  * dash left. The purple pips beside his wounds - two, coming back one at a time. Half the reach through the glue
  * (west, by where he starts) and the thicket (south); the wall (north) stops it dead. A grunt's claws land mid-dash
