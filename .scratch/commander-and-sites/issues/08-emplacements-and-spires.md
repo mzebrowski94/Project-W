@@ -1,7 +1,7 @@
 # Emplacements, and the fen's spires
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: none
 Spec: [spec.md](../spec.md) section 9
@@ -140,3 +140,38 @@ Also a mission code with the fen early.
 - G0113 and the rows are written.
 - `verify.sh` is green and the branch is committed.
 - The final message lists the keys.
+
+## Answer
+
+Built (merged into integration), G0113 (amends G0068); no ADR 0024 needed:
+- **Emplacement table:** `EmplacementKind`/`EmplacementDef`, `sim.emplacement.<kind>.*`; cycle `dealt <fewest> <most>` or `volley <bearings>`, packed into one number on the `Emplacement` component (snapshot carries it; never re-dealt).
+- **`EmplacementSystem`** (`system/level`) at 54, after `SlingSystem`, before `ControlPointSystem`: wakes on where men ended the tick, its gun reads the upgrade ledger so it runs before `UpgradeSystem`. Fires through `Guns.volley`; wake radius via `SpatialGrid`; radius 0 = woken by something else (09's warden).
+- **Body:** solid `Obstacle`, no `Health`, Faction ALIEN, no `Enemy` - nothing hunts it, no branch needed.
+- **Spire placement:** pass after geysers, as a boulder; `emplacementKeepOff` off ways in, nests, finale watch, site edges, never on thicket; cycle from the attempt's stream. `MissionFaults.emplacements` checks these and the 3-5 count.
+- **Look:** disc with lighter cap, edge tick at each bearing the next step fires (`SpireMark`).
+- **Scenario** "Spire Fen": mire, three spires, squad at the west edge, a point beyond.
+- **Docs:** G0113 + index; G0068 amended by; two enforced invariant rows; glossary **emplacement** (spire, warden rows point to it; the "words we do not use" entry rewritten); `components.md`, `simulation-order.md`, `new-biome` skill.
+- Sweeps: MissionSweep 2192 seeds 0 faults, StripSweep 2000 seeds 0 faults. `EmplacementTest`/`CycleDefTest` passed on first run (never seen red).
+
+Provisional decisions (AFK run, for review; also in G0113):
+1. Volley grammar with commas `volley 0,90,180,270`. Turned down: spaces (new `ConfigBinder` reading).
+2. A dealt cycle's bearings all differ. Turned down: repeats (N,N,N,E).
+3. Bearings are compass points (multiples of 45). Turned down: free angles.
+4. Next-bearing tell: edge tick, always shown. Turned down: none; only while awake; turning `Facing`.
+5. Only a man on his feet wakes it. Turned down: the down too.
+6. Asleep, its clock stops; first shot one period after waking. Turned down: running clock.
+7. Keep-off one key, 15. Turned down: wake radius 45 or range 30 (no room in the fen).
+8. Alien shots pass a spire. Turned down: stopping them (collision exception).
+9. Spire Fen's cycles hand-laid (4, 5, 6 bearings): a scenario may not start a random stream.
+10. No ADR 0024: one more kind table on ADR 0008.
+11. Bead damage 50 (only turrets and barrels care; a man takes the wound).
+
+Keys:
+- `assets/sim/level.properties`: `sim.emplacement.spire.radius=1.4`, `.look=spire`, `.gun=spire_shot`, `.periodSeconds=1`, `.wakeRadius=45`, `.cycle=dealt 4 6` (wake wider than reach: first beads land short, a warning).
+- `assets/sim/weapons.properties`: `sim.weapon.spire_shot.*` (spit block) `projectileRadius=0.15`, `projectileSpeed=25` (step-round slow), `projectileRange=30`, `damage=50`, `harm=wound`, `projectileLook=spire_shot`.
+- `assets/sim/biomes.properties`: `furniture.spires=3 5` fen, `0 0` the other eight.
+- `assets/sim/missions.properties`: `sim.mission.placement.emplacementKeepOff=15`.
+- `assets/graphic.properties`: `graphic.color.spire=4a5a48ff`, `graphic.color.spire_shot=c8f0b0ff`, `graphic.spire.cap=8a9a84ff`, `.capShare=0.45`, `.tell=d8e8c8ff`, `.tellLength=0.45`, `.tellWidth=0.2`.
+- `assets/i18n/ui.properties`: `ui.weapon.SPIRE_SHOT=BEAD`.
+
+Judge by: `./gradlew lwjgl3:run --args="--scenario=spire-fen"`; `--mission=MHAA-AAA4` (fen first; hard `HHAA-AAAX`; generated, not launched).

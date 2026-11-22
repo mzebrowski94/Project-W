@@ -61,3 +61,5 @@ redeploy, sites and crates, the mainframe, the jaguar, the rift, spires and the 
 - 2026-11-22, ticket 05 (resolved, merged): `Site` component + `Sites.taken` helper held per system; band bit-mask seam `Placement.Biome.sites`; caches/medkit keys stay under `sim.controlPoint.*`; Looter sets `looted` even when full. Provisional.
 - 2026-11-22, ticket 06 (resolved, merged): `WorkedSiteKind` table + `WorkedSiteSystem` after `DoorSystem`; radius 2.4; nearest site by route; reinforcements and turrets still by points only; objective ring (Mateusz's add) hidden once taken. Provisional.
 - 2026-11-22, ticket 07 (resolved, merged): `house <strain> min max` roster form, pass `housePacks` after house stock off doorway tiles; patch confined for life; grunt perception; no pack in a house near start or finale watch. Provisional.
+- 2026-11-22, ticket 08 (resolved, merged): `EmplacementKind` table + `EmplacementSystem` at 54; spire ALIEN without `Enemy` or `Health`; compass bearings, comma volleys, edge-tick tell; clock stops asleep; keep-off 15; no ADR 0024. Provisional.
+- 2026-11-22: run paused after 08 at Mateusz's word, for testing and tuning; 09 and 10 open.
