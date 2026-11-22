@@ -73,6 +73,7 @@ do not treat one as taken when adding a game binding. None of them is on the pad
 | `Q` | `RB` / `R1` | Throw a grenade - spends one of his grenades; with none left, nothing (G0077) | built - G0019, G0077 |
 | `E` | `A` / `Cross` | Act on what is in reach - stabilise a casualty, get on or off a turret, open a crate, open a shut door (held) | built - G0021, G0024, G0056, G0069 |
 | `F` | - (released for the dash, 2026-11-22) | Take hold of a load, or let go of it | built - G0021; off the pad since G0107 |
+| `F`, while down | `B` / `Circle`, while down | Redeploy: once half his bleed-out has run, a press gives up the rest of it and he goes as running out would, at the same cost (G0109). The drag's key and the dash's button in a context of their own - down, he can neither drag nor dash. `[F] REDEPLOY` is prompted over him on his own machine | built - G0109 |
 | `Space`, left `Shift` | `B` / `Circle` | Dash: a short burst along the way he is moving, never his aim; with none left, only a puff (G0107). A pad's back paddle (R4) has no button in the input layer: it is mapped to B in the pad's own software | built - G0107 |
 | `1` | D-pad up | Squad order: follow me | built - scaffolding, see below |
 | `2` | D-pad right | Squad order: forward | built - scaffolding, see below |

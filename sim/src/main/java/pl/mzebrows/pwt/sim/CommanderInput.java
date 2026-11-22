@@ -33,6 +33,8 @@ package pl.mzebrows.pwt.sim;
  *     the field. A stick sets it; a mouse never does
  * @param dashing whether the dash input is held this tick (G0107). Held, like everything here; the dash goes on
  *     the press, which the simulation derives
+ * @param redeploying whether the redeploy input is held this tick (G0109). Held, like the dash; only a press while he
+ *     is down and his window is open does anything, which the simulation derives
  */
 public record CommanderInput(
         float moveX,
@@ -45,14 +47,15 @@ public record CommanderInput(
         boolean acting,
         boolean dragging,
         boolean aimRelative,
-        boolean dashing) {
+        boolean dashing,
+        boolean redeploying) {
 
     /** Movement, aim and the two main buttons, with everything else released - the common case in tests. */
     public CommanderInput(float moveX, float moveY, float aimX, float aimY, boolean firing, boolean striking) {
-        this(moveX, moveY, aimX, aimY, firing, striking, false, false, false, false, false);
+        this(moveX, moveY, aimX, aimY, firing, striking, false, false, false, false, false, false);
     }
 
-    /** Everything but the dash, which is released. */
+    /** Everything but the dash and redeploy, which are released. */
     public CommanderInput(
             float moveX,
             float moveY,
@@ -64,46 +67,90 @@ public record CommanderInput(
             boolean acting,
             boolean dragging,
             boolean aimRelative) {
-        this(moveX, moveY, aimX, aimY, firing, striking, throwing, acting, dragging, aimRelative, false);
+        this(moveX, moveY, aimX, aimY, firing, striking, throwing, acting, dragging, aimRelative, false, false);
+    }
+
+    /** Everything but redeploy, which is released. */
+    public CommanderInput(
+            float moveX,
+            float moveY,
+            float aimX,
+            float aimY,
+            boolean firing,
+            boolean striking,
+            boolean throwing,
+            boolean acting,
+            boolean dragging,
+            boolean aimRelative,
+            boolean dashing) {
+        this(moveX, moveY, aimX, aimY, firing, striking, throwing, acting, dragging, aimRelative, dashing, false);
     }
 
     /** No movement, no firing, no swinging. What a simulation steps with when nothing is driving it. */
     public static final CommanderInput IDLE =
-            new CommanderInput(0f, 0f, 0f, 0f, false, false, false, false, false, false, false);
+            new CommanderInput(0f, 0f, 0f, 0f, false, false, false, false, false, false, false, false);
 
     /** The same input with the fire button released - convenient in tests. */
     public CommanderInput notFiring() {
         return new CommanderInput(
-                moveX, moveY, aimX, aimY, false, striking, throwing, acting, dragging, aimRelative, dashing);
+                moveX,
+                moveY,
+                aimX,
+                aimY,
+                false,
+                striking,
+                throwing,
+                acting,
+                dragging,
+                aimRelative,
+                dashing,
+                redeploying);
     }
 
     /** The same input with the melee button held - convenient in tests. */
     public CommanderInput swinging() {
         return new CommanderInput(
-                moveX, moveY, aimX, aimY, firing, true, throwing, acting, dragging, aimRelative, dashing);
+                moveX, moveY, aimX, aimY, firing, true, throwing, acting, dragging, aimRelative, dashing, redeploying);
     }
 
     /** The same input with the action key held, or released - convenient in tests. */
     public CommanderInput acting(boolean held) {
         return new CommanderInput(
-                moveX, moveY, aimX, aimY, firing, striking, throwing, held, dragging, aimRelative, dashing);
+                moveX,
+                moveY,
+                aimX,
+                aimY,
+                firing,
+                striking,
+                throwing,
+                held,
+                dragging,
+                aimRelative,
+                dashing,
+                redeploying);
     }
 
     /** The same input with the drag key held, or released - convenient in tests. */
     public CommanderInput dragging(boolean held) {
         return new CommanderInput(
-                moveX, moveY, aimX, aimY, firing, striking, throwing, acting, held, aimRelative, dashing);
+                moveX, moveY, aimX, aimY, firing, striking, throwing, acting, held, aimRelative, dashing, redeploying);
     }
 
     /** The same input with the dash key held, or released - convenient in tests. */
     public CommanderInput dashing(boolean held) {
         return new CommanderInput(
-                moveX, moveY, aimX, aimY, firing, striking, throwing, acting, dragging, aimRelative, held);
+                moveX, moveY, aimX, aimY, firing, striking, throwing, acting, dragging, aimRelative, held, redeploying);
+    }
+
+    /** The same input with the redeploy key held, or released - convenient in tests. */
+    public CommanderInput redeploying(boolean held) {
+        return new CommanderInput(
+                moveX, moveY, aimX, aimY, firing, striking, throwing, acting, dragging, aimRelative, dashing, held);
     }
 
     /** The same input with its aim read as an offset from the commander rather than as a place. */
     public CommanderInput aimingRelatively() {
         return new CommanderInput(
-                moveX, moveY, aimX, aimY, firing, striking, throwing, acting, dragging, true, dashing);
+                moveX, moveY, aimX, aimY, firing, striking, throwing, acting, dragging, true, dashing, redeploying);
     }
 }

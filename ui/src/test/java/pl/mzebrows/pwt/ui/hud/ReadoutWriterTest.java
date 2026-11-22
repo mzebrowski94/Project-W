@@ -248,6 +248,22 @@ class ReadoutWriterTest {
         assertThat(player.bleedOut).isCloseTo(0.25f, TOLERANCE);
     }
 
+    /** Whether he may redeploy is the simulation's word (G0109), carried over as it stands, never worked out here. */
+    @Test
+    void carriesWhetherAManDownMayRedeploy() {
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 0);
+        commander.getComponent(Vitality.class).begin();
+        Appearance appearance = commander.getComponent(Appearance.class);
+        appearance.state = Appearance.State.CASUALTY;
+
+        assertThat(fill(new ReadoutWriter(), world).player(0).redeployOpen).isFalse();
+
+        appearance.redeployOpen = true;
+
+        assertThat(fill(new ReadoutWriter(), world).player(0).redeployOpen).isTrue();
+    }
+
     @Test
     void showsTheTurretsGunAndItsHeatWhileHeIsAboard() {
         Simulation world = world();

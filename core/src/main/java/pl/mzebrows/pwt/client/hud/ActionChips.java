@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import java.util.Arrays;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.client.draw.ActionMark;
+import pl.mzebrows.pwt.client.draw.DownMark;
 import pl.mzebrows.pwt.client.draw.Drawn;
 import pl.mzebrows.pwt.client.draw.GraphicConfig;
 import pl.mzebrows.pwt.client.draw.Palette;
@@ -35,7 +36,8 @@ import pl.mzebrows.pwt.ui.layout.ScreenLayout;
 
 /**
  * Each local commander's **prompt** (G0098), on the UI canvas above what it is about: the key in his device's words
- * and the verb - {@code [E] OPEN}, {@code HOLD [E] STABILISE}, {@code [C] UPGRADE x2}, filling as the work is done - on a see-through backing
+ * and the verb - {@code [E] OPEN}, {@code HOLD [E] STABILISE}, {@code [C] UPGRADE x2}, {@code [F] REDEPLOY} over his
+ * down mark (G0109), filling as the work is done - on a see-through backing
  * that thins while an alien body is under it, so the fight shows through. Leaving a gun is smaller and dim. With more
  * than one player in the game each is framed in its player's colour; several on one thing stack, lowest slot
  * nearest it. Neutral text, never red over the view (section 10).
@@ -59,6 +61,7 @@ public final class ActionChips {
     private final HudMetrics metrics;
     private final Palette palette;
     private final ActionMark mark;
+    private final DownMark downMark;
     private final Color backing;
     private final Color text;
     private final Color dim;
@@ -91,6 +94,7 @@ public final class ActionChips {
         this.metrics = metrics;
         this.palette = palette;
         this.mark = graphic.action();
+        this.downMark = graphic.downMark();
         this.backing = graphic.hud().color().bar();
         this.text = graphic.hud().color().text();
         this.dim = graphic.hud().color().textDim();
@@ -136,7 +140,7 @@ public final class ActionChips {
             @Nullable
             Entity anchor =
                     kind == PromptKind.NONE || key == null ? null : Handles.resolve(handled, prompts.anchor(slot));
-            if (key == null || anchor == null || !above(anchor, alpha, viewport, layout)) {
+            if (key == null || anchor == null || !above(anchor, kind, alpha, viewport, layout)) {
                 fade.step(slot, false, delta);
                 continue;
             }
@@ -187,17 +191,19 @@ public final class ActionChips {
     }
 
     /**
-     * Puts {@link #point} on the canvas just above the anchor's brackets - a body's top, a doorway's - and says
-     * whether that is inside the view at all.
+     * Puts {@link #point} on the canvas just above the anchor's brackets - a body's top, a doorway's, or for redeploy the
+     * top of his down mark (G0109) - and says whether that is inside the view at all.
      */
-    private boolean above(Entity anchor, float alpha, Viewport viewport, ScreenLayout layout) {
+    private boolean above(Entity anchor, PromptKind kind, float alpha, Viewport viewport, ScreenLayout layout) {
         if (DOOR.has(anchor)) {
             Door door = DOOR.get(anchor);
             point.set((door.col + door.width * 0.5f) * tileSize, (door.row + door.height) * tileSize + mark.gap());
         } else if (BODY.has(anchor) && PREVIOUS.has(anchor)) {
+            float radius = BODY.get(anchor).radius;
+            float top = kind == PromptKind.REDEPLOY ? downMark.topAbove(radius) : radius;
             point.set(
                     Drawn.x(POSITION.get(anchor), PREVIOUS.get(anchor), alpha),
-                    Drawn.y(POSITION.get(anchor), PREVIOUS.get(anchor), alpha) + BODY.get(anchor).radius + mark.gap());
+                    Drawn.y(POSITION.get(anchor), PREVIOUS.get(anchor), alpha) + top + mark.gap());
         } else {
             return false;
         }

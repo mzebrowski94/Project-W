@@ -531,6 +531,8 @@ public record SimConfig(
      * @param maxWounds how many wounds he carries on his feet; one more puts him down (G0053)
      * @param bleedOutSeconds how long he lies shot off his feet before he is gone. His own, not the
      *     squad's {@link CasualtyConfig#bleedOutSeconds}
+     * @param redeployAfterSeconds how much of that bleed-out must have run before he may redeploy - give up the rest
+     *     of it and come back as running out would (G0109). Above zero and below the bleed-out, or the loader refuses it
      * @param deathThroesSeconds how long its body stays on the field after a killing blow, before the
      *     respawn countdown starts
      * @param respawnDelaySeconds how long after the body is removed before it comes back
@@ -549,6 +551,7 @@ public record SimConfig(
             float speed,
             int maxWounds,
             float bleedOutSeconds,
+            float redeployAfterSeconds,
             float deathThroesSeconds,
             float respawnDelaySeconds,
             float respawnShieldSeconds,
@@ -560,6 +563,11 @@ public record SimConfig(
             Require.positive("commander speed", speed);
             Require.notNegative("commander maxWounds", maxWounds);
             Require.positive("commander bleedOutSeconds", bleedOutSeconds);
+            Require.positive("commander redeployAfterSeconds", redeployAfterSeconds);
+            if (redeployAfterSeconds >= bleedOutSeconds) {
+                throw new IllegalArgumentException("commander redeployAfterSeconds must be below bleedOutSeconds ("
+                        + bleedOutSeconds + "), was " + redeployAfterSeconds);
+            }
             Require.notNegative("commander deathThroesSeconds", deathThroesSeconds);
             Require.notNegative("commander respawnDelaySeconds", respawnDelaySeconds);
             Require.notNegative("commander respawnShieldSeconds", respawnShieldSeconds);

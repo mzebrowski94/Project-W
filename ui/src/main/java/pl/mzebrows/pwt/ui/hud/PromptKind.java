@@ -12,5 +12,11 @@ public enum PromptKind {
     ACTION,
 
     /** He has just earned an upgrade: the draft key, over him, for a few seconds (G0049). */
-    UPGRADE
+    UPGRADE,
+
+    /**
+     * He is down and may redeploy: the redeploy key, over him, above his down mark (G0109). Only while he is down, so
+     * it never meets the others.
+     */
+    REDEPLOY
 }

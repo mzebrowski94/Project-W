@@ -387,6 +387,7 @@ public final class Simulation {
                             input.acting(),
                             input.dragging(),
                             input.dashing(),
+                            input.redeploying(),
                             inputs.orderOf(COMMANDER.get(commander).slot))
                     .crate(
                             inputs.crateTakeOf(COMMANDER.get(commander).slot),

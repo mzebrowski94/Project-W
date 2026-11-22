@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Bloat;
+import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Dash;
@@ -69,6 +70,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Pop> POP = ComponentMapper.getFor(Pop.class);
     private static final ComponentMapper<Puff> PUFF = ComponentMapper.getFor(Puff.class);
     private static final ComponentMapper<Dash> DASH = ComponentMapper.getFor(Dash.class);
+    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
@@ -170,6 +172,11 @@ public final class AppearanceSystem extends IteratingSystem {
         // How many wounds a man on his feet is carrying, one mark each (G0053, pillar 5).
         appearance.wounds = VITALITY.has(entity) && VITALITY.get(entity).wounded() ? VITALITY.get(entity).wounds : 0;
         appearance.shield = SHIELD.has(entity) ? SHIELD.get(entity).fraction() : 0f;
+        // A commander down wears the down mark for everybody (G0109); a trooper down keeps the look he has. Whether
+        // his redeploy window is open is his own machine's prompt.
+        boolean commanderDown = COMMANDER.has(entity) && Life.casualty(entity);
+        appearance.downMarked = commanderDown;
+        appearance.redeployOpen = commanderDown && VITALITY.get(entity).redeployOpen();
         // The circle a slam covers, for a moment after it lands, and how much of a declared stun is left (G0071).
         boolean bursting = BARRAGE.has(entity) && BARRAGE.get(entity).burstFade() > 0f;
         appearance.burst = bursting ? BARRAGE.get(entity).burstReach : 0f;

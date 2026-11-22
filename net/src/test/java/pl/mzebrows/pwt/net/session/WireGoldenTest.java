@@ -17,7 +17,7 @@ import pl.mzebrows.pwt.sim.CommanderInput;
 class WireGoldenTest {
 
     /** What {@link Msg#PROTOCOL} was when the bytes in this file were written. Bump both together. */
-    private static final int PROTOCOL_OF_THESE_BYTES = 10;
+    private static final int PROTOCOL_OF_THESE_BYTES = 11;
 
     private final WireWriter out = new WireWriter(64);
     private final WireReader in = new WireReader();
@@ -121,7 +121,7 @@ class WireGoldenTest {
         assertThat(out.toBytes()).containsExactly(new byte[Bundle.HELD_BYTES]);
     }
 
-    /** The dash is the held byte's seventh button, bit 64 (G0107); bit 128 is the last one left. */
+    /** The dash is the held byte's seventh button, bit 64 (G0107). */
     @Test
     void writesTheDashAsBitSixtyFourOfTheButtons() {
         InputCodec.writeHeld(out, CommanderInput.IDLE.dashing(true));
@@ -129,6 +129,17 @@ class WireGoldenTest {
         byte[] written = out.toBytes();
         assertThat(written).containsExactly(bytes(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64));
         assertThat(InputCodec.readHeld(written, 0, CommanderInput.IDLE).dashing())
+                .isTrue();
+    }
+
+    /** Redeploy is the held byte's eighth and last button, bit 128 (G0109): the byte is full. */
+    @Test
+    void writesRedeployAsBitOneHundredAndTwentyEightOfTheButtons() {
+        InputCodec.writeHeld(out, CommanderInput.IDLE.redeploying(true));
+
+        byte[] written = out.toBytes();
+        assertThat(written).containsExactly(bytes(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128));
+        assertThat(InputCodec.readHeld(written, 0, CommanderInput.IDLE).redeploying())
                 .isTrue();
     }
 
@@ -166,7 +177,7 @@ class WireGoldenTest {
 
         assertThat(out.toBytes())
                 .containsExactly(bytes(
-                        12, 0, 0, 0, 10, 0, 0, 0, 2, 'b', '1', 0, 0, 0, 1, 'm', 0, 0, 0, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                        12, 0, 0, 0, 11, 0, 0, 0, 2, 'b', '1', 0, 0, 0, 1, 'm', 0, 0, 0, 16, 1, 2, 3, 4, 5, 6, 7, 8, 9,
                         10, 11, 12, 13, 14, 15, 16));
     }
 

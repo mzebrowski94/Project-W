@@ -126,6 +126,9 @@ public final class WorldRenderer implements Disposable {
     /** A slam's circle is many bodies wide; sixteen sides read as a polygon at that size. */
     private static final int BURST_SEGMENTS = 40;
 
+    /** One over the square root of two: a distance along a diagonal, as its x and its y. */
+    private static final float DIAGONAL = 0.70710677f;
+
     /** Reused, so drawing a see-through mark costs no colour per entity per frame. */
     private static final Color SCRATCH = new Color();
 
@@ -160,6 +163,7 @@ public final class WorldRenderer implements Disposable {
     private final LimpetMark limpetMark;
     private final DashMark dashMark;
     private final BorderMark borderMark;
+    private final DownMark downMark;
 
     /** How far anything drawn on the client's clock moves - a taken point's flag; zero holds it still. */
     private final float motionScale;
@@ -401,7 +405,46 @@ public final class WorldRenderer implements Disposable {
         shapes.end();
         drawRings();
         drawTrees();
+        drawDownMarks(alpha);
         Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
+    /**
+     * The down mark over every commander who is down (G0109): drawn last, over the trees, because it is state every
+     * player must see for as long as he is down - foliage hides what is beneath it (G0072), never this. A black disc
+     * with a red X - a saltire, its bars on the diagonals, never a red cross. The second bar stops at the first's
+     * edge, so the middle is not drawn twice and the mark is see-through by the same amount all over.
+     */
+    private void drawDownMarks(float alpha) {
+        boolean begun = false;
+        for (int i = 0; i < drawable.size(); i++) {
+            Entity entity = drawable.get(i);
+            if (!APPEARANCE.get(entity).downMarked) {
+                continue;
+            }
+            if (!begun) {
+                shapes.begin(ShapeRenderer.ShapeType.Filled);
+                begun = true;
+            }
+            float x = Drawn.x(POSITION.get(entity), PREVIOUS.get(entity), alpha);
+            float y = Drawn.y(POSITION.get(entity), PREVIOUS.get(entity), alpha)
+                    + downMark.centreAbove(BODY.get(entity).radius);
+            SCRATCH.set(downMark.ring());
+            SCRATCH.a *= downMark.alpha();
+            shapes.setColor(SCRATCH);
+            shapes.circle(x, y, downMark.radius(), CIRCLE_SEGMENTS);
+            SCRATCH.set(downMark.cross());
+            SCRATCH.a *= downMark.alpha();
+            shapes.setColor(SCRATCH);
+            float reach = downMark.barReach() * DIAGONAL;
+            float edge = downMark.stroke() * 0.5f * DIAGONAL;
+            shapes.rectLine(x - reach, y - reach, x + reach, y + reach, downMark.stroke());
+            shapes.rectLine(x - reach, y + reach, x - edge, y + edge, downMark.stroke());
+            shapes.rectLine(x + edge, y - edge, x + reach, y - reach, downMark.stroke());
+        }
+        if (begun) {
+            shapes.end();
+        }
     }
 
     /**

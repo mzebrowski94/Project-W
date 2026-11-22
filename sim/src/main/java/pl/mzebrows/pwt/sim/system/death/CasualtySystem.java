@@ -8,12 +8,14 @@ import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Dragged;
+import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
- * Runs the clock on a man who is down, and finishes him when it runs out.
+ * Runs the clock on a man who is down, and finishes him when it runs out - or, a commander, when he redeploys once
+ * enough of it has run (G0109).
  *
  * <p>The mirror of {@code DyingSystem}: that one takes a body away once it has lain there long
  * enough, this one decides that a man nobody reached is a body. Both end at the same call, so a
@@ -38,6 +40,7 @@ public final class CasualtySystem extends IteratingSystem {
 
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Dragged> DRAGGED = ComponentMapper.getFor(Dragged.class);
+    private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
 
     private final Spawner spawner;
     private final Modifiers modifiers;
@@ -67,9 +70,18 @@ public final class CasualtySystem extends IteratingSystem {
             return;
         }
         int rate = DRAGGED.has(entity) && DRAGGED.get(entity).held() ? draggedBleedRate : Vitality.TICK;
-        if (casualty.bleed(rate)) {
+        if (casualty.bleed(rate) || redeploys(entity, casualty)) {
             Deaths.kill(spawner, entity);
         }
+    }
+
+    /**
+     * Whether he gives up the rest of his bleed-out this tick (G0109): his window is open and his redeploy key went
+     * down. He then goes exactly as running out would - the same call, so the throes, the respawn and its cost to the
+     * reserve are the ones a bleed-out leaves. A trooper's window never opens.
+     */
+    private static boolean redeploys(Entity entity, Vitality casualty) {
+        return casualty.redeployOpen() && INTENT.has(entity) && INTENT.get(entity).redeployPressed;
     }
 
     /**

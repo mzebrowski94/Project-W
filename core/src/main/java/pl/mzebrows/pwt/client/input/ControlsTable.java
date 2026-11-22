@@ -65,6 +65,8 @@ public record ControlsTable(List<String> lines, int actionColumns) {
         rows.add(row(words, "act", keys(key.action()), pad.action(), pad.actionTrigger(), playStation));
         rows.add(row(words, "drag", keys(key.drag()), pad.drag(), pad.dragTrigger(), playStation));
         rows.add(row(words, "dash", keys(key.dash(), key.dashAlias()), pad.dash(), pad.dashTrigger(), playStation));
+        // While he is down (G0109): the drag's key and the dash's button, in a context of their own.
+        rows.add(row(words, "redeploy", keys(key.redeploy()), pad.redeploy(), pad.redeployTrigger(), playStation));
         rows.add(row(
                 words,
                 "orderFollowMe",

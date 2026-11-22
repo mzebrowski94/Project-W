@@ -1,6 +1,6 @@
 # G0098: The action names its subject, and the interface marks it
 
-**Status.** accepted
+**Status.** amended by G0109: the down mark is the one red mark over the view
 
 **Trigger.** Drawing anything on what the action key would act on; proposing to let the player pick among
 things in reach; making a touch pickup a key press; putting a mark or a prompt over the view.
@@ -52,7 +52,8 @@ buys nothing and adds a subject to the key's list, which is G0021's revisit trig
 
 **No:** *A red icon or red mark over the view* - for a man pinned, or anything else. Alert red is the bars' alone
 (`docs/ui/menu_layout_agent.md`, section 10); a pin is said in his panel, in alert, and the prompt over him is
-neutral.
+neutral. *Amended by G0109:* the down mark over a commander who is down is the one red mark over the view - a
+saltire, never a cross; nothing else red goes there.
 
 **No:** *A ring as the highlight.* A ring already says a charge, a shine, a shield or a grip's clock, and a door has
 no body to put one round. Brackets.

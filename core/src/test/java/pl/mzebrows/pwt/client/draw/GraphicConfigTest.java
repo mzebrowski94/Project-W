@@ -60,6 +60,21 @@ class GraphicConfigTest {
         assertThatThrownBy(() -> new PopMark(1f, 1.5f)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    /**
+     * The down mark (G0109) is a red X on a black disc, see-through - red on a black ground, so it reads as the one red
+     * mark over the view, and its bars are diagonal by how it is drawn, so it is never a red cross.
+     */
+    @Test
+    void marksAManDownWithASeeThroughRedXOnABlackDisc() {
+        DownMark mark = GraphicConfig.load().downMark();
+
+        assertThat(mark.alpha()).isEqualTo(0.65f);
+        assertThat(mark.ring()).isEqualTo(Color.BLACK);
+        assertThat(mark.cross().r).isGreaterThan(mark.cross().g * 2f).isGreaterThan(mark.cross().b * 2f);
+        assertThat(mark.barReach()).isLessThan(mark.radius());
+        assertThat(mark.topAbove(1f)).isGreaterThan(mark.centreAbove(1f)).isGreaterThan(1f);
+    }
+
     /** A dash's thrusters are seen while it runs and die away over the tail; its puff grows and is seen (G0107). */
     @Test
     void readsADashsThrustersAndPuff() {
@@ -237,6 +252,7 @@ class GraphicConfigTest {
                         d.limpet(),
                         d.dash(),
                         d.border(),
+                        d.downMark(),
                         d.action(),
                         d.actionMark(),
                         d.pickupMark(),

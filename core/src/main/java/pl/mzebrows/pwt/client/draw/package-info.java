@@ -6,7 +6,8 @@
  * among them), {@link pl.mzebrows.pwt.client.draw.Palette} (a thing's colour, a player's among them), {@link
  * pl.mzebrows.pwt.client.draw.Drawn} (where a thing is drawn this frame) and {@link
  * pl.mzebrows.pwt.client.draw.ActionMark} (how the action's brackets stand round a thing) - the last two so a
- * prompt sits over what is drawn (G0098). Entries, for the root: {@code WorldRenderer}, {@code TerrainRenderer},
+ * prompt sits over what is drawn (G0098) - and {@link pl.mzebrows.pwt.client.draw.DownMark} (how high the down mark
+ * stands over a man who is down), so the redeploy prompt sits over it (G0109). Entries, for the root: {@code WorldRenderer}, {@code TerrainRenderer},
  * {@code ActionBrackets}, {@code CameraDirector}, {@code Drawn}, {@code LocalAim}, {@code LetterboxViewport}. The marks, {@code StateTint}, {@code TerrainPalette}
  * and {@code GroundDetail} stay inside: only {@code GraphicConfig} builds them and only the renderers read
  * them.

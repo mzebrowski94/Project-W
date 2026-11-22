@@ -188,6 +188,18 @@ public final class Appearance implements Component, Pool.Poolable {
     public float dashAgo;
 
     /**
+     * Whether the **down mark** is drawn over him (G0109): a commander who is down, for every player on every machine, for
+     * as long as he is down. State, not a prompt - nothing on a machine hides it.
+     */
+    public boolean downMarked;
+
+    /**
+     * Whether a commander who is down may redeploy now (G0109) - enough of his bleed-out has run. For his own machine's
+     * prompt; nothing over the view says it to anybody else.
+     */
+    public boolean redeployOpen;
+
+    /**
      * How much of a declared stun it is under is left, in {@code [0, 1]}; zero with none (G0053). Drawn as a pale
      * circle shrinking onto it as the stun runs out.
      */
@@ -288,6 +300,8 @@ public final class Appearance implements Component, Pool.Poolable {
         dashY = 0f;
         dashing = false;
         dashAgo = 0f;
+        downMarked = false;
+        redeployOpen = false;
         daze = 0f;
         throes = 0f;
         shield = 0f;
