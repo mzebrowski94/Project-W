@@ -56,6 +56,7 @@ final class ProvingPreview implements Disposable {
                 graphic.door(),
                 graphic.post(),
                 graphic.flag(),
+                graphic.siteRing(),
                 graphic.mainframe(),
                 graphic.burst(),
                 graphic.daze(),

@@ -89,6 +89,9 @@ public final class WorldRenderer implements Disposable {
 
     private static final Family HANDLED = Family.all(Handle.class).get();
 
+    private static final Family SITES = Family.all(Site.class, Position.class, PreviousPosition.class, Body.class)
+            .get();
+
     /** Where a cosmetic lead writes the facing it draws; reused, so it costs nothing per frame. */
     private final float[] ahead = new float[2];
 
@@ -151,6 +154,7 @@ public final class WorldRenderer implements Disposable {
     private final DoorMark doorMark;
     private final PostMark postMark;
     private final FlagMark flagMark;
+    private final ObjectiveRing objectiveRing;
     private final MainframeMark mainframeMark;
     private final BurstMark burstMark;
     private final DazeMark dazeMark;
@@ -190,6 +194,9 @@ public final class WorldRenderer implements Disposable {
     /** Every entity with a handle, to find a clinch's partner by (G0099). */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
+    /** Every site, to draw the objective ring round those not yet taken (G0111). */
+    private ImmutableArray<Entity> sites = new ImmutableArray<>(new Array<>());
+
     /** How long one tick of the bound world is: what a devour's sway counts its phase in. */
     private float tickSeconds;
 
@@ -207,6 +214,7 @@ public final class WorldRenderer implements Disposable {
         drawable = simulation.engine().getEntitiesFor(DRAWABLE);
         squared = simulation.engine().getEntitiesFor(SQUARED);
         handled = simulation.engine().getEntitiesFor(HANDLED);
+        sites = simulation.engine().getEntitiesFor(SITES);
         tickSeconds = simulation.config().tickSeconds();
     }
 
@@ -239,6 +247,7 @@ public final class WorldRenderer implements Disposable {
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         drawGround(alpha);
         drawSquared(alpha);
+        drawObjectiveRings(alpha);
         for (int i = 0; i < drawable.size(); i++) {
             Entity entity = drawable.get(i);
             Position position = POSITION.get(entity);
@@ -780,6 +789,41 @@ public final class WorldRenderer implements Disposable {
             return;
         }
         drawLoading(x, y, radius * limpetMark.ringPitch(), palette.colorFor(appearance.chargeLook), appearance.charge);
+    }
+
+    /**
+     * The objective ring round every site not yet taken (G0111): stripes by turns in its two colours, turning and
+     * shining on the client's clock, underfoot. Read off the site's state, the same on every machine.
+     */
+    private void drawObjectiveRings(float alpha) {
+        float brightness = objectiveRing.brightnessAt(pulseSeconds, motionScale);
+        float width = objectiveRing.width();
+        int pieces = objectiveRing.pieces();
+        for (int i = 0; i < sites.size(); i++) {
+            Entity entity = sites.get(i);
+            if (SITE.get(entity).taken) {
+                continue;
+            }
+            float x = Drawn.x(POSITION.get(entity), PREVIOUS.get(entity), alpha);
+            float y = Drawn.y(POSITION.get(entity), PREVIOUS.get(entity), alpha);
+            float ring = objectiveRing.ringFor(BODY.get(entity).radius);
+            for (int stripe = 0; stripe < objectiveRing.stripes(); stripe++) {
+                Color color = objectiveRing.colorOf(stripe);
+                tinted.set(color.r * brightness, color.g * brightness, color.b * brightness, color.a);
+                shapes.setColor(tinted);
+                for (int piece = 0; piece < pieces; piece++) {
+                    int at = stripe * pieces + piece;
+                    float from = objectiveRing.angleAt(at, pulseSeconds, motionScale);
+                    float to = objectiveRing.angleAt(at + 1, pulseSeconds, motionScale);
+                    shapes.rectLine(
+                            x + MathUtils.cosDeg(from) * ring,
+                            y + MathUtils.sinDeg(from) * ring,
+                            x + MathUtils.cosDeg(to) * ring,
+                            y + MathUtils.sinDeg(to) * ring,
+                            width);
+                }
+            }
+        }
     }
 
     /**
