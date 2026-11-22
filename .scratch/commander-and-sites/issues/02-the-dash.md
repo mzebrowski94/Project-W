@@ -1,7 +1,7 @@
 # The dash
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: none
 Spec: [spec.md](../spec.md) section 1
@@ -202,3 +202,31 @@ Also on a pad.
 - "Dash Yard" is reachable with `--scenario`.
 - `verify.sh` is green and the branch is committed.
 - The final message lists the keys and their values.
+
+## Answer
+
+Built (merged into integration), G0107, the commander's dash:
+- **Sim:** `Dash` component on every commander (burst ticks, direction, last move direction, `spent`, recharge ticks, look-only `sinceTicks`); `Puff` transient (`Look.PUFF`) through `Spawner.spawnPuff`. `Dashes` folds the counts; `Stat.DASH_MOST` (COUNT) and `Stat.DASH_RECHARGE` (SCALE), one `@Reads` each on `Modifiers`. `Pace.slowing` asks the slow sources as `Pace.of` does. Burst counted in `CooldownSystem`, recharge in `CommanderControlSystem`. `ActionSystem` takes his hands off stabilise/door-open during a dash. `Simulation.dashes`/`dashMost` feed the panel; `Simulation.spawnSlick` lays glue for a scenario.
+- **Input:** keyboard `Space` or `L-Shift`; pad `EAST`; pad drag now `NONE`. Controls page DASH row; pad briefing says "dash" for "pull".
+- **Wire:** `CommanderInput.dashing` (last field, old constructors kept), InputCodec bit 64 (`BUTTON_BITS` 127), `Msg.PROTOCOL` 9 -> 10; golden test updated.
+- **Panel:** purple pips (`TallyIcon.DASH`, `DASH_SPARE`) after the wounds on row 1.
+- **Look:** two flame cones behind his shoulders while dashing and a short tail after; a puff grows and fades where the dash began; a press with no dash left shows only the puff.
+- **Docs:** G0107 and its index row; `players.md` rows "a dash never protects him" and "a dash goes along movement, never the aim"; input-map dash row and drag pad column "- (released for the dash, 2026-11-22)"; `simulation-order.md` row; `components.md` regenerated.
+
+Provisional decisions (AFK run, for review; also in G0107):
+1. `CommanderControlSystem` launches the dash (the one owner of his velocity). Turned down: a separate DashSystem - two writers of one velocity.
+2. A press mid-burst is ignored (nothing spent, no new direction). Turned down: chaining - mashing would spend both dashes in a third of a second.
+3. Hauling: the dash owns his velocity; `DragSystem` caps the load's pull at max(walk speed, last tick's speed), so the load trails one tick and the grip holds. Turned down: capping the dash at haul pace (spec forbids) or letting go.
+4. Any active `Slowed` halves a dash, a laser's self-slow included. Turned down: checking the slow's source - a second reader of what slowed him.
+5. Hands stay off work for the whole burst; the action key's press edge is still tracked so a key held through a dash does not board a gun after.
+6. Puff colour is `graphic.color.puff` (palette), not a `graphic.dash.puff` colour key - no colour in two places.
+7. Thrusters start behind his shoulders, `apart` either side, shrink and fade linearly over the tail.
+
+Keys:
+- `assets/sim/commander.properties` (new): `sim.commander.dash.distance=15`, `durationSeconds=0.15` (9 ticks, ~100 u/s), `most=2`, `rechargeSeconds=3`, `slowFactor=0.5`, `puffSeconds=0.6`.
+- `assets/sim/upgrades.properties`: `sim.upgrade.stat.dash_most.*` (min 1), `sim.upgrade.stat.dash_recharge.*` (-50..+100 %).
+- `assets/controls.properties`: `controls.key.dash=Space`, `controls.key.dashAlias=L-Shift`, `controls.pad.dash=EAST`, `controls.pad.dashTrigger=NONE`; `controls.pad.drag` EAST -> NONE.
+- `assets/graphic.properties`: `graphic.hud.color.dash=b060ffff`, `graphic.color.puff=c8c8c8ff`, `graphic.dash.thruster.*` (tailSeconds 0.12, length 1.1, width 0.45, apart 0.55, tipShare 0.35, core `ffb347ff`, tip `ffffffff`), `graphic.dash.puff.*` (radiusFrom 1.4, radiusTo 3.2, alpha 0.45).
+- `assets/i18n/ui.properties`: `ui.controls.dash=DASH`.
+
+Judge by: `./gradlew lwjgl3:run --args="--scenario=dash-yard"` - open sand, glue puddle west, thicket south, wall north, five grunts east, no squad. Try the pad (B) too.
