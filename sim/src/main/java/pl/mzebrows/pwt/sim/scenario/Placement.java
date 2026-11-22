@@ -228,7 +228,7 @@ final class Placement {
             // Drawn from the biome's own stream, never the attempt's: whether it has a mainframe, in which house and
             // against
             // which wall is the same on every attempt and every tier (G0111).
-            sites(sites, housedSites(sites, stream.derive(WORKED)), attempt.derive(POINTS));
+            sites(sites, housedSites(sites, stream.derive(WORKED), attempt.derive(WORKED)), attempt.derive(POINTS));
             houseStock(stock, attempt.derive(STOCK));
             housePacks(pressure, stream.derive(HOUSE_PACKS), attempt.derive(HOUSED));
             unhoused(stock);
@@ -278,7 +278,7 @@ final class Placement {
          * house of this biome, never a gatehouse, against a wall and clear of its doorways; and the bit of the band
          * each stands in, which a control point then leaves to it. Put down here, first of everything.
          */
-        private long housedSites(int count, Randomness rng) {
+        private long housedSites(int count, Randomness rng, Randomness spot) {
             List<House> houses = new ArrayList<>();
             for (House house : laid.houses()) {
                 if (inThisBiome(house)) {
@@ -301,7 +301,7 @@ final class Placement {
                 if (spots.isEmpty()) {
                     continue;
                 }
-                float[] at = spots.get(rng.nextInt(spots.size()));
+                float[] at = spots.get(spot.nextInt(spots.size()));
                 int band = bandOf(bands, map.colAt(at[0]));
                 if (band < 0 || (taken & (1L << band)) != 0) {
                     continue;
