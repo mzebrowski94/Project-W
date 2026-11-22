@@ -9,8 +9,10 @@ import com.badlogic.gdx.graphics.Color;
  *
  * @param thruster the jets on his back
  * @param puff the smoke where it began; its colour is {@code graphic.color.puff}
+ * @param surge the ring a Rocketman's surge is drawn as where it went off (G0108); its colour is
+ *     {@code graphic.color.rocketman}, its fill and outline the slam's ({@code graphic.burst.*})
  */
-public record DashMark(Thruster thruster, Puff puff) {
+public record DashMark(Thruster thruster, Puff puff, Surge surge) {
 
     /**
      * Two flame cones behind his shoulders, pointing back along the dash.
@@ -73,6 +75,25 @@ public record DashMark(Thruster thruster, Puff puff) {
         /** How wide it is with {@code left} of it to go. */
         public float radiusFor(float left) {
             return radiusFrom + (radiusTo - radiusFrom) * (1f - left);
+        }
+    }
+
+    /**
+     * A ring growing out to the surge's reach and fading as it goes: the ground it stunned, read at a glance.
+     *
+     * @param grownFrom how much of the reach it is drawn at the instant it goes off, growing to all of it
+     */
+    public record Surge(float grownFrom) {
+
+        public Surge {
+            if (grownFrom < 0f || grownFrom > 1f) {
+                throw new IllegalArgumentException("surge grownFrom must be in [0, 1], was " + grownFrom);
+            }
+        }
+
+        /** How far round it the ring is drawn, with {@code left} of it to go, for a surge of this reach. */
+        public float radiusFor(float reach, float left) {
+            return reach * (grownFrom + (1f - grownFrom) * (1f - left));
         }
     }
 }

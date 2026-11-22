@@ -44,5 +44,9 @@ public enum UpgradeKind {
     /** An adaptation: every alien leaves a spatter of venom where it dies, which a man goes round only on a chance. */
     TOXIC_BLOOD,
     /** The chooser carries one more grenade per rank, and is handed it when he takes it (G0077). Personal. */
-    BANDOLIER
+    BANDOLIER,
+    /** The chooser's every dash stuns the aliens round him as it launches - its surge, wider a rank (G0108). Personal. */
+    ROCKETMAN,
+    /** The chooser holds one more dash a rank, and each comes back sooner (G0108). Personal. */
+    PANTERA
 }

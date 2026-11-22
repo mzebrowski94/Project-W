@@ -233,5 +233,10 @@ public enum Look {
      * The see-through smoke a dash leaves where it began (G0107), growing and fading where it was left. A look only:
      * nothing touches it.
      */
-    PUFF
+    PUFF,
+    /**
+     * The ring a Rocketman's surge is drawn as where it went off (G0108): growing to its reach and fading. A look only:
+     * the stun landed on the tick it appeared.
+     */
+    ROCKETMAN
 }

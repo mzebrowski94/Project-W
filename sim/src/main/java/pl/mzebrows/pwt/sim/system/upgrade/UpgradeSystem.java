@@ -163,13 +163,21 @@ public final class UpgradeSystem extends EntitySystem {
      * adaptation by the swarm, counted towards its tiers. Allocates; never called during a tick.
      */
     public static void hold(Engine engine, SimConfig config, UpgradeKind kind, int ranks) {
+        hold(engine, config, kind, ranks, 0);
+    }
+
+    /**
+     * The same, a personal upgrade held by this slot rather than slot zero - a scenario that hands every seat its kit
+     * from the first tick (G0108). A shared one or an adaptation is held as above, whatever the slot.
+     */
+    public static void hold(Engine engine, SimConfig config, UpgradeKind kind, int ranks, int slot) {
         UpgradeDef def = config.upgrades().of(kind);
         int held = Math.min(ranks, def.ranks());
         ImmutableArray<Entity> levels =
                 engine.getEntitiesFor(Family.all(Upgrades.class).get());
         for (int i = 0; held > 0 && i < levels.size(); i++) {
             Upgrades upgrades = UPGRADES.get(levels.get(i));
-            upgrades.held.add(new Upgrades.Held(kind, def.personal() ? 0 : Upgrades.SHARED, held));
+            upgrades.held.add(new Upgrades.Held(kind, def.personal() ? slot : Upgrades.SHARED, held));
             if (def.side() == Side.ALIEN) {
                 upgrades.adaptations += held;
             }

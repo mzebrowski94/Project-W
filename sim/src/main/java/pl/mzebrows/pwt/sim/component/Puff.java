@@ -6,6 +6,9 @@ import com.badlogic.gdx.utils.Pool;
 /**
  * A puff (G0107): the see-through smoke a dash leaves where it began, and all a press with no dash left does. A look
  * only - feedback, spawned rather than sent (G0004), on a pop's pattern (G0078).
+ *
+ * <p>A puff with a {@link #reach} is a Rocketman's surge instead (G0108): the ring it is drawn as where it went off,
+ * counted down and reaped as the smoke is.
  */
 public final class Puff implements Component, Pool.Poolable {
 
@@ -14,6 +17,15 @@ public final class Puff implements Component, Pool.Poolable {
 
     /** How much of that is left, in whole ticks; zero is over. */
     public int remainingTicks;
+
+    /** How far round it the ring of a surge reaches, in world units; zero for the smoke of a dash. */
+    public float reach;
+
+    /** Makes it the ring of a surge this far round, returning this component, for fluent spawning. */
+    public Puff reaching(float newReach) {
+        this.reach = newReach;
+        return this;
+    }
 
     /** Starts it, this many ticks long, and returns this component, for fluent spawning. */
     public Puff set(int newLifeTicks) {
@@ -39,5 +51,6 @@ public final class Puff implements Component, Pool.Poolable {
     public void reset() {
         lifeTicks = 0;
         remainingTicks = 0;
+        reach = 0f;
     }
 }

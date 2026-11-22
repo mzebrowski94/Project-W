@@ -255,6 +255,14 @@ public final class WorldRenderer implements Disposable {
                 drawPuff(x, y, appearance.puff);
                 continue;
             }
+            if (appearance.look == Look.ROCKETMAN) {
+                // A Rocketman's surge where it went off (G0108): the slam's circle, its fill here and nothing else.
+                SCRATCH.set(burstColor(appearance));
+                SCRATCH.a = burstMark.fillAlpha() * appearance.burstFade;
+                shapes.setColor(SCRATCH);
+                shapes.circle(x, y, burstRadius(appearance), BURST_SEGMENTS);
+                continue;
+            }
             if (appearance.pop > 0f) {
                 // A take by touch, rising off the taker and fading (G0078): its look and nothing on it.
                 drawPop(x, y, radius, appearance);
@@ -820,10 +828,10 @@ public final class WorldRenderer implements Disposable {
                 drawShield(position.x, position.y, radius, appearance.shield);
             }
             if (appearance.burst > 0f) {
-                SCRATCH.set(burstMark.color());
+                SCRATCH.set(burstColor(appearance));
                 SCRATCH.a = burstMark.outlineAlpha() * appearance.burstFade;
                 shapes.setColor(SCRATCH);
-                shapes.circle(position.x, position.y, appearance.burst, BURST_SEGMENTS);
+                shapes.circle(position.x, position.y, burstRadius(appearance), BURST_SEGMENTS);
             }
         }
         shapes.end();
@@ -896,6 +904,18 @@ public final class WorldRenderer implements Disposable {
             shapes.setColor(SCRATCH);
             shapes.circle(x, risen, crateMark.dotFor(radius), CIRCLE_SEGMENTS);
         }
+    }
+
+    /** The slam's circle is white; a Rocketman's surge drawn on it is its own colour (G0108). */
+    private Color burstColor(Appearance appearance) {
+        return appearance.look == Look.ROCKETMAN ? palette.colorFor(Look.ROCKETMAN) : burstMark.color();
+    }
+
+    /** How far round it the circle is drawn: a slam's whole reach at once, a surge's growing out to it as it fades. */
+    private float burstRadius(Appearance appearance) {
+        return appearance.look == Look.ROCKETMAN
+                ? dashMark.surge().radiusFor(appearance.burst, appearance.burstFade)
+                : appearance.burst;
     }
 
     /** A puff: a see-through disc of its own colour, grown and faded by how much of it is left (G0107). */

@@ -57,7 +57,8 @@ import pl.mzebrows.pwt.sim.system.query.Pace;
  * it - and the solver still has the last word on where it ends. Its recharge is counted here too, where whether
  * anything is spent is decided; the burst's own clock is {@code CooldownSystem}'s. It is a pure function of his
  * inputs and the ground: no dice (G0012). The puffs it leaves are reaped here when they run out, as a pop is by the
- * system that spawns it.
+ * system that spawns it. A Rocketman's surge goes off here too, on the tick a dash launches and only then ({@link
+ * Surges}, G0108): a press refused or with no dash left sets nothing off.
  */
 public final class CommanderControlSystem extends IteratingSystem {
 
@@ -81,6 +82,8 @@ public final class CommanderControlSystem extends IteratingSystem {
     private final Spawner spawner;
 
     private final Dashes dashes;
+
+    private final Surges surges;
 
     private final float leashRadius;
 
@@ -124,10 +127,11 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     /** @param capacity how many slots the game holds - the most machines its commanders can sit at */
     public CommanderControlSystem(
-            SimConfig config, TileMap map, Guns guns, Spawner spawner, Dashes dashes, int capacity) {
+            SimConfig config, TileMap map, Guns guns, Spawner spawner, Dashes dashes, Surges surges, int capacity) {
         this.guns = guns;
         this.spawner = spawner;
         this.dashes = dashes;
+        this.surges = surges;
         super(Family.all(
                         Commander.class,
                         Intent.class,
@@ -158,6 +162,7 @@ public final class CommanderControlSystem extends IteratingSystem {
         levels = engine.getEntitiesFor(Family.all(Presence.class).get());
         limpets = engine.getEntitiesFor(Family.all(Limpet.class).get());
         puffs = engine.getEntitiesFor(Family.all(Puff.class).get());
+        surges.bind(engine);
     }
 
     /**
@@ -169,6 +174,7 @@ public final class CommanderControlSystem extends IteratingSystem {
     public void update(float deltaTime) {
         findCentres();
         reapPuffs();
+        surges.tick();
         super.update(deltaTime);
     }
 
@@ -345,6 +351,8 @@ public final class CommanderControlSystem extends IteratingSystem {
         dash.spent++;
         dash.remainingTicks = dashTicks;
         dash.sinceTicks = 0;
+        // Where it begins, on the tick it launches: an escape, not an engage (G0108).
+        surges.goOff(entity, at.x, at.y);
     }
 
     /**

@@ -1,6 +1,6 @@
 # G0018: The blast is one circle, and things explode by dying
 
-**Status.** amended by G0053: each blast kind declares its harm to a man; amended by G0082: a thing with health shrugs off its blast resistance
+**Status.** amended by G0053: each blast kind declares its harm to a man; amended by G0082: a thing with health shrugs off its blast resistance; amended by G0108: a dash's surge is a second, non-lethal radial effect and no blast
 
 **Trigger.** Adding or changing anything explosive - a weapon with an area, a hazard, a death that
 hurts what is near it - or proposing that damage fall off with distance.
@@ -72,6 +72,12 @@ the harm it does to a man - a grenade's `WOUND`, a barrel's, a mine's and a char
 Inside the circle there is still one meaning for a man and outside it none; everything with health is
 still caught by the same decisive amount, so a grenade kills every alien it catches exactly as before.
 It is still not a free button: it costs its thrower a wound, and a second one puts him down.
+
+## Amended by G0108
+
+**The second radial kind, and not a blast.** A Rocketman's surge stuns every alien round a launching dash and harms
+nothing. It is not a `Blast`: it is on one side, lands a harmless blow through `Damage` and leaves no explosion. A blast
+is still one circle, on nobody's side, fatal inside it.
 
 ## Amended by G0082
 
