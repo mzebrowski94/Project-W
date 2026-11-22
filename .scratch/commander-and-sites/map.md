@@ -56,3 +56,4 @@ redeploy, sites and crates, the mainframe, the jaguar, the rift, spires and the 
 - 2026-11-22: the whole of [spec.md](spec.md), grilled with Mateusz.
 - 2026-11-22, ticket 01 (resolved, merged): `--scenario` resolved by `Scenarios.looselyNamed` in sim (registry only, exact `named` kept for online); mission-versus-scenario conflict caught in `LaunchOptions`; commander gold, `.1` white, trooper blue unchanged. Provisional.
 - 2026-11-22, ticket 02 (resolved, merged): dash launched in `CommanderControlSystem`; a press mid-burst ignored; a hauled load pulled at his actual pace so he keeps hold; any `Slowed` halves a dash; puff colour `graphic.color.puff`; button bit 64, `Msg.PROTOCOL` 10. Provisional.
+- 2026-11-22, ticket 03 (resolved, merged): Rocketman's surge in `CommanderControlSystem.launch` via `Surges`, `Damage.landStunning`; reach 5/10; Pantera -13 % recharge per rank (whole percents); ring stays where it went off. Provisional.

@@ -1,7 +1,7 @@
 # Redeploy and the down mark
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: 02 (the pad's B is the dash's when standing; the wire's bit 64 is the dash's)
 Spec: [spec.md](../spec.md) section 4

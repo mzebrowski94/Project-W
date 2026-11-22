@@ -1,7 +1,7 @@
 # Rocketman and Pantera
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: 02
 Spec: [spec.md](../spec.md) section 1
@@ -122,3 +122,32 @@ Two **personal** upgrades on the dash (ticket 02), drafted like any other (G0049
 - G0108 and the invariant row are written.
 - `verify.sh` is green and the branch is committed.
 - The final message lists the keys.
+
+## Answer
+
+Built (merged into integration), G0108:
+- **Upgrades:** `UpgradeKind.ROCKETMAN`, `PANTERA` (personal, 2 ranks), draft blocks, names, effect lines, `AlphaWorlds.upgrades()` fixtures.
+- **Surge** (new glossary word: Rocketman's stun round a launching dash): `Stat.SURGE_REACH` (base 0), one reader `Modifiers.surgeReach`; `Surges` helper called from `CommanderControlSystem.launch` only when a dash launches; aliens filed in a `SpatialGrid` only on a surge tick; `Sight.withinRange` + `Sight.clearLine`; aliens only. Lands via new `Damage.landStunning(ticks, slot)`; `DamageSystem` dazes the same tick.
+- **Ring:** `Puff.reach` (reset), `Spawner.spawnSurge`, `Look.ROCKETMAN`, published as `burst`/`burstFade`, drawn in `graphic.color.rocketman`.
+- **Scenario:** Dash Yard Upgraded (`DashYardScenario(true)`): 4×4 grunt pack, Rocketman 2 + Pantera 2 for every slot; `UpgradeSystem.hold` slot overload.
+- **Docs:** G0108 + index; G0018 amended by G0108; `combat.md` row "Rocketman never stuns the squad's side" (enforced); glossary; `simulation-order.md` constraint (control before `DamageSystem`, `SystemOrderTest` row); `components.md`.
+- Boss not exempt from the stun, as the ticket says; noted in G0108.
+
+Provisional decisions (AFK run, for review; also in G0108):
+1. Stun inside the control system's launch (`Surges` helper). Turned down: a separate system - needs a launched-this-tick flag on `Dash` and an order renumbering.
+2. `Damage.landStunning(ticks, slot)`, provoking toward him, credited to his slot. Turned down: making `stun` public (G0057).
+3. Pantera -13 % recharge per rank (-26 % at rank 2): effect percentages are whole. Turned down: -12 (24 %).
+4. Rocketman reach 5 / 10 (linear fold cannot give 6 / 10 with 0 unheld).
+5. Weight 10, tier 1, as Bandolier.
+6. Distances measured from where everyone stood at the start of the press tick (the puff's spot). Turned down: after movement.
+7. Ring stays where the surge went off, 0.35 s, grows from 0.4 of reach to all. Turned down: ring following him.
+8. Scenario holds the upgrades for every slot up to capacity. Turned down: slot 0 only.
+9. `GraphicConfigTest.readsACommandersRim` was red on the integration tip (pinned `f8fafcff` after `graphic.border.color` was retuned to `949697ff`); now checks the rim is opaque.
+
+Keys:
+- `assets/sim/commander.properties`: `sim.commander.dash.stunSeconds=1`, `sim.commander.dash.surgeSeconds=0.35` (ring life).
+- `assets/sim/upgrades.properties`: `sim.upgrade.stat.surge_reach.minPercent=0`, `.maxPercent=0`, `.min=0`; `sim.upgrade.rocketman.*` (player, weight 10, ranks 2, tier 1, effects `count surge_reach chooser 5`); `sim.upgrade.pantera.*` (same, effects `count dash_most chooser 1; scale dash_recharge chooser -13`).
+- `assets/graphic.properties`: `graphic.color.rocketman=8f7bffff`, `graphic.dash.surge.grownFrom=0.4`.
+- `assets/i18n/ui.properties`: `ui.upgrade.ROCKETMAN`, `ui.upgrade.PANTERA`, `ui.effect.count.DASH_MOST`, `ui.effect.scale.DASH_RECHARGE`, `ui.effect.count.SURGE_REACH`.
+
+Judge by: `./gradlew lwjgl3:run --args="--scenario=dash-yard-upgraded"`
