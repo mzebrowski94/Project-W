@@ -1,7 +1,7 @@
 # `--scenario`, Full House and the commander colours
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: none
 Spec: [spec.md](../spec.md) sections 2 and 3
