@@ -48,5 +48,10 @@ public enum UpgradeKind {
     /** The chooser's every dash stuns the aliens round him as it launches - its surge, wider a rank (G0108). Personal. */
     ROCKETMAN,
     /** The chooser holds one more dash a rank, and each comes back sooner (G0108). Personal. */
-    PANTERA
+    PANTERA,
+    /**
+     * The first time the chooser opens a crate, it holds one more card of a kind not already in it - once per crate,
+     * whoever's Looter it was (G0110). Personal.
+     */
+    LOOTER
 }

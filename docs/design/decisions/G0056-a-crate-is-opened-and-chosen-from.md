@@ -1,6 +1,6 @@
 # G0056: A crate is opened and chosen from, dealt on its first opening, by one commander at a time
 
-**Status.** accepted
+**Status.** amended by G0110: a taken site leaves crates by the seated count, and no crate holds two cards of one kind
 
 **Trigger.** Anything about what a crate holds or when that is decided; opening one; the crate bar in the
 top bar; an upgrade that changes what crates hold; proposing that a crate show its contents from a

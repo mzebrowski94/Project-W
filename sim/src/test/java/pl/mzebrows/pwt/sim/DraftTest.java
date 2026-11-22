@@ -15,6 +15,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Drafts;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -263,6 +264,7 @@ class DraftTest {
 
     private static void take(Entity point) {
         point.getComponent(ControlPoint.class).captured = true;
+        point.getComponent(Site.class).taken = true;
     }
 
     private static List<Entity> points(Simulation simulation, int count) {

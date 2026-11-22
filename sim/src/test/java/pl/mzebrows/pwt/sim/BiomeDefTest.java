@@ -24,7 +24,7 @@ class BiomeDefTest {
         for (BiomeKind kind : BiomeKind.values()) {
             BiomeDef biome = shipped.biomes().of(kind);
             assertThat(biome.roster()).as("%s's roster", kind).isNotEmpty();
-            assertThat(biome.furniture().pointsMin()).as("%s's points", kind).isGreaterThanOrEqualTo(1);
+            assertThat(biome.furniture().sitesMin()).as("%s's points", kind).isGreaterThanOrEqualTo(1);
         }
         BiomeDef quarry = shipped.biomes().of(BiomeKind.QUARRY);
         assertThat(quarry.ground().houses()).isEqualTo(new Houses(1, 2));
@@ -91,8 +91,8 @@ class BiomeDefTest {
 
     private static Furniture stocking(Furniture furniture, PickupKind kind) {
         return new Furniture(
-                furniture.pointsMin(),
-                furniture.pointsMax(),
+                furniture.sitesMin(),
+                furniture.sitesMax(),
                 furniture.barrelsMin(),
                 furniture.barrelsMax(),
                 furniture.rabbitsMin(),

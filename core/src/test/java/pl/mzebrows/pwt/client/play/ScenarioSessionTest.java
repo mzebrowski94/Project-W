@@ -14,8 +14,8 @@ import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Commander;
-import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.Harm;
@@ -411,7 +411,7 @@ class ScenarioSessionTest {
         public void populate(Simulation simulation) {
             simulation.spawnCommander(10f, 10f);
             for (int i = 0; i < points; i++) {
-                simulation.spawnControlPoint(30f + 10f * i, 30f).getComponent(ControlPoint.class).captured = true;
+                simulation.spawnControlPoint(30f + 10f * i, 30f).getComponent(Site.class).taken = true;
             }
         }
     }

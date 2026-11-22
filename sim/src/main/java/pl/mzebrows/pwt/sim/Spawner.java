@@ -70,6 +70,7 @@ import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Shock;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Slick;
 import pl.mzebrows.pwt.sim.component.SlicksOnDeath;
 import pl.mzebrows.pwt.sim.component.Sling;
@@ -922,6 +923,7 @@ public final class Spawner {
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(point.radius()));
         entity.add(engine.createComponent(Appearance.class).set(Look.CONTROL_POINT));
+        entity.add(engine.createComponent(Site.class));
         admit(entity);
         return entity;
     }

@@ -11,11 +11,11 @@ import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Seats;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Commander;
-import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Drafts;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.component.Respawning;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Defs;
@@ -46,7 +46,7 @@ public final class UpgradeSystem extends EntitySystem {
     private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
-    private static final ComponentMapper<ControlPoint> CONTROL_POINT = ComponentMapper.getFor(ControlPoint.class);
+    private static final ComponentMapper<Site> SITE = ComponentMapper.getFor(Site.class);
 
     private static final UpgradeKind[] KINDS = UpgradeKind.values();
 
@@ -72,7 +72,7 @@ public final class UpgradeSystem extends EntitySystem {
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> returning = new ImmutableArray<>(new Array<>());
-    private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> sites = new ImmutableArray<>(new Array<>());
 
     /**
      * @param rng what drafts are dealt from
@@ -97,7 +97,7 @@ public final class UpgradeSystem extends EntitySystem {
                         .get());
         commanders = engine.getEntitiesFor(Family.all(Commander.class).get());
         returning = engine.getEntitiesFor(Family.all(Respawning.class).get());
-        points = engine.getEntitiesFor(Family.all(ControlPoint.class).get());
+        sites = engine.getEntitiesFor(Family.all(Site.class).get());
     }
 
     @Override
@@ -275,8 +275,9 @@ public final class UpgradeSystem extends EntitySystem {
     private boolean earn(Upgrades upgrades, Drafts drafts, Level level, Waves waves) {
         boolean earned = false;
         int taken = 0;
-        for (int i = 0; i < points.size(); i++) {
-            if (CONTROL_POINT.get(points.get(i)).captured) {
+        // Sites, whatever their kind (G0110): a control point today, and every site after it by carrying one.
+        for (int i = 0; i < sites.size(); i++) {
+            if (SITE.get(sites.get(i)).taken) {
                 taken++;
             }
         }

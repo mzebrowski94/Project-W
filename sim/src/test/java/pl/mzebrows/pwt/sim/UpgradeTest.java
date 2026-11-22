@@ -17,10 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
@@ -438,7 +438,7 @@ class UpgradeTest {
 
     /** Takes one rank through the real path: a point taken earns a draft, and a pick takes the card. */
     private static void take(Simulation simulation, UpgradeKind kind) {
-        simulation.spawnControlPoint(10f, 10f).getComponent(ControlPoint.class).captured = true;
+        simulation.spawnControlPoint(10f, 10f).getComponent(Site.class).taken = true;
         simulation.step();
         int serial = DraftTest.drafts(simulation).pending.first().serial();
         simulation.step(new PlayerInputs().pick(0, serial, kind));

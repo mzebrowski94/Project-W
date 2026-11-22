@@ -24,8 +24,8 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * Puts down what each biome of a mission counts, by rules and never by places (G0068): ordered {@link Scatter}
- * passes, the most constrained first - points, what a house holds, nests, packs, crates by points, turrets by points,
- * geysers, medkits and food,
+ * passes, the most constrained first - sites, what a house holds, nests, packs, turrets by points, geysers, medkits and
+ * food,
  * barrels, boulders, trees, rabbits. Each pass keeps off what went down before it by its radii, crow-flies, and off every
  * tile the strip kept: the start, aprons, doorsteps, and every house's inside but for its stock. The last biome keeps
  * everything hostile outside the finale's watch (G0064), so holding its post never waits on a hole or a sleeper behind
@@ -41,6 +41,9 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
  */
 final class Placement {
 
+    /** Which of a biome's site bands another kind of site takes, a bit a band: none, until one does (G0110). */
+    private static final long NO_OTHER_SITES = 0L;
+
     /** How many times a biome is placed before what would not fit is reported. */
     private static final int ATTEMPTS = 32;
 
@@ -51,7 +54,6 @@ final class Placement {
     private static final long STOCK = 0x859B_0F5E_8DAB_B577L;
     private static final long NESTS = 0x176C_645E_059D_330AL;
     private static final long PACKS = 0xB77F_62E4_1C9B_4737L;
-    private static final long CRATES = 0x892B_360E_4985_3C6BL;
     private static final long PICKUPS = 0xBCB8_8634_48D1_4DE2L;
     private static final long BARRELS = 0x712F_4803_E234_2E39L;
     private static final long BOULDERS = 0x69CB_E66C_A40B_DAC8L;
@@ -188,7 +190,7 @@ final class Placement {
             }
             Randomness counted = stream.derive(FURNITURE);
             Furniture furniture = def.furniture();
-            int pointCount = furniture.points(counted);
+            int sites = furniture.sites(counted);
             int barrels = furniture.barrels(counted);
             int rabbits = furniture.rabbits(counted);
             int boulders = furniture.boulders(counted);
@@ -204,11 +206,11 @@ final class Placement {
             // Drawn after that, for the same reason: a biome with no stones draws everything as it did before them.
             int stones = furniture.stones(counted);
 
-            points(pointCount, attempt.derive(POINTS));
+            sites(sites, NO_OTHER_SITES, attempt.derive(POINTS));
             houseStock(stock, attempt.derive(STOCK));
+            unhoused(stock);
             nests(creatures, attempt.derive(NESTS));
             packs(creatures, attempt.derive(PACKS));
-            crates(stock, attempt.derive(CRATES));
             turrets(turrets, attempt.derive(TURRETS));
             geysers(geysers, attempt.derive(GEYSERS));
             pickups(stock, attempt.derive(PICKUPS));
@@ -223,14 +225,18 @@ final class Placement {
         // ---- the passes, in order ----
 
         /**
-         * One point to each equal band of columns, so the goal line leads east; the last biome's last band is its
-         * {@code approachColumns}.
+         * The biome's sites (G0110): {@code count} equal bands of columns, so the goal line leads east - the last
+         * biome's last band its {@code approachColumns} - and a control point in each band but those {@code others}
+         * marks, one bit a band, which another kind of site takes. Today no kind does.
          */
-        private void points(int count, Randomness rng) {
+        private void sites(int count, long others, Randomness rng) {
             Scatter scatter = scatter(rng, 0f);
             float radius = config.controlPoint().radius();
             List<TileRect> bands = bands(count);
             for (int b = 0; b < bands.size(); b++) {
+                if ((others & (1L << b)) != 0) {
+                    continue;
+                }
                 int got = scatter.scatter(bands.get(b), 1, radius, (x, y) -> {
                     put(new Placed.Point(x, y, position));
                     scatter.reserve(x, y, rules.pointApart());
@@ -365,21 +371,15 @@ final class Placement {
             return got;
         }
 
-        /** Crates the houses did not take, each within {@code pointReach} of a point: the reward where the fight is. */
-        private void crates(int[] stock, Randomness rng) {
-            Scatter scatter = scatter(rng, 0f);
-            keepOffNests(scatter);
+        /**
+         * Crates the houses did not take are not laid (G0110): a biome's crates are its houses' stock, and the field's
+         * are what its taken sites leave.
+         */
+        private void unhoused(int[] stock) {
             for (int line = 0; line < stock.length; line++) {
-                PickupKind pickup = kindOf(line);
-                if (!crate(pickup)) {
-                    continue;
+                if (crate(kindOf(line))) {
+                    stock[line] = 0;
                 }
-                float radius = config.pickup(pickup).radius();
-                Scatter.Place place = (x, y) -> put(new Placed.Pickup(pickup, x, y, position));
-                for (int k = 0; k < stock[line]; k++) {
-                    shortOf(pickup + " by a point", 1, byAPoint(scatter, k, radius, place));
-                }
-                stock[line] = 0;
             }
         }
 

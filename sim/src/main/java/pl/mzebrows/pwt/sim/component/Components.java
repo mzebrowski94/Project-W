@@ -78,6 +78,7 @@ public final class Components {
                     RespawnsOnDeath.class,
                     Shake.class,
                     Shield.class,
+                    Site.class,
                     Shock.class,
                     Slick.class,
                     Sling.class,

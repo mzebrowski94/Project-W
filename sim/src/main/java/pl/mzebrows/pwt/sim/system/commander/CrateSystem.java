@@ -43,6 +43,12 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  * whatever an upgrade stocks every crate with, swapped in from the last card back. It keeps what it holds
  * from then on, whoever opens it next.
  *
+ * <p><strong>No crate holds two cards of one kind</strong> (G0110): a card of a kind it already holds goes back and
+ * another is drawn, and a deck with no other kind left makes a smaller crate. A stock swaps its card in only where
+ * the crate does not hold one. <strong>Looter</strong> adds one card more, of a kind new to it, the first time a
+ * commander holding it opens a crate - dealt into the deal, or drawn then if the crate was dealt before - and never
+ * again for that crate, whoever's Looter opens it next.
+ *
  * <p><strong>It shuts on him</strong> the tick he takes a wound or goes down, steps out of arm's length,
  * drops his link, takes something, or says so; and it goes from the field the tick it is empty. A take of
  * something he is offered nothing by - a medkit to a man with no wound (G0053) - is turned down and leaves
@@ -139,8 +145,14 @@ public final class CrateSystem extends EntitySystem {
                 crate.close();
                 continue;
             }
+            int extra = crate.looted || crate.openedOn != tick ? 0 : modifiers.crateExtra(man);
             if (!crate.dealt) {
-                deal(crate, ARMOURY.get(level));
+                deal(crate, ARMOURY.get(level), extra);
+            } else if (extra > 0) {
+                draw(crate, ARMOURY.get(level), crate.count + extra);
+            }
+            if (extra > 0) {
+                crate.looted = true;
             }
             int wounds = VITALITY.has(man) ? VITALITY.get(man).wounds : 0;
             if (crate.openedOn != tick && wounds > crate.openerWounds) {
@@ -183,15 +195,25 @@ public final class CrateSystem extends EntitySystem {
         }
     }
 
-    /** What a crate holds, dealt once, on its first opening. */
-    private void deal(Crate crate, Armoury armoury) {
-        int size = size(armoury);
-        for (int i = 0; i < size; i++) {
-            crate.put(i, card(armoury));
-        }
-        stock(crate, size);
-        crate.count = size;
+    /** What a crate holds, dealt once, on its first opening; {@code extra} more for a Looter opening it. */
+    private void deal(Crate crate, Armoury armoury, int extra) {
+        crate.count = 0;
+        draw(crate, armoury, size(armoury) + extra);
+        stock(crate);
         crate.dealt = true;
+    }
+
+    /** Draws cards into the crate up to {@code size}, never past its capacity, while the deck has a kind it lacks. */
+    private void draw(Crate crate, Armoury armoury, int size) {
+        int wanted = Math.min(SimConfig.CrateConfig.CAPACITY, size);
+        while (crate.count < wanted) {
+            @Nullable PickupKind kind = card(armoury, crate);
+            if (kind == null) {
+                return;
+            }
+            crate.put(crate.count, kind);
+            crate.count++;
+        }
     }
 
     /**
@@ -214,19 +236,35 @@ public final class CrateSystem extends EntitySystem {
     /**
      * The next card from the armoury deck, from a bag: no card comes up twice before every card has. The
      * deck's counts are folded afresh (ADR 0017); a deck that has grown since its last shuffle - an upgrade
-     * has stacked it - is shuffled again before it deals.
+     * has stacked it - is shuffled again before it deals. A card of a kind the crate already holds is never
+     * drawn (G0110): it stays in the bag for the next crate. A shuffle with nothing left but those is shuffled
+     * afresh; null when even a fresh one holds no other kind.
      */
-    private PickupKind card(Armoury armoury) {
+    private @Nullable PickupKind card(Armoury armoury, Crate crate) {
         int total = 0;
+        long barred = 0L;
         for (int d = 0; d < deck.length; d++) {
             deckNow[d] = modifiers.armouryCards(deck[d], deckBase[d]);
+            if (crate.indexOf(deck[d]) >= 0) {
+                barred |= run(total, deckNow[d]);
+            }
             total += deckNow[d];
+        }
+        if (total == 0) {
+            return null;
         }
         if (armoury.shuffledAt != total) {
             armoury.drawn = 0L;
             armoury.shuffledAt = total;
         }
-        int card = Bag.draw(rng, armoury.drawn, total);
+        long whole = run(0, total);
+        if (((armoury.drawn | barred) & whole) == whole) {
+            if ((barred & whole) == whole) {
+                return null;
+            }
+            armoury.drawn = 0L;
+        }
+        int card = Bag.draw(rng, armoury.drawn | barred, total);
         armoury.drawn = Bag.take(armoury.drawn, card, total);
         for (int d = 0; d < deck.length; d++) {
             if (card < deckNow[d]) {
@@ -237,30 +275,36 @@ public final class CrateSystem extends EntitySystem {
         throw new IllegalStateException("card " + card + " is past the end of a deck of " + total);
     }
 
+    /** The bits of {@code count} cards from the {@code from}-th, as a bag holds them. */
+    private static long run(int from, int count) {
+        if (count <= 0) {
+            return 0L;
+        }
+        long bits = count >= Bag.MOST ? -1L : (1L << count) - 1L;
+        return bits << from;
+    }
+
     /**
-     * Whatever an upgrade stocks every crate with (Firepower's flamer): what the deck dealt is kept where it
-     * already is one, and swapped for it from the last card back until there are enough - never over a card
-     * another stock has just put there.
+     * Whatever an upgrade stocks every crate with (Firepower's flamer): kept where the deck already dealt one,
+     * and otherwise swapped in for the last card not already a stock's - one, since no crate holds two of a kind
+     * (G0110).
      */
-    private void stock(Crate crate, int size) {
+    private void stock(Crate crate) {
         int locked = 0;
         for (PickupKind kind : deck) {
-            int wanted = Math.min(size, modifiers.crateStock(kind));
-            if (wanted == 0) {
+            if (crate.count == 0 || modifiers.crateStock(kind) <= 0) {
                 continue;
             }
-            int have = 0;
-            for (int i = 0; i < size && have < wanted; i++) {
-                if (crate.get(i) == kind && (locked & (1 << i)) == 0) {
-                    locked |= 1 << i;
-                    have++;
-                }
+            int at = crate.indexOf(kind);
+            if (at >= 0) {
+                locked |= 1 << at;
+                continue;
             }
-            for (int i = size - 1; i >= 0 && have < wanted; i--) {
+            for (int i = crate.count - 1; i >= 0; i--) {
                 if ((locked & (1 << i)) == 0) {
                     crate.put(i, kind);
                     locked |= 1 << i;
-                    have++;
+                    break;
                 }
             }
         }

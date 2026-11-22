@@ -232,8 +232,8 @@ class MissionTest {
                         .count();
                 var furniture = shipped.biomes().of(mission.order().get(p)).furniture();
 
-                assertThat(points).as("seed %d, biome %d", seed, p).isBetween((long) furniture.pointsMin(), (long)
-                        furniture.pointsMax());
+                assertThat(points).as("seed %d, biome %d", seed, p).isBetween((long) furniture.sitesMin(), (long)
+                        furniture.sitesMax());
             }
         }
     }

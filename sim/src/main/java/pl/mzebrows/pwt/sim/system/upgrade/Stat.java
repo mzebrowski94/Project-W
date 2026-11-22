@@ -63,6 +63,11 @@ public enum Stat {
      * number, moved only by a {@code Stock}.
      */
     CRATE_STOCK(Form.COUNT, Reader.SIDE),
+    /**
+     * How many cards one more a crate holds when this commander opens it before any other with it has (G0110). None
+     * unless an upgrade adds some: zero is off. Read where the crate is opened, for the man opening it.
+     */
+    CRATE_EXTRA(Form.COUNT, Reader.UNIT),
     /** How fast a leap flies. Read where a leap leaves the ground, and held for that flight. */
     LEAP_SPEED(Form.SCALE, Reader.UNIT),
     /** How close a man must be before a leaper commits. Read where it decides whether to commit. */

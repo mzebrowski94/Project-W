@@ -74,7 +74,7 @@ meanwhile. The HTML prototype is for looks only.
 - `roster=loose|nest <strain> min max; ...` - loose is put down unaware in packs, a nest is a hole of that strain.
   The ranges are the biome at the first position on medium; tier and ramp scale every count through `Roster.count`
   (pressure = tier `enemyPercent` x (1 + `rampPercent` x position), G0063), and nothing else does.
-- `furniture.pointsMin/Max` (2-3), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, `treesMin/Max` and
+- `furniture.sitesMin/Max` (2-3 sites: control points, or another kind of site in a point's place, G0110), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, `treesMin/Max` and
   `treesByNestMin/Max` (0 for none - the fen alone has trees, G0072), `turretsMin/Max` (0 for none - the plain alone
   has them, G0082), `geysersMin/Max` (0 for none - the cut and the caldera have them, G0089, G0091), and
   `furniture.pickups=pickup <kind> min max; ...`.
@@ -99,12 +99,15 @@ meanwhile. The HTML prototype is for looks only.
   short on 9 seeds of 2000 dealt first. Fold a line of one or two into a neighbour, or drop it. A block must fit on hard: **x1.25 its most if dealt first, x1.625 at the last position** - in
   practice **1-2 holes and at most about 25 loose creatures** a block. Ground that leaves less room (heavy crags,
   houses) holds less: the quarry holds one hole.
-- **Where it goes** (G0068): points one a column band; house stock (crates, then medkits) up to `houseStock` a house;
-  nests; packs; leftover crates by points; turrets by points; medkits anywhere; **food** - anything a creature gains from - on the
+- **Where it goes** (G0068): sites one a column band - a control point in each band no other kind of site takes
+  (G0110); house stock (crates, then medkits) up to `houseStock` a house;
+  nests; packs; turrets by points; medkits anywhere; **food** - anything a creature gains from - on the
   biome's organic ground while there is room; barrels by holes and packs; boulders `rockMargin` off rock; trees as boulders, the first within `treeReach` of each
   nest; rabbits. Geysers (G0089) go after turrets and before medkits, `geyserKeepOff` off points, nests and ways in,
   so what is placed after them keeps off their fire; each one's radius is drawn in its pass, as a trunk is.
-  A block says none of this; it is why a crate or a medkit line fills the houses first.
+  A block says none of this; it is why a crate or a medkit line fills the houses first. A crate line is house stock
+  and nothing else (G0110): what no house takes is not laid, so a biome that lays no house has no crate line - the
+  field's crates are what a taken site leaves.
 - **Porting**: the Adventure biome's own counts, scaled by width (x1.8 - an Adventure biome is 29 columns, a
   mission's 50-58), then **cut to the room** - holes most of all. A range about +-20 % round the count. Drop
   mines, armoury caches and sleeping extras; a turret only as a `turrets` line, by a point.
@@ -174,7 +177,7 @@ None is written per biome; a biome joins every one by being a constant.
   built on **every tier**, held to `StripFaults` (the strip, over the **shipped** pool - a `map` test fixture) and
   `MissionFaults` (G0068: nothing short, points and stock reached from the start, nothing on kept ground, nothing
   hostile near the start or in a house, nests off the passes, points, each other and pickups, a point a band and
-  the last in the last `approachColumns`, crates by points; the finale's set piece and every mouth open and reached,
+  the last in the last `approachColumns`, no biome crate outside a house; the finale's set piece and every mouth open and reached,
   nothing hostile of the last biome in its watch). Also the build budget: a mission's whole world, median
   of 16, under 100 ms (stage 7: about 6 ms). Under `PWT_SWEEP=1` a run, green or red, prints one summary line - seeds, faults,
   ms/build, creatures per biome on hard - and three seeds that deal each biome first, each as its medium and hard
