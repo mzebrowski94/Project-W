@@ -57,6 +57,16 @@ public final class Intent implements Component, Pool.Poolable {
      */
     public boolean dashPressed;
 
+    /** Whether the redeploy input is held this tick (G0109). */
+    public boolean redeploying;
+
+    /**
+     * Whether the redeploy input went down this tick: held now and not held the tick before. Only a press counts, so a
+     * key held from before his window opened - or from before he went down - redeploys nobody until it is let go and
+     * pressed again. Derived as {@link #firePressed} is.
+     */
+    public boolean redeployPressed;
+
     /**
      * The squad order given this tick, or null.
      *
@@ -88,6 +98,7 @@ public final class Intent implements Component, Pool.Poolable {
             boolean newActing,
             boolean newDragging,
             boolean newDashing,
+            boolean newRedeploying,
             @Nullable Order newOrder) {
         this.moveX = newMoveX;
         this.moveY = newMoveY;
@@ -101,6 +112,8 @@ public final class Intent implements Component, Pool.Poolable {
         this.dragging = newDragging;
         this.dashPressed = newDashing && !this.dashing;
         this.dashing = newDashing;
+        this.redeployPressed = newRedeploying && !this.redeploying;
+        this.redeploying = newRedeploying;
         this.order = newOrder;
         this.crateTake = null;
         this.crateClose = false;
@@ -128,6 +141,8 @@ public final class Intent implements Component, Pool.Poolable {
         dragging = false;
         dashing = false;
         dashPressed = false;
+        redeploying = false;
+        redeployPressed = false;
         order = null;
         crateTake = null;
         crateClose = false;

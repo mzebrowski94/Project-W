@@ -68,6 +68,14 @@ class PadControlsTest {
         assertThat(input.dragging()).isFalse();
     }
 
+    /** The same button redeploys him while he is down (G0109): the simulation tells the two apart by his state. */
+    @Test
+    void redeploysWhileTheEastButtonIsHeld() {
+        CommanderInput input = new PadControls(CONTROLS).read(FakeGamepad.xbox().hold(GamepadButton.EAST));
+
+        assertThat(input.redeploying()).isTrue();
+    }
+
     @Test
     void marksAPadsAimAsAnOffsetFromTheCommander() {
         CommanderInput input = new PadControls(CONTROLS).read(FakeGamepad.xbox().push(GamepadAxis.RIGHT_X, 1f));

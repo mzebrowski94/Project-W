@@ -207,6 +207,8 @@ public final class ReadoutWriter {
         };
         if (player.posture == Posture.CASUALTY && VITALITY.has(entity)) {
             player.bleedOut = VITALITY.get(entity).fraction();
+            // Whether he may redeploy now (G0109), as the simulation published it - never worked out here.
+            player.redeployOpen = appearance.redeployOpen;
         }
         if (VITALITY.has(entity)) {
             // A pip per wound he carries and per one he could (G0053); the appearance says which count.

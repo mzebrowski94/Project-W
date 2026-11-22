@@ -37,6 +37,9 @@ public final class PlayerReadout {
     /** How much of his bleed-out is left while he is a casualty, in {@code [0, 1]}. */
     public float bleedOut;
 
+    /** Whether he is down and enough of his bleed-out has run for him to redeploy (G0109): his own prompt's. */
+    public boolean redeployOpen;
+
     /**
      * The wounds he carries on his feet, and how many he can (G0053). Zero wounds while he is down:
      * his bleed-out says more.
@@ -141,6 +144,7 @@ public final class PlayerReadout {
         overheated = false;
         detonating = false;
         bleedOut = 0f;
+        redeployOpen = false;
         wounds = 0;
         maxWounds = 0;
         grenades = 0;
@@ -176,6 +180,7 @@ public final class PlayerReadout {
         overheated = other.overheated;
         detonating = other.detonating;
         bleedOut = other.bleedOut;
+        redeployOpen = other.redeployOpen;
         wounds = other.wounds;
         maxWounds = other.maxWounds;
         grenades = other.grenades;

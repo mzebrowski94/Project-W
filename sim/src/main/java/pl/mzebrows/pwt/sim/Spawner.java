@@ -214,7 +214,8 @@ public final class Spawner {
                         grenade.blastRadius(),
                         grenade.most()));
         entity.add(engine.createComponent(Taking.class));
-        // He can be shot off his feet like his men (G0023); his bleed-out is his own, read only here.
+        // He can be shot off his feet like his men (G0023); his bleed-out is his own, read only here - and so is the
+        // point in it from which he may redeploy (G0109), which no trooper has.
         entity.add(engine.createComponent(Vitality.class)
                 .set(
                         ticks(commander.bleedOutSeconds()),
@@ -223,7 +224,8 @@ public final class Spawner {
                         commander.maxWounds(),
                         ticks(config.wound().graceSeconds()),
                         config.wound().speedFactor(),
-                        config.wound().cooldownFactor()));
+                        config.wound().cooldownFactor())
+                .redeploysAfter(ticks(commander.redeployAfterSeconds())));
         entity.add(engine.createComponent(Action.class).set(config.action().reach()));
         entity.add(engine.createComponent(Drag.class)
                 .set(

@@ -87,6 +87,21 @@ class ControlsConfigTest {
         assertThat(pad.dragTrigger()).isEqualTo(GamepadAxis.NONE);
     }
 
+    /**
+     * Redeploy is the drag's key and the dash's button (G0109), in a context of their own: down, he can neither take
+     * hold of a load nor dash, so the shared binding never means two things at once.
+     */
+    @Test
+    void redeploysOnTheDragsKeyAndTheDashsButton() {
+        ControlsConfig shipped = ControlsConfig.defaults();
+
+        assertThat(shipped.key().redeploy()).isEqualTo(new KeyCode(Input.Keys.F));
+        assertThat(shipped.key().redeploy()).isEqualTo(shipped.key().drag());
+        assertThat(shipped.pad().redeploy()).isEqualTo(GamepadButton.EAST);
+        assertThat(shipped.pad().redeploy()).isEqualTo(shipped.pad().dash());
+        assertThat(shipped.pad().redeployTrigger()).isEqualTo(GamepadAxis.NONE);
+    }
+
     @Test
     void drivesPagesWithEnterEscapeAndThePadsSouthAndEast() {
         ControlsConfig.Ui ui = ControlsConfig.load().ui();

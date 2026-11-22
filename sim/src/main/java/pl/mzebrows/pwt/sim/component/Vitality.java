@@ -43,6 +43,12 @@ public final class Vitality implements Component, Pool.Poolable {
     /** How long he has before he bleeds out, once he goes down, in ticks. Configuration, not state. */
     public int bleedOutTicks;
 
+    /**
+     * How much of his bleed-out must have run before he may redeploy - end it himself, as running out would (G0109) -
+     * in ticks. Zero is never: a trooper's. Configuration, set only on a commander by {@link #redeploysAfter}.
+     */
+    public int redeployAfterTicks;
+
     /** How long somebody has to stand over him to put him back on his feet, in ticks. Configuration. */
     public int stabiliseTicks;
 
@@ -103,6 +109,7 @@ public final class Vitality implements Component, Pool.Poolable {
         this.graceTicks = newGraceTicks;
         this.woundedPace = newWoundedPace;
         this.woundedCooldown = newWoundedCooldown;
+        this.redeployAfterTicks = 0;
         this.begun = false;
         this.remaining = 0;
         this.stabilised = 0;
@@ -110,6 +117,21 @@ public final class Vitality implements Component, Pool.Poolable {
         this.graceRemaining = 0;
         this.mendTicks = 0;
         return this;
+    }
+
+    /** Lets him redeploy once this many ticks of his bleed-out have run (G0109), and returns this, for fluent spawning. */
+    public Vitality redeploysAfter(int ticks) {
+        this.redeployAfterTicks = ticks;
+        return this;
+    }
+
+    /**
+     * Whether he may redeploy now (G0109): down, with time still left, and at least {@link #redeployAfterTicks} of his
+     * bleed-out run. Counted in the bleed-out's own hundredths, so a haul that stops his clock holds the window shut
+     * until enough of it has run in all.
+     */
+    public boolean redeployOpen() {
+        return redeployAfterTicks > 0 && active() && bleedOutTicks * TICK - remaining >= redeployAfterTicks * TICK;
     }
 
     /**
@@ -263,6 +285,7 @@ public final class Vitality implements Component, Pool.Poolable {
         graceTicks = 0;
         woundedPace = 1f;
         woundedCooldown = 1f;
+        redeployAfterTicks = 0;
         begun = false;
         remaining = 0;
         stabilised = 0;

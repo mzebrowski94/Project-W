@@ -118,6 +118,8 @@ final class ClientArchitectureTest {
             CLIENT + ".draw.Drawn",
             // How the action's brackets stand round a thing, which its prompt sits above (G0098).
             CLIENT + ".draw.ActionMark",
+            // How high the down mark stands over a man who is down, which the redeploy prompt sits above (G0109).
+            CLIENT + ".draw.DownMark",
             // How much of the dev overlay is on, which lays the top bar out.
             CLIENT + ".play.OverlayMode",
             // The one way to read a config file.

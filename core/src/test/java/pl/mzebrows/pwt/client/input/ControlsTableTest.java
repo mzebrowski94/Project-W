@@ -33,6 +33,7 @@ class ControlsTableTest {
                 .anyMatch(line -> line.matches("GRENADE +Q +RB"))
                 .anyMatch(line -> line.matches("DRAG A LOAD +F +-"))
                 .anyMatch(line -> line.matches("DASH +SPACE L-SHIFT +B"))
+                .anyMatch(line -> line.matches("REDEPLOY \\(DOWN\\) +F +B"))
                 .anyMatch(line -> line.matches("ORDER: FOLLOW ME +1 +D-PAD UP"))
                 .anyMatch(line -> line.matches("UPGRADES +C +Y"))
                 .anyMatch(line -> line.matches("SHUT A CRATE +X +D-PAD DOWN"))

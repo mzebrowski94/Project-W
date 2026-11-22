@@ -66,6 +66,7 @@ public final class PadControls {
         boolean acting = held(pad, bindings.action(), bindings.actionTrigger());
         boolean dragging = held(pad, bindings.drag(), bindings.dragTrigger());
         boolean dashing = held(pad, bindings.dash(), bindings.dashTrigger());
+        boolean redeploying = held(pad, bindings.redeploy(), bindings.redeployTrigger());
 
         zoomToggled = wentDown(pad, bindings.zoom(), bindings.zoomTrigger(), zoomWasDown);
         zoomWasDown = held(pad, bindings.zoom(), bindings.zoomTrigger());
@@ -86,7 +87,8 @@ public final class PadControls {
                 acting,
                 dragging,
                 true,
-                dashing);
+                dashing,
+                redeploying);
     }
 
     /**

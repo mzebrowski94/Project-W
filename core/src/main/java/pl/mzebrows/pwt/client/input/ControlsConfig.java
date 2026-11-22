@@ -46,6 +46,8 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
      * @param action key that acts on whatever is in reach
      * @param drag key that takes hold of a load, or lets go
      * @param dash, dashAlias the keys that dash (G0107), two for one action - either works
+     * @param redeploy key that redeploys him while he is down and his window is open (G0109). The drag's key: down, he
+     *     can drag nothing, so the two never meet
      * @param zoom key that pulls the view back and puts it again
      * @param rollCall key that swaps the bottom bar between the players' panels and the roll call
      * @param orderFollowMe, orderForward, orderDefence, orderCancel the four order keys. Alpha-phase
@@ -70,6 +72,7 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
             KeyCode drag,
             KeyCode dash,
             KeyCode dashAlias,
+            KeyCode redeploy,
             KeyCode zoom,
             KeyCode rollCall,
             KeyCode orderFollowMe,
@@ -98,6 +101,8 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
      *     pad to shoot
      * @param dash, dashTrigger what dashes (G0107). The pad's back paddle has no button of its own here: a pad's own
      *     software maps it to {@code EAST}, which is what this is bound to
+     * @param redeploy, redeployTrigger what redeploys him while he is down and his window is open (G0109). The dash's
+     *     button: down, he cannot dash, so the two never meet
      * @param zoom, zoomTrigger what pulls the view back. Shared, like the view itself: any player's press
      *     moves everybody's camera
      * @param orderFollowMe, orderForward, orderDefence, orderCancel the four orders, on the d-pad
@@ -131,6 +136,8 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
             GamepadAxis dragTrigger,
             GamepadButton dash,
             GamepadAxis dashTrigger,
+            GamepadButton redeploy,
+            GamepadAxis redeployTrigger,
             GamepadButton zoom,
             GamepadAxis zoomTrigger,
             GamepadButton pause,

@@ -43,7 +43,8 @@ public final class KeyControls {
                 held.held(bindings.action()),
                 held.held(bindings.drag()),
                 false,
-                held.held(bindings.dash()) || held.held(bindings.dashAlias()));
+                held.held(bindings.dash()) || held.held(bindings.dashAlias()),
+                held.held(bindings.redeploy()));
     }
 
     /** One way for two keys, the other way for two others; both at once cancel. */

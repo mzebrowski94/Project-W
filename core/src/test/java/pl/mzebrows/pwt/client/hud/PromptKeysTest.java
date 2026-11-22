@@ -19,6 +19,7 @@ class PromptKeysTest {
         assertThat(keys.of(PromptKind.ACTION)).isEqualTo("E");
         assertThat(keys.of(PromptKind.STRIKE)).isEqualTo("RMB");
         assertThat(keys.of(PromptKind.UPGRADE)).isEqualTo("C");
+        assertThat(keys.of(PromptKind.REDEPLOY)).isEqualTo("F");
     }
 
     @Test
@@ -27,6 +28,7 @@ class PromptKeysTest {
         assertThat(keys.of(PromptKind.ACTION)).isEqualTo("A");
         assertThat(keys.of(PromptKind.STRIKE)).isEqualTo("LT");
         assertThat(keys.of(PromptKind.UPGRADE)).isEqualTo("Y");
+        assertThat(keys.of(PromptKind.REDEPLOY)).isEqualTo("B");
 
         keys.follow(1, true);
         assertThat(keys.of(PromptKind.ACTION)).isEqualTo("Cross");

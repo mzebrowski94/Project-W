@@ -213,6 +213,51 @@ class PromptsTest {
         assertThat(prompts.kind(2)).isEqualTo(PromptKind.NONE);
     }
 
+    /** Down, his own machine prompts redeploy over him once his window is open, and nothing before (G0109). */
+    @Test
+    void promptsRedeployOverAManWhoIsDownOnceHisWindowIsOpenAndNothingBefore() {
+        PlayerReadout player = standing(0, 10L);
+        player.posture = Posture.CASUALTY;
+
+        prompts.update(readout, EVERYBODY, FRAME);
+        assertThat(prompts.kind(0)).isEqualTo(PromptKind.NONE);
+
+        player.redeployOpen = true;
+        prompts.update(readout, EVERYBODY, FRAME);
+
+        assertThat(prompts.kind(0)).isEqualTo(PromptKind.REDEPLOY);
+        assertThat(prompts.anchor(0)).isEqualTo(10L);
+        assertThat(prompts.verb(0)).isEqualTo("ui.action.REDEPLOY");
+        assertThat(prompts.hold(0)).isFalse();
+    }
+
+    /** Prompts are this machine's (G0098): a down man played elsewhere gets none here - his down mark says it all. */
+    @Test
+    void promptsNoRedeployForAManPlayedOnAnotherMachine() {
+        PlayerReadout player = standing(1, 11L);
+        player.posture = Posture.CASUALTY;
+        player.redeployOpen = true;
+
+        prompts.update(readout, slot -> slot == 0, FRAME);
+
+        assertThat(prompts.kind(1)).isEqualTo(PromptKind.NONE);
+    }
+
+    /** What he could act on before he went down is no prompt now: down, redeploy is the only one. */
+    @Test
+    void promptsOnlyRedeployWhileHeIsDown() {
+        PlayerReadout player = standing(0, 10L);
+        player.posture = Posture.CASUALTY;
+        player.redeployOpen = true;
+        player.action = ActionKind.OPEN_CRATE;
+        player.subject = 20L;
+        player.pinned = true;
+
+        prompts.update(readout, EVERYBODY, FRAME);
+
+        assertThat(prompts.kind(0)).isEqualTo(PromptKind.REDEPLOY);
+    }
+
     @Test
     void stacksThePromptsOnOneSubjectLowestSlotFirst() {
         for (int slot : new int[] {3, 1, 2}) {

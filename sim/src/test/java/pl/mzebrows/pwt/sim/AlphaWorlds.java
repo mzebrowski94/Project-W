@@ -284,6 +284,9 @@ public final class AlphaWorlds {
      */
     public static final float COMMANDER_BLEED_OUT = 1f;
 
+    /** Half of his bleed-out, as what ships: how much of it must run before he may redeploy (G0109). */
+    public static final float COMMANDER_REDEPLOY_AFTER = 0.5f;
+
     /** How many shots one pull of a scattering gun sends in the fixtures. Small enough to count. */
     public static final int PELLETS = 3;
 
@@ -971,6 +974,7 @@ public final class AlphaWorlds {
                         COMMANDER_SPEED,
                         COMMANDER_MAX_WOUNDS,
                         COMMANDER_BLEED_OUT,
+                        COMMANDER_REDEPLOY_AFTER,
                         DEATH_THROES,
                         RESPAWN_DELAY,
                         RESPAWN_SHIELD,

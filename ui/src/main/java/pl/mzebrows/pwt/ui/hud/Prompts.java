@@ -9,7 +9,8 @@ import pl.mzebrows.pwt.sim.def.ActionKind;
 /**
  * The one **prompt** each commander played on this machine is shown, chosen once a frame from the {@link
  * Readout} (G0098): the strike while he is pinned - an ant's pin, never a leech's cling - else what the action
- * key would do, else his upgrade for a few seconds after he earns one. What it says, whether it is a hold and how
+ * key would do, else his upgrade for a few seconds after he earns one; while he is down, redeploy once his window is
+ * open (G0109), and nothing else. What it says, whether it is a hold and how
  * far through, and what it is drawn over - by handle, the simulation's own choice of subject; nothing here looks
  * for one.
  *
@@ -85,6 +86,7 @@ public final class Prompts {
         return switch (kinds[slot]) {
             case STRIKE -> "ui.action.STRIKE";
             case UPGRADE -> count(slot) > 0 ? "ui.action.UPGRADES" : "ui.action.UPGRADE";
+            case REDEPLOY -> "ui.action.REDEPLOY";
             case ACTION, NONE ->
                 switch (actions[slot]) {
                     case NONE -> "ui.action.NONE";
@@ -147,8 +149,18 @@ public final class Prompts {
         actions[slot] = ActionKind.NONE;
         anchors[slot] = Handles.NOBODY;
         fills[slot] = 0f;
+        if (!local) {
+            return;
+        }
+        if (player.posture == Posture.CASUALTY) {
+            // Down, the one thing he can do is give up the rest of his bleed-out, once enough of it has run (G0109).
+            if (player.redeployOpen) {
+                set(slot, PromptKind.REDEPLOY, player.self);
+            }
+            return;
+        }
         boolean up = player.posture == Posture.STANDING || player.posture == Posture.ABOARD;
-        if (!local || !up) {
+        if (!up) {
             return;
         }
         if (player.pinned) {
