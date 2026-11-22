@@ -82,6 +82,17 @@ public final class Wander implements Component, Pool.Poolable {
         return this;
     }
 
+    /**
+     * Makes its patch a room (G0112): centred here, no wider than {@code roam}, and rooted - it never drifts. Called
+     * once, at the spawn of a house pack's creature.
+     */
+    public Wander confine(float x, float y, float roam) {
+        anchor(x, y);
+        this.radius = Math.min(radius, roam);
+        this.driftPerStop = 0f;
+        return this;
+    }
+
     /** Sends it somewhere, and starts the clock on how long it will keep trying to get there. */
     public void walkTo(float x, float y) {
         this.targetX = x;

@@ -1090,6 +1090,9 @@ public final class AlphaWorlds {
                         // A plain strain that does not slither: the fixtures about one switch it on (G0095).
                         .put(UnitKind.SNAKE, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.SNAKE))
                         .put(UnitKind.WORM, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.WORM))
+                        // A plain strain, with no barrage, so a fixture arming every strain arms it too; the tests of
+                        // the jaguar take it as it ships (G0112).
+                        .put(UnitKind.JAGUAR, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.JAGUAR))
                         .build(),
                 onShipped(
                                 PickupKind.class,

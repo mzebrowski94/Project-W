@@ -64,7 +64,8 @@ class DefsTest {
                         strain(RADIUS * 2f, Look.SLINGER),
                         strain(RADIUS, Look.MAGMA_SPITTER),
                         strain(RADIUS, Look.SNAKE),
-                        strain(RADIUS, Look.WORM));
+                        strain(RADIUS, Look.WORM),
+                        strain(RADIUS, Look.JAGUAR));
     }
 
     @Test
@@ -90,6 +91,7 @@ class DefsTest {
                 .put(UnitKind.MAGMA_SPITTER, strain(RADIUS, Look.MAGMA_SPITTER))
                 .put(UnitKind.SNAKE, strain(RADIUS, Look.SNAKE))
                 .put(UnitKind.WORM, strain(RADIUS, Look.WORM))
+                .put(UnitKind.JAGUAR, strain(RADIUS, Look.JAGUAR))
                 .build();
     }
 

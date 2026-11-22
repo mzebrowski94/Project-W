@@ -1,6 +1,6 @@
 # G0068: A biome is populated by rules in order, never by coordinates
 
-**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has; amended by G0082: turrets by points; amended by G0089: geysers, kept off points, nests and ways in; amended by G0110: a biome counts sites, and crates are only its houses' stock; amended by G0111: a worked site in its house first
+**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has; amended by G0082: turrets by points; amended by G0089: geysers, kept off points, nests and ways in; amended by G0110: a biome counts sites, and crates are only its houses' stock; amended by G0111: a worked site in its house first; amended by G0112: a house may hold a house pack
 
 **Trigger.** Changing where anything a biome's roster or furniture counts is put down, the order it goes down in,
 what a house holds, or what happens when a rule cannot be met.
@@ -50,7 +50,7 @@ builds a field a biome for a measure the player does not walk by.
 **No:** *Nests guarding points.* Taking ground would always wake a hole on the spot; a point is kept off nests by more
 than its own rouse.
 
-**No:** *A pack waiting inside a house*, or *a point inside a house.* A house is a cache, and its door is opened
+**No:** *A (loose) pack waiting inside a house*, or *a point inside a house.* (A house pack is G0112's.) A house is a cache, and its door is opened
 rather than fought through.
 
 **No:** *Silently placing fewer.* A full biome and a broken rule look the same to a caller handed no answer.
@@ -77,3 +77,11 @@ A biome's worked sites - a mainframe - are put down first of all, before its poi
 biome's own stream, in a house of the biome, on a tile beside a wall and clear of its doorways; each takes the column
 band it stands in, and the points keep `pointApart` off it, nests `pointKeepOff` and geysers `geyserKeepOff`. The
 house's stock is laid round it.
+
+## Amended by G0112
+
+A house may hold a **house pack**: each house of a biome - never a gatehouse - holds a pack of each of its roster's
+`house` lines on `sim.mission.placement.housePackChance`, rolled from the biome's own stream, laid inside it straight
+after its stock, off its doorways; only in a house wholly `startKeepOff` off the start and outside the finale's watch.
+Its creatures wander only inside it until they notice somebody (G0112). Points and loose packs still never stand in a
+house: *a pack waiting inside a house* below now means a loose one.

@@ -838,4 +838,45 @@ class SimConfigTest {
         assertThat(magmaSpit.cooldownSeconds()).isGreaterThan(spit.cooldownSeconds());
         assertThat(magma.look()).isNotEqualTo(spitter.look());
     }
+
+    /**
+     * The jaguar (G0112, provisional, for review): a runner's way of fighting - its weave, dodge, approach and avoidance
+     * - on a grunt's body, a third faster, far tougher, with a quicker leap; it notices as a grunt does, not as a runner,
+     * so a house's jaguars break out only for a man near it; and a locked burst of three globs that harm nobody and
+     * leave the sludger's glue.
+     */
+    @Test
+    void makesTheJaguarARunnerOnAGruntsBodyThatSpitsHarmlessGlue() {
+        SimConfig config = SimConfig.defaults();
+        UnitDef jaguar = config.units().of(UnitKind.JAGUAR);
+        UnitDef runner = config.units().of(UnitKind.RUNNER);
+        UnitDef grunt = config.units().of(UnitKind.GRUNT);
+        WeaponDef jaguarGlob = config.weapons().of(jaguar.barrage().stream().gun());
+        WeaponDef glob = config.weapons().of(WeaponKind.GLOB);
+
+        assertThat(jaguar.radius()).isEqualTo(grunt.radius());
+        assertThat(jaguar.speed()).isCloseTo(runner.speed() * 1.3f, Offset.offset(1e-4f));
+        assertThat(jaguar.health()).isGreaterThan(grunt.health());
+        assertThat(jaguar.weave()).isEqualTo(runner.weave());
+        assertThat(jaguar.dodge()).isEqualTo(runner.dodge());
+        assertThat(jaguar.approach()).isEqualTo(runner.approach());
+        assertThat(jaguar.avoidance()).isEqualTo(runner.avoidance());
+        assertThat(jaguar.leap().speed()).isGreaterThan(runner.leap().speed());
+        assertThat(jaguar.leap().cooldownSeconds()).isLessThan(runner.leap().cooldownSeconds());
+        assertThat(jaguar.leap().sequenceLength()).isEqualTo(runner.leap().sequenceLength());
+        assertThat(jaguar.perception().detectionRange())
+                .isEqualTo(grunt.perception().detectionRange());
+        assertThat(jaguar.perception().loseRange()).isEqualTo(grunt.perception().loseRange());
+        assertThat(jaguar.barrage().stream().gun()).isEqualTo(WeaponKind.JAGUAR_GLOB);
+        assertThat(jaguar.barrage().stream().salvos()).isEqualTo(3);
+        assertThat(jaguar.barrage().stream().locked()).isTrue();
+        assertThat(jaguar.barrage().stream().stepped()).isFalse();
+        assertThat(jaguar.barrage().holdsStill()).isTrue();
+        assertThat(jaguarGlob.damage()).isZero();
+        assertThat(jaguarGlob.harm()).isEqualTo(Harm.NONE);
+        assertThat(jaguarGlob.slicks()).isEqualTo(glob.slicks());
+        assertThat(jaguarGlob.projectileRadius()).isLessThan(glob.projectileRadius());
+        assertThat(jaguarGlob.projectileSpeed()).isGreaterThan(glob.projectileSpeed());
+        assertThat(jaguar.barrage().reach()).isLessThan(jaguar.radius() + jaguarGlob.projectileRange());
+    }
 }

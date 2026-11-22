@@ -115,8 +115,7 @@ final class MissionFaults {
             }
         }
         for (Placed placed : mission.placed()) {
-            boolean hostile = placed instanceof Placed.Nest || placed instanceof Placed.Loose;
-            if (hostile && placed.biome() == finale - 1 && between(placed, hold) <= hold.watch()) {
+            if (hostile(placed) && placed.biome() == finale - 1 && between(placed, hold) <= hold.watch()) {
                 faults.add(placed + " is " + (int) between(placed, hold) + " from the finale's post, inside its watch");
             }
         }
@@ -148,8 +147,10 @@ final class MissionFaults {
         for (Placed placed : mission.placed()) {
             int col = map.colAt(placed.x());
             int row = map.rowAt(placed.y());
-            boolean stock =
-                    (placed instanceof Placed.Pickup || placed instanceof Placed.Worked) && inAHouse(mission, col, row);
+            boolean stock = (placed instanceof Placed.Pickup
+                            || placed instanceof Placed.Worked
+                            || placed instanceof Placed.Housed)
+                    && inAHouse(mission, col, row);
             if (mission.laid().kept(col, row) && !stock) {
                 faults.add(placed + " stands on kept ground at (" + col + "," + row + ")");
             }
@@ -157,11 +158,28 @@ final class MissionFaults {
         return faults;
     }
 
-    /** No point, nest or creature in a house: a house is a cache you open. */
+    /**
+     * No point, nest or loose creature in a house: a house is a cache you open - and what it holds that is hostile is a
+     * house pack, laid inside one of its own biome's houses and never a gatehouse (G0112).
+     */
     static List<String> houses(Mission mission) {
         TileMap map = mission.laid().map();
         List<String> faults = new ArrayList<>();
         for (Placed placed : mission.placed()) {
+            if (placed instanceof Placed.Housed housed) {
+                House house = houseAt(mission, map.colAt(housed.x()), map.rowAt(housed.y()));
+                TileRect rect = housed.biome() < mission.order().size()
+                        ? mission.laid().biomes().get(housed.biome())
+                        : null;
+                if (house == null
+                        || rect == null
+                        || !rect.contains(house.walls().col(), house.walls().row())
+                        || !rect.contains(
+                                house.walls().endCol() - 1, house.walls().endRow() - 1)) {
+                    faults.add(housed + " is not inside a house of its biome");
+                }
+                continue;
+            }
             boolean barred =
                     placed instanceof Placed.Point || placed instanceof Placed.Nest || placed instanceof Placed.Loose;
             if (barred && inAHouse(mission, map.colAt(placed.x()), map.rowAt(placed.y()))) {
@@ -177,8 +195,7 @@ final class MissionFaults {
         TileMap map = mission.laid().map();
         List<String> faults = new ArrayList<>();
         for (Placed placed : mission.placed()) {
-            if ((placed instanceof Placed.Nest || placed instanceof Placed.Loose)
-                    && distance(map, start, placed) < rules.startKeepOff()) {
+            if (hostile(placed) && distance(map, start, placed) < rules.startKeepOff()) {
                 faults.add(placed + " is " + (int) distance(map, start, placed) + " from the start");
             }
         }
@@ -427,6 +444,7 @@ final class MissionFaults {
             case Placed.Point _, Placed.Hold _ -> config.controlPoint().radius();
             case Placed.Nest _ -> config.nest().radius();
             case Placed.Loose loose -> config.unit(loose.strain()).radius();
+            case Placed.Housed housed -> config.unit(housed.strain()).radius();
             case Placed.Pickup pickup -> config.pickup(pickup.kind()).radius();
             case Placed.Barrel _ -> config.pickup(PickupKind.BARREL).radius();
             case Placed.Boulder _ -> config.obstacle().radius();
@@ -438,6 +456,11 @@ final class MissionFaults {
             case Placed.Mine _ -> config.mine().radius();
             case Placed.Worked worked -> config.workedSite(worked.kind()).radius();
         };
+    }
+
+    /** Something hostile a biome put down: a nest, a loose creature, or one of a house pack (G0112). */
+    private static boolean hostile(Placed placed) {
+        return placed instanceof Placed.Nest || placed instanceof Placed.Loose || placed instanceof Placed.Housed;
     }
 
     /** A site of a biome, whatever its kind (G0110): a control point or a worked site in a point's place. */

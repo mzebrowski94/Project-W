@@ -54,6 +54,8 @@ public enum Look {
      * and, while it comes up, the maw - a ring of teeth pointing inwards, shrinking onto it, one fewer a tooth lost.
      */
     WORM,
+    /** A grunt-sized body in a strong purple, deeper than the spitter's: a runner's line, and it fires (G0112). */
+    JAGUAR,
     /** Ground a squad takes by standing on it. */
     CONTROL_POINT,
     /** Ground a level says you must hold, and the other side walks at. */
@@ -116,6 +118,8 @@ public enum Look {
     SPEW,
     /** What a sludger spits: kin to the glue it leaves, brighter, because it is still flying. */
     GLOB,
+    /** What a jaguar spits: drawn as a glob is, in the jaguar's purple (G0112). */
+    JAGUAR_GLOB,
     /**
      * One circle of ground a frog has ruined.
      *
