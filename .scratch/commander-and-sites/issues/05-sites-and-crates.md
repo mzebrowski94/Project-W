@@ -1,7 +1,7 @@
 # Sites, and the crates a taken site leaves
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: none
 Spec: [spec.md](../spec.md) section 5
@@ -154,3 +154,37 @@ This ticket lays the ground for tickets 06 (mainframe), 09 (relic) and 10 (rift)
 - G0110 and the rows are written, and the amended records marked.
 - `verify.sh` is green and the branch is committed.
 - The final message lists keys, including the rename.
+
+## Answer
+
+Built (merged into integration), G0110 (amends G0056, G0068, G0078):
+- **Site seam:** `Site` component (`taken`) on every control point; draft count and goal line count sites. `Placement.Biome.sites(count, others, rng)` lays a point in every band whose bit in `others` is unset (`NO_OTHER_SITES` today; 06/09 fill it).
+- **Shared step:** `Sites` in `system/level`, `Sites.taken(site, at, reach, laysCrates)`: marks taken, credits commanders on it, lays caches, medkit, then crates. `ControlPointSystem` holds one.
+- **Crates by seated count** (1,2,3,5,6,8 seated -> 1,1,2,2,3,3).
+- **Furniture crates house stock only**; by-a-point pass deleted; sweep rule "no biome crate outside a house".
+- **No duplicates**; short deck gives a smaller crate; Firepower's flamer only if none dealt.
+- **Looter:** `UpgradeKind.LOOTER`, `Stat.CRATE_EXTRA`, `Crate.looted`, fixture, name, effect line.
+- **Docs:** G0110 + index; G0056/G0068/G0078 amended by G0110; three enforced invariant rows (pickups x2, progression); glossary crate, control point, grenade cache; `components.md`; `new-biome` skill.
+- Sweeps: StripSweep 2000 seeds 0 faults; MissionSweep 2192 seeds 0 faults; `BiomeMeasureTest` green.
+
+Provisional decisions (AFK run, for review; also in G0110):
+1. Shared step as a helper object each site-holding system holds. Turned down: a polling system (a tick late); a static helper (families passed every call).
+2. `Site` as a component. Turned down: counting `ControlPoint.captured`; a counter on `Level`.
+3. Finale hold point carries a `Site` but lays no crates.
+4. `grenadeCaches`/`medkitChance` stay under `sim.controlPoint.*` (moving would change `ControlPointTest`, kept unchanged).
+5. Crates laid after caches and medkit; a cornered site lays fewer.
+6. A shuffle left with only kinds already in the crate is reshuffled; smaller crate only when the whole deck lacks another kind.
+7. Looter fires only on the opening tick; `looted` set even when full. Turned down: leaving a full crate unlooted.
+8. Looter tier 1, weight 10; card `OWN +1 CRATE CARD`.
+9. Seam marks bands with a bit mask. Turned down: a site-kind enum (06's table).
+10. Readout keeps `pointsTaken`/`pointsTotal` names, now counting sites.
+
+Follow-ups: Firepower rank 2 no longer adds a second flamer (its stock line overstates rank 2; numbers left for Mateusz). Crate lines overstate with `houseStock=2` (quarry `4 5` lays at most 4; header says so). Relic-only desert would crash `Placement.turrets` (`points.size()` 0) - ticket 09 guards it. `Sites` package-private; a port if 06's system lives elsewhere.
+
+Keys:
+- `assets/sim/level.properties`: `sim.site.crates.byPlayers=1,3,6,10` (new).
+- `assets/sim/biomes.properties`: `furniture.pointsMin/pointsMax` -> `sitesMin/sitesMax` in all 9 biomes (2/3); `pickup crate` dropped from cut, fen, caldera, desert.
+- `assets/sim/upgrades.properties`: `sim.upgrade.looter.*` (player, weight 10, ranks 1, tier 1, `count crate_extra chooser 1`); `sim.upgrade.stat.crate_extra.*` 0/0/0.
+- `assets/i18n/ui.properties`: `ui.upgrade.LOOTER`, `ui.effect.count.CRATE_EXTRA`.
+
+Judge by: `./gradlew lwjgl3:run --args="--mission=MH3K-6GPX --pads=all"` (quarry first, always a house; hard `HH3K-6GPU`).
