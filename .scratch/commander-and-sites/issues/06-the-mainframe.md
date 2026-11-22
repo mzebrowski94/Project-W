@@ -1,7 +1,7 @@
 # The mainframe
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: 05
 Spec: [spec.md](../spec.md) section 6
@@ -147,3 +147,37 @@ Also a mission code with a mainframe in an early biome; print it.
 - G0111 and the rows are written.
 - `verify.sh` is green and the branch is committed.
 - The final message lists the keys.
+
+## Answer
+
+Built (merged into integration), G0111 (amends G0068, G0098):
+- **Worked-site table:** `WorkedSiteKind`/`WorkedSiteDef` (`sim.site.<kind>.*`), `WorkedSite` component; `MAINFRAME` now, 09's relic is one more row with its own action (`EXTRACT`, `ui.action.EXTRACT.working`).
+- **Mainframe:** solid, immovable, unbreakable, neutral; shots and blasts stop on it.
+- **`WorkedSiteSystem`** after `DoorSystem` (after `ActionSystem` and `DamageSystem`: hands and wounds of the tick known; before draft and objectives: taken counts this tick). Door's work template; letting go, out of reach, dash or wound resets; one tick of work per tick; each fresh attempt rouses once; taken through `Sites.taken`, never again.
+- **`ActionKind.DOWNLOAD`:** `HOLD [E] DOWNLOAD`, then `DECRYPTING…` with fill; charge on the mainframe for everyone; brackets include it.
+- **Troopers:** `TrooperObjective` nearest untaken site by route; one works, up to four watch sectors, a spare sent on.
+- **Placement:** first pass in a biome, its own stream; own house only, 50 %; against a wall clear of both doorways; takes its band; house stock round it.
+- **Look:** dark-grey cabinet, black screen, red X then green tick.
+- **Objective ring** (asked by Mateusz with the ticket): white/yellow stripes turning and pulsing round every untaken site, incl. the finale hold point; from Site state, same on every machine.
+- Mainframe counts for take-every-point; caches and crates never on its body; mission sweep counts sites; two `MissionTest` tests now count sites.
+- **Docs:** G0111 + index; G0068/G0098 amended by; two enforced rows in `squad-and-objectives.md`; glossary **worked site**, **objective ring**; input map E row; `components.md`, `simulation-order.md`.
+
+Provisional decisions (AFK run, for review; also in G0111):
+1. Radius 2.4 (4.8 across): "about 2.5 across" read as the radius key; 1.25 is smaller than a trooper. 2.4 not 2.5 so it clears the wall tile. Turned down: radius 1.25; flush to the wall.
+2. Wall spot: middle of any inside-wall tile, a man's width plus its body from every doorway. Turned down: opposite wall only; house centre.
+3. Troopers: nearest site by route, mainframe and point alike. Turned down: preferring the mainframe.
+4. After download the squad holds round it as round a taken point. Turned down: leaving at once.
+5. Trooper "at" a mainframe within edge + body + arm. Turned down: own radius key.
+6. Chip fill from the man's own action progress, set to the mainframe's while held. Turned down: chip reading the site (no `DECRYPTING…` switch).
+7. Mainframe counts for take-every-point. Turned down: a new objective.
+8. Reinforcements still only beside control points (a replaced point means fewer spares). Turned down: men by the mainframe.
+9. Turrets still only beside control points.
+10. Ring hidden once taken (turned down: dimmed); under the men (turned down: over); spin and pulse follow `graphic.ui.motionScale`; rings the finale hold point too.
+11. Body colour `graphic.color.mainframe` instead of `graphic.site.mainframe.body` (looks take a palette colour; two keys would drift).
+
+Keys:
+- `assets/sim/level.properties`: `sim.site.mainframe.radius=2.4`, `.workSeconds=6`, `.rouseRadius=58`, `.chance=50`, `.housed=true`, `.action=download`, `.look=mainframe`.
+- `assets/graphic.properties`: `graphic.color.mainframe=3c4046ff`; `graphic.site.ring.first=fffbe8ff`, `.second=ffd21fff`, `.stripes=24`, `.pieces=2`, `.width=0.6`, `.margin=0.8`, `.spinDegrees=30`, `.pulseHz=0.8`, `.pulseDepth=0.35`; `graphic.site.mainframe.screen=0a0c0eff`, `.locked=e02a2aff`, `.done=3ad06aff`, `.width=1.9`, `.height=1.5`, `.screenWidth=1.2`, `.screenHeight=0.8`, `.stroke=0.14`.
+- `assets/i18n/ui.properties`: `ui.action.DOWNLOAD=DOWNLOAD`, `ui.action.DOWNLOAD.working=DECRYPTING…`.
+
+Judge by: `./gradlew lwjgl3:run --args="--scenario=mainframe"` (house, shut door, squad of six, grunts, a ringed point in the yard); `--mission=MHPC-VVKG` (mainframe in brake, first biome; hard `HHPC-VVKD`).
