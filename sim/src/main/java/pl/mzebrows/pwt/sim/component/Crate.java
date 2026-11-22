@@ -44,6 +44,12 @@ public final class Crate implements Component, Pool.Poolable {
     /** The opener's wounds as of the last tick, so a new one closes it. */
     public int openerWounds;
 
+    /**
+     * Whether a commander holding Looter has opened it (G0110): it gave its one more card then, and never gives
+     * another, whoever's Looter opens it next.
+     */
+    public boolean looted;
+
     /** Whether somebody has it open. */
     public boolean open() {
         return openedBy != NOBODY;
@@ -104,6 +110,7 @@ public final class Crate implements Component, Pool.Poolable {
         second = PickupKind.MEDKIT;
         third = PickupKind.MEDKIT;
         fourth = PickupKind.MEDKIT;
+        looted = false;
         close();
     }
 }

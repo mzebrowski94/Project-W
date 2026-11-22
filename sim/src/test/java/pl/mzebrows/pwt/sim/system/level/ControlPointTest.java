@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Appearance;
@@ -29,6 +31,7 @@ import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.component.Respawning;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -505,7 +508,7 @@ class ControlPointTest {
         int yes = 0;
         for (long seed = 0; seed < SEEDS; seed++) {
             for (long point = 1; point <= POINTS; point++) {
-                if (ControlPointSystem.laysAMedkit(seed, point, SHIPPED_MEDKIT_CHANCE / 100f)) {
+                if (Sites.laysAMedkit(seed, point, SHIPPED_MEDKIT_CHANCE / 100f)) {
                     yes++;
                 }
             }
@@ -513,6 +516,68 @@ class ControlPointTest {
 
         assertThat(yes / (float) (SEEDS * POINTS))
                 .isCloseTo(SHIPPED_MEDKIT_CHANCE / 100f, Offset.offset(CHANCE_TOLERANCE));
+    }
+
+    /** G0110: a taken site leaves crates by how many are seated, over the thresholds 1, 3, 6, 10. */
+    @ParameterizedTest
+    @CsvSource({"1, 1", "2, 1", "3, 2", "5, 2", "6, 3", "8, 3"})
+    void laysCratesBesideItBySeatedCountWhenItIsTaken(int players, int crates) {
+        Simulation simulation = new Simulation(config(), players);
+        simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        for (int slot = 1; slot < players; slot++) {
+            simulation.spawnCommander(ELSEWHERE, ELSEWHERE - slot * 3f, slot);
+        }
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        TileRect reach = TileRect.around(simulation.map(), MIDDLE, MIDDLE, POINT_REINFORCEMENT_RADIUS);
+        assertThat(lying(simulation, PickupKind.CRATE)).hasSize(crates).allSatisfy(crate -> {
+            Position at = crate.getComponent(Position.class);
+            assertThat(distance(at, MIDDLE, MIDDLE)).isGreaterThan(POINT_RADIUS);
+            assertThat(reach.contains(
+                            simulation.map().colAt(at.x), simulation.map().rowAt(at.y)))
+                    .isTrue();
+        });
+    }
+
+    @Test
+    void laysItsCratesOnceAndNeverAgainWhileItIsHeld() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        simulation.spawnControlPoint(MIDDLE, MIDDLE);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) * 3);
+
+        assertThat(lying(simulation, PickupKind.CRATE)).hasSize(1);
+    }
+
+    /** The finale's point is no biome's site: its caches before the hold, as ever, and no crates (G0110). */
+    @Test
+    void laysNoCratesBesideAPointThatIsHeldAfterwards() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        held(simulation);
+
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) + 2);
+
+        assertThat(lying(simulation, PickupKind.CRATE)).isEmpty();
+        assertThat(grenadeCaches(simulation)).hasSize(1);
+    }
+
+    /** What the draft and the goal line count: the point is a site, and taking it marks the site taken. */
+    @Test
+    void marksItsSiteTakenOnTheTickItIsTaken() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        Entity point = simulation.spawnControlPoint(MIDDLE, MIDDLE);
+        steps(simulation, ticksIn(POINT_CAPTURE_SECONDS) - 1);
+        boolean takenEarly = point.getComponent(Site.class).taken;
+
+        simulation.step();
+
+        assertThat(takenEarly).isFalse();
+        assertThat(point.getComponent(Site.class).taken).isTrue();
     }
 
     private static Simulation withMedkitChance(int percent) {

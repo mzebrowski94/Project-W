@@ -85,6 +85,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * @param wound what a wound costs a man on his feet, and how long it protects him (G0053)
  * @param nest the holes in the ground that keep sending more out
  * @param controlPoint what it takes to hold a point, and how far taking one carries
+ * @param site what a taken site leaves besides what a point always has (G0110)
  * @param turret the gun on a mount that a man gets on
  * @param obstacle the static circles that block movement
  * @param collision how hard the constraint solver works
@@ -136,6 +137,7 @@ public record SimConfig(
         ActionConfig action,
         NestConfig nest,
         ControlPointConfig controlPoint,
+        SiteConfig site,
         TurretConfig turret,
         ObstacleConfig obstacle,
         CollisionConfig collision,
@@ -478,6 +480,42 @@ public record SimConfig(
             Require.positive("control point loiterRadius", loiterRadius);
             Require.notNegative("control point grenadeCaches", grenadeCaches);
             Require.percent("control point medkitChance", medkitChance);
+        }
+    }
+
+    /**
+     * What a taken site leaves besides its grenade caches and medkit (G0110).
+     *
+     * @param cratesByPlayers the fewest seated players for each next crate a taken site of a biome leaves, smallest
+     *     first and starting at one: {@code 1,3,6,10} is one crate for one or two, two for three to five, three for
+     *     six to nine, four for ten and more. Strictly increasing, so no count is reached twice
+     */
+    @With
+    public record SiteConfig(@ConfigKey("crates.byPlayers") List<Integer> cratesByPlayers) {
+        public SiteConfig {
+            cratesByPlayers = List.copyOf(cratesByPlayers);
+            if (cratesByPlayers.isEmpty() || cratesByPlayers.getFirst() != 1) {
+                throw new IllegalArgumentException(
+                        "site crates.byPlayers starts at one player, so every taken site leaves one, was "
+                                + cratesByPlayers);
+            }
+            for (int i = 1; i < cratesByPlayers.size(); i++) {
+                if (cratesByPlayers.get(i) <= cratesByPlayers.get(i - 1)) {
+                    throw new IllegalArgumentException(
+                            "site crates.byPlayers must be strictly increasing, was " + cratesByPlayers);
+                }
+            }
+        }
+
+        /** How many crates a taken site of a biome leaves for this many seated players: none for none. */
+        public int crates(int players) {
+            int crates = 0;
+            for (int i = 0; i < cratesByPlayers.size(); i++) {
+                if (players >= cratesByPlayers.get(i)) {
+                    crates++;
+                }
+            }
+            return crates;
         }
     }
 

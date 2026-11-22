@@ -13,7 +13,6 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.Commander;
-import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
@@ -21,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Lair;
 import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Respawning;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
@@ -56,7 +56,7 @@ public final class ReadoutWriter {
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
     private static final ComponentMapper<Respawning> RESPAWNING = ComponentMapper.getFor(Respawning.class);
-    private static final ComponentMapper<ControlPoint> POINT = ComponentMapper.getFor(ControlPoint.class);
+    private static final ComponentMapper<Site> SITE = ComponentMapper.getFor(Site.class);
     private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
     private static final ComponentMapper<Crate> CRATE = ComponentMapper.getFor(Crate.class);
 
@@ -66,7 +66,7 @@ public final class ReadoutWriter {
     private static final Family COMMANDERS =
             Family.all(Commander.class, Appearance.class).get();
     private static final Family RESPAWNS = Family.all(Respawning.class).get();
-    private static final Family POINTS = Family.all(ControlPoint.class).get();
+    private static final Family SITES = Family.all(Site.class).get();
     private static final Family NESTS = Family.all(Nest.class).get();
     private static final Family TROOPERS = Family.all(Trooper.class).get();
     private static final Family CRATES = Family.all(Crate.class).get();
@@ -83,7 +83,7 @@ public final class ReadoutWriter {
     private long serial;
     private ImmutableArray<Entity> commanders = empty();
     private ImmutableArray<Entity> respawns = empty();
-    private ImmutableArray<Entity> points = empty();
+    private ImmutableArray<Entity> sites = empty();
     private ImmutableArray<Entity> nests = empty();
     private ImmutableArray<Entity> troopers = empty();
     private ImmutableArray<Entity> turrets = empty();
@@ -117,9 +117,10 @@ public final class ReadoutWriter {
         out.wavesSent = waves.sent();
         out.wavesTotal = waves.total();
         out.wavesArmed = waves.armed();
-        for (int i = 0; i < points.size(); i++) {
+        // Every site, whatever its kind (G0110): the goal line's points are its sites.
+        for (int i = 0; i < sites.size(); i++) {
             out.pointsTotal++;
-            if (POINT.get(points.get(i)).captured) {
+            if (SITE.get(sites.get(i)).taken) {
                 out.pointsTaken++;
             }
         }
@@ -312,7 +313,7 @@ public final class ReadoutWriter {
         serial++;
         commanders = world.engine().getEntitiesFor(COMMANDERS);
         respawns = world.engine().getEntitiesFor(RESPAWNS);
-        points = world.engine().getEntitiesFor(POINTS);
+        sites = world.engine().getEntitiesFor(SITES);
         nests = world.engine().getEntitiesFor(NESTS);
         troopers = world.engine().getEntitiesFor(TROOPERS);
         turrets = world.engine().getEntitiesFor(TURRETS);

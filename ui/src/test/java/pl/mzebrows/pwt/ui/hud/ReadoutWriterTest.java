@@ -20,6 +20,7 @@ import pl.mzebrows.pwt.sim.component.Dash;
 import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Respawning;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Thrower;
@@ -73,6 +74,7 @@ class ReadoutWriterTest {
         Entity taken = world.spawnControlPoint(90f, 30f);
         world.level().require(Objective.CAPTURE_POINTS);
         taken.getComponent(ControlPoint.class).captured = true;
+        taken.getComponent(Site.class).taken = true;
 
         Readout readout = fill(new ReadoutWriter(), world);
 
@@ -442,7 +444,7 @@ class ReadoutWriterTest {
     void showsWhoHoldsADraftAndItsCardsWithTheRankEachWouldHave() {
         Simulation world = world();
         world.spawnCommander(40f, 40f, 0);
-        world.spawnControlPoint(30f, 30f).getComponent(ControlPoint.class).captured = true;
+        world.spawnControlPoint(30f, 30f).getComponent(Site.class).taken = true;
         world.step();
 
         Readout readout = fill(new ReadoutWriter(), world);
@@ -477,7 +479,7 @@ class ReadoutWriterTest {
     void listsWhatIsHeldWithItsRanksAndTheMostItCanHave() {
         Simulation world = world();
         world.spawnCommander(40f, 40f, 0);
-        world.spawnControlPoint(30f, 30f).getComponent(ControlPoint.class).captured = true;
+        world.spawnControlPoint(30f, 30f).getComponent(Site.class).taken = true;
         world.step();
         int serial = world.upgradeView().oldestDraftOf(0);
         UpgradeKind taken = Objects.requireNonNull(world.upgradeView().cardOf(serial, 0));

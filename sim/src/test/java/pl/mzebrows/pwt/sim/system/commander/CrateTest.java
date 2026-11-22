@@ -5,29 +5,39 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ACTION_REACH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CRATE_FEWEST;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.CRATE_MOST;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.GRENADE_MOST;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.PlayerInputs;
+import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.ActionKind;
+import pl.mzebrows.pwt.sim.def.ArmouryDef;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.PickupKind;
+import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.system.upgrade.Effect;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeDef;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * A crate (G0056): opened with the action key by one commander at a time, dealt what it holds on its first
@@ -428,8 +438,197 @@ class CrateTest {
                 .containsExactlyInAnyOrder(CRATE_FEWEST, CRATE_MOST);
     }
 
+    /** G0110: a drawn card of a kind the crate already holds goes back, however stacked the deck is. */
+    @Test
+    void neverShowsOneKindTwiceInACrateOverManyDeals() {
+        Simulation simulation = new Simulation(stacked(config()));
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        AlphaWorlds.hold(simulation, UpgradeKind.EXPLOSIVES, 1);
+        AlphaWorlds.hold(simulation, UpgradeKind.FULL_CRATES, 1);
+
+        for (int round = 0; round < DEALS; round++) {
+            assertThat(openOne(simulation, commander)).as("crate %d", round).doesNotHaveDuplicates();
+        }
+    }
+
+    /** A deck with fewer kinds than the crate's size deals a smaller crate rather than a second of one. */
+    @Test
+    void dealsASmallerCrateFromADeckShortOfKinds() {
+        SimConfig config = config();
+        for (PickupKind kind :
+                new PickupKind[] {PickupKind.ARMOURY_RAILGUN, PickupKind.ARMOURY_SHOTGUN, PickupKind.ARMOURY_LASER}) {
+            config = config.withPickups(config.pickups().map(kind, pickup -> pickup.withArmoury(ArmouryDef.off())));
+        }
+        Simulation simulation = new Simulation(config);
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        AlphaWorlds.hold(simulation, UpgradeKind.FULL_CRATES, 1);
+
+        List<PickupKind> dealt = openOne(simulation, commander);
+
+        assertThat(dealt).containsExactlyInAnyOrder(PickupKind.ARMOURY_FLAMER, PickupKind.MEDKIT);
+    }
+
+    /** Firepower's flamer is swapped in only where the deal held none: never a second (G0110). */
+    @Test
+    void addsNoSecondFlamerUnderFirepower() {
+        Simulation simulation = new Simulation(stacked(config()));
+        Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
+        AlphaWorlds.hold(simulation, UpgradeKind.EXPLOSIVES, 1);
+        AlphaWorlds.hold(simulation, UpgradeKind.FIREPOWER, 1);
+
+        for (int round = 0; round < DEALS; round++) {
+            assertThat(openOne(simulation, commander))
+                    .as("crate %d", round)
+                    .filteredOn(kind -> kind == PickupKind.ARMOURY_FLAMER)
+                    .hasSize(1);
+        }
+    }
+
+    /** G0110: Looter's holder finds one card more in a crate on his first opening of it. */
+    @Test
+    void holdsOneCardMoreOnALooterHoldersFirstOpening() {
+        Simulation plain = simulation();
+        Simulation looting = simulation();
+        Entity crate = firstOpening(plain, false);
+
+        Entity looted = firstOpening(looting, true);
+
+        assertThat(crate(looted).count).isEqualTo(crate(crate).count + 1);
+        assertThat(contents(looted)).doesNotHaveDuplicates();
+    }
+
+    @Test
+    void givesNothingMoreOnTheLooterHoldersSecondOpening() {
+        Simulation simulation = simulation();
+        Entity crate = firstOpening(simulation, true);
+        int held = crate(crate).count;
+        simulation.step(new PlayerInputs().set(0, ACT).closeCrate(0));
+
+        simulation.step(STILL);
+        simulation.step(ACT);
+
+        assertThat(crate(crate).open()).isTrue();
+        assertThat(crate(crate).count).isEqualTo(held);
+    }
+
+    /** Once per crate, ever: whoever's Looter set it off, another's opening later adds nothing. */
+    @Test
+    void givesNothingMoreOnAnotherLooterHoldersLaterOpening() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(MIDDLE + 2f * BESIDE, MIDDLE, 1);
+        hold(simulation, UpgradeKind.LOOTER, 1);
+        Entity crate = firstOpening(simulation, true);
+        int held = crate(crate).count;
+
+        reopenAsTheSecond(simulation);
+
+        assertThat(crate(crate).openedBy).isEqualTo(1);
+        assertThat(crate(crate).count).isEqualTo(held);
+    }
+
+    /** A crate somebody without Looter opened first still gives its one card more, of a kind new to it. */
+    @Test
+    void addsACardOfANewKindToACrateANonLooterOpenedFirst() {
+        Simulation simulation = simulation();
+        simulation.spawnCommander(MIDDLE + 2f * BESIDE, MIDDLE, 1);
+        hold(simulation, UpgradeKind.LOOTER, 1);
+        Entity crate = firstOpening(simulation, false);
+        PickupKind[] before = contents(crate);
+
+        reopenAsTheSecond(simulation);
+
+        assertThat(crate(crate).openedBy).isEqualTo(1);
+        assertThat(contents(crate))
+                .hasSize(before.length + 1)
+                .startsWith(before)
+                .doesNotHaveDuplicates();
+        assertThat(crate(crate).looted).isTrue();
+    }
+
+    @Test
+    void neverHoldsMoreThanACrateCanUnderLooter() {
+        Simulation simulation = simulation();
+        AlphaWorlds.hold(simulation, UpgradeKind.FULL_CRATES, 1);
+
+        Entity crate = firstOpening(simulation, true);
+
+        assertThat(crate(crate).count).isEqualTo(SimConfig.CrateConfig.CAPACITY);
+        assertThat(crate(crate).looted).isTrue();
+    }
+
     /** The fixture's deck: one card for each of four guns and the medkit. */
     private static final int DECK = 5;
+
+    /** Crates enough for a stacked deck to come round several times. */
+    private static final int DEALS = 40;
+
+    /** Cards a stacking Explosives adds to the flamer's and the medkit's, so a deal draws either again and again. */
+    private static final int STACKED = 10;
+
+    /** The fixture with Explosives turned into a deal that stacks two kinds of the deck high. */
+    private static SimConfig stacked(SimConfig config) {
+        return config.withUpgrades(config.upgrades()
+                .map(
+                        UpgradeKind.EXPLOSIVES,
+                        explosives -> new UpgradeDef(
+                                Side.PLAYER,
+                                0,
+                                1,
+                                1,
+                                null,
+                                0,
+                                List.of(
+                                        new Effect.Deal(PickupKind.ARMOURY_FLAMER, STACKED),
+                                        new Effect.Deal(PickupKind.MEDKIT, STACKED)))));
+    }
+
+    /** Lays a crate beside him, opens it, says what it was dealt, and shuts it and puts it out of his way. */
+    private static List<PickupKind> openOne(Simulation simulation, Entity commander) {
+        Entity crate = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
+        simulation.step(STILL);
+        simulation.step(ACT);
+        List<PickupKind> dealt = List.of(contents(crate));
+        simulation.step(new PlayerInputs().set(0, ACT).closeCrate(0));
+        crate.getComponent(Position.class).set(MIDDLE, MIDDLE + 40f);
+        commander.getComponent(Position.class).set(MIDDLE, MIDDLE);
+        return dealt;
+    }
+
+    /** Slot zero beside a crate, holding Looter or not, opens it for the first time. */
+    private static Entity firstOpening(Simulation simulation, boolean looter) {
+        simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        Entity crate = simulation.spawnPickup(PickupKind.CRATE, MIDDLE + BESIDE, MIDDLE);
+        if (looter) {
+            simulation
+                    .engine()
+                    .getEntitiesFor(Family.all(Upgrades.class).get())
+                    .first()
+                    .getComponent(Upgrades.class)
+                    .held
+                    .add(new Upgrades.Held(UpgradeKind.LOOTER, 0, 1));
+        }
+        simulation.step(STILL);
+        simulation.step(ACT);
+        return crate;
+    }
+
+    /** Slot one's personal rank of {@code kind}. */
+    private static void hold(Simulation simulation, UpgradeKind kind, int ranks) {
+        simulation
+                .engine()
+                .getEntitiesFor(Family.all(Upgrades.class).get())
+                .first()
+                .getComponent(Upgrades.class)
+                .held
+                .add(new Upgrades.Held(kind, 1, ranks));
+    }
+
+    /** Slot zero shuts the crate he has open, and slot one, beside it, opens it. */
+    private static void reopenAsTheSecond(Simulation simulation) {
+        simulation.step(new PlayerInputs().set(0, ACT).closeCrate(0));
+        simulation.step(new PlayerInputs());
+        simulation.step(new PlayerInputs().set(1, ACT));
+    }
 
     static Crate crate(Entity entity) {
         return entity.getComponent(Crate.class);

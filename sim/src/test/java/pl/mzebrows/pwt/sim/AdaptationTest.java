@@ -6,7 +6,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 import com.badlogic.ashley.core.Entity;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -175,7 +175,7 @@ class AdaptationTest {
 
     /** Takes one rank through the real path: a point taken earns a draft, and a pick takes the card. */
     private static void pick(Simulation simulation, UpgradeKind kind) {
-        simulation.spawnControlPoint(10f, 10f).getComponent(ControlPoint.class).captured = true;
+        simulation.spawnControlPoint(10f, 10f).getComponent(Site.class).taken = true;
         simulation.step();
         int serial = DraftTest.drafts(simulation).pending.first().serial();
         simulation.step(new PlayerInputs().pick(0, serial, kind));

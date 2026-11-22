@@ -761,6 +761,9 @@ public final class AlphaWorlds {
     /** Off, so a test counting what a taken point lays counts grenade caches; a medkit test turns it on. */
     public static final int POINT_MEDKIT_CHANCE = 0;
 
+    /** The shipped thresholds (G0110): one crate a taken site for one or two players, two from three, three from six. */
+    public static final List<Integer> SITE_CRATES_BY_PLAYERS = List.of(1, 3, 6, 10);
+
     /** What one crate is worth. Three, as the shipped one is. */
     public static final int CRATE_TROOPERS = 3;
 
@@ -1691,6 +1694,7 @@ public final class AlphaWorlds {
                         POST_LOITER_RADIUS,
                         POINT_GRENADE_CACHES,
                         POINT_MEDKIT_CHANCE),
+                new SimConfig.SiteConfig(SITE_CRATES_BY_PLAYERS),
                 new SimConfig.TurretConfig(
                         TURRET_RADIUS,
                         TURRET_HEALTH,
@@ -1797,6 +1801,7 @@ public final class AlphaWorlds {
                                 2,
                                 new Effect.Count(Stat.DASH_MOST, Target.CHOOSER, 1),
                                 new Effect.Scale(Stat.DASH_RECHARGE, Target.CHOOSER, PANTERA_PERCENT)))
+                .put(UpgradeKind.LOOTER, off(1, new Effect.Count(Stat.CRATE_EXTRA, Target.CHOOSER, LOOTER_CARDS)))
                 .put(
                         UpgradeKind.FIREPOWER,
                         off(
@@ -1883,6 +1888,10 @@ public final class AlphaWorlds {
     public static final int SURGE_REACH_PER_RANK = 5;
 
     public static final int PANTERA_PERCENT = -13;
+
+    /** What Looter adds to a crate the first time its holder opens it (G0110). */
+    public static final int LOOTER_CARDS = 1;
+
     public static final int FIREPOWER_STOCK = 1;
     public static final int FIREPOWER_PERCENT = 25;
 

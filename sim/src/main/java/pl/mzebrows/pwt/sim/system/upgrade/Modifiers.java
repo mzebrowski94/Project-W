@@ -216,6 +216,15 @@ public final class Modifiers {
                 stats.of(Stat.CRATE_STOCK).min());
     }
 
+    /** How many cards more a crate holds the first time {@code who} opens it, if no Looter has before (G0110). */
+    @Reads(Stat.CRATE_EXTRA)
+    public int crateExtra(Entity who) {
+        return Fold.count(
+                0,
+                sum(Stat.CRATE_EXTRA, who, null, null),
+                stats.of(Stat.CRATE_EXTRA).min());
+    }
+
     /** How fast {@code who}'s leap flies, read as it leaves the ground and held for that flight. */
     @Reads(Stat.LEAP_SPEED)
     public float leapSpeed(Entity who, float base) {

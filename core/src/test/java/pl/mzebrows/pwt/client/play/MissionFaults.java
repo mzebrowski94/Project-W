@@ -267,28 +267,32 @@ final class MissionFaults {
     }
 
     /**
-     * Every crate a house did not take, and every turret, within {@code pointReach} of a point of its biome (G0082); a
-     * finale's are laid.
+     * Every turret within {@code pointReach} of a point of its biome (G0082), and every crate a biome lays in a house
+     * (G0110): a crate on the open field is what a taken site leaves, never furniture. A finale's are laid.
      */
     static List<String> crates(Mission mission, SimConfig config) {
         TileMap map = mission.laid().map();
         List<String> faults = new ArrayList<>();
-        for (Placed crate : mission.placed()) {
-            boolean byAPoint = crate instanceof Placed.Turret
-                    || (crate instanceof Placed.Pickup pickup
-                            && config.pickup(pickup.kind()).armoury().crate()
-                            && !inAHouse(mission, map.colAt(crate.x()), map.rowAt(crate.y())));
-            if (!byAPoint || crate.biome() == mission.order().size()) {
+        for (Placed placed : mission.placed()) {
+            if (placed.biome() == mission.order().size()) {
+                continue;
+            }
+            if (placed instanceof Placed.Pickup pickup
+                    && config.pickup(pickup.kind()).armoury().crate()
+                    && !inAHouse(mission, map.colAt(placed.x()), map.rowAt(placed.y()))) {
+                faults.add(placed + " is a crate outside every house");
+            }
+            if (!(placed instanceof Placed.Turret)) {
                 continue;
             }
             float nearest = Float.MAX_VALUE;
             for (Placed point : mission.placed()) {
-                if (point instanceof Placed.Point && point.biome() == crate.biome()) {
-                    nearest = Math.min(nearest, between(crate, point));
+                if (point instanceof Placed.Point && point.biome() == placed.biome()) {
+                    nearest = Math.min(nearest, between(placed, point));
                 }
             }
             if (nearest > config.mission().placement().pointReach()) {
-                faults.add(crate + " is " + (int) nearest + " from the nearest point");
+                faults.add(placed + " is " + (int) nearest + " from the nearest point");
             }
         }
         return faults;

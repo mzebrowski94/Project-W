@@ -357,6 +357,31 @@ class SimConfigTest {
                 .hasMessageContaining("at most");
     }
 
+    /** G0110: every taken site leaves a crate, and each threshold is a new count. */
+    @Test
+    void refusesSiteCrateThresholdsThatDoNotStartAtOneOrDoNotRise() {
+        assertThatThrownBy(() -> new SimConfig.SiteConfig(List.of(2, 3))).hasMessageContaining("starts at one");
+        assertThatThrownBy(() -> new SimConfig.SiteConfig(List.of())).hasMessageContaining("starts at one");
+        assertThatThrownBy(() -> new SimConfig.SiteConfig(List.of(1, 3, 3))).hasMessageContaining("strictly");
+    }
+
+    /** The shipped thresholds read as the spec says: 1-2 players one crate, 3-5 two, 6-9 three, 10 and more four. */
+    @Test
+    void countsTheShippedSiteCratesByPlayers() {
+        SimConfig.SiteConfig site = SimConfig.defaults().site();
+
+        assertThat(new int[] {
+                    site.crates(1),
+                    site.crates(2),
+                    site.crates(3),
+                    site.crates(5),
+                    site.crates(6),
+                    site.crates(9),
+                    site.crates(10)
+                })
+                .containsExactly(1, 1, 2, 2, 3, 3, 4);
+    }
+
     /** The deck with every deal at its highest rank still fits the bag it is dealt from. */
     @Test
     void refusesAnArmouryDeckTooBigForABag() {

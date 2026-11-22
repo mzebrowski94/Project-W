@@ -4,11 +4,12 @@ import java.util.List;
 import pl.mzebrows.pwt.map.Randomness;
 
 /**
- * What a biome holds besides its creatures (missions ticket 03): control points, barrels, rabbits, boulders, trees,
+ * What a biome holds besides its creatures (missions ticket 03): sites, barrels, rabbits, boulders, trees,
  * turrets, geysers and the pickups lying about. Fixed ranges, never scaled by tier or ramp; where each goes is placement's (G0068).
  *
- * @param pointsMin the fewest control points, at least one: the goal line leads east through them
- * @param pointsMax the most
+ * @param sitesMin the fewest sites (G0110) - control points, or another kind of site in a point's place - at least one:
+ *     the goal line leads east through them
+ * @param sitesMax the most
  * @param barrelsMin the fewest explosive barrels, put down by holes and packs
  * @param barrelsMax the most
  * @param rabbitsMin the fewest rabbits, food that runs
@@ -25,11 +26,12 @@ import pl.mzebrows.pwt.map.Randomness;
  * @param turretsMax the most
  * @param geysersMin the fewest geysers, ground that erupts in fire (G0089): zero in every biome but the cut
  * @param geysersMax the most
- * @param pickups what lies about, a line per kind; a house is stocked with its crates and medkits first
+ * @param pickups what lies about, a line per kind; a house is stocked with its crates and medkits first, and a crate is
+ *     laid nowhere else (G0110)
  */
 public record Furniture(
-        int pointsMin,
-        int pointsMax,
+        int sitesMin,
+        int sitesMax,
         int barrelsMin,
         int barrelsMax,
         int rabbitsMin,
@@ -49,9 +51,9 @@ public record Furniture(
         List<Stock> pickups) {
 
     public Furniture {
-        if (pointsMin < 1 || pointsMax < pointsMin) {
+        if (sitesMin < 1 || sitesMax < sitesMin) {
             throw new IllegalArgumentException(
-                    "a biome has from at least 1 control point up, was " + pointsMin + ".." + pointsMax);
+                    "a biome has from at least 1 site up, was " + sitesMin + ".." + sitesMax);
         }
         range("barrels", barrelsMin, barrelsMax);
         range("rabbits", rabbitsMin, rabbitsMax);
@@ -64,9 +66,9 @@ public record Furniture(
         pickups = List.copyOf(pickups);
     }
 
-    /** How many control points, drawn. */
-    public int points(Randomness rng) {
-        return between(rng, pointsMin, pointsMax);
+    /** How many sites, drawn. */
+    public int sites(Randomness rng) {
+        return between(rng, sitesMin, sitesMax);
     }
 
     /** How many barrels, drawn. */

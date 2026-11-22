@@ -24,7 +24,7 @@ import pl.mzebrows.pwt.sim.CommanderInput;
 import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Simulation;
-import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
 import pl.mzebrows.pwt.ui.page.Briefing;
@@ -396,7 +396,7 @@ class OnlineSessionTest {
         public Simulation fresh(SessionSetup setup) {
             Simulation world = scenario.fresh(setup);
             for (int i = 0; i < 2; i++) {
-                world.spawnControlPoint(30f + 10f * i, 30f).getComponent(ControlPoint.class).captured = true;
+                world.spawnControlPoint(30f + 10f * i, 30f).getComponent(Site.class).taken = true;
             }
             // Dealt before the first tick is sealed: a mission is started from a briefing, so a pick made at once
             // reaches the sequencer before that tick, where it used to reach it a few ticks in.
