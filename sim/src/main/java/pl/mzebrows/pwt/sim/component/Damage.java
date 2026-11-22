@@ -195,6 +195,15 @@ public final class Damage implements Component, Pool.Poolable {
         land(extra, blowHarm, Tally.NOBODY);
     }
 
+    /**
+     * Records a blow that owes nothing and harms a man not at all, and stuns for this long - a Rocketman's surge
+     * (G0108). It lands as any harmless blow does (G0057): it breaks a shield, provokes, and counts for the slot.
+     */
+    public void landStunning(int ticks, int slot) {
+        land(0, 0, Harm.NONE, slot);
+        stun(ticks);
+    }
+
     private void land(int extra, int recovery, Harm blowHarm, int slot) {
         landed = true;
         amount += extra;

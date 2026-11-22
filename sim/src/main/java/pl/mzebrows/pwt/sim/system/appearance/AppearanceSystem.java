@@ -178,8 +178,15 @@ public final class AppearanceSystem extends IteratingSystem {
         appearance.throes = DYING.has(entity) ? DYING.get(entity).left() : 0f;
         // A take by touch, rising and fading as it runs out (G0078).
         appearance.pop = POP.has(entity) ? POP.get(entity).left() : 0f;
-        // A dash's smoke where it began, growing and fading where it was left (G0107).
-        appearance.puff = PUFF.has(entity) ? PUFF.get(entity).left() : 0f;
+        // A dash's smoke where it began, growing and fading where it was left (G0107) - or, with a reach, the ring of a
+        // Rocketman's surge where it went off, on the slam's circle (G0108).
+        Puff puff = PUFF.get(entity);
+        boolean surge = puff != null && puff.reach > 0f;
+        appearance.puff = puff != null && !surge ? puff.left() : 0f;
+        if (surge) {
+            appearance.burst = puff.reach;
+            appearance.burstFade = puff.left();
+        }
         publishDash(entity, appearance, deltaTime);
         publishRiders(entity, appearance);
         if (DOOR.has(entity)) {

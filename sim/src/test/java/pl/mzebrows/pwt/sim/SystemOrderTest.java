@@ -166,6 +166,10 @@ class SystemOrderTest {
                 CommanderControlSystem.class,
                 "it publishes where the load lies; only his control system may constrain his velocity"));
         rows.add(new Before(CommanderControlSystem.class, MeleeSystem.class, "a swing reads this tick's intent"));
+        rows.add(new Before(
+                CommanderControlSystem.class,
+                DamageSystem.class,
+                "a Rocketman's surge stuns on the tick the dash launches (G0108)"));
         rows.add(new Before(CommanderControlSystem.class, TurretSystem.class, "a gun on a mount is a pair of hands"));
         rows.add(new Before(MeleeSystem.class, TurretSystem.class, "the same window a sweep is spawned in"));
         rows.add(

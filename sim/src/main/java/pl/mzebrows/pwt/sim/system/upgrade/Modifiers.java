@@ -180,6 +180,15 @@ public final class Modifiers {
                 baseTicks, sum(Stat.DASH_RECHARGE, who, null, null), stat.minPercent(), stat.maxPercent());
     }
 
+    /** How far round {@code who} his dash stuns the aliens as it launches, in world units; zero for none (G0108). */
+    @Reads(Stat.SURGE_REACH)
+    public int surgeReach(Entity who) {
+        return Fold.count(
+                0,
+                sum(Stat.SURGE_REACH, who, null, null),
+                stats.of(Stat.SURGE_REACH).min());
+    }
+
     /** How many cards of this cache the armoury deck holds (G0056). The side's number. */
     @Reads(Stat.ARMOURY_CARDS)
     public int armouryCards(PickupKind card, int base) {

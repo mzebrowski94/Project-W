@@ -74,14 +74,24 @@ class GraphicConfigTest {
         assertThatThrownBy(() -> new DashMark.Puff(1f, 0.5f, 0.5f)).isInstanceOf(IllegalArgumentException.class);
     }
 
-    /** Every commander's rim is drawn, thin, in a light colour; a negative width is refused. */
+    /** A Rocketman's surge is drawn growing out to its whole reach as it fades (G0108). */
+    @Test
+    void readsASurgeGrowingOutToItsReach() {
+        DashMark.Surge surge = GraphicConfig.load().dash().surge();
+
+        assertThat(surge.radiusFor(10f, 1f)).isLessThan(10f);
+        assertThat(surge.radiusFor(10f, 0f)).isEqualTo(10f);
+        assertThatThrownBy(() -> new DashMark.Surge(1.5f)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /** Every commander's rim is drawn, thin and opaque, its colour whatever is tuned; a negative width is refused. */
     @Test
     void readsACommandersRim() {
         BorderMark border = GraphicConfig.load().border();
 
         assertThat(border.drawn()).isTrue();
         assertThat(border.width()).isLessThan(1f);
-        assertThat(border.color()).isEqualTo(Color.valueOf("f8fafcff"));
+        assertThat(border.color().a).isEqualTo(1f);
         assertThatThrownBy(() -> new BorderMark(-0.1f, Color.WHITE)).isInstanceOf(IllegalArgumentException.class);
     }
 

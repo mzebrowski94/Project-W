@@ -1424,6 +1424,23 @@ public final class Spawner {
     }
 
     /**
+     * Spawns the ring a Rocketman's surge is drawn as (G0108), where it went off: a puff with a reach, counted down and
+     * reaped as one, a look only.
+     */
+    public Entity spawnSurge(float x, float y, float reach) {
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Puff.class)
+                .set(ticks(config.commander().dash().surgeSeconds()))
+                .reaching(reach));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(config.commander().radius()));
+        entity.add(engine.createComponent(Appearance.class).set(Look.ROCKETMAN));
+        admit(entity);
+        return entity;
+    }
+
+    /**
      * Spawns the pending-respawn ticket for a unit that just died: a countdown and nothing else.
      */
     public Entity spawnRespawn(float delaySeconds, float shieldSeconds, int slot) {

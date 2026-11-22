@@ -747,6 +747,11 @@ public final class AlphaWorlds {
 
     public static final float PUFF_SECONDS = 0.5f;
 
+    /** A Rocketman's surge (G0108): a second's stun, and a ring drawn for half of one. */
+    public static final float SURGE_STUN_SECONDS = 1f;
+
+    public static final float SURGE_SECONDS = 0.5f;
+
     /** One a seated slot, as the shipped number is, so a test counting caches counts players. */
     public static final int POINT_GRENADE_CACHES = 1;
 
@@ -972,7 +977,14 @@ public final class AlphaWorlds {
                         LEASH_RADIUS,
                         WeaponKind.SIDEARM,
                         new SimConfig.DashConfig(
-                                DASH_DISTANCE, DASH_SECONDS, DASH_MOST, DASH_RECHARGE, DASH_SLOW_FACTOR, PUFF_SECONDS)),
+                                DASH_DISTANCE,
+                                DASH_SECONDS,
+                                DASH_MOST,
+                                DASH_RECHARGE,
+                                DASH_SLOW_FACTOR,
+                                PUFF_SECONDS,
+                                SURGE_STUN_SECONDS,
+                                SURGE_SECONDS)),
                 new SimConfig.TrooperConfig(
                         TROOPER_RADIUS,
                         TROOPER_SPEED,
@@ -1773,6 +1785,15 @@ public final class AlphaWorlds {
                         off(1, new Effect.Count(Stat.MEND_SECONDS, Target.CHOOSER, SELF_TREATMENT_SECONDS)))
                 .put(UpgradeKind.BANDOLIER, off(2, new Effect.Count(Stat.GRENADE_MOST, Target.CHOOSER, 1)))
                 .put(
+                        UpgradeKind.ROCKETMAN,
+                        off(2, new Effect.Count(Stat.SURGE_REACH, Target.CHOOSER, SURGE_REACH_PER_RANK)))
+                .put(
+                        UpgradeKind.PANTERA,
+                        off(
+                                2,
+                                new Effect.Count(Stat.DASH_MOST, Target.CHOOSER, 1),
+                                new Effect.Scale(Stat.DASH_RECHARGE, Target.CHOOSER, PANTERA_PERCENT)))
+                .put(
                         UpgradeKind.FIREPOWER,
                         off(
                                 2,
@@ -1853,6 +1874,11 @@ public final class AlphaWorlds {
     public static final int MARCH_PERCENT = 10;
     public static final int FIRST_AID_PERCENT = 25;
     public static final int SELF_TREATMENT_SECONDS = 1;
+
+    /** What one rank of Rocketman adds to his surge's reach, and one of Pantera to his dashes and their recharge. */
+    public static final int SURGE_REACH_PER_RANK = 5;
+
+    public static final int PANTERA_PERCENT = -13;
     public static final int FIREPOWER_STOCK = 1;
     public static final int FIREPOWER_PERCENT = 25;
 

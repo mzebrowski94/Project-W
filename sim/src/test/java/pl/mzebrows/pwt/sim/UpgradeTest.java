@@ -3,11 +3,13 @@ package pl.mzebrows.pwt.sim;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARMY_HEADROOM;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARMY_MEN;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.DASH_MOST;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.GRENADE_MOST;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.GRENADIER_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MARCH_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MARKSMEN_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MEDICINE_PER_SECOND;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.PANTERA_PERCENT;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.SELF_TREATMENT_SECONDS;
 
 import com.badlogic.ashley.core.Entity;
@@ -179,6 +181,39 @@ class UpgradeTest {
         assertThat(simulation.grenadeMost(chooser)).isEqualTo(GRENADE_MOST + 2);
         assertThat(simulation.grenades(chooser)).isEqualTo(GRENADE_MOST + 1);
         assertThat(simulation.grenadeMost(other)).isEqualTo(GRENADE_MOST);
+    }
+
+    /** Pantera's first rank: one dash more, and a little sooner back (G0108). */
+    @Test
+    void givesTheChooserOneMoreDashAtRankOne() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        Entity chooser = simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        Modifiers modifiers = new Modifiers(simulation.engine(), simulation.config());
+
+        hold(simulation, new Upgrades.Held(UpgradeKind.PANTERA, 0, 1));
+
+        assertThat(simulation.dashMost(chooser)).isEqualTo(DASH_MOST + 1);
+        assertThat(modifiers.dashRechargeTicks(chooser, 100)).isEqualTo(100 + PANTERA_PERCENT);
+    }
+
+    /**
+     * Pantera is personal (G0108): a dash more a rank, and each one back sooner - the chooser's alone, and his speed
+     * and reach untouched.
+     */
+    @Test
+    void givesTheChooserOneMoreDashARankAndASoonerRecharge() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        Entity chooser = simulation.spawnCommander(MIDDLE, MIDDLE, 0);
+        Entity other = simulation.spawnCommander(MIDDLE + 5f, MIDDLE, 1);
+        Modifiers modifiers = new Modifiers(simulation.engine(), simulation.config());
+
+        hold(simulation, new Upgrades.Held(UpgradeKind.PANTERA, 0, 2));
+
+        assertThat(simulation.dashMost(chooser)).isEqualTo(DASH_MOST + 2);
+        assertThat(simulation.dashes(chooser)).isEqualTo(DASH_MOST + 2);
+        assertThat(modifiers.dashRechargeTicks(chooser, 100)).isEqualTo(100 + 2 * PANTERA_PERCENT);
+        assertThat(simulation.dashMost(other)).isEqualTo(DASH_MOST);
+        assertThat(modifiers.dashRechargeTicks(other, 100)).isEqualTo(100);
     }
 
     /**

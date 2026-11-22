@@ -48,6 +48,7 @@ import pl.mzebrows.pwt.sim.system.commander.Dashes;
 import pl.mzebrows.pwt.sim.system.commander.DragSystem;
 import pl.mzebrows.pwt.sim.system.commander.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.commander.StrikeSystem;
+import pl.mzebrows.pwt.sim.system.commander.Surges;
 import pl.mzebrows.pwt.sim.system.commander.TurretSystem;
 import pl.mzebrows.pwt.sim.system.creature.BarrageSystem;
 import pl.mzebrows.pwt.sim.system.creature.EnemyLeapSystem;
@@ -212,7 +213,8 @@ public final class Simulation {
         engine.addSystem(new DragSystem());
         // Launches a dash too (G0107): the one system that owns his velocity, after CooldownSystem has counted the
         // burst down and DragSystem has published the load's bearing.
-        engine.addSystem(new CommanderControlSystem(config, map, guns, spawner, dashes, capacity));
+        engine.addSystem(new CommanderControlSystem(
+                config, map, guns, spawner, dashes, new Surges(config, solid, modifiers, spawner), capacity));
         engine.addSystem(new MeleeSystem(spawner));
         // After the commander's hands, before anything looks around.
         engine.addSystem(new TurretSystem(solid, guns));

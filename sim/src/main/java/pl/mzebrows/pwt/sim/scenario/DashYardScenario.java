@@ -10,6 +10,8 @@ import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeSystem;
 
 /**
  * Open sand to dash about on (G0107), and the things that change a dash: glue and a thicket to halve it, a wall to
@@ -20,6 +22,11 @@ import pl.mzebrows.pwt.sim.def.WeaponKind;
  * dash left. The purple pips beside his wounds - two, coming back one at a time. Half the reach through the glue
  * (west, by where he starts) and the thicket (south); the wall (north) stops it dead. A grunt's claws land mid-dash
  * as anywhere: it protects him from nothing.
+ *
+ * <p><strong>Dash Yard Upgraded</strong> (G0108) is the same yard with Rocketman II and Pantera II held by every seat from
+ * the first tick, and a denser pack of grunts to dash into. What to look at: four purple pips coming back faster, and a
+ * blue-violet ring where each dash begins - every grunt inside it, in a clear line, dazed for a second; none behind the
+ * wall, and never a man of his.
  */
 final class DashYardScenario implements Scenario {
 
@@ -40,14 +47,44 @@ final class DashYardScenario implements Scenario {
 
     private static final float GLUE_PITCH = 3f;
 
+    /** The plain yard's grunts, in a line down the far side, and the upgraded yard's pack: columns by rows. */
+    private static final int LINE = 5;
+
+    private static final int PACK_COLS = 4;
+
+    private static final int PACK_ROWS = 4;
+
+    /** Where the pack's south-west grunt stands, in tiles, and how far apart they stand. */
+    private static final int PACK_COL = 26;
+
+    private static final int PACK_ROW = 7;
+
+    private static final int PACK_PITCH = 2;
+
+    /** Rocketman's and Pantera's last rank, held from the first tick. */
+    private static final int RANKS = 2;
+
+    private final boolean upgraded;
+
+    DashYardScenario() {
+        this(false);
+    }
+
+    /** @param upgraded the yard with Rocketman and Pantera held by every seat, and a pack to dash into */
+    DashYardScenario(boolean upgraded) {
+        this.upgraded = upgraded;
+    }
+
     @Override
     public String name() {
-        return "Dash Yard";
+        return upgraded ? "Dash Yard Upgraded" : "Dash Yard";
     }
 
     @Override
     public String description() {
-        return "Dash on open sand, through glue and thicket, into a wall, away from grunts.";
+        return upgraded
+                ? "Dash Yard with Rocketman and Pantera held: four dashes, each stunning the grunts round you."
+                : "Dash on open sand, through glue and thicket, into a wall, away from grunts.";
     }
 
     @Override
@@ -86,8 +123,24 @@ final class DashYardScenario implements Scenario {
             }
         }
 
-        for (int i = 0; i < 5; i++) {
-            simulation.spawnUnit(UnitKind.GRUNT, map.tileCentreX(35), map.tileCentreY(6 + i * 3));
+        if (!upgraded) {
+            for (int i = 0; i < LINE; i++) {
+                simulation.spawnUnit(UnitKind.GRUNT, map.tileCentreX(35), map.tileCentreY(6 + i * 3));
+            }
+            return;
+        }
+        for (int col = 0; col < PACK_COLS; col++) {
+            for (int row = 0; row < PACK_ROWS; row++) {
+                simulation.spawnUnit(
+                        UnitKind.GRUNT,
+                        map.tileCentreX(PACK_COL + col * PACK_PITCH),
+                        map.tileCentreY(PACK_ROW + row * PACK_PITCH));
+            }
+        }
+        // Every seat, whoever sits in it: a personal upgrade is held by a slot, and a player may join any of them.
+        for (int slot = 0; slot < simulation.capacity(); slot++) {
+            UpgradeSystem.hold(simulation.engine(), simulation.config(), UpgradeKind.ROCKETMAN, RANKS, slot);
+            UpgradeSystem.hold(simulation.engine(), simulation.config(), UpgradeKind.PANTERA, RANKS, slot);
         }
     }
 }

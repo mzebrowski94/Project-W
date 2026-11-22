@@ -44,6 +44,11 @@ public enum Stat {
     /** How long a dash he spent takes to come back (G0107). Read where the clock is wound, for the man dashing. */
     DASH_RECHARGE(Form.SCALE, Reader.UNIT),
     /**
+     * How far round him a commander's dash stuns the aliens as it launches - a Rocketman's surge (G0108). None unless
+     * an upgrade adds some: zero is off. Read where the surge goes off, for the man dashing.
+     */
+    SURGE_REACH(Form.COUNT, Reader.UNIT),
+    /**
      * How many cards of one cache the armoury deck holds (G0056). Read where a crate is dealt its
      * pickups; the side's number, moved only by a {@code Deal}.
      */

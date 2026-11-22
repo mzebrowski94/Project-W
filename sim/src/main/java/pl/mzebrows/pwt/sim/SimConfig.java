@@ -576,6 +576,8 @@ public record SimConfig(
      * @param rechargeSeconds how long one he spent takes to come back, one at a time
      * @param slowFactor how much of its speed a tick of it keeps on ground that slows him
      * @param puffSeconds how long the puff it leaves where it began lasts
+     * @param stunSeconds how long a Rocketman's surge stuns an alien it reaches (G0108), before the stun-duration fold
+     * @param surgeSeconds how long the ring a surge is drawn as lasts where it went off
      */
     @With
     public record DashConfig(
@@ -584,13 +586,17 @@ public record SimConfig(
             int most,
             float rechargeSeconds,
             float slowFactor,
-            float puffSeconds) {
+            float puffSeconds,
+            float stunSeconds,
+            float surgeSeconds) {
         public DashConfig {
             Require.positive("dash distance", distance);
             Require.positive("dash durationSeconds", durationSeconds);
             Require.atLeastOne("dash most", most);
             Require.positive("dash rechargeSeconds", rechargeSeconds);
             Require.positive("dash puffSeconds", puffSeconds);
+            Require.positive("dash stunSeconds", stunSeconds);
+            Require.positive("dash surgeSeconds", surgeSeconds);
             if (slowFactor <= 0f || slowFactor > 1f) {
                 throw new IllegalArgumentException("dash slowFactor must be in (0, 1], was " + slowFactor);
             }
