@@ -1,7 +1,7 @@
 # The mainframe
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: 05
 Spec: [spec.md](../spec.md) section 6
