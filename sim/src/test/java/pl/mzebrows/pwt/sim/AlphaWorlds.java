@@ -734,6 +734,19 @@ public final class AlphaWorlds {
     /** Round, so a test can step half of one without counting fractions of a tick. */
     public static final float POP_SECONDS = 0.5f;
 
+    /** A dash (G0107): three tiles in nine ticks, two held, each back after a second, halved on slowing ground. */
+    public static final float DASH_DISTANCE = 15f;
+
+    public static final float DASH_SECONDS = 0.15f;
+
+    public static final int DASH_MOST = 2;
+
+    public static final float DASH_RECHARGE = 1f;
+
+    public static final float DASH_SLOW_FACTOR = 0.5f;
+
+    public static final float PUFF_SECONDS = 0.5f;
+
     /** One a seated slot, as the shipped number is, so a test counting caches counts players. */
     public static final int POINT_GRENADE_CACHES = 1;
 
@@ -957,7 +970,9 @@ public final class AlphaWorlds {
                         RESPAWN_DELAY,
                         RESPAWN_SHIELD,
                         LEASH_RADIUS,
-                        WeaponKind.SIDEARM),
+                        WeaponKind.SIDEARM,
+                        new SimConfig.DashConfig(
+                                DASH_DISTANCE, DASH_SECONDS, DASH_MOST, DASH_RECHARGE, DASH_SLOW_FACTOR, PUFF_SECONDS)),
                 new SimConfig.TrooperConfig(
                         TROOPER_RADIUS,
                         TROOPER_SPEED,

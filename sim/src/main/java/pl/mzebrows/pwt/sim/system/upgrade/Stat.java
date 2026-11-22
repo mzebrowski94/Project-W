@@ -37,6 +37,13 @@ public enum Stat {
      */
     GRENADE_MOST(Form.COUNT, Reader.UNIT),
     /**
+     * How many dashes a commander holds at most (G0107). Read where a dash is weighed, and by his panel through the
+     * same method - so the pips are the number the next press meets.
+     */
+    DASH_MOST(Form.COUNT, Reader.UNIT),
+    /** How long a dash he spent takes to come back (G0107). Read where the clock is wound, for the man dashing. */
+    DASH_RECHARGE(Form.SCALE, Reader.UNIT),
+    /**
      * How many cards of one cache the armoury deck holds (G0056). Read where a crate is dealt its
      * pickups; the side's number, moved only by a {@code Deal}.
      */

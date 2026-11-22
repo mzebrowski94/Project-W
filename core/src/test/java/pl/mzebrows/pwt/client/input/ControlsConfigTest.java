@@ -57,12 +57,34 @@ class ControlsConfigTest {
                         keys.action(),
                         keys.grenade(),
                         keys.drag(),
+                        keys.dash(),
+                        keys.dashAlias(),
                         keys.zoom(),
                         keys.draft(),
                         keys.orderFollowMe(),
                         keys.orderForward(),
                         keys.orderDefence(),
                         keys.orderCancel());
+    }
+
+    /** libGDX names the left Shift key {@code L-Shift}, not {@code Shift}: the file has to say what it calls it. */
+    @Test
+    void dashesOnSpaceOrTheLeftShift() {
+        ControlsConfig.Keys keys = ControlsConfig.defaults().key();
+
+        assertThat(keys.dash()).isEqualTo(new KeyCode(Input.Keys.SPACE));
+        assertThat(keys.dashAlias()).isEqualTo(new KeyCode(Input.Keys.SHIFT_LEFT));
+        assertThat(ControlsConfig.FILE.read("").problems()).isEmpty();
+    }
+
+    /** The pad's B is the dash's (G0107), so taking hold of a load is off the pad for now. */
+    @Test
+    void dashesOnThePadsEastAndLeavesDragOffThePad() {
+        ControlsConfig.Pad pad = ControlsConfig.defaults().pad();
+
+        assertThat(pad.dash()).isEqualTo(GamepadButton.EAST);
+        assertThat(pad.drag()).isEqualTo(GamepadButton.NONE);
+        assertThat(pad.dragTrigger()).isEqualTo(GamepadAxis.NONE);
     }
 
     @Test

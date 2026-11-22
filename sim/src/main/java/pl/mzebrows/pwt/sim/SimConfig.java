@@ -541,6 +541,7 @@ public record SimConfig(
      *     leash
      * @param weapon the gun he spawns and comes back with: the sidearm, in every level but the proving
      *     ground (G0060). A better gun is found on the field and lost on death (pillar 3)
+     * @param dash his short burst along the way he is moving (G0107)
      */
     @With
     public record CommanderConfig(
@@ -552,7 +553,8 @@ public record SimConfig(
             float respawnDelaySeconds,
             float respawnShieldSeconds,
             float leashRadius,
-            WeaponKind weapon) {
+            WeaponKind weapon,
+            DashConfig dash) {
         public CommanderConfig {
             Require.positive("commander radius", radius);
             Require.positive("commander speed", speed);
@@ -562,6 +564,36 @@ public record SimConfig(
             Require.notNegative("commander respawnDelaySeconds", respawnDelaySeconds);
             Require.notNegative("commander respawnShieldSeconds", respawnShieldSeconds);
             Require.notNegative("commander leashRadius", leashRadius);
+        }
+    }
+
+    /**
+     * A commander's dash (G0107): a burst along the way he is moving, a few held at once, each coming back on its own.
+     *
+     * @param distance how far one carries him on open ground, in world units
+     * @param durationSeconds how long it lasts; its speed is the distance over this
+     * @param most how many he holds at most, before upgrades
+     * @param rechargeSeconds how long one he spent takes to come back, one at a time
+     * @param slowFactor how much of its speed a tick of it keeps on ground that slows him
+     * @param puffSeconds how long the puff it leaves where it began lasts
+     */
+    @With
+    public record DashConfig(
+            float distance,
+            float durationSeconds,
+            int most,
+            float rechargeSeconds,
+            float slowFactor,
+            float puffSeconds) {
+        public DashConfig {
+            Require.positive("dash distance", distance);
+            Require.positive("dash durationSeconds", durationSeconds);
+            Require.atLeastOne("dash most", most);
+            Require.positive("dash rechargeSeconds", rechargeSeconds);
+            Require.positive("dash puffSeconds", puffSeconds);
+            if (slowFactor <= 0f || slowFactor > 1f) {
+                throw new IllegalArgumentException("dash slowFactor must be in (0, 1], was " + slowFactor);
+            }
         }
     }
 

@@ -61,7 +61,7 @@ public final class PadLabels {
                 + ", strike " + of(pad.strike(), pad.strikeTrigger(), playStation)
                 + ", grenade " + of(pad.grenade(), pad.grenadeTrigger(), playStation)
                 + ", act " + of(pad.action(), pad.actionTrigger(), playStation)
-                + ", pull " + of(pad.drag(), pad.dragTrigger(), playStation)
+                + ", dash " + of(pad.dash(), pad.dashTrigger(), playStation)
                 + ", zoom " + of(pad.zoom(), pad.zoomTrigger(), playStation)
                 + ", pause " + of(pad.pause(), pad.pauseTrigger(), playStation)
                 + ", upgrades " + of(pad.draft(), pad.draftTrigger(), playStation)

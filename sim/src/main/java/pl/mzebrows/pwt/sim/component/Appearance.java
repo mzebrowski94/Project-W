@@ -169,6 +169,25 @@ public final class Appearance implements Component, Pool.Poolable {
     public float pop;
 
     /**
+     * How much of a puff is left, in {@code [0, 1]}; zero for everything that is no puff (G0107). Drawn growing where
+     * it was left and fading as it runs down.
+     */
+    public float puff;
+
+    /**
+     * Which way his last dash went, as a unit vector; {@code (0, 0)} if he never dashed (G0107). The thrusters fire
+     * the other way.
+     */
+    public float dashX;
+
+    public float dashY;
+
+    /** Whether a dash is running, and how long ago, in seconds, the last one ended - zero while one runs. */
+    public boolean dashing;
+
+    public float dashAgo;
+
+    /**
      * How much of a declared stun it is under is left, in {@code [0, 1]}; zero with none (G0053). Drawn as a pale
      * circle shrinking onto it as the stun runs out.
      */
@@ -264,6 +283,11 @@ public final class Appearance implements Component, Pool.Poolable {
         burst = 0f;
         burstFade = 0f;
         pop = 0f;
+        puff = 0f;
+        dashX = 0f;
+        dashY = 0f;
+        dashing = false;
+        dashAgo = 0f;
         daze = 0f;
         throes = 0f;
         shield = 0f;

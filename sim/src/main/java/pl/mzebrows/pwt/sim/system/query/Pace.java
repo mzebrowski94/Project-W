@@ -80,15 +80,33 @@ public final class Pace {
             // A slinger standing for the tell before a sling (G0074).
             pace *= SLING.get(entity).paceFactor();
         }
+        return pace * groundFactor(entity, map, ground);
+    }
+
+    /**
+     * Whether something slows this entity this tick: a slow done to it ({@link Slowed}: glue underfoot, a beam), or
+     * ground it costs more to cross. A wound is not a slow here, nor is anything that only stands a creature still.
+     * What a dash asks (G0107): a tick of one on slowing ground goes at a fraction of its speed, whatever the fraction
+     * of a walk would be.
+     */
+    public static boolean slowing(Entity entity, TileMap map, Defs<Terrain, GroundDef> ground) {
+        if (SLOWED.has(entity) && SLOWED.get(entity).factor() < 1f) {
+            return true;
+        }
+        return groundFactor(entity, map, ground) < 1f;
+    }
+
+    /** How much of its speed the ground it stands on leaves it; one off any ground that matters. */
+    private static float groundFactor(Entity entity, TileMap map, Defs<Terrain, GroundDef> ground) {
         if (!POSITION.has(entity)) {
-            return pace;
+            return 1f;
         }
         Position at = POSITION.get(entity);
         GroundDef under = ground.of(map.terrainAt(at.x, at.y));
         if (!under.matters()) {
-            return pace;
+            return 1f;
         }
         Side side = FACTION.has(entity) ? FACTION.get(entity).side : Side.NEUTRAL;
-        return pace * under.factorFor(side);
+        return under.factorFor(side);
     }
 }

@@ -285,10 +285,22 @@ public final class BottomBarPainter {
         };
     }
 
-    /** Row 1 while he stands free: his wounds, then a shield in front of him (G0053). */
+    /** Row 1 while he stands free: his wounds, then his dashes (G0107), then a shield in front of him (G0053). */
     private void standing(PlayerReadout player, int x, int row) {
         wounds(player, x, row);
         int after = x + player.maxWounds * UiFont.ADVANCE;
+        if (player.dashMost > 0) {
+            after += UiFont.ADVANCE;
+            pips(
+                    player.dashes,
+                    player.dashMost,
+                    after,
+                    row,
+                    TallyIcon.DASH,
+                    TallyIcon.DASH_SPARE,
+                    graphic.hud().color().dash());
+            after += player.dashMost * UiFont.ADVANCE;
+        }
         if (player.shielded) {
             after += UiFont.ADVANCE;
             hud.text(shieldText, after, row, palette.colorFor(Look.COMMANDER, player.variant));
@@ -298,6 +310,9 @@ public final class BottomBarPainter {
     /** Columns that takes. */
     private int standingColumns(PlayerReadout player) {
         int columns = player.maxWounds;
+        if (player.dashMost > 0) {
+            columns += 1 + player.dashMost;
+        }
         if (player.shielded) {
             columns += 1 + shieldText.length();
         }

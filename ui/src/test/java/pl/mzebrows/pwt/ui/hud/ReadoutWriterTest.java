@@ -16,6 +16,7 @@ import pl.mzebrows.pwt.sim.component.Appearance;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
+import pl.mzebrows.pwt.sim.component.Dash;
 import pl.mzebrows.pwt.sim.component.Gripped;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Respawning;
@@ -125,6 +126,20 @@ class ReadoutWriterTest {
         PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
 
         assertThat(player.maxWounds).isEqualTo(SimConfig.defaults().commander().maxWounds() + 1);
+    }
+
+    /** A pip per dash he holds and per one he could (G0107), through the dash's own fold. */
+    @Test
+    void publishesTheDashesHeHoldsAndHisMost() {
+        Simulation world = world();
+        Entity commander = world.spawnCommander(40f, 40f, 0);
+        commander.getComponent(Dash.class).spent = 1;
+
+        PlayerReadout player = fill(new ReadoutWriter(), world).player(0);
+
+        int most = SimConfig.defaults().commander().dash().most();
+        assertThat(player.dashMost).isEqualTo(most);
+        assertThat(player.dashes).isEqualTo(most - 1);
     }
 
     /** A pip per grenade he carries and per one he could (G0077): Bandolier's raise is in the most from the frame he takes it. */

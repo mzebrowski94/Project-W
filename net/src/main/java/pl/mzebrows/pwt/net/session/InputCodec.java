@@ -33,7 +33,8 @@ final class InputCodec {
      */
     private static final float PUSH_STEPS = 16_384f;
 
-    private static final int BUTTON_BITS = 63;
+    /** Seven held buttons, one a bit; bit 128 is the last left. */
+    private static final int BUTTON_BITS = 127;
 
     private static final Order[] ORDERS = Order.values();
 
@@ -129,7 +130,8 @@ final class InputCodec {
                 (buttons & 4) != 0,
                 (buttons & 8) != 0,
                 (buttons & 16) != 0,
-                (buttons & 32) != 0);
+                (buttons & 32) != 0,
+                (buttons & 64) != 0);
     }
 
     @SuppressWarnings("EnumOrdinal") // both ends run the same build - the handshake refuses anything else
@@ -184,7 +186,8 @@ final class InputCodec {
                 | (input.throwing() ? 4 : 0)
                 | (input.acting() ? 8 : 0)
                 | (input.dragging() ? 16 : 0)
-                | (input.aimRelative() ? 32 : 0);
+                | (input.aimRelative() ? 32 : 0)
+                | (input.dashing() ? 64 : 0);
     }
 
     private static int push(float move) {

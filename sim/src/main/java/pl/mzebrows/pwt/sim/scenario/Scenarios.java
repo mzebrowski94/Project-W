@@ -33,7 +33,8 @@ public final class Scenarios {
             new DemolitionScenario(),
             new CasualtyScenario(),
             new CrowdScenario(),
-            new FullHouseScenario());
+            new FullHouseScenario(),
+            new DashYardScenario());
 
     private Scenarios() {}
 

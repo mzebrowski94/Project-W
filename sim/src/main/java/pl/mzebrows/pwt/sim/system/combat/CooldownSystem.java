@@ -10,6 +10,7 @@ import com.badlogic.gdx.utils.Array;
 import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
+import pl.mzebrows.pwt.sim.component.Dash;
 import pl.mzebrows.pwt.sim.component.Dodge;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Heat;
@@ -17,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Pop;
+import pl.mzebrows.pwt.sim.component.Puff;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Slick;
@@ -67,6 +69,8 @@ public final class CooldownSystem extends EntitySystem {
     private static final ComponentMapper<Thrower> THROWER = ComponentMapper.getFor(Thrower.class);
     private static final ComponentMapper<Heat> HEAT = ComponentMapper.getFor(Heat.class);
     private static final ComponentMapper<Pop> POP = ComponentMapper.getFor(Pop.class);
+    private static final ComponentMapper<Puff> PUFF = ComponentMapper.getFor(Puff.class);
+    private static final ComponentMapper<Dash> DASH = ComponentMapper.getFor(Dash.class);
 
     private ImmutableArray<Entity> invulnerable = new ImmutableArray<>(new Array<>());
 
@@ -88,6 +92,8 @@ public final class CooldownSystem extends EntitySystem {
     private ImmutableArray<Entity> throwers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> heats = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> pops = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> puffs = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> dashes = new ImmutableArray<>(new Array<>());
 
     @Override
     public void addedToEngine(Engine engine) {
@@ -109,6 +115,8 @@ public final class CooldownSystem extends EntitySystem {
         throwers = engine.getEntitiesFor(Family.all(Thrower.class).get());
         heats = engine.getEntitiesFor(Family.all(Heat.class, Weapon.class).get());
         pops = engine.getEntitiesFor(Family.all(Pop.class).get());
+        puffs = engine.getEntitiesFor(Family.all(Puff.class).get());
+        dashes = engine.getEntitiesFor(Family.all(Dash.class).get());
     }
 
     @Override
@@ -190,6 +198,15 @@ public final class CooldownSystem extends EntitySystem {
         for (int i = 0; i < pops.size(); i++) {
             Pop pop = POP.get(pops.get(i));
             pop.remainingTicks = countDown(pop.remainingTicks);
+        }
+        for (int i = 0; i < puffs.size(); i++) {
+            Puff puff = PUFF.get(puffs.get(i));
+            puff.remainingTicks = countDown(puff.remainingTicks);
+        }
+        for (int i = 0; i < dashes.size(); i++) {
+            // The burst itself; its recharge runs only while one is spent, so it is counted where that is decided.
+            Dash dash = DASH.get(dashes.get(i));
+            dash.remainingTicks = countDown(dash.remainingTicks);
         }
         for (int i = 0; i < throwers.size(); i++) {
             Thrower thrower = THROWER.get(throwers.get(i));

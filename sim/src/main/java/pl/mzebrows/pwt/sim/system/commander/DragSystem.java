@@ -138,7 +138,8 @@ public final class DragSystem extends EntitySystem {
 
     /**
      * A velocity that closes whatever slack there is this tick, capped at the speed of whoever is
-     * pulling. Nothing drives a held unit, so this is the only thing writing it (an enforced rule) -
+     * pulling - his walk, or the pace he is going at if that is more: a load hauled through a dash keeps up with it,
+     * a tick behind, and he keeps hold (G0107). Nothing drives a held unit, so this is the only thing writing it (an enforced rule) -
      * and the constraint solver still has the last word about where it may end up.
      */
     private static void follow(
@@ -151,6 +152,10 @@ public final class DragSystem extends EntitySystem {
         float dx = (wantX - loadAt.x) / deltaTime;
         float dy = (wantY - loadAt.y) / deltaTime;
         float cap = SPEED.has(dragger) ? SPEED.get(dragger).value : 0f;
+        if (VELOCITY.has(dragger)) {
+            Velocity going = VELOCITY.get(dragger);
+            cap = Math.max(cap, (float) Math.sqrt(going.x * going.x + going.y * going.y));
+        }
         float wanted = (float) Math.sqrt(dx * dx + dy * dy);
         if (cap > 0f && wanted > cap) {
             dx = dx / wanted * cap;

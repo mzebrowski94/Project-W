@@ -15,17 +15,21 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Dash;
 import pl.mzebrows.pwt.sim.component.Drag;
+import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Limpet;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Presence;
+import pl.mzebrows.pwt.sim.component.Puff;
 import pl.mzebrows.pwt.sim.component.Speed;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.GroundDef;
+import pl.mzebrows.pwt.sim.def.Ticks;
 import pl.mzebrows.pwt.sim.system.combat.Guns;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Limpets;
@@ -47,6 +51,13 @@ import pl.mzebrows.pwt.sim.system.query.Pace;
  * <p><strong>It holds together the commanders at one machine, and nobody else</strong> (G0056). Players
  * sharing a screen share a camera that has to frame them all; a player at a machine of his own has a
  * camera of his own, and a rope tied to somebody else's screen would only be an invisible wall.
+ *
+ * <p><strong>The dash is launched here</strong> (G0107), because this system owns his velocity and a dash is a
+ * velocity: while one runs it is his velocity outright - the stick, the haul's reshaping and his wounds do not touch
+ * it - and the solver still has the last word on where it ends. Its recharge is counted here too, where whether
+ * anything is spent is decided; the burst's own clock is {@code CooldownSystem}'s. It is a pure function of his
+ * inputs and the ground: no dice (G0012). The puffs it leaves are reaped here when they run out, as a pop is by the
+ * system that spawns it.
  */
 public final class CommanderControlSystem extends IteratingSystem {
 
@@ -58,6 +69,9 @@ public final class CommanderControlSystem extends IteratingSystem {
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
+    private static final ComponentMapper<Dash> DASH = ComponentMapper.getFor(Dash.class);
+    private static final ComponentMapper<Facing> FACING = ComponentMapper.getFor(Facing.class);
+    private static final ComponentMapper<Puff> PUFF = ComponentMapper.getFor(Puff.class);
 
     /** Below this a direction is treated as no direction, rather than normalised into a huge one. */
     private static final float EPSILON = 1e-4f;
@@ -66,7 +80,17 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     private final Spawner spawner;
 
+    private final Dashes dashes;
+
     private final float leashRadius;
+
+    /** How long a dash lasts, in whole ticks, and how fast it goes: its distance over exactly those ticks. */
+    private final int dashTicks;
+
+    private final float dashSpeed;
+
+    /** How much of that speed a tick of it keeps on ground that slows him. */
+    private final float dashSlowFactor;
 
     /** The ground he is standing on, and what each kind of it costs him. */
     private final TileMap map;
@@ -96,10 +120,14 @@ public final class CommanderControlSystem extends IteratingSystem {
 
     private ImmutableArray<Entity> limpets = new ImmutableArray<>(new Array<>());
 
+    private ImmutableArray<Entity> puffs = new ImmutableArray<>(new Array<>());
+
     /** @param capacity how many slots the game holds - the most machines its commanders can sit at */
-    public CommanderControlSystem(SimConfig config, TileMap map, Guns guns, Spawner spawner, int capacity) {
+    public CommanderControlSystem(
+            SimConfig config, TileMap map, Guns guns, Spawner spawner, Dashes dashes, int capacity) {
         this.guns = guns;
         this.spawner = spawner;
+        this.dashes = dashes;
         super(Family.all(
                         Commander.class,
                         Intent.class,
@@ -108,11 +136,16 @@ public final class CommanderControlSystem extends IteratingSystem {
                         Speed.class,
                         Body.class,
                         Weapon.class,
-                        Faction.class)
+                        Faction.class,
+                        Dash.class)
                 .get());
         this.map = map;
         this.ground = config.ground();
         this.leashRadius = config.commander().leashRadius();
+        SimConfig.DashConfig dash = config.commander().dash();
+        this.dashTicks = Ticks.of(dash.durationSeconds(), config.tickSeconds());
+        this.dashSpeed = dash.distance() / (dashTicks * config.tickSeconds());
+        this.dashSlowFactor = dash.slowFactor();
         this.groupMachine = new int[capacity];
         this.groupX = new float[capacity];
         this.groupY = new float[capacity];
@@ -124,6 +157,7 @@ public final class CommanderControlSystem extends IteratingSystem {
         super.addedToEngine(engine);
         levels = engine.getEntitiesFor(Family.all(Presence.class).get());
         limpets = engine.getEntitiesFor(Family.all(Limpet.class).get());
+        puffs = engine.getEntitiesFor(Family.all(Puff.class).get());
     }
 
     /**
@@ -134,16 +168,30 @@ public final class CommanderControlSystem extends IteratingSystem {
     @Override
     public void update(float deltaTime) {
         findCentres();
+        reapPuffs();
         super.update(deltaTime);
     }
 
     @Override
     protected void processEntity(Entity entity, float deltaTime) {
+        Dash dash = DASH.get(entity);
+        // Whatever holds him, what he spent still comes back, and the tail of his last burst still runs out.
+        recharge(entity, dash);
+        if (dash.running()) {
+            dash.sinceTicks = 0;
+        } else if (dash.sinceTicks < Dash.LONG_AGO) {
+            dash.sinceTicks++;
+        }
         if (Drivers.held(entity)) {
+            // A press now is refused: it spends nothing and shows nothing.
             return;
         }
         Intent intent = INTENT.get(entity);
-        drive(entity, intent);
+        rememberMove(dash, intent);
+        if (intent.dashPressed && !dash.running()) {
+            launch(entity, intent, dash);
+        }
+        drive(entity, intent, dash);
         leash(entity, deltaTime);
         if (Drivers.handsFull(entity)) {
             return;
@@ -230,14 +278,91 @@ public final class CommanderControlSystem extends IteratingSystem {
         velocity.set(velocity.x - excess * outX, velocity.y - excess * outY);
     }
 
+    /** Puffs that have run out are taken away, once a tick. */
+    private void reapPuffs() {
+        for (int i = 0; i < puffs.size(); i++) {
+            Entity puff = puffs.get(i);
+            if (PUFF.get(puff).isOver() && !puff.isScheduledForRemoval()) {
+                spawner.markDead(puff);
+            }
+        }
+    }
+
+    /**
+     * One tick off the clock of a dash he spent, and the dash back when it runs out - one at a time, the clock wound
+     * again for the next while any is still spent (G0107).
+     */
+    private void recharge(Entity entity, Dash dash) {
+        if (dash.spent <= 0) {
+            dash.rechargeTicks = 0;
+            return;
+        }
+        dash.rechargeTicks--;
+        if (dash.rechargeTicks > 0) {
+            return;
+        }
+        dash.spent--;
+        dash.rechargeTicks = dash.spent > 0 ? dashes.rechargeTicks(entity) : 0;
+    }
+
+    /** Which way he last moved, for a dash pressed with the stick at rest. */
+    private static void rememberMove(Dash dash, Intent intent) {
+        float length = (float) Math.sqrt(intent.moveX * intent.moveX + intent.moveY * intent.moveY);
+        if (length <= EPSILON) {
+            return;
+        }
+        dash.lastMoveX = intent.moveX / length;
+        dash.lastMoveY = intent.moveY / length;
+    }
+
+    /**
+     * A press: a puff where he stands, and a dash from there if he has one left - along the way he is moving, or
+     * the way he last moved, or his aim if he never has, fixed for the whole burst (G0107). With none left the puff
+     * is all there is.
+     */
+    private void launch(Entity entity, Intent intent, Dash dash) {
+        Position at = POSITION.get(entity);
+        spawner.spawnPuff(at.x, at.y);
+        if (dashes.left(entity, dash) <= 0) {
+            return;
+        }
+        float length = (float) Math.sqrt(intent.moveX * intent.moveX + intent.moveY * intent.moveY);
+        if (length > EPSILON) {
+            dash.directionX = intent.moveX / length;
+            dash.directionY = intent.moveY / length;
+        } else if (dash.lastMoveX != 0f || dash.lastMoveY != 0f) {
+            dash.directionX = dash.lastMoveX;
+            dash.directionY = dash.lastMoveY;
+        } else {
+            Facing facing = FACING.get(entity);
+            boolean faces = facing != null && (facing.x != 0f || facing.y != 0f);
+            dash.directionX = faces ? facing.x : 1f;
+            dash.directionY = faces ? facing.y : 0f;
+        }
+        if (dash.spent == 0) {
+            dash.rechargeTicks = dashes.rechargeTicks(entity);
+        }
+        dash.spent++;
+        dash.remainingTicks = dashTicks;
+        dash.sinceTicks = 0;
+    }
+
     /**
      * A move intent longer than one unit is normalised, so holding two keys is not faster than
      * holding one; a shorter one is kept as-is, so a half-pushed stick moves at half speed.
      *
      * <p>The speed is {@link Pace}d first: his velocity is not committed by {@code DriveSystem}.
+     *
+     * <p>While a dash runs it is his velocity, at its own speed - a fraction of it on ground that slows him - and
+     * along its own direction: not the stick's, not the haul's, and no wound slows it (G0107).
      */
-    private void drive(Entity entity, Intent intent) {
+    private void drive(Entity entity, Intent intent, Dash dash) {
         Velocity velocity = VELOCITY.get(entity);
+        if (dash.running()) {
+            float speed = Pace.slowing(entity, map, ground) ? dashSpeed * dashSlowFactor : dashSpeed;
+            velocity.set(dash.directionX * speed, dash.directionY * speed);
+            return;
+        }
         float length = (float) Math.sqrt(intent.moveX * intent.moveX + intent.moveY * intent.moveY);
         if (length <= EPSILON) {
             velocity.set(0f, 0f);

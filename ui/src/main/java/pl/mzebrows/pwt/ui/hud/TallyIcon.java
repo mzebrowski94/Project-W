@@ -5,8 +5,8 @@ package pl.mzebrows.pwt.ui.hud;
  * goals, a plus for men stabilised - a <strong>plus</strong>, never a red cross, which is a protected
  * emblem. And a wound (G0053): a narrow diamond, a slit, filled for a wound he carries and hollow for
  * one he could still take. A grenade (G0077): a body with its lever, filled for one he carries and hollow for one he
- * could. Drawn as data, a cap height tall, until there is an atlas; {@code #} is lit.
- * Every lit column of a wound or a grenade sits inside one font advance, so a row of them never touches.
+ * could. A dash (G0107): an arrowhead pointing on, filled for one he holds and hollow for one coming back. Drawn as data, a cap height tall, until there is an atlas; {@code #} is lit.
+ * Every lit column of a wound, a grenade or a dash sits inside one font advance, so a row of them never touches.
  */
 public enum TallyIcon {
     KILLS(".#####.", "#######", "#..#..#", "#######", ".#####.", ".#.#.#.", "......."),
@@ -15,7 +15,9 @@ public enum TallyIcon {
     WOUND("...#...", "..###..", "..###..", ".#####.", "..###..", "..###..", "...#..."),
     WOUND_SPARE("...#...", "..#.#..", "..#.#..", ".#...#.", "..#.#..", "..#.#..", "...#..."),
     GRENADE("...##..", "..#....", ".#####.", ".#####.", ".#####.", ".#####.", "..###.."),
-    GRENADE_SPARE(".......", "..#....", ".#####.", ".#...#.", ".#...#.", ".#...#.", "..###..");
+    GRENADE_SPARE(".......", "..#....", ".#####.", ".#...#.", ".#...#.", ".#...#.", "..###.."),
+    DASH("..#....", "..##...", "..###..", "..####.", "..###..", "..##...", "..#...."),
+    DASH_SPARE("..#....", "..##...", "..#.#..", "..#..#.", "..#.#..", "..##...", "..#....");
 
     /** Side of every icon, in UI pixels: the font's cap height, so an icon sits on a line like a capital. */
     public static final int SIZE = 7;

@@ -163,6 +163,23 @@ public final class Modifiers {
                 stats.of(Stat.GRENADE_MOST).min());
     }
 
+    /** How many dashes {@code who} holds at most (G0107). */
+    @Reads(Stat.DASH_MOST)
+    public int dashMost(Entity who, int base) {
+        return Fold.count(
+                base,
+                sum(Stat.DASH_MOST, who, null, null),
+                stats.of(Stat.DASH_MOST).min());
+    }
+
+    /** How long a dash {@code who} spent takes to come back, in ticks (G0107). */
+    @Reads(Stat.DASH_RECHARGE)
+    public int dashRechargeTicks(Entity who, int baseTicks) {
+        StatDef stat = stats.of(Stat.DASH_RECHARGE);
+        return Fold.scaleTicks(
+                baseTicks, sum(Stat.DASH_RECHARGE, who, null, null), stat.minPercent(), stat.maxPercent());
+    }
+
     /** How many cards of this cache the armoury deck holds (G0056). The side's number. */
     @Reads(Stat.ARMOURY_CARDS)
     public int armouryCards(PickupKind card, int base) {

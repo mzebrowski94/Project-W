@@ -11,6 +11,7 @@ import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Dash;
 import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
@@ -25,6 +26,7 @@ import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
+import pl.mzebrows.pwt.sim.def.SlickDef;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.appearance.AppearanceSystem;
@@ -42,6 +44,7 @@ import pl.mzebrows.pwt.sim.system.commander.ActionSystem;
 import pl.mzebrows.pwt.sim.system.commander.AidSystem;
 import pl.mzebrows.pwt.sim.system.commander.CommanderControlSystem;
 import pl.mzebrows.pwt.sim.system.commander.CrateSystem;
+import pl.mzebrows.pwt.sim.system.commander.Dashes;
 import pl.mzebrows.pwt.sim.system.commander.DragSystem;
 import pl.mzebrows.pwt.sim.system.commander.MeleeSystem;
 import pl.mzebrows.pwt.sim.system.commander.StrikeSystem;
@@ -110,6 +113,7 @@ public final class Simulation {
     private static final ComponentMapper<Intent> INTENT = ComponentMapper.getFor(Intent.class);
     private static final ComponentMapper<Invulnerable> INVULNERABLE = ComponentMapper.getFor(Invulnerable.class);
     private static final ComponentMapper<Thrower> THROWER = ComponentMapper.getFor(Thrower.class);
+    private static final ComponentMapper<Dash> DASH = ComponentMapper.getFor(Dash.class);
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
@@ -143,6 +147,9 @@ public final class Simulation {
 
     /** The one hand every thrower goes through, kept so the interface reads his grenades through it too. */
     private final Throws throwing;
+
+    /** How many dashes a commander holds and gets back (G0107), kept so the interface reads them through it too. */
+    private final Dashes dashes;
 
     /**
      * Reused by {@link #step(CommanderInput)}, so driving one player costs no allocation per tick.
@@ -198,11 +205,14 @@ public final class Simulation {
         // The one trigger and the one hand: every shooter and every thrower goes through these.
         Guns guns = new Guns(spawner, modifiers, scatter, config.muzzleGap());
         this.throwing = new Throws(spawner, modifiers, config.muzzleGap());
+        this.dashes = new Dashes(modifiers, config.commander().dash(), config.tickSeconds());
 
         engine.addSystem(new PositionHistorySystem());
         engine.addSystem(new CooldownSystem());
         engine.addSystem(new DragSystem());
-        engine.addSystem(new CommanderControlSystem(config, map, guns, spawner, capacity));
+        // Launches a dash too (G0107): the one system that owns his velocity, after CooldownSystem has counted the
+        // burst down and DragSystem has published the load's bearing.
+        engine.addSystem(new CommanderControlSystem(config, map, guns, spawner, dashes, capacity));
         engine.addSystem(new MeleeSystem(spawner));
         // After the commander's hands, before anything looks around.
         engine.addSystem(new TurretSystem(solid, guns));
@@ -374,6 +384,7 @@ public final class Simulation {
                             input.throwing(),
                             input.acting(),
                             input.dragging(),
+                            input.dashing(),
                             inputs.orderOf(COMMANDER.get(commander).slot))
                     .crate(
                             inputs.crateTakeOf(COMMANDER.get(commander).slot),
@@ -459,6 +470,17 @@ public final class Simulation {
     public int grenadeMost(Entity man) {
         Thrower thrower = THROWER.get(man);
         return thrower == null ? 0 : throwing.most(man, thrower);
+    }
+
+    /** How many dashes this commander has left (G0107) - for the interface; zero for anything that does not dash. */
+    public int dashes(Entity man) {
+        Dash dash = DASH.get(man);
+        return dash == null ? 0 : dashes.left(man, dash);
+    }
+
+    /** How many dashes this commander holds at most, upgrades included (G0107) - for the interface. */
+    public int dashMost(Entity man) {
+        return DASH.has(man) ? dashes.most(man) : 0;
     }
 
     /**
@@ -556,6 +578,30 @@ public final class Simulation {
     /** Spawns something lying on the field for the first thing that touches it. */
     public Entity spawnPickup(PickupKind kind, float x, float y) {
         return spawner.spawnPickup(kind, x, y);
+    }
+
+    /**
+     * Lays one circle of ruined ground as {@code slick} declares it, on {@code side}, for a scenario that wants ground
+     * laid by hand rather than spat - a dash yard's glue (G0107).
+     */
+    public Entity spawnSlick(float x, float y, SlickDef slick, Side side) {
+        return spawner.spawnSlick(
+                x,
+                y,
+                slick.radius(),
+                slick.seconds(),
+                slick.growFraction(),
+                slick.fadeFraction(),
+                slick.damage(),
+                slick.victimInvulnerableSeconds(),
+                slick.look(),
+                slick.knockbackSpeed(),
+                slick.harm(),
+                slick.slowFactor(),
+                slick.slowSeconds(),
+                slick.heeded(),
+                0L,
+                side);
     }
 
     /** Spawns a boulder: a static circle that blocks units and projectiles. */

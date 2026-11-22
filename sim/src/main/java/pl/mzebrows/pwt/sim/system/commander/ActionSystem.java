@@ -17,6 +17,7 @@ import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
+import pl.mzebrows.pwt.sim.component.Dash;
 import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Level;
@@ -73,6 +74,7 @@ public final class ActionSystem extends EntitySystem {
     private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Crew> CREW = ComponentMapper.getFor(Crew.class);
+    private static final ComponentMapper<Dash> DASH = ComponentMapper.getFor(Dash.class);
 
     private final float reviveInvulnerableSeconds;
     private final Modifiers modifiers;
@@ -129,6 +131,8 @@ public final class ActionSystem extends EntitySystem {
             boolean acting = INTENT.get(commander).acting;
             boolean pressed = acting && !action.wasHeld;
             action.wasHeld = acting;
+            // A dash takes his hands off any work in hand, and the work is lost as letting go loses it (G0107).
+            boolean working = acting && !dashing(commander);
             if (Drivers.aboard(commander)) {
                 offer(action, ActionKind.LEAVE_TURRET, CREW.get(commander).station);
                 if (pressed) {
@@ -150,7 +154,7 @@ public final class ActionSystem extends EntitySystem {
                     && Reach.doorGap(commander, door, tileSize) < nearestGap(commander, station, crate, casualty)) {
                 // The bar is the door's, drawn over it; nothing fills on him.
                 offer(action, ActionKind.OPEN_DOOR, Handles.of(door));
-                if (acting) {
+                if (working) {
                     putHandsTo(commander, DOOR.get(door));
                 }
                 continue;
@@ -175,7 +179,7 @@ public final class ActionSystem extends EntitySystem {
             }
             action.available = ActionKind.STABILISE;
             action.subject = Handles.of(casualty);
-            if (acting) {
+            if (working) {
                 if (Aid.work(modifiers, commander, casualty, deltaTime, reviveInvulnerableSeconds)
                         && TALLY.has(commander)) {
                     // A stabilise is a stabilise, whoever he put back on his feet (G0044).
@@ -187,6 +191,11 @@ public final class ActionSystem extends EntitySystem {
             action.progress = Aid.progress(casualty);
         }
         openCrates(tick);
+    }
+
+    /** Whether he is in a dash this tick (G0107). */
+    private static boolean dashing(Entity commander) {
+        return DASH.has(commander) && DASH.get(commander).running();
     }
 
     /** Each slot that pressed opens the shut crate he would reach first, lowest slot first. */

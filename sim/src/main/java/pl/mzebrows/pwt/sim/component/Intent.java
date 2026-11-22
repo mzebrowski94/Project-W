@@ -47,6 +47,16 @@ public final class Intent implements Component, Pool.Poolable {
     /** Whether the drag input is held this tick. */
     public boolean dragging;
 
+    /** Whether the dash input is held this tick (G0107). */
+    public boolean dashing;
+
+    /**
+     * Whether the dash input went down this tick: held now and not held the tick before. A dash is launched on the
+     * press, never on the hold, so a key held through a refusal launches nothing once it ends. Derived as {@link
+     * #firePressed} is.
+     */
+    public boolean dashPressed;
+
     /**
      * The squad order given this tick, or null.
      *
@@ -77,6 +87,7 @@ public final class Intent implements Component, Pool.Poolable {
             boolean newThrowing,
             boolean newActing,
             boolean newDragging,
+            boolean newDashing,
             @Nullable Order newOrder) {
         this.moveX = newMoveX;
         this.moveY = newMoveY;
@@ -88,6 +99,8 @@ public final class Intent implements Component, Pool.Poolable {
         this.throwing = newThrowing;
         this.acting = newActing;
         this.dragging = newDragging;
+        this.dashPressed = newDashing && !this.dashing;
+        this.dashing = newDashing;
         this.order = newOrder;
         this.crateTake = null;
         this.crateClose = false;
@@ -113,6 +126,8 @@ public final class Intent implements Component, Pool.Poolable {
         throwing = false;
         acting = false;
         dragging = false;
+        dashing = false;
+        dashPressed = false;
         order = null;
         crateTake = null;
         crateClose = false;

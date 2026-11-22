@@ -25,6 +25,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Crew;
 import pl.mzebrows.pwt.sim.component.Damage;
+import pl.mzebrows.pwt.sim.component.Dash;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Dodge;
 import pl.mzebrows.pwt.sim.component.Door;
@@ -62,6 +63,7 @@ import pl.mzebrows.pwt.sim.component.Post;
 import pl.mzebrows.pwt.sim.component.Presence;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Puff;
 import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
@@ -234,6 +236,8 @@ public final class Spawner {
         // Carried always: what he holds changes, and a gun that does not run hot leaves it at zero.
         entity.add(engine.createComponent(Heat.class));
         entity.add(engine.createComponent(Slowed.class));
+        // He starts full of dashes, and comes back full (G0107).
+        entity.add(engine.createComponent(Dash.class));
         // What a body is made of does not depend on its side.
         entity.add(engine.createComponent(Bloat.class));
         entity.add(engine.createComponent(Shock.class));
@@ -1398,6 +1402,23 @@ public final class Spawner {
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(radius));
         entity.add(engine.createComponent(Appearance.class).set(look));
+        admit(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a puff (G0107): the smoke a dash leaves where it began, for {@code sim.commander.dash.puffSeconds}. No
+     * collider, no side: feedback, which nothing touches or hunts (G0004). As wide as a commander; how it grows is the
+     * renderer's.
+     */
+    public Entity spawnPuff(float x, float y) {
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Puff.class)
+                .set(ticks(config.commander().dash().puffSeconds())));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(config.commander().radius()));
+        entity.add(engine.createComponent(Appearance.class).set(Look.PUFF));
         admit(entity);
         return entity;
     }

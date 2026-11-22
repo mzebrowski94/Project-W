@@ -18,6 +18,7 @@ import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Bloat;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Crew;
+import pl.mzebrows.pwt.sim.component.Dash;
 import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Dying;
 import pl.mzebrows.pwt.sim.component.Feed;
@@ -35,6 +36,7 @@ import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Pop;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
+import pl.mzebrows.pwt.sim.component.Puff;
 import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Slick;
@@ -65,6 +67,8 @@ import pl.mzebrows.pwt.sim.system.query.Limpets;
 public final class AppearanceSystem extends IteratingSystem {
 
     private static final ComponentMapper<Pop> POP = ComponentMapper.getFor(Pop.class);
+    private static final ComponentMapper<Puff> PUFF = ComponentMapper.getFor(Puff.class);
+    private static final ComponentMapper<Dash> DASH = ComponentMapper.getFor(Dash.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
@@ -174,11 +178,26 @@ public final class AppearanceSystem extends IteratingSystem {
         appearance.throes = DYING.has(entity) ? DYING.get(entity).left() : 0f;
         // A take by touch, rising and fading as it runs out (G0078).
         appearance.pop = POP.has(entity) ? POP.get(entity).left() : 0f;
+        // A dash's smoke where it began, growing and fading where it was left (G0107).
+        appearance.puff = PUFF.has(entity) ? PUFF.get(entity).left() : 0f;
+        publishDash(entity, appearance, deltaTime);
         publishRiders(entity, appearance);
         if (DOOR.has(entity)) {
             // An opened door is seen sinking, its squares shrinking to nothing (G0069). A look only.
             appearance.squareFill = 1f - DOOR.get(entity).sunk();
         }
+    }
+
+    /** Which way his last dash went, whether one runs and how long ago it ended: the thrusters' (G0107). A look only. */
+    private static void publishDash(Entity entity, Appearance appearance, float deltaTime) {
+        if (!DASH.has(entity)) {
+            return;
+        }
+        Dash dash = DASH.get(entity);
+        appearance.dashX = dash.directionX;
+        appearance.dashY = dash.directionY;
+        appearance.dashing = dash.running();
+        appearance.dashAgo = dash.sinceTicks * deltaTime;
     }
 
     /** What it still carries on its back, and as what (G0074, pillar 5). */

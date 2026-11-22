@@ -66,6 +66,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param slither how to draw the parts trailing a slithering head (G0095)
  * @param burrow how to draw a worm: its shadow under the ground and its maw's teeth up (G0096)
  * @param devour how to draw a clinch ending: the one killed shrinking, the pair swayed (G0099)
+ * @param dash how to draw a dash: its thrusters and the puff it leaves (G0107)
  * @param action how to draw the action key's brackets and its prompt (G0098)
  * @param actionMark the colour of the brackets on what the action key would act on, and of its prompt's frame
  * @param pickupMark the colour of the ticks on a pickup worth something to a commander near it
@@ -116,6 +117,7 @@ public record GraphicConfig(
         BurrowMark burrow,
         DevourMark devour,
         LimpetMark limpet,
+        DashMark dash,
         ActionMark action,
         @ConfigKey("color.actionMark") Color actionMark,
         @ConfigKey("color.pickupMark") Color pickupMark,
@@ -220,7 +222,14 @@ public record GraphicConfig(
 
     /** The bars' colours. */
     public record HudColor(
-            Color text, Color textDim, Color alert, Color overlayFrame, Color bar, Color wound, Color swarm) {}
+            Color text,
+            Color textDim,
+            Color alert,
+            Color overlayFrame,
+            Color bar,
+            Color wound,
+            Color swarm,
+            Color dash) {}
 
     /** How much of the view's width the dev overlay may take. */
     public record Overlay(float widthShare) {
