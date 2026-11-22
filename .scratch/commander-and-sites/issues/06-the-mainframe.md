@@ -181,3 +181,5 @@ Keys:
 - `assets/i18n/ui.properties`: `ui.action.DOWNLOAD=DOWNLOAD`, `ui.action.DOWNLOAD.working=DECRYPTING…`.
 
 Judge by: `./gradlew lwjgl3:run --args="--scenario=mainframe"` (house, shut door, squad of six, grunts, a ringed point in the yard); `--mission=MHPC-VVKG` (mainframe in brake, first biome; hard `HHPC-VVKD`).
+
+Follow-up (afk/cs-06-sweep-fix, merged): the wall spot was drawn from the biome's own stream, so a retry could not move it and two seeds (`HHRG-6VV9` anthill, `HHQG-J6A3` brake) came up short of ant nests. The spot now comes from the attempt's stream; chance and house stay on the biome's. G0111 decision 2 updated. Sweeps: MissionSweep 2192 seeds 0 faults, StripSweep 2000 seeds 0 faults.
