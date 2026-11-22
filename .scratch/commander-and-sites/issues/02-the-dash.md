@@ -1,7 +1,7 @@
 # The dash
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: none
 Spec: [spec.md](../spec.md) section 1
