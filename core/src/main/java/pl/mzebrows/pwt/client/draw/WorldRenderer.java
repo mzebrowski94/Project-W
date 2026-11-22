@@ -28,6 +28,7 @@ import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Slither;
 import pl.mzebrows.pwt.sim.component.Stunned;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -84,8 +85,12 @@ public final class WorldRenderer implements Disposable {
     private static final ComponentMapper<Slither> SLITHER = ComponentMapper.getFor(Slither.class);
     private static final ComponentMapper<Burrow> BURROW = ComponentMapper.getFor(Burrow.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
+    private static final ComponentMapper<Site> SITE = ComponentMapper.getFor(Site.class);
 
     private static final Family HANDLED = Family.all(Handle.class).get();
+
+    private static final Family SITES = Family.all(Site.class, Position.class, PreviousPosition.class, Body.class)
+            .get();
 
     /** Where a cosmetic lead writes the facing it draws; reused, so it costs nothing per frame. */
     private final float[] ahead = new float[2];
@@ -149,6 +154,8 @@ public final class WorldRenderer implements Disposable {
     private final DoorMark doorMark;
     private final PostMark postMark;
     private final FlagMark flagMark;
+    private final ObjectiveRing objectiveRing;
+    private final MainframeMark mainframeMark;
     private final BurstMark burstMark;
     private final DazeMark dazeMark;
     private final TreeMark treeMark;
@@ -187,6 +194,9 @@ public final class WorldRenderer implements Disposable {
     /** Every entity with a handle, to find a clinch's partner by (G0099). */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
+    /** Every site, to draw the objective ring round those not yet taken (G0111). */
+    private ImmutableArray<Entity> sites = new ImmutableArray<>(new Array<>());
+
     /** How long one tick of the bound world is: what a devour's sway counts its phase in. */
     private float tickSeconds;
 
@@ -204,6 +214,7 @@ public final class WorldRenderer implements Disposable {
         drawable = simulation.engine().getEntitiesFor(DRAWABLE);
         squared = simulation.engine().getEntitiesFor(SQUARED);
         handled = simulation.engine().getEntitiesFor(HANDLED);
+        sites = simulation.engine().getEntitiesFor(SITES);
         tickSeconds = simulation.config().tickSeconds();
     }
 
@@ -236,6 +247,7 @@ public final class WorldRenderer implements Disposable {
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         drawGround(alpha);
         drawSquared(alpha);
+        drawObjectiveRings(alpha);
         for (int i = 0; i < drawable.size(); i++) {
             Entity entity = drawable.get(i);
             Position position = POSITION.get(entity);
@@ -316,6 +328,9 @@ public final class WorldRenderer implements Disposable {
                 drawBoulder(x, y, radius, tint(appearance));
             } else if (appearance.look == Look.STONE) {
                 drawStone(x, y, radius, tint(appearance));
+            } else if (appearance.look == Look.MAINFRAME) {
+                drawMainframe(entity, x, y, radius, appearance);
+                continue;
             } else if (appearance.streaks()) {
                 // Drawn back to where it says it came from, with a head on it so a beam that has
                 // just been fired is still something rather than a zero-length line. The far end is
@@ -774,6 +789,72 @@ public final class WorldRenderer implements Disposable {
             return;
         }
         drawLoading(x, y, radius * limpetMark.ringPitch(), palette.colorFor(appearance.chargeLook), appearance.charge);
+    }
+
+    /**
+     * The objective ring round every site not yet taken (G0111): stripes by turns in its two colours, turning and
+     * shining on the client's clock, underfoot. Read off the site's state, the same on every machine.
+     */
+    private void drawObjectiveRings(float alpha) {
+        float brightness = objectiveRing.brightnessAt(pulseSeconds, motionScale);
+        float width = objectiveRing.width();
+        int pieces = objectiveRing.pieces();
+        for (int i = 0; i < sites.size(); i++) {
+            Entity entity = sites.get(i);
+            if (SITE.get(entity).taken) {
+                continue;
+            }
+            float x = Drawn.x(POSITION.get(entity), PREVIOUS.get(entity), alpha);
+            float y = Drawn.y(POSITION.get(entity), PREVIOUS.get(entity), alpha);
+            float ring = objectiveRing.ringFor(BODY.get(entity).radius);
+            for (int stripe = 0; stripe < objectiveRing.stripes(); stripe++) {
+                Color color = objectiveRing.colorOf(stripe);
+                tinted.set(color.r * brightness, color.g * brightness, color.b * brightness, color.a);
+                shapes.setColor(tinted);
+                for (int piece = 0; piece < pieces; piece++) {
+                    int at = stripe * pieces + piece;
+                    float from = objectiveRing.angleAt(at, pulseSeconds, motionScale);
+                    float to = objectiveRing.angleAt(at + 1, pulseSeconds, motionScale);
+                    shapes.rectLine(
+                            x + MathUtils.cosDeg(from) * ring,
+                            y + MathUtils.sinDeg(from) * ring,
+                            x + MathUtils.cosDeg(to) * ring,
+                            y + MathUtils.sinDeg(to) * ring,
+                            width);
+                }
+            }
+        }
+    }
+
+    /**
+     * A mainframe (G0111): its cabinet, its black screen, and on the screen a red X - or a green tick once its site is
+     * taken. Its download is the door's loading circle over it. Read off its site and its charge, never a field of its
+     * own.
+     */
+    private void drawMainframe(Entity entity, float x, float y, float radius, Appearance appearance) {
+        float halfWidth = mainframeMark.widthFor(radius) * 0.5f;
+        float halfHeight = mainframeMark.heightFor(radius) * 0.5f;
+        shapes.setColor(tint(appearance));
+        shapes.rect(x - halfWidth, y - halfHeight, halfWidth * 2f, halfHeight * 2f);
+        float screenX = mainframeMark.screenWidthFor(radius) * 0.5f;
+        float screenY = mainframeMark.screenHeightFor(radius) * 0.5f;
+        shapes.setColor(mainframeMark.screen());
+        shapes.rect(x - screenX, y - screenY, screenX * 2f, screenY * 2f);
+        float stroke = mainframeMark.strokeFor(radius);
+        float markX = screenX * 0.6f;
+        float markY = screenY * 0.6f;
+        if (SITE.has(entity) && SITE.get(entity).taken) {
+            shapes.setColor(mainframeMark.done());
+            shapes.rectLine(x - markX, y, x - markX * 0.3f, y - markY, stroke);
+            shapes.rectLine(x - markX * 0.3f, y - markY, x + markX, y + markY, stroke);
+            return;
+        }
+        shapes.setColor(mainframeMark.locked());
+        shapes.rectLine(x - markX, y - markY, x + markX, y + markY, stroke);
+        shapes.rectLine(x - markX, y + markY, x + markX, y - markY, stroke);
+        if (appearance.charge > 0f) {
+            drawLoading(x, y, radius * 2f, palette.colorFor(appearance.chargeLook), appearance.charge);
+        }
     }
 
     /** A post: an outline just round the point it stands on, pulsing between its dark green and a light one. */

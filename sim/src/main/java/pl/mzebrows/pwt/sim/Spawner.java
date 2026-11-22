@@ -94,6 +94,7 @@ import pl.mzebrows.pwt.sim.component.Wander;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.component.Weave;
+import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.BurrowDef;
 import pl.mzebrows.pwt.sim.def.Harm;
@@ -110,6 +111,8 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.WeaponType;
 import pl.mzebrows.pwt.sim.def.Whole;
+import pl.mzebrows.pwt.sim.def.WorkedSiteDef;
+import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 
 /**
  * The one place that builds entity state, so no system has to remember which components a commander
@@ -924,6 +927,29 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(point.radius()));
         entity.add(engine.createComponent(Appearance.class).set(Look.CONTROL_POINT));
         entity.add(engine.createComponent(Site.class));
+        admit(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a worked site of this kind (G0111): ground the squad takes by one man's work held at it - a mainframe.
+     *
+     * <p>Solid, immovable and <strong>unbreakable</strong>: no health, so nothing hurts it, and shots and blasts stop
+     * on it as on a boulder. On nobody's side, so nothing hunts it. A {@link Site}, so taking it counts as taking any
+     * site does.
+     */
+    public Entity spawnWorkedSite(WorkedSiteKind kind, float x, float y) {
+        WorkedSiteDef def = config.workedSite(kind);
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(WorkedSite.class).set(kind, def.action(), ticks(def.workSeconds())));
+        entity.add(engine.createComponent(Site.class));
+        entity.add(engine.createComponent(Obstacle.class));
+        entity.add(engine.createComponent(Faction.class).set(Side.NEUTRAL));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(def.radius()));
+        entity.add(engine.createComponent(Collider.class).set(true, false));
+        entity.add(engine.createComponent(Appearance.class).set(def.look()));
         admit(entity);
         return entity;
     }

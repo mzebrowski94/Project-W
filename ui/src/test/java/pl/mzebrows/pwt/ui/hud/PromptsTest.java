@@ -61,6 +61,26 @@ class PromptsTest {
     }
 
     @Test
+    void offersADownloadOnAHoldAndSaysWhatIsBeingDoneOnceItIsUnderWay() {
+        PlayerReadout player = standing(0, 10L);
+        player.action = ActionKind.DOWNLOAD;
+        player.subject = 20L;
+
+        prompts.update(readout, EVERYBODY, FRAME);
+        String before = prompts.verb(0);
+        boolean workingBefore = prompts.working(0);
+        player.progress = 0.3f;
+        prompts.update(readout, EVERYBODY, FRAME);
+
+        assertThat(prompts.hold(0)).isTrue();
+        assertThat(before).isEqualTo("ui.action.DOWNLOAD");
+        assertThat(workingBefore).isFalse();
+        assertThat(prompts.working(0)).isTrue();
+        assertThat(prompts.verb(0)).isEqualTo("ui.action.DOWNLOAD.working");
+        assertThat(prompts.fill(0)).isEqualTo(0.3f);
+    }
+
+    @Test
     void promptsTheStrikeOverHimWhilePinned() {
         PlayerReadout player = standing(0, 10L);
         player.pinned = true;

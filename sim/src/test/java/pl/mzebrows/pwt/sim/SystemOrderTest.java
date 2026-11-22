@@ -58,6 +58,7 @@ import pl.mzebrows.pwt.sim.system.level.NestSystem;
 import pl.mzebrows.pwt.sim.system.level.ObjectiveSystem;
 import pl.mzebrows.pwt.sim.system.level.ReinforcementSystem;
 import pl.mzebrows.pwt.sim.system.level.WaveSystem;
+import pl.mzebrows.pwt.sim.system.level.WorkedSiteSystem;
 import pl.mzebrows.pwt.sim.system.motion.AvoidanceSystem;
 import pl.mzebrows.pwt.sim.system.motion.DodgeSystem;
 import pl.mzebrows.pwt.sim.system.motion.DriveSystem;
@@ -239,6 +240,22 @@ class SystemOrderTest {
                 "a door goes to a man whose way it shuts this tick (G0069)"));
         rows.add(new Before(
                 DamageSystem.class, DoorSystem.class, "a door broken this tick stops being a wall this tick (G0069)"));
+        rows.add(new Before(
+                ActionSystem.class,
+                WorkedSiteSystem.class,
+                "a commander's hands on a worked site this tick count this tick (G0111)"));
+        rows.add(new Before(
+                DamageSystem.class,
+                WorkedSiteSystem.class,
+                "a wound this tick loses the work on a worked site this tick (G0111)"));
+        rows.add(new Before(
+                WorkedSiteSystem.class,
+                UpgradeSystem.class,
+                "a worked site taken this tick earns its draft point this tick (G0111)"));
+        rows.add(new Before(
+                WorkedSiteSystem.class,
+                ObjectiveSystem.class,
+                "a worked site taken this tick counts for the objectives this tick (G0111)"));
         rows.add(new Before(DyingSystem.class, RespawnSystem.class, "reactions run while the dead are still there"));
         rows.add(new Before(RespawnSystem.class, ProjectileBoundsSystem.class, "a spent shot joins the death chain"));
         rows.add(new Before(

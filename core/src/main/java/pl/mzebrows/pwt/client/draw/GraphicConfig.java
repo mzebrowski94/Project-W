@@ -57,6 +57,8 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param door how to draw a door being opened (G0069)
  * @param post how to draw a post, round the point it was taken from
  * @param flag how to draw a control point once it is taken: its pole, its flag and its ring
+ * @param siteRing the objective ring round every site not yet taken (G0111)
+ * @param mainframe how to draw a mainframe: its cabinet, its screen, the X and the tick (G0111)
  * @param tree how to draw a tree's foliage over its trunk (G0072)
  * @param boulder how to shade a boulder
  * @param sling how to draw a slinger's riders on its back (G0074)
@@ -107,6 +109,8 @@ public record GraphicConfig(
         DoorMark door,
         PostMark post,
         FlagMark flag,
+        @ConfigKey("site.ring") ObjectiveRing siteRing,
+        @ConfigKey("site.mainframe") MainframeMark mainframe,
         BurstMark burst,
         DazeMark daze,
         TreeMark tree,

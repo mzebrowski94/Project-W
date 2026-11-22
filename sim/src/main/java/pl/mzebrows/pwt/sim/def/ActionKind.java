@@ -29,5 +29,18 @@ public enum ActionKind {
      * Open the shut door he is standing at (G0069): a hold, on stabilise's rules. Last on a tie - it goes to
      * whatever is already on the list.
      */
-    OPEN_DOOR
+    OPEN_DOOR,
+    /**
+     * Download the mainframe he is standing at (G0111): a hold, on a door's rules - the work is the mainframe's, one
+     * tick of it a tick however many hands, and lost the moment he lets go, steps away, dashes or takes a wound.
+     */
+    DOWNLOAD;
+
+    /**
+     * Whether this works a site (G0111): a hold whose work is the site's, and whose prompt says what is being done
+     * while it is - {@code DECRYPTING…} at a mainframe. Every worked site's action is one.
+     */
+    public boolean worksASite() {
+        return this == DOWNLOAD;
+    }
 }

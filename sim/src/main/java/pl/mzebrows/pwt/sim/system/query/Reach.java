@@ -11,7 +11,9 @@ import pl.mzebrows.pwt.sim.component.Crate;
 import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Turret;
+import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 
 /**
@@ -30,6 +32,8 @@ public final class Reach {
     private static final ComponentMapper<Crate> CRATE = ComponentMapper.getFor(Crate.class);
     private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
     private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
+    private static final ComponentMapper<WorkedSite> WORKED = ComponentMapper.getFor(WorkedSite.class);
+    private static final ComponentMapper<Site> SITE = ComponentMapper.getFor(Site.class);
 
     private Reach() {}
 
@@ -76,6 +80,27 @@ public final class Reach {
         return nearest;
     }
 
+    /**
+     * The untaken worked site the man would reach first, whatever its kind, or null if none is within reach (G0111).
+     * What it offers is its own {@code WorkedSite.action}.
+     */
+    public static @Nullable Entity nearestWorkedSite(ImmutableArray<Entity> sites, Entity man, float reach) {
+        Entity nearest = null;
+        float nearestGap = Float.MAX_VALUE;
+        for (int i = 0; i < sites.size(); i++) {
+            Entity site = sites.get(i);
+            if (!offers(site, WORKED.get(site).action)) {
+                continue;
+            }
+            float gap = gap(man, site);
+            if (gap <= reach && gap < nearestGap) {
+                nearest = site;
+                nearestGap = gap;
+            }
+        }
+        return nearest;
+    }
+
     /** How far a man is from a door, his surface to the nearest part of its doorway, in world units. */
     public static float doorGap(Entity man, Entity door, float tileSize) {
         Position at = POSITION.get(man);
@@ -93,7 +118,7 @@ public final class Reach {
 
     /**
      * Whether this is something the action could be done to now: a casualty, an empty gun, a shut crate, a shut
-     * door. Public because the interface asks it too, to bracket faintly what else the key could act on (G0098) -
+     * door, an untaken worked site of the kind that offers it. Public because the interface asks it too, to bracket faintly what else the key could act on (G0098) -
      * whether, never which: which one the key means is {@code ActionSystem}'s alone.
      */
     public static boolean offers(Entity candidate, ActionKind offer) {
@@ -102,6 +127,7 @@ public final class Reach {
             case MAN_TURRET -> !TURRET.get(candidate).crewed;
             case OPEN_CRATE -> !CRATE.get(candidate).open() && !DEAD.has(candidate);
             case OPEN_DOOR -> !DOOR.get(candidate).open && !DEAD.has(candidate);
+            case DOWNLOAD -> WORKED.get(candidate).action == offer && !SITE.get(candidate).taken;
             case NONE, LEAVE_TURRET -> throw new IllegalArgumentException("nothing is reached for to " + offer);
         };
     }

@@ -49,6 +49,7 @@ import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupDef;
@@ -103,6 +104,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Sling> SLING = ComponentMapper.getFor(Sling.class);
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
+    private static final ComponentMapper<WorkedSite> WORKED = ComponentMapper.getFor(WorkedSite.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Limpet> LIMPET = ComponentMapper.getFor(Limpet.class);
 
@@ -265,7 +267,15 @@ public final class AppearanceSystem extends IteratingSystem {
             appearance.charge = DOOR.get(entity).progress();
             return;
         }
-        if (ACTION.has(entity) && ACTION.get(entity).progress > 0f) {
+        if (WORKED.has(entity)) {
+            // The site's bar, not the man's (G0111): everyone sees the download on the mainframe, green as a door's.
+            appearance.chargeLook = Look.MENDING;
+            appearance.charge = WORKED.get(entity).progress();
+            return;
+        }
+        if (ACTION.has(entity)
+                && ACTION.get(entity).progress > 0f
+                && !ACTION.get(entity).available.worksASite()) {
             // The work shows on the man doing it; the casualty's circle shows his clock. Its own
             // colour: the one clock the player is winning.
             appearance.chargeLook = Look.MENDING;

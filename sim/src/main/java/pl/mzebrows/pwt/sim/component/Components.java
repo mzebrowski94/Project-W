@@ -104,7 +104,8 @@ public final class Components {
                     Drafts.class,
                     Presence.class,
                     Weapon.class,
-                    Weave.class)
+                    Weave.class,
+                    WorkedSite.class)
             .sorted(Comparator.comparing(Class::getSimpleName))
             .toList();
 
