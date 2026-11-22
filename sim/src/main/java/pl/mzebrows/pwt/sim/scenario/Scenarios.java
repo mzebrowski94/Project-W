@@ -37,7 +37,8 @@ public final class Scenarios {
             new DashYardScenario(),
             new DashYardScenario(true),
             new MainframeScenario(),
-            new JaguarHouseScenario());
+            new JaguarHouseScenario(),
+            new SpireFenScenario());
 
     private Scenarios() {}
 

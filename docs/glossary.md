@@ -316,8 +316,9 @@ A term that could sit in two sections goes where a reader would look for it, not
 | **objective ring** | The striped ring, white and yellow by turns, turning and shining, drawn underfoot round every **site** not yet taken, so every player sees at a glance what the level wants taken; gone once it is (G0111). Rendering only, read off the site's state. Not a **charge**, and not the action's highlight, which is a **bracket**. |
 | **relic** | The desert's **site**: a glowing square turning slowly over a stone **plinth**, **extracted** as a **mainframe** is downloaded but rousing far wider, and gone once taken - which hatches snakes near it. Four **wardens** guard it. Not *artifact*. |
 | **plinth** | The stone block a **relic** hovers over. Solid, and stays after the relic is gone. |
-| **warden** | One of the four sand-coloured oval pillars round a **relic**, close enough that the ground between them is tight. Woken by the first attempt to extract it, each fires small shots straight along the four compass lines, over and over, at the squad's side only, until the relic is taken. Solid and unbreakable. |
-| **spire** | A **fen**'s standing shooter: solid, unbreakable, firing one small shot a second along a fixed cycle of compass bearings dealt to it when the level is built, so it can be learnt. At the squad's side only, and only while one of them is near. Not *totem*; not a **turret**, which a man gets on. |
+| **warden** | One of the four sand-coloured oval pillars round a **relic** - an **emplacement** - close enough that the ground between them is tight. Woken by the first attempt to extract it, each fires small shots straight along the four compass lines, over and over, at the squad's side only, until the relic is taken. Solid and unbreakable. |
+| **emplacement** | A standing shooter nobody crews: a **spire** or a **warden**. Fires one shot along each bearing of a step of its cycle every period - a cycle dealt once when the level is built, or a fixed volley - while somebody is near or once something wakes it; solid, unbreakable, at the squad's side only, and never an enemy to clear or a target (G0113). `Emplacement` in code; its kinds are `EmplacementKind`. Not a **turret**, which a man gets on. |
+| **spire** | A **fen**'s **emplacement**: solid, unbreakable, firing one small shot a second along a fixed cycle of compass bearings dealt to it when the level is built, so it can be learnt. At the squad's side only, and only while one of them is near. Not *totem*; not a **turret**, which a man gets on. |
 | **flag** | What a **control point** flies once it is taken: a pole at its middle with a small flag in a light player-blue, waving on the client's clock, and a static ring round its edge in the same blue in place of the full **charge** - so taken never reads as nearly taken (pillar 5). A finale's point flies one too; a **post** is drawn round it as before. Rendering only (`FlagMark`): the renderer reads a point's full charge, never a field of its own (G0003). Never red, which is the aliens'. Not *banner*, which is the paused one. |
 | **capture crowd** | How many men on a **control point** being taken are enough: a trooper who arrives once that many are on it goes on to the next point and holds there, never past it. |
 | **level** *(source)* | One self-contained combat scenario, start to objective. |
@@ -482,7 +483,8 @@ What the player is shown around the fight and how he moves through it. Decided i
 - *barrel* for the end of a gun - say muzzle. A barrel is the explosive.
 - *ammo*, *ammunition*, *reload* for what heat does - say heat and overheat. Heat is a rate limit and
   not a supply. The commander's **grenades** are the one thing counted (G0077) - say grenades, never ammo.
-- *mount*, *emplacement*, *vehicle* - say turret for the thing and station for the role.
+- *mount*, *vehicle* - say turret for the thing and station for the role. *Emplacement* is a standing shooter nobody
+  crews (G0113), never a turret.
 - *enter*, *board*, *ride* - say crew, or "aboard" for the state.
 - *update* for a simulation step - say tick.
 - *client* or *server* for a machine in a session - say peer, or host. *Client* already means the

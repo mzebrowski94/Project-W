@@ -1,5 +1,7 @@
 package pl.mzebrows.pwt.sim.scenario;
 
+import pl.mzebrows.pwt.sim.def.Cycle;
+import pl.mzebrows.pwt.sim.def.EmplacementKind;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
@@ -67,6 +69,12 @@ public sealed interface Placed {
 
     /** A mine, a finale's, which only the other side sets off. */
     record Mine(float x, float y, int biome) implements Placed {}
+
+    /**
+     * An emplacement of this kind (G0113): a spire, and the cycle it was dealt as it was put down - the one it fires for
+     * the whole level.
+     */
+    record Emplacement(EmplacementKind kind, float x, float y, Cycle cycle, int biome) implements Placed {}
 
     /** A worked site of this kind (G0111): a mainframe, standing in a house against a wall. A site, as a point is. */
     record Worked(WorkedSiteKind kind, float x, float y, int biome) implements Placed {}

@@ -23,6 +23,8 @@ import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Thrower;
 import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.Cycle;
+import pl.mzebrows.pwt.sim.def.EmplacementKind;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
@@ -69,6 +71,7 @@ import pl.mzebrows.pwt.sim.system.death.RespawnSystem;
 import pl.mzebrows.pwt.sim.system.death.SlickSystem;
 import pl.mzebrows.pwt.sim.system.level.ControlPointSystem;
 import pl.mzebrows.pwt.sim.system.level.DoorSystem;
+import pl.mzebrows.pwt.sim.system.level.EmplacementSystem;
 import pl.mzebrows.pwt.sim.system.level.LairSystem;
 import pl.mzebrows.pwt.sim.system.level.NestSystem;
 import pl.mzebrows.pwt.sim.system.level.ObjectiveSystem;
@@ -306,8 +309,14 @@ public final class Simulation {
         // Beside the barrage, for its reasons; after the death chain and before the reaper and the objectives, for
         // the nests': riders spilled this tick are on the field, and count, this tick (G0074).
         engine.addSystem(new SlingSystem(config, map, spawner, streams.of(RngStream.SLING)));
+        // Beside the barrage and the sling, for their reasons (G0113): a cycle on its own clock, no desired velocity
+        // owed,
+        // a shot fired here first moving on the next tick; woken by where the men ended up once the solver and the
+        // death
+        // chain have run; before the ledger changes, since its gun reads it.
+        engine.addSystem(new EmplacementSystem(config, map, guns));
         engine.addSystem(new ControlPointSystem(config, map, spawner, streams.of(RngStream.CACHE), capacity));
-        // After every source of a draft (43, 46, 47, and the sites taken at 38 and 54), so what was earned this tick is
+        // After every source of a draft (43, 46, 47, and the sites taken at 38 and 55), so what was earned this tick is
         // dealt this tick; and
         // after every reader of Modifiers, so the ledger changes once, at the end, for every reader alike.
         engine.addSystem(
@@ -524,6 +533,11 @@ public final class Simulation {
     /** Spawns a shut door in a doorway of this map (G0069). */
     public Entity spawnDoor(TileRect doorway) {
         return spawner.spawnDoor(doorway, map.tileSize());
+    }
+
+    /** Spawns an emplacement of this kind firing this cycle (G0113): a spire. */
+    public Entity spawnEmplacement(EmplacementKind kind, float x, float y, Cycle cycle) {
+        return spawner.spawnEmplacement(kind, x, y, cycle);
     }
 
     /** Spawns a site of this kind taken by work held at it (G0111): a mainframe. */

@@ -23,6 +23,7 @@ import pl.mzebrows.pwt.sim.component.Armour;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Burrow;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Emplacement;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Handle;
@@ -31,6 +32,8 @@ import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Slither;
 import pl.mzebrows.pwt.sim.component.Stunned;
+import pl.mzebrows.pwt.sim.def.Cycle;
+import pl.mzebrows.pwt.sim.def.EmplacementDef;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.Side;
 
@@ -75,6 +78,7 @@ import pl.mzebrows.pwt.sim.def.Side;
 public final class WorldRenderer implements Disposable {
 
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Emplacement> EMPLACEMENT = ComponentMapper.getFor(Emplacement.class);
     private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Appearance> APPEARANCE = ComponentMapper.getFor(Appearance.class);
@@ -156,6 +160,7 @@ public final class WorldRenderer implements Disposable {
     private final FlagMark flagMark;
     private final ObjectiveRing objectiveRing;
     private final MainframeMark mainframeMark;
+    private final SpireMark spireMark;
     private final BurstMark burstMark;
     private final DazeMark dazeMark;
     private final TreeMark treeMark;
@@ -330,6 +335,9 @@ public final class WorldRenderer implements Disposable {
                 drawStone(x, y, radius, tint(appearance));
             } else if (appearance.look == Look.MAINFRAME) {
                 drawMainframe(entity, x, y, radius, appearance);
+                continue;
+            } else if (appearance.look == Look.SPIRE) {
+                drawSpire(entity, x, y, radius, appearance);
                 continue;
             } else if (appearance.streaks()) {
                 // Drawn back to where it says it came from, with a head on it so a beam that has
@@ -822,6 +830,32 @@ public final class WorldRenderer implements Disposable {
                             y + MathUtils.sinDeg(to) * ring,
                             width);
                 }
+            }
+        }
+    }
+
+    /**
+     * A spire (G0113): its body, a lighter cap in its middle, and a tick on its edge at each bearing its next step
+     * fires along - read off its cycle, the same on every machine, so its pattern can be learnt by eye (pillar 5).
+     */
+    private void drawSpire(Entity entity, float x, float y, float radius, Appearance appearance) {
+        shapes.setColor(tint(appearance));
+        shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
+        shapes.setColor(spireMark.cap());
+        shapes.circle(x, y, spireMark.capFor(radius), CIRCLE_SEGMENTS);
+        if (!EMPLACEMENT.has(entity)) {
+            return;
+        }
+        int points = EMPLACEMENT.get(entity).nextPoints();
+        shapes.setColor(spireMark.tell());
+        float from = spireMark.tellFromFor(radius);
+        float width = spireMark.tellWidthFor(radius);
+        for (int point = 0; point < Cycle.POINTS; point++) {
+            if ((points & (1 << point)) != 0) {
+                float bearingX = EmplacementDef.bearingX(point);
+                float bearingY = EmplacementDef.bearingY(point);
+                shapes.rectLine(
+                        x + bearingX * from, y + bearingY * from, x + bearingX * radius, y + bearingY * radius, width);
             }
         }
     }

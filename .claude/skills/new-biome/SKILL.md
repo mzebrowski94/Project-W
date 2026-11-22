@@ -78,8 +78,8 @@ meanwhile. The HTML prototype is for looks only.
   (pressure = tier `enemyPercent` x (1 + `rampPercent` x position), G0063), and nothing else does.
 - `furniture.sitesMin/Max` (2-3 sites: control points, or another kind of site in a point's place, G0110), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, `treesMin/Max` and
   `treesByNestMin/Max` (0 for none - the fen alone has trees, G0072), `turretsMin/Max` (0 for none - the plain alone
-  has them, G0082), `geysersMin/Max` (0 for none - the cut and the caldera have them, G0089, G0091), and
-  `furniture.pickups=pickup <kind> min max; ...`.
+  has them, G0082), `geysersMin/Max` (0 for none - the cut and the caldera have them, G0089, G0091),
+  `spires=min max` on one line (`0 0` for none - the fen alone has them, G0113), and `furniture.pickups=pickup <kind> min max; ...`.
   Never scaled. **Every block carries every furniture key**, zeros included: a new furniture line is a key in all of
   them. A new line that stands something is also a `Placed` record, a case in `MissionScenario.populate`, in
   `Placement.radius` and in `MissionFaults`' radius, a pass in `Placement.Biome.place` and its count drawn **after**
@@ -107,6 +107,8 @@ meanwhile. The HTML prototype is for looks only.
   biome's organic ground while there is room; barrels by holes and packs; boulders `rockMargin` off rock; trees as boulders, the first within `treeReach` of each
   nest; rabbits. Geysers (G0089) go after turrets and before medkits, `geyserKeepOff` off points, nests and ways in,
   so what is placed after them keeps off their fire; each one's radius is drawn in its pass, as a trunk is.
+  Emplacements - spires (G0113) - go after geysers, as boulders stand, `emplacementKeepOff` off ways in, nests, the
+  finale's watch and every site's edge, never on thicket; each one's cycle is dealt in its pass.
   A block says none of this; it is why a crate or a medkit line fills the houses first. A crate line is house stock
   and nothing else (G0110): what no house takes is not laid, so a biome that lays no house has no crate line - the
   field's crates are what a taken site leaves.

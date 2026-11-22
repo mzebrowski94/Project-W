@@ -28,6 +28,7 @@ import pl.mzebrows.pwt.sim.component.Burrow;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Door;
+import pl.mzebrows.pwt.sim.component.Emplacement;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Obstacle;
@@ -89,6 +90,48 @@ class MissionTest {
 
         assertThat(withAMainframe / (float) housed)
                 .isCloseTo(SHIPPED_MAINFRAME_CHANCE / 100f, Offset.offset(MAINFRAME_TOLERANCE));
+    }
+
+    /**
+     * G0113: every fen stands its fewest to most spires and no other biome stands one; each was dealt its cycle as it
+     * went down, the same on every build of one seed.
+     */
+    @Test
+    void standsItsSpiresInEveryFenAndNowhereElseEachWithTheCycleItsSeedDeals() {
+        SimConfig shipped = SimConfig.defaults();
+        var spires = shipped.biomes().of(BiomeKind.FEN).furniture().spires();
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Mission mission = Mission.build(shipped.withSeed(seed), TierKind.MEDIUM);
+            Mission again = Mission.build(shipped.withSeed(seed), TierKind.MEDIUM);
+            for (int p = 0; p < mission.order().size(); p++) {
+                int position = p;
+                long standing = mission.placed().stream()
+                        .filter(placed -> placed.biome() == position && placed instanceof Placed.Emplacement)
+                        .count();
+                if (mission.order().get(p) == BiomeKind.FEN) {
+                    assertThat(standing).as("seed %d", seed).isBetween((long) spires.min(), (long) spires.max());
+                } else {
+                    assertThat(standing).as("seed %d biome %d", seed, p).isZero();
+                }
+            }
+            assertThat(emplacements(again)).as("seed %d", seed).isEqualTo(emplacements(mission));
+        }
+    }
+
+    @Test
+    void spawnsAFensSpiresAsEmplacements() {
+        long seed = 0;
+        while (!Mission.deal(SimConfig.defaults().withSeed(seed)).contains(BiomeKind.FEN)) {
+            seed++;
+        }
+
+        Simulation world = Scenarios.world(
+                Scenarios.mission(TierKind.MEDIUM), SimConfig.defaults().withSeed(seed));
+
+        assertThat(world.engine()
+                        .getEntitiesFor(Family.all(Emplacement.class).get())
+                        .size())
+                .isBetween(3, 5);
     }
 
     @Test
@@ -773,5 +816,11 @@ class MissionTest {
     private static boolean ownHouse(TileRect biome, House house) {
         TileRect walls = house.walls();
         return biome.contains(walls.col(), walls.row()) && biome.contains(walls.endCol() - 1, walls.endRow() - 1);
+    }
+
+    private static List<Placed> emplacements(Mission mission) {
+        return mission.placed().stream()
+                .filter(placed -> placed instanceof Placed.Emplacement)
+                .toList();
     }
 }

@@ -31,8 +31,11 @@ import pl.mzebrows.pwt.sim.def.AvoidanceDef;
 import pl.mzebrows.pwt.sim.def.BarrageDef;
 import pl.mzebrows.pwt.sim.def.BurrowDef;
 import pl.mzebrows.pwt.sim.def.Chances;
+import pl.mzebrows.pwt.sim.def.CycleDef;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
+import pl.mzebrows.pwt.sim.def.EmplacementDef;
+import pl.mzebrows.pwt.sim.def.EmplacementKind;
 import pl.mzebrows.pwt.sim.def.FuseDef;
 import pl.mzebrows.pwt.sim.def.Grant;
 import pl.mzebrows.pwt.sim.def.GripDef;
@@ -789,6 +792,33 @@ public final class AlphaWorlds {
                                 true,
                                 ActionKind.DOWNLOAD,
                                 Look.MAINFRAME))
+                .build();
+    }
+
+    public static final float SPIRE_RADIUS = 1.4f;
+
+    /** Round, so a test can step whole periods. */
+    public static final float SPIRE_PERIOD = 0.5f;
+
+    /** Under half the arena, so a man can stand out of it. */
+    public static final float SPIRE_WAKE_RADIUS = 20f;
+
+    public static final int SPIRE_CYCLE_FEWEST = 4;
+
+    public static final int SPIRE_CYCLE_MOST = 6;
+
+    /** Every emplacement (G0113): the spire, with a wake a small arena can stand outside. */
+    public static Defs<EmplacementKind, EmplacementDef> emplacements() {
+        return Defs.<EmplacementKind, EmplacementDef>builder(EmplacementKind.class)
+                .put(
+                        EmplacementKind.SPIRE,
+                        new EmplacementDef(
+                                SPIRE_RADIUS,
+                                Look.SPIRE,
+                                WeaponKind.SPIRE_SHOT,
+                                SPIRE_PERIOD,
+                                SPIRE_WAKE_RADIUS,
+                                new CycleDef.Dealt(SPIRE_CYCLE_FEWEST, SPIRE_CYCLE_MOST)))
                 .build();
     }
 
@@ -1727,6 +1757,7 @@ public final class AlphaWorlds {
                         POINT_MEDKIT_CHANCE),
                 new SimConfig.SiteConfig(SITE_CRATES_BY_PLAYERS),
                 workedSites(),
+                emplacements(),
                 new SimConfig.TurretConfig(
                         TURRET_RADIUS,
                         TURRET_HEALTH,

@@ -18,6 +18,8 @@ import pl.mzebrows.pwt.sim.Roster;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Stock;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
+import pl.mzebrows.pwt.sim.def.EmplacementDef;
+import pl.mzebrows.pwt.sim.def.EmplacementKind;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.UnitKind;
@@ -27,7 +29,7 @@ import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 /**
  * Puts down what each biome of a mission counts, by rules and never by places (G0068): ordered {@link Scatter}
  * passes, the most constrained first - sites (a worked site in its house first, G0111), what a house holds, its house
- * packs (G0112), nests, packs, turrets by points, geysers, medkits and
+ * packs (G0112), nests, packs, turrets by points, geysers, emplacements (G0113), medkits and
  * food,
  * barrels, boulders, trees, rabbits. Each pass keeps off what went down before it by its radii, crow-flies, and off every
  * tile the strip kept: the start, aprons, doorsteps, and every house's inside but for its stock. The last biome keeps
@@ -78,6 +80,11 @@ final class Placement {
     private static final long WORKED = 0xC4E1_3B87_5F20_9AD6L;
     private static final long HOUSE_PACKS = 0x7D3A_E5C1_29B8_604FL;
     private static final long HOUSED = 0xE19C_4F72_B05D_3A86L;
+    private static final long EMPLACEMENTS = 0x5B2D_8E71_C93A_04F6L;
+    private static final long CYCLES = 0x96E4_17C3_5AD0_B82FL;
+
+    /** Where an emplacement may stand: any ground but a thicket's, so never in a thicket blob's middle (G0113). */
+    private static final EnumSet<Terrain> OFF_THICKET = offThicket();
 
     private final SimConfig config;
     private final PlacementRules rules;
@@ -224,6 +231,8 @@ final class Placement {
             int geysers = furniture.geysers(counted);
             // Drawn after that, for the same reason: a biome with no stones draws everything as it did before them.
             int stones = furniture.stones(counted);
+            // Last of all, for the same reason: a biome with no spires draws everything as it did before them (G0113).
+            int spires = furniture.spires().draw(counted);
 
             // Drawn from the biome's own stream, never the attempt's: whether it has a mainframe, in which house and
             // against
@@ -236,6 +245,7 @@ final class Placement {
             packs(creatures, attempt.derive(PACKS));
             turrets(turrets, attempt.derive(TURRETS));
             geysers(geysers, attempt.derive(GEYSERS));
+            emplacements(EmplacementKind.SPIRE, spires, attempt.derive(EMPLACEMENTS));
             pickups(stock, attempt.derive(PICKUPS));
             barrels(barrels, attempt.derive(BARRELS));
             boulders(boulders, attempt.derive(BOULDERS));
@@ -626,6 +636,41 @@ final class Placement {
         }
 
         /**
+         * Emplacements of one kind (G0113), standing as a boulder does - {@code rockMargin} off rock and off everything
+         * standing - and {@code emplacementKeepOff} off every way in (the start's own distance in the first biome),
+         * every nest and the finale's watch, and off every site's edge; never on a thicket's tile. Each one's cycle is
+         * dealt as it goes down, from the attempt's stream, so it is the cycle it fires for the whole level.
+         */
+        private void emplacements(EmplacementKind which, int count, Randomness rng) {
+            if (count == 0) {
+                return;
+            }
+            float keepOff = rules.emplacementKeepOff();
+            Scatter scatter = scatter(rng, rules.rockMargin()).keepingOffRock(rules.rockMargin());
+            keepOffEntries(scatter, entryKeepOff(keepOff));
+            keepOffTheWatch(scatter, keepOff);
+            for (Placed point : points) {
+                scatter.reserve(point.x(), point.y(), config.controlPoint().radius() + keepOff);
+            }
+            for (Placed site : worked) {
+                scatter.reserve(site.x(), site.y(), radius(site) + keepOff);
+            }
+            for (Placed nest : nests) {
+                scatter.reserve(nest.x(), nest.y(), keepOff);
+            }
+            EmplacementDef def = config.emplacement(which);
+            Randomness cycles = rng.derive(CYCLES);
+            int got = scatter.scatter(
+                    rect,
+                    count,
+                    def.radius(),
+                    OFF_THICKET,
+                    (x, y) ->
+                            put(new Placed.Emplacement(which, x, y, def.cycle().deal(cycles), position)));
+            shortOf("emplacements of " + which, count, got);
+        }
+
+        /**
          * One thing within {@code pointReach} of a point, trying the points in turn from the {@code from}-th: how many
          * went down, one or none.
          */
@@ -888,7 +933,19 @@ final class Placement {
             case Placed.Turret _ -> config.turret().radius();
             case Placed.Mine _ -> config.mine().radius();
             case Placed.Worked worked -> config.workedSite(worked.kind()).radius();
+            case Placed.Emplacement emplacement ->
+                config.emplacement(emplacement.kind()).radius();
         };
+    }
+
+    private static EnumSet<Terrain> offThicket() {
+        EnumSet<Terrain> ground = EnumSet.noneOf(Terrain.class);
+        for (Terrain terrain : Terrain.values()) {
+            if (terrain.passable() && terrain != Terrain.THICKET) {
+                ground.add(terrain);
+            }
+        }
+        return ground;
     }
 
     /** A crate: opened by hand and dealt from the armoury deck (G0056). */

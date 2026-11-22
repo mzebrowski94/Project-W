@@ -33,6 +33,7 @@ import pl.mzebrows.pwt.sim.component.Drafts;
 import pl.mzebrows.pwt.sim.component.Drag;
 import pl.mzebrows.pwt.sim.component.Dragged;
 import pl.mzebrows.pwt.sim.component.Dying;
+import pl.mzebrows.pwt.sim.component.Emplacement;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Faction;
@@ -97,6 +98,9 @@ import pl.mzebrows.pwt.sim.component.Weave;
 import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.BurrowDef;
+import pl.mzebrows.pwt.sim.def.Cycle;
+import pl.mzebrows.pwt.sim.def.EmplacementDef;
+import pl.mzebrows.pwt.sim.def.EmplacementKind;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.LimpetDef;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -949,6 +953,31 @@ public final class Spawner {
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Body.class).set(def.radius()));
         entity.add(engine.createComponent(Collider.class).set(true, false));
+        entity.add(engine.createComponent(Appearance.class).set(def.look()));
+        admit(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns an emplacement of this kind (G0113): a standing shooter nobody crews, firing this cycle - dealt by whoever
+     * put it down, and never again.
+     *
+     * <p>Solid, immovable and <strong>unbreakable</strong>: no health, so nothing hurts it, and shots and blasts stop on
+     * it as on a boulder. On the aliens' side, so its shots pass the aliens and hurt the men. <strong>Never an
+     * {@code Enemy}</strong>: nothing counts it as one to clear, no trooper or turret aims at it, and it is no threat.
+     */
+    public Entity spawnEmplacement(EmplacementKind kind, float x, float y, Cycle cycle) {
+        EmplacementDef def = config.emplacement(kind);
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Emplacement.class)
+                .set(kind, cycle, ticks(def.periodSeconds()), def.wakeRadius()));
+        entity.add(engine.createComponent(Obstacle.class));
+        entity.add(engine.createComponent(Faction.class).set(Side.ALIEN));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(def.radius()));
+        entity.add(engine.createComponent(Collider.class).set(true, false));
+        entity.add(engine.createComponent(Weapon.class).set(def.gun(), config.weapon(def.gun()), config.tickSeconds()));
         entity.add(engine.createComponent(Appearance.class).set(def.look()));
         admit(entity);
         return entity;

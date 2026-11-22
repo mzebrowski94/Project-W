@@ -150,6 +150,9 @@ final class MissionScenario implements Scenario {
                 case Placed.Turret turret -> simulation.spawnTurret(turret.x(), turret.y());
                 case Placed.Mine mine -> simulation.spawnMine(mine.x(), mine.y());
                 case Placed.Worked worked -> simulation.spawnWorkedSite(worked.kind(), worked.x(), worked.y());
+                case Placed.Emplacement emplacement ->
+                    simulation.spawnEmplacement(
+                            emplacement.kind(), emplacement.x(), emplacement.y(), emplacement.cycle());
             }
         }
         Waves waves = simulation.waves().holdBack();

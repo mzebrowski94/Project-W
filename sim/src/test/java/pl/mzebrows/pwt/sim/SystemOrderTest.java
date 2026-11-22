@@ -53,6 +53,7 @@ import pl.mzebrows.pwt.sim.system.death.RespawnSystem;
 import pl.mzebrows.pwt.sim.system.death.SlickSystem;
 import pl.mzebrows.pwt.sim.system.level.ControlPointSystem;
 import pl.mzebrows.pwt.sim.system.level.DoorSystem;
+import pl.mzebrows.pwt.sim.system.level.EmplacementSystem;
 import pl.mzebrows.pwt.sim.system.level.LairSystem;
 import pl.mzebrows.pwt.sim.system.level.NestSystem;
 import pl.mzebrows.pwt.sim.system.level.ObjectiveSystem;
@@ -287,6 +288,14 @@ class SystemOrderTest {
                 SlickSystem.class, SlingSystem.class, "a dead slinger spills its riders inside the death window"));
         rows.add(
                 new Before(SlingSystem.class, ObjectiveSystem.class, "riders spilled this tick are not a clear level"));
+        rows.add(new Before(
+                CollisionSystem.class,
+                EmplacementSystem.class,
+                "an emplacement wakes on where the men ended the tick"));
+        rows.add(new Before(
+                EmplacementSystem.class,
+                UpgradeSystem.class,
+                "an emplacement's gun reads the ledger every reader sees"));
         rows.add(new Before(WaveSystem.class, ControlPointSystem.class, "a schedule armed this tick sends next tick"));
         rows.add(new Before(
                 ControlPointSystem.class, ObjectiveSystem.class, "the post exists on the tick it is asked about"));
