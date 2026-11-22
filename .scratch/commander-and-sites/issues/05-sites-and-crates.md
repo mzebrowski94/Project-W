@@ -1,7 +1,7 @@
 # Sites, and the crates a taken site leaves
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: none
 Spec: [spec.md](../spec.md) section 5

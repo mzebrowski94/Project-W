@@ -1,7 +1,7 @@
 # Redeploy and the down mark
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: 02 (the pad's B is the dash's when standing; the wire's bit 64 is the dash's)
 Spec: [spec.md](../spec.md) section 4
@@ -144,3 +144,29 @@ Get downed (harness `G` off); several commanders show the mark at once. `--scena
 - The invariant rows and input map are written.
 - `verify.sh` is green and the branch is committed.
 - The final message lists the keys.
+
+## Answer
+
+Built (merged into integration), G0109 (amends G0098):
+- **Sim:** `CommanderConfig.redeployAfterSeconds` (loader refuses <= 0 or >= bleed-out); `Vitality.redeployAfterTicks`/`redeployOpen()` counted from how much bleed-out has run (commanders only); `Intent.redeploying`/`redeployPressed`; `CasualtySystem` ends the bleed-out with `Deaths.kill` on a press once open; `Appearance.downMarked`, `redeployOpen`. `RedeployTest`.
+- **Input/wire:** `CommanderInput.redeploying` (last field), bit 128, `BUTTON_BITS` 255 with "byte is full" comment, `Msg.PROTOCOL` 10 -> 11, `WireGoldenTest`. Controls page row `REDEPLOY (DOWN)`.
+- **Core:** `DownMark` (black disc, red saltire), `WorldRenderer.drawDownMarks` after the trees; `ActionChips` lifts the prompt above the mark.
+- **UI:** `PromptKind.REDEPLOY`; `Prompts` gives it to a down commander on his own machine once open; `PlayerReadout.redeployOpen`.
+- **Docs:** G0109 + index; G0098 amended by G0109; `players.md` two enforced rows; `wounds.md` commander bleed-out row amended; input-map "while down" row; `menu_layout_agent.md`; `simulation-order.md`; `components.md`. Glossary rows already matched.
+
+Provisional decisions (AFK run, for review; also in G0109):
+1. Mark radius 1.6, lift 0.8, stroke 0.5, bars to 0.62 of radius. Turned down: disc as wide as him (prompt too far off his body).
+2. Mark drawn over the trees. Turned down: under them (G0072 foliage would hide promised state).
+3. Second bar stops at the first's edge, even opacity. Turned down: crossing bars (dark centre at 65 %).
+4. Panel bar does not mark the redeploy point. Turned down: a notch - a second signal for what his prompt says.
+5. `PromptKind.REDEPLOY`, not an `ActionKind`: not the action key, not about anything in reach.
+6. Press read in `CasualtySystem`; a stabilise completing the same tick wins (Action and Aid run first).
+7. Hauled-commander redeploy tested on `Vitality` only: no commander can be hauled today (`DragSystem` excludes him).
+
+Keys:
+- `assets/sim/commander.properties`: `sim.commander.bleedOutSeconds` 5 -> 10; `sim.commander.redeployAfterSeconds=5`.
+- `assets/controls.properties`: `controls.key.redeploy=F`, `controls.pad.redeploy=EAST`, `controls.pad.redeployTrigger=NONE`.
+- `assets/graphic.properties`: `graphic.downMark.alpha=0.65`, `.radius=1.6`, `.lift=0.8`, `.ring=000000ff`, `.cross=e02a2aff`, `.stroke=0.5`, `.reach=0.62`.
+- `assets/i18n/ui.properties`: `ui.action.REDEPLOY=REDEPLOY`, `ui.controls.redeploy=REDEPLOY (DOWN)`.
+
+Judge by: `./gradlew lwjgl3:run --args="--scenario=full-house"` (harness G off, get downed) or `--scenario=casualty`.
