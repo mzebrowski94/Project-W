@@ -1,7 +1,7 @@
 # Rocketman and Pantera
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: 02
 Spec: [spec.md](../spec.md) section 1
