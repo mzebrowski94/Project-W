@@ -90,7 +90,7 @@ public interface Scenario {
      * Puts the player's side on the field: the commander and his squad, in the level's spawn area.
      *
      * <p><strong>Everyone is jittered inside the area's tiles</strong> (G0009), the commander first. If
-     * he does not fit, he goes at its centre: every scenario has exactly one commander.
+     * he does not fit, he goes at its centre: every scenario has a commander in slot 0.
      */
     default void deployPlayerSide(Simulation simulation) {
         SimConfig config = simulation.config();

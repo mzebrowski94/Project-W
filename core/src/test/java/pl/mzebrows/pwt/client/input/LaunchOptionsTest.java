@@ -21,7 +21,34 @@ class LaunchOptionsTest {
         assertThat(options.instanceGiven()).isFalse();
         assertThat(options.pads().takes(3)).isTrue();
         assertThat(options.mission()).isNull();
+        assertThat(options.scenario()).isNull();
         assertThat(options.problems()).isEmpty();
+    }
+
+    @Test
+    void keepsTheScenarioItWasStartedWithAsTyped() {
+        LaunchOptions options = LaunchOptions.parse("--scenario=full-house");
+
+        assertThat(options.scenario()).isEqualTo("full-house");
+        assertThat(options.problems()).isEmpty();
+    }
+
+    @Test
+    void refusesAScenarioFlagWithNoName() {
+        LaunchOptions options = LaunchOptions.parse("--scenario=");
+
+        assertThat(options.scenario()).isNull();
+        assertThat(options.problems()).singleElement().asString().startsWith("ignored --scenario");
+    }
+
+    /** Two ways in at once: the mission is played and the scenario is said to be ignored. */
+    @Test
+    void playsTheMissionWhenAScenarioIsGivenBesideIt() {
+        LaunchOptions options = LaunchOptions.parse("--scenario=full-house", "--mission=" + MISSION.text());
+
+        assertThat(options.mission()).isEqualTo(MISSION);
+        assertThat(options.scenario()).isNull();
+        assertThat(options.problems()).singleElement().asString().startsWith("ignored --scenario=full-house");
     }
 
     @Test

@@ -14,6 +14,8 @@ import pl.mzebrows.pwt.client.play.MissionCode;
  *       window's title and place, its connection log's name, and which pads it reads. Zero when absent.
  *   <li>{@code --pads=all|none|0,2} - see {@link PadPolicy}.
  *   <li>{@code --mission=<code>} - a mission, by its code (G0065). A code that fails its check is refused.
+ *   <li>{@code --scenario=<name>} - a registered scenario, by its name typed loosely ({@code full-house}); the
+ *       menus list none (`docs/design/alpha-phase.md`). Beside {@code --mission} it is refused: the mission wins.
  * </ul>
  *
  * <p>For a developer's PC; a player needs none of them. Something this does not understand is reported in
@@ -22,12 +24,14 @@ import pl.mzebrows.pwt.client.play.MissionCode;
  * @param instance which copy this is
  * @param instanceGiven whether {@code --instance} was given; only then are windows placed side by side
  * @param mission the mission {@code --mission} named, or null for none
+ * @param scenario the scenario name {@code --scenario} gave, as typed and not yet looked up, or null for none
  */
 public record LaunchOptions(
         int instance,
         boolean instanceGiven,
         PadPolicy pads,
         @Nullable MissionCode mission,
+        @Nullable String scenario,
         List<String> problems) {
 
     public LaunchOptions {
@@ -44,6 +48,7 @@ public record LaunchOptions(
         boolean instanceGiven = false;
         PadPolicy pads = null;
         MissionCode mission = null;
+        String scenario = null;
         List<String> problems = new ArrayList<>();
         for (String arg : args) {
             int equals = arg.indexOf('=');
@@ -65,14 +70,29 @@ public record LaunchOptions(
                             throw new IllegalArgumentException("not a mission code");
                         }
                     }
+                    case "--scenario" -> {
+                        if (value.isBlank()) {
+                            throw new IllegalArgumentException("no scenario named");
+                        }
+                        scenario = value.trim();
+                    }
                     default -> problems.add("ignored " + arg + ": not an option this game has");
                 }
             } catch (IllegalArgumentException e) {
                 problems.add("ignored " + arg + ": " + e.getMessage());
             }
         }
+        if (mission != null && scenario != null) {
+            problems.add("ignored --scenario=" + scenario + ": --mission was given too, and the mission is played");
+            scenario = null;
+        }
         return new LaunchOptions(
-                instance, instanceGiven, pads == null ? PadPolicy.defaultFor(instance) : pads, mission, problems);
+                instance,
+                instanceGiven,
+                pads == null ? PadPolicy.defaultFor(instance) : pads,
+                mission,
+                scenario,
+                problems);
     }
 
     /** What this copy's connection log is called. */

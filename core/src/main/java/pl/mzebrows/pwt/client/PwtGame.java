@@ -22,12 +22,15 @@ import pl.mzebrows.pwt.client.play.ScenarioSession;
 import pl.mzebrows.pwt.net.NetConfig;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.scenario.ProvingSetup;
+import pl.mzebrows.pwt.sim.scenario.Scenario;
+import pl.mzebrows.pwt.sim.scenario.Scenarios;
 import pl.mzebrows.pwt.ui.nav.SelectionMemory;
 import pl.mzebrows.pwt.ui.page.UiPage;
 
 /**
  * Application entry point: owns everything that outlives a single screen - configuration, assets and
- * the shared text renderer - and opens the scenario menu, or the mission {@code --mission} named.
+ * the shared text renderer - and opens the scenario menu, the mission {@code --mission} named, or the scenario
+ * {@code --scenario} named.
  *
  * <p>Fields are created in {@link #create()} because they need a GL context, which does not exist
  * when this object is constructed - hence the class-level NullAway.Init suppression.
@@ -90,7 +93,12 @@ public final class PwtGame extends Game implements GameContext {
                     null);
             mission = null;
         }
-        if (mission == null) {
+        Scenario scenario = mission == null ? scenarioFromCommandLine() : null;
+        if (scenario != null) {
+            // The same way in as the menu's scenario list, which ships off; leaving it lands on that page.
+            Log.info("Starting scenario " + scenario.name());
+            setScreen(new ScenarioScreen(this, new ScenarioSession(scenario, simConfig), UiPage.CAMPAIGN));
+        } else if (mission == null) {
             setScreen(new MenuScreen(this));
         } else {
             // A developer's way in; leaving it lands where a player would have started it.
@@ -101,6 +109,25 @@ public final class PwtGame extends Game implements GameContext {
                     new ScenarioSession(mission.scenario(), simConfig.withSeed(mission.seed())),
                     UiPage.MISSIONS));
         }
+    }
+
+    /** The registered scenario {@code --scenario} named, or null for none or for a name no scenario has. */
+    private @Nullable Scenario scenarioFromCommandLine() {
+        String typed = launchOptions.scenario();
+        if (typed == null) {
+            return null;
+        }
+        Scenario scenario = Scenarios.looselyNamed(typed);
+        if (scenario == null) {
+            StringBuilder names = new StringBuilder();
+            for (Scenario each : Scenarios.all()) {
+                names.append(names.isEmpty() ? "" : ", ").append(Scenarios.typedName(each));
+            }
+            Log.error(
+                    "Command line: ignored --scenario=" + typed + ": no scenario is called that; there are " + names,
+                    null);
+        }
+        return scenario;
     }
 
     /**
