@@ -37,6 +37,25 @@ use it in tests too rather than constructing a `Simulation` and populating it by
 a commander in slot 0 and no slot twice (`Full House` seats all eight), and survive 300 ticks. `SimulationDeterminismTest` replays each one twice and
 requires identical results, so a scenario cannot introduce non-reproducible spawning.
 
+### Opening a scenario directly
+
+`--scenario=<name>` opens a registered scenario straight from the command line, as the menu's list would,
+and leaving it lands on CAMPAIGN. The name is matched loosely - case, spaces, hyphens and underscores
+aside - so `--scenario=full-house`, `--scenario=FullHouse` and `--scenario="Full House"` are the same.
+Only `Scenarios.ALL` answers it (`Scenarios.looselyNamed`): a mission is opened by `--mission=<code>`,
+and the proving ground from its page. A name nobody has is logged with every valid one, and the game
+opens on the menu; beside `--mission` the mission wins and the scenario is logged as ignored. This is how
+a hidden scenario is judged: the menus' scenario list stays off (`graphic.ui.page.scenarios=false`).
+
+```
+./gradlew lwjgl3:run --args="--scenario=full-house"
+```
+
+Gradle's `run` passes `--args` to the game as it is. In IntelliJ: a Gradle run configuration with
+`lwjgl3:run --args="--scenario=full-house"` in *Run*, or an Application configuration on
+`pl.mzebrows.pwt.lwjgl3.Lwjgl3Launcher` (module `lwjgl3.main`) with the working directory `assets`, the VM
+option `--enable-native-access=ALL-UNNAMED` and `--scenario=full-house` in *Program arguments*.
+
 **Scenarios are content, not design.** Numbers in one are chosen to make a system visible, not to
 balance the game, and a scenario may be unfair or absurd if that is what shows the system working.
 Nothing in a scenario answers an open question in `README.md`.
@@ -166,7 +185,7 @@ Behaviour that looks like design and is not. Each line names what replaces it.
 | Turrets are placed by hand in scenarios | Whatever a level does about them. Same standing as hand-laid rock and hand-placed barrels: the turret is designed, where turrets come from is not. |
 | A barrel is a small orange-red circle | Whatever a barrel looks like. The colour is deliberately off the grunt's red - a field where some red circles chase you and the others kill you when you shoot them is exactly the confusion pillar 5 exists to prevent. |
 | Barrels are placed by hand in `Demolition` and `Casualty` | Missions place theirs by holes and packs (G0068); the two arenas each show one system and stay as they are. The barrel is designed. |
-| **Each player's commander is a circle in a colour of its own** - cyan, amber, green, pink, and four provisional ones for the players a game on several machines can hold - and nothing else tells them apart | Whatever eight commanders look like. The colour is doing the whole job of pillar 5 here, which is enough to play and not enough to be one of four men in a fight: no number, no name, no marker over your own. `Appearance.variant` is the hook and is already published, so the renderer decides. |
+| **Each player's commander is a circle in a colour of its own** - gold, white, green, pink, and four provisional ones for the players a game on several machines can hold - and nothing else tells them apart | Whatever eight commanders look like. The colour is doing the whole job of pillar 5 here, which is enough to play and not enough to be one of four men in a fight: no number, no name, no marker over your own. `Appearance.variant` is the hook and is already published, so the renderer decides. |
 | **The leash is invisible.** A commander at the end of it simply stops walking outwards, with nothing on screen saying why | Whatever tells a player he has reached the edge of the fight. The rule itself is settled for the alpha and listed as an open question in `README.md`; what is certainly missing either way is the tell, and a wall with no tell is the one way this reads as a bug. |
 
 ## Known limits, accepted on purpose

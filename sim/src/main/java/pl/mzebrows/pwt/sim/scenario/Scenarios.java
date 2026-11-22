@@ -1,6 +1,8 @@
 package pl.mzebrows.pwt.sim.scenario;
 
 import java.util.List;
+import java.util.Locale;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.RngStream;
@@ -93,6 +95,40 @@ public final class Scenarios {
             return mission(mission.tier(), mission.length(), mission.strength());
         }
         throw new IllegalArgumentException("no scenario named \"" + name + "\"");
+    }
+
+    /**
+     * The registered scenario a developer meant by this name, typed loosely: case, spaces, hyphens and
+     * underscores aside, so {@code full-house}, {@code FullHouse} and {@code Full House} are one name. Only the
+     * registry - never a mission or the proving ground, which have their own ways in. What {@code --scenario}
+     * opens; an online session names its scenario exactly, by {@link #named}.
+     *
+     * @return the scenario, or null if no registered one has this name
+     */
+    public static @Nullable Scenario looselyNamed(String name) {
+        String wanted = loose(name);
+        for (Scenario scenario : ALL) {
+            if (loose(scenario.name()).equals(wanted)) {
+                return scenario;
+            }
+        }
+        return null;
+    }
+
+    /** A scenario's name as it is typed on a command line: lower case, a hyphen for each space. */
+    public static String typedName(Scenario scenario) {
+        return scenario.name().toLowerCase(Locale.ROOT).replace(' ', '-');
+    }
+
+    private static String loose(String name) {
+        StringBuilder kept = new StringBuilder(name.length());
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (c != ' ' && c != '-' && c != '_') {
+                kept.append(c);
+            }
+        }
+        return kept.toString().toLowerCase(Locale.ROOT);
     }
 
     /**
