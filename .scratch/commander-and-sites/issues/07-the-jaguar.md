@@ -1,7 +1,7 @@
 # The jaguar
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: none
 Spec: [spec.md](../spec.md) section 7
@@ -130,3 +130,35 @@ Also the proving ground, if it lists every strain.
 - G0112 is written, and G0068 is marked amended.
 - `verify.sh` is green and the branch is committed.
 - The final message lists the keys.
+
+## Answer
+
+Built (merged into integration), G0112 (amends G0068):
+- **Strain:** `UnitKind.JAGUAR`, `WeaponKind.JAGUAR_GLOB`, `Look.JAGUAR`, `Look.JAGUAR_GLOB`; `sim.unit.jaguar` is the runner's block plus the ticket's body, leap, perception and barrage; `ui.strain.JAGUAR`.
+- **Roster form `house <strain> min max`** (`Roster.House`); `house jaguar 1 3` last on plain, quarry, brake, anthill, badlands (other lines draw as before).
+- Each house (never a gatehouse) rolls from the biome's stream; count drawn after the roll, scaled as a loose line. Pass `housePacks` right after house stock, inside `House.inside()`, round stock and any mainframe, off doorway tiles; `Placed.Housed`.
+- `MissionFaults`: a house pack must lie inside a house of its biome; start and finale-watch checks count it hostile.
+- **Confined wander:** `HousePacks`/`Wander.confine`: patch centred on the house, radius at most half the inside's shorter side, drift 0.
+- **Breakout:** G0075's door siege, unchanged; a test covers it.
+- `AlphaWorlds` gains the jaguar as a plain strain (gun-arming fixtures refuse a barrage strain).
+- **Docs:** G0112 + index; G0068 amended by; two enforced rows in `aliens.md`, `map-and-view.md` row amended; glossary **house pack**, roster and house-stock rows; `components.md` Wander row; `new-biome` skill.
+
+Provisional decisions (AFK run, for review; also in G0112):
+1. Grunt perception 51/77. Turned down: runner's 78/104 (wakes a house for a man far off).
+2. Glob radius 0.5, speed 26.4, range 26. Turned down: the sludger glob's numbers.
+3. Hesitation 0.04-0.10 s. Turned down: runner's 0.06-0.16.
+4. `holdsStill=true` as the sludger. Turned down: firing on the move (untried).
+5. Confined patch set at spawn for life. Turned down: a per-unit cap field; restoring the strain's patch once out.
+6. A house within `startKeepOff` (150) of the start or reaching into the finale's watch rolls but holds no pack. Turned down: laying it anyway; laying what fits.
+7. Packs keep off every doorway tile. Turned down: off the doorway's middle only (bodies landed half in it).
+8. `ui.weapon.JAGUAR_GLOB=GLOB`.
+
+Keys:
+- `assets/sim/units.properties`: new `sim.unit.jaguar.*` (runner's except): `radius=1.8`, `health=350`, `speed=15.6`; `leap.speed=44`, `leap.cooldownSeconds=0.6`, `leap.hesitationMinSeconds=0.04`, `leap.hesitationMaxSeconds=0.10`; `perception.detectionRange=51`, `perception.loseRange=77`; `barrage.windUpSeconds=0.25`, `.restSeconds=3`, `.reach=24`, `.holdsStill=true`, `.stunCancels=true`, `barrage.stream.gun=jaguar_glob`, `shots=1`, `salvos=3`, `intervalSeconds=0.1`, `aimed=true`, `locked=true`, `stepped=false` - a short stop, a locked line of three harmless globs every 3 s, a hard quick leap with almost no tell.
+- `assets/sim/weapons.properties`: `sim.weapon.jaguar_glob.*`: glob's block with `damage=0`, `harm=none`, `projectileRadius=0.5`, `projectileSpeed=26.4`, `projectileRange=26`, `projectileLook=jaguar_glob`; slicks: glue, `slowFactor=0.4`, `slowSeconds=0.3`, `seconds=6`.
+- `assets/sim/missions.properties`: `sim.mission.placement.housePackChance=50`.
+- `assets/sim/biomes.properties`: `; house jaguar 1 3` on five rosters.
+- `assets/graphic.properties`: `graphic.color.jaguar=9b1fe8ff`, `graphic.color.jaguar_glob=9b1fe8ff`.
+- `assets/i18n/ui.properties`: `ui.strain.JAGUAR=JAGUAR`, `ui.weapon.JAGUAR_GLOB=GLOB`.
+
+Judge by: `./gradlew lwjgl3:run --args="--scenario=jaguar-house"`; the proving ground lists it too.
