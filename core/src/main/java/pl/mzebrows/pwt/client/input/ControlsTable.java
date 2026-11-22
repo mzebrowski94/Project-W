@@ -64,6 +64,7 @@ public record ControlsTable(List<String> lines, int actionColumns) {
         rows.add(row(words, "grenade", keys(key.grenade()), pad.grenade(), pad.grenadeTrigger(), playStation));
         rows.add(row(words, "act", keys(key.action()), pad.action(), pad.actionTrigger(), playStation));
         rows.add(row(words, "drag", keys(key.drag()), pad.drag(), pad.dragTrigger(), playStation));
+        rows.add(row(words, "dash", keys(key.dash(), key.dashAlias()), pad.dash(), pad.dashTrigger(), playStation));
         rows.add(row(
                 words,
                 "orderFollowMe",

@@ -61,6 +61,14 @@ class PadControlsTest {
     }
 
     @Test
+    void dashesWhileTheEastButtonIsHeld() {
+        CommanderInput input = new PadControls(CONTROLS).read(FakeGamepad.xbox().hold(GamepadButton.EAST));
+
+        assertThat(input.dashing()).isTrue();
+        assertThat(input.dragging()).isFalse();
+    }
+
+    @Test
     void marksAPadsAimAsAnOffsetFromTheCommander() {
         CommanderInput input = new PadControls(CONTROLS).read(FakeGamepad.xbox().push(GamepadAxis.RIGHT_X, 1f));
 

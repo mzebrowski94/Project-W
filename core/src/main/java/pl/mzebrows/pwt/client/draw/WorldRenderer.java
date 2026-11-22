@@ -158,6 +158,7 @@ public final class WorldRenderer implements Disposable {
     private final BurrowMark burrowMark;
     private final DevourMark devourMark;
     private final LimpetMark limpetMark;
+    private final DashMark dashMark;
 
     /** How far anything drawn on the client's clock moves - a taken point's flag; zero holds it still. */
     private final float motionScale;
@@ -248,6 +249,11 @@ public final class WorldRenderer implements Disposable {
             float x = Drawn.x(position, previous, alpha) + swayX;
             float y = Drawn.y(position, previous, alpha) + swayY;
             float radius = BODY.get(entity).radius * devourScale;
+            if (appearance.puff > 0f) {
+                // A dash's smoke where it began, growing and fading where it was left (G0107).
+                drawPuff(x, y, appearance.puff);
+                continue;
+            }
             if (appearance.pop > 0f) {
                 // A take by touch, rising off the taker and fading (G0078): its look and nothing on it.
                 drawPop(x, y, radius, appearance);
@@ -276,6 +282,10 @@ public final class WorldRenderer implements Disposable {
             if (appearance.look == Look.LIMPET) {
                 drawLimpet(x, y, radius, appearance);
                 continue;
+            }
+            if (appearance.dashX != 0f || appearance.dashY != 0f) {
+                // Behind his shoulders and under him, so the jets read as on his back (G0107).
+                drawThrusters(x, y, radius, appearance);
             }
             shapes.setColor(tint(appearance));
             if (square(appearance.look)) {
@@ -880,6 +890,72 @@ public final class WorldRenderer implements Disposable {
             shapes.setColor(SCRATCH);
             shapes.circle(x, risen, crateMark.dotFor(radius), CIRCLE_SEGMENTS);
         }
+    }
+
+    /** A puff: a see-through disc of its own colour, grown and faded by how much of it is left (G0107). */
+    private void drawPuff(float x, float y, float left) {
+        SCRATCH.set(palette.colorFor(Look.PUFF));
+        SCRATCH.a = dashMark.puff().alpha() * left;
+        shapes.setColor(SCRATCH);
+        shapes.circle(x, y, dashMark.puff().radiusFor(left), CIRCLE_SEGMENTS);
+    }
+
+    /**
+     * Two flame cones behind his shoulders, pointing back along his dash, full while it runs and dying away over the
+     * tail (G0107); white-hot at the nozzle.
+     */
+    private void drawThrusters(float x, float y, float radius, Appearance appearance) {
+        DashMark.Thruster thruster = dashMark.thruster();
+        float strength = thruster.strength(appearance.dashing, appearance.dashAgo);
+        if (strength <= 0f) {
+            return;
+        }
+        float backX = -appearance.dashX;
+        float backY = -appearance.dashY;
+        float acrossX = -backY;
+        float acrossY = backX;
+        float half = thruster.width() * radius * 0.5f;
+        float length = thruster.length() * radius * strength;
+        for (int side = -1; side <= 1; side += 2) {
+            float baseX = x + backX * radius * 0.5f + acrossX * thruster.apart() * radius * side;
+            float baseY = y + backY * radius * 0.5f + acrossY * thruster.apart() * radius * side;
+            cone(baseX, baseY, backX, backY, acrossX, acrossY, half, length, thruster.core(), strength);
+            cone(
+                    baseX,
+                    baseY,
+                    backX,
+                    backY,
+                    acrossX,
+                    acrossY,
+                    half,
+                    length * thruster.tipShare(),
+                    thruster.tip(),
+                    strength);
+        }
+    }
+
+    /** One flame: a triangle with its base across the nozzle, pointing back, in this colour at this strength. */
+    private void cone(
+            float baseX,
+            float baseY,
+            float backX,
+            float backY,
+            float acrossX,
+            float acrossY,
+            float half,
+            float length,
+            Color color,
+            float strength) {
+        SCRATCH.set(color);
+        SCRATCH.a = color.a * strength;
+        shapes.setColor(SCRATCH);
+        shapes.triangle(
+                baseX + acrossX * half,
+                baseY + acrossY * half,
+                baseX - acrossX * half,
+                baseY - acrossY * half,
+                baseX + backX * length,
+                baseY + backY * length);
     }
 
     /** A worm under the ground: a see-through black disc its size, fainter while it rests (G0096). */

@@ -45,6 +45,7 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
      * @param grenade key that throws
      * @param action key that acts on whatever is in reach
      * @param drag key that takes hold of a load, or lets go
+     * @param dash, dashAlias the keys that dash (G0107), two for one action - either works
      * @param zoom key that pulls the view back and puts it again
      * @param rollCall key that swaps the bottom bar between the players' panels and the roll call
      * @param orderFollowMe, orderForward, orderDefence, orderCancel the four order keys. Alpha-phase
@@ -67,6 +68,8 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
             KeyCode grenade,
             KeyCode action,
             KeyCode drag,
+            KeyCode dash,
+            KeyCode dashAlias,
             KeyCode zoom,
             KeyCode rollCall,
             KeyCode orderFollowMe,
@@ -93,6 +96,8 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
      *     marked relative and the simulation turns it into a place
      * @param fire, fireTrigger what fires. A face button and a trigger, because both are how people hold a
      *     pad to shoot
+     * @param dash, dashTrigger what dashes (G0107). The pad's back paddle has no button of its own here: a pad's own
+     *     software maps it to {@code EAST}, which is what this is bound to
      * @param zoom, zoomTrigger what pulls the view back. Shared, like the view itself: any player's press
      *     moves everybody's camera
      * @param orderFollowMe, orderForward, orderDefence, orderCancel the four orders, on the d-pad
@@ -124,6 +129,8 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
             GamepadAxis actionTrigger,
             GamepadButton drag,
             GamepadAxis dragTrigger,
+            GamepadButton dash,
+            GamepadAxis dashTrigger,
             GamepadButton zoom,
             GamepadAxis zoomTrigger,
             GamepadButton pause,

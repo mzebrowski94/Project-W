@@ -50,6 +50,11 @@ public final class PlayerReadout {
 
     public int grenadeMost;
 
+    /** The dashes he holds, and the most he can (G0107) - one pip each, filled for those he has. */
+    public int dashes;
+
+    public int dashMost;
+
     /** Whether a shield is in front of him (G0053). */
     public boolean shielded;
 
@@ -140,6 +145,8 @@ public final class PlayerReadout {
         maxWounds = 0;
         grenades = 0;
         grenadeMost = 0;
+        dashes = 0;
+        dashMost = 0;
         shielded = false;
         invulnerable = false;
         stunned = false;
@@ -173,6 +180,8 @@ public final class PlayerReadout {
         maxWounds = other.maxWounds;
         grenades = other.grenades;
         grenadeMost = other.grenadeMost;
+        dashes = other.dashes;
+        dashMost = other.dashMost;
         shielded = other.shielded;
         invulnerable = other.invulnerable;
         stunned = other.stunned;

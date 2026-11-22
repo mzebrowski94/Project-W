@@ -13,7 +13,7 @@ import pl.mzebrows.pwt.sim.CommanderInput;
  * <p>Movement and aim are read independently (G0002): the mouse decides where the commander points
  * and the keys decide where he walks, and neither is derived from the other.
  *
- * <p>The grenade, action and drag keys are read as held rather than as pressed, and so are the mouse
+ * <p>The grenade, action, drag and dash keys are read as held rather than as pressed, and so are the mouse
  * buttons. How often a throw may happen is a {@code Thrower} cooldown and how long a stabilise takes
  * is a number on a casualty; neither is a question about key repeat.
  *
@@ -42,7 +42,8 @@ public final class KeyControls {
                 held.held(bindings.grenade()),
                 held.held(bindings.action()),
                 held.held(bindings.drag()),
-                false);
+                false,
+                held.held(bindings.dash()) || held.held(bindings.dashAlias()));
     }
 
     /** One way for two keys, the other way for two others; both at once cancel. */

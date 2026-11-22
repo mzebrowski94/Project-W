@@ -24,7 +24,8 @@ class BundleTest {
     void carriesAimToTheBitAndMovementToASixteenThousandthOfAPush() {
         CommanderInput odd = new CommanderInput(0.70710677f, -1f, Float.MAX_VALUE, 0.1f + 0.2f, true, false)
                 .acting(true)
-                .aimingRelatively();
+                .aimingRelatively()
+                .dashing(true);
 
         InputCodec.writeHeld(out.reset(), odd);
         CommanderInput read = InputCodec.readHeld(out.array(), 0, CommanderInput.IDLE);
@@ -35,6 +36,7 @@ class BundleTest {
         assertThat(Float.floatToRawIntBits(read.aimY())).isEqualTo(Float.floatToRawIntBits(0.1f + 0.2f));
         assertThat(read.acting()).isTrue();
         assertThat(read.aimRelative()).isTrue();
+        assertThat(read.dashing()).isTrue();
         assertThat(out.size()).isEqualTo(Bundle.HELD_BYTES);
     }
 

@@ -60,6 +60,20 @@ class GraphicConfigTest {
         assertThatThrownBy(() -> new PopMark(1f, 1.5f)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    /** A dash's thrusters are seen while it runs and die away over the tail; its puff grows and is seen (G0107). */
+    @Test
+    void readsADashsThrustersAndPuff() {
+        DashMark dash = GraphicConfig.load().dash();
+
+        assertThat(dash.thruster().strength(true, 5f)).isEqualTo(1f);
+        assertThat(dash.thruster().strength(false, 0f)).isEqualTo(1f);
+        assertThat(dash.thruster().strength(false, dash.thruster().tailSeconds()))
+                .isZero();
+        assertThat(dash.puff().alpha()).isPositive();
+        assertThat(dash.puff().radiusFor(0f)).isGreaterThan(dash.puff().radiusFor(1f));
+        assertThatThrownBy(() -> new DashMark.Puff(1f, 0.5f, 0.5f)).isInstanceOf(IllegalArgumentException.class);
+    }
+
     /** One shadow for whatever is off the ground - a slung rider, a thrown grenade (G0077) - and it is seen. */
     @Test
     void readsOneShadowForEverythingOffTheGround() {
@@ -200,6 +214,7 @@ class GraphicConfigTest {
                         d.burrow(),
                         d.devour(),
                         d.limpet(),
+                        d.dash(),
                         d.action(),
                         d.actionMark(),
                         d.pickupMark(),

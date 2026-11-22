@@ -228,5 +228,10 @@ public enum Look {
      *
      * <p>A charge look that is never full and never empty, so it reads as a glow.
      */
-    GLEAM
+    GLEAM,
+    /**
+     * The see-through smoke a dash leaves where it began (G0107), growing and fading where it was left. A look only:
+     * nothing touches it.
+     */
+    PUFF
 }

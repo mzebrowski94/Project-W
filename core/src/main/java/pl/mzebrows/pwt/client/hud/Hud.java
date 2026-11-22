@@ -41,6 +41,8 @@ public final class Hud implements Disposable {
     private final Texture woundSpare = icon(TallyIcon.WOUND_SPARE);
     private final Texture grenade = icon(TallyIcon.GRENADE);
     private final Texture grenadeSpare = icon(TallyIcon.GRENADE_SPARE);
+    private final Texture dash = icon(TallyIcon.DASH);
+    private final Texture dashSpare = icon(TallyIcon.DASH_SPARE);
     private final SystemPointer pointer;
     private ScreenLayout layout = ScreenLayout.NONE;
     private boolean warnedSmall;
@@ -161,6 +163,8 @@ public final class Hud implements Disposable {
         plus.dispose();
         wound.dispose();
         woundSpare.dispose();
+        dash.dispose();
+        dashSpare.dispose();
     }
 
     /**
@@ -208,6 +212,8 @@ public final class Hud implements Disposable {
             case WOUND_SPARE -> woundSpare;
             case GRENADE -> grenade;
             case GRENADE_SPARE -> grenadeSpare;
+            case DASH -> dash;
+            case DASH_SPARE -> dashSpare;
         };
     }
 
