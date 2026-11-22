@@ -71,7 +71,9 @@ meanwhile. The HTML prototype is for looks only.
 
 ## 3. Biome: roster and furniture
 
-- `roster=loose|nest <strain> min max; ...` - loose is put down unaware in packs, a nest is a hole of that strain.
+- `roster=loose|nest|house <strain> min max; ...` - loose is put down unaware in packs, a nest is a hole of that strain,
+  a house line a **house pack** in each of its houses on `housePackChance` (G0112) - a biome that lays houses has
+  `house jaguar 1 3`, last, and the range is one house's.
   The ranges are the biome at the first position on medium; tier and ramp scale every count through `Roster.count`
   (pressure = tier `enemyPercent` x (1 + `rampPercent` x position), G0063), and nothing else does.
 - `furniture.sitesMin/Max` (2-3 sites: control points, or another kind of site in a point's place, G0110), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, `treesMin/Max` and

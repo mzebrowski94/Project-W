@@ -104,5 +104,10 @@ public enum WeaponKind {
      * the first rock, door, scenery or alien it touches, calibrates there, and goes off small before that and big
      * after - the only gun whose blast is his to time. Every throw runs it to the stop, a reload.
      */
-    DETONATOR
+    DETONATOR,
+    /**
+     * What a jaguar spits (G0112): the sludger's glob made small, quick and harmless - it lands as a blow that does
+     * nothing (G0057) and leaves the glob's glue where it stops. No pickup grants it.
+     */
+    JAGUAR_GLOB
 }

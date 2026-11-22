@@ -25,6 +25,8 @@ import pl.mzebrows.pwt.sim.def.Require;
  *     a tree off everything else: wider than the widest thing that must get past it, so it leaves no slot to be stuck in (G0042)
  * @param geyserKeepOff how far a geyser's middle keeps off every control point, every nest and every way into its biome,
  *     the start among them (G0089): its fire is nobody's, so it never erupts where the squad must stand or comes in
+ * @param housePackChance the chance, a whole per cent, that one house of a biome holds a pack of each of its roster's
+ *     {@code house} lines (G0112); zero is never
  */
 public record PlacementRules(
         float startKeepOff,
@@ -41,7 +43,8 @@ public record PlacementRules(
         float barrelReach,
         float treeReach,
         float rockMargin,
-        float geyserKeepOff) {
+        float geyserKeepOff,
+        int housePackChance) {
 
     public PlacementRules {
         Require.notNegative("placement startKeepOff", startKeepOff);
@@ -59,5 +62,6 @@ public record PlacementRules(
         Require.positive("placement treeReach", treeReach);
         Require.notNegative("placement rockMargin", rockMargin);
         Require.notNegative("placement geyserKeepOff", geyserKeepOff);
+        Require.notNegative("placement housePackChance", housePackChance);
     }
 }

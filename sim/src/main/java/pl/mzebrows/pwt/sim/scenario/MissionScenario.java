@@ -140,6 +140,7 @@ final class MissionScenario implements Scenario {
             switch (placed) {
                 case Placed.Point _, Placed.Hold _, Placed.Nest _, Placed.Geyser _ -> {}
                 case Placed.Loose loose -> simulation.spawnUnit(loose.strain(), loose.x(), loose.y());
+                case Placed.Housed housed -> HousePacks.spawn(simulation, housed);
                 case Placed.Pickup pickup -> simulation.spawnPickup(pickup.kind(), pickup.x(), pickup.y());
                 case Placed.Barrel barrel -> simulation.spawnBarrel(barrel.x(), barrel.y());
                 case Placed.Boulder boulder -> simulation.spawnObstacle(boulder.x(), boulder.y());

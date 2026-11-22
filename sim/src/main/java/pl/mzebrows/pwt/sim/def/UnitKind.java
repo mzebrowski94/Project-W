@@ -116,5 +116,12 @@ public enum UnitKind {
      * snaps. What to read is the ring opening round your feet; what to do is keep walking, then shoot it while it stands
      * in its hole.
      */
-    WORM
+    WORM,
+    /**
+     * The jaguar (G0112): a runner's line - it weaves, dodges and leaps in threes, quicker than a runner - on a grunt's
+     * body far harder to kill, and a short locked burst of three globs that hurt nobody and leave glue. It lives in
+     * houses, wandering inside until it notices somebody, then leaps the door down to get out. What to read is the
+     * brief stop before the burst; what to do is step off the line and keep shooting - one magazine will not do.
+     */
+    JAGUAR
 }

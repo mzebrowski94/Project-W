@@ -29,6 +29,13 @@ public sealed interface Placed {
     /** A creature put down unaware, one of a pack. */
     record Loose(UnitKind strain, float x, float y, int biome) implements Placed {}
 
+    /**
+     * A creature of a house pack (G0112), put down unaware inside a house: its patch is the house - centred on
+     * {@code homeX, homeY}, no wider than {@code roam} - and it never drifts, so the shut doors hold it in.
+     */
+    record Housed(UnitKind strain, float x, float y, float homeX, float homeY, float roam, int biome)
+            implements Placed {}
+
     /** A pickup lying about: a crate, a medkit, food. */
     record Pickup(PickupKind kind, float x, float y, int biome) implements Placed {}
 

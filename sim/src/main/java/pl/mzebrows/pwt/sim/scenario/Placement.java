@@ -26,7 +26,8 @@ import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 
 /**
  * Puts down what each biome of a mission counts, by rules and never by places (G0068): ordered {@link Scatter}
- * passes, the most constrained first - sites (a worked site in its house first, G0111), what a house holds, nests, packs, turrets by points, geysers, medkits and
+ * passes, the most constrained first - sites (a worked site in its house first, G0111), what a house holds, its house
+ * packs (G0112), nests, packs, turrets by points, geysers, medkits and
  * food,
  * barrels, boulders, trees, rabbits. Each pass keeps off what went down before it by its radii, crow-flies, and off every
  * tile the strip kept: the start, aprons, doorsteps, and every house's inside but for its stock. The last biome keeps
@@ -45,6 +46,9 @@ final class Placement {
 
     /** Which of a biome's site bands another kind of site takes, a bit a band: none, until one does (G0110). */
     private static final long NO_OTHER_SITES = 0L;
+
+    /** Half a tile's diagonal, as a fraction of its side: a circle on a tile's centre this wide covers the tile. */
+    private static final float HALF_DIAGONAL = 0.7072f;
 
     /** A chance is dealt as a whole per cent. */
     private static final int PERCENT = 100;
@@ -72,6 +76,8 @@ final class Placement {
     private static final long STONES = 0x93A7_5C1E_D24B_806FL;
     private static final long STONE_SIZES = 0x2B6E_F193_7A0D_C54BL;
     private static final long WORKED = 0xC4E1_3B87_5F20_9AD6L;
+    private static final long HOUSE_PACKS = 0x7D3A_E5C1_29B8_604FL;
+    private static final long HOUSED = 0xE19C_4F72_B05D_3A86L;
 
     private final SimConfig config;
     private final PlacementRules rules;
@@ -196,7 +202,10 @@ final class Placement {
             Randomness drawn = stream.derive(ROSTER);
             int[] creatures = new int[def.roster().size()];
             for (int i = 0; i < creatures.length; i++) {
-                creatures[i] = def.roster().get(i).count(drawn, pressure);
+                // A house line is counted house by house where its packs are laid (G0112), never here: drawing
+                // nothing for it keeps every other line's count as it was.
+                Roster line = def.roster().get(i);
+                creatures[i] = line instanceof Roster.House ? 0 : line.count(drawn, pressure);
             }
             Randomness counted = stream.derive(FURNITURE);
             Furniture furniture = def.furniture();
@@ -221,6 +230,7 @@ final class Placement {
             // which wall is the same on every attempt and every tier (G0111).
             sites(sites, housedSites(sites, stream.derive(WORKED)), attempt.derive(POINTS));
             houseStock(stock, attempt.derive(STOCK));
+            housePacks(pressure, stream.derive(HOUSE_PACKS), attempt.derive(HOUSED));
             unhoused(stock);
             nests(creatures, attempt.derive(NESTS));
             packs(creatures, attempt.derive(PACKS));
@@ -382,6 +392,74 @@ final class Placement {
                     stock[line]--;
                 }
             }
+        }
+
+        /**
+         * The house packs (G0112): each house of this biome - never a gatehouse - holds a pack of each house line on
+         * {@code housePackChance}, rolled and counted house by house from {@code rolls}, the biome's own stream, so
+         * whether a house holds one and how many is the same on every attempt; laid inside it, round its stock and any
+         * worked site, from {@code rng}. A house not wholly {@code startKeepOff} off the start, or reaching into the
+         * finale's watch, still rolls but holds none: nothing hostile stands there.
+         */
+        private void housePacks(MissionConfig.Pressure pressure, Randomness rolls, Randomness rng) {
+            Scatter scatter = new Scatter(map, rng, 0f, 0f);
+            for (Placed standing : here) {
+                scatter.reserve(standing.x(), standing.y(), radius(standing));
+            }
+            for (House house : laid.houses()) {
+                if (!inThisBiome(house)) {
+                    continue;
+                }
+                // Off its doorways, where its doors stand shut: a body inside, never one the door is put down on.
+                float tile = map.tileSize();
+                for (TileRect doorway : house.doorways()) {
+                    for (int row = doorway.row(); row < doorway.endRow(); row++) {
+                        for (int col = doorway.col(); col < doorway.endCol(); col++) {
+                            scatter.reserve(map.tileCentreX(col), map.tileCentreY(row), tile * HALF_DIAGONAL);
+                        }
+                    }
+                }
+                for (Roster line : def.roster()) {
+                    if (!(line instanceof Roster.House pack) || rolls.nextInt(PERCENT) >= rules.housePackChance()) {
+                        continue;
+                    }
+                    int count = pack.count(rolls, pressure);
+                    if (count == 0 || !clearOfTheStartAndTheWatch(house)) {
+                        continue;
+                    }
+                    int got = scatter.scatter(
+                            house.inside(),
+                            count,
+                            config.unit(pack.strain()).radius(),
+                            (x, y) -> put(HousePacks.in(house, map, pack.strain(), x, y, position)));
+                    shortOf("house pack of " + pack.strain(), count, got);
+                }
+            }
+        }
+
+        /** Whether the whole of a house's inside is {@code startKeepOff} off the start and outside the finale's watch. */
+        private boolean clearOfTheStartAndTheWatch(House house) {
+            float tile = map.tileSize();
+            TileRect inside = house.inside();
+            if (position == 0) {
+                for (TileRect entry : entries) {
+                    float dx = Math.max(0f, Math.max(entry.col() - inside.endCol(), inside.col() - entry.endCol()));
+                    float dy = Math.max(0f, Math.max(entry.row() - inside.endRow(), inside.row() - entry.endRow()));
+                    if ((dx * dx + dy * dy) * tile * tile < rules.startKeepOff() * rules.startKeepOff()) {
+                        return false;
+                    }
+                }
+            }
+            if (last) {
+                float nearestX = Math.clamp(hold.x(), inside.col() * tile, inside.endCol() * tile);
+                float nearestY = Math.clamp(hold.y(), inside.row() * tile, inside.endRow() * tile);
+                float dx = nearestX - hold.x();
+                float dy = nearestY - hold.y();
+                if (dx * dx + dy * dy <= hold.watch() * hold.watch()) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         /** Holes: off the way in, off every point and off each other; never in a house, nor in the finale's watch. */
@@ -798,6 +876,7 @@ final class Placement {
             case Placed.Point _ -> config.controlPoint().radius();
             case Placed.Nest _ -> config.nest().radius();
             case Placed.Loose loose -> config.unit(loose.strain()).radius();
+            case Placed.Housed housed -> config.unit(housed.strain()).radius();
             case Placed.Pickup pickup -> config.pickup(pickup.kind()).radius();
             case Placed.Barrel _ -> config.pickup(PickupKind.BARREL).radius();
             case Placed.Boulder _ -> config.obstacle().radius();

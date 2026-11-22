@@ -5,7 +5,7 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
  * One line of a biome's roster (missions ticket 03): how many of one strain it is dealt, and how. Written {@code
- * loose|nest <strain> min max}; the range is the biome at the first position on medium. <strong>Every count a
+ * loose|nest|house <strain> min max}; the range is the biome at the first position on medium. <strong>Every count a
  * roster deals is drawn and scaled in {@link #count}</strong>, and nothing else scales one (G0063).
  */
 public sealed interface Roster {
@@ -56,6 +56,22 @@ public sealed interface Roster {
         @Override
         public int count(Randomness rng, MissionConfig.Pressure pressure) {
             return pressure.scale(drawn(min, max, rng));
+        }
+    }
+
+    /**
+     * Creatures put down in a house, the house pack (G0112): each of the biome's houses - never a gatehouse - holds one
+     * on {@code sim.mission.placement.housePackChance}, of this many, drawn and scaled as a loose line is - per house,
+     * so the range is one house's.
+     */
+    record House(UnitKind strain, int min, int max) implements Roster {
+        public House {
+            range("house " + strain, min, max);
+        }
+
+        @Override
+        public int count(Randomness rng, MissionConfig.Pressure pressure) {
+            return Roster.count(min, max, rng, pressure);
         }
     }
 
