@@ -109,5 +109,10 @@ public enum WeaponKind {
      * What a jaguar spits (G0112): the sludger's glob made small, quick and harmless - it lands as a blow that does
      * nothing (G0057) and leaves the glob's glue where it stops. No pickup grants it.
      */
-    JAGUAR_GLOB
+    JAGUAR_GLOB,
+    /**
+     * What a spire fires (G0113): a small, slow bead along a bearing of its cycle, never aimed, that wounds a man it
+     * hits as gunfire does. No pickup grants it.
+     */
+    SPIRE_SHOT
 }

@@ -240,6 +240,7 @@ class GraphicConfigTest {
                         d.flag(),
                         d.siteRing(),
                         d.mainframe(),
+                        d.spire(),
                         d.burst(),
                         d.daze(),
                         d.tree(),

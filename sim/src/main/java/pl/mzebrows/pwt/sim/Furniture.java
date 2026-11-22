@@ -26,6 +26,7 @@ import pl.mzebrows.pwt.map.Randomness;
  * @param turretsMax the most
  * @param geysersMin the fewest geysers, ground that erupts in fire (G0089): zero in every biome but the cut
  * @param geysersMax the most
+ * @param spires how many spires, the fen's emplacements (G0113): {@code 0 0} in every biome but the fen
  * @param pickups what lies about, a line per kind; a house is stocked with its crates and medkits first, and a crate is
  *     laid nowhere else (G0110)
  */
@@ -48,7 +49,21 @@ public record Furniture(
         int turretsMax,
         int geysersMin,
         int geysersMax,
+        Count spires,
         List<Stock> pickups) {
+
+    /** A fewest and a most, on one line: {@code spires=3 5}. */
+    public record Count(int min, int max) {
+
+        public Count {
+            range("count", min, max);
+        }
+
+        /** How many, drawn. */
+        public int draw(Randomness rng) {
+            return between(rng, min, max);
+        }
+    }
 
     public Furniture {
         if (sitesMin < 1 || sitesMax < sitesMin) {

@@ -59,6 +59,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param flag how to draw a control point once it is taken: its pole, its flag and its ring
  * @param siteRing the objective ring round every site not yet taken (G0111)
  * @param mainframe how to draw a mainframe: its cabinet, its screen, the X and the tick (G0111)
+ * @param spire how to draw a spire: its cap and the tick at its next bearing (G0113)
  * @param tree how to draw a tree's foliage over its trunk (G0072)
  * @param boulder how to shade a boulder
  * @param sling how to draw a slinger's riders on its back (G0074)
@@ -111,6 +112,7 @@ public record GraphicConfig(
         FlagMark flag,
         @ConfigKey("site.ring") ObjectiveRing siteRing,
         @ConfigKey("site.mainframe") MainframeMark mainframe,
+        SpireMark spire,
         BurstMark burst,
         DazeMark daze,
         TreeMark tree,

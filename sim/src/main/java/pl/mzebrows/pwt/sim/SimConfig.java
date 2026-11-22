@@ -14,6 +14,8 @@ import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.Chances;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.DodgeDef;
+import pl.mzebrows.pwt.sim.def.EmplacementDef;
+import pl.mzebrows.pwt.sim.def.EmplacementKind;
 import pl.mzebrows.pwt.sim.def.FinaleKind;
 import pl.mzebrows.pwt.sim.def.GroundDef;
 import pl.mzebrows.pwt.sim.def.Harm;
@@ -89,6 +91,7 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * @param controlPoint what it takes to hold a point, and how far taking one carries
  * @param site what a taken site leaves besides what a point always has (G0110)
  * @param workedSites every site taken by work held at it, by kind (G0111): a {@code sim.site.<kind>} block each
+ * @param emplacements every standing shooter nobody crews, by kind (G0113): a {@code sim.emplacement.<kind>} block each
  * @param turret the gun on a mount that a man gets on
  * @param obstacle the static circles that block movement
  * @param collision how hard the constraint solver works
@@ -142,6 +145,7 @@ public record SimConfig(
         ControlPointConfig controlPoint,
         SiteConfig site,
         @ConfigKey("site") Defs<WorkedSiteKind, WorkedSiteDef> workedSites,
+        @ConfigKey("emplacement") Defs<EmplacementKind, EmplacementDef> emplacements,
         TurretConfig turret,
         ObstacleConfig obstacle,
         CollisionConfig collision,
@@ -206,6 +210,11 @@ public record SimConfig(
     /** The definition of one kind of worked site (G0111). */
     public WorkedSiteDef workedSite(WorkedSiteKind kind) {
         return workedSites.of(kind);
+    }
+
+    /** The definition of one kind of emplacement (G0113). */
+    public EmplacementDef emplacement(EmplacementKind kind) {
+        return emplacements.of(kind);
     }
 
     /** The definition of one kind of pickup. */
@@ -308,6 +317,9 @@ public record SimConfig(
         }
         largest = Math.max(largest, nest.radius());
         largest = Math.max(largest, turret.radius());
+        for (EmplacementDef emplacement : emplacements.values()) {
+            largest = Math.max(largest, emplacement.radius());
+        }
         return Math.max(largest, mine.radius());
     }
 

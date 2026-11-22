@@ -66,6 +66,11 @@ public enum Look {
      */
     MAINFRAME,
     /**
+     * A spire (G0113): a tall dark totem-like column seen from above - a mossy grey-green disc with a lighter cap - and
+     * a faint tick on its edge at each bearing its next step fires along, so its pattern reads (pillar 5).
+     */
+    SPIRE,
+    /**
      * A hole in the ground that keeps sending more of one strain out of it.
      *
      * <p>What comes out of it is named on the charge channel, in that strain's colour.
@@ -120,6 +125,8 @@ public enum Look {
     GLOB,
     /** What a jaguar spits: drawn as a glob is, in the jaguar's purple (G0112). */
     JAGUAR_GLOB,
+    /** A spire's shot (G0113): a small pale-green bead. */
+    SPIRE_SHOT,
     /**
      * One circle of ground a frog has ruined.
      *

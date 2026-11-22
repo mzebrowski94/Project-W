@@ -1,6 +1,6 @@
 # G0068: A biome is populated by rules in order, never by coordinates
 
-**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has; amended by G0082: turrets by points; amended by G0089: geysers, kept off points, nests and ways in; amended by G0110: a biome counts sites, and crates are only its houses' stock; amended by G0111: a worked site in its house first; amended by G0112: a house may hold a house pack
+**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has; amended by G0082: turrets by points; amended by G0089: geysers, kept off points, nests and ways in; amended by G0110: a biome counts sites, and crates are only its houses' stock; amended by G0111: a worked site in its house first; amended by G0112: a house may hold a house pack; amended by G0113: spires after the geysers
 
 **Trigger.** Changing where anything a biome's roster or furniture counts is put down, the order it goes down in,
 what a house holds, or what happens when a rule cannot be met.
@@ -85,3 +85,10 @@ A house may hold a **house pack**: each house of a biome - never a gatehouse - h
 after its stock, off its doorways; only in a house wholly `startKeepOff` off the start and outside the finale's watch.
 Its creatures wander only inside it until they notice somebody (G0112). Points and loose packs still never stand in a
 house: *a pack waiting inside a house* below now means a loose one.
+
+## Amended by G0113
+
+A pass after the geysers and before the medkits and food puts a biome's emplacements - the fen's spires,
+`furniture.spires` - as a boulder stands, `emplacementKeepOff` off every way in (the start's distance in a first biome),
+every nest and the finale's watch, and off every site's edge, never on a thicket's tile; each is dealt its cycle from
+the pass's stream as it goes down. Only the fen asks for any (3-5). Provisional, for review.

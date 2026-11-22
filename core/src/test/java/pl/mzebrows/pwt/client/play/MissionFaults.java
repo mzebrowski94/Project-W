@@ -8,6 +8,7 @@ import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.StripFaults;
+import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.Furniture;
@@ -46,6 +47,7 @@ final class MissionFaults {
         faults.addAll(crates(mission, config));
         faults.addAll(trees(mission, config));
         faults.addAll(geysers(mission, config.mission().placement()));
+        faults.addAll(emplacements(mission, config));
         faults.addAll(finale(mission));
         return faults;
     }
@@ -438,6 +440,67 @@ final class MissionFaults {
         return faults;
     }
 
+    /**
+     * A biome's emplacements (G0113): between its fewest and most spires, never on a thicket's tile, and each {@code
+     * emplacementKeepOff} off every way in (the start's own distance in the first biome), every nest of its biome, every
+     * site's edge and the finale's watch.
+     */
+    static List<String> emplacements(Mission mission, SimConfig config) {
+        PlacementRules rules = config.mission().placement();
+        TileMap map = mission.laid().map();
+        float keepOff = rules.emplacementKeepOff();
+        int finale = mission.order().size();
+        @Nullable Placed hold = null;
+        for (Placed placed : mission.placed()) {
+            if (placed instanceof Placed.Hold) {
+                hold = placed;
+            }
+        }
+        List<String> faults = new ArrayList<>();
+        int[] counted = new int[finale];
+        for (Placed emplacement : mission.placed()) {
+            if (!(emplacement instanceof Placed.Emplacement)) {
+                continue;
+            }
+            int biome = emplacement.biome();
+            counted[biome]++;
+            if (map.terrainAt(emplacement.x(), emplacement.y()) == Terrain.THICKET) {
+                faults.add(emplacement + " stands in a thicket");
+            }
+            float fromAWayIn = biome == 0 ? Math.max(rules.startKeepOff(), keepOff) : keepOff;
+            for (TileRect entry : mission.laid().entries().get(biome)) {
+                if (distance(map, entry, emplacement) < fromAWayIn) {
+                    faults.add(emplacement + " is " + (int) distance(map, entry, emplacement) + " from the way in at "
+                            + entry);
+                }
+            }
+            for (Placed other : mission.placed()) {
+                if (other.biome() != biome) {
+                    continue;
+                }
+                float least =
+                        site(other) ? radius(other, config) + keepOff : other instanceof Placed.Nest ? keepOff : 0f;
+                if (between(emplacement, other) < least) {
+                    faults.add(emplacement + " is " + (int) between(emplacement, other) + " from " + other);
+                }
+            }
+            if (hold instanceof Placed.Hold watched
+                    && biome == finale - 1
+                    && between(emplacement, hold) < watched.watch() + keepOff) {
+                faults.add(emplacement + " is " + (int) between(emplacement, hold) + " from the finale's post");
+            }
+        }
+        for (int biome = 0; biome < finale; biome++) {
+            Furniture.Count spires =
+                    config.biomes().of(mission.order().get(biome)).furniture().spires();
+            if (counted[biome] < spires.min() || counted[biome] > spires.max()) {
+                faults.add("biome " + biome + " has " + counted[biome] + " spires, not " + spires.min() + "-"
+                        + spires.max());
+            }
+        }
+        return faults;
+    }
+
     /** What a thing standing takes up, as placement reserves it. */
     private static float radius(Placed thing, SimConfig config) {
         return switch (thing) {
@@ -455,6 +518,8 @@ final class MissionFaults {
             case Placed.Turret _ -> config.turret().radius();
             case Placed.Mine _ -> config.mine().radius();
             case Placed.Worked worked -> config.workedSite(worked.kind()).radius();
+            case Placed.Emplacement emplacement ->
+                config.emplacement(emplacement.kind()).radius();
         };
     }
 
