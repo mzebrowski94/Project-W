@@ -51,10 +51,10 @@ while a site is worked.
   takes it up. The capture crowd (G0086, `sim.trooper.captureCrowd`) counts at it as at a point: the worker and up to
   four others stand round it in their sectors; a spare past the crowd is sent on to the next site.
 - **Placement** (amends G0068): first of a biome's passes, before its points. For each housed kind, from the biome's
-  **own** stream (`stream.derive(WORKED)`, the same on every attempt and tier), kind after kind: on its `chance`
+  **own** stream (`stream.derive(WORKED)`, the same on every attempt), kind after kind: on its `chance`
   (`sim.site.mainframe.chance=50`), in a house wholly inside the biome - never a gatehouse - dealt from the stream when
   there are two; on a tile beside one of its walls, at that tile's middle and clear of the wall, a man's width
-  (`sim.trooper.radius` twice) and its body clear of every doorway, dealt from the stream; it takes the band its
+  (`sim.trooper.radius` twice) and its body clear of every doorway, dealt from the attempt's stream (`attempt.derive(WORKED)`), so a biome placed again can move it and the attempt taken - the first that fits every tier - stands it in one place on all of them; it takes the band its
   column falls in, which a control point then leaves to it (G0110's seam). At most one of a kind a biome. Its band's
   neighbours' points keep `pointApart` off it; nests keep `pointKeepOff` and geysers `geyserKeepOff`; the house's
   stock is laid round it. No turret stands by one - turrets stay by points (G0082).
@@ -72,7 +72,7 @@ while a site is worked.
    it, as everything put down is. Turned down: a 1.25 radius; a body flush against the wall (fails "nothing in or
    against rock").
 2. **Against the wall:** the middle of any tile along the inside of any wall, a man's width and its body off every
-   doorway, dealt from the biome's stream. Turned down: the wall opposite the doorways only (a house's two doorways
+   doorway, dealt from the attempt's stream, not the biome's: with the spot fixed for every attempt, a biome it crowded could never be placed again round it (sweep: `HHRG-6VV9`, `HHQG-J6A3` short of nests). Whether, and which house, stay the biome's stream's, as settled. Turned down: the wall opposite the doorways only (a house's two doorways
    are on any two walls); the middle of the house (not "against a wall").
 3. **Troopers go to the nearest site by route, a mainframe and a point alike** (the ticket's default). Turned down:
    preferring the mainframe.
