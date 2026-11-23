@@ -1,6 +1,6 @@
 # G0075: A hunter goes round a shut door when there is a way round
 
-**Status.** accepted
+**Status.** amended by G0116: ice is ground to a hunter's route, broken in its way rather than gone round
 
 **Trigger.** Changing how a creature routes or picks its line to a man; adding anything else that blocks for a while
 - a barricade, a gate - that a route should see; marching creatures past houses.
@@ -14,7 +14,8 @@ on their way to a man in the open, although nobody was inside.
 **Amends ADR 0022.** A hunter's route and its straight line are taken over the ground **as it is now** (`Solid`):
 terrain and every shut door. Its route floods again whenever the set of shut doors changes.
 
-**Constraint.**
+**Constraint.** Every door in a doorway keeps this record unchanged, *Do not build* and all; only ice (ADR 0025) is G0116's.
+
 
 - **Round first.** A hunter walks the route over the ground now while that route reaches any man on the player's
   side. A shut house between it and a man in the open is walked round, and a line through both of a house's doorways

@@ -14,8 +14,9 @@ import pl.mzebrows.pwt.sim.component.Handle;
  * Whether a tile is solid now (ADR 0022): the map's terrain, and the doorway of every shut door. <strong>The one
  * place in {@code sim} that answers it</strong> for a running world - the solver's clamp, a shot flying into rock, a
  * blast's line, perception's clear line and a shooter's choice of target all ask here - so a shut door is a wall to
- * everything that moves, shoots, explodes or looks. A hunter's route asks too, and goes round a shut door when there
- * is a way round; only when there is none does it run through the door, so a hunter walks up to it (G0069, G0075).
+ * everything that moves, shoots, explodes or looks. A hunter's route asks too ({@link #routes}), and goes round a shut
+ * door when there is a way round; only when there is none does it run through the door, so a hunter walks up to it
+ * (G0069, G0075). Ice it runs through whatever the way round (G0116).
  * {@link #revision} says when the answer has changed, so a route floods again only then.
  *
  * <p>Derived from the doors, never carried: {@link #derive} rebuilds it from every door standing shut, before every
@@ -36,6 +37,9 @@ public final class Solid implements Passability {
     /** The handle of the shut door standing in each tile, or nobody - {@code row * cols + col}. */
     private final long[] shut;
 
+    /** Per tile: a shut door there that a hunter's route runs through, as if broken - ice (G0116). */
+    private final boolean[] routedThrough;
+
     /** The handles of the doors standing shut at the last {@link #derive}, in the order the doors came, and how many. */
     private long[] shutDoors = new long[4];
 
@@ -50,11 +54,17 @@ public final class Solid implements Passability {
     /** This, but for the tiles of {@link #excepted}: built once, so a walk to a door allocates nothing. */
     private final Passability toExcepted;
 
+    /** This, but for the tiles of every door a route runs through (G0116): built once. */
+    private final Passability routes;
+
     public Solid(TileMap map) {
         this.map = map;
         this.shut = new long[map.cols() * map.rows()];
+        this.routedThrough = new boolean[map.cols() * map.rows()];
         this.toExcepted = (col, row) -> map.passableAtTile(col, row)
                 && (shut[row * map.cols() + col] == Handle.NOBODY || shut[row * map.cols() + col] == excepted);
+        this.routes = (col, row) -> map.passableAtTile(col, row)
+                && (shut[row * map.cols() + col] == Handle.NOBODY || routedThrough[row * map.cols() + col]);
     }
 
     /** The ground under it, which never changes: its extent, its tiles and its terrain. */
@@ -65,6 +75,7 @@ public final class Solid implements Passability {
     /** Rebuilds which tiles a shut door stands in, from every door still standing and not yet opened. */
     public void derive(ImmutableArray<Entity> doors) {
         Arrays.fill(shut, Handle.NOBODY);
+        Arrays.fill(routedThrough, false);
         int count = 0;
         boolean changed = false;
         for (int i = 0; i < doors.size(); i++) {
@@ -83,6 +94,7 @@ public final class Solid implements Passability {
                 for (int col = door.col; col < door.col + door.width; col++) {
                     if (map.inBounds(col, row)) {
                         shut[row * map.cols() + col] = handle;
+                        routedThrough[row * map.cols() + col] = door.routedThrough;
                     }
                 }
             }
@@ -105,6 +117,15 @@ public final class Solid implements Passability {
     @Override
     public boolean passableAtTile(int col, int row) {
         return map.passableAtTile(col, row) && shut[row * map.cols() + col] == Handle.NOBODY;
+    }
+
+    /**
+     * The ground a hunter's route is flooded over (G0075, G0116): this, but with every shut door a route runs through -
+     * ice - counted open, so a hunter whose shortest way runs through ice walks up to it and leaps at it, and goes round
+     * only a door that is not. Changes with {@link #revision}.
+     */
+    public Passability routes() {
+        return routes;
     }
 
     /** Whether something can stand at this world position now. */

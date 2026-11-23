@@ -44,6 +44,12 @@ public final class Projectile implements Component, Pool.Poolable {
     public boolean breaksDoors;
 
     /**
+     * How far a trooper this shot wounds steps off its line (G0114): its gun's {@code stepOff}. Zero, on every shot but
+     * a warden's, is none.
+     */
+    public float stepOff;
+
+    /**
      * How far back along its own path this shot is drawn, in world units. Zero is a dot, which is
      * what every gun but the beam declares.
      *
@@ -88,6 +94,12 @@ public final class Projectile implements Component, Pool.Poolable {
         return this;
     }
 
+    /** Makes it a shot a trooper it wounds steps off the line of, this far, and returns this component. */
+    public Projectile steppedOffBy(float distance) {
+        this.stepOff = distance;
+        return this;
+    }
+
     /** True if the next thing it hits turns it rather than stops it. */
     public boolean bounces() {
         return bouncesLeft > 0;
@@ -129,5 +141,6 @@ public final class Projectile implements Component, Pool.Poolable {
         piercing = false;
         bouncesLeft = 0;
         breaksDoors = false;
+        stepOff = 0f;
     }
 }

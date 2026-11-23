@@ -13,7 +13,8 @@ import pl.mzebrows.pwt.map.TileRect;
  * <p>Every door starts shut. One door fits every doorway, so there is no table of them: one {@code sim.door} block.
  *
  * <p><strong>Ice is a door nobody opens</strong> (ADR 0025): across a way of a maze rather than in a doorway, its
- * {@code openTicks} zero, chipped by every shot from the squad's side, its health {@code sim.ice.health}.
+ * {@code openTicks} zero, chipped by every shot from the squad's side, its health {@code sim.ice.health}, and ground to
+ * a hunter's route, so a hunter breaks it in its way rather than going round (G0116).
  */
 public final class Door implements Component, Pool.Poolable {
 
@@ -37,6 +38,13 @@ public final class Door implements Component, Pool.Poolable {
      * (ADR 0025). False for a door in a doorway.
      */
     public boolean chipped;
+
+    /**
+     * Whether a hunter's route takes it as ground, as if it were broken, so a hunter whose shortest way runs through it
+     * walks up to it and leaps at it rather than going round (G0116) - ice. False for a door in a doorway, which a hunter
+     * goes round while there is a way round (G0075).
+     */
+    public boolean routedThrough;
 
     /** How much work has been done on it, in ticks. Lost on any tick nobody works on it. */
     public int workTicks;
@@ -70,12 +78,19 @@ public final class Door implements Component, Pool.Poolable {
         this.sinkTicks = newSinkTicks;
         this.sinkingTicks = 0;
         this.chipped = false;
+        this.routedThrough = false;
         return this;
     }
 
     /** Makes it chipped by every shot from the squad's side, and returns this component, for fluent spawning. */
     public Door chippedByEveryShot() {
         this.chipped = true;
+        return this;
+    }
+
+    /** Makes a hunter's route run through it, as if broken (G0116), and returns this component, for fluent spawning. */
+    public Door routedThroughByHunters() {
+        this.routedThrough = true;
         return this;
     }
 
@@ -125,5 +140,6 @@ public final class Door implements Component, Pool.Poolable {
         sinkTicks = 0;
         sinkingTicks = 0;
         chipped = false;
+        routedThrough = false;
     }
 }

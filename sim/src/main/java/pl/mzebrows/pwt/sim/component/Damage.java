@@ -80,6 +80,27 @@ public final class Damage implements Component, Pool.Poolable {
     /** How fast that shove bleeds off, in world units per second per second. */
     public float shoveDecay;
 
+    /**
+     * How far a trooper steps off the line of a shot that landed on him this tick (G0114): the farthest any of this
+     * tick's shots asked for; zero for none. Read only for a trooper this tick's blows leave on his feet.
+     */
+    public float stepOff;
+
+    /** The unit direction of that step: square to the shot's line, to the side he stands on. */
+    public float stepOffX;
+
+    public float stepOffY;
+
+    /** Records a step off a shot's line, keeping the farthest asked for this tick. */
+    public void stepOff(float directionX, float directionY, float distance) {
+        if (distance <= stepOff) {
+            return;
+        }
+        stepOff = distance;
+        stepOffX = directionX;
+        stepOffY = directionY;
+    }
+
     /** The longest stun any of this tick's hits declared, in ticks; zero for none (G0053). */
     public int stunTicks;
 
@@ -297,5 +318,8 @@ public final class Damage implements Component, Pool.Poolable {
         shock = 0f;
         shockStunTicks = 0;
         credit = Tally.NOBODY;
+        stepOff = 0f;
+        stepOffX = 0f;
+        stepOffY = 0f;
     }
 }

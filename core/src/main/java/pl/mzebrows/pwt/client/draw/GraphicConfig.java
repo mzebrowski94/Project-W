@@ -60,7 +60,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param siteRing the objective ring round every site not yet taken (G0111)
  * @param mainframe how to draw a mainframe: its cabinet, its screen, the X and the tick (G0111)
  * @param spire how to draw a spire: its cap (G0113)
- * @param relic how to draw a relic's glowing square and its wardens' ovals (G0114)
+ * @param relic how to draw a relic's glowing square and its wardens' ringed tokens (G0114)
  * @param tree how to draw a tree's foliage over its trunk (G0072)
  * @param boulder how to shade a boulder
  * @param sling how to draw a slinger's riders on its back (G0074)

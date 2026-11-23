@@ -80,6 +80,11 @@ public final class DamageSystem extends IteratingSystem {
     private final SimConfig.ShockConfig shockConfig;
     private final int alertTicks;
 
+    /** How fast a wounded trooper walks: the slowest he steps off a shot's line at, which bounds the step (G0114). */
+    private final float woundedSpeed;
+
+    private final float tickSeconds;
+
     /** Every entity with a handle, for finding one named by it. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
@@ -93,6 +98,8 @@ public final class DamageSystem extends IteratingSystem {
         this.bloatConfig = config.bloat();
         this.shockConfig = config.shock();
         this.alertTicks = Ticks.of(config.trooper().alertSeconds(), config.tickSeconds());
+        this.woundedSpeed = config.trooper().speed() * config.wound().speedFactor();
+        this.tickSeconds = config.tickSeconds();
     }
 
     @Override
@@ -123,6 +130,20 @@ public final class DamageSystem extends IteratingSystem {
         // The one place a tick's blows are cleared - landed or not, protected or not, so nothing a blow
         // recorded outlives the tick it landed on.
         damage.reset();
+    }
+
+    /**
+     * Sends a trooper left on his feet off the line of a shot that is stepped off from (G0114): to the place the step
+     * the shot asked for ends, for no longer than a wounded man takes to walk it - so rock in his way ends it too.
+     */
+    private void stepOff(Entity entity, Damage damage) {
+        if (damage.stepOff <= 0f || !TROOPER.has(entity) || !POSITION.has(entity) || woundedSpeed <= 0f) {
+            return;
+        }
+        Position at = POSITION.get(entity);
+        int ticks = Math.max(1, Ticks.of(damage.stepOff / woundedSpeed, tickSeconds));
+        TROOPER.get(entity)
+                .stepOff(at.x + damage.stepOffX * damage.stepOff, at.y + damage.stepOffY * damage.stepOff, ticks);
     }
 
     /** What this tick's blows cost the entity they landed on. */
@@ -168,6 +189,7 @@ public final class DamageSystem extends IteratingSystem {
                 throwClear(entity, damage);
                 daze(entity, damage.stunTicks);
                 shock(entity, damage);
+                stepOff(entity, damage);
             }
             return;
         }

@@ -23,6 +23,8 @@ import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.Ticks;
+import pl.mzebrows.pwt.sim.def.WorkedSiteDef;
+import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 import pl.mzebrows.pwt.sim.system.query.Compass;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Sight;
@@ -436,13 +438,29 @@ final class TrooperObjective {
         Position where = POSITION.get(point);
         float reach;
         if (!POINT.has(point)) {
-            // At arm's length of its edge, short of it, so the man who works it can reach it (G0111).
-            reach = BODY.get(point).radius + atAWorkedSite * INSIDE_THE_EDGE;
+            // At arm's length of its edge, short of it, so the man who works it can reach it (G0111) - and round one
+            // with guards, inside their lanes, so a man watching is never standing in one (G0114).
+            reach = Math.min(
+                    BODY.get(point).radius + atAWorkedSite * INSIDE_THE_EDGE, insideTheLanes(WORKED.get(point).kind));
         } else {
             ControlPoint held = POINT.get(point);
             reach = held.holdsAfterwards && held.captured ? postRingRadius : held.radius * INSIDE_THE_EDGE;
         }
         return Sight.withinRange(at.x, at.y, where.x, where.y, reach);
+    }
+
+    /**
+     * How far from a worked site's middle a man may stand round it and keep his body out of its guards' lanes - by his
+     * body and their shot - or no limit for a kind with no guards (G0114). The ring inside the lanes is square, and this
+     * the circle inside it.
+     */
+    private float insideTheLanes(WorkedSiteKind kind) {
+        WorkedSiteDef.Guards guards = config.workedSite(kind).guards();
+        if (!guards.on()) {
+            return Float.MAX_VALUE;
+        }
+        float shot = config.weapon(config.emplacement(guards.kind()).gun()).projectileRadius();
+        return guards.lane() - bodyRadius - shot;
     }
 
     /**

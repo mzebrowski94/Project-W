@@ -19,6 +19,7 @@ import pl.mzebrows.pwt.sim.collision.SpatialGrid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Collider;
 import pl.mzebrows.pwt.sim.component.Commander;
+import pl.mzebrows.pwt.sim.component.Door;
 import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Gripped;
@@ -69,6 +70,7 @@ public final class TrooperCombatSystem extends EntitySystem {
     private static final ComponentMapper<Thrower> THROWER = ComponentMapper.getFor(Thrower.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Collider> COLLIDER = ComponentMapper.getFor(Collider.class);
+    private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
 
     private static final float EPSILON = 1e-4f;
 
@@ -111,6 +113,9 @@ public final class TrooperCombatSystem extends EntitySystem {
 
     private ImmutableArray<Entity> leapers = new ImmutableArray<>(new Array<>());
 
+    /** Every door and every ice, for the ice a man is shooting down (G0117). */
+    private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
+
     /** Every entity with a handle, for finding what has a man in its jaws. */
     private ImmutableArray<Entity> handled = new ImmutableArray<>(new Array<>());
 
@@ -135,6 +140,7 @@ public final class TrooperCombatSystem extends EntitySystem {
                 Family.all(Trooper.class, Position.class, Weapon.class, Melee.class, Faction.class)
                         .get());
         leapers = engine.getEntitiesFor(Family.all(Leap.class, Position.class).get());
+        doors = engine.getEntitiesFor(Family.all(Door.class, Handle.class).get());
         handled = engine.getEntitiesFor(Family.all(Handle.class).get());
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
         aliens = engine.getEntitiesFor(Family.all(Enemy.class, Position.class).get());
@@ -165,6 +171,9 @@ public final class TrooperCombatSystem extends EntitySystem {
             }
             Trooper trooper = TROOPER.get(entity);
             if (trooper.mode != Trooper.Mode.FIGHT || !trooper.hasTarget) {
+                if (trooper.clearingIce) {
+                    shootTheIce(entity, trooper);
+                }
                 continue;
             }
             if (swingAtALeap(entity, deltaTime)) {
@@ -428,12 +437,37 @@ public final class TrooperCombatSystem extends EntitySystem {
      * before his gun's spread; a gun on a mount he crews is the mount's, and never comes through here.
      */
     private void fire(Entity entity, Trooper trooper) {
+        fireAt(entity, trooper, trooper.targetX, trooper.targetY);
+    }
+
+    /**
+     * Fires at the ice his way runs into, at its nearest part, as at anything else (G0117): his walk stood him at it
+     * facing it, and nothing of the swarm is his to fight, which would have come first.
+     */
+    private void shootTheIce(Entity entity, Trooper trooper) {
+        @Nullable Entity ice = Handles.resolve(doors, trooper.door);
+        if (ice == null) {
+            return;
+        }
+        Door run = DOOR.get(ice);
+        float tile = map.map().tileSize();
+        Position at = POSITION.get(entity);
+        float left = run.col * tile;
+        float bottom = run.row * tile;
+        fireAt(
+                entity,
+                trooper,
+                Math.max(left, Math.min(at.x, left + run.width * tile)),
+                Math.max(bottom, Math.min(at.y, bottom + run.height * tile)));
+    }
+
+    private void fireAt(Entity entity, Trooper trooper, float x, float y) {
         if (!guns.ready(entity)) {
             return;
         }
         Position at = POSITION.get(entity);
-        float toX = trooper.targetX - at.x;
-        float toY = trooper.targetY - at.y;
+        float toX = x - at.x;
+        float toY = y - at.y;
         float distance = (float) Math.sqrt(toX * toX + toY * toY);
         if (distance <= EPSILON) {
             return;

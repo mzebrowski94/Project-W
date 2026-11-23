@@ -787,15 +787,15 @@ public final class AlphaWorlds {
     /** Twice the mainframe's, as the shipped relic's is twice the shipped mainframe's. */
     public static final float RELIC_ROUSE_RADIUS = 52f;
 
-    public static final float RELIC_ROOM = 7f;
+    public static final float RELIC_ROOM = 10f;
 
-    public static final float RELIC_WARDEN_OFFSET = 5f;
+    public static final float RELIC_WARDEN_OFFSET = 8f;
 
     public static final int RELIC_HATCH_MIN = 2;
 
     public static final int RELIC_HATCH_MAX = 3;
 
-    public static final float RELIC_HATCH_RADIUS = 14f;
+    public static final float RELIC_HATCH_RADIUS = 17f;
 
     /** Every worked site (G0111): the mainframe and the relic, small numbers. */
     public static Defs<WorkedSiteKind, WorkedSiteDef> workedSites() {
@@ -828,7 +828,7 @@ public final class AlphaWorlds {
                                 new WorkedSiteDef.Guards(EmplacementKind.WARDEN, RELIC_WARDEN_OFFSET),
                                 new WorkedSiteDef.Hatch(
                                         UnitKind.SNAKE, RELIC_HATCH_MIN, RELIC_HATCH_MAX, RELIC_HATCH_RADIUS),
-                                false))
+                                true))
                 .build();
     }
 

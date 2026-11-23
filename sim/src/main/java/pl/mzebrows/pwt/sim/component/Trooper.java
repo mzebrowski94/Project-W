@@ -50,7 +50,13 @@ public final class Trooper implements Component, Pool.Poolable {
          *
          * <p>Ranks below {@link #AID} and above {@link #CREW}.
          */
-        MEND
+        MEND,
+        /**
+         * Wounded by a shot that is stepped off from - a warden's bead - and stepping square off its line (G0114).
+         *
+         * <p>Ranks above everything, the fight included: a few ticks, then the cascade takes him back up.
+         */
+        STEP_OFF
     }
 
     public Mode mode = Mode.ADVANCE;
@@ -156,6 +162,17 @@ public final class Trooper implements Component, Pool.Poolable {
     public float alertY;
 
     /**
+     * How many more ticks he may go on stepping off the line of a shot that wounded him (G0114); zero is not stepping.
+     * Written where damage lands, ended by the mind once he is there, walked by the legs.
+     */
+    public int stepOffRemaining;
+
+    /** Where that step ends: square off the shot's line, on the side he stood on. A place, as every target is. */
+    public float stepOffX;
+
+    public float stepOffY;
+
+    /**
      * Whether it has already picked a bearing to watch since it last stopped.
      *
      * <p>Every stop picks a bearing of its own; cleared the moment it moves again.
@@ -220,6 +237,12 @@ public final class Trooper implements Component, Pool.Poolable {
      * tick he walks: the one it went to opens it, and the rest stand by it and watch their sectors.
      */
     public long door = Handle.NOBODY;
+
+    /**
+     * Whether the shut door his way runs into is ice he is standing at and shooting down (G0117). Written by {@code
+     * TrooperMoveSystem} every tick he walks, read by {@code TrooperCombatSystem} the same tick; never while he fights.
+     */
+    public boolean clearingIce;
 
     /**
      * The target he is keeping on, by handle, or nobody (G0085): one whose {@code Enemy.kept} is set, which he
@@ -295,6 +318,18 @@ public final class Trooper implements Component, Pool.Poolable {
         this.alertRemaining = ticks;
     }
 
+    /** Starts it stepping off a shot's line, to that place, for at most that long (G0114). */
+    public void stepOff(float x, float y, int ticks) {
+        this.stepOffX = x;
+        this.stepOffY = y;
+        this.stepOffRemaining = ticks;
+    }
+
+    /** Whether it is stepping off a shot's line (G0114). */
+    public boolean steppingOff() {
+        return stepOffRemaining > 0;
+    }
+
     /** Points it somewhere, and returns this component, for fluent spawning. */
     public Trooper look(float x, float y) {
         this.lookX = x;
@@ -336,6 +371,7 @@ public final class Trooper implements Component, Pool.Poolable {
         sectorSpan = 0;
         sectorStep = 0;
         door = Handle.NOBODY;
+        clearingIce = false;
         keeping = Handle.NOBODY;
         fouled = false;
         metLeaper = Handle.NOBODY;
@@ -360,6 +396,9 @@ public final class Trooper implements Component, Pool.Poolable {
         alertRemaining = 0;
         alertX = 0f;
         alertY = 0f;
+        stepOffRemaining = 0;
+        stepOffX = 0f;
+        stepOffY = 0f;
         settled = false;
         forwardRemaining = 0f;
         baseLookX = 1f;

@@ -743,12 +743,39 @@ public final class WorldRenderer implements Disposable {
                 for (int down = 0; down < appearance.squaresDown; down++) {
                     float middleX = x + (across - (appearance.squaresAcross - 1) * 0.5f) * pitch;
                     float middleY = y + (down - (appearance.squaresDown - 1) * 0.5f) * pitch;
-                    shapes.rect(middleX - side * 0.5f, middleY - side * 0.5f, side, side);
+                    if (appearance.look == Look.ICE) {
+                        // Shards, not a slab (G0115): turned tile by tile so a run never repeats one tile's pieces.
+                        drawShards(middleX, middleY, side, (across + down) % 2 == 1, (across + 2 * down) % 3 == 1);
+                    } else {
+                        shapes.rect(middleX - side * 0.5f, middleY - side * 0.5f, side, side);
+                    }
                 }
             }
             drawCracks(appearance, x, y, pitch);
             if (appearance.charge > 0f) {
                 drawLoading(x, y, pitch, palette.colorFor(appearance.chargeLook), appearance.charge);
+            }
+        }
+    }
+
+    /**
+     * One tile of ice as its shards, each a fan of triangles drawn in from its seams, mirrored as asked: irregular pieces
+     * with the ground showing between them, in the colour already set.
+     */
+    private void drawShards(float middleX, float middleY, float side, boolean flipAcross, boolean flipDown) {
+        float signX = flipAcross ? -side : side;
+        float signY = flipDown ? -side : side;
+        for (int shard = 0; shard < doorMark.shards(); shard++) {
+            float firstX = middleX + doorMark.shardAt(shard, 0, 0) * signX;
+            float firstY = middleY + doorMark.shardAt(shard, 0, 1) * signY;
+            for (int point = 1; point + 1 < doorMark.shardPoints(shard); point++) {
+                shapes.triangle(
+                        firstX,
+                        firstY,
+                        middleX + doorMark.shardAt(shard, point, 0) * signX,
+                        middleY + doorMark.shardAt(shard, point, 1) * signY,
+                        middleX + doorMark.shardAt(shard, point + 1, 0) * signX,
+                        middleY + doorMark.shardAt(shard, point + 1, 1) * signY);
             }
         }
     }
@@ -900,12 +927,22 @@ public final class WorldRenderer implements Disposable {
         }
     }
 
-    /** A warden (G0114): an oval, its body's width and longer north to south. */
+    /**
+     * A warden (G0114): a token seen from above - its darker side showing below its top, and lighter rings on the top.
+     * Each ring a lighter disc with the top's colour over its middle, so the rings need no line mode.
+     */
     private void drawWarden(float x, float y, float radius, Appearance appearance) {
-        float width = radius * 2f;
-        float length = width * relicMark.wardenLength();
-        shapes.setColor(tint(appearance));
-        shapes.ellipse(x - width * 0.5f, y - length * 0.5f, width, length, CIRCLE_SEGMENTS);
+        shapes.setColor(relicMark.wardenSide());
+        shapes.circle(x, y - relicMark.dropFor(radius), radius, CIRCLE_SEGMENTS);
+        Color top = tint(appearance);
+        shapes.setColor(top);
+        shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
+        for (int ring = 1; ring <= relicMark.wardenRings(); ring++) {
+            shapes.setColor(relicMark.wardenRing());
+            shapes.circle(x, y, relicMark.ringOuterFor(radius, ring), CIRCLE_SEGMENTS);
+            shapes.setColor(top);
+            shapes.circle(x, y, relicMark.ringInnerFor(radius, ring), CIRCLE_SEGMENTS);
+        }
     }
 
     /**

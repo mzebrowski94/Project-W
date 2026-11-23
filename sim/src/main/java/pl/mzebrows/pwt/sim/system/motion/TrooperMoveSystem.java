@@ -38,7 +38,9 @@ import pl.mzebrows.pwt.sim.system.query.Sight;
  *
  * <p><strong>A shut door in his way stops him</strong> (G0069): the first man at arm's length is the one it goes to
  * ({@code DoorSystem}) and stands at it, facing it; every other man whose way it shuts stands where he is and
- * watches his sector. His route still runs through it, as every route does (ADR 0022).
+ * watches his sector. His route still runs through it, as every route does (ADR 0022). <strong>Ice in his way he
+ * shoots down</strong> (G0117): he walks up to within {@code sim.ice.clearDistance} of it, stands facing it, and
+ * {@code TrooperCombatSystem} fires at it - only ever outside a fight, which comes first.
  *
  * <p>Writes a desired velocity; {@code DriveSystem} commits it.
  */
@@ -90,6 +92,12 @@ public final class TrooperMoveSystem extends EntitySystem {
     /** How far ahead a shut door shuts his way (G0069). */
     private final float doorWait;
 
+    /** How near ice in his way he comes before he stands and shoots it (G0117). */
+    private final float iceClear;
+
+    /** How far ahead he looks for a shut door or ice in his way: the further of the two. */
+    private final float doorAhead;
+
     /** Whether he turns onto a new look at once: a turn speed of zero, or a tick's turn of half round or more. */
     private final boolean turnsAtOnce;
 
@@ -114,6 +122,8 @@ public final class TrooperMoveSystem extends EntitySystem {
         this.solid = solid;
         this.map = solid.map();
         this.doorWait = config.door().waitDistance();
+        this.iceClear = config.ice().clearDistance();
+        this.doorAhead = Math.max(doorWait, iceClear);
         this.rng = rng;
         SimConfig.TrooperConfig trooper = config.trooper();
         this.urgency = trooper.urgency();
@@ -147,6 +157,7 @@ public final class TrooperMoveSystem extends EntitySystem {
             Trooper trooper = TROOPER.get(entity);
             // Asked afresh every tick he walks; a man standing, fighting or held has no door in his way.
             trooper.door = Handle.NOBODY;
+            trooper.clearingIce = false;
             if (Drivers.held(entity)) {
                 continue;
             }
@@ -160,6 +171,10 @@ public final class TrooperMoveSystem extends EntitySystem {
     /** Decides where he walks and where he would look, this tick: the look he then turns towards. */
     private void drive(Entity entity, Trooper trooper, float deltaTime) {
         sweep(trooper, deltaTime);
+        if (trooper.mode == Trooper.Mode.STEP_OFF) {
+            stepOff(entity, trooper);
+            return;
+        }
         if (trooper.mode == Trooper.Mode.HOLD
                 || trooper.mode == Trooper.Mode.SECURE
                 || (trooper.mode == Trooper.Mode.AID && !trooper.hasTarget)) {
@@ -188,7 +203,7 @@ public final class TrooperMoveSystem extends EntitySystem {
         }
         // A walk of the grid ahead of him, skipped on a level with no doors at all.
         trooper.door =
-                doors.size() == 0 ? Handle.NOBODY : solid.doorAhead(at.x, at.y, direction[0], direction[1], doorWait);
+                doors.size() == 0 ? Handle.NOBODY : solid.doorAhead(at.x, at.y, direction[0], direction[1], doorAhead);
         if (trooper.door != Handle.NOBODY && waitsAtTheDoor(entity, trooper, at)) {
             return;
         }
@@ -212,6 +227,24 @@ public final class TrooperMoveSystem extends EntitySystem {
         trooper.lookY = direction[1];
         float speed = SPEED.get(entity).value * (closingIn ? 1f : pace(trooper, deltaTime));
         STEERING.get(entity).set(direction[0] * speed, direction[1] * speed);
+    }
+
+    /**
+     * Steps him straight to the end of his step off a shot's line (G0114), at his own pace, still looking where he was:
+     * no lean, no route, no spreading out - it is a stride or two square off a lane, and rock in the way ends it.
+     */
+    private void stepOff(Entity entity, Trooper trooper) {
+        trooper.sampling = false;
+        trooper.settled = false;
+        Position at = POSITION.get(entity);
+        float toX = trooper.stepOffX - at.x;
+        float toY = trooper.stepOffY - at.y;
+        float distance = (float) Math.sqrt(toX * toX + toY * toY);
+        if (distance <= EPSILON) {
+            return;
+        }
+        float speed = SPEED.get(entity).value;
+        STEERING.get(entity).set(toX / distance * speed, toY / distance * speed);
     }
 
     /**
@@ -253,8 +286,28 @@ public final class TrooperMoveSystem extends EntitySystem {
         if (door == null || !ACTION.has(entity)) {
             return false;
         }
-        if (!DOOR.get(door).opensByHand()) {
-            // Ice (ADR 0025): nobody opens it, so it shuts his way as rock does, and he waits for nobody at it.
+        Door shut = DOOR.get(door);
+        if (!shut.opensByHand()) {
+            // Ice (ADR 0025, G0117): nobody opens it, so he waits for nobody at it - he walks up to it and shoots it
+            // down.
+            if (shut.distanceFrom(at.x, at.y, map.tileSize()) > iceClear) {
+                return false;
+            }
+            float left = shut.col * map.tileSize();
+            float bottom = shut.row * map.tileSize();
+            float toX = Math.max(left, Math.min(at.x, left + shut.width * map.tileSize())) - at.x;
+            float toY = Math.max(bottom, Math.min(at.y, bottom + shut.height * map.tileSize())) - at.y;
+            float distance = (float) Math.sqrt(toX * toX + toY * toY);
+            trooper.clearingIce = true;
+            trooper.sampling = false;
+            trooper.settled = false;
+            if (distance > EPSILON) {
+                trooper.look(toX / distance, toY / distance);
+            }
+            return true;
+        }
+        if (shut.distanceFrom(at.x, at.y, map.tileSize()) > doorWait) {
+            // Looked for as far ahead as ice is; a door shuts his way only within its own wait (G0069).
             trooper.door = Handle.NOBODY;
             return false;
         }

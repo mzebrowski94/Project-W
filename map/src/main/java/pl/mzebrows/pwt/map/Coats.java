@@ -6,7 +6,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Lays one biome's coats over its base: clearings, houses, then patches in order, then crags, then outcrops. Rock always wins
+ * Lays one biome's coats over its base: clearings, houses, then patches in order, then corridors, then crags, then outcrops. Rock always wins
  * over a patch; an apron tile keeps base ground, and so do a house's inside, doorways and doorsteps; no passage is
  * left under the clearance; nothing is sealed off. Each coat draws from a stream of its own, derived from the biome's, so
  * retuning one moves no other's draws (G0065).
@@ -19,7 +19,8 @@ import org.jspecify.annotations.Nullable;
  * <p>The techniques, named so they can be looked up (the {@code game-patterns} skill): patches are
  * rectangles or blobs grown by Eden growth; crags are smoothed white noise cut at a quantile, then
  * repaired; outcrops are bars and Ls placed by dart throwing, the clearance off all other rock - so they
- * cannot enclose anything, and the flood fill after each is only the net; houses are walled rects thrown the same
+ * cannot enclose anything, and the flood fill after each is only the net; corridors are a braided maze carved out of a
+ * filled biome - a randomised spanning tree (Kruskal's) over a lattice of long, level cells, loops added after; houses are walled rects thrown the same
  * way, each doorstep an end so the repairs after keep it reached. Package-private: {@code Strip}
  * is the seam a caller crosses.
  *
@@ -33,6 +34,7 @@ final class Coats {
     private static final long HOUSES = 0x428A_2F98_D728_AE22L;
     private static final long CLEARINGS = 0x9B05_688C_68D6_A0C2L;
     private static final long ICE = 0x1F83_D9AB_5BE0_CD19L;
+    private static final long CORRIDORS = 0x5BE0_CD19_1F83_D9ABL;
 
     /**
      * How far a way's either side must be from each other, walking, with the way shut, for it to be a chokepoint worth
@@ -65,6 +67,9 @@ final class Coats {
 
     private static final int ARM_ALONG_MIN = 2;
     private static final int ARM_ALONG_MAX = 4;
+
+    /** How often a corridor's edge wanders a row, column by column: about every three, so it reads as rock. */
+    private static final float WANDER_CHANCE = 0.3f;
 
     /** Bounds on the crag repairs, each of which converges long before. */
     private static final int REPAIR_ROUNDS = 80;
@@ -166,6 +171,7 @@ final class Coats {
         coats.clearings(biome.derive(CLEARINGS));
         List<House> houses = coats.houses(rules.houses(), biome.derive(HOUSES));
         coats.patches(biome.derive(PATCHES));
+        coats.corridors(biome.derive(CORRIDORS));
         coats.crags(biome.derive(CRAGS));
         coats.outcrops(biome.derive(OUTCROPS));
         List<TileRect> ice = coats.ice(biome.derive(ICE));
@@ -555,6 +561,263 @@ final class Coats {
         return 1;
     }
 
+    // ---- corridors ----
+
+    /**
+     * The rift's maze (G0115, amended 2026-11-23): every open tile of the area that no apron or clearing keeps filled
+     * with solid, then corridors, links and chambers carved back out of it ({@link Corridors} has the shape), the ends
+     * tunnelled to the maze while one is cut off, and the crag repairs after - no passage under the clearance, nothing
+     * sealed off. A braided maze: a randomised spanning tree over the cells (Kruskal's), loops added after.
+     */
+    private void corridors(Randomness rng) {
+        Corridors maze = ground.corridors();
+        if (!maze.on()) {
+            return;
+        }
+        if (maze.widthMin() < clearance) {
+            throw new IllegalArgumentException(
+                    "a corridor " + maze.widthMin() + " wide is under the clearance " + clearance);
+        }
+        boolean[] mine = new boolean[tiles.length];
+        Terrain[] under = new Terrain[tiles.length];
+        for (int row = area.row(); row < area.endRow(); row++) {
+            for (int col = area.col(); col < area.endCol(); col++) {
+                int at = row * cols + col;
+                if (!apron[at] && !clear[at] && tiles[at].passable()) {
+                    mine[at] = true;
+                    under[at] = tiles[at];
+                    tiles[at] = maze.terrain();
+                }
+            }
+        }
+        int deepest = maze.widthMax() + maze.wander();
+        int pitch = deepest + maze.wall();
+        int corridors = Math.max(1, (area.height() + maze.wall()) / pitch);
+        int spare = Math.max(0, area.height() - corridors * deepest - (corridors - 1) * maze.wall());
+        int firstRow = area.row() + rng.nextInt(spare + 1);
+        int cells = Math.max(1, area.width() / maze.cell());
+        int nodes = corridors * cells;
+        int[] width = new int[nodes];
+        for (int node = 0; node < nodes; node++) {
+            width[node] = between(rng, maze.widthMin(), Math.min(maze.widthMax(), area.height()));
+        }
+        // Joins: along a corridor, node to node + 1; links: down a wall, node to node + cells.
+        boolean[] joined = new boolean[nodes];
+        boolean[] linked = new boolean[nodes];
+        int[] group = new int[nodes];
+        for (int node = 0; node < nodes; node++) {
+            group[node] = node;
+        }
+        List<Integer> shut = new ArrayList<>();
+        for (int node = 0; node < nodes; node++) {
+            if (node % cells == cells - 1) {
+                continue;
+            }
+            if (rng.nextFloat() < maze.breaks()) {
+                shut.add(node);
+            } else {
+                joined[node] = true;
+                union(group, node, node + 1);
+            }
+        }
+        List<Integer> links = new ArrayList<>();
+        for (int node = 0; node + cells < nodes; node++) {
+            links.add(node);
+        }
+        shuffle(links, rng);
+        shuffle(shut, rng);
+        List<Integer> spareLinks = new ArrayList<>();
+        for (int node : links) {
+            if (union(group, node, node + cells)) {
+                linked[node] = true;
+            } else {
+                spareLinks.add(node);
+            }
+        }
+        for (int node : shut) {
+            if (union(group, node, node + 1)) {
+                joined[node] = true;
+            }
+        }
+        for (int node : spareLinks) {
+            linked[node] = rng.nextFloat() < maze.loops();
+        }
+        for (int corridor = 0; corridor < corridors; corridor++) {
+            corridor(maze, firstRow + corridor * pitch, corridor * cells, cells, width, joined, mine, under, rng);
+        }
+        for (int node = 0; node < nodes; node++) {
+            if (!linked[node]) {
+                continue;
+            }
+            int corridor = node / cells;
+            int cell = node % cells;
+            int top = firstRow + corridor * pitch;
+            int bottom = firstRow + (corridor + 1) * pitch + maze.wander() + maze.widthMin();
+            int from = cellStart(cell, cells);
+            int to = cellStart(cell + 1, cells) - (cell < cells - 1 ? maze.wall() : 0);
+            if (rng.nextFloat() < maze.chambers()) {
+                carve(from, top, to - from, bottom - top, mine, under);
+            } else {
+                int across = Math.min(to - from, between(rng, maze.widthMin(), maze.widthMax()));
+                int col = from + rng.nextInt(to - from - across + 1);
+                carve(col, top, across, bottom - top, mine, under);
+            }
+        }
+        // A way in opens onto open ground, the clearance round its apron, never straight into a corridor's wall.
+        for (int row = area.row(); row < area.endRow(); row++) {
+            for (int col = area.col(); col < area.endCol(); col++) {
+                if (apron[row * cols + col]) {
+                    carve(col - clearance, row - clearance, 2 * clearance + 1, 2 * clearance + 1, mine, under);
+                }
+            }
+        }
+        tunnelEnds(mine, under);
+        widen(mine, under);
+        sealPockets(maze.terrain());
+    }
+
+    /**
+     * One corridor, column by column, its edges wandering as rock does (G0115, amended 2026-11-23): a walk that, on a column
+     * in {@link #WANDER_CHANCE}, widens or narrows it a row or shifts it a row within {@code wander}, starting each
+     * cell at the width dealt to it - and only ever so that two columns side by side share the clearance of rows, so the
+     * way along it never pinches under it. The last {@code wall} columns of a cell whose join is shut are left solid.
+     */
+    private void corridor(
+            Corridors maze,
+            int top,
+            int first,
+            int cells,
+            int[] width,
+            boolean[] joined,
+            boolean[] mine,
+            Terrain[] under,
+            Randomness rng) {
+        int off = rng.nextInt(maze.wander() + 1);
+        int wide = width[first];
+        for (int cell = 0; cell < cells; cell++) {
+            int node = first + cell;
+            int from = cellStart(cell, cells);
+            int to = cellStart(cell + 1, cells);
+            int shutFrom = cell < cells - 1 && !joined[node] ? to - maze.wall() : to;
+            for (int col = from; col < to; col++) {
+                int nextOff = off;
+                int nextWide = col == from ? width[node] : wide;
+                if (col != from && rng.nextFloat() < WANDER_CHANCE) {
+                    switch (rng.nextInt(4)) {
+                        case 0 -> nextWide++;
+                        case 1 -> nextWide--;
+                        case 2 -> nextOff++;
+                        default -> nextOff--;
+                    }
+                }
+                boolean fits = nextWide >= maze.widthMin()
+                        && nextWide <= maze.widthMax()
+                        && nextOff >= 0
+                        && nextOff <= maze.wander()
+                        && Math.min(off + wide, nextOff + nextWide) - Math.max(off, nextOff) >= clearance;
+                if (fits || col == from) {
+                    off = fits ? nextOff : off;
+                    wide = fits ? nextWide : wide;
+                }
+                if (col < shutFrom) {
+                    carve(col, top + off, 1, wide, mine, under);
+                }
+            }
+        }
+    }
+
+    /** The first column of cell {@code cell} of {@code cells}, spread evenly over the area; the area's end past the last. */
+    private int cellStart(int cell, int cells) {
+        return area.col() + cell * area.width() / cells;
+    }
+
+    /** Gives back the ground under every tile of the rect the coat filled, inside the area. */
+    private void carve(int col, int row, int w, int h, boolean[] mine, Terrain[] under) {
+        for (int r = row; r < row + h; r++) {
+            for (int c = col; c < col + w; c++) {
+                int at = index(c, r);
+                if (area.contains(c, r) && mine[at]) {
+                    restore(at, mine, under);
+                }
+            }
+        }
+    }
+
+    /**
+     * While an end is cut off, the shortest way from it through what the coat filled to what the first end reaches,
+     * carved the clearance wide: a breadth-first search, never through rock the coat did not lay.
+     */
+    private void tunnelEnds(boolean[] mine, Terrain[] under) {
+        for (int round = 0; round < REPAIR_ROUNDS; round++) {
+            boolean[] reached = reach();
+            int cut = -1;
+            for (int end : ends) {
+                if (!reached[end]) {
+                    cut = end;
+                    break;
+                }
+            }
+            if (cut < 0) {
+                return;
+            }
+            int[] from = new int[tiles.length];
+            Arrays.fill(from, -2);
+            int[] queue = new int[tiles.length];
+            int head = 0;
+            int tail = 0;
+            queue[tail++] = cut;
+            from[cut] = -1;
+            int met = -1;
+            while (head < tail && met < 0) {
+                int at = queue[head++];
+                if (reached[at]) {
+                    met = at;
+                    break;
+                }
+                int col = at % cols;
+                int row = at / cols;
+                for (int d = 0; d < 4; d++) {
+                    int nc = col + (d == 0 ? 1 : d == 1 ? -1 : 0);
+                    int nr = row + (d == 2 ? 1 : d == 3 ? -1 : 0);
+                    if (nc < area.col() - 1 || nc > area.endCol() || nr < area.row() - 1 || nr > area.endRow()) {
+                        continue;
+                    }
+                    int next = index(nc, nr);
+                    if (next < 0 || from[next] != -2 || (rock(nc, nr) && !mine[next])) {
+                        continue;
+                    }
+                    from[next] = at;
+                    queue[tail++] = next;
+                }
+            }
+            if (met < 0) {
+                return;
+            }
+            for (int at = met; at >= 0; at = from[at]) {
+                carve(at % cols, at / cols, clearance, clearance, mine, under);
+            }
+        }
+    }
+
+    private static boolean union(int[] group, int a, int b) {
+        int ra = root(group, a);
+        int rb = root(group, b);
+        if (ra == rb) {
+            return false;
+        }
+        group[Math.max(ra, rb)] = Math.min(ra, rb);
+        return true;
+    }
+
+    private static void shuffle(List<Integer> list, Randomness rng) {
+        for (int i = list.size() - 1; i > 0; i--) {
+            int pick = rng.nextInt(i + 1);
+            Integer swap = list.get(i);
+            list.set(i, list.get(pick));
+            list.set(pick, swap);
+        }
+    }
+
     // ---- crags ----
 
     /**
@@ -610,7 +873,7 @@ final class Coats {
         }
         reopenEnds(mine, under);
         widen(mine, under);
-        sealPockets();
+        sealPockets(crags.terrain());
     }
 
     /** Each noise value the mean of itself and its neighbours that carry one. */
@@ -734,14 +997,14 @@ final class Coats {
         return widened;
     }
 
-    /** Whatever open ground of the area the ends cannot reach becomes what the crags are of. */
-    private void sealPockets() {
+    /** Whatever open ground of the area the ends cannot reach becomes {@code solid} - what the coat is of. */
+    private void sealPockets(Terrain solid) {
         boolean[] reached = reach();
         for (int row = area.row(); row < area.endRow(); row++) {
             for (int col = area.col(); col < area.endCol(); col++) {
                 int at = row * cols + col;
                 if (tiles[at].passable() && !reached[at]) {
-                    tiles[at] = ground.crags().terrain();
+                    tiles[at] = solid;
                 }
             }
         }

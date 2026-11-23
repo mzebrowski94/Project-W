@@ -30,18 +30,18 @@ import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Emplacement;
-import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Obstacle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Strain;
+import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Velocity;
-import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.ActionKind;
 import pl.mzebrows.pwt.sim.def.EmplacementKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 
 /**
@@ -57,13 +57,13 @@ class RelicTest {
     private static final float LANE = RELIC_WARDEN_OFFSET * 0.70710677f;
 
     /**
-     * Square on the relic's east compass point, just outside the ring: clear of the lanes by a shot's width and still
-     * within arm's length of the plinth - the one place to extract from untouched.
+     * Square on the relic's east compass point, between the plinth and the wardens: inside the ring, clear of the lanes
+     * and within arm's length of the plinth - the place to extract from untouched.
      */
-    private static final float OUT_OF_THE_LANES = MIDDLE + LANE + COMMANDER_RADIUS + 0.4f;
-
-    /** Between the plinth and the wardens, inside the ring. */
     private static final float INSIDE_THE_RING = MIDDLE + RELIC_RADIUS + COMMANDER_RADIUS + 0.3f;
+
+    /** The shipped trooper's body, wider than the small worlds' (G0114). */
+    private static final float SHIPPED_TROOPER_RADIUS = 1.6f;
 
     private static final CommanderInput EXTRACTING = CommanderInput.IDLE.acting(true);
 
@@ -84,16 +84,17 @@ class RelicTest {
     }
 
     @Test
-    void isTakenOnTheActionKeyHeldFromOutOfTheLanesUntouched() {
+    void isTakenOnTheActionKeyHeldFromInsideTheLanesUntouched() {
         Simulation simulation = harmless();
         Entity relic = simulation.spawnWorkedSite(WorkedSiteKind.RELIC, MIDDLE, MIDDLE);
-        Entity commander = simulation.spawnCommander(OUT_OF_THE_LANES, MIDDLE);
+        Entity commander = simulation.spawnCommander(INSIDE_THE_RING, MIDDLE);
 
         simulation.step(EXTRACTING);
         ActionKind offered = commander.getComponent(Action.class).available;
         steps(simulation, ticksIn(RELIC_WORK_SECONDS), EXTRACTING);
 
-        assertThat(OUT_OF_THE_LANES - MIDDLE - RELIC_RADIUS - COMMANDER_RADIUS).isLessThanOrEqualTo(ACTION_REACH);
+        assertThat(INSIDE_THE_RING - MIDDLE - RELIC_RADIUS - COMMANDER_RADIUS).isLessThanOrEqualTo(ACTION_REACH);
+        assertThat(INSIDE_THE_RING + COMMANDER_RADIUS).as("clear of the lanes").isLessThan(MIDDLE + LANE);
         assertThat(offered).isEqualTo(ActionKind.EXTRACT);
         assertThat(relic.getComponent(Site.class).taken).isTrue();
         assertThat(unhurt(commander)).as("out of every lane").isTrue();
@@ -117,7 +118,7 @@ class RelicTest {
     void keepsItsWardensSilentUntilItsFirstAttempt() {
         Simulation simulation = harmless();
         simulation.spawnWorkedSite(WorkedSiteKind.RELIC, MIDDLE, MIDDLE);
-        simulation.spawnCommander(OUT_OF_THE_LANES, MIDDLE);
+        simulation.spawnCommander(INSIDE_THE_RING, MIDDLE);
 
         steps(simulation, ticksIn(WARDEN_PERIOD) * 4);
 
@@ -131,7 +132,7 @@ class RelicTest {
     void wakesAllFourOnItsFirstAttemptToFireNorthEastSouthAndWestEveryPeriodWhileNobodyWorksIt() {
         Simulation simulation = harmless();
         simulation.spawnWorkedSite(WorkedSiteKind.RELIC, MIDDLE, MIDDLE);
-        simulation.spawnCommander(OUT_OF_THE_LANES, MIDDLE);
+        simulation.spawnCommander(INSIDE_THE_RING, MIDDLE);
         int period = ticksIn(WARDEN_PERIOD);
 
         simulation.step(EXTRACTING);
@@ -161,7 +162,7 @@ class RelicTest {
     void silencesItsWardensForGoodOnceItIsTaken() {
         Simulation simulation = harmless();
         simulation.spawnWorkedSite(WorkedSiteKind.RELIC, MIDDLE, MIDDLE);
-        simulation.spawnCommander(OUT_OF_THE_LANES, MIDDLE);
+        simulation.spawnCommander(INSIDE_THE_RING, MIDDLE);
 
         steps(simulation, ticksIn(RELIC_WORK_SECONDS) + 1, EXTRACTING);
         steps(simulation, ticksIn(WARDEN_PERIOD) * 3);
@@ -197,7 +198,7 @@ class RelicTest {
     void leavesThePlinthStandingAndHatchesItsSnakesOutsideTheRingOffTheMen() {
         Simulation simulation = harmless();
         Entity relic = simulation.spawnWorkedSite(WorkedSiteKind.RELIC, MIDDLE, MIDDLE);
-        Entity commander = simulation.spawnCommander(OUT_OF_THE_LANES, MIDDLE);
+        Entity commander = simulation.spawnCommander(INSIDE_THE_RING, MIDDLE);
 
         steps(simulation, ticksIn(RELIC_WORK_SECONDS) + 1, EXTRACTING);
 
@@ -223,19 +224,58 @@ class RelicTest {
     }
 
     @Test
-    void isLeftToTheCommandersByTheSquad() {
-        Simulation simulation = harmless();
+    void isExtractedByTheSquadWatchingFromInsideTheLanes() {
+        // Troopers as wide as the shipped ones, so standing at arm's length would put a man's body in a lane.
+        SimConfig wide = config().withTrooper(config().trooper().withRadius(SHIPPED_TROOPER_RADIUS));
+        Simulation simulation = new Simulation(everyStrain(wide, strain -> strain.withContactDamage(0)));
         Entity relic = simulation.spawnWorkedSite(WorkedSiteKind.RELIC, MIDDLE, MIDDLE);
-        simulation.spawnTrooper(OUT_OF_THE_LANES, MIDDLE);
-        simulation.spawnTrooper(MIDDLE - LANE - 3f, MIDDLE);
+        simulation.spawnCommander(MIDDLE - 40f, MIDDLE - 40f);
+        float out = RELIC_ROOM + 4f;
+        simulation.spawnTrooper(MIDDLE + out, MIDDLE + 2f);
+        simulation.spawnTrooper(MIDDLE - out, MIDDLE - 2f);
+        simulation.spawnTrooper(MIDDLE + 2f, MIDDLE + out);
+        simulation.spawnTrooper(MIDDLE - 2f, MIDDLE - out);
+        float shot = simulation.config().weapon(WeaponKind.WARDEN_SHOT).projectileRadius();
+        float clear = LANE - SHIPPED_TROOPER_RADIUS - shot;
 
-        steps(simulation, ticksIn(RELIC_WORK_SECONDS) * 4);
+        List<float[]> watching = new ArrayList<>();
+        for (int tick = 0; tick < ticksIn(RELIC_WORK_SECONDS * 8f) && !relic.getComponent(Site.class).taken; tick++) {
+            simulation.step();
+            for (Entity man :
+                    simulation.engine().getEntitiesFor(Family.all(Trooper.class).get())) {
+                if (man.getComponent(Trooper.class).mode == Trooper.Mode.SECURE) {
+                    Position at = man.getComponent(Position.class);
+                    watching.add(new float[] {at.x - MIDDLE, at.y - MIDDLE});
+                }
+            }
+        }
 
-        assertThat(relic.getComponent(Site.class).taken).isFalse();
-        assertThat(relic.getComponent(WorkedSite.class).trooper).isEqualTo(Handle.NOBODY);
-        assertThat(wardens(simulation))
-                .allSatisfy(warden ->
-                        assertThat(warden.getComponent(Emplacement.class).awake).isFalse());
+        assertThat(relic.getComponent(Site.class).taken)
+                .as("taken by the squad")
+                .isTrue();
+        assertThat(watching).isNotEmpty();
+        assertThat(watching)
+                .as("every man standing round it is inside the lanes")
+                .allSatisfy(at -> {
+                    assertThat(Math.abs(at[0])).isLessThanOrEqualTo(clear);
+                    assertThat(Math.abs(at[1])).isLessThanOrEqualTo(clear);
+                });
+    }
+
+    @Test
+    void holdsTheSquadsWatchInsideItsLanesOnTheShippedNumbers() {
+        SimConfig shipped = SimConfig.defaults();
+        var relic = shipped.workedSite(WorkedSiteKind.RELIC);
+        float trooper = shipped.trooper().radius();
+        float shot = shipped.weapon(WeaponKind.WARDEN_SHOT).projectileRadius();
+
+        assertThat(relic.troopersWork()).isTrue();
+        assertThat(relic.radius() + trooper)
+                .as("a trooper touching the plinth anywhere round it is clear of every lane")
+                .isLessThanOrEqualTo(relic.guards().lane() - trooper - shot);
+        assertThat(relic.guards().lane() - trooper - shot - relic.radius() - trooper)
+                .as("and works it from wherever inside them he stands")
+                .isLessThanOrEqualTo(shipped.action().reach());
     }
 
     @Test

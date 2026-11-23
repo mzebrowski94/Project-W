@@ -500,6 +500,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         // Recorded, not applied, protected target or not: whether it costs anything is DamageSystem's.
         owed.land(attack);
         recordSource(attacker, owed);
+        stepOffTheLine(attacker, target, owed);
         lock(attacker, target, attack, owed);
         shove(attacker, target, attack, owed);
     }
@@ -690,6 +691,29 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
             Position at = POSITION.get(source);
             owed.cameFrom(at.x, at.y);
         }
+    }
+
+    /**
+     * Notes the step a shot that is stepped off from asks of what it lands on (G0114): square to the line it flies
+     * along, to the side of that line the target already stands on - from where the two are and which way the shot
+     * flies, never drawn (G0012). Dead on the line, to the shot's left. Whether anybody steps is {@code DamageSystem}'s.
+     */
+    private static void stepOffTheLine(Entity attacker, Entity target, Damage owed) {
+        if (!PROJECTILE.has(attacker) || PROJECTILE.get(attacker).stepOff <= 0f || !VELOCITY.has(attacker)) {
+            return;
+        }
+        Velocity flight = VELOCITY.get(attacker);
+        float speed = (float) Math.sqrt(flight.x * flight.x + flight.y * flight.y);
+        if (speed <= EPSILON || !POSITION.has(target)) {
+            return;
+        }
+        float alongX = flight.x / speed;
+        float alongY = flight.y / speed;
+        Position shot = POSITION.get(attacker);
+        Position man = POSITION.get(target);
+        // Which side of the line he stands on: the cross product of the way it flies and the way to him.
+        float side = alongX * (man.y - shot.y) - alongY * (man.x - shot.x) < 0f ? -1f : 1f;
+        owed.stepOff(-alongY * side, alongX * side, PROJECTILE.get(attacker).stepOff);
     }
 
     /** The entity that swung this, where the attacker is a swing rather than a unit. */

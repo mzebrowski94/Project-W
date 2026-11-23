@@ -7,6 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.BiomeGround;
 import pl.mzebrows.pwt.map.Clearings;
+import pl.mzebrows.pwt.map.Corridors;
 import pl.mzebrows.pwt.map.Crags;
 import pl.mzebrows.pwt.map.Houses;
 import pl.mzebrows.pwt.map.Ice;
@@ -148,6 +149,7 @@ class FinaleDefTest {
                 Houses.off(),
                 List.of(),
                 Crags.off(),
+                Corridors.off(),
                 Outcrops.off(),
                 Clearings.off(),
                 Ice.off(),
@@ -235,6 +237,7 @@ class FinaleDefTest {
                 Houses.off(),
                 List.of(),
                 Crags.off(),
+                Corridors.off(),
                 Outcrops.off(),
                 Clearings.off(),
                 Ice.off(),

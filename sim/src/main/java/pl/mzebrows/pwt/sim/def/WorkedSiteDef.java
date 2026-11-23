@@ -25,7 +25,8 @@ import pl.mzebrows.pwt.map.Randomness;
  *     (G0114); off for a kind with none
  * @param hatch what comes up round it the tick it is taken (G0114); off for a kind that hatches nothing
  * @param troopersWork whether a trooper makes it his objective - walks to it, stands round it and works it - as he does
- *     a control point (G0111); false leaves it to the commanders, the squad passing it over for the next site (G0114)
+ *     a control point (G0111); false leaves it to the commanders, the squad passing it over for the next site. A site
+ *     with guards is stood round inside their lanes (G0114)
  */
 @With
 public record WorkedSiteDef(
@@ -106,6 +107,14 @@ public record WorkedSiteDef(
         /** Whether any stand there. */
         public boolean on() {
             return offset > 0f;
+        }
+
+        /**
+         * How far off the site's middle, north or south and east or west, each guard stands - and so where the lanes
+         * of a guard firing along the compass lines run (G0114): the diagonal offset's share of each.
+         */
+        public float lane() {
+            return offset * EmplacementDef.bearingX(1);
         }
     }
 

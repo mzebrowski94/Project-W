@@ -926,7 +926,10 @@ public final class Spawner {
         float x = (run.col() + run.width() * 0.5f) * tileSize;
         float y = (run.row() + run.height() * 0.5f) * tileSize;
         Entity entity = engine.createEntity();
-        entity.add(engine.createComponent(Door.class).set(run, 0, 0).chippedByEveryShot());
+        entity.add(engine.createComponent(Door.class)
+                .set(run, 0, 0)
+                .chippedByEveryShot()
+                .routedThroughByHunters());
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Health.class).set(config.ice().health()));
@@ -1185,6 +1188,8 @@ public final class Spawner {
                 weapon.bounces,
                 // A heavy gun's shot is the one a door takes a blow from (G0069).
                 config.weapon(weapon.kind).type() == WeaponType.HEAVY,
+                // The one place a gun's stepOff is read: a warden's bead is stepped off from (G0114).
+                config.weapon(weapon.kind).stepOff(),
                 side,
                 credit);
     }
@@ -1212,6 +1217,7 @@ public final class Spawner {
             Harm blastHarm,
             int bounces,
             boolean breaksDoors,
+            float stepOff,
             Side side,
             int credit) {
         Entity entity = engine.createEntity();
@@ -1220,7 +1226,8 @@ public final class Spawner {
                 .lasting(range)
                 .trailing(trailLength)
                 .bouncing(bounces)
-                .breakingDoors(breaksDoors);
+                .breakingDoors(breaksDoors)
+                .steppedOffBy(stepOff);
         if (pierceIntervalTicks > 0) {
             // A shot that goes through things: the contact cooldown makes one crossing one blow.
             shot.piercing();

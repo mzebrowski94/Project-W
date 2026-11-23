@@ -465,14 +465,18 @@ public record SimConfig(
     /**
      * Ice across a chokepoint of a maze (G0115, ADR 0025): a door nobody opens, solid ground until it is broken. Every
      * shot from the squad's side chips it, a blast breaks it outright, a leap lands the door's {@code leapDamage} on it,
-     * and a shot from the swarm's side does nothing - so a hunter goes round it, or sieges it, as it does a door.
+     * and a shot from the swarm's side does nothing. A hunter whose way runs through it breaks it (G0116), and so does a
+     * trooper, with his gun, when nothing of the swarm is his to fight (G0117).
      *
      * @param health what it takes before it breaks, a shot's damage at a time
+     * @param clearDistance how near a trooper whose way runs into it comes before he stands and shoots it, in world
+     *     units, from his middle to its nearest part
      */
     @With
-    public record IceConfig(int health) {
+    public record IceConfig(int health, float clearDistance) {
         public IceConfig {
             Require.positive("ice health", health);
+            Require.positive("ice clearDistance", clearDistance);
         }
     }
 

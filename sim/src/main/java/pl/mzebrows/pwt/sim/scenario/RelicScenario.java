@@ -14,11 +14,12 @@ import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
  * Open sand with one relic on it and its four wardens round it (G0114), the commander and his squad by the west edge,
  * and a few runners about. Taking the relic is the level's one objective.
  *
- * <p>What to look at: the gold square turning over its dark plinth, the striped ring round it, and the four pale oval
+ * <p>What to look at: the gold square turning over its dark plinth, the striped ring round it, and the four pale ringed
  * wardens on its diagonals - silent. Walk in and {@code HOLD [E] EXTRACT} at arm's length, then {@code EXTRACTING…}:
  * the first attempt wakes the wardens, and from then on every 0.75 s each fires a bead north, east, south and west,
- * whether anybody is at the relic or not - lanes crossing the ring. Square on a compass point, just outside the ring, a
- * man is out of every lane and still within reach. Each fresh attempt is heard far off, so the runners come. Six
+ * whether anybody is at the relic or not - lanes crossing round the ring. Inside the four lanes a man is out of the fire
+ * and within reach; the squad goes in and works it too, its watchers standing inside the lanes, and a man a bead wounds
+ * steps off its line. Each fresh attempt is heard far off, so the runners come. Six
  * seconds held and it is taken: the square is gone, the plinth stays, the wardens fall silent, crates and caches lie
  * round it - and two or three snakes come up out of the sand round it.
  */

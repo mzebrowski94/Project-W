@@ -11,6 +11,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.BiomeGround;
 import pl.mzebrows.pwt.map.Clearings;
+import pl.mzebrows.pwt.map.Corridors;
 import pl.mzebrows.pwt.map.Crags;
 import pl.mzebrows.pwt.map.Houses;
 import pl.mzebrows.pwt.map.Ice;
@@ -366,6 +367,7 @@ class ConfigBinderTest {
                                 new Patch.Rect(PatchGround.neighbour(), 0.035f, 4, 6),
                                 new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
                         Crags.off(),
+                        Corridors.off(),
                         new Outcrops(0.015f, 2, 4, 1, 2, 0.3f, 0f),
                         Clearings.off(),
                         Ice.off(),

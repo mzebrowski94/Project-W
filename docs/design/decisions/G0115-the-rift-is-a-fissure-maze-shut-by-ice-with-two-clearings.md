@@ -1,12 +1,12 @@
 # G0115: The rift is a fissure maze shut by ice, with two clearings
 
-**Status.** accepted
+**Status.** amended by G0116: hunters break ice in their way; amended by G0117: troopers shoot down ice in theirs
 
 **Trigger.** The rift's ground, roster or furniture; a terrain laid as crags that is not rock or lava; a round
 stretch of a biome kept clear of rock; sites or packs placed by a biome's clearings; anything that shuts a way for a
 while and is broken through - ice.
 
-**Enforced by.** `CoatsTest.laysNoCragInAClearingAndKeepsEveryClearingReached`,
+**Enforced by.** `CoatsTest.carvesTheRiftIntoLongNarrowLevelCorridors`, `.laysNoCragInAClearingAndKeepsEveryClearingReached`,
 `.centresTwoClearingsEachInAnOuterThirdOfTheBiome`, `.icesChokepointsOfTheMazeAndNeverAClearingOrAWayIn`; `IceTest`;
 `TerrainCollisionTest.stopsAUnitWalkedIntoAFissureAsIntoRock`, `.stopsAProjectileThatFliesIntoAFissureAsIntoRock`;
 `MissionTest.standsAControlPointAtTheCentreOfEachOfTheRiftsClearings`,
@@ -19,6 +19,28 @@ narrow way, never in a clearing or by kept ground, nothing standing in it); `Gra
 **Settled with Mateusz, 2026-11-22** (`.scratch/commander-and-sites/spec.md`, section 8, and ticket 10). The points
 under *Provisional* are the implementer's, taken in an AFK run, for review.
 
+**Amended 2026-11-23, with Mateusz** (after playing the crag maze: blobs, not ways):
+
+- **The maze is corridors, not crags.** A new coat, `Corridors` (`ground.corridors.*`, off in every other biome): the
+  biome filled with fissure and long, narrow (2-3 tiles), mostly level **corridors** carved back out of it, their
+  walls wandering a row along their length like rock (`wander=1`), joined through short **links** down the walls - a
+  braided maze, a randomised spanning tree over cells 8 columns long (Kruskal's) with `breaks=0.35` of the joins along
+  a corridor shut first and `loops=0.3` of the spare links opened after, `chambers=0.15` of the links opened across
+  their cell. Every way in opens onto the clearance round its apron; the crag repairs (ends tunnelled to, no passage
+  under the clearance, pockets sealed) net the rest. The crag coat stays for the other biomes; the rift lays none.
+- **Fissure is dark brown**, `graphic.terrain.fissure=2e2218ff`, not near-black.
+- **Clearings of radius 5**, not 8.
+- **Roster** `loose jaguar 1 2; loose thumper 2 3; loose sludger 5 6`: no nest. A hole wants `rockMargin` off
+  fissure, `pointKeepOff` off the points and `nestKeepOff` off the passes, and corridors leave that on too few seeds
+  (measured: dozens of 2192 short with chambers in a quarter of the cells, 50 with chambers in most of the middle
+  third, which read as rooms, not corridors). The jaguars are loose instead. Turned down: chambers enough for a nest
+  (the maze stops being corridors); a wider rift; loosening a keep-off for one biome (G0115's own rejection).
+- **Ice share 0.1** of the narrow ways, not 0.4: in corridors every link is a chokepoint, so 0.4 iced most of them -
+  about three to five ice a rift (measured over 64 rigs).
+- **Ice drawn as shards**: five uneven fragments a tile, their rim wandering in and out like broken rock, seams of the
+  ground between them (`graphic.door.shardGap=0.12`); cracks thinner and shorter (`graphic.door.crackWidth=0.035`,
+  `.crackLength=0.6`). Its wear still darkens and cracks it (pillar 5).
+
 **Amends G0068** - the order: a biome whose sites are in its clearings stands a point at each clearing's centre after
 its worked sites and before its other points, and anchors a share of its loose packs in its clearings first.
 
@@ -28,7 +50,7 @@ its worked sites and before its other points, and anchors a share of its loose p
   1, `graphic.terrain.frost=3a4552ff`) cut into a maze by **fissures** (`Terrain.FISSURE`, impassable,
   `graphic.terrain.fissure=0b0e14ff`), with two **clearings**. No house, no outcrop, no tree, no geyser; never dealt
   beside a biome of the same base, which no other has.
-- **Fissures are crags**, as the caldera's lava is (G0091): `crags.terrain=fissure`, laid with the crag repairs, so a
+- **Fissures are crags** (superseded 2026-11-23: corridors, above), as the caldera's lava is (G0091): `crags.terrain=fissure`, laid with the crag repairs, so a
   pass is never closed and no passage is left under the clearance. Solid to units, shots and sight alike - **why it
   stops shots**: there is one solidity (`Solid`, G0091's shortcut); shots across a fissure stay deferred, as across
   lava, until a second terrain wants a second solidity.
@@ -45,7 +67,7 @@ its worked sites and before its other points, and anchors a share of its loose p
   the first, a pack is anchored in a clearing while fewer than 60 % of those dealt so far are, the clearings in turn;
   a pack a clearing has no room for goes anywhere. Nests keep `pointKeepOff` off the points as everywhere, so they
   stand in the maze.
-- **Roster**: `nest jaguar 1 1; loose thumper 2 3; loose sludger 5 6`. Furniture: 2-3 sites,
+- **Roster** (superseded 2026-11-23, above): `nest jaguar 1 1; loose thumper 2 3; loose sludger 5 6`. Furniture: 2-3 sites,
   barrels 1-2, boulders 0-2, a medkit; no crate line (no house, G0110).
 
 **Provisional, for review (AFK run).**
@@ -90,7 +112,7 @@ its worked sites and before its other points, and anchors a share of its loose p
 - **Breaking**: every shot from the squad's side chips it by its damage (`sim.ice.health=300`, six sidearm shots); a
   blast - a grenade, a barrel - breaks it outright; an alien's leap lands `sim.door.leapDamage` (100) on it, as in a
   door siege; the swarm's shots do nothing. Nobody opens it with the action key, and a trooper waits for nobody at it.
-- **Hunters** take the ground as it is now (G0075): round the ice while there is a way round, and when there is none,
+- **Hunters** (superseded by G0116: a hunter breaks ice in its way) take the ground as it is now (G0075): round the ice while there is a way round, and when there is none,
   up to it and leaping at it, as at a shut door.
 - **Look**: light blue, a little translucent (`graphic.color.ice=a8dcf0d0`), darker and cracked across each square as
   it is chipped (pillar 5); a door leapt at shows its wear the same way. No shatter.

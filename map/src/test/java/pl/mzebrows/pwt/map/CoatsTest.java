@@ -137,6 +137,40 @@ class CoatsTest {
         }
     }
 
+    /**
+     * The rift's maze (G0115, amended 2026-11-23): a biome filled with fissure and carved into long, narrow, level ways -
+     * open runs along a row far longer than down a column, most of the maze no wider than its widest corridor - with
+     * every pass reached, nothing sealed off and no passage under the clearance.
+     */
+    @Test
+    void carvesTheRiftIntoLongNarrowLevelCorridors() {
+        Corridors maze = TestBiome.RIFT.ground().corridors();
+        float[] level = new float[SEEDS];
+        float[] narrow = new float[SEEDS];
+        for (int seed = 0; seed < SEEDS; seed++) {
+            Rig rig = Rig.laid(TestBiome.RIFT.ground(), seed);
+            float[] runs = rig.mazeRuns();
+            level[seed] = runs[0] / runs[1];
+            narrow[seed] = runs[2];
+
+            assertThat(rig.narrowest()).as("seed %d", seed).isGreaterThanOrEqualTo(CLEARANCE);
+            assertThat(rig.pockets()).as("seed %d", seed).isZero();
+            assertThat(rig.passesConnect()).as("seed %d", seed).isTrue();
+            assertThat(rig.share(Terrain.FISSURE)).as("seed %d fissure", seed).isBetween(0.25f, 0.55f);
+        }
+        java.util.Arrays.sort(level);
+        java.util.Arrays.sort(narrow);
+        assertThat(level[SEEDS / 2])
+                .as("median, along a row against down a column")
+                .isGreaterThan(2f);
+        assertThat(level[0]).as("least, along a row against down a column").isGreaterThan(1f);
+        assertThat(narrow[SEEDS / 2])
+                .as("median, the maze no wider than a corridor")
+                .isGreaterThan(0.45f);
+        assertThat(narrow[0]).as("least, the maze no wider than a corridor").isGreaterThan(0.25f);
+        assertThat(maze.widthMax()).isLessThanOrEqualTo(CLEARANCE + 1);
+    }
+
     @Test
     void laysNoCragInAClearingAndKeepsEveryClearingReached() {
         for (long seed = 0; seed < SEEDS; seed++) {
@@ -228,7 +262,7 @@ class CoatsTest {
                     .as("seed %d", seed)
                     .isBetween(Rig.WIDTH * 2 / 3, Rig.WIDTH * 2 / 3 + Rig.WIDTH / 12 - 1);
             for (Clearing clearing : rig.clearings) {
-                assertThat(clearing.row()).as("seed %d", seed).isBetween(Rig.AREA.row() + 8, Rig.AREA.endRow() - 1 - 8);
+                assertThat(clearing.row()).as("seed %d", seed).isBetween(Rig.AREA.row() + 5, Rig.AREA.endRow() - 1 - 5);
             }
         }
     }
@@ -352,6 +386,7 @@ class CoatsTest {
                 houses,
                 g.patches(),
                 g.crags(),
+                g.corridors(),
                 g.outcrops(),
                 g.clearings(),
                 g.ice(),
@@ -368,6 +403,7 @@ class CoatsTest {
                 g.houses(),
                 patches,
                 g.crags(),
+                g.corridors(),
                 g.outcrops(),
                 g.clearings(),
                 g.ice(),
@@ -384,6 +420,7 @@ class CoatsTest {
                 g.houses(),
                 g.patches(),
                 crags,
+                g.corridors(),
                 g.outcrops(),
                 g.clearings(),
                 g.ice(),
@@ -400,6 +437,7 @@ class CoatsTest {
                 g.houses(),
                 g.patches(),
                 g.crags(),
+                g.corridors(),
                 outcrops,
                 g.clearings(),
                 g.ice(),
@@ -578,6 +616,55 @@ class CoatsTest {
                 }
             }
             return pockets;
+        }
+
+        /**
+         * Over the open ground of the area outside every clearing and apron: the mean open run along a row through it, the
+         * mean down a column, and the share of it whose run along one of the two is no longer than the widest corridor.
+         */
+        float[] mazeRuns() {
+            long along = 0;
+            long down = 0;
+            int narrow = 0;
+            int open = 0;
+            for (int r = AREA.row(); r < AREA.endRow(); r++) {
+                for (int c = AREA.col(); c < AREA.endCol(); c++) {
+                    if (!map.passableAtTile(c, r) || apron[r * COLS + c] || inClearing(c, r)) {
+                        continue;
+                    }
+                    int across = run(c, r, 1, 0);
+                    int upDown = run(c, r, 0, 1);
+                    open++;
+                    along += across;
+                    down += upDown;
+                    if (Math.min(across, upDown)
+                            <= TestBiome.RIFT.ground().corridors().widthMax()) {
+                        narrow++;
+                    }
+                }
+            }
+            return new float[] {along / (float) open, down / (float) open, narrow / (float) open};
+        }
+
+        private boolean inClearing(int c, int r) {
+            for (Clearing clearing : clearings) {
+                if (clearing.contains(c, r)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /** The open run through a tile along one axis, both ways. */
+        private int run(int c, int r, int dc, int dr) {
+            int length = 1;
+            for (int s = 1; map.passableAtTile(c + s * dc, r + s * dr); s++) {
+                length++;
+            }
+            for (int s = 1; map.passableAtTile(c - s * dc, r - s * dr); s++) {
+                length++;
+            }
+            return length;
         }
 
         /** The shortest run of open ground between two rocks along any row or column through the biome. */

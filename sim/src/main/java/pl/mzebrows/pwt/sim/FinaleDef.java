@@ -37,6 +37,7 @@ public record FinaleDef(
         if (ground.houses().max() > 0
                 || !ground.patches().isEmpty()
                 || ground.crags().density() > 0f
+                || ground.corridors().on()
                 || ground.outcrops().density() > 0f
                 || ground.clearings().count() > 0
                 || ground.ice().share() > 0f) {
@@ -104,6 +105,7 @@ public record FinaleDef(
                 g.houses(),
                 g.patches(),
                 g.crags(),
+                g.corridors(),
                 g.outcrops(),
                 g.clearings(),
                 g.ice(),

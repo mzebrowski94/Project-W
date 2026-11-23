@@ -18,12 +18,16 @@ import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Order;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
+import pl.mzebrows.pwt.sim.system.query.Sight;
 
 /**
  * Decides, once a tick, what each trooper is doing and where it is headed.
  *
  * <p>Deciding is here and driving is {@code TrooperMoveSystem} (G0010); downstream reads
  * {@link Trooper#mode} and the target and asks again for nobody.
+ *
+ * <p><strong>Above it all, a step off a warden's line</strong> (G0114): a man its bead wounded steps square off the
+ * lane, then the cascade takes him back up where he left it.
  *
  * <p><strong>The cascade is fight, order, errands (aid, mend, crew), objective, roam</strong>, each half in
  * its own class; this one owns only the order. A standing order beats fetching somebody (G0017). An
@@ -47,8 +51,12 @@ public final class TrooperMindSystem extends EntitySystem {
 
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
 
+    /** One tick's walk: a man stepping off a line this near the end of his step is there (G0114). */
+    private final float stride;
+
     public TrooperMindSystem(SimConfig config, Solid solid, Rng rng, Odds odds) {
         TileMap map = solid.map();
+        this.stride = config.trooper().speed() * config.tickSeconds();
         this.fight = new TrooperFight(config, solid);
         this.orders = new TrooperOrders(config, map);
         this.aid = new TrooperAid(config, odds);
@@ -93,6 +101,9 @@ public final class TrooperMindSystem extends EntitySystem {
             if (trooper.alertRemaining > 0) {
                 trooper.alertRemaining--;
             }
+            if (stepsOff(trooper, at)) {
+                continue;
+            }
 
             if (fight.engages(
                             trooper,
@@ -112,6 +123,23 @@ public final class TrooperMindSystem extends EntitySystem {
             roam.explores(trooper, at);
         }
         objective.splitIntoSectors();
+    }
+
+    /**
+     * Whether he goes on stepping off a shot's line this tick (G0114): until he is within a stride of where the step
+     * ends, or has been at it as long as a wounded man takes to walk it.
+     */
+    private boolean stepsOff(Trooper trooper, Position at) {
+        if (!trooper.steppingOff()) {
+            return false;
+        }
+        if (Sight.withinRange(at.x, at.y, trooper.stepOffX, trooper.stepOffY, stride)) {
+            trooper.stepOffRemaining = 0;
+            return false;
+        }
+        trooper.stepOffRemaining--;
+        trooper.mode = Trooper.Mode.STEP_OFF;
+        return true;
     }
 
     /** How far this man's shot flies before it goes out; zero for a gun whose shot flies until it hits. */

@@ -30,7 +30,6 @@ import pl.mzebrows.pwt.sim.component.Health;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.def.ActionKind;
-import pl.mzebrows.pwt.sim.def.LeapDef;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.query.Reach;
@@ -38,7 +37,8 @@ import pl.mzebrows.pwt.sim.system.query.Reach;
 /**
  * Ice is solid ground until broken (ADR 0025): a door nobody opens, standing across a way - so it holds and stops shots
  * as a shut door does, every shot from the squad's side chips it, a blast breaks it outright and a leap lands on it as
- * on a door, the swarm's own shots do nothing, and a hunter goes round it when there is a way round. Broken, it is gone.
+ * on a door, the swarm's own shots do nothing, and a hunter whose way runs through it breaks it rather than going round
+ * (G0116). Broken, it is gone.
  */
 class IceTest {
 
@@ -169,21 +169,54 @@ class IceTest {
         assertThat(ice.getComponent(Appearance.class).wear).as("chipped again").isGreaterThan(once);
     }
 
+    /**
+     * Ice is ground to a hunter's route (G0116): its shortest way runs through the ice, so it walks up to it and leaps at
+     * it - even with a way round the wall open - and never takes the way round while the ice stands.
+     */
     @Test
-    void aHunterGoesRoundIceWhenThereIsAWayRound() {
-        SimConfig harmless =
-                everyStrain(config(), strain -> strain.withContactDamage(0).withLeap(LeapDef.off()));
-        Simulation simulation = on(harmless, walledWithAWayRound());
-        simulation.spawnIce(DOORWAY);
+    void aHunterBreaksIceInItsWayEvenWhenThereIsAWayRound() {
+        SimConfig leaping =
+                everyStrain(config(), strain -> strain.withContactDamage(0).withLeap(leapConfig()));
+        Simulation simulation = on(leaping, walledWithAWayRound());
+        Entity ice = simulation.spawnIce(DOORWAY);
         simulation.spawnCommander(DOORWAY_MIDDLE_X, INSIDE);
         godMode(simulation);
         Entity creature = simulation.spawnEnemy(DOORWAY_MIDDLE_X, OUTSIDE);
+        int full = ice.getComponent(Health.class).current;
+
+        int tick = 0;
+        while (ice.getComponent(Health.class).current == full && tick++ < ticksIn(10f)) {
+            simulation.step();
+            assertThat(creature.getComponent(Position.class).y)
+                    .as("never round the wall while the ice stands")
+                    .isLessThan(WALL_BOTTOM);
+        }
+
+        assertThat(ice.getComponent(Health.class).current)
+                .as("leapt at, in its way")
+                .isEqualTo(full - simulation.config().door().leapDamage());
+    }
+
+    /** A shut door is not ice (G0075 holds): with a way round, a hunter takes it and leaves the door alone. */
+    @Test
+    void aHunterStillGoesRoundAShutDoorWhenThereIsAWayRound() {
+        SimConfig leaping =
+                everyStrain(config(), strain -> strain.withContactDamage(0).withLeap(leapConfig()));
+        Simulation simulation = on(leaping, walledWithAWayRound());
+        Entity door = simulation.spawnDoor(DOORWAY);
+        simulation.spawnCommander(DOORWAY_MIDDLE_X, INSIDE);
+        godMode(simulation);
+        Entity creature = simulation.spawnEnemy(DOORWAY_MIDDLE_X, OUTSIDE);
+        int full = door.getComponent(Health.class).current;
 
         steps(simulation, ticksIn(20f));
 
         assertThat(creature.getComponent(Position.class).y)
                 .as("past the wall, by the way round")
                 .isGreaterThan(WALL_BOTTOM + TILE);
+        assertThat(door.getComponent(Health.class).current)
+                .as("the door untouched")
+                .isEqualTo(full);
     }
 
     /** A shot from {@code side} flown into the ice from below, and the ticks until it has landed. */

@@ -48,7 +48,9 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * <p><strong>Round a shut door, or at it</strong> (G0075, amending ADR 0022): a hunter's route and its line both go
  * over the ground as it is now ({@link Solid}), so a shut house between it and a man in the open is walked round.
  * Only a hunter that cannot reach any man with the doors shut takes the terrain's route, which runs through the
- * door to the man behind it, and so walks up to the door it then leaps at (G0069).
+ * door to the man behind it, and so walks up to the door it then leaps at (G0069). <strong>Ice is ground to a
+ * route</strong> (G0116, amending G0075 for ice alone): the route now runs through it as if it were broken, so a hunter
+ * whose shortest way it shuts walks up to it and leaps at it even with a way round.
  *
  * <p>Writes a desired velocity; {@code DriveSystem} commits it (G0010).
  */
@@ -73,7 +75,7 @@ public final class NavigationSystem extends EntitySystem {
 
     /**
      * One field per strain over the ground as it is now, indexed by ordinal, never persisted: the way round a shut
-     * door.
+     * door - but through ice, which a hunter breaks in its way (G0116).
      */
     private final FlowField[] fields;
 
@@ -131,7 +133,7 @@ public final class NavigationSystem extends EntitySystem {
         this.placeClaim = new int[UnitKind.values().length];
         for (UnitKind kind : UnitKind.values()) {
             fields[kind.ordinal()] =
-                    FlowField.over(map, solid, config.unit(kind).radius());
+                    FlowField.over(map, solid.routes(), config.unit(kind).radius());
             sieges[kind.ordinal()] = FlowField.over(map, config.unit(kind).radius());
             marches[kind.ordinal()] = FlowField.over(map, config.unit(kind).radius());
             places[kind.ordinal()] =

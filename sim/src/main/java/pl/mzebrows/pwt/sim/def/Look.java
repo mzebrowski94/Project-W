@@ -75,7 +75,7 @@ public enum Look {
      * square turning slowly. Drawn from its body and its site's state, never a field of its own.
      */
     RELIC,
-    /** A warden (G0114): a sand-coloured oval pillar, lighter than sand; its body is a circle, the oval only its look. */
+    /** A warden (G0114): a sand-coloured token seen from above, lighter than sand - its darker side below, rings on top. */
     WARDEN,
     /**
      * A hole in the ground that keeps sending more of one strain out of it.

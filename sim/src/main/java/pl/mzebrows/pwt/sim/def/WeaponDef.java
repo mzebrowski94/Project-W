@@ -60,6 +60,9 @@ import lombok.With;
  *     {@link WeaponType#NONE} for every gun no man carries
  * @param limpet what it throws instead of a shot, if it throws a limpet (G0100); {@link LimpetDef#off()} for every
  *     gun but the detonator
+ * @param stepOff how far a trooper one of its shots wounds, and leaves on his feet, steps off its line - square to it,
+ *     to the side he already stands on - before he goes back to what he was doing (G0114); zero on every gun but the
+ *     warden's, whose lanes are the danger rather than whoever fired
  */
 @With
 public record WeaponDef(
@@ -91,7 +94,8 @@ public record WeaponDef(
         ShakeDef shake,
         int bounces,
         WeaponType type,
-        LimpetDef limpet) {
+        LimpetDef limpet,
+        float stepOff) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;
@@ -121,6 +125,7 @@ public record WeaponDef(
         Require.notNegative("weapon recoilSeconds", recoilSeconds);
         Require.notNegative("weapon stunAfterHits", stunAfterHits);
         Require.notNegative("weapon bounces", bounces);
+        Require.notNegative("weapon stepOff", stepOff);
         if (bounces > 0 && pierceIntervalSeconds > 0f) {
             throw new IllegalArgumentException(
                     "a shot comes off what it hits or passes through it, never both: bounces with a pierceIntervalSeconds");
@@ -137,7 +142,7 @@ public record WeaponDef(
         }
     }
 
-    /** Every gun but the detonator: the same, throwing no limpet. */
+    /** Every gun but the detonator and the warden's: the same, throwing no limpet, and no shot stepped off from. */
     public WeaponDef(
             float cooldownSeconds,
             float projectileSpeed,
@@ -196,7 +201,8 @@ public record WeaponDef(
                 shake,
                 bounces,
                 type,
-                LimpetDef.off());
+                LimpetDef.off(),
+                0f);
     }
 
     /** True if what this gun hits keeps less of its speed for a while afterwards. */

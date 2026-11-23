@@ -21,6 +21,7 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     Crags.off(),
+                    Corridors.off(),
                     new Outcrops(0.006f, 1, 2, 1, 1, 0f, 0f),
                     Clearings.off(),
                     Ice.off(),
@@ -37,6 +38,7 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(1, 2),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     Crags.off(),
+                    Corridors.off(),
                     new Outcrops(0.10f, 4, 9, 2, 3, 0.7f, 0f),
                     Clearings.off(),
                     Ice.off(),
@@ -55,6 +57,7 @@ record TestBiome(String name, BiomeGround ground) {
                             new Patch.Rect(PatchGround.of(Terrain.ORGANIC), 0.035f, 4, 6),
                             new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
                     Crags.off(),
+                    Corridors.off(),
                     new Outcrops(0.015f, 2, 4, 1, 2, 0.3f, 0f),
                     Clearings.off(),
                     Ice.off(),
@@ -71,6 +74,7 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     new Crags(0.05f, 4, Terrain.ROCK),
+                    Corridors.off(),
                     Outcrops.off(),
                     Clearings.off(),
                     Ice.off(),
@@ -87,6 +91,7 @@ record TestBiome(String name, BiomeGround ground) {
                     new Houses(0, 1),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     new Crags(0.13f, 4, Terrain.ROCK),
+                    Corridors.off(),
                     new Outcrops(0.02f, 2, 4, 1, 2, 0.3f, 0f),
                     Clearings.off(),
                     Ice.off(),
@@ -94,7 +99,7 @@ record TestBiome(String name, BiomeGround ground) {
 
     static final List<TestBiome> FIVE = List.of(PLAIN, QUARRY, BRAKE, ANTHILL, BADLANDS);
 
-    /** The rift (G0115): frost cut by fissures laid as dense crags, and two clearings no fissure is laid in. */
+    /** The rift (G0115): frost filled with fissure and carved into corridors, and two clearings no fissure is laid in. */
     static final TestBiome RIFT = new TestBiome(
             "rift",
             new BiomeGround(
@@ -105,10 +110,11 @@ record TestBiome(String name, BiomeGround ground) {
                     Terrain.DUST,
                     Houses.off(),
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.03f, 4, 6)),
-                    new Crags(0.16f, 2, Terrain.FISSURE),
+                    Crags.off(),
+                    new Corridors(2, 3, 1, 2, 8, 0.35f, 0.3f, 0.15f, Terrain.FISSURE),
                     Outcrops.off(),
-                    new Clearings(2, 8),
-                    new Ice(0.4f),
+                    new Clearings(2, 5),
+                    new Ice(0.1f),
                     List.of()));
 
     /** The redoubt's ground: a fixed width, no dealt coats, its rock four fixed pieces round the anchor. */
@@ -123,6 +129,7 @@ record TestBiome(String name, BiomeGround ground) {
                     Houses.off(),
                     List.of(),
                     Crags.off(),
+                    Corridors.off(),
                     Outcrops.off(),
                     Clearings.off(),
                     Ice.off(),

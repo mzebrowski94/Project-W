@@ -1,6 +1,6 @@
 # 0025: Ice is solid ground until broken
 
-**Status.** accepted
+**Status.** amended by G0116: a hunter's route runs through ice; amended by G0117: a trooper shoots ice in his way
 
 **Trigger.** Building or changing ice; adding anything else that stands across a way until it is broken - a
 barricade, rubble, a web; deciding where generation puts such a thing; adding a reader of "is this tile solid" or of
@@ -25,10 +25,11 @@ the second thing `Solid` answers for, and it answers through the same door.
   by hand" (`Door.opensByHand`) - and `Health` (`sim.ice.health`), `Damage`, `Shake` and `Look.ICE`, spawned by
   `Spawner.spawnIce` for every run the strip iced. So `Solid.derive`, which takes every shut door, takes ice beside the
   doors with no second family and no second array: the solver's clamp, a shot into it, a blast's line, perception's
-  clear line, a shooter's target, a hunter's route over the ground now and the siege (G0069, G0075) all treat it as a
-  shut door, because to them it is one. Broken, it is marked dead and `DoorSystem` derives the place again, as for a
+  clear line, a shooter's target and the siege (G0069) all treat it as a shut door, because to them it is one. A
+  hunter's route is the exception (G0116): it is flooded over `Solid.routes()`, which counts every door with
+  `routedThrough` - ice - open, so a hunter breaks ice in its way where it goes round a door (G0075). Broken, it is marked dead and `DoorSystem` derives the place again, as for a
   door.
-- **What sets it apart is two fields, never a branch on a kind.** `openTicks` zero: `Reach` never offers it to the
+- **What sets it apart is fields, never a branch on a kind** (two in ticket 10, a third, `routedThrough`, by G0116). `openTicks` zero: `Reach` never offers it to the
   action key, a trooper whose way it shuts waits for nobody at it, and `DoorSystem` counts no work on it.
   `Door.chipped`: every shot from the squad's side lands its blow on it, where a door takes only a heavy gun's
   (`ProjectileBoundsSystem`); the swarm's shots land on neither. A blast breaks either outright, a leap lands
