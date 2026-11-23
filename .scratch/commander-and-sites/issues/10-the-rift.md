@@ -1,7 +1,7 @@
 # The rift
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: 05 (sites and the site seam), 07 (the jaguar)
 Spec: [spec.md](../spec.md) section 8
@@ -174,3 +174,34 @@ The printed mission code (rift first), for example `--mission=<code>`.
 - G0115, ADR 0025 and the rows are written.
 - `verify.sh` is green and the branch is committed.
 - The final message lists the keys and a mission code.
+
+## Answer
+
+Built (merged into integration) in two commits, stage A d3916ce, stage B e9b8ece. G0115 (amends G0068), ADR 0025 (amends ADR 0022). No new system or component.
+- **Stage A, ground:** `Terrain.FROST`, `Terrain.FISSURE`, `BiomeKind.RIFT` (all appended last). `map` records `Clearings`/`Clearing`, laid in `Coats` after the fixed pieces and before every other coat; no crag or outcrop in the disc, its centre counted as a way in so crag repairs keep it reached; `Strip.Laid.clearings()`. Furniture fields on every biome `sitesInClearings`, `clearingPackShare`, read by `Placement` as data: a point at each clearing centre taking that band; 60 % of packs anchored in the clearings first. `StripFaults.clearings`, `MissionFaults.clearings`; tests in `CoatsTest`, `MissionTest`, `TerrainCollisionTest`, `BiomePromisesTest`.
+- **Stage B, ice:** an entity with a `Door` whose `openTicks` is 0 (nobody opens it) and a new `Door.chipped` flag, so `Solid.derive`, siege, blasts, routes (G0075) and `DoorSystem` take it unchanged. `map` marks ice runs (`Ice`, `Strip.Laid.ice()`), never writes the `TileMap`, so every pass check counts an iced way open. `Spawner.spawnIce`; `ProjectileBoundsSystem`: squad shot chips, alien shot nothing. `Appearance.wear` + cracks in `WorldRenderer` (pillar 5). `MissionFaults.ice`; `IceTest` (8).
+- Full verify green (3507); MissionSweep 2192 seeds 0 faults; StripSweep 2000 seeds 0 faults (its fixture pool has no rift; the rift is swept through MissionSweep).
+
+**Departures from Settled (for review):**
+- **Roster** `nest jaguar 1 1; loose thumper 2 3; loose sludger 5 6` instead of `nest sludger 2 3; nest jaguar 2; loose thumper 2 3; loose sludger 4 5`: the dense maze plus point keep-offs (12 tiles) in the clearings leave room for about 2 nests at the worst seed; 4-5 nests become 8 at hard in the last position, and even `nest sludger 1 2; nest jaguar 1 1` fell short on dozens of 2000 seeds. Kept the jaguar nest, folded the sludger nest into one more loose sludger.
+- **Width 64-72** instead of 52-60, for the room (as the desert, G0095).
+- `BiomePromisesTest`: "caldera has fewer boulders than any biome that has them" now "no more than", since the rift's settled 0-2 equals the caldera's.
+- Adding RIFT to the pool re-deals every seed: earlier tickets' mission codes changed (fresh ones in the run's final message).
+
+Provisional decisions (AFK run, for review; in G0115 / ADR 0025):
+1. Fissure crags density 0.16, smoothing 2 (~21 % of the maze). Turned down: 0.20 smoothed once (crackier, some seeds no nest); denser merges into a mass the repairs clear whole.
+2. Clearing centres within a twelfth of the width of 1/3 and 2/3, pushed outward, one radius in from the edge row - each in its own site band. Turned down: jitter either side (both can land in the middle third).
+3. Flag and pack share on furniture (`map` knows nothing of sites). Turned down: inferred from clearings.
+4. No second frost tone; small neighbour-ground patches give texture.
+5. Ice is a `Door`. Turned down: own `Ice` component (a second family in four systems), or a door table (too much for two kinds).
+6. Chokepoint: a run across a way at most clearance + 1 long, solid both ends, open both sides, whose two sides do not join within 16 steps when shut; never within clearance of a kept tile; one per way. Entry and exit passes and clearings never iced.
+7. Ice share 0.4 (~4 per rift), health 300 (six sidearm shots).
+8. Wear shown on every door, not only ice, so a door under siege cracks too. Turned down: ice only.
+9. A rift dealt last gets clearings + 1 sites, the extra for the approach columns.
+
+Keys:
+- `biomes.properties` rift: `widthMin=64`, `widthMax=72`, `base=frost`, `fallback=dust`, `patches=rect neighbour 0.03 4 6`, `crags.density=0.16`, `crags.smoothing=2`, `crags.terrain=fissure`, `clearings.count=2`, `clearings.radius=8`, `ice.share=0.4`, barrels 1 2, boulders 0 2, `sitesInClearings=true`, `clearingPackShare=60`, a medkit; the other nine `sitesInClearings=false`, `clearingPackShare=0`.
+- `level.properties`: `sim.ice.health=300`.
+- `graphic.properties`: `graphic.terrain.frost=3a4552ff`, `graphic.terrain.fissure=0b0e14ff`, `graphic.color.ice=a8dcf0d0`, `graphic.door.crackWidth=0.06`, `graphic.door.crackDim=0.35`.
+
+Judge by: `./gradlew lwjgl3:run --args="--mission=MHPC-VVKG"` (rift first; hard `HHPC-VVKD`). No ice scenario; no shatter.

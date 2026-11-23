@@ -64,3 +64,5 @@ redeploy, sites and crates, the mainframe, the jaguar, the rift, spires and the 
 - 2026-11-22, ticket 08 (resolved, merged): `EmplacementKind` table + `EmplacementSystem` at 54; spire ALIEN without `Enemy` or `Health`; compass bearings, comma volleys, edge-tick tell; clock stops asleep; keep-off 15; no ADR 0024. Provisional.
 - 2026-11-22: run paused after 08 at Mateusz's word, for testing and tuning; 09 and 10 open.
 - 2026-11-23, ticket 09 (resolved, merged): relic and warden as kinds on 06/08 tables, `WorkedSiteDef` room/guards/hatch/troopersWork; troopers do not extract (commander alone); room 7 kept open; caches outside the room. Provisional.
+- 2026-11-23, ticket 10 (resolved, merged): rift; clearings a `map` coat; ice a `Door` nobody opens, chipped by squad shots; roster cut to one jaguar nest and width 64-72 against Settled (no room); seeds re-dealt. Provisional.
+- 2026-11-23: codes after the rift re-deal (earlier Answers' codes are stale): quarry with house `MHAA-AA9R`, mainframe in first biome `MHAA-AAWJ`, fen `MHAA-AAA4`, desert relic `MHAA-AAGP`, rift `MHPC-VVKG`.
