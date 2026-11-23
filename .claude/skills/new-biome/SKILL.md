@@ -40,7 +40,8 @@ are the one exception**, counted, because a house is a place.
 | a new ground | a `Terrain` constant **appended** (so no other renumbers), `graphic.terrain.<name>`, and `sim.ground.<name>.*` if it slows | ground the pool has no terrain for - the desert's mud (G0095) |
 | houses | `houses.min`, `houses.max` | a place worth taking - "a quarry with a base in it". 0-2; leave the block out for none. Size and doorways are the strip's (`sim.mission.ground.houses.*`). Every doorway gets a shut door at populate (G0069): a house's stock is behind three seconds of work, and a hunter that chases a man in will siege it - count that into how busy the biome is |
 | patches | `patches=rect\|blob <terrain\|neighbour> density sizeMin sizeMax; ...` | `rect` for small patches of colour, `blob` for ground worth going round (thicket). `neighbour` takes the nearer biome's base, or `fallback` |
-| crags | `crags.density`, `crags.smoothing`, `crags.terrain` | irregular masses; more smoothing, fewer and bigger. `terrain` is `rock`, or `lava` for pools nothing stands on (the caldera, G0091) - any solid terrain, laid with the crag repairs, which is why a solid ground is never a patch (`PatchGround` refuses it). Leave the block out for none |
+| crags | `crags.density`, `crags.smoothing`, `crags.terrain` | irregular masses; more smoothing, fewer and bigger. `terrain` is `rock`, `lava` for pools nothing stands on (the caldera, G0091), or `fissure` for the rift's maze (G0115) - any solid terrain, laid with the crag repairs, which is why a solid ground is never a patch (`PatchGround` refuses it). Leave the block out for none |
+| clearings | `clearings.count`, `clearings.radius` | round stretches of base no crag or outcrop is laid in, each reached from the passes - the rift's two (G0115). Laid before every other coat, centred in the outer thirds; with the furniture's `sitesInClearings` each holds a point, and `clearingPackShare` puts that share of the packs in them first. A clearing takes a quarter of a biome off its crags' room, so its density lands higher in the rest - measure it there. Leave the block out for none |
 | outcrops | `outcrops.density`, `lengthMin/Max`, `thicknessMin/Max`, `arms`, `ragged` | rock bent round a corner - the Adventures' shape. `ragged` (0-1, no arms with it) knocks corners off and bumps the faces, so a slab reads as broken rock rather than a block from above (the cut, 0.6). Leave the block out for none |
 
 Plus `widthMin/Max` and `regions` (at least 1 - every region lies inside one biome, G0062), which are geometry.
@@ -80,7 +81,9 @@ meanwhile. The HTML prototype is for looks only.
   `treesByNestMin/Max` (0 for none - the fen alone has trees, G0072), `turretsMin/Max` (0 for none - the plain alone
   has them, G0082), `geysersMin/Max` (0 for none - the cut and the caldera have them, G0089, G0091),
   `spires=min max` on one line (`0 0` for none - the fen alone has them, G0113), `relics=min max` (`0 0` for none, at
-  most `sitesMin` - the desert alone has them, each a site in a point's place, G0114), and `furniture.pickups=pickup <kind> min max; ...`.
+  most `sitesMin` - the desert alone has them, each a site in a point's place, G0114), `sitesInClearings` and
+  `clearingPackShare` (`false` and `0` for none - the rift alone has them: a point at each clearing's centre and 60 % of its
+  packs in its clearings, G0115), and `furniture.pickups=pickup <kind> min max; ...`.
   Never scaled. **Every block carries every furniture key**, zeros included: a new furniture line is a key in all of
   them. A new line that stands something is also a `Placed` record, a case in `MissionScenario.populate`, in
   `Placement.radius` and in `MissionFaults`' radius, a pass in `Placement.Biome.place` and its count drawn **after**

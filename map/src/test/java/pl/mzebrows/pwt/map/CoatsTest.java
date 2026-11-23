@@ -138,6 +138,102 @@ class CoatsTest {
     }
 
     @Test
+    void laysNoCragInAClearingAndKeepsEveryClearingReached() {
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Rig rig = Rig.laid(TestBiome.RIFT.ground(), seed);
+            boolean[] reached = Maps.reachableFrom(rig.map, rig.ends[0] % Rig.COLS, rig.ends[0] / Rig.COLS);
+
+            assertThat(rig.clearings).as("seed %d", seed).hasSize(2);
+            for (Clearing clearing : rig.clearings) {
+                for (int r = Rig.AREA.row(); r < Rig.AREA.endRow(); r++) {
+                    for (int c = Rig.AREA.col(); c < Rig.AREA.endCol(); c++) {
+                        if (clearing.contains(c, r)) {
+                            assertThat(rig.map.terrainAtTile(c, r))
+                                    .as("seed %d, (%d,%d)", seed, c, r)
+                                    .isNotEqualTo(Terrain.FISSURE);
+                            assertThat(reached[r * Rig.COLS + c])
+                                    .as("seed %d, (%d,%d)", seed, c, r)
+                                    .isTrue();
+                        }
+                    }
+                }
+            }
+            assertThat(rig.narrowest()).as("seed %d", seed).isGreaterThanOrEqualTo(CLEARANCE);
+            assertThat(rig.pockets()).as("seed %d", seed).isZero();
+            assertThat(rig.passesConnect()).as("seed %d", seed).isTrue();
+        }
+    }
+
+    /**
+     * The rift's ice (ADR 0025): on some of its chokepoints, every run across a narrow way between two solid tiles -
+     * open ground either side of it, at most the clearance and one long - never in a clearing or within the clearance
+     * of a kept tile, the clearance apart from each other. Its ground stays open, so the passes still connect.
+     */
+    @Test
+    void icesChokepointsOfTheMazeAndNeverAClearingOrAWayIn() {
+        int iced = 0;
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Rig rig = Rig.laid(TestBiome.RIFT.ground(), seed);
+            for (TileRect run : rig.ice) {
+                boolean lying = run.height() == 1;
+                int length = lying ? run.width() : run.height();
+                assertThat(length).as("seed %d, %s", seed, run).isBetween(1, CLEARANCE + 1);
+                assertThat(rig.map.passableAtTile(lying ? run.col() - 1 : run.col(), lying ? run.row() : run.row() - 1))
+                        .as("seed %d, %s's first end", seed, run)
+                        .isFalse();
+                assertThat(rig.map.passableAtTile(lying ? run.endCol() : run.col(), lying ? run.row() : run.endRow()))
+                        .as("seed %d, %s's last end", seed, run)
+                        .isFalse();
+                for (int r = run.row(); r < run.endRow(); r++) {
+                    for (int c = run.col(); c < run.endCol(); c++) {
+                        assertThat(rig.map.passableAtTile(c, r))
+                                .as("seed %d, (%d,%d)", seed, c, r)
+                                .isTrue();
+                        for (int dr = -CLEARANCE; dr <= CLEARANCE; dr++) {
+                            for (int dc = -CLEARANCE; dc <= CLEARANCE; dc++) {
+                                int at = (r + dr) * Rig.COLS + c + dc;
+                                assertThat(at >= 0 && at < rig.apron.length && rig.apron[at])
+                                        .as("seed %d, kept beside (%d,%d)", seed, c, r)
+                                        .isFalse();
+                            }
+                        }
+                        for (Clearing clearing : rig.clearings) {
+                            assertThat(clearing.contains(c, r))
+                                    .as("seed %d, (%d,%d)", seed, c, r)
+                                    .isFalse();
+                        }
+                    }
+                }
+            }
+            assertThat(rig.passesConnect()).as("seed %d", seed).isTrue();
+            iced += rig.ice.size();
+        }
+        assertThat(iced).as("ice over the seeds").isPositive();
+    }
+
+    /**
+     * Two clearings, the west one in the biome's west third and the east one in its east third - so in the halves, the
+     * thirds or the bands of a last biome, each lies in a band of its own - each a radius in from the top and bottom.
+     */
+    @Test
+    void centresTwoClearingsEachInAnOuterThirdOfTheBiome() {
+        int third = Rig.WIDTH / 3;
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Rig rig = Rig.laid(TestBiome.RIFT.ground(), seed);
+            Clearing west = rig.clearings.getFirst();
+            Clearing east = rig.clearings.getLast();
+
+            assertThat(west.col() - Rig.AREA.col()).as("seed %d", seed).isBetween(third - Rig.WIDTH / 12, third - 1);
+            assertThat(east.col() - Rig.AREA.col())
+                    .as("seed %d", seed)
+                    .isBetween(Rig.WIDTH * 2 / 3, Rig.WIDTH * 2 / 3 + Rig.WIDTH / 12 - 1);
+            for (Clearing clearing : rig.clearings) {
+                assertThat(clearing.row()).as("seed %d", seed).isBetween(Rig.AREA.row() + 8, Rig.AREA.endRow() - 1 - 8);
+            }
+        }
+    }
+
+    @Test
     void refusesCragsOfGroundSomethingCouldStandOn() {
         assertThatThrownBy(() -> new Crags(0.1f, 4, Terrain.ASH)).isInstanceOf(IllegalArgumentException.class);
     }
@@ -257,6 +353,8 @@ class CoatsTest {
                 g.patches(),
                 g.crags(),
                 g.outcrops(),
+                g.clearings(),
+                g.ice(),
                 g.pieces());
     }
 
@@ -271,6 +369,8 @@ class CoatsTest {
                 patches,
                 g.crags(),
                 g.outcrops(),
+                g.clearings(),
+                g.ice(),
                 g.pieces());
     }
 
@@ -285,6 +385,8 @@ class CoatsTest {
                 g.patches(),
                 crags,
                 g.outcrops(),
+                g.clearings(),
+                g.ice(),
                 g.pieces());
     }
 
@@ -299,6 +401,8 @@ class CoatsTest {
                 g.patches(),
                 g.crags(),
                 outcrops,
+                g.clearings(),
+                g.ice(),
                 g.pieces());
     }
 
@@ -336,12 +440,16 @@ class CoatsTest {
         private final boolean[] apron;
         private final int[] ends;
         private final List<House> houses;
+        private final List<Clearing> clearings;
+        private final List<TileRect> ice;
 
-        private Rig(TileMap map, boolean[] apron, int[] ends, List<House> houses) {
+        private Rig(TileMap map, boolean[] apron, int[] ends, Coats.Laid laid) {
             this.map = map;
             this.apron = apron;
             this.ends = ends;
-            this.houses = houses;
+            this.houses = laid.houses();
+            this.clearings = laid.clearings();
+            this.ice = laid.ice();
         }
 
         static Rig laid(BiomeGround ground, long seed) {
@@ -381,8 +489,8 @@ class CoatsTest {
                     apron[(EAST_PASS + r) * COLS + COLS - 1 - d] = true;
                 }
             }
-            List<House> houses = Coats.lay(builder, AREA, ground, west, east, apron, ends, StripTest.RULES, stream);
-            return new Rig(builder.build(), apron, ends, houses);
+            Coats.Laid laid = Coats.lay(builder, AREA, ground, west, east, apron, ends, StripTest.RULES, stream);
+            return new Rig(builder.build(), apron, ends, laid);
         }
 
         float share(Terrain terrain) {

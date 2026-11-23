@@ -106,6 +106,8 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
  * @param biomes every biome a mission deals from, by kind (missions ticket 03)
  * @param finales every finale a mission ends on, by kind (G0064)
  * @param door what stands in every doorway (G0069)
+ * @param ice what stands across a chokepoint of a maze: a door nobody opens, chipped by the squad's every shot (ADR
+ *     0025)
  * @param medkit how many medkits a level that asks for them scatters (G0053)
  * @param crate how many pickups a crate is dealt (G0056)
  * @param pop how long a take by touch is shown for (G0078)
@@ -158,6 +160,7 @@ public record SimConfig(
         @ConfigKey("biome") Defs<BiomeKind, BiomeDef> biomes,
         @ConfigKey("finale") Defs<FinaleKind, FinaleDef> finales,
         DoorConfig door,
+        IceConfig ice,
         MedkitConfig medkit,
         CrateConfig crate,
         PopConfig pop) {
@@ -456,6 +459,20 @@ public record SimConfig(
             Require.positive("door waitDistance", waitDistance);
             Require.notNegative("door throwSpeed", throwSpeed);
             Require.positive("door throwSeconds", throwSeconds);
+        }
+    }
+
+    /**
+     * Ice across a chokepoint of a maze (G0115, ADR 0025): a door nobody opens, solid ground until it is broken. Every
+     * shot from the squad's side chips it, a blast breaks it outright, a leap lands the door's {@code leapDamage} on it,
+     * and a shot from the swarm's side does nothing - so a hunter goes round it, or sieges it, as it does a door.
+     *
+     * @param health what it takes before it breaks, a shot's damage at a time
+     */
+    @With
+    public record IceConfig(int health) {
+        public IceConfig {
+            Require.positive("ice health", health);
         }
     }
 

@@ -1,6 +1,6 @@
 # 0022: A shut door is solid ground, not a body
 
-**Status.** amended by G0075: a hunter's route and line go over the ground now, round a shut door when there is a way round
+**Status.** amended by G0075: a hunter's route and line go over the ground now, round a shut door when there is a way round; amended by ADR 0025: ice is a second thing it answers for, a door nobody opens
 
 **Trigger.** Building or changing doors; adding anything else that blocks for a while and then does not; adding a
 reader of "is this tile solid" in `sim`.

@@ -253,6 +253,11 @@ public final class TrooperMoveSystem extends EntitySystem {
         if (door == null || !ACTION.has(entity)) {
             return false;
         }
+        if (!DOOR.get(door).opensByHand()) {
+            // Ice (ADR 0025): nobody opens it, so it shuts his way as rock does, and he waits for nobody at it.
+            trooper.door = Handle.NOBODY;
+            return false;
+        }
         long opener = DOOR.get(door).trooper;
         boolean atIt = Reach.doorGap(entity, door, map.tileSize()) <= ACTION.get(entity).reach;
         if (opener != Handle.NOBODY && opener != Handles.of(entity)) {

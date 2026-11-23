@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.Clearing;
 import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.StripFaults;
@@ -45,6 +46,8 @@ final class MissionFaults {
         faults.addAll(bands(mission, config));
         faults.addAll(sites(mission, config));
         faults.addAll(relics(mission, config));
+        faults.addAll(clearings(mission, config));
+        faults.addAll(ice(mission, config));
         faults.addAll(crates(mission, config));
         faults.addAll(trees(mission, config));
         faults.addAll(geysers(mission, config.mission().placement()));
@@ -351,6 +354,76 @@ final class MissionFaults {
     }
 
     /**
+     * Every run of ice (ADR 0025) stands across a way - solid at both ends, at most the clearance and one long - on open
+     * ground, never in a clearing nor within the clearance of a kept tile, so no way in is iced; and nothing placed
+     * stands in it.
+     */
+    static List<String> ice(Mission mission, SimConfig config) {
+        TileMap map = mission.laid().map();
+        int clearance = config.mission().ground().clearance();
+        List<String> faults = new ArrayList<>();
+        for (TileRect run : mission.laid().ice()) {
+            boolean lying = run.height() == 1;
+            int length = lying ? run.width() : run.height();
+            boolean firstEnd = map.passableAtTile(lying ? run.col() - 1 : run.col(), lying ? run.row() : run.row() - 1);
+            boolean lastEnd = map.passableAtTile(lying ? run.endCol() : run.col(), lying ? run.row() : run.endRow());
+            if (length > clearance + 1 || firstEnd || lastEnd) {
+                faults.add("ice " + run + " does not stand across a narrow way");
+            }
+            for (int row = run.row(); row < run.endRow(); row++) {
+                for (int col = run.col(); col < run.endCol(); col++) {
+                    if (!map.passableAtTile(col, row)) {
+                        faults.add("ice " + run + " stands on " + map.terrainAtTile(col, row));
+                    }
+                    for (Clearing clearing : mission.laid().clearings()) {
+                        if (clearing.contains(col, row)) {
+                            faults.add("ice " + run + " stands in " + clearing);
+                        }
+                    }
+                    if (keptNear(mission, col, row, clearance)) {
+                        faults.add("ice " + run + " stands by kept ground at " + col + "," + row);
+                    }
+                }
+            }
+            for (Placed placed : mission.placed()) {
+                if (distance(map, run, placed) < radius(placed, config)) {
+                    faults.add(placed + " stands in the ice " + run);
+                }
+            }
+        }
+        return faults;
+    }
+
+    /**
+     * Every clearing of a biome whose sites are in its clearings holds a control point on its centre tile (G0115).
+     */
+    static List<String> clearings(Mission mission, SimConfig config) {
+        TileMap map = mission.laid().map();
+        List<String> faults = new ArrayList<>();
+        for (int p = 0; p < mission.order().size(); p++) {
+            if (!config.biomes().of(mission.order().get(p)).furniture().sitesInClearings()) {
+                continue;
+            }
+            TileRect rect = mission.laid().biomes().get(p);
+            for (Clearing clearing : mission.laid().clearings()) {
+                if (!rect.contains(clearing.col(), clearing.row())) {
+                    continue;
+                }
+                boolean held = false;
+                for (Placed placed : mission.placed()) {
+                    held |= placed instanceof Placed.Point
+                            && map.colAt(placed.x()) == clearing.col()
+                            && map.rowAt(placed.y()) == clearing.row();
+                }
+                if (!held) {
+                    faults.add("biome " + p + "'s " + clearing + " holds no control point at its centre");
+                }
+            }
+        }
+        return faults;
+    }
+
+    /**
      * Every worked site in the open - a relic (G0114) - stands in its room: every tile within it its biome's base and
      * not kept, and nothing else placed within it. And its plinth is reachable from inside its wardens: a commander fits
      * square on each of its four compass points, touching the plinth - clear of rock and of every warden's body.
@@ -598,6 +671,18 @@ final class MissionFaults {
             case Placed.Emplacement emplacement ->
                 config.emplacement(emplacement.kind()).radius();
         };
+    }
+
+    /** Whether generation kept a tile within {@code reach} tiles of this one. */
+    private static boolean keptNear(Mission mission, int col, int row, int reach) {
+        for (int r = row - reach; r <= row + reach; r++) {
+            for (int c = col - reach; c <= col + reach; c++) {
+                if (mission.laid().kept(c, r)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** Something hostile a biome put down: a nest, a loose creature, or one of a house pack (G0112). */

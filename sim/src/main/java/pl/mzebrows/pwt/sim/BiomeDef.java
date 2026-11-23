@@ -21,6 +21,17 @@ public record BiomeDef(BiomeGround ground, List<Roster> roster, Furniture furnit
 
     public BiomeDef {
         roster = List.copyOf(roster);
+        int clearings = ground.clearings().count();
+        if (furniture.sitesInClearings() && (clearings == 0 || clearings + 1 > furniture.sitesMax())) {
+            // A last biome lays a point in its approach columns besides its clearings' (G0115): room for it in its
+            // sites.
+            throw new IllegalArgumentException("a biome whose sites are in its " + clearings
+                    + " clearings has at least one, and sites for each and one more, was up to "
+                    + furniture.sitesMax());
+        }
+        if (furniture.clearingPackShare() > 0 && clearings == 0) {
+            throw new IllegalArgumentException("a biome with no clearing puts no pack in one");
+        }
     }
 
     /**

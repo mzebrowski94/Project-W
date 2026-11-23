@@ -737,7 +737,8 @@ public final class WorldRenderer implements Disposable {
             float y = Drawn.y(POSITION.get(entity), PREVIOUS.get(entity), alpha);
             float pitch = appearance.squarePitch;
             float side = pitch * appearance.squareFill;
-            shapes.setColor(tint(appearance));
+            Color fill = tint(appearance);
+            shapes.setColor(darkened(fill, appearance.wear * doorMark.crackDim()));
             for (int across = 0; across < appearance.squaresAcross; across++) {
                 for (int down = 0; down < appearance.squaresDown; down++) {
                     float middleX = x + (across - (appearance.squaresAcross - 1) * 0.5f) * pitch;
@@ -745,8 +746,36 @@ public final class WorldRenderer implements Disposable {
                     shapes.rect(middleX - side * 0.5f, middleY - side * 0.5f, side, side);
                 }
             }
+            drawCracks(appearance, x, y, pitch);
             if (appearance.charge > 0f) {
                 drawLoading(x, y, pitch, palette.colorFor(appearance.chargeLook), appearance.charge);
+            }
+        }
+    }
+
+    /**
+     * A door or ice worn as it is broken at (ADR 0025, pillar 5): cracks across each square, more as less is left, in
+     * the darkest of its own colour.
+     */
+    private void drawCracks(Appearance appearance, float x, float y, float pitch) {
+        int cracks = doorMark.cracksFor(appearance.wear);
+        if (cracks == 0) {
+            return;
+        }
+        shapes.setColor(darkened(tint(appearance), 1f - doorMark.crackDim() * 0.5f));
+        float width = doorMark.crackWidthFor(pitch);
+        for (int across = 0; across < appearance.squaresAcross; across++) {
+            for (int down = 0; down < appearance.squaresDown; down++) {
+                float middleX = x + (across - (appearance.squaresAcross - 1) * 0.5f) * pitch;
+                float middleY = y + (down - (appearance.squaresDown - 1) * 0.5f) * pitch;
+                for (int crack = 0; crack < cracks; crack++) {
+                    shapes.rectLine(
+                            middleX + doorMark.crackAt(crack, 0) * pitch,
+                            middleY + doorMark.crackAt(crack, 1) * pitch,
+                            middleX + doorMark.crackAt(crack, 2) * pitch,
+                            middleY + doorMark.crackAt(crack, 3) * pitch,
+                            width);
+                }
             }
         }
     }

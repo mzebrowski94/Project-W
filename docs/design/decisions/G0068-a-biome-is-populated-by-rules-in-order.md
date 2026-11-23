@@ -1,6 +1,6 @@
 # G0068: A biome is populated by rules in order, never by coordinates
 
-**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has; amended by G0082: turrets by points; amended by G0089: geysers, kept off points, nests and ways in; amended by G0110: a biome counts sites, and crates are only its houses' stock; amended by G0111: a worked site in its house first; amended by G0112: a house may hold a house pack; amended by G0113: spires after the geysers; amended by G0114: a worked site in the open after the housed ones, before the points
+**Status.** amended by G0070: a biome short of room is placed again, and its counts fit the room it has; amended by G0082: turrets by points; amended by G0089: geysers, kept off points, nests and ways in; amended by G0110: a biome counts sites, and crates are only its houses' stock; amended by G0111: a worked site in its house first; amended by G0112: a house may hold a house pack; amended by G0113: spires after the geysers; amended by G0114: a worked site in the open after the housed ones, before the points; amended by G0115: points in a biome's clearings first, and a share of its packs in them
 
 **Trigger.** Changing where anything a biome's roster or furniture counts is put down, the order it goes down in,
 what a house holds, or what happens when a rule cannot be met.

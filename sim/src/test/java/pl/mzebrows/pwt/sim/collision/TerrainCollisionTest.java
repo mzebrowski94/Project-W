@@ -165,6 +165,27 @@ class TerrainCollisionTest {
     }
 
     @Test
+    void stopsAUnitWalkedIntoAFissureAsIntoRock() {
+        Simulation simulation = on(wall(Terrain.FISSURE));
+        Entity commander = simulation.spawnCommander(50f, 45f);
+
+        steps(simulation, 60, 0f, 1f);
+
+        assertThat(commander.getComponent(Position.class).y)
+                .isLessThanOrEqualTo(WALL_BOTTOM - COMMANDER_RADIUS + TOLERANCE);
+    }
+
+    @Test
+    void stopsAProjectileThatFliesIntoAFissureAsIntoRock() {
+        Simulation simulation = on(wall(Terrain.FISSURE));
+        simulation.spawnProjectile(50f, 45f, 0f, 1f);
+
+        steps(simulation, 10, 0f, 0f);
+
+        assertThat(count(simulation, Projectile.class)).isZero();
+    }
+
+    @Test
     void letsAProjectileCarryOnOverOpenGround() {
         Simulation simulation = on(wall());
         simulation.spawnProjectile(50f, 20f, 0f, 1f);

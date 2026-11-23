@@ -26,6 +26,39 @@ public final class StripFaults {
         faults.addAll(houses(laid, grounds, rules));
         faults.addAll(entries(laid, grounds, rules));
         faults.addAll(kept(laid, grounds, rules));
+        faults.addAll(clearings(laid, grounds));
+        return faults;
+    }
+
+    /**
+     * Every biome holds as many clearings as its ground asks for, each centred inside it, and every tile of each open
+     * ground - no crag, no outcrop, nothing a ridge laid (G0115). That each is reached is {@link #reach}'s.
+     */
+    public static List<String> clearings(Strip.Laid laid, List<BiomeGround> grounds) {
+        List<String> faults = new ArrayList<>();
+        TileMap map = laid.map();
+        int[] perBiome = new int[grounds.size()];
+        for (Clearing clearing : laid.clearings()) {
+            int biome = -1;
+            for (int p = 0; p < laid.biomes().size(); p++) {
+                biome = laid.biomes().get(p).contains(clearing.col(), clearing.row()) ? p : biome;
+            }
+            if (biome < 0) {
+                faults.add(clearing + " is centred in no biome");
+                continue;
+            }
+            perBiome[biome]++;
+            String solid = firstSolid(map, clearing);
+            if (solid != null) {
+                faults.add(clearing + " has " + solid);
+            }
+        }
+        for (int p = 0; p < grounds.size(); p++) {
+            if (perBiome[p] != grounds.get(p).clearings().count()) {
+                faults.add("biome " + p + " has " + perBiome[p] + " clearings, its ground asks for "
+                        + grounds.get(p).clearings().count());
+            }
+        }
         return faults;
     }
 
@@ -327,6 +360,18 @@ public final class StripFaults {
             }
         }
         return faults;
+    }
+
+    /** The first tile of a clearing that is not open ground, named with its terrain, or null. */
+    private static @Nullable String firstSolid(TileMap map, Clearing clearing) {
+        for (int r = clearing.row() - clearing.radius(); r <= clearing.row() + clearing.radius(); r++) {
+            for (int c = clearing.col() - clearing.radius(); c <= clearing.col() + clearing.radius(); c++) {
+                if (clearing.contains(c, r) && !map.passableAtTile(c, r)) {
+                    return map.terrainAtTile(c, r) + " at (" + c + "," + r + ")";
+                }
+            }
+        }
+        return null;
     }
 
     private static void allKept(Strip.Laid laid, TileRect rect, String what, List<String> faults) {

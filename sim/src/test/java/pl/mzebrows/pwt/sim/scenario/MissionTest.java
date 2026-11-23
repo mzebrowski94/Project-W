@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Set;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import pl.mzebrows.pwt.map.Clearing;
 import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Strip;
 import pl.mzebrows.pwt.map.Terrain;
@@ -361,8 +362,8 @@ class MissionTest {
                             .engine()
                             .getEntitiesFor(Family.all(Door.class).get())
                             .size())
-                    .as("seed %d", seed)
-                    .isEqualTo(doorways);
+                    .as("seed %d, a door in every doorway and ice across every iced way", seed)
+                    .isEqualTo(doorways + mission.laid().ice().size());
             laid += doorways;
         }
         assertThat(laid).as("doorways across the seeds").isPositive();
@@ -461,6 +462,114 @@ class MissionTest {
             }
         }
         assertThat(seen).as("geysers across the seeds").isPositive();
+    }
+
+    /**
+     * Ice across every way the strip iced (ADR 0025): each a door nobody opens, its tiles solid ground from the first tick,
+     * the ground under it still open on the map - and none on a way in.
+     */
+    @Test
+    void standsIceAcrossEveryWayTheStripIcedAndNoneOnAWayIn() {
+        int iced = 0;
+        for (long seed = 0; seed < 64 && iced == 0; seed++) {
+            SimConfig config = SimConfig.defaults().withSeed(seed);
+            if (!Mission.deal(config).contains(BiomeKind.RIFT)) {
+                continue;
+            }
+            Simulation simulation = Scenarios.world(Scenarios.mission(TierKind.MEDIUM), config);
+            Mission mission = Mission.build(simulation.config(), TierKind.MEDIUM);
+            simulation.step();
+
+            for (TileRect run : mission.laid().ice()) {
+                for (int row = run.row(); row < run.endRow(); row++) {
+                    for (int col = run.col(); col < run.endCol(); col++) {
+                        assertThat(simulation.solid().passableAtTile(col, row))
+                                .as("seed %d, ice at %d,%d", seed, col, row)
+                                .isFalse();
+                        assertThat(mission.laid().map().passableAtTile(col, row))
+                                .as("seed %d, the ground under it", seed)
+                                .isTrue();
+                        assertThat(mission.laid().kept(col, row))
+                                .as("seed %d, on a way in", seed)
+                                .isFalse();
+                    }
+                }
+                iced++;
+            }
+        }
+        assertThat(iced).as("ice across the seeds").isPositive();
+    }
+
+    /** The rift's sites are in its clearings (G0115): a control point on the centre tile of each, in every rift dealt. */
+    @Test
+    void standsAControlPointAtTheCentreOfEachOfTheRiftsClearings() {
+        SimConfig shipped = SimConfig.defaults();
+        int seen = 0;
+        for (long seed = 0; seed < 64; seed++) {
+            Mission mission = Mission.build(shipped.withSeed(seed), TierKind.MEDIUM);
+            TileMap map = mission.laid().map();
+            for (int p = 0; p < mission.order().size(); p++) {
+                if (mission.order().get(p) != BiomeKind.RIFT) {
+                    continue;
+                }
+                TileRect rect = mission.laid().biomes().get(p);
+                List<Clearing> clearings = mission.laid().clearings().stream()
+                        .filter(clearing -> rect.contains(clearing.col(), clearing.row()))
+                        .toList();
+                List<Placed> points = points(mission).stream()
+                        .filter(point -> rect.contains(map.colAt(point.x()), map.rowAt(point.y())))
+                        .toList();
+
+                assertThat(clearings).as("seed %d", seed).hasSize(2);
+                for (Clearing clearing : clearings) {
+                    assertThat(points)
+                            .as("seed %d, %s", seed, clearing)
+                            .anyMatch(point ->
+                                    map.colAt(point.x()) == clearing.col() && map.rowAt(point.y()) == clearing.row());
+                }
+                seen++;
+            }
+        }
+        assertThat(seen).as("rifts across the seeds").isPositive();
+    }
+
+    /**
+     * More of the swarm in the rift's clearings than in the maze between them (G0115): loose creatures to a tile of open
+     * ground, counted over every rift dealt.
+     */
+    @Test
+    void putsMoreOfTheSwarmToATileInTheRiftsClearingsThanInItsMaze() {
+        SimConfig shipped = SimConfig.defaults();
+        long[] inClearings = new long[2];
+        long[] inMaze = new long[2];
+        for (long seed = 0; seed < 64; seed++) {
+            Mission mission = Mission.build(shipped.withSeed(seed), TierKind.MEDIUM);
+            TileMap map = mission.laid().map();
+            for (int p = 0; p < mission.order().size(); p++) {
+                if (mission.order().get(p) != BiomeKind.RIFT) {
+                    continue;
+                }
+                TileRect rect = mission.laid().biomes().get(p);
+                for (int row = rect.row(); row < rect.endRow(); row++) {
+                    for (int col = rect.col(); col < rect.endCol(); col++) {
+                        if (map.passableAtTile(col, row)) {
+                            (inClearing(mission, col, row) ? inClearings : inMaze)[0]++;
+                        }
+                    }
+                }
+                int position = p;
+                for (Placed placed : mission.placed()) {
+                    if (placed instanceof Placed.Loose && placed.biome() == position) {
+                        boolean clear = inClearing(mission, map.colAt(placed.x()), map.rowAt(placed.y()));
+                        (clear ? inClearings : inMaze)[1]++;
+                    }
+                }
+            }
+        }
+        assertThat(inClearings[0]).as("open tiles in the rifts' clearings").isPositive();
+        assertThat(inClearings[1] / (double) inClearings[0])
+                .as("loose creatures to an open tile, clearings against maze")
+                .isGreaterThan(inMaze[1] / (double) inMaze[0]);
     }
 
     /** A biome's trees number between its fewest and most, each trunk as big as a trunk may be (G0072). */
@@ -783,6 +892,15 @@ class MissionTest {
 
     private static Terrain base(SimConfig config, BiomeKind kind) {
         return config.biomes().of(kind).ground().base();
+    }
+
+    private static boolean inClearing(Mission mission, int col, int row) {
+        for (Clearing clearing : mission.laid().clearings()) {
+            if (clearing.contains(col, row)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static List<Placed> points(Mission mission) {

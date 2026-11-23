@@ -111,6 +111,8 @@ class BiomeDefTest {
                 furniture.geysersMax(),
                 furniture.spires(),
                 furniture.relics(),
+                furniture.sitesInClearings(),
+                furniture.clearingPackShare(),
                 List.of(new Stock.Pickup(kind, 1, 1)));
     }
 }

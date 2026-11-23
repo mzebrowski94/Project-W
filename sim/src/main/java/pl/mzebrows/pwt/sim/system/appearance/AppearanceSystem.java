@@ -201,6 +201,8 @@ public final class AppearanceSystem extends IteratingSystem {
         if (DOOR.has(entity)) {
             // An opened door is seen sinking, its squares shrinking to nothing (G0069). A look only.
             appearance.squareFill = 1f - DOOR.get(entity).sunk();
+            // And worn as it is broken at - ice cracking as it is chipped (ADR 0025, pillar 5).
+            appearance.wear = HEALTH.has(entity) ? 1f - HEALTH.get(entity).fraction() : 0f;
         }
     }
 

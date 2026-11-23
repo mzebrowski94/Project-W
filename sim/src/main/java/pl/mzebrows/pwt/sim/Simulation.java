@@ -535,6 +535,11 @@ public final class Simulation {
         return spawner.spawnDoor(doorway, map.tileSize());
     }
 
+    /** Spawns ice across a chokepoint of this map (G0115, ADR 0025): a door nobody opens, chipped by the squad's shots. */
+    public Entity spawnIce(TileRect run) {
+        return spawner.spawnIce(run, map.tileSize());
+    }
+
     /** Spawns an emplacement of this kind firing this cycle (G0113): a spire. */
     public Entity spawnEmplacement(EmplacementKind kind, float x, float y, Cycle cycle) {
         return spawner.spawnEmplacement(kind, x, y, cycle);

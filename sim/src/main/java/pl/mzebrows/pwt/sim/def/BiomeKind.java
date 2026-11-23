@@ -30,5 +30,11 @@ public enum BiomeKind {
      * Open sand with few obstacles - stones from a man's size to five times it, and patches of mud that slow whoever
      * wades them - runners and sludgers on it, and the snake going through all of it (G0095).
      */
-    DESERT
+    DESERT,
+    /**
+     * Frost cut into a maze by fissures, its narrow ways shut by ice to be broken through, and two clearings in it, each
+     * with a control point and more of the swarm than the maze (G0115, provisional, for review): sludgers and jaguars
+     * from nests, thumpers and sludgers on the loose.
+     */
+    RIFT
 }

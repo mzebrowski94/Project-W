@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.scenario;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import pl.mzebrows.pwt.map.Clearing;
 import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Randomness;
 import pl.mzebrows.pwt.map.Scatter;
@@ -84,6 +85,7 @@ final class Placement {
     private static final long CYCLES = 0x96E4_17C3_5AD0_B82FL;
     private static final long OPEN_BANDS = 0x3C71_A9E2_58D4_0B6FL;
     private static final long OPEN_SITES = 0xD28F_6B13_E7A0_4C95L;
+    private static final long CLEARING_SITES = 0x4A9E_2C71_B3F5_08D6L;
 
     /** Where an emplacement may stand: any ground but a thicket's, so never in a thicket blob's middle (G0113). */
     private static final EnumSet<Terrain> OFF_THICKET = offThicket();
@@ -196,6 +198,9 @@ final class Placement {
         /** A pack found no room of its own and joined others: what a host's count may do, never a tier's (G0106). */
         private boolean crowded;
 
+        /** Its ground's clearings (G0115), west to east: none in every biome but the rift. */
+        private final List<Clearing> clearings = new ArrayList<>();
+
         Biome(int position, BiomeKind kind, BiomeDef def, boolean last, Randomness stream, Randomness attempt) {
             this.position = position;
             this.kind = kind;
@@ -205,6 +210,11 @@ final class Placement {
             this.attempt = attempt;
             this.rect = laid.biomes().get(position);
             this.entries = laid.entries().get(position);
+            for (Clearing clearing : laid.clearings()) {
+                if (rect.contains(clearing.col(), clearing.row())) {
+                    clearings.add(clearing);
+                }
+            }
         }
 
         Biome place(MissionConfig.Pressure pressure) {
@@ -218,7 +228,11 @@ final class Placement {
             }
             Randomness counted = stream.derive(FURNITURE);
             Furniture furniture = def.furniture();
-            int sites = furniture.sites(counted);
+            int drawnSites = furniture.sites(counted);
+            // A biome whose sites are in its clearings has one in each, and when last one more in its approach columns
+            // (G0115); counted here, after the draw, so every other count is drawn as it was.
+            int sites =
+                    furniture.sitesInClearings() ? Math.max(drawnSites, clearings.size() + (last ? 1 : 0)) : drawnSites;
             int barrels = furniture.barrels(counted);
             int rabbits = furniture.rabbits(counted);
             int boulders = furniture.boulders(counted);
@@ -245,6 +259,9 @@ final class Placement {
             // Which bands a relic takes is the biome's own stream's too; where in its band, the attempt's (G0114).
             long taken = openSites(
                     WorkedSiteKind.RELIC, relics, sites, housed, stream.derive(OPEN_BANDS), attempt.derive(OPEN_SITES));
+            if (furniture.sitesInClearings()) {
+                taken = clearingSites(sites, taken, attempt.derive(CLEARING_SITES));
+            }
             sites(sites, taken, attempt.derive(POINTS));
             houseStock(stock, attempt.derive(STOCK));
             housePacks(pressure, stream.derive(HOUSE_PACKS), attempt.derive(HOUSED));
@@ -277,6 +294,10 @@ final class Placement {
                 // each other (G0111).
                 scatter.reserve(site.x(), site.y(), rules.pointApart());
             }
+            for (Placed point : points) {
+                // So does a point already standing in a clearing (G0115).
+                scatter.reserve(point.x(), point.y(), rules.pointApart());
+            }
             float radius = config.controlPoint().radius();
             List<TileRect> bands = bands(count);
             for (int b = 0; b < bands.size(); b++) {
@@ -289,6 +310,36 @@ final class Placement {
                 });
                 shortOf("point in band " + b, 1, got);
             }
+        }
+
+        /**
+         * A control point at the centre of each clearing (G0115): on the tile nearest it, jittered inside the tile as
+         * every scatter is, kept {@code pointApart} off any site already down; and the bit of the band each stands in,
+         * which the ordinary points then leave to it. The clearings are laid so each falls in a band of its own.
+         */
+        private long clearingSites(int count, long taken, Randomness rng) {
+            Scatter scatter = scatter(rng, 0f);
+            for (Placed site : worked) {
+                scatter.reserve(site.x(), site.y(), rules.pointApart());
+            }
+            float radius = config.controlPoint().radius();
+            List<TileRect> bands = bands(count);
+            long laid = taken;
+            for (Clearing clearing : clearings) {
+                float x = map.tileCentreX(clearing.col());
+                float y = map.tileCentreY(clearing.row());
+                int got = scatter.scatterNearest(
+                        TileRect.around(map, x, y, map.tileSize()), x, y, 1, radius, (px, py) -> {
+                            put(new Placed.Point(px, py, position));
+                            scatter.reserve(px, py, rules.pointApart());
+                        });
+                shortOf("point in the clearing at " + clearing.col() + "," + clearing.row(), 1, got);
+                int band = bandOf(bands, clearing.col());
+                if (band >= 0) {
+                    laid |= 1L << band;
+                }
+            }
+            return laid;
         }
 
         /**
@@ -581,9 +632,13 @@ final class Placement {
 
         /**
          * Each loose line in packs round anchors kept off the passes in, the start and each other: encounters, not a
-         * carpet.
+         * carpet. A biome with clearings anchors {@code clearingPackShare} of its packs inside them, dealt evenly pack by
+         * pack from the first and the clearings in turn (G0115); a pack a clearing has no room for goes anywhere.
          */
         private void packs(int[] creatures, Randomness rng) {
+            int share = def.furniture().clearingPackShare();
+            int dealt = 0;
+            int inClearings = 0;
             float spread = rules.packApart() / 2f;
             Scatter anchoring = scatter(rng, 0f);
             keepOffEntries(anchoring, position == 0 ? rules.startKeepOff() : rules.nestKeepOff());
@@ -602,11 +657,23 @@ final class Placement {
                     int size = Math.min(left, rules.packMin() + rng.nextInt(rules.packMax() - rules.packMin() + 1));
                     left -= size;
                     float[] anchor = new float[2];
-                    int found = anchoring.scatter(rect, 1, radius, (x, y) -> {
+                    Scatter.Place anchored = (x, y) -> {
                         anchor[0] = x;
                         anchor[1] = y;
                         anchoring.reserve(x, y, rules.packApart());
-                    });
+                    };
+                    int found = 0;
+                    if (!clearings.isEmpty() && inClearings * PERCENT < share * (dealt + 1)) {
+                        Clearing clearing = clearings.get(inClearings % clearings.size());
+                        anchoring.excluding((col, row) -> laid.kept(col, row) || !clearing.contains(col, row));
+                        found = anchoring.scatter(clearingBox(clearing), 1, radius, anchored);
+                        anchoring.excluding(laid::kept);
+                        inClearings += found;
+                    }
+                    dealt++;
+                    if (found == 0) {
+                        found = anchoring.scatter(rect, 1, radius, anchored);
+                    }
                     int got = 0;
                     if (found > 0) {
                         anchors.add(anchor);
@@ -625,6 +692,12 @@ final class Placement {
                     shortOf("pack of " + loose.strain(), size, got);
                 }
             }
+        }
+
+        /** The tiles round a clearing, its disc and the corners of the square it sits in. */
+        private static TileRect clearingBox(Clearing clearing) {
+            int r = clearing.radius();
+            return new TileRect(clearing.col() - r, clearing.row() - r, 2 * r + 1, 2 * r + 1);
         }
 
         /**
@@ -883,6 +956,18 @@ final class Placement {
             Scatter scatter = new Scatter(map, rng, clearance, 0f).excluding(laid::kept);
             for (Placed standing : here) {
                 scatter.reserve(standing.x(), standing.y(), radius(standing));
+            }
+            float tile = map.tileSize();
+            for (TileRect run : laid.ice()) {
+                if (!rect.contains(run.col(), run.row())) {
+                    continue;
+                }
+                // Ice is solid ground until broken (ADR 0025): nothing stands in it, as nothing stands in rock.
+                for (int row = run.row(); row < run.endRow(); row++) {
+                    for (int col = run.col(); col < run.endCol(); col++) {
+                        scatter.reserve(map.tileCentreX(col), map.tileCentreY(row), tile * HALF_DIAGONAL);
+                    }
+                }
             }
             return scatter;
         }

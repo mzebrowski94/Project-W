@@ -6,8 +6,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.BiomeGround;
+import pl.mzebrows.pwt.map.Clearings;
 import pl.mzebrows.pwt.map.Crags;
 import pl.mzebrows.pwt.map.Houses;
+import pl.mzebrows.pwt.map.Ice;
 import pl.mzebrows.pwt.map.Outcrops;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileRect;
@@ -138,7 +140,18 @@ class FinaleDefTest {
     @Test
     void refusesAFinaleWhoseWidthIsDealt() {
         BiomeGround dealt = new BiomeGround(
-                30, 38, 3, Terrain.DUST, Terrain.ASH, Houses.off(), List.of(), Crags.off(), Outcrops.off(), List.of());
+                30,
+                38,
+                3,
+                Terrain.DUST,
+                Terrain.ASH,
+                Houses.off(),
+                List.of(),
+                Crags.off(),
+                Outcrops.off(),
+                Clearings.off(),
+                Ice.off(),
+                List.of());
 
         assertThatThrownBy(() -> new FinaleDef(dealt, hold(), List.of(), List.of(), List.of()))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -214,7 +227,18 @@ class FinaleDefTest {
 
     private static BiomeGround ground(List<TileRect> pieces) {
         return new BiomeGround(
-                34, 34, 3, Terrain.DUST, Terrain.ASH, Houses.off(), List.of(), Crags.off(), Outcrops.off(), pieces);
+                34,
+                34,
+                3,
+                Terrain.DUST,
+                Terrain.ASH,
+                Houses.off(),
+                List.of(),
+                Crags.off(),
+                Outcrops.off(),
+                Clearings.off(),
+                Ice.off(),
+                pieces);
     }
 
     private static Hold hold() {
