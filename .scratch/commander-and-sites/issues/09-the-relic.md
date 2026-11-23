@@ -1,7 +1,7 @@
 # The desert relic and its wardens
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: 05 (sites), 06 (the worked site), 08 (emplacements)
 Spec: [spec.md](../spec.md) section 10
