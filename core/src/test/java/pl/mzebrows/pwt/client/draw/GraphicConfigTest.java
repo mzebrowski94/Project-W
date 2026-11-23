@@ -241,6 +241,7 @@ class GraphicConfigTest {
                         d.siteRing(),
                         d.mainframe(),
                         d.spire(),
+                        d.relic(),
                         d.burst(),
                         d.daze(),
                         d.tree(),

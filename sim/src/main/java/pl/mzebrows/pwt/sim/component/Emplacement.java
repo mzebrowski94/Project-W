@@ -9,7 +9,7 @@ import pl.mzebrows.pwt.sim.def.EmplacementKind;
  * An **emplacement** (G0113): a standing shooter nobody crews, and where it is in its cycle. The cycle was dealt when it
  * was put down and is held here, so a snapshot carries it (ADR 0014); nothing ever deals it again, so it can be learnt
  * (pillar 5). While it is awake it fires the points of its next step every period and moves on; asleep, its clock and
- * its cycle both stand still.
+ * its cycle both stand still. A guard (G0114) names the worked site whose attempt wakes it.
  */
 public final class Emplacement implements Component, Pool.Poolable {
 
@@ -37,6 +37,12 @@ public final class Emplacement implements Component, Pool.Poolable {
     /** Whether it is firing: set each tick from the men near it, or - with no wake radius - by what wakes it. */
     public boolean awake;
 
+    /**
+     * The worked site it guards, by handle (ADR 0016), or nobody (G0114): with no wake radius, that site's first attempt
+     * wakes it and its taking puts it to sleep for good.
+     */
+    public long guards = Handle.NOBODY;
+
     /** Sets its kind, its cycle and its clock, asleep and a whole period from its first step, for fluent spawning. */
     public Emplacement set(EmplacementKind newKind, Cycle cycle, int newPeriodTicks, float newWakeRadius) {
         this.kind = newKind;
@@ -47,6 +53,13 @@ public final class Emplacement implements Component, Pool.Poolable {
         this.remainingTicks = newPeriodTicks;
         this.wakeRadius = newWakeRadius;
         this.awake = false;
+        this.guards = Handle.NOBODY;
+        return this;
+    }
+
+    /** Sets the worked site it guards, by handle, and returns this component (G0114). */
+    public Emplacement guarding(long site) {
+        this.guards = site;
         return this;
     }
 
@@ -65,5 +78,6 @@ public final class Emplacement implements Component, Pool.Poolable {
         remainingTicks = 0;
         wakeRadius = 0f;
         awake = false;
+        guards = Handle.NOBODY;
     }
 }

@@ -99,6 +99,7 @@ import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.AiChance;
 import pl.mzebrows.pwt.sim.def.BurrowDef;
 import pl.mzebrows.pwt.sim.def.Cycle;
+import pl.mzebrows.pwt.sim.def.CycleDef;
 import pl.mzebrows.pwt.sim.def.EmplacementDef;
 import pl.mzebrows.pwt.sim.def.EmplacementKind;
 import pl.mzebrows.pwt.sim.def.Harm;
@@ -955,7 +956,32 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(true, false));
         entity.add(engine.createComponent(Appearance.class).set(def.look()));
         admit(entity);
+        guard(entity, def.guards(), x, y);
         return entity;
+    }
+
+    /**
+     * Puts a worked site's guards down round it (G0114): one on each diagonal, its offset from the middle, each firing
+     * its kind's fixed volley and guarding the site by its handle - so a mission and a scenario stand the same ring.
+     */
+    private void guard(Entity site, WorkedSiteDef.Guards guards, float x, float y) {
+        if (!guards.on()) {
+            return;
+        }
+        if (!(config.emplacement(guards.kind()).cycle() instanceof CycleDef.Volley volley)) {
+            throw new IllegalStateException("a guard fires a fixed volley (G0114): " + guards.kind());
+        }
+        long handle = Handles.of(site);
+        // The odd compass points are the diagonals: north-east, south-east, south-west, north-west.
+        for (int point = 1; point < Cycle.POINTS; point += 2) {
+            spawnEmplacement(
+                            guards.kind(),
+                            x + EmplacementDef.bearingX(point) * guards.offset(),
+                            y + EmplacementDef.bearingY(point) * guards.offset(),
+                            volley.cycle())
+                    .getComponent(Emplacement.class)
+                    .guarding(handle);
+        }
     }
 
     /**

@@ -184,6 +184,7 @@ public record SimConfig(
         }
         UpgradeDef.checkCatalogue(draft, stats, upgrades, pickups);
         BiomeDef.checkStock(biomes, pickups);
+        WorkedSiteDef.checkGuards(workedSites, emplacements);
     }
 
     /** The definition of one strain, for a system or a scenario that needs its numbers. */

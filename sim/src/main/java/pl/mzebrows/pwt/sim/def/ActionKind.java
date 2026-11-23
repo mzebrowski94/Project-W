@@ -34,13 +34,19 @@ public enum ActionKind {
      * Download the mainframe he is standing at (G0111): a hold, on a door's rules - the work is the mainframe's, one
      * tick of it a tick however many hands, and lost the moment he lets go, steps away, dashes or takes a wound.
      */
-    DOWNLOAD;
+    DOWNLOAD,
+    /**
+     * Extract the relic he is standing at (G0114): a download's hold under another name - the work is the relic's, lost
+     * as a download's is.
+     */
+    EXTRACT;
 
     /**
      * Whether this works a site (G0111): a hold whose work is the site's, and whose prompt says what is being done
-     * while it is - {@code DECRYPTING…} at a mainframe. Every worked site's action is one.
+     * while it is - {@code DECRYPTING…} at a mainframe, {@code EXTRACTING…} at a relic. Every worked site's action is
+     * one.
      */
     public boolean worksASite() {
-        return this == DOWNLOAD;
+        return this == DOWNLOAD || this == EXTRACT;
     }
 }

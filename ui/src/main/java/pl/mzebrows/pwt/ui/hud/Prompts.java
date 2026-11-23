@@ -96,6 +96,7 @@ public final class Prompts {
                     case OPEN_CRATE -> "ui.action.OPEN_CRATE";
                     case OPEN_DOOR -> "ui.action.OPEN_DOOR";
                     case DOWNLOAD -> working(slot) ? "ui.action.DOWNLOAD.working" : "ui.action.DOWNLOAD";
+                    case EXTRACT -> working(slot) ? "ui.action.EXTRACT.working" : "ui.action.EXTRACT";
                 };
         };
     }

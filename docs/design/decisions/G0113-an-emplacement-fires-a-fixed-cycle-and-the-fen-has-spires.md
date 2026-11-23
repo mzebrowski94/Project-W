@@ -1,6 +1,6 @@
 # G0113: An emplacement fires a fixed cycle, and the fen has spires
 
-**Status.** accepted
+**Status.** amended by G0114: a warden is woken by its relic's first attempt and silenced by its taking
 
 **Trigger.** A standing shooter nobody crews - the fen's spire now, the desert relic's warden next (ticket 09, G0114) -
 and where a fen stands its spires.

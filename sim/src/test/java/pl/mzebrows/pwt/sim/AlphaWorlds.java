@@ -779,7 +779,25 @@ public final class AlphaWorlds {
 
     public static final int MAINFRAME_CHANCE = 50;
 
-    /** Every worked site (G0111): the mainframe, small numbers. */
+    /** A relic as big as the shipped one, its wardens as far off, and as quick to extract as the mainframe (G0114). */
+    public static final float RELIC_RADIUS = 1.5f;
+
+    public static final float RELIC_WORK_SECONDS = 1f;
+
+    /** Twice the mainframe's, as the shipped relic's is twice the shipped mainframe's. */
+    public static final float RELIC_ROUSE_RADIUS = 52f;
+
+    public static final float RELIC_ROOM = 7f;
+
+    public static final float RELIC_WARDEN_OFFSET = 5f;
+
+    public static final int RELIC_HATCH_MIN = 2;
+
+    public static final int RELIC_HATCH_MAX = 3;
+
+    public static final float RELIC_HATCH_RADIUS = 14f;
+
+    /** Every worked site (G0111): the mainframe and the relic, small numbers. */
     public static Defs<WorkedSiteKind, WorkedSiteDef> workedSites() {
         return Defs.<WorkedSiteKind, WorkedSiteDef>builder(WorkedSiteKind.class)
                 .put(
@@ -791,7 +809,26 @@ public final class AlphaWorlds {
                                 MAINFRAME_CHANCE,
                                 true,
                                 ActionKind.DOWNLOAD,
-                                Look.MAINFRAME))
+                                Look.MAINFRAME,
+                                0f,
+                                WorkedSiteDef.Guards.off(),
+                                WorkedSiteDef.Hatch.off(),
+                                true))
+                .put(
+                        WorkedSiteKind.RELIC,
+                        new WorkedSiteDef(
+                                RELIC_RADIUS,
+                                RELIC_WORK_SECONDS,
+                                RELIC_ROUSE_RADIUS,
+                                0,
+                                false,
+                                ActionKind.EXTRACT,
+                                Look.RELIC,
+                                RELIC_ROOM,
+                                new WorkedSiteDef.Guards(EmplacementKind.WARDEN, RELIC_WARDEN_OFFSET),
+                                new WorkedSiteDef.Hatch(
+                                        UnitKind.SNAKE, RELIC_HATCH_MIN, RELIC_HATCH_MAX, RELIC_HATCH_RADIUS),
+                                false))
                 .build();
     }
 
@@ -807,7 +844,12 @@ public final class AlphaWorlds {
 
     public static final int SPIRE_CYCLE_MOST = 6;
 
-    /** Every emplacement (G0113): the spire, with a wake a small arena can stand outside. */
+    public static final float WARDEN_RADIUS = 1.2f;
+
+    /** Round, so a test can step whole periods: the shipped 0.75. */
+    public static final float WARDEN_PERIOD = 0.75f;
+
+    /** Every emplacement (G0113): the spire, with a wake a small arena can stand outside, and the relic's warden. */
     public static Defs<EmplacementKind, EmplacementDef> emplacements() {
         return Defs.<EmplacementKind, EmplacementDef>builder(EmplacementKind.class)
                 .put(
@@ -819,6 +861,15 @@ public final class AlphaWorlds {
                                 SPIRE_PERIOD,
                                 SPIRE_WAKE_RADIUS,
                                 new CycleDef.Dealt(SPIRE_CYCLE_FEWEST, SPIRE_CYCLE_MOST, 1, 4)))
+                .put(
+                        EmplacementKind.WARDEN,
+                        new EmplacementDef(
+                                WARDEN_RADIUS,
+                                Look.WARDEN,
+                                WeaponKind.WARDEN_SHOT,
+                                WARDEN_PERIOD,
+                                0f,
+                                new CycleDef.Volley(List.of(0, 90, 180, 270))))
                 .build();
     }
 

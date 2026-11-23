@@ -15,6 +15,8 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
 import pl.mzebrows.pwt.sim.component.Action;
 import pl.mzebrows.pwt.sim.component.Body;
+import pl.mzebrows.pwt.sim.component.Emplacement;
+import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
@@ -22,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.WorkedSite;
+import pl.mzebrows.pwt.sim.def.WorkedSiteDef;
 import pl.mzebrows.pwt.sim.system.query.Drivers;
 import pl.mzebrows.pwt.sim.system.query.Reach;
 
@@ -41,8 +44,13 @@ import pl.mzebrows.pwt.sim.system.query.Reach;
  * it goes to the first, a tie to the lower handle, and stays his while he is fit to work it. The others stand round it
  * and watch their sectors, which is {@code TrooperObjective}'s.
  *
+ * <p><strong>Its guards wake on its first attempt and sleep once it is taken</strong> (G0114): the emplacements that
+ * name it by handle start firing the tick its work first goes from none to some, and fire on whether anybody works
+ * it or not; the tick it is taken they stop for good.
+ *
  * <p><strong>Taken through the one step</strong> (G0110): {@link Sites#taken} marks it, credits the commanders at
- * arm's length and lays the caches, the medkit and the crates. Never worked again.
+ * arm's length and lays the caches, the medkit and the crates. Never worked again. Then its kind's hatch comes up
+ * round it through {@link Brood}, outside its room and off the men (G0114).
  *
  * <p>After {@code ActionSystem}, which puts a commander's hands to it this tick, and after {@code DamageSystem}, which
  * wounds whoever was working it - straight after {@code DoorSystem}, the other thing worked on those rules.
@@ -58,8 +66,12 @@ public final class WorkedSiteSystem extends EntitySystem {
     private static final ComponentMapper<Vitality> VITALITY = ComponentMapper.getFor(Vitality.class);
     private static final ComponentMapper<Handle> HANDLE = ComponentMapper.getFor(Handle.class);
 
+    private static final ComponentMapper<Emplacement> EMPLACEMENT = ComponentMapper.getFor(Emplacement.class);
+
     private final SimConfig config;
     private final Sites sites;
+    private final Brood brood;
+    private final Rng rng;
 
     /** How far past arm's length of a site a commander counts as at it when it is taken: his own body. */
     private final float commanderRadius;
@@ -67,6 +79,8 @@ public final class WorkedSiteSystem extends EntitySystem {
     private ImmutableArray<Entity> worked = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> watchers = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> guards = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> quarry = new ImmutableArray<>(new Array<>());
 
     /**
      * @param rng where what a taken site leaves falls - the stream a taken point's falls from
@@ -75,6 +89,8 @@ public final class WorkedSiteSystem extends EntitySystem {
     public WorkedSiteSystem(SimConfig config, TileMap map, Spawner spawner, Rng rng, int capacity) {
         this.config = config;
         this.sites = new Sites(config, map, spawner, rng, capacity);
+        this.brood = new Brood(map, spawner, config.nest().hatchKeepOff());
+        this.rng = rng;
         this.commanderRadius = config.commander().radius();
     }
 
@@ -88,6 +104,8 @@ public final class WorkedSiteSystem extends EntitySystem {
                         .get());
         watchers = engine.getEntitiesFor(
                 Family.all(Perception.class, Position.class).get());
+        guards = engine.getEntitiesFor(Family.all(Emplacement.class).get());
+        quarry = engine.getEntitiesFor(Family.all(Faction.class, Position.class).get());
         sites.addedToEngine(engine);
     }
 
@@ -103,16 +121,42 @@ public final class WorkedSiteSystem extends EntitySystem {
             boolean fresh = site.workedTicks == 0;
             work(site, trooperAt(entity, site));
             Position at = POSITION.get(entity);
+            WorkedSiteDef def = config.workedSite(site.kind);
             if (fresh && site.workedTicks > 0) {
                 // Through Rouse, shared with the point and the nest (G0016).
-                Rouse.within(watchers, at.x, at.y, config.workedSite(site.kind).rouseRadius());
+                Rouse.within(watchers, at.x, at.y, def.rouseRadius());
+                wake(Handles.of(entity), true);
             }
             if (site.workedTicks >= site.workTicks) {
                 site.workedTicks = 0;
                 site.trooper = Handle.NOBODY;
                 sites.taken(
                         entity, at, BODY.get(entity).radius + config.action().reach() + commanderRadius, true);
+                wake(Handles.of(entity), false);
+                hatch(def.hatch(), at, def.clearing());
             }
+        }
+    }
+
+    /**
+     * Wakes, or puts to sleep, every emplacement guarding this site (G0114). Only on the tick of an attempt or a taking,
+     * never every tick.
+     */
+    private void wake(long site, boolean awake) {
+        for (int i = 0; i < guards.size(); i++) {
+            Emplacement guard = EMPLACEMENT.get(guards.get(i));
+            if (guard.guards == site) {
+                guard.awake = awake;
+            }
+        }
+    }
+
+    /** What comes up round a site the tick it is taken (G0114): outside its room, off the men. */
+    private void hatch(WorkedSiteDef.Hatch hatch, Position at, float room) {
+        int count = hatch.max() > 0 ? hatch.count(rng) : 0;
+        if (count > 0) {
+            float radius = config.unit(hatch.strain()).radius();
+            brood.hatch(rng, hatch.strain(), radius, 0, at, room, hatch.radius(), count, quarry);
         }
     }
 
