@@ -50,7 +50,7 @@ public final class Emplacement implements Component, Pool.Poolable {
         return this;
     }
 
-    /** The compass points its next step fires along, one bit a point: what the renderer's tell shows. */
+    /** The compass points its next step fires along, one bit a point. */
     public int nextPoints() {
         return length <= 0 ? 0 : Cycle.points(steps, next);
     }

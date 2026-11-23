@@ -12,7 +12,9 @@ import pl.mzebrows.pwt.sim.Rng;
 /** An emplacement's cycle is dealt once from the stream it is put down from, and a volley is not dealt at all (G0113). */
 class CycleDefTest {
 
-    private static final CycleDef.Dealt FOUR_TO_SIX = new CycleDef.Dealt(4, 6);
+    private static final CycleDef.Dealt FOUR_TO_SIX = new CycleDef.Dealt(4, 6, 1, 4);
+
+    private static final int DIRECTIONS = Cycle.NORTH | Cycle.EAST | Cycle.SOUTH | Cycle.WEST;
 
     private static final int SEEDS = 64;
 
@@ -30,21 +32,39 @@ class CycleDefTest {
     }
 
     @Test
-    void dealsBetweenItsFewestAndMostDifferentCompassPointsOneAStep() {
+    void dealsBetweenItsFewestAndMostStepsEachOneToAllFourDirections() {
         for (long seed = 0; seed < SEEDS; seed++) {
             Cycle cycle = FOUR_TO_SIX.deal(new Rng(seed));
 
             assertThat(cycle.length()).isBetween(4, 6);
-            int seen = 0;
             for (int step = 0; step < cycle.length(); step++) {
                 int points = cycle.points(step);
                 assertThat(Integer.bitCount(points))
                         .as("seed %d step %d", seed, step)
-                        .isOne();
-                assertThat(seen & points).as("seed %d step %d", seed, step).isZero();
-                seen |= points;
+                        .isBetween(1, 4);
+                assertThat(points & ~DIRECTIONS)
+                        .as("seed %d step %d", seed, step)
+                        .isZero();
             }
         }
+    }
+
+    @Test
+    void dealsEveryCountOfDirectionsFromOneToFourOverManySteps() {
+        Set<Integer> counts = new HashSet<>();
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Cycle cycle = FOUR_TO_SIX.deal(new Rng(seed));
+            for (int step = 0; step < cycle.length(); step++) {
+                counts.add(Integer.bitCount(cycle.points(step)));
+            }
+        }
+
+        assertThat(counts).containsExactlyInAnyOrder(1, 2, 3, 4);
+    }
+
+    @Test
+    void refusesADealtStepOfMoreThanTheFourDirections() {
+        assertThatThrownBy(() -> new CycleDef.Dealt(4, 6, 1, 5)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -61,7 +81,7 @@ class CycleDefTest {
     }
 
     @Test
-    void refusesADealtCycleLongerThanTheCompass() {
-        assertThatThrownBy(() -> new CycleDef.Dealt(4, 9)).isInstanceOf(IllegalArgumentException.class);
+    void refusesADealtCycleLongerThanACycleHolds() {
+        assertThatThrownBy(() -> new CycleDef.Dealt(4, 9, 1, 4)).isInstanceOf(IllegalArgumentException.class);
     }
 }

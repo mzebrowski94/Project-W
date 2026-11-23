@@ -39,9 +39,20 @@ final class SpireFenScenario implements Scenario {
 
     /**
      * Their cycles, one a spire, laid by hand where a mission deals them - so the scenario is the same every time it is
-     * judged. Compass points, north 0, clockwise: four, five and six bearings.
+     * judged. Four, five and six steps, each one to all four of the directions.
      */
-    private static final Cycle[] CYCLES = {Cycle.of(0, 2, 4, 6), Cycle.of(1, 5, 3, 7, 0), Cycle.of(6, 4, 2, 0, 5, 1)};
+    private static final Cycle[] CYCLES = {
+        Cycle.of(
+                Cycle.NORTH, Cycle.EAST | Cycle.WEST, Cycle.SOUTH, Cycle.NORTH | Cycle.EAST | Cycle.SOUTH | Cycle.WEST),
+        Cycle.of(Cycle.EAST, Cycle.NORTH | Cycle.SOUTH, Cycle.WEST, Cycle.EAST | Cycle.SOUTH | Cycle.WEST, Cycle.NORTH),
+        Cycle.of(
+                Cycle.SOUTH | Cycle.WEST,
+                Cycle.NORTH,
+                Cycle.EAST | Cycle.WEST,
+                Cycle.NORTH | Cycle.EAST | Cycle.SOUTH,
+                Cycle.WEST,
+                Cycle.NORTH | Cycle.EAST | Cycle.SOUTH | Cycle.WEST)
+    };
 
     @Override
     public String name() {

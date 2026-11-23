@@ -8,7 +8,7 @@ and where a fen stands its spires.
 **Enforced by.** `EmplacementTest` (one step a period along the next bearing, round the cycle and back to its start,
 idle and holding its place with nobody near, its shot wounds a commander and passes an alien, never an enemy to clear
 nor a trooper's target, a volley fires every bearing together once something wakes it); `CycleDefTest` (one seed one
-cycle, others others; four to six different compass points one a step; a volley one step; a bearing that is no compass
+cycle, others others; four to six steps of one to four of the four directions; a volley one step; a bearing that is no compass
 point refused); `MissionTest.standsItsSpiresInEveryFenAndNowhereElseEachWithTheCycleItsSeedDeals`,
 `.spawnsAFensSpiresAsEmplacements`; `MissionSweepTest.holdsEveryMissionToTheRules` through
 `MissionFaults.emplacements`; `SpireFenScenarioTest`; `SystemOrderTest`.
@@ -24,8 +24,9 @@ under *Provisional* are the implementer's, taken in an AFK run, for review.
   `EmplacementDef`, a `sim.emplacement.<kind>` block each (ADR 0008): `radius`, `look`, `gun`, `periodSeconds`,
   `wakeRadius` and `cycle`. One component, `Emplacement`, and one system, `EmplacementSystem`, for every kind; a
   warden is one more constant and block.
-- **Its cycle** is either *dealt* - `cycle=dealt 4 6`, that many different compass points, dealt when the level is
-  built from the placing stream and fired one a step - or a *volley* - `cycle=volley 0,90,180,270`, every bearing named
+- **Its cycle** is either *dealt* - `cycle=dealt 4 6 1 4`, four to six steps, each one to four different ones of the
+  four directions (N, E, S, W) fired together, dealt when the level is built from the placing stream (Mateusz,
+  2026-11-22, after playing) - or a *volley* - `cycle=volley 0,90,180,270`, every bearing named
   fired together every step. The cycle is held on the entity, packed into one number a snapshot writes (ADR 0014), and
   **never dealt again**: no `Rng` after placement.
 - **It fires** one shot of its gun along each bearing of its current step, through `Guns.volley`, every
@@ -41,7 +42,7 @@ under *Provisional* are the implementer's, taken in an AFK run, for review.
   the ledger changes (`docs/simulation-order.md`).
 
 **The spire.** The fen's, `sim.biome.fen.furniture.spires=3 5`, and no other biome's (`0 0`). `radius=1.4`,
-`periodSeconds=1`, `wakeRadius=45`, `cycle=dealt 4 6`, gun `spire_shot`: `projectileRadius=0.15` (half the sidearm's),
+`periodSeconds=1`, `wakeRadius=45`, `cycle=dealt 4 6 1 4`, gun `spire_shot`: `projectileRadius=0.15` (half the sidearm's),
 `projectileRange=30`, `projectileSpeed=25`, `harm=wound`. A placement pass after the geysers: as a boulder stands -
 `rockMargin` off rock and everything already standing - `emplacementKeepOff` off every way in (the start's
 `startKeepOff` in a first biome), every nest and the finale's watch, and off every site's edge; never on a thicket's
@@ -61,17 +62,17 @@ damage race, and a squad would stop for it.
 
 **Provisional, for review (AFK run).**
 
-1. **The cycle grammar:** `dealt <fewest> <most>` and `volley <bearings>` with the bearings separated by **commas**
+1. **The cycle grammar:** `dealt <fewest steps> <most steps> <fewest directions> <most directions>` and `volley <bearings>` with the bearings separated by **commas**
    (`volley 0,90,180,270`), because a record of one argument is read from the rest of the line and a whole-number list
    is comma-separated in every config here. Turned down: spaces (`volley 0 90 180 270`), which would need a reading
    of its own in `ConfigBinder`.
-2. **A dealt cycle's bearings are all different**, a partial shuffle of the eight. Turned down: repeats allowed, which
-   deals cycles like N, N, N, E that read as broken.
-3. **Bearings are the eight compass points**, a volley's too (a multiple of 45 degrees or refused), so one packed form
-   serves both. Turned down: free angles for a volley.
-4. **The next-bearing tell**: a short tick on the spire's edge at each bearing its next step fires along, always shown,
-   read off `Emplacement` by the renderer (`graphic.spire.*`). Turned down: no tell; a tell only while awake; turning a
-   `Facing` towards it (a second writer of `Facing`).
+2. **A dealt step's directions are all different** (a partial shuffle of the four); one step may repeat another.
+   Superseded: a cycle of different compass points, one a step - Mateusz, 2026-11-22: a step fires one to all four
+   directions.
+3. **A dealt cycle fires along the four directions only**; a volley's bearings are any of the eight compass points (a
+   multiple of 45 degrees or refused), so one packed form serves both. Turned down: free angles for a volley.
+4. **No tell**: nothing on the spire shows where it fires next (Mateusz, 2026-11-22, after playing: no tick on its
+   edge); the pattern is learnt by watching its beads. Superseded: a tick on the edge at each bearing of the next step.
 5. **Woken by a man on his feet** - a casualty or a body in its throes wakes nothing. Turned down: any man on the field.
 6. **Asleep, its clock stands still too**, so the first shot comes a whole period after waking. Turned down: a clock
    that runs while asleep, so a waking spire may fire at once.

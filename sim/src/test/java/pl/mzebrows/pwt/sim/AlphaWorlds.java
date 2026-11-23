@@ -818,7 +818,7 @@ public final class AlphaWorlds {
                                 WeaponKind.SPIRE_SHOT,
                                 SPIRE_PERIOD,
                                 SPIRE_WAKE_RADIUS,
-                                new CycleDef.Dealt(SPIRE_CYCLE_FEWEST, SPIRE_CYCLE_MOST)))
+                                new CycleDef.Dealt(SPIRE_CYCLE_FEWEST, SPIRE_CYCLE_MOST, 1, 4)))
                 .build();
     }
 
