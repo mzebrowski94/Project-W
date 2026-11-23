@@ -240,6 +240,12 @@ public final class Appearance implements Component, Pool.Poolable {
     /** How much of each square is drawn, in {@code [0, 1]}: one whole, shrinking to nothing as a door sinks. */
     public float squareFill;
 
+    /**
+     * How worn what is drawn as squares is, in {@code [0, 1]}: none whole, towards one as its health runs out - a door
+     * leapt at, ice chipped (ADR 0025) - so how near it is to breaking is seen on it (pillar 5).
+     */
+    public float wear;
+
     /** Sets the look and returns this component, for fluent spawning. */
     public Appearance set(Look newLook) {
         return set(newLook, 0);
@@ -311,5 +317,6 @@ public final class Appearance implements Component, Pool.Poolable {
         squaresDown = 0;
         squarePitch = 0f;
         squareFill = 0f;
+        wear = 0f;
     }
 }

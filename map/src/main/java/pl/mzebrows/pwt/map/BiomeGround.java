@@ -17,6 +17,7 @@ import java.util.List;
  * @param fallback what neighbour ground is when there is no other biome's base to take
  * @param clearings round stretches of its base kept clear of crags and outcrops (G0115); off in every biome but the
  *     rift
+ * @param ice how much of its chokepoints are shut by ice, laid last (G0115, ADR 0025); off in every biome but the rift
  * @param pieces fixed rock, rects of tiles offset from the biome's {@link Strip#anchor}, laid before every coat - a
  *     finale's set piece (G0064); empty for every dealt biome, whose rock is its coats
  */
@@ -31,6 +32,7 @@ public record BiomeGround(
         Crags crags,
         Outcrops outcrops,
         Clearings clearings,
+        Ice ice,
         List<TileRect> pieces) {
 
     public BiomeGround {

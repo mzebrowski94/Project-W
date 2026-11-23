@@ -126,7 +126,7 @@ public final class Reach {
             case STABILISE -> Life.casualty(candidate);
             case MAN_TURRET -> !TURRET.get(candidate).crewed;
             case OPEN_CRATE -> !CRATE.get(candidate).open() && !DEAD.has(candidate);
-            case OPEN_DOOR -> !DOOR.get(candidate).open && !DEAD.has(candidate);
+            case OPEN_DOOR -> DOOR.get(candidate).opensByHand() && !DOOR.get(candidate).open && !DEAD.has(candidate);
             case DOWNLOAD, EXTRACT -> WORKED.get(candidate).action == offer && !SITE.get(candidate).taken;
             case NONE, LEAVE_TURRET -> throw new IllegalArgumentException("nothing is reached for to " + offer);
         };

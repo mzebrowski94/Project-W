@@ -73,6 +73,8 @@ public final class Strip {
 
     private final List<Clearing> clearings = new ArrayList<>();
 
+    private final List<TileRect> ice = new ArrayList<>();
+
     /** Where each biome is entered from the west: the start for the first, each pass's mouth for the rest. */
     private final List<List<TileRect>> entries = new ArrayList<>();
 
@@ -115,6 +117,7 @@ public final class Strip {
         private final List<TileRect> biomes;
         private final List<House> houses;
         private final List<Clearing> clearings;
+        private final List<TileRect> ice;
         private final List<List<TileRect>> entries;
         private final boolean[] kept;
 
@@ -123,12 +126,14 @@ public final class Strip {
                 List<TileRect> biomes,
                 List<House> houses,
                 List<Clearing> clearings,
+                List<TileRect> ice,
                 List<List<TileRect>> entries,
                 boolean[] kept) {
             this.map = map;
             this.biomes = List.copyOf(biomes);
             this.houses = List.copyOf(houses);
             this.clearings = List.copyOf(clearings);
+            this.ice = List.copyOf(ice);
             this.entries = entries.stream().map(List::copyOf).toList();
             this.kept = kept.clone();
         }
@@ -150,6 +155,15 @@ public final class Strip {
         /** Every clearing laid (G0115), biome by biome west to east: open ground no crag was laid in, reached. */
         public List<Clearing> clearings() {
             return clearings;
+        }
+
+        /**
+         * Every run of tiles ice stands across (G0115, ADR 0025), biome by biome: a chokepoint of a maze, its ground its
+         * own and counted open by every check here, for the ice can always be broken. What stands there is {@code
+         * sim}'s.
+         */
+        public List<TileRect> ice() {
+            return ice;
         }
 
         /**
@@ -227,7 +241,7 @@ public final class Strip {
         strip.floors();
         strip.seal();
         strip.houses.sort(Comparator.comparingInt(house -> house.walls().col()));
-        return new Laid(strip.map.build(), rects, strip.houses, strip.clearings, strip.entries, strip.apron);
+        return new Laid(strip.map.build(), rects, strip.houses, strip.clearings, strip.ice, strip.entries, strip.apron);
     }
 
     /**
@@ -646,6 +660,7 @@ public final class Strip {
                     at[p].derive(COATS));
             houses.addAll(laid.houses());
             clearings.addAll(laid.clearings());
+            ice.addAll(laid.ice());
         }
     }
 

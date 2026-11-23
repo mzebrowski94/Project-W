@@ -362,8 +362,8 @@ class MissionTest {
                             .engine()
                             .getEntitiesFor(Family.all(Door.class).get())
                             .size())
-                    .as("seed %d", seed)
-                    .isEqualTo(doorways);
+                    .as("seed %d, a door in every doorway and ice across every iced way", seed)
+                    .isEqualTo(doorways + mission.laid().ice().size());
             laid += doorways;
         }
         assertThat(laid).as("doorways across the seeds").isPositive();
@@ -462,6 +462,42 @@ class MissionTest {
             }
         }
         assertThat(seen).as("geysers across the seeds").isPositive();
+    }
+
+    /**
+     * Ice across every way the strip iced (ADR 0025): each a door nobody opens, its tiles solid ground from the first tick,
+     * the ground under it still open on the map - and none on a way in.
+     */
+    @Test
+    void standsIceAcrossEveryWayTheStripIcedAndNoneOnAWayIn() {
+        int iced = 0;
+        for (long seed = 0; seed < 64 && iced == 0; seed++) {
+            SimConfig config = SimConfig.defaults().withSeed(seed);
+            if (!Mission.deal(config).contains(BiomeKind.RIFT)) {
+                continue;
+            }
+            Simulation simulation = Scenarios.world(Scenarios.mission(TierKind.MEDIUM), config);
+            Mission mission = Mission.build(simulation.config(), TierKind.MEDIUM);
+            simulation.step();
+
+            for (TileRect run : mission.laid().ice()) {
+                for (int row = run.row(); row < run.endRow(); row++) {
+                    for (int col = run.col(); col < run.endCol(); col++) {
+                        assertThat(simulation.solid().passableAtTile(col, row))
+                                .as("seed %d, ice at %d,%d", seed, col, row)
+                                .isFalse();
+                        assertThat(mission.laid().map().passableAtTile(col, row))
+                                .as("seed %d, the ground under it", seed)
+                                .isTrue();
+                        assertThat(mission.laid().kept(col, row))
+                                .as("seed %d, on a way in", seed)
+                                .isFalse();
+                    }
+                }
+                iced++;
+            }
+        }
+        assertThat(iced).as("ice across the seeds").isPositive();
     }
 
     /** The rift's sites are in its clearings (G0115): a control point on the centre tile of each, in every rift dealt. */

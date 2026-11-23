@@ -1832,6 +1832,7 @@ public final class AlphaWorlds {
                 SimConfig.defaults().biomes(),
                 SimConfig.defaults().finales(),
                 SimConfig.defaults().door(),
+                SimConfig.defaults().ice(),
                 new SimConfig.MedkitConfig(0),
                 new SimConfig.CrateConfig(CRATE_FEWEST, CRATE_MOST),
                 new SimConfig.PopConfig(POP_SECONDS));

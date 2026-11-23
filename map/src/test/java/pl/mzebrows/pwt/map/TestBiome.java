@@ -23,6 +23,7 @@ record TestBiome(String name, BiomeGround ground) {
                     Crags.off(),
                     new Outcrops(0.006f, 1, 2, 1, 1, 0f, 0f),
                     Clearings.off(),
+                    Ice.off(),
                     List.of()));
 
     static final TestBiome QUARRY = new TestBiome(
@@ -38,6 +39,7 @@ record TestBiome(String name, BiomeGround ground) {
                     Crags.off(),
                     new Outcrops(0.10f, 4, 9, 2, 3, 0.7f, 0f),
                     Clearings.off(),
+                    Ice.off(),
                     List.of()));
 
     static final TestBiome BRAKE = new TestBiome(
@@ -55,6 +57,7 @@ record TestBiome(String name, BiomeGround ground) {
                     Crags.off(),
                     new Outcrops(0.015f, 2, 4, 1, 2, 0.3f, 0f),
                     Clearings.off(),
+                    Ice.off(),
                     List.of()));
 
     static final TestBiome ANTHILL = new TestBiome(
@@ -70,6 +73,7 @@ record TestBiome(String name, BiomeGround ground) {
                     new Crags(0.05f, 4, Terrain.ROCK),
                     Outcrops.off(),
                     Clearings.off(),
+                    Ice.off(),
                     List.of()));
 
     static final TestBiome BADLANDS = new TestBiome(
@@ -85,6 +89,7 @@ record TestBiome(String name, BiomeGround ground) {
                     new Crags(0.13f, 4, Terrain.ROCK),
                     new Outcrops(0.02f, 2, 4, 1, 2, 0.3f, 0f),
                     Clearings.off(),
+                    Ice.off(),
                     List.of()));
 
     static final List<TestBiome> FIVE = List.of(PLAIN, QUARRY, BRAKE, ANTHILL, BADLANDS);
@@ -103,6 +108,7 @@ record TestBiome(String name, BiomeGround ground) {
                     new Crags(0.16f, 2, Terrain.FISSURE),
                     Outcrops.off(),
                     new Clearings(2, 8),
+                    new Ice(0.4f),
                     List.of()));
 
     /** The redoubt's ground: a fixed width, no dealt coats, its rock four fixed pieces round the anchor. */
@@ -119,6 +125,7 @@ record TestBiome(String name, BiomeGround ground) {
                     Crags.off(),
                     Outcrops.off(),
                     Clearings.off(),
+                    Ice.off(),
                     List.of(
                             new TileRect(-9, -3, 2, 3),
                             new TileRect(8, 1, 2, 3),

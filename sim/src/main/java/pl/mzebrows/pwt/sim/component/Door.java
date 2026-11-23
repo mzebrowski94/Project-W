@@ -11,6 +11,9 @@ import pl.mzebrows.pwt.map.TileRect;
  * leaves the field. A leap, a blast or a heavy gun breaks it ({@link Health}); a broken door is simply gone.
  *
  * <p>Every door starts shut. One door fits every doorway, so there is no table of them: one {@code sim.door} block.
+ *
+ * <p><strong>Ice is a door nobody opens</strong> (ADR 0025): across a way of a maze rather than in a doorway, its
+ * {@code openTicks} zero, chipped by every shot from the squad's side, its health {@code sim.ice.health}.
  */
 public final class Door implements Component, Pool.Poolable {
 
@@ -26,8 +29,14 @@ public final class Door implements Component, Pool.Poolable {
     /** How many rows it spans. */
     public int height;
 
-    /** How many ticks of work open it. */
+    /** How many ticks of work open it; zero for one nobody opens by hand - ice (ADR 0025). */
     public int openTicks;
+
+    /**
+     * Whether every shot from the squad's side chips it, by the shot's damage, rather than a heavy gun's alone - ice
+     * (ADR 0025). False for a door in a doorway.
+     */
+    public boolean chipped;
 
     /** How much work has been done on it, in ticks. Lost on any tick nobody works on it. */
     public int workTicks;
@@ -60,7 +69,19 @@ public final class Door implements Component, Pool.Poolable {
         this.open = false;
         this.sinkTicks = newSinkTicks;
         this.sinkingTicks = 0;
+        this.chipped = false;
         return this;
+    }
+
+    /** Makes it chipped by every shot from the squad's side, and returns this component, for fluent spawning. */
+    public Door chippedByEveryShot() {
+        this.chipped = true;
+        return this;
+    }
+
+    /** Whether anybody can open it by hand: a door can, ice cannot (ADR 0025). */
+    public boolean opensByHand() {
+        return openTicks > 0;
     }
 
     /**
@@ -103,5 +124,6 @@ public final class Door implements Component, Pool.Poolable {
         open = false;
         sinkTicks = 0;
         sinkingTicks = 0;
+        chipped = false;
     }
 }

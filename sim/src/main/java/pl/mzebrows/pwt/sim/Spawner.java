@@ -917,6 +917,27 @@ public final class Spawner {
     }
 
     /**
+     * Spawns ice across a chokepoint (G0115, ADR 0025): a door nobody opens - its run's tiles solid ground until it is
+     * broken, as a shut door's doorway is, so everything a door is to the solver, shots, blasts, sight, routes and a
+     * siege, it is. Every shot from the squad's side chips it; a blast breaks it outright and a leap lands the door's
+     * {@code leapDamage} on it. Broken, it is simply gone. No body and no collider, as a door has none.
+     */
+    public Entity spawnIce(TileRect run, float tileSize) {
+        float x = (run.col() + run.width() * 0.5f) * tileSize;
+        float y = (run.row() + run.height() * 0.5f) * tileSize;
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Door.class).set(run, 0, 0).chippedByEveryShot());
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Health.class).set(config.ice().health()));
+        entity.add(engine.createComponent(Damage.class));
+        entity.add(engine.createComponent(Shake.class));
+        entity.add(engine.createComponent(Appearance.class).set(Look.ICE).squares(run.width(), run.height(), tileSize));
+        admit(entity);
+        return entity;
+    }
+
+    /**
      * Spawns a control point: ground the squad takes by standing on it.
      *
      * <p><strong>No collider</strong>, so its capture-radius body never sizes the collision grid. The

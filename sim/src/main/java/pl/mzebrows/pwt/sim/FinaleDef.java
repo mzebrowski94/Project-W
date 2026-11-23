@@ -38,7 +38,8 @@ public record FinaleDef(
                 || !ground.patches().isEmpty()
                 || ground.crags().density() > 0f
                 || ground.outcrops().density() > 0f
-                || ground.clearings().count() > 0) {
+                || ground.clearings().count() > 0
+                || ground.ice().share() > 0f) {
             throw new IllegalArgumentException("a finale's ground has no dealt coat: its rock is its pieces");
         }
         for (WaveLine wave : waves) {
@@ -105,6 +106,7 @@ public record FinaleDef(
                 g.crags(),
                 g.outcrops(),
                 g.clearings(),
+                g.ice(),
                 pieces);
     }
 

@@ -957,6 +957,18 @@ final class Placement {
             for (Placed standing : here) {
                 scatter.reserve(standing.x(), standing.y(), radius(standing));
             }
+            float tile = map.tileSize();
+            for (TileRect run : laid.ice()) {
+                if (!rect.contains(run.col(), run.row())) {
+                    continue;
+                }
+                // Ice is solid ground until broken (ADR 0025): nothing stands in it, as nothing stands in rock.
+                for (int row = run.row(); row < run.endRow(); row++) {
+                    for (int col = run.col(); col < run.endCol(); col++) {
+                        scatter.reserve(map.tileCentreX(col), map.tileCentreY(row), tile * HALF_DIAGONAL);
+                    }
+                }
+            }
             return scatter;
         }
 

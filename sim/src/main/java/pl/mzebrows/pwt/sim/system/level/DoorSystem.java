@@ -127,8 +127,11 @@ public final class DoorSystem extends EntitySystem {
                 && Reach.doorGap(trooper, door, tileSize) <= ACTION.get(trooper).reach;
     }
 
-    /** Counts this tick's work on a shut door, and says whether that opened it. */
+    /** Counts this tick's work on a shut door, and says whether that opened it. Ice is never opened (ADR 0025). */
     private static boolean work(Door door, @Nullable Entity trooper) {
+        if (!door.opensByHand()) {
+            return false;
+        }
         if (trooper != null && VITALITY.has(trooper) && VITALITY.get(trooper).woundedThisTick()) {
             // A wound on the man at it loses the work, as it does on a commander (G0069).
             door.workTicks = 0;

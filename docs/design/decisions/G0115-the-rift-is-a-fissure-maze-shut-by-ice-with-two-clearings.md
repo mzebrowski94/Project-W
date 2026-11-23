@@ -7,13 +7,14 @@ stretch of a biome kept clear of rock; sites or packs placed by a biome's cleari
 while and is broken through - ice.
 
 **Enforced by.** `CoatsTest.laysNoCragInAClearingAndKeepsEveryClearingReached`,
-`.centresTwoClearingsEachInAnOuterThirdOfTheBiome`; `TerrainCollisionTest.stopsAUnitWalkedIntoAFissureAsIntoRock`,
-`.stopsAProjectileThatFliesIntoAFissureAsIntoRock`; `MissionTest.standsAControlPointAtTheCentreOfEachOfTheRiftsClearings`,
-`.putsMoreOfTheSwarmToATileInTheRiftsClearingsThanInItsMaze`;
+`.centresTwoClearingsEachInAnOuterThirdOfTheBiome`, `.icesChokepointsOfTheMazeAndNeverAClearingOrAWayIn`; `IceTest`;
+`TerrainCollisionTest.stopsAUnitWalkedIntoAFissureAsIntoRock`, `.stopsAProjectileThatFliesIntoAFissureAsIntoRock`;
+`MissionTest.standsAControlPointAtTheCentreOfEachOfTheRiftsClearings`,
+`.putsMoreOfTheSwarmToATileInTheRiftsClearingsThanInItsMaze`, `.standsIceAcrossEveryWayTheStripIcedAndNoneOnAWayIn`;
 `BiomePromisesTest.theRiftIsTheOneBiomeOfFissuresOnFrostWithItsSitesInTwoClearings`;
 `MissionSweepTest.holdsEveryMissionToTheRules` through `StripFaults.clearings` (each clearing open ground, as many as
-its ground asks for) and `MissionFaults.clearings` (a point on each clearing's centre tile);
-`GraphicConfigTest.mapsEveryTerrainToAColour`.
+its ground asks for), `MissionFaults.clearings` (a point on each clearing's centre tile) and `MissionFaults.ice` (across a
+narrow way, never in a clearing or by kept ground, nothing standing in it); `GraphicConfigTest.mapsEveryTerrainToAColour`.
 
 **Settled with Mateusz, 2026-11-22** (`.scratch/commander-and-sites/spec.md`, section 8, and ticket 10). The points
 under *Provisional* are the implementer's, taken in an AFK run, for review.
@@ -76,8 +77,26 @@ its worked sites and before its other points, and anchors a share of its loose p
 7. **The caldera's boulders against the rift's**: `BiomePromisesTest`'s "fewer boulders than any biome that has them"
    now reads "no more than": the rift's are its ticket's 0-2, the caldera's.
 
-**Scope.** The rift's ground, clearings, sites, packs and roster; its ice is a stage of its own, below. Not snow, not
-slippery ground, not a fissure that shots fly over.
+8. **Ice**: its chokepoint rule (a narrow crossing whose two sides, shut, are not joined within 16 steps), its share
+   (0.4 - about four a rift), its health (300) and its wear on every door are ADR 0025's provisional points, with the
+   alternatives turned down.
+**Ice** (stage B, ADR 0025 for the structure).
+
+- **Ice is a door nobody opens**, standing across a chokepoint of the maze: solid ground to everything until it is
+  broken, then gone for good. `map` marks the runs (`ground.ice.share=0.4` of the chokepoints, laid last); the ground
+  under it stays frost, so generation counts every iced way as open, and `StripFaults.reach` and every pass check hold
+  with it. Never in a clearing, never within the clearance of a pass's apron or the start - no way into the rift is
+  iced.
+- **Breaking**: every shot from the squad's side chips it by its damage (`sim.ice.health=300`, six sidearm shots); a
+  blast - a grenade, a barrel - breaks it outright; an alien's leap lands `sim.door.leapDamage` (100) on it, as in a
+  door siege; the swarm's shots do nothing. Nobody opens it with the action key, and a trooper waits for nobody at it.
+- **Hunters** take the ground as it is now (G0075): round the ice while there is a way round, and when there is none,
+  up to it and leaping at it, as at a shut door.
+- **Look**: light blue, a little translucent (`graphic.color.ice=a8dcf0d0`), darker and cracked across each square as
+  it is chipped (pillar 5); a door leapt at shows its wear the same way. No shatter.
+
+**Scope.** The rift's ground, clearings, sites, packs, roster and ice. Not snow, not slippery ground, not a fissure
+that shots fly over, not ice that reforms.
 
 **DO NOT BUILD** - rejected, and likely to be re-proposed.
 
@@ -86,5 +105,9 @@ slippery ground, not a fissure that shots fly over.
 **No:** *A clearings coat of rock rings* - a clearing is open ground kept clear of the coats, never a wall round it.
 
 **No:** *A fissure laid as a patch* - solid ground is laid only as crags, whose repairs keep the passes open.
+
+**No:** *Ice on the rift's way in* - its entry or exit pass, its start, a pass's apron.
+
+**No:** *Ice the swarm's shots chip* - alien-side fire breaks no door, and ice is one.
 
 **Revisit when** the maze reads as blobs rather than cracks on the screen, or a second biome wants clearings.

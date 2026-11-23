@@ -13,6 +13,7 @@ import pl.mzebrows.pwt.map.BiomeGround;
 import pl.mzebrows.pwt.map.Clearings;
 import pl.mzebrows.pwt.map.Crags;
 import pl.mzebrows.pwt.map.Houses;
+import pl.mzebrows.pwt.map.Ice;
 import pl.mzebrows.pwt.map.Outcrops;
 import pl.mzebrows.pwt.map.Patch;
 import pl.mzebrows.pwt.map.PatchGround;
@@ -367,6 +368,7 @@ class ConfigBinderTest {
                         Crags.off(),
                         new Outcrops(0.015f, 2, 4, 1, 2, 0.3f, 0f),
                         Clearings.off(),
+                        Ice.off(),
                         List.of()));
     }
 

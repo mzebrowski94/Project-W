@@ -165,6 +165,53 @@ class CoatsTest {
     }
 
     /**
+     * The rift's ice (ADR 0025): on some of its chokepoints, every run across a narrow way between two solid tiles -
+     * open ground either side of it, at most the clearance and one long - never in a clearing or within the clearance
+     * of a kept tile, the clearance apart from each other. Its ground stays open, so the passes still connect.
+     */
+    @Test
+    void icesChokepointsOfTheMazeAndNeverAClearingOrAWayIn() {
+        int iced = 0;
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Rig rig = Rig.laid(TestBiome.RIFT.ground(), seed);
+            for (TileRect run : rig.ice) {
+                boolean lying = run.height() == 1;
+                int length = lying ? run.width() : run.height();
+                assertThat(length).as("seed %d, %s", seed, run).isBetween(1, CLEARANCE + 1);
+                assertThat(rig.map.passableAtTile(lying ? run.col() - 1 : run.col(), lying ? run.row() : run.row() - 1))
+                        .as("seed %d, %s's first end", seed, run)
+                        .isFalse();
+                assertThat(rig.map.passableAtTile(lying ? run.endCol() : run.col(), lying ? run.row() : run.endRow()))
+                        .as("seed %d, %s's last end", seed, run)
+                        .isFalse();
+                for (int r = run.row(); r < run.endRow(); r++) {
+                    for (int c = run.col(); c < run.endCol(); c++) {
+                        assertThat(rig.map.passableAtTile(c, r))
+                                .as("seed %d, (%d,%d)", seed, c, r)
+                                .isTrue();
+                        for (int dr = -CLEARANCE; dr <= CLEARANCE; dr++) {
+                            for (int dc = -CLEARANCE; dc <= CLEARANCE; dc++) {
+                                int at = (r + dr) * Rig.COLS + c + dc;
+                                assertThat(at >= 0 && at < rig.apron.length && rig.apron[at])
+                                        .as("seed %d, kept beside (%d,%d)", seed, c, r)
+                                        .isFalse();
+                            }
+                        }
+                        for (Clearing clearing : rig.clearings) {
+                            assertThat(clearing.contains(c, r))
+                                    .as("seed %d, (%d,%d)", seed, c, r)
+                                    .isFalse();
+                        }
+                    }
+                }
+            }
+            assertThat(rig.passesConnect()).as("seed %d", seed).isTrue();
+            iced += rig.ice.size();
+        }
+        assertThat(iced).as("ice over the seeds").isPositive();
+    }
+
+    /**
      * Two clearings, the west one in the biome's west third and the east one in its east third - so in the halves, the
      * thirds or the bands of a last biome, each lies in a band of its own - each a radius in from the top and bottom.
      */
@@ -307,6 +354,7 @@ class CoatsTest {
                 g.crags(),
                 g.outcrops(),
                 g.clearings(),
+                g.ice(),
                 g.pieces());
     }
 
@@ -322,6 +370,7 @@ class CoatsTest {
                 g.crags(),
                 g.outcrops(),
                 g.clearings(),
+                g.ice(),
                 g.pieces());
     }
 
@@ -337,6 +386,7 @@ class CoatsTest {
                 crags,
                 g.outcrops(),
                 g.clearings(),
+                g.ice(),
                 g.pieces());
     }
 
@@ -352,6 +402,7 @@ class CoatsTest {
                 g.crags(),
                 outcrops,
                 g.clearings(),
+                g.ice(),
                 g.pieces());
     }
 
@@ -390,6 +441,7 @@ class CoatsTest {
         private final int[] ends;
         private final List<House> houses;
         private final List<Clearing> clearings;
+        private final List<TileRect> ice;
 
         private Rig(TileMap map, boolean[] apron, int[] ends, Coats.Laid laid) {
             this.map = map;
@@ -397,6 +449,7 @@ class CoatsTest {
             this.ends = ends;
             this.houses = laid.houses();
             this.clearings = laid.clearings();
+            this.ice = laid.ice();
         }
 
         static Rig laid(BiomeGround ground, long seed) {

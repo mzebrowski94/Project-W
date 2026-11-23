@@ -15,11 +15,13 @@ import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.ContactDamage;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Door;
+import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Velocity;
+import pl.mzebrows.pwt.sim.def.Side;
 
 /**
  * Throws away projectiles that have left the arena, flown into rock, or flown as far as their gun
@@ -62,6 +64,8 @@ public final class ProjectileBoundsSystem extends EntitySystem {
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<ContactDamage> BLOW = ComponentMapper.getFor(ContactDamage.class);
     private static final ComponentMapper<Damage> DAMAGE = ComponentMapper.getFor(Damage.class);
+    private static final ComponentMapper<Door> DOOR = ComponentMapper.getFor(Door.class);
+    private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
 
     private final Spawner spawner;
     private final Solid map;
@@ -109,19 +113,28 @@ public final class ProjectileBoundsSystem extends EntitySystem {
                     || position.y - radius > height) {
                 spawner.markDead(projectile);
             } else if (!map.passableAt(position.x, position.y)) {
-                if (shot.breaksDoors) {
-                    breakAt(projectile, map.doorAt(position.x, position.y));
-                }
+                breakAt(projectile, shot, map.doorAt(position.x, position.y));
                 backToTheFace(projectile, position);
                 spawner.markDead(projectile);
             }
         }
     }
 
-    /** Lands a heavy shot's blow on the shut door it flew into, if it was a door and not rock (G0069). */
-    private void breakAt(Entity projectile, long door) {
+    /**
+     * Lands a shot's blow on the shut door it flew into, if it was a door and not rock: a heavy shot's on any door
+     * (G0069), and any shot from the squad's side on ice, which every one of them chips (ADR 0025). The swarm's shots
+     * land on neither.
+     */
+    private void breakAt(Entity projectile, Projectile shot, long door) {
+        if (door == Handle.NOBODY || !BLOW.has(projectile)) {
+            return;
+        }
         @Nullable Entity struck = Handles.resolve(doors, door);
-        if (struck != null && BLOW.has(projectile)) {
+        if (struck == null) {
+            return;
+        }
+        boolean squads = FACTION.has(projectile) && FACTION.get(projectile).side == Side.PLAYER;
+        if (shot.breaksDoors || (DOOR.get(struck).chipped && squads)) {
             DAMAGE.get(struck).land(BLOW.get(projectile));
         }
     }

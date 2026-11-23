@@ -32,6 +32,14 @@ final class Coats {
     private static final long OUTCROPS = 0x3C6E_F372_FE94_F82BL;
     private static final long HOUSES = 0x428A_2F98_D728_AE22L;
     private static final long CLEARINGS = 0x9B05_688C_68D6_A0C2L;
+    private static final long ICE = 0x1F83_D9AB_5BE0_CD19L;
+
+    /**
+     * How far a way's either side must be from each other, walking, with the way shut, for it to be a chokepoint worth
+     * icing: further than this many steps round, and shutting it is a detour or a siege; nearer, and it is a gap
+     * beside a lone rock (ADR 0025).
+     */
+    private static final int ICE_DETOUR = 16;
 
     /** A house's walls, in the order they are drawn from. */
     private static final int WEST = 0;
@@ -88,12 +96,14 @@ final class Coats {
      * @param houses as many as fitted up to the count drawn - fewer than the biome's {@code min} only when there was no
      *     room, which the strip sweep reports
      * @param clearings every clearing its ground asks for, west to east
+     * @param ice every run of tiles ice stands across, a chokepoint each
      */
-    record Laid(List<House> houses, List<Clearing> clearings) {
+    record Laid(List<House> houses, List<Clearing> clearings, List<TileRect> ice) {
 
         Laid {
             houses = List.copyOf(houses);
             clearings = List.copyOf(clearings);
+            ice = List.copyOf(ice);
         }
     }
 
@@ -158,12 +168,13 @@ final class Coats {
         coats.patches(biome.derive(PATCHES));
         coats.crags(biome.derive(CRAGS));
         coats.outcrops(biome.derive(OUTCROPS));
+        List<TileRect> ice = coats.ice(biome.derive(ICE));
         for (int row = area.row(); row < area.endRow(); row++) {
             for (int col = area.col(); col < area.endCol(); col++) {
                 map.set(col, row, coats.tiles[row * coats.cols + col]);
             }
         }
-        return new Laid(houses, coats.clearings);
+        return new Laid(houses, coats.clearings, ice);
     }
 
     // ---- pieces ----
@@ -907,6 +918,202 @@ final class Coats {
             own[tile] = false;
         }
         return fits;
+    }
+
+    // ---- ice ----
+
+    /**
+     * The maze's chokepoints, a share of them iced (G0115, ADR 0025, provisional, for review) - laid last, over the
+     * finished ground, which it never changes: an iced way counts as open to every connectivity check, for it can always
+     * be broken. A chokepoint is a <em>narrow crossing</em> of a way: a run of open tiles across it, along a row or down a
+     * column, between two solid tiles, at most the clearance and one long, open ground either side of every tile of it -
+     * and shut, its two sides not joined within {@link #ICE_DETOUR} steps, so it is a way and not a gap beside a lone
+     * rock (a bounded flood: a local cut test). Never on or within the clearance of a kept tile - a pass's apron, the
+     * start, a house - so no way into the biome is iced, and never in a clearing. The runs across one way are one
+     * chokepoint: its middle run. Then the chokepoints in a dealt order, each kept while it stands the clearance off
+     * every one kept before, until the share is iced.
+     */
+    private List<TileRect> ice(Randomness rng) {
+        float share = ground.ice().share();
+        List<TileRect> laid = new ArrayList<>();
+        if (share <= 0f) {
+            return laid;
+        }
+        List<TileRect> runs = new ArrayList<>();
+        for (int row = area.row(); row < area.endRow(); row++) {
+            for (int col = area.col(); col < area.endCol(); col++) {
+                addCrossing(col, row, 1, 0, runs);
+                addCrossing(col, row, 0, 1, runs);
+            }
+        }
+        List<TileRect> ways = middles(runs);
+        for (int i = ways.size() - 1; i > 0; i--) {
+            int pick = rng.nextInt(i + 1);
+            TileRect swap = ways.get(i);
+            ways.set(i, ways.get(pick));
+            ways.set(pick, swap);
+        }
+        int wanted = Math.round(share * ways.size());
+        for (int i = 0; i < ways.size() && laid.size() < wanted; i++) {
+            TileRect way = ways.get(i);
+            boolean apart = true;
+            for (TileRect other : laid) {
+                apart &= gapBetween(way, other) > clearance;
+            }
+            if (apart) {
+                laid.add(way);
+            }
+        }
+        return laid;
+    }
+
+    /** The run of open tiles starting here along {@code (dc, dr)}, if it is a chokepoint. */
+    private void addCrossing(int col, int row, int dc, int dr, List<TileRect> runs) {
+        if (rock(col, row) || !rock(col - dc, row - dr)) {
+            return;
+        }
+        int widest = clearance + 1;
+        int length = 0;
+        while (length <= widest && !rock(col + length * dc, row + length * dr)) {
+            length++;
+        }
+        if (length > widest) {
+            return;
+        }
+        // Across the run: the two sides of the way it shuts.
+        int sideC = dr;
+        int sideR = dc;
+        for (int k = 0; k < length; k++) {
+            int c = col + k * dc;
+            int r = row + k * dr;
+            if (!area.contains(c, r)
+                    || clear[r * cols + c]
+                    || nearKept(c, r)
+                    || rock(c - sideC, r - sideR)
+                    || rock(c + sideC, r + sideR)) {
+                return;
+            }
+        }
+        TileRect run = new TileRect(col, row, dc == 1 ? length : 1, dr == 1 ? length : 1);
+        int middleC = col + (length / 2) * dc;
+        int middleR = row + (length / 2) * dr;
+        if (!joinedWithin(run, middleC - sideC, middleR - sideR, middleC + sideC, middleR + sideR)) {
+            runs.add(run);
+        }
+    }
+
+    /** Whether a kept tile lies within the clearance of this one. */
+    private boolean nearKept(int col, int row) {
+        for (int r = row - clearance; r <= row + clearance; r++) {
+            for (int c = col - clearance; c <= col + clearance; c++) {
+                if (inside(c, r) && apron[r * cols + c]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Whether one tile reaches another within {@link #ICE_DETOUR} steps, four-connected, with {@code shut} solid. */
+    private boolean joinedWithin(TileRect shut, int fromC, int fromR, int toC, int toR) {
+        int span = ICE_DETOUR;
+        int side = 2 * span + 1;
+        int[] steps = new int[side * side];
+        Arrays.fill(steps, -1);
+        int[] queue = new int[side * side];
+        int head = 0;
+        int tail = 0;
+        queue[tail++] = span * side + span;
+        steps[span * side + span] = 0;
+        while (head < tail) {
+            int at = queue[head++];
+            int lc = at % side;
+            int lr = at / side;
+            int c = fromC + lc - span;
+            int r = fromR + lr - span;
+            if (c == toC && r == toR) {
+                return true;
+            }
+            if (steps[at] == span) {
+                continue;
+            }
+            for (int d = 0; d < 4; d++) {
+                int nc = lc + (d == 0 ? 1 : d == 1 ? -1 : 0);
+                int nr = lr + (d == 2 ? 1 : d == 3 ? -1 : 0);
+                if (nc < 0 || nr < 0 || nc >= side || nr >= side) {
+                    continue;
+                }
+                int next = nr * side + nc;
+                int wc = fromC + nc - span;
+                int wr = fromR + nr - span;
+                if (steps[next] >= 0 || rock(wc, wr) || shut.contains(wc, wr)) {
+                    continue;
+                }
+                steps[next] = steps[at] + 1;
+                queue[tail++] = next;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * One run a way: the runs across one way - the same along, side by side - joined, and the middle one of each kept,
+     * in the order the ways were first met.
+     */
+    private static List<TileRect> middles(List<TileRect> runs) {
+        int[] group = new int[runs.size()];
+        for (int i = 0; i < group.length; i++) {
+            group[i] = i;
+        }
+        for (int i = 0; i < runs.size(); i++) {
+            for (int j = i + 1; j < runs.size(); j++) {
+                if (sideBySide(runs.get(i), runs.get(j))) {
+                    int a = root(group, i);
+                    int b = root(group, j);
+                    group[Math.max(a, b)] = Math.min(a, b);
+                }
+            }
+        }
+        List<TileRect> middles = new ArrayList<>();
+        for (int i = 0; i < runs.size(); i++) {
+            if (root(group, i) != i) {
+                continue;
+            }
+            List<TileRect> members = new ArrayList<>();
+            for (int j = i; j < runs.size(); j++) {
+                if (root(group, j) == i) {
+                    members.add(runs.get(j));
+                }
+            }
+            middles.add(members.get(members.size() / 2));
+        }
+        return middles;
+    }
+
+    private static int root(int[] group, int i) {
+        int at = i;
+        while (group[at] != at) {
+            at = group[at];
+        }
+        return at;
+    }
+
+    /** Two runs across one way: lying the same way, a row (or column) apart, overlapping along it. */
+    private static boolean sideBySide(TileRect a, TileRect b) {
+        if (a.height() == 1 && b.height() == 1) {
+            return Math.abs(a.row() - b.row()) == 1 && a.col() < b.endCol() && b.col() < a.endCol();
+        }
+        if (a.width() == 1 && b.width() == 1) {
+            return Math.abs(a.col() - b.col()) == 1 && a.row() < b.endRow() && b.row() < a.endRow();
+        }
+        return false;
+    }
+
+    /** How many tiles lie between two rects, the larger of the column and row gaps; zero when they touch. */
+    private static int gapBetween(TileRect a, TileRect b) {
+        int across = Math.max(0, Math.max(a.col() - b.endCol(), b.col() - a.endCol()));
+        int down = Math.max(0, Math.max(a.row() - b.endRow(), b.row() - a.endRow()));
+        return Math.max(across, down);
     }
 
     // ---- the grid ----

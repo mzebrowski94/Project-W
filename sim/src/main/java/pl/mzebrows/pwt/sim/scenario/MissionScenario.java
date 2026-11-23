@@ -135,6 +135,10 @@ final class MissionScenario implements Scenario {
                 simulation.spawnDoor(doorway);
             }
         }
+        for (TileRect run : mission.laid().ice()) {
+            // Across a chokepoint of a maze: a door nobody opens (ADR 0025).
+            simulation.spawnIce(run);
+        }
         deployPlayerSide(simulation);
         for (Placed placed : mission.placed()) {
             switch (placed) {

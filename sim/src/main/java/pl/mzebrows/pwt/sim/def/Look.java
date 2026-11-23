@@ -87,6 +87,11 @@ public enum Look {
     TURRET,
     /** A shut door: its doorway's squares, apart from the wall either side of it so it reads as the way in (G0069). */
     DOOR,
+    /**
+     * Ice across a way through a maze (ADR 0025): its run's squares, light blue - and cracking as it is chipped, so how
+     * near it is to breaking is seen on it (pillar 5).
+     */
+    ICE,
     PROJECTILE,
     /** A heavy shot, so a gun is visible in what it fires. */
     SLUG,
