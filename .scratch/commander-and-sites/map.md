@@ -63,3 +63,4 @@ redeploy, sites and crates, the mainframe, the jaguar, the rift, spires and the 
 - 2026-11-22, ticket 07 (resolved, merged): `house <strain> min max` roster form, pass `housePacks` after house stock off doorway tiles; patch confined for life; grunt perception; no pack in a house near start or finale watch. Provisional.
 - 2026-11-22, ticket 08 (resolved, merged): `EmplacementKind` table + `EmplacementSystem` at 54; spire ALIEN without `Enemy` or `Health`; compass bearings, comma volleys, edge-tick tell; clock stops asleep; keep-off 15; no ADR 0024. Provisional.
 - 2026-11-22: run paused after 08 at Mateusz's word, for testing and tuning; 09 and 10 open.
+- 2026-11-23, ticket 09 (resolved, merged): relic and warden as kinds on 06/08 tables, `WorkedSiteDef` room/guards/hatch/troopersWork; troopers do not extract (commander alone); room 7 kept open; caches outside the room. Provisional.

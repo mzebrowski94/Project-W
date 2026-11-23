@@ -1,7 +1,7 @@
 # The rift
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: 05 (sites and the site seam), 07 (the jaguar)
 Spec: [spec.md](../spec.md) section 8

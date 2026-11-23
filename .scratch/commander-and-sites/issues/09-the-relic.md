@@ -1,7 +1,7 @@
 # The desert relic and its wardens
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: 05 (sites), 06 (the worked site), 08 (emplacements)
 Spec: [spec.md](../spec.md) section 10
@@ -141,3 +141,33 @@ Also a mission code with the desert early; print it.
 - G0114 and the rows are written.
 - `verify.sh` is green and the branch is committed.
 - The final message lists the keys.
+
+## Answer
+
+Built (merged into integration), G0114 (amends G0068, G0111, G0113); no new system, no new component:
+- **Relic** = second worked-site kind `WorkedSiteKind.RELIC`, action `ActionKind.EXTRACT`. `WorkedSiteDef` gained four general fields, off for the mainframe: `room` (open ground kept round it), `Guards(kind, offset)` (emplacements stood round it), `Hatch(strain, min, max, radius)` (what its taking brings up), `troopersWork`. Load check: guards fire a fixed volley and fit inside the room.
+- **Warden** = second emplacement kind `EmplacementKind.WARDEN`, gun `WeaponKind.WARDEN_SHOT`; `Emplacement.guards` holds the guarded site's handle (cleared in `reset()`).
+- `Spawner.spawnWorkedSite` stands the four wardens on the diagonals (missions and scenarios share it).
+- `WorkedSiteSystem` (38, unchanged): first attempt wakes its wardens by handle; the taking tick silences them for good, then `Brood.hatch` of snakes outside the room, off the men. Runs before `EmplacementSystem` (54), so a warden woken this tick starts its clock this tick and one silenced never fires again (`simulation-order.md`).
+- `Placement`: open-site pass after housed sites, before control points; turret pass records a shortfall when a biome has no point. `MissionFaults.relics` + relic count in `.sites`.
+- Look: `RelicMark` - dark plinth, gold square turning in a halo, oval wardens.
+- Scenario `RelicScenario` (hidden). Tests: `RelicTest` (11), `RelicScenarioTest`, `MissionTest` +2, `PromptsTest` +1. Full verify green (3490); MissionSweep 2192 seeds 0 faults.
+
+Provisional decisions (AFK run, for review; also in G0114):
+1. **Troopers do not extract a relic** (`troopersWork=false`); the commander does it alone. Turned down: troopers working it as a mainframe - measured in the scenario, all nine stood in the lanes and were down within ~12 s. Troopers working from the four safe spots is new trooper behaviour, left open.
+2. Room 7: no tile within it but sand, kept ground, a pass or the finale's watch; later passes keep off it. Turned down: reserving only plinth and warden bodies (a stone fits between), anchor-tile check only (mud gets in).
+3. Which bands hold relics dealt from the biome's own stream. Turned down: fixed bands.
+4. Numbers: warden offset 5 on the diagonal, body 1.2, volley 0.75 s, shot speed 26, range 22, plinth 1.5, hatch radius 14.
+5. Key names on the general definition: `guards.kind/offset`, `hatch.strain/min/max/radius`. Turned down: the ticket's `wardenOffset`, `snakesMin/Max`, `hatchRadius` (relic-only names on a shared table).
+6. Caches and crates land outside the room. Turned down: just off the plinth (inside the lanes).
+7. One drawing record `RelicMark` for relic and wardens. Turned down: a separate warden record.
+8. Scenario runners start unaware, so only an attempt brings them.
+
+Keys:
+- `level.properties`: `sim.site.mainframe.room=0`, `.troopersWork=true`; `sim.site.relic.radius=1.5`, `.workSeconds=6`, `.rouseRadius=116`, `.chance=0`, `.housed=false`, `.action=extract`, `.look=relic`, `.room=7`, `.guards.kind=warden`, `.guards.offset=5`, `.hatch.strain=snake`, `.hatch.min=2`, `.hatch.max=3`, `.hatch.radius=14`, `.troopersWork=false`; `sim.emplacement.warden.radius=1.2`, `.look=warden`, `.gun=warden_shot`, `.periodSeconds=0.75`, `.wakeRadius=0`, `.cycle=volley 0,90,180,270`.
+- `weapons.properties`: `sim.weapon.warden_shot.*` (spire bead block), `projectileSpeed=26`, `projectileRange=22`.
+- `biomes.properties`: `furniture.relics=1 2` desert, `0 0` the other eight.
+- `graphic.properties`: `graphic.color.relic=2a2216ff` (plinth), `graphic.color.warden=8c7a55ff`, `graphic.color.warden_shot=ffe6a0ff`, `graphic.site.relic.glow=ffc94aff`, `.size=1.1`, `.spinDegreesPerSecond=30`, `.halo=1.5`, `.haloAlpha=0.3`, `.wardenLength=1.4`.
+- `ui.properties`: `ui.action.EXTRACT=EXTRACT`, `ui.action.EXTRACT.working=EXTRACTING…`, `ui.weapon.WARDEN_SHOT=BEAD`.
+
+Judge by: `./gradlew lwjgl3:run --args="--scenario=relic"`; `--mission=MH76-YM47` (desert first; hard `HH76-YM43`). The one safe extracting spot: square on a compass point just outside the ring.
