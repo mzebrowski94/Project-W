@@ -61,7 +61,8 @@ while a site is worked.
 - **Drawn** as a dark-grey cabinet (`graphic.color.mainframe`) with a black screen showing a **red X**, a **green tick**
   once taken (`graphic.site.mainframe.*`) - on the object, never over the view.
 - **The objective ring** round every site not yet taken - a point, a mainframe, a finale's point, whatever site a relic
-  carries: white and yellow stripes by turns, turning and shining (`graphic.site.ring.*`), underfoot, gone the moment
+  carries: faint white stripes with gaps between, turning slowly, their faintness pulsing gently (`graphic.site.ring.*`) -
+  informative, not flashy - underfoot, gone the moment
   it is taken. Rendering only, read off `Site.taken`, so the same on every machine. Not the action's highlight -
   that is a bracket and never a ring (G0098) - and not a charge.
 

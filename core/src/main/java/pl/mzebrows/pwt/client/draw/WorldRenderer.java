@@ -59,8 +59,8 @@ import pl.mzebrows.pwt.sim.def.Side;
  * every pixel of the line is on the path a real shot actually took - there is no hitscan behind it,
  * and the renderer is not inventing geometry (G0003).
  *
- * <p>Blending is on for the whole shape pass. Everything in it is opaque but one mark - the ring on
- * a thing being pumped up, which has to be seen through - and turning it on once costs nothing that
+ * <p>Blending is on for the whole shape pass. Everything in it is opaque but two marks - the ring on
+ * a thing being pumped up and the objective ring round a site, which have to be seen through - and turning it on once costs nothing that
  * a flush per mark would not cost more of.
  *
  * <p><strong>Trees are drawn last</strong> (G0072): their foliage hides everything beneath it, and the trunk is
@@ -796,11 +796,13 @@ public final class WorldRenderer implements Disposable {
     }
 
     /**
-     * The objective ring round every site not yet taken (G0111): stripes by turns in its two colours, turning and
-     * shining on the client's clock, underfoot. Read off the site's state, the same on every machine.
+     * The objective ring round every site not yet taken (G0111): faint white stripes with gaps between, turning and
+     * fading in and out on the client's clock, underfoot. Read off the site's state, the same on every machine.
      */
     private void drawObjectiveRings(float alpha) {
-        float brightness = objectiveRing.brightnessAt(pulseSeconds, motionScale);
+        Color color = objectiveRing.color();
+        tinted.set(color.r, color.g, color.b, objectiveRing.alphaAt(pulseSeconds, motionScale));
+        shapes.setColor(tinted);
         float width = objectiveRing.width();
         int pieces = objectiveRing.pieces();
         for (int i = 0; i < sites.size(); i++) {
@@ -812,11 +814,8 @@ public final class WorldRenderer implements Disposable {
             float y = Drawn.y(POSITION.get(entity), PREVIOUS.get(entity), alpha);
             float ring = objectiveRing.ringFor(BODY.get(entity).radius);
             for (int stripe = 0; stripe < objectiveRing.stripes(); stripe++) {
-                Color color = objectiveRing.colorOf(stripe);
-                tinted.set(color.r * brightness, color.g * brightness, color.b * brightness, color.a);
-                shapes.setColor(tinted);
                 for (int piece = 0; piece < pieces; piece++) {
-                    int at = stripe * pieces + piece;
+                    int at = objectiveRing.pieceAt(stripe, piece);
                     float from = objectiveRing.angleAt(at, pulseSeconds, motionScale);
                     float to = objectiveRing.angleAt(at + 1, pulseSeconds, motionScale);
                     shapes.rectLine(

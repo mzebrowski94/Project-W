@@ -14,12 +14,11 @@ class ObjectiveRingTest {
     private static final ObjectiveRing SHIPPED = GraphicConfig.defaults().siteRing();
 
     @Test
-    void stripesItsTwoColoursByTurns() {
-        assertThat(SHIPPED.colorOf(0)).isEqualTo(SHIPPED.first());
-        assertThat(SHIPPED.colorOf(1)).isEqualTo(SHIPPED.second());
-        assertThat(SHIPPED.colorOf(SHIPPED.stripes() - 1))
-                .as("ends on the second, so it meets the first")
-                .isEqualTo(SHIPPED.second());
+    void leavesAGapAsLongAsAStripeAfterEachStripe() {
+        assertThat(SHIPPED.pieceAt(1, 0) - SHIPPED.pieceAt(0, 0)).isEqualTo(2 * SHIPPED.pieces());
+        assertThat(SHIPPED.pieceAt(SHIPPED.stripes() - 1, SHIPPED.pieces() - 1) + 1 + SHIPPED.pieces())
+                .as("the last gap closes the ring")
+                .isEqualTo(SHIPPED.segments());
     }
 
     @Test
@@ -36,16 +35,24 @@ class ObjectiveRingTest {
     }
 
     @Test
-    void shinesBetweenFullAndItsDepthAndIsSteadyWithNoMotion() {
+    void fadesBetweenItsAlphaAndItsDepthAndIsSteadyWithNoMotion() {
+        float top = SHIPPED.color().a;
         for (float seconds = 0f; seconds < 3f; seconds += 0.05f) {
-            assertThat(SHIPPED.brightnessAt(seconds, 1f)).isBetween(1f - SHIPPED.pulseDepth() - 1e-4f, 1f + 1e-4f);
+            assertThat(SHIPPED.alphaAt(seconds, 1f)).isBetween(top * (1f - SHIPPED.pulseDepth()) - 1e-4f, top + 1e-4f);
         }
-        assertThat(SHIPPED.brightnessAt(0.3f, 0f)).isEqualTo(1f);
+        assertThat(SHIPPED.alphaAt(0.3f, 0f)).isEqualTo(top);
     }
 
     @Test
-    void refusesStripesThatCannotAlternateAllTheWayRound() {
-        assertThatThrownBy(() -> new ObjectiveRing(Color.WHITE, Color.YELLOW, 5, 2, 0.5f, 0.5f, 30f, 1f, 0.3f))
+    void isFaint() {
+        assertThat(SHIPPED.color().a)
+                .as("see-through, so it informs rather than shouts")
+                .isLessThan(0.5f);
+    }
+
+    @Test
+    void refusesARingWithNoStripes() {
+        assertThatThrownBy(() -> new ObjectiveRing(Color.WHITE, 0, 2, 0.5f, 0.5f, 8f, 0.4f, 0.5f))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }
