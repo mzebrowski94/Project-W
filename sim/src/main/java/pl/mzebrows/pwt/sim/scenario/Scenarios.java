@@ -38,7 +38,8 @@ public final class Scenarios {
             new DashYardScenario(true),
             new MainframeScenario(),
             new JaguarHouseScenario(),
-            new SpireFenScenario());
+            new SpireFenScenario(),
+            new RelicScenario());
 
     private Scenarios() {}
 

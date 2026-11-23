@@ -312,6 +312,7 @@ public final class ScenarioScreen extends ScreenAdapter {
                 context.graphicConfig().siteRing(),
                 context.graphicConfig().mainframe(),
                 context.graphicConfig().spire(),
+                context.graphicConfig().relic(),
                 context.graphicConfig().burst(),
                 context.graphicConfig().daze(),
                 context.graphicConfig().tree(),

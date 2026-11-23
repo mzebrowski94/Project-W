@@ -27,6 +27,8 @@ import pl.mzebrows.pwt.map.Randomness;
  * @param geysersMin the fewest geysers, ground that erupts in fire (G0089): zero in every biome but the cut
  * @param geysersMax the most
  * @param spires how many spires, the fen's emplacements (G0113): {@code 0 0} in every biome but the fen
+ * @param relics how many of its sites are relics (G0114), each in a point's place: {@code 0 0} in every biome but the
+ *     desert; never more than it has sites
  * @param pickups what lies about, a line per kind; a house is stocked with its crates and medkits first, and a crate is
  *     laid nowhere else (G0110)
  */
@@ -50,9 +52,10 @@ public record Furniture(
         int geysersMin,
         int geysersMax,
         Count spires,
+        Count relics,
         List<Stock> pickups) {
 
-    /** A fewest and a most, on one line: {@code spires=3 5}. */
+    /** A fewest and a most, on one line: {@code spires=3 5}, {@code relics=1 2}. */
     public record Count(int min, int max) {
 
         public Count {
@@ -78,6 +81,10 @@ public record Furniture(
         range("stones", stonesMin, stonesMax);
         range("turrets", turretsMin, turretsMax);
         range("geysers", geysersMin, geysersMax);
+        if (relics.max() > sitesMin) {
+            throw new IllegalArgumentException(
+                    "a biome's relics are among its sites, so at most " + sitesMin + ", were up to " + relics.max());
+        }
         pickups = List.copyOf(pickups);
     }
 

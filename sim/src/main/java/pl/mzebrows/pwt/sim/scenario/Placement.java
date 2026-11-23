@@ -82,6 +82,8 @@ final class Placement {
     private static final long HOUSED = 0xE19C_4F72_B05D_3A86L;
     private static final long EMPLACEMENTS = 0x5B2D_8E71_C93A_04F6L;
     private static final long CYCLES = 0x96E4_17C3_5AD0_B82FL;
+    private static final long OPEN_BANDS = 0x3C71_A9E2_58D4_0B6FL;
+    private static final long OPEN_SITES = 0xD28F_6B13_E7A0_4C95L;
 
     /** Where an emplacement may stand: any ground but a thicket's, so never in a thicket blob's middle (G0113). */
     private static final EnumSet<Terrain> OFF_THICKET = offThicket();
@@ -233,11 +235,17 @@ final class Placement {
             int stones = furniture.stones(counted);
             // Last of all, for the same reason: a biome with no spires draws everything as it did before them (G0113).
             int spires = furniture.spires().draw(counted);
+            // After them, for the same reason: a biome with no relics draws everything as it did before them (G0114).
+            int relics = furniture.relics().draw(counted);
 
             // Drawn from the biome's own stream, never the attempt's: whether it has a mainframe, in which house and
             // against
             // which wall is the same on every attempt and every tier (G0111).
-            sites(sites, housedSites(sites, stream.derive(WORKED), attempt.derive(WORKED)), attempt.derive(POINTS));
+            long housed = housedSites(sites, stream.derive(WORKED), attempt.derive(WORKED));
+            // Which bands a relic takes is the biome's own stream's too; where in its band, the attempt's (G0114).
+            long taken = openSites(
+                    WorkedSiteKind.RELIC, relics, sites, housed, stream.derive(OPEN_BANDS), attempt.derive(OPEN_SITES));
+            sites(sites, taken, attempt.derive(POINTS));
             houseStock(stock, attempt.derive(STOCK));
             housePacks(pressure, stream.derive(HOUSE_PACKS), attempt.derive(HOUSED));
             unhoused(stock);
@@ -320,6 +328,75 @@ final class Placement {
                 put(new Placed.Worked(site, at[0], at[1], position));
             }
             return taken;
+        }
+
+        /**
+         * The worked sites of one kind that stand in the open (G0114): {@code count} of them, each in a band of its own
+         * that no housed site took - dealt from {@code bands}, the biome's own stream, never the last biome's last band,
+         * which leads to the finale - wherever in it its whole room is open ground: every tile it could reach its
+         * biome's base, none kept, no rock, off every way in and the finale's watch, and {@code pointApart} off every
+         * other site. A biome with fewer free bands lays fewer. Returns the bands taken, housed and open.
+         */
+        private long openSites(
+                WorkedSiteKind which, int count, int sites, long taken, Randomness bands, Randomness rng) {
+            if (count == 0) {
+                return taken;
+            }
+            WorkedSiteDef site = config.workedSite(which);
+            float clearing = site.clearing();
+            List<TileRect> all = bands(sites);
+            List<Integer> free = new ArrayList<>();
+            for (int b = 0; b < all.size(); b++) {
+                if ((taken & (1L << b)) == 0 && !(last && b == all.size() - 1)) {
+                    free.add(b);
+                }
+            }
+            Scatter scatter = scatter(rng, 0f).excluding(openGround(clearing));
+            keepOffEntries(scatter, 0f);
+            keepOffTheWatch(scatter, 0f);
+            for (Placed other : worked) {
+                scatter.reserve(other.x(), other.y(), rules.pointApart());
+            }
+            long laid = taken;
+            for (int k = 0; k < count && !free.isEmpty(); k++) {
+                int band = free.remove(/* index */ bands.nextInt(free.size()));
+                laid |= 1L << band;
+                int got = scatter.scatter(all.get(band), 1, clearing, (x, y) -> {
+                    put(new Placed.Worked(which, x, y, position));
+                    scatter.reserve(x, y, rules.pointApart());
+                });
+                shortOf(which + " in band " + band, 1, got);
+            }
+            return laid;
+        }
+
+        /**
+         * The tiles a thing needing {@code clearing} of open ground round it may not be anchored on: any tile within
+         * that of anywhere on it - a jittered anchor may stand anywhere on its tile - that is off the map, kept, or not
+         * the biome's base (G0114).
+         */
+        private Scatter.Exclusion openGround(float clearing) {
+            float tile = map.tileSize();
+            float reach = clearing + tile * HALF_DIAGONAL;
+            int span = (int) Math.ceil(reach / tile);
+            Terrain base = def.ground().base();
+            return (col, row) -> {
+                float x = map.tileCentreX(col);
+                float y = map.tileCentreY(row);
+                for (int r = row - span; r <= row + span; r++) {
+                    for (int c = col - span; c <= col + span; c++) {
+                        float dx = Math.max(Math.max(c * tile - x, 0f), x - (c + 1) * tile);
+                        float dy = Math.max(Math.max(r * tile - y, 0f), y - (r + 1) * tile);
+                        if (dx * dx + dy * dy > reach * reach) {
+                            continue;
+                        }
+                        if (!map.inBounds(c, r) || laid.kept(c, r) || map.terrainAtTile(c, r) != base) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
         }
 
         /**
@@ -594,6 +671,11 @@ final class Placement {
          */
         private void turrets(int count, Randomness rng) {
             if (count == 0) {
+                return;
+            }
+            if (points.isEmpty()) {
+                // Every site a relic (G0114): no point to stand a gun by.
+                shortOf("turret by a point", count, 0);
                 return;
             }
             Scatter scatter = scatter(rng, 0f);
@@ -932,7 +1014,8 @@ final class Placement {
             case Placed.Hold _ -> config.controlPoint().radius();
             case Placed.Turret _ -> config.turret().radius();
             case Placed.Mine _ -> config.mine().radius();
-            case Placed.Worked worked -> config.workedSite(worked.kind()).radius();
+            // Its room, so nothing laid after it stands among a relic's wardens (G0114).
+            case Placed.Worked worked -> config.workedSite(worked.kind()).clearing();
             case Placed.Emplacement emplacement ->
                 config.emplacement(emplacement.kind()).radius();
         };

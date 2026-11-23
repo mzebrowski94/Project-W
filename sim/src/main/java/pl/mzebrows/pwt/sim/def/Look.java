@@ -71,6 +71,13 @@ public enum Look {
      */
     SPIRE,
     /**
+     * A relic (G0114): a stone plinth a desert stone darker than sand, and over it - until it is taken - a glowing gold
+     * square turning slowly. Drawn from its body and its site's state, never a field of its own.
+     */
+    RELIC,
+    /** A warden (G0114): a sand-coloured oval pillar, lighter than sand; its body is a circle, the oval only its look. */
+    WARDEN,
+    /**
      * A hole in the ground that keeps sending more of one strain out of it.
      *
      * <p>What comes out of it is named on the charge channel, in that strain's colour.
@@ -127,6 +134,8 @@ public enum Look {
     JAGUAR_GLOB,
     /** A spire's shot (G0113): a small pale-green bead. */
     SPIRE_SHOT,
+    /** A warden's shot (G0114): a small bead, warm against sand. */
+    WARDEN_SHOT,
     /**
      * One circle of ground a frog has ruined.
      *

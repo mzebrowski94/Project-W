@@ -45,10 +45,12 @@ final class Sites {
     private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<Tally> TALLY = ComponentMapper.getFor(Tally.class);
+    private static final ComponentMapper<WorkedSite> WORKED = ComponentMapper.getFor(WorkedSite.class);
 
     /** A medkit is one draw a site: its second key has nothing to tell apart. */
     private static final long ONE_A_SITE = 0L;
 
+    private final SimConfig config;
     private final Spawner spawner;
     private final TileMap map;
     private final Rng rng;
@@ -76,6 +78,7 @@ final class Sites {
      * @param capacity how many slots the game holds
      */
     Sites(SimConfig config, TileMap map, Spawner spawner, Rng rng, int capacity) {
+        this.config = config;
         this.spawner = spawner;
         this.map = map;
         this.rng = rng;
@@ -156,11 +159,13 @@ final class Sites {
             Position other = POSITION.get(pointsOnTheField.get(i));
             scatter.reserve(other.x, other.y, points.radius());
         }
-        // Off every worked site's body, so nothing a mainframe leaves lies inside the mainframe (G0111).
+        // Off every worked site's body, so nothing a mainframe leaves lies inside the mainframe (G0111) - and out of a
+        // relic's room, so nothing it leaves lies among its wardens (G0114).
         for (int i = 0; i < worked.size(); i++) {
             Entity standing = worked.get(i);
             Position where = POSITION.get(standing);
-            scatter.reserve(where.x, where.y, BODY.get(standing).radius);
+            float room = config.workedSite(WORKED.get(standing).kind).room();
+            scatter.reserve(where.x, where.y, Math.max(BODY.get(standing).radius, room));
         }
         // Off what already lies there - the point's supply drops share this ring - so nothing lands on anything.
         for (int i = 0; i < lying.size(); i++) {

@@ -110,6 +110,7 @@ class BiomeDefTest {
                 furniture.geysersMin(),
                 furniture.geysersMax(),
                 furniture.spires(),
+                furniture.relics(),
                 List.of(new Stock.Pickup(kind, 1, 1)));
     }
 }

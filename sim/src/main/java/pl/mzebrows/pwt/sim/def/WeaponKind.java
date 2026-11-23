@@ -114,5 +114,10 @@ public enum WeaponKind {
      * What a spire fires (G0113): a small, slow bead along a bearing of its cycle, never aimed, that wounds a man it
      * hits as gunfire does. No pickup grants it.
      */
-    SPIRE_SHOT
+    SPIRE_SHOT,
+    /**
+     * What a warden fires (G0114): the spire's bead along each of the four compass lines at once, never aimed, that
+     * wounds a man it hits as gunfire does. No pickup grants it.
+     */
+    WARDEN_SHOT
 }

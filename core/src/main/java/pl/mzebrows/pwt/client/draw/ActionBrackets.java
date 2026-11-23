@@ -160,6 +160,7 @@ public final class ActionBrackets implements ChipCover {
             faint(shapes, crates, ActionKind.OPEN_CRATE, alpha);
             faint(shapes, doors, ActionKind.OPEN_DOOR, alpha);
             faint(shapes, workedSites, ActionKind.DOWNLOAD, alpha);
+            faint(shapes, workedSites, ActionKind.EXTRACT, alpha);
             ticks(shapes, alpha);
         }
         for (int slot = 0; slot < Players.MAX; slot++) {

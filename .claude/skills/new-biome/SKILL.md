@@ -79,7 +79,8 @@ meanwhile. The HTML prototype is for looks only.
 - `furniture.sitesMin/Max` (2-3 sites: control points, or another kind of site in a point's place, G0110), `barrelsMin/Max`, `rabbitsMin/Max`, `bouldersMin/Max`, `treesMin/Max` and
   `treesByNestMin/Max` (0 for none - the fen alone has trees, G0072), `turretsMin/Max` (0 for none - the plain alone
   has them, G0082), `geysersMin/Max` (0 for none - the cut and the caldera have them, G0089, G0091),
-  `spires=min max` on one line (`0 0` for none - the fen alone has them, G0113), and `furniture.pickups=pickup <kind> min max; ...`.
+  `spires=min max` on one line (`0 0` for none - the fen alone has them, G0113), `relics=min max` (`0 0` for none, at
+  most `sitesMin` - the desert alone has them, each a site in a point's place, G0114), and `furniture.pickups=pickup <kind> min max; ...`.
   Never scaled. **Every block carries every furniture key**, zeros included: a new furniture line is a key in all of
   them. A new line that stands something is also a `Placed` record, a case in `MissionScenario.populate`, in
   `Placement.radius` and in `MissionFaults`' radius, a pass in `Placement.Biome.place` and its count drawn **after**
@@ -102,7 +103,8 @@ meanwhile. The HTML prototype is for looks only.
   practice **1-2 holes and at most about 25 loose creatures** a block. Ground that leaves less room (heavy crags,
   houses) holds less: the quarry holds one hole.
 - **Where it goes** (G0068): sites one a column band - a control point in each band no other kind of site takes
-  (G0110); house stock (crates, then medkits) up to `houseStock` a house;
+  (G0110) - a mainframe in its house first (G0111), then relics in rooms of open base ground (G0114); house stock (crates,
+  then medkits) up to `houseStock` a house;
   nests; packs; turrets by points; medkits anywhere; **food** - anything a creature gains from - on the
   biome's organic ground while there is room; barrels by holes and packs; boulders `rockMargin` off rock; trees as boulders, the first within `treeReach` of each
   nest; rabbits. Geysers (G0089) go after turrets and before medkits, `geyserKeepOff` off points, nests and ways in,

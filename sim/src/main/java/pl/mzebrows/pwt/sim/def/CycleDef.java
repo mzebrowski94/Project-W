@@ -75,6 +75,11 @@ public sealed interface CycleDef {
 
         @Override
         public Cycle deal(Randomness rng) {
+            return cycle();
+        }
+
+        /** The one step it fires, every step: what a volley is, with nothing to deal. */
+        public Cycle cycle() {
             int points = 0;
             for (int bearing : bearings) {
                 points |= 1 << (bearing / DEGREES_A_POINT);

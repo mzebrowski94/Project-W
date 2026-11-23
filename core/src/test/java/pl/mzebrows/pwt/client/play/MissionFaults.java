@@ -44,6 +44,7 @@ final class MissionFaults {
         faults.addAll(nests(mission, config.mission().placement()));
         faults.addAll(bands(mission, config));
         faults.addAll(sites(mission, config));
+        faults.addAll(relics(mission, config));
         faults.addAll(crates(mission, config));
         faults.addAll(trees(mission, config));
         faults.addAll(geysers(mission, config.mission().placement()));
@@ -301,6 +302,7 @@ final class MissionFaults {
         float man = config.trooper().radius() * 2f;
         for (int p = 0; p < mission.order().size(); p++) {
             int sites = 0;
+            int open = 0;
             Set<WorkedSiteKind> kinds = new HashSet<>();
             for (Placed placed : mission.placed()) {
                 if (placed.biome() != p || !site(placed)) {
@@ -310,11 +312,13 @@ final class MissionFaults {
                 if (!(placed instanceof Placed.Worked worked)) {
                     continue;
                 }
+                if (!config.workedSite(worked.kind()).housed()) {
+                    // In the open, a relic: as many as its biome's furniture counts (G0114).
+                    open++;
+                    continue;
+                }
                 if (!kinds.add(worked.kind())) {
                     faults.add("biome " + p + " has a second " + worked.kind());
-                }
-                if (!config.workedSite(worked.kind()).housed()) {
-                    continue;
                 }
                 House house = houseAt(mission, map.colAt(worked.x()), map.rowAt(worked.y()));
                 TileRect rect = mission.laid().biomes().get(p);
@@ -337,6 +341,79 @@ final class MissionFaults {
             if (sites < furniture.sitesMin() || sites > furniture.sitesMax()) {
                 faults.add("biome " + p + " has " + sites + " sites, not " + furniture.sitesMin() + ".."
                         + furniture.sitesMax());
+            }
+            if (open < furniture.relics().min() || open > furniture.relics().max()) {
+                faults.add("biome " + p + " has " + open + " relics, not "
+                        + furniture.relics().min() + ".." + furniture.relics().max());
+            }
+        }
+        return faults;
+    }
+
+    /**
+     * Every worked site in the open - a relic (G0114) - stands in its room: every tile within it its biome's base and
+     * not kept, and nothing else placed within it. And its plinth is reachable from inside its wardens: a commander fits
+     * square on each of its four compass points, touching the plinth - clear of rock and of every warden's body.
+     */
+    static List<String> relics(Mission mission, SimConfig config) {
+        TileMap map = mission.laid().map();
+        float tile = map.tileSize();
+        float man = config.commander().radius();
+        List<String> faults = new ArrayList<>();
+        for (Placed placed : mission.placed()) {
+            if (!(placed instanceof Placed.Worked worked)
+                    || config.workedSite(worked.kind()).housed()) {
+                continue;
+            }
+            var site = config.workedSite(worked.kind());
+            float room = site.clearing();
+            Terrain base = config.biomes()
+                    .of(mission.order().get(placed.biome()))
+                    .ground()
+                    .base();
+            int span = (int) Math.ceil(room / tile);
+            for (int row = map.rowAt(worked.y()) - span; row <= map.rowAt(worked.y()) + span; row++) {
+                for (int col = map.colAt(worked.x()) - span; col <= map.colAt(worked.x()) + span; col++) {
+                    float dx = Math.max(Math.max(col * tile - worked.x(), 0f), worked.x() - (col + 1) * tile);
+                    float dy = Math.max(Math.max(row * tile - worked.y(), 0f), worked.y() - (row + 1) * tile);
+                    if (dx * dx + dy * dy > room * room) {
+                        continue;
+                    }
+                    if (!map.inBounds(col, row)
+                            || mission.laid().kept(col, row)
+                            || map.terrainAtTile(col, row) != base) {
+                        faults.add(
+                                worked + " has ground other than open " + base + " in its room at " + col + "," + row);
+                    }
+                }
+            }
+            for (Placed other : mission.placed()) {
+                if (!other.equals(placed) && between(placed, other) < room + radius(other, config)) {
+                    faults.add(other + " stands in the room of " + worked);
+                }
+            }
+            if (!site.guards().on()) {
+                continue;
+            }
+            float offset = site.guards().offset();
+            float guard = config.emplacement(site.guards().kind()).radius();
+            float diagonal = offset * (float) Math.sqrt(0.5);
+            float out = site.radius() + man;
+            float[][] spots = {{0f, out}, {out, 0f}, {0f, -out}, {-out, 0f}};
+            for (float[] spot : spots) {
+                float x = worked.x() + spot[0];
+                float y = worked.y() + spot[1];
+                boolean clear = map.isClear(x, y, man);
+                for (int sx = -1; sx <= 1; sx += 2) {
+                    for (int sy = -1; sy <= 1; sy += 2) {
+                        float gx = worked.x() + sx * diagonal - x;
+                        float gy = worked.y() + sy * diagonal - y;
+                        clear &= gx * gx + gy * gy >= (guard + man) * (guard + man);
+                    }
+                }
+                if (!clear) {
+                    faults.add(worked + "'s plinth cannot be reached from inside its wardens at " + x + "," + y);
+                }
             }
         }
         return faults;

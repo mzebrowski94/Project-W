@@ -1,6 +1,6 @@
 # G0111: A mainframe is a site you download, and one man does it while the others watch
 
-**Status.** accepted
+**Status.** amended by G0114: a worked site may stand in the open in a room, have guards and a hatch, and be left to the commanders
 
 **Trigger.** A site taken by work held at it rather than by standing on it - a mainframe, the desert's relic (ticket
 09, G0114); the action key at one; a trooper working one; where a biome stands one; how it is drawn; the ring drawn

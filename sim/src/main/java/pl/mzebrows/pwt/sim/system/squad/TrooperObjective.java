@@ -58,10 +58,12 @@ final class TrooperObjective {
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Site> SITE = ComponentMapper.getFor(Site.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
+    private static final ComponentMapper<WorkedSite> WORKED = ComponentMapper.getFor(WorkedSite.class);
 
     /** How far inside a point counts as standing on it, as a fraction of its radius. */
     private static final float INSIDE_THE_EDGE = 0.7f;
 
+    private final SimConfig config;
     private final TileMap map;
     private final Rng rng;
     private final float bodyRadius;
@@ -131,6 +133,7 @@ final class TrooperObjective {
     private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
 
     TrooperObjective(SimConfig config, TileMap map, Rng rng, TrooperRoam roam) {
+        this.config = config;
         this.map = map;
         this.rng = rng;
         this.bodyRadius = config.trooper().radius();
@@ -450,6 +453,14 @@ final class TrooperObjective {
         return POINT.has(point) ? POINT.get(point).radius : BODY.get(point).radius + atAWorkedSite;
     }
 
+    /**
+     * Whether a site is the squad's to take (G0114): every point, and a worked site whose kind says troopers work it - a
+     * relic is left to the commanders.
+     */
+    private boolean forTheSquad(Entity point) {
+        return !WORKED.has(point) || config.workedSite(WORKED.get(point).kind).troopersWork();
+    }
+
     /** Whether a site has been taken, whatever its kind. */
     private static boolean taken(Entity point) {
         return POINT.has(point) ? POINT.get(point).captured : SITE.get(point).taken;
@@ -593,7 +604,10 @@ final class TrooperObjective {
         int shortest = Integer.MAX_VALUE;
         for (int i = 0; i < points.size(); i++) {
             Entity point = points.get(i);
-            if (i == passOver || taken(point) || (holdsAfterwards(point) && !aCommanderInBiomeOf(point))) {
+            if (i == passOver
+                    || taken(point)
+                    || !forTheSquad(point)
+                    || (holdsAfterwards(point) && !aCommanderInBiomeOf(point))) {
                 continue;
             }
             int steps = routes[i].stepsTo(col, row);

@@ -157,6 +157,7 @@ public final class WorldRenderer implements Disposable {
     private final ObjectiveRing objectiveRing;
     private final MainframeMark mainframeMark;
     private final SpireMark spireMark;
+    private final RelicMark relicMark;
     private final BurstMark burstMark;
     private final DazeMark dazeMark;
     private final TreeMark treeMark;
@@ -334,6 +335,12 @@ public final class WorldRenderer implements Disposable {
                 continue;
             } else if (appearance.look == Look.SPIRE) {
                 drawSpire(x, y, radius, appearance);
+                continue;
+            } else if (appearance.look == Look.RELIC) {
+                drawRelic(entity, x, y, radius, appearance);
+                continue;
+            } else if (appearance.look == Look.WARDEN) {
+                drawWarden(x, y, radius, appearance);
                 continue;
             } else if (appearance.streaks()) {
                 // Drawn back to where it says it came from, with a head on it so a beam that has
@@ -838,6 +845,38 @@ public final class WorldRenderer implements Disposable {
         shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
         shapes.setColor(spireMark.cap());
         shapes.circle(x, y, spireMark.capFor(radius), CIRCLE_SEGMENTS);
+    }
+
+    /**
+     * A relic (G0114): its plinth, and over it - until it is taken - a gold square in a fainter halo, turning slowly on
+     * the client's clock. Its extraction is the door's loading circle over it. Read off its site and its charge.
+     */
+    private void drawRelic(Entity entity, float x, float y, float radius, Appearance appearance) {
+        shapes.setColor(tint(appearance));
+        shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
+        if (SITE.has(entity) && SITE.get(entity).taken) {
+            return;
+        }
+        float side = relicMark.squareFor(radius);
+        float angle = relicMark.angleAt(pulseSeconds, motionScale);
+        Color glow = relicMark.glow();
+        float halo = side * relicMark.halo();
+        tinted.set(glow.r, glow.g, glow.b, relicMark.haloAlpha());
+        shapes.setColor(tinted);
+        shapes.rect(x - halo * 0.5f, y - halo * 0.5f, halo * 0.5f, halo * 0.5f, halo, halo, 1f, 1f, angle);
+        shapes.setColor(glow);
+        shapes.rect(x - side * 0.5f, y - side * 0.5f, side * 0.5f, side * 0.5f, side, side, 1f, 1f, angle);
+        if (appearance.charge > 0f) {
+            drawLoading(x, y, radius * 2f, palette.colorFor(appearance.chargeLook), appearance.charge);
+        }
+    }
+
+    /** A warden (G0114): an oval, its body's width and longer north to south. */
+    private void drawWarden(float x, float y, float radius, Appearance appearance) {
+        float width = radius * 2f;
+        float length = width * relicMark.wardenLength();
+        shapes.setColor(tint(appearance));
+        shapes.ellipse(x - width * 0.5f, y - length * 0.5f, width, length, CIRCLE_SEGMENTS);
     }
 
     /**

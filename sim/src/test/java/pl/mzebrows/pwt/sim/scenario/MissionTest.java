@@ -39,12 +39,14 @@ import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.Arrival;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
+import pl.mzebrows.pwt.sim.def.EmplacementKind;
 import pl.mzebrows.pwt.sim.def.FinaleKind;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.Wave;
+import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 
 /**
  * A mission is built whole from its seed and tier (G0065): the seed deals the order, lays the ground and chooses
@@ -80,7 +82,9 @@ class MissionTest {
                 boolean house = mission.laid().houses().stream()
                         .anyMatch(h -> ownHouse(mission.laid().biomes().get(position), h));
                 long mainframes = mission.placed().stream()
-                        .filter(placed -> placed.biome() == position && placed instanceof Placed.Worked)
+                        .filter(placed -> placed.biome() == position
+                                && placed instanceof Placed.Worked worked
+                                && worked.kind() == WorkedSiteKind.MAINFRAME)
                         .count();
                 assertThat(mainframes).as("seed %d biome %d", seed, p).isLessThanOrEqualTo(house ? 1L : 0L);
                 housed += house ? 1 : 0;
@@ -128,10 +132,68 @@ class MissionTest {
         Simulation world = Scenarios.world(
                 Scenarios.mission(TierKind.MEDIUM), SimConfig.defaults().withSeed(seed));
 
-        assertThat(world.engine()
-                        .getEntitiesFor(Family.all(Emplacement.class).get())
-                        .size())
-                .isBetween(3, 5);
+        long spires = 0;
+        for (Entity emplacement :
+                world.engine().getEntitiesFor(Family.all(Emplacement.class).get())) {
+            spires += emplacement.getComponent(Emplacement.class).kind == EmplacementKind.SPIRE ? 1 : 0;
+        }
+        assertThat(spires).isBetween(3L, 5L);
+    }
+
+    /**
+     * G0114: every desert lays its fewest to most relics among its sites, each in a point's place, and no other biome
+     * lays one.
+     */
+    @Test
+    void laysOneOrTwoRelicsAmongTheSitesOfEveryDesertAndNoneElsewhere() {
+        SimConfig shipped = SimConfig.defaults();
+        var relics = shipped.biomes().of(BiomeKind.DESERT).furniture().relics();
+        int deserts = 0;
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Mission mission = Mission.build(shipped.withSeed(seed), TierKind.MEDIUM);
+            for (int p = 0; p < mission.order().size(); p++) {
+                int position = p;
+                long standing = mission.placed().stream()
+                        .filter(placed -> placed.biome() == position
+                                && placed instanceof Placed.Worked worked
+                                && worked.kind() == WorkedSiteKind.RELIC)
+                        .count();
+                if (mission.order().get(p) == BiomeKind.DESERT) {
+                    deserts++;
+                    assertThat(standing).as("seed %d", seed).isBetween((long) relics.min(), (long) relics.max());
+                } else {
+                    assertThat(standing).as("seed %d biome %d", seed, p).isZero();
+                }
+            }
+        }
+        assertThat(deserts).as("the seeds deal a desert").isPositive();
+    }
+
+    @Test
+    void spawnsADesertsRelicWithItsFourWardensSilent() {
+        long seed = 0;
+        while (!Mission.deal(SimConfig.defaults().withSeed(seed)).contains(BiomeKind.DESERT)) {
+            seed++;
+        }
+        Mission mission = Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM);
+        long relics = mission.placed().stream()
+                .filter(placed -> placed instanceof Placed.Worked worked && worked.kind() == WorkedSiteKind.RELIC)
+                .count();
+
+        Simulation world = Scenarios.world(
+                Scenarios.mission(TierKind.MEDIUM), SimConfig.defaults().withSeed(seed));
+
+        long wardens = 0;
+        for (Entity emplacement :
+                world.engine().getEntitiesFor(Family.all(Emplacement.class).get())) {
+            Emplacement warden = emplacement.getComponent(Emplacement.class);
+            if (warden.kind == EmplacementKind.WARDEN) {
+                wardens++;
+                assertThat(warden.awake).isFalse();
+            }
+        }
+        assertThat(relics).isPositive();
+        assertThat(wardens).isEqualTo(relics * 4);
     }
 
     @Test

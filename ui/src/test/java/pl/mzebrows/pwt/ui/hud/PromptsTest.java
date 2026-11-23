@@ -81,6 +81,22 @@ class PromptsTest {
     }
 
     @Test
+    void offersAnExtractionOnAHoldAndSaysWhatIsBeingDoneOnceItIsUnderWay() {
+        PlayerReadout player = standing(0, 10L);
+        player.action = ActionKind.EXTRACT;
+        player.subject = 20L;
+
+        prompts.update(readout, EVERYBODY, FRAME);
+        String before = prompts.verb(0);
+        player.progress = 0.3f;
+        prompts.update(readout, EVERYBODY, FRAME);
+
+        assertThat(prompts.hold(0)).isTrue();
+        assertThat(before).isEqualTo("ui.action.EXTRACT");
+        assertThat(prompts.verb(0)).isEqualTo("ui.action.EXTRACT.working");
+    }
+
+    @Test
     void promptsTheStrikeOverHimWhilePinned() {
         PlayerReadout player = standing(0, 10L);
         player.pinned = true;
