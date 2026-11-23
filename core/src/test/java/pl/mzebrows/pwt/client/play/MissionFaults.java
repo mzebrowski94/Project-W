@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.map.Clearing;
 import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Maps;
 import pl.mzebrows.pwt.map.StripFaults;
@@ -45,6 +46,7 @@ final class MissionFaults {
         faults.addAll(bands(mission, config));
         faults.addAll(sites(mission, config));
         faults.addAll(relics(mission, config));
+        faults.addAll(clearings(mission, config));
         faults.addAll(crates(mission, config));
         faults.addAll(trees(mission, config));
         faults.addAll(geysers(mission, config.mission().placement()));
@@ -345,6 +347,35 @@ final class MissionFaults {
             if (open < furniture.relics().min() || open > furniture.relics().max()) {
                 faults.add("biome " + p + " has " + open + " relics, not "
                         + furniture.relics().min() + ".." + furniture.relics().max());
+            }
+        }
+        return faults;
+    }
+
+    /**
+     * Every clearing of a biome whose sites are in its clearings holds a control point on its centre tile (G0115).
+     */
+    static List<String> clearings(Mission mission, SimConfig config) {
+        TileMap map = mission.laid().map();
+        List<String> faults = new ArrayList<>();
+        for (int p = 0; p < mission.order().size(); p++) {
+            if (!config.biomes().of(mission.order().get(p)).furniture().sitesInClearings()) {
+                continue;
+            }
+            TileRect rect = mission.laid().biomes().get(p);
+            for (Clearing clearing : mission.laid().clearings()) {
+                if (!rect.contains(clearing.col(), clearing.row())) {
+                    continue;
+                }
+                boolean held = false;
+                for (Placed placed : mission.placed()) {
+                    held |= placed instanceof Placed.Point
+                            && map.colAt(placed.x()) == clearing.col()
+                            && map.rowAt(placed.y()) == clearing.row();
+                }
+                if (!held) {
+                    faults.add("biome " + p + "'s " + clearing + " holds no control point at its centre");
+                }
             }
         }
         return faults;

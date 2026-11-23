@@ -22,6 +22,7 @@ record TestBiome(String name, BiomeGround ground) {
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     Crags.off(),
                     new Outcrops(0.006f, 1, 2, 1, 1, 0f, 0f),
+                    Clearings.off(),
                     List.of()));
 
     static final TestBiome QUARRY = new TestBiome(
@@ -36,6 +37,7 @@ record TestBiome(String name, BiomeGround ground) {
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     Crags.off(),
                     new Outcrops(0.10f, 4, 9, 2, 3, 0.7f, 0f),
+                    Clearings.off(),
                     List.of()));
 
     static final TestBiome BRAKE = new TestBiome(
@@ -52,6 +54,7 @@ record TestBiome(String name, BiomeGround ground) {
                             new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
                     Crags.off(),
                     new Outcrops(0.015f, 2, 4, 1, 2, 0.3f, 0f),
+                    Clearings.off(),
                     List.of()));
 
     static final TestBiome ANTHILL = new TestBiome(
@@ -66,6 +69,7 @@ record TestBiome(String name, BiomeGround ground) {
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     new Crags(0.05f, 4, Terrain.ROCK),
                     Outcrops.off(),
+                    Clearings.off(),
                     List.of()));
 
     static final TestBiome BADLANDS = new TestBiome(
@@ -80,9 +84,26 @@ record TestBiome(String name, BiomeGround ground) {
                     List.of(new Patch.Rect(PatchGround.neighbour(), 0.04f, 4, 6)),
                     new Crags(0.13f, 4, Terrain.ROCK),
                     new Outcrops(0.02f, 2, 4, 1, 2, 0.3f, 0f),
+                    Clearings.off(),
                     List.of()));
 
     static final List<TestBiome> FIVE = List.of(PLAIN, QUARRY, BRAKE, ANTHILL, BADLANDS);
+
+    /** The rift (G0115): frost cut by fissures laid as dense crags, and two clearings no fissure is laid in. */
+    static final TestBiome RIFT = new TestBiome(
+            "rift",
+            new BiomeGround(
+                    64,
+                    72,
+                    3,
+                    Terrain.FROST,
+                    Terrain.DUST,
+                    Houses.off(),
+                    List.of(new Patch.Rect(PatchGround.neighbour(), 0.03f, 4, 6)),
+                    new Crags(0.16f, 2, Terrain.FISSURE),
+                    Outcrops.off(),
+                    new Clearings(2, 8),
+                    List.of()));
 
     /** The redoubt's ground: a fixed width, no dealt coats, its rock four fixed pieces round the anchor. */
     static final TestBiome REDOUBT = new TestBiome(
@@ -97,6 +118,7 @@ record TestBiome(String name, BiomeGround ground) {
                     List.of(),
                     Crags.off(),
                     Outcrops.off(),
+                    Clearings.off(),
                     List.of(
                             new TileRect(-9, -3, 2, 3),
                             new TileRect(8, 1, 2, 3),

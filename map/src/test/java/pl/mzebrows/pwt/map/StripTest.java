@@ -219,6 +219,7 @@ class StripTest {
                 List.of(),
                 Crags.off(),
                 Outcrops.off(),
+                Clearings.off(),
                 List.of(new TileRect(18, 0, 1, 1)));
 
         assertThatThrownBy(() -> Strip.lay(RULES, ORDER, past, START, TestStream.seeded(1L), TILE_SIZE))
@@ -321,6 +322,7 @@ class StripTest {
                 badlands.patches(),
                 new Crags(0.05f, 2, Terrain.ROCK),
                 Outcrops.off(),
+                Clearings.off(),
                 badlands.pieces());
         List<BiomeGround> order = new ArrayList<>(ORDER);
         order.set(2, retuned);

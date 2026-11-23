@@ -92,11 +92,46 @@ class BiomePromisesTest {
         for (BiomeKind kind : BiomeKind.values()) {
             int boulders = SHIPPED.biomes().of(kind).furniture().bouldersMax();
             if (kind != BiomeKind.CALDERA && boulders > 0) {
+                // No more than any biome that has them: the rift's maze, as short of room, lays as few (G0115).
                 assertThat(furniture.bouldersMax())
                         .as("the caldera against %s", kind)
-                        .isLessThan(boulders);
+                        .isLessThanOrEqualTo(boulders);
             }
         }
+    }
+
+    /**
+     * "A cold biome" (ticket 10, G0115, provisional, for review): the rift is the one biome of fissures - its crags of
+     * them, on frost - and the one with clearings, two of radius 8, its sites in them and 60 % of its packs; no house,
+     * no tree, no geyser.
+     */
+    @Test
+    void theRiftIsTheOneBiomeOfFissuresOnFrostWithItsSitesInTwoClearings() {
+        for (BiomeKind kind : BiomeKind.values()) {
+            boolean rift = kind == BiomeKind.RIFT;
+            var furniture = SHIPPED.biomes().of(kind).furniture();
+            assertThat(ground(kind).crags().terrain() == Terrain.FISSURE)
+                    .as("%s's fissures", kind)
+                    .isEqualTo(rift);
+            assertThat(ground(kind).clearings().count() > 0)
+                    .as("%s's clearings", kind)
+                    .isEqualTo(rift);
+            assertThat(furniture.sitesInClearings())
+                    .as("%s's sites in clearings", kind)
+                    .isEqualTo(rift);
+            assertThat(furniture.clearingPackShare() > 0)
+                    .as("%s's packs in clearings", kind)
+                    .isEqualTo(rift);
+        }
+        BiomeGround rift = ground(BiomeKind.RIFT);
+        var furniture = SHIPPED.biomes().of(BiomeKind.RIFT).furniture();
+        assertThat(rift.base()).isEqualTo(Terrain.FROST);
+        assertThat(rift.clearings().count()).isEqualTo(2);
+        assertThat(rift.clearings().radius()).isEqualTo(8);
+        assertThat(rift.houses().max()).isZero();
+        assertThat(furniture.clearingPackShare()).isEqualTo(60);
+        assertThat(furniture.treesMax()).isZero();
+        assertThat(furniture.geysersMax()).isZero();
     }
 
     /** "Upgraded spitters in it" (ticket 16): the magma spitter stands in the caldera and nowhere else. */

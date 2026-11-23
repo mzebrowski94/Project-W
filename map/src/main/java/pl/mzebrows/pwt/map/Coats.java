@@ -6,7 +6,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Lays one biome's coats over its base: houses, then patches in order, then crags, then outcrops. Rock always wins
+ * Lays one biome's coats over its base: clearings, houses, then patches in order, then crags, then outcrops. Rock always wins
  * over a patch; an apron tile keeps base ground, and so do a house's inside, doorways and doorsteps; no passage is
  * left under the clearance; nothing is sealed off. Each coat draws from a stream of its own, derived from the biome's, so
  * retuning one moves no other's draws (G0065).
@@ -31,6 +31,7 @@ final class Coats {
     private static final long CRAGS = 0xBB67_AE85_84CA_A73BL;
     private static final long OUTCROPS = 0x3C6E_F372_FE94_F82BL;
     private static final long HOUSES = 0x428A_2F98_D728_AE22L;
+    private static final long CLEARINGS = 0x9B05_688C_68D6_A0C2L;
 
     /** A house's walls, in the order they are drawn from. */
     private static final int WEST = 0;
@@ -76,6 +77,26 @@ final class Coats {
     /** Scratch: the tiles of the outcrop being tried. */
     private final boolean[] own;
 
+    /** Per tile: inside a clearing, where no crag and no outcrop is laid (G0115). */
+    private final boolean[] clear;
+
+    private final List<Clearing> clearings = new ArrayList<>();
+
+    /**
+     * What one biome's coats laid besides its ground: its houses and its clearings.
+     *
+     * @param houses as many as fitted up to the count drawn - fewer than the biome's {@code min} only when there was no
+     *     room, which the strip sweep reports
+     * @param clearings every clearing its ground asks for, west to east
+     */
+    record Laid(List<House> houses, List<Clearing> clearings) {
+
+        Laid {
+            houses = List.copyOf(houses);
+            clearings = List.copyOf(clearings);
+        }
+    }
+
     private Coats(
             TileMap.Builder map,
             TileRect area,
@@ -99,6 +120,7 @@ final class Coats {
         this.ends = ends;
         this.clearance = clearance;
         this.own = new boolean[cols * rows];
+        this.clear = new boolean[cols * rows];
     }
 
     /**
@@ -111,10 +133,9 @@ final class Coats {
      * @param ends tiles of the map, {@code row * cols + col}, where the biome is entered; at least one
      * @param rules the clearance, and every house's size and doorways
      * @param biome this biome's stream; only derived from, never drawn
-     * @return the houses laid, as many as fitted up to the count drawn - fewer than the biome's {@code min} only
-     *     when there was no room, which the strip sweep reports
+     * @return the houses and clearings laid
      */
-    static List<House> lay(
+    static Laid lay(
             TileMap.Builder map,
             TileRect area,
             BiomeGround ground,
@@ -132,6 +153,7 @@ final class Coats {
         }
         Coats coats = new Coats(map, area, ground, west, east, apron, ends, rules.clearance());
         coats.pieces();
+        coats.clearings(biome.derive(CLEARINGS));
         List<House> houses = coats.houses(rules.houses(), biome.derive(HOUSES));
         coats.patches(biome.derive(PATCHES));
         coats.crags(biome.derive(CRAGS));
@@ -141,7 +163,7 @@ final class Coats {
                 map.set(col, row, coats.tiles[row * coats.cols + col]);
             }
         }
-        return houses;
+        return new Laid(houses, coats.clearings);
     }
 
     // ---- pieces ----
@@ -160,6 +182,53 @@ final class Coats {
                     tiles[r * cols + c] = Terrain.ROCK;
                 }
             }
+        }
+    }
+
+    // ---- clearings ----
+
+    /**
+     * Each clearing its ground asks for (G0115, provisional, for review): clearing {@code k} of {@code n} centred on a
+     * column dealt within a twelfth of the width of {@code k / (n + 1)} of it, on the side away from the middle - so of
+     * two, the west one is in the west third and the west half, and the east one in the east third and the east half,
+     * whichever way a biome's sites are banded - and on a row a radius in from either edge. Its disc is marked clear,
+     * so no later coat lays rock in it, and its centre is an end, so the crag repairs keep it reached.
+     */
+    private void clearings(Randomness rng) {
+        Clearings wanted = ground.clearings();
+        int n = wanted.count();
+        int radius = wanted.radius();
+        int spread = Math.max(1, area.width() / 12);
+        int lowRow = area.row() + radius;
+        int highRow = area.endRow() - 1 - radius;
+        if (n > 0 && highRow < lowRow) {
+            throw new IllegalArgumentException("a clearing of radius " + radius + " does not fit in " + area);
+        }
+        for (int k = 1; k <= n; k++) {
+            int edge = area.col() + k * area.width() / (n + 1);
+            int from;
+            int to;
+            if (2 * k < n + 1) {
+                from = edge - spread;
+                to = edge - 1;
+            } else if (2 * k > n + 1) {
+                from = edge;
+                to = edge + spread - 1;
+            } else {
+                from = edge - spread / 2;
+                to = edge + spread / 2;
+            }
+            Clearing clearing = new Clearing(between(rng, from, to), between(rng, lowRow, highRow), radius);
+            for (int row = clearing.row() - radius; row <= clearing.row() + radius; row++) {
+                for (int col = clearing.col() - radius; col <= clearing.col() + radius; col++) {
+                    if (area.contains(col, row) && clearing.contains(col, row)) {
+                        clear[row * cols + col] = true;
+                    }
+                }
+            }
+            ends = Arrays.copyOf(ends, ends.length + 1);
+            ends[ends.length - 1] = clearing.row() * cols + clearing.col();
+            clearings.add(clearing);
         }
     }
 
@@ -210,7 +279,7 @@ final class Coats {
     private boolean openRound(int x, int y, int w, int h) {
         for (int row = y - clearance; row < y + h + clearance; row++) {
             for (int col = x - clearance; col < x + w + clearance; col++) {
-                if (rock(col, row) || apron[row * cols + col]) {
+                if (rock(col, row) || apron[row * cols + col] || clear[row * cols + col]) {
                     return false;
                 }
             }
@@ -496,7 +565,7 @@ final class Coats {
         for (int row = bottom; row <= top; row++) {
             for (int col = left; col <= right; col++) {
                 int at = row * cols + col;
-                if (!apron[at] && tiles[at].passable()) {
+                if (!apron[at] && !clear[at] && tiles[at].passable()) {
                     noise[at] = rng.nextFloat();
                     candidates++;
                 }
@@ -813,7 +882,7 @@ final class Coats {
         for (int tile : at) {
             int col = tile % cols;
             int row = tile / cols;
-            if (!area.contains(col, row) || apron[tile] || !tiles[tile].passable()) {
+            if (!area.contains(col, row) || apron[tile] || clear[tile] || !tiles[tile].passable()) {
                 return false;
             }
         }

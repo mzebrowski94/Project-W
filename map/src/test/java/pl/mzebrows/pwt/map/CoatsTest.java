@@ -138,6 +138,55 @@ class CoatsTest {
     }
 
     @Test
+    void laysNoCragInAClearingAndKeepsEveryClearingReached() {
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Rig rig = Rig.laid(TestBiome.RIFT.ground(), seed);
+            boolean[] reached = Maps.reachableFrom(rig.map, rig.ends[0] % Rig.COLS, rig.ends[0] / Rig.COLS);
+
+            assertThat(rig.clearings).as("seed %d", seed).hasSize(2);
+            for (Clearing clearing : rig.clearings) {
+                for (int r = Rig.AREA.row(); r < Rig.AREA.endRow(); r++) {
+                    for (int c = Rig.AREA.col(); c < Rig.AREA.endCol(); c++) {
+                        if (clearing.contains(c, r)) {
+                            assertThat(rig.map.terrainAtTile(c, r))
+                                    .as("seed %d, (%d,%d)", seed, c, r)
+                                    .isNotEqualTo(Terrain.FISSURE);
+                            assertThat(reached[r * Rig.COLS + c])
+                                    .as("seed %d, (%d,%d)", seed, c, r)
+                                    .isTrue();
+                        }
+                    }
+                }
+            }
+            assertThat(rig.narrowest()).as("seed %d", seed).isGreaterThanOrEqualTo(CLEARANCE);
+            assertThat(rig.pockets()).as("seed %d", seed).isZero();
+            assertThat(rig.passesConnect()).as("seed %d", seed).isTrue();
+        }
+    }
+
+    /**
+     * Two clearings, the west one in the biome's west third and the east one in its east third - so in the halves, the
+     * thirds or the bands of a last biome, each lies in a band of its own - each a radius in from the top and bottom.
+     */
+    @Test
+    void centresTwoClearingsEachInAnOuterThirdOfTheBiome() {
+        int third = Rig.WIDTH / 3;
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Rig rig = Rig.laid(TestBiome.RIFT.ground(), seed);
+            Clearing west = rig.clearings.getFirst();
+            Clearing east = rig.clearings.getLast();
+
+            assertThat(west.col() - Rig.AREA.col()).as("seed %d", seed).isBetween(third - Rig.WIDTH / 12, third - 1);
+            assertThat(east.col() - Rig.AREA.col())
+                    .as("seed %d", seed)
+                    .isBetween(Rig.WIDTH * 2 / 3, Rig.WIDTH * 2 / 3 + Rig.WIDTH / 12 - 1);
+            for (Clearing clearing : rig.clearings) {
+                assertThat(clearing.row()).as("seed %d", seed).isBetween(Rig.AREA.row() + 8, Rig.AREA.endRow() - 1 - 8);
+            }
+        }
+    }
+
+    @Test
     void refusesCragsOfGroundSomethingCouldStandOn() {
         assertThatThrownBy(() -> new Crags(0.1f, 4, Terrain.ASH)).isInstanceOf(IllegalArgumentException.class);
     }
@@ -257,6 +306,7 @@ class CoatsTest {
                 g.patches(),
                 g.crags(),
                 g.outcrops(),
+                g.clearings(),
                 g.pieces());
     }
 
@@ -271,6 +321,7 @@ class CoatsTest {
                 patches,
                 g.crags(),
                 g.outcrops(),
+                g.clearings(),
                 g.pieces());
     }
 
@@ -285,6 +336,7 @@ class CoatsTest {
                 g.patches(),
                 crags,
                 g.outcrops(),
+                g.clearings(),
                 g.pieces());
     }
 
@@ -299,6 +351,7 @@ class CoatsTest {
                 g.patches(),
                 g.crags(),
                 outcrops,
+                g.clearings(),
                 g.pieces());
     }
 
@@ -336,12 +389,14 @@ class CoatsTest {
         private final boolean[] apron;
         private final int[] ends;
         private final List<House> houses;
+        private final List<Clearing> clearings;
 
-        private Rig(TileMap map, boolean[] apron, int[] ends, List<House> houses) {
+        private Rig(TileMap map, boolean[] apron, int[] ends, Coats.Laid laid) {
             this.map = map;
             this.apron = apron;
             this.ends = ends;
-            this.houses = houses;
+            this.houses = laid.houses();
+            this.clearings = laid.clearings();
         }
 
         static Rig laid(BiomeGround ground, long seed) {
@@ -381,8 +436,8 @@ class CoatsTest {
                     apron[(EAST_PASS + r) * COLS + COLS - 1 - d] = true;
                 }
             }
-            List<House> houses = Coats.lay(builder, AREA, ground, west, east, apron, ends, StripTest.RULES, stream);
-            return new Rig(builder.build(), apron, ends, houses);
+            Coats.Laid laid = Coats.lay(builder, AREA, ground, west, east, apron, ends, StripTest.RULES, stream);
+            return new Rig(builder.build(), apron, ends, laid);
         }
 
         float share(Terrain terrain) {

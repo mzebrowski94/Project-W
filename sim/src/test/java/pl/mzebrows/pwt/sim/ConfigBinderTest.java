@@ -10,6 +10,7 @@ import java.util.TreeMap;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.BiomeGround;
+import pl.mzebrows.pwt.map.Clearings;
 import pl.mzebrows.pwt.map.Crags;
 import pl.mzebrows.pwt.map.Houses;
 import pl.mzebrows.pwt.map.Outcrops;
@@ -365,6 +366,7 @@ class ConfigBinderTest {
                                 new Patch.Blob(PatchGround.of(Terrain.THICKET), 0.18f, 6, 11)),
                         Crags.off(),
                         new Outcrops(0.015f, 2, 4, 1, 2, 0.3f, 0f),
+                        Clearings.off(),
                         List.of()));
     }
 

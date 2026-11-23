@@ -73,7 +73,20 @@ public enum Terrain {
      * Deep mud, the desert's: passable, and slow to cross as a {@link #THICKET} is - what it costs is asked of
      * {@code sim} in the same way. Its own constant so it is drawn as mud rather than as undergrowth (pillar 5).
      */
-    MUD(true);
+    MUD(true),
+
+    /**
+     * Frozen stony ground, the rift's base (G0115, provisional, for review): passable and costs nothing. Cold grey-blue
+     * rather than snow, its own constant so it is drawn as what it is (pillar 5).
+     */
+    FROST(true),
+
+    /**
+     * A dark crack nothing stands on, the rift's maze (G0115, provisional, for review): solid as {@link #LAVA} is to
+     * everything - a unit, a shot, a clear line - for there is one solidity (G0091). Laid as crags, so its masses are
+     * repaired as rock's are and never close a pass. Its own constant so it is drawn as what it is (pillar 5).
+     */
+    FISSURE(false);
 
     private final boolean passable;
 

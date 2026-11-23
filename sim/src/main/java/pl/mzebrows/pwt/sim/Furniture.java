@@ -29,6 +29,10 @@ import pl.mzebrows.pwt.map.Randomness;
  * @param spires how many spires, the fen's emplacements (G0113): {@code 0 0} in every biome but the fen
  * @param relics how many of its sites are relics (G0114), each in a point's place: {@code 0 0} in every biome but the
  *     desert; never more than it has sites
+ * @param sitesInClearings whether a control point stands at the centre of each of its ground's clearings, first of its
+ *     sites, each in the band its column falls in (G0115); false in every biome but the rift
+ * @param clearingPackShare the per cent of its loose packs put down in its clearings, before any elsewhere (G0115);
+ *     zero in every biome but the rift
  * @param pickups what lies about, a line per kind; a house is stocked with its crates and medkits first, and a crate is
  *     laid nowhere else (G0110)
  */
@@ -53,6 +57,8 @@ public record Furniture(
         int geysersMax,
         Count spires,
         Count relics,
+        boolean sitesInClearings,
+        int clearingPackShare,
         List<Stock> pickups) {
 
     /** A fewest and a most, on one line: {@code spires=3 5}, {@code relics=1 2}. */
@@ -84,6 +90,9 @@ public record Furniture(
         if (relics.max() > sitesMin) {
             throw new IllegalArgumentException(
                     "a biome's relics are among its sites, so at most " + sitesMin + ", were up to " + relics.max());
+        }
+        if (clearingPackShare < 0 || clearingPackShare > 100) {
+            throw new IllegalArgumentException("furniture clearingPackShare is a per cent, was " + clearingPackShare);
         }
         pickups = List.copyOf(pickups);
     }
