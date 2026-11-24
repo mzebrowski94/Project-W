@@ -559,7 +559,7 @@ final class AdventureScenario implements Scenario {
         pickups(simulation, map, PickupKind.ARMOURY_RAILGUN, 104, 6);
         // CRATES from here on, about half of every biome's caches (G0056): the growth taught which colour
         // is which gun, and now some of what is lying about is opened and chosen from. The deck is a bag,
-        // so what these hold is spread over every gun and the medkits, and Firepower stocks each one.
+        // so what these hold is spread over every gun and the medkits.
         pickups(simulation, map, PickupKind.CRATE, 108, 12, 99, 24, 115, 24);
         // THE FIRST BEAM, and the quarry is where it is first worth having. Everything here outlives
         // a sidearm, and the beam is the gun that answers a thing rather than a crowd: it holds one

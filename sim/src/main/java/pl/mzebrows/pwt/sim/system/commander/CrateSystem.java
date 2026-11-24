@@ -285,7 +285,7 @@ public final class CrateSystem extends EntitySystem {
     }
 
     /**
-     * Whatever an upgrade stocks every crate with (Firepower's flamer): kept where the deck already dealt one,
+     * Whatever an upgrade stocks every crate with - no shipped card does since G0127: kept where the deck already dealt one,
      * and otherwise swapped in for the last card not already a stock's - one, since no crate holds two of a kind
      * (G0110).
      */

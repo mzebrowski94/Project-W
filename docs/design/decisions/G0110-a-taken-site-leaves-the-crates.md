@@ -1,6 +1,6 @@
 # G0110: A taken site leaves the crates, counted by players; a crate holds no kind twice; Looter
 
-**Status.** accepted
+**Status.** amended by G0127: Firepower stocks no flamer
 
 **Trigger.** Anything a taken site - a control point, a mainframe, a relic - earns or lays; where crates come from;
 a biome's crate line; how many crates a taking leaves for how many players; two cards of one kind in a crate; an
@@ -11,7 +11,7 @@ upgrade that adds a card to a crate; adding a kind of site.
 `.marksItsSiteTakenOnTheTickItIsTaken`, and every older `ControlPointTest` row of G0078 and G0086 through the shared
 step; `SimConfigTest.refusesSiteCrateThresholdsThatDoNotStartAtOneOrDoNotRise`, `.countsTheShippedSiteCratesByPlayers`;
 `CrateTest.neverShowsOneKindTwiceInACrateOverManyDeals`, `.dealsASmallerCrateFromADeckShortOfKinds`,
-`.addsNoSecondFlamerUnderFirepower`, `.holdsOneCardMoreOnALooterHoldersFirstOpening`,
+`.addsNoSecondCardOfTheKindAStockNames`, `.holdsOneCardMoreOnALooterHoldersFirstOpening`,
 `.givesNothingMoreOnTheLooterHoldersSecondOpening`, `.givesNothingMoreOnAnotherLooterHoldersLaterOpening`,
 `.addsACardOfANewKindToACrateANonLooterOpenedFirst`, `.neverHoldsMoreThanACrateCanUnderLooter`;
 `MissionSweepTest.holdsEveryMissionToTheRules` through `MissionFaults.crates` (no biome crate outside a house).
@@ -51,7 +51,7 @@ order loses "crates by points" and counts sites, not points; G0078's "what a tak
   means "crates in the house, when there is one". The finales' hand-placed crates are untouched.
 - **No crate holds two cards of one pickup kind.** A card of a kind the crate already holds is never drawn: it stays
   in the armoury bag for another crate, and another card is drawn. A deck with no other kind left makes a smaller
-  crate than its drawn size. Firepower's flamer is swapped in only when the deal holds none. The armoury deck's even
+  crate than its drawn size. A stocked card is swapped in only when the deal holds none. The armoury deck's even
   deal - a bag over cards - is kept.
 - **Looter** (`UpgradeKind.LOOTER`, personal, one rank, `Stat.CRATE_EXTRA`): the first time a commander holding it
   opens a given crate, the crate holds one card more of a kind it does not hold, if it has room under four. Once per
@@ -104,3 +104,10 @@ the caches.
 
 **Revisit when** a site is not a control point (G0111, G0114), a game seats more than eight, or a crate should hold
 more than four.
+
+## Amended by G0127
+
+Firepower stocks no flamer (G0127), so no shipped card stocks a crate: the rule that a stocked card is swapped in only
+where the deal holds none stands for the `stock` form, which stays a card's grammar (`CrateTest.addsNoSecondCardOfTheKindAStockNames`).
+The two bullets above on Firepower's second rank and on Looter's card before *Firepower's stock* read as history; the
+stock line Mateusz was to retune is gone.

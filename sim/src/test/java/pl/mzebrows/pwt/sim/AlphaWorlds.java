@@ -1925,8 +1925,9 @@ public final class AlphaWorlds {
                         UpgradeKind.FIREPOWER,
                         off(
                                 2,
-                                new Effect.Stock(PickupKind.ARMOURY_FLAMER, FIREPOWER_STOCK),
-                                new Effect.Gun(WeaponKind.FLAMER, Stat.GUN_DAMAGE, Target.TEAM, FIREPOWER_PERCENT)))
+                                new Effect.Gun(WeaponKind.FLAMER, Stat.GUN_DAMAGE, Target.TEAM, FIREPOWER_PERCENT),
+                                new Effect.Gun(WeaponKind.BAZOOKA, Stat.GUN_DAMAGE, Target.TEAM, FIREPOWER_PERCENT),
+                                new Effect.Gun(WeaponKind.DETONATOR, Stat.GUN_DAMAGE, Target.TEAM, FIREPOWER_PERCENT)))
                 .put(
                         UpgradeKind.EXPLOSIVES,
                         off(1, new Effect.Chance(AiChance.THROW_A_GRENADE, Target.SQUAD, EXPLOSIVES_PER_SECOND)))
@@ -2011,8 +2012,8 @@ public final class AlphaWorlds {
     /** What Looter adds to a crate the first time its holder opens it (G0110). */
     public static final int LOOTER_CARDS = 1;
 
-    public static final int FIREPOWER_STOCK = 1;
-    public static final int FIREPOWER_PERCENT = 25;
+    /** What one rank of Firepower adds to each heavy gun's damage, its blasts' included (G0127). */
+    public static final int FIREPOWER_PERCENT = 15;
 
     /** What one rank of Rapid Spit takes off a spitter's cooldown, in percent. */
     public static final int SPIT_PERCENT = -25;

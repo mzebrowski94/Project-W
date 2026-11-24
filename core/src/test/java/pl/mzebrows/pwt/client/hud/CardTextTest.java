@@ -48,6 +48,26 @@ class CardTextTest {
         assertThat(TEXT.effect(new Effect.Stock(PickupKind.ARMOURY_FLAMER, 1))).isEqualTo("+1 FLAMER PER CRATE");
     }
 
+    /** Firepower's three heavy guns (G0127): one line naming each, where three would not fit a card. */
+    @Test
+    void foldsGunEffectsAlikeButForTheGunIntoOneLine() {
+        List<Effect> heavy = List.of(
+                new Effect.Gun(WeaponKind.FLAMER, Stat.GUN_DAMAGE, Target.TEAM, 15),
+                new Effect.Gun(WeaponKind.BAZOOKA, Stat.GUN_DAMAGE, Target.TEAM, 15),
+                new Effect.Gun(WeaponKind.DETONATOR, Stat.GUN_DAMAGE, Target.TEAM, 15));
+
+        assertThat(TEXT.lines(heavy)).containsExactly("FLAMER/BAZOOKA/LIMPET DMG +15%");
+    }
+
+    @Test
+    void keepsGunEffectsThatDifferInTheirNumberOnLinesOfTheirOwn() {
+        List<Effect> apart = List.of(
+                new Effect.Gun(WeaponKind.FLAMER, Stat.GUN_DAMAGE, Target.TEAM, 15),
+                new Effect.Gun(WeaponKind.BAZOOKA, Stat.GUN_DAMAGE, Target.TEAM, 10));
+
+        assertThat(TEXT.lines(apart)).containsExactly("FLAMER DAMAGE +15%", "BAZOOKA DAMAGE +10%");
+    }
+
     @Test
     void namesAnUpgradeWithTheRankItWillHave() {
         assertThat(TEXT.title(UpgradeKind.LARGER_ARMY, 2)).isEqualTo("LARGER ARMY II");
@@ -61,15 +81,12 @@ class CardTextTest {
             UpgradeDef def = SimConfig.defaults().upgrades().of(kind);
             List<String> lines = new ArrayList<>();
             lines.add(TEXT.title(kind, def.ranks()));
-            for (Effect effect : def.effects()) {
-                lines.add(TEXT.effect(effect));
-            }
+            List<String> effects = TEXT.lines(def.effects());
+            lines.addAll(effects);
 
             if (def.side() == Side.PLAYER) {
                 // Only a players' upgrade is dealt on a card; an adaptation is shown by its name and rank.
-                assertThat(def.effects().size())
-                        .as("%s effects on a card", kind)
-                        .isLessThanOrEqualTo(CardText.EFFECT_LINES);
+                assertThat(effects.size()).as("%s effects on a card", kind).isLessThanOrEqualTo(CardText.EFFECT_LINES);
             }
             for (String line : lines) {
                 assertThat(line).as(kind.name()).doesNotContain("#ui.").doesNotContain("{");

@@ -5,15 +5,18 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA_TILES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.BAZOOKA_BLAST_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.BAZOOKA_RANGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.BAZOOKA_SHAKE_STRENGTH;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.BLAST_DAMAGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TILE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.hold;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.on;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
@@ -30,6 +33,7 @@ import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * The bazooka: one rocket, then the wait for the gun to cool, a kick back from every pull, and a blast
@@ -152,6 +156,19 @@ class BazookaTest {
         assertThat(bystander.getComponent(Vitality.class).begun).isFalse();
     }
 
+    /** A blast is part of what the gun does: Firepower's two ranks land the rocket's blast 30 % harder (G0127). */
+    @Test
+    void landsItsBlastAsMuchHarderAsItsGunUnderFirepower() {
+        Simulation plain = simulation();
+        holding(plain, WeaponKind.BAZOOKA);
+        Simulation firepower = simulation();
+        holding(firepower, WeaponKind.BAZOOKA);
+        hold(firepower, UpgradeKind.FIREPOWER, 2);
+
+        assertThat(blastOf(plain)).isEqualTo(BLAST_DAMAGE);
+        assertThat(blastOf(firepower)).isEqualTo(BLAST_DAMAGE * 130 / 100);
+    }
+
     // ---- into a wall ----
 
     /**
@@ -217,6 +234,21 @@ class BazookaTest {
                 .getComponent(Weapon.class)
                 .set(gun, simulation.config().weapon(gun), simulation.config().tickSeconds());
         return commander;
+    }
+
+    /** What the blast of one rocket fired along the lane takes off whatever it catches. */
+    private static int blastOf(Simulation simulation) {
+        simulation.step(FIRING);
+        int ticks = 0;
+        while (count(simulation, Blast.class) == 0 && ticks++ < untilSpent(simulation)) {
+            simulation.step();
+        }
+        return simulation
+                .engine()
+                .getEntitiesFor(Family.all(Blast.class).get())
+                .first()
+                .getComponent(Blast.class)
+                .damage;
     }
 
     /** The whole of a rocket's flight, and a few ticks for its blast to land. */

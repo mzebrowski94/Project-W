@@ -468,10 +468,22 @@ class CrateTest {
         assertThat(dealt).containsExactlyInAnyOrder(PickupKind.ARMOURY_FLAMER, PickupKind.MEDKIT);
     }
 
-    /** Firepower's flamer is swapped in only where the deal held none: never a second (G0110). */
+    /** A stocked card is swapped in only where the deal held none: never a second (G0110). */
     @Test
-    void addsNoSecondFlamerUnderFirepower() {
-        Simulation simulation = new Simulation(stacked(config()));
+    void addsNoSecondCardOfTheKindAStockNames() {
+        SimConfig config = stacked(config());
+        config = config.withUpgrades(config.upgrades()
+                .map(
+                        UpgradeKind.FIREPOWER,
+                        firepower -> new UpgradeDef(
+                                Side.PLAYER,
+                                0,
+                                1,
+                                1,
+                                null,
+                                0,
+                                List.of(new Effect.Stock(PickupKind.ARMOURY_FLAMER, 1)))));
+        Simulation simulation = new Simulation(config);
         Entity commander = simulation.spawnCommander(MIDDLE, MIDDLE);
         AlphaWorlds.hold(simulation, UpgradeKind.EXPLOSIVES, 1);
         AlphaWorlds.hold(simulation, UpgradeKind.FIREPOWER, 1);

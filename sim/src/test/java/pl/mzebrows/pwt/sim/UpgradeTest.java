@@ -343,12 +343,41 @@ class UpgradeTest {
     }
 
     /**
-     * Firepower stocks every crate (G0056): with one rank every crate opened after the pick holds a flamer,
-     * whatever the deck dealt - read through the one port.
+     * A crate opened under Firepower is dealt as any other (G0127): the flamer at the deck's baseline, the same crates
+     * card for card as a level where nobody took it.
      */
     @Test
-    void stocksEveryCrateWithAFlamerUnderFirepower() {
-        Simulation simulation = new Simulation(AlphaWorlds.config());
+    void dealsEveryCrateUnderFirepowerAsWithoutIt() {
+        Simulation plain = new Simulation(AlphaWorlds.config());
+        plain.spawnCommander(MIDDLE, MIDDLE);
+        Simulation firepower = new Simulation(AlphaWorlds.config());
+        firepower.spawnCommander(MIDDLE, MIDDLE);
+        hold(firepower, new Upgrades.Held(UpgradeKind.FIREPOWER, Upgrades.SHARED, 2));
+
+        for (int crate = 0; crate < 4; crate++) {
+            assertThat(open(firepower, crate)).as("crate %d", crate).isEqualTo(open(plain, crate));
+        }
+    }
+
+    /**
+     * A stock puts its card in every crate opened after the pick (G0056), whatever the deck dealt - read through the
+     * one port. No card ships one since G0127; the form stays, a card's grammar.
+     */
+    @Test
+    void stocksEveryCrateWithTheCardAStockNames() {
+        SimConfig config = AlphaWorlds.config();
+        config = config.withUpgrades(config.upgrades()
+                .map(
+                        UpgradeKind.FIREPOWER,
+                        firepower -> new UpgradeDef(
+                                Side.PLAYER,
+                                0,
+                                2,
+                                1,
+                                null,
+                                0,
+                                List.of(new Effect.Stock(PickupKind.ARMOURY_FLAMER, 1)))));
+        Simulation simulation = new Simulation(config);
         simulation.spawnCommander(MIDDLE, MIDDLE);
         hold(simulation, new Upgrades.Held(UpgradeKind.FIREPOWER, Upgrades.SHARED, 1));
 
@@ -403,18 +432,23 @@ class UpgradeTest {
                 .hasSize(AlphaWorlds.ARMOURY_CARDS + 2);
     }
 
-    /** Its damage is the flamer's alone, and reaches whoever holds one - a trooper who took a crate too. */
+    /**
+     * Its damage is the three heavy guns' alone (G0127) - the flamer, the bazooka and the detonator - and reaches
+     * whoever holds one, a trooper who took a crate too.
+     */
     @Test
-    void hitsHarderWithAFlamerAndWithNoOtherGunUnderFirepower() {
+    void hitsHarderWithTheHeavyGunsAndWithNoOtherGunUnderFirepower() {
         Simulation simulation = new Simulation(AlphaWorlds.config());
         simulation.spawnCommander(MIDDLE, MIDDLE);
         Entity trooper = simulation.spawnTrooper(MIDDLE - 10f, MIDDLE);
         hold(simulation, new Upgrades.Held(UpgradeKind.FIREPOWER, Upgrades.SHARED, 2));
         Modifiers modifiers = new Modifiers(simulation.engine(), simulation.config());
 
-        assertThat(modifiers.gunDamage(trooper, WeaponKind.FLAMER, 100))
-                .isEqualTo(100 + 2 * AlphaWorlds.FIREPOWER_PERCENT);
+        for (WeaponKind heavy : new WeaponKind[] {WeaponKind.FLAMER, WeaponKind.BAZOOKA, WeaponKind.DETONATOR}) {
+            assertThat(modifiers.gunDamage(trooper, heavy, 100)).as("%s", heavy).isEqualTo(130);
+        }
         assertThat(modifiers.gunDamage(trooper, WeaponKind.RAILGUN, 100)).isEqualTo(100);
+        assertThat(modifiers.gunDamage(trooper, WeaponKind.LASER, 100)).isEqualTo(100);
     }
 
     /**

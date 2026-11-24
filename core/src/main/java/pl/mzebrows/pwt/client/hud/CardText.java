@@ -1,5 +1,6 @@
 package pl.mzebrows.pwt.client.hud;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
@@ -19,6 +20,10 @@ import pl.mzebrows.pwt.ui.hud.RankText;
  * <p>Every effect template may use {@code {0}} its signed number, {@code {1}} who it reaches ({@code
  * ui.target.<TARGET>}, a prefix, empty for everyone) and {@code {2}} a gun's name, or for an
  * adaptation narrowed to one strain the strain's ({@code ui.strain.<KIND>}).
+ *
+ * <p>A run of gun effects alike but for the gun - one stat, one reach, one number - is one line naming every gun
+ * ({@code ui.effect.guns.<stat>}, the names joined by {@code /}): Firepower's three heavy guns (G0127) on one
+ * line of the two a card shows.
  */
 final class CardText {
 
@@ -49,10 +54,42 @@ final class CardText {
         return name(kind) + " " + RankText.roman(rank);
     }
 
-    /** The line for this kind's effect at this place, or empty past its last. */
+    /** The line for this kind's effects at this place, or empty past its last. */
     String effect(UpgradeView view, UpgradeKind kind, int index) {
-        List<Effect> effects = view.effects(kind);
-        return index < effects.size() ? effect(effects.get(index)) : "";
+        List<String> lines = lines(view.effects(kind));
+        return index < lines.size() ? lines.get(index) : "";
+    }
+
+    /** Every line these effects make on a card: one an effect, a run of gun effects alike but for the gun one line. */
+    List<String> lines(List<Effect> effects) {
+        List<String> lines = new ArrayList<>();
+        for (int i = 0; i < effects.size(); i++) {
+            if (!(effects.get(i) instanceof Effect.Gun first)) {
+                lines.add(effect(effects.get(i)));
+                continue;
+            }
+            StringBuilder guns =
+                    new StringBuilder(strings.get("ui.weapon." + first.gun().name()));
+            int last = i;
+            while (last + 1 < effects.size()
+                    && effects.get(last + 1) instanceof Effect.Gun next
+                    && next.stat() == first.stat()
+                    && next.target() == first.target()
+                    && next.percent() == first.percent()) {
+                last++;
+                guns.append('/').append(strings.get("ui.weapon." + next.gun().name()));
+            }
+            lines.add(
+                    last == i
+                            ? effect(first)
+                            : strings.format(
+                                    "ui.effect.guns." + first.stat().name(),
+                                    signed(first.percent()),
+                                    who(first.target()),
+                                    guns.toString()));
+            i = last;
+        }
+        return lines;
     }
 
     String effect(Effect effect) {

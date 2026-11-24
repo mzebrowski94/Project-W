@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ARENA_TILES;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.BLAST_DAMAGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DOORWAY;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DOORWAY_MIDDLE_X;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.TILE;
@@ -11,6 +12,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.WALL_BOTTOM;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.harmless;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.hold;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.on;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
@@ -41,6 +43,7 @@ import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.LimpetDef;
 import pl.mzebrows.pwt.sim.def.WeaponDef;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
  * The detonator (G0100): one limpet out, thrown by a fire press and set off by the next; it sticks to the first
@@ -160,6 +163,18 @@ class DetonatorTest {
         assertThat(small.getComponent(Blast.class).harm).isEqualTo(Harm.WOUND);
         assertThat(radius(big)).isEqualTo(limpet.calibratedBlastRadius());
         assertThat(big.getComponent(Blast.class).harm).isEqualTo(Harm.DOWN);
+    }
+
+    /** Both its blasts are the gun's: Firepower's two ranks land each 30 % harder (G0127). */
+    @Test
+    void landsBothItsBlastsAsMuchHarderAsItsGunUnderFirepower() {
+        WeaponDef gun = simulation().config().weapon(WeaponKind.DETONATOR);
+        float landed = gun.projectileRange() / gun.projectileSpeed();
+        float calibrated = landed + gun.limpet().calibrateSeconds() + 0.5f;
+
+        assertThat(damage(blastAfter(0.2f, 0))).isEqualTo(BLAST_DAMAGE);
+        assertThat(damage(blastAfter(0.2f, 2))).isEqualTo(BLAST_DAMAGE * 130 / 100);
+        assertThat(damage(blastAfter(calibrated, 2))).isEqualTo(BLAST_DAMAGE * 130 / 100);
     }
 
     @Test
@@ -415,8 +430,16 @@ class DetonatorTest {
 
     /** The blast a limpet leaves when it is set off this long after it was thrown. */
     private static Entity blastAfter(float seconds) {
+        return blastAfter(seconds, 0);
+    }
+
+    /** The same, with this many ranks of Firepower held. */
+    private static Entity blastAfter(float seconds, int firepower) {
         Simulation simulation = simulation();
         holding(simulation);
+        if (firepower > 0) {
+            hold(simulation, UpgradeKind.FIREPOWER, firepower);
+        }
         simulation.step(PRESS);
         steps(simulation, ticksIn(seconds), RELEASE);
         simulation.step(PRESS);
@@ -451,6 +474,10 @@ class DetonatorTest {
         float x = one.x - two.x;
         float y = one.y - two.y;
         return (float) Math.sqrt(x * x + y * y);
+    }
+
+    private static int damage(Entity blast) {
+        return blast.getComponent(Blast.class).damage;
     }
 
     private static float radius(Entity entity) {
