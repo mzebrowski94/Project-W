@@ -51,3 +51,6 @@ each change written down where this repository records it: the records' *Enforce
 - 2026-11-24, 04 (provisional): roles' members as in G0120 9; a two-mouth wave sends a member's range from each mouth;
   `hole dx dy` dealt from `pool` (most 2); the keep's seven guns, four dealt. Mateusz mid-run: finale mines cut to
   4-6 (redoubt) and 2-4 (keep).
+- 2026-11-24, 05 (provisional): the assault lives in `TrooperObjective`; `Enemy.raised` marks the lair's; nearest
+  crow-flies; reach capped at sight + standsOut; `sim.trooper.assaultStandOff=40`; G0122 *Amended by*.
+- 2026-11-24: all five merged on `finale-variety-integration`, `verify.sh` green.

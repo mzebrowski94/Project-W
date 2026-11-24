@@ -92,4 +92,5 @@ of the barrage's guns. Keep cover 2-4 (4-6 did not fit). The lair's cache kinds 
   `barrels=4 6 3 11 -13 6`, `pickups=2 2 2 4 -5 5`, `pickupKinds=crate; armoury_laser`, `lair=4 4 2 11 4 12`,
   `lairKinds=armoury_shotgun; armoury_railgun; armoury_laser; armoury_flamer`, `inReach=true`.
 
-**Play.** Four codes, one per finale and flip, are printed from the integration tip at the end of the run (below).
+**Play** (printed from the integration tip after 05): `./gradlew lwjgl3:run --args="--mission=<code>"` with redoubt
+`MHAA-YX34` (plain), `MHC3-G4AH` (flipped); keep `MHNA-GY9H` (plain), `MH6F-ECPV` (flipped).

@@ -1,7 +1,7 @@
 # The squad assaults the lair
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: 01 (a green `main`)
 Spec: [spec.md](../spec.md) answer 9
@@ -48,3 +48,26 @@ the boss.
   the boss once the nests are dead; an order and a grunt in his all-round range still outrank it; the redoubt unchanged.
   `verify.sh` green.
 - `## Answer` gives a keep mission code, or a hidden scenario that starts at the keep with a squad.
+
+## Answer
+
+**Built.** `TrooperObjective.assaults`, in `TrooperMindSystem`'s cascade after the errands and before the post's ring:
+while anything a lair raised is alive, a trooper with nothing above it walks (`Trooper.Mode.ASSAULT`) to his gun's
+reach of the nearest living nest it raised, crow-flies, then of its boss, and stands there, where the fight takes him
+up. `LairSystem` marks what it raises (`Enemy.raised`); the raised are collected once a tick (`findRaised`), so a
+man's choice walks only those few, never the whole swarm. No new system or component. The performance guard passes
+(keep finale 1.15 ms/step, 0 bytes/step).
+
+**Provisional** (G0122 `## Amended by` 1-5):
+- Lives in `TrooperObjective`, ranked by the cascade.
+- `Enemy.raised` marks what the lair raised. Alt: the lair's own list of handles.
+- Nearest is crow-flies. Alt: a flow field for each nest.
+- Reach is `projectileRange`, else `assaultStandOff`, capped at sight + `standsOut` so he can pick the target out.
+  Alt: the bare reach.
+- A new mode, `ASSAULT`.
+
+**Keys.** `sim.trooper.assaultStandOff=40` (`assets/sim/squad.properties`): how far from a nest or the boss a man with
+the sidearm stops. Lower walks the squad into the brood's mouth; higher keeps it at the edge of what it can pick out (54).
+
+**Play.** A keep: `./gradlew lwjgl3:run --args="--mission=MHNA-GY9H"` (plain) or `--mission=MH6F-ECPV` (flipped).
+Walk in. Once the lair rises, the squad should walk to the holes and fire from range, then at the boss.

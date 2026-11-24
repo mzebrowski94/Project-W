@@ -78,4 +78,8 @@ so 03's placement does not move when a list changes. Sanity: 8 keeps raised and 
 - `sim.finale.keep.rules.lairKinds=armoury_shotgun; armoury_railgun; armoury_laser; armoury_flamer; armoury_bazooka;
   armoury_pulse; armoury_disc`
 
-**Play.** Two redoubt and two keep codes with different enemies are printed from the integration tip at the end (below).
+**Play** (printed from the integration tip after 05):
+- redoubt `MHAA-YX34`: ant grunt jaguar spitter jaguar thumper jaguar frog ant magma_spitter brute runner
+- redoubt `MH3M-V9HF`: ant grunt jaguar magma_spitter frog slinger jaguar runner grunt magma_spitter brute runner
+- keep `MHNA-GY9H`: holes ant runner spitter slinger frog brute; guns pulse shotgun flamer disc
+- keep `MH4C-6PJE`: holes brute brute grunt sludger sludger runner; guns laser shotgun disc flamer
