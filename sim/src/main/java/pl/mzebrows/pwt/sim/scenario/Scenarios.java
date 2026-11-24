@@ -39,7 +39,8 @@ public final class Scenarios {
             new MainframeScenario(),
             new JaguarHouseScenario(),
             new SpireFenScenario(),
-            new RelicScenario());
+            new RelicScenario(),
+            new RecallScenario());
 
     private Scenarios() {}
 

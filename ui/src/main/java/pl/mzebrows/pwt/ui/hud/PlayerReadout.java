@@ -75,6 +75,9 @@ public final class PlayerReadout {
     /** Waiting on the reserve to come back: nobody in it, so his countdown has not started (G0055). */
     public boolean respawnWaiting;
 
+    /** Paid for by recalling a trooper (G0121) rather than from the reserve: says {@code RECALL} while he waits. */
+    public boolean respawnRecalled;
+
     /** Which of the commander's colours he wears. */
     public int variant;
 
@@ -157,6 +160,7 @@ public final class PlayerReadout {
         stunLeft = 0f;
         respawnSeconds = 0f;
         respawnWaiting = false;
+        respawnRecalled = false;
         variant = 0;
         action = ActionKind.NONE;
         subject = Handles.NOBODY;
@@ -193,6 +197,7 @@ public final class PlayerReadout {
         stunLeft = other.stunLeft;
         respawnSeconds = other.respawnSeconds;
         respawnWaiting = other.respawnWaiting;
+        respawnRecalled = other.respawnRecalled;
         variant = other.variant;
         action = other.action;
         subject = other.subject;

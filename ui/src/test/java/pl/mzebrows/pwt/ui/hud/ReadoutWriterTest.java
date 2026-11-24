@@ -314,6 +314,25 @@ class ReadoutWriterTest {
         assertThat(paid.respawnWaiting).isFalse();
     }
 
+    /** Paid for by a recall (G0121): the panel says so in place of the countdown. */
+    @Test
+    void saysHeWasPaidForByARecall() {
+        Simulation world = world();
+        Entity pending = world.engine().createEntity();
+        pending.add(world.engine().createComponent(Respawning.class).set(90, 0, 3));
+        world.engine().addEntity(pending);
+        Respawning respawning = pending.getComponent(Respawning.class);
+        respawning.paid = true;
+
+        PlayerReadout fromTheReserve = fill(new ReadoutWriter(), world).player(3);
+        respawning.recalled = true;
+        PlayerReadout recalled = fill(new ReadoutWriter(), world).player(3);
+
+        assertThat(fromTheReserve.respawnRecalled).isFalse();
+        assertThat(recalled.respawnRecalled).isTrue();
+        assertThat(recalled.respawnWaiting).isFalse();
+    }
+
     /** The army the top bar shows: men on the field against its most, and the reserve. */
     @Test
     void copiesTheArmyTheFieldAndTheReserve() {

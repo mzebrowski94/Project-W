@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.sim.system.level;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.DEATH_THROES;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESERVE_START;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.RESPAWN_DELAY;
@@ -14,18 +15,25 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.utils.ImmutableArray;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.component.Appearance;
+import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
+import pl.mzebrows.pwt.sim.component.Pop;
 import pl.mzebrows.pwt.sim.component.Position;
+import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.Trooper;
+import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.def.Harm;
+import pl.mzebrows.pwt.sim.def.Look;
 
 /**
  * The reserve: the men a side has off the field, and the one pool every man who comes onto it is
@@ -320,6 +328,159 @@ class ReserveTest {
         assertThat(count(simulation, Commander.class)).isEqualTo(1);
     }
 
+    /** From the killing blow to the tick his ticket is paid: his throes, and the tick after he is gone. */
+    private static final int PAID = ticksIn(DEATH_THROES) + 3;
+
+    /**
+     * With nobody in reserve a trooper on his feet is recalled to pay for him (G0121): the commander comes back, the
+     * trooper is gone, and the level goes on.
+     */
+    @Test
+    void recallsATrooperToBringACommanderBackOnAnEmptyReserve() {
+        Simulation simulation = new Simulation(reserveOf(0));
+        simulation.spawnTrooper(30f, 30f);
+        kill(simulation.spawnCommander(50f, 50f));
+
+        steps(simulation, RETURN);
+
+        assertThat(count(simulation, Commander.class)).isEqualTo(1);
+        assertThat(count(simulation, Trooper.class)).isZero();
+        assertThat(simulation.level().reserve).isZero();
+        assertThat(simulation.level().failed).isFalse();
+    }
+
+    /** The reserve pays first: a man in it is spent before anybody on the field is recalled. */
+    @Test
+    void paysFromTheReserveBeforeRecallingAnybody() {
+        Simulation simulation = new Simulation(reserveOf(1));
+        simulation.spawnTrooper(30f, 30f);
+        kill(simulation.spawnCommander(50f, 50f));
+
+        steps(simulation, RETURN);
+
+        assertThat(count(simulation, Commander.class)).isEqualTo(1);
+        assertThat(count(simulation, Trooper.class)).isEqualTo(1);
+        assertThat(simulation.level().reserve).isZero();
+    }
+
+    /** The rear of the squad: the man on his feet nearest the rally point, so the line keeps its shooters. */
+    @Test
+    void recallsTheTrooperNearestTheRallyPoint() {
+        Simulation simulation = new Simulation(reserveOf(0));
+        take(simulation.spawnControlPoint(40f, 50f), 1);
+        simulation.spawnTrooper(45f, 50f);
+        Entity far = simulation.spawnTrooper(80f, 80f);
+        kill(simulation.spawnCommander(70f, 20f));
+
+        steps(simulation, PAID);
+
+        assertThat(troopers(simulation)).containsExactly(far);
+    }
+
+    /** A man down is never recalled: the one on his feet goes, however much farther off he stands. */
+    @Test
+    void neverRecallsAManWhoIsDown() {
+        Simulation simulation = new Simulation(reserveOf(0));
+        take(simulation.spawnControlPoint(40f, 50f), 1);
+        Entity down = simulation.spawnTrooper(42f, 50f);
+        down.getComponent(Vitality.class).begin();
+        simulation.spawnTrooper(80f, 80f);
+        kill(simulation.spawnCommander(70f, 20f));
+
+        steps(simulation, PAID);
+
+        assertThat(troopers(simulation)).containsExactly(down);
+    }
+
+    /** Two as near as each other: the handle decides, never the dice - the first put on the field goes. */
+    @Test
+    void breaksATieByHandleOrder() {
+        Simulation simulation = new Simulation(reserveOf(0));
+        take(simulation.spawnControlPoint(40f, 50f), 1);
+        simulation.spawnTrooper(40f, 60f);
+        Entity second = simulation.spawnTrooper(40f, 40f);
+        kill(simulation.spawnCommander(70f, 20f));
+
+        steps(simulation, PAID);
+
+        assertThat(troopers(simulation)).containsExactly(second);
+    }
+
+    /** One recall per waiting commander, lowest slot first, each from the troopers still standing after the last. */
+    @Test
+    void recallsOnePerWaitingCommanderLowestSlotFirst() {
+        Simulation simulation = new Simulation(reserveOf(0));
+        simulation.spawnTrooper(30f, 30f);
+        kill(simulation.spawnCommander(60f, 50f, 1));
+        kill(simulation.spawnCommander(50f, 50f, 0));
+
+        steps(simulation, RETURN);
+
+        assertThat(count(simulation, Trooper.class)).isZero();
+        assertThat(count(simulation, Commander.class)).isEqualTo(1);
+        assertThat(commander(simulation).getComponent(Commander.class).slot).isZero();
+    }
+
+    @Test
+    void bringsEveryWaitingCommanderBackWhileThereAreTroopersToRecall() {
+        Simulation simulation = new Simulation(reserveOf(0));
+        simulation.spawnTrooper(30f, 30f);
+        simulation.spawnTrooper(30f, 40f);
+        kill(simulation.spawnCommander(60f, 50f, 1));
+        kill(simulation.spawnCommander(50f, 50f, 0));
+
+        steps(simulation, RETURN);
+
+        assertThat(count(simulation, Trooper.class)).isZero();
+        assertThat(count(simulation, Commander.class)).isEqualTo(2);
+    }
+
+    /**
+     * Not a death (G0121): no throes, no blast, no corpse - he is off the field the tick he is recalled, his fade where he
+     * stood, and his commander's ticket says it was a recall.
+     */
+    @Test
+    void recallsHimWithoutADeath() {
+        Simulation simulation = new Simulation(reserveOf(0));
+        simulation.spawnTrooper(30f, 30f);
+        kill(simulation.spawnCommander(50f, 50f));
+        int ticks = 0;
+        while (count(simulation, Trooper.class) > 0 && ticks < PAID) {
+            steps(simulation, 1);
+            ticks++;
+        }
+
+        assertThat(count(simulation, Trooper.class)).isZero();
+        assertThat(count(simulation, Blast.class)).isZero();
+        assertThat(simulation
+                        .engine()
+                        .getEntitiesFor(Family.all(Pop.class, Appearance.class).get()))
+                .singleElement()
+                .satisfies(fade -> {
+                    assertThat(fade.getComponent(Appearance.class).look).isEqualTo(Look.RECALL);
+                    assertThat(fade.getComponent(Position.class).x).isCloseTo(30f, within(3f));
+                });
+        assertThat(simulation
+                        .engine()
+                        .getEntitiesFor(Family.all(Respawning.class).get()))
+                .singleElement()
+                .satisfies(ticket -> assertThat(ticket.getComponent(Respawning.class).recalled)
+                        .isTrue());
+    }
+
+    /** The lost level gains its fourth condition (G0121): nobody left on his feet to recall. */
+    @Test
+    void losesTheLevelWhenNoTrooperIsOnHisFeet() {
+        Simulation simulation = new Simulation(reserveOf(0));
+        simulation.spawnTrooper(30f, 30f).getComponent(Vitality.class).begin();
+        kill(simulation.spawnCommander(50f, 50f));
+
+        steps(simulation, RETURN);
+
+        assertThat(simulation.level().failed).isTrue();
+        assertThat(count(simulation, Trooper.class)).isEqualTo(1);
+    }
+
     private static SimConfig mustering(int reserve) {
         SimConfig base = reserveOf(reserve);
         return base.withReserve(base.reserve()
@@ -352,7 +513,7 @@ class ReserveTest {
                 .first();
     }
 
-    private static Iterable<Entity> troopers(Simulation simulation) {
+    private static ImmutableArray<Entity> troopers(Simulation simulation) {
         return simulation.engine().getEntitiesFor(Family.all(Trooper.class).get());
     }
 }
