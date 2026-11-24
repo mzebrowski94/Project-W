@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.Handles;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.WorldCodec;
 import pl.mzebrows.pwt.sim.component.Blast;
 import pl.mzebrows.pwt.sim.component.Damage;
 import pl.mzebrows.pwt.sim.component.Health;
@@ -180,6 +181,20 @@ class SentryTest {
 
         assertThat(sentry.getComponent(pl.mzebrows.pwt.sim.component.Appearance.class).charge)
                 .isBetween(0.45f, 0.55f);
+    }
+
+    /** What it has left to stand is world state (pillar 7): a snapshot carries it. */
+    @Test
+    void carriesItsTimeLeftThroughASnapshot() {
+        Simulation simulation = simulation();
+        Entity sentry = simulation.spawnSentry(X, Y, 0);
+        simulation.step();
+        byte[] before = WorldCodec.snapshot(simulation);
+
+        sentry.getComponent(Sentry.class).remainingTicks--;
+
+        assertThat(WorldCodec.differences(before, WorldCodec.snapshot(simulation), 10))
+                .anySatisfy(line -> assertThat(line).contains("Sentry.remainingTicks"));
     }
 
     // ---- helpers ----

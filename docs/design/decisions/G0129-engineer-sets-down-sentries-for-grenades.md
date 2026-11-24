@@ -8,7 +8,7 @@
 `.turnsOntoTheNearerOfTwoAliens`, `.sparesAManInTheLineOfItsFire`, `.drawsTheAliensFromTheMomentItStands`,
 `.goesOffAtTheEndOfItsLife`, `.goesOffTheSameWayWhenItIsDestroyed`, `.woundsAManCaughtInTheBlastItGoesOffIn`,
 `.stunsTheAliensRoundItAsItGoesOffAndNeverAMan`, `.stunsNoAlienBeyondItsStunsReach`,
-`.showsHowMuchOfItsLifeIsLeftOnItsCharge`; `SystemOrderTest`'s rows for `SentrySystem` (after `DamageSystem`, before
+`.showsHowMuchOfItsLifeIsLeftOnItsCharge`, `.carriesItsTimeLeftThroughASnapshot`; `SystemOrderTest`'s rows for `SentrySystem` (after `DamageSystem`, before
 `BlastSystem` and `UpgradeSystem`). `EngineerTest` - `.setsASentryDownAtHisFeetInsteadOfThrowingAGrenade`,
 `.spendsAGrenadeOnTheSentry`, `.setsNoSentryDownWithNoGrenadeLeft`, `.setsNoSentryDownOnSolidGroundAndSpendsNothing`,
 `.throwsAGrenadeAsEverWithoutIt`, `.leavesTheKeyOfAPlayerWhoDoesNotHoldItThrowing`, `.waitsOutHisGrenadeWaitBetweenSentries`,
