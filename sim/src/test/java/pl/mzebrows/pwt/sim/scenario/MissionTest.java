@@ -534,6 +534,28 @@ class MissionTest {
     }
 
     /**
+     * Seed 2777720 (EHJD-YK39) deals the rift last, with no corridor through any of its nooks: its jaguar's hole still
+     * goes down, in a nook, on every tier (finale-variety ticket 01; G0070 - a short biome is a fault).
+     */
+    @Test
+    void laysTheRiftsNestInANookTheMazeLeftBare() {
+        for (TierKind tier : TierKind.values()) {
+            Mission mission = Mission.build(SimConfig.defaults().withSeed(2_777_720L), tier);
+            int last = mission.order().size() - 1;
+            TileMap map = mission.laid().map();
+
+            assertThat(mission.order().get(last)).isEqualTo(BiomeKind.RIFT);
+            assertThat(mission.shortfalls()).as("%s", tier).isEmpty();
+            assertThat(mission.placed())
+                    .as("%s", tier)
+                    .anyMatch(hole -> hole instanceof Placed.Nest
+                            && hole.biome() == last
+                            && mission.laid().nooks().stream()
+                                    .anyMatch(nook -> nook.contains(map.colAt(hole.x()), map.rowAt(hole.y()))));
+        }
+    }
+
+    /**
      * The rift's holes go in its nooks first (G0115, amended 2026-11-24): over every rift dealt, most of its nests stand
      * in a nook - one goes elsewhere only when the keep-offs leave no nook room, and the maze between seldom has any.
      */
