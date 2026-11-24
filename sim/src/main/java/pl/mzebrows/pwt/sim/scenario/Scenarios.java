@@ -42,7 +42,9 @@ public final class Scenarios {
             new RelicScenario(),
             new HeavyRangeScenario(),
             new PlasmaRangeScenario(),
-            new SentryPostScenario());
+            new SentryPostScenario(),
+            new EngineerYardScenario(1),
+            new EngineerYardScenario(2));
 
     private Scenarios() {}
 

@@ -53,6 +53,9 @@ public final class PlayerReadout {
 
     public int grenadeMost;
 
+    /** Whether his grenade key sets a sentry down instead (G0129): the slot shows sentries, the count the same. */
+    public boolean sentries;
+
     /** The dashes he holds, and the most he can (G0107) - one pip each, filled for those he has. */
     public int dashes;
 
@@ -149,6 +152,7 @@ public final class PlayerReadout {
         maxWounds = 0;
         grenades = 0;
         grenadeMost = 0;
+        sentries = false;
         dashes = 0;
         dashMost = 0;
         shielded = false;
@@ -185,6 +189,7 @@ public final class PlayerReadout {
         maxWounds = other.maxWounds;
         grenades = other.grenades;
         grenadeMost = other.grenadeMost;
+        sentries = other.sentries;
         dashes = other.dashes;
         dashMost = other.dashMost;
         shielded = other.shielded;

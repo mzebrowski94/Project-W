@@ -219,6 +219,8 @@ public final class ReadoutWriter {
         // A pip per grenade he carries and per one he could (G0077), through the throw's own fold.
         player.grenades = world.grenades(entity);
         player.grenadeMost = world.grenadeMost(entity);
+        // Under Engineer the same pips are sentries (G0129), through the throw's own fold.
+        player.sentries = world.setsSentries(entity);
         // A pip per dash he holds and per one he could (G0107), through the dash's own fold.
         player.dashes = world.dashes(entity);
         player.dashMost = world.dashMost(entity);

@@ -1927,6 +1927,13 @@ public final class AlphaWorlds {
                                 new Effect.Scale(Stat.DASH_RECHARGE, Target.CHOOSER, PANTERA_PERCENT)))
                 .put(UpgradeKind.LOOTER, off(1, new Effect.Count(Stat.CRATE_EXTRA, Target.CHOOSER, LOOTER_CARDS)))
                 .put(
+                        UpgradeKind.ENGINEER,
+                        off(
+                                2,
+                                new Effect.Count(Stat.SETS_SENTRIES, Target.CHOOSER, 1),
+                                new Effect.Gun(
+                                        WeaponKind.SENTRY_GUN, Stat.FIRE_COOLDOWN, Target.CHOOSER, ENGINEER_PERCENT)))
+                .put(
                         UpgradeKind.FIREPOWER,
                         off(
                                 2,
@@ -2011,6 +2018,9 @@ public final class AlphaWorlds {
 
     /** What one rank of Rocketman adds to his surge's reach, and one of Pantera to his dashes and their recharge. */
     public static final int SURGE_REACH_PER_RANK = 5;
+
+    /** What one rank of Engineer takes off a sentry's gun's cooldown, in percent (G0129). */
+    public static final int ENGINEER_PERCENT = -20;
 
     public static final int PANTERA_PERCENT = -13;
 
