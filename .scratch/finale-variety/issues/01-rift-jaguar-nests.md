@@ -1,7 +1,7 @@
 # The rift's missing jaguar nests
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: -
 Skills: `/mattpocock-skills:diagnosing-bugs` with `docs/workflow.md`'s failure protocol
