@@ -1,7 +1,7 @@
 # The recall
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: 01 (a green `main`)
 Spec: [spec.md](../spec.md) answer 8

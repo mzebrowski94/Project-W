@@ -43,3 +43,4 @@ each change written down where this repository records it: the records' *Enforce
 ## Decisions so far
 
 - 2026-11-24: the whole of [spec.md](spec.md), grilled with Mateusz.
+- 2026-11-24, 01 (provisional): the rift's nooks are 7 of radius 3, so a bare one holds a nest; G0115 *Amended by*.
