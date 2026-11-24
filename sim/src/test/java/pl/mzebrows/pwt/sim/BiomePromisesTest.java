@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.map.BiomeGround;
+import pl.mzebrows.pwt.map.Clearing;
 import pl.mzebrows.pwt.map.Outcrops;
 import pl.mzebrows.pwt.map.Patch;
 import pl.mzebrows.pwt.map.Terrain;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
@@ -138,6 +140,33 @@ class BiomePromisesTest {
         assertThat(furniture.clearingPackShare()).isEqualTo(60);
         assertThat(furniture.treesMax()).isZero();
         assertThat(furniture.geysersMax()).isZero();
+    }
+
+    /**
+     * A rift's nook holds a hole by its own width (G0115, amended 2026-11-24 by finale-variety ticket 01): a nook with
+     * fissure all round it and no corridor through it still leaves its centre a nest's radius and the rock margin off
+     * the fissure, so its nest never waits on the maze to widen it.
+     */
+    @Test
+    void aBareNookOfTheRiftHoldsANestKeptOffTheFissureRoundIt() {
+        int radius = ground(BiomeKind.RIFT).clearings().nookRadius();
+        int size = 2 * radius + 3;
+        Clearing nook = new Clearing(size / 2, size / 2, radius);
+        TileMap.Builder bare =
+                TileMap.builder(size, size, SHIPPED.map().tileSize()).fill(Terrain.FISSURE);
+        for (int row = 0; row < size; row++) {
+            for (int col = 0; col < size; col++) {
+                if (nook.contains(col, row)) {
+                    bare.set(col, row, Terrain.FROST);
+                }
+            }
+        }
+        TileMap map = bare.build();
+
+        float clearance =
+                SHIPPED.nest().radius() + SHIPPED.mission().placement().rockMargin();
+        assertThat(map.isClear(map.tileCentreX(nook.col()), map.tileCentreY(nook.row()), clearance))
+                .isTrue();
     }
 
     /** "Upgraded spitters in it" (ticket 16): the magma spitter stands in the caldera and nowhere else. */
