@@ -48,3 +48,6 @@ each change written down where this repository records it: the records' *Enforce
   reactions, fades as a pop of its own look, says bare `RECALL`; G0121 *Amended by*.
 - 2026-11-24, 03 (provisional): lots are rings round the post dealt in pairs; cover dealt on bare ground before the strip
   with 32 attempts; keep cover 2-4; `ConfigBinder` drops numbered blocks; G0120 *Amended by* 1-8.
+- 2026-11-24, 04 (provisional): roles' members as in G0120 9; a two-mouth wave sends a member's range from each mouth;
+  `hole dx dy` dealt from `pool` (most 2); the keep's seven guns, four dealt. Mateusz mid-run: finale mines cut to
+  4-6 (redoubt) and 2-4 (keep).
