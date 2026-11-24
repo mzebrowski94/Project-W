@@ -35,6 +35,7 @@ final class Coats {
     private static final long CLEARINGS = 0x9B05_688C_68D6_A0C2L;
     private static final long ICE = 0x1F83_D9AB_5BE0_CD19L;
     private static final long CORRIDORS = 0x5BE0_CD19_1F83_D9ABL;
+    private static final long NOOKS = 0x2B99_2DDF_A232_59D7L;
 
     /**
      * How far a way's either side must be from each other, walking, with the way shut, for it to be a chokepoint worth
@@ -95,19 +96,23 @@ final class Coats {
 
     private final List<Clearing> clearings = new ArrayList<>();
 
+    private final List<Clearing> nooks = new ArrayList<>();
+
     /**
-     * What one biome's coats laid besides its ground: its houses and its clearings.
+     * What one biome's coats laid besides its ground: its houses, its clearings and its nooks.
      *
      * @param houses as many as fitted up to the count drawn - fewer than the biome's {@code min} only when there was no
      *     room, which the strip sweep reports
      * @param clearings every clearing its ground asks for, west to east
+     * @param nooks every nook its ground asks for, west to east
      * @param ice every run of tiles ice stands across, a chokepoint each
      */
-    record Laid(List<House> houses, List<Clearing> clearings, List<TileRect> ice) {
+    record Laid(List<House> houses, List<Clearing> clearings, List<Clearing> nooks, List<TileRect> ice) {
 
         Laid {
             houses = List.copyOf(houses);
             clearings = List.copyOf(clearings);
+            nooks = List.copyOf(nooks);
             ice = List.copyOf(ice);
         }
     }
@@ -169,6 +174,7 @@ final class Coats {
         Coats coats = new Coats(map, area, ground, west, east, apron, ends, rules.clearance());
         coats.pieces();
         coats.clearings(biome.derive(CLEARINGS));
+        coats.nooks(biome.derive(NOOKS));
         List<House> houses = coats.houses(rules.houses(), biome.derive(HOUSES));
         coats.patches(biome.derive(PATCHES));
         coats.corridors(biome.derive(CORRIDORS));
@@ -180,7 +186,7 @@ final class Coats {
                 map.set(col, row, coats.tiles[row * coats.cols + col]);
             }
         }
-        return new Laid(houses, coats.clearings, ice);
+        return new Laid(houses, coats.clearings, coats.nooks, ice);
     }
 
     // ---- pieces ----
@@ -236,17 +242,65 @@ final class Coats {
                 to = edge + spread / 2;
             }
             Clearing clearing = new Clearing(between(rng, from, to), between(rng, lowRow, highRow), radius);
-            for (int row = clearing.row() - radius; row <= clearing.row() + radius; row++) {
-                for (int col = clearing.col() - radius; col <= clearing.col() + radius; col++) {
-                    if (area.contains(col, row) && clearing.contains(col, row)) {
-                        clear[row * cols + col] = true;
-                    }
-                }
-            }
-            ends = Arrays.copyOf(ends, ends.length + 1);
-            ends[ends.length - 1] = clearing.row() * cols + clearing.col();
+            clear(clearing);
             clearings.add(clearing);
         }
+    }
+
+    /**
+     * Each nook its ground asks for (G0115, amended 2026-11-24): nook {@code k} of {@code n} centred on a column of the
+     * {@code k}-th of {@code n} equal bands of the width less a twelfth at either end - where a ridge's face wanders in,
+     * laid before any coat - a radius in from its edges, and on a row of the top third or
+     * the bottom third, a radius in from the edge - a row dealt in each, and whichever lies farther from the nearest
+     * clearing's centre taken, since a hole keeps off the point a clearing holds. Marked clear and kept reached, as a
+     * clearing is.
+     */
+    private void nooks(Randomness rng) {
+        Clearings wanted = ground.clearings();
+        int n = wanted.nooks();
+        int radius = wanted.nookRadius();
+        int third = area.height() / 3;
+        int inset = Math.max(1, area.width() / 12);
+        int west = area.col() + inset;
+        int width = area.width() - 2 * inset;
+        if (n > 0 && (width / n <= 2 * radius || third - 1 < radius)) {
+            throw new IllegalArgumentException(n + " nooks of radius " + radius + " do not fit in " + area);
+        }
+        for (int k = 0; k < n; k++) {
+            int from = west + k * width / n + radius;
+            int to = west + (k + 1) * width / n - 1 - radius;
+            int col = between(rng, from, to);
+            int top = between(rng, area.row() + radius, area.row() + third - 1);
+            int bottom = between(rng, area.endRow() - third, area.endRow() - 1 - radius);
+            Clearing nook = new Clearing(col, nearest(col, top) >= nearest(col, bottom) ? top : bottom, radius);
+            clear(nook);
+            nooks.add(nook);
+        }
+    }
+
+    /** The squared distance in tiles from a tile to the nearest clearing's centre; the most there is with none. */
+    private long nearest(int col, int row) {
+        long nearest = Long.MAX_VALUE;
+        for (Clearing clearing : clearings) {
+            long dc = (long) col - clearing.col();
+            long dr = (long) row - clearing.row();
+            nearest = Math.min(nearest, dc * dc + dr * dr);
+        }
+        return nearest;
+    }
+
+    /** Marks a disc clear, so no later coat lays rock in it, and its centre an end, so the crag repairs keep it reached. */
+    private void clear(Clearing disc) {
+        int radius = disc.radius();
+        for (int row = disc.row() - radius; row <= disc.row() + radius; row++) {
+            for (int col = disc.col() - radius; col <= disc.col() + radius; col++) {
+                if (area.contains(col, row) && disc.contains(col, row)) {
+                    clear[row * cols + col] = true;
+                }
+            }
+        }
+        ends = Arrays.copyOf(ends, ends.length + 1);
+        ends[ends.length - 1] = disc.row() * cols + disc.col();
     }
 
     // ---- houses ----

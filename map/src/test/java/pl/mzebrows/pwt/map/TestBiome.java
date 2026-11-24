@@ -113,7 +113,7 @@ record TestBiome(String name, BiomeGround ground) {
                     Crags.off(),
                     new Corridors(2, 3, 1, 2, 8, 0.35f, 0.3f, 0.15f, Terrain.FISSURE),
                     Outcrops.off(),
-                    new Clearings(2, 5),
+                    new Clearings(2, 5, 0, 0),
                     new Ice(0.1f),
                     List.of()));
 

@@ -12,8 +12,8 @@ while and is broken through - ice.
 `MissionTest.standsAControlPointAtTheCentreOfEachOfTheRiftsClearings`,
 `.putsMoreOfTheSwarmToATileInTheRiftsClearingsThanInItsMaze`, `.standsIceAcrossEveryWayTheStripIcedAndNoneOnAWayIn`;
 `BiomePromisesTest.theRiftIsTheOneBiomeOfFissuresOnFrostWithItsSitesInTwoClearings`;
-`MissionSweepTest.holdsEveryMissionToTheRules` through `StripFaults.clearings` (each clearing open ground, as many as
-its ground asks for), `MissionFaults.clearings` (a point on each clearing's centre tile) and `MissionFaults.ice` (across a
+`MissionSweepTest.holdsEveryMissionToTheRules` through `StripFaults.clearings` (each clearing and nook open ground, as many as
+its ground asks for), `MissionFaults.clearings` (a point on each clearing's centre tile), `MissionTest.putsTheRiftsNestsInItsNooksFirst` and `MissionFaults.ice` (across a
 narrow way, never in a clearing or by kept ground, nothing standing in it); `GraphicConfigTest.mapsEveryTerrainToAColour`.
 
 **Settled with Mateusz, 2026-11-22** (`.scratch/commander-and-sites/spec.md`, section 8, and ticket 10). The points
@@ -58,6 +58,14 @@ its worked sites and before its other points, and anchors a share of its loose p
   fixed pieces and before every other coat, each a disc judged at tile centres (as the proving ground's sand) where no
   crag and no outcrop is laid, its centre tile an end of the biome so the crag repairs keep it reached from the
   passes. `Strip.Laid.clearings` hands them to placement.
+- **Nooks** (amended 2026-11-24, Mateusz: keep the rift's jaguar nests), `ground.clearings.nooks` and `ground.clearings.nookRadius`
+  (ten of radius 2 in the rift, none elsewhere): small clearings holding no site, laid after the clearings, one to
+  each equal band of the biome's columns but a twelfth at either end, where a ridge's face wanders in, in the top or bottom third farther from the nearest clearing, kept reached as
+  a clearing is. `Strip.Laid.nooks` hands them to placement, which puts a biome's holes at their centres first, west to
+  east, and scatters the rest. A corridor alone leaves a hole no room off fissure; but each clearing's point keeps
+  holes `pointKeepOff` off across nearly the biome's whole height, so the room is capped whatever is carved: the
+  rift's roster is `nest jaguar 1 1` - ramped to two late in a long hard mission, one sweep seed still falls one short
+  (provisional, for review).
 - **Sites in clearings**, `furniture.sitesInClearings` (false in every other biome): a control point on the tile
   nearest each clearing's centre, kept `pointApart` off any site; the band each falls in is taken, and a third site,
   when dealt, goes by the ordinary band rule. A rift dealt last always has one more than its clearings - its approach

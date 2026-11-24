@@ -15,7 +15,7 @@ ticket 07 holds the numbers.
 
 - **A tier is four numbers on the swarm**: how many (`enemyPercent`, every roster count), how tough
   (`healthPercent`, on top of `sim.swarm.healthPercent`), how often a nest breeds (`nestPeriodPercent`)
-  and how fast it adapts (`adaptation.everySeconds`, `adaptation.perPlayerUpgrades`). Plus one **ramp**, the same for
+  and how fast it adapts (`adaptations`, the count it is planned on the drafts' schedule - G0118). Plus one **ramp**, the same for
   every tier: a biome's counts rise with its position in the march. Never which strains (missions ticket 01).
 - **One reader, one rounding.** `MissionConfig` reads a tier and folds it into the `SimConfig` a world is
   built from, so no system learns what a tier is. A percentage meeting a whole number - hit points or a

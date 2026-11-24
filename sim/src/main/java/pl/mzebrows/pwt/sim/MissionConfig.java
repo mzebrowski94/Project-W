@@ -138,7 +138,7 @@ public record MissionConfig(
 
     /**
      * {@code config} as a mission on this tier plays it: the tier's health on top of the swarm's, its nest
-     * period and its adaptation pace. Nothing else changes - the squad, the reserve and every blow are the same
+     * period and how many adaptations it plans (G0118). Nothing else changes - the squad, the reserve and every blow are the same
      * on every tier. Applied once, to a config no tier has been applied to.
      */
     public SimConfig apply(TierKind tier, SimConfig config) {
@@ -159,10 +159,19 @@ public record MissionConfig(
                         .withStrengthCountPercent(strength.countPercent()))
                 .withNest(config.nest()
                         .withPeriodSeconds(config.nest().periodSeconds() * def.nestPeriodPercent() / WHOLE))
-                .withAdaptation(new AdaptationDef(
-                        def.adaptationEverySeconds(),
-                        def.adaptationPerPlayerUpgrades(),
-                        config.adaptation().answerWeight()));
+                .withAdaptation(adapted(tier, config));
+    }
+
+    /**
+     * {@code config} with the swarm adapting as it does on this tier (G0118) and nothing else of the tier: the Adventure
+     * levels' pace, a medium mission's.
+     */
+    public SimConfig adapting(TierKind tier, SimConfig config) {
+        return config.withAdaptation(adapted(tier, config));
+    }
+
+    private AdaptationDef adapted(TierKind tier, SimConfig config) {
+        return config.adaptation().withAdaptations(tiers.of(tier).adaptations());
     }
 
     /**

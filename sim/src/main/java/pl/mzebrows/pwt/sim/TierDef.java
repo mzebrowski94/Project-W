@@ -11,22 +11,15 @@ import pl.mzebrows.pwt.sim.def.Require;
  *     percentage
  * @param nestPeriodPercent the time between a nest's broods, as a whole percentage of {@code
  *     sim.nest.periodSeconds}
- * @param adaptationEverySeconds one adaptation each time this much level time has passed; zero is off
- * @param adaptationPerPlayerUpgrades one adaptation each time the players have taken this many upgrades; zero
- *     is off
+ * @param adaptations how many adaptations a level of the drafts' {@code sourcesRef} weighed sources plans the swarm
+ *     (G0118), in place of the level's; zero is off
  */
-public record TierDef(
-        int enemyPercent,
-        int healthPercent,
-        int nestPeriodPercent,
-        @ConfigKey("adaptation.everySeconds") float adaptationEverySeconds,
-        @ConfigKey("adaptation.perPlayerUpgrades") int adaptationPerPlayerUpgrades) {
+public record TierDef(int enemyPercent, int healthPercent, int nestPeriodPercent, int adaptations) {
 
     public TierDef {
         Require.atLeastOne("tier enemyPercent", enemyPercent);
         Require.atLeastOne("tier healthPercent", healthPercent);
         Require.atLeastOne("tier nestPeriodPercent", nestPeriodPercent);
-        Require.notNegative("tier adaptation everySeconds", adaptationEverySeconds);
-        Require.notNegative("tier adaptation perPlayerUpgrades", adaptationPerPlayerUpgrades);
+        Require.notNegative("tier adaptations", adaptations);
     }
 }

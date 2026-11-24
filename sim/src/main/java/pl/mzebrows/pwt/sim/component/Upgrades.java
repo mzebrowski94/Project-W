@@ -27,25 +27,36 @@ public final class Upgrades implements Component, Pool.Poolable {
      */
     public int revision;
 
-    /** How many cards the players have taken this level. */
-    public int playerPicks;
-
     /** How many adaptations the swarm has taken this level (ADR 0017) - what unlocks an adaptation's tier. */
     public int adaptations;
 
-    /** How many adaptations level time has been credited with so far, dealt or not. */
-    public int fromTime;
+    /**
+     * How many adaptations the level plans (G0118), fixed on its first tick with the drafts' schedule, its spread
+     * drawn - what an adaptation's tier opens by a share of.
+     */
+    public int adaptationsPlanned;
 
-    /** How many adaptations the players' picks have been credited with so far, dealt or not. */
-    public int fromPicks;
+    /** How many sites taken the swarm's count has been given. */
+    public int sitesCounted;
+
+    /** The furthest biome any commander has entered, as a count of the ridges behind it (G0118). */
+    public int biomesEntered;
+
+    /** The swarm's count of sources passed, in hundredths, each worth what it was with the players then seated. */
+    public int passedHundredths;
+
+    /** How many adaptations the schedule has been credited with so far, dealt or not. */
+    public int credited;
 
     @Override
     public void reset() {
         held.clear();
         revision = 0;
-        playerPicks = 0;
         adaptations = 0;
-        fromTime = 0;
-        fromPicks = 0;
+        adaptationsPlanned = 0;
+        sitesCounted = 0;
+        biomesEntered = 0;
+        passedHundredths = 0;
+        credited = 0;
     }
 }

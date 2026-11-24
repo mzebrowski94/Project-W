@@ -13,7 +13,6 @@ import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.Whole;
-import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
 
 /**
  * A tier is four numbers on the swarm and a ramp (G0063), read by {@code MissionConfig} alone: folded into the
@@ -29,9 +28,7 @@ class MissionConfigTest {
 
     private static final int HARD_NEST_PERIOD = 75;
 
-    private static final float HARD_ADAPTS_EVERY = 150f;
-
-    private static final int HARD_ADAPTS_PER_UPGRADES = 3;
+    private static final int HARD_ADAPTATIONS = 9;
 
     private static final int ANSWER_WEIGHT = 2;
 
@@ -63,15 +60,27 @@ class MissionConfigTest {
         assertThat(hard.nest().periodSeconds()).isCloseTo(NEST_PERIOD * HARD_NEST_PERIOD / 100f, within(1e-6f));
     }
 
-    /** The tier's pace replaces whatever the level had; how much an answer weighs is not the tier's. */
+    /**
+     * The tier's count of adaptations replaces whatever the level had (G0118); the rest of the schedule, and how much
+     * an answer weighs, are not the tier's.
+     */
     @Test
     void adaptsTheSwarmAtTheTiersPace() {
-        SimConfig config = config().withAdaptation(new AdaptationDef(0f, 0, ANSWER_WEIGHT));
+        SimConfig config = config().withAdaptation(config().adaptation().withAnswerWeight(ANSWER_WEIGHT));
 
         SimConfig hard = config.mission().apply(TierKind.HARD, config);
 
-        assertThat(hard.adaptation())
-                .isEqualTo(new AdaptationDef(HARD_ADAPTS_EVERY, HARD_ADAPTS_PER_UPGRADES, ANSWER_WEIGHT));
+        assertThat(hard.adaptation()).isEqualTo(config.adaptation().withAdaptations(HARD_ADAPTATIONS));
+    }
+
+    /** The Adventure levels' pace: the tier's count of adaptations, and nothing else of the tier. */
+    @Test
+    void adaptsTheSwarmAsATierDoesAndChangesNothingElse() {
+        SimConfig config = config();
+
+        SimConfig adapting = config.mission().adapting(TierKind.HARD, config);
+
+        assertThat(adapting).isEqualTo(config.withAdaptation(config.adaptation().withAdaptations(HARD_ADAPTATIONS)));
     }
 
     @Test
@@ -187,16 +196,9 @@ class MissionConfigTest {
                 .mission()
                 .withRampTopPercent(RAMP_TOP)
                 .withTiers(Defs.<TierKind, TierDef>builder(TierKind.class)
-                        .put(TierKind.EASY, new TierDef(75, 85, 130, 0f, 0))
-                        .put(TierKind.MEDIUM, new TierDef(100, 100, 100, 240f, 4))
-                        .put(
-                                TierKind.HARD,
-                                new TierDef(
-                                        HARD_ENEMIES,
-                                        HARD_HEALTH,
-                                        HARD_NEST_PERIOD,
-                                        HARD_ADAPTS_EVERY,
-                                        HARD_ADAPTS_PER_UPGRADES))
+                        .put(TierKind.EASY, new TierDef(75, 85, 130, 0))
+                        .put(TierKind.MEDIUM, new TierDef(100, 100, 100, 6))
+                        .put(TierKind.HARD, new TierDef(HARD_ENEMIES, HARD_HEALTH, HARD_NEST_PERIOD, HARD_ADAPTATIONS))
                         .build());
     }
 }

@@ -534,6 +534,40 @@ class MissionTest {
     }
 
     /**
+     * The rift's holes go in its nooks first (G0115, amended 2026-11-24): over every rift dealt, most of its nests stand
+     * in a nook - one goes elsewhere only when the keep-offs leave no nook room, and the maze between seldom has any.
+     */
+    @Test
+    void putsTheRiftsNestsInItsNooksFirst() {
+        SimConfig shipped = SimConfig.defaults();
+        int inNooks = 0;
+        int elsewhere = 0;
+        for (long seed = 0; seed < 64; seed++) {
+            Mission mission = Mission.build(shipped.withSeed(seed), TierKind.MEDIUM);
+            TileMap map = mission.laid().map();
+            for (int p = 0; p < mission.order().size(); p++) {
+                if (mission.order().get(p) != BiomeKind.RIFT) {
+                    continue;
+                }
+                TileRect rect = mission.laid().biomes().get(p);
+                for (Placed hole : mission.placed()) {
+                    int col = map.colAt(hole.x());
+                    int row = map.rowAt(hole.y());
+                    if (!(hole instanceof Placed.Nest) || !rect.contains(col, row)) {
+                        continue;
+                    }
+                    if (mission.laid().nooks().stream().anyMatch(nook -> nook.contains(col, row))) {
+                        inNooks++;
+                    } else {
+                        elsewhere++;
+                    }
+                }
+            }
+        }
+        assertThat(inNooks).as("rift nests in a nook").isGreaterThan(2 * elsewhere);
+    }
+
+    /**
      * More of the swarm in the rift's clearings than in the maze between them (G0115): loose creatures to a tile of open
      * ground, counted over every rift dealt.
      */

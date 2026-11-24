@@ -30,8 +30,8 @@ import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.WeaponKind;
-import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
+import pl.mzebrows.pwt.sim.system.upgrade.UpgradeSystem;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeView;
 
 class ReadoutWriterTest {
@@ -499,8 +499,9 @@ class ReadoutWriterTest {
     @Test
     void marksWhatTheSwarmHoldsApartFromWhatTheSideHolds() {
         SimConfig config = SimConfig.defaults();
-        Simulation world = new Simulation(config.withAdaptation(new AdaptationDef(config.tickSeconds(), 0, 0)));
+        Simulation world = new Simulation(config);
         world.spawnCommander(40f, 40f, 0);
+        UpgradeSystem.hold(world.engine(), config, UpgradeKind.RAPID_SPIT, 1);
         world.step();
 
         Readout readout = fill(new ReadoutWriter(), world);

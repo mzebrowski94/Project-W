@@ -1826,7 +1826,7 @@ public final class AlphaWorlds {
                 new DraftDef(DRAFT_OPTIONS, 1, 1, 100, 1, 1, true, List.of(0, TIER_TWO_FROM)),
                 stats(),
                 upgrades(),
-                new AdaptationDef(0f, 0, 0),
+                new AdaptationDef(0, 100, 0, 100, 0, 100, 0),
                 new SimConfig.SwarmConfig(100, 100, 100, 100),
                 SimConfig.defaults().mission(),
                 SimConfig.defaults().biomes(),

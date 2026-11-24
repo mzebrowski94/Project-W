@@ -24,9 +24,9 @@ one strain, laid by the `house` roster form; points and loose packs still never 
 - **The strain.** `UnitKind.JAGUAR`, its `sim.unit.jaguar` block a copy of the runner's key for key - its weave,
   dodge, approach and avoidance, a leap in threes, 0.24 s in the air, nothing deflects it - but for a grunt's body
   (`radius=1.8`), `health=350`, `speed=15.6` (the runner's 12 x 1.3) and a quicker leap (`leap.speed=44` against 34,
-  `leap.cooldownSeconds=0.6` against 0.9). It notices as a **grunt** does, 51 and loses at 77, not at the runner's
-  78/104 - perception is range-only (G0011), so it notices through walls, and with a runner's reach a house's jaguars
-  would break out for a man most of a level away.
+  `leap.cooldownSeconds=0.6` against 0.9). It noticed as a **grunt** does, 51 and lost at 77; Mateusz's rebalance
+  (2026-11-24) has it notice at 100 and lose at 110, past the runner's 78/104. Perception is range-only (G0011), so it
+  notices through walls, and a house's jaguars break out for a man that far off - a house is a wider trap than it was.
 - **Its shots.** A barrage of one pattern in the sludger's stream shape (G0073): three single `jaguar_glob`s 0.1 s
   apart down a locked line, after a 0.25 s tint it stands still for (`holdsStill` - the stop is the tell), 24 reach,
   not stepped, 3 s rest, a declared stun breaks it off. **`sim.weapon.jaguar_glob` harms nobody**: the sludger's

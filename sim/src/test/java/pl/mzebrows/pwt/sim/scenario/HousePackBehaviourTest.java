@@ -1,10 +1,10 @@
 package pl.mzebrows.pwt.sim.scenario;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.TILE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.godMode;
-import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
@@ -35,8 +35,11 @@ class HousePackBehaviourTest {
 
     private static final House HOUSE = new House(WALLS, List.of(DOORWAY));
 
-    /** Further than a jaguar notices from the middle of the house. */
-    private static final float FAR_CORNER = 2f;
+    /** Tiles across the ground the house stands on: wide enough for a corner past a jaguar's notice. */
+    private static final int WIDE = 64;
+
+    /** Further than a jaguar notices from the middle of the house, at the ground's far corner. */
+    private static final float FAR_CORNER = (WIDE - 1) * TILE;
 
     /** South of the door, well inside a jaguar's detection range of the house. */
     private static final float OUTSIDE_Y = 12f;
@@ -106,7 +109,9 @@ class HousePackBehaviourTest {
             config = config.withUnit(
                     kind, strain -> strain.withPerception(strain.perception().withAlwaysAggressive(false)));
         }
-        TileMap map = ground().rect(WALLS.col(), WALLS.row(), WALLS.width(), WALLS.height(), Terrain.WALL)
+        TileMap map = TileMap.builder(WIDE, WIDE, TILE)
+                .fill(Terrain.PLAIN)
+                .rect(WALLS.col(), WALLS.row(), WALLS.width(), WALLS.height(), Terrain.WALL)
                 .rect(WALLS.col() + 1, WALLS.row() + 1, WALLS.width() - 2, WALLS.height() - 2, Terrain.PLAIN)
                 .rect(DOORWAY.col(), DOORWAY.row(), DOORWAY.width(), DOORWAY.height(), Terrain.PLAIN)
                 .build();

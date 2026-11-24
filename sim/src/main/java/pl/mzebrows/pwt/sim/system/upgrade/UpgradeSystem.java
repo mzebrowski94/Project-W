@@ -20,20 +20,20 @@ import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Upgrades;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Side;
-import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
  * The only writer of the ledger and the drafts (ADR 0017, G0049, G0118). Once per tick, at the end of it:
  *
  * <ol>
  *   <li>on the level's first tick, plans the schedule: every site standing and every ridge of the map, weighed,
- *       and how many drafts that plans each slot;
+ *       how many drafts that plans each slot, and how many adaptations it plans the swarm, its spread drawn;
  *   <li>applies this tick's picks, each from the next tick on;
  *   <li>re-deals any card a pick made stale, in its place;
  *   <li>earns every seated slot - away or not - each draft his own count has reached: the sites the side has
  *       taken and the ridges his own commander has crossed, caught up by where he stands; and deals its cards;
- *   <li>adapts the swarm, if an adaptation is due by level time or by the players' picks: one card from
- *       the aliens' pool, on a stream of its own, taken at once - there is nobody to choose.
+ *   <li>adapts the swarm once for every threshold the side's count has reached: the sites taken and the furthest
+ *       biome any commander has entered, each worth more for every player seated when it is passed. One card from the
+ *       aliens' pool, on a stream of its own, taken at once - there is nobody to choose.
  * </ol>
  *
  * <p>Nothing here waits, and nothing passes on: a draft is state, a pick is input, and a draft nobody picks is
@@ -60,8 +60,8 @@ public final class UpgradeSystem extends EntitySystem {
     /** The ground, whose ridges a crossing is counted by. */
     private final TileMap map;
 
-    /** One adaptation per this many ticks of level time; zero is off. */
-    private final int everyTicks;
+    /** Every rank the swarm could take, of every adaptation dealt at all: what its share of the pool is of. */
+    private final int pool;
 
     /**
      * Scratch, overwritten before each read: by slot, whether it has a commander, and how many ridges his commander
@@ -94,7 +94,7 @@ public final class UpgradeSystem extends EntitySystem {
         this.rng = rng;
         this.adapting = adapting;
         this.map = map;
-        this.everyTicks = Ticks.of(config.adaptation().everySeconds(), config.tickSeconds());
+        this.pool = pool(config.upgrades());
         this.seated = new boolean[capacity];
         this.reached = new int[capacity];
     }
@@ -116,28 +116,59 @@ public final class UpgradeSystem extends EntitySystem {
             Upgrades upgrades = UPGRADES.get(level);
             Drafts drafts = DRAFTS.get(level);
             if (!drafts.scheduled) {
-                schedule(drafts);
+                schedule(drafts, upgrades);
             }
             boolean changed = applyPicks(upgrades, drafts);
             if (changed) {
                 refresh(upgrades, drafts);
             }
-            changed |= earn(upgrades, drafts, LEVEL.get(level));
+            int taken = taken();
+            changed |= earn(upgrades, drafts, LEVEL.get(level), taken);
             if (changed) {
                 drafts.revision++;
             }
-            adapt(upgrades, LEVEL.get(level), drafts.planned);
+            adapt(upgrades, drafts, taken);
         }
     }
 
     /**
      * Fixes the schedule (G0118), once, on the level's first tick - by then everything the level was built with
-     * stands on it: every site, taken or not, and every ridge, at their weights.
+     * stands on it: every site, taken or not, and every ridge, at their weights. The swarm's plan is moved by its
+     * spread, drawn from its own stream - and nothing is drawn for a plan of none, or no spread.
      */
-    private void schedule(Drafts drafts) {
+    private void schedule(Drafts drafts, Upgrades upgrades) {
         drafts.sources = draft.sources(sites.size(), map.ridgeCount());
         drafts.planned = draft.planned(drafts.sources);
+        int offset = 0;
+        int spread = adaptation.spread();
+        if (spread > 0 && adaptation.planned(drafts.sources, draft.sourcesRef(), pool, 0) > 0) {
+            offset = adapting.nextInt(2 * spread + 1) - spread;
+        }
+        upgrades.adaptationsPlanned = adaptation.planned(drafts.sources, draft.sourcesRef(), pool, offset);
         drafts.scheduled = true;
+    }
+
+    /** Every rank of every adaptation that is dealt at all. */
+    private static int pool(Defs<UpgradeKind, UpgradeDef> catalogue) {
+        int ranks = 0;
+        for (UpgradeKind kind : KINDS) {
+            UpgradeDef def = catalogue.of(kind);
+            if (def.side() == Side.ALIEN && def.weight() > 0) {
+                ranks += def.ranks();
+            }
+        }
+        return ranks;
+    }
+
+    /** How many sites the side has taken, whatever their kind (G0110). */
+    private int taken() {
+        int taken = 0;
+        for (int i = 0; i < sites.size(); i++) {
+            if (SITE.get(sites.get(i)).taken) {
+                taken++;
+            }
+        }
+        return taken;
     }
 
     /**
@@ -167,7 +198,6 @@ public final class UpgradeSystem extends EntitySystem {
             rememberPassedOver(drafts, pick);
             removeDraft(drafts, index);
             upgrades.revision++;
-            upgrades.playerPicks++;
             changed = true;
         }
         drafts.submitted.clear();
@@ -273,7 +303,7 @@ public final class UpgradeSystem extends EntitySystem {
      * not been credited with (G0118): the sites the side has taken, and the ridges his own commander has crossed,
      * the furthest east he has ever stood. Slots in order, so every machine deals the same cards to the same slot.
      */
-    private boolean earn(Upgrades upgrades, Drafts drafts, Level level) {
+    private boolean earn(Upgrades upgrades, Drafts drafts, Level level, int taken) {
         Seats.mark(seated, commanders, returning);
         for (int slot = 0; slot < reached.length; slot++) {
             reached[slot] = 0;
@@ -284,13 +314,6 @@ public final class UpgradeSystem extends EntitySystem {
             if (slot >= 0 && slot < reached.length) {
                 int past = map.ridgesReached(map.colAt(POSITION.get(commander).x));
                 reached[slot] = Math.max(reached[slot], past);
-            }
-        }
-        int taken = 0;
-        // Sites, whatever their kind (G0110), counted for every seated slot alike.
-        for (int i = 0; i < sites.size(); i++) {
-            if (SITE.get(sites.get(i)).taken) {
-                taken++;
             }
         }
         boolean earned = false;
@@ -386,33 +409,54 @@ public final class UpgradeSystem extends EntitySystem {
     }
 
     /**
-     * Adapts the swarm once for every adaptation it is owed and has not been credited with: by level
-     * time, counting this tick, and by the players' picks, counting this tick's. Each is one card dealt
-     * from the aliens' pool and taken at once; an empty pool takes nothing, and draws nothing.
+     * Adapts the swarm once for every threshold of its plan the side's count has reached and it has not been credited
+     * with (G0118). The count gains what this tick passed - sites newly taken, and biomes newly entered by the
+     * furthest commander - each worth more for every player seated now. The first waits its gap, so the swarm adapts
+     * as the side comes into a biome rather than as it sets out. Each is one card dealt from the aliens' pool and
+     * taken at once, up to the most the players seated allow; an empty pool takes nothing, and draws nothing.
      */
-    private void adapt(Upgrades upgrades, Level level, int planned) {
-        int byTime = everyTicks <= 0 ? 0 : (int) ((level.tick + 1) / everyTicks);
-        while (upgrades.fromTime < byTime) {
-            upgrades.fromTime++;
-            adaptOnce(upgrades, planned);
+    private void adapt(Upgrades upgrades, Drafts drafts, int taken) {
+        int seatedNow = Seats.count(seated, commanders, returning);
+        int entered = Math.max(upgrades.biomesEntered, entered());
+        int sitesNew = Math.max(0, taken - upgrades.sitesCounted);
+        int sourcesNew = draft.sources(sitesNew, entered - upgrades.biomesEntered);
+        upgrades.passedHundredths += sourcesNew * adaptation.worth(seatedNow);
+        upgrades.sitesCounted += sitesNew;
+        upgrades.biomesEntered = entered;
+        int owed = AdaptationSchedule.owed(
+                upgrades.passedHundredths,
+                drafts.sources,
+                upgrades.adaptationsPlanned,
+                adaptation.most(pool, seatedNow));
+        while (upgrades.credited < owed) {
+            upgrades.credited++;
+            adaptOnce(upgrades);
         }
-        int per = adaptation.perPlayerUpgrades();
-        int byPicks = per <= 0 ? 0 : upgrades.playerPicks / per;
-        while (upgrades.fromPicks < byPicks) {
-            upgrades.fromPicks++;
-            adaptOnce(upgrades, planned);
+    }
+
+    /**
+     * The furthest biome any commander stands in, as the ridges behind it - never more than the map has, so a map
+     * whose biomes no ridge divides counts none.
+     */
+    private int entered() {
+        int furthest = 0;
+        for (int i = 0; i < commanders.size(); i++) {
+            Position at = POSITION.get(commanders.get(i));
+            furthest = Math.max(furthest, map.biomeAt(at.x, at.y));
         }
+        return Math.min(furthest, map.ridgeCount());
     }
 
     /**
      * Deals the swarm one adaptation, weighted, and takes it. An adaptation that answers an upgrade the
      * players hold is weighted up by {@code answerWeight} per rank they hold of it. Its tiers open on its count of
-     * adaptations against a slot's planned drafts, as a chooser's would.
+     * adaptations against its own plan, as a chooser's open against his.
      */
-    private void adaptOnce(Upgrades upgrades, int planned) {
+    private void adaptOnce(Upgrades upgrades) {
         for (int k = 0; k < KINDS.length; k++) {
             UpgradeKind kind = KINDS[k];
-            if (!eligible(kind, Side.ALIEN, Upgrades.SHARED, upgrades, upgrades.adaptations, planned)) {
+            if (!eligible(
+                    kind, Side.ALIEN, Upgrades.SHARED, upgrades, upgrades.adaptations, upgrades.adaptationsPlanned)) {
                 weights[k] = 0;
                 continue;
             }
@@ -444,7 +488,8 @@ public final class UpgradeSystem extends EntitySystem {
     /**
      * Whether this chooser could take this kind now: that side's, below its last rank, its tier open at
      * {@code earned} of {@code planned} drafts, what it requires held, nothing else in its group held, and not
-     * switched off. The swarm is a chooser holding only what the side holds, and counts its tiers in adaptations.
+     * switched off. The swarm is a chooser holding only what the side holds, and counts its tiers in adaptations
+     * against its own plan.
      */
     private boolean eligible(UpgradeKind kind, Side side, int chooser, Upgrades upgrades, int earned, int planned) {
         UpgradeDef def = catalogue.of(kind);

@@ -319,8 +319,8 @@ class ScenarioSessionTest {
     /** One press is one card, however many ticks the frame after it runs, and a second draft stays. */
     @Test
     void spendsAPickOnceEvenWhenAFrameRunsSeveralTicks() {
-        // Two drafts: five points plan two, the first at once and the next a gap after it (G0118).
-        ScenarioSession session = new ScenarioSession(new OnTakenPoints(5), SimConfig.defaults());
+        // Two drafts: three points plan two, the first at once and the next a gap after it (G0118).
+        ScenarioSession session = new ScenarioSession(new OnTakenPoints(3), SimConfig.defaults());
         session.advance(TICK, NOBODY);
 
         session.apply(HarnessCommand.TAKE_FIRST_CARD, NOBODY);

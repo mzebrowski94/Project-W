@@ -9,14 +9,14 @@ a barrage; proposing that a slam, a stomp or a shockwave be a blast; making a st
 `.standsStillWhileItWindsUpAndFiresAndWalksWhileItRests`, `.shakesTheGroundWhenItStartsWindingUp`,
 `.breaksOffThePatternWhenADeclaredStunLandsAndWindsItUpAgainAfter`, `.keepsWindingUpThroughAStagger`,
 `.showsTheCircleItsShotsReachForAMomentAfterASalvoThatSaysSo`, `.finishesAPatternItHasStartedWhenWhatItHuntsGetsAway`, `GiantTest`,
-`SimConfigTest.makesEachGiantABruteGrownHalfAsBigAgainAndFourTimesAsHard`,
+`SimConfigTest.makesEachGiantABruteGrownHalfAsBigAgainAndAtLeastFourTimesAsHard`,
 `.slamsACircleWhoseRadiusIsTwiceTheThumpersWidthAndStartsOnlyWithSomebodyInIt`, `.searsOnlyWhereItsConeLands`.
 
 **Grilled with Mateusz, 2026-10-06**, porting the cut and the fen.
 
 **Constraint.**
 
-- **Two giants, the searer and the thumper**: a brute's body half as big again, four times its health, slower than
+- **Two giants, the searer and the thumper**: a brute's body half as big again, at least four times its health, slower than
   anything else that walks, no leap, and quicker to give up than a brute (never sooner than a frog). Constants and
   blocks (G0008); they turn up loose in the cut and the fen, 0-1 of each.
 - **Each attacks with a barrage of one pattern** - the boss's machinery (G0048), on the definition every strain

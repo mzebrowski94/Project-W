@@ -17,7 +17,7 @@ import pl.mzebrows.pwt.sim.component.ControlPoint;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.def.PickupKind;
-import pl.mzebrows.pwt.sim.system.upgrade.AdaptationDef;
+import pl.mzebrows.pwt.sim.def.TierKind;
 
 /**
  * One arena the alpha-phase menu can launch, built to demonstrate and test a system by hand.
@@ -72,15 +72,12 @@ public interface Scenario {
     }
 
     /**
-     * This config with the swarm adapting (ADR 0017): one adaptation every three minutes of the level, and one
-     * for every third card the players take. What ships leaves both off; the Adventure levels turn them on
-     * so the schedule can be felt, and it runs dry once every adaptation is at its last rank.
+     * This config with the swarm adapting (ADR 0017, G0118) as a medium mission's does: so many adaptations planned
+     * on the drafts' schedule, over the level's sites - it has no ridges. What ships leaves it off; the Adventure
+     * levels turn it on so the schedule can be felt.
      */
     static SimConfig adapting(SimConfig config) {
-        float everySeconds = 180f;
-        int perPlayerUpgrades = 3;
-        return config.withAdaptation(new AdaptationDef(
-                everySeconds, perPlayerUpgrades, config.adaptation().answerWeight()));
+        return config.mission().adapting(TierKind.MEDIUM, config);
     }
 
     /** Fills an empty simulation. Spawn the commander first, so it is always present. */

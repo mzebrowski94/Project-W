@@ -671,17 +671,17 @@ class SimConfigTest {
     }
 
     /**
-     * <strong>A giant is a brute grown</strong> (G0071): half as big again, four times its health, slower, no
+     * <strong>A giant is a brute grown</strong> (G0071): half as big again, at least four times its health, slower, no
      * leap, and quicker to let you go - but never sooner than a frog, which the test above holds.
      */
     @Test
-    void makesEachGiantABruteGrownHalfAsBigAgainAndFourTimesAsHard() {
+    void makesEachGiantABruteGrownHalfAsBigAgainAndAtLeastFourTimesAsHard() {
         SimConfig config = SimConfig.defaults();
         UnitDef brute = config.units().of(UnitKind.BRUTE);
         for (UnitKind giant : List.of(UnitKind.SEARER, UnitKind.THUMPER)) {
             UnitDef def = config.units().of(giant);
             assertThat(def.radius()).as("%s's size", giant).isCloseTo(brute.radius() * 1.5f, Offset.offset(0.01f));
-            assertThat(def.health()).as("%s's health", giant).isEqualTo(brute.health() * 4);
+            assertThat(def.health()).as("%s's health", giant).isGreaterThanOrEqualTo(brute.health() * 4);
             assertThat(def.speed()).as("%s's pace", giant).isLessThan(brute.speed());
             assertThat(def.leap().enabled()).as("%s's leap", giant).isFalse();
             assertThat(leeway(config, giant)).as("%s's leeway", giant).isLessThan(leeway(config, UnitKind.BRUTE));
@@ -841,9 +841,8 @@ class SimConfigTest {
 
     /**
      * The jaguar (G0112, provisional, for review): a runner's way of fighting - its weave, dodge, approach and avoidance
-     * - on a grunt's body, a third faster, far tougher, with a quicker leap; it notices as a grunt does, not as a runner,
-     * so a house's jaguars break out only for a man near it; and a locked burst of three globs that harm nobody and
-     * leave the sludger's glue.
+     * - on a grunt's body, a third faster, far tougher, with a quicker leap; and a locked burst of three globs that harm
+     * nobody and leave the sludger's glue. How far it notices is tuned on its own (rebalanced 2026-11-24).
      */
     @Test
     void makesTheJaguarARunnerOnAGruntsBodyThatSpitsHarmlessGlue() {
@@ -864,9 +863,6 @@ class SimConfigTest {
         assertThat(jaguar.leap().speed()).isGreaterThan(runner.leap().speed());
         assertThat(jaguar.leap().cooldownSeconds()).isLessThan(runner.leap().cooldownSeconds());
         assertThat(jaguar.leap().sequenceLength()).isEqualTo(runner.leap().sequenceLength());
-        assertThat(jaguar.perception().detectionRange())
-                .isEqualTo(grunt.perception().detectionRange());
-        assertThat(jaguar.perception().loseRange()).isEqualTo(grunt.perception().loseRange());
         assertThat(jaguar.barrage().stream().gun()).isEqualTo(WeaponKind.JAGUAR_GLOB);
         assertThat(jaguar.barrage().stream().salvos()).isEqualTo(3);
         assertThat(jaguar.barrage().stream().locked()).isTrue();

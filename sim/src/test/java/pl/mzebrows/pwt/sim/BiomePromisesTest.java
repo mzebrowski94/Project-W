@@ -102,8 +102,8 @@ class BiomePromisesTest {
 
     /**
      * "A cold biome" (ticket 10, G0115, provisional, for review): the rift is the one biome of fissures - corridors carved
-     * out of them, on frost - and the one with clearings, two of radius 5 (amended 2026-11-23), its sites in them and
-     * 60 % of its packs; no house, no tree, no geyser.
+     * out of them, on frost - and the one with clearings, two of radius 4 (amended 2026-11-24), its sites in them and
+     * 60 % of its packs, and nooks for its nests; no house, no tree, no geyser.
      */
     @Test
     void theRiftIsTheOneBiomeOfFissuresOnFrostWithItsSitesInTwoClearings() {
@@ -119,6 +119,9 @@ class BiomePromisesTest {
             assertThat(ground(kind).clearings().count() > 0)
                     .as("%s's clearings", kind)
                     .isEqualTo(rift);
+            assertThat(ground(kind).clearings().nooks() > 0)
+                    .as("%s's nooks", kind)
+                    .isEqualTo(rift);
             assertThat(furniture.sitesInClearings())
                     .as("%s's sites in clearings", kind)
                     .isEqualTo(rift);
@@ -130,7 +133,7 @@ class BiomePromisesTest {
         var furniture = SHIPPED.biomes().of(BiomeKind.RIFT).furniture();
         assertThat(rift.base()).isEqualTo(Terrain.FROST);
         assertThat(rift.clearings().count()).isEqualTo(2);
-        assertThat(rift.clearings().radius()).isEqualTo(5);
+        assertThat(rift.clearings().radius()).isEqualTo(4);
         assertThat(rift.houses().max()).isZero();
         assertThat(furniture.clearingPackShare()).isEqualTo(60);
         assertThat(furniture.treesMax()).isZero();

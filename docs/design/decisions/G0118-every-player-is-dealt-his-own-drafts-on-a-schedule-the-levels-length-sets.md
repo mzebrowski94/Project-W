@@ -45,6 +45,17 @@ a count and a share of the pool, on the same schedule as the drafts.
   furthest crossing any commander has made. Each source is worth `perPlayerPercent` more per seated slot past the first
   when it is passed, and the share rises by the same factor, but never past `ceilingPercent`, so no run ends on the
   whole pool. Nobody chooses; `answerWeight` still leans the deal towards what the players hold.
+- **The swarm answers a biome; it does not open one** (Mateusz, 2026-11-24, stage 2). Its crossing is a commander's
+  first step into the biome beyond a ridge - the tile's own biome, past the middle of the ridge - where a slot's is his
+  commander entering the ridge's pass; the furthest any commander has come, never less, and caught up by where one
+  comes on. Its first waits one gap and the rest one even gap apart, the gap going on past the plan for a count the
+  players seated made worth more, where a slot's first draft comes at once. Its count is kept in hundredths of a
+  source, so a source's worth is never rounded; the plan and the most it may hold are rounded once, in `Whole`.
+- **What a tier moves is the count** (stage 2): `sim.mission.tier.<tier>.adaptations` - easy 0, medium 6, hard 8 -
+  in place of the level's `sim.adaptation.adaptations`, which is zero; `curvePercent` 60, `spread` 1, `mostPercent` 50,
+  `perPlayerPercent` 20 and `ceilingPercent` 75 are the same on every tier. The Adventure levels adapt as a medium
+  mission does, over their sites alone. An adaptation's tier opens by `tierFrom`'s share of the swarm's own plan, as a
+  card's opens by a share of its chooser's.
 
 **Scope.** Every level that earns drafts, a mission or not, by the one rule over its sources - a level without biomes
 has sites alone. The proving ground earns nothing (G0060). Crates are pickups, and how often one is left is G0110's.

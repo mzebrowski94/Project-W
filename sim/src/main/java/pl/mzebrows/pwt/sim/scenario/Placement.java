@@ -201,6 +201,9 @@ final class Placement {
         /** Its ground's clearings (G0115), west to east: none in every biome but the rift. */
         private final List<Clearing> clearings = new ArrayList<>();
 
+        /** Its ground's nooks (G0115, amended 2026-11-24), west to east: room for a nest in the rift's maze. */
+        private final List<Clearing> nooks = new ArrayList<>();
+
         Biome(int position, BiomeKind kind, BiomeDef def, boolean last, Randomness stream, Randomness attempt) {
             this.position = position;
             this.kind = kind;
@@ -213,6 +216,11 @@ final class Placement {
             for (Clearing clearing : laid.clearings()) {
                 if (rect.contains(clearing.col(), clearing.row())) {
                     clearings.add(clearing);
+                }
+            }
+            for (Clearing nook : laid.nooks()) {
+                if (rect.contains(nook.col(), nook.row())) {
+                    nooks.add(nook);
                 }
             }
         }
@@ -600,7 +608,11 @@ final class Placement {
             return true;
         }
 
-        /** Holes: off the way in, off every point and off each other; never in a house, nor in the finale's watch. */
+        /**
+         * Holes: off the way in, off every point and off each other; never in a house, nor in the finale's watch. A biome
+         * with nooks puts its holes at their centres first, west to east, each nook the keep-offs leave room in taking
+         * one, and scatters the rest as any other biome does.
+         */
         private void nests(int[] creatures, Randomness rng) {
             Scatter scatter = scatter(rng, 0f).keepingOffRock(rules.rockMargin());
             keepOffEntries(scatter, entryKeepOff(rules.nestKeepOff()));
@@ -617,14 +629,34 @@ final class Placement {
                     scatter.reserve(stocked.x(), stocked.y(), rules.pickupKeepOff());
                 }
             }
+            boolean[] used = new boolean[nooks.size()];
             for (int i = 0; i < creatures.length; i++) {
                 if (def.roster().get(i) instanceof Roster.Nest nest) {
-                    int got = scatter.scatter(rect, creatures[i], config.nest().radius(), (x, y) -> {
-                        Placed hole = new Placed.Nest(nest.strain(), x, y, position);
-                        put(hole);
-                        nests.add(hole);
+                    Scatter.Place hole = (x, y) -> {
+                        Placed placed = new Placed.Nest(nest.strain(), x, y, position);
+                        put(placed);
+                        nests.add(placed);
                         scatter.reserve(x, y, rules.nestApart());
-                    });
+                    };
+                    int got = 0;
+                    for (int k = 0; k < nooks.size() && got < creatures[i]; k++) {
+                        if (used[k]) {
+                            continue;
+                        }
+                        float x = map.tileCentreX(nooks.get(k).col());
+                        float y = map.tileCentreY(nooks.get(k).row());
+                        int put = scatter.scatterNearest(
+                                TileRect.around(map, x, y, map.tileSize()),
+                                x,
+                                y,
+                                1,
+                                config.nest().radius(),
+                                hole);
+                        used[k] = put > 0;
+                        got += put;
+                    }
+                    got += scatter.scatter(
+                            rect, creatures[i] - got, config.nest().radius(), hole);
                     shortOf("nests of " + nest.strain(), creatures[i], got);
                 }
             }

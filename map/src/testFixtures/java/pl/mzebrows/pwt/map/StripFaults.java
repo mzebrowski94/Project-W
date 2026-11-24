@@ -31,14 +31,28 @@ public final class StripFaults {
     }
 
     /**
-     * Every biome holds as many clearings as its ground asks for, each centred inside it, and every tile of each open
-     * ground - no crag, no outcrop, nothing a ridge laid (G0115). That each is reached is {@link #reach}'s.
+     * Every biome holds as many clearings and as many nooks as its ground asks for, each centred inside it, and every
+     * tile of each open ground - no crag, no outcrop, nothing a ridge laid (G0115). That each is reached is {@link
+     * #reach}'s.
      */
     public static List<String> clearings(Strip.Laid laid, List<BiomeGround> grounds) {
+        int[] clearings = new int[grounds.size()];
+        int[] nooks = new int[grounds.size()];
+        for (int p = 0; p < grounds.size(); p++) {
+            clearings[p] = grounds.get(p).clearings().count();
+            nooks[p] = grounds.get(p).clearings().nooks();
+        }
+        List<String> faults = discs(laid, laid.clearings(), clearings, "clearings");
+        faults.addAll(discs(laid, laid.nooks(), nooks, "nooks"));
+        return faults;
+    }
+
+    /** {@link #clearings} for one kind of disc: {@code wanted} of them a biome, each open ground. */
+    private static List<String> discs(Strip.Laid laid, List<Clearing> discs, int[] wanted, String what) {
         List<String> faults = new ArrayList<>();
         TileMap map = laid.map();
-        int[] perBiome = new int[grounds.size()];
-        for (Clearing clearing : laid.clearings()) {
+        int[] perBiome = new int[wanted.length];
+        for (Clearing clearing : discs) {
             int biome = -1;
             for (int p = 0; p < laid.biomes().size(); p++) {
                 biome = laid.biomes().get(p).contains(clearing.col(), clearing.row()) ? p : biome;
@@ -53,10 +67,9 @@ public final class StripFaults {
                 faults.add(clearing + " has " + solid);
             }
         }
-        for (int p = 0; p < grounds.size(); p++) {
-            if (perBiome[p] != grounds.get(p).clearings().count()) {
-                faults.add("biome " + p + " has " + perBiome[p] + " clearings, its ground asks for "
-                        + grounds.get(p).clearings().count());
+        for (int p = 0; p < wanted.length; p++) {
+            if (perBiome[p] != wanted[p]) {
+                faults.add("biome " + p + " has " + perBiome[p] + " " + what + ", its ground asks for " + wanted[p]);
             }
         }
         return faults;
