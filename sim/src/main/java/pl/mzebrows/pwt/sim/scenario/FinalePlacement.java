@@ -40,6 +40,7 @@ final class FinalePlacement {
     private static final long LAIR = 0xA5F9_3C60_D84B_1E27L;
     private static final long BARRELS = 0x1B6E_C7A2_95F0_4D38L;
     private static final long MINES = 0xE839_52D1_4AB7_06FCL;
+    private static final long GUNS = 0x4E7A_19C5_B30D_F862L;
 
     /** How many times the cover is dealt again, from the next attempt's stream, before it reports a shortfall (G0070). */
     private static final int ATTEMPTS = 32;
@@ -209,6 +210,8 @@ final class FinalePlacement {
                     placed.add(new Placed.Pickup(kind, x, y, position));
                 },
                 "pickups");
+        // Which guns, from the list, none twice (G0120): from a stream of their own, so a longer list moves no cache.
+        List<PickupKind> guns = deal(rules.lairKinds(), rules.lair().max(), stream.derive(GUNS));
         int[] cache = {0};
         lot(
                 map,
@@ -221,8 +224,7 @@ final class FinalePlacement {
                 rules.lair().max() / 2,
                 widest(rules.lairKinds()),
                 barrage,
-                (x, y) -> caches.add(
-                        Arrival.pickup(rules.lairKinds().get(cache[0]++).kind(), x, y)),
+                (x, y) -> caches.add(Arrival.pickup(guns.get(cache[0]++), x, y)),
                 "the lair's caches");
         lot(
                 map,
@@ -467,6 +469,7 @@ final class FinalePlacement {
         return switch (line) {
             case LairLine.Unit unit -> config.unit(unit.strain()).radius();
             case LairLine.Nest nest -> config.nest().radius();
+            case LairLine.Hole hole -> config.nest().radius();
             case LairLine.Pickup pickup -> config.pickup(pickup.kind()).radius();
         };
     }
@@ -478,6 +481,19 @@ final class FinalePlacement {
             case PICKUP ->
                 config.pickup(Objects.requireNonNull(arrival.pickup())).radius();
         };
+    }
+
+    /** So many of the kinds, none twice, in the order dealt. */
+    private static List<PickupKind> deal(List<FinaleRules.Pick> kinds, int count, Randomness rng) {
+        List<PickupKind> left = new ArrayList<>();
+        for (FinaleRules.Pick pick : kinds) {
+            left.add(pick.kind());
+        }
+        List<PickupKind> dealt = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            dealt.add(left.remove(rng.nextInt(left.size())));
+        }
+        return dealt;
     }
 
     private float widest(List<FinaleRules.Pick> kinds) {

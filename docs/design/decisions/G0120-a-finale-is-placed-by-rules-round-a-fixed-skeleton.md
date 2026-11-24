@@ -13,7 +13,10 @@ barrage), sweeping every finale both ways by name; `MissionTest.flipsTheFinalesS
 `.standsTheKeepsTwoGunsInsideTheBossesBarrage`, `.endsOnTheSameFinaleOnEveryTierButForHowManyComeInAWave`;
 `FinaleDefTest.refusesTurretsThatAreDealt`, `.refusesALotThatIsNotDealtInPairs`,
 `.refusesPickupsThatAreNotOneOfEachKindNamed`, `.flipsEveryPositionNorthSouthAndNoneEastWest`;
-`ScatterTest.placesInMirroredPairsAboutARow`; `ConfigBinderTest.refusesBlocksNumberedUnderAListsKey`.
+`ScatterTest.placesInMirroredPairsAboutARow`; `ConfigBinderTest.refusesBlocksNumberedUnderAListsKey`. Enemies
+(ticket 04): `MissionTest.dealsEachWaveOneMemberOfItsRole`, `.dealsTheKeepsHolesFromItsPoolAndItsGunsFromItsList`,
+`.endsOnTheSameFinaleOnEveryTierButForHowManyComeInAWave` (counts still tiered); `FinaleDefTest.refusesAWaveOfARoleWithNoMembers`,
+`.refusesALairOfMoreHolesThanItsPoolCanDeal`, `.bindsTheRedoubtFromItsBlock`, `.bindsTheKeepFromItsBlock`.
 
 **Settled with Mateusz, 2026-11-24** (grilling, `grill-with-docs`): *more variety in the finale - walls, especially cover
 for the boss fight, turrets, mines, weapons, crates and nests varied per playthrough, reproducibly; vary the nests' strains
@@ -101,3 +104,24 @@ the record left it open:
    boss's first ring never sets one off - a crate and a laser in 2-4, the lair's four caches in 2-11, 4-12 east.
 8. **The lair's caches** are dealt positions for the four kinds the keep names, in that order (ticket 04 deals the
    kinds); its holes and boss stay at their spots.
+
+**Mateusz, 2026-11-24, mid-run (not provisional):** "decrease greatly amount of mines in finales" - the redoubt's mines
+**4-6** (were 16-20), the keep's **2-4** (were 8-12).
+
+**Finale-variety ticket 04, 2026-11-24 - provisional, for review (AFK run).** The enemies half:
+
+9. **Roles**: `fodder=grunt 9 11; ant 9 11`, `fast=runner 8 10; frog 5 7; jaguar 4 6`, `ranged=spitter 4 6; sludger 4 5;
+   magma_spitter 3 5`, `heavy=brute 4 5; thumper 2 3; slinger 2 3`. Today's strains are members with one range each
+   (runner 8-10 and spitter 4-6 stand for the three and two ranges the schedule wrote); the frog is fast. Left out: the
+   leech (rooted) and the worm (burrows), which cannot walk out of a mouth; the snake, searer, leech slinger and giant
+   kinds, to keep each role to strains of the redoubt's weight. Turned down: a share per wave to trim a two-mouth wave
+   (the old schedule cut those by up to a fifth; a member's range is now what each mouth sends, so late two-mouth waves
+   are a little heavier).
+10. **The pool** is written `pool.strains=grunt; spitter; runner; frog; ant; brute; sludger; slinger; magma_spitter` and
+    `pool.most=2`, and a hole spot `hole dx dy` (`LairLine.Hole`) - the old `nest <strain>` form stays for a fixed
+    strain. Each hole is dealt uniformly among the strains dealt fewer than `most`. Turned down: reading the strain
+    written on a `nest` line as a placeholder (a config value that lies).
+11. **The lair's guns**: `lairKinds` now the keep's seven guns - shotgun, railgun, laser, flamer, bazooka, pulse, disc -
+    four of them dealt, none twice; grenades and the detonator are not guns.
+12. **Streams**: roles from the finale's stream's `ROLES` branch, the pool from its `POOL` branch, the guns from the
+    rules' `GUNS` branch - each its own, so a longer list moves no placement and no wave count.

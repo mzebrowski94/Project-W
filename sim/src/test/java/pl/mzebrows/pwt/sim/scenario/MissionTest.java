@@ -18,6 +18,8 @@ import pl.mzebrows.pwt.map.Strip;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.FinaleDef;
+import pl.mzebrows.pwt.sim.FinaleRules;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.WaveLine;
@@ -42,6 +44,7 @@ import pl.mzebrows.pwt.sim.def.EmplacementKind;
 import pl.mzebrows.pwt.sim.def.FinaleKind;
 import pl.mzebrows.pwt.sim.def.Look;
 import pl.mzebrows.pwt.sim.def.Objective;
+import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.Wave;
@@ -824,6 +827,75 @@ class MissionTest {
         }
     }
 
+    /**
+     * Each redoubt wave is dealt one member of its role (G0120): its strain one the role names, the same on every
+     * build of one seed, and over a few seeds the same place in the schedule sent more than one strain.
+     */
+    @Test
+    void dealsEachWaveOneMemberOfItsRole() {
+        FinaleDef redoubt = SimConfig.defaults().finales().of(FinaleKind.REDOUBT);
+        List<Set<UnitKind>> seen = new ArrayList<>();
+        for (int w = 0; w < redoubt.waves().size(); w++) {
+            seen.add(new HashSet<>());
+        }
+        for (int nth = 0; nth < 6; nth++) {
+            Mission mission = endingOn(FinaleKind.REDOUBT, nth % 2 == 1, nth / 2);
+            Mission again = Mission.build(SimConfig.defaults().withSeed(mission.seed()), TierKind.MEDIUM);
+
+            assertThat(again.finale().waves())
+                    .extracting(Wave::kind)
+                    .isEqualTo(mission.finale().waves().stream().map(Wave::kind).toList());
+            for (int w = 0; w < redoubt.waves().size(); w++) {
+                UnitKind strain = mission.finale().waves().get(w).kind();
+                assertThat(redoubt.roles().of(redoubt.waves().get(w).role()))
+                        .as("wave %d", w)
+                        .extracting(WaveLine.Member::strain)
+                        .contains(strain);
+                seen.get(w).add(strain);
+            }
+        }
+        assertThat(seen).anySatisfy(strains -> assertThat(strains).hasSizeGreaterThan(1));
+    }
+
+    /**
+     * The keep's six holes are each dealt a strain of its pool (G0120), no strain more than twice, and its lair's guns
+     * from its list, none twice; two keeps deal two different lairs.
+     */
+    @Test
+    void dealsTheKeepsHolesFromItsPoolAndItsGunsFromItsList() {
+        FinaleDef keep = SimConfig.defaults().finales().of(FinaleKind.KEEP);
+        Set<UnitKind> pool = new HashSet<>();
+        for (FinaleDef.Pooled pooled : keep.pool().strains()) {
+            pool.add(pooled.strain());
+        }
+        Set<List<UnitKind>> lairs = new HashSet<>();
+        for (int nth = 0; nth < 6; nth++) {
+            Mission mission = endingOn(FinaleKind.KEEP, nth % 2 == 1, nth / 2);
+            List<UnitKind> holes = new ArrayList<>();
+            List<PickupKind> guns = new ArrayList<>();
+            for (Arrival arrival : mission.finale().lair()) {
+                if (arrival.form() == Arrival.Form.NEST) {
+                    holes.add(arrival.strain());
+                } else if (arrival.form() == Arrival.Form.PICKUP) {
+                    guns.add(arrival.pickup());
+                }
+            }
+
+            assertThat(holes).hasSize(6).allMatch(pool::contains);
+            for (UnitKind strain : holes) {
+                assertThat(holes.stream().filter(strain::equals).count())
+                        .as("%s", strain)
+                        .isLessThanOrEqualTo(2);
+            }
+            assertThat(guns)
+                    .hasSize(keep.rules().lair().max())
+                    .doesNotHaveDuplicates()
+                    .allMatch(gun -> keep.rules().lairKinds().contains(new FinaleRules.Pick(gun)));
+            lairs.add(holes);
+        }
+        assertThat(lairs).hasSizeGreaterThan(1);
+    }
+
     /** A wave from two mouths is one wave of the schedule, a lot from each, each its own draw (G0087). */
     @Test
     void sendsAWaveFromEachMouthItNamesAsOneWave() {
@@ -1063,7 +1135,7 @@ class MissionTest {
                 "no " + nth + "th seed of " + SEEDS * 8L + " ends on " + kind + (flipped ? " flipped" : ""));
     }
 
-    /** The finale's skeleton - its post, its lair's holes and boss, its waves' mouths - by tile offset, sorted. */
+    /** The finale's skeleton - its post, its lair's hole spots and boss, its waves' mouths - by tile offset, sorted. */
     private static List<String> skeleton(Mission mission, boolean mirrored) {
         TileMap map = mission.laid().map();
         TileRect anchor = Strip.anchor(mission.laid().biomes().getLast());
@@ -1077,8 +1149,10 @@ class MissionTest {
         for (Arrival arrival : mission.finale().lair()) {
             if (arrival.form() != Arrival.Form.PICKUP) {
                 int dy = map.rowAt(arrival.y()) - anchor.row();
-                things.add("Lair " + arrival.form() + " " + arrival.strain() + " "
-                        + (map.colAt(arrival.x()) - anchor.col()) + " " + (mirrored ? -dy : dy));
+                // A hole's spot is the skeleton's; its strain the pool's (G0120).
+                Object who = arrival.form() == Arrival.Form.UNIT ? arrival.strain() : "";
+                things.add("Lair " + arrival.form() + " " + who + " " + (map.colAt(arrival.x()) - anchor.col()) + " "
+                        + (mirrored ? -dy : dy));
             }
         }
         for (Wave wave : mission.finale().waves()) {

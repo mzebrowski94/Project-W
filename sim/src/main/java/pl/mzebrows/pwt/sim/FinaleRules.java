@@ -21,9 +21,8 @@ import pl.mzebrows.pwt.sim.def.Require;
  * @param barrels how many explosive barrels, and where
  * @param pickups how many pickups lie about the hold - one of each kind in {@code pickupKinds} - and where
  * @param pickupKinds what they are, in the order they are put down
- * @param lair how many gun caches the lair raises - one of each kind in {@code lairKinds} - and where; none outside a
- *     keep
- * @param lairKinds what they are, in the order they are put down
+ * @param lair how many gun caches the lair raises - fixed - and where; none outside a keep
+ * @param lairKinds the kinds they are dealt from, none twice (G0120)
  * @param inReach whether the cover and the guns stand inside the barrage of the lair's unit - the keep's boss - so a
  *     man who uses them takes the patterns for it
  */
@@ -55,7 +54,11 @@ public record FinaleRules(
                     "a finale's turrets are fixed, never dealt, were " + turrets.min() + ".." + turrets.max());
         }
         fixed("pickups", pickups, pickupKinds);
-        fixed("lair", lair, lairKinds);
+        if (lair.min() != lair.max() || lair.max() > lairKinds.size()) {
+            throw new IllegalArgumentException(
+                    "a finale's lair raises a fixed count of caches, none twice, so no more than " + lairKinds.size()
+                            + " kinds, were " + lair.min() + ".." + lair.max());
+        }
     }
 
     /** The places of each pickup of the block's list, in pairs: one of each, no more and no fewer. */
