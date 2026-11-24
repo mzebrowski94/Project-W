@@ -1,7 +1,7 @@
 # Engineer and the grenade slot
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: 03
 Spec: [spec.md](../spec.md) C2-C3

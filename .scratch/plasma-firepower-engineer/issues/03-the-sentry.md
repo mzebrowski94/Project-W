@@ -1,7 +1,7 @@
 # The sentry
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: -
 Spec: [spec.md](../spec.md) C1
@@ -51,3 +51,35 @@ puts it down in a scenario; ticket 04 gives the commander a way to make one.
 - Tests: it fires at the nearest alien in reach and not beyond; aliens target it at once; it goes off at its life's end
   and when destroyed, the same way; its blast wounds a man and stuns aliens but never a man. `verify.sh` green.
 - A hidden scenario (`--scenario=<name>`) with two sentries standing and a pack coming.
+
+## Answer
+
+Built on `afk/pfe-03-sentry`, merged into `pfe-integration` (green but for the rift seeds).
+
+**What.** `Sentry` component and `SentrySystem` (`system.commander`); `Look.SENTRY` (drawn square, light grey, smaller than a
+turret); `WeaponKind.SENTRY_GUN`; `SimConfig.SentryConfig` read from `sim.sentry.*` in `level.properties`;
+`Spawner.spawnSentry(x, y, slot)`. It is on the players' side with health, so the aliens hunt it at once; it turns onto
+the nearest alien it has a clear shot at in reach and fires through `Guns`; it goes off by dying - out of time it is
+marked dead by `SentrySystem`, destroyed by `DamageSystem` - leaving its `BlastsOnDeath` and a stun through
+`Surges.stunRound` (the dash surge's harmless stunning blow, factored out of `Surges.surge`). Time left: the body's core
+shrinks on the charge channel. Tests: `SentryTest` (11).
+
+**Provisional decisions** (also in G0129 *Amended by*):
+- Aim: a turret's turn (rate, slower while firing, `TurretSystem.ON_TARGET` before firing), faster than a turret's.
+  Turned down: a trooper's aim - it carries his aim error from the squad's stream; a sentry is a gun on a mount.
+- Sparing our men: by the shot's side (players'), not G0084's fouled line. Turned down: the fouled line - it would hold its
+  fire behind the squad it covers.
+- Stun beside the blast, not in it: the blast stays on nobody's side (G0018). Turned down: a stunning blast.
+- `Spawner.spawnSentry`, beside `spawnTurret`: no existing table to spawn it through. Turned down: a branch in
+  `spawnTurret`, or the emplacements' table (the aliens', G0113).
+- `SentrySystem` at 43, after `RespawnSystem`, before `ProjectileBoundsSystem`: after the damage that destroys it, before
+  the blast its going off leaves and before the ledger moves (it fires through `Guns`).
+
+**Keys** (`level.properties`): `sim.sentry.radius=1.4`, `health=300`, `lifeSeconds=60`, `range=30`, `turnRate=8`,
+`firingTurnFactor=0.6`, `gun=sentry_gun`, `blastRadius=4`, `blastDamage=150`, `blastHarm=wound`, `stunRadius=10`,
+`stunSeconds=1`. `weapons.properties`: `sim.weapon.sentry_gun.*` - `cooldownSeconds=0.2`, `damage=14`,
+`projectileSpeed=150`, `projectileRadius=0.35`, `projectileRange=34`, `projectileLook=turret_shot`, no heat.
+`graphic.properties`: `graphic.color.sentry=c9ced3ff`.
+
+**Scenario:** `--scenario=sentry-post` - two sentries ahead of the commander, a pack (grunts, runners, two brutes) coming
+from the east in four lots.
