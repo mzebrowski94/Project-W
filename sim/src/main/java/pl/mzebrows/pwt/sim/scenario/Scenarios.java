@@ -41,7 +41,8 @@ public final class Scenarios {
             new SpireFenScenario(),
             new RelicScenario(),
             new HeavyRangeScenario(),
-            new PlasmaRangeScenario());
+            new PlasmaRangeScenario(),
+            new SentryPostScenario());
 
     private Scenarios() {}
 

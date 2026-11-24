@@ -130,5 +130,10 @@ public enum WeaponKind {
      * What an orb beams (G0128): the laser's kind of shot, short and green, from the orb at an alien, stopping on the
      * first thing in its way. No pickup grants it.
      */
-    PLASMA_BEAM
+    PLASMA_BEAM,
+    /**
+     * What a sentry fires (G0129): a light, rapid gun on the players' side - a turret's kind of fire, lighter and a
+     * little slower. No pickup grants it.
+     */
+    SENTRY_GUN
 }

@@ -34,6 +34,7 @@ import pl.mzebrows.pwt.sim.system.commander.CommanderControlSystem;
 import pl.mzebrows.pwt.sim.system.commander.CrateSystem;
 import pl.mzebrows.pwt.sim.system.commander.DragSystem;
 import pl.mzebrows.pwt.sim.system.commander.MeleeSystem;
+import pl.mzebrows.pwt.sim.system.commander.SentrySystem;
 import pl.mzebrows.pwt.sim.system.commander.StrikeSystem;
 import pl.mzebrows.pwt.sim.system.commander.TurretSystem;
 import pl.mzebrows.pwt.sim.system.creature.BarrageSystem;
@@ -320,6 +321,14 @@ class SystemOrderTest {
                 CollisionSystem.class, UpgradeSystem.class, "a ridge crossed this tick earns its draft this tick"));
         rows.add(new Before(
                 OrbSystem.class, BlastSystem.class, "an orb spent this tick goes off in this tick's death window"));
+        rows.add(new Before(
+                DamageSystem.class,
+                SentrySystem.class,
+                "a sentry destroyed this tick goes off while its body is here"));
+        rows.add(new Before(
+                SentrySystem.class, BlastSystem.class, "a sentry out of time this tick leaves its blast this tick"));
+        rows.add(new Before(
+                SentrySystem.class, UpgradeSystem.class, "a sentry fires through Guns, which reads the ledger"));
         for (Class<? extends EntitySystem> reader : readersOfTheLedger()) {
             rows.add(new Before(reader, UpgradeSystem.class, "every reader in a tick sees the same ledger"));
         }

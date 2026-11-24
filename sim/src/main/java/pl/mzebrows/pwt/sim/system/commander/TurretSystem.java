@@ -50,9 +50,10 @@ public final class TurretSystem extends EntitySystem {
     /**
      * How nearly on target a gun has to be before a crew of its own judgement pulls the trigger.
      *
-     * <p>About ten degrees. The commander fires wherever it points; a trooper waits.
+     * <p>About ten degrees. The commander fires wherever it points; a trooper waits - and so does a sentry, which
+     * nobody crews (G0129).
      */
-    private static final float ON_TARGET = 0.985f;
+    static final float ON_TARGET = 0.985f;
 
     private final Solid map;
     private final Guns guns;

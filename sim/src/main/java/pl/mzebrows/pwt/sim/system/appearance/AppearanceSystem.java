@@ -39,6 +39,7 @@ import pl.mzebrows.pwt.sim.component.Pop;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Projectile;
 import pl.mzebrows.pwt.sim.component.Puff;
+import pl.mzebrows.pwt.sim.component.Sentry;
 import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Shock;
 import pl.mzebrows.pwt.sim.component.Slick;
@@ -109,6 +110,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Limpet> LIMPET = ComponentMapper.getFor(Limpet.class);
     private static final ComponentMapper<Orb> ORB = ComponentMapper.getFor(Orb.class);
+    private static final ComponentMapper<Sentry> SENTRY = ComponentMapper.getFor(Sentry.class);
 
     private final Defs<UnitKind, UnitDef> units;
     private final Defs<PickupKind, PickupDef> pickups;
@@ -308,6 +310,11 @@ public final class AppearanceSystem extends IteratingSystem {
         if (GRIPPED.has(entity) && GRIPPED.get(entity).held()) {
             // How long a man in something's jaws has left, read backwards like a casualty's (G0045).
             appearance.charge = GRIPPED.get(entity).fraction;
+            return;
+        }
+        if (SENTRY.has(entity)) {
+            // How long a sentry has left to stand (G0129), read backwards, as a casualty's clock is: never a number.
+            appearance.charge = SENTRY.get(entity).lifeLeft();
             return;
         }
         if (ORB.has(entity)) {

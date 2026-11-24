@@ -71,6 +71,7 @@ import pl.mzebrows.pwt.sim.component.Puff;
 import pl.mzebrows.pwt.sim.component.Ranged;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
+import pl.mzebrows.pwt.sim.component.Sentry;
 import pl.mzebrows.pwt.sim.component.Shake;
 import pl.mzebrows.pwt.sim.component.Shield;
 import pl.mzebrows.pwt.sim.component.Shock;
@@ -1040,6 +1041,43 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(true, false));
         entity.add(engine.createComponent(Weapon.class).set(def.gun(), config.weapon(def.gun()), config.tickSeconds()));
         entity.add(engine.createComponent(Appearance.class).set(def.look()));
+        admit(entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a sentry (G0129) set down by the commander in {@code slot}: a small standing gun on the players' side, nobody's
+     * to crew or haul. Solid and immovable; it has health, so the aliens hunt it from the moment it stands; it goes off by
+     * dying, in a small blast credited to {@code slot}, and stuns the aliens round it as it goes.
+     */
+    public Entity spawnSentry(float x, float y, int slot) {
+        SimConfig.SentryConfig sentry = config.sentry();
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Sentry.class)
+                .set(
+                        slot,
+                        sentry.turnRate(),
+                        sentry.firingTurnFactor(),
+                        sentry.range(),
+                        ticks(sentry.lifeSeconds()),
+                        sentry.stunRadius(),
+                        ticks(sentry.stunSeconds())));
+        entity.add(engine.createComponent(Faction.class).set(Side.PLAYER));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(sentry.radius()));
+        entity.add(engine.createComponent(Collider.class).set(true, false));
+        entity.add(engine.createComponent(Health.class).set(sentry.health()));
+        entity.add(engine.createComponent(Damage.class));
+        entity.add(blastsOnDeath()
+                .set(sentry.blastRadius(), sentry.blastRadius())
+                .dealing(sentry.blastDamage())
+                .harming(sentry.blastHarm())
+                .credited(slot));
+        entity.add(engine.createComponent(Weapon.class)
+                .set(sentry.gun(), config.weapon(sentry.gun()), config.tickSeconds()));
+        entity.add(engine.createComponent(Appearance.class).set(Look.SENTRY));
+        entity.add(engine.createComponent(Facing.class).face(1f, 0f));
         admit(entity);
         return entity;
     }
