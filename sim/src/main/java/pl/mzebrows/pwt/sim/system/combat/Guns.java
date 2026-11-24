@@ -17,6 +17,9 @@ import pl.mzebrows.pwt.sim.component.Tally;
 import pl.mzebrows.pwt.sim.component.Velocity;
 import pl.mzebrows.pwt.sim.component.Vitality;
 import pl.mzebrows.pwt.sim.component.Weapon;
+import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.WeaponDef;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
 
 /**
@@ -52,21 +55,21 @@ public final class Guns {
     private final Modifiers modifiers;
     private final Rng scatter;
     private final float muzzleGap;
-    private final int blastDamage;
+    private final Defs<WeaponKind, WeaponDef> weapons;
     private final float[] muzzle = new float[2];
 
     /**
      * @param scatter how loosely a gun throws, for every shooter; not how badly a creature aims
      * @param muzzleGap how far clear of the firer's body a shot leaves, for every gun there is
-     * @param blastDamage what the blast a shot leaves takes off what it catches before the gun's damage is folded in:
-     *     {@code sim.blast.damage}
+     * @param weapons every gun, for what an orb's beam shot takes before the gun's damage is folded in (G0128)
      */
-    public Guns(Spawner spawner, Modifiers modifiers, Rng scatter, float muzzleGap, int blastDamage) {
+    public Guns(
+            Spawner spawner, Modifiers modifiers, Rng scatter, float muzzleGap, Defs<WeaponKind, WeaponDef> weapons) {
         this.spawner = spawner;
         this.modifiers = modifiers;
         this.scatter = scatter;
         this.muzzleGap = muzzleGap;
-        this.blastDamage = blastDamage;
+        this.weapons = weapons;
     }
 
     /**
@@ -134,7 +137,10 @@ public final class Guns {
         }
         int pellets = weapon.pellets < 1 ? 1 : weapon.pellets;
         int damage = scaled(firer, weapon, weapon.damage);
-        int blast = scaled(firer, weapon, blastDamage);
+        int blast = scaled(firer, weapon, weapon.blastDamage);
+        int beam = weapon.beam.enabled()
+                ? scaled(firer, weapon, weapons.of(weapon.beam.gun()).damage())
+                : 0;
         for (int pellet = 0; pellet < pellets; pellet++) {
             float directionX = aimX;
             float directionY = aimY;
@@ -168,6 +174,7 @@ public final class Guns {
                     weapon,
                     damage,
                     blast,
+                    beam,
                     FACTION.get(firer).side,
                     credit,
                     range);
@@ -175,7 +182,7 @@ public final class Guns {
     }
 
     /**
-     * A number of what this gun does - its shot's damage, the blast its shot or limpet leaves - with the gun's damage
+     * A number of what this gun does - its shot's damage, the blast its shot or limpet leaves, an orb's beam - with the gun's damage
      * scale folded in: the one place {@code GUN_DAMAGE} is read, so a shot and its blast cannot drift apart (G0127).
      */
     private int scaled(Entity firer, Weapon weapon, int base) {

@@ -119,5 +119,16 @@ public enum WeaponKind {
      * What a warden fires (G0114): the spire's bead along each of the four compass lines at once, never aimed, that
      * wounds a man it hits as gunfire does. No pickup grants it.
      */
-    WARDEN_SHOT
+    WARDEN_SHOT,
+    /**
+     * Throws an orb (G0128): one a pull, every pull running it to the stop as the bazooka's does. The orb flies
+     * straight at about twice his pace, beaming at up to three aliens within its reach - sparing our men - and goes off
+     * in a small blast on what it touches, at its flight's end, or once its beams have landed its power.
+     */
+    PLASMA,
+    /**
+     * What an orb beams (G0128): the laser's kind of shot, short and green, from the orb at an alien, stopping on the
+     * first thing in its way. No pickup grants it.
+     */
+    PLASMA_BEAM
 }

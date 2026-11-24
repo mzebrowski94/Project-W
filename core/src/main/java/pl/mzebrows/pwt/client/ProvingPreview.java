@@ -72,6 +72,7 @@ final class ProvingPreview implements Disposable {
                 graphic.burrow(),
                 graphic.devour(),
                 graphic.limpet(),
+                graphic.orb(),
                 graphic.dash(),
                 graphic.border(),
                 graphic.downMark(),

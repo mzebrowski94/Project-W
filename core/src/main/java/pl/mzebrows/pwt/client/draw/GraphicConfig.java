@@ -70,6 +70,7 @@ import pl.mzebrows.pwt.ui.layout.LayoutSpec;
  * @param slither how to draw the parts trailing a slithering head (G0095)
  * @param burrow how to draw a worm: its shadow under the ground and its maw's teeth up (G0096)
  * @param devour how to draw a clinch ending: the one killed shrinking, the pair swayed (G0099)
+ * @param orb how to draw an orb: its ring, flickering, and its dimming as its power is spent (G0128)
  * @param dash how to draw a dash: its thrusters and the puff it leaves (G0107)
  * @param border how to draw the rim every commander has
  * @param downMark how to draw the down mark over a commander who is down (G0109)
@@ -127,6 +128,7 @@ public record GraphicConfig(
         BurrowMark burrow,
         DevourMark devour,
         LimpetMark limpet,
+        OrbMark orb,
         DashMark dash,
         BorderMark border,
         DownMark downMark,

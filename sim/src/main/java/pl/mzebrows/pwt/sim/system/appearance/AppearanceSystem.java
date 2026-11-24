@@ -32,6 +32,7 @@ import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Limpet;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Nest;
+import pl.mzebrows.pwt.sim.component.Orb;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Pop;
@@ -107,6 +108,7 @@ public final class AppearanceSystem extends IteratingSystem {
     private static final ComponentMapper<WorkedSite> WORKED = ComponentMapper.getFor(WorkedSite.class);
     private static final ComponentMapper<Dying> DYING = ComponentMapper.getFor(Dying.class);
     private static final ComponentMapper<Limpet> LIMPET = ComponentMapper.getFor(Limpet.class);
+    private static final ComponentMapper<Orb> ORB = ComponentMapper.getFor(Orb.class);
 
     private final Defs<UnitKind, UnitDef> units;
     private final Defs<PickupKind, PickupDef> pickups;
@@ -306,6 +308,11 @@ public final class AppearanceSystem extends IteratingSystem {
         if (GRIPPED.has(entity) && GRIPPED.get(entity).held()) {
             // How long a man in something's jaws has left, read backwards like a casualty's (G0045).
             appearance.charge = GRIPPED.get(entity).fraction;
+            return;
+        }
+        if (ORB.has(entity)) {
+            // How much of an orb's power is left (G0128): it dims as its beams spend it, so what is left is seen.
+            appearance.charge = ORB.get(entity).fraction();
             return;
         }
         if (BLAST.has(entity)) {

@@ -66,6 +66,7 @@ public final class Components {
                     Mine.class,
                     Nest.class,
                     Obstacle.class,
+                    Orb.class,
                     Perception.class,
                     Pickup.class,
                     Pop.class,

@@ -69,5 +69,7 @@ public enum PickupKind {
      */
     ARMOURY_GRENADES,
     /** A weapons cache holding the detonator (G0100), dealt into crates like every other found gun. */
-    ARMOURY_DETONATOR
+    ARMOURY_DETONATOR,
+    /** A weapons cache holding the plasma cannon (G0128), dealt into crates like every other found gun. */
+    ARMOURY_PLASMA
 }

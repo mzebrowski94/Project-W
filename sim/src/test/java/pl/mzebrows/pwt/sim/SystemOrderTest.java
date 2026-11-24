@@ -24,6 +24,7 @@ import pl.mzebrows.pwt.sim.system.combat.CooldownSystem;
 import pl.mzebrows.pwt.sim.system.combat.DamageSystem;
 import pl.mzebrows.pwt.sim.system.combat.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.combat.LimpetSystem;
+import pl.mzebrows.pwt.sim.system.combat.OrbSystem;
 import pl.mzebrows.pwt.sim.system.combat.PickupSystem;
 import pl.mzebrows.pwt.sim.system.combat.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.combat.ShockSystem;
@@ -129,6 +130,12 @@ class SystemOrderTest {
     @Test
     void sticksALimpetStraightAfterTheGrenadesBounceIsAnswered() {
         assertImmediatelyAfter(LimpetSystem.class, GrenadeSystem.class);
+    }
+
+    /** An orb's power is spent by this tick's contacts, and one spent goes off inside this tick's death window (G0128). */
+    @Test
+    void beamsFromAnOrbStraightAfterTheLimpetBeforeTheDeathChain() {
+        assertImmediatelyAfter(OrbSystem.class, LimpetSystem.class);
     }
 
     @Test
@@ -311,6 +318,8 @@ class SystemOrderTest {
                 ControlPointSystem.class, UpgradeSystem.class, "a point taken this tick earns its draft this tick"));
         rows.add(new Before(
                 CollisionSystem.class, UpgradeSystem.class, "a ridge crossed this tick earns its draft this tick"));
+        rows.add(new Before(
+                OrbSystem.class, BlastSystem.class, "an orb spent this tick goes off in this tick's death window"));
         for (Class<? extends EntitySystem> reader : readersOfTheLedger()) {
             rows.add(new Before(reader, UpgradeSystem.class, "every reader in a tick sees the same ledger"));
         }

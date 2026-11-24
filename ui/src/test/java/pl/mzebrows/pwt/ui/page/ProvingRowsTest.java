@@ -66,7 +66,8 @@ class ProvingRowsTest {
                         WeaponKind.BAZOOKA,
                         WeaponKind.PULSE,
                         WeaponKind.DISC_GUN,
-                        WeaponKind.DETONATOR);
+                        WeaponKind.DETONATOR,
+                        WeaponKind.PLASMA);
         assertThat(rows.value(ProvingSetup.first(), ProvingRows.Row.GUN).key()).isEqualTo("ui.weapon.SIDEARM");
     }
 
