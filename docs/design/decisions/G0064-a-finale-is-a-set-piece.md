@@ -1,6 +1,6 @@
 # G0064: A finale is a set piece, and the last biome's last point stands at its approach
 
-**Status.** amended by G0087: one of a few hand-made layouts, dealt, and a wave from two mouths
+**Status.** amended by G0087: one of a few hand-made layouts, dealt, and a wave from two mouths; amended by G0120: placed by rules round a fixed skeleton, enemies dealt by role, two turrets in the keep
 
 **Trigger.** Adding or changing a finale kind; laying anything in a finale from rules or the `Rng`; proposing a
 second objective for a finale, a rally ground of its own, or waves that change with the march.
@@ -55,7 +55,7 @@ a player who skips it a cost he chose and can see.
 
 **DO NOT BUILD** - rejected, and likely to be re-proposed.
 
-**No:** *A finale laid out by rules* - counts and distances worked out from the seed. A finale is learnt; dealt
+**Reversed by G0120:** *A finale laid out by rules* - counts and distances worked out from the seed. A finale is learnt; dealt
 turrets are noise, and rules that reproduce the Adventures' layout are coordinates with extra steps.
 
 **No:** *A rally ground that jumps to the finale* when somebody enters it. A second rally rule beside the point

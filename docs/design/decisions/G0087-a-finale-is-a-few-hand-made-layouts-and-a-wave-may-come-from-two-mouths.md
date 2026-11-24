@@ -1,6 +1,6 @@
 # G0087: A finale is a few hand-made layouts, and a wave may come from two mouths
 
-**Status.** accepted
+**Status.** amended by G0120: the hand-made layouts are replaced by placement rules
 
 **Trigger.** Adding or changing a finale's layouts; varying where anything of a finale stands; a wave that comes from
 more than one mouth; proposing positions worked out from the seed.

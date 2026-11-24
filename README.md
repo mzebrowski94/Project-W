@@ -92,6 +92,7 @@ Player one plays on keyboard and mouse, everyone else on a gamepad. The full lis
 | | Action | Keyboard & mouse | Gamepad (Xbox / PlayStation) |
 |---|---|---|---|
 | 🏃 | Move | `WASD` or arrows | Left stick |
+| 💨 | **Dash** - a short burst the way you are moving, not where you aim. Two charges (the purple pips on your panel), back one at a time; no invulnerability, and walls still stop you | **`Space`** or left **`Shift`** | **`B` / `R4`** |
 | 🆙 | **Upgrades** - open the cards you have earned, then pick one | **`C`**, then `1`-`3` | **`Y` / `Triangle`**, then d-pad |
 | 🎯 | Aim and fire | Mouse, left button | Right stick, `RT` / `R2` |
 | 🗡️ | Hand strike | Mouse, right button | Right stick, `LT` / `L2` |

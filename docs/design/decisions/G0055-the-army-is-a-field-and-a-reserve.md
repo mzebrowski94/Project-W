@@ -1,6 +1,6 @@
 # G0055: The army is a field and a reserve, and every man after the first tick comes from the reserve
 
-**Status.** amended by G0061: a point that holds afterwards is never the rally point; amended by G0081: every commander on the field counts towards its most
+**Status.** amended by G0061: a point that holds afterwards is never the rally point; amended by G0081: every commander on the field counts towards its most; amended by G0121: with the reserve empty a trooper is recalled, and the level is lost only with no trooper on his feet
 
 **Trigger.** Anything that changes how many men a side has, where a man comes onto the field, what a
 commander's return costs, what a crate of men is worth, or how a level is lost.

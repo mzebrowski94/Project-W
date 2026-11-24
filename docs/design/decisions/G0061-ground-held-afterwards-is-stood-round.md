@@ -1,6 +1,6 @@
 # G0061: Ground held afterwards is stood round, and it is never the rally point
 
-**Status.** accepted
+**Status.** amended by G0122: once a lair has risen the squad assaults it rather than standing the ring
 
 **Trigger.** Changing where a man from the reserve comes onto the field, where a squad's walk to a point
 ends, who takes the point that starts a level's last fight, or what a squad does once nothing is left to take.

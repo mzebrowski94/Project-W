@@ -155,6 +155,11 @@ contradiction three features later.
   rolled on every attempt would want an even deal counted in attempts - Dota's P = C x N or a hard pity -
   and whether it is kept per unit or per slot (pillar 7) is a real choice. Nothing needs it yet.
 
+- **Should the lair rise a second time?** The boss's enrage below `barrage.enragedBelow` is his one phase. A second
+  rising - each dead lair nest's spot given a fresh nest once, the tick he goes below it - is the classic adds-at-a-phase
+  change, and with G0122's squad it would turn the men back to the nests for the last of the fight. Asked and set aside
+  for play (Mateusz, 2026-11-24); it would amend G0048's "the lair wakes once".
+
 - **What is the input for a squad order?** The model is settled (G0017): an order reaches the troopers
   near the commander and names one of four verbs, never a target. Keys `1`-`4` are scaffolding; the
   intended binding is a button plus a radial menu.
