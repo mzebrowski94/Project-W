@@ -1,7 +1,7 @@
 # Firepower: heavy damage, no flamer stock
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: -
 Spec: [spec.md](../spec.md) B
