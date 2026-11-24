@@ -20,8 +20,8 @@ import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
- * A finale is a constant and a block (G0064): a set piece of offsets from its anchor, one of a few hand-made layouts
- * (G0087), its waves each from mouths it has, flipped north-south and never east-west.
+ * A finale is a constant and a block (G0064): a fixed skeleton of offsets from its anchor and the rules that place
+ * everything else round it (G0120), its waves each from mouths it has, flipped north-south and never east-west.
  */
 class FinaleDefTest {
 
@@ -32,49 +32,57 @@ class FinaleDefTest {
         assertThat(redoubt.ground().widthMin())
                 .isEqualTo(34)
                 .isEqualTo(redoubt.ground().widthMax());
-        assertThat(redoubt.layouts()).hasSize(3);
-        FinaleDef square = redoubt.laid(0);
-        assertThat(square.ground().pieces()).contains(new TileRect(-9, -3, 2, 3));
-        assertThat(square.hold().post()).isEqualTo(new Offset(0, 0));
-        assertThat(square.hold().watch()).isEqualTo(118f);
-        assertThat(square.hold().turrets()).hasSize(4).contains(new Offset(-5, -5));
-        assertThat(square.hold().pickups()).contains(new LairLine.Pickup(PickupKind.ARMOURY_FLAMER, 3, 0));
-        assertThat(square.hold().mouths()).contains(new Mouth("nw", -14, -13, 4, 4));
+        assertThat(redoubt.ground().pieces()).isEmpty();
+        assertThat(redoubt.hold().post()).isEqualTo(new Offset(0, 0));
+        assertThat(redoubt.hold().watch()).isEqualTo(118f);
+        assertThat(redoubt.hold().mouths()).contains(new Mouth("nw", -14, -13, 4, 4));
+        assertThat(redoubt.rules().turrets().max()).isEqualTo(4);
+        assertThat(redoubt.rules().mines().min()).isBetween(10, 20);
+        assertThat(redoubt.rules().pickupKinds())
+                .extracting(FinaleRules.Pick::kind)
+                .containsExactly(PickupKind.CRATE, PickupKind.ARMOURY_FLAMER);
+        assertThat(redoubt.rules().shapes())
+                .contains(new FinaleRules.CoverShape.Bar(3, 1), new FinaleRules.CoverShape.Ell(3, 2));
+        assertThat(redoubt.rules().inReach()).isFalse();
         assertThat(redoubt.waves()).first().isEqualTo(new WaveLine(6f, UnitKind.GRUNT, 9, 11, "nw"));
         assertThat(redoubt.lair()).isEmpty();
     }
 
-    /**
-     * A layout is laid over what every layout shares (G0087): its own rock and guns added to the finale's post, watch,
-     * mouths and pickups, which stay where they are whichever is dealt. Every layout of the redoubt has its four guns.
-     */
+    /** Its cover is ground once dealt (G0120): its pieces added to the ground's, nothing else of it moved. */
     @Test
-    void laysEachLayoutOverWhatEveryLayoutShares() {
+    void coversAFinaleWithTheRockItsRulesDealt() {
         FinaleDef redoubt = SimConfig.defaults().finales().of(FinaleKind.REDOUBT);
+        List<TileRect> cover = List.of(new TileRect(5, -6, 3, 1), new TileRect(5, 6, 3, 1));
 
-        for (int layout = 0; layout < redoubt.layoutCount(); layout++) {
-            FinaleDef laid = redoubt.laid(layout);
+        FinaleDef covered = redoubt.covered(cover);
 
-            assertThat(laid.layouts()).isEmpty();
-            assertThat(laid.ground().pieces())
-                    .isEqualTo(redoubt.layouts().get(layout).pieces());
-            assertThat(laid.hold().turrets()).hasSize(4);
-            assertThat(laid.hold().post()).isEqualTo(redoubt.hold().post());
-            assertThat(laid.hold().mouths()).isEqualTo(redoubt.hold().mouths());
-            assertThat(laid.hold().pickups()).containsAll(redoubt.hold().pickups());
-            assertThat(laid.waves()).isEqualTo(redoubt.waves());
-        }
-        assertThat(redoubt.laid(1).hold().turrets())
-                .isNotEqualTo(redoubt.laid(0).hold().turrets());
+        assertThat(covered.ground().pieces()).containsExactlyElementsOf(cover);
+        assertThat(covered.hold()).isEqualTo(redoubt.hold());
+        assertThat(covered.rules()).isEqualTo(redoubt.rules());
     }
 
-    /** A finale as laid is a finale of one layout, its own. */
+    /** "Turret counts dealt" is ruled out (G0120): a finale's guns are its backbone. */
     @Test
-    void laysAFinaleWithNoLayoutsAsItself() {
-        FinaleDef plain = new FinaleDef(ground(List.of()), hold(), List.of(), List.of(), List.of());
+    void refusesTurretsThatAreDealt() {
+        assertThatThrownBy(() -> rules(new FinaleRules.Lot(2, 4, 3, 8, -8, 8), lot(0), List.of()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("turrets are fixed");
+    }
 
-        assertThat(plain.layoutCount()).isEqualTo(1);
-        assertThat(plain.laid(0)).isEqualTo(plain);
+    /** Everything comes in mirrored pairs (G0120), so a lot's ends are even. */
+    @Test
+    void refusesALotThatIsNotDealtInPairs() {
+        assertThatThrownBy(() -> new FinaleRules.Lot(3, 4, 3, 8, -8, 8))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("mirrored pairs");
+    }
+
+    /** One of each pickup it names: the hold's crate and cache are not dealt. */
+    @Test
+    void refusesPickupsThatAreNotOneOfEachKindNamed() {
+        assertThatThrownBy(() -> rules(lot(4), lot(4), List.of(new FinaleRules.Pick(PickupKind.CRATE))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("one of each kind named");
     }
 
     /** Half the redoubt's waves come from two mouths at once (G0087), more of them late than early. */
@@ -115,27 +123,13 @@ class FinaleDefTest {
             assertThatThrownBy(() -> new FinaleDef(
                             ground(List.of()),
                             hold(),
-                            List.of(),
+                            rules(),
                             List.of(new WaveLine(5f, UnitKind.GRUNT, 1, 2, mouths)),
                             List.of()))
                     .as(mouths)
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("north, a mouth the hold lacks");
         }
-    }
-
-    @Test
-    void refusesAHoldPickupThatIsNotAPickup() {
-        assertThatThrownBy(() -> new Hold(
-                        new Offset(0, 0),
-                        118f,
-                        List.of(),
-                        List.of(),
-                        List.of(),
-                        List.of(new LairLine.Unit(UnitKind.BRUTE, 3, 0)),
-                        List.of()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("a hold's pickups are pickups");
     }
 
     @Test
@@ -155,14 +149,14 @@ class FinaleDefTest {
                 Ice.off(),
                 List.of());
 
-        assertThatThrownBy(() -> new FinaleDef(dealt, hold(), List.of(), List.of(), List.of()))
+        assertThatThrownBy(() -> new FinaleDef(dealt, hold(), rules(), List.of(), List.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("width is fixed");
     }
 
     /**
-     * The keep is the redoubt's ground with a lair instead of waves or guns: holes, then the cache, then the boss, in
-     * the order written (G0048, G0064).
+     * The keep is the redoubt's ground with a lair instead of waves: holes and the boss at fixed spots (G0048, G0064),
+     * two guns and its cover inside his barrage, and the lair's caches placed by its rules (G0120).
      */
     @Test
     void bindsTheKeepFromItsBlock() {
@@ -170,50 +164,34 @@ class FinaleDefTest {
 
         assertThat(keep.ground().base()).isEqualTo(Terrain.ASH);
         assertThat(keep.hold().watch()).isEqualTo(118f);
-        assertThat(keep.hold().barrels()).doesNotContain(new Offset(12, 0));
-        assertThat(keep.layouts()).hasSizeBetween(2, 3);
-        assertThat(keep.layouts())
-                .allSatisfy(layout -> assertThat(layout.mines()).isNotEmpty());
         assertThat(keep.waves()).isEmpty();
         assertThat(keep.hold().mouths()).isEmpty();
-        assertThat(keep.hold().turrets()).isEmpty();
-        assertThat(keep.lair()).hasSize(11);
+        assertThat(keep.rules().turrets().max()).isEqualTo(2);
+        assertThat(keep.rules().inReach()).isTrue();
+        assertThat(keep.rules().barrels().east()).isLessThan(12);
+        assertThat(keep.rules().lairKinds()).hasSize(4);
+        assertThat(keep.lair()).hasSize(7);
         assertThat(keep.lair().getFirst()).isEqualTo(new LairLine.Nest(UnitKind.GRUNT, 13, -6));
         assertThat(keep.lair().getLast()).isEqualTo(new LairLine.Unit(UnitKind.BOSS_GRUNT, 13, 0));
     }
 
-    /** The flip negates every dy and turns nothing east-west, so west stays the way in (G0064). */
+    /** The flip negates every dy of the skeleton and turns nothing east-west, so west stays the way in (G0064). */
     @Test
     void flipsEveryPositionNorthSouthAndNoneEastWest() {
-        FinaleDef redoubt =
-                SimConfig.defaults().finales().of(FinaleKind.REDOUBT).laid(0);
+        FinaleDef redoubt = SimConfig.defaults()
+                .finales()
+                .of(FinaleKind.REDOUBT)
+                .covered(List.of(new TileRect(-9, -3, 2, 3), new TileRect(-1, -10, 3, 1)));
         FinaleDef flipped = redoubt.flipped();
 
-        assertThat(flipped.ground().pieces()).contains(new TileRect(-9, 1, 2, 3), new TileRect(0, -9, 3, 1));
-        assertThat(flipped.hold().turrets())
-                .containsExactlyElementsOf(redoubt.hold().turrets().stream()
-                        .map(at -> new Offset(at.dx(), -at.dy()))
-                        .toList());
-        assertThat(flipped.hold().pickups()).contains(new LairLine.Pickup(PickupKind.CRATE, -3, 0));
+        assertThat(flipped.ground().pieces()).containsExactly(new TileRect(-9, 1, 2, 3), new TileRect(-1, 10, 3, 1));
         assertThat(flipped.hold().mouth("nw")).isEqualTo(new Mouth("nw", -14, 10, 4, 4));
+        assertThat(flipped.rules()).isEqualTo(redoubt.rules());
         assertThat(flipped.waves()).isEqualTo(redoubt.waves());
         assertThat(flipped.flipped()).isEqualTo(redoubt);
         FinaleDef keep = SimConfig.defaults().finales().of(FinaleKind.KEEP);
         assertThat(keep.flipped().lair()).contains(new LairLine.Nest(UnitKind.GRUNT, 13, 6));
         assertThat(keep.flipped().flipped()).isEqualTo(keep);
-    }
-
-    /** A layout dealt and then flipped is the flipped finale's same layout: the flip reaches every one (G0087). */
-    @Test
-    void flipsEveryLayoutAsItFlipsTheRest() {
-        for (FinaleKind kind : FinaleKind.values()) {
-            FinaleDef def = SimConfig.defaults().finales().of(kind);
-            for (int layout = 0; layout < def.layoutCount(); layout++) {
-                assertThat(def.flipped().laid(layout))
-                        .as("%s layout %d", kind, layout)
-                        .isEqualTo(def.laid(layout).flipped());
-            }
-        }
     }
 
     /** A wave counts like a roster line: drawn, then the tier's percent once (G0063), and no ramp. */
@@ -245,13 +223,33 @@ class FinaleDefTest {
     }
 
     private static Hold hold() {
-        return new Hold(
-                new Offset(0, 0),
-                118f,
+        return new Hold(new Offset(0, 0), 118f, List.of(new Mouth("nw", -14, -13, 4, 4)));
+    }
+
+    private static FinaleRules rules() {
+        return rules(
+                lot(4),
+                lot(2),
+                List.of(new FinaleRules.Pick(PickupKind.CRATE), new FinaleRules.Pick(PickupKind.CRATE)));
+    }
+
+    private static FinaleRules rules(FinaleRules.Lot turrets, FinaleRules.Lot pickups, List<FinaleRules.Pick> kinds) {
+        return new FinaleRules(
+                1.5f,
+                2f,
+                List.of(new FinaleRules.CoverShape.Bar(3, 1)),
+                lot(2),
+                turrets,
+                lot(4),
+                lot(2),
+                pickups,
+                kinds,
+                lot(0),
                 List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(new Mouth("nw", -14, -13, 4, 4)));
+                false);
+    }
+
+    private static FinaleRules.Lot lot(int count) {
+        return new FinaleRules.Lot(count, count, 3, 8, -8, 8);
     }
 }

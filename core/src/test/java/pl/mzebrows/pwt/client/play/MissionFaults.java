@@ -3,19 +3,25 @@ package pl.mzebrows.pwt.client.play;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.Clearing;
 import pl.mzebrows.pwt.map.House;
 import pl.mzebrows.pwt.map.Maps;
+import pl.mzebrows.pwt.map.Strip;
 import pl.mzebrows.pwt.map.StripFaults;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.FinaleRules;
 import pl.mzebrows.pwt.sim.Furniture;
+import pl.mzebrows.pwt.sim.Offset;
 import pl.mzebrows.pwt.sim.PlacementRules;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.def.Arrival;
+import pl.mzebrows.pwt.sim.def.BarrageDef;
+import pl.mzebrows.pwt.sim.def.PatternDef;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.Wave;
 import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
@@ -53,6 +59,7 @@ final class MissionFaults {
         faults.addAll(geysers(mission, config.mission().placement()));
         faults.addAll(emplacements(mission, config));
         faults.addAll(finale(mission));
+        faults.addAll(finaleRules(mission, config));
         return faults;
     }
 
@@ -61,7 +68,7 @@ final class MissionFaults {
      * comes from, on open ground reached from the start - and nothing hostile of the last biome inside its watch, so
      * holding its post never waits on a hole or a sleeper behind the ridge. What its lair raises stands there too, off
      * kept ground, and inside the watch, so holding the post means dealing with it (G0048). And no two things of the
-     * set piece or its lair on one tile - a mine under a gun - which a hand-made layout could write (G0087).
+     * set piece or its lair on one tile - a mine under a gun.
      */
     static List<String> finale(Mission mission) {
         TileMap map = mission.laid().map();
@@ -126,6 +133,190 @@ final class MissionFaults {
             }
         }
         return faults;
+    }
+
+    /**
+     * What a finale's rules promise (G0120): each lot's count within its range - the guns fixed, one of each pickup
+     * named - everything round the post and every cache of the lair in mirrored north-south pairs about the anchor's
+     * row, and so every piece of cover; the ring of tiles round every piece open ground reached from the start, so its
+     * lee is; the straight way from every mouth to the post, and from the post to whoever the lair raises, never rock;
+     * and in a finale whose rules say so, its guns, caches and cover inside the boss's barrage.
+     */
+    static List<String> finaleRules(Mission mission, SimConfig config) {
+        TileMap map = mission.laid().map();
+        TileRect anchor = Strip.anchor(mission.laid().biomes().getLast());
+        TileRect start = start(mission);
+        boolean[] reached = Maps.reachableFrom(map, start.col(), start.row());
+        FinaleRules rules = mission.finale().def(config).rules();
+        int position = mission.order().size();
+        float row = map.tileCentreY(anchor.row());
+        List<String> faults = new ArrayList<>();
+
+        List<float[]> paired = new ArrayList<>();
+        int[] counted = new int[4];
+        for (Placed placed : mission.placed()) {
+            if (placed.biome() != position || placed instanceof Placed.Hold) {
+                continue;
+            }
+            paired.add(new float[] {placed.x(), placed.y()});
+            switch (placed) {
+                case Placed.Turret turret -> counted[0]++;
+                case Placed.Mine mine -> counted[1]++;
+                case Placed.Barrel barrel -> counted[2]++;
+                case Placed.Pickup pickup -> counted[3]++;
+                default -> faults.add("the finale's rules put down " + placed + ", which they never place");
+            }
+        }
+        List<Arrival> caches = new ArrayList<>();
+        Arrival boss = null;
+        for (Arrival arrival : mission.finale().lair()) {
+            if (arrival.form() == Arrival.Form.PICKUP) {
+                caches.add(arrival);
+                paired.add(new float[] {arrival.x(), arrival.y()});
+            } else if (arrival.form() == Arrival.Form.UNIT) {
+                boss = arrival;
+            }
+        }
+        within(faults, "turrets", counted[0], rules.turrets());
+        within(faults, "mines", counted[1], rules.mines());
+        within(faults, "barrels", counted[2], rules.barrels());
+        within(faults, "pickups", counted[3], rules.pickups());
+        within(faults, "lair's caches", caches.size(), rules.lair());
+
+        for (float[] one : paired) {
+            boolean mirrored = false;
+            for (float[] other : paired) {
+                mirrored |= Math.abs(other[0] - one[0]) < 1e-3f && Math.abs((other[1] - row) + (one[1] - row)) < 1e-3f;
+            }
+            if (!mirrored) {
+                faults.add("the finale's thing at " + one[0] + "," + one[1] + " has no mirror north-south");
+            }
+        }
+        List<TileRect> cover = mission.finale().cover();
+        for (TileRect piece : cover) {
+            if (!cover.contains(Offset.flipped(piece))) {
+                faults.add("the finale's cover " + piece + " has no mirror north-south");
+            }
+            TileRect at =
+                    new TileRect(anchor.col() + piece.col(), anchor.row() + piece.row(), piece.width(), piece.height());
+            for (int r = at.row() - 1; r <= at.endRow(); r++) {
+                for (int c = at.col() - 1; c <= at.endCol(); c++) {
+                    if (at.contains(c, r) || armOf(cover, anchor, at, c, r)) {
+                        continue;
+                    }
+                    if (!map.inBounds(c, r) || !reached[r * map.cols() + c]) {
+                        faults.add("the lee of the finale's cover " + piece + " is shut at (" + c + "," + r + ")");
+                    }
+                }
+            }
+        }
+
+        Placed.Hold hold = null;
+        for (Placed placed : mission.placed()) {
+            if (placed instanceof Placed.Hold point) {
+                hold = point;
+            }
+        }
+        if (hold == null) {
+            return faults;
+        }
+        for (Wave wave : mission.finale().waves()) {
+            for (Wave.Lot lot : wave.lots()) {
+                way(
+                        faults,
+                        map,
+                        "from the mouth " + lot.where(),
+                        lot.where().centreX(map),
+                        lot.where().centreY(map),
+                        hold);
+            }
+        }
+        if (boss != null) {
+            way(faults, map, "to the lair's " + boss.strain(), boss.x(), boss.y(), hold);
+        }
+
+        if (rules.inReach() && boss != null) {
+            float reach = reach(config, boss);
+            for (Placed placed : mission.placed()) {
+                if (placed instanceof Placed.Turret
+                        && placed.biome() == position
+                        && apart(placed.x(), placed.y(), boss) > reach) {
+                    faults.add("the finale's " + placed + " is outside the boss's barrage");
+                }
+            }
+            for (Arrival cache : caches) {
+                if (apart(cache.x(), cache.y(), boss) > reach) {
+                    faults.add("the lair's " + cache + " is outside the boss's barrage");
+                }
+            }
+            for (TileRect piece : cover) {
+                float x = map.tileCentreX(anchor.col() + piece.col());
+                float y = map.tileCentreY(anchor.row() + piece.row());
+                if (apart(x, y, boss) > reach) {
+                    faults.add("the finale's cover " + piece + " is outside the boss's barrage");
+                }
+            }
+        }
+        return faults;
+    }
+
+    private static void within(List<String> faults, String what, int count, FinaleRules.Lot lot) {
+        if (count < lot.min() || count > lot.max()) {
+            faults.add("the finale has " + count + " " + what + ", not " + lot.min() + ".." + lot.max());
+        }
+    }
+
+    /** Whether a tile is in another rect of the cover that shares an edge with this one: the other arm of an L. */
+    private static boolean armOf(List<TileRect> cover, TileRect anchor, TileRect at, int col, int row) {
+        for (TileRect piece : cover) {
+            TileRect other =
+                    new TileRect(anchor.col() + piece.col(), anchor.row() + piece.row(), piece.width(), piece.height());
+            if (other.equals(at) || !other.contains(col, row)) {
+                continue;
+            }
+            boolean besideAcross = other.endCol() == at.col() || at.endCol() == other.col();
+            boolean besideUp = other.endRow() == at.row() || at.endRow() == other.row();
+            boolean overlapsUp = other.row() < at.endRow() && at.row() < other.endRow();
+            boolean overlapsAcross = other.col() < at.endCol() && at.col() < other.endCol();
+            if ((besideAcross && overlapsUp) || (besideUp && overlapsAcross)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The straight way from here to the post, every half tile of it, on ground that is not rock. */
+    private static void way(List<String> faults, TileMap map, String what, float x, float y, Placed.Hold hold) {
+        float dx = hold.x() - x;
+        float dy = hold.y() - y;
+        int steps = Math.max(1, (int) (Math.sqrt(dx * dx + dy * dy) / (map.tileSize() * 0.5f)));
+        for (int i = 0; i <= steps; i++) {
+            int col = map.colAt(x + dx * i / steps);
+            int r = map.rowAt(y + dy * i / steps);
+            if (!map.passableAtTile(col, r)) {
+                faults.add("the finale's way " + what + " to its post is shut by rock at (" + col + "," + r + ")");
+                return;
+            }
+        }
+    }
+
+    /** How far the boss's barrage reaches: the shortest range of a gun its patterns fire, a shot that flies on aside. */
+    private static float reach(SimConfig config, Arrival boss) {
+        BarrageDef barrage = config.unit(Objects.requireNonNull(boss.strain())).barrage();
+        float reach = Float.MAX_VALUE;
+        for (PatternDef pattern : List.of(barrage.ring(), barrage.fan(), barrage.spiral(), barrage.stream())) {
+            float range = config.weapon(pattern.gun()).projectileRange();
+            if (pattern.enabled() && range > 0f) {
+                reach = Math.min(reach, range);
+            }
+        }
+        return reach;
+    }
+
+    private static float apart(float x, float y, Arrival other) {
+        float dx = x - other.x();
+        float dy = y - other.y();
+        return (float) Math.sqrt(dx * dx + dy * dy);
     }
 
     /** Every point and pickup - a house's stock among them - stands on ground reached from the start. */

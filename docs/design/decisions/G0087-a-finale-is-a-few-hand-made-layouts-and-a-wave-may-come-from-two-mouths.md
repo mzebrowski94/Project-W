@@ -5,12 +5,11 @@
 **Trigger.** Adding or changing a finale's layouts; varying where anything of a finale stands; a wave that comes from
 more than one mouth; proposing positions worked out from the seed.
 
-**Enforced by.** `FinaleDefTest` - `.laysEachLayoutOverWhatEveryLayoutShares`, `.flipsEveryLayoutAsItFlipsTheRest`,
-`.refusesAWaveFromAMouthItsHoldLacks`, `.sendsHalfTheRedoubtsWavesFromTwoMouthsMostlyLate`;
-`MissionTest.dealsEveryLayoutOfEveryFinaleAndLaysTheOneDealt`, `.flipsTheFinaleNorthSouthAndNeverEastWest`,
-`.sendsAWaveFromEachMouthItNamesAsOneWave`; `DefendTest.sendsAWaveFromTwoPlacesOnTheOneTickAsOneWave`;
-`MissionSweepTest.holdsEveryMissionToTheRules` (every finale, layout and flip by name, `MissionFaults.finale`);
-`ConfigBinderTest.readsAListOfBlocksNumberedFromOne`; `WorldCodecTest.carriesAWaveFromSeveralPlacesThroughASnapshot`.
+**Enforced by.** The layouts are gone (G0120 places a finale by rules; its tests hold that). The waves from two mouths:
+`FinaleDefTest.refusesAWaveFromAMouthItsHoldLacks`, `.sendsHalfTheRedoubtsWavesFromTwoMouthsMostlyLate`;
+`MissionTest.sendsAWaveFromEachMouthItNamesAsOneWave`; `DefendTest.sendsAWaveFromTwoPlacesOnTheOneTickAsOneWave`;
+`MissionSweepTest.holdsEveryMissionToTheRules` (every finale and flip by name, `MissionFaults.finale`);
+`WorldCodecTest.carriesAWaveFromSeveralPlacesThroughASnapshot`.
 
 **Settled on Mateusz's behalf, 2026-11-13** (AFK run, provisional, for review), from the playtest list (ticket 10 of
 the playtest-feedback map): *the wave finale needs to be made harder, e.g. waves from two sides at once; vary the

@@ -55,6 +55,9 @@ public final class Scatter {
 
     private final List<Circle> taken = new ArrayList<>();
 
+    /** The row of world {@code y} every placement is mirrored about; not a number places one at a time. */
+    private float mirror = Float.NaN;
+
     /**
      * @param clearance gap left between anything placed and anything already there, in world units
      * @param wallMargin how far from the edge of the map a placed circle must stay. Something flush
@@ -90,6 +93,17 @@ public final class Scatter {
      */
     public Scatter excluding(Exclusion excluded) {
         this.excluded = excluded;
+        return this;
+    }
+
+    /**
+     * Places everything from here on in mirrored north-south pairs about world {@code y} (G0120), and returns this
+     * scatter: a circle is put down only where its mirror fits as well, clear of it, and each is handed to the {@link
+     * Place} - the one, then its mirror - and counted, so a count is so many circles, two to a pair; an odd count's last
+     * is not placed. What an area offers is where the first of a pair may stand.
+     */
+    public Scatter mirroredAbout(float y) {
+        this.mirror = y;
         return this;
     }
 
@@ -182,6 +196,21 @@ public final class Scatter {
             float x = rng.nextFloat(col * map.tileSize(), (col + 1) * map.tileSize());
             float y = rng.nextFloat(row * map.tileSize(), (row + 1) * map.tileSize());
             if (!fits(x, y, radius)) {
+                continue;
+            }
+            if (!Float.isNaN(mirror)) {
+                if (count - placed < 2) {
+                    break;
+                }
+                float mirrored = 2f * mirror - y;
+                if (Math.abs(mirrored - y) < 2f * radius + clearance || !fits(x, mirrored, radius)) {
+                    continue;
+                }
+                reserve(x, y, radius);
+                reserve(x, mirrored, radius);
+                place.at(x, y);
+                place.at(x, mirrored);
+                placed += 2;
                 continue;
             }
             reserve(x, y, radius);

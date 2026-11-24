@@ -48,9 +48,6 @@ import pl.mzebrows.pwt.sim.def.Defs;
  *       squad_headroom side 2};
  *   <li>a {@code List} of a plain record the same way, its arguments alone, one word each: {@code -5 -5; 5 -5},
  *       {@code nw -14 -13 4 4};
- *   <li>a {@code List} of a plain record given no line of its own but blocks under its key, as one block per item
- *       numbered from one, up to the first number the file says nothing about: {@code layouts.1.mines=...},
- *       {@code layouts.2.mines=...} - a finale's layouts (G0087);
  *   <li>a {@code List} of records the file says nothing about at all as empty - "zero means off" for a list, as
  *       for a block: a biome with no fixed rock needs no {@code pieces} line;
  *   <li>a {@link PatchGround} as {@code neighbour} or a terrain's name: {@code rect neighbour 0.04 4 6};
@@ -224,7 +221,7 @@ public final class ConfigBinder {
             throw new IllegalArgumentException("no reading for " + type + " at " + key);
         }
         if (raw == List.class && listOfRecords(type) && !values.containsKey(key) && !fallback.containsKey(key)) {
-            return blocks(key, ((ParameterizedType) type).getActualTypeArguments()[0]);
+            return List.of();
         }
         return leaf(key, type, nullable);
     }
@@ -258,28 +255,6 @@ public final class ConfigBinder {
             }
             return null;
         }
-    }
-
-    /**
-     * A list of a plain record written as numbered blocks, {@code key.1}, {@code key.2}, ... up to the first the file
-     * does not mention; none at all is the empty list.
-     */
-    private @Nullable Object blocks(String key, Type element) {
-        Class<?> raw = rawClass(element);
-        List<Object> items = new ArrayList<>();
-        if (!raw.isRecord()) {
-            return List.of();
-        }
-        boolean complete = true;
-        for (int n = 1; mentions(values, key + "." + n) || mentions(fallback, key + "." + n); n++) {
-            Object item = record(key + "." + n, raw);
-            if (item == null) {
-                complete = false;
-            } else {
-                items.add(item);
-            }
-        }
-        return complete ? List.copyOf(items) : null;
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
