@@ -304,11 +304,13 @@ class SystemOrderTest {
                 FacingSystem.class,
                 "a facing is where the tick ended looking - perception reads it next tick, the arc the renderer drew"));
         rows.add(new Before(
-                WaveSystem.class, UpgradeSystem.class, "a wave cleared this tick earns its draft this tick"));
-        rows.add(new Before(
-                BarrageSystem.class, UpgradeSystem.class, "a boss felled this tick earns its draft this tick"));
+                WorkedSiteSystem.class,
+                UpgradeSystem.class,
+                "a site worked to its end this tick earns its draft this tick"));
         rows.add(new Before(
                 ControlPointSystem.class, UpgradeSystem.class, "a point taken this tick earns its draft this tick"));
+        rows.add(new Before(
+                CollisionSystem.class, UpgradeSystem.class, "a ridge crossed this tick earns its draft this tick"));
         for (Class<? extends EntitySystem> reader : readersOfTheLedger()) {
             rows.add(new Before(reader, UpgradeSystem.class, "every reader in a tick sees the same ledger"));
         }

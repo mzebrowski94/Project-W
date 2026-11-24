@@ -48,7 +48,7 @@ public final class UpgradeView {
 
     /**
      * Whether this slot's link has dropped and nobody has taken it since (G0052): its commander stands idle
-     * and the draft rotation passes it by. Offline never.
+     * and its drafts wait for it (G0118). Offline never.
      */
     public boolean away(int slot) {
         if (levels.size() == 0) {

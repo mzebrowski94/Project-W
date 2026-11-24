@@ -80,6 +80,20 @@ public final class Whole {
     }
 
     /**
+     * A count a power has given, to the nearest, halves up, and above zero never to zero: 0.94 is 1, 2.5 is 3, 9.09
+     * is 9, nothing or less is 0. The one place this rule meets a {@code double} rather than a percentage - a
+     * level's planned drafts, whose curve is a {@code StrictMath} power taken once (G0118), so it is the same on
+     * every machine.
+     */
+    public static int nearest(double value) {
+        if (!(value > 0.0)) {
+            return 0;
+        }
+        double rounded = StrictMath.floor(value + 0.5);
+        return (int) Math.max(1.0, Math.min(Integer.MAX_VALUE, rounded));
+    }
+
+    /**
      * How many of {@code pieces} are left for {@code current} of {@code max} shared out between them, rounded up, never
      * fewer than one nor more than all: a snake's parts and a worm's teeth (G0095, G0096) - the last piece goes with the
      * last point. Nothing left, or no whole to share, is one.

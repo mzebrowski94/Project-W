@@ -304,6 +304,7 @@ public final class Strip {
         int westRough = rules.ridgeRough();
         int eastRough = beforeFinale ? 0 : rules.ridgeRough();
         map.rect(x0, 1, width, rules.rows() - 2, Terrain.ROCK);
+        map.ridge(x0);
         face(x0, -1, westRough, faces);
         face(x1, 1, eastRough, faces);
 

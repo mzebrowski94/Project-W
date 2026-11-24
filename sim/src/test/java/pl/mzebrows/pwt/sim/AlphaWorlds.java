@@ -1823,7 +1823,7 @@ public final class AlphaWorlds {
                 new SimConfig.ObstacleConfig(
                         OBSTACLE_RADIUS, 0, OBSTACLE_RADIUS, OBSTACLE_RADIUS, OBSTACLE_RADIUS, OBSTACLE_RADIUS),
                 new SimConfig.CollisionConfig(3),
-                new DraftDef(DRAFT_OPTIONS, 1, 1, 1, List.of(0, TIER_TWO_FROM)),
+                new DraftDef(DRAFT_OPTIONS, 1, 1, 100, 1, 1, true, List.of(0, TIER_TWO_FROM)),
                 stats(),
                 upgrades(),
                 new AdaptationDef(0f, 0, 0),
@@ -1841,8 +1841,12 @@ public final class AlphaWorlds {
     /** Cards a draft deals here - more than the catalogue has, so every draft offers all it can. */
     public static final int DRAFT_OPTIONS = 3;
 
-    /** Drafts earned before a tier-two upgrade is dealt. */
-    public static final int TIER_TWO_FROM = 2;
+    /**
+     * The share of a slot's planned drafts, in per cent, he must have earned before a tier-two upgrade is dealt. The
+     * schedule here plans one draft a source, every source one apart and the first at once, so every site taken and
+     * every ridge crossed earns its draft.
+     */
+    public static final int TIER_TWO_FROM = 50;
 
     /** What one rank of Larger Army adds to a crate, and to the squad's headroom. */
     public static final int ARMY_MEN = 1;

@@ -143,7 +143,7 @@ class ProvingGroundTest {
         assertThat(view.heldRanks(2)).isEqualTo(view.ranksOf(UpgradeKind.RAPID_SPIT));
     }
 
-    /** Practice earns nothing (G0060) - not even the boss, which earns a draft everywhere else. */
+    /** Practice earns nothing (G0060) - not even the boss. */
     @Test
     void earnsNoDraftForKillingTheBoss() {
         Simulation simulation = world(ProvingSetup.first().withStrain(UnitKind.BOSS_GRUNT));

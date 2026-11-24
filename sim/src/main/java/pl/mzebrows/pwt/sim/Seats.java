@@ -10,7 +10,7 @@ import pl.mzebrows.pwt.sim.component.Respawning;
  * Which slots are seated: have a commander, standing, down or on his way back (G0052). Whether the slot's machine
  * is away is a separate question - a seated slot may be away.
  *
- * <p>One answer for everything that deals per player - the draft rotation, and the grenade caches a taken point lays
+ * <p>One answer for everything that deals per player - every seated slot's drafts (G0118), and the grenade caches a taken point lays
  * (G0078). In the {@code sim} root rather than {@code query}, as {@code Life} is, because the upgrade package asks it
  * and calls no other (ADR 0017).
  */

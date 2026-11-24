@@ -7,46 +7,47 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.Seats;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Drafts;
 import pl.mzebrows.pwt.sim.component.Level;
-import pl.mzebrows.pwt.sim.component.Presence;
+import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Upgrades;
-import pl.mzebrows.pwt.sim.component.Waves;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.Side;
 import pl.mzebrows.pwt.sim.def.Ticks;
 
 /**
- * The only writer of the ledger and the drafts (ADR 0017, G0049). Once per tick, at the end of it:
+ * The only writer of the ledger and the drafts (ADR 0017, G0049, G0118). Once per tick, at the end of it:
  *
  * <ol>
+ *   <li>on the level's first tick, plans the schedule: every site standing and every ridge of the map, weighed,
+ *       and how many drafts that plans each slot;
  *   <li>applies this tick's picks, each from the next tick on;
- *   <li>passes the drafts of away slots on (G0052);
- *   <li>re-deals any card a pick or a pass made stale, in its place;
- *   <li>earns drafts from what the level published this tick - points taken, hold waves cleared,
- *       bosses killed - at their configured rates, and deals their cards;
+ *   <li>re-deals any card a pick made stale, in its place;
+ *   <li>earns every seated slot - away or not - each draft his own count has reached: the sites the side has
+ *       taken and the ridges his own commander has crossed, caught up by where he stands; and deals its cards;
  *   <li>adapts the swarm, if an adaptation is due by level time or by the players' picks: one card from
  *       the aliens' pool, on a stream of its own, taken at once - there is nobody to choose.
  * </ol>
  *
- * <p>Nothing here waits: a draft is state, a pick is input, and a draft nobody picks is simply still
- * there. Cards are dealt from a stream of their own when a draft is earned, so what is offered does
- * not depend on when anybody looks.
+ * <p>Nothing here waits, and nothing passes on: a draft is state, a pick is input, and a draft nobody picks is
+ * simply still there, its chooser's. Cards are dealt from a stream of their own when a draft is earned, so what is
+ * offered does not depend on when anybody looks.
  */
 public final class UpgradeSystem extends EntitySystem {
 
     private static final ComponentMapper<Upgrades> UPGRADES = ComponentMapper.getFor(Upgrades.class);
     private static final ComponentMapper<Drafts> DRAFTS = ComponentMapper.getFor(Drafts.class);
-    private static final ComponentMapper<Presence> PRESENCE = ComponentMapper.getFor(Presence.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
-    private static final ComponentMapper<Waves> WAVES = ComponentMapper.getFor(Waves.class);
     private static final ComponentMapper<Site> SITE = ComponentMapper.getFor(Site.class);
+    private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
+    private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
 
     private static final UpgradeKind[] KINDS = UpgradeKind.values();
 
@@ -56,13 +57,19 @@ public final class UpgradeSystem extends EntitySystem {
     private final Rng rng;
     private final Rng adapting;
 
+    /** The ground, whose ridges a crossing is counted by. */
+    private final TileMap map;
+
     /** One adaptation per this many ticks of level time; zero is off. */
     private final int everyTicks;
 
-    /** Scratch, overwritten before each read: by slot, whether it has a commander, and whether it is away. */
+    /**
+     * Scratch, overwritten before each read: by slot, whether it has a commander, and how many ridges his commander
+     * stands past this tick.
+     */
     private final boolean[] seated;
 
-    private final boolean[] away;
+    private final int[] reached;
 
     /** Scratch for a deal: a weight per kind, and the kinds dealt. */
     private final int[] weights = new int[KINDS.length];
@@ -77,25 +84,27 @@ public final class UpgradeSystem extends EntitySystem {
     /**
      * @param rng what drafts are dealt from
      * @param adapting what the swarm's adaptations are dealt from
-     * @param capacity how many slots the game holds - what the rotation goes round
+     * @param map the ground, whose ridges a crossing is counted by
+     * @param capacity how many slots the game holds - each is dealt his own
      */
-    public UpgradeSystem(SimConfig config, Rng rng, Rng adapting, int capacity) {
+    public UpgradeSystem(SimConfig config, Rng rng, Rng adapting, TileMap map, int capacity) {
         this.draft = config.draft();
         this.adaptation = config.adaptation();
         this.catalogue = config.upgrades();
         this.rng = rng;
         this.adapting = adapting;
+        this.map = map;
         this.everyTicks = Ticks.of(config.adaptation().everySeconds(), config.tickSeconds());
         this.seated = new boolean[capacity];
-        this.away = new boolean[capacity];
+        this.reached = new int[capacity];
     }
 
     @Override
     public void addedToEngine(Engine engine) {
-        levels =
-                engine.getEntitiesFor(Family.all(Upgrades.class, Drafts.class, Presence.class, Level.class, Waves.class)
-                        .get());
-        commanders = engine.getEntitiesFor(Family.all(Commander.class).get());
+        levels = engine.getEntitiesFor(
+                Family.all(Upgrades.class, Drafts.class, Level.class).get());
+        commanders = engine.getEntitiesFor(
+                Family.all(Commander.class, Position.class).get());
         returning = engine.getEntitiesFor(Family.all(Respawning.class).get());
         sites = engine.getEntitiesFor(Family.all(Site.class).get());
     }
@@ -106,26 +115,29 @@ public final class UpgradeSystem extends EntitySystem {
             Entity level = levels.get(i);
             Upgrades upgrades = UPGRADES.get(level);
             Drafts drafts = DRAFTS.get(level);
-            seat(PRESENCE.get(level));
+            if (!drafts.scheduled) {
+                schedule(drafts);
+            }
             boolean changed = applyPicks(upgrades, drafts);
-            changed |= passOn(drafts);
             if (changed) {
                 refresh(upgrades, drafts);
             }
-            changed |= earn(upgrades, drafts, LEVEL.get(level), WAVES.get(level));
+            changed |= earn(upgrades, drafts, LEVEL.get(level));
             if (changed) {
                 drafts.revision++;
             }
-            adapt(upgrades, LEVEL.get(level));
+            adapt(upgrades, LEVEL.get(level), drafts.planned);
         }
     }
 
-    /** Who has a commander this tick, standing, down or on his way back, and who is away. */
-    private void seat(Presence presence) {
-        Seats.mark(seated, commanders, returning);
-        for (int slot = 0; slot < away.length; slot++) {
-            away[slot] = presence.isAway(slot);
-        }
+    /**
+     * Fixes the schedule (G0118), once, on the level's first tick - by then everything the level was built with
+     * stands on it: every site, taken or not, and every ridge, at their weights.
+     */
+    private void schedule(Drafts drafts) {
+        drafts.sources = draft.sources(sites.size(), map.ridgeCount());
+        drafts.planned = draft.planned(drafts.sources);
+        drafts.scheduled = true;
     }
 
     /**
@@ -141,7 +153,13 @@ public final class UpgradeSystem extends EntitySystem {
             if (index < 0
                     || drafts.pending.get(index).chooser() != pick.slot()
                     || !offers(drafts, pick.serial(), pick.kind())
-                    || !eligible(pick.kind(), Side.PLAYER, pick.slot(), upgrades, drafts.earned)) {
+                    || !eligible(
+                            pick.kind(),
+                            Side.PLAYER,
+                            pick.slot(),
+                            upgrades,
+                            earnedOf(drafts, pick.slot()),
+                            drafts.planned)) {
                 continue;
             }
             UpgradeDef def = catalogue.of(pick.kind());
@@ -212,25 +230,6 @@ public final class UpgradeSystem extends EntitySystem {
         }
     }
 
-    /** While a slot is away, each of its drafts moves to the next present slot, its cards unchanged. */
-    private boolean passOn(Drafts drafts) {
-        boolean moved = false;
-        for (int i = 0; i < drafts.pending.size; i++) {
-            Drafts.Draft pending = drafts.pending.get(i);
-            if (!away[pending.chooser()]) {
-                continue;
-            }
-            int next = Rotation.next(pending.chooser(), seated, away);
-            if (next == pending.chooser() || away[next]) {
-                continue;
-            }
-            drafts.pending.set(
-                    i, new Drafts.Draft(pending.serial(), next, pending.earnedTick(), pending.revision() + 1));
-            moved = true;
-        }
-        return moved;
-    }
-
     /**
      * Re-deals, in its place, every card that can no longer be taken by its draft's chooser - its last
      * rank went, or its group was taken. A card nothing can replace is dropped, and a draft left with
@@ -239,15 +238,16 @@ public final class UpgradeSystem extends EntitySystem {
     private void refresh(Upgrades upgrades, Drafts drafts) {
         for (int d = drafts.pending.size - 1; d >= 0; d--) {
             Drafts.Draft pending = drafts.pending.get(d);
+            int earned = earnedOf(drafts, pending.chooser());
             boolean redealt = false;
             for (int c = drafts.cards.size - 1; c >= 0; c--) {
                 Drafts.Card card = drafts.cards.get(c);
                 if (card.serial() != pending.serial()
-                        || eligible(card.kind(), Side.PLAYER, pending.chooser(), upgrades, drafts.earned)) {
+                        || eligible(card.kind(), Side.PLAYER, pending.chooser(), upgrades, earned, drafts.planned)) {
                     continue;
                 }
                 redealt = true;
-                int count = deal(pending.chooser(), upgrades, drafts, 1, pending.serial());
+                int count = deal(pending.chooser(), upgrades, drafts, 1, pending.serial(), earned);
                 if (count == 0) {
                     drafts.cards.removeIndex(c);
                 } else {
@@ -269,43 +269,72 @@ public final class UpgradeSystem extends EntitySystem {
     }
 
     /**
-     * Earns every draft the level's published facts are owed, points first, then waves, then bosses:
-     * the first of each source at once, then one every so many.
+     * Earns every seated slot - away or not, seated late or not - each threshold his count has reached and he has
+     * not been credited with (G0118): the sites the side has taken, and the ridges his own commander has crossed,
+     * the furthest east he has ever stood. Slots in order, so every machine deals the same cards to the same slot.
      */
-    private boolean earn(Upgrades upgrades, Drafts drafts, Level level, Waves waves) {
-        boolean earned = false;
+    private boolean earn(Upgrades upgrades, Drafts drafts, Level level) {
+        Seats.mark(seated, commanders, returning);
+        for (int slot = 0; slot < reached.length; slot++) {
+            reached[slot] = 0;
+        }
+        for (int i = 0; i < commanders.size(); i++) {
+            Entity commander = commanders.get(i);
+            int slot = COMMANDER.get(commander).slot;
+            if (slot >= 0 && slot < reached.length) {
+                int past = map.ridgesReached(map.colAt(POSITION.get(commander).x));
+                reached[slot] = Math.max(reached[slot], past);
+            }
+        }
         int taken = 0;
-        // Sites, whatever their kind (G0110): a control point today, and every site after it by carrying one.
+        // Sites, whatever their kind (G0110), counted for every seated slot alike.
         for (int i = 0; i < sites.size(); i++) {
             if (SITE.get(sites.get(i)).taken) {
                 taken++;
             }
         }
-        while (drafts.fromPoints < due(taken, draft.pointsPerDraft())) {
-            drafts.fromPoints++;
-            earned |= earnOne(upgrades, drafts, level);
-        }
-        while (drafts.fromWaves < due(Long.bitCount(waves.cleared), draft.wavesPerDraft())) {
-            drafts.fromWaves++;
-            earned |= earnOne(upgrades, drafts, level);
-        }
-        while (drafts.fromBosses < due(level.bossesDown, draft.bossesPerDraft())) {
-            drafts.fromBosses++;
-            earned |= earnOne(upgrades, drafts, level);
+        boolean earned = false;
+        for (int slot = 0; slot < seated.length; slot++) {
+            if (seated[slot]) {
+                earned |= earnFor(slot, taken, upgrades, drafts, level);
+            }
         }
         return earned;
     }
 
-    /** How many drafts {@code count} of a source is worth at one per {@code per}; zero is off. */
-    private static int due(int count, int per) {
-        return per <= 0 ? 0 : (count + per - 1) / per;
+    /**
+     * One seated slot's crossings caught up and every threshold he is owed credited. Allocates only when either
+     * moves: once per crossing, per draft, and the first time the slot is seated.
+     */
+    private boolean earnFor(int slot, int taken, Upgrades upgrades, Drafts drafts, Level level) {
+        int index = progressIndex(drafts, slot);
+        if (index < 0) {
+            drafts.progress.add(new Drafts.Progress(slot, 0, 0));
+            index = drafts.progress.size - 1;
+        }
+        Drafts.Progress progress = drafts.progress.get(index);
+        int crossings = Math.max(progress.crossings(), reached[slot]);
+        int passed = draft.sources(taken, crossings);
+        int owed = DraftSchedule.owed(passed, drafts.sources, drafts.planned, draft.firstAtOnce());
+        int credited = progress.earned();
+        boolean earned = false;
+        while (credited < owed) {
+            earned |= earnOne(upgrades, drafts, level, slot, credited);
+            credited++;
+        }
+        if (crossings != progress.crossings() || credited != progress.earned()) {
+            drafts.progress.set(index, new Drafts.Progress(slot, crossings, credited));
+        }
+        return earned;
     }
 
-    /** Deals one draft to whoever's turn it is. An empty pool earns nothing: there is nothing left to learn. */
-    private boolean earnOne(Upgrades upgrades, Drafts drafts, Level level) {
-        int chooser = Rotation.next(drafts.lastChooser, seated, away);
+    /**
+     * Deals one draft to this slot, {@code earned} thresholds into his schedule. An empty pool earns nothing: there
+     * is nothing left to learn.
+     */
+    private boolean earnOne(Upgrades upgrades, Drafts drafts, Level level, int chooser, int earned) {
         int serial = drafts.nextSerial;
-        int count = deal(chooser, upgrades, drafts, draft.options(), serial);
+        int count = deal(chooser, upgrades, drafts, draft.options(), serial, earned);
         if (count == 0) {
             drafts.dry++;
             return false;
@@ -315,9 +344,22 @@ public final class UpgradeSystem extends EntitySystem {
         for (int position = 0; position < count; position++) {
             drafts.cards.add(new Drafts.Card(serial, position, KINDS[dealt[position]]));
         }
-        drafts.lastChooser = chooser;
-        drafts.earned++;
         return true;
+    }
+
+    /** How many of the schedule's thresholds this slot has been credited with, which is what opens a tier for him. */
+    private static int earnedOf(Drafts drafts, int slot) {
+        int index = progressIndex(drafts, slot);
+        return index < 0 ? 0 : drafts.progress.get(index).earned();
+    }
+
+    private static int progressIndex(Drafts drafts, int slot) {
+        for (int i = 0; i < drafts.progress.size; i++) {
+            if (drafts.progress.get(i).slot() == slot) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -325,10 +367,11 @@ public final class UpgradeSystem extends EntitySystem {
      * already on draft {@code serial} and, while others remain, what he passed over last time.
      */
     @SuppressWarnings("EnumOrdinal")
-    private int deal(int chooser, Upgrades upgrades, Drafts drafts, int options, int serial) {
+    private int deal(int chooser, Upgrades upgrades, Drafts drafts, int options, int serial, int earned) {
         for (int k = 0; k < KINDS.length; k++) {
             UpgradeKind kind = KINDS[k];
-            weights[k] = !offers(drafts, serial, kind) && eligible(kind, Side.PLAYER, chooser, upgrades, drafts.earned)
+            weights[k] = !offers(drafts, serial, kind)
+                            && eligible(kind, Side.PLAYER, chooser, upgrades, earned, drafts.planned)
                     ? catalogue.of(kind).weight()
                     : 0;
         }
@@ -347,28 +390,29 @@ public final class UpgradeSystem extends EntitySystem {
      * time, counting this tick, and by the players' picks, counting this tick's. Each is one card dealt
      * from the aliens' pool and taken at once; an empty pool takes nothing, and draws nothing.
      */
-    private void adapt(Upgrades upgrades, Level level) {
+    private void adapt(Upgrades upgrades, Level level, int planned) {
         int byTime = everyTicks <= 0 ? 0 : (int) ((level.tick + 1) / everyTicks);
         while (upgrades.fromTime < byTime) {
             upgrades.fromTime++;
-            adaptOnce(upgrades);
+            adaptOnce(upgrades, planned);
         }
         int per = adaptation.perPlayerUpgrades();
         int byPicks = per <= 0 ? 0 : upgrades.playerPicks / per;
         while (upgrades.fromPicks < byPicks) {
             upgrades.fromPicks++;
-            adaptOnce(upgrades);
+            adaptOnce(upgrades, planned);
         }
     }
 
     /**
      * Deals the swarm one adaptation, weighted, and takes it. An adaptation that answers an upgrade the
-     * players hold is weighted up by {@code answerWeight} per rank they hold of it.
+     * players hold is weighted up by {@code answerWeight} per rank they hold of it. Its tiers open on its count of
+     * adaptations against a slot's planned drafts, as a chooser's would.
      */
-    private void adaptOnce(Upgrades upgrades) {
+    private void adaptOnce(Upgrades upgrades, int planned) {
         for (int k = 0; k < KINDS.length; k++) {
             UpgradeKind kind = KINDS[k];
-            if (!eligible(kind, Side.ALIEN, Upgrades.SHARED, upgrades, upgrades.adaptations)) {
+            if (!eligible(kind, Side.ALIEN, Upgrades.SHARED, upgrades, upgrades.adaptations, planned)) {
                 weights[k] = 0;
                 continue;
             }
@@ -398,13 +442,13 @@ public final class UpgradeSystem extends EntitySystem {
     }
 
     /**
-     * Whether this chooser could take this kind now: that side's, below its last rank, its tier
-     * unlocked, what it requires held, nothing else in its group held, and not switched off. The swarm
-     * is a chooser holding only what the side holds, and counts its tiers in adaptations.
+     * Whether this chooser could take this kind now: that side's, below its last rank, its tier open at
+     * {@code earned} of {@code planned} drafts, what it requires held, nothing else in its group held, and not
+     * switched off. The swarm is a chooser holding only what the side holds, and counts its tiers in adaptations.
      */
-    private boolean eligible(UpgradeKind kind, Side side, int chooser, Upgrades upgrades, int earned) {
+    private boolean eligible(UpgradeKind kind, Side side, int chooser, Upgrades upgrades, int earned, int planned) {
         UpgradeDef def = catalogue.of(kind);
-        if (def.side() != side || def.weight() <= 0 || earned < draft.unlockedAt(def.tier())) {
+        if (def.side() != side || def.weight() <= 0 || !draft.opens(def.tier(), earned, planned)) {
             return false;
         }
         if (ranks(upgrades, kind, def.personal() ? chooser : Upgrades.SHARED) >= def.ranks()) {

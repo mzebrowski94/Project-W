@@ -135,6 +135,9 @@ contradiction three features later.
   slot or the man, does an unspent draft carry over, and do the aliens' adaptations reset?
 - **Should the aliens adapt to what the players take?** Adaptations are dealt on a schedule, at
   random; a hook for weighting them against the players' upgrades exists and is off.
+- **Does a player see how near his next draft is?** Its thresholds are fixed when the level is built (G0118),
+  so they could be shown - a mark on his panel, or the sites and crossings still to go. Pillar 5 says he never
+  tracks a number the game does not show; whether "when is my next card" is such a number is open.
 - **Rerolls.** None in v1. If one is ever wanted it is an input event limited by a count, never by a
   currency (pillar 3).
 - **Can an adaptation raise an alien's health?** For men it can (G0053: wounds are damage taken, the

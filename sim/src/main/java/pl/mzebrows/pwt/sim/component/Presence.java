@@ -5,8 +5,8 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 
 /**
- * The slots that are away (G0052): their link has dropped, so their commanders stand idle and the
- * draft rotation passes them by - and which machine each slot sits at, which the leash is reckoned by
+ * The slots that are away (G0052): their link has dropped, so their commanders stand idle and no
+ * solo pause is theirs - and which machine each slot sits at, which the leash is reckoned by
  * (G0056). Level state on the level entity, written by {@code Simulation.step} from the tick's input and
  * nothing else. Offline nothing is ever away, and every slot sits at machine 0.
  */

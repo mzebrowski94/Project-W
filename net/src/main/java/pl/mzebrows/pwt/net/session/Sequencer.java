@@ -136,7 +136,7 @@ public final class Sequencer implements AutoCloseable {
 
     /**
      * By slot, whether its link dropped and nobody has been seated in it since (G0052): its commander
-     * stands idle, and the draft rotation passes it by. Sealed as <em>away</em> the tick after the drop and
+     * stands idle, and keeps the drafts it is dealt (G0118). Sealed as <em>away</em> the tick after the drop and
      * as <em>back</em> the tick after somebody is seated in it again.
      */
     private final boolean[] away;
@@ -662,7 +662,7 @@ public final class Sequencer implements AutoCloseable {
                         + millis(now - peer.lastHeardNanos));
     }
 
-    /** The slot's commander stands idle and the draft rotation passes him by (G0052), from the next tick. */
+    /** The slot's commander stands idle (G0052) and his drafts wait for him (G0118), from the next tick. */
     private void goAway(int slot) {
         away[slot] = true;
         awayWanted[slot] = true;
@@ -1546,7 +1546,7 @@ public final class Sequencer implements AutoCloseable {
             if (owner[slot] == peer.id && peer.id >= 0) {
                 owner[slot] = -1;
                 Arrays.fill(lastHeld[slot], (byte) 0);
-                // The unplugged pad of G0038: the commander stays, and the draft rotation passes him by.
+                // The unplugged pad of G0038: the commander stays, and his drafts wait for him.
                 if (!joinWanted[slot]) {
                     goAway(slot);
                 }

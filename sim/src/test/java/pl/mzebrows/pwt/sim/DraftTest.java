@@ -27,13 +27,17 @@ import pl.mzebrows.pwt.sim.system.upgrade.UpgradeDef;
 import pl.mzebrows.pwt.sim.system.upgrade.UpgradeKind;
 
 /**
- * An upgrade is earned on the field and drafted in turn (G0049): objectives earn drafts at their rate,
- * each goes to the next present slot, a pick is an input event naming the draft and the kind, and it
- * counts from the next tick - or not at all, if anything about it is wrong.
+ * An upgrade is earned on the field (G0049), and every slot is dealt his own drafts (G0118): a site taken earns
+ * every seated slot his draft on the schedule the level was planned with, nothing passes on, a pick is an input
+ * event naming the draft and the kind, and it counts from the next tick - or not at all, if anything about it is
+ * wrong. Crossings are {@code CrossingTest}'s; the schedule's numbers {@code DraftScheduleTest}'s.
  */
 class DraftTest {
 
     private static final float MIDDLE = 50f;
+
+    /** A serial no draft here is given. */
+    private static final int NO_DRAFT = 9_999;
 
     @Test
     void earnsADraftForSlotZeroWhenAPointIsTakenInSinglePlayer() {
@@ -61,19 +65,20 @@ class DraftTest {
         assertThat(drafts(simulation).pending).isEmpty();
     }
 
+    /** No rotation: nobody's card waits on anybody else's. */
     @Test
-    void goesRoundThePresentSlotsInOrder() {
+    void dealsEverySeatedSlotHisOwnDraftForASiteTaken() {
         Simulation simulation = new Simulation(AlphaWorlds.config());
         simulation.spawnCommander(MIDDLE, MIDDLE, 0);
         simulation.spawnCommander(MIDDLE + 5f, MIDDLE, 2);
-        List<Entity> points = points(simulation, 3);
+        List<Entity> points = points(simulation, 2);
 
         for (Entity point : points) {
             take(point);
             simulation.step();
         }
 
-        assertThat(drafts(simulation).pending).extracting(Drafts.Draft::chooser).containsExactly(0, 2, 0);
+        assertThat(drafts(simulation).pending).extracting(Drafts.Draft::chooser).containsExactly(0, 2, 0, 2);
     }
 
     @Test
@@ -101,11 +106,11 @@ class DraftTest {
         simulation.step();
         int serial = drafts(simulation).pending.first().serial();
 
-        simulation.step(new PlayerInputs().pick(0, serial + 1, UpgradeKind.LARGER_ARMY));
+        simulation.step(new PlayerInputs().pick(0, NO_DRAFT, UpgradeKind.LARGER_ARMY));
         simulation.step(new PlayerInputs().pick(1, serial, UpgradeKind.LARGER_ARMY));
 
         assertThat(ledger(simulation).held).isEmpty();
-        assertThat(drafts(simulation).pending).hasSize(1);
+        assertThat(drafts(simulation).pending).hasSize(2);
     }
 
     @Test
@@ -140,43 +145,91 @@ class DraftTest {
         assertThat(drafts(simulation).pending.first().revision()).isEqualTo(1);
     }
 
+    /** Nothing is passed on (G0118): an away slot keeps what he holds and goes on being dealt his own. */
     @Test
-    void passesTheDraftsOfAnAwaySlotOnAndTakesItBackIntoTheRotation() {
+    void keepsTheDraftsOfAnAwaySlotAndGoesOnDealingHim() {
         Simulation simulation = new Simulation(AlphaWorlds.config());
         simulation.spawnCommander(MIDDLE, MIDDLE, 0);
         simulation.spawnCommander(MIDDLE + 5f, MIDDLE, 1);
-        List<Entity> points = points(simulation, 3);
+        List<Entity> points = points(simulation, 2);
         take(points.get(0));
         simulation.step();
 
         simulation.step(new PlayerInputs().away(0));
-        assertThat(drafts(simulation).pending.first().chooser()).isEqualTo(1);
-
         take(points.get(1));
         simulation.step();
-        simulation.step(new PlayerInputs().back(0));
-        take(points.get(2));
-        simulation.step();
 
-        assertThat(drafts(simulation).pending).extracting(Drafts.Draft::chooser).containsExactly(1, 1, 0);
+        assertThat(drafts(simulation).pending).extracting(Drafts.Draft::chooser).containsExactly(0, 1, 0, 1);
     }
 
+    /** A slot seated mid-level is owed every threshold his count passes, the sites already taken included. */
     @Test
-    void earnsAtTheConfiguredRateFromEachSource() {
-        SimConfig config = AlphaWorlds.config();
-        Simulation simulation = new Simulation(
-                config.withDraft(new DraftDef(3, 2, 0, 0, config.draft().tierFrom())));
-        simulation.spawnCommander(MIDDLE, MIDDLE);
+    void owesASlotSeatedLateTheDraftsOfEverySiteAlreadyTaken() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        simulation.spawnCommander(MIDDLE, MIDDLE, 0);
         List<Entity> points = points(simulation, 3);
+        take(points.get(0));
+        take(points.get(1));
+        simulation.step();
+
+        simulation.spawnCommander(MIDDLE + 5f, MIDDLE, 1);
+        simulation.step();
+
+        assertThat(simulation.upgradeView().draftsOf(0)).isEqualTo(2);
+        assertThat(simulation.upgradeView().draftsOf(1)).isEqualTo(2);
+    }
+
+    /** Two drafts over four sites: one at once, the next a gap of two after it. */
+    @Test
+    void earnsOnTheScheduleTheLevelWasPlannedWith() {
+        SimConfig config = AlphaWorlds.config();
+        Simulation simulation = new Simulation(config.withDraft(
+                new DraftDef(3, 2, 4, 100, 1, 1, true, config.draft().tierFrom())));
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        List<Entity> points = points(simulation, 4);
         List<Integer> earned = new ArrayList<>();
 
         for (Entity point : points) {
             take(point);
             simulation.step();
-            earned.add(drafts(simulation).earned);
+            earned.add(simulation.upgradeView().draftsOf(0));
         }
 
-        assertThat(earned).containsExactly(1, 1, 2);
+        assertThat(earned).containsExactly(1, 1, 2, 2);
+    }
+
+    /** What stands on the level at its first tick is what it is planned on; a site put down later moves nothing. */
+    @Test
+    void plansTheScheduleOnceFromWhatTheLevelWasBuiltWith() {
+        Simulation simulation = new Simulation(AlphaWorlds.config());
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        points(simulation, 3);
+        simulation.step();
+
+        simulation.spawnControlPoint(80f, 80f);
+        simulation.step();
+
+        assertThat(drafts(simulation).sources).isEqualTo(3);
+        assertThat(drafts(simulation).planned).isEqualTo(3);
+    }
+
+    /** A tier opens by share of his own planned drafts (G0118): half of four, so from his third draft on. */
+    @Test
+    void dealsATierOnceItsShareOfHisPlannedDraftsIsBehindHim() {
+        Simulation simulation = new Simulation(handlingOnTierTwo(AlphaWorlds.config()));
+        simulation.spawnCommander(MIDDLE, MIDDLE);
+        List<Entity> points = points(simulation, 4);
+        List<List<UpgradeKind>> dealt = new ArrayList<>();
+
+        for (int i = 0; i < 3; i++) {
+            take(points.get(i));
+            simulation.step();
+            dealt.add(cards(simulation, drafts(simulation).pending.peek().serial()));
+        }
+
+        assertThat(dealt.get(0)).containsExactly(UpgradeKind.LARGER_ARMY);
+        assertThat(dealt.get(1)).containsExactly(UpgradeKind.LARGER_ARMY);
+        assertThat(dealt.get(2)).containsExactlyInAnyOrder(UpgradeKind.LARGER_ARMY, UpgradeKind.WEAPON_HANDLING);
     }
 
     /** A draft the pool cannot fill is not earned, and is counted so the interface can say so. */
@@ -190,7 +243,7 @@ class DraftTest {
         simulation.step();
 
         assertThat(drafts(simulation).pending).isEmpty();
-        assertThat(drafts(simulation).fromPoints).isEqualTo(1);
+        assertThat(drafts(simulation).progress).containsExactly(new Drafts.Progress(0, 0, 1));
         assertThat(simulation.upgradeView().dry()).isEqualTo(1);
     }
 
@@ -326,7 +379,22 @@ class DraftTest {
                         new UpgradeDef(army.side(), army.weight(), 1, army.tier(), null, 0, army.effects())));
     }
 
-    /** Weapon Handling as a personal upgrade, reaching only the commander of the slot that took it. */
+    /** Weapon Handling on tier two, so a draft deals it only once the tier is open. */
+    private static SimConfig handlingOnTierTwo(SimConfig config) {
+        UpgradeDef handling = config.upgrades().of(UpgradeKind.WEAPON_HANDLING);
+        return config.withUpgrades(config.upgrades()
+                .with(
+                        UpgradeKind.WEAPON_HANDLING,
+                        new UpgradeDef(
+                                handling.side(),
+                                handling.weight(),
+                                handling.ranks(),
+                                2,
+                                handling.requires(),
+                                handling.group(),
+                                handling.effects())));
+    }
+
     private static SimConfig off(SimConfig config, UpgradeKind kind) {
         UpgradeDef def = config.upgrades().of(kind);
         return config.withUpgrades(config.upgrades()
@@ -336,6 +404,7 @@ class DraftTest {
                                 def.side(), 0, def.ranks(), def.tier(), def.requires(), def.group(), def.effects())));
     }
 
+    /** Weapon Handling as a personal upgrade, reaching only the commander of the slot that took it. */
     private static SimConfig personalHandling(SimConfig config) {
         return config.withUpgrades(config.upgrades()
                 .with(

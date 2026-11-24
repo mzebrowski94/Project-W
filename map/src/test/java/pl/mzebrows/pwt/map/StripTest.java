@@ -89,6 +89,26 @@ class StripTest {
         }
     }
 
+    /** A crossing is counted by the ridge's west edge (G0118), so the map carries every one of them. */
+    @Test
+    void marksTheWestEdgeOfEveryRidgeOnTheMapItLays() {
+        for (long seed = 0; seed < SEEDS; seed++) {
+            Strip.Laid laid = lay(ORDER, seed);
+            TileMap map = laid.map();
+
+            assertThat(map.ridgeCount()).as("seed %d", seed).isEqualTo(StripFaults.ridges(laid));
+            for (int b = 0; b < StripFaults.ridges(laid); b++) {
+                int edge = StripFaults.westEdge(laid, b);
+                assertThat(map.ridgesReached(edge - 1))
+                        .as("seed %d, west of ridge %d", seed, b)
+                        .isEqualTo(b);
+                assertThat(map.ridgesReached(edge))
+                        .as("seed %d, ridge %d", seed, b)
+                        .isEqualTo(b + 1);
+            }
+        }
+    }
+
     @Test
     void putsAOneColumnRidgeInTheBiomeToItsEast() {
         StripRules wall = new StripRules(30, 3, 2, 1, 3, 4, 1, 2, 6, 4, 8, gatehouses(0f));

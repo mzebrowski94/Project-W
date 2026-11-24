@@ -323,7 +323,7 @@ class DefendTest {
         return entity.getComponent(Position.class);
     }
 
-    /** A wave is cleared once everything it sent is off its feet - a source of drafts (G0049) - and not before. */
+    /** A wave is cleared once everything it sent is off its feet, and not before. */
     @Test
     void marksAWaveClearedOnlyOnceTheLastOfItsAliensGoesDown() {
         Simulation simulation = simulation();

@@ -12,7 +12,7 @@ import pl.mzebrows.pwt.map.TileRect;
  * record's - it simply says how long after the one before it comes.
  *
  * <p><strong>From one place or several at once</strong> (G0087): a wave is one or more {@link Lot}s, all put down on
- * the tick it arrives and counted as one wave - one stamp, one clearing, one draft earned.
+ * the tick it arrives and counted as one wave - one stamp, one clearing.
  *
  * @param afterSeconds how long after the previous wave - or after the level starts, for the first
  * @param kind which strain arrives

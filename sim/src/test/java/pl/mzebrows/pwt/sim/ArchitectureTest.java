@@ -538,6 +538,7 @@ final class ArchitectureTest {
             "Drafts.cards",
             "Drafts.passed",
             "Drafts.submitted",
+            "Drafts.progress",
             "Presence.away",
             "Presence.seats");
 

@@ -316,11 +316,11 @@ public final class Simulation {
         // chain have run; before the ledger changes, since its gun reads it.
         engine.addSystem(new EmplacementSystem(config, map, guns));
         engine.addSystem(new ControlPointSystem(config, map, spawner, streams.of(RngStream.CACHE), capacity));
-        // After every source of a draft (43, 46, 47, and the sites taken at 38 and 55), so what was earned this tick is
-        // dealt this tick; and
-        // after every reader of Modifiers, so the ledger changes once, at the end, for every reader alike.
-        engine.addSystem(
-                new UpgradeSystem(config, streams.of(RngStream.DRAFT), streams.of(RngStream.ADAPTATION), capacity));
+        // After every source of a draft (G0118) - the sites taken at 38 and 55, and where the solver left each
+        // commander - so what was earned this tick is dealt this tick; and after every reader of Modifiers, so the
+        // ledger changes once, at the end, for every reader alike.
+        engine.addSystem(new UpgradeSystem(
+                config, streams.of(RngStream.DRAFT), streams.of(RngStream.ADAPTATION), map, capacity));
         engine.addSystem(new ObjectiveSystem());
         engine.addSystem(new FacingSystem());
         engine.addSystem(new AppearanceSystem(config));

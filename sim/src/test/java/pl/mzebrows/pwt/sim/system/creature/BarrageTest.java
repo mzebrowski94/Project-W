@@ -386,22 +386,6 @@ class BarrageTest {
         assertThat(boss.getComponent(Appearance.class).charge).isCloseTo(0.25f, CLOSE);
     }
 
-    /** A boss going down is counted on the level once, on the tick its throes begin - a source of drafts (G0049). */
-    @Test
-    void countsABossDownOnceWhenItsThroesBegin() {
-        Simulation simulation = new Simulation(barraging(ring(RING_SHOTS, 1)));
-        simulation.spawnCommander(MIDDLE - OFF_THE_LINES, MIDDLE + OFF_THE_LINES);
-        Entity boss = simulation.spawnUnit(UnitKind.BOSS_GRUNT, MIDDLE, MIDDLE);
-        steps(simulation, 2);
-        int before = simulation.level().bossesDown;
-
-        boss.getComponent(Damage.class).land(BOSS_HEALTH * 10, Harm.KILL);
-        steps(simulation, 10);
-
-        assertThat(before).isZero();
-        assertThat(simulation.level().bossesDown).isEqualTo(1);
-    }
-
     // ---- a giant's barrage: one that walks (G0071) ----
 
     @Test

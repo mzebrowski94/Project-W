@@ -29,8 +29,8 @@ public final class Waves implements Component, Pool.Poolable {
 
     /**
      * A bit per wave sent, set once nothing it sent is still on its feet: bit {@code w} for the wave
-     * sent {@code w}-th, counting from zero. Written by {@code WaveSystem}; read by the upgrade package,
-     * which earns drafts from cleared waves (G0049).
+     * sent {@code w}-th, counting from zero. Written by {@code WaveSystem}; a wave cleared earns no draft
+     * (G0118).
      */
     public long cleared;
 

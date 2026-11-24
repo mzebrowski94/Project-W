@@ -120,6 +120,34 @@ class TileMapTest {
         assertThat(map.biomeAt(BAND * 2 * TILE, 1f)).isEqualTo(1);
     }
 
+    @Test
+    void marksNoRidgeOnAMapThatNamesNone() {
+        TileMap map = banded(TileMap.builder(COLS, ROWS, TILE)).build();
+
+        assertThat(map.ridgeCount()).isZero();
+        assertThat(map.ridgesReached(COLS - 1)).isZero();
+    }
+
+    /** Counted by each ridge's west edge, in whatever order they were marked (G0118). */
+    @Test
+    void countsTheRidgesAtOrWestOfAColumn() {
+        TileMap map =
+                TileMap.builder(COLS, ROWS, TILE).ridge(BAND * 2).ridge(BAND).build();
+
+        assertThat(map.ridgeCount()).isEqualTo(2);
+        assertThat(map.ridgesReached(BAND - 1)).isZero();
+        assertThat(map.ridgesReached(BAND)).isEqualTo(1);
+        assertThat(map.ridgesReached(BAND * 2 - 1)).isEqualTo(1);
+        assertThat(map.ridgesReached(COLS - 1)).isEqualTo(2);
+    }
+
+    @Test
+    void refusesARidgeOffTheMap() {
+        TileMap.Builder builder = TileMap.builder(COLS, ROWS, TILE);
+
+        assertThatThrownBy(() -> builder.ridge(COLS)).isInstanceOf(IllegalArgumentException.class);
+    }
+
     /** A biome nothing is in would make the count a lie, and every caller sizes from the count. */
     @Test
     void refusesBiomesThatLeaveOneOut() {

@@ -757,11 +757,11 @@ class SessionTest {
     }
 
     /**
-     * A dropped link is sealed as away on every machine, and the drafts come round past it; a machine
-     * seated in the slot again is sealed as back (G0052).
+     * A dropped link is sealed as away on every machine, and his slot goes on being dealt its own drafts and keeps
+     * them (G0118); a machine seated in the slot again is sealed as back, and finds them waiting (G0052).
      */
     @Test
-    void passesADroppedPlayersTurnOnAndTakesHimBackWhenSomebodySitsInHisSlot() {
+    void keepsADroppedPlayersDraftsAndTakesHimBackWhenSomebodySitsInHisSlot() {
         try (SessionHarness session = new SessionHarness("Thicket" + TestWorlds.DRAFTING, 31L, PERFECT)) {
             Machine host = session.host();
             Machine friend = session.join("friend", PERFECT);
@@ -773,15 +773,19 @@ class SessionTest {
                     .as("slot 1 away once his link dropped")
                     .isTrue();
             runUntilDraftCount(session, host, 0, 3);
-            assertThat(view(host).draftsOf(1))
-                    .as("no draft goes to an away slot")
-                    .isZero();
+            int held = view(host).draftsOf(1);
+            assertThat(held)
+                    .as("an away slot is dealt his own, as the present one is")
+                    .isEqualTo(view(host).draftsOf(0));
 
             Machine back = session.join("back", PERFECT);
             session.run(300);
             session.agreedHash();
 
             assertThat(back.session.slotOf(0)).isEqualTo(1);
+            assertThat(view(back).draftsOf(1))
+                    .as("the drafts he was dealt while away are his on his return")
+                    .isGreaterThanOrEqualTo(held);
             for (Machine machine : session.machines) {
                 assertThat(view(machine).away(1))
                         .as("%s sees slot 1 back", machine.name)

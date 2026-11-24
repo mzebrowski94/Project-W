@@ -97,9 +97,6 @@ public final class Barrage implements Component, Pool.Poolable {
     /** How many times it has been all the way round, which is what decides which way a pattern turns. */
     public int cycles;
 
-    /** Whether its going down has been counted on the level, so a boss is counted once. */
-    public boolean fallen;
-
     /**
      * Which way it is shooting - at whoever it hunts, or the place it was hurt from - as a direction of any
      * length; {@code (0, 0)} until it has had something to shoot at. Kept while it idles, so it goes on
@@ -199,7 +196,6 @@ public final class Barrage implements Component, Pool.Poolable {
         phaseTicks = 0;
         salvo = 0;
         cycles = 0;
-        fallen = false;
         aimX = 0f;
         aimY = 0f;
     }

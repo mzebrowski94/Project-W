@@ -1,6 +1,6 @@
 # G0063: A tier moves the swarm's numbers, never what a blow does to a man
 
-**Status.** amended by G0102: the ramp spans the march, whatever its length; amended by G0106: a host's strength rides on the tier's
+**Status.** amended by G0102: the ramp spans the march, whatever its length; amended by G0106: a host's strength rides on the tier's; amended by G0118: the adaptation pace is a count and a share of the pool on the drafts' schedule; amended by G0119: the players seated fold in beside it
 
 **Trigger.** Adding or changing what a mission's tier scales; proposing a tier number for damage, for the
 squad, the reserve, crates or medkits; changing `sim.melee.damage`, a strain's health or

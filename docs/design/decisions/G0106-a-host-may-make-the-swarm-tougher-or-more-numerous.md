@@ -1,6 +1,6 @@
 # G0106: A host may make a mission's swarm tougher or more numerous, beside its tier
 
-**Status.** accepted
+**Status.** amended by G0119: the players seated fold in beside the strength
 
 **Trigger.** Adding or changing what a host may set on a mission besides its code, tier and length; putting a health
 or count number on a mission's swarm; changing what is recorded for a daily.

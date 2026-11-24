@@ -51,6 +51,9 @@ public final class TileMap implements Passability {
 
     private final int biomeCount;
 
+    /** The west edge of each ridge's core, west to east (G0118): where a commander has entered its pass. */
+    private final int[] ridges;
+
     private TileMap(
             int cols,
             int rows,
@@ -59,7 +62,8 @@ public final class TileMap implements Passability {
             int[] region,
             int regionCount,
             int[] biomeOfRegion,
-            int biomeCount) {
+            int biomeCount,
+            int[] ridges) {
         this.cols = cols;
         this.rows = rows;
         this.tileSize = tileSize;
@@ -68,6 +72,7 @@ public final class TileMap implements Passability {
         this.regionCount = regionCount;
         this.biomeOfRegion = biomeOfRegion;
         this.biomeCount = biomeCount;
+        this.ridges = ridges;
     }
 
     /** Starts a map of this many tiles, every one of them {@link Terrain#PLAIN} in region zero, biome zero. */
@@ -96,6 +101,26 @@ public final class TileMap implements Passability {
     /** How many biomes this map's regions were grouped into: one if it named none. Ids run from zero. */
     public int biomeCount() {
         return biomeCount;
+    }
+
+    /**
+     * How many ridges a strip laid across this map (G0118): one between every two biomes and before the finale; none on
+     * a map laid by hand unless it marks some.
+     */
+    public int ridgeCount() {
+        return ridges.length;
+    }
+
+    /**
+     * How many ridges lie at or west of this column, counted by the west edge of each one's core - the ridges a
+     * commander standing here has entered the pass of, or gone past (G0118).
+     */
+    public int ridgesReached(int col) {
+        int reached = 0;
+        while (reached < ridges.length && ridges[reached] <= col) {
+            reached++;
+        }
+        return reached;
     }
 
     /** The playable width, in world units. This is the arena. */
@@ -332,6 +357,9 @@ public final class TileMap implements Passability {
         /** The biome each region has been put in so far, by region id; grown as regions are named. */
         private int[] biomeOfRegion = new int[0];
 
+        /** The west edge of each ridge's core marked so far, in the order marked. */
+        private int[] ridges = new int[0];
+
         private Builder(int cols, int rows, float tileSize) {
             if (cols < 1 || rows < 1) {
                 throw new IllegalArgumentException("a map needs at least one tile, was " + cols + "x" + rows);
@@ -431,6 +459,16 @@ public final class TileMap implements Passability {
             return this;
         }
 
+        /** Marks a ridge whose core's west edge is this column (G0118). Allocates, once per ridge. */
+        public Builder ridge(int col) {
+            if (col < 0 || col >= cols) {
+                throw new IllegalArgumentException("no column " + col + " in a map " + cols + " wide");
+            }
+            ridges = java.util.Arrays.copyOf(ridges, ridges.length + 1);
+            ridges[ridges.length - 1] = col;
+            return this;
+        }
+
         public TileMap build() {
             int highest = 0;
             for (int id : region) {
@@ -444,8 +482,18 @@ public final class TileMap implements Passability {
                         + " was put in a biome, but the map has only " + regionCount + " regions");
             }
             int[] biomes = java.util.Arrays.copyOf(biomeOfRegion, regionCount);
+            int[] westToEast = ridges.clone();
+            java.util.Arrays.sort(westToEast);
             return new TileMap(
-                    cols, rows, tileSize, terrain.clone(), region.clone(), regionCount, biomes, biomeCount(biomes));
+                    cols,
+                    rows,
+                    tileSize,
+                    terrain.clone(),
+                    region.clone(),
+                    regionCount,
+                    biomes,
+                    biomeCount(biomes),
+                    westToEast);
         }
 
         /** One more than the highest biome any region is in, refusing a gap: a biome nothing is in. */

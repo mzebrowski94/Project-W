@@ -1,14 +1,14 @@
 # G0052: A slot can be away
 
-**Status.** accepted
+**Status.** amended by G0118: an away slot keeps his drafts
 
 **Trigger.** Anything that needs to know whether a player is still at the game - the draft rotation,
 the HUD's OFFLINE label, a pause that should end; a dropped link or a returning machine; counting
 "solo".
 
-**Enforced by.** `DraftTest` - an away slot's drafts pass on, and the rotation skips it.
-`SessionTest.passesADroppedPlayersTurnOnAndTakesHimBackWhenSomebodySitsInHisSlot` - a dropped link is
-sealed as away on every machine and the drafts come round past it; somebody seated in the slot again is
+**Enforced by.** `DraftTest.keepsTheDraftsOfAnAwaySlotAndGoesOnDealingHim` - an away slot keeps his drafts
+(G0118). `SessionTest.keepsADroppedPlayersDraftsAndTakesHimBackWhenSomebodySitsInHisSlot` - a dropped link is
+sealed as away on every machine and his slot is dealt its own all the same; somebody seated in the slot again is
 sealed as back. `SessionTest.liftsADraftPauseWhenASecondPlayerSitsDown` - a solo draft's pause
 ends when a second player sits down. `SessionTest.keepsAMachineWhoseGameStoppedAndTakesItBackWhenItRunsAgain`
 and `SessionTest.restartsWithAStoppedMachinesCommanderAway` - a dormant machine's slots are away, in a

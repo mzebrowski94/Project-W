@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
 
 import com.badlogic.ashley.core.Entity;
+import com.badlogic.ashley.core.Family;
+import com.badlogic.ashley.utils.ImmutableArray;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.component.Site;
@@ -29,10 +31,14 @@ class AdaptationTest {
     private static final int BASE_TICKS = 40;
     private static final float EVERY_SECONDS = 1f;
 
+    /** Points enough for every pick a test here makes. */
+    private static final int SITES = 3;
+
     @Test
     void adaptsNothingAndDrawsNothingWhileBothHalvesAreOff() {
         Simulation simulation = new Simulation(scheduled(0f, 0));
         simulation.spawnCommander(MIDDLE, MIDDLE);
+        sites(simulation);
         long untouched = simulation.stream(RngStream.ADAPTATION).state();
 
         AlphaWorlds.steps(simulation, ticksIn(5f));
@@ -63,6 +69,7 @@ class AdaptationTest {
     void adaptsOncePerSoManyUpgradesThePlayersTake() {
         Simulation simulation = new Simulation(scheduled(0f, 2));
         simulation.spawnCommander(MIDDLE, MIDDLE);
+        sites(simulation);
 
         pick(simulation, UpgradeKind.WEAPON_HANDLING);
         int afterOne = ranks(simulation, UpgradeKind.RAPID_SPIT);
@@ -112,6 +119,7 @@ class AdaptationTest {
                                         List.of(new Effect.Breed(UnitKind.GRUNT, Stat.FIRE_COOLDOWN, -10)))));
         Simulation simulation = new Simulation(config);
         simulation.spawnCommander(MIDDLE, MIDDLE);
+        sites(simulation);
         pick(simulation, UpgradeKind.WEAPON_HANDLING);
 
         AlphaWorlds.steps(simulation, ticksIn(EVERY_SECONDS));
@@ -173,9 +181,24 @@ class AdaptationTest {
         return AlphaWorlds.config().withAdaptation(new AdaptationDef(everySeconds, perPlayerUpgrades, 0));
     }
 
+    /** Puts down the points {@link #pick} takes, before the level's first tick plans its schedule on them (G0118). */
+    private static void sites(Simulation simulation) {
+        for (int i = 0; i < SITES; i++) {
+            simulation.spawnControlPoint(10f + 5f * i, 10f);
+        }
+    }
+
     /** Takes one rank through the real path: a point taken earns a draft, and a pick takes the card. */
     private static void pick(Simulation simulation, UpgradeKind kind) {
-        simulation.spawnControlPoint(10f, 10f).getComponent(Site.class).taken = true;
+        ImmutableArray<Entity> sites =
+                simulation.engine().getEntitiesFor(Family.all(Site.class).get());
+        for (int i = 0; i < sites.size(); i++) {
+            Site site = sites.get(i).getComponent(Site.class);
+            if (!site.taken) {
+                site.taken = true;
+                break;
+            }
+        }
         simulation.step();
         int serial = DraftTest.drafts(simulation).pending.first().serial();
         simulation.step(new PlayerInputs().pick(0, serial, kind));

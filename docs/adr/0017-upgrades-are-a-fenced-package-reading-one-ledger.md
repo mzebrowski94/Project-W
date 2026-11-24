@@ -37,7 +37,7 @@ a unit spawned after an upgrade is identical to one on the field when it landed.
   across two packages and need a fence exception anyway. `SystemOrderTest` reads `Simulation`'s
   constructor, not packages, so the order keeps one source of truth.
 - The package is called, and does not call: it depends on components, definitions and `Rng`, never on
-  a system or a scenario. Its pure parts (`Fold`, `Dealer`, `Rotation`) depend on nothing, so lifting
+  a system or a scenario. Its pure parts (`Fold`, `Dealer`, `DraftSchedule`) depend on nothing, so lifting
   them into a module later is a move rather than a rewrite.
 
 **Scope.** Both sides: the players' upgrades and the aliens' adaptations use the same catalogue,

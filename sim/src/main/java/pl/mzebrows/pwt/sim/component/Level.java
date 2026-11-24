@@ -81,12 +81,6 @@ public final class Level implements Component, Pool.Poolable {
     public boolean commandersInvulnerable;
 
     /**
-     * How many bosses have gone down this level, counted on the tick each one's throes begin. Written
-     * by {@code BarrageSystem}, once per boss; read by the upgrade package as a source of drafts.
-     */
-    public int bossesDown;
-
-    /**
      * The first tick any trooper may throw a grenade again: at most one per squad gap (G0051). Written
      * by {@code TrooperCombatSystem} when a man throws; zero lets the first throw go at once.
      */
@@ -164,7 +158,6 @@ public final class Level implements Component, Pool.Poolable {
         tick = 0L;
         nextHandle = 1L;
         commandersInvulnerable = false;
-        bossesDown = 0;
         squadThrowReadyTick = 0L;
     }
 }

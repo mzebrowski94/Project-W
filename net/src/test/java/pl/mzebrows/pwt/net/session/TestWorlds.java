@@ -27,7 +27,7 @@ final class TestWorlds implements WorldFactory {
 
     static final float APART = 2f;
 
-    /** Nine points: drafts at the first, the fifth and the ninth (sim.upgrade.draft.pointsPerDraft=4). */
+    /** Nine points: a draft at the first and more as they are taken, every slot his own (G0118). */
     static final int POINTS = 9;
 
     /** A radius past any map a test plays on. */

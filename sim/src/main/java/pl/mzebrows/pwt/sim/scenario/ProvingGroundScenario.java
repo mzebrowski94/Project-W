@@ -103,7 +103,7 @@ final class ProvingGroundScenario implements Scenario {
                 .withSpawn(new SimConfig.SpawnConfig(side / 2 - OURS - SPAWN_WIDTH / 2, SPAWN_WIDTH, SPAWN_HEIGHT))
                 .withReserve(config.reserve().withStart(config.reserve().max()))
                 // Practice earns nothing (G0060): no source of a draft counts here, the boss included.
-                .withDraft(new DraftDef(draft.options(), 0, 0, 0, draft.tierFrom()))
+                .withDraft(draft.off())
                 .withCommander(config.commander().withWeapon(setup.gun()))
                 .withTrooper(config.trooper()
                         .withSquadSize(setup.squad() ? config.trooper().squadSize() : 0));

@@ -1,6 +1,6 @@
 # G0049: An upgrade is earned on the field and drafted in turn
 
-**Status.** accepted
+**Status.** amended by G0118: every slot is dealt his own drafts, by sites and crossings, on a schedule the length sets
 
 **Trigger.** Anything that grants the player's side an upgrade, decides what earns one, who chooses
 it, how long it lasts or whether choosing pauses; a reroll, a shop, a timer on a choice; proposing

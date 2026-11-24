@@ -13,7 +13,6 @@ import pl.mzebrows.pwt.sim.component.Barrage;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Faction;
 import pl.mzebrows.pwt.sim.component.Health;
-import pl.mzebrows.pwt.sim.component.Level;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Shake;
@@ -53,7 +52,6 @@ public final class BarrageSystem extends EntitySystem {
     private static final ComponentMapper<Weapon> WEAPON = ComponentMapper.getFor(Weapon.class);
     private static final ComponentMapper<Health> HEALTH = ComponentMapper.getFor(Health.class);
     private static final ComponentMapper<Perception> PERCEPTION = ComponentMapper.getFor(Perception.class);
-    private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
     private static final ComponentMapper<Stunned> STUNNED = ComponentMapper.getFor(Stunned.class);
     private static final ComponentMapper<Shake> SHAKE = ComponentMapper.getFor(Shake.class);
 
@@ -63,7 +61,6 @@ public final class BarrageSystem extends EntitySystem {
     private final Guns guns;
 
     private ImmutableArray<Entity> bosses = new ImmutableArray<>(new Array<>());
-    private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
 
     public BarrageSystem(Spawner spawner, Guns guns) {
         this.spawner = spawner;
@@ -81,7 +78,6 @@ public final class BarrageSystem extends EntitySystem {
                         Health.class,
                         Perception.class)
                 .get());
-        levels = engine.getEntitiesFor(Family.all(Level.class).get());
     }
 
     @Override
@@ -96,7 +92,6 @@ public final class BarrageSystem extends EntitySystem {
                 barrage.burstTicks--;
             }
             if (Life.down(entity)) {
-                fall(entity, barrage);
                 continue;
             }
             Perception perception = PERCEPTION.get(entity);
@@ -122,20 +117,6 @@ public final class BarrageSystem extends EntitySystem {
                     || barrage.aimX * barrage.aimX + barrage.aimY * barrage.aimY <= barrage.reach * barrage.reach;
             float pace = enraged(barrage, HEALTH.get(entity)) ? barrage.enragedFactor : 1f;
             advance(entity, barrage, targetX, targetY, inReach, pace, deltaTime);
-        }
-    }
-
-    /**
-     * Counts a boss down on the level, once, on the tick its throes begin - a source of drafts
-     * (G0049). A boss is a unit whose barrage is not off, so nothing else needs to know it is one.
-     */
-    private void fall(Entity entity, Barrage barrage) {
-        if (barrage.fallen || !Life.dying(entity)) {
-            return;
-        }
-        barrage.fallen = true;
-        for (int i = 0; i < levels.size(); i++) {
-            LEVEL.get(levels.get(i)).bossesDown++;
         }
     }
 
