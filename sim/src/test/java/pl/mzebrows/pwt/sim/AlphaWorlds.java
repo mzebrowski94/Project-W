@@ -1146,7 +1146,7 @@ public final class AlphaWorlds {
                         new TrooperGrenadeDef(TROOPER_GRENADE_COOLDOWN, MIN_CLUSTER, SAFETY_MARGIN, SQUAD_GAP_SECONDS)),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 // Never musters: men turning up every so often would move every count in every test.
-                new SimConfig.ReserveConfig(RESERVE_START, RESERVE_MAX, 0f, 2, 3),
+                new SimConfig.ReserveConfig(RESERVE_START, RESERVE_MAX, 0f, 2, 3, 0.8f),
                 onShipped(UnitKind.class, SimConfig.defaults().units(), UnaryOperator.identity())
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
                         .put(UnitKind.BRUTE, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.BRUTE))
