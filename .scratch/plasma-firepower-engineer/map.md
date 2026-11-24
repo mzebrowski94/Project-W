@@ -46,6 +46,8 @@ the records' *Enforced by*, invariant rows, glossary rows; every ticket leaving 
   power drained from `Damage.land`'s result; every gun names its `blastDamage` (the orb's 300).
 - 2026-11-24, 03 (provisional): the sentry aims with a turret's turn, spares our men by its shots' side, goes off by dying
   with its stun through `Surges.stunRound` beside its blast; `Spawner.spawnSentry`; `SentrySystem` in the death window (43).
+- 2026-11-24, 04 (provisional): Engineer switches the key by a `sets_sentries` stat read in `Throws`; rank two is a
+  sentry-gun cooldown cut of 20 % a rank on a 0.25 s base; `chooser` alone reaches a sentry, through its slot.
 
 ## Not yet specified
 
