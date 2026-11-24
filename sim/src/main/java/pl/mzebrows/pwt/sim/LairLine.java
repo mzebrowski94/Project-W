@@ -4,8 +4,8 @@ import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 
 /**
- * One thing a finale puts down at an offset from its anchor (G0064), written {@code unit|nest|pickup <kind> dx dy}:
- * a lair's contents, in the order written, and a hold's pickups. Positions, never counts - a tier never reaches one.
+ * One thing a finale puts down at an offset from its anchor (G0064), written {@code unit|nest|pickup <kind> dx dy} or
+ * {@code hole dx dy}: a lair's contents, in the order written. Positions, never counts - a tier never reaches one.
  */
 public sealed interface LairLine {
 
@@ -38,6 +38,19 @@ public sealed interface LairLine {
         @Override
         public LairLine flipped() {
             return new Nest(strain, dx, -dy);
+        }
+    }
+
+    /** A hole whose strain the finale's pool deals (G0120): the keep's nest spots, fixed, their strains not. */
+    record Hole(int dx, int dy) implements LairLine {
+        @Override
+        public Offset at() {
+            return new Offset(dx, dy);
+        }
+
+        @Override
+        public LairLine flipped() {
+            return new Hole(dx, -dy);
         }
     }
 

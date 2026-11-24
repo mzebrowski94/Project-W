@@ -6,6 +6,9 @@ import pl.mzebrows.pwt.map.BiomeGround;
 import pl.mzebrows.pwt.map.Strip;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.component.Waves;
+import pl.mzebrows.pwt.sim.def.Defs;
+import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WaveRole;
 
 /**
  * One kind of finale as data (G0064, missions ticket 04): a fixed <strong>skeleton</strong> - its post, watch, mouths
@@ -18,10 +21,49 @@ import pl.mzebrows.pwt.sim.component.Waves;
  *     none as read, the cover its rules deal once {@link #covered}
  * @param hold the point that holds afterwards, its watch and its mouths
  * @param rules how its cover, guns, mines, barrels and pickups are placed round the skeleton
- * @param waves the schedule held back until the post is taken, in order, each from mouths the hold names
+ * @param waves the schedule held back until the post is taken, in order, each from mouths the hold names, each naming
+ *     a role
+ * @param roles each role's members (G0120), {@code roles.fast=runner 8 10; frog 5 7}: one dealt to each wave that
+ *     names it; a role no wave names may be left out
  * @param lair what rises inside the watch, at fixed spots - empty but for a keep
+ * @param pool the strains its lair's holes are dealt from, and how many holes one strain may have
  */
-public record FinaleDef(BiomeGround ground, Hold hold, FinaleRules rules, List<WaveLine> waves, List<LairLine> lair) {
+public record FinaleDef(
+        BiomeGround ground,
+        Hold hold,
+        FinaleRules rules,
+        List<WaveLine> waves,
+        Defs<WaveRole, List<WaveLine.Member>> roles,
+        List<LairLine> lair,
+        Pool pool) {
+
+    /**
+     * The strains a lair's holes are dealt from (G0120), written {@code pool.strains=grunt; spitter; ...} and
+     * {@code pool.most=2}: each hole a strain of the pool, uniformly among those dealt fewer than {@code most} so far.
+     *
+     * @param strains the strains, each once
+     * @param most how many holes one strain may have
+     */
+    public record Pool(List<Pooled> strains, int most) {
+
+        public Pool {
+            strains = List.copyOf(strains);
+            if (most < 0 || (!strains.isEmpty() && most < 1)) {
+                throw new IllegalArgumentException("a pool lets a strain have at least one hole, was " + most);
+            }
+            if (strains.stream().map(Pooled::strain).distinct().count() != strains.size()) {
+                throw new IllegalArgumentException("a pool names each strain once, was " + strains);
+            }
+        }
+
+        /** No pool: a finale whose lair has no holes to deal. */
+        public static Pool off() {
+            return new Pool(List.of(), 0);
+        }
+    }
+
+    /** A strain of a pool: {@code grunt}. */
+    public record Pooled(UnitKind strain) {}
 
     public FinaleDef {
         waves = List.copyOf(waves);
@@ -43,9 +85,17 @@ public record FinaleDef(BiomeGround ground, Hold hold, FinaleRules rules, List<W
             for (String mouth : wave.mouthNames()) {
                 if (!hold.hasMouth(mouth)) {
                     throw new IllegalArgumentException(
-                            "a wave of " + wave.strain() + " comes from " + mouth + ", a mouth the hold lacks");
+                            "a " + wave.role() + " wave comes from " + mouth + ", a mouth the hold lacks");
                 }
             }
+            if (roles.of(wave.role()).isEmpty()) {
+                throw new IllegalArgumentException("a " + wave.role() + " wave names a role with no members");
+            }
+        }
+        long holes = lair.stream().filter(line -> line instanceof LairLine.Hole).count();
+        if (holes > (long) pool.strains().size() * pool.most()) {
+            throw new IllegalArgumentException("a lair of " + holes + " holes needs a pool that can deal them, had "
+                    + pool.strains().size() + " strains, " + pool.most() + " holes each");
         }
         if (waves.size() > Waves.MOST) {
             throw new IllegalArgumentException("a finale sends at most " + Waves.MOST + " waves, had " + waves.size());
@@ -54,7 +104,7 @@ public record FinaleDef(BiomeGround ground, Hold hold, FinaleRules rules, List<W
 
     /** The same finale with this cover dealt (G0120): its pieces the ground's and these, offsets from the anchor. */
     public FinaleDef covered(List<TileRect> cover) {
-        return new FinaleDef(withPieces(ground, joined(ground.pieces(), cover)), hold, rules, waves, lair);
+        return new FinaleDef(withPieces(ground, joined(ground.pieces(), cover)), hold, rules, waves, roles, lair, pool);
     }
 
     /**
@@ -67,7 +117,9 @@ public record FinaleDef(BiomeGround ground, Hold hold, FinaleRules rules, List<W
                 hold.flipped(),
                 rules,
                 waves,
-                lair.stream().map(LairLine::flipped).toList());
+                roles,
+                lair.stream().map(LairLine::flipped).toList(),
+                pool);
     }
 
     private static BiomeGround withPieces(BiomeGround g, List<TileRect> pieces) {

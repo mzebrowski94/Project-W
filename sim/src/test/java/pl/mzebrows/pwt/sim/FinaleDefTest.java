@@ -14,10 +14,12 @@ import pl.mzebrows.pwt.map.Ice;
 import pl.mzebrows.pwt.map.Outcrops;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.FinaleKind;
 import pl.mzebrows.pwt.sim.def.PickupKind;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
+import pl.mzebrows.pwt.sim.def.WaveRole;
 
 /**
  * A finale is a constant and a block (G0064): a fixed skeleton of offsets from its anchor and the rules that place
@@ -37,14 +39,18 @@ class FinaleDefTest {
         assertThat(redoubt.hold().watch()).isEqualTo(118f);
         assertThat(redoubt.hold().mouths()).contains(new Mouth("nw", -14, -13, 4, 4));
         assertThat(redoubt.rules().turrets().max()).isEqualTo(4);
-        assertThat(redoubt.rules().mines().min()).isBetween(10, 20);
+        assertThat(redoubt.rules().mines().max()).isBetween(2, 8);
         assertThat(redoubt.rules().pickupKinds())
                 .extracting(FinaleRules.Pick::kind)
                 .containsExactly(PickupKind.CRATE, PickupKind.ARMOURY_FLAMER);
         assertThat(redoubt.rules().shapes())
                 .contains(new FinaleRules.CoverShape.Bar(3, 1), new FinaleRules.CoverShape.Ell(3, 2));
         assertThat(redoubt.rules().inReach()).isFalse();
-        assertThat(redoubt.waves()).first().isEqualTo(new WaveLine(6f, UnitKind.GRUNT, 9, 11, "nw"));
+        assertThat(redoubt.waves()).first().isEqualTo(new WaveLine(6f, WaveRole.FODDER, "nw"));
+        assertThat(redoubt.roles().of(WaveRole.FODDER)).contains(new WaveLine.Member(UnitKind.GRUNT, 9, 11));
+        for (WaveRole role : WaveRole.values()) {
+            assertThat(redoubt.roles().of(role)).as("%s", role).hasSizeGreaterThan(1);
+        }
         assertThat(redoubt.lair()).isEmpty();
     }
 
@@ -105,13 +111,13 @@ class FinaleDefTest {
 
     @Test
     void readsAWaveFromSeveralMouthsJoinedByAPlus() {
-        assertThat(new WaveLine(5f, UnitKind.GRUNT, 1, 2, "nw+se").mouthNames()).containsExactly("nw", "se");
-        assertThat(new WaveLine(5f, UnitKind.GRUNT, 1, 2, "nw").mouthNames()).containsExactly("nw");
+        assertThat(new WaveLine(5f, WaveRole.FODDER, "nw+se").mouthNames()).containsExactly("nw", "se");
+        assertThat(new WaveLine(5f, WaveRole.FODDER, "nw").mouthNames()).containsExactly("nw");
     }
 
     @Test
     void refusesAWaveThatNamesAMouthTwice() {
-        assertThatThrownBy(() -> new WaveLine(5f, UnitKind.GRUNT, 1, 2, "nw+nw"))
+        assertThatThrownBy(() -> new WaveLine(5f, WaveRole.FODDER, "nw+nw"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("each of its mouths once");
     }
@@ -124,8 +130,10 @@ class FinaleDefTest {
                             ground(List.of()),
                             hold(),
                             rules(),
-                            List.of(new WaveLine(5f, UnitKind.GRUNT, 1, 2, mouths)),
-                            List.of()))
+                            List.of(new WaveLine(5f, WaveRole.FODDER, mouths)),
+                            roles(),
+                            List.of(),
+                            FinaleDef.Pool.off()))
                     .as(mouths)
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("north, a mouth the hold lacks");
@@ -149,7 +157,8 @@ class FinaleDefTest {
                 Ice.off(),
                 List.of());
 
-        assertThatThrownBy(() -> new FinaleDef(dealt, hold(), rules(), List.of(), List.of()))
+        assertThatThrownBy(() ->
+                        new FinaleDef(dealt, hold(), rules(), List.of(), roles(), List.of(), FinaleDef.Pool.off()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("width is fixed");
     }
@@ -169,9 +178,14 @@ class FinaleDefTest {
         assertThat(keep.rules().turrets().max()).isEqualTo(2);
         assertThat(keep.rules().inReach()).isTrue();
         assertThat(keep.rules().barrels().east()).isLessThan(12);
-        assertThat(keep.rules().lairKinds()).hasSize(4);
         assertThat(keep.lair()).hasSize(7);
-        assertThat(keep.lair().getFirst()).isEqualTo(new LairLine.Nest(UnitKind.GRUNT, 13, -6));
+        assertThat(keep.lair().getFirst()).isEqualTo(new LairLine.Hole(13, -6));
+        assertThat(keep.lair().stream().filter(line -> line instanceof LairLine.Hole))
+                .hasSize(6);
+        assertThat(keep.pool().strains()).hasSizeGreaterThanOrEqualTo(8);
+        assertThat(keep.pool().most()).isEqualTo(2);
+        assertThat(keep.rules().lairKinds())
+                .hasSizeGreaterThan(keep.rules().lair().max());
         assertThat(keep.lair().getLast()).isEqualTo(new LairLine.Unit(UnitKind.BOSS_GRUNT, 13, 0));
     }
 
@@ -190,15 +204,52 @@ class FinaleDefTest {
         assertThat(flipped.waves()).isEqualTo(redoubt.waves());
         assertThat(flipped.flipped()).isEqualTo(redoubt);
         FinaleDef keep = SimConfig.defaults().finales().of(FinaleKind.KEEP);
-        assertThat(keep.flipped().lair()).contains(new LairLine.Nest(UnitKind.GRUNT, 13, 6));
+        assertThat(keep.flipped().lair()).contains(new LairLine.Hole(13, 6));
         assertThat(keep.flipped().flipped()).isEqualTo(keep);
+    }
+
+    /** A wave names a role its block fills (G0120): one it left empty is refused. */
+    @Test
+    void refusesAWaveOfARoleWithNoMembers() {
+        Defs<WaveRole, List<WaveLine.Member>> none = Defs.<WaveRole, List<WaveLine.Member>>builder(WaveRole.class)
+                .put(WaveRole.FODDER, List.of())
+                .put(WaveRole.FAST, List.of())
+                .put(WaveRole.RANGED, List.of())
+                .put(WaveRole.HEAVY, List.of())
+                .build();
+
+        assertThatThrownBy(() -> new FinaleDef(
+                        ground(List.of()),
+                        hold(),
+                        rules(),
+                        List.of(new WaveLine(5f, WaveRole.HEAVY, "nw")),
+                        none,
+                        List.of(),
+                        FinaleDef.Pool.off()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("a role with no members");
+    }
+
+    /** No strain more than its pool's most (G0120): six holes from two strains, two each, cannot be dealt. */
+    @Test
+    void refusesALairOfMoreHolesThanItsPoolCanDeal() {
+        List<LairLine> holes = new java.util.ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            holes.add(new LairLine.Hole(10, i - 3));
+        }
+        FinaleDef.Pool two = new FinaleDef.Pool(
+                List.of(new FinaleDef.Pooled(UnitKind.GRUNT), new FinaleDef.Pooled(UnitKind.ANT)), 2);
+
+        assertThatThrownBy(() -> new FinaleDef(ground(List.of()), hold(), rules(), List.of(), roles(), holes, two))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("a pool that can deal them");
     }
 
     /** A wave counts like a roster line: drawn, then the tier's percent once (G0063), and no ramp. */
     @Test
     void countsAWaveThroughTheTiersPressureWithNoRamp() {
         MissionConfig mission = SimConfig.defaults().mission();
-        WaveLine line = new WaveLine(5f, UnitKind.GRUNT, 8, 8, "nw");
+        WaveLine.Member line = new WaveLine.Member(UnitKind.GRUNT, 8, 8);
 
         assertThat(mission.finale(TierKind.MEDIUM).rampedPercent()).isEqualTo(100);
         assertThat(line.count(new Rng(1L), new MissionConfig.Pressure(125, 100)))
@@ -224,6 +275,14 @@ class FinaleDefTest {
 
     private static Hold hold() {
         return new Hold(new Offset(0, 0), 118f, List.of(new Mouth("nw", -14, -13, 4, 4)));
+    }
+
+    private static Defs<WaveRole, List<WaveLine.Member>> roles() {
+        Defs.Builder<WaveRole, List<WaveLine.Member>> roles = Defs.builder(WaveRole.class);
+        for (WaveRole role : WaveRole.values()) {
+            roles.put(role, List.of(new WaveLine.Member(UnitKind.GRUNT, 1, 2)));
+        }
+        return roles.build();
     }
 
     private static FinaleRules rules() {

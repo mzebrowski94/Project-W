@@ -22,6 +22,7 @@ import pl.mzebrows.pwt.sim.def.BiomeKind;
 import pl.mzebrows.pwt.sim.def.Defs;
 import pl.mzebrows.pwt.sim.def.FinaleKind;
 import pl.mzebrows.pwt.sim.def.TierKind;
+import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.Wave;
 
 /**
@@ -57,6 +58,8 @@ public record Mission(
     private static final long FINALE = 0xE7C4_1A0D_93B6_5F28L;
     private static final long WAVES = 0x4B19_F6E2_07CD_A853L;
     private static final long RULES = 0x7C2D_E580_1F9B_46A3L;
+    private static final long ROLES = 0x2B95_D0E4_6A17_C83FL;
+    private static final long POOL = 0x8F31_6C2A_E5D9_074BL;
 
     /** How many deals are tried before a pool that cannot deal its count is refused. */
     private static final int DEALS = 64;
@@ -178,6 +181,9 @@ public record Mission(
         }
 
         // The lair's fixed spots first, so what the rules put down round the post keeps off them.
+        // Each hole dealt a strain of the pool, from a stream of its own (G0120), none more than the pool's most.
+        Randomness pooling = mission(config).derive(FINALE).derive(POOL);
+        int[] dealt = new int[finale.pool().strains().size()];
         List<Arrival> spots = new ArrayList<>();
         for (LairLine line : finale.lair()) {
             float x = centreX(tiles, line.at(), anchor);
@@ -186,6 +192,7 @@ public record Mission(
                     switch (line) {
                         case LairLine.Unit unit -> Arrival.unit(unit.strain(), x, y);
                         case LairLine.Nest nest -> Arrival.nest(nest.strain(), x, y);
+                        case LairLine.Hole hole -> Arrival.nest(pooled(finale.pool(), dealt, pooling), x, y);
                         case LairLine.Pickup pickup -> Arrival.pickup(pickup.kind(), x, y);
                     });
         }
@@ -197,20 +204,24 @@ public record Mission(
 
         // Every tier draws the same counts from the same stream and scales them, so a harder tier moves nothing else.
         // A wave from several mouths draws a count for each, in the order written (G0087).
+        // Who comes is dealt from each wave's role, from a stream of its own (G0120), so a longer role moves no count.
         Randomness counting = mission(config).derive(FINALE).derive(WAVES);
+        Randomness casting = mission(config).derive(FINALE).derive(ROLES);
         List<Wave> waves = new ArrayList<>();
         for (WaveLine line : finale.waves()) {
+            List<WaveLine.Member> members = finale.roles().of(line.role());
+            WaveLine.Member member = members.get(casting.nextInt(members.size()));
             List<Wave.Lot> lots = new ArrayList<>();
             for (String mouth : line.mouthNames()) {
                 lots.add(new Wave.Lot(
-                        line.count(
+                        member.count(
                                 counting,
                                 config.mission()
                                         .finale(tier)
                                         .times(config.swarm().strengthCountPercent())),
                         hold.mouth(mouth).from(anchor)));
             }
-            waves.add(new Wave(line.afterSeconds(), line.strain(), lots));
+            waves.add(new Wave(line.afterSeconds(), member.strain(), lots));
         }
         // Holes first, then the caches, then whoever rises among them, as Adventure 2 placed them (G0048).
         List<Arrival> lair = new ArrayList<>();
@@ -235,6 +246,22 @@ public record Mission(
                 placed,
                 new Finale(drawn.kind(), drawn.flipped(), cover, waves, lair),
                 shortfalls);
+    }
+
+    /**
+     * A strain of the pool for one more hole: uniformly among those dealt fewer than its most so far, {@code dealt}
+     * counting each by its place in the pool.
+     */
+    private static UnitKind pooled(FinaleDef.Pool pool, int[] dealt, Randomness rng) {
+        List<Integer> open = new ArrayList<>();
+        for (int i = 0; i < pool.strains().size(); i++) {
+            if (dealt[i] < pool.most()) {
+                open.add(i);
+            }
+        }
+        int chosen = open.get(rng.nextInt(open.size()));
+        dealt[chosen]++;
+        return pool.strains().get(chosen).strain();
     }
 
     private static float centreX(TileMap map, Offset at, TileRect anchor) {
