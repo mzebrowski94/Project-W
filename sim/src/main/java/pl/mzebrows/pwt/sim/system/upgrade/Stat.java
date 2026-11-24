@@ -88,7 +88,13 @@ public enum Stat {
     /** How many a nest's brood holds, the size it drew plus what is held. Read where the brood is sized, for the nest. */
     NEST_BROOD_SIZE(Form.COUNT, Reader.UNIT),
     /** How many circles of venom an alien leaves where it dies (G0076). Read where it dies, for the one dying. */
-    DEATH_SLICKS(Form.COUNT, Reader.UNIT);
+    DEATH_SLICKS(Form.COUNT, Reader.UNIT),
+    /**
+     * Whether a commander's grenade key sets a sentry down rather than throwing (G0129): Engineer's. None unless an
+     * upgrade adds some: zero is off. Read where a throw is let go, and by his panel through the same method - so the
+     * slot shows what the next press makes.
+     */
+    SETS_SENTRIES(Form.COUNT, Reader.UNIT);
 
     /** How an effect moves the number. */
     public enum Form {

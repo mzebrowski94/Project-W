@@ -41,6 +41,8 @@ public final class Hud implements Disposable {
     private final Texture woundSpare = icon(TallyIcon.WOUND_SPARE);
     private final Texture grenade = icon(TallyIcon.GRENADE);
     private final Texture grenadeSpare = icon(TallyIcon.GRENADE_SPARE);
+    private final Texture sentry = icon(TallyIcon.SENTRY);
+    private final Texture sentrySpare = icon(TallyIcon.SENTRY_SPARE);
     private final Texture dash = icon(TallyIcon.DASH);
     private final Texture dashSpare = icon(TallyIcon.DASH_SPARE);
     private final SystemPointer pointer;
@@ -212,6 +214,8 @@ public final class Hud implements Disposable {
             case WOUND_SPARE -> woundSpare;
             case GRENADE -> grenade;
             case GRENADE_SPARE -> grenadeSpare;
+            case SENTRY -> sentry;
+            case SENTRY_SPARE -> sentrySpare;
             case DASH -> dash;
             case DASH_SPARE -> dashSpare;
         };

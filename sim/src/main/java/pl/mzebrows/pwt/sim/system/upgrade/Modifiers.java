@@ -189,6 +189,16 @@ public final class Modifiers {
                 stats.of(Stat.SURGE_REACH).min());
     }
 
+    /** Whether {@code who}'s grenade key sets a sentry down rather than throwing (G0129); none for nobody. */
+    @Reads(Stat.SETS_SENTRIES)
+    public boolean setsSentries(Entity who) {
+        return Fold.count(
+                        0,
+                        sum(Stat.SETS_SENTRIES, who, null, null),
+                        stats.of(Stat.SETS_SENTRIES).min())
+                > 0;
+    }
+
     /** How many cards of this cache the armoury deck holds (G0056). The side's number. */
     @Reads(Stat.ARMOURY_CARDS)
     public int armouryCards(PickupKind card, int base) {

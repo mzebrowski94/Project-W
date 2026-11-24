@@ -5,6 +5,7 @@ import com.badlogic.ashley.core.Entity;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.Faction;
+import pl.mzebrows.pwt.sim.component.Sentry;
 import pl.mzebrows.pwt.sim.component.Strain;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Upgrades;
@@ -14,8 +15,8 @@ import pl.mzebrows.pwt.sim.def.UnitKind;
 /**
  * Whether an effect reaches the unit reading a number: what it is (commander, trooper, alien), for a
  * personal upgrade which slot, and for an adaptation narrowed to one strain which strain. Read from components it already carries, so no tag is added for
- * the upgrades' sake. Anything else - a turret, whose gun belongs to the place (G0024) - is reached by
- * nothing.
+ * the upgrades' sake. A sentry is reached by its setter's personal upgrades alone, through the slot it carries (G0129).
+ * Anything else - a turret, whose gun belongs to the place (G0024) - is reached by nothing.
  */
 final class Scope {
 
@@ -23,6 +24,7 @@ final class Scope {
     private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
     private static final ComponentMapper<Faction> FACTION = ComponentMapper.getFor(Faction.class);
     private static final ComponentMapper<Strain> STRAIN = ComponentMapper.getFor(Strain.class);
+    private static final ComponentMapper<Sentry> SENTRY = ComponentMapper.getFor(Sentry.class);
 
     /** Nobody in particular: the side's own numbers. */
     private static final int NOBODY = 0;
@@ -43,7 +45,8 @@ final class Scope {
 
     /**
      * A commander: no kind, since a personal upgrade tells him from every other by his slot. There are only as
-     * many as the players, so his reads are folded each time rather than kept.
+     * many as the players, so his reads are folded each time rather than kept. A sentry too, which a personal upgrade
+     * tells apart by the slot of the man who set it down (G0129): its reads are a pull of its gun, folded each time.
      */
     static final int COMMANDER_KIND = -1;
 
@@ -65,6 +68,9 @@ final class Scope {
         if (TROOPER.has(who)) {
             return TROOPER_KIND;
         }
+        if (SENTRY.has(who)) {
+            return COMMANDER_KIND;
+        }
         if (FACTION.has(who) && FACTION.get(who).side == Side.ALIEN) {
             return STRAIN.has(who) ? FIRST_STRAIN + STRAIN.get(who).kind.ordinal() : ALIEN;
         }
@@ -79,7 +85,9 @@ final class Scope {
         return switch (target) {
             case SQUAD -> TROOPER.has(who);
             case COMMANDERS -> COMMANDER.has(who);
-            case CHOOSER -> COMMANDER.has(who) && COMMANDER.get(who).slot == slot;
+            case CHOOSER ->
+                (COMMANDER.has(who) && COMMANDER.get(who).slot == slot)
+                        || (SENTRY.has(who) && SENTRY.get(who).slot == slot);
             case TEAM -> TROOPER.has(who) || COMMANDER.has(who);
             case SIDE -> false;
             case ALIENS -> FACTION.has(who) && FACTION.get(who).side == Side.ALIEN;

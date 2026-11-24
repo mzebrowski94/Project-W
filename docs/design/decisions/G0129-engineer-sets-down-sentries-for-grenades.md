@@ -9,7 +9,10 @@
 `.goesOffAtTheEndOfItsLife`, `.goesOffTheSameWayWhenItIsDestroyed`, `.woundsAManCaughtInTheBlastItGoesOffIn`,
 `.stunsTheAliensRoundItAsItGoesOffAndNeverAMan`, `.stunsNoAlienBeyondItsStunsReach`,
 `.showsHowMuchOfItsLifeIsLeftOnItsCharge`; `SystemOrderTest`'s rows for `SentrySystem` (after `DamageSystem`, before
-`BlastSystem` and `UpgradeSystem`).
+`BlastSystem` and `UpgradeSystem`). `EngineerTest` - `.setsASentryDownAtHisFeetInsteadOfThrowingAGrenade`,
+`.spendsAGrenadeOnTheSentry`, `.setsNoSentryDownWithNoGrenadeLeft`, `.setsNoSentryDownOnSolidGroundAndSpendsNothing`,
+`.throwsAGrenadeAsEverWithoutIt`, `.leavesTheKeyOfAPlayerWhoDoesNotHoldItThrowing`, `.waitsOutHisGrenadeWaitBetweenSentries`,
+`.makesHisSentriesFireFasterAtItsSecondRank`; `ReadoutWriterTest.namesTheSentrySlotWhileHeHoldsEngineer`.
 
 **Settled with Mateusz, 2026-11-24** (grilling). Not yet built, not yet played.
 
@@ -75,4 +78,21 @@ Ticket 03 of the AFK run (2026-11-24), building the sentry - provisional, for re
 - **Starting values**: `sim.sentry.radius=1.4` (a turret's 2.2), `health=300` (a turret's 1200), `lifeSeconds=60`,
   `range=30` (a trooper's sight 27, a turret's 55), `turnRate=8`, `firingTurnFactor=0.6`, `blastRadius=4`,
   `blastDamage=150`, `blastHarm=wound`, `stunRadius=10`, `stunSeconds=1`; `sim.weapon.sentry_gun` - `cooldownSeconds=0.2`
-  (`turret_gun`'s 0.16), `damage=14` (its 30), `projectileSpeed=150`, `projectileRange=34`.
+  (`turret_gun`'s 0.16; ticket 04 raised the base to 0.25, which Engineer's rank one brings back to 0.2), `damage=14` (its 30), `projectileSpeed=150`, `projectileRange=34`.
+
+Ticket 04 of the AFK run (2026-11-24), building Engineer - provisional, for review:
+
+- **Rank one switches the key through a stat**, `sets_sentries` (a count whose base is none: zero is off), read in
+  `Throws.setsSentries` - the one hand, for the press and for his panel. *Turned down:* a branch on the upgrade's kind,
+  and a flag on `Thrower` written by `UpgradeSystem`, a second copy of what the ledger already says.
+- **Rank two is `gun sentry_gun fire_cooldown chooser -20`**, and a rank folds linearly, so the cut lands at rank one too:
+  the gun's base is 0.25 s so rank one fires at ticket 03's 0.2 s and rank two at 0.15 s. A sentry no Engineer set down
+  (a scenario's) fires at the base. *Turned down:* a "rank two only" effect form - a second way to fold a rank.
+- **A sentry is reached by its setter's personal upgrades** (`chooser`, through `Sentry.slot`) and by nothing else, in
+  `Scope`, the one place the reader is resolved; its reads are folded each time, as a commander's are, rather than cached
+  per slot - sizing a cache by `Players.MAX` is what `CeilingTest` refuses. *Turned down:* `team` reaching it too, which
+  would hand it Weapon Handling and every team-wide gun effect.
+- **Refused where the ground is solid** means the straight path from his middle to the sentry's, its width, is not clear
+  (`Solid.isClearPath`): no sentry half in rock. Nothing is spent, and his wait does not start.
+- **The sentry icon** is a square with its gun up (`TallyIcon.SENTRY`, `SENTRY_SPARE`) in `graphic.color.sentry`: no new
+  key.

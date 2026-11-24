@@ -5,7 +5,7 @@ package pl.mzebrows.pwt.ui.hud;
  * goals, a plus for men stabilised - a <strong>plus</strong>, never a red cross, which is a protected
  * emblem. And a wound (G0053): a narrow diamond, a slit, filled for a wound he carries and hollow for
  * one he could still take. A grenade (G0077): a body with its lever, filled for one he carries and hollow for one he
- * could. A dash (G0107): an arrowhead pointing on, filled for one he holds and hollow for one coming back. Drawn as data, a cap height tall, until there is an atlas; {@code #} is lit.
+ * could, or a sentry in its place under Engineer (G0129): a square with its gun up. A dash (G0107): an arrowhead pointing on, filled for one he holds and hollow for one coming back. Drawn as data, a cap height tall, until there is an atlas; {@code #} is lit.
  * Every lit column of a wound, a grenade or a dash sits inside one font advance, so a row of them never touches.
  */
 public enum TallyIcon {
@@ -16,6 +16,8 @@ public enum TallyIcon {
     WOUND_SPARE("...#...", "..#.#..", "..#.#..", ".#...#.", "..#.#..", "..#.#..", "...#..."),
     GRENADE("...##..", "..#....", ".#####.", ".#####.", ".#####.", ".#####.", "..###.."),
     GRENADE_SPARE(".......", "..#....", ".#####.", ".#...#.", ".#...#.", ".#...#.", "..###.."),
+    SENTRY("...#...", "...#...", ".#####.", ".#####.", ".#####.", ".#####.", "......."),
+    SENTRY_SPARE("...#...", "...#...", ".#####.", ".#...#.", ".#...#.", ".#####.", "......."),
     DASH("..#....", "..##...", "..###..", "..####.", "..###..", "..##...", "..#...."),
     DASH_SPARE("..#....", "..##...", "..#.#..", "..#..#.", "..#.#..", "..##...", "..#....");
 

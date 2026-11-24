@@ -162,6 +162,28 @@ class ReadoutWriterTest {
         int most = SimConfig.defaults().grenade().most() + 1;
         assertThat(player.grenadeMost).isEqualTo(most);
         assertThat(player.grenades).isEqualTo(most - 1);
+        assertThat(player.sentries).isFalse();
+    }
+
+    /** Under Engineer his grenade slot is a sentry slot (G0129): the same pips, the same count. */
+    @Test
+    void namesTheSentrySlotWhileHeHoldsEngineer() {
+        Simulation world = world();
+        world.spawnCommander(40f, 40f, 0);
+        world.spawnCommander(60f, 40f, 1);
+        world.engine()
+                .getEntitiesFor(Family.all(Upgrades.class).get())
+                .first()
+                .getComponent(Upgrades.class)
+                .held
+                .add(new Upgrades.Held(UpgradeKind.ENGINEER, 0, 1));
+
+        Readout readout = fill(new ReadoutWriter(), world);
+
+        assertThat(readout.player(0).sentries).isTrue();
+        assertThat(readout.player(0).grenades)
+                .isEqualTo(SimConfig.defaults().grenade().most());
+        assertThat(readout.player(1).sentries).isFalse();
     }
 
     @Test

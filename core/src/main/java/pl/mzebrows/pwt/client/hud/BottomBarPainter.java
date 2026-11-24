@@ -239,7 +239,8 @@ public final class BottomBarPainter {
         if (player.posture == Posture.STANDING || player.posture == Posture.ABOARD) {
             hud.text(weapons.getOrDefault(player.weapon, ""), textX, row, text);
             int heatX = textX + (weaponColumns + 1) * UiFont.ADVANCE;
-            int heatRight = grenades(player, textRight, row, palette.colorFor(Look.GRENADE));
+            int heatRight =
+                    grenades(player, textRight, row, palette.colorFor(player.sentries ? Look.SENTRY : Look.GRENADE));
             if (player.detonating) {
                 // His next press sets his limpet off (G0100): the word, on the heat's colour - news, not an alarm.
                 inverse(
@@ -322,7 +323,7 @@ public final class BottomBarPainter {
     /**
      * Row 2's right end, ending at {@code right}: a grenade per one he can carry, filled for each he has and hollow for
      * the rest (G0077) - his count is shown, never remembered (pillar 5). Nothing for a man whose throws are not
-     * counted.
+     * counted. Under Engineer each is a sentry instead, the count the same (G0129).
      *
      * @return where what goes before them on the row must end
      */
@@ -331,7 +332,9 @@ public final class BottomBarPainter {
             return right;
         }
         int x = right - player.grenadeMost * UiFont.ADVANCE;
-        pips(player.grenades, player.grenadeMost, x, row, TallyIcon.GRENADE, TallyIcon.GRENADE_SPARE, color);
+        TallyIcon lit = player.sentries ? TallyIcon.SENTRY : TallyIcon.GRENADE;
+        TallyIcon spare = player.sentries ? TallyIcon.SENTRY_SPARE : TallyIcon.GRENADE_SPARE;
+        pips(player.grenades, player.grenadeMost, x, row, lit, spare, color);
         return x - UiFont.ADVANCE;
     }
 

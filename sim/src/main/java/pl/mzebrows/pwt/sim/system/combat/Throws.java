@@ -4,6 +4,7 @@ import com.badlogic.ashley.core.ComponentMapper;
 import com.badlogic.ashley.core.Entity;
 import pl.mzebrows.pwt.sim.Players;
 import pl.mzebrows.pwt.sim.Spawner;
+import pl.mzebrows.pwt.sim.collision.Solid;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Thrower;
@@ -15,6 +16,9 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  * point (G0019) - and must already be a unit vector.
  *
  * <p>One per simulation. It leaves the hand by the same gap a shot leaves a gun by.
+ *
+ * <p>Under Engineer (G0129) the same press sets a sentry down at his feet instead, for the same grenade and the same
+ * wait - refused, spending nothing, where the ground there is solid.
  */
 public final class Throws {
 
@@ -23,13 +27,20 @@ public final class Throws {
 
     private final Spawner spawner;
     private final Modifiers modifiers;
+    private final Solid solid;
     private final float muzzleGap;
+    private final float sentryRadius;
 
-    /** @param muzzleGap gap between the thrower's body and what leaves it, so a throw never starts inside him */
-    public Throws(Spawner spawner, Modifiers modifiers, float muzzleGap) {
+    /**
+     * @param muzzleGap gap between the thrower's body and what leaves it, so a throw never starts inside him
+     * @param sentryRadius how big a sentry he sets down is, so it comes down clear of him
+     */
+    public Throws(Spawner spawner, Modifiers modifiers, Solid solid, float muzzleGap, float sentryRadius) {
         this.spawner = spawner;
         this.modifiers = modifiers;
+        this.solid = solid;
         this.muzzleGap = muzzleGap;
+        this.sentryRadius = sentryRadius;
     }
 
     /**
@@ -54,6 +65,14 @@ public final class Throws {
         return Math.max(0, most(entity, thrower) - thrower.spent);
     }
 
+    /**
+     * Whether his press sets a sentry down rather than throwing (G0129) - the one place it is folded, for the press and
+     * for his panel.
+     */
+    public boolean setsSentries(Entity entity) {
+        return modifiers.setsSentries(entity);
+    }
+
     /** Whether he can throw now: his wait has run out and, where his throws are counted, he has one left. */
     public boolean ready(Entity entity, Thrower thrower) {
         return thrower.ready() && (!thrower.counted() || left(entity, thrower) > 0);
@@ -64,6 +83,10 @@ public final class Throws {
      * his wait for the next.
      */
     public void release(Entity entity, Thrower thrower, float directionX, float directionY) {
+        if (setsSentries(entity)) {
+            setDown(entity, thrower, directionX, directionY);
+            return;
+        }
         Position at = POSITION.get(entity);
         float muzzle = BODY.get(entity).radius + thrower.radius + muzzleGap;
         spawner.spawnGrenade(
@@ -73,6 +96,27 @@ public final class Throws {
                 directionY,
                 thrower,
                 Players.credit(entity));
+        pay(entity, thrower);
+    }
+
+    /**
+     * Sets a sentry down just in front of him along this direction, clear of his body by the gap a throw leaves it by,
+     * and pays for it as for a grenade (G0129). Nothing - and nothing spent - where the ground between is solid.
+     */
+    private void setDown(Entity entity, Thrower thrower, float directionX, float directionY) {
+        Position at = POSITION.get(entity);
+        float gap = BODY.get(entity).radius + sentryRadius + muzzleGap;
+        float x = at.x + directionX * gap;
+        float y = at.y + directionY * gap;
+        if (!solid.isClearPath(at.x, at.y, x, y, sentryRadius)) {
+            return;
+        }
+        spawner.spawnSentry(x, y, Players.credit(entity));
+        pay(entity, thrower);
+    }
+
+    /** What a throw costs, a grenade's or a sentry's: one spent where his throws are counted, and his wait begun. */
+    private void pay(Entity entity, Thrower thrower) {
         if (thrower.counted()) {
             thrower.spent++;
         }

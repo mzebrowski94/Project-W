@@ -53,5 +53,10 @@ public enum UpgradeKind {
      * The first time the chooser opens a crate, it holds one more card of a kind not already in it - once per crate,
      * whoever's Looter it was (G0110). Personal.
      */
-    LOOTER
+    LOOTER,
+    /**
+     * The chooser's grenade key sets a sentry down at his feet instead of throwing, for a grenade; its second rank makes
+     * his sentries fire faster (G0129). Personal.
+     */
+    ENGINEER
 }

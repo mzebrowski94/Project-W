@@ -212,7 +212,8 @@ public final class Simulation {
         Rng scatter = streams.of(RngStream.SCATTER);
         // The one trigger and the one hand: every shooter and every thrower goes through these.
         Guns guns = new Guns(spawner, modifiers, scatter, config.muzzleGap(), config.weapons());
-        this.throwing = new Throws(spawner, modifiers, config.muzzleGap());
+        this.throwing = new Throws(
+                spawner, modifiers, solid, config.muzzleGap(), config.sentry().radius());
         this.dashes = new Dashes(modifiers, config.commander().dash(), config.tickSeconds());
 
         engine.addSystem(new PositionHistorySystem());
@@ -498,6 +499,11 @@ public final class Simulation {
     public int grenadeMost(Entity man) {
         Thrower thrower = THROWER.get(man);
         return thrower == null ? 0 : throwing.most(man, thrower);
+    }
+
+    /** Whether this commander's grenade key sets a sentry down rather than throwing (G0129) - for the interface. */
+    public boolean setsSentries(Entity man) {
+        return THROWER.has(man) && throwing.setsSentries(man);
     }
 
     /** How many dashes this commander has left (G0107) - for the interface; zero for anything that does not dash. */
