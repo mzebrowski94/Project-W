@@ -44,3 +44,5 @@ each change written down where this repository records it: the records' *Enforce
 
 - 2026-11-24: the whole of [spec.md](spec.md), grilled with Mateusz.
 - 2026-11-24, 01 (provisional): the rift's nooks are 7 of radius 3, so a bare one holds a nest; G0115 *Amended by*.
+- 2026-11-24, 02 (provisional): the recall lands after his throes, crow-flies to the rally area, strips his death
+  reactions, fades as a pop of its own look, says bare `RECALL`; G0121 *Amended by*.

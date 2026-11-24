@@ -1,7 +1,7 @@
 # A finale placed by rules
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: 01 (a green `main`, and the sweep this ticket extends)
 Spec: [spec.md](../spec.md) answers 1-5
