@@ -31,6 +31,18 @@ public final class Enemy implements Component, Pool.Poolable {
      */
     public boolean kept;
 
+    /**
+     * Whether a lair raised it (G0122): what the squad assaults once it has risen, its nests first and then the rest.
+     * Set by the lair that puts it down; false for everything else.
+     */
+    public boolean raised;
+
+    /** Marks it raised by a lair, and returns this component. */
+    public Enemy raisedByALair() {
+        this.raised = true;
+        return this;
+    }
+
     /** Sets how far it stands out, and returns this component, for fluent spawning. */
     public Enemy standingOut(float newStandsOut) {
         this.standsOut = newStandsOut;
@@ -49,5 +61,6 @@ public final class Enemy implements Component, Pool.Poolable {
         standsOut = 0f;
         threat = false;
         kept = false;
+        raised = false;
     }
 }

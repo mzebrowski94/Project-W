@@ -29,7 +29,8 @@ import pl.mzebrows.pwt.sim.system.query.Sight;
  * <p><strong>Above it all, a step off a warden's line</strong> (G0114): a man its bead wounded steps square off the
  * lane, then the cascade takes him back up where he left it.
  *
- * <p><strong>The cascade is fight, order, errands (aid, mend, crew), objective, roam</strong>, each half in
+ * <p><strong>The cascade is fight, order, errands (aid, mend, crew), a risen lair's assault (G0122), objective,
+ * roam</strong>, each half in
  * its own class; this one owns only the order. A standing order beats fetching somebody (G0017). An
  * errand is rolled only while not already going, so men do not set off and think better of it.
  * Nothing is remembered across the cascade: the objective is re-derived the moment a fight ends.
@@ -83,6 +84,7 @@ public final class TrooperMindSystem extends EntitySystem {
     public void update(float deltaTime) {
         objective.buildRoutesIfNeeded();
         objective.countCrowds();
+        objective.findRaised();
         fight.beginTick();
         for (int i = 0; i < troopers.size(); i++) {
             Entity entity = troopers.get(i);
@@ -116,6 +118,7 @@ public final class TrooperMindSystem extends EntitySystem {
                     || aid.aids(entity, trooper, at, deltaTime)
                     || mend.mends(entity, trooper, at)
                     || crew.crews(entity, trooper, at, deltaTime)
+                    || objective.assaults(trooper, at, reach(entity))
                     || objective.holdsWhatItHasTaken(trooper, at, deltaTime)
                     || objective.advances(trooper, at)) {
                 continue;
