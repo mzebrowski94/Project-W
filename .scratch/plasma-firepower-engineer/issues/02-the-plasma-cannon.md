@@ -1,7 +1,7 @@
 # The plasma cannon
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: 01 (same config files; serial only)
 Spec: [spec.md](../spec.md) A

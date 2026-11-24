@@ -40,6 +40,8 @@ the records' *Enforced by*, invariant rows, glossary rows; every ticket leaving 
 ## Decisions so far
 
 - 2026-11-24: the whole of [spec.md](spec.md), grilled with Mateusz.
+- 2026-11-24, 01 (provisional): a blast takes the damage its source declares (G0130, amends G0018), scaled for a gun's
+  blast in the one `gun_damage` read; the stock form stays; Firepower's three gun lines fold into one on its card.
 
 ## Not yet specified
 
