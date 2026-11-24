@@ -1,7 +1,7 @@
 # Wave roles and the keep's pool
 
 Type: task
-Status: open
+Status: claimed
 Label: ready-for-agent
 Blocked by: 03 (same block, same `FinaleDef`, same stream)
 Spec: [spec.md](../spec.md) answers 6-7

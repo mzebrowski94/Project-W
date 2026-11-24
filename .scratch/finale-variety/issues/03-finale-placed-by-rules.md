@@ -1,7 +1,7 @@
 # A finale placed by rules
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: 01 (a green `main`, and the sweep this ticket extends)
 Spec: [spec.md](../spec.md) answers 1-5
@@ -61,3 +61,35 @@ round a fixed **skeleton**. Both finales: the redoubt and the keep. Add two turr
 - No `layouts` left in config or code; both finales placed by rules; the keep has its two turrets; the sweep holds every
   rule over its seeds and `verify.sh` is green.
 - `## Answer` gives four mission codes: each finale kind, both flips.
+
+## Answer
+
+**Built.** `FinaleDef(ground, hold, rules, waves, lair)`: the skeleton (`Hold(post, watch, mouths)`, the keep's holes and
+boss in `lair`) and `FinaleRules`, a lot per thing - `fewest most near far west east`, both ends even, dealt in pairs.
+`FinalePlacement` (sim, beside `Placement`) deals the cover on the finale's bare ground before the strip is laid (32
+attempts, counts kept, G0070's rule) and the turrets, pickups, the lair's caches, barrels and mines on the strip as laid,
+each lot from its own stream, all through `Scatter`'s new mirrored mode (`mirroredAbout`). The keep has 2 turrets inside
+the boss's barrage. Layouts are gone: `Layout`, `sim.finale.*.layouts.*`, `FinaleDef.laid`/`layoutCount`,
+`Mission.Finale.layout` (now `cover`), the hold's turrets/mines/barrels/pickups, and `ConfigBinder`'s numbered blocks
+(a numbered block under a list's key is now an unknown key). `MissionFaults.finaleRules` holds counts, mirrors, every
+piece's ring (its lee) open and reached, the ways from the mouths and to the boss, and the keep's reach. The sweep picks
+seeds by finale and flip. 2064-seed sweep: 0 faults.
+
+**Accepted (G0065):** every mission code dealt before this ends on different finale ground.
+
+**Provisional** (G0120 `## Amended by`, items 1-8): lots as rings in tiles from the post, every lot in pairs (nothing
+alone on the row; alt: odd counts with one on the row). Rules in `sim`, only the mirrored pass in `map` (alt: `Mission`
+mirroring `Scatter`'s output). Cover dealt before the strip, with 32 attempts. `apart=1.5`, `gap=2`, pieces held off
+the anchor row so no one-tile slot opens. Shapes: bars and small Ls, no `ell 3 3`. Reach = the shortest positive range
+of the barrage's guns. Keep cover 2-4 (4-6 did not fit). The lair's cache kinds stay a fixed list in 03.
+
+**Keys** (`assets/sim/finales.properties`; deleted: every `layouts.*`, `hold.turrets/mines/barrels/pickups`, the lair's
+`pickup` lines). New, per finale `sim.finale.<k>.rules.`:
+- redoubt: `apart=1.5`, `gap=2`, `shapes=bar 3 1; bar 1 3; bar 2 1; ell 2 2; ell 3 2; ell 2 3`, `cover=4 6 5 12 -13 13`,
+  `turrets=4 4 4 8 -8 8`, `mines=16 20 3 13 -14 14`, `barrels=6 8 3 12 -13 13`, `pickups=2 2 2 4 -5 5`,
+  `pickupKinds=crate; armoury_flamer`, `lair=0 0 0 0 0 0`, `inReach=false`.
+- keep: the same `apart`, `gap`, `shapes`; `cover=2 4 3 11 1 11`, `turrets=2 2 3 9 2 10`, `mines=8 12 3 13 -14 8`,
+  `barrels=4 6 3 11 -13 6`, `pickups=2 2 2 4 -5 5`, `pickupKinds=crate; armoury_laser`, `lair=4 4 2 11 4 12`,
+  `lairKinds=armoury_shotgun; armoury_railgun; armoury_laser; armoury_flamer`, `inReach=true`.
+
+**Play.** Four codes, one per finale and flip, are printed from the integration tip at the end of the run (below).

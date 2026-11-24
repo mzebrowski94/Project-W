@@ -46,3 +46,5 @@ each change written down where this repository records it: the records' *Enforce
 - 2026-11-24, 01 (provisional): the rift's nooks are 7 of radius 3, so a bare one holds a nest; G0115 *Amended by*.
 - 2026-11-24, 02 (provisional): the recall lands after his throes, crow-flies to the rally area, strips his death
   reactions, fades as a pop of its own look, says bare `RECALL`; G0121 *Amended by*.
+- 2026-11-24, 03 (provisional): lots are rings round the post dealt in pairs; cover dealt on bare ground before the strip
+  with 32 attempts; keep cover 2-4; `ConfigBinder` drops numbered blocks; G0120 *Amended by* 1-8.
