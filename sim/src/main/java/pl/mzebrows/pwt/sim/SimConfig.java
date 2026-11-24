@@ -732,6 +732,8 @@ public record SimConfig(
      * @param postRingRadius how far round a point that holds afterwards a trooper's march to it ends, in
      *     world units (G0061): past the point's own radius, so the squad forms up round it and taking it is
      *     left to whoever steps in
+     * @param assaultStandOff how far from a nest or a boss a lair raised a trooper with a gun whose shot flies until it
+     *     hits stops to fight it, in world units (G0122); a gun that reaches less stops at its reach
      * @param blockSeconds how long a walking man may make less than {@code blockDistance} before he
      *     counts as stuck and takes a detour. Zero never counts anybody as stuck
      * @param blockDistance how much ground in that time still counts as progress, in world units
@@ -790,6 +792,7 @@ public record SimConfig(
             float holdJitterSeconds,
             float rallyRadius,
             float postRingRadius,
+            float assaultStandOff,
             float blockSeconds,
             float blockDistance,
             float detourSeconds,
@@ -832,6 +835,7 @@ public record SimConfig(
             Require.notNegative("trooper holdJitterSeconds", holdJitterSeconds);
             Require.positive("trooper rallyRadius", rallyRadius);
             Require.positive("trooper postRingRadius", postRingRadius);
+            Require.positive("trooper assaultStandOff", assaultStandOff);
             Require.notNegative("trooper blockSeconds", blockSeconds);
             Require.notNegative("trooper blockDistance", blockDistance);
             Require.notNegative("trooper detourSeconds", detourSeconds);

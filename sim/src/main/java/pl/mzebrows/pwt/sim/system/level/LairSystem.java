@@ -94,7 +94,9 @@ public final class LairSystem extends EntitySystem {
                 if (arrival.form() == Arrival.Form.PICKUP && pickup != null) {
                     spawner.spawnPickup(pickup, arrival.x(), arrival.y());
                 } else if (arrival.form() == Arrival.Form.NEST && strain != null) {
-                    spawner.spawnNest(strain, arrival.x(), arrival.y());
+                    spawner.spawnNest(strain, arrival.x(), arrival.y())
+                            .getComponent(Enemy.class)
+                            .raisedByALair();
                 } else if (strain != null) {
                     Entity nearest = nearestOn(lair.ground(), arrival.x(), arrival.y());
                     Position at = nearest == null ? null : POSITION.get(nearest);
@@ -103,7 +105,8 @@ public final class LairSystem extends EntitySystem {
                     spawner.spawnUnit(strain, arrival.x(), arrival.y(), faceX, faceY)
                             .getComponent(Enemy.class)
                             .standingOut(nest.standsOut())
-                            .weighed(nest.threat(), nest.kept());
+                            .weighed(nest.threat(), nest.kept())
+                            .raisedByALair();
                 }
             }
             lair.wake();

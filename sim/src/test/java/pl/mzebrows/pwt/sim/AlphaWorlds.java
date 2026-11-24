@@ -980,6 +980,8 @@ public final class AlphaWorlds {
 
     /** How far round ground held afterwards the squad's march ends. Past a point's radius, inside the arena. */
     public static final float POST_RING_RADIUS = 12f;
+    /** How far from what a lair raised a trooper with a sidearm stops to fight it (G0122). */
+    public static final float ASSAULT_STAND_OFF = 20f;
 
     /** How long a walking trooper may make almost no ground before he counts as stuck. */
     public static final float BLOCK_SECONDS = 1f;
@@ -1129,6 +1131,7 @@ public final class AlphaWorlds {
                         HOLD_JITTER_SECONDS,
                         RALLY_RADIUS,
                         POST_RING_RADIUS,
+                        ASSAULT_STAND_OFF,
                         BLOCK_SECONDS,
                         BLOCK_DISTANCE,
                         DETOUR_SECONDS,
