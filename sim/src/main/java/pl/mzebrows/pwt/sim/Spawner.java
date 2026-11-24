@@ -1672,6 +1672,37 @@ public final class Spawner {
     }
 
     /**
+     * Takes a recalled trooper off the field without a death (G0121): his reactions to dying taken off first, so
+     * nothing that runs on a death - a blast, a spatter, a ticket - runs on him; no throes, so no corpse; his fade
+     * ({@link #spawnRecall}) left where he stood; and marked to be reaped at the end of this tick, as everything is.
+     * What he held is let go as anything is whose holder is gone.
+     */
+    public void recall(Entity trooper) {
+        Position at = trooper.getComponent(Position.class);
+        spawnRecall(at.x, at.y);
+        trooper.remove(BlastsOnDeath.class);
+        trooper.remove(SlicksOnDeath.class);
+        trooper.remove(RespawnsOnDeath.class);
+        markDead(trooper);
+    }
+
+    /**
+     * Spawns the fade a recalled trooper leaves where he stood (G0121), for {@code sim.reserve.recallSeconds}: a pop of
+     * his size in a look of its own, rising and fading as a take by touch does (G0078), never a death's. No collider,
+     * no side: feedback, which nothing touches or hunts (G0004).
+     */
+    public Entity spawnRecall(float x, float y) {
+        Entity entity = engine.createEntity();
+        entity.add(engine.createComponent(Pop.class).set(ticks(config.reserve().recallSeconds())));
+        entity.add(engine.createComponent(Position.class).set(x, y));
+        entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
+        entity.add(engine.createComponent(Body.class).set(config.trooper().radius()));
+        entity.add(engine.createComponent(Appearance.class).set(Look.RECALL));
+        admit(entity);
+        return entity;
+    }
+
+    /**
      * Spawns the ring a Rocketman's surge is drawn as (G0108), where it went off: a puff with a reach, counted down and
      * reaped as one, a look only.
      */

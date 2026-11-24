@@ -62,6 +62,7 @@ public final class BottomBarPainter {
     private final String pinned;
     private final String redeployTemplate;
     private final String noReserve;
+    private final String recall;
     private final String aboard;
     private final String overheat;
     private final String detonate;
@@ -110,6 +111,7 @@ public final class BottomBarPainter {
         this.pinned = strings.get("ui.hud.pinned");
         this.redeployTemplate = strings.get("ui.hud.redeploy");
         this.noReserve = strings.get("ui.hud.noReserve");
+        this.recall = strings.get("ui.hud.recall");
         this.aboard = strings.get("ui.hud.aboard");
         this.overheat = strings.get("ui.hud.overheat");
         this.detonate = strings.get("ui.hud.detonate");
@@ -458,11 +460,14 @@ public final class BottomBarPainter {
 
     /**
      * {@code REDEPLOY} alone while he is dying, with the seconds to his return once he is gone - or that there is
-     * nobody in reserve to return as (G0055).
+     * nobody in reserve to return as (G0055), or that a trooper was recalled to bring him back (G0121).
      */
     private String redeployText(int slot, PlayerReadout player) {
         if (player.posture == Posture.RESPAWNING && player.respawnWaiting) {
             return noReserve;
+        }
+        if (player.posture == Posture.RESPAWNING && player.respawnRecalled) {
+            return recall;
         }
         return redeployIn(slot, player.posture == Posture.RESPAWNING ? player.respawnSeconds : -1f);
     }

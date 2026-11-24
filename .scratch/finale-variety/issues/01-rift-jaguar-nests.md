@@ -1,7 +1,7 @@
 # The rift's missing jaguar nests
 
 Type: task
-Status: open
+Status: resolved
 Label: ready-for-agent
 Blocked by: -
 Skills: `/mattpocock-skills:diagnosing-bugs` with `docs/workflow.md`'s failure protocol
@@ -45,3 +45,23 @@ the rift's nests"); not yet diagnosed.
 
 - The three codes above lay their jaguar nests, a test reproducing one of them is green, and `verify.sh` is green.
 - `## Answer` names the cause, and a mission code with a rift to look at.
+
+## Answer
+
+**Cause.** A bare nook of radius 2 leaves its centre ~7.9 world units off the fissure round it; a hole needs its radius
+plus `rockMargin`, 2.4 + 6 = 8.4. A nook held a nest only where a corridor happened to widen it. On seed 2777720
+(the rift dealt last) none was widened, and the maze had no room elsewhere, so no attempt fit, on any tier.
+
+**Built.** `sim.biome.rift.ground.clearings.nooks` 10 -> **7**, `.nookRadius` 2 -> **3**: a bare nook of radius 3 leaves
+~12.7. Seven because `Coats.nooks` needs each band wider than a nook. No code change. Tests:
+`BiomePromisesTest.aBareNookOfTheRiftHoldsANestKeptOffTheFissureRoundIt` (geometry, red at 10/2) and
+`MissionTest.laysTheRiftsNestInANookTheMazeLeftBare` (the seed, every tier, red at 10/2). 2192-seed sweep: 0 faults.
+
+**Provisional (AFK run), in G0115's `## Amended by`:** nooks 7 of radius 3. Turned down: `nest jaguar 0 1` (a draw of
+one still falls short on such a seed, and the rift loses its nest half the time); a smaller rock margin for the rift
+(G0115 rejects loosening a keep-off for one biome).
+
+**Keys.** `sim.biome.rift.ground.clearings.nooks=7` (was 10), `sim.biome.rift.ground.clearings.nookRadius=3` (was 2).
+
+**Look at it.** `--mission=MHJD-YK3G` (the failing seed, rift last, medium); `--mission=MHPC-VVKG` (rift first). Codes are
+reprinted from the integration tip at the end of the run, since ticket 03 re-deals the finales.

@@ -46,6 +46,11 @@ public final class Trooper implements Component, Pool.Poolable {
          */
         CREW,
         /**
+         * Going after what a risen lair raised (G0122): walking to his gun's reach of its nearest nest, or of its boss,
+         * or standing there with nowhere else to be. Ranks below the errands and above the level's objectives.
+         */
+        ASSAULT,
+        /**
          * Wounded, and walking to a medkit (G0053).
          *
          * <p>Ranks below {@link #AID} and above {@link #CREW}.

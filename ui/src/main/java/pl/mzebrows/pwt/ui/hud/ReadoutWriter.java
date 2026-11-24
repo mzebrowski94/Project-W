@@ -144,6 +144,7 @@ public final class ReadoutWriter {
                 player.respawnSeconds =
                         Math.max(0, respawning.remainingTicks) * world.config().tickSeconds();
                 player.respawnWaiting = !respawning.paid;
+                player.respawnRecalled = respawning.recalled;
                 player.variant = respawning.slot;
                 int[] last = lastLife[respawning.slot];
                 player.kills = last[0];

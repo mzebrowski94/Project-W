@@ -16,6 +16,9 @@ public final class Respawning implements Component, Pool.Poolable {
 
     /** Whether a man has been taken from the reserve for this one. Until then the countdown waits. */
     public boolean paid;
+
+    /** Whether he was paid for by recalling a trooper (G0121) rather than from the reserve: shown as {@code RECALL}. */
+    public boolean recalled;
     /** How long the shield he comes back behind lasts, in ticks (G0053). */
     public int shieldTicks;
 
@@ -30,6 +33,7 @@ public final class Respawning implements Component, Pool.Poolable {
     public Respawning set(int newRemainingTicks, int newShieldTicks, int newSlot) {
         this.remainingTicks = newRemainingTicks;
         this.paid = false;
+        this.recalled = false;
         this.shieldTicks = newShieldTicks;
         this.slot = newSlot;
         return this;
@@ -39,6 +43,7 @@ public final class Respawning implements Component, Pool.Poolable {
     public void reset() {
         remainingTicks = 0;
         paid = false;
+        recalled = false;
         shieldTicks = 0;
         slot = 0;
     }

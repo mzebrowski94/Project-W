@@ -980,6 +980,8 @@ public final class AlphaWorlds {
 
     /** How far round ground held afterwards the squad's march ends. Past a point's radius, inside the arena. */
     public static final float POST_RING_RADIUS = 12f;
+    /** How far from what a lair raised a trooper with a sidearm stops to fight it (G0122). */
+    public static final float ASSAULT_STAND_OFF = 20f;
 
     /** How long a walking trooper may make almost no ground before he counts as stuck. */
     public static final float BLOCK_SECONDS = 1f;
@@ -1129,6 +1131,7 @@ public final class AlphaWorlds {
                         HOLD_JITTER_SECONDS,
                         RALLY_RADIUS,
                         POST_RING_RADIUS,
+                        ASSAULT_STAND_OFF,
                         BLOCK_SECONDS,
                         BLOCK_DISTANCE,
                         DETOUR_SECONDS,
@@ -1146,7 +1149,7 @@ public final class AlphaWorlds {
                         new TrooperGrenadeDef(TROOPER_GRENADE_COOLDOWN, MIN_CLUSTER, SAFETY_MARGIN, SQUAD_GAP_SECONDS)),
                 new SimConfig.SpawnConfig(SPAWN_COL, SPAWN_WIDTH, SPAWN_HEIGHT),
                 // Never musters: men turning up every so often would move every count in every test.
-                new SimConfig.ReserveConfig(RESERVE_START, RESERVE_MAX, 0f, 2, 3),
+                new SimConfig.ReserveConfig(RESERVE_START, RESERVE_MAX, 0f, 2, 3, 0.8f),
                 onShipped(UnitKind.class, SimConfig.defaults().units(), UnaryOperator.identity())
                         .put(UnitKind.GRUNT, strain(ENEMY_RADIUS, ENEMY_SPEED, ENEMY_HEALTH, Look.GRUNT))
                         .put(UnitKind.BRUTE, strain(BRUTE_RADIUS, BRUTE_SPEED, BRUTE_HEALTH, Look.BRUTE))

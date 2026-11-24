@@ -13,7 +13,8 @@ while and is broken through - ice.
 `.putsMoreOfTheSwarmToATileInTheRiftsClearingsThanInItsMaze`, `.standsIceAcrossEveryWayTheStripIcedAndNoneOnAWayIn`;
 `BiomePromisesTest.theRiftIsTheOneBiomeOfFissuresOnFrostWithItsSitesInTwoClearings`;
 `MissionSweepTest.holdsEveryMissionToTheRules` through `StripFaults.clearings` (each clearing and nook open ground, as many as
-its ground asks for), `MissionFaults.clearings` (a point on each clearing's centre tile), `MissionTest.putsTheRiftsNestsInItsNooksFirst` and `MissionFaults.ice` (across a
+its ground asks for), `MissionFaults.clearings` (a point on each clearing's centre tile), `MissionTest.putsTheRiftsNestsInItsNooksFirst`, `.laysTheRiftsNestInANookTheMazeLeftBare`,
+`BiomePromisesTest.aBareNookOfTheRiftHoldsANestKeptOffTheFissureRoundIt` and `MissionFaults.ice` (across a
 narrow way, never in a clearing or by kept ground, nothing standing in it); `GraphicConfigTest.mapsEveryTerrainToAColour`.
 
 **Settled with Mateusz, 2026-11-22** (`.scratch/commander-and-sites/spec.md`, section 8, and ticket 10). The points
@@ -59,7 +60,7 @@ its worked sites and before its other points, and anchors a share of its loose p
   crag and no outcrop is laid, its centre tile an end of the biome so the crag repairs keep it reached from the
   passes. `Strip.Laid.clearings` hands them to placement.
 - **Nooks** (amended 2026-11-24, Mateusz: keep the rift's jaguar nests), `ground.clearings.nooks` and `ground.clearings.nookRadius`
-  (ten of radius 2 in the rift, none elsewhere): small clearings holding no site, laid after the clearings, one to
+  (seven of radius 3 in the rift, none elsewhere - ten of radius 2 until *Amended by* below): small clearings holding no site, laid after the clearings, one to
   each equal band of the biome's columns but a twelfth at either end, where a ridge's face wanders in, in the top or bottom third farther from the nearest clearing, kept reached as
   a clearing is. `Strip.Laid.nooks` hands them to placement, which puts a biome's holes at their centres first, west to
   east, and scatters the rest. A corridor alone leaves a hole no room off fissure; but each clearing's point keeps
@@ -141,3 +142,19 @@ that shots fly over, not ice that reforms.
 **No:** *Ice the swarm's shots chip* - alien-side fire breaks no door, and ice is one.
 
 **Revisit when** the maze reads as blobs rather than cracks on the screen, or a second biome wants clearings.
+
+## Amended by
+
+**Finale-variety ticket 01, 2026-11-24 - provisional, for review (AFK run).** Nooks are **seven of radius 3**, not ten
+of radius 2 (`sim.biome.rift.ground.clearings.nooks=7`, `.nookRadius=3`).
+
+- **Cause.** A nook of radius 2 with no corridor through it leaves its centre about 7.9 world units off the fissure
+  round it (tile 5); a hole needs its radius and `rockMargin`, 2.4 + 6 = 8.4. So a nook held a nest only where the
+  maze happened to widen it, and on seed 2777720 (`EHJD-YK39`, the rift last) it widened none: no attempt laid the
+  jaguar's hole, on any tier. A bare nook of radius 3 leaves about 12.7.
+- **Seven**, because the nooks' bands must stay wider than a nook (`Coats.nooks`): ten of radius 3 do not fit a
+  64-column rift. Measured: 0 faults in the 2192-seed sweep (`PWT_SWEEP=1`), where ten of radius 2 had 3 in 88.
+- **Turned down:** `nest jaguar 0 1` (Mateusz's offered fallback) - a draw of one still falls short on a seed like
+  this, and the rift would lose its nest on half the seeds for a fault in the ground; a smaller `rockMargin` for the
+  rift's holes (G0115's own rejection of loosening a keep-off for one biome); a nook judged clear by the hole it must
+  hold rather than by a radius (a second rule where a number does).

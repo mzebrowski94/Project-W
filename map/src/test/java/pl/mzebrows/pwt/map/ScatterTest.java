@@ -1,6 +1,7 @@
 package pl.mzebrows.pwt.map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -26,6 +27,31 @@ class ScatterTest {
 
         assertThat(count).isEqualTo(10);
         assertThat(placed).hasSize(10);
+    }
+
+    /**
+     * Mirrored about a row (G0120), everything comes in north-south pairs: each circle's mirror is put down too, clear
+     * of it, and the count is circles, two to a pair - so an odd count's last is left out.
+     */
+    @Test
+    void placesInMirroredPairsAboutARow() {
+        TileMap map = open();
+        float row = map.tileCentreY(ROWS / 2);
+        List<float[]> placed = new ArrayList<>();
+
+        int count = scatterer(map)
+                .mirroredAbout(row)
+                .scatter(new TileRect(0, 0, COLS, ROWS / 2), 7, RADIUS, (x, y) -> placed.add(new float[] {x, y}));
+
+        assertThat(count).isEqualTo(6);
+        assertThat(placed).hasSize(6);
+        for (int i = 0; i < placed.size(); i += 2) {
+            float[] one = placed.get(i);
+            float[] mirror = placed.get(i + 1);
+            assertThat(mirror[0]).isEqualTo(one[0]);
+            assertThat(mirror[1] - row).isCloseTo(row - one[1], within(1e-3f));
+            assertThat(distance(one, mirror)).isGreaterThanOrEqualTo(2 * RADIUS + CLEARANCE);
+        }
     }
 
     /** A full arena and a broken generator look identical to a caller that is handed no answer. */

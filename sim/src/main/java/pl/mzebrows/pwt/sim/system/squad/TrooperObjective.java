@@ -6,6 +6,7 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.FlowField;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.sim.Handles;
@@ -16,8 +17,11 @@ import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.component.Body;
 import pl.mzebrows.pwt.sim.component.Commander;
 import pl.mzebrows.pwt.sim.component.ControlPoint;
+import pl.mzebrows.pwt.sim.component.Dead;
 import pl.mzebrows.pwt.sim.component.Door;
+import pl.mzebrows.pwt.sim.component.Enemy;
 import pl.mzebrows.pwt.sim.component.Handle;
+import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Site;
 import pl.mzebrows.pwt.sim.component.Trooper;
@@ -61,6 +65,8 @@ final class TrooperObjective {
     private static final ComponentMapper<Site> SITE = ComponentMapper.getFor(Site.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<WorkedSite> WORKED = ComponentMapper.getFor(WorkedSite.class);
+    private static final ComponentMapper<Enemy> ENEMY = ComponentMapper.getFor(Enemy.class);
+    private static final ComponentMapper<Nest> NEST = ComponentMapper.getFor(Nest.class);
 
     /** How far inside a point counts as standing on it, as a fraction of its radius. */
     private static final float INSIDE_THE_EDGE = 0.7f;
@@ -74,6 +80,9 @@ final class TrooperObjective {
     private final float rallyRadius;
     private final float postRingRadius;
     private final int captureCrowd;
+
+    /** How far off what a lair raised a man whose shot flies until it hits stops to fight it (G0122). */
+    private final float assaultStandOff;
 
     /** How far past a worked site's edge a man counts as at it: his body and his arm's length (G0111). */
     private final float atAWorkedSite;
@@ -133,6 +142,11 @@ final class TrooperObjective {
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> commanders = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> doors = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> hostile = new ImmutableArray<>(new Array<>());
+
+    /** Scratch: everything a lair raised still alive this tick, in spawn order (G0122). */
+    @NotState("scratch rebuilt every tick by findRaised")
+    private final Array<Entity> raised = new Array<>();
 
     TrooperObjective(SimConfig config, TileMap map, Rng rng, TrooperRoam roam) {
         this.config = config;
@@ -144,6 +158,7 @@ final class TrooperObjective {
         this.rallyRadius = config.trooper().rallyRadius();
         this.postRingRadius = config.trooper().postRingRadius();
         this.captureCrowd = config.trooper().captureCrowd();
+        this.assaultStandOff = config.trooper().assaultStandOff();
         this.atAWorkedSite = config.trooper().radius() + config.action().reach();
         this.roam = roam;
     }
@@ -160,6 +175,72 @@ final class TrooperObjective {
                 Family.all(Commander.class, Position.class).get());
         doors = engine.getEntitiesFor(Family.all(Door.class, Handle.class).get());
         men = engine.getEntitiesFor(Life.onTheField());
+        hostile = engine.getEntitiesFor(
+                Family.all(Enemy.class, Position.class).exclude(Dead.class).get());
+    }
+
+    /**
+     * Once a lair has risen, goes after what it raised (G0122): to his gun's reach of the nearest living nest it raised,
+     * crow-flies, and with none left of the nearest other thing it raised - its boss - then stands there, where the fight
+     * takes him up. Never closer: a gun that flies until it hits stops at {@code assaultStandOff}, and nothing is walked
+     * to nearer than it stands out from his sight, so at the end of the walk he can pick it out. False while nothing a
+     * lair raised is alive - before it rises, after it is cleared, and on a level with none.
+     *
+     * @param reach how far his shot flies before it goes out; zero for one that flies until it hits
+     */
+    boolean assaults(Trooper trooper, Position at, float reach) {
+        Entity target = nearestRaised(at, true);
+        if (target == null) {
+            target = nearestRaised(at, false);
+        }
+        if (target == null) {
+            return false;
+        }
+        Position where = POSITION.get(target);
+        float standOff =
+                Math.min(reach > 0f ? reach : assaultStandOff, trooper.sightRange + ENEMY.get(target).standsOut);
+        trooper.mode = Trooper.Mode.ASSAULT;
+        if (Sight.withinRange(at.x, at.y, where.x, where.y, standOff)) {
+            trooper.clearTarget();
+        } else {
+            trooper.headFor(where.x, where.y);
+        }
+        return true;
+    }
+
+    /**
+     * Collects what a lair raised and is still alive, once a tick before any man decides (G0122): the whole swarm walked
+     * once, so a man's choice walks only the few it raised - never man against every creature.
+     */
+    void findRaised() {
+        raised.clear();
+        for (int i = 0; i < hostile.size(); i++) {
+            Entity candidate = hostile.get(i);
+            if (ENEMY.get(candidate).raised && !Life.dying(candidate)) {
+                raised.add(candidate);
+            }
+        }
+    }
+
+    /** The nearest living thing a lair raised, crow-flies - a nest, or anything else - or null; ties to the first spawned. */
+    private @Nullable Entity nearestRaised(Position at, boolean nests) {
+        Entity nearest = null;
+        float best = Float.MAX_VALUE;
+        for (int i = 0; i < raised.size; i++) {
+            Entity candidate = raised.get(i);
+            if (NEST.has(candidate) != nests) {
+                continue;
+            }
+            Position where = POSITION.get(candidate);
+            float dx = where.x - at.x;
+            float dy = where.y - at.y;
+            float distance = dx * dx + dy * dy;
+            if (distance < best) {
+                best = distance;
+                nearest = candidate;
+            }
+        }
+        return nearest;
     }
 
     /**

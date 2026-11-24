@@ -29,8 +29,8 @@ import pl.mzebrows.pwt.sim.scenario.Scenarios;
  * first, each as its medium and its hard code - the hard one to measure the field on. A failure lists every failing
  * mission by its code. In {@code core}, beside {@link MissionCode}, so a seed is named by the code that plays it.
  *
- * <p><strong>Every layout of every finale, by name</strong> (G0087): beside the spread seeds it sweeps the first
- * {@link #PER_LAYOUT} seeds that end on each finale, layout and flip, picked by {@link Mission#drawn} - never trusting
+ * <p><strong>Every finale both ways, by name</strong> (G0120): beside the spread seeds it sweeps the first
+ * {@link #PER_ENDING} seeds that end on each finale, flipped and not, picked by {@link Mission#drawn} - never trusting
  * the spread to happen on them.
  */
 class MissionSweepTest {
@@ -38,8 +38,8 @@ class MissionSweepTest {
     private static final boolean BIG = "1".equals(System.getenv("PWT_SWEEP"));
     private static final int SEEDS = BIG ? 2000 : 64;
 
-    /** Seeds swept for each finale, layout and flip, on top of the spread. */
-    private static final int PER_LAYOUT = BIG ? 16 : 2;
+    /** Seeds swept for each finale and flip, on top of the spread. */
+    private static final int PER_ENDING = BIG ? 16 : 4;
 
     /** Where those are looked for along the stride: past the big spread, so they are other seeds in either run. */
     private static final int SPREAD = 2000;
@@ -120,7 +120,7 @@ class MissionSweepTest {
                 .withFailMessage(() ->
                         String.join("\n", faults) + "\n" + faults.size() + " faults in " + seeds.size() + " seeds")
                 .isEmpty();
-        assertThat(endings).as("every finale, layout and flip swept").containsAll(everyEnding());
+        assertThat(endings).as("every finale and flip swept").containsAll(everyEnding());
     }
 
     /**
@@ -175,7 +175,7 @@ class MissionSweepTest {
         return Math.floorMod(i * STRIDE, MissionCode.SEEDS);
     }
 
-    /** The spread, then the first {@link #PER_LAYOUT} seeds past the big one that end on each finale, layout and flip. */
+    /** The spread, then the first {@link #PER_ENDING} seeds past the big one that end on each finale and flip. */
     private static List<Long> seeds() {
         List<Long> seeds = new ArrayList<>();
         for (int i = 0; i < SEEDS; i++) {
@@ -188,7 +188,7 @@ class MissionSweepTest {
             String ending = ending(Mission.drawn(SimConfig.defaults().withSeed(seed)));
             if (wanted.contains(ending)) {
                 seeds.add(seed);
-                if (found.merge(ending, 1, Integer::sum) >= PER_LAYOUT) {
+                if (found.merge(ending, 1, Integer::sum) >= PER_ENDING) {
                     wanted.remove(ending);
                 }
             }
@@ -196,21 +196,18 @@ class MissionSweepTest {
         return seeds;
     }
 
-    /** Every finale, each of its layouts, flipped and not. */
+    /** Every finale, flipped and not. */
     private static List<String> everyEnding() {
         List<String> endings = new ArrayList<>();
         for (FinaleKind kind : FinaleKind.values()) {
-            int layouts = SimConfig.defaults().finales().of(kind).layoutCount();
-            for (int layout = 0; layout < layouts; layout++) {
-                endings.add(ending(new Mission.Finale(kind, false, layout, List.of(), List.of())));
-                endings.add(ending(new Mission.Finale(kind, true, layout, List.of(), List.of())));
-            }
+            endings.add(ending(new Mission.Finale(kind, false, List.of(), List.of(), List.of())));
+            endings.add(ending(new Mission.Finale(kind, true, List.of(), List.of(), List.of())));
         }
         return endings;
     }
 
     private static String ending(Mission.Finale finale) {
-        return finale.kind() + " layout " + (finale.layout() + 1) + (finale.flipped() ? " flipped" : "");
+        return finale.kind() + (finale.flipped() ? " flipped" : "");
     }
 
     private static String summary(

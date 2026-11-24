@@ -43,3 +43,14 @@ each change written down where this repository records it: the records' *Enforce
 ## Decisions so far
 
 - 2026-11-24: the whole of [spec.md](spec.md), grilled with Mateusz.
+- 2026-11-24, 01 (provisional): the rift's nooks are 7 of radius 3, so a bare one holds a nest; G0115 *Amended by*.
+- 2026-11-24, 02 (provisional): the recall lands after his throes, crow-flies to the rally area, strips his death
+  reactions, fades as a pop of its own look, says bare `RECALL`; G0121 *Amended by*.
+- 2026-11-24, 03 (provisional): lots are rings round the post dealt in pairs; cover dealt on bare ground before the strip
+  with 32 attempts; keep cover 2-4; `ConfigBinder` drops numbered blocks; G0120 *Amended by* 1-8.
+- 2026-11-24, 04 (provisional): roles' members as in G0120 9; a two-mouth wave sends a member's range from each mouth;
+  `hole dx dy` dealt from `pool` (most 2); the keep's seven guns, four dealt. Mateusz mid-run: finale mines cut to
+  4-6 (redoubt) and 2-4 (keep).
+- 2026-11-24, 05 (provisional): the assault lives in `TrooperObjective`; `Enemy.raised` marks the lair's; nearest
+  crow-flies; reach capped at sight + standsOut; `sim.trooper.assaultStandOff=40`; G0122 *Amended by*.
+- 2026-11-24: all five merged on `finale-variety-integration`, `verify.sh` green.

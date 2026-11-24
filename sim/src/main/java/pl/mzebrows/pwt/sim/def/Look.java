@@ -283,5 +283,10 @@ public enum Look {
      * The ring a Rocketman's surge is drawn as where it went off (G0108): growing to its reach and fading. A look only:
      * the stun landed on the tick it appeared.
      */
-    ROCKETMAN
+    ROCKETMAN,
+    /**
+     * A trooper recalled to pay for a commander coming back (G0121), rising and fading where he stood as a pop does
+     * (G0078) - his own colour, never a death's. A look only: he left the field the tick he was recalled.
+     */
+    RECALL
 }

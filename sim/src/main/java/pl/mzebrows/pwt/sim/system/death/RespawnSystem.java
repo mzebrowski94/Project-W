@@ -7,9 +7,12 @@ import com.badlogic.ashley.core.EntitySystem;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.utils.ImmutableArray;
 import com.badlogic.gdx.utils.Array;
+import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.Scatter;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
+import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.Life;
 import pl.mzebrows.pwt.sim.Rng;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Spawner;
@@ -21,6 +24,7 @@ import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Respawning;
 import pl.mzebrows.pwt.sim.component.RespawnsOnDeath;
 import pl.mzebrows.pwt.sim.component.Shield;
+import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.system.query.RallyPoint;
 
 /**
@@ -32,8 +36,11 @@ import pl.mzebrows.pwt.sim.system.query.RallyPoint;
  *
  * <p><strong>A man coming back is a man from the reserve.</strong> A ticket is paid for with one the
  * tick after it opens - before the muster, which runs later in the tick, so a player is heard before a
- * trooper - and counts down only once it is paid. With nobody in reserve it waits. With every commander
- * out and every ticket waiting on an empty reserve the level is lost, and stays lost.
+ * trooper - and counts down only once it is paid. With nobody in reserve a trooper on his feet is
+ * <strong>recalled</strong> to pay for it (G0121): the one nearest the rally point leaves the field - not a death: no
+ * throes, no corpse, no blast, nobody credited - and fades where he stood. One recall per waiting ticket, lowest slot
+ * first. With nobody to recall it waits. With every commander out, every ticket waiting on an empty reserve and no
+ * trooper on his feet the level is lost, and stays lost.
  *
  * <p><strong>Where</strong> is the rally point on the tick he returns ({@link RallyPoint}): the spawn
  * area until a point is taken, the point taken last after that - never beside a friend who is still
@@ -50,6 +57,8 @@ public final class RespawnSystem extends EntitySystem {
     private static final ComponentMapper<Shield> SHIELD = ComponentMapper.getFor(Shield.class);
     private static final ComponentMapper<Commander> COMMANDER = ComponentMapper.getFor(Commander.class);
     private static final ComponentMapper<Level> LEVEL = ComponentMapper.getFor(Level.class);
+    private static final ComponentMapper<Position> POSITION = ComponentMapper.getFor(Position.class);
+    private static final ComponentMapper<Dead> DEAD = ComponentMapper.getFor(Dead.class);
 
     private final SimConfig config;
     private final TileMap map;
@@ -61,6 +70,7 @@ public final class RespawnSystem extends EntitySystem {
     private ImmutableArray<Entity> living = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> levels = new ImmutableArray<>(new Array<>());
     private ImmutableArray<Entity> points = new ImmutableArray<>(new Array<>());
+    private ImmutableArray<Entity> troopers = new ImmutableArray<>(new Array<>());
 
     public RespawnSystem(SimConfig config, TileMap map, Spawner spawner, Rng rng) {
         this.config = config;
@@ -80,6 +90,8 @@ public final class RespawnSystem extends EntitySystem {
         levels = engine.getEntitiesFor(Family.all(Level.class).get());
         points = engine.getEntitiesFor(
                 Family.all(ControlPoint.class, Position.class).get());
+        troopers = engine.getEntitiesFor(
+                Family.all(Trooper.class, Position.class).exclude(Dead.class).get());
     }
 
     @Override
@@ -104,7 +116,10 @@ public final class RespawnSystem extends EntitySystem {
         }
     }
 
-    /** A man from the reserve for every ticket still waiting on one, oldest first, while there are any. */
+    /**
+     * A man from the reserve for every ticket still waiting on one, oldest first, while there are any; then a trooper
+     * recalled for each still waiting, lowest slot first, while anybody is on his feet (G0121).
+     */
     private void payTickets(Level level) {
         if (level.failed) {
             return;
@@ -116,6 +131,76 @@ public final class RespawnSystem extends EntitySystem {
                 level.reserve--;
             }
         }
+        if (level.reserve > 0) {
+            return;
+        }
+        for (Respawning waiting = lowestWaiting(); waiting != null; waiting = lowestWaiting()) {
+            Entity trooper = nearestOnHisFeet();
+            if (trooper == null) {
+                return;
+            }
+            recall(trooper);
+            waiting.paid = true;
+            waiting.recalled = true;
+        }
+    }
+
+    /** The unpaid ticket of the lowest slot, or null when none is waiting. */
+    private @Nullable Respawning lowestWaiting() {
+        Respawning lowest = null;
+        for (int i = 0; i < pending.size(); i++) {
+            Respawning respawning = PENDING.get(pending.get(i));
+            if (!respawning.paid && (lowest == null || respawning.slot < lowest.slot)) {
+                lowest = respawning;
+            }
+        }
+        return lowest;
+    }
+
+    /**
+     * The trooper on his feet nearest the rally point, crow-flies, the lower handle on a tie - never the dice
+     * (G0121) - or null when nobody is. Allocates the rally area, once per recall.
+     */
+    private @Nullable Entity nearestOnHisFeet() {
+        TileRect area = RallyPoint.area(points, config, map);
+        float x = area.centreX(map);
+        float y = area.centreY(map);
+        Entity nearest = null;
+        float best = Float.MAX_VALUE;
+        long bestHandle = Long.MAX_VALUE;
+        for (int i = 0; i < troopers.size(); i++) {
+            Entity trooper = troopers.get(i);
+            if (DEAD.has(trooper) || Life.down(trooper)) {
+                continue;
+            }
+            Position at = POSITION.get(trooper);
+            float dx = at.x - x;
+            float dy = at.y - y;
+            float distance = dx * dx + dy * dy;
+            long handle = Handles.of(trooper);
+            if (distance < best || (distance == best && handle < bestHandle)) {
+                nearest = trooper;
+                best = distance;
+                bestHandle = handle;
+            }
+        }
+        return nearest;
+    }
+
+    /** Takes him off the field without a death (G0121), his fade left where he stood. */
+    private void recall(Entity trooper) {
+        spawner.recall(trooper);
+    }
+
+    /** Whether any trooper is on his feet: one somebody waiting can still be paid for with (G0121). */
+    private boolean anyoneToRecall() {
+        for (int i = 0; i < troopers.size(); i++) {
+            Entity trooper = troopers.get(i);
+            if (!DEAD.has(trooper) && !Life.down(trooper)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void closeExpiredTickets() {
@@ -151,12 +236,12 @@ public final class RespawnSystem extends EntitySystem {
     }
 
     /**
-     * Every commander out, somebody waiting to come back, and nobody left to come back as: the level is
-     * lost - unless it was won first (G0066). A ticket already paid for is a man on his way, so it holds
-     * the verdict off.
+     * Every commander out, somebody waiting to come back, and nobody left to come back as - none in reserve, no trooper
+     * on his feet to recall (G0121): the level is lost - unless it was won first (G0066). A ticket already paid for is
+     * a man on his way, so it holds the verdict off.
      */
     private void judge(Level level) {
-        if (level.decided() || living.size() > 0 || pending.size() == 0 || level.reserve > 0) {
+        if (level.decided() || living.size() > 0 || pending.size() == 0 || level.reserve > 0 || anyoneToRecall()) {
             return;
         }
         for (int i = 0; i < pending.size(); i++) {

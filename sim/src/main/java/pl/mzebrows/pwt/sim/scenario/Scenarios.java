@@ -44,7 +44,8 @@ public final class Scenarios {
             new PlasmaRangeScenario(),
             new SentryPostScenario(),
             new EngineerYardScenario(1),
-            new EngineerYardScenario(2));
+            new EngineerYardScenario(2),
+            new RecallScenario());
 
     private Scenarios() {}
 

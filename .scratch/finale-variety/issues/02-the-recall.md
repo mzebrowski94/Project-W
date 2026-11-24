@@ -1,7 +1,7 @@
 # The recall
 
 Type: task
-Status: open
+Status: resolved
 Label: ready-for-agent
 Blocked by: 01 (a green `main`)
 Spec: [spec.md](../spec.md) answer 8
@@ -54,3 +54,26 @@ A level no longer fails on an empty reserve while troopers are still on their fe
 - `ReserveTest` (or a test beside it) holds: a recall on an empty reserve; nearest the rally point; never a down man;
   one per waiting commander by slot; the crate-first rule; the new loss; no corpse or kill. `verify.sh` green.
 - A hidden scenario (`--scenario=<name>`) starting on an empty reserve with a few troopers, for Mateusz to die in.
+
+## Answer
+
+**Built.** `RespawnSystem` pays from the reserve first, then, for each ticket still waiting, lowest slot first, recalls
+the trooper on his feet nearest the rally point (crow-flies to the middle of `RallyPoint.area`, lower handle on a tie)
+and marks the ticket `paid` and `recalled`. `Spawner.recall` takes his blast, slick and ticket reactions off, leaves
+his fade (a pop of `Look.RECALL`, his size) and marks him for reaping: no throes, no corpse, no credit. The loss now also
+needs no trooper on his feet. HUD: `PlayerReadout.respawnRecalled` -> `RECALL` in place of the countdown. Hidden
+scenario `Recall`. No new system or component (one field on `Respawning`, carried by the snapshot's reflective plan).
+
+**Provisional (G0121 `## Amended by`):**
+- Lands the tick the reserve would have paid (after his throes). Alt: the tick he falls.
+- Crow-flies to the rally area's middle. Alt: route distance (no flow field at hand there).
+- Leaves by stripping his on-death reactions, not by a `Recalled` marker every death reaction excludes.
+- Fade = a pop in its own look and colour. Alt: a new effect component and painter.
+- `RECALL` bare, no seconds. Alt: `RECALL` with the countdown.
+
+**Keys.** `sim.reserve.recallSeconds=0.8` (how long the fade lasts); `graphic.color.recall=9fe8ffff` (pale cyan);
+`ui.hud.recall=RECALL`. The fade's rise and alpha are the pop's (`graphic.pop.*`).
+
+**Play.** `./gradlew lwjgl3:run --args="--scenario=recall"`: empty reserve, four troopers, twelve grunts east. Die; the
+man nearest the spawn area fades, you come back there with `RECALL` on the panel; after four deaths, `NO RESERVE` and the
+level is lost.
