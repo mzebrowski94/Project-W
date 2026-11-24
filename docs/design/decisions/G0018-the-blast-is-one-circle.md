@@ -1,6 +1,6 @@
 # G0018: The blast is one circle, and things explode by dying
 
-**Status.** amended by G0053: each blast kind declares its harm to a man; amended by G0082: a thing with health shrugs off its blast resistance; amended by G0108: a dash's surge is a second, non-lethal radial effect and no blast
+**Status.** amended by G0053: each blast kind declares its harm to a man; amended by G0082: a thing with health shrugs off its blast resistance; amended by G0108: a dash's surge is a second, non-lethal radial effect and no blast; amended by G0130: a blast takes the damage its source declares
 
 **Trigger.** Adding or changing anything explosive - a weapon with an area, a hazard, a death that
 hurts what is near it - or proposing that damage fall off with distance.
@@ -85,3 +85,9 @@ The circle is still uniform, but not uniformly fatal: a thing with health takes 
 `Health.blastResistance` per cent, rounded by `Whole`, read in `BlastSystem` alone. Zero for everything but a
 turret (90), which a blast scars rather than takes. A man has no health and takes the blast's harm as before.
 Provisional, for review.
+
+## Amended by G0130
+
+**A blast takes the damage its source declares**, as G0053 made it take its harm. Still one circle, uniform inside
+it, on nobody's side, by dying. `sim.blast.damage` is what every source declares unless a gun moves it: a rocket's
+and a limpet's are their gun's, and Firepower raises them with it (G0127). Provisional, for review (AFK run).

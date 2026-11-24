@@ -209,7 +209,8 @@ public final class Simulation {
         // How loosely a gun throws, for every shooter; not how badly a creature aims (SPIT).
         Rng scatter = streams.of(RngStream.SCATTER);
         // The one trigger and the one hand: every shooter and every thrower goes through these.
-        Guns guns = new Guns(spawner, modifiers, scatter, config.muzzleGap());
+        Guns guns = new Guns(
+                spawner, modifiers, scatter, config.muzzleGap(), config.blast().damage());
         this.throwing = new Throws(spawner, modifiers, config.muzzleGap());
         this.dashes = new Dashes(modifiers, config.commander().dash(), config.tickSeconds());
 

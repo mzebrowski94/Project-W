@@ -52,17 +52,21 @@ public final class Guns {
     private final Modifiers modifiers;
     private final Rng scatter;
     private final float muzzleGap;
+    private final int blastDamage;
     private final float[] muzzle = new float[2];
 
     /**
      * @param scatter how loosely a gun throws, for every shooter; not how badly a creature aims
      * @param muzzleGap how far clear of the firer's body a shot leaves, for every gun there is
+     * @param blastDamage what the blast a shot leaves takes off what it catches before the gun's damage is folded in:
+     *     {@code sim.blast.damage}
      */
-    public Guns(Spawner spawner, Modifiers modifiers, Rng scatter, float muzzleGap) {
+    public Guns(Spawner spawner, Modifiers modifiers, Rng scatter, float muzzleGap, int blastDamage) {
         this.spawner = spawner;
         this.modifiers = modifiers;
         this.scatter = scatter;
         this.muzzleGap = muzzleGap;
+        this.blastDamage = blastDamage;
     }
 
     /**
@@ -106,7 +110,8 @@ public final class Guns {
      * <p>The aim must be a unit vector already carrying the shooter's cone; the gun's scatter is
      * applied here per pellet, by rotation. {@code credit} is the slot of the player whose tally a kill
      * by these shots counts for, or {@link Tally#NOBODY} (G0044). What each shot does is read once, for
-     * the whole pull.
+     * the whole pull - the blast a shot or a limpet leaves included: part of what the gun does, so the one read of
+     * {@code gun_damage} moves it with the shot (G0127).
      */
     public void volley(Entity firer, float aimX, float aimY, int credit) {
         volley(firer, aimX, aimY, credit, 0f);
@@ -128,7 +133,8 @@ public final class Guns {
             range = range > 0f ? Math.min(range, flight) : flight;
         }
         int pellets = weapon.pellets < 1 ? 1 : weapon.pellets;
-        int damage = modifiers.gunDamage(firer, weapon.kind, weapon.damage);
+        int damage = scaled(firer, weapon, weapon.damage);
+        int blast = scaled(firer, weapon, blastDamage);
         for (int pellet = 0; pellet < pellets; pellet++) {
             float directionX = aimX;
             float directionY = aimY;
@@ -148,6 +154,7 @@ public final class Guns {
                         directionX,
                         directionY,
                         weapon,
+                        blast,
                         HANDLE.has(firer) ? HANDLE.get(firer).id : Handle.NOBODY,
                         FACTION.get(firer).side,
                         credit);
@@ -160,10 +167,19 @@ public final class Guns {
                     directionY,
                     weapon,
                     damage,
+                    blast,
                     FACTION.get(firer).side,
                     credit,
                     range);
         }
+    }
+
+    /**
+     * A number of what this gun does - its shot's damage, the blast its shot or limpet leaves - with the gun's damage
+     * scale folded in: the one place {@code GUN_DAMAGE} is read, so a shot and its blast cannot drift apart (G0127).
+     */
+    private int scaled(Entity firer, Weapon weapon, int base) {
+        return modifiers.gunDamage(firer, weapon.kind, base);
     }
 
     /**

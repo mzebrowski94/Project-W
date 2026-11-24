@@ -254,8 +254,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Shock.class));
         // Inert until a gun that shakes the ground is fired from his hands; read by the view, never the simulation.
         entity.add(engine.createComponent(Shake.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class)
-                .harming(config.blast().harm()));
+        entity.add(blastsOnDeath().harming(config.blast().harm()));
         entity.add(engine.createComponent(Appearance.class).set(Look.COMMANDER, slot));
         entity.add(engine.createComponent(Facing.class).face(1f, 0f));
         admit(entity);
@@ -295,8 +294,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Shock.class));
         // Inert until a gun that shakes the ground is fired from his hands; read by the view, never the simulation.
         entity.add(engine.createComponent(Shake.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class)
-                .harming(config.blast().harm()));
+        entity.add(blastsOnDeath().harming(config.blast().harm()));
         entity.add(engine.createComponent(Collider.class).set(true, true));
         entity.add(engine.createComponent(Damage.class));
         entity.add(engine.createComponent(Invulnerable.class));
@@ -431,8 +429,7 @@ public final class Spawner {
         // Carried by everything that can be killed; inert until a beam fills it (zero means off, G0018).
         entity.add(engine.createComponent(Bloat.class));
         entity.add(engine.createComponent(Shock.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class)
-                .harming(config.blast().harm()));
+        entity.add(blastsOnDeath().harming(config.blast().harm()));
         // Its own blood, which its strain names the circles of and the swarm's toxic blood adds to (G0076).
         entity.add(engine.createComponent(SlicksOnDeath.class)
                 .set(config.blood().shape())
@@ -771,7 +768,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(true, false));
         entity.add(engine.createComponent(Health.class).set(barrel.health()));
         entity.add(engine.createComponent(Damage.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class)
+        entity.add(blastsOnDeath()
                 .set(barrel.blastRadius(), barrel.bittenBlastRadius())
                 .harming(config.blast().harm()));
         // A velocity only because it can be hauled; nothing drives it.
@@ -805,7 +802,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(true, false).avoided(false));
         entity.add(engine.createComponent(Health.class).set(mine.health()));
         entity.add(engine.createComponent(Damage.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class)
+        entity.add(blastsOnDeath()
                 .set(mine.blastRadius(), mine.blastRadius())
                 .harming(config.blast().harm()));
         // Hauled exactly as a barrel is (G0021).
@@ -1052,7 +1049,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(true, false));
         entity.add(engine.createComponent(Health.class).set(turret.health()).resisting(turret.blastResistance()));
         entity.add(engine.createComponent(Damage.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class)
+        entity.add(blastsOnDeath()
                 .set(turret.blastRadius(), turret.blastRadius())
                 .harming(config.blast().harm()));
         entity.add(engine.createComponent(Dragged.class));
@@ -1147,7 +1144,17 @@ public final class Spawner {
      */
     public Entity spawnProjectile(
             float x, float y, float directionX, float directionY, Weapon weapon, int damage, Side side, int credit) {
-        return spawnProjectile(x, y, directionX, directionY, weapon, damage, side, credit, weapon.projectileRange);
+        return spawnProjectile(
+                x,
+                y,
+                directionX,
+                directionY,
+                weapon,
+                damage,
+                config.blast().damage(),
+                side,
+                credit,
+                weapon.projectileRange);
     }
 
     /**
@@ -1161,6 +1168,7 @@ public final class Spawner {
             float directionY,
             Weapon weapon,
             int damage,
+            int blastDamage,
             Side side,
             int credit,
             float range) {
@@ -1175,6 +1183,7 @@ public final class Spawner {
                 damage,
                 weapon.projectileLook,
                 weapon.blastRadius,
+                blastDamage,
                 weapon.slicks,
                 ticks(weapon.pierceIntervalSeconds),
                 weapon.slowFactor,
@@ -1205,6 +1214,7 @@ public final class Spawner {
             int damage,
             Look look,
             float blastRadius,
+            int blastDamage,
             SlickDef slicks,
             int pierceIntervalTicks,
             float slowFactor,
@@ -1250,8 +1260,9 @@ public final class Spawner {
                 .credited(credit));
         if (blastRadius > 0f) {
             // A shot that goes off where it stops, by dying (G0018) - on a hit or at the arena edge.
-            entity.add(engine.createComponent(BlastsOnDeath.class)
+            entity.add(blastsOnDeath()
                     .set(blastRadius, blastRadius)
+                    .dealing(blastDamage)
                     .harming(blastHarm)
                     .credited(credit));
         }
@@ -1273,7 +1284,15 @@ public final class Spawner {
      * small until it has calibrated; {@code credit} is the slot what that kills counts for.
      */
     public Entity spawnLimpet(
-            float x, float y, float directionX, float directionY, Weapon weapon, long owner, Side side, int credit) {
+            float x,
+            float y,
+            float directionX,
+            float directionY,
+            Weapon weapon,
+            int blastDamage,
+            long owner,
+            Side side,
+            int credit) {
         LimpetDef limpet = weapon.limpet;
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Limpet.class)
@@ -1294,8 +1313,9 @@ public final class Spawner {
         entity.add(engine.createComponent(Collider.class).set(false, true).stopsShots(false));
         entity.add(engine.createComponent(Health.class).set(1));
         entity.add(engine.createComponent(Damage.class));
-        entity.add(engine.createComponent(BlastsOnDeath.class)
+        entity.add(blastsOnDeath()
                 .set(limpet.blastRadius(), limpet.blastRadius())
+                .dealing(blastDamage)
                 .harming(limpet.blastHarm())
                 .credited(credit));
         entity.add(engine.createComponent(Appearance.class).set(Look.LIMPET));
@@ -1457,7 +1477,7 @@ public final class Spawner {
         entity.add(engine.createComponent(Body.class).set(radius));
         entity.add(engine.createComponent(Collider.class).set(false, true));
         // Nothing bites a grenade out of the air, so both ways of ending it are the same circle.
-        entity.add(engine.createComponent(BlastsOnDeath.class)
+        entity.add(blastsOnDeath()
                 .set(blastRadius, blastRadius)
                 // A grenade's blast wounds a man where every other puts him down (G0018, G0053).
                 .harming(config.grenade().blastHarm())
@@ -1465,6 +1485,12 @@ public final class Spawner {
         entity.add(engine.createComponent(Appearance.class).set(Look.GRENADE));
         admit(entity);
         return entity;
+    }
+
+    /** A death reaction leaving the ordinary blast, {@code sim.blast.damage}: where every carrier of one starts. */
+    private BlastsOnDeath blastsOnDeath() {
+        return engine.createComponent(BlastsOnDeath.class)
+                .dealing(config.blast().damage());
     }
 
     /**
@@ -1475,19 +1501,28 @@ public final class Spawner {
      */
     public Entity spawnBlast(float x, float y, float radius) {
         return spawnBlast(
-                x, y, radius, true, Look.BLAST, Tally.NOBODY, config.blast().harm());
+                x,
+                y,
+                radius,
+                config.blast().damage(),
+                true,
+                Look.BLAST,
+                Tally.NOBODY,
+                config.blast().harm());
     }
 
     /**
-     * The same, saying whether it leaves the ground burning and what it is drawn as. Everything that
+     * The same, saying what it takes off what it catches - its source's, {@code sim.blast.damage} unless a gun moves
+     * it (G0127) - whether it leaves the ground burning and what it is drawn as. Everything that
      * explodes leaves fire and is drawn as an explosion, but one. {@code credit} is the slot what it
      * kills counts for, or {@link Tally#NOBODY}; {@code harm} is what it does to a man (G0053).
      */
-    public Entity spawnBlast(float x, float y, float radius, boolean leavesFire, Look look, int credit, Harm harm) {
+    public Entity spawnBlast(
+            float x, float y, float radius, int damage, boolean leavesFire, Look look, int credit, Harm harm) {
         SimConfig.BlastConfig blast = config.blast();
         Entity entity = engine.createEntity();
         entity.add(engine.createComponent(Blast.class)
-                .set(blast.damage(), harm, ticks(blast.durationSeconds()))
+                .set(damage, harm, ticks(blast.durationSeconds()))
                 .credited(credit));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));

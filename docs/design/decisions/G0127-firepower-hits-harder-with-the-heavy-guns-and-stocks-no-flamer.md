@@ -4,7 +4,9 @@
 
 **Trigger.** What Firepower does; what a crate is dealt under it; how an upgrade reaches more than one gun.
 
-**Enforced by.** Tests written with the code (`UpgradeTest`, `CrateTest`).
+**Enforced by.** `UpgradeTest.hitsHarderWithTheHeavyGunsAndWithNoOtherGunUnderFirepower`,
+`.dealsEveryCrateUnderFirepowerAsWithoutIt`; `BazookaTest.landsItsBlastAsMuchHarderAsItsGunUnderFirepower`,
+`DetonatorTest.landsBothItsBlastsAsMuchHarderAsItsGunUnderFirepower` (the blast through G0130).
 
 **Settled with Mateusz, 2026-11-24** (grilling): *remove the bonus flamer from crates; slightly increase the damage of the
 explosive and fire guns.* Not yet built, not yet played.

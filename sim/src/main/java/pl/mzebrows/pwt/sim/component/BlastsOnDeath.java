@@ -17,6 +17,13 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
     public float radius;
 
     /**
+     * What the blast it leaves takes off whatever has health (G0018): {@code sim.blast.damage}, far above any
+     * alien's, unless the gun that fired it hits harder or softer - a rocket's and a limpet's are their gun's,
+     * moved by what moves its damage (G0127).
+     */
+    public int damage;
+
+    /**
      * How wide instead, if something bit into it rather than shooting it.
      *
      * <p>A field read before the death, not a second path (G0018).
@@ -65,6 +72,12 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
         return this;
     }
 
+    /** Declares what the blast this leaves takes off what it catches, and returns this component, for fluent spawning. */
+    public BlastsOnDeath dealing(int newDamage) {
+        this.damage = newDamage;
+        return this;
+    }
+
     /** Declares what the blast this leaves does to a man, and returns this component, for fluent spawning. */
     public BlastsOnDeath harming(Harm newHarm) {
         this.harm = newHarm;
@@ -100,6 +113,7 @@ public final class BlastsOnDeath implements Component, Pool.Poolable {
     @Override
     public void reset() {
         radius = 0f;
+        damage = 0;
         bittenRadius = 0f;
         harm = Harm.DOWN;
         leavesFire = true;

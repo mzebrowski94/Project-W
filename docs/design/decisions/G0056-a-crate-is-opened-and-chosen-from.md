@@ -1,6 +1,6 @@
 # G0056: A crate is opened and chosen from, dealt on its first opening, by one commander at a time
 
-**Status.** amended by G0110: a taken site leaves crates by the seated count, and no crate holds two cards of one kind
+**Status.** amended by G0110: a taken site leaves crates by the seated count, and no crate holds two cards of one kind; amended by G0127: Firepower stocks no flamer
 
 **Trigger.** Anything about what a crate holds or when that is decided; opening one; the crate bar in the
 top bar; an upgrade that changes what crates hold; proposing that a crate show its contents from a
@@ -10,7 +10,7 @@ distance, or that a trooper open one; anything that keeps two crates or a crate 
 first opening and not before, keeps what it was dealt less what was taken, gone once empty, one opener at
 a time and the lower slot on a tie, shut on a wound, on going down, out of reach, on a dropped link and on
 request, a medkit refused to a man with no wound, the deck and the size both from a bag),
-`UpgradeTest.stocksEveryCrateWithAFlamerUnderFirepower`, `.fillsEveryCrateUnderFullCrates`,
+`UpgradeTest.stocksEveryCrateWithTheCardAStockNames`, `.fillsEveryCrateUnderFullCrates`,
 `.shufflesTheArmouryDeckAfreshWhenADealStacksIt`, `CrateBarTest` (one bar a machine, a second local crate
 named for shutting, only its seat works it, nothing re-shown before the world has answered),
 `CrateKeysTest`, `ReadoutWriterTest.listsTheCardsOfTheCrateHeHasOpenAndWhichHeWouldBeTurnedDownFor`,
@@ -44,9 +44,9 @@ exception to pillar 1 beside the upgrade draft (G0049). **Amends G0038** for the
 - **One crate or one draft in a machine's top bar at a time.** A second local seat's press on a crate is not
   sent while the bar is taken, and a crate that opens anyway - two presses in one frame - is shut. Seats
   on other machines open their own crates freely. Opening one pauses a solo game as a draft does (G0049).
-- **Upgrades**: Full Crates raises the fewest a crate is dealt to the four it can hold; Firepower puts a
-  flamer per rank into every crate dealt after the pick, swapped for what the deck dealt from the last
-  card back.
+- **Upgrades**: Full Crates raises the fewest a crate is dealt to the four it can hold; a stock puts its card
+  into every crate dealt after the pick, swapped for what the deck dealt from the last card back. (Firepower's
+  flamer was the one stock; G0127 took it off.)
 
 **Beside it.** **The leash holds together the commanders at one machine,
 and nobody else.** A slot's machine arrives with its join event and is carried by the snapshot, and only
@@ -71,3 +71,9 @@ choices at once is a menu again (pillar 1).
 
 **Revisit when** a trooper should fetch from a crate, or a crate should hold something other than a gun's
 cache or a medkit - the deck is any pickup with cards, so the second needs only a number.
+
+## Amended by G0127
+
+**No stock.** Firepower no longer puts a flamer in every crate: a crate opened under it is dealt as any other, the
+flamer at the armoury deck's baseline (`UpgradeTest.dealsEveryCrateUnderFirepowerAsWithoutIt`). The `stock` effect
+form stays, with no shipped user, enforced by `UpgradeTest.stocksEveryCrateWithTheCardAStockNames`.

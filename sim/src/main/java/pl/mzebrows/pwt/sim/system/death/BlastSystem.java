@@ -104,7 +104,15 @@ public final class BlastSystem extends EntitySystem {
                 continue;
             }
             Position at = POSITION.get(entity);
-            spawner.spawnBlast(at.x, at.y, radius, reaction.leavesFire, reaction.look, reaction.credit, reaction.harm);
+            spawner.spawnBlast(
+                    at.x,
+                    at.y,
+                    radius,
+                    reaction.damage,
+                    reaction.leavesFire,
+                    reaction.look,
+                    reaction.credit,
+                    reaction.harm);
         }
     }
 
