@@ -12,7 +12,8 @@ import pl.mzebrows.pwt.sim.component.Weapon;
  *
  * <p>The gap is the caller's, not the gun's: how much clearance a shot needs is a fact about the
  * thing holding it rather than about the gun, and the two that existed before this did were already
- * different from each other.
+ * different from each other. A gun may ask for more on top - {@code muzzleClearance}, the plasma cannon's orb, which
+ * is on nobody's side and would otherwise go off on the man walking after it (G0128).
  */
 final class Muzzle {
 
@@ -26,7 +27,7 @@ final class Muzzle {
             float x, float y, float bodyRadius, Weapon weapon, float gap, float aimX, float aimY, float[] out) {
         boolean right = weapon.nextMuzzleRight;
         weapon.nextMuzzleRight = !right;
-        float forward = bodyRadius + weapon.projectileRadius + gap;
+        float forward = bodyRadius + weapon.projectileRadius + gap + weapon.muzzleClearance;
         float lateral = right ? -weapon.muzzleOffset : weapon.muzzleOffset;
         out[0] = x + aimX * forward - aimY * lateral;
         out[1] = y + aimY * forward + aimX * lateral;

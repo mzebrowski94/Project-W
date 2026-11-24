@@ -3,6 +3,7 @@ package pl.mzebrows.pwt.sim.system.combat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.config;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.ground;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.simulation;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.steps;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ticksIn;
@@ -58,6 +59,23 @@ class PlasmaTest {
 
         assertThat(count(simulation, Orb.class)).isOne();
         assertThat(commander.getComponent(Heat.class).locked).isTrue();
+    }
+
+    /**
+     * Walking after his own throw on the tick he throws, he never touches the orb: it leaves clear of him by its gun's
+     * muzzle clearance, past where the solver sweeps it from (G0128). At the shipped pace, his and the orb's.
+     */
+    @Test
+    void throwsTheOrbClearOfHimWhileHeWalksAfterIt() {
+        Simulation simulation = new Simulation(SimConfig.defaults(), ground().build());
+        Entity commander = simulation.spawnCommander(X, Y);
+        arm(simulation, commander);
+
+        steps(simulation, ticksIn(0.3f), new CommanderInput(1f, 0f, X + 60f, Y, true, false));
+
+        assertThat(count(simulation, Orb.class)).isOne();
+        assertThat(count(simulation, Blast.class)).isZero();
+        assertThat(unhurt(commander)).isTrue();
     }
 
     // ---- the beams ----
@@ -164,8 +182,10 @@ class PlasmaTest {
     @Test
     void goesOffAtTheEndOfItsFlightWithNothingInTheWay() {
         Simulation simulation = simulation();
-        orb(simulation, 1f, 0f);
         WeaponDef gun = simulation.config().weapon(WeaponKind.PLASMA);
+        // From the west edge, so its whole flight lies inside the arena rather than off its far side.
+        float from = simulation.map().worldWidth() - gun.projectileRange() - gun.projectileRadius() * 4f;
+        simulation.spawnProjectile(from, Y, 1f, 0f, WeaponKind.PLASMA, Side.PLAYER);
         float flight = gun.projectileRange() / gun.projectileSpeed();
 
         steps(simulation, ticksIn(flight * 0.9f));

@@ -68,6 +68,9 @@ import lombok.With;
  *     that leaves no blast
  * @param beam what one of its shots beams at while it flies (G0128); {@link BeamDef#off()} for every gun but the plasma
  *     cannon
+ * @param muzzleClearance how much further clear of its holder's body its shots leave, past {@code sim.muzzleGap}, in world
+ *     units; zero on every gun but one whose shot is on nobody's side and would go off on the man walking after it - the
+ *     plasma cannon's orb (G0128)
  */
 @With
 public record WeaponDef(
@@ -102,7 +105,8 @@ public record WeaponDef(
         LimpetDef limpet,
         float stepOff,
         int blastDamage,
-        BeamDef beam) {
+        BeamDef beam,
+        float muzzleClearance) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;
@@ -134,6 +138,7 @@ public record WeaponDef(
         Require.notNegative("weapon bounces", bounces);
         Require.notNegative("weapon stepOff", stepOff);
         Require.notNegative("weapon blastDamage", blastDamage);
+        Require.notNegative("weapon muzzleClearance", muzzleClearance);
         if (bounces > 0 && pierceIntervalSeconds > 0f) {
             throw new IllegalArgumentException(
                     "a shot comes off what it hits or passes through it, never both: bounces with a pierceIntervalSeconds");
@@ -216,7 +221,8 @@ public record WeaponDef(
                 LimpetDef.off(),
                 0f,
                 0,
-                BeamDef.off());
+                BeamDef.off(),
+                0f);
     }
 
     /** True if what this gun hits keeps less of its speed for a while afterwards. */

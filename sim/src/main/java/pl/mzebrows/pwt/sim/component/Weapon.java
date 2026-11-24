@@ -64,6 +64,9 @@ public final class Weapon implements Component, Pool.Poolable {
     /** How far to either side of the line of fire its muzzles sit. Zero for a gun with one. */
     public float muzzleOffset;
 
+    /** How much further clear of the holder's body its shots leave, past the shared gap (G0128). Zero for most. */
+    public float muzzleClearance;
+
     /**
      * How long one of its shots waits between the blows it lands. Zero is a shot that stops at the
      * first thing it touches, which is what every gun but one declares.
@@ -165,6 +168,7 @@ public final class Weapon implements Component, Pool.Poolable {
         this.beam = def.beam();
         this.slicks = def.slicks();
         this.muzzleOffset = def.muzzleOffset();
+        this.muzzleClearance = def.muzzleClearance();
         this.pierceIntervalSeconds = def.pierceIntervalSeconds();
         this.slowFactor = def.slowFactor();
         this.slowTicks = Ticks.of(def.slowSeconds(), tickSeconds);
@@ -212,6 +216,7 @@ public final class Weapon implements Component, Pool.Poolable {
         beam = BeamDef.off();
         slicks = SlickDef.off();
         muzzleOffset = 0f;
+        muzzleClearance = 0f;
         pierceIntervalSeconds = 0f;
         slowFactor = 1f;
         slowTicks = 0;

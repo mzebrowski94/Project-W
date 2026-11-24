@@ -9,7 +9,7 @@
 `.passesAManInTheLineOfItsBeamHarmlessly`, `.goesOffOnTouchingAnAlienInABlastOfItsOwnDamage`,
 `.goesOffOnTouchingAManOfOursAndItsBlastWoundsHim`, `.goesOffAtTheEndOfItsFlightWithNothingInTheWay`,
 `.goesOffOnceItsBeamsHaveLandedItsPower`, `.spendsItsPowerByWhatItsBeamsLandOnTheLivingAlone`,
-`.carriesWhatIsLeftOfItsPowerThroughASnapshot`; `SystemOrderTest.beamsFromAnOrbStraightAfterTheLimpetBeforeTheDeathChain`.
+`.carriesWhatIsLeftOfItsPowerThroughASnapshot`, `.throwsTheOrbClearOfHimWhileHeWalksAfterIt`; `SystemOrderTest.beamsFromAnOrbStraightAfterTheLimpetBeforeTheDeathChain`.
 
 **Settled with Mateusz, 2026-11-24** (grilling). Not yet built, not yet played.
 
@@ -66,3 +66,12 @@ Ticket 02 of the AFK run (2026-11-24), building this record - provisional, for r
   moderate.
 - **`OrbSystem` sits straight after `LimpetSystem`**; picking ignores lines of sight - a beam into rock stops on the
   rock and spends nothing.
+
+After play (Mateusz, 2026-11-24):
+
+- **The orb leaves clear of the man walking after it.** Thrown 0.1 off his body (`sim.muzzleGap`), it was touched on the
+  tick he threw while walking - the solver sweeps a shot from where it left, and he had stepped into that - and went
+  off on him. A gun may now ask for more room past the shared gap, `sim.weapon.<gun>.muzzleClearance`, read where the
+  muzzle is placed (`Muzzle.next`) and in the gun's reach; 1 on the plasma cannon, zero on every other gun.
+  `PlasmaTest.throwsTheOrbClearOfHimWhileHeWalksAfterIt`. A dash (50 a second) still outruns the orb (40).
+  *Turned down:* raising `sim.muzzleGap` for every gun - only a shot on nobody's side can hurt its own thrower.

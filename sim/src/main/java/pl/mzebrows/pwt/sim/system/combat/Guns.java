@@ -78,7 +78,11 @@ public final class Guns {
      */
     public float reach(Entity holder) {
         Weapon weapon = WEAPON.get(holder);
-        return BODY.get(holder).radius + muzzleGap + weapon.projectileRadius * 2f + weapon.projectileRange;
+        return BODY.get(holder).radius
+                + muzzleGap
+                + weapon.muzzleClearance
+                + weapon.projectileRadius * 2f
+                + weapon.projectileRange;
     }
 
     /** Whether this thing may fire at all this tick: the gun is off cooldown and has not stopped itself. */
@@ -132,7 +136,7 @@ public final class Guns {
         float range = weapon.projectileRange;
         if (stopAt > 0f) {
             // Never down to zero, which would be "until it hits something": a shot stopping at the muzzle stops there.
-            float flight = Math.max(stopAt - bodyRadius - muzzleGap, Float.MIN_VALUE);
+            float flight = Math.max(stopAt - bodyRadius - muzzleGap - weapon.muzzleClearance, Float.MIN_VALUE);
             range = range > 0f ? Math.min(range, flight) : flight;
         }
         int pellets = weapon.pellets < 1 ? 1 : weapon.pellets;

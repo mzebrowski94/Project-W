@@ -75,10 +75,10 @@ Ticket 03 of the AFK run (2026-11-24), building the sentry - provisional, for re
 - **`SentrySystem` sits in the death window** (43, after `RespawnSystem`, before `ProjectileBoundsSystem`), with its
   reason in `docs/simulation-order.md`.
 - **Time left on the charge channel**: the body's core shrinks as its life runs out, as a casualty's clock does.
-- **Starting values**: `sim.sentry.radius=1.4` (a turret's 2.2), `health=300` (a turret's 1200), `lifeSeconds=60`,
+- **Starting values**: `sim.sentry.radius=1.4` (a turret's 2.2), `health=300` (a turret's 1200; 600 after play), `lifeSeconds=60`,
   `range=30` (a trooper's sight 27, a turret's 55), `turnRate=8`, `firingTurnFactor=0.6`, `blastRadius=4`,
-  `blastDamage=150`, `blastHarm=wound`, `stunRadius=10`, `stunSeconds=1`; `sim.weapon.sentry_gun` - `cooldownSeconds=0.2`
-  (`turret_gun`'s 0.16; ticket 04 raised the base to 0.25, which Engineer's rank one brings back to 0.2), `damage=14` (its 30), `projectileSpeed=150`, `projectileRange=34`.
+  `blastDamage=150`, `blastHarm=wound`, `stunRadius=10`, `stunSeconds=1` (1.5 after play); `sim.weapon.sentry_gun` - `cooldownSeconds=0.2`
+  (`turret_gun`'s 0.16; ticket 04 raised the base to 0.25, which Engineer's rank one brings back to 0.2; 0.2 base after play), `damage=14` (its 30; 20 after play), `projectileSpeed=150`, `projectileRange=34`.
 
 Ticket 04 of the AFK run (2026-11-24), building Engineer - provisional, for review:
 
@@ -86,7 +86,7 @@ Ticket 04 of the AFK run (2026-11-24), building Engineer - provisional, for revi
   `Throws.setsSentries` - the one hand, for the press and for his panel. *Turned down:* a branch on the upgrade's kind,
   and a flag on `Thrower` written by `UpgradeSystem`, a second copy of what the ledger already says.
 - **Rank two is `gun sentry_gun fire_cooldown chooser -20`**, and a rank folds linearly, so the cut lands at rank one too:
-  the gun's base is 0.25 s so rank one fires at ticket 03's 0.2 s and rank two at 0.15 s. A sentry no Engineer set down
+  the gun's base is 0.25 s so rank one fires at ticket 03's 0.2 s and rank two at 0.15 s (after play the base is 0.2: 0.16 and 0.12). A sentry no Engineer set down
   (a scenario's) fires at the base. *Turned down:* a "rank two only" effect form - a second way to fold a rank.
 - **A sentry is reached by its setter's personal upgrades** (`chooser`, through `Sentry.slot`) and by nothing else, in
   `Scope`, the one place the reader is resolved; its reads are folded each time, as a commander's are, rather than cached
