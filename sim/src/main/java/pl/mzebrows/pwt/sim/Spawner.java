@@ -4,6 +4,8 @@ import com.badlogic.ashley.core.Entity;
 import com.badlogic.ashley.core.Family;
 import com.badlogic.ashley.core.PooledEngine;
 import com.badlogic.ashley.utils.ImmutableArray;
+import java.util.EnumMap;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.component.Action;
@@ -56,6 +58,7 @@ import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Mine;
 import pl.mzebrows.pwt.sim.component.Nest;
 import pl.mzebrows.pwt.sim.component.Obstacle;
+import pl.mzebrows.pwt.sim.component.Orb;
 import pl.mzebrows.pwt.sim.component.Perception;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Pop;
@@ -97,6 +100,7 @@ import pl.mzebrows.pwt.sim.component.Weapon;
 import pl.mzebrows.pwt.sim.component.Weave;
 import pl.mzebrows.pwt.sim.component.WorkedSite;
 import pl.mzebrows.pwt.sim.def.AiChance;
+import pl.mzebrows.pwt.sim.def.BeamDef;
 import pl.mzebrows.pwt.sim.def.BurrowDef;
 import pl.mzebrows.pwt.sim.def.Cycle;
 import pl.mzebrows.pwt.sim.def.CycleDef;
@@ -136,10 +140,20 @@ public final class Spawner {
 
     private final ImmutableArray<Entity> levels;
 
+    /** The shot every orb's beam fires (G0128), read in once: a gun nobody holds, so no entity carries it. */
+    @NotState("cache: the beam guns, read from the config at construction")
+    private final Map<WeaponKind, Weapon> beams = new EnumMap<>(WeaponKind.class);
+
     Spawner(PooledEngine engine, SimConfig config) {
         this.engine = engine;
         this.config = config;
         this.levels = engine.getEntitiesFor(Family.all(Level.class).get());
+        for (WeaponKind kind : WeaponKind.values()) {
+            if (config.weapon(kind).beams()) {
+                WeaponKind gun = config.weapon(kind).beam().gun();
+                beams.put(gun, new Weapon().set(gun, config.weapon(gun), config.tickSeconds()));
+            }
+        }
     }
 
     /**
@@ -1144,6 +1158,8 @@ public final class Spawner {
      */
     public Entity spawnProjectile(
             float x, float y, float directionX, float directionY, Weapon weapon, int damage, Side side, int credit) {
+        int beamDamage =
+                weapon.beam.enabled() ? config.weapon(weapon.beam.gun()).damage() : 0;
         return spawnProjectile(
                 x,
                 y,
@@ -1151,7 +1167,8 @@ public final class Spawner {
                 directionY,
                 weapon,
                 damage,
-                config.blast().damage(),
+                weapon.blastDamage,
+                beamDamage,
                 side,
                 credit,
                 weapon.projectileRange);
@@ -1169,6 +1186,7 @@ public final class Spawner {
             Weapon weapon,
             int damage,
             int blastDamage,
+            int beamDamage,
             Side side,
             int credit,
             float range) {
@@ -1184,6 +1202,8 @@ public final class Spawner {
                 weapon.projectileLook,
                 weapon.blastRadius,
                 blastDamage,
+                weapon.beam,
+                beamDamage,
                 weapon.slicks,
                 ticks(weapon.pierceIntervalSeconds),
                 weapon.slowFactor,
@@ -1215,6 +1235,8 @@ public final class Spawner {
             Look look,
             float blastRadius,
             int blastDamage,
+            BeamDef beam,
+            int beamDamage,
             SlickDef slicks,
             int pierceIntervalTicks,
             float slowFactor,
@@ -1243,7 +1265,9 @@ public final class Spawner {
             shot.piercing();
         }
         entity.add(shot);
-        entity.add(engine.createComponent(Faction.class).set(side));
+        // An orb is on nobody's side, as a limpet is, so it goes off on our men as on theirs; its beams are on the side
+        // it was thrown from (G0128).
+        entity.add(engine.createComponent(Faction.class).set(beam.enabled() ? Side.NEUTRAL : side));
         entity.add(engine.createComponent(Position.class).set(x, y));
         entity.add(engine.createComponent(PreviousPosition.class).set(x, y));
         entity.add(engine.createComponent(Velocity.class).set(directionX * speed, directionY * speed));
@@ -1264,7 +1288,21 @@ public final class Spawner {
                     .set(blastRadius, blastRadius)
                     .dealing(blastDamage)
                     .harming(blastHarm)
-                    .credited(credit));
+                    .credited(credit)
+                    // An orb's blast is drawn green, as it is (G0128).
+                    .drawnAs(beam.enabled() ? Look.ORB_BLAST : Look.BLAST));
+        }
+        if (beam.enabled()) {
+            entity.add(engine.createComponent(Orb.class)
+                    .set(
+                            side,
+                            credit,
+                            beam.power(),
+                            beam.count(),
+                            beam.reach(),
+                            ticks(beam.cooldownSeconds()),
+                            beam.gun(),
+                            beamDamage));
         }
         if (slicks.leavesAnything()) {
             // And one that ruins the ground where it stops; a gun may name both.
@@ -1273,6 +1311,30 @@ public final class Spawner {
         entity.add(engine.createComponent(Appearance.class).set(look));
         admit(entity);
         return entity;
+    }
+
+    /**
+     * Spawns one beam shot of an orb's (G0128): a shot of {@code gun} from the orb's middle at an alien, on the side the
+     * orb was thrown from, so it passes our men; what it lands comes off the orb's power ({@code beamedFrom}).
+     */
+    public Entity spawnBeamShot(
+            float x,
+            float y,
+            float directionX,
+            float directionY,
+            WeaponKind gun,
+            int damage,
+            Side side,
+            int credit,
+            long beamedFrom) {
+        Weapon beam = beams.get(gun);
+        if (beam == null) {
+            throw new IllegalArgumentException(gun + " is no gun's beam");
+        }
+        Entity shot = spawnProjectile(
+                x, y, directionX, directionY, beam, damage, beam.blastDamage, 0, side, credit, beam.projectileRange);
+        shot.getComponent(Projectile.class).beamedFrom(beamedFrom);
+        return shot;
     }
 
     /**

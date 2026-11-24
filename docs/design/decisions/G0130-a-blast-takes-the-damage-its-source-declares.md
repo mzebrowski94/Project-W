@@ -16,12 +16,16 @@ blast took `sim.blast.damage` whatever made it, so there was nothing for Firepow
 **Constraint.**
 
 - **The damage is the source's**, carried on its `BlastsOnDeath` as its harm is (G0053) and handed to the `Blast` it
-  leaves. Every carrier starts at `sim.blast.damage`; one place in `Spawner` gives it.
-- **A gun's blast is part of what the gun does.** `Guns.volley` - the one place `gun_damage` is read - folds the gun's
-  damage scale into the blast a rocket or a limpet leaves, for the same pull, so an upgrade that moves a gun's damage
-  moves its blast's with it.
+  leaves. Every carrier but a gun's starts at `sim.blast.damage`; one place in `Spawner` gives it.
+- **A gun's blast is part of what the gun does.** Each gun names its `blastDamage` - a rocket's, a charged spit's and a
+  limpet's `sim.blast.damage`'s thousand, an orb's 300 (G0128) - and `Guns.volley`, the one place `gun_damage` is
+  read, folds the gun's damage scale into it for the same pull, so an upgrade that moves a gun's damage moves its
+  blast's with it.
 - **Still one circle**, uniform inside it, on nobody's side, through the one death reaction. What a man takes is still
   the blast kind's harm; only what has health reads the damage.
+
+**Why a gun names it.** The orb's blast is meant to be moderate (G0128), the sentry's small (G0129): two sources that
+are not the ordinary thousand, so the number is the source's to declare, as its radius and its harm already are.
 
 **Why on the source and not on the blast config.** `sim.blast.*` is what is true of every explosion (G0018); the
 number a gun's upgrade moves belongs to whoever fired, as the harm already does.

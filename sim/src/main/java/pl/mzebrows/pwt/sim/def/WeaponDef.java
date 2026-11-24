@@ -63,6 +63,11 @@ import lombok.With;
  * @param stepOff how far a trooper one of its shots wounds, and leaves on his feet, steps off its line - square to it,
  *     to the side he already stands on - before he goes back to what he was doing (G0114); zero on every gun but the
  *     warden's, whose lanes are the danger rather than whoever fired
+ * @param blastDamage what the blast one of its shots - or its limpet - leaves takes off what it catches, before upgrades
+ *     (G0130): {@code sim.blast.damage}'s thousand for a rocket's or a limpet's, less for an orb's; meaningless on a gun
+ *     that leaves no blast
+ * @param beam what one of its shots beams at while it flies (G0128); {@link BeamDef#off()} for every gun but the plasma
+ *     cannon
  */
 @With
 public record WeaponDef(
@@ -95,7 +100,9 @@ public record WeaponDef(
         int bounces,
         WeaponType type,
         LimpetDef limpet,
-        float stepOff) {
+        float stepOff,
+        int blastDamage,
+        BeamDef beam) {
 
     /** The widest a cone may be before "roughly where it was pointed" stops meaning anything. */
     private static final float WIDEST_SPREAD = 180f;
@@ -126,6 +133,7 @@ public record WeaponDef(
         Require.notNegative("weapon stunAfterHits", stunAfterHits);
         Require.notNegative("weapon bounces", bounces);
         Require.notNegative("weapon stepOff", stepOff);
+        Require.notNegative("weapon blastDamage", blastDamage);
         if (bounces > 0 && pierceIntervalSeconds > 0f) {
             throw new IllegalArgumentException(
                     "a shot comes off what it hits or passes through it, never both: bounces with a pierceIntervalSeconds");
@@ -142,7 +150,11 @@ public record WeaponDef(
         }
     }
 
-    /** Every gun but the detonator and the warden's: the same, throwing no limpet, and no shot stepped off from. */
+    /**
+     * Every gun but the detonator, the warden's and the plasma cannon: the same, throwing no limpet, no shot stepped off
+     * from, beaming nothing, and leaving no blast - or one taking nothing, which a fixture names with
+     * {@code withBlastDamage}.
+     */
     public WeaponDef(
             float cooldownSeconds,
             float projectileSpeed,
@@ -202,7 +214,9 @@ public record WeaponDef(
                 bounces,
                 type,
                 LimpetDef.off(),
-                0f);
+                0f,
+                0,
+                BeamDef.off());
     }
 
     /** True if what this gun hits keeps less of its speed for a while afterwards. */
@@ -246,6 +260,11 @@ public record WeaponDef(
     /** True if its shots pass through anything alive rather than stopping at the first of it. */
     public boolean pierces() {
         return pierceIntervalSeconds > 0f;
+    }
+
+    /** True if what it fires beams at what it passes (G0128). */
+    public boolean beams() {
+        return beam.enabled();
     }
 
     /** True if what it fires goes off where it stops. */

@@ -57,6 +57,12 @@ public final class Projectile implements Component, Pool.Poolable {
      */
     public float trailLength;
 
+    /**
+     * The orb this shot was beamed from (G0128), whose power what it lands comes off; {@link Handle#NOBODY} for every
+     * shot that is not a beam's. Named by handle, never held (ADR 0016).
+     */
+    public long beamedFrom = Handle.NOBODY;
+
     /** Records the muzzle, and returns this component, for fluent spawning. */
     public Projectile from(float x, float y) {
         this.originX = x;
@@ -73,6 +79,12 @@ public final class Projectile implements Component, Pool.Poolable {
     /** Gives it a flight length, and returns this component, for fluent spawning. */
     public Projectile lasting(float newRange) {
         this.range = newRange;
+        return this;
+    }
+
+    /** Makes it a beam shot of this orb's, and returns this component, for fluent spawning. */
+    public Projectile beamedFrom(long orb) {
+        this.beamedFrom = orb;
         return this;
     }
 
@@ -142,5 +154,6 @@ public final class Projectile implements Component, Pool.Poolable {
         bouncesLeft = 0;
         breaksDoors = false;
         stepOff = 0f;
+        beamedFrom = Handle.NOBODY;
     }
 }

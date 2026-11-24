@@ -191,8 +191,10 @@ public final class Damage implements Component, Pool.Poolable {
      * the stun, slow, pumping and credit it carries. Where it came from, and what it does to the two
      * bodies, depend on where they stand, and are said with {@link #cameFrom}, {@link #push},
      * {@link #shove} and {@link #lockOnDeath}.
+     *
+     * @return the hit points it owes: what an orb's beam takes off its power (G0128), from this one record
      */
-    public void land(ContactDamage blow) {
+    public int land(ContactDamage blow) {
         land(blow.amount, blow.victimInvulnerableTicks, blow.harm, blow.credit);
         if (blow.shock > 0f) {
             charge(blow.shock, blow.stunTicks);
@@ -201,6 +203,7 @@ public final class Damage implements Component, Pool.Poolable {
         }
         slow(blow.slowFactor, blow.slowTicks);
         pump(blow.bloat);
+        return blow.amount;
     }
 
     /**

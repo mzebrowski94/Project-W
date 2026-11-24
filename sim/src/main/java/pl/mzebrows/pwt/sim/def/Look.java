@@ -137,6 +137,15 @@ public enum Look {
     GLOB,
     /** What a jaguar spits: drawn as a glob is, in the jaguar's purple (G0112). */
     JAGUAR_GLOB,
+    /**
+     * An orb (G0128): a green ball inside a thin, slightly offset ring flickering green and white, dimming as its
+     * power is spent - on the charge channel - so what is left of it is seen. Only the ball touches anything.
+     */
+    ORB,
+    /** One shot of an orb's beam (G0128): the laser's kind of line, green. */
+    PLASMA_BEAM,
+    /** The circle an orb goes off in (G0128): an ordinary blast, drawn green. */
+    ORB_BLAST,
     /** A spire's shot (G0113): a small pale-green bead. */
     SPIRE_SHOT,
     /** A warden's shot (G0114): a small bead, warm against sand. */
@@ -211,6 +220,7 @@ public enum Look {
     ARMOURY_PULSE,
     ARMOURY_DISC,
     ARMOURY_DETONATOR,
+    ARMOURY_PLASMA,
     /** A grenade cache (G0077): never on the field, only a card in a crate - its look is the card's colour. */
     ARMOURY_GRENADES,
     /**

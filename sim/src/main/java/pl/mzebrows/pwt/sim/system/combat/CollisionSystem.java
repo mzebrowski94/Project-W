@@ -29,6 +29,7 @@ import pl.mzebrows.pwt.sim.component.Handle;
 import pl.mzebrows.pwt.sim.component.Invulnerable;
 import pl.mzebrows.pwt.sim.component.Leap;
 import pl.mzebrows.pwt.sim.component.Limpet;
+import pl.mzebrows.pwt.sim.component.Orb;
 import pl.mzebrows.pwt.sim.component.Pickup;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.PreviousPosition;
@@ -88,6 +89,7 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
     private static final ComponentMapper<Gripped> GRIPPED = ComponentMapper.getFor(Gripped.class);
     private static final ComponentMapper<Body> BODY = ComponentMapper.getFor(Body.class);
     private static final ComponentMapper<PreviousPosition> PREVIOUS = ComponentMapper.getFor(PreviousPosition.class);
+    private static final ComponentMapper<Orb> ORB = ComponentMapper.getFor(Orb.class);
 
     /** Below this two bodies are on top of each other and give no direction to be thrown along. */
     private static final float EPSILON = 1e-4f;
@@ -498,11 +500,26 @@ public final class CollisionSystem extends EntitySystem implements ConstraintSol
         }
         attack.remainingTicks = attack.cooldownTicks;
         // Recorded, not applied, protected target or not: whether it costs anything is DamageSystem's.
-        owed.land(attack);
+        int landed = owed.land(attack);
+        drain(attacker, target, landed);
         recordSource(attacker, owed);
         stepOffTheLine(attacker, target, owed);
         lock(attacker, target, attack, owed);
         shove(attacker, target, attack, owed);
+    }
+
+    /**
+     * Takes what a beam shot landed off the power of the orb it was beamed from (G0128) - on anything alive, so a corpse
+     * in the way spends nothing. Read from the one record of the blow, never counted a second way.
+     */
+    private void drain(Entity attacker, Entity target, int landed) {
+        if (!PROJECTILE.has(attacker) || PROJECTILE.get(attacker).beamedFrom == Handle.NOBODY || inert(target)) {
+            return;
+        }
+        @Nullable Entity orb = Handles.resolve(handled, PROJECTILE.get(attacker).beamedFrom);
+        if (orb != null && ORB.has(orb)) {
+            ORB.get(orb).spend(landed);
+        }
     }
 
     /**

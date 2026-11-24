@@ -2,6 +2,7 @@ package pl.mzebrows.pwt.sim.component;
 
 import com.badlogic.ashley.core.Component;
 import com.badlogic.gdx.utils.Pool;
+import pl.mzebrows.pwt.sim.def.BeamDef;
 import pl.mzebrows.pwt.sim.def.Harm;
 import pl.mzebrows.pwt.sim.def.LimpetDef;
 import pl.mzebrows.pwt.sim.def.Look;
@@ -42,6 +43,15 @@ public final class Weapon implements Component, Pool.Poolable {
 
     /** How wide a blast each shot leaves where it stops. Zero for every ordinary gun. */
     public float blastRadius;
+
+    /** What that blast - or its limpet's - takes off what it catches, before upgrades (G0130). */
+    public int blastDamage;
+
+    /**
+     * What one of its shots beams at while it flies (G0128); {@link BeamDef#off()} for every gun but one. The immutable
+     * record itself, as {@link #slicks} is.
+     */
+    public BeamDef beam = BeamDef.off();
 
     /**
      * What each shot leaves lying on the ground where it bursts. {@link SlickDef#off()} for every
@@ -151,6 +161,8 @@ public final class Weapon implements Component, Pool.Poolable {
         this.halfSpreadRadians = def.halfSpreadRadians();
         this.projectileLook = def.projectileLook();
         this.blastRadius = def.blastRadius();
+        this.blastDamage = def.blastDamage();
+        this.beam = def.beam();
         this.slicks = def.slicks();
         this.muzzleOffset = def.muzzleOffset();
         this.pierceIntervalSeconds = def.pierceIntervalSeconds();
@@ -196,6 +208,8 @@ public final class Weapon implements Component, Pool.Poolable {
         halfSpreadRadians = 0f;
         projectileLook = Look.PROJECTILE;
         blastRadius = 0f;
+        blastDamage = 0;
+        beam = BeamDef.off();
         slicks = SlickDef.off();
         muzzleOffset = 0f;
         pierceIntervalSeconds = 0f;

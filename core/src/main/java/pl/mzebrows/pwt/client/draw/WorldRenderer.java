@@ -170,6 +170,7 @@ public final class WorldRenderer implements Disposable {
     private final BurrowMark burrowMark;
     private final DevourMark devourMark;
     private final LimpetMark limpetMark;
+    private final OrbMark orbMark;
     private final DashMark dashMark;
     private final BorderMark borderMark;
     private final DownMark downMark;
@@ -308,6 +309,10 @@ public final class WorldRenderer implements Disposable {
             }
             if (appearance.look == Look.LIMPET) {
                 drawLimpet(x, y, radius, appearance);
+                continue;
+            }
+            if (appearance.look == Look.ORB) {
+                drawOrb(x, y, radius, appearance);
                 continue;
             }
             if (appearance.dashX != 0f || appearance.dashY != 0f) {
@@ -825,6 +830,41 @@ public final class WorldRenderer implements Disposable {
             fromX = toX;
             fromY = toY;
         }
+    }
+
+    /**
+     * An orb (G0128): a thin ring outside its ball, its middle a little off the ball's, flickering green to white on the
+     * client's clock - straight pieces, as a loading circle is - then the ball, its body and the one part that touches
+     * anything, dimmed by how much of its power is spent.
+     */
+    private void drawOrb(float x, float y, float radius, Appearance appearance) {
+        Color green = palette.colorFor(Look.ORB);
+        float white = orbMark.whiteAt(pulseSeconds);
+        tinted.set(
+                green.r + (1f - green.r) * white,
+                green.g + (1f - green.g) * white,
+                green.b + (1f - green.b) * white,
+                green.a);
+        shapes.setColor(tinted);
+        float offset = radius * orbMark.ringOffset();
+        float ringX = x + offset;
+        float ringY = y + offset * 0.5f;
+        float ring = radius * orbMark.ring();
+        float width = radius * orbMark.ringWidth();
+        float fromX = ringX + ring;
+        float fromY = ringY;
+        for (int step = 1; step <= CIRCLE_SEGMENTS; step++) {
+            float angle = step * 360f / CIRCLE_SEGMENTS;
+            float toX = ringX + MathUtils.cosDeg(angle) * ring;
+            float toY = ringY + MathUtils.sinDeg(angle) * ring;
+            shapes.rectLine(fromX, fromY, toX, toY, width);
+            fromX = toX;
+            fromY = toY;
+        }
+        float bright = orbMark.brightnessFor(appearance.charge);
+        tinted.set(green.r * bright, green.g * bright, green.b * bright, green.a);
+        shapes.setColor(tinted);
+        shapes.circle(x, y, radius, CIRCLE_SEGMENTS);
     }
 
     /**

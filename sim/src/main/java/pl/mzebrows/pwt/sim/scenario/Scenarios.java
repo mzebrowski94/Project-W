@@ -40,7 +40,8 @@ public final class Scenarios {
             new JaguarHouseScenario(),
             new SpireFenScenario(),
             new RelicScenario(),
-            new HeavyRangeScenario());
+            new HeavyRangeScenario(),
+            new PlasmaRangeScenario());
 
     private Scenarios() {}
 

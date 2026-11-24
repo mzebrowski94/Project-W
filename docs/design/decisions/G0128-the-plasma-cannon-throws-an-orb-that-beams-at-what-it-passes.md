@@ -4,7 +4,12 @@
 
 **Trigger.** A new found gun; a shot that shoots; a shot that goes off by what it has spent.
 
-**Enforced by.** Tests written with the code.
+**Enforced by.** `PlasmaTest` - `.throwsOneOrbAPullAndRunsItsHeatToTheStop`, `.beamsAtTheThreeNearestAliensInItsReachAndNoOthers`,
+`.neverBeamsAtAMan`, `.stopsABeamOnAnAlienInTheWayOfTheOneItIsAimedAt`, `.stopsABeamOnSceneryInTheWay`,
+`.passesAManInTheLineOfItsBeamHarmlessly`, `.goesOffOnTouchingAnAlienInABlastOfItsOwnDamage`,
+`.goesOffOnTouchingAManOfOursAndItsBlastWoundsHim`, `.goesOffAtTheEndOfItsFlightWithNothingInTheWay`,
+`.goesOffOnceItsBeamsHaveLandedItsPower`, `.spendsItsPowerByWhatItsBeamsLandOnTheLivingAlone`,
+`.carriesWhatIsLeftOfItsPowerThroughASnapshot`; `SystemOrderTest.beamsFromAnOrbStraightAfterTheLimpetBeforeTheDeathChain`.
 
 **Settled with Mateusz, 2026-11-24** (grilling). Not yet built, not yet played.
 
@@ -41,3 +46,23 @@ beams longer - and it is a number the player sees spent, not a timer.
 **No:** *Beams that hurt our men.*
 
 **Revisit when** play shows the orb clearing whole waves on its own, or never reaching its power.
+
+## Amended by
+
+Ticket 02 of the AFK run (2026-11-24), building this record - provisional, for review:
+
+- **The orb is a shot on nobody's side**, as a limpet is, so it goes off on our men; its `Orb` carries the side it was
+  thrown from, and its beam shots are on that side, so the collision rule's own *nothing happens within a side* passes
+  them through our men - the laser's way with a trooper in the line, checked and matched. Its own touch is a harmless
+  blow (damage 0, harm none, G0057); the blast is the hurt. *Turned down:* a player-side orb with a "touches our men"
+  exception in the collision rule.
+- **Only the ball collides**: `projectileRadius` is its body; the ring is drawn outside it and touches nothing
+  (Mateusz, mid-run).
+- **Its beam shots inherit the gun's damage scale**, folded at the throw in the one `gun_damage` read (`Guns.volley`).
+- **Power is drained where the blow is recorded**: `Damage.land` returns what it recorded and `CollisionSystem` takes
+  that off the orb named on the shot (`Projectile.beamedFrom`), on anything not in its throes.
+- **A gun's blast takes the gun's own `blastDamage`** (G0130): the orb's is 300 - "moderate", a grunt's death and not a
+  brute's - where a rocket's and a limpet's stay 1000. *Turned down:* the orb's blast at `sim.blast.damage`, which is not
+  moderate.
+- **`OrbSystem` sits straight after `LimpetSystem`**; picking ignores lines of sight - a beam into rock stops on the
+  rock and spends nothing.

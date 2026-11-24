@@ -39,6 +39,7 @@ import pl.mzebrows.pwt.sim.system.combat.DamageSystem;
 import pl.mzebrows.pwt.sim.system.combat.GrenadeSystem;
 import pl.mzebrows.pwt.sim.system.combat.Guns;
 import pl.mzebrows.pwt.sim.system.combat.LimpetSystem;
+import pl.mzebrows.pwt.sim.system.combat.OrbSystem;
 import pl.mzebrows.pwt.sim.system.combat.PickupSystem;
 import pl.mzebrows.pwt.sim.system.combat.ProjectileBoundsSystem;
 import pl.mzebrows.pwt.sim.system.combat.ShockSystem;
@@ -209,8 +210,7 @@ public final class Simulation {
         // How loosely a gun throws, for every shooter; not how badly a creature aims (SPIT).
         Rng scatter = streams.of(RngStream.SCATTER);
         // The one trigger and the one hand: every shooter and every thrower goes through these.
-        Guns guns = new Guns(
-                spawner, modifiers, scatter, config.muzzleGap(), config.blast().damage());
+        Guns guns = new Guns(spawner, modifiers, scatter, config.muzzleGap(), config.weapons());
         this.throwing = new Throws(spawner, modifiers, config.muzzleGap());
         this.dashes = new Dashes(modifiers, config.commander().dash(), config.tickSeconds());
 
@@ -261,6 +261,9 @@ public final class Simulation {
         // Straight after the grenade, for the grenade's reason - a limpet's contact is the solver's, answered with
         // nothing moved in between - and inside the death window, so one that dies here goes off this tick (G0100).
         engine.addSystem(new LimpetSystem(solid, spawner));
+        // Straight after the limpet: this tick's contacts have spent an orb's power and stopped the orbs that touched
+        // something, and one spent here goes off this tick, inside the death window (G0128).
+        engine.addSystem(new OrbSystem(config, map, spawner));
         engine.addSystem(new PickupSystem(config, spawner, modifiers));
         engine.addSystem(new EvolutionSystem(config, spawner));
         engine.addSystem(new DamageSystem(config, spawner, modifiers));

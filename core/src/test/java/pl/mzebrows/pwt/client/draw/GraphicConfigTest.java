@@ -254,6 +254,7 @@ class GraphicConfigTest {
                         d.burrow(),
                         d.devour(),
                         d.limpet(),
+                        d.orb(),
                         d.dash(),
                         d.border(),
                         d.downMark(),
