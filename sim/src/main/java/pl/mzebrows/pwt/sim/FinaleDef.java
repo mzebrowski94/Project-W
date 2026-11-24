@@ -8,31 +8,27 @@ import pl.mzebrows.pwt.map.TileRect;
 import pl.mzebrows.pwt.sim.component.Waves;
 
 /**
- * One kind of finale as data (G0064, missions ticket 04): a set piece, one of a few hand-made {@link Layout}s dealt a
- * mission and then flipped north-south or not (G0087), every position a tile offset from the anchor ({@link
- * Strip#anchor}). The redoubt is a definition with no lair; the keep the same with one. Every finale is won by holding
- * its post alone. Read from {@code sim.finale.<name>} in {@code finales.properties}.
+ * One kind of finale as data (G0064, missions ticket 04): a fixed <strong>skeleton</strong> - its post, watch, mouths
+ * and, in a keep, its lair's nests and boss - every position a tile offset from the anchor ({@link Strip#anchor}),
+ * flipped north-south or not, and {@link FinaleRules} that place everything else round it from the finale's own stream
+ * (G0120). The redoubt is a definition with no lair; the keep the same with one. Every finale is won by holding its
+ * post alone. Read from {@code sim.finale.<name>} in {@code finales.properties}.
  *
- * <p>As read, its ground and hold carry what every layout shares and {@code layouts} what varies; {@link #laid} lays
- * one over the rest, and what comes out has no layouts of its own - a finale as laid is a finale of one layout.
- *
- * @param ground its width - fixed - and base, laid by {@code Strip} with no dealt coat; its rock is its {@code pieces}
- *     and its layout's
- * @param hold the point that holds afterwards, its watch, its mouths, and what stands round it in every layout
- * @param layouts the hand-made arrangements one is dealt from, numbered blocks from one; none is a finale as laid
+ * @param ground its width - fixed - and base, laid by {@code Strip} with no dealt coat; its rock is its {@code pieces}:
+ *     none as read, the cover its rules deal once {@link #covered}
+ * @param hold the point that holds afterwards, its watch and its mouths
+ * @param rules how its cover, guns, mines, barrels and pickups are placed round the skeleton
  * @param waves the schedule held back until the post is taken, in order, each from mouths the hold names
- * @param lair what rises inside the watch - empty but for a keep
+ * @param lair what rises inside the watch, at fixed spots - empty but for a keep
  */
-public record FinaleDef(
-        BiomeGround ground, Hold hold, List<Layout> layouts, List<WaveLine> waves, List<LairLine> lair) {
+public record FinaleDef(BiomeGround ground, Hold hold, FinaleRules rules, List<WaveLine> waves, List<LairLine> lair) {
 
     public FinaleDef {
-        layouts = List.copyOf(layouts);
         waves = List.copyOf(waves);
         lair = List.copyOf(lair);
         if (ground.widthMin() != ground.widthMax()) {
             throw new IllegalArgumentException("a finale's width is fixed, was " + ground.widthMin() + ".."
-                    + ground.widthMax() + ": its layout is offsets from its middle");
+                    + ground.widthMax() + ": its skeleton is offsets from its middle");
         }
         if (ground.houses().max() > 0
                 || !ground.patches().isEmpty()
@@ -56,41 +52,20 @@ public record FinaleDef(
         }
     }
 
-    /** How many layouts its stream deals from: one, itself, for a finale as laid. */
-    public int layoutCount() {
-        return Math.max(1, layouts.size());
+    /** The same finale with this cover dealt (G0120): its pieces the ground's and these, offsets from the anchor. */
+    public FinaleDef covered(List<TileRect> cover) {
+        return new FinaleDef(withPieces(ground, joined(ground.pieces(), cover)), hold, rules, waves, lair);
     }
 
     /**
-     * The finale with one of its layouts laid over what every layout shares, counting from zero: its pieces added to
-     * the ground's, its turrets, mines, barrels and pickups to the hold's. A finale as laid lays itself.
+     * The same skeleton flipped north-south - its pieces, its hold and its lair - never east-west. Its rules are
+     * symmetric about the anchor's row, so they place the same either way.
      */
-    public FinaleDef laid(int layout) {
-        if (layouts.isEmpty()) {
-            return this;
-        }
-        Layout chosen = layouts.get(layout);
-        return new FinaleDef(
-                withPieces(ground, joined(ground.pieces(), chosen.pieces())),
-                new Hold(
-                        hold.post(),
-                        hold.watch(),
-                        joined(hold.turrets(), chosen.turrets()),
-                        joined(hold.mines(), chosen.mines()),
-                        joined(hold.barrels(), chosen.barrels()),
-                        joined(hold.pickups(), chosen.pickups()),
-                        hold.mouths()),
-                List.of(),
-                waves,
-                lair);
-    }
-
-    /** The same set piece flipped north-south - its pieces, its hold, its layouts and its lair - never east-west. */
     public FinaleDef flipped() {
         return new FinaleDef(
                 withPieces(ground, ground.pieces().stream().map(Offset::flipped).toList()),
                 hold.flipped(),
-                layouts.stream().map(Layout::flipped).toList(),
+                rules,
                 waves,
                 lair.stream().map(LairLine::flipped).toList());
     }

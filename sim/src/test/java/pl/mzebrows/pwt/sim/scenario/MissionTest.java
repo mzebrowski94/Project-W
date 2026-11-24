@@ -18,8 +18,6 @@ import pl.mzebrows.pwt.map.Strip;
 import pl.mzebrows.pwt.map.Terrain;
 import pl.mzebrows.pwt.map.TileMap;
 import pl.mzebrows.pwt.map.TileRect;
-import pl.mzebrows.pwt.sim.FinaleDef;
-import pl.mzebrows.pwt.sim.Hold;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
 import pl.mzebrows.pwt.sim.WaveLine;
@@ -47,6 +45,7 @@ import pl.mzebrows.pwt.sim.def.Objective;
 import pl.mzebrows.pwt.sim.def.TierKind;
 import pl.mzebrows.pwt.sim.def.UnitKind;
 import pl.mzebrows.pwt.sim.def.Wave;
+import pl.mzebrows.pwt.sim.def.WeaponKind;
 import pl.mzebrows.pwt.sim.def.WorkedSiteKind;
 
 /**
@@ -717,46 +716,111 @@ class MissionTest {
     }
 
     /**
-     * One bit flips the finale north-south (G0064): every tile of its ground and everything standing on it mirrored
-     * about the anchor's row, and nothing moved east-west, so west stays the way in - in every layout (G0087).
+     * One bit flips the finale's skeleton north-south (G0064, G0120): its post where it was, its lair's spots and its
+     * mouths mirrored about the anchor's row, nothing moved east-west, so west stays the way in.
      */
     @Test
-    void flipsTheFinaleNorthSouthAndNeverEastWest() {
+    void flipsTheFinalesSkeletonNorthSouthAndNeverEastWest() {
         for (FinaleKind kind : FinaleKind.values()) {
-            int layouts = SimConfig.defaults().finales().of(kind).layoutCount();
-            for (int layout = 0; layout < layouts; layout++) {
-                Mission plain = endingOn(kind, false, layout);
-                Mission flipped = endingOn(kind, true, layout);
+            Mission plain = endingOn(kind, false, 0);
+            Mission flipped = endingOn(kind, true, 0);
 
-                assertThat(finaleTiles(flipped, true))
-                        .as("%s layout %d", kind, layout)
-                        .isEqualTo(finaleTiles(plain, false));
-                assertThat(finaleThings(flipped, true))
-                        .as("%s layout %d", kind, layout)
-                        .isEqualTo(finaleThings(plain, false));
-                assertThat(finaleThings(plain, false)).contains("Hold 0 0", "Pickup -3 0");
-            }
+            assertThat(skeleton(flipped, true)).as("%s", kind).isEqualTo(skeleton(plain, false));
+            assertThat(skeleton(plain, false)).as("%s", kind).contains("Hold 0 0");
         }
     }
 
     /**
-     * A finale's stream deals one of its layouts a mission (G0087), each of them on some seed, and lays it: the
-     * finale's rock is the dealt layout's, so two layouts of one finale are two grounds.
+     * A finale's cover is dealt by its rules (G0120), afresh for every seed, and laid as ground: every tile of every
+     * piece rock on the strip, and two missions on one finale two grounds.
      */
     @Test
-    void dealsEveryLayoutOfEveryFinaleAndLaysTheOneDealt() {
+    void dealsTheFinalesCoverByItsRulesAndLaysItAsGround() {
         for (FinaleKind kind : FinaleKind.values()) {
-            FinaleDef def = SimConfig.defaults().finales().of(kind);
-            assertThat(def.layoutCount()).as("%s", kind).isGreaterThan(1);
             Set<List<String>> grounds = new HashSet<>();
-            for (int layout = 0; layout < def.layoutCount(); layout++) {
-                Mission mission = endingOn(kind, false, layout);
+            for (int nth = 0; nth < 3; nth++) {
+                Mission mission = endingOn(kind, false, nth);
+                TileMap map = mission.laid().map();
+                TileRect anchor = Strip.anchor(mission.laid().biomes().getLast());
 
-                assertThat(mission.finale().def(SimConfig.defaults()).ground().pieces())
-                        .isEqualTo(def.laid(layout).ground().pieces());
+                assertThat(mission.finale().cover()).as("%s", kind).isNotEmpty();
+                for (TileRect piece : mission.finale().cover()) {
+                    for (int row = piece.row(); row < piece.endRow(); row++) {
+                        for (int col = piece.col(); col < piece.endCol(); col++) {
+                            assertThat(map.passableAtTile(anchor.col() + col, anchor.row() + row))
+                                    .as("%s piece %s", kind, piece)
+                                    .isFalse();
+                        }
+                    }
+                }
                 grounds.add(finaleTiles(mission, false));
             }
-            assertThat(grounds).as("%s", kind).hasSize(def.layoutCount());
+            assertThat(grounds).as("%s", kind).hasSize(3);
+        }
+    }
+
+    /**
+     * Everything a finale's rules put down comes in mirrored north-south pairs (G0120): each thing round the post and
+     * each of the lair's caches has its mirror about the anchor's row, and so has each piece of cover.
+     */
+    @Test
+    void placesEverythingRoundTheFinaleInMirroredPairs() {
+        for (FinaleKind kind : FinaleKind.values()) {
+            Mission mission = endingOn(kind, true, 1);
+            TileMap map = mission.laid().map();
+            float row = map.tileCentreY(
+                    Strip.anchor(mission.laid().biomes().getLast()).row());
+            List<float[]> things = new ArrayList<>();
+            for (Placed placed : mission.placed()) {
+                if (placed.biome() == mission.order().size() && !(placed instanceof Placed.Hold)) {
+                    things.add(new float[] {placed.x(), placed.y()});
+                }
+            }
+            for (Arrival arrival : mission.finale().lair()) {
+                if (arrival.form() == Arrival.Form.PICKUP) {
+                    things.add(new float[] {arrival.x(), arrival.y()});
+                }
+            }
+
+            assertThat(things).as("%s", kind).isNotEmpty();
+            for (float[] one : things) {
+                assertThat(things)
+                        .as("%s: the mirror of %f %f", kind, one[0], one[1])
+                        .anyMatch(other -> Math.abs(other[0] - one[0]) < 1e-3f
+                                && Math.abs((other[1] - row) + (one[1] - row)) < 1e-3f);
+            }
+            assertThat(mission.finale().cover())
+                    .as("%s", kind)
+                    .containsExactlyInAnyOrderElementsOf(mission.finale().cover().stream()
+                            .map(pl.mzebrows.pwt.sim.Offset::flipped)
+                            .toList());
+        }
+    }
+
+    /**
+     * The keep's two guns stand between the post and the boss, inside his barrage (G0120): a tool that costs exposure
+     * to use, never a seat behind the post.
+     */
+    @Test
+    void standsTheKeepsTwoGunsInsideTheBossesBarrage() {
+        SimConfig shipped = SimConfig.defaults();
+        float reach = shipped.weapon(WeaponKind.SPEW).projectileRange();
+        for (int nth = 0; nth < 4; nth++) {
+            Mission mission = endingOn(FinaleKind.KEEP, nth % 2 == 1, nth / 2);
+            Arrival boss = mission.finale().lair().getLast();
+            List<Placed> guns = mission.placed().stream()
+                    .filter(placed -> placed instanceof Placed.Turret
+                            && placed.biome() == mission.order().size())
+                    .toList();
+
+            assertThat(boss.strain()).isEqualTo(UnitKind.BOSS_GRUNT);
+            assertThat(guns).hasSize(2);
+            for (Placed gun : guns) {
+                float dx = gun.x() - boss.x();
+                float dy = gun.y() - boss.y();
+                assertThat((float) Math.sqrt(dx * dx + dy * dy)).isLessThanOrEqualTo(reach);
+                assertThat(gun.x()).isLessThan(boss.x());
+            }
         }
     }
 
@@ -846,7 +910,7 @@ class MissionTest {
         assertThat(commander.getComponent(Vitality.class).wounds).isEqualTo(1);
     }
 
-    /** The tier moves how many come in a wave and nothing else of the finale: not its layout, timing or mouths. */
+    /** The tier moves how many come in a wave and nothing else of the finale: not its cover, timing or mouths. */
     @Test
     void endsOnTheSameFinaleOnEveryTierButForHowManyComeInAWave() {
         int withWaves = 0;
@@ -858,7 +922,7 @@ class MissionTest {
             for (Mission other : List.of(easy, hard)) {
                 assertThat(other.finale().kind()).isEqualTo(medium.finale().kind());
                 assertThat(other.finale().flipped()).isEqualTo(medium.finale().flipped());
-                assertThat(other.finale().layout()).isEqualTo(medium.finale().layout());
+                assertThat(other.finale().cover()).isEqualTo(medium.finale().cover());
                 assertThat(finaleThings(other, false)).isEqualTo(finaleThings(medium, false));
                 assertThat(other.finale().waves())
                         .extracting(Wave::afterSeconds, Wave::kind, MissionTest::mouths)
@@ -897,12 +961,15 @@ class MissionTest {
         }
         assertThat(held).hasSize(1);
         assertThat(held.getFirst().watchRadius).isEqualTo(118f);
-        Hold hold = mission.finale().def(simulation.config()).hold();
         assertThat(simulation
                         .engine()
                         .getEntitiesFor(Family.all(Turret.class).get())
                         .size())
-                .isEqualTo(hold.turrets().size()
+                .isEqualTo(mission.finale()
+                                .def(simulation.config())
+                                .rules()
+                                .turrets()
+                                .max()
                         + mission.placed().stream()
                                 .filter(placed -> placed instanceof Placed.Turret
                                         && placed.biome() < mission.order().size())
@@ -911,7 +978,9 @@ class MissionTest {
                         .engine()
                         .getEntitiesFor(Family.all(Mine.class).get())
                         .size())
-                .isEqualTo(hold.mines().size());
+                .isEqualTo(mission.placed().stream()
+                        .filter(placed -> placed instanceof Placed.Mine)
+                        .count());
         assertThat(simulation.waves().armed()).isFalse();
         assertThat(simulation.waves().total())
                 .isEqualTo(mission.finale().waves().size());
@@ -981,18 +1050,46 @@ class MissionTest {
                 .count();
     }
 
-    /** The first seed whose mission ends on this finale, flipped or not, with this layout dealt. */
-    private static Mission endingOn(FinaleKind kind, boolean flipped, int layout) {
+    /** The {@code nth} seed, from nought, whose mission ends on this finale, flipped or not. */
+    private static Mission endingOn(FinaleKind kind, boolean flipped, int nth) {
+        int found = 0;
         for (long seed = 0; seed < SEEDS * 8L; seed++) {
             Mission.Finale drawn = Mission.drawn(SimConfig.defaults().withSeed(seed));
-            if (drawn.kind() == kind && drawn.flipped() == flipped && drawn.layout() == layout) {
-                Mission mission = Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM);
-                assertThat(mission.finale().layout()).isEqualTo(layout);
-                return mission;
+            if (drawn.kind() == kind && drawn.flipped() == flipped && found++ == nth) {
+                return Mission.build(SimConfig.defaults().withSeed(seed), TierKind.MEDIUM);
             }
         }
         throw new AssertionError(
-                "no seed of " + SEEDS * 8L + " ends on " + kind + " layout " + layout + (flipped ? " flipped" : ""));
+                "no " + nth + "th seed of " + SEEDS * 8L + " ends on " + kind + (flipped ? " flipped" : ""));
+    }
+
+    /** The finale's skeleton - its post, its lair's holes and boss, its waves' mouths - by tile offset, sorted. */
+    private static List<String> skeleton(Mission mission, boolean mirrored) {
+        TileMap map = mission.laid().map();
+        TileRect anchor = Strip.anchor(mission.laid().biomes().getLast());
+        List<String> things = new ArrayList<>();
+        for (Placed placed : mission.placed()) {
+            if (placed instanceof Placed.Hold) {
+                int dy = map.rowAt(placed.y()) - anchor.row();
+                things.add("Hold " + (map.colAt(placed.x()) - anchor.col()) + " " + (mirrored ? -dy : dy));
+            }
+        }
+        for (Arrival arrival : mission.finale().lair()) {
+            if (arrival.form() != Arrival.Form.PICKUP) {
+                int dy = map.rowAt(arrival.y()) - anchor.row();
+                things.add("Lair " + arrival.form() + " " + arrival.strain() + " "
+                        + (map.colAt(arrival.x()) - anchor.col()) + " " + (mirrored ? -dy : dy));
+            }
+        }
+        for (Wave wave : mission.finale().waves()) {
+            for (Wave.Lot lot : wave.lots()) {
+                TileRect where = lot.where();
+                int south = where.row() - anchor.row();
+                int dy = mirrored ? -(south + where.height() - 1) : south;
+                things.add("Mouth " + (where.col() - anchor.col()) + " " + dy);
+            }
+        }
+        return things.stream().sorted().toList();
     }
 
     private static List<TileRect> mouths(Wave wave) {

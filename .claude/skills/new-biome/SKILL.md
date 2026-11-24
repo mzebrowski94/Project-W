@@ -124,14 +124,14 @@ meanwhile. The HTML prototype is for looks only.
 
 ## 4. Finale
 
-A finale is a **set piece** (G0064): `FinaleKind`, and a block under `sim.finale.<name>.` in
-`assets/sim/finales.properties` binding `FinaleDef(ground, hold, layouts, waves, lair)`. Its variety is a few
-hand-made **layouts** (G0087) - `layouts.1.`, `layouts.2.`, ... numbered blocks with no gap, each its own `pieces`,
-`turrets`, `mines`, `barrels` and `pickups`, laid over the ground's and the hold's, which keep what every layout shares
-(the post, the watch and the mouths always) - then one bit that flips it north-south. The stream draws kind, flip,
-layout, in that order, equally, whatever the tier. Write each layout symmetric north-south about the anchor's row, or
-name its pattern in its comment. Never rules, never a dealt coat - a finale laid by rules is G0064's first DO NOT BUILD.
-A finale with no layouts is laid as it is written.
+A finale is a fixed **skeleton** and the **rules** that place everything round it (G0120, amending G0064 and G0087):
+`FinaleKind`, and a block under `sim.finale.<name>.` in `assets/sim/finales.properties` binding `FinaleDef(ground,
+hold, rules, waves, lair)`. The skeleton - the post, the watch, the mouths and the lair's holes and boss - is written
+as offsets; the stream draws the kind, then one bit that flips the skeleton north-south, whatever the tier. Everything
+else - cover, guns on mounts, mines, barrels, pickups, the lair's gun caches - is placed by `FinalePlacement` through
+`Scatter` in **mirrored north-south pairs** about the anchor's row, each lot from a stream of its own: the cover on the
+finale's bare ground before the strip is laid (dealt again from the next attempt, up to 32, if a pair will not fit -
+G0070's rule), the rest on the strip as laid. Never hand-made layouts beside the rules - G0120's DO NOT BUILD.
 
 **Every position is an offset `dx dy` from the anchor**, `Strip.anchor`: the finale's middle column rounded west and
 its middle row - (197, 15) on the Adventures' ground, so a port subtracts that. `dy` counts rows **north**, and a
@@ -141,11 +141,11 @@ new field with a position must go through it, or the flip tests fail.
 
 | Part | Keys | What to know |
 |---|---|---|
-| ground | `widthMin` = `widthMax`, `regions`, `base`, `fallback`, `pieces=dx dy w h; ...` | A dealt width or any coat - houses, patches, crags, outcrops - is refused. Its rock is its `pieces`, laid by `Coats` before anything; a piece past the finale's rect is refused at lay |
-| hold | `post=dx dy`, `watch`, `turrets`, `mines`, `barrels` (`dx dy; ...`), `pickups=pickup <kind> dx dy; ...`, `mouths=name dx dy w h; ...` | Nothing scaled by tier. `watch` is world units, from the post. A gun's cache may lie here, never in a biome. Mouth names are unique |
-| layouts | `layouts.<n>.pieces`, `.turrets`, `.mines`, `.barrels`, `.pickups`, as the ground's and hold's lines | Numbered from 1, no gap - a gap ends the list and what lies past it is an unknown key. Each laid over the shared ground and hold by `FinaleDef.laid`; `Mission.Finale.layout` says which was dealt and `def(config)` lays it |
+| ground | `widthMin` = `widthMax`, `regions`, `base`, `fallback` | A dealt width or any coat - houses, patches, crags, outcrops - is refused. Its rock is the cover its rules deal, laid by `Coats` before anything |
+| hold | `post=dx dy`, `watch`, `mouths=name dx dy w h; ...` | The skeleton. Nothing scaled by tier. `watch` is world units, from the post. Mouth names are unique |
+| rules | `apart`, `gap` (tiles), `shapes=bar a u; ell a u; ...`, lots `cover`, `turrets`, `mines`, `barrels`, `pickups`, `lair` as `fewest most near far west east`, `pickupKinds` and `lairKinds` (`crate; armoury_flamer`), `inReach` | A lot's ends are even - it is dealt in pairs - its band `near`..`far` tiles from the post on column offsets `west`..`east`. `turrets` fixed (fewest = most); `pickups` and `lair` one of each kind named; `lair=0 0 0 0 0 0` and no kinds for none. `inReach` holds the cover, guns and caches inside the barrage of the lair's unit (its shortest positive gun range). A gun's cache may be a pickup here, never in a biome |
 | waves | `waves=afterSeconds strain countMin countMax mouths; ...` | Held back until the post is taken. `nw+se` comes from both on one tick, one wave, each mouth its own count from the range (G0087). A mouth the hold lacks - any of them - is refused, and so are more than `Waves.MOST` (63) waves. Each count through `Roster.count` at `MissionConfig.finale(tier)` - the tier's `enemyPercent`, no ramp |
-| lair | `lair=unit\|nest\|pickup <kind> dx dy; ...` | Positions, never counts. Resolved into `Mission.Finale.lair` (`Arrival`s, in the order written) and put on the level's `Lair` over the finale's whole rect: nothing of it on the field until every commander on his feet stands in the finale, and each creature rises facing the nearest of them. Keep it inside the `watch` - the sweep checks - so holding the post means dealing with it. A mission strips `alwaysAggressive` from every strain, so a risen boss starts shooting only once somebody is within his `detectionRange` |
+| lair | `lair=unit\|nest <kind> dx dy; ...` | The skeleton's spots, never counts; its caches are the rules'. Resolved into `Mission.Finale.lair` (`Arrival`s, in the order written) and put on the level's `Lair` over the finale's whole rect: nothing of it on the field until every commander on his feet stands in the finale, and each creature rises facing the nearest of them. Keep it inside the `watch` - the sweep checks - so holding the post means dealing with it. A mission strips `alwaysAggressive` from every strain, so a risen boss starts shooting only once somebody is within his `detectionRange` |
 
 **What a block may use**: interior rows 1-28 with the anchor on 15, so with the flip a position fits `dy` -13..13;
 columns `dx` -16..17 of a 34-wide finale. The pass from the ridge before it keeps the first four columns (`dx` -16..-13)
@@ -159,13 +159,15 @@ amended) - a wider watch costs the last biome room, and the sweep says when it h
 `HOLD_POINT` alone.
 
 **A new finale re-draws every seed**: the draw is one of `FinaleKind.values()`, so adding a constant changes which
-finale every existing mission code ends on - a daily's record among them. Say so in the final message. A new layout
-re-draws only which layout a seed of that finale ends on: the layout is drawn last.
+finale every existing mission code ends on - a daily's record among them. Say so in the final message. A change to
+a finale's rules re-deals only what they place on that finale: each lot draws from a stream of its own.
 
-**The sweep reaches every layout by name**: `MissionSweepTest` picks, past its spread, the first seeds whose
-`Mission.drawn` ends on each finale, layout and flip, and fails if any is missing - a new layout is swept by being
-written. `MissionFaults.finale` also refuses two things of the set piece or its lair on one tile. Tests that
-name one finale's numbers (four turrets, twenty mines) read them from `mission.finale().def(config)` instead, and
+**The sweep reaches every finale both ways by name**: `MissionSweepTest` picks, past its spread, the first seeds whose
+`Mission.drawn` ends on each finale and flip, and fails if any is missing. `MissionFaults.finale` refuses two things of
+the set piece or its lair on one tile; `MissionFaults.finaleRules` holds every lot to its range, every thing and piece
+to its mirror, every piece's ring open and reached, the ways from the mouths and to the boss clear of rock, and the
+keep's guns, caches and cover inside the boss's barrage. Tests that name one finale's numbers (four turrets) read them
+from `mission.finale().def(config).rules()` instead, and
 `MissionTest.endsOnEveryFinaleFlippedAndNot` fails a finale the draw never reaches. The goal line leads
 through every point, the finale's among them, until the waves are let go, then says the hold.
 

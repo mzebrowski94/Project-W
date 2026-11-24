@@ -8,7 +8,7 @@ second objective for a finale, a rally ground of its own, or waves that change w
 **Enforced by.** `MissionSweepTest.holdsEveryMissionToTheRules` (`MissionFaults.finale`: everything the set piece
 stands and every mouth's tiles open and reached from the start, nothing hostile of the last biome inside the watch;
 `MissionFaults.bands`: a point in the last `approachColumns`), `FinaleDefTest.refusesAWaveFromAMouthItsHoldLacks`,
-`.flipsEveryPositionNorthSouthAndNoneEastWest`, `MissionTest.flipsTheFinaleNorthSouthAndNeverEastWest`,
+`.flipsEveryPositionNorthSouthAndNoneEastWest`, `MissionTest.flipsTheFinalesSkeletonNorthSouthAndNeverEastWest`,
 `.endsOnTheSameFinaleOnEveryTierButForHowManyComeInAWave`, `.holdsTheFinalesWavesBackAndAsksOnlyThatItsPostBeHeld`,
 `StripTest.laysAFinalesPiecesAsRockAtTheirOffsetsFromItsAnchor`. Missions ticket 04 holds the shape and both blocks.
 

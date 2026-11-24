@@ -40,7 +40,7 @@ import pl.mzebrows.pwt.sim.def.Wave;
  * @param laid the strip they are laid in, and the finale past its last ridge
  * @param placed everything placement put down, biome by biome in the order of its passes, then the finale's set
  *     piece: its hold, turrets, mines, barrels and pickups
- * @param finale which finale, whether it is flipped, and its waves
+ * @param finale which finale, whether it is flipped, the cover its rules dealt, and its waves
  * @param shortfalls every pass that put down fewer than it was dealt - a generator fault, which the sweep fails
  */
 public record Mission(
@@ -56,6 +56,7 @@ public record Mission(
     private static final long PLACEMENT = 0x8D1E_63F7_0BA2_C459L;
     private static final long FINALE = 0xE7C4_1A0D_93B6_5F28L;
     private static final long WAVES = 0x4B19_F6E2_07CD_A853L;
+    private static final long RULES = 0x7C2D_E580_1F9B_46A3L;
 
     /** How many deals are tried before a pool that cannot deal its count is refused. */
     private static final int DEALS = 64;
@@ -70,38 +71,39 @@ public record Mission(
      * The finale a mission ends on (G0064). Its set piece is in {@code placed}, at the position after the last biome.
      *
      * @param kind which one was drawn
-     * @param flipped whether its layout is mirrored north-south
-     * @param layout which of its hand-made layouts was dealt, counting from zero (G0087)
+     * @param flipped whether its skeleton is mirrored north-south
+     * @param cover the rock its rules dealt round the skeleton (G0120), tile offsets from its anchor - in mirrored
+     *     north-south pairs, each piece's mirror after it
      * @param waves its schedule, held back until its post is taken, each count drawn and scaled for the tier
-     * @param lair what rises once every commander stands in the finale, in the order written - empty but for a keep;
-     *     its ground is the finale's whole rect (G0048)
+     * @param lair what rises once every commander stands in the finale - its holes, then its gun caches, then its boss;
+     *     empty but for a keep; its ground is the finale's whole rect (G0048)
      */
-    public record Finale(FinaleKind kind, boolean flipped, int layout, List<Wave> waves, List<Arrival> lair) {
+    public record Finale(FinaleKind kind, boolean flipped, List<TileRect> cover, List<Wave> waves, List<Arrival> lair) {
 
         public Finale {
+            cover = List.copyOf(cover);
             waves = List.copyOf(waves);
             lair = List.copyOf(lair);
         }
 
-        /** Its definition as it is laid: its layout over what every layout shares, then flipped, if it is. */
+        /** Its definition as it is laid: flipped, if it is, with its cover. */
         public FinaleDef def(SimConfig config) {
-            FinaleDef def = config.finales().of(kind).laid(layout);
-            return flipped ? def.flipped() : def;
+            FinaleDef def = config.finales().of(kind);
+            return (flipped ? def.flipped() : def).covered(cover);
         }
     }
 
     /**
-     * Which finale {@code config.seed()} ends on - its kind, its flip and its layout, in that order from the finale's
-     * stream - with its waves and lair not yet resolved. What a sweep picks seeds by, so it reaches every layout of
-     * every finale by name rather than by luck.
+     * Which finale {@code config.seed()} ends on - its kind, then its flip, from the finale's stream - with its cover,
+     * waves and lair not yet resolved. What a sweep picks seeds by, so it reaches every finale both ways by name rather
+     * than by luck. What its rules place is drawn after, from a stream of their own (G0120).
      */
     public static Finale drawn(SimConfig config) {
         Randomness drawing = mission(config).derive(FINALE);
         List<FinaleKind> kinds = List.of(FinaleKind.values());
         FinaleKind kind = kinds.get(drawing.nextInt(kinds.size()));
         boolean flipped = drawing.nextInt(2) == 1;
-        int layout = drawing.nextInt(config.finales().of(kind).layoutCount());
-        return new Finale(kind, flipped, layout, List.of(), List.of());
+        return new Finale(kind, flipped, List.of(), List.of(), List.of());
     }
 
     /** The mission {@code config.seed()} names on this tier, from a config the tier has been applied to or not. */
@@ -132,7 +134,11 @@ public record Mission(
     static Mission build(SimConfig config, TierKind tier, Randomness map) {
         List<BiomeKind> order = deal(config);
         Finale drawn = drawn(config);
-        FinaleDef finale = drawn.def(config);
+        // The skeleton as it is laid, its cover dealt by its rules on its bare ground before the strip is (G0120).
+        FinalePlacement rules = new FinalePlacement(
+                config, drawn.def(config), mission(config).derive(FINALE).derive(RULES));
+        List<TileRect> cover = rules.cover();
+        FinaleDef finale = drawn.def(config).covered(cover);
 
         List<BiomeGround> grounds = new ArrayList<>();
         for (BiomeKind dealt : order) {
@@ -171,24 +177,23 @@ public record Mission(
                     placing.derive(p));
         }
 
+        // The lair's fixed spots first, so what the rules put down round the post keeps off them.
+        List<Arrival> spots = new ArrayList<>();
+        for (LairLine line : finale.lair()) {
+            float x = centreX(tiles, line.at(), anchor);
+            float y = centreY(tiles, line.at(), anchor);
+            spots.add(
+                    switch (line) {
+                        case LairLine.Unit unit -> Arrival.unit(unit.strain(), x, y);
+                        case LairLine.Nest nest -> Arrival.nest(nest.strain(), x, y);
+                        case LairLine.Pickup pickup -> Arrival.pickup(pickup.kind(), x, y);
+                    });
+        }
+        FinalePlacement.Items items = rules.items(laid, laid.biomes().getLast(), position, spots);
+
         List<Placed> placed = new ArrayList<>(placement.placed());
         placed.add(point);
-        for (Offset at : hold.turrets()) {
-            placed.add(new Placed.Turret(centreX(tiles, at, anchor), centreY(tiles, at, anchor), position));
-        }
-        for (Offset at : hold.mines()) {
-            placed.add(new Placed.Mine(centreX(tiles, at, anchor), centreY(tiles, at, anchor), position));
-        }
-        for (Offset at : hold.barrels()) {
-            placed.add(new Placed.Barrel(centreX(tiles, at, anchor), centreY(tiles, at, anchor), position));
-        }
-        for (LairLine line : hold.pickups()) {
-            if (line instanceof LairLine.Pickup pickup) {
-                Offset at = pickup.at();
-                placed.add(new Placed.Pickup(
-                        pickup.kind(), centreX(tiles, at, anchor), centreY(tiles, at, anchor), position));
-            }
-        }
+        placed.addAll(items.placed());
 
         // Every tier draws the same counts from the same stream and scales them, so a harder tier moves nothing else.
         // A wave from several mouths draws a count for each, in the order written (G0087).
@@ -207,25 +212,29 @@ public record Mission(
             }
             waves.add(new Wave(line.afterSeconds(), line.strain(), lots));
         }
+        // Holes first, then the caches, then whoever rises among them, as Adventure 2 placed them (G0048).
         List<Arrival> lair = new ArrayList<>();
-        for (LairLine line : finale.lair()) {
-            float x = centreX(tiles, line.at(), anchor);
-            float y = centreY(tiles, line.at(), anchor);
-            lair.add(
-                    switch (line) {
-                        case LairLine.Unit unit -> Arrival.unit(unit.strain(), x, y);
-                        case LairLine.Nest nest -> Arrival.nest(nest.strain(), x, y);
-                        case LairLine.Pickup pickup -> Arrival.pickup(pickup.kind(), x, y);
-                    });
+        for (Arrival spot : spots) {
+            if (spot.form() != Arrival.Form.UNIT) {
+                lair.add(spot);
+            }
         }
+        lair.addAll(items.caches());
+        for (Arrival spot : spots) {
+            if (spot.form() == Arrival.Form.UNIT) {
+                lair.add(spot);
+            }
+        }
+        List<String> shortfalls = new ArrayList<>(placement.shortfalls());
+        shortfalls.addAll(rules.shortfalls());
         return new Mission(
                 tier,
                 config.seed(),
                 order,
                 laid,
                 placed,
-                new Finale(drawn.kind(), drawn.flipped(), drawn.layout(), waves, lair),
-                placement.shortfalls());
+                new Finale(drawn.kind(), drawn.flipped(), cover, waves, lair),
+                shortfalls);
     }
 
     private static float centreX(TileMap map, Offset at, TileRect anchor) {
