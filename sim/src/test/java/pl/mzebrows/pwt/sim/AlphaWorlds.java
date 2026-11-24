@@ -1824,6 +1824,7 @@ public final class AlphaWorlds {
                         TURRET_CREW_RADIUS,
                         TURRET_QUIET_SECONDS,
                         WeaponKind.TURRET_GUN),
+                SimConfig.defaults().sentry(),
                 new SimConfig.ObstacleConfig(
                         OBSTACLE_RADIUS, 0, OBSTACLE_RADIUS, OBSTACLE_RADIUS, OBSTACLE_RADIUS, OBSTACLE_RADIUS),
                 new SimConfig.CollisionConfig(3),

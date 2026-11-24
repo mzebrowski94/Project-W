@@ -51,6 +51,7 @@ import pl.mzebrows.pwt.sim.system.commander.CrateSystem;
 import pl.mzebrows.pwt.sim.system.commander.Dashes;
 import pl.mzebrows.pwt.sim.system.commander.DragSystem;
 import pl.mzebrows.pwt.sim.system.commander.MeleeSystem;
+import pl.mzebrows.pwt.sim.system.commander.SentrySystem;
 import pl.mzebrows.pwt.sim.system.commander.StrikeSystem;
 import pl.mzebrows.pwt.sim.system.commander.Surges;
 import pl.mzebrows.pwt.sim.system.commander.TurretSystem;
@@ -286,6 +287,11 @@ public final class Simulation {
         // trooper: one concern (G0055), so one stream for both systems.
         Rng reinforcement = streams.of(RngStream.REINFORCEMENT);
         engine.addSystem(new RespawnSystem(config, map, spawner, reinforcement));
+        // Inside the death window (G0129): after the damage that destroys a sentry, before the blast its going off
+        // leaves
+        // and before the ledger moves, since it fires through Guns.
+        engine.addSystem(
+                new SentrySystem(config, map, solid, spawner, guns, new Surges(config, solid, modifiers, spawner)));
         // Before the death reactions: a shot that misses ends by dying too (G0018), and must leave
         // its blast or spatter.
         engine.addSystem(new ProjectileBoundsSystem(solid, spawner));
@@ -565,6 +571,11 @@ public final class Simulation {
      */
     public Entity spawnNest(UnitKind kind, float x, float y) {
         return spawner.spawnNest(kind, x, y);
+    }
+
+    /** Spawns a sentry (G0129) set down by the commander in this slot: a standing gun nobody crews. */
+    public Entity spawnSentry(float x, float y, int slot) {
+        return spawner.spawnSentry(x, y, slot);
     }
 
     /** Spawns a turret: a gun on a mount that the commander or a trooper can get on. */

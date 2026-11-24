@@ -78,6 +78,7 @@ public final class Components {
                     Ranged.class,
                     Respawning.class,
                     RespawnsOnDeath.class,
+                    Sentry.class,
                     Shake.class,
                     Shield.class,
                     Site.class,

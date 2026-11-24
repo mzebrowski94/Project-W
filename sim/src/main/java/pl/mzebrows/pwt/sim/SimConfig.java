@@ -149,6 +149,7 @@ public record SimConfig(
         @ConfigKey("site") Defs<WorkedSiteKind, WorkedSiteDef> workedSites,
         @ConfigKey("emplacement") Defs<EmplacementKind, EmplacementDef> emplacements,
         TurretConfig turret,
+        SentryConfig sentry,
         ObstacleConfig obstacle,
         CollisionConfig collision,
         @ConfigKey("upgrade.draft") DraftDef draft,
@@ -321,6 +322,7 @@ public record SimConfig(
         }
         largest = Math.max(largest, nest.radius());
         largest = Math.max(largest, turret.radius());
+        largest = Math.max(largest, sentry.radius());
         for (EmplacementDef emplacement : emplacements.values()) {
             largest = Math.max(largest, emplacement.radius());
         }
@@ -335,6 +337,7 @@ public record SimConfig(
     public float largestBlastRadius() {
         float largest = Math.max(barrel.blastRadius(), grenade.blastRadius());
         largest = Math.max(largest, turret.blastRadius());
+        largest = Math.max(largest, sentry.blastRadius());
         largest = Math.max(largest, mine.blastRadius());
         for (WeaponDef gun : weapons.values()) {
             largest = Math.max(largest, gun.blastRadius());
@@ -1654,6 +1657,57 @@ public record SimConfig(
             Require.positive("turret range", range);
             Require.notNegative("turret crewRadius", crewRadius);
             Require.notNegative("turret quietSeconds", quietSeconds);
+        }
+    }
+
+    /**
+     * A sentry (G0129): a small standing gun on the players' side that nobody crews or hauls. It turns onto the nearest
+     * alien in its reach - a turret's turn, at a rate - and fires; the aliens hunt it from the moment it stands; it lives
+     * {@code lifeSeconds}, and going off - destroyed or out of time, one path - leaves a small ordinary blast and stuns the
+     * aliens round it, the dash surge's way (G0108).
+     *
+     * @param radius its circular body, in world units: smaller than a turret's
+     * @param health what it absorbs before it is destroyed
+     * @param lifeSeconds how long it stands before it goes off of itself
+     * @param range how far it will shoot, in world units
+     * @param turnRate how fast it comes round, as the fraction of the angle left it covers per second - a turret's shape
+     * @param firingTurnFactor what is left of that rate while it fires, in {@code (0, 1]}
+     * @param gun what it fires: a gun no man carries
+     * @param blastRadius how wide the blast it goes off in is, in world units
+     * @param blastDamage what that blast takes off what has health - small, beside {@code sim.blast.damage} (G0130)
+     * @param blastHarm what that blast does to a man (G0053)
+     * @param stunRadius how far round it the aliens are stunned as it goes off, in world units
+     * @param stunSeconds how long they are stunned for, before the stun-duration fold
+     */
+    @With
+    public record SentryConfig(
+            float radius,
+            int health,
+            float lifeSeconds,
+            float range,
+            float turnRate,
+            float firingTurnFactor,
+            WeaponKind gun,
+            float blastRadius,
+            int blastDamage,
+            Harm blastHarm,
+            float stunRadius,
+            float stunSeconds) {
+
+        public SentryConfig {
+            Require.positive("sentry radius", radius);
+            Require.positive("sentry health", health);
+            Require.positive("sentry lifeSeconds", lifeSeconds);
+            Require.positive("sentry range", range);
+            Require.notNegative("sentry turnRate", turnRate);
+            if (firingTurnFactor <= 0f || firingTurnFactor > 1f) {
+                throw new IllegalArgumentException(
+                        "sentry firingTurnFactor must be in (0, 1], was " + firingTurnFactor);
+            }
+            Require.notNegative("sentry blastRadius", blastRadius);
+            Require.notNegative("sentry blastDamage", blastDamage);
+            Require.notNegative("sentry stunRadius", stunRadius);
+            Require.notNegative("sentry stunSeconds", stunSeconds);
         }
     }
 

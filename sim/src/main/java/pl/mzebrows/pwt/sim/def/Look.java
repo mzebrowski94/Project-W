@@ -85,6 +85,11 @@ public enum Look {
     NEST,
     /** A gun on a mount that a man gets on. Square rather than round, because it is not a creature. */
     TURRET,
+    /**
+     * A sentry (G0129): a small light-grey square, smaller than a turret, its gun the facing mark; its time left on the
+     * charge channel, shrinking as it runs out (pillar 5). Square because it is equipment, not a creature.
+     */
+    SENTRY,
     /** A shut door: its doorway's squares, apart from the wall either side of it so it reads as the way in (G0069). */
     DOOR,
     /**

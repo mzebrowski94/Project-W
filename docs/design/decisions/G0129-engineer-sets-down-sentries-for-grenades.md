@@ -4,7 +4,12 @@
 
 **Trigger.** A shooter on the players' side nobody crews; an upgrade that changes what a key does; the grenade slot.
 
-**Enforced by.** Tests written with the code.
+**Enforced by.** `SentryTest` - `.firesAtAnAlienInItsReach`, `.holdsItsFireAtAnAlienBeyondItsReach`,
+`.turnsOntoTheNearerOfTwoAliens`, `.sparesAManInTheLineOfItsFire`, `.drawsTheAliensFromTheMomentItStands`,
+`.goesOffAtTheEndOfItsLife`, `.goesOffTheSameWayWhenItIsDestroyed`, `.woundsAManCaughtInTheBlastItGoesOffIn`,
+`.stunsTheAliensRoundItAsItGoesOffAndNeverAMan`, `.stunsNoAlienBeyondItsStunsReach`,
+`.showsHowMuchOfItsLifeIsLeftOnItsCharge`; `SystemOrderTest`'s rows for `SentrySystem` (after `DamageSystem`, before
+`BlastSystem` and `UpgradeSystem`).
 
 **Settled with Mateusz, 2026-11-24** (grilling). Not yet built, not yet played.
 
@@ -44,3 +49,30 @@ tracks (pillar 5).
 **No:** *A cap on standing sentries* until play shows a carpet of them.
 
 **Revisit when** play shows sentries carrying a level, or never living long enough to matter.
+
+## Amended by
+
+Ticket 03 of the AFK run (2026-11-24), building the sentry - provisional, for review:
+
+- **Its aim is a turret's turn, not a trooper's**: `sim.sentry.turnRate` as the fraction of the angle left it covers a
+  second, slower while it fires (`firingTurnFactor`), and a crewed turret's judgement (`TurretSystem.ON_TARGET`) before it
+  fires. Faster than a turret's (8 against 2.5; 0.6 against 0.3) so it "turns fast", and its coming round stays visible
+  (pillar 5). *Turned down:* a trooper's look and fire arc, which carries his aim error drawn from the squad's stream -
+  a sentry is a gun on a mount, not a man.
+- **Its fire spares our men by the shot's side**, not by G0084's fouled line: its shots are on the players' side, so the
+  collision rule passes them through a man in their line. *Turned down:* the fouled line, which would make it hold its
+  fire behind the squad it is set down to cover.
+- **It goes off by dying** (G0018): out of time, `SentrySystem` marks it dead; destroyed, `DamageSystem` has. Either way
+  `SentrySystem` stuns the aliens round it through `Surges.stunRound` - the dash surge's harmless stunning blow, the one
+  way - while its body is on the field, and its blast is its `BlastsOnDeath`, credited to the slot that set it down.
+  *Turned down:* a stun in the blast, which G0018 keeps on nobody's side.
+- **`Spawner.spawnSentry(x, y, slot)`**, beside `spawnTurret`: the sentry is a new thing with a component and a system of
+  its own, not a member of an existing table, so there is no kind's spawn for it to go through. *Turned down:* a branch in
+  `spawnTurret` (G0008) or the emplacements' table (theirs, G0113).
+- **`SentrySystem` sits in the death window** (43, after `RespawnSystem`, before `ProjectileBoundsSystem`), with its
+  reason in `docs/simulation-order.md`.
+- **Time left on the charge channel**: the body's core shrinks as its life runs out, as a casualty's clock does.
+- **Starting values**: `sim.sentry.radius=1.4` (a turret's 2.2), `health=300` (a turret's 1200), `lifeSeconds=60`,
+  `range=30` (a trooper's sight 27, a turret's 55), `turnRate=8`, `firingTurnFactor=0.6`, `blastRadius=4`,
+  `blastDamage=150`, `blastHarm=wound`, `stunRadius=10`, `stunSeconds=1`; `sim.weapon.sentry_gun` - `cooldownSeconds=0.2`
+  (`turret_gun`'s 0.16), `damage=14` (its 30), `projectileSpeed=150`, `projectileRange=34`.

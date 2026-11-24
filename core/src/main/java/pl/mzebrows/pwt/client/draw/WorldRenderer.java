@@ -1423,7 +1423,7 @@ public final class WorldRenderer implements Disposable {
      * a circle either way (ADR 0007), so this changes what is seen and nothing about what is hit.
      */
     private static boolean square(Look look) {
-        return look == Look.TURRET || look == Look.CRATE;
+        return look == Look.TURRET || look == Look.SENTRY || look == Look.CRATE;
     }
 
     /** Looks drawn with a dot in the middle, over everything else on them (G0056). */

@@ -10,6 +10,7 @@ import pl.mzebrows.pwt.sim.component.Facing;
 import pl.mzebrows.pwt.sim.component.Intent;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Ranged;
+import pl.mzebrows.pwt.sim.component.Sentry;
 import pl.mzebrows.pwt.sim.component.Steering;
 import pl.mzebrows.pwt.sim.component.Trooper;
 import pl.mzebrows.pwt.sim.component.Turret;
@@ -40,6 +41,7 @@ public final class FacingSystem extends IteratingSystem {
     private static final ComponentMapper<Velocity> VELOCITY = ComponentMapper.getFor(Velocity.class);
     private static final ComponentMapper<Trooper> TROOPER = ComponentMapper.getFor(Trooper.class);
     private static final ComponentMapper<Turret> TURRET = ComponentMapper.getFor(Turret.class);
+    private static final ComponentMapper<Sentry> SENTRY = ComponentMapper.getFor(Sentry.class);
 
     public FacingSystem() {
         super(Family.all(Facing.class).get());
@@ -51,6 +53,12 @@ public final class FacingSystem extends IteratingSystem {
         if (TURRET.has(entity)) {
             Turret turret = TURRET.get(entity);
             facing.face(turret.aimX, turret.aimY);
+            return;
+        }
+        if (SENTRY.has(entity)) {
+            // A sentry faces where its gun points, as a turret does (G0129).
+            Sentry sentry = SENTRY.get(entity);
+            facing.face(sentry.aimX, sentry.aimY);
             return;
         }
         if (TROOPER.has(entity)) {

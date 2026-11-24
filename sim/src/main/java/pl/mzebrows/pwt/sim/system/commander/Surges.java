@@ -32,6 +32,8 @@ import pl.mzebrows.pwt.sim.system.upgrade.Modifiers;
  * <p>The second non-lethal radial effect in the game, and deliberately no blast (G0018): a blast is on nobody's side
  * and fatal, this is the aliens' alone and harms nothing.
  *
+ * <p>A sentry going off stuns the aliens round it the same way, through {@link #stunRound} (G0129).
+ *
  * <p>The aliens are filed in a {@link SpatialGrid} at most once a tick, on the first surge of it - most ticks none goes
  * off, and those cost nothing. One per simulation, handed to {@code CommanderControlSystem}, which launches the dash.
  */
@@ -91,8 +93,16 @@ public final class Surges {
         if (reach <= 0) {
             return;
         }
+        stunRound(x, y, reach, stunTicks, Players.credit(commander));
+        spawner.spawnSurge(x, y, reach);
+    }
+
+    /**
+     * Every alien whose middle is within {@code reach} of here, along a line rock and a shut door leave clear, takes a
+     * harmless blow that stuns it for {@code ticks} - a surge's, and a sentry's as it goes off (G0129). Never a man.
+     */
+    void stunRound(float x, float y, float reach, int ticks, int credit) {
         fileTheAliens();
-        int credit = Players.credit(commander);
         grid.near(x, y, reach, nearby);
         for (int i = 0; i < nearby.size; i++) {
             Entity alien = nearby.get(i);
@@ -101,10 +111,9 @@ public final class Surges {
                 continue;
             }
             Damage owed = DAMAGE.get(alien);
-            owed.landStunning(stunTicks, credit);
+            owed.landStunning(ticks, credit);
             owed.cameFrom(x, y);
         }
-        spawner.spawnSurge(x, y, reach);
     }
 
     /** Every alien on the field into the grid, once a tick, on the first surge that needs them. */
