@@ -2,12 +2,11 @@ package pl.mzebrows.pwt.client.hud;
 
 import pl.mzebrows.pwt.client.input.ControlsConfig;
 import pl.mzebrows.pwt.client.input.PadLabels;
-import pl.mzebrows.pwt.client.input.PlayerSeats;
 import pl.mzebrows.pwt.ui.hud.PromptKind;
 
 /**
  * The keys a seat's **prompt** tells it to press, in its own device's words (G0098): the action key, the strike, the
- * draft key and redeploy (G0109). Seat zero is the keyboard, its mouse buttons named short - {@code LMB}, {@code RMB} - and every
+ * draft key and redeploy (G0109). The keyboard's seat - zero, unless player one is on a pad - its mouse buttons named short - {@code LMB}, {@code RMB} - and every
  * other seat a pad, through {@link PadLabels}. Named again only when the seat or its pad's family changes. {@link
  * CrateHints}' pattern, for the prompt.
  */
@@ -19,20 +18,26 @@ public final class PromptKeys {
     private String draft = "";
     private String redeploy = "";
     private int seat = -2;
+    private boolean keyboard;
     private boolean playStation;
 
     public PromptKeys(ControlsConfig controls) {
         this.controls = controls;
     }
 
-    /** Names the keys of this seat, whose pad - if it has one - is a PlayStation pad or not. */
-    public void follow(int seat, boolean playStation) {
-        if (seat == this.seat && playStation == this.playStation) {
+    /**
+     * Names the keys of this seat - the keyboard's, or a pad's that is a PlayStation pad or not.
+     *
+     * @param keyboard whether the seat is the keyboard and mouse's, which seat zero is unless player one is on a pad
+     */
+    public void follow(int seat, boolean keyboard, boolean playStation) {
+        if (seat == this.seat && keyboard == this.keyboard && playStation == this.playStation) {
             return;
         }
         this.seat = seat;
+        this.keyboard = keyboard;
         this.playStation = playStation;
-        if (seat == PlayerSeats.KEYBOARD_SLOT) {
+        if (keyboard) {
             action = controls.key().action().name();
             strike = mouse(controls.mouse().strike().name());
             draft = controls.key().draft().name();

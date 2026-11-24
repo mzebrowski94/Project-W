@@ -20,8 +20,8 @@ class ControlsTableTest {
 
     @Test
     void showsEveryActionWithItsKeyAndItsPadButton() {
-        List<String> lines =
-                ControlsTable.of(ControlsConfig.defaults(), WORDS, false).lines();
+        List<String> lines = ControlsTable.of(ControlsConfig.defaults(), WORDS, false, PlayerOne.KEYBOARD)
+                .lines();
 
         assertThat(lines.get(0)).matches("ACTION +KEYBOARD +GAMEPAD");
         assertThat(lines)
@@ -31,8 +31,7 @@ class ControlsTableTest {
                 .anyMatch(line -> line.matches("FIRE +LEFT MOUSE +X/RT"))
                 .anyMatch(line -> line.matches("STRIKE +RIGHT MOUSE +LT"))
                 .anyMatch(line -> line.matches("GRENADE +Q +RB"))
-                .anyMatch(line -> line.matches("DRAG A LOAD +F +-"))
-                .anyMatch(line -> line.matches("DASH +SPACE L-SHIFT +B"))
+                .anyMatch(line -> line.matches("DASH +SPACE L-SHIFT +R4 B"))
                 .anyMatch(line -> line.matches("REDEPLOY \\(DOWN\\) +F +B"))
                 .anyMatch(line -> line.matches("ORDER: FOLLOW ME +1 +D-PAD UP"))
                 .anyMatch(line -> line.matches("UPGRADES +C +Y"))
@@ -41,30 +40,39 @@ class ControlsTableTest {
                 .anyMatch(line -> line.matches("PAUSE +ESCAPE +START"));
     }
 
+    /** Taking hold of a load is the keyboard's F alone, and the page has no room for a row a pad cannot use. */
+    @Test
+    void leavesOutTakingHoldOfALoad() {
+        assertThat(ControlsTable.of(ControlsConfig.defaults(), WORDS, false, PlayerOne.KEYBOARD)
+                        .lines())
+                .noneMatch(line -> line.startsWith("DRAG"));
+    }
+
     @Test
     void showsAReboundKeyAsWhatItNowIs() {
         ControlsConfig rebound = ControlsConfig.FILE
                 .read("controls.key.grenade=G\ncontrols.pad.grenade=EAST\n")
                 .config();
 
-        assertThat(ControlsTable.of(rebound, WORDS, false).lines()).anyMatch(line -> line.matches("GRENADE +G +B"));
+        assertThat(ControlsTable.of(rebound, WORDS, false, PlayerOne.KEYBOARD).lines())
+                .anyMatch(line -> line.matches("GRENADE +G +B"));
     }
 
     @Test
     void callsAPlayStationPadsButtonsWhatItCallsThem() {
-        List<String> lines =
-                ControlsTable.of(ControlsConfig.defaults(), WORDS, true).lines();
+        List<String> lines = ControlsTable.of(ControlsConfig.defaults(), WORDS, true, PlayerOne.KEYBOARD)
+                .lines();
 
         assertThat(lines)
                 .anyMatch(line -> line.matches("GRENADE +Q +R1"))
-                .anyMatch(line -> line.matches("DASH +SPACE L-SHIFT +CIRCLE"))
+                .anyMatch(line -> line.matches("DASH +SPACE L-SHIFT +R4 CIRCLE"))
                 .anyMatch(line -> line.matches("FIRE +LEFT MOUSE +SQUARE/R2"));
     }
 
     @Test
     void startsEachColumnAtTheSamePlaceOnEveryLine() {
-        List<String> lines =
-                ControlsTable.of(ControlsConfig.defaults(), WORDS, false).lines();
+        List<String> lines = ControlsTable.of(ControlsConfig.defaults(), WORDS, false, PlayerOne.KEYBOARD)
+                .lines();
         int keyboard = lines.get(0).indexOf("KEYBOARD");
         int pad = lines.get(0).indexOf("GAMEPAD");
 
@@ -79,7 +87,7 @@ class ControlsTableTest {
     /** The headings and the actions are what the eye runs down; the bindings are what it stops at. */
     @Test
     void brightensTheHeadingsAndTheActionsButNotTheBindings() {
-        ControlsTable table = ControlsTable.of(ControlsConfig.defaults(), WORDS, false);
+        ControlsTable table = ControlsTable.of(ControlsConfig.defaults(), WORDS, false, PlayerOne.KEYBOARD);
         List<String> lines = table.lines();
         int fire = indexOf(lines, "FIRE ");
 
@@ -90,7 +98,7 @@ class ControlsTableTest {
 
     @Test
     void saysUnderTheHeadingsThatTheKeyboardIsPlayerOnesAndThePadEverybodyElses() {
-        ControlsTable table = ControlsTable.of(ControlsConfig.defaults(), WORDS, false);
+        ControlsTable table = ControlsTable.of(ControlsConfig.defaults(), WORDS, false, PlayerOne.KEYBOARD);
         List<String> lines = table.lines();
         String note = lines.get(1);
 
@@ -100,14 +108,24 @@ class ControlsTableTest {
         assertThat(table.bright(1)).isZero();
     }
 
+    /** With player one on a pad the keyboard drives only the menus, and every player is a pad. */
+    @Test
+    void saysUnderTheHeadingsThatEveryPlayerIsAPadWhenPlayerOneIsOnOne() {
+        List<String> lines = ControlsTable.of(ControlsConfig.defaults(), WORDS, false, PlayerOne.PAD)
+                .lines();
+
+        assertThat(lines.get(1)).matches(" +MENUS ONLY +PLAYERS 1\\+");
+        assertThat(lines.get(1).indexOf("MENUS ONLY")).isEqualTo(lines.get(0).indexOf("KEYBOARD"));
+    }
+
     /** A note longer than its column is cut to it: the bindings are what the columns are sized by. */
     @Test
     void keepsTheColumnsWhereTheyAreHoweverLongTheNoteIs() {
         UnaryOperator<String> wordy = key -> key.endsWith(".note") ? "X".repeat(40) : WORDS.apply(key);
-        List<String> lines =
-                ControlsTable.of(ControlsConfig.defaults(), WORDS, false).lines();
-        List<String> wordyLines =
-                ControlsTable.of(ControlsConfig.defaults(), wordy, false).lines();
+        List<String> lines = ControlsTable.of(ControlsConfig.defaults(), WORDS, false, PlayerOne.KEYBOARD)
+                .lines();
+        List<String> wordyLines = ControlsTable.of(ControlsConfig.defaults(), wordy, false, PlayerOne.KEYBOARD)
+                .lines();
         int pad = lines.get(0).indexOf("GAMEPAD");
 
         assertThat(wordyLines.get(0)).isEqualTo(lines.get(0));
@@ -127,11 +145,13 @@ class ControlsTableTest {
 
         for (UnaryOperator<String> words : List.of(WORDS, pseudo(WORDS))) {
             for (boolean playStation : new boolean[] {false, true}) {
-                assertThat(ControlsTable.of(ControlsConfig.defaults(), words, playStation)
-                                .lines())
-                        .allSatisfy(line -> assertThat(line)
-                                .hasSizeLessThanOrEqualTo(columns)
-                                .doesNotContain("#"));
+                for (PlayerOne playerOne : PlayerOne.values()) {
+                    assertThat(ControlsTable.of(ControlsConfig.defaults(), words, playStation, playerOne)
+                                    .lines())
+                            .allSatisfy(line -> assertThat(line)
+                                    .hasSizeLessThanOrEqualTo(columns)
+                                    .doesNotContain("#"));
+                }
             }
         }
     }

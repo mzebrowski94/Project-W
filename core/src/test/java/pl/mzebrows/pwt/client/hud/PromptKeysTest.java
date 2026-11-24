@@ -14,7 +14,7 @@ class PromptKeysTest {
 
     @Test
     void namesTheKeyboardsKeysAndItsMouseButtonsShort() {
-        keys.follow(PlayerSeats.KEYBOARD_SLOT, false);
+        keys.follow(PlayerSeats.KEYBOARD_SLOT, true, false);
 
         assertThat(keys.of(PromptKind.ACTION)).isEqualTo("E");
         assertThat(keys.of(PromptKind.STRIKE)).isEqualTo("RMB");
@@ -24,20 +24,30 @@ class PromptKeysTest {
 
     @Test
     void namesAPadsButtonsByItsOwnLabels() {
-        keys.follow(1, false);
+        keys.follow(1, false, false);
         assertThat(keys.of(PromptKind.ACTION)).isEqualTo("A");
         assertThat(keys.of(PromptKind.STRIKE)).isEqualTo("LT");
         assertThat(keys.of(PromptKind.UPGRADE)).isEqualTo("Y");
         assertThat(keys.of(PromptKind.REDEPLOY)).isEqualTo("B");
 
-        keys.follow(1, true);
+        keys.follow(1, false, true);
         assertThat(keys.of(PromptKind.ACTION)).isEqualTo("Cross");
         assertThat(keys.of(PromptKind.STRIKE)).isEqualTo("L2");
     }
 
+    /** Player one on a pad is told his pad's buttons, in seat zero as in any other. */
+    @Test
+    void namesAPadsButtonsInTheKeyboardsSeatWhenPlayerOneIsOnAPad() {
+        keys.follow(PlayerSeats.KEYBOARD_SLOT, true, false);
+        keys.follow(PlayerSeats.KEYBOARD_SLOT, false, false);
+
+        assertThat(keys.of(PromptKind.ACTION)).isEqualTo("A");
+        assertThat(keys.of(PromptKind.STRIKE)).isEqualTo("LT");
+    }
+
     @Test
     void sayNothingForNoPrompt() {
-        keys.follow(PlayerSeats.KEYBOARD_SLOT, false);
+        keys.follow(PlayerSeats.KEYBOARD_SLOT, true, false);
 
         assertThat(keys.of(PromptKind.NONE)).isEmpty();
     }

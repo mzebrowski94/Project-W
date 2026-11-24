@@ -77,18 +77,22 @@ class ControlsConfigTest {
         assertThat(ControlsConfig.FILE.read("").problems()).isEmpty();
     }
 
-    /** The pad's B is the dash's (G0107), so taking hold of a load is off the pad for now. */
+    /**
+     * The dash is the back paddle R4, and B beside it for a pad whose paddles SDL cannot see (G0107); taking hold of a
+     * load stays off the pad.
+     */
     @Test
-    void dashesOnThePadsEastAndLeavesDragOffThePad() {
+    void dashesOnTheBackPaddleOrThePadsEastAndLeavesDragOffThePad() {
         ControlsConfig.Pad pad = ControlsConfig.defaults().pad();
 
-        assertThat(pad.dash()).isEqualTo(GamepadButton.EAST);
+        assertThat(pad.dash()).isEqualTo(GamepadButton.R4);
+        assertThat(pad.dashAlias()).isEqualTo(GamepadButton.EAST);
         assertThat(pad.drag()).isEqualTo(GamepadButton.NONE);
         assertThat(pad.dragTrigger()).isEqualTo(GamepadAxis.NONE);
     }
 
     /**
-     * Redeploy is the drag's key and the dash's button (G0109), in a context of their own: down, he can neither take
+     * Redeploy is the drag's key and the dash's B (G0109), in a context of their own: down, he can neither take
      * hold of a load nor dash, so the shared binding never means two things at once.
      */
     @Test
@@ -98,8 +102,16 @@ class ControlsConfigTest {
         assertThat(shipped.key().redeploy()).isEqualTo(new KeyCode(Input.Keys.F));
         assertThat(shipped.key().redeploy()).isEqualTo(shipped.key().drag());
         assertThat(shipped.pad().redeploy()).isEqualTo(GamepadButton.EAST);
-        assertThat(shipped.pad().redeploy()).isEqualTo(shipped.pad().dash());
+        assertThat(shipped.pad().redeploy()).isEqualTo(shipped.pad().dashAlias());
         assertThat(shipped.pad().redeployTrigger()).isEqualTo(GamepadAxis.NONE);
+    }
+
+    /** Player one is the keyboard's as shipped; the controls page's switch moves him onto a pad. */
+    @Test
+    void shipsPlayerOneOnTheKeyboardAndReadsAPadForHim() {
+        assertThat(ControlsConfig.defaults().playerOne()).isEqualTo(PlayerOne.KEYBOARD);
+        assertThat(ControlsConfig.FILE.read("controls.playerOne=PAD\n").config().playerOne())
+                .isEqualTo(PlayerOne.PAD);
     }
 
     @Test

@@ -20,12 +20,12 @@ final class DraftKeys {
 
     /**
      * Takes this seat's order out of the frame's input and returns what it means to the draft - or null,
-     * for no order or one that means nothing there.
+     * for no order or one that means nothing there. {@code keyboard} says whether the seat is the keyboard's.
      */
-    static DraftBar.@Nullable Key route(PlayerInputs inputs, int seat) {
+    static DraftBar.@Nullable Key route(PlayerInputs inputs, int seat, boolean keyboard) {
         Order order = inputs.orderOf(seat);
         inputs.order(seat, null);
-        return seat == TopBarSeats.KEYBOARD ? keyboard(order) : pad(order);
+        return keyboard ? keyboard(order) : pad(order);
     }
 
     static DraftBar.@Nullable Key keyboard(@Nullable Order order) {

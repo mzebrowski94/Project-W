@@ -20,6 +20,63 @@ class PlayerSeatsTest {
 
         assertThat(seats.padIn(PlayerSeats.KEYBOARD_SLOT)).isNull();
         assertThat(seats.padIn(1)).isNotNull();
+        assertThat(seats.keyboard(PlayerSeats.KEYBOARD_SLOT)).isTrue();
+    }
+
+    /**
+     * With player one on a pad the first pad takes seat zero - whose commander stands from the start, so it is no
+     * new player - and the keyboard has no seat at all.
+     */
+    @Test
+    void seatsTheFirstPadInTheKeyboardsSeatWhenPlayerOneIsOnAPad() {
+        PlayerSeats seats = new PlayerSeats(PlayerOne.PAD);
+        FakeGamepads pads = new FakeGamepads();
+        pads.pluggedIn(new FakeGamepad("a", "Pad A"), new FakeGamepad("b", "Pad B"));
+
+        seats.refresh(pads);
+
+        assertThat(seats.padIn(PlayerSeats.KEYBOARD_SLOT).id()).isEqualTo("a");
+        assertThat(seats.padIn(1).id()).isEqualTo("b");
+        assertThat(seats.keyboardSeat()).isEqualTo(-1);
+        assertThat(seats.keyboard(PlayerSeats.KEYBOARD_SLOT)).isFalse();
+        assertThat(seats.nextNewlySeated()).isEqualTo(1);
+        assertThat(seats.nextNewlySeated()).isEqualTo(-1);
+    }
+
+    /** Four pads seat four players when the keyboard drives nobody. */
+    @Test
+    void seatsFourPadsWhenPlayerOneIsOnAPad() {
+        PlayerSeats seats = new PlayerSeats(PlayerOne.PAD);
+        FakeGamepads pads = new FakeGamepads();
+        pads.pluggedIn(
+                new FakeGamepad("a", "Pad A"),
+                new FakeGamepad("b", "Pad B"),
+                new FakeGamepad("c", "Pad C"),
+                new FakeGamepad("d", "Pad D"));
+
+        seats.refresh(pads);
+
+        for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
+            assertThat(seats.padIn(seat)).as("seat " + seat).isNotNull();
+        }
+    }
+
+    /** Player one's pad unplugged is a seat waiting like any other: the game pauses for him and he takes it back. */
+    @Test
+    void keepsSeatZeroForPlayerOnesPadWhileItIsUnplugged() {
+        PlayerSeats seats = new PlayerSeats(PlayerOne.PAD);
+        FakeGamepads pads = new FakeGamepads();
+        pads.pluggedIn(new FakeGamepad("a", "Pad A"), new FakeGamepad("b", "Pad B"));
+        seats.refresh(pads);
+
+        pads.pluggedIn(new FakeGamepad("b", "Pad B"));
+        seats.refresh(pads);
+        int unplugged = seats.nextNewlyUnplugged();
+        pads.pluggedIn(new FakeGamepad("a2", "Pad A"), new FakeGamepad("b", "Pad B"));
+        seats.refresh(pads);
+
+        assertThat(unplugged).isEqualTo(PlayerSeats.KEYBOARD_SLOT);
+        assertThat(seats.padIn(PlayerSeats.KEYBOARD_SLOT).id()).isEqualTo("a2");
     }
 
     @Test

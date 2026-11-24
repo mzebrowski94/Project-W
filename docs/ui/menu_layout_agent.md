@@ -336,6 +336,7 @@ Title `ui.controls.title = CONTROLS`. Entries, top to bottom:
 | Entry | Label | Intent | Enabled |
 |---|---|---|---|
 | `prompts` | `ui.controls.prompts = PROMPTS: {state}`, the state `ui.controls.on = ON` or `ui.controls.off = OFF` | `CHOOSE(0)` - flips it; left/right flip it too | always - first entry, default selection |
+| `playerOne` | `ui.controls.playerOne = PLAYER 1: {device}`, the device `ui.controls.playerOne.KEYBOARD = KEYBOARD` or `ui.controls.playerOne.PAD = GAMEPAD` | `CHOOSE(1)` - flips it; left/right flip it too | here; greyed on `UI:play/pause/controls` (`MenuTree.enabled`) - a level seats him as it starts |
 | `back` | `ui.common.back = BACK` | `BACK` | always |
 
 **PROMPTS** says whether the in-world **prompts** show on this computer - the chips over the subject saying
@@ -344,22 +345,30 @@ by default, one for the machine and never one a seat. Kept at once in libGDX pre
 `pl.mzebrows.pwt.settings` (`LocalSettings`, `GameContext.settings()`), beside the mission records'. **The
 first player setting kept in a user file**, which answers the plan's Q4 for a switch with no shipped default to
 override: `Preferences`, never the shipped `assets/*.properties`. Where a setting that does override a shipped
-default goes - rebinding, Options' - is still open. Flipping it is the one thing this page changes.
+default goes - rebinding, Options' - is still open.
+
+**PLAYER 1** (added 2026-11-24 by request) says what player one plays with on this computer: the keyboard and mouse,
+or a pad - then the first pad seated takes seat zero, up to four pads play, and the keyboard drives the menus, the
+view and the harness but no commander. Shipped as `controls.playerOne=KEYBOARD`; the switch is kept in the same
+`Preferences` and overrides it, the first setting there that does. Read as a level starts (`InputReader`), so it is
+locked - shown, greyed - over a running one. The two switches are the only things this page changes.
 
 Under the entries, the table, a line an action, three columns each as wide as its longest heading or binding
 (`ControlsTable`, tested): `ui.controls.action = ACTION`, `ui.controls.keyboard = KEYBOARD`,
 `ui.controls.pad = GAMEPAD`. Under the headings a note, dim: `ui.controls.keyboard.note = PLAYER 1` under
 KEYBOARD and `ui.controls.pad.note = PLAYERS 2+` under GAMEPAD - the keyboard is player one's and every other
-player is a pad (alpha-phase 1.a). Each note is cut to its column and never widens it. The headings and the
+player is a pad (alpha-phase 1.a); with PLAYER 1 on a pad, `ui.controls.keyboard.notePad = MENUS ONLY` and
+`ui.controls.pad.notePad = PLAYERS 1+`, written again as the switch flips. Each note is cut to its column and never widens it. The headings and the
 action column are drawn in the bright text colour (`graphic.hud.color.text`), the bindings and the note in the
 dim one (`textDim`), so the eye runs down the actions and stops at a binding. Every row is read from the
 bindings (`ControlsConfig`), so a key rebound in `controls.properties` shows as what it now is; a pad's buttons
 are called what the pad last pressed calls them (`PadLabels`), Xbox's where none was. Rows, in order: move (two
-lines - the keys, then their aliases), aim, fire, strike, grenade, act, drag a load, the four orders, upgrades
+lines - the keys, then their aliases), aim, fire, strike, grenade, act, dash (its button, then its alias), redeploy, the four orders, upgrades
 (the draft), shut a crate, zoom out, pause - `ui.controls.*`, mouse buttons as `ui.controls.mouse.*`. It fits a
 page in the pseudo-locale (section 8).
 
-Not on it: the roll call's key (a placeholder), what the order keys do while a draft or a crate is open (the
+Not on it: the roll call's key (a placeholder), taking hold of a load (the keyboard's `F` alone, off the pad since
+G0107; its row taken off 2026-11-24 for room), what the order keys do while a draft or a crate is open (the
 top bar's own hints say), the harness keys, and how a page is driven (every page's hint line says).
 
 Do not build: rebinding from this page - where a player's bindings would be kept, over the shipped ones, is not
@@ -429,7 +438,7 @@ the first tick of play (plan 6.2, `ReleaseLatch`).
 
 ### `UI:play/pause/controls` - modal
 
-`UI:main/controls` over the pause menu: the same title, entries (PROMPTS, BACK), table and words (`MenuTree`,
+`UI:main/controls` over the pause menu: the same title, entries (PROMPTS, PLAYER 1 greyed, BACK), table and words (`MenuTree`,
 `ControlsTable`), and the same PROMPTS switch, kept at once (`LocalSettings`) - the bindings where the player is
 stuck on one. **Centred on the whole UI canvas, over the bars**, not docked over the view as the pause menu is:
 the table is taller than the view between the bars. The upgrades list beside the pause menu is not drawn under

@@ -503,6 +503,9 @@ public final class MenuScreen extends ScreenAdapter {
         if (top == UiPage.CONTROLS && (nav.left || nav.right) && page.index() == MenuTree.CONTROLS_PROMPTS) {
             flipPrompts();
         }
+        if (top == UiPage.CONTROLS && (nav.left || nav.right) && page.index() == MenuTree.CONTROLS_PLAYER_ONE) {
+            flipPlayerOne();
+        }
         if (isMissions(top) && (nav.left || nav.right) && page.index() == MenuTree.MISSION_RANDOM) {
             missions.stepRandomTier(nav.right ? 1 : -1);
             relabelMissions();
@@ -619,7 +622,9 @@ public final class MenuScreen extends ScreenAdapter {
                 return !leaveBriefing();
             }
             case CHOOSE -> {
-                if (flow.top() == UiPage.CONTROLS) {
+                if (flow.top() == UiPage.CONTROLS && effect.index() == MenuTree.CONTROLS_PLAYER_ONE) {
+                    flipPlayerOne();
+                } else if (flow.top() == UiPage.CONTROLS) {
                     flipPrompts();
                 } else if (flow.top() == UiPage.ONLINE_HOST) {
                     chooseHost(effect.index());
@@ -798,6 +803,13 @@ public final class MenuScreen extends ScreenAdapter {
 
     private void flipPrompts() {
         controls.flip(labels);
+    }
+
+    /** Flips PLAYER 1, and the table under it, whose notes say whose each column is. */
+    private void flipPlayerOne() {
+        controls.flipPlayerOne(labels);
+        foot.clear();
+        foot.addAll(controls.table());
     }
 
     /** A count that cannot be chosen - a rooted strain's - is dimmed and passed over. */

@@ -56,6 +56,9 @@ public final class MenuTree {
     /** The controls page's PROMPTS switch, its first entry. */
     public static final int CONTROLS_PROMPTS = 0;
 
+    /** The controls page's PLAYER 1 switch, under PROMPTS: what player one plays with. Locked while a level runs. */
+    public static final int CONTROLS_PLAYER_ONE = 1;
+
     private static final Map<UiPage, MenuPage> PAGES = new EnumMap<>(UiPage.class);
 
     /** The result of a mission: COPY CODE between RETRY and MENU (G0066). */
@@ -116,12 +119,15 @@ public final class MenuTree {
                                 back()),
                         ONLINE_ROWS));
         PAGES.put(UiPage.CAMPAIGN, new MenuPage("ui.campaign.title", "ui.campaign.closed", List.of(back()), 0));
-        // Its table of bindings is the screen's to write, from the bindings themselves, and so is the
-        // switch's ON or OFF; the switch is the one thing on the page that changes anything.
+        // Its table of bindings is the screen's to write, from the bindings themselves, and so are the
+        // switches' states; the two switches are the only things on the page that change anything.
         MenuPage controls = new MenuPage(
                 "ui.controls.title",
                 "",
-                List.of(entry("prompts", "ui.controls.prompts", UiIntent.choose(CONTROLS_PROMPTS)), back()),
+                List.of(
+                        entry("prompts", "ui.controls.prompts", UiIntent.choose(CONTROLS_PROMPTS)),
+                        entry("playerOne", "ui.controls.playerOne", UiIntent.choose(CONTROLS_PLAYER_ONE)),
+                        back()),
                 0);
         PAGES.put(UiPage.CONTROLS, controls);
         PAGES.put(UiPage.PAUSE_CONTROLS, controls);
@@ -228,8 +234,14 @@ public final class MenuTree {
         return PAGES.containsKey(page);
     }
 
-    /** Whether an entry can be confirmed right now: RESTART only offline or on the host. */
+    /**
+     * Whether an entry can be confirmed right now: RESTART only offline or on the host, and PLAYER 1 never over a
+     * running level - he is seated by it as the level starts.
+     */
     public static boolean enabled(MenuEntry entry, UiFlow flow) {
+        if (flow.top() == UiPage.PAUSE_CONTROLS && entry.intent().equals(UiIntent.choose(CONTROLS_PLAYER_ONE))) {
+            return false;
+        }
         return entry.intent().kind() != UiIntent.Kind.RESTART || flow.canRestart();
     }
 

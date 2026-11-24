@@ -44,6 +44,10 @@ public final class PadLabels {
             case DPAD_DOWN -> "D-pad down";
             case DPAD_LEFT -> "D-pad left";
             case DPAD_RIGHT -> "D-pad right";
+            case R4 -> "R4";
+            case L4 -> "L4";
+            case R5 -> "R5";
+            case L5 -> "L5";
         };
     }
 
@@ -61,11 +65,17 @@ public final class PadLabels {
                 + ", strike " + of(pad.strike(), pad.strikeTrigger(), playStation)
                 + ", grenade " + of(pad.grenade(), pad.grenadeTrigger(), playStation)
                 + ", act " + of(pad.action(), pad.actionTrigger(), playStation)
-                + ", dash " + of(pad.dash(), pad.dashTrigger(), playStation)
+                + ", dash " + dash(pad, playStation)
                 + ", zoom " + of(pad.zoom(), pad.zoomTrigger(), playStation)
                 + ", pause " + of(pad.pause(), pad.pauseTrigger(), playStation)
                 + ", upgrades " + of(pad.draft(), pad.draftTrigger(), playStation)
                 + ", orders on the d-pad";
+    }
+
+    /** What the dash is called on that pad: its button and trigger, then its alias, a space between. */
+    public static String dash(ControlsConfig.Pad pad, boolean playStation) {
+        String dash = of(pad.dash(), pad.dashTrigger(), playStation);
+        return pad.dashAlias() == GamepadButton.NONE ? dash : dash + " " + of(pad.dashAlias(), playStation);
     }
 
     /** What a whole binding is called - a button, a trigger, or both, in that pad's labels. */

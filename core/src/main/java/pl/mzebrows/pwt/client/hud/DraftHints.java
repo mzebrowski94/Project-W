@@ -3,7 +3,6 @@ package pl.mzebrows.pwt.client.hud;
 import java.util.Arrays;
 import pl.mzebrows.pwt.client.input.ControlsConfig;
 import pl.mzebrows.pwt.client.input.PadLabels;
-import pl.mzebrows.pwt.client.input.PlayerSeats;
 import pl.mzebrows.pwt.ui.hud.PlayerReadout;
 
 /**
@@ -18,6 +17,7 @@ public final class DraftHints {
     private String close = "";
     private final String[] cards = new String[PlayerReadout.CARDS];
     private int seat = -2;
+    private boolean keyboard;
     private boolean playStation;
 
     public DraftHints(ControlsConfig controls) {
@@ -25,15 +25,20 @@ public final class DraftHints {
         Arrays.fill(cards, "");
     }
 
-    /** Names the keys of this seat, whose pad - if it has one - is a PlayStation pad or not. */
-    public void follow(int seat, boolean playStation) {
-        if (seat == this.seat && playStation == this.playStation) {
+    /**
+     * Names the keys of this seat - the keyboard's, or a pad's that is a PlayStation pad or not.
+     *
+     * @param keyboard whether the seat is the keyboard and mouse's, which seat zero is unless player one is on a pad
+     */
+    public void follow(int seat, boolean keyboard, boolean playStation) {
+        if (seat == this.seat && keyboard == this.keyboard && playStation == this.playStation) {
             return;
         }
         this.seat = seat;
+        this.keyboard = keyboard;
         this.playStation = playStation;
         Arrays.fill(cards, "");
-        if (seat == PlayerSeats.KEYBOARD_SLOT) {
+        if (keyboard) {
             ControlsConfig.Keys keys = controls.key();
             take = keys.draft().name();
             close = keys.orderCancel().name();

@@ -4,6 +4,7 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Preferences;
 import org.jspecify.annotations.Nullable;
+import pl.mzebrows.pwt.client.input.PlayerOne;
 
 /**
  * What the player has set on this computer, kept in libGDX preferences of their own beside the mission
@@ -18,6 +19,8 @@ public final class LocalSettings {
 
     private static final String PROMPTS = "prompts";
 
+    private static final String PLAYER_ONE = "playerOne";
+
     private static final String HOST_PASSWORD = "hostPassword";
 
     private static final String RELAY_HOST = "relayHost";
@@ -28,6 +31,8 @@ public final class LocalSettings {
 
     /** What this run set, when there are no preferences to keep it in: a test, or a store that failed to open. */
     private boolean unsavedPrompts = true;
+
+    private @Nullable PlayerOne unsavedPlayerOne;
 
     private String unsavedHostPassword = "";
 
@@ -83,6 +88,40 @@ public final class LocalSettings {
             kept.flush();
         } catch (RuntimeException e) {
             Log.error("Setting " + PROMPTS + " not saved", e);
+        }
+    }
+
+    /**
+     * What player one plays with on this computer: what the player switched it to, else what ships ({@code
+     * controls.playerOne}). A kept value that names nothing is read as never set.
+     */
+    public PlayerOne playerOne(PlayerOne shipped) {
+        Preferences kept = preferences;
+        if (kept == null) {
+            PlayerOne unsaved = unsavedPlayerOne;
+            return unsaved == null ? shipped : unsaved;
+        }
+        String name = kept.getString(PLAYER_ONE, "");
+        for (PlayerOne device : PlayerOne.values()) {
+            if (device.name().equals(name)) {
+                return device;
+            }
+        }
+        return shipped;
+    }
+
+    /** Keeps what player one plays with, at once - a failed write logged, the run's value kept anyway. */
+    public void switchPlayerOne(PlayerOne device) {
+        unsavedPlayerOne = device;
+        Preferences kept = preferences;
+        if (kept == null) {
+            return;
+        }
+        try {
+            kept.putString(PLAYER_ONE, device.name());
+            kept.flush();
+        } catch (RuntimeException e) {
+            Log.error("Setting " + PLAYER_ONE + " not saved", e);
         }
     }
 

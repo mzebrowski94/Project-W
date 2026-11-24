@@ -75,10 +75,15 @@ public final class GdxGamepads implements GamepadSource {
     private void announce(Controller controller) {
         int axes = controller.getAxisCount();
         boolean raw = hardware.leftTriggerAxis() < axes && hardware.rightTriggerAxis() < axes;
+        boolean paddles = hardware.r4Button() >= 0 && controller.getMaxButtonIndex() >= hardware.r4Button();
         Log.info("pad \"" + controller.getName() + "\": " + axes + " axes, triggers read from "
                 + (raw
                         ? "axes " + hardware.leftTriggerAxis() + " and " + hardware.rightTriggerAxis()
-                        : "the L2/R2 buttons"));
+                        : "the L2/R2 buttons")
+                + (paddles
+                        ? ", back paddles seen"
+                        : ", no back paddles seen - R4 reaches the game only mapped to a face button in the pad's own"
+                                + " software"));
     }
 
     private static boolean stillPluggedIn(Array<Controller> live, String id) {
@@ -176,7 +181,16 @@ public final class GdxGamepads implements GamepadSource {
                 case DPAD_DOWN -> controller.getButton(mapping.buttonDpadDown);
                 case DPAD_LEFT -> controller.getButton(mapping.buttonDpadLeft);
                 case DPAD_RIGHT -> controller.getButton(mapping.buttonDpadRight);
+                case R4 -> raw(hardware.r4Button());
+                case L4 -> raw(hardware.l4Button());
+                case R5 -> raw(hardware.r5Button());
+                case L5 -> raw(hardware.l5Button());
             };
+        }
+
+        /** A button the canonical mapping has no name for - a back paddle - by its raw code; -1 is never pressed. */
+        private boolean raw(int code) {
+            return code >= 0 && controller.getButton(code);
         }
     }
 }

@@ -12,8 +12,8 @@ putting something on the pad's B; Rocketman, Pantera or any other upgrade on the
 `.leavesAPuffWhereTheDashBegan`, `.givesThemBackOneAtATime`, `.ignoresAPressWhileABurstStillRuns`,
 `.reachesHalfAsFarAcrossAThicket`, `.reachesHalfAsFarThroughGlue`, `.goesItsWholeDistanceWounded`,
 `.isStoppedByAWall`, `.neverProtectsHim`, `.losesTheWorkOfAStabiliseInHand`, `.keepsHoldOfWhatHeHauls`;
-`ControlsConfigTest.dashesOnSpaceOrTheLeftShift`, `.dashesOnThePadsEastAndLeavesDragOffThePad`;
-`PadControlsTest.dashesWhileTheEastButtonIsHeld`; `WireGoldenTest.writesTheDashAsBitSixtyFourOfTheButtons`;
+`ControlsConfigTest.dashesOnSpaceOrTheLeftShift`, `.dashesOnTheBackPaddleOrThePadsEastAndLeavesDragOffThePad`;
+`PadControlsTest.dashesWhileTheBackPaddleIsHeld`, `.dashesWhileTheEastButtonIsHeld`; `WireGoldenTest.writesTheDashAsBitSixtyFourOfTheButtons`;
 `GraphicConfigTest.readsADashsThrustersAndPuff`; `ReadoutWriterTest.publishesTheDashesHeHoldsAndHisMost`.
 
 **Settled with Mateusz, 2026-11-22** (`.scratch/commander-and-sites/spec.md`, section 1); the points under
@@ -39,9 +39,11 @@ putting something on the pad's B; Rocketman, Pantera or any other upgrade on the
 - **Slowing ground, per tick**: every tick of a dash spent on ground that slows him - a terrain's `playerFactor`
   below one (thicket, mud), or a slow done to him (`Slowed`: glue) - goes at `slowFactor` (0.7; 0.5 until the 2026-11-22 retune) of its speed. Fire
   is no slow. A wound does not shorten a dash. The ground is read through `Pace`, the one place that knows it.
-- **Inputs**: `Space` or left Shift on the keyboard; `EAST` (B / Circle) on the pad. **The pad lost "take hold / let
-  go"**: `controls.pad.drag=NONE`, the keyboard's `F` alone hauls. A back paddle is mapped to B in the pad's own
-  software. On the wire, button bit 64 (`Msg.PROTOCOL` 10).
+- **Inputs**: `Space` or left Shift on the keyboard; the back paddle `R4` or `EAST` (B / Circle) on the pad
+  (`controls.pad.dash`, `dashAlias`; R4 added 2026-11-24 by request). The paddle is read by its raw SDL button code
+  (`controls.pad.r4Button`), which gdx-controllers' mapping has no name for; a pad whose paddles SDL cannot see - most,
+  in XInput mode - keeps B, or maps R4 to B in its own software as before. **The pad lost "take hold / let go"**:
+  `controls.pad.drag=NONE`, the keyboard's `F` alone hauls. On the wire, button bit 64 (`Msg.PROTOCOL` 10).
 - **Shown**: purple pips beside his wounds on his player panel, gone with the wounds when a status word replaces
   them; two small thrusters on his back while it runs and for a short tail; a **puff** where it began - and only the
   puff on a press with no dash left.

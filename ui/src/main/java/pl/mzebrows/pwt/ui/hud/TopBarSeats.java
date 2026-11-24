@@ -22,8 +22,11 @@ import pl.mzebrows.pwt.sim.def.ActionKind;
  */
 public final class TopBarSeats {
 
-    /** The keyboard's seat: always the first (glossary, <em>seat</em>). */
+    /** The keyboard's seat when it has one: the first (glossary, <em>seat</em>). */
     public static final int KEYBOARD = 0;
+
+    /** The seat whose order inputs are the keyboard's number keys, or -1 while player one is on a pad. */
+    private int keyboard = KEYBOARD;
 
     private final DraftBar draftBar = new DraftBar();
     private final CrateBar crateBar = new CrateBar();
@@ -46,6 +49,14 @@ public final class TopBarSeats {
         crateKeys = new CrateBar.Key[seats];
         wasActing = new boolean[seats];
         slotOfSeat = new int[seats];
+    }
+
+    /**
+     * Which seat is the keyboard's - {@link #KEYBOARD}, or -1 while player one is on a pad and every seat is a pad's.
+     * Its order keys choose cards by number; a pad's d-pad moves the highlight.
+     */
+    public void keyboardIn(int seat) {
+        keyboard = seat;
     }
 
     /** The draft on show, for the client to draw. */
@@ -80,15 +91,15 @@ public final class TopBarSeats {
         }
         int drafting = draftBar.seat();
         if (drafting >= 0 && drafting < seats) {
-            DraftBar.Key key = DraftKeys.route(players, drafting);
+            DraftBar.Key key = DraftKeys.route(players, drafting, drafting == keyboard);
             if (draftKeys[drafting] == null) {
                 draftKeys[drafting] = key;
             }
         }
         int crating = crateBar.seat();
         if (crating >= 0 && crating < seats) {
-            crateKeys[crating] = CrateKeys.route(players, crating);
-            if (crating == KEYBOARD && crateClosePressed) {
+            crateKeys[crating] = CrateKeys.route(players, crating, crating == keyboard);
+            if (crating == keyboard && crateClosePressed) {
                 crateKeys[crating] = CrateBar.Key.CLOSE;
             }
             if (players.get(crating).acting() && !wasActing[crating]) {

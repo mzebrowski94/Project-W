@@ -105,14 +105,36 @@ class MenuTreeTest {
         }
     }
 
-    /** The controls page changes one thing: the PROMPTS switch, first and selected, above BACK. */
+    /** The controls page changes two things: the PROMPTS switch, first and selected, then PLAYER 1, above BACK. */
     @Test
-    void offersThePromptsSwitchSelectedThenBackOnTheControlsPage() {
+    void offersThePromptsSwitchSelectedThenPlayerOneThenBackOnTheControlsPage() {
         MenuPage page = MenuTree.page(UiPage.CONTROLS);
 
-        assertThat(page.entries()).extracting(MenuEntry::id).containsExactly("prompts", "back");
-        assertThat(page.entries()).extracting(MenuEntry::intent).containsExactly(UiIntent.choose(0), UiIntent.BACK);
+        assertThat(page.entries()).extracting(MenuEntry::id).containsExactly("prompts", "playerOne", "back");
+        assertThat(page.entries())
+                .extracting(MenuEntry::intent)
+                .containsExactly(
+                        UiIntent.choose(MenuTree.CONTROLS_PROMPTS),
+                        UiIntent.choose(MenuTree.CONTROLS_PLAYER_ONE),
+                        UiIntent.BACK);
         assertThat(page.defaultSelection()).isZero();
+    }
+
+    /** A level seats player one as it starts, so over a running one PLAYER 1 is shown and locked; PROMPTS is not. */
+    @Test
+    void locksPlayerOneOverARunningLevelButNotOnTheMainMenu() {
+        MenuEntry prompts = MenuTree.page(UiPage.CONTROLS).entries().get(MenuTree.CONTROLS_PROMPTS);
+        MenuEntry playerOne = MenuTree.page(UiPage.CONTROLS).entries().get(MenuTree.CONTROLS_PLAYER_ONE);
+        UiFlow menu = new UiFlow(UiPage.MAIN);
+        menu.apply(UiIntent.open(UiPage.CONTROLS));
+        UiFlow level = new UiFlow(UiPage.PLAY);
+        level.apply(UiIntent.PAUSE);
+        level.apply(UiIntent.open(UiPage.PAUSE_CONTROLS));
+
+        assertThat(level.top()).isEqualTo(UiPage.PAUSE_CONTROLS);
+        assertThat(MenuTree.enabled(playerOne, menu)).isTrue();
+        assertThat(MenuTree.enabled(playerOne, level)).isFalse();
+        assertThat(MenuTree.enabled(prompts, level)).isTrue();
     }
 
     /** Each entry above START writes into the code line; START MISSION alone starts anything. */

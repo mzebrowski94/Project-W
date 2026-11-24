@@ -43,6 +43,21 @@ class TopBarSeatsTest {
         assertThat(seats.draft().open()).isFalse();
     }
 
+    /**
+     * With player one on a pad seat zero's orders are a d-pad's: the cancel order moves the highlight rather than
+     * closing the draft as the keyboard's fourth key does.
+     */
+    @Test
+    void readsSeatZerosOrdersAsAPadsWhenPlayerOneIsOnOne() {
+        seats.keyboardIn(-1);
+        drafts(0, UpgradeKind.MARKSMEN, UpgradeKind.FIELD_MEDICINE, UpgradeKind.LARGER_ARMY);
+
+        frame(draftPressed(0), inputs());
+        frame(nothingPressed(), inputs().order(0, Order.CANCEL));
+
+        assertThat(seats.draft().open()).isTrue();
+    }
+
     @Test
     void givesNoOrderFromTheSeatDrivingTheDraftAndLeavesEveryOtherSeatAlone() {
         drafts(0, UpgradeKind.MARKSMEN);

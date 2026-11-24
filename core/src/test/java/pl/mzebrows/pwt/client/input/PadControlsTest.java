@@ -61,6 +61,15 @@ class PadControlsTest {
     }
 
     @Test
+    void dashesWhileTheBackPaddleIsHeld() {
+        CommanderInput input = new PadControls(CONTROLS).read(FakeGamepad.xbox().hold(GamepadButton.R4));
+
+        assertThat(input.dashing()).isTrue();
+        assertThat(input.redeploying()).isFalse();
+    }
+
+    /** B dashes too, for a pad whose paddles SDL cannot see - most, in XInput mode. */
+    @Test
     void dashesWhileTheEastButtonIsHeld() {
         CommanderInput input = new PadControls(CONTROLS).read(FakeGamepad.xbox().hold(GamepadButton.EAST));
 

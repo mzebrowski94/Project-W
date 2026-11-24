@@ -9,7 +9,7 @@ import pl.mzebrows.pwt.ui.hud.TextFit;
 /**
  * What the controls page shows ({@code UI:main/controls}): every action a player has in a level, the key
  * or mouse button it is on and the pad's button for it, a line each under a line of headings and a note
- * whose players each column is (1.a) - three columns, each as wide as its longest heading or binding.
+ * whose players each column is, by what player one plays with - three columns, each as wide as its longest heading or binding.
  *
  * <p>Written from the bindings themselves, so a rebound key shows as what it now is and the page cannot
  * say one thing while the file says another. A pad's buttons are called what that pad calls them ({@link
@@ -38,8 +38,10 @@ public record ControlsTable(List<String> lines, int actionColumns) {
      *
      * @param words the interface's words by key - {@code ui.controls.*}
      * @param playStation whether the pad's buttons are called what a PlayStation pad calls them
+     * @param playerOne what player one plays with, which the notes under the headings say
      */
-    public static ControlsTable of(ControlsConfig controls, UnaryOperator<String> words, boolean playStation) {
+    public static ControlsTable of(
+            ControlsConfig controls, UnaryOperator<String> words, boolean playStation, PlayerOne playerOne) {
         ControlsConfig.Keys key = controls.key();
         ControlsConfig.Pad pad = controls.pad();
         List<String[]> rows = new ArrayList<>();
@@ -63,8 +65,8 @@ public record ControlsTable(List<String> lines, int actionColumns) {
         rows.add(row(words, "strike", strike, pad.strike(), pad.strikeTrigger(), playStation));
         rows.add(row(words, "grenade", keys(key.grenade()), pad.grenade(), pad.grenadeTrigger(), playStation));
         rows.add(row(words, "act", keys(key.action()), pad.action(), pad.actionTrigger(), playStation));
-        rows.add(row(words, "drag", keys(key.drag()), pad.drag(), pad.dragTrigger(), playStation));
-        rows.add(row(words, "dash", keys(key.dash(), key.dashAlias()), pad.dash(), pad.dashTrigger(), playStation));
+        rows.add(cells(
+                words.apply("ui.controls.dash"), keys(key.dash(), key.dashAlias()), PadLabels.dash(pad, playStation)));
         // While he is down (G0109): the drag's key and the dash's button, in a context of their own.
         rows.add(row(words, "redeploy", keys(key.redeploy()), pad.redeploy(), pad.redeployTrigger(), playStation));
         rows.add(row(
@@ -107,7 +109,8 @@ public record ControlsTable(List<String> lines, int actionColumns) {
         rows.add(row(words, "zoom", keys(key.zoom()), pad.zoom(), pad.zoomTrigger(), playStation));
         // In a level the key that goes back a page opens the pause menu.
         rows.add(row(words, "pause", keys(controls.ui().key().back()), pad.pause(), pad.pauseTrigger(), playStation));
-        return aligned(rows, words.apply("ui.controls.keyboard.note"), words.apply("ui.controls.pad.note"));
+        String note = playerOne == PlayerOne.PAD ? ".notePad" : ".note";
+        return aligned(rows, words.apply("ui.controls.keyboard" + note), words.apply("ui.controls.pad" + note));
     }
 
     /**

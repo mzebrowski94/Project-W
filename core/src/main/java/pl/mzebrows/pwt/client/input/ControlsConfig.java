@@ -26,8 +26,11 @@ import pl.mzebrows.pwt.sim.ConfigFile;
  * <p><strong>Shaped as the file is</strong>, and bound from it directly: a binding is a component here and a
  * line there, and nothing else. A pad action's button and trigger are two components, as they are two
  * lines.
+ *
+ * @param playerOne what player one plays with as shipped, {@code controls.playerOne}; the controls page's switch,
+ *     kept in the player's settings, overrides it
  */
-public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
+public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui, PlayerOne playerOne) {
 
     /** How a key and a mouse button are read from their names - what the binder cannot see from {@code sim}. */
     private static final ConfigBinder.Conversions NAMES =
@@ -99,8 +102,8 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
      *     marked relative and the simulation turns it into a place
      * @param fire, fireTrigger what fires. A face button and a trigger, because both are how people hold a
      *     pad to shoot
-     * @param dash, dashTrigger what dashes (G0107). The pad's back paddle has no button of its own here: a pad's own
-     *     software maps it to {@code EAST}, which is what this is bound to
+     * @param dash, dashTrigger, dashAlias what dashes (G0107): the back paddle {@code R4}, and {@code EAST} beside it
+     *     for a pad whose paddles SDL cannot see - either works
      * @param redeploy, redeployTrigger what redeploys him while he is down and his window is open (G0109). The dash's
      *     button: down, he cannot dash, so the two never meet
      * @param zoom, zoomTrigger what pulls the view back. Shared, like the view itself: any player's press
@@ -111,6 +114,8 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
      * @param leftTriggerAxis, rightTriggerAxis raw axis index of each trigger; SDL's are 4 and 5. Here rather
      *     than hardcoded because the library cannot answer it: gdx-controllers 2.2.4's canonical mapping has
      *     no trigger axes at all, so a trigger is read as a raw axis by index, a fact about SDL and the pad
+     * @param r4Button, l4Button, r5Button, l5Button raw button code of each back paddle; SDL's are 16 to 19. Here for
+     *     the triggers' reason: the canonical mapping has no paddles. -1 reads a paddle as never pressed
      * @param triggerRestsAtMinusOne whether a released trigger reads -1 rather than 0. SDL's read zero to
      *     one; a pad that reads -1 to 1 needs this on or its triggers register only past halfway
      * @param moveDeadZone how far the walking stick must leave centre before he walks. Radial rather than
@@ -136,6 +141,7 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
             GamepadAxis dragTrigger,
             GamepadButton dash,
             GamepadAxis dashTrigger,
+            GamepadButton dashAlias,
             GamepadButton redeploy,
             GamepadAxis redeployTrigger,
             GamepadButton zoom,
@@ -154,6 +160,10 @@ public record ControlsConfig(Keys key, Mouse mouse, Pad pad, Ui ui) {
             GamepadAxis draftTrigger,
             int leftTriggerAxis,
             int rightTriggerAxis,
+            int r4Button,
+            int l4Button,
+            int r5Button,
+            int l5Button,
             boolean triggerRestsAtMinusOne,
             float moveDeadZone,
             float aimDeadZone,

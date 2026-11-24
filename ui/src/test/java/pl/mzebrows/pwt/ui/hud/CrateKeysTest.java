@@ -16,7 +16,7 @@ class CrateKeysTest {
     void takesTheOpenersOrderAndLeavesEveryOtherSeatsAlone() {
         PlayerInputs inputs = new PlayerInputs().order(0, Order.FORWARD).order(1, Order.DEFENCE);
 
-        CrateBar.Key key = CrateKeys.route(inputs, 1);
+        CrateBar.Key key = CrateKeys.route(inputs, 1, false);
 
         assertThat(key).isEqualTo(CrateBar.Key.CLOSE);
         assertThat(inputs.orderOf(1)).isNull();

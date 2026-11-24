@@ -334,7 +334,12 @@ public final class ScenarioScreen extends ScreenAdapter {
                 viewport,
                 context.graphicConfig().terrainPalette(),
                 context.graphicConfig().groundDetail());
-        input = new InputReader(viewport, context.controlsConfig(), context.gamepads());
+        input = new InputReader(
+                viewport,
+                context.controlsConfig(),
+                context.gamepads(),
+                context.settings().playerOne(context.controlsConfig().playerOne()));
+        topBarSeats.keyboardIn(input.seats().keyboardSeat());
         camera = new CameraDirector(context.graphicConfig().camera());
         menus = new PlayMenus(
                 context.hud(),
@@ -519,14 +524,12 @@ public final class ScenarioScreen extends ScreenAdapter {
                         play.connection(),
                         play.invitation());
         if (topBarSeats.draft().open()) {
-            draftHints.follow(
-                    topBarSeats.draft().seat(),
-                    input.playStation(topBarSeats.draft().seat()));
+            int drafting = topBarSeats.draft().seat();
+            draftHints.follow(drafting, input.seats().keyboard(drafting), input.playStation(drafting));
         }
         if (topBarSeats.crate().open()) {
-            crateHints.follow(
-                    topBarSeats.crate().seat(),
-                    input.playStation(topBarSeats.crate().seat()));
+            int crating = topBarSeats.crate().seat();
+            crateHints.follow(crating, input.seats().keyboard(crating), input.playStation(crating));
         }
         topBar.render(
                 layout,
@@ -587,7 +590,8 @@ public final class ScenarioScreen extends ScreenAdapter {
             }
             return;
         }
-        int keyboard = play.slotOf(PlayerSeats.KEYBOARD_SLOT);
+        int keyboardSeat = input.seats().keyboardSeat();
+        int keyboard = keyboardSeat < 0 ? -1 : play.slotOf(keyboardSeat);
         if (graphic.hud().reticle().keyboard() && keyboard >= 0) {
             hud.hideSystemCursor();
             hud.reticle(Gdx.input.getX(), Gdx.graphics.getHeight() - 1 - Gdx.input.getY(), colourOf(keyboard));
@@ -635,8 +639,9 @@ public final class ScenarioScreen extends ScreenAdapter {
             if (slot >= 0 && slot < Players.MAX && readout.player(slot).drafts > 0) {
                 draftKeys[slot] = input.draftKeyLabel(seat);
             }
-            boolean padGone = seat != PlayerSeats.KEYBOARD_SLOT
-                    && input.seats().taken(seat)
+            // Seat zero with player one on a pad is driven by nothing until his pad comes, as an unplugged seat is.
+            boolean padGone = !input.seats().keyboard(seat)
+                    && (input.seats().taken(seat) || seat == PlayerSeats.KEYBOARD_SLOT)
                     && input.seats().padIn(seat) == null;
             if (slot >= 0 && slot < Players.MAX && padGone) {
                 connected[slot] = false;
@@ -650,19 +655,19 @@ public final class ScenarioScreen extends ScreenAdapter {
         Arrays.fill(slotKeys, null);
         for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
             int slot = play.slotOf(seat);
-            if (slot < 0
-                    || slot >= Players.MAX
-                    || (seat != PlayerSeats.KEYBOARD_SLOT && !input.seats().taken(seat))) {
+            if (slot < 0 || slot >= Players.MAX || !input.seats().taken(seat)) {
                 continue;
             }
-            seatKeys[seat].follow(seat, input.playStation(seat));
+            seatKeys[seat].follow(seat, input.seats().keyboard(seat), input.playStation(seat));
             slotKeys[slot] = seatKeys[seat];
         }
     }
 
     private boolean onALocalPad(int slot) {
-        for (int seat = PlayerSeats.KEYBOARD_SLOT + 1; seat < PlayerSeats.SEATS; seat++) {
-            if (play.slotOf(seat) == slot && input.seats().taken(seat)) {
+        for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
+            if (play.slotOf(seat) == slot
+                    && input.seats().taken(seat)
+                    && !input.seats().keyboard(seat)) {
                 return true;
             }
         }
@@ -681,7 +686,7 @@ public final class ScenarioScreen extends ScreenAdapter {
         localAim.clear();
         for (int seat = 0; seat < PlayerSeats.SEATS; seat++) {
             int slot = play.slotOf(seat);
-            if (slot >= 0 && (seat == PlayerSeats.KEYBOARD_SLOT || input.seats().taken(seat))) {
+            if (slot >= 0 && input.seats().taken(seat)) {
                 localAim.set(slot, players.get(seat));
             }
         }

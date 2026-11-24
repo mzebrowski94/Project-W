@@ -52,8 +52,10 @@ cheapest guard against two features silently claiming the same input.
 *Built* rows work today. *Settled* rows are fixed by a decision but not yet wired up; *proposed*
 rows are still a guess.
 
-**Both columns are live.** The keyboard is player one's and no pad takes it in the alpha (1.a); every
-other player is a pad. Every binding below is in [`assets/controls.properties`](../../assets/controls.properties)
+**Both columns are live.** The keyboard is player one's and no pad takes it in the alpha (1.a) - unless the
+controls page's PLAYER 1 switch (`controls.playerOne`, kept per computer over it) puts him on a pad: then the first
+pad takes seat zero and the keyboard drives no commander, only the menus, the view and the harness. Every other
+player is a pad. Every binding below is in [`assets/controls.properties`](../../assets/controls.properties)
 and can be changed there without touching code.
 
 Pad buttons are named by **where they are**, never by what is printed on them: `SOUTH` is A on an Xbox
@@ -74,7 +76,7 @@ do not treat one as taken when adding a game binding. None of them is on the pad
 | `E` | `A` / `Cross` | Act on what is in reach - stabilise a casualty, get on or off a turret, open a crate, open a shut door (held), download a mainframe (held), extract a relic (held) | built - G0021, G0024, G0056, G0069, G0111, G0114 |
 | `F` | - (released for the dash, 2026-11-22) | Take hold of a load, or let go of it | built - G0021; off the pad since G0107 |
 | `F`, while down | `B` / `Circle`, while down | Redeploy: once half his bleed-out has run, a press gives up the rest of it and he goes as running out would, at the same cost (G0109). The drag's key and the dash's button in a context of their own - down, he can neither drag nor dash. `[F] REDEPLOY` is prompted over him on his own machine | built - G0109 |
-| `Space`, left `Shift` | `B` / `Circle` | Dash: a short burst along the way he is moving, never his aim; with none left, only a puff (G0107). A pad's back paddle (R4) has no button in the input layer: it is mapped to B in the pad's own software | built - G0107 |
+| `Space`, left `Shift` | Back paddle `R4`, or `B` / `Circle` | Dash: a short burst along the way he is moving, never his aim; with none left, only a puff (G0107). R4 is read by its raw SDL code (`controls.pad.r4Button`); a pad whose paddles SDL cannot see keeps B, or maps R4 to B in its own software | built - G0107 |
 | `1` | D-pad up | Squad order: follow me | built - scaffolding, see below |
 | `2` | D-pad right | Squad order: forward | built - scaffolding, see below |
 | `3` | D-pad down | Squad order: defence | built - scaffolding, see below |

@@ -16,7 +16,7 @@ class DraftKeysTest {
     void takesTheChoosersOrderAndLeavesEveryOtherSeatsAlone() {
         PlayerInputs inputs = new PlayerInputs().order(0, Order.FORWARD).order(1, Order.DEFENCE);
 
-        DraftBar.Key key = DraftKeys.route(inputs, 1);
+        DraftBar.Key key = DraftKeys.route(inputs, 1, false);
 
         assertThat(key).isEqualTo(DraftBar.Key.CLOSE);
         assertThat(inputs.orderOf(1)).isNull();

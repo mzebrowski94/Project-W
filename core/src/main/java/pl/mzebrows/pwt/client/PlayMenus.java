@@ -547,7 +547,12 @@ final class PlayMenus {
             case REQUEST_PAUSE -> play.setPaused(true);
             case REQUEST_RESUME -> play.setPaused(false);
             case RESTART -> play.apply(HarnessCommand.RESTART, players);
-            case CHOOSE -> flipPrompts();
+            case CHOOSE -> {
+                // PLAYER 1 is locked over a level (MenuTree.enabled): PROMPTS is the one switch here.
+                if (effect.index() == MenuTree.CONTROLS_PROMPTS) {
+                    flipPrompts();
+                }
+            }
             case LEAVE -> play.apply(HarnessCommand.LEAVE, players);
             case TO_BRIEFING -> play.toBriefing();
             case COPY_CODE -> {

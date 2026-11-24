@@ -35,5 +35,17 @@ public enum GamepadButton {
     DPAD_UP,
     DPAD_DOWN,
     DPAD_LEFT,
-    DPAD_RIGHT
+    DPAD_RIGHT,
+    /**
+     * Upper back paddle under the right hand: R4, Xbox Elite P1. The four paddles are read by raw button code
+     * ({@code controls.pad.r4Button} and its neighbours), because gdx-controllers' mapping has no paddles; a pad
+     * whose paddles SDL cannot see - most, in XInput mode - never presses them.
+     */
+    R4,
+    /** Upper back paddle under the left hand: L4, Xbox Elite P3. */
+    L4,
+    /** Lower back paddle under the right hand: R5, Xbox Elite P2. */
+    R5,
+    /** Lower back paddle under the left hand: L5, Xbox Elite P4. */
+    L5
 }

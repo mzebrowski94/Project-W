@@ -11,10 +11,11 @@ import pl.mzebrows.pwt.ui.hud.TopBarSeats;
  * Offline a seat and a slot are the same number, which is why the methods here still speak of slots;
  * online the host maps each machine's seats to slots in the game (G0038).
  *
- * <p><strong>Seat zero is the keyboard's and no pad ever takes it</strong> (1.a), so four players is
- * one keyboard and three pads in the alpha. A pad claims the lowest free slot the first time it is
- * seen, which makes plugging one in the whole of joining the game - there is no lobby, no press-start
- * screen and nothing to choose.
+ * <p><strong>Seat zero is the keyboard's and no pad ever takes it</strong> (1.a) - unless player one is switched to
+ * a pad ({@link PlayerOne#PAD}), when the first pad takes it and the keyboard drives no commander. So four players is
+ * one keyboard and three pads, or four pads. A pad claims the lowest free slot the first time it is seen, which makes
+ * plugging one in the whole of joining the game - there is no lobby, no press-start screen and nothing to choose.
+ * Seat zero's commander is there from the start either way, so the pad that takes it is never a new arrival.
  *
  * <p><strong>A seat is kept when its pad goes away.</strong> A pulled cable, a flat battery and
  * somebody kicking the dongle all look the same from here, and all three are almost always followed
@@ -36,7 +37,7 @@ import pl.mzebrows.pwt.ui.hud.TopBarSeats;
  */
 public final class PlayerSeats {
 
-    /** Player one, always the keyboard and mouse in the alpha phase. */
+    /** Player one: the keyboard and mouse, unless he is switched to a pad. */
     public static final int KEYBOARD_SLOT = TopBarSeats.KEYBOARD;
 
     /**
@@ -80,6 +81,18 @@ public final class PlayerSeats {
 
     private int wasTurnedAway;
 
+    /** The lowest seat a pad may take: zero when player one plays on a pad, else the one after the keyboard's. */
+    private final int firstPadSeat;
+
+    /** Seat zero the keyboard's, as shipped. */
+    public PlayerSeats() {
+        this(PlayerOne.KEYBOARD);
+    }
+
+    public PlayerSeats(PlayerOne playerOne) {
+        this.firstPadSeat = playerOne == PlayerOne.PAD ? KEYBOARD_SLOT : KEYBOARD_SLOT + 1;
+    }
+
     /** Brings the seating in line with what is plugged in, logging every change. */
     public void refresh(GamepadSource pads) {
         for (int slot = 0; slot < SEATS; slot++) {
@@ -108,7 +121,17 @@ public final class PlayerSeats {
 
     /** Whether anybody has ever taken this seat. A seat stays taken while its pad is unplugged. */
     public boolean taken(int slot) {
-        return slot == KEYBOARD_SLOT || idBySlot[slot] != null;
+        return keyboard(slot) || idBySlot[slot] != null;
+    }
+
+    /** Whether this seat is the keyboard and mouse's: seat zero, while player one is not on a pad. */
+    public boolean keyboard(int seat) {
+        return seat == KEYBOARD_SLOT && firstPadSeat > KEYBOARD_SLOT;
+    }
+
+    /** The keyboard and mouse's seat, or -1 while player one is on a pad and the keyboard drives nobody. */
+    public int keyboardSeat() {
+        return firstPadSeat > KEYBOARD_SLOT ? KEYBOARD_SLOT : -1;
     }
 
     /**
@@ -178,7 +201,8 @@ public final class PlayerSeats {
         idBySlot[free] = pad.id();
         padBySlot[free] = pad;
         nameBySlot[free] = pad.name();
-        unreported[free] = true;
+        // Seat zero's commander stands from the start: the pad that takes it is player one, not a new player.
+        unreported[free] = free != KEYBOARD_SLOT;
         Log.info("gamepad seated in slot " + free + ": " + pad.name()
                 + (PadLabels.isPlayStation(pad.name()) ? " (PlayStation labels)" : " (Xbox labels)"));
     }
@@ -200,7 +224,7 @@ public final class PlayerSeats {
      */
     private int missingSeatFor(String name) {
         int any = -1;
-        for (int slot = KEYBOARD_SLOT + 1; slot < SEATS; slot++) {
+        for (int slot = firstPadSeat; slot < SEATS; slot++) {
             if (idBySlot[slot] == null || padBySlot[slot] != null) {
                 continue;
             }
@@ -224,7 +248,7 @@ public final class PlayerSeats {
     }
 
     private int lowestFreeSlot() {
-        for (int slot = KEYBOARD_SLOT + 1; slot < SEATS; slot++) {
+        for (int slot = firstPadSeat; slot < SEATS; slot++) {
             if (idBySlot[slot] == null) {
                 return slot;
             }
