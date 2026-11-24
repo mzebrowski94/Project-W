@@ -1,7 +1,7 @@
 # The plasma cannon
 
 Type: task
-Status: claimed
+Status: resolved
 Label: ready-for-agent
 Blocked by: 01 (same config files; serial only)
 Spec: [spec.md](../spec.md) A
@@ -58,3 +58,47 @@ small blast.
   in its way; a man in the line takes nothing; the orb goes off on contact, at its flight's end and at its power; its
   blast wounds a man. `verify.sh` green; no allocation in the per-orb loop.
 - A hidden scenario (`--scenario=<name>`) with the plasma cannon in hand and a crowd to fire into.
+
+## Answer
+
+Built on `afk/pfe-02-plasma-cannon`, merged into `pfe-integration`; `verify.sh` green but for the rift seeds; the
+performance guard steady (no orb in it; `OrbSystem` costs nothing with none out).
+
+- **The gun**: `WeaponKind.PLASMA` (`energy`), its card `ARMOURY_PLASMA` (`armoury.cards=3`, `arm plasma`). One orb a
+  pull, heat to the stop (`perShot=1`, cools 0.5/s: two seconds). Several orbs may be out.
+- **The beam** is `BeamDef` on every gun's definition, `off()` on all but the plasma cannon: count, reach, wait, power,
+  and the gun its shots are - `WeaponKind.PLASMA_BEAM`, a laser-like block. `OrbSystem` (new, straight after
+  `LimpetSystem`) picks the nearest aliens through `SpatialGrid` into fixed scratch arrays - no allocation - and fires
+  one shot at each through `Spawner.spawnBeamShot`.
+- **Power**: `Orb` (new component, in `Components.ALL` and `docs/components.md`, carried by the snapshot). `Damage.land`
+  now returns what it recorded; `CollisionSystem` takes it off the orb named on the shot (`Projectile.beamedFrom`), on
+  anything not in its throes. Spent, `OrbSystem` marks the orb dead and it goes off through the one reaction.
+- **Look**: `ORB` (ball dims with power on the charge channel; offset ring flickering green-white, `OrbMark`),
+  `PLASMA_BEAM` (green line), `ORB_BLAST` (green blast), `ARMOURY_PLASMA`.
+
+**Provisional, for review (AFK run):**
+
+- **How our men are spared**: the laser's shots are on his side and the collision rule does nothing within a side, so a
+  trooper in the line takes nothing - matched. The orb itself is on **nobody's** side (as a limpet), so it goes off on
+  our men; its own touch is a harmless blow, the blast the hurt. *Turned down:* a player-side orb with an exception in
+  the collision rule.
+- **Only the ball collides** (Mateusz, mid-run): `projectileRadius=1` is its body; the ring is drawn at 1.6 radii.
+- **Beam shots inherit the gun's damage scale**, folded at the throw in `Guns.volley`'s one read. *Turned down:* none.
+- **A gun names its own `blastDamage`** (G0130 updated): every gun block gained the key - 1000 for the bazooka,
+  detonator, charged and magma spit, 0 for guns that leave no blast, 300 for the plasma cannon ("moderate": a grunt's
+  death, not a brute's). *Turned down:* the orb's blast at `sim.blast.damage`'s decisive 1000, not moderate.
+- **Picking ignores lines of sight**; a beam into rock stops on it and spends nothing. *Turned down:* a clear-line test
+  per candidate - the spec puts the stop on the shot.
+- **Power needs a snapshot field**: yes, `Orb.power` (`PlasmaTest.carriesWhatIsLeftOfItsPowerThroughASnapshot`).
+
+**Keys:** `sim.weapon.plasma.*` - `projectileSpeed=26`, `projectileRadius=1`, `projectileRange=60`, `damage=0`,
+`harm=none`, `blastRadius=4`, `blastDamage=300`, `blastHarm=wound`, `heat.perShot=1`, `heat.coolPerSecond=0.5`,
+`heat.resumeBelow=0`, `type=energy`, `beam.count=3`, `beam.reach=15`, `beam.cooldownSeconds=0.1`, `beam.power=600`,
+`beam.gun=plasma_beam`; `sim.weapon.plasma_beam.*` - `projectileSpeed=190`, `projectileRadius=0.3`,
+`projectileRange=18`, `damage=10`, `trailLength=18`, `type=none`; `sim.weapon.<every gun>.blastDamage` (new);
+`sim.pickup.armoury_plasma.*`; `graphic.color.orb=4dff6aff`, `.plasma_beam=a6ffb4ff`, `.orb_blast=5cff7cff`,
+`.armoury_plasma=2ec85aff`; `graphic.orb.ring=1.6`, `.ringWidth=0.18`, `.ringOffset=0.2`, `.flickerHz=3`,
+`.dimmest=0.35`.
+
+**Scenario:** `./gradlew lwjgl3:run --args="--scenario=plasma-range"` - the plasma cannon in hand, two more caches,
+his squad, boulders, and a crowd of grunts with brutes among them.

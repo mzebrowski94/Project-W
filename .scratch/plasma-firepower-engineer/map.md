@@ -42,6 +42,8 @@ the records' *Enforced by*, invariant rows, glossary rows; every ticket leaving 
 - 2026-11-24: the whole of [spec.md](spec.md), grilled with Mateusz.
 - 2026-11-24, 01 (provisional): a blast takes the damage its source declares (G0130, amends G0018), scaled for a gun's
   blast in the one `gun_damage` read; the stock form stays; Firepower's three gun lines fold into one on its card.
+- 2026-11-24, 02 (provisional): the orb is on nobody's side and its beam shots on the thrower's; only its ball collides;
+  power drained from `Damage.land`'s result; every gun names its `blastDamage` (the orb's 300).
 
 ## Not yet specified
 
