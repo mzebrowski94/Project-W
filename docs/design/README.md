@@ -24,7 +24,8 @@ Statements that must hold across every feature, one file per domain. **Before ad
 every file below whose domain it touches, and check it against their rows**; if it would break a row,
 stop and raise it rather than deciding alone.
 
-`enforced` rows have a test and cannot drift. `judgement` rows need a human to notice. `deferred`
+`enforced` rows have a test and cannot drift - for every clause: one no named test would catch is a
+`judgement` row of its own. `judgement` rows need a human to notice. `deferred`
 rows become enforceable once the named feature exists - promote them then.
 
 | File | What it holds |
