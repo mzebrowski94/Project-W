@@ -23,6 +23,9 @@ import pl.mzebrows.pwt.sim.component.Strike;
  * codebase holding a reference to an entity. A {@code reset()} that forgot that field would keep a
  * dead commander reachable from the pool for as long as the game ran, and nothing else would notice.
  *
+ * <p>{@link Melee} is the third: its swing count decides which way the next sweep goes, and one kept
+ * past its man would start the next commander on the wrong side of his aim.
+ *
  * <p>The first assertion checks that the pool really did hand back the same instance. Without it a
  * change in Ashley's recycling would leave this test passing while testing nothing.
  */
@@ -69,17 +72,13 @@ class ComponentPoolingTest {
         assertThat(used.owner).isEqualTo(Handle.NOBODY);
     }
 
-    /**
-     * {@link Melee} is the third worth guarding, for a third reason: it counts the swings this weapon
-     * has released, and the count decides which way the next one sweeps. A count kept past the man who
-     * swung it would start the next commander on the wrong side of his own aim.
-     */
     @Test
     void letsGoOfTheSwingCountWhenAWeaponIsRecycled() {
         Simulation simulation = simulation();
         Entity commander = simulation.spawnCommander(50f, 50f);
         Melee weapon = commander.getComponent(Melee.class);
         simulation.step(new CommanderInput(0f, 0f, 60f, 50f, false, true));
+        assertThat(weapon.swingsReleased).as("he swung").isEqualTo(1);
 
         simulation.engine().removeEntity(commander);
 

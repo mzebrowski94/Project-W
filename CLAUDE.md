@@ -54,6 +54,10 @@ the wall clock, unseeded randomness, hash order and `Math`'s transcendentals in 
 component holding an `Entity` - is left to `verify.sh`.
 
 - [ ] `.claude/scripts/verify.sh` green. Reading the code is not evidence it compiles.
+- [ ] Every test you added to prove the change fails with the change taken out - you ran it that way
+      once. A test the old code passes proves nothing about the new.
+- [ ] An existing test you moved or loosened says in its comment what your change did to it, found
+      rather than guessed: this game replays exactly, so "now and again" is never a cause.
 - [ ] Cloud session: committed and pushed to the `claude/*` branch with `cloud-commit.sh`, tree clean.
       AFK run: committed on its own branch, tree clean. Otherwise on the desktop or in Cowork: nothing committed.
 - [ ] Inside a per-entity loop: no allocation (`new`, boxing, varargs, capturing lambda, stream,

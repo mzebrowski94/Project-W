@@ -1009,8 +1009,8 @@ class SessionTest {
 
             host.session.start(new SessionSetup("", "Skirmish", 9L), 1f / 60f);
             session.run(30);
-            // Checked before the fight can take a man: this test is about the slots coming back, and a
-            // scripted commander walking about with his hand out dies now and again.
+            // Counted before the aliens reach them: which scripted men are still standing at tick 300
+            // turns with any change to the fight, and this test is about the slots coming back.
             assertThat(commanders(newcomer))
                     .as("every player's man is on the field again")
                     .isEqualTo(3);
