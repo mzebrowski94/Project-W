@@ -5,6 +5,7 @@ import static pl.mzebrows.pwt.sim.AlphaWorlds.BRUTE_HEALTH;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.COMMANDER_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.ENEMY_RADIUS;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_ACTIVE;
+import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_COOLDOWN;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_DAMAGE;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.MELEE_LOCK;
 import static pl.mzebrows.pwt.sim.AlphaWorlds.count;
@@ -45,6 +46,15 @@ class StrikeCombatTest {
 
     /** Where the sweep passes halfway through its arc when the commander stands at (50, 50) aiming east. */
     private static final float IN_THE_ARC_X = 53f;
+
+    /** Two enemies in the arc one either side of the aim, so which one the swing kills says which way it swept. */
+    private static final float SOUTH_IN_THE_ARC_X = 52.12f;
+
+    private static final float SOUTH_IN_THE_ARC_Y = 47.88f;
+
+    private static final float NORTH_IN_THE_ARC_X = 52.12f;
+
+    private static final float NORTH_IN_THE_ARC_Y = 52.12f;
 
     @Test
     void killsAnOrdinaryEnemyOutright() {
@@ -257,6 +267,28 @@ class StrikeCombatTest {
         steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_EAST);
 
         assertThat(countLiving(simulation, Enemy.class)).isEqualTo(1);
+    }
+
+    /**
+     * The alternation is the sweep's own body travelling the arc, not a picture of it (G0005, pillar
+     * 5). Two enemies stand inside the arc, one either side of the aim: the swing takes the one it
+     * starts towards, and the next swing, coming back the other way, takes the other.
+     */
+    @Test
+    void takesWhicheverOfTwoItsSweepReachesFirst() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(50f, 50f);
+        Entity south = simulation.spawnEnemy(SOUTH_IN_THE_ARC_X, SOUTH_IN_THE_ARC_Y);
+        simulation.spawnEnemy(NORTH_IN_THE_ARC_X, NORTH_IN_THE_ARC_Y);
+
+        steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_EAST);
+
+        assertThat(killed(south)).isTrue();
+        assertThat(countLiving(simulation, Enemy.class)).isEqualTo(1);
+
+        steps(simulation, ticksIn(MELEE_COOLDOWN) + 2, SWING_EAST);
+
+        assertThat(countLiving(simulation, Enemy.class)).isZero();
     }
 
     @Test

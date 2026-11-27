@@ -16,15 +16,20 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 import pl.mzebrows.pwt.sim.AlphaWorlds;
 import pl.mzebrows.pwt.sim.CommanderInput;
+import pl.mzebrows.pwt.sim.Handles;
+import pl.mzebrows.pwt.sim.PlayerInputs;
 import pl.mzebrows.pwt.sim.SimConfig;
 import pl.mzebrows.pwt.sim.Simulation;
+import pl.mzebrows.pwt.sim.WorldCodec;
+import pl.mzebrows.pwt.sim.component.Melee;
 import pl.mzebrows.pwt.sim.component.Position;
 import pl.mzebrows.pwt.sim.component.Strike;
 import pl.mzebrows.pwt.sim.component.Stunned;
 
 /**
  * Swinging. The sweep is a real body in the world that travels an arc and is gone (G0005), so what is
- * tested here is where it goes and when - never whether it hit anything, which belongs to collision.
+ * tested here is where it goes, when, and which way round the arc - never whether it hit anything,
+ * which belongs to collision.
  */
 class MeleeSystemTest {
 
@@ -34,6 +39,17 @@ class MeleeSystemTest {
 
     /** Walking east and swinging east: the case where an anchored sweep is left behind him. */
     private static final CommanderInput EAST_AIM_EAST_WALK = new CommanderInput(1f, 0f, 90f, 50f, false, true);
+
+    /** Two commanders, each pointing east along his own row. */
+    private static final float SOUTH_COMMANDER_Y = 42f;
+
+    private static final float NORTH_COMMANDER_Y = 58f;
+
+    private static final CommanderInput SWING_EAST_FROM_SOUTH =
+            new CommanderInput(0f, 0f, 60f, SOUTH_COMMANDER_Y, false, true);
+
+    private static final CommanderInput SWING_EAST_FROM_NORTH =
+            new CommanderInput(0f, 0f, 60f, NORTH_COMMANDER_Y, false, true);
 
     @Test
     void putsASweepInTheWorldWhenTheMeleeInputIsPressed() {
@@ -105,6 +121,76 @@ class MeleeSystemTest {
 
         assertThat(sweep(simulation).getComponent(Position.class).x)
                 .isCloseTo(commander.getComponent(Position.class).x + MELEE_REACH, Offset.offset(0.3f));
+    }
+
+    /**
+     * A swing sweeps the opposite way to the one before it, like a blade. The sweep is a real body in
+     * the world (G0005), so which side of the aim it starts on is not a picture: it is where the blow
+     * is, and it decides what the swing reaches first.
+     */
+    @Test
+    void sweepsTheOtherWayOnTheNextSwing() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+
+        simulation.step(EAST);
+        boolean firstStartsNorth = startsNorthOfHisAim(simulation, commander);
+        steps(simulation, ticksIn(MELEE_COOLDOWN) + 2, IDLE_AIMED);
+        simulation.step(EAST);
+
+        assertThat(firstStartsNorth).isFalse();
+        assertThat(startsNorthOfHisAim(simulation, commander)).isTrue();
+    }
+
+    /** Nothing puts it back: not a pause, not a long one. It alternates for the whole of his life. */
+    @Test
+    void keepsAlternatingHoweverLongHeWaitsBetweenSwings() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+
+        boolean first = waitsOutTheCooldownAndSweepsNorth(simulation, commander);
+        boolean second = waitsOutTheCooldownAndSweepsNorth(simulation, commander);
+        boolean third = waitsOutTheCooldownAndSweepsNorth(simulation, commander);
+
+        assertThat(first).isFalse();
+        assertThat(second).isTrue();
+        assertThat(third).isFalse();
+    }
+
+    /**
+     * The alternation belongs to the man. Two commanders both start on the default side rather than
+     * one either way, and each turns on his own swings rather than on anybody else's.
+     */
+    @Test
+    void countsEveryCommandersOwnSwings() {
+        Simulation simulation = simulation();
+        Entity south = simulation.spawnCommander(50f, SOUTH_COMMANDER_Y, 0);
+        Entity north = simulation.spawnCommander(50f, NORTH_COMMANDER_Y, 1);
+
+        simulation.step(bothSwinging());
+        boolean southStartsNorth = startsNorthOfHisAim(simulation, south);
+        boolean northStartsNorth = startsNorthOfHisAim(simulation, north);
+        steps(simulation, ticksIn(MELEE_COOLDOWN) + 2);
+        simulation.step(bothSwinging());
+
+        assertThat(southStartsNorth).isFalse();
+        assertThat(northStartsNorth).isFalse();
+        assertThat(startsNorthOfHisAim(simulation, south)).isTrue();
+        assertThat(startsNorthOfHisAim(simulation, north)).isTrue();
+    }
+
+    /** Which way the next sweep goes is world state (pillar 7): a snapshot carries it. */
+    @Test
+    void carriesWhichWayTheNextSweepGoesThroughASnapshot() {
+        Simulation simulation = simulation();
+        Entity commander = simulation.spawnCommander(50f, 50f);
+        simulation.step(EAST);
+        byte[] before = WorldCodec.snapshot(simulation);
+
+        commander.getComponent(Melee.class).swingsReleased++;
+
+        assertThat(WorldCodec.differences(before, WorldCodec.snapshot(simulation), 10))
+                .anySatisfy(line -> assertThat(line).contains("Melee.swingsReleased"));
     }
 
     @Test
@@ -212,6 +298,38 @@ class MeleeSystemTest {
                 .engine()
                 .getEntitiesFor(Family.all(Strike.class).get())
                 .first();
+    }
+
+    /** The sweep this man swung, by the handle the strike carries - with two commanders, "the first one" is no answer. */
+    private static Entity sweepOf(Simulation simulation, Entity man) {
+        long owner = Handles.of(man);
+        for (Entity swing :
+                simulation.engine().getEntitiesFor(Family.all(Strike.class).get())) {
+            if (swing.getComponent(Strike.class).owner == owner) {
+                return swing;
+            }
+        }
+        throw new IllegalStateException("this commander swung nothing");
+    }
+
+    /** Waits out the cooldown, swings, and says which side of his aim the sweep started on. */
+    private static boolean waitsOutTheCooldownAndSweepsNorth(Simulation simulation, Entity commander) {
+        steps(simulation, ticksIn(MELEE_COOLDOWN) + 2, IDLE_AIMED);
+        simulation.step(EAST);
+        return startsNorthOfHisAim(simulation, commander);
+    }
+
+    /**
+     * Which side of his aim the sweep stands on the tick it appears. Every test here aims him due east,
+     * so north of him is the half of the arc the default swing finishes in rather than starts in.
+     */
+    private static boolean startsNorthOfHisAim(Simulation simulation, Entity commander) {
+        return sweepOf(simulation, commander).getComponent(Position.class).y > commander.getComponent(Position.class).y;
+    }
+
+    /** One tick with both commanders swinging east, and nobody else doing anything. */
+    private static PlayerInputs bothSwinging() {
+        return new PlayerInputs().set(0, SWING_EAST_FROM_SOUTH).set(1, SWING_EAST_FROM_NORTH);
     }
 
     private static float distanceBetween(Entity first, Entity second) {
