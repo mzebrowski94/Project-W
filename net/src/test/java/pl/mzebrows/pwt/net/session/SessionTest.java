@@ -1008,9 +1008,14 @@ class SessionTest {
             assertThat(newcomer.session.state()).as("lands on the briefing").isEqualTo(PeerSession.State.BRIEFING);
 
             host.session.start(new SessionSetup("", "Skirmish", 9L), 1f / 60f);
-            session.run(300);
+            session.run(30);
+            // Checked before the fight can take a man: this test is about the slots coming back, and a
+            // scripted commander walking about with his hand out dies now and again.
+            assertThat(commanders(newcomer))
+                    .as("every player's man is on the field again")
+                    .isEqualTo(3);
+            session.run(270);
             session.agreedHash();
-            assertThat(commanders(newcomer)).isEqualTo(3);
             assertThat(friend.session.setup().seed()).isEqualTo(9L);
         }
     }
