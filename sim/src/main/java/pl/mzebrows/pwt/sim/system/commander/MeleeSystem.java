@@ -28,10 +28,8 @@ import pl.mzebrows.pwt.sim.system.query.Drivers;
  * behind where the player is pointing and travels through it, so pointing at a target puts that
  * target in the middle of the swing.
  *
- * <p>Which half it starts in alternates: a sweep crosses the aim one way, the next swing crosses it
- * the other, like a blade. It is the sweep's own body that turns round, so what a swing reaches first
- * changes with it and the drawing cannot disagree with the hit (G0005, pillar 5). The count of swings
- * decides it and nothing else - no dice, no clock - so it holds across a pause and a snapshot.
+ * <p>Which half it starts in alternates from swing to swing, like a blade: the sweep's own body turns
+ * round, so what a swing reaches first turns with it (G0005, pillar 5).
  */
 public final class MeleeSystem extends IteratingSystem {
 
@@ -79,11 +77,10 @@ public final class MeleeSystem extends IteratingSystem {
             return;
         }
         float aimAngle = (float) StrictMath.atan2(toAimY, toAimX);
-        // Which way this swing crosses the aim, and its arc signed that way round.
-        float sweep = melee.nextSweepDirection() * melee.arcDegrees * MathUtils.degreesToRadians;
-        // It still starts half an arc before the aim whichever way it goes: the sign says only which
-        // way the body travels, so every swing covers the same ground centred on where he points.
+        // Signed, so it starts half an arc before the aim on whichever side this swing comes from.
+        float sweep = melee.sweepDirection() * melee.arcDegrees * MathUtils.degreesToRadians;
         spawner.spawnStrike(
                 entity, position.x, position.y, aimAngle - sweep * HALF, sweep, melee, FACTION.get(entity).side);
+        melee.swingsReleased++;
     }
 }

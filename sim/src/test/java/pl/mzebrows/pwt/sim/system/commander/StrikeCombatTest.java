@@ -47,14 +47,10 @@ class StrikeCombatTest {
     /** Where the sweep passes halfway through its arc when the commander stands at (50, 50) aiming east. */
     private static final float IN_THE_ARC_X = 53f;
 
-    /** Two enemies in the arc one either side of the aim, so which one the swing kills says which way it swept. */
-    private static final float SOUTH_IN_THE_ARC_X = 52.12f;
+    private static final CommanderInput SWING_WEST = new CommanderInput(0f, 0f, 40f, 50f, false, true);
 
-    private static final float SOUTH_IN_THE_ARC_Y = 47.88f;
-
-    private static final float NORTH_IN_THE_ARC_X = 52.12f;
-
-    private static final float NORTH_IN_THE_ARC_Y = 52.12f;
+    /** 45 degrees off an eastward aim and as far out as {@link #IN_THE_ARC_X}, along each axis: 3 cos 45. */
+    private static final float OFF_THE_AIM = 2.12f;
 
     @Test
     void killsAnOrdinaryEnemyOutright() {
@@ -269,26 +265,32 @@ class StrikeCombatTest {
         assertThat(countLiving(simulation, Enemy.class)).isEqualTo(1);
     }
 
-    /**
-     * The alternation is the sweep's own body travelling the arc, not a picture of it (G0005, pillar
-     * 5). Two enemies stand inside the arc, one either side of the aim: the swing takes the one it
-     * starts towards, and the next swing, coming back the other way, takes the other.
-     */
     @Test
-    void takesWhicheverOfTwoItsSweepReachesFirst() {
+    void takesTheOneSouthOfHisAimWithHisFirstSwing() {
         Simulation simulation = harmless();
         simulation.spawnCommander(50f, 50f);
-        Entity south = simulation.spawnEnemy(SOUTH_IN_THE_ARC_X, SOUTH_IN_THE_ARC_Y);
-        simulation.spawnEnemy(NORTH_IN_THE_ARC_X, NORTH_IN_THE_ARC_Y);
+        Entity south = simulation.spawnEnemy(50f + OFF_THE_AIM, 50f - OFF_THE_AIM);
+        Entity north = simulation.spawnEnemy(50f + OFF_THE_AIM, 50f + OFF_THE_AIM);
 
         steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_EAST);
 
         assertThat(killed(south)).isTrue();
-        assertThat(countLiving(simulation, Enemy.class)).isEqualTo(1);
+        assertThat(killed(north)).isFalse();
+    }
 
-        steps(simulation, ticksIn(MELEE_COOLDOWN) + 2, SWING_EAST);
+    @Test
+    void takesTheOneNorthOfHisAimWithTheSwingAfter() {
+        Simulation simulation = harmless();
+        simulation.spawnCommander(50f, 50f);
+        steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_WEST);
+        steps(simulation, ticksIn(MELEE_COOLDOWN));
+        Entity south = simulation.spawnEnemy(50f + OFF_THE_AIM, 50f - OFF_THE_AIM);
+        Entity north = simulation.spawnEnemy(50f + OFF_THE_AIM, 50f + OFF_THE_AIM);
 
-        assertThat(countLiving(simulation, Enemy.class)).isZero();
+        steps(simulation, ticksIn(MELEE_ACTIVE) + 2, SWING_EAST);
+
+        assertThat(killed(north)).isTrue();
+        assertThat(killed(south)).isFalse();
     }
 
     @Test

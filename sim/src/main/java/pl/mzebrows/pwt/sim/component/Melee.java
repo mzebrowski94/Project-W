@@ -52,10 +52,7 @@ public final class Melee implements Component, Pool.Poolable {
     public float pendingAimX;
     public float pendingAimY;
 
-    /**
-     * How many sweeps this weapon has released: the only thing that decides which way the next one
-     * goes, so the alternation costs no dice and lives in world state.
-     */
+    /** How many swings this weapon has released; its parity alone decides which way the next one sweeps. */
     public int swingsReleased;
 
     /** Sets the weapon ready to swing immediately, and returns this component, for fluent spawning. */
@@ -120,17 +117,9 @@ public final class Melee implements Component, Pool.Poolable {
         windupRemaining = 0;
     }
 
-    /**
-     * Which way this swing sweeps - anticlockwise across the aim, or the other way round - alternating
-     * from swing to swing, and it takes the swing off the count as it answers. Nothing else decides it:
-     * no dice, no clock. It holds across a pause, and a weapon read back from a snapshot carries on
-     * where its last swing left off.
-     *
-     * <p>Ask it <strong>once per swing</strong>, wherever that swing's bodies go into the world: a swing
-     * made of several sweeps still takes all of them the same way.
-     */
-    public int nextSweepDirection() {
-        return (swingsReleased++ & 1) == 0 ? SWEEP_ANTICLOCKWISE : SWEEP_CLOCKWISE;
+    /** Which way the swing being released sweeps: 1 anticlockwise, -1 clockwise, the same for every body of it. */
+    public int sweepDirection() {
+        return (swingsReleased & 1) == 0 ? SWEEP_ANTICLOCKWISE : SWEEP_CLOCKWISE;
     }
 
     @Override
